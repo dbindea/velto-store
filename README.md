@@ -2,6 +2,8 @@
 
 Aplicación Angular para gestión de flota de vehículos de alquiler.
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9e5112dc-f6d0-4f9b-8119-942641cf8df2/deploy-status)](https://app.netlify.com/projects/velto-store/deploys)
+
 ## Stack Tecnológico
 
 - **Angular 20** con standalone components
@@ -71,8 +73,8 @@ export const environment = {
     projectId: 'TU_PROJECT_ID',
     storageBucket: 'TU_PROJECT_ID.appspot.com',
     messagingSenderId: 'TU_MESSAGING_SENDER_ID',
-    appId: 'TU_APP_ID'
-  }
+    appId: 'TU_APP_ID',
+  },
 };
 ```
 
@@ -92,6 +94,7 @@ npm start
 La aplicación estará disponible en `http://localhost:4200/`
 
 Verás una pantalla de estado confirmando:
+
 - Angular OK
 - Firebase config loaded
 - Ready for Firestore
@@ -127,17 +130,18 @@ npm run firebase:emulators
 
 ## Scripts Disponibles
 
-| Script | Descripción |
-|--------|-------------|
-| `npm start` | Iniciar servidor de desarrollo |
-| `npm run build` | Build de desarrollo |
-| `npm run build:prod` | Build de producción |
-| `npm run deploy:hosting` | Desplegar a Firebase Hosting |
-| `npm run firebase:emulators` | Iniciar emuladores Firebase |
+| Script                       | Descripción                    |
+| ---------------------------- | ------------------------------ |
+| `npm start`                  | Iniciar servidor de desarrollo |
+| `npm run build`              | Build de desarrollo            |
+| `npm run build:prod`         | Build de producción            |
+| `npm run deploy:hosting`     | Desplegar a Firebase Hosting   |
+| `npm run firebase:emulators` | Iniciar emuladores Firebase    |
 
 ## Próximos Pasos
 
 Este proyecto está preparado para añadir:
+
 - Módulo de vehículos
 - Módulo de reservas
 - Modelo Firestore completo
