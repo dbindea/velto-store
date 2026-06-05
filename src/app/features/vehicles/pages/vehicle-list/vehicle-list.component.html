@@ -1,0 +1,92 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-top">
+      <div>
+        <h1>{{ 'vehicles.title' | translate }}</h1>
+        <p>{{ 'vehicles.subtitle' | translate }}</p>
+      </div>
+      <a routerLink="/vehicles/new" class="btn btn-primary">
+        <i class="pi pi-plus"></i>
+        <span class="btn-text">{{ 'vehicles.new' | translate }}</span>
+      </a>
+    </div>
+
+    <div class="filters">
+      <div class="search-box">
+        <i class="pi pi-search"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchText"
+          (input)="onSearch()"
+          [placeholder]="'vehicles.searchPlaceholder' | translate"
+          class="search-input"
+        />
+      </div>
+
+      <div class="filter-row">
+        <select [(ngModel)]="filterStatus" (change)="onStatusFilter()" class="filter-select">
+          <option value="">{{ 'vehicles.filterAllStatus' | translate }}</option>
+          @for (status of statusOptions; track status) {
+            <option [value]="status">{{ getStatusLabel(status) | translate }}</option>
+          }
+        </select>
+
+        <select [(ngModel)]="filterCategory" (change)="onCategoryFilter()" class="filter-select">
+          <option value="">{{ 'vehicles.filterAllCategories' | translate }}</option>
+          @for (category of categoryOptions; track category) {
+            <option [value]="category">{{ getCategoryLabel(category) | translate }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (filteredVehicles.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-car"></i>
+      <p>{{ 'vehicles.noVehicles' | translate }}</p>
+      <a routerLink="/vehicles/new" class="btn btn-primary">
+        {{ 'vehicles.addFirst' | translate }}
+      </a>
+    </div>
+  } @else {
+    <div class="vehicles-grid">
+      @for (vehicle of filteredVehicles; track vehicle.id) {
+        <div class="vehicle-card" (click)="viewDetail(vehicle)">
+          <div class="vehicle-image">
+            @if (vehicle.mainImageUrl) {
+              <img [src]="vehicle.mainImageUrl" [alt]="vehicle.brand + ' ' + vehicle.model" />
+            } @else {
+              <div class="vehicle-image-placeholder">
+                <i class="pi pi-car"></i>
+              </div>
+            }
+            <span class="vehicle-status" [class]="getStatusClass(vehicle.status)">
+              {{ getStatusLabel(vehicle.status) | translate }}
+            </span>
+          </div>
+
+          <div class="vehicle-info">
+            <h3>{{ vehicle.brand }} {{ vehicle.model }}</h3>
+            <div class="vehicle-meta">
+              <span class="acriss-code">{{ vehicle.acrissCode }}</span>
+              <span class="category">{{ getCategoryLabel(vehicle.category) | translate }}</span>
+            </div>
+            <p class="plate">{{ vehicle.plateNumber }}</p>
+          </div>
+
+          <div class="vehicle-actions">
+            <button class="btn-icon" [title]="'vehicles.viewDetail' | translate">
+              <i class="pi pi-eye"></i>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

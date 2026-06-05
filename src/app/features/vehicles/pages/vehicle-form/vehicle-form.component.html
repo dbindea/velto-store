@@ -1,0 +1,355 @@
+@if (loading) {
+  <div class="page-container">
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  </div>
+} @else {
+  <div class="page-container">
+    <div class="form-header">
+      <button class="btn-back" (click)="onCancel()">
+        <i class="pi pi-arrow-left"></i>
+        <span>{{ 'common.back' | translate }}</span>
+      </button>
+      <h1>{{ isEditMode ? ('vehicles.edit' | translate) : ('vehicles.new' | translate) }}</h1>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="vehicle-form">
+      <div class="form-sections">
+        <!-- Section A: Basic Info -->
+        <div class="form-section">
+          <h2 class="section-title">{{ 'vehicles.sections.basicInfo' | translate }}</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="brand">{{ 'vehicles.fields.brand' | translate }} *</label>
+              <input
+                type="text"
+                id="brand"
+                [(ngModel)]="formData.brand"
+                name="brand"
+                (input)="onFieldChange()"
+                required
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label for="model">{{ 'vehicles.fields.model' | translate }} *</label>
+              <input
+                type="text"
+                id="model"
+                [(ngModel)]="formData.model"
+                name="model"
+                (input)="onFieldChange()"
+                required
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="version">{{ 'vehicles.fields.version' | translate }}</label>
+              <input
+                type="text"
+                id="version"
+                [(ngModel)]="formData.version"
+                name="version"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label for="year">{{ 'vehicles.fields.year' | translate }} *</label>
+              <select id="year" [(ngModel)]="formData.year" name="year" class="form-control">
+                @for (year of yearOptions; track year) {
+                  <option [value]="year">{{ year }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="plateNumber">{{ 'vehicles.fields.plateNumber' | translate }} *</label>
+              <input
+                type="text"
+                id="plateNumber"
+                [(ngModel)]="formData.plateNumber"
+                name="plateNumber"
+                (input)="onFieldChange()"
+                required
+                class="form-control plate-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="color">{{ 'vehicles.fields.color' | translate }}</label>
+              <input
+                type="text"
+                id="color"
+                [(ngModel)]="formData.color"
+                name="color"
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="currentKm">{{ 'vehicles.fields.currentKm' | translate }}</label>
+              <input
+                type="number"
+                id="currentKm"
+                [(ngModel)]="formData.currentKm"
+                name="currentKm"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label for="vin">{{ 'vehicles.fields.vin' | translate }}</label>
+              <input
+                type="text"
+                id="vin"
+                [(ngModel)]="formData.vin"
+                name="vin"
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">{{ 'vehicles.fields.description' | translate }}</label>
+            <textarea
+              id="description"
+              [(ngModel)]="formData.description"
+              name="description"
+              rows="3"
+              class="form-control"
+            ></textarea>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="formData.publicEnabled" name="publicEnabled" />
+              {{ 'vehicles.fields.publicEnabled' | translate }}
+            </label>
+          </div>
+        </div>
+
+        <!-- Section B: Rental Classification -->
+        <div class="form-section">
+          <h2 class="section-title">{{ 'vehicles.sections.rentalClassification' | translate }}</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="category">{{ 'vehicles.fields.category' | translate }} *</label>
+              <select
+                id="category"
+                [(ngModel)]="formData.category"
+                name="category"
+                (change)="onFieldChange()"
+                class="form-control"
+              >
+                @for (cat of categoryOptions; track cat) {
+                  <option [value]="cat">{{ getCategoryLabel(cat) | translate }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="bodyType">{{ 'vehicles.fields.bodyType' | translate }} *</label>
+              <select
+                id="bodyType"
+                [(ngModel)]="formData.bodyType"
+                name="bodyType"
+                (change)="onFieldChange()"
+                class="form-control"
+              >
+                @for (body of bodyTypeOptions; track body) {
+                  <option [value]="body">{{ getBodyTypeLabel(body) | translate }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="doors">{{ 'vehicles.fields.doors' | translate }}</label>
+              <input
+                type="number"
+                id="doors"
+                [(ngModel)]="formData.doors"
+                name="doors"
+                min="2"
+                max="6"
+                class="form-control"
+              />
+            </div>
+            <div class="form-group">
+              <label for="seats">{{ 'vehicles.fields.seats' | translate }} *</label>
+              <input
+                type="number"
+                id="seats"
+                [(ngModel)]="formData.seats"
+                name="seats"
+                required
+                min="1"
+                max="9"
+                class="form-control"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="trunkCapacity">{{ 'vehicles.fields.trunkCapacity' | translate }}</label>
+            <input
+              type="number"
+              id="trunkCapacity"
+              [(ngModel)]="formData.trunkCapacityLiters"
+              name="trunkCapacityLiters"
+              class="form-control"
+              placeholder="Litros"
+            />
+          </div>
+        </div>
+
+        <!-- Section C: Features -->
+        <div class="form-section">
+          <h2 class="section-title">{{ 'vehicles.sections.features' | translate }}</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fuelType">{{ 'vehicles.fields.fuelType' | translate }} *</label>
+              <select
+                id="fuelType"
+                [(ngModel)]="formData.fuelType"
+                name="fuelType"
+                (change)="onFieldChange()"
+                class="form-control"
+              >
+                @for (fuel of fuelOptions; track fuel) {
+                  <option [value]="fuel">{{ getFuelLabel(fuel) | translate }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="transmission">{{ 'vehicles.fields.transmission' | translate }} *</label>
+              <select
+                id="transmission"
+                [(ngModel)]="formData.transmission"
+                name="transmission"
+                (change)="onFieldChange()"
+                class="form-control"
+              >
+                @for (trans of transmissionOptions; track trans) {
+                  <option [value]="trans">{{ getTransmissionLabel(trans) | translate }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="features-checkboxes">
+            <label class="checkbox-item">
+              <input
+                type="checkbox"
+                [(ngModel)]="formData.features.airConditioning"
+                name="airConditioning"
+                (change)="onFieldChange()"
+              />
+              <span>{{ 'vehicles.features.airConditioning' | translate }}</span>
+            </label>
+            <label class="checkbox-item">
+              <input
+                type="checkbox"
+                [(ngModel)]="formData.features.navigation"
+                name="navigation"
+              />
+              <span>{{ 'vehicles.features.navigation' | translate }}</span>
+            </label>
+            <label class="checkbox-item">
+              <input
+                type="checkbox"
+                [(ngModel)]="formData.features.parkingSensors"
+                name="parkingSensors"
+              />
+              <span>{{ 'vehicles.features.parkingSensors' | translate }}</span>
+            </label>
+            <label class="checkbox-item">
+              <input
+                type="checkbox"
+                [(ngModel)]="formData.features.rearCamera"
+                name="rearCamera"
+              />
+              <span>{{ 'vehicles.features.rearCamera' | translate }}</span>
+            </label>
+            <label class="checkbox-item">
+              <input
+                type="checkbox"
+                [(ngModel)]="formData.features.cruiseControl"
+                name="cruiseControl"
+              />
+              <span>{{ 'vehicles.features.cruiseControl' | translate }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section D: ACRISS Code -->
+        <div class="form-section acriss-section">
+          <h2 class="section-title">{{ 'vehicles.fields.acrissCode' | translate }}</h2>
+          <div class="acriss-display">
+            <span class="acriss-code">{{ acrissCode }}</span>
+            <p class="acriss-help">{{ 'vehicles.help.acrissGenerated' | translate }}</p>
+          </div>
+        </div>
+
+        <!-- Section E: Photos (Edit mode only) -->
+        @if (isEditMode && vehicleId) {
+          <div class="form-section">
+            <h2 class="section-title">{{ 'vehicles.fields.mainImage' | translate }}</h2>
+            <div class="photo-upload">
+              <label class="upload-btn">
+                <i class="pi pi-upload"></i>
+                {{ 'vehicles.actions.uploadPhoto' | translate }}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  (change)="onMainImageSelected($event)"
+                  hidden
+                />
+              </label>
+              <p class="upload-hint">JPG, PNG o WebP. Máx 5MB</p>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="section-title">{{ 'vehicles.fields.gallery' | translate }}</h2>
+            <div class="photo-upload">
+              <label class="upload-btn">
+                <i class="pi pi-images"></i>
+                {{ 'vehicles.actions.addGalleryPhoto' | translate }}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  (change)="onGalleryImageSelected($event)"
+                  hidden
+                />
+              </label>
+              <p class="upload-hint">JPG, PNG o WebP. Máx 5MB</p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving">
+          @if (saving) {
+            <i class="pi pi-spin pi-spinner"></i>
+          }
+          {{ 'common.save' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

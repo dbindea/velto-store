@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Fleet Manager",
+    "name": "Velto Store",
     "subtitle": "Gestiune internă de flotă"
   },
   "auth": {
-    "loginTitle": "Fleet Manager",
+    "loginTitle": "Velto Store",
     "loginSubtitle": "Acces intern",
     "loginWithGoogle": "Intră cu Google",
     "logout": "Deconectare",
@@ -33,7 +33,7 @@
     "pendingInspections": "Inspecții în așteptare"
   },
   "layout": {
-    "footer": "Fleet Manager v1.0",
+    "footer": "Velto Store v1.0",
     "userRoleAdmin": "Administrator",
     "userRoleEmployee": "Angajat"
   },
@@ -49,5 +49,83 @@
     "close": "Închide",
     "moduleInProgress": "Modul în pregătire",
     "welcome": "Bine ai venit"
+  },
+  "vehicles": {
+    "title": "Vehicule",
+    "subtitle": "Gestionează flota ta",
+    "new": "Vehicul nou",
+    "edit": "Editează vehicul",
+    "detail": "Detalii vehicul",
+    "searchPlaceholder": "Caută după marcă, model, placă...",
+    "noVehicles": "Nu există vehicule",
+    "addFirst": "Adaugă primul vehicul",
+    "viewDetail": "Vezi detalii",
+    "filterAllStatus": "Toate statusurile",
+    "filterAllCategories": "Toate categoriile",
+    "status": {
+      "available": "Disponibil",
+      "rented": "Închiriat",
+      "maintenance": "Întreținere",
+      "out_of_service": "Hors de funcțiune"
+    },
+    "fields": {
+      "brand": "Marcă",
+      "model": "Model",
+      "version": "Versiune",
+      "year": "An",
+      "plateNumber": "Număr de înmatriculare",
+      "category": "Categorie",
+      "acrissCode": "Cod ACRISS",
+      "fuelType": "Tip combustibil",
+      "transmission": "Transmisie",
+      "bodyType": "Tip caroserie",
+      "seats": "Locuri",
+      "doors": "Uși",
+      "trunkCapacity": "Capacitate portbagaj",
+      "status": "Status",
+      "currentKm": "Kilometraj actual",
+      "color": "Culoare",
+      "vin": "NUMĂR ȘASIU",
+      "description": "Descriere",
+      "publicEnabled": "Publică pe web",
+      "mainImage": "Fotografie principală",
+      "gallery": "Galerie foto"
+    },
+    "sections": {
+      "basicInfo": "Informații de bază",
+      "rentalClassification": "Clasificare de închiriere",
+      "features": "Caracteristici",
+      "photos": "Fotografii",
+      "history": "Istoric"
+    },
+    "tabs": {
+      "info": "Informații",
+      "features": "Caracteristici",
+      "photos": "Fotografii",
+      "history": "Istoric"
+    },
+    "features": {
+      "airConditioning": "Aer condiționat",
+      "navigation": "Navigație",
+      "parkingSensors": "Senzori de parcare",
+      "rearCamera": "Cameră spate",
+      "cruiseControl": "Control tracțiune"
+    },
+    "actions": {
+      "changeStatus": "Schimbă status",
+      "setMainImage": "Setează ca principal",
+      "deleteImage": "Șterge imagine",
+      "uploadPhoto": "Încarcă fotografie",
+      "addGalleryPhoto": "Adaugă la galerie"
+    },
+    "help": {
+      "acrissGenerated": "Acest cod este generat automat în funcție de categorie și caracteristici."
+    },
+    "mainPhoto": "Principală",
+    "noPhotos": "Nu există fotografii",
+    "historyPlaceholder": "Istoric în dezvoltare",
+    "changeStatusTitle": "Schimbă statusul vehiculului",
+    "deleteTitle": "Șterge vehicul",
+    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată."
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, signal, effect, computed } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 
 export type Language = 'es' | 'ro' | 'en';
 
@@ -11,18 +11,16 @@ interface TranslationMap {
 })
 export class TranslateService {
   private translations = signal<TranslationMap>({});
-  private currentLang = signal<Language>(this.getStoredLanguage());
-  private translationsCache: { [lang: string]: TranslationMap } = {};
+  private translationsCache: Record<string, TranslationMap> = {};
 
-  readonly language = this.currentLang.asReadonly();
-  readonly languageLabel = computed(() => this.getLanguageLabel(this.currentLang()));
-  readonly translationsReady = signal(false);
+  readonly language = signal<Language>(this.getInitialLanguage());
+  readonly languageLabel = computed(() => this.getLanguageLabel(this.language()));
 
   constructor() {
     this.preloadTranslations();
   }
 
-  private getStoredLanguage(): Language {
+  private getInitialLanguage(): Language {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('language') as Language;
       if (stored && ['es', 'ro', 'en'].includes(stored)) {
@@ -41,39 +39,56 @@ export class TranslateService {
     return labels[lang];
   }
 
-  private async preloadTranslations(): Promise<void> {
-    const lang = this.currentLang();
-    if (this.translationsCache[lang]) {
-      this.translations.set(this.translationsCache[lang]);
-      this.translationsReady.set(true);
-      return;
-    }
+  private preloadTranslations(): void {
+    const lang = this.language();
+    // Load synchronously using XMLHttpRequest to ensure translations are available immediately
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `/assets/i18n/${lang}.json`, false); // false = synchronous
+    xhr.send(null);
 
-    try {
-      const response = await fetch(`/assets/i18n/${lang}.json`);
-      if (response.ok) {
-        const data = await response.json();
+    if (xhr.status === 200) {
+      try {
+        const data = JSON.parse(xhr.responseText);
         this.translationsCache[lang] = data;
         this.translations.set(data);
-        this.translationsReady.set(true);
+      } catch (e) {
+        console.error('Error parsing translations:', e);
       }
-    } catch (error) {
-      console.error(`Error loading language ${lang}:`, error);
-      this.translationsReady.set(true);
+    } else {
+      console.error('Error loading translations:', xhr.status);
     }
   }
 
   async setLanguage(lang: Language): Promise<void> {
-    this.currentLang.set(lang);
+    this.language.set(lang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('language', lang);
     }
-    await this.preloadTranslations();
+
+    // Load async for subsequent changes
+    if (this.translationsCache[lang]) {
+      this.translations.set(this.translationsCache[lang]);
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `/assets/i18n/${lang}.json`, false);
+    xhr.send(null);
+
+    if (xhr.status === 200) {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        this.translationsCache[lang] = data;
+        this.translations.set(data);
+      } catch (e) {
+        console.error('Error parsing translations:', e);
+      }
+    }
   }
 
   translate(key: string): string {
+    const trans = this.translations();
     const keys = key.split('.');
-    let value: any = this.translations();
+    let value: any = trans;
 
     for (const k of keys) {
       if (value && typeof value === 'object' && k in value) {
@@ -87,7 +102,7 @@ export class TranslateService {
   }
 
   getCurrentLanguage(): Language {
-    return this.currentLang();
+    return this.language();
   }
 
   getAvailableLanguages(): { code: Language; label: string }[] {

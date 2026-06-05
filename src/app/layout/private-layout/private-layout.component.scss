@@ -40,7 +40,7 @@
 
 .sidebar-header {
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .logo {
@@ -71,6 +71,7 @@
   flex: 1;
   padding: 1rem 0.75rem;
   overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .nav-item {
@@ -104,7 +105,7 @@
 
 .sidebar-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .user-info {
@@ -163,7 +164,7 @@
 .header {
   height: 64px;
   background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   padding: 0 1.5rem;

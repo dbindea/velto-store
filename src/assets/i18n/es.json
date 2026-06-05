@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Fleet Manager",
+    "name": "Velto Store",
     "subtitle": "Gestión interna de flota"
   },
   "auth": {
-    "loginTitle": "Fleet Manager",
+    "loginTitle": "Velto Store",
     "loginSubtitle": "Acceso interno",
     "loginWithGoogle": "Entrar con Google",
     "logout": "Cerrar sesión",
@@ -33,7 +33,7 @@
     "pendingInspections": "Inspecciones pendientes"
   },
   "layout": {
-    "footer": "Fleet Manager v1.0",
+    "footer": "Velto Store v1.0",
     "userRoleAdmin": "Administrador",
     "userRoleEmployee": "Empleado"
   },
@@ -49,5 +49,83 @@
     "close": "Cerrar",
     "moduleInProgress": "Módulo en preparación",
     "welcome": "Bienvenido"
+  },
+  "vehicles": {
+    "title": "Vehículos",
+    "subtitle": "Gestiona tu flota",
+    "new": "Nuevo vehículo",
+    "edit": "Editar vehículo",
+    "detail": "Detalle del vehículo",
+    "searchPlaceholder": "Buscar por marca, modelo, matrícula...",
+    "noVehicles": "No hay vehículos todavía",
+    "addFirst": "Añadir primer vehículo",
+    "viewDetail": "Ver detalle",
+    "filterAllStatus": "Todos los estados",
+    "filterAllCategories": "Todas las categorías",
+    "status": {
+      "available": "Disponible",
+      "rented": "En alquiler",
+      "maintenance": "Mantenimiento",
+      "out_of_service": "Fuera de servicio"
+    },
+    "fields": {
+      "brand": "Marca",
+      "model": "Modelo",
+      "version": "Versión",
+      "year": "Año",
+      "plateNumber": "Matrícula",
+      "category": "Categoría",
+      "acrissCode": "Código ACRISS",
+      "fuelType": "Combustible",
+      "transmission": "Transmisión",
+      "bodyType": "Carrocería",
+      "seats": "Plazas",
+      "doors": "Puertas",
+      "trunkCapacity": "Capacidad maletero",
+      "status": "Estado",
+      "currentKm": "Kilometraje actual",
+      "color": "Color",
+      "vin": "Número de bastidor",
+      "description": "Descripción",
+      "publicEnabled": "Publicar en web",
+      "mainImage": "Foto principal",
+      "gallery": "Galería de fotos"
+    },
+    "sections": {
+      "basicInfo": "Información básica",
+      "rentalClassification": "Clasificación de alquiler",
+      "features": "Características",
+      "photos": "Fotos",
+      "history": "Historial"
+    },
+    "tabs": {
+      "info": "Información",
+      "features": "Características",
+      "photos": "Fotos",
+      "history": "Historial"
+    },
+    "features": {
+      "airConditioning": "Aire acondicionado",
+      "navigation": "Navegador",
+      "parkingSensors": "Sensores de aparcamiento",
+      "rearCamera": "Cámara trasera",
+      "cruiseControl": "Control de crucero"
+    },
+    "actions": {
+      "changeStatus": "Cambiar estado",
+      "setMainImage": "Establecer como principal",
+      "deleteImage": "Eliminar imagen",
+      "uploadPhoto": "Subir foto",
+      "addGalleryPhoto": "Añadir a galería"
+    },
+    "help": {
+      "acrissGenerated": "Este código se genera automáticamente según categoría y características."
+    },
+    "mainPhoto": "Principal",
+    "noPhotos": "No hay fotos disponibles",
+    "historyPlaceholder": "Historial en desarrollo",
+    "changeStatusTitle": "Cambiar estado del vehículo",
+    "deleteTitle": "Eliminar vehículo",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."
   }
 }
