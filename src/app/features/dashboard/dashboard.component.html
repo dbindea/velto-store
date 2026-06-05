@@ -1,0 +1,20 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>{{ 'dashboard.title' | translate }}</h1>
+    <p>{{ 'dashboard.subtitle' | translate }}</p>
+  </div>
+
+  <div class="stats-grid">
+    @for (stat of stats; track stat.labelKey) {
+      <div class="stat-card" [class]="'stat-' + stat.color">
+        <div class="stat-info">
+          <p class="stat-label">{{ stat.labelKey | translate }}</p>
+          <p class="stat-value">{{ stat.value }}</p>
+        </div>
+        <div class="stat-icon">
+          <i [class]="stat.iconClass"></i>
+        </div>
+      </div>
+    }
+  </div>
+</div>

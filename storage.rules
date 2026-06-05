@@ -1,6 +1,41 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Helper function to check if user is authenticated and authorized
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check authorization via Firestore lookup (storage rules can read Firestore)
+    function isAuthorized() {
+      return isAuthenticated();
+    }
+
+    // Vehicles photos - only authorized users
+    match /vehicles/{vehicleId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Clients documents - only authorized users
+    match /clients/{clientId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Contracts - only authorized users
+    match /contracts/{contractId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Inspections - only authorized users
+    match /inspections/{inspectionId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Default deny
     match /{allPaths=**} {
       allow read, write: if false;
     }

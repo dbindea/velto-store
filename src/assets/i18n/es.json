@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Fleet Manager",
+    "subtitle": "Gestión interna de flota"
+  },
+  "auth": {
+    "loginTitle": "Fleet Manager",
+    "loginSubtitle": "Acceso interno",
+    "loginWithGoogle": "Entrar con Google",
+    "logout": "Cerrar sesión",
+    "notAuthorized": "Tu cuenta no está autorizada para acceder a esta aplicación.",
+    "loading": "Verificando..."
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendario",
+    "reservations": "Reservas",
+    "vehicles": "Vehículos",
+    "clients": "Clientes",
+    "payments": "Pagos",
+    "expenses": "Gastos",
+    "contracts": "Contratos",
+    "inspections": "Inspecciones",
+    "reports": "Informes",
+    "settings": "Ajustes"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Bienvenido al sistema de gestión de flota",
+    "vehicles": "Vehículos",
+    "activeReservations": "Reservas activas",
+    "clients": "Clientes",
+    "pendingInspections": "Inspecciones pendientes"
+  },
+  "layout": {
+    "footer": "Fleet Manager v1.0",
+    "userRoleAdmin": "Administrador",
+    "userRoleEmployee": "Empleado"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "search": "Buscar",
+    "new": "Nuevo",
+    "back": "Volver",
+    "close": "Cerrar",
+    "moduleInProgress": "Módulo en preparación",
+    "welcome": "Bienvenido"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Fleet Manager",
+    "subtitle": "Gestiune internă de flotă"
+  },
+  "auth": {
+    "loginTitle": "Fleet Manager",
+    "loginSubtitle": "Acces intern",
+    "loginWithGoogle": "Intră cu Google",
+    "logout": "Deconectare",
+    "notAuthorized": "Contul tău nu are autorizare pentru a accesa această aplicație.",
+    "loading": "Verificare..."
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "reservations": "Rezervări",
+    "vehicles": "Vehicule",
+    "clients": "Clienți",
+    "payments": "Plăți",
+    "expenses": "Cheltuieli",
+    "contracts": "Contracte",
+    "inspections": "Inspecții",
+    "reports": "Rapoarte",
+    "settings": "Setări"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Bine ai venit în sistemul de gestionare a flotei",
+    "vehicles": "Vehicule",
+    "activeReservations": "Rezervări active",
+    "clients": "Clienți",
+    "pendingInspections": "Inspecții în așteptare"
+  },
+  "layout": {
+    "footer": "Fleet Manager v1.0",
+    "userRoleAdmin": "Administrator",
+    "userRoleEmployee": "Angajat"
+  },
+  "common": {
+    "loading": "Se încarcă...",
+    "save": "Salvează",
+    "cancel": "Anulează",
+    "edit": "Editează",
+    "delete": "Șterge",
+    "search": "Caută",
+    "new": "Nou",
+    "back": "Înapoi",
+    "close": "Închide",
+    "moduleInProgress": "Modul în pregătire",
+    "welcome": "Bine ai venit"
+  }
+}

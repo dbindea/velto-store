@@ -1,6 +1,77 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper function to check if user is authenticated and authorized
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAuthorized(email) {
+      return isAuthenticated() &&
+        request.auth.token.email == email &&
+        exists(/databases/$(database)/documents/authorizedUsers/$(email)) &&
+        get(/databases/$(database)/documents/authorizedUsers/$(email)).data.active == true;
+    }
+
+    function isAdmin(email) {
+      return isAuthenticated() &&
+        request.auth.token.email == email &&
+        exists(/databases/$(database)/documents/authorizedUsers/$(email)) &&
+        get(/databases/$(database)/documents/authorizedUsers/$(email)).data.active == true &&
+        get(/databases/$(database)/documents/authorizedUsers/$(email)).data.role == 'admin';
+    }
+
+    // authorizedUsers collection - users can only read their own document
+    match /authorizedUsers/{email} {
+      allow read: if isAuthenticated() && request.auth.token.email == email;
+      allow create: if isAdmin(request.resource.data.email);
+      allow update: if isAdmin(email);
+      allow delete: if isAdmin(email);
+    }
+
+    // vehicles collection - only authorized users
+    match /vehicles/{vehicleId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // reservations collection - only authorized users
+    match /reservations/{reservationId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // clients collection - only authorized users
+    match /clients/{clientId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // payments collection - only authorized users
+    match /payments/{paymentId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // expenses collection - only authorized users
+    match /expenses/{expenseId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // contracts collection - only authorized users
+    match /contracts/{contractId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // inspections collection - only authorized users
+    match /inspections/{inspectionId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
