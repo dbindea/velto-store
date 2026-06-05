@@ -32,7 +32,25 @@ export const routes: Routes = [
       },
       {
         path: 'vehicles',
-        loadComponent: () => import('./features/vehicles/vehicles.component').then(m => m.VehiclesComponent)
+        loadComponent: () => import('./features/vehicles/vehicles.component').then(m => m.VehiclesComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/vehicles/pages/vehicle-list/vehicle-list.component').then(m => m.VehicleListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/vehicles/pages/vehicle-form/vehicle-form.component').then(m => m.VehicleFormComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/vehicles/pages/vehicle-detail/vehicle-detail.component').then(m => m.VehicleDetailComponent)
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/vehicles/pages/vehicle-form/vehicle-form.component').then(m => m.VehicleFormComponent)
+          }
+        ]
       },
       {
         path: 'clients',
