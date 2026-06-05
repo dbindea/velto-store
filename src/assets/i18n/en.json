@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Fleet Manager",
+    "subtitle": "Internal fleet management"
+  },
+  "auth": {
+    "loginTitle": "Fleet Manager",
+    "loginSubtitle": "Internal access",
+    "loginWithGoogle": "Sign in with Google",
+    "logout": "Sign out",
+    "notAuthorized": "Your account is not authorized to access this application.",
+    "loading": "Verifying..."
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "reservations": "Reservations",
+    "vehicles": "Vehicles",
+    "clients": "Clients",
+    "payments": "Payments",
+    "expenses": "Expenses",
+    "contracts": "Contracts",
+    "inspections": "Inspections",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Welcome to the fleet management system",
+    "vehicles": "Vehicles",
+    "activeReservations": "Active reservations",
+    "clients": "Clients",
+    "pendingInspections": "Pending inspections"
+  },
+  "layout": {
+    "footer": "Fleet Manager v1.0",
+    "userRoleAdmin": "Administrator",
+    "userRoleEmployee": "Employee"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "new": "New",
+    "back": "Back",
+    "close": "Close",
+    "moduleInProgress": "Module in preparation",
+    "welcome": "Welcome"
+  }
+}

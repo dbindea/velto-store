@@ -1,0 +1,21 @@
+<div class="lang-selector">
+  <button class="lang-btn" (click)="toggleDropdown()">
+    <span>{{ getCurrentLangCode() }}</span>
+    <i class="pi" [class.pi-chevron-down]="!isOpen" [class.pi-chevron-up]="isOpen"></i>
+  </button>
+
+  @if (isOpen) {
+    <div class="dropdown">
+      @for (lang of translateService.getAvailableLanguages(); track lang.code) {
+        <button
+          class="dropdown-item"
+          [class.active]="lang.code === translateService.getCurrentLanguage()"
+          (click)="selectLanguage(lang.code)"
+        >
+          <span>{{ lang.label }}</span>
+          <i class="pi pi-check" [class.hidden]="lang.code !== translateService.getCurrentLanguage()"></i>
+        </button>
+      }
+    </div>
+  }
+</div>

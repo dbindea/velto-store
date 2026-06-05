@@ -1,0 +1,113 @@
+<div class="app-layout">
+  @if (sidebarOpen()) {
+    <div class="sidebar-overlay" (click)="closeSidebar()"></div>
+  }
+
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.open]="sidebarOpen()">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="pi pi-car"></i>
+        </div>
+        <span class="logo-text">{{ 'app.name' | translate }}</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (item of menuItems; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          class="nav-item"
+          (click)="closeSidebar()"
+        >
+          <i [class]="item.iconClass"></i>
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ (authService.authorizedUser()?.displayName || authService.authorizedUser()?.email || 'U')[0].toUpperCase() }}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ authService.authorizedUser()?.displayName || authService.authorizedUser()?.email }}</span>
+          <span class="user-role">
+            {{ authService.authorizedUser()?.role === 'admin' ? ('layout.userRoleAdmin' | translate) : ('layout.userRoleEmployee' | translate) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-wrapper">
+    <header class="header">
+      <button class="menu-toggle" (click)="toggleSidebar()">
+        <i class="pi pi-bars"></i>
+      </button>
+
+      <div class="header-spacer"></div>
+
+      <button class="icon-btn" (click)="toggleDarkMode()">
+        @if (themeService.isDark()) {
+          <i class="pi pi-sun"></i>
+        } @else {
+          <i class="pi pi-moon"></i>
+        }
+      </button>
+
+      <app-language-selector />
+
+      <button class="icon-btn" (click)="logout()">
+        <i class="pi pi-sign-out"></i>
+      </button>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+
+    <footer class="footer">
+      <span>{{ 'layout.footer' | translate }}</span>
+    </footer>
+  </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-nav">
+    @for (item of mobileMenuItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        class="mobile-nav-item"
+      >
+        <i [class]="item.iconClass"></i>
+        <span>{{ item.labelKey | translate }}</span>
+      </a>
+    }
+
+    <div class="mobile-nav-item" (click)="toggleMoreMenu()">
+      <i class="pi pi-bars"></i>
+      <span>Más</span>
+
+      @if (moreMenuOpen()) {
+        <div class="more-menu">
+          @for (item of remainingMenuItems; track item.path) {
+            <a
+              [routerLink]="item.path"
+              routerLinkActive="active"
+              class="more-menu-item"
+              (click)="moreMenuOpen.set(false)"
+            >
+              <i [class]="item.iconClass"></i>
+              <span>{{ item.labelKey | translate }}</span>
+            </a>
+          }
+        </div>
+      }
+    </div>
+  </nav>
+</div>
