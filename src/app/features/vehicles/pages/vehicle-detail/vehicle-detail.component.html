@@ -112,10 +112,10 @@
               <label>{{ 'vehicles.fields.seats' | translate }}</label>
               <span>{{ vehicle.seats }}</span>
             </div>
-            @if (vehicle.doors) {
+            @if (vehicle.luggageCapacity) {
               <div class="info-item">
-                <label>{{ 'vehicles.fields.doors' | translate }}</label>
-                <span>{{ vehicle.doors }}</span>
+                <label>{{ 'vehicles.fields.luggageCapacity' | translate }}</label>
+                <span>{{ vehicle.luggageCapacity }}</span>
               </div>
             }
             @if (vehicle.currentKm) {
@@ -128,12 +128,6 @@
               <div class="info-item">
                 <label>{{ 'vehicles.fields.color' | translate }}</label>
                 <span>{{ vehicle.color }}</span>
-              </div>
-            }
-            @if (vehicle.trunkCapacityLiters) {
-              <div class="info-item">
-                <label>{{ 'vehicles.fields.trunkCapacity' | translate }}</label>
-                <span>{{ vehicle.trunkCapacityLiters }} L</span>
               </div>
             }
             @if (vehicle.vin) {

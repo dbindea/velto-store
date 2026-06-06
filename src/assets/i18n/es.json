@@ -75,13 +75,12 @@
       "year": "Año",
       "plateNumber": "Matrícula",
       "category": "Categoría",
+      "bodyType": "Tipo de carrocería",
       "acrissCode": "Código ACRISS",
       "fuelType": "Combustible",
       "transmission": "Transmisión",
-      "bodyType": "Carrocería",
       "seats": "Plazas",
-      "doors": "Puertas",
-      "trunkCapacity": "Capacidad maletero",
+      "luggageCapacity": "Equipaje",
       "status": "Estado",
       "currentKm": "Kilometraje actual",
       "color": "Color",
@@ -90,6 +89,15 @@
       "publicEnabled": "Publicar en web",
       "mainImage": "Foto principal",
       "gallery": "Galería de fotos"
+    },
+    "bodyTypes": {
+      "2_4_doors": "2/4 puertas",
+      "4_5_doors": "4/5 puertas",
+      "estate": "Familiar",
+      "suv": "SUV",
+      "van": "Furgoneta",
+      "cabrio": "Cabrio",
+      "mpv": "Monovolumen"
     },
     "sections": {
       "basicInfo": "Información básica",
@@ -119,7 +127,7 @@
       "addGalleryPhoto": "Añadir a galería"
     },
     "help": {
-      "acrissGenerated": "Este código se genera automáticamente según categoría y características."
+      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C (estándar Amadeus)"
     },
     "mainPhoto": "Principal",
     "noPhotos": "No hay fotos disponibles",

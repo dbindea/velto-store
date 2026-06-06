@@ -75,13 +75,12 @@
       "year": "An",
       "plateNumber": "Număr de înmatriculare",
       "category": "Categorie",
+      "bodyType": "Tip caroserie",
       "acrissCode": "Cod ACRISS",
       "fuelType": "Tip combustibil",
       "transmission": "Transmisie",
-      "bodyType": "Tip caroserie",
       "seats": "Locuri",
-      "doors": "Uși",
-      "trunkCapacity": "Capacitate portbagaj",
+      "luggageCapacity": "Bagaje",
       "status": "Status",
       "currentKm": "Kilometraj actual",
       "color": "Culoare",
@@ -90,6 +89,15 @@
       "publicEnabled": "Publică pe web",
       "mainImage": "Fotografie principală",
       "gallery": "Galerie foto"
+    },
+    "bodyTypes": {
+      "2_4_doors": "2/4 uși",
+      "4_5_doors": "4/5 uși",
+      "estate": "Break",
+      "suv": "SUV",
+      "van": "Duba",
+      "cabrio": "Cabrio",
+      "mpv": "Monovolum"
     },
     "sections": {
       "basicInfo": "Informații de bază",
@@ -119,7 +127,7 @@
       "addGalleryPhoto": "Adaugă la galerie"
     },
     "help": {
-      "acrissGenerated": "Acest cod este generat automat în funcție de categorie și caracteristici."
+      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C (standard Amadeus)"
     },
     "mainPhoto": "Principală",
     "noPhotos": "Nu există fotografii",

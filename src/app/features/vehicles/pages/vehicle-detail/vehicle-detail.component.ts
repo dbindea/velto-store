@@ -6,6 +6,7 @@ import { VehicleService } from '../../services/vehicle.service';
 import {
   Vehicle,
   VehicleStatus,
+  BodyType,
   VEHICLE_STATUS_LABELS,
   VEHICLE_CATEGORY_LABELS,
   FUEL_TYPE_LABELS,
@@ -74,8 +75,8 @@ export class VehicleDetailComponent implements OnInit {
     return TRANSMISSION_LABELS[trans as keyof typeof TRANSMISSION_LABELS] || trans;
   }
 
-  getBodyTypeLabel(body: string): string {
-    return BODY_TYPE_LABELS[body as keyof typeof BODY_TYPE_LABELS] || body;
+  getBodyTypeLabel(body: BodyType): string {
+    return BODY_TYPE_LABELS[body] || body;
   }
 
   getStatusClass(status: VehicleStatus): string {

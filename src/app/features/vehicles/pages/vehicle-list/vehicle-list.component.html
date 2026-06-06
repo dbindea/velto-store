@@ -76,6 +76,12 @@
             <div class="vehicle-meta">
               <span class="acriss-code">{{ vehicle.acrissCode }}</span>
               <span class="category">{{ getCategoryLabel(vehicle.category) | translate }}</span>
+              @if (vehicle.luggageCapacity) {
+                <span class="luggage" title="{{ 'vehicles.fields.luggageCapacity' | translate }}">
+                  <i class="pi pi-shopping-bag"></i>
+                  {{ vehicle.luggageCapacity }}
+                </span>
+              }
             </div>
             <p class="plate">{{ vehicle.plateNumber }}</p>
           </div>

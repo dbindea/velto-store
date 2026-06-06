@@ -75,13 +75,12 @@
       "year": "Year",
       "plateNumber": "Plate number",
       "category": "Category",
+      "bodyType": "Body type",
       "acrissCode": "ACRISS code",
       "fuelType": "Fuel type",
       "transmission": "Transmission",
-      "bodyType": "Body type",
       "seats": "Seats",
-      "doors": "Doors",
-      "trunkCapacity": "Trunk capacity",
+      "luggageCapacity": "Luggage",
       "status": "Status",
       "currentKm": "Current km",
       "color": "Color",
@@ -90,6 +89,15 @@
       "publicEnabled": "Publish to web",
       "mainImage": "Main photo",
       "gallery": "Photo gallery"
+    },
+    "bodyTypes": {
+      "2_4_doors": "2/4 doors",
+      "4_5_doors": "4/5 doors",
+      "estate": "Estate/Wagon",
+      "suv": "SUV",
+      "van": "Van/Passengers",
+      "cabrio": "Cabriolet",
+      "mpv": "MPV"
     },
     "sections": {
       "basicInfo": "Basic information",
@@ -119,7 +127,7 @@
       "addGalleryPhoto": "Add to gallery"
     },
     "help": {
-      "acrissGenerated": "This code is automatically generated based on category and features."
+      "acrissGenerated": "ACRISS/SIPP code: Category + Body type + Transmission + Fuel/A/C (Amadeus standard)"
     },
     "mainPhoto": "Main",
     "noPhotos": "No photos available",
