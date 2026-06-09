@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Velto Store",
+    "name": "VELTO",
     "subtitle": "Gestión interna de flota"
   },
   "auth": {
-    "loginTitle": "Velto Store",
+    "loginTitle": "VELTO",
     "loginSubtitle": "Acceso interno",
     "loginWithGoogle": "Entrar con Google",
     "logout": "Cerrar sesión",
@@ -33,7 +33,7 @@
     "pendingInspections": "Inspecciones pendientes"
   },
   "layout": {
-    "footer": "Velto Store v1.0",
+    "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrador",
     "userRoleEmployee": "Empleado"
   },
@@ -132,6 +132,17 @@
     "mainPhoto": "Principal",
     "noPhotos": "No hay fotos disponibles",
     "historyPlaceholder": "Historial en desarrollo",
+    "photos": {
+      "openGallery": "Ver galería",
+      "closeGallery": "Cerrar galería",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "mainPhoto": "Principal",
+      "gallery": "Galería",
+      "count": "{{count}} fotos",
+      "imageAlt": "Foto del vehículo",
+      "thumbnail": "Miniatura"
+    },
     "changeStatusTitle": "Cambiar estado del vehículo",
     "deleteTitle": "Eliminar vehículo",
     "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."

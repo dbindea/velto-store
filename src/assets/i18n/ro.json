@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Velto Store",
+    "name": "VELTO",
     "subtitle": "Gestiune internă de flotă"
   },
   "auth": {
-    "loginTitle": "Velto Store",
+    "loginTitle": "VELTO",
     "loginSubtitle": "Acces intern",
     "loginWithGoogle": "Intră cu Google",
     "logout": "Deconectare",
@@ -33,7 +33,7 @@
     "pendingInspections": "Inspecții în așteptare"
   },
   "layout": {
-    "footer": "Velto Store v1.0",
+    "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrator",
     "userRoleEmployee": "Angajat"
   },
@@ -132,6 +132,17 @@
     "mainPhoto": "Principală",
     "noPhotos": "Nu există fotografii",
     "historyPlaceholder": "Istoric în dezvoltare",
+    "photos": {
+      "openGallery": "Vezi galeria",
+      "closeGallery": "Închide galeria",
+      "previous": "Anterior",
+      "next": "Următor",
+      "mainPhoto": "Principală",
+      "gallery": "Galerie",
+      "count": "{{count}} fotografii",
+      "imageAlt": "Fotografie vehicul",
+      "thumbnail": "Miniatură"
+    },
     "changeStatusTitle": "Schimbă statusul vehiculului",
     "deleteTitle": "Șterge vehicul",
     "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată."

@@ -15,6 +15,19 @@ export class VehicleService {
     this.vehiclesRef = collection(this.firestore, 'vehicles');
   }
 
+  /** Removes undefined/null fields recursively - required by Firestore */
+  private cleanData<T extends object>(data: T): Partial<T> {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== null) {
+        cleaned[key] = typeof value === 'object' && !Array.isArray(value) && value !== null
+          ? this.cleanData(value)
+          : value;
+      }
+    }
+    return cleaned;
+  }
+
   getVehicles(): Observable<Vehicle[]> {
     const q = query(this.vehiclesRef, orderBy('createdAt', 'desc'));
     return from(getDocs(q)).pipe(
@@ -33,7 +46,7 @@ export class VehicleService {
   }
 
   async createVehicle(vehicle: VehicleFormData, acrissCode: string): Promise<string> {
-    const docRef = await addDoc(this.vehiclesRef, {
+    const data = this.cleanData({
       ...vehicle,
       acrissCode,
       publicEnabled: false,
@@ -41,15 +54,16 @@ export class VehicleService {
       images: [],
       createdAt: { seconds: Date.now() / 1000 }
     });
+    const docRef = await addDoc(this.vehiclesRef, data);
     return docRef.id;
   }
 
   async updateVehicle(id: string, data: Partial<VehicleFormData>): Promise<void> {
     const docRef = doc(this.firestore, `vehicles/${id}`);
-    await updateDoc(docRef, {
+    await updateDoc(docRef, this.cleanData({
       ...data,
       updatedAt: { seconds: Date.now() / 1000 }
-    });
+    }));
   }
 
   async deleteVehicle(id: string): Promise<void> {

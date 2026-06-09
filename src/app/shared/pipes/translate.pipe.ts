@@ -1,4 +1,4 @@
-import { Pipe, PipeTransform, inject, effect } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
 import { TranslateService } from '@core/i18n/translate.service';
 
 @Pipe({
@@ -8,27 +8,10 @@ import { TranslateService } from '@core/i18n/translate.service';
 })
 export class TranslatePipe implements PipeTransform {
   private translateService = inject(TranslateService);
-  private lastKey = '';
-  private lastValue = '';
-  private currentLang = '';
-
-  constructor() {
-    effect(() => {
-      const lang = this.translateService.language();
-      if (lang !== this.currentLang) {
-        this.currentLang = lang;
-        if (this.lastKey) {
-          this.lastValue = this.translateService.translate(this.lastKey);
-        }
-      }
-    });
-  }
 
   transform(key: string): string {
-    if (key !== this.lastKey) {
-      this.lastKey = key;
-      this.lastValue = this.translateService.translate(key);
-    }
-    return this.lastValue;
+    // Access translations signal to make Angular reactive to language changes
+    this.translateService['translations']();
+    return this.translateService.translate(key);
   }
 }

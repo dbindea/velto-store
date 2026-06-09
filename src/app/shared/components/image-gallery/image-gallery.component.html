@@ -1,0 +1,60 @@
+@if (isOpen && images.length > 0) {
+  <div class="gallery-overlay" (click)="onOverlayClick($event)">
+    <div class="gallery-container">
+      <!-- Header -->
+      <div class="gallery-header">
+        <span class="gallery-counter">{{ counter }}</span>
+        <button class="gallery-close" (click)="onClose()" [title]="'vehicles.photos.closeGallery' | translate">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <!-- Main image -->
+      <div class="gallery-main">
+        @if (currentImage) {
+          <img 
+            [src]="currentImage.url" 
+            [alt]="'vehicles.photos.imageAlt' | translate"
+            class="gallery-image"
+          />
+        }
+      </div>
+
+      <!-- Navigation -->
+      <div class="gallery-nav">
+        <button 
+          class="nav-btn nav-prev" 
+          (click)="previous()"
+          [disabled]="currentIndex() === 0"
+          [title]="'vehicles.photos.previous' | translate"
+        >
+          <i class="pi pi-chevron-left"></i>
+        </button>
+
+        <button 
+          class="nav-btn nav-next" 
+          (click)="next()"
+          [disabled]="currentIndex() === images.length - 1"
+          [title]="'vehicles.photos.next' | translate"
+        >
+          <i class="pi pi-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Thumbnails -->
+      @if (images.length > 1) {
+        <div class="gallery-thumbnails">
+          @for (image of images; track trackByIndex($index)) {
+            <button 
+              class="thumbnail"
+              [class.active]="currentIndex() === $index"
+              (click)="goToIndex($index)"
+            >
+              <img [src]="image.url" [alt]="'vehicles.photos.thumbnail' | translate" loading="lazy" />
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

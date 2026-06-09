@@ -1,8 +1,9 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { VehicleService } from '../../services/vehicle.service';
+import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-gallery/image-gallery.component';
 import {
   Vehicle,
   VehicleStatus,
@@ -17,7 +18,7 @@ import {
 @Component({
   selector: 'app-vehicle-detail',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, ImageGalleryComponent],
   templateUrl: './vehicle-detail.component.html',
   styleUrl: './vehicle-detail.component.scss'
 })
@@ -31,8 +32,41 @@ export class VehicleDetailComponent implements OnInit {
   activeTab: 'info' | 'features' | 'photos' | 'history' = 'info';
   showStatusModal = false;
   showDeleteModal = false;
+  showGallery = false;
+  galleryIndex = 0;
 
   statusOptions: VehicleStatus[] = ['available', 'rented', 'maintenance', 'out_of_service'];
+
+  // All images combined: mainImageUrl first, then gallery (excluding main)
+  galleryImages = computed<GalleryImage[]>(() => {
+    if (!this.vehicle) return [];
+    
+    const images: GalleryImage[] = [];
+    
+    // Add main image first
+    if (this.vehicle.mainImageUrl) {
+      images.push({
+        url: this.vehicle.mainImageUrl,
+        path: '',
+        isMain: true
+      });
+    }
+    
+    // Add gallery images, excluding the main one (avoid duplicates)
+    if (this.vehicle.images) {
+      for (const img of this.vehicle.images) {
+        if (img.url !== this.vehicle?.mainImageUrl) {
+          images.push({
+            url: img.url,
+            path: img.path,
+            isMain: img.isMain
+          });
+        }
+      }
+    }
+    
+    return images;
+  });
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -57,6 +91,21 @@ export class VehicleDetailComponent implements OnInit {
 
   setTab(tab: 'info' | 'features' | 'photos' | 'history'): void {
     this.activeTab = tab;
+  }
+
+  openGallery(index = 0): void {
+    this.galleryIndex = index;
+    this.showGallery = true;
+  }
+
+  openGalleryByUrl(url: string): void {
+    const images = this.galleryImages();
+    const index = images.findIndex(img => img.url === url);
+    this.openGallery(index >= 0 ? index : 0);
+  }
+
+  closeGallery(): void {
+    this.showGallery = false;
   }
 
   getStatusLabel(status: VehicleStatus): string {
@@ -130,5 +179,9 @@ export class VehicleDetailComponent implements OnInit {
     if (this.vehicle?.id) {
       this.router.navigate(['/vehicles', this.vehicle.id, 'edit']);
     }
+  }
+
+  trackByIndex(index: number): number {
+    return index;
   }
 }

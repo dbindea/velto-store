@@ -60,7 +60,12 @@
         <div class="vehicle-card" (click)="viewDetail(vehicle)">
           <div class="vehicle-image">
             @if (vehicle.mainImageUrl) {
-              <img [src]="vehicle.mainImageUrl" [alt]="vehicle.brand + ' ' + vehicle.model" />
+              <img 
+                [src]="vehicle.mainImageUrl" 
+                [alt]="vehicle.brand + ' ' + vehicle.model"
+                loading="lazy"
+                decoding="async"
+              />
             } @else {
               <div class="vehicle-image-placeholder">
                 <i class="pi pi-car"></i>
@@ -69,6 +74,12 @@
             <span class="vehicle-status" [class]="getStatusClass(vehicle.status)">
               {{ getStatusLabel(vehicle.status) | translate }}
             </span>
+            @if (vehicle.images && vehicle.images.length > 0) {
+              <span class="photo-count" [title]="'vehicles.photos.count' | translate">
+                <i class="pi pi-images"></i>
+                {{ vehicle.images.length }}
+              </span>
+            }
           </div>
 
           <div class="vehicle-info">
