@@ -8,7 +8,10 @@
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "deploy:hosting": "ng build && firebase deploy --only hosting",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:all": "npm run build && firebase deploy",
+    "serve:hosting": "npm run build && firebase emulators:start --only hosting",
     "firebase:emulators": "firebase emulators:start"
   },
   "prettier": {

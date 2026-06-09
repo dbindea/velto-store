@@ -6,11 +6,10 @@ Aplicación Angular para gestión de flota de vehículos de alquiler.
 
 - **Angular 20** con standalone components
 - **TypeScript**
-- **Firebase 12** (Auth, Firestore, Storage)
+- **Firebase 12** (Auth, Firestore, Storage, Hosting)
 - **Tailwind CSS v4**
 - **PrimeIcons** - Librería de iconos
 - **AngularFire 20**
-- **Netlify** (hosting)
 
 ### Por qué PrimeIcons
 
@@ -20,6 +19,7 @@ Se usa PrimeIcons por ser la librería de iconos más compatible con Angular, ma
 
 - Node.js 18.19+ o 20.x+
 - npm 10.x+
+- Firebase CLI (`npm install -g firebase-tools`)
 
 ## Instalación
 
@@ -40,34 +40,47 @@ npm install
    - **Authentication**: Authentication > Get started
    - **Storage**: Storage > Get started
 
-## Despliegue en Netlify
+## Despliegue en Firebase Hosting
 
-### Configuración
+### Configuración actual
 
-El proyecto incluye `netlify.toml` con la configuración correcta para Angular SPA:
-
-```toml
-[build]
-  command = "npm run build"
-  publish = "dist/velto-store/browser"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-```
+El proyecto ya está configurado para desplegar en Firebase Hosting:
+- `firebase.json` - Configuración de Hosting, Firestore y Storage
+- `.firebaserc` - Apunta al proyecto `velto-store`
+- `dist/velto-store/browser` - Carpeta de salida del build Angular
 
 ### Desplegar
 
-1. Conecta tu repositorio en [Netlify](https://netlify.com)
-2. Netlify detectará automáticamente la configuración
-3. O usa CLI:
+```bash
+# Login en Firebase
+firebase login
+
+# Deploy solo hosting (frontend)
+npm run deploy:hosting
+
+# Deploy completo (hosting + firestore + storage)
+npm run deploy:all
+
+# Deploy desde cero
+npm run deploy
+```
+
+### Probar localmente con emuladores
 
 ```bash
-npm install -g netlify-cli
-netlify login
-netlify deploy --prod
+# Solo hosting
+npm run serve:hosting
+
+# Todos los servicios
+npm run firebase:emulators
 ```
+
+### Configurar dominio propio
+
+1. Ve a Firebase Console > Hosting
+2. Conecta tu dominio personalizado
+3. Configura los registros DNS sugeridos
+4. Espera la verificación SSL
 
 ## Autenticación con Google
 
@@ -193,6 +206,20 @@ src/app/
         └── translate.pipe.ts         # Pipe para traducciones
 ```
 
+## Arquitectura Firebase
+
+```
+Firebase Hosting (Frontend)
+├── Angular App
+└── Rutas SPA (todas → index.html)
+
+Firebase Backend
+├── Authentication (Google Auth)
+├── Firestore (base de datos en tiempo real)
+├── Storage (archivos: vehículos, contratos, etc.)
+└── Cloud Functions (futuro) - prepara con: firebase init functions
+```
+
 ## Reglas de Seguridad
 
 ### Firestore Rules
@@ -218,13 +245,31 @@ Las reglas están en `storage.rules`. Resumen:
 | `npm start` | Iniciar servidor de desarrollo |
 | `npm run build` | Build de desarrollo |
 | `npm run build:prod` | Build de producción |
+| `npm run deploy` | Build + deploy hosting |
+| `npm run deploy:hosting` | Build + deploy solo hosting |
+| `npm run deploy:all` | Build + deploy completo |
+| `npm run serve:hosting` | Probar hosting local con build |
+| `npm run firebase:emulators` | Iniciar emuladores Firebase |
 
-## Próximos Pasos
+## Futuros enhancements
 
-Este proyecto está preparado para añadir:
+### Cloud Functions
 
-- Módulo de vehículos
-- Módulo de reservas
-- Modelo Firestore completo
-- Subida de contratos PDF
-- Dashboard de gestión
+El proyecto está preparado para añadir Cloud Functions en el futuro:
+
+```bash
+firebase init functions
+```
+
+Esto permitirá implementar:
+- APIs backend personalizadas
+- Webhooks para integraciones
+- Processing asíncrono (reservas, notificaciones)
+- Scheduler jobs (limpieza, reportes)
+
+### Autres integraciones
+
+- Push notifications con Firebase Cloud Messaging
+- Analytics con Firebase Analytics
+- Crashlytics para monitoring de errores
+- Remote Config para feature flags

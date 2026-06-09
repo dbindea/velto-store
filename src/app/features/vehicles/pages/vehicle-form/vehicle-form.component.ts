@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { VehicleService } from '../../services/vehicle.service';
@@ -9,9 +9,9 @@ import {
   VehicleFormData,
   VehicleStatus,
   VehicleCategory,
+  BodyType,
   FuelType,
   TransmissionType,
-  BodyType,
   VEHICLE_STATUS_LABELS,
   VEHICLE_CATEGORY_LABELS,
   FUEL_TYPE_LABELS,
@@ -41,9 +41,9 @@ export class VehicleFormComponent implements OnInit {
 
   statusOptions = Object.keys(VEHICLE_STATUS_LABELS) as VehicleStatus[];
   categoryOptions = Object.keys(VEHICLE_CATEGORY_LABELS) as VehicleCategory[];
+  bodyTypeOptions = Object.keys(BODY_TYPE_LABELS) as BodyType[];
   fuelOptions = Object.keys(FUEL_TYPE_LABELS) as FuelType[];
   transmissionOptions = Object.keys(TRANSMISSION_LABELS) as TransmissionType[];
-  bodyTypeOptions = Object.keys(BODY_TYPE_LABELS) as BodyType[];
 
   currentYear = new Date().getFullYear();
   yearOptions: number[] = [];
@@ -76,12 +76,11 @@ export class VehicleFormComponent implements OnInit {
           year: vehicle.year,
           plateNumber: vehicle.plateNumber,
           category: vehicle.category,
+          bodyType: vehicle.bodyType,
           fuelType: vehicle.fuelType,
           transmission: vehicle.transmission,
-          bodyType: vehicle.bodyType,
           seats: vehicle.seats,
-          doors: vehicle.doors,
-          trunkCapacityLiters: vehicle.trunkCapacityLiters,
+          luggageCapacity: vehicle.luggageCapacity || 2,
           status: vehicle.status,
           currentKm: vehicle.currentKm,
           color: vehicle.color || '',
@@ -108,12 +107,11 @@ export class VehicleFormComponent implements OnInit {
       year: this.currentYear,
       plateNumber: '',
       category: 'economy',
+      bodyType: '4_5_doors',
       fuelType: 'petrol',
       transmission: 'manual',
-      bodyType: '5_doors',
       seats: 5,
-      doors: 5,
-      trunkCapacityLiters: undefined,
+      luggageCapacity: 2,
       status: 'available',
       currentKm: undefined,
       color: '',
@@ -142,6 +140,20 @@ export class VehicleFormComponent implements OnInit {
   }
 
   onFieldChange(): void {
+    this.updateAcrissCode();
+  }
+
+  onPlateInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    input.value = input.value.toUpperCase().trim();
+    this.formData.plateNumber = input.value;
+    this.updateAcrissCode();
+  }
+
+  onVinInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    input.value = input.value.toUpperCase().replace(/\s/g, '');
+    this.formData.vin = input.value;
     this.updateAcrissCode();
   }
 

@@ -75,9 +75,9 @@
               <input
                 type="text"
                 id="plateNumber"
-                [(ngModel)]="formData.plateNumber"
+                [ngModel]="formData.plateNumber"
+                (input)="onPlateInput($event)"
                 name="plateNumber"
-                (input)="onFieldChange()"
                 required
                 class="form-control plate-input"
               />
@@ -110,7 +110,8 @@
               <input
                 type="text"
                 id="vin"
-                [(ngModel)]="formData.vin"
+                [ngModel]="formData.vin"
+                (input)="onVinInput($event)"
                 name="vin"
                 class="form-control"
               />
@@ -173,18 +174,6 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="doors">{{ 'vehicles.fields.doors' | translate }}</label>
-              <input
-                type="number"
-                id="doors"
-                [(ngModel)]="formData.doors"
-                name="doors"
-                min="2"
-                max="6"
-                class="form-control"
-              />
-            </div>
-            <div class="form-group">
               <label for="seats">{{ 'vehicles.fields.seats' | translate }} *</label>
               <input
                 type="number"
@@ -200,14 +189,16 @@
           </div>
 
           <div class="form-group">
-            <label for="trunkCapacity">{{ 'vehicles.fields.trunkCapacity' | translate }}</label>
+            <label for="luggageCapacity">{{ 'vehicles.fields.luggageCapacity' | translate }} *</label>
             <input
               type="number"
-              id="trunkCapacity"
-              [(ngModel)]="formData.trunkCapacityLiters"
-              name="trunkCapacityLiters"
+              id="luggageCapacity"
+              [(ngModel)]="formData.luggageCapacity"
+              name="luggageCapacity"
+              required
+              min="0"
+              max="10"
               class="form-control"
-              placeholder="Litros"
             />
           </div>
         </div>
@@ -241,7 +232,7 @@
                 class="form-control"
               >
                 @for (trans of transmissionOptions; track trans) {
-                  <option [value]="trans">{{ getTransmissionLabel(trans) | translate }}</option>
+                  <option [value]="$any(trans)">{{ getTransmissionLabel(trans) | translate }}</option>
                 }
               </select>
             </div>
@@ -316,7 +307,7 @@
                   hidden
                 />
               </label>
-              <p class="upload-hint">JPG, PNG o WebP. Máx 5MB</p>
+              <p class="upload-hint">JPG, PNG o WebP. Max 5MB</p>
             </div>
           </div>
 
@@ -333,7 +324,7 @@
                   hidden
                 />
               </label>
-              <p class="upload-hint">JPG, PNG o WebP. Máx 5MB</p>
+              <p class="upload-hint">JPG, PNG o WebP. Max 5MB</p>
             </div>
           </div>
         }

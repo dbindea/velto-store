@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Velto Store",
+    "name": "VELTO",
     "subtitle": "Gestión interna de flota"
   },
   "auth": {
-    "loginTitle": "Velto Store",
+    "loginTitle": "VELTO",
     "loginSubtitle": "Acceso interno",
     "loginWithGoogle": "Entrar con Google",
     "logout": "Cerrar sesión",
@@ -33,7 +33,7 @@
     "pendingInspections": "Inspecciones pendientes"
   },
   "layout": {
-    "footer": "Velto Store v1.0",
+    "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrador",
     "userRoleEmployee": "Empleado"
   },
@@ -75,13 +75,12 @@
       "year": "Año",
       "plateNumber": "Matrícula",
       "category": "Categoría",
+      "bodyType": "Tipo de carrocería",
       "acrissCode": "Código ACRISS",
       "fuelType": "Combustible",
       "transmission": "Transmisión",
-      "bodyType": "Carrocería",
       "seats": "Plazas",
-      "doors": "Puertas",
-      "trunkCapacity": "Capacidad maletero",
+      "luggageCapacity": "Equipaje",
       "status": "Estado",
       "currentKm": "Kilometraje actual",
       "color": "Color",
@@ -90,6 +89,15 @@
       "publicEnabled": "Publicar en web",
       "mainImage": "Foto principal",
       "gallery": "Galería de fotos"
+    },
+    "bodyTypes": {
+      "2_4_doors": "2/4 puertas",
+      "4_5_doors": "4/5 puertas",
+      "estate": "Familiar",
+      "suv": "SUV",
+      "van": "Furgoneta",
+      "cabrio": "Cabrio",
+      "mpv": "Monovolumen"
     },
     "sections": {
       "basicInfo": "Información básica",
@@ -119,11 +127,22 @@
       "addGalleryPhoto": "Añadir a galería"
     },
     "help": {
-      "acrissGenerated": "Este código se genera automáticamente según categoría y características."
+      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C (estándar Amadeus)"
     },
     "mainPhoto": "Principal",
     "noPhotos": "No hay fotos disponibles",
     "historyPlaceholder": "Historial en desarrollo",
+    "photos": {
+      "openGallery": "Ver galería",
+      "closeGallery": "Cerrar galería",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "mainPhoto": "Principal",
+      "gallery": "Galería",
+      "count": "{{count}} fotos",
+      "imageAlt": "Foto del vehículo",
+      "thumbnail": "Miniatura"
+    },
     "changeStatusTitle": "Cambiar estado del vehículo",
     "deleteTitle": "Eliminar vehículo",
     "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."

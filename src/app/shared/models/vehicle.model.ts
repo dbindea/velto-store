@@ -2,11 +2,11 @@ export type VehicleStatus = 'available' | 'rented' | 'maintenance' | 'out_of_ser
 
 export type VehicleCategory = 'mini' | 'economy' | 'compact' | 'intermediate' | 'standard' | 'fullsize' | 'premium' | 'suv' | 'van';
 
+export type BodyType = '2_4_doors' | '4_5_doors' | 'estate' | 'suv' | 'van' | 'cabrio' | 'mpv';
+
 export type FuelType = 'diesel' | 'petrol' | 'hybrid' | 'electric';
 
 export type TransmissionType = 'manual' | 'automatic';
-
-export type BodyType = '3_doors' | '5_doors' | 'suv' | 'monovolume' | 'van';
 
 export interface VehicleImage {
   url: string;
@@ -23,13 +23,12 @@ export interface Vehicle {
   year: number;
   plateNumber: string;
   category: VehicleCategory;
+  bodyType: BodyType;
   acrissCode: string;
   fuelType: FuelType;
   transmission: TransmissionType;
-  bodyType: BodyType;
   seats: number;
-  doors?: number;
-  trunkCapacityLiters?: number;
+  luggageCapacity: number;
   status: VehicleStatus;
   currentKm?: number;
   color?: string;
@@ -58,12 +57,11 @@ export interface VehicleFormData {
   year: number;
   plateNumber: string;
   category: VehicleCategory;
+  bodyType: BodyType;
   fuelType: FuelType;
   transmission: TransmissionType;
-  bodyType: BodyType;
   seats: number;
-  doors?: number;
-  trunkCapacityLiters?: number;
+  luggageCapacity: number;
   status: VehicleStatus;
   currentKm?: number;
   color?: string;
@@ -105,9 +103,11 @@ export const TRANSMISSION_LABELS: Record<TransmissionType, string> = {
 };
 
 export const BODY_TYPE_LABELS: Record<BodyType, string> = {
-  '3_doors': '3 puertas',
-  '5_doors': '5 puertas',
-  suv: 'SUV',
-  monovolume: 'Monovolumen',
-  van: 'Furgoneta'
+  '2_4_doors': 'vehicles.bodyTypes.2_4_doors',
+  '4_5_doors': 'vehicles.bodyTypes.4_5_doors',
+  'estate': 'vehicles.bodyTypes.estate',
+  'suv': 'vehicles.bodyTypes.suv',
+  'van': 'vehicles.bodyTypes.van',
+  'cabrio': 'vehicles.bodyTypes.cabrio',
+  'mpv': 'vehicles.bodyTypes.mpv'
 };
