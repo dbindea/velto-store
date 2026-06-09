@@ -250,6 +250,31 @@
     }
   }
 
+  .vehicle-pricing {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+    flex-wrap: wrap;
+
+    .price-from {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .price-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-color);
+    }
+
+    .deposit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+  }
+
   .plate {
     font-size: 0.85rem;
     color: var(--text-muted);

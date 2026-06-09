@@ -494,3 +494,65 @@
   gap: 0.75rem;
   justify-content: flex-end;
 }
+// Pricing Section
+.pricing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.pricing-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pricing-rule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+
+  .rule-label {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .rule-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-color);
+  }
+}
+
+.pricing-conditions {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+
+  .condition-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-light);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .condition-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .condition-value {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+  }
+}

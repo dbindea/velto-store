@@ -48,7 +48,11 @@
     "back": "Volver",
     "close": "Cerrar",
     "moduleInProgress": "Módulo en preparación",
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "all": "Todos",
+    "paid": "Pagado",
+    "pending": "Pendiente",
+    "or": "o"
   },
   "vehicles": {
     "title": "Vehículos",
@@ -104,12 +108,14 @@
       "rentalClassification": "Clasificación de alquiler",
       "features": "Características",
       "photos": "Fotos",
-      "history": "Historial"
+      "history": "Historial",
+      "pricing": "Tarifas y condiciones"
     },
     "tabs": {
       "info": "Información",
       "features": "Características",
       "photos": "Fotos",
+      "pricing": "Tarifas",
       "history": "Historial"
     },
     "features": {
@@ -127,7 +133,7 @@
       "addGalleryPhoto": "Añadir a galería"
     },
     "help": {
-      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C (estándar Amadeus)"
+      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C"
     },
     "mainPhoto": "Principal",
     "noPhotos": "No hay fotos disponibles",
@@ -145,6 +151,131 @@
     },
     "changeStatusTitle": "Cambiar estado del vehículo",
     "deleteTitle": "Eliminar vehículo",
-    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
+    "pricing": {
+      "title": "Tarifas",
+      "conditions": "Condiciones",
+      "rules": "Reglas de precio",
+      "preview": "Vista previa de precio",
+      "defaultDepositAmount": "Fianza",
+      "includedKmPerDay": "Km incluidos/día",
+      "extraKmPrice": "Precio km extra",
+      "minimumRentalDays": "Mínimo días alquiler",
+      "manualPriceAllowed": "Permitir precio manual",
+      "label": "Etiqueta",
+      "minDays": "Desde",
+      "maxDays": "Hasta",
+      "pricePerDay": "€/día",
+      "addRule": "Añadir rango",
+      "removeRule": "Eliminar rango",
+      "restoreDefaults": "Restaurar tarifas",
+      "testDays": "Días de prueba",
+      "appliedRule": "Regla aplicada",
+      "totalPrice": "Total",
+      "noRuleFound": "Sin regla para estos días",
+      "from": "Desde",
+      "to": "Hasta",
+      "moreThan": "+",
+      "days": "días",
+      "day": "día",
+      "priceFrom": "Desde",
+      "deposit": "Fianza",
+      "allowed": "Sí",
+      "notAllowed": "No"
+    }
+  },
+  "reservations": {
+    "title": "Reservas",
+    "subtitle": "Gestiona las reservas de alquiler",
+    "new": "Nueva reserva",
+    "create": "Crear reserva",
+    "detail": "Detalle de reserva",
+    "list": "Lista de reservas",
+    "steps": {
+      "dates": "Fechas",
+      "vehicle": "Vehículo",
+      "client": "Cliente",
+      "summary": "Resumen"
+    },
+    "fields": {
+      "pickupDate": "Fecha de recogida",
+      "pickupTime": "Hora de recogida",
+      "returnDate": "Fecha de devolución",
+      "returnTime": "Hora de devolución",
+      "pickupLocation": "Lugar de recogida",
+      "returnLocation": "Lugar de devolución",
+      "totalDays": "días",
+      "notes": "Notas"
+    },
+    "availability": {
+      "search": "Buscar disponibilidad",
+      "available": "Disponible",
+      "notAvailable": "No disponible",
+      "selectVehicle": "Seleccionar vehículo",
+      "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas"
+    },
+    "pricing": {
+      "pricePerDay": "Precio/día",
+      "basePrice": "Precio base",
+      "finalPrice": "Precio total",
+      "initialPayment": "Señal",
+      "remainingPayment": "Resto pendiente",
+      "deposit": "Fianza",
+      "dueDate": "Fecha de vencimiento",
+      "manualAdjustment": "Ajuste manual"
+    },
+    "client": {
+      "select": "Seleccionar cliente",
+      "search": "Buscar cliente...",
+      "createQuick": "Crear cliente rápido",
+      "fullName": "Nombre completo",
+      "phone": "Teléfono",
+      "email": "Correo electrónico",
+      "documentNumber": "Número de documento"
+    },
+    "status": {
+      "quote": "Presupuesto",
+      "reserved": "Reservado",
+      "confirmed": "Confirmado",
+      "delivered": "Entregado",
+      "returned": "Devuelto",
+      "closed": "Cerrado",
+      "cancelled": "Cancelado"
+    },
+    "paymentStatus": {
+      "pending": "Pendiente",
+      "partial": "Parcial",
+      "paid": "Pagado",
+      "refunded": "Reembolsado"
+    },
+    "contractStatus": {
+      "pending": "Pendiente",
+      "signed": "Firmado",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    },
+    "actions": {
+      "cancel": "Cancelar reserva",
+      "createReservation": "Crear reserva",
+      "viewDetail": "Ver detalle"
+    },
+    "messages": {
+      "created": "Reserva creada correctamente",
+      "cancelled": "Reserva cancelada",
+      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
+      "vehicleNoLongerAvailable": "El vehículo ya no está disponible para estas fechas"
+    },
+    "placeholders": {
+      "contractFuture": "Firma de contrato en desarrollo",
+      "paymentsFuture": "Gestión de pagos en desarrollo",
+      "deliveryFuture": "Entrega/devolución en desarrollo"
+    },
+    "list": {
+      "empty": "No hay reservas todavía"
+    }
+  },
+  "clients": {
+    "title": "Clientes",
+    "subtitle": "Gestiona los clientes"
   }
 }

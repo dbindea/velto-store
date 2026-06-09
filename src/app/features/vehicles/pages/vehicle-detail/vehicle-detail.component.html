@@ -35,8 +35,8 @@
   </div>
 
   <div class="main-image-section" (click)="openGallery(0)">
-    @if (vehicle.mainImageUrl) {
-      <img [src]="vehicle.mainImageUrl" [alt]="vehicle.brand + ' ' + vehicle.model" class="main-image" loading="lazy" decoding="async" />
+    @if (vehicle.images && vehicle.images.length > 0) {
+      <img [src]="vehicle.images[0].url" [alt]="vehicle.brand + ' ' + vehicle.model" class="main-image" loading="lazy" decoding="async" />
     } @else {
       <div class="main-image-placeholder">
         <i class="pi pi-car"></i>
@@ -45,7 +45,7 @@
     <span class="vehicle-status-badge" [class]="getStatusClass(vehicle.status)">
       {{ getStatusLabel(vehicle.status) | translate }}
     </span>
-    @if (galleryImages().length > 0) {
+    @if (galleryImages().length > 1) {
       <button class="gallery-btn" [title]="'vehicles.photos.openGallery' | translate">
         <i class="pi pi-images"></i>
         <span>{{ galleryImages().length }}</span>
@@ -57,6 +57,7 @@
     <button class="tab" [class.active]="activeTab === 'info'" (click)="setTab('info')">Info</button>
     <button class="tab" [class.active]="activeTab === 'features'" (click)="setTab('features')">Features</button>
     <button class="tab" [class.active]="activeTab === 'photos'" (click)="setTab('photos')">Photos</button>
+    <button class="tab" [class.active]="activeTab === 'pricing'" (click)="setTab('pricing')">{{ 'vehicles.tabs.pricing' | translate }}</button>
     <button class="tab" [class.active]="activeTab === 'history'" (click)="setTab('history')">History</button>
   </div>
 
@@ -169,11 +170,8 @@
         @if (vehicle.images && vehicle.images.length > 0) {
           <div class="photos-grid">
             @for (image of vehicle.images; track image.path) {
-              <div class="photo-item" [class.main]="image.isMain" (click)="openGalleryByUrl(image.url)">
+              <div class="photo-item" (click)="openGalleryByUrl(image.url)">
                 <img [src]="image.url" alt="Vehicle photo" loading="lazy" decoding="async" />
-                @if (image.isMain) {
-                  <span class="main-badge">{{ 'vehicles.photos.mainPhoto' | translate }}</span>
-                }
               </div>
             }
           </div>
@@ -183,6 +181,42 @@
             <p>{{ 'vehicles.noPhotos' | translate }}</p>
           </div>
         }
+      </div>
+    }
+
+    @if (activeTab === 'pricing') {
+      <div class="pricing-section">
+        <div class="pricing-rules-list">
+          @for (rule of vehicle.pricingRules || []; track $index) {
+            <div class="pricing-rule-item">
+              <span class="rule-label">{{ getPricingRuleLabel(rule) }}</span>
+              <span class="rule-price">{{ rule.pricePerDay }} €/día</span>
+            </div>
+          }
+        </div>
+
+        <div class="pricing-conditions">
+          <div class="condition-item">
+            <span class="condition-label">{{ 'vehicles.pricing.defaultDepositAmount' | translate }}:</span>
+            <span class="condition-value">{{ vehicle.defaultDepositAmount || 300 }} €</span>
+          </div>
+          <div class="condition-item">
+            <span class="condition-label">{{ 'vehicles.pricing.includedKmPerDay' | translate }}:</span>
+            <span class="condition-value">{{ vehicle.includedKmPerDay || 200 }} km</span>
+          </div>
+          <div class="condition-item">
+            <span class="condition-label">{{ 'vehicles.pricing.extraKmPrice' | translate }}:</span>
+            <span class="condition-value">{{ vehicle.extraKmPrice || 0.25 }} €/km</span>
+          </div>
+          <div class="condition-item">
+            <span class="condition-label">{{ 'vehicles.pricing.minimumRentalDays' | translate }}:</span>
+            <span class="condition-value">{{ vehicle.minimumRentalDays || 1 }}</span>
+          </div>
+          <div class="condition-item">
+            <span class="condition-label">{{ 'vehicles.pricing.manualPriceAllowed' | translate }}:</span>
+            <span class="condition-value">{{ (vehicle.manualPriceAllowed !== false) ? ('vehicles.pricing.allowed' | translate) : ('vehicles.pricing.notAllowed' | translate) }}</span>
+          </div>
+        </div>
       </div>
     }
 

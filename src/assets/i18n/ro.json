@@ -48,7 +48,11 @@
     "back": "Înapoi",
     "close": "Închide",
     "moduleInProgress": "Modul în pregătire",
-    "welcome": "Bine ai venit"
+    "welcome": "Bine ai venit",
+    "all": "Toate",
+    "paid": "Plătit",
+    "pending": "În așteptare",
+    "or": "sau"
   },
   "vehicles": {
     "title": "Vehicule",
@@ -104,12 +108,14 @@
       "rentalClassification": "Clasificare de închiriere",
       "features": "Caracteristici",
       "photos": "Fotografii",
-      "history": "Istoric"
+      "history": "Istoric",
+      "pricing": "Tarife și condiții"
     },
     "tabs": {
       "info": "Informații",
       "features": "Caracteristici",
       "photos": "Fotografii",
+      "pricing": "Tarife",
       "history": "Istoric"
     },
     "features": {
@@ -127,7 +133,7 @@
       "addGalleryPhoto": "Adaugă la galerie"
     },
     "help": {
-      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C (standard Amadeus)"
+      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C"
     },
     "mainPhoto": "Principală",
     "noPhotos": "Nu există fotografii",
@@ -145,6 +151,131 @@
     },
     "changeStatusTitle": "Schimbă statusul vehiculului",
     "deleteTitle": "Șterge vehicul",
-    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată."
+    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
+    "pricing": {
+      "title": "Tarife",
+      "conditions": "Condiții",
+      "rules": "Reguli de preț",
+      "preview": "Previzualizare preț",
+      "defaultDepositAmount": "Avans",
+      "includedKmPerDay": "Km incluse/zi",
+      "extraKmPrice": "Preț km extra",
+      "minimumRentalDays": "Minim zile închiriere",
+      "manualPriceAllowed": "Permite preț manual",
+      "label": "Etichetă",
+      "minDays": "De la",
+      "maxDays": "Până la",
+      "pricePerDay": "€/zi",
+      "addRule": "Adaugă interval",
+      "removeRule": "Elimină interval",
+      "restoreDefaults": "Restabilește implicit",
+      "testDays": "Zile de test",
+      "appliedRule": "Regulă aplicată",
+      "totalPrice": "Total",
+      "noRuleFound": "Fără regulă pentru aceste zile",
+      "from": "De la",
+      "to": "Până la",
+      "moreThan": "+",
+      "days": "zile",
+      "day": "zi",
+      "priceFrom": "De la",
+      "deposit": "Avans",
+      "allowed": "Da",
+      "notAllowed": "Nu"
+    }
+  },
+  "reservations": {
+    "title": "Rezervări",
+    "subtitle": "Gestionează rezervările de închiriere",
+    "new": "Rezervare nouă",
+    "create": "Creare rezervare",
+    "detail": "Detalii rezervare",
+    "list": "Lista rezervărilor",
+    "steps": {
+      "dates": "Date",
+      "vehicle": "Vehicul",
+      "client": "Client",
+      "summary": "Rezumat"
+    },
+    "fields": {
+      "pickupDate": "Data preluării",
+      "pickupTime": "Ora preluării",
+      "returnDate": "Data returnării",
+      "returnTime": "Ora returnării",
+      "pickupLocation": "Locație preluare",
+      "returnLocation": "Locație returnare",
+      "totalDays": "zile",
+      "notes": "Note"
+    },
+    "availability": {
+      "search": "Caută disponibilitate",
+      "available": "Disponibil",
+      "notAvailable": "Nu este disponibil",
+      "selectVehicle": "Selectează vehicul",
+      "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date"
+    },
+    "pricing": {
+      "pricePerDay": "Preț/zi",
+      "basePrice": "Preț de bază",
+      "finalPrice": "Preț total",
+      "initialPayment": "Avans",
+      "remainingPayment": "Rest de plată",
+      "deposit": "Garanție",
+      "dueDate": "Dată scadență",
+      "manualAdjustment": "Ajustare manuală"
+    },
+    "client": {
+      "select": "Selectează client",
+      "search": "Caută client...",
+      "createQuick": "Creare rapidă client",
+      "fullName": "Nume complet",
+      "phone": "Telefon",
+      "email": "Email",
+      "documentNumber": "Număr document"
+    },
+    "status": {
+      "quote": "Ofertă",
+      "reserved": "Rezervat",
+      "confirmed": "Confirmat",
+      "delivered": "Predat",
+      "returned": "Returnat",
+      "closed": "Închis",
+      "cancelled": "Anulat"
+    },
+    "paymentStatus": {
+      "pending": "În așteptare",
+      "partial": "Parțial",
+      "paid": "Plătit",
+      "refunded": "Restituit"
+    },
+    "contractStatus": {
+      "pending": "În așteptare",
+      "signed": "Semnat",
+      "completed": "Finalizat",
+      "cancelled": "Anulat"
+    },
+    "actions": {
+      "cancel": "Anulează rezervarea",
+      "createReservation": "Creare rezervare",
+      "viewDetail": "Vezi detalii"
+    },
+    "messages": {
+      "created": "Rezervare creată cu succes",
+      "cancelled": "Rezervare anulată",
+      "invalidDates": "Data returnării trebuie să fie după data preluării",
+      "vehicleNoLongerAvailable": "Vehiculul nu mai este disponibil pentru aceste date"
+    },
+    "placeholders": {
+      "contractFuture": "Semnare contract în dezvoltare",
+      "paymentsFuture": "Gestionare plăți în dezvoltare",
+      "deliveryFuture": "Predare/returnare în dezvoltare"
+    },
+    "list": {
+      "empty": "Nu există rezervări"
+    }
+  },
+  "clients": {
+    "title": "Clienți",
+    "subtitle": "Gestionează clienții"
   }
 }

@@ -5,7 +5,6 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 export interface GalleryImage {
   url: string;
   path?: string;
-  isMain?: boolean;
   uploadedAt?: any;
   fileName?: string;
 }

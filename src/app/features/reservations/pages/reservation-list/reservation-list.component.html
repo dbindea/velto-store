@@ -1,0 +1,126 @@
+<div class="page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'reservations.title' | translate }}</h1>
+      <p class="subtitle">{{ 'reservations.subtitle' | translate }}</p>
+    </div>
+    <button class="btn-primary" type="button" (click)="createNew()">
+      <i class="pi pi-plus"></i>
+      {{ 'reservations.new' | translate }}
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <i class="pi pi-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChange()"
+        [placeholder]="'common.search' | translate"
+        class="form-control">
+    </div>
+
+    <select 
+      class="form-control filter-select" 
+      [(ngModel)]="statusFilter"
+      (ngModelChange)="onFilterChange()">
+      @for (option of statusOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (filteredReservations.length === 0) {
+    <!-- Empty State -->
+    <div class="empty-state">
+      <i class="pi pi-calendar"></i>
+      <p>{{ 'reservations.list.empty' | translate }}</p>
+      <button class="btn-primary" type="button" (click)="createNew()">
+        <i class="pi pi-plus"></i>
+        {{ 'reservations.new' | translate }}
+      </button>
+    </div>
+  } @else {
+    <!-- Reservation List -->
+    <div class="reservation-list">
+      @for (reservation of filteredReservations; track reservation.id) {
+        <div class="reservation-card" (click)="viewDetail(reservation)">
+          <!-- Vehicle Info -->
+          <div class="card-vehicle">
+            @if (reservation.vehicleSnapshot.mainImageUrl) {
+              <div class="vehicle-image">
+                <img [src]="reservation.vehicleSnapshot.mainImageUrl" [alt]="reservation.vehicleSnapshot.brand">
+              </div>
+            } @else {
+              <div class="vehicle-image placeholder">
+                <i class="pi pi-car"></i>
+              </div>
+            }
+            <div class="vehicle-info">
+              <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
+              <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>
+            </div>
+          </div>
+
+          <!-- Client Info -->
+          <div class="card-client">
+            <div class="client-avatar">
+              {{ reservation.clientSnapshot.fullName.charAt(0).toUpperCase() }}
+            </div>
+            <div class="client-info">
+              <span class="client-name">{{ reservation.clientSnapshot.fullName }}</span>
+              @if (reservation.clientSnapshot.phone) {
+                <span class="client-phone">{{ reservation.clientSnapshot.phone }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <div class="card-dates">
+            <div class="date-row">
+              <i class="pi pi-sign-out"></i>
+              <span>{{ getPickupDate(reservation) | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="date-row">
+              <i class="pi pi-sign-in"></i>
+              <span>{{ getReturnDate(reservation) | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <span class="total-days">{{ reservation.totalDays }} días</span>
+          </div>
+
+          <!-- Pricing -->
+          <div class="card-pricing">
+            <span class="total-price">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+            @if (getPendingAmount(reservation) > 0) {
+              <span class="pending-amount">{{ getPendingAmount(reservation) | number:'1.2-2' }} € pendiente</span>
+            }
+          </div>
+
+          <!-- Status Badges -->
+          <div class="card-status">
+            <span class="badge" [ngClass]="getStatusClass(reservation.reservationStatus)">
+              {{ getStatusLabel(reservation.reservationStatus) }}
+            </span>
+            <span class="badge" [ngClass]="getPaymentStatusClass(reservation.paymentStatus)">
+              {{ getPaymentLabel(reservation.paymentStatus) }}
+            </span>
+          </div>
+
+          <!-- Arrow -->
+          <div class="card-arrow">
+            <i class="pi pi-chevron-right"></i>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -59,9 +59,9 @@
       @for (vehicle of filteredVehicles; track vehicle.id) {
         <div class="vehicle-card" (click)="viewDetail(vehicle)">
           <div class="vehicle-image">
-            @if (vehicle.mainImageUrl) {
+            @if (vehicle.images && vehicle.images.length > 0) {
               <img 
-                [src]="vehicle.mainImageUrl" 
+                [src]="vehicle.images[0].url" 
                 [alt]="vehicle.brand + ' ' + vehicle.model"
                 loading="lazy"
                 decoding="async"
@@ -74,7 +74,7 @@
             <span class="vehicle-status" [class]="getStatusClass(vehicle.status)">
               {{ getStatusLabel(vehicle.status) | translate }}
             </span>
-            @if (vehicle.images && vehicle.images.length > 0) {
+            @if (vehicle.images && vehicle.images.length > 1) {
               <span class="photo-count" [title]="'vehicles.photos.count' | translate">
                 <i class="pi pi-images"></i>
                 {{ vehicle.images.length }}
@@ -94,6 +94,13 @@
                 </span>
               }
             </div>
+            @if (vehicle.pricingRules && vehicle.pricingRules.length > 0) {
+              <div class="vehicle-pricing">
+                <span class="price-from">{{ 'vehicles.pricing.priceFrom' | translate }}</span>
+                <span class="price-value">{{ getLowestPrice(vehicle.pricingRules) }} €/día</span>
+                <span class="deposit">{{ 'vehicles.pricing.deposit' | translate }}: {{ vehicle.defaultDepositAmount || 300 }}€</span>
+              </div>
+            }
             <p class="plate">{{ vehicle.plateNumber }}</p>
           </div>
 

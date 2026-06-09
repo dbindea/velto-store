@@ -7,6 +7,7 @@ import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-ga
 import {
   Vehicle,
   VehicleStatus,
+  VehiclePricingRule,
   BodyType,
   VEHICLE_STATUS_LABELS,
   VEHICLE_CATEGORY_LABELS,
@@ -29,7 +30,7 @@ export class VehicleDetailComponent implements OnInit {
 
   vehicle: Vehicle | null = null;
   loading = true;
-  activeTab: 'info' | 'features' | 'photos' | 'history' = 'info';
+  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'history' = 'info';
   showStatusModal = false;
   showDeleteModal = false;
   showGallery = false;
@@ -37,35 +38,13 @@ export class VehicleDetailComponent implements OnInit {
 
   statusOptions: VehicleStatus[] = ['available', 'rented', 'maintenance', 'out_of_service'];
 
-  // All images combined: mainImageUrl first, then gallery (excluding main)
+  // All images from vehicle.images array
   galleryImages = computed<GalleryImage[]>(() => {
-    if (!this.vehicle) return [];
-    
-    const images: GalleryImage[] = [];
-    
-    // Add main image first
-    if (this.vehicle.mainImageUrl) {
-      images.push({
-        url: this.vehicle.mainImageUrl,
-        path: '',
-        isMain: true
-      });
-    }
-    
-    // Add gallery images, excluding the main one (avoid duplicates)
-    if (this.vehicle.images) {
-      for (const img of this.vehicle.images) {
-        if (img.url !== this.vehicle?.mainImageUrl) {
-          images.push({
-            url: img.url,
-            path: img.path,
-            isMain: img.isMain
-          });
-        }
-      }
-    }
-    
-    return images;
+    if (!this.vehicle?.images) return [];
+    return this.vehicle.images.map(img => ({
+      url: img.url,
+      path: img.path
+    }));
   });
 
   ngOnInit(): void {
@@ -89,7 +68,7 @@ export class VehicleDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'info' | 'features' | 'photos' | 'history'): void {
+  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'history'): void {
     this.activeTab = tab;
   }
 
@@ -126,6 +105,13 @@ export class VehicleDetailComponent implements OnInit {
 
   getBodyTypeLabel(body: BodyType): string {
     return BODY_TYPE_LABELS[body] || body;
+  }
+
+  getPricingRuleLabel(rule: VehiclePricingRule): string {
+    if (rule.label) return rule.label;
+    if (rule.maxDays === null) return `+${rule.minDays} días`;
+    if (rule.minDays === rule.maxDays) return `${rule.minDays} día`;
+    return `${rule.minDays}-${rule.maxDays} días`;
   }
 
   getStatusClass(status: VehicleStatus): string {

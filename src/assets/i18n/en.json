@@ -48,7 +48,11 @@
     "back": "Back",
     "close": "Close",
     "moduleInProgress": "Module in preparation",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "all": "All",
+    "paid": "Paid",
+    "pending": "Pending",
+    "or": "or"
   },
   "vehicles": {
     "title": "Vehicles",
@@ -104,12 +108,14 @@
       "rentalClassification": "Rental classification",
       "features": "Features",
       "photos": "Photos",
-      "history": "History"
+      "history": "History",
+      "pricing": "Pricing and conditions"
     },
     "tabs": {
       "info": "Information",
       "features": "Features",
       "photos": "Photos",
+      "pricing": "Pricing",
       "history": "History"
     },
     "features": {
@@ -127,7 +133,7 @@
       "addGalleryPhoto": "Add to gallery"
     },
     "help": {
-      "acrissGenerated": "ACRISS/SIPP code: Category + Body type + Transmission + Fuel/A/C (Amadeus standard)"
+      "acrissGenerated": "ACRISS/SIPP code: Category + Body type + Transmission + Fuel/A/C"
     },
     "mainPhoto": "Main",
     "noPhotos": "No photos available",
@@ -145,6 +151,131 @@
     },
     "changeStatusTitle": "Change vehicle status",
     "deleteTitle": "Delete vehicle",
-    "deleteConfirm": "Are you sure you want to delete this vehicle? This action cannot be undone."
+    "deleteConfirm": "Are you sure you want to delete this vehicle? This action cannot be undone.",
+    "pricing": {
+      "title": "Pricing",
+      "conditions": "Conditions",
+      "rules": "Price rules",
+      "preview": "Price preview",
+      "defaultDepositAmount": "Deposit",
+      "includedKmPerDay": "Included km/day",
+      "extraKmPrice": "Extra km price",
+      "minimumRentalDays": "Minimum rental days",
+      "manualPriceAllowed": "Allow manual price",
+      "label": "Label",
+      "minDays": "From",
+      "maxDays": "To",
+      "pricePerDay": "€/day",
+      "addRule": "Add range",
+      "removeRule": "Remove range",
+      "restoreDefaults": "Restore defaults",
+      "testDays": "Test days",
+      "appliedRule": "Applied rule",
+      "totalPrice": "Total",
+      "noRuleFound": "No rule for this days",
+      "from": "From",
+      "to": "To",
+      "moreThan": "+",
+      "days": "days",
+      "day": "day",
+      "priceFrom": "From",
+      "deposit": "Deposit",
+      "allowed": "Yes",
+      "notAllowed": "No"
+    }
+  },
+  "reservations": {
+    "title": "Reservations",
+    "subtitle": "Manage rental reservations",
+    "new": "New reservation",
+    "create": "Create reservation",
+    "detail": "Reservation details",
+    "list": "Reservation list",
+    "steps": {
+      "dates": "Dates",
+      "vehicle": "Vehicle",
+      "client": "Client",
+      "summary": "Summary"
+    },
+    "fields": {
+      "pickupDate": "Pickup date",
+      "pickupTime": "Pickup time",
+      "returnDate": "Return date",
+      "returnTime": "Return time",
+      "pickupLocation": "Pickup location",
+      "returnLocation": "Return location",
+      "totalDays": "days",
+      "notes": "Notes"
+    },
+    "availability": {
+      "search": "Search availability",
+      "available": "Available",
+      "notAvailable": "Not available",
+      "selectVehicle": "Select vehicle",
+      "noVehiclesAvailable": "No vehicles available for these dates"
+    },
+    "pricing": {
+      "pricePerDay": "Price/day",
+      "basePrice": "Base price",
+      "finalPrice": "Total price",
+      "initialPayment": "Signal",
+      "remainingPayment": "Remaining",
+      "deposit": "Deposit",
+      "dueDate": "Due date",
+      "manualAdjustment": "Manual adjustment"
+    },
+    "client": {
+      "select": "Select client",
+      "search": "Search client...",
+      "createQuick": "Create quick client",
+      "fullName": "Full name",
+      "phone": "Phone",
+      "email": "Email",
+      "documentNumber": "Document number"
+    },
+    "status": {
+      "quote": "Quote",
+      "reserved": "Reserved",
+      "confirmed": "Confirmed",
+      "delivered": "Delivered",
+      "returned": "Returned",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    },
+    "paymentStatus": {
+      "pending": "Pending",
+      "partial": "Partial",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    },
+    "contractStatus": {
+      "pending": "Pending",
+      "signed": "Signed",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "cancel": "Cancel reservation",
+      "createReservation": "Create reservation",
+      "viewDetail": "View details"
+    },
+    "messages": {
+      "created": "Reservation created successfully",
+      "cancelled": "Reservation cancelled",
+      "invalidDates": "Return date must be after pickup date",
+      "vehicleNoLongerAvailable": "Vehicle is no longer available for these dates"
+    },
+    "placeholders": {
+      "contractFuture": "Contract signing in development",
+      "paymentsFuture": "Payment management in development",
+      "deliveryFuture": "Delivery/return in development"
+    },
+    "list": {
+      "empty": "No reservations yet"
+    }
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Manage clients"
   }
 }

@@ -4,6 +4,7 @@ import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angula
 import { Observable, from, throwError } from 'rxjs';
 import { switchMap, map } from 'rxjs/operators';
 import { Vehicle, VehicleImage, VehicleStatus, VehicleFormData } from '@shared/models/vehicle.model';
+import { sortPricingRules, getDefaultPricingRules } from '@shared/utils/pricing.util';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
@@ -46,12 +47,21 @@ export class VehicleService {
   }
 
   async createVehicle(vehicle: VehicleFormData, acrissCode: string): Promise<string> {
+    // Use default pricing rules if not provided
+    const pricingRules = vehicle.pricingRules?.length ? vehicle.pricingRules : getDefaultPricingRules();
+    
     const data = this.cleanData({
       ...vehicle,
       acrissCode,
       publicEnabled: false,
       status: 'available',
       images: [],
+      pricingRules: sortPricingRules(pricingRules),
+      defaultDepositAmount: vehicle.defaultDepositAmount ?? 300,
+      includedKmPerDay: vehicle.includedKmPerDay ?? 200,
+      extraKmPrice: vehicle.extraKmPrice ?? 0.25,
+      minimumRentalDays: vehicle.minimumRentalDays ?? 1,
+      manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
       createdAt: { seconds: Date.now() / 1000 }
     });
     const docRef = await addDoc(this.vehiclesRef, data);
@@ -59,9 +69,16 @@ export class VehicleService {
   }
 
   async updateVehicle(id: string, data: Partial<VehicleFormData>): Promise<void> {
+    // Sort pricing rules before saving
+    let pricingRules = data.pricingRules;
+    if (pricingRules?.length) {
+      pricingRules = sortPricingRules(pricingRules);
+    }
+    
     const docRef = doc(this.firestore, `vehicles/${id}`);
     await updateDoc(docRef, this.cleanData({
       ...data,
+      pricingRules,
       updatedAt: { seconds: Date.now() / 1000 }
     }));
   }
@@ -76,28 +93,7 @@ export class VehicleService {
     await updateDoc(docRef, { status, updatedAt: { seconds: Date.now() / 1000 } });
   }
 
-  async uploadMainImage(vehicleId: string, file: File): Promise<string> {
-    const timestamp = Date.now();
-    const filename = `${timestamp}-${file.name}`;
-    const storagePath = `vehicles/${vehicleId}/main/${filename}`;
-    const storageRef = ref(this.storage, storagePath);
-
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-
-    const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
-    const imageData: VehicleImage = {
-      url,
-      path: storagePath,
-      isMain: true,
-      uploadedAt: { seconds: Date.now() / 1000 }
-    };
-
-    await updateDoc(docRef, { mainImageUrl: url, images: [imageData], updatedAt: { seconds: Date.now() / 1000 } });
-    return url;
-  }
-
-  async uploadGalleryImage(vehicleId: string, file: File): Promise<VehicleImage> {
+  async uploadImage(vehicleId: string, file: File): Promise<VehicleImage> {
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.name}`;
     const storagePath = `vehicles/${vehicleId}/gallery/${filename}`;
@@ -109,7 +105,6 @@ export class VehicleService {
     const imageData: VehicleImage = {
       url,
       path: storagePath,
-      isMain: false,
       uploadedAt: { seconds: Date.now() / 1000 }
     };
 
@@ -135,28 +130,6 @@ export class VehicleService {
     const vehicle = vehicleSnap.data() as Vehicle;
     const images = (vehicle.images || []).filter(img => img.path !== image.path);
 
-    const update: Partial<Vehicle> = { images };
-    if (image.isMain) {
-      update.mainImageUrl = undefined;
-    }
-
-    await updateDoc(docRef, update);
-  }
-
-  async setMainImage(vehicleId: string, image: VehicleImage): Promise<void> {
-    const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
-    const vehicleSnap = await getDoc(docRef);
-    const vehicle = vehicleSnap.data() as Vehicle;
-
-    const images = (vehicle.images || []).map(img => ({
-      ...img,
-      isMain: img.path === image.path
-    }));
-
-    await updateDoc(docRef, {
-      mainImageUrl: image.url,
-      images,
-      updatedAt: { seconds: Date.now() / 1000 }
-    });
+    await updateDoc(docRef, { images, updatedAt: { seconds: Date.now() / 1000 } });
   }
 }
