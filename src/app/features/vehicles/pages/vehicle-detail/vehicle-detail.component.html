@@ -35,8 +35,8 @@
   </div>
 
   <div class="main-image-section" (click)="openGallery(0)">
-    @if (vehicle.mainImageUrl) {
-      <img [src]="vehicle.mainImageUrl" [alt]="vehicle.brand + ' ' + vehicle.model" class="main-image" loading="lazy" decoding="async" />
+    @if (vehicle.images && vehicle.images.length > 0) {
+      <img [src]="vehicle.images[0].url" [alt]="vehicle.brand + ' ' + vehicle.model" class="main-image" loading="lazy" decoding="async" />
     } @else {
       <div class="main-image-placeholder">
         <i class="pi pi-car"></i>
@@ -45,7 +45,7 @@
     <span class="vehicle-status-badge" [class]="getStatusClass(vehicle.status)">
       {{ getStatusLabel(vehicle.status) | translate }}
     </span>
-    @if (galleryImages().length > 0) {
+    @if (galleryImages().length > 1) {
       <button class="gallery-btn" [title]="'vehicles.photos.openGallery' | translate">
         <i class="pi pi-images"></i>
         <span>{{ galleryImages().length }}</span>
@@ -169,11 +169,8 @@
         @if (vehicle.images && vehicle.images.length > 0) {
           <div class="photos-grid">
             @for (image of vehicle.images; track image.path) {
-              <div class="photo-item" [class.main]="image.isMain" (click)="openGalleryByUrl(image.url)">
+              <div class="photo-item" (click)="openGalleryByUrl(image.url)">
                 <img [src]="image.url" alt="Vehicle photo" loading="lazy" decoding="async" />
-                @if (image.isMain) {
-                  <span class="main-badge">{{ 'vehicles.photos.mainPhoto' | translate }}</span>
-                }
               </div>
             }
           </div>

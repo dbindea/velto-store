@@ -295,32 +295,15 @@
         <!-- Section E: Photos (Edit mode only) -->
         @if (isEditMode && vehicleId) {
           <div class="form-section">
-            <h2 class="section-title">{{ 'vehicles.fields.mainImage' | translate }}</h2>
+            <h2 class="section-title">{{ 'vehicles.tabs.photos' | translate }}</h2>
             <div class="photo-upload">
               <label class="upload-btn">
                 <i class="pi pi-upload"></i>
-                {{ 'vehicles.actions.uploadPhoto' | translate }}
+                {{ 'vehicles.actions.addPhoto' | translate }}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  (change)="onMainImageSelected($event)"
-                  hidden
-                />
-              </label>
-              <p class="upload-hint">JPG, PNG o WebP. Max 5MB</p>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h2 class="section-title">{{ 'vehicles.fields.gallery' | translate }}</h2>
-            <div class="photo-upload">
-              <label class="upload-btn">
-                <i class="pi pi-images"></i>
-                {{ 'vehicles.actions.addGalleryPhoto' | translate }}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  (change)="onGalleryImageSelected($event)"
+                  (change)="onImageSelected($event)"
                   hidden
                 />
               </label>

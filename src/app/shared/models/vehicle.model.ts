@@ -11,7 +11,6 @@ export type TransmissionType = 'manual' | 'automatic';
 export interface VehicleImage {
   url: string;
   path: string;
-  isMain: boolean;
   uploadedAt?: any;
 }
 
@@ -35,7 +34,6 @@ export interface Vehicle {
   vin?: string;
   description?: string;
   features: VehicleFeatures;
-  mainImageUrl?: string;
   images?: VehicleImage[];
   publicEnabled: boolean;
   createdAt?: any;

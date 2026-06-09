@@ -157,7 +157,7 @@ export class VehicleFormComponent implements OnInit {
     this.updateAcrissCode();
   }
 
-  async onMainImageSelected(event: Event): Promise<void> {
+  async onImageSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length || !this.vehicleId) return;
 
@@ -166,23 +166,7 @@ export class VehicleFormComponent implements OnInit {
 
     this.saving = true;
     try {
-      await this.vehicleService.uploadMainImage(this.vehicleId, file);
-    } finally {
-      this.saving = false;
-      input.value = '';
-    }
-  }
-
-  async onGalleryImageSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length || !this.vehicleId) return;
-
-    const file = input.files[0];
-    if (!this.validateImage(file)) return;
-
-    this.saving = true;
-    try {
-      await this.vehicleService.uploadGalleryImage(this.vehicleId, file);
+      await this.vehicleService.uploadImage(this.vehicleId, file);
     } finally {
       this.saving = false;
       input.value = '';

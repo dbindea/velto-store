@@ -76,28 +76,7 @@ export class VehicleService {
     await updateDoc(docRef, { status, updatedAt: { seconds: Date.now() / 1000 } });
   }
 
-  async uploadMainImage(vehicleId: string, file: File): Promise<string> {
-    const timestamp = Date.now();
-    const filename = `${timestamp}-${file.name}`;
-    const storagePath = `vehicles/${vehicleId}/main/${filename}`;
-    const storageRef = ref(this.storage, storagePath);
-
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-
-    const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
-    const imageData: VehicleImage = {
-      url,
-      path: storagePath,
-      isMain: true,
-      uploadedAt: { seconds: Date.now() / 1000 }
-    };
-
-    await updateDoc(docRef, { mainImageUrl: url, images: [imageData], updatedAt: { seconds: Date.now() / 1000 } });
-    return url;
-  }
-
-  async uploadGalleryImage(vehicleId: string, file: File): Promise<VehicleImage> {
+  async uploadImage(vehicleId: string, file: File): Promise<VehicleImage> {
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.name}`;
     const storagePath = `vehicles/${vehicleId}/gallery/${filename}`;
@@ -109,7 +88,6 @@ export class VehicleService {
     const imageData: VehicleImage = {
       url,
       path: storagePath,
-      isMain: false,
       uploadedAt: { seconds: Date.now() / 1000 }
     };
 
@@ -135,28 +113,6 @@ export class VehicleService {
     const vehicle = vehicleSnap.data() as Vehicle;
     const images = (vehicle.images || []).filter(img => img.path !== image.path);
 
-    const update: Partial<Vehicle> = { images };
-    if (image.isMain) {
-      update.mainImageUrl = undefined;
-    }
-
-    await updateDoc(docRef, update);
-  }
-
-  async setMainImage(vehicleId: string, image: VehicleImage): Promise<void> {
-    const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
-    const vehicleSnap = await getDoc(docRef);
-    const vehicle = vehicleSnap.data() as Vehicle;
-
-    const images = (vehicle.images || []).map(img => ({
-      ...img,
-      isMain: img.path === image.path
-    }));
-
-    await updateDoc(docRef, {
-      mainImageUrl: image.url,
-      images,
-      updatedAt: { seconds: Date.now() / 1000 }
-    });
+    await updateDoc(docRef, { images, updatedAt: { seconds: Date.now() / 1000 } });
   }
 }

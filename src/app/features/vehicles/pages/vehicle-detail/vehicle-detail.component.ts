@@ -37,35 +37,13 @@ export class VehicleDetailComponent implements OnInit {
 
   statusOptions: VehicleStatus[] = ['available', 'rented', 'maintenance', 'out_of_service'];
 
-  // All images combined: mainImageUrl first, then gallery (excluding main)
+  // All images from vehicle.images array
   galleryImages = computed<GalleryImage[]>(() => {
-    if (!this.vehicle) return [];
-    
-    const images: GalleryImage[] = [];
-    
-    // Add main image first
-    if (this.vehicle.mainImageUrl) {
-      images.push({
-        url: this.vehicle.mainImageUrl,
-        path: '',
-        isMain: true
-      });
-    }
-    
-    // Add gallery images, excluding the main one (avoid duplicates)
-    if (this.vehicle.images) {
-      for (const img of this.vehicle.images) {
-        if (img.url !== this.vehicle?.mainImageUrl) {
-          images.push({
-            url: img.url,
-            path: img.path,
-            isMain: img.isMain
-          });
-        }
-      }
-    }
-    
-    return images;
+    if (!this.vehicle?.images) return [];
+    return this.vehicle.images.map(img => ({
+      url: img.url,
+      path: img.path
+    }));
   });
 
   ngOnInit(): void {
