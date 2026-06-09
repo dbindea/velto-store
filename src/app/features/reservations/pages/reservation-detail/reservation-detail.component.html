@@ -26,22 +26,64 @@
 
     <div class="detail-grid">
       <!-- A. Vehicle Section -->
-      <div class="detail-card">
+      <div class="detail-card vehicle-card">
         <div class="card-header">
           <i class="pi pi-car"></i>
           <span>{{ 'vehicles.title' | translate }}</span>
         </div>
         <div class="card-content">
-          @if (reservation.vehicleSnapshot.mainImageUrl) {
-            <div class="vehicle-image">
-              <img [src]="reservation.vehicleSnapshot.mainImageUrl" [alt]="reservation.vehicleSnapshot.brand">
-            </div>
-          }
-          <div class="vehicle-info">
+          <div class="vehicle-header">
             <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
-            <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>
+            <span class="plate-badge">{{ reservation.vehicleSnapshot.plateNumber }}</span>
+          </div>
+          <div class="vehicle-specs">
+            @if (reservation.vehicleSnapshot.year) {
+              <div class="spec-item">
+                <i class="pi pi-calendar"></i>
+                <span>{{ reservation.vehicleSnapshot.year }}</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.currentKm) {
+              <div class="spec-item">
+                <i class="pi pi-chart-bar"></i>
+                <span>{{ reservation.vehicleSnapshot.currentKm | number }} km</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.fuelType) {
+              <div class="spec-item">
+                <i class="pi pi-bolt"></i>
+                <span>{{ getFuelLabel(reservation.vehicleSnapshot.fuelType) }}</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.transmission) {
+              <div class="spec-item">
+                <i class="pi pi-cog"></i>
+                <span>{{ getTransmissionLabel(reservation.vehicleSnapshot.transmission) }}</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.seats) {
+              <div class="spec-item">
+                <i class="pi pi-users"></i>
+                <span>{{ reservation.vehicleSnapshot.seats }} plazas</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.luggageCapacity) {
+              <div class="spec-item">
+                <i class="pi pi-box"></i>
+                <span>{{ reservation.vehicleSnapshot.luggageCapacity }} maletas</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.color) {
+              <div class="spec-item">
+                <i class="pi pi-palette"></i>
+                <span>{{ reservation.vehicleSnapshot.color }}</span>
+              </div>
+            }
             @if (reservation.vehicleSnapshot.acrissCode) {
-              <p class="acriss">{{ reservation.vehicleSnapshot.acrissCode }}</p>
+              <div class="spec-item acriss">
+                <span class="acriss-label">ACRISS:</span>
+                <span>{{ reservation.vehicleSnapshot.acrissCode }}</span>
+              </div>
             }
           </div>
         </div>

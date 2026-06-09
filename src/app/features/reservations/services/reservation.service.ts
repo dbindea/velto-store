@@ -279,8 +279,14 @@ export class ReservationService {
         brand: vehicle.brand,
         model: vehicle.model,
         plateNumber: vehicle.plateNumber,
+        year: vehicle.year,
         acrissCode: vehicle.acrissCode,
-        mainImageUrl: vehicle.images?.[0]?.url
+        fuelType: vehicle.fuelType,
+        transmission: vehicle.transmission,
+        seats: vehicle.seats,
+        luggageCapacity: vehicle.luggageCapacity,
+        currentKm: vehicle.currentKm,
+        color: vehicle.color
       },
       clientId,
       clientSnapshot: {
@@ -370,8 +376,14 @@ export class ReservationService {
         brand: vehicle.brand,
         model: vehicle.model,
         plateNumber: vehicle.plateNumber,
+        year: vehicle.year,
         acrissCode: vehicle.acrissCode,
-        mainImageUrl: vehicle.images?.[0]?.url
+        fuelType: vehicle.fuelType,
+        transmission: vehicle.transmission,
+        seats: vehicle.seats,
+        luggageCapacity: vehicle.luggageCapacity,
+        currentKm: vehicle.currentKm,
+        color: vehicle.color
       },
       clientId: client.id!,
       clientSnapshot: {

@@ -56,15 +56,9 @@
         <div class="reservation-card" (click)="viewDetail(reservation)">
           <!-- Vehicle Info -->
           <div class="card-vehicle">
-            @if (reservation.vehicleSnapshot.mainImageUrl) {
-              <div class="vehicle-image">
-                <img [src]="reservation.vehicleSnapshot.mainImageUrl" [alt]="reservation.vehicleSnapshot.brand">
-              </div>
-            } @else {
-              <div class="vehicle-image placeholder">
-                <i class="pi pi-car"></i>
-              </div>
-            }
+            <div class="vehicle-image placeholder">
+              <i class="pi pi-car"></i>
+            </div>
             <div class="vehicle-info">
               <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
               <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>

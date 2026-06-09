@@ -73,8 +73,14 @@ export interface Reservation {
     brand: string;
     model: string;
     plateNumber: string;
+    year?: number;
     acrissCode?: string;
-    mainImageUrl?: string;
+    fuelType?: string;
+    transmission?: string;
+    seats?: number;
+    luggageCapacity?: number;
+    currentKm?: number;
+    color?: string;
   };
 
   clientId: string;

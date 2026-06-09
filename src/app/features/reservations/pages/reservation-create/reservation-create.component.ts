@@ -234,6 +234,17 @@ export class ReservationCreateComponent implements OnInit {
     }
   }
 
+  // Format fullName - capitalize first letter of each word
+  formatFullName(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const words = input.value.toLowerCase().split(' ');
+    const formatted = words.map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+    this.quickClient.fullName = formatted;
+    input.value = formatted;
+  }
+
   // Computed values for summary
   get pickupDateTime(): Date {
     return combineDateAndTime(this.pickupDate, this.pickupTime);

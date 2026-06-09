@@ -5,6 +5,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ReservationService } from '../../services/reservation.service';
 import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS, CONTRACT_STATUS_LABELS } from '@shared/models/reservation.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -129,5 +130,13 @@ export class ReservationDetailComponent implements OnInit {
     if (!this.reservation) return false;
     const cancellableStatuses = ['quote', 'reserved'];
     return cancellableStatuses.includes(this.reservation.reservationStatus);
+  }
+
+  getFuelLabel(fuel: string): string {
+    return FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS] || fuel;
+  }
+
+  getTransmissionLabel(trans: string): string {
+    return TRANSMISSION_LABELS[trans as keyof typeof TRANSMISSION_LABELS] || trans;
   }
 }

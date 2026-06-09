@@ -249,6 +249,7 @@
                   type="text" 
                   id="fullName" 
                   [(ngModel)]="quickClient.fullName"
+                  (input)="formatFullName($event)"
                   class="form-control"
                   required>
               </div>
