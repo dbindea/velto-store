@@ -7,6 +7,7 @@ import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-ga
 import {
   Vehicle,
   VehicleStatus,
+  VehiclePricingRule,
   BodyType,
   VEHICLE_STATUS_LABELS,
   VEHICLE_CATEGORY_LABELS,
@@ -29,7 +30,7 @@ export class VehicleDetailComponent implements OnInit {
 
   vehicle: Vehicle | null = null;
   loading = true;
-  activeTab: 'info' | 'features' | 'photos' | 'history' = 'info';
+  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'history' = 'info';
   showStatusModal = false;
   showDeleteModal = false;
   showGallery = false;
@@ -67,7 +68,7 @@ export class VehicleDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'info' | 'features' | 'photos' | 'history'): void {
+  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'history'): void {
     this.activeTab = tab;
   }
 
@@ -104,6 +105,13 @@ export class VehicleDetailComponent implements OnInit {
 
   getBodyTypeLabel(body: BodyType): string {
     return BODY_TYPE_LABELS[body] || body;
+  }
+
+  getPricingRuleLabel(rule: VehiclePricingRule): string {
+    if (rule.label) return rule.label;
+    if (rule.maxDays === null) return `+${rule.minDays} días`;
+    if (rule.minDays === rule.maxDays) return `${rule.minDays} día`;
+    return `${rule.minDays}-${rule.maxDays} días`;
   }
 
   getStatusClass(status: VehicleStatus): string {

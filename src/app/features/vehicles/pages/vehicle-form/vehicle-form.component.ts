@@ -12,12 +12,17 @@ import {
   BodyType,
   FuelType,
   TransmissionType,
+  VehiclePricingRule,
   VEHICLE_STATUS_LABELS,
   VEHICLE_CATEGORY_LABELS,
   FUEL_TYPE_LABELS,
   TRANSMISSION_LABELS,
   BODY_TYPE_LABELS
 } from '@shared/models/vehicle.model';
+import {
+  getDefaultPricingRules,
+  validatePricingRules
+} from '@shared/utils/pricing.util';
 
 @Component({
   selector: 'app-vehicle-form',
@@ -38,6 +43,9 @@ export class VehicleFormComponent implements OnInit {
 
   formData: VehicleFormData = this.getEmptyForm();
   acrissCode = '';
+
+  // Pricing validation errors
+  pricingErrors: string[] = [];
 
   statusOptions = Object.keys(VEHICLE_STATUS_LABELS) as VehicleStatus[];
   categoryOptions = Object.keys(VEHICLE_CATEGORY_LABELS) as VehicleCategory[];
@@ -87,9 +95,16 @@ export class VehicleFormComponent implements OnInit {
           vin: vehicle.vin || '',
           description: vehicle.description || '',
           publicEnabled: vehicle.publicEnabled,
-          features: { ...vehicle.features }
+          features: { ...vehicle.features },
+          pricingRules: vehicle.pricingRules?.length ? vehicle.pricingRules : getDefaultPricingRules(),
+          defaultDepositAmount: vehicle.defaultDepositAmount ?? 300,
+          includedKmPerDay: vehicle.includedKmPerDay ?? 200,
+          extraKmPrice: vehicle.extraKmPrice ?? 0.25,
+          minimumRentalDays: vehicle.minimumRentalDays ?? 1,
+          manualPriceAllowed: vehicle.manualPriceAllowed ?? true
         };
         this.updateAcrissCode();
+        this.pricingErrors = validatePricingRules(this.formData.pricingRules || []);
         this.loading = false;
       },
       error: () => {
@@ -124,7 +139,13 @@ export class VehicleFormComponent implements OnInit {
         parkingSensors: false,
         rearCamera: false,
         cruiseControl: false
-      }
+      },
+      pricingRules: getDefaultPricingRules(),
+      defaultDepositAmount: 300,
+      includedKmPerDay: 200,
+      extraKmPrice: 0.25,
+      minimumRentalDays: 1,
+      manualPriceAllowed: true
     };
   }
 
@@ -237,5 +258,44 @@ export class VehicleFormComponent implements OnInit {
 
   getBodyTypeLabel(body: BodyType): string {
     return BODY_TYPE_LABELS[body];
+  }
+
+  // Pricing methods
+  addPricingRule(): void {
+    const rules = this.formData.pricingRules || [];
+    const lastRule = rules[rules.length - 1];
+    const newMinDays = lastRule ? (lastRule.maxDays || lastRule.minDays) + 1 : 1;
+    
+    rules.push({
+      minDays: newMinDays,
+      maxDays: newMinDays + 3,
+      pricePerDay: 40
+    });
+    
+    this.formData.pricingRules = [...rules];
+    this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+  }
+
+  removePricingRule(index: number): void {
+    if (this.formData.pricingRules && this.formData.pricingRules.length > 1) {
+      this.formData.pricingRules = this.formData.pricingRules.filter((_, i) => i !== index);
+      this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+    }
+  }
+
+  restoreDefaultPricing(): void {
+    this.formData.pricingRules = getDefaultPricingRules();
+    this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+  }
+
+  updatePricingRule(index: number, field: keyof VehiclePricingRule, value: any): void {
+    if (!this.formData.pricingRules) return;
+    
+    this.formData.pricingRules = this.formData.pricingRules.map((rule, i) => {
+      if (i !== index) return rule;
+      return { ...rule, [field]: value };
+    });
+    
+    this.pricingErrors = validatePricingRules(this.formData.pricingRules);
   }
 }

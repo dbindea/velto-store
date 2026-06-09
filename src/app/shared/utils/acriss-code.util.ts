@@ -24,7 +24,7 @@ export function generateAcrissCode(input: AcrissInput): string {
 }
 
 /**
- * ACRISS/SIPP codes according to Amadeus specification:
+ * ACRISS/SIPP codes according to specification:
  * 1st letter = category/size: M(mini), E(economy), C(compact), I(intermediate),
  *              S(standard), F(fullsize), P(premium), L(luxury), X(special)
  * 2nd letter = body type: C(2/4 doors), D(4/5 doors), W(estate), F(SUV),

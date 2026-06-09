@@ -104,12 +104,14 @@
       "rentalClassification": "Clasificare de închiriere",
       "features": "Caracteristici",
       "photos": "Fotografii",
-      "history": "Istoric"
+      "history": "Istoric",
+      "pricing": "Tarife și condiții"
     },
     "tabs": {
       "info": "Informații",
       "features": "Caracteristici",
       "photos": "Fotografii",
+      "pricing": "Tarife",
       "history": "Istoric"
     },
     "features": {
@@ -127,7 +129,7 @@
       "addGalleryPhoto": "Adaugă la galerie"
     },
     "help": {
-      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C (standard Amadeus)"
+      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C"
     },
     "mainPhoto": "Principală",
     "noPhotos": "Nu există fotografii",
@@ -145,6 +147,37 @@
     },
     "changeStatusTitle": "Schimbă statusul vehiculului",
     "deleteTitle": "Șterge vehicul",
-    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată."
+    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
+    "pricing": {
+      "title": "Tarife",
+      "conditions": "Condiții",
+      "rules": "Reguli de preț",
+      "preview": "Previzualizare preț",
+      "defaultDepositAmount": "Avans",
+      "includedKmPerDay": "Km incluse/zi",
+      "extraKmPrice": "Preț km extra",
+      "minimumRentalDays": "Minim zile închiriere",
+      "manualPriceAllowed": "Permite preț manual",
+      "label": "Etichetă",
+      "minDays": "De la",
+      "maxDays": "Până la",
+      "pricePerDay": "€/zi",
+      "addRule": "Adaugă interval",
+      "removeRule": "Elimină interval",
+      "restoreDefaults": "Restabilește implicit",
+      "testDays": "Zile de test",
+      "appliedRule": "Regulă aplicată",
+      "totalPrice": "Total",
+      "noRuleFound": "Fără regulă pentru aceste zile",
+      "from": "De la",
+      "to": "Până la",
+      "moreThan": "+",
+      "days": "zile",
+      "day": "zi",
+      "priceFrom": "De la",
+      "deposit": "Avans",
+      "allowed": "Da",
+      "notAllowed": "Nu"
+    }
   }
 }

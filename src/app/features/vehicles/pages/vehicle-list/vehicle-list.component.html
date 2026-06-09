@@ -94,6 +94,13 @@
                 </span>
               }
             </div>
+            @if (vehicle.pricingRules && vehicle.pricingRules.length > 0) {
+              <div class="vehicle-pricing">
+                <span class="price-from">{{ 'vehicles.pricing.priceFrom' | translate }}</span>
+                <span class="price-value">{{ getLowestPrice(vehicle.pricingRules) }} €/día</span>
+                <span class="deposit">{{ 'vehicles.pricing.deposit' | translate }}: {{ vehicle.defaultDepositAmount || 300 }}€</span>
+              </div>
+            }
             <p class="plate">{{ vehicle.plateNumber }}</p>
           </div>
 

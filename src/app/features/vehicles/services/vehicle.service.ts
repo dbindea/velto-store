@@ -4,6 +4,7 @@ import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angula
 import { Observable, from, throwError } from 'rxjs';
 import { switchMap, map } from 'rxjs/operators';
 import { Vehicle, VehicleImage, VehicleStatus, VehicleFormData } from '@shared/models/vehicle.model';
+import { sortPricingRules, getDefaultPricingRules } from '@shared/utils/pricing.util';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
@@ -46,12 +47,21 @@ export class VehicleService {
   }
 
   async createVehicle(vehicle: VehicleFormData, acrissCode: string): Promise<string> {
+    // Use default pricing rules if not provided
+    const pricingRules = vehicle.pricingRules?.length ? vehicle.pricingRules : getDefaultPricingRules();
+    
     const data = this.cleanData({
       ...vehicle,
       acrissCode,
       publicEnabled: false,
       status: 'available',
       images: [],
+      pricingRules: sortPricingRules(pricingRules),
+      defaultDepositAmount: vehicle.defaultDepositAmount ?? 300,
+      includedKmPerDay: vehicle.includedKmPerDay ?? 200,
+      extraKmPrice: vehicle.extraKmPrice ?? 0.25,
+      minimumRentalDays: vehicle.minimumRentalDays ?? 1,
+      manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
       createdAt: { seconds: Date.now() / 1000 }
     });
     const docRef = await addDoc(this.vehiclesRef, data);
@@ -59,9 +69,16 @@ export class VehicleService {
   }
 
   async updateVehicle(id: string, data: Partial<VehicleFormData>): Promise<void> {
+    // Sort pricing rules before saving
+    let pricingRules = data.pricingRules;
+    if (pricingRules?.length) {
+      pricingRules = sortPricingRules(pricingRules);
+    }
+    
     const docRef = doc(this.firestore, `vehicles/${id}`);
     await updateDoc(docRef, this.cleanData({
       ...data,
+      pricingRules,
       updatedAt: { seconds: Date.now() / 1000 }
     }));
   }

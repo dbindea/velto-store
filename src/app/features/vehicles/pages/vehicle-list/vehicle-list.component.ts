@@ -8,9 +8,11 @@ import {
   Vehicle,
   VehicleStatus,
   VehicleCategory,
+  VehiclePricingRule,
   VEHICLE_STATUS_LABELS,
   VEHICLE_CATEGORY_LABELS
 } from '@shared/models/vehicle.model';
+import { getLowestPricePerDay } from '@shared/utils/pricing.util';
 
 @Component({
   selector: 'app-vehicle-list',
@@ -108,5 +110,9 @@ export class VehicleListComponent implements OnInit {
       out_of_service: 'status-out'
     };
     return map[status] || '';
+  }
+
+  getLowestPrice(rules: VehiclePricingRule[]): number {
+    return getLowestPricePerDay(rules) || 0;
   }
 }

@@ -14,6 +14,14 @@ export interface VehicleImage {
   uploadedAt?: any;
 }
 
+export interface VehiclePricingRule {
+  id?: string;
+  minDays: number;
+  maxDays: number | null;
+  pricePerDay: number;
+  label?: string;
+}
+
 export interface Vehicle {
   id?: string;
   brand: string;
@@ -35,6 +43,12 @@ export interface Vehicle {
   description?: string;
   features: VehicleFeatures;
   images?: VehicleImage[];
+  pricingRules?: VehiclePricingRule[];
+  defaultDepositAmount?: number;
+  includedKmPerDay?: number;
+  extraKmPrice?: number;
+  minimumRentalDays?: number;
+  manualPriceAllowed?: boolean;
   publicEnabled: boolean;
   createdAt?: any;
   updatedAt?: any;
@@ -67,6 +81,12 @@ export interface VehicleFormData {
   description?: string;
   publicEnabled: boolean;
   features: VehicleFeatures;
+  pricingRules?: VehiclePricingRule[];
+  defaultDepositAmount?: number;
+  includedKmPerDay?: number;
+  extraKmPrice?: number;
+  minimumRentalDays?: number;
+  manualPriceAllowed?: boolean;
 }
 
 export const VEHICLE_STATUS_LABELS: Record<VehicleStatus, string> = {

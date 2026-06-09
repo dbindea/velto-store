@@ -104,12 +104,14 @@
       "rentalClassification": "Clasificación de alquiler",
       "features": "Características",
       "photos": "Fotos",
-      "history": "Historial"
+      "history": "Historial",
+      "pricing": "Tarifas y condiciones"
     },
     "tabs": {
       "info": "Información",
       "features": "Características",
       "photos": "Fotos",
+      "pricing": "Tarifas",
       "history": "Historial"
     },
     "features": {
@@ -127,7 +129,7 @@
       "addGalleryPhoto": "Añadir a galería"
     },
     "help": {
-      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C (estándar Amadeus)"
+      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C"
     },
     "mainPhoto": "Principal",
     "noPhotos": "No hay fotos disponibles",
@@ -145,6 +147,37 @@
     },
     "changeStatusTitle": "Cambiar estado del vehículo",
     "deleteTitle": "Eliminar vehículo",
-    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer."
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
+    "pricing": {
+      "title": "Tarifas",
+      "conditions": "Condiciones",
+      "rules": "Reglas de precio",
+      "preview": "Vista previa de precio",
+      "defaultDepositAmount": "Fianza",
+      "includedKmPerDay": "Km incluidos/día",
+      "extraKmPrice": "Precio km extra",
+      "minimumRentalDays": "Mínimo días alquiler",
+      "manualPriceAllowed": "Permitir precio manual",
+      "label": "Etiqueta",
+      "minDays": "Desde",
+      "maxDays": "Hasta",
+      "pricePerDay": "€/día",
+      "addRule": "Añadir rango",
+      "removeRule": "Eliminar rango",
+      "restoreDefaults": "Restaurar tarifas",
+      "testDays": "Días de prueba",
+      "appliedRule": "Regla aplicada",
+      "totalPrice": "Total",
+      "noRuleFound": "Sin regla para estos días",
+      "from": "Desde",
+      "to": "Hasta",
+      "moreThan": "+",
+      "days": "días",
+      "day": "día",
+      "priceFrom": "Desde",
+      "deposit": "Fianza",
+      "allowed": "Sí",
+      "notAllowed": "No"
+    }
   }
 }
