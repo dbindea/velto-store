@@ -28,7 +28,21 @@ export const routes: Routes = [
       },
       {
         path: 'reservations',
-        loadComponent: () => import('./features/reservations/reservations.component').then(m => m.ReservationsComponent)
+        loadComponent: () => import('./features/reservations/reservations.component').then(m => m.ReservationsComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/reservations/pages/reservation-list/reservation-list.component').then(m => m.ReservationListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/reservations/pages/reservation-create/reservation-create.component').then(m => m.ReservationCreateComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/reservations/pages/reservation-detail/reservation-detail.component').then(m => m.ReservationDetailComponent)
+          }
+        ]
       },
       {
         path: 'vehicles',

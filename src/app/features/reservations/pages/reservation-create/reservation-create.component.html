@@ -1,0 +1,445 @@
+<div class="page">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn-back" type="button" (click)="goBack()">
+      <i class="pi pi-arrow-left"></i>
+    </button>
+    <div class="header-content">
+      <h1>{{ 'reservations.new' | translate }}</h1>
+      <p class="subtitle">{{ 'reservations.subtitle' | translate }}</p>
+    </div>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    @for (step of steps; track step) {
+      <div 
+        class="step" 
+        [class.active]="currentStep === step"
+        [class.complete]="isStepComplete(step)"
+        (click)="goToStep(step)">
+        <div class="step-number">
+          @if (isStepComplete(step) && currentStep !== step) {
+            <i class="pi pi-check"></i>
+          } @else {
+            {{ getStepIndex(step) }}
+          }
+        </div>
+        <div class="step-label">{{ 'reservations.steps.' + step | translate }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- Step Content -->
+  <div class="step-content">
+    
+    <!-- Step 1: Dates -->
+    @if (currentStep === 'dates') {
+      <div class="step-panel">
+        <div class="section">
+          <h2>{{ 'reservations.fields.pickupDate' | translate }}</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pickupDate">{{ 'reservations.fields.pickupDate' | translate }}</label>
+              <input 
+                type="date" 
+                id="pickupDate" 
+                [(ngModel)]="pickupDate"
+                class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="pickupTime">{{ 'reservations.fields.pickupTime' | translate }}</label>
+              <input 
+                type="time" 
+                id="pickupTime" 
+                [(ngModel)]="pickupTime"
+                class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="pickupLocation">{{ 'reservations.fields.pickupLocation' | translate }}</label>
+            <input 
+              type="text" 
+              id="pickupLocation" 
+              [(ngModel)]="pickupLocation"
+              class="form-control"
+              [placeholder]="'reservations.fields.pickupLocation' | translate">
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>{{ 'reservations.fields.returnDate' | translate }}</h2>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="returnDate">{{ 'reservations.fields.returnDate' | translate }}</label>
+              <input 
+                type="date" 
+                id="returnDate" 
+                [(ngModel)]="returnDate"
+                class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="returnTime">{{ 'reservations.fields.returnTime' | translate }}</label>
+              <input 
+                type="time" 
+                id="returnTime" 
+                [(ngModel)]="returnTime"
+                class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="returnLocation">{{ 'reservations.fields.returnLocation' | translate }}</label>
+            <input 
+              type="text" 
+              id="returnLocation" 
+              [(ngModel)]="returnLocation"
+              class="form-control"
+              [placeholder]="'reservations.fields.returnLocation' | translate">
+          </div>
+        </div>
+
+        @if (dateError) {
+          <div class="error-message">
+            {{ dateError | translate }}
+          </div>
+        }
+
+        <div class="actions">
+          <button 
+            class="btn-primary" 
+            type="button"
+            [disabled]="searching"
+            (click)="searchAvailability()">
+            @if (searching) {
+              <i class="pi pi-spin pi-spinner"></i>
+              {{ 'common.loading' | translate }}
+            } @else {
+              <i class="pi pi-search"></i>
+              {{ 'reservations.availability.search' | translate }}
+            }
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Step 2: Vehicle -->
+    @if (currentStep === 'vehicle') {
+      <div class="step-panel">
+        <div class="section">
+          <h2>{{ 'reservations.availability.selectVehicle' | translate }}</h2>
+          
+          @if (searching) {
+            <div class="loading-state">
+              <i class="pi pi-spin pi-spinner"></i>
+              <p>{{ 'common.loading' | translate }}</p>
+            </div>
+          } @else if (availabilityResults.length === 0) {
+            <div class="empty-state">
+              <i class="pi pi-car"></i>
+              <p>{{ 'reservations.availability.noVehiclesAvailable' | translate }}</p>
+            </div>
+          } @else {
+            <div class="vehicle-list">
+              @for (result of availabilityResults; track result.vehicleId) {
+                <div 
+                  class="vehicle-card"
+                  [class.available]="result.available"
+                  [class.unavailable]="!result.available"
+                  [class.selected]="selectedVehicle?.vehicleId === result.vehicleId"
+                  (click)="selectVehicle(result)">
+                  
+                  <div class="vehicle-image">
+                    @if (result.vehicle.images?.[0]?.url) {
+                      <img [src]="result.vehicle.images?.[0]?.url" [alt]="result.vehicle.brand">
+                    } @else {
+                      <div class="placeholder-image">
+                        <i class="pi pi-car"></i>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="vehicle-info">
+                    <h3>{{ result.vehicle.brand }} {{ result.vehicle.model }}</h3>
+                    <p class="plate">{{ result.vehicle.plateNumber }}</p>
+                    <p class="acriss">{{ result.vehicle.acrissCode }}</p>
+                    
+                    @if (result.available) {
+                      <div class="pricing">
+                        <div class="days">{{ result.totalDays }} {{ 'reservations.fields.totalDays' | translate }}</div>
+                        <div class="price">{{ result.pricing?.finalPrice | number:'1.2-2' }} €</div>
+                        <div class="price-per-day">{{ result.pricing?.pricePerDay }} €/día</div>
+                      </div>
+                    } @else {
+                      <div class="unavailable-badge">
+                        <i class="pi pi-ban"></i>
+                        {{ result.conflictMessage || 'No disponible' }}
+                      </div>
+                    }
+                  </div>
+
+                  @if (result.available) {
+                    <div class="select-indicator">
+                      <i class="pi pi-check-circle"></i>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Step 3: Client -->
+    @if (currentStep === 'client') {
+      <div class="step-panel">
+        <div class="section">
+          <h2>{{ 'reservations.client.select' | translate }}</h2>
+          
+          @if (!showQuickClientForm) {
+            <div class="search-box">
+              <i class="pi pi-search"></i>
+              <input 
+                type="text" 
+                [(ngModel)]="clientSearchTerm"
+                (ngModelChange)="searchClients()"
+                [placeholder]="'reservations.client.search' | translate"
+                class="form-control">
+            </div>
+
+            @if (searchResults.length > 0) {
+              <div class="client-list">
+                @for (client of searchResults; track client.id) {
+                  <div class="client-card" (click)="selectClient(client)">
+                    <div class="client-avatar">
+                      {{ client.fullName.charAt(0).toUpperCase() }}
+                    </div>
+                    <div class="client-info">
+                      <h4>{{ client.fullName }}</h4>
+                      @if (client.phone) {
+                        <p>{{ client.phone }}</p>
+                      }
+                      @if (client.email) {
+                        <p class="email">{{ client.email }}</p>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="divider">
+              <span>{{ 'common.or' | translate }}</span>
+            </div>
+
+            <button 
+              class="btn-outline" 
+              type="button"
+              (click)="toggleQuickClientForm()">
+              <i class="pi pi-plus"></i>
+              {{ 'reservations.client.createQuick' | translate }}
+            </button>
+          } @else {
+            <div class="quick-client-form">
+              <h3>{{ 'reservations.client.createQuick' | translate }}</h3>
+              
+              <div class="form-group">
+                <label for="fullName">{{ 'reservations.client.fullName' | translate }} *</label>
+                <input 
+                  type="text" 
+                  id="fullName" 
+                  [(ngModel)]="quickClient.fullName"
+                  class="form-control"
+                  required>
+              </div>
+
+              <div class="form-group">
+                <label for="phone">{{ 'reservations.client.phone' | translate }}</label>
+                <input 
+                  type="tel" 
+                  id="phone" 
+                  [(ngModel)]="quickClient.phone"
+                  class="form-control">
+              </div>
+
+              <div class="form-group">
+                <label for="email">{{ 'reservations.client.email' | translate }}</label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  [(ngModel)]="quickClient.email"
+                  class="form-control">
+              </div>
+
+              <div class="form-group">
+                <label for="documentNumber">{{ 'reservations.client.documentNumber' | translate }}</label>
+                <input 
+                  type="text" 
+                  id="documentNumber" 
+                  [(ngModel)]="quickClient.documentNumber"
+                  class="form-control">
+              </div>
+
+              <div class="form-actions">
+                <button 
+                  class="btn-secondary" 
+                  type="button"
+                  (click)="toggleQuickClientForm()">
+                  {{ 'common.cancel' | translate }}
+                </button>
+                <button 
+                  class="btn-primary" 
+                  type="button"
+                  [disabled]="!quickClient.fullName || saving"
+                  (click)="createQuickClient()">
+                  @if (saving) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                  } @else {
+                    {{ 'common.save' | translate }}
+                  }
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Step 4: Summary -->
+    @if (currentStep === 'summary') {
+      <div class="step-panel">
+        <div class="section">
+          <h2>{{ 'reservations.detail' | translate }}</h2>
+          
+          <div class="summary-grid">
+            <!-- Vehicle -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-car"></i>
+                <span>{{ 'vehicles.title' | translate }}</span>
+              </div>
+              <div class="summary-content">
+                <p class="vehicle-name">{{ selectedVehicle?.vehicle?.brand }} {{ selectedVehicle?.vehicle?.model }}</p>
+                <p class="plate">{{ selectedVehicle?.vehicle?.plateNumber }}</p>
+              </div>
+            </div>
+
+            <!-- Client -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-user"></i>
+                <span>{{ 'clients.title' | translate }}</span>
+              </div>
+              <div class="summary-content">
+                <p class="client-name">{{ selectedClient?.fullName }}</p>
+                @if (selectedClient?.phone) {
+                  <p>{{ selectedClient?.phone }}</p>
+                }
+              </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-calendar"></i>
+                <span>{{ 'reservations.fields.pickupDate' | translate }}</span>
+              </div>
+              <div class="summary-content">
+                <p><strong>{{ 'reservations.fields.pickupDate' | translate }}:</strong> {{ pickupDateTime | date:'dd/MM/yyyy HH:mm' }}</p>
+                <p><strong>{{ 'reservations.fields.returnDate' | translate }}:</strong> {{ returnDateTime | date:'dd/MM/yyyy HH:mm' }}</p>
+                <p class="total-days">{{ totalDays }} {{ 'reservations.fields.totalDays' | translate }}</p>
+              </div>
+            </div>
+
+            <!-- Pricing -->
+            <div class="summary-card pricing-card">
+              <div class="summary-header">
+                <i class="pi pi-euro"></i>
+                <span>{{ 'reservations.pricing.basePrice' | translate }}</span>
+              </div>
+              <div class="summary-content">
+                <div class="price-row">
+                  <span>{{ 'reservations.pricing.pricePerDay' | translate }}:</span>
+                  <span>{{ selectedVehicle?.pricing?.pricePerDay }} €</span>
+                </div>
+                <div class="price-row">
+                  <span>{{ totalDays }} x {{ selectedVehicle?.pricing?.pricePerDay }} €:</span>
+                  <span>{{ selectedVehicle?.pricing?.basePrice }} €</span>
+                </div>
+                <div class="price-row total">
+                  <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
+                  <span>{{ finalPrice }} €</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payments -->
+            <div class="summary-card payments-card">
+              <div class="summary-header">
+                <i class="pi pi-wallet"></i>
+                <span>{{ 'reservations.paymentStatus.pending' | translate }}</span>
+              </div>
+              <div class="summary-content">
+                <div class="price-row">
+                  <span>{{ 'reservations.pricing.initialPayment' | translate }}:</span>
+                  <span class="highlight">{{ initialPayment }} €</span>
+                </div>
+                <div class="price-row">
+                  <span>{{ 'reservations.pricing.remainingPayment' | translate }}:</span>
+                  <span>{{ remainingPayment }} €</span>
+                </div>
+                <div class="price-row">
+                  <span>{{ 'reservations.pricing.deposit' | translate }}:</span>
+                  <span class="highlight">{{ deposit }} €</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="summary-card status-card">
+              <div class="summary-header">
+                <i class="pi pi-info-circle"></i>
+                <span>{{ 'reservations.status.reserved' | translate }}</span>
+              </div>
+              <div class="summary-content">
+                <div class="status-badges">
+                  <span class="badge badge-reserved">{{ 'reservations.status.reserved' | translate }}</span>
+                  <span class="badge badge-pending">{{ 'reservations.paymentStatus.pending' | translate }}</span>
+                  <span class="badge badge-pending">{{ 'reservations.contractStatus.pending' | translate }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group notes-group">
+            <label for="notes">{{ 'reservations.fields.notes' | translate }}</label>
+            <textarea 
+              id="notes" 
+              [(ngModel)]="notes"
+              class="form-control"
+              rows="3"
+              [placeholder]="'reservations.fields.notes' | translate"></textarea>
+          </div>
+
+          <div class="actions">
+            <button 
+              class="btn-primary btn-lg" 
+              type="button"
+              [disabled]="saving"
+              (click)="createReservation()">
+              @if (saving) {
+                <i class="pi pi-spin pi-spinner"></i>
+                {{ 'common.loading' | translate }}
+              } @else {
+                <i class="pi pi-check"></i>
+                {{ 'reservations.actions.createReservation' | translate }}
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+  </div>
+</div>

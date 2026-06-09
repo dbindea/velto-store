@@ -48,7 +48,11 @@
     "back": "Volver",
     "close": "Cerrar",
     "moduleInProgress": "Módulo en preparación",
-    "welcome": "Bienvenido"
+    "welcome": "Bienvenido",
+    "all": "Todos",
+    "paid": "Pagado",
+    "pending": "Pendiente",
+    "or": "o"
   },
   "vehicles": {
     "title": "Vehículos",
@@ -179,5 +183,99 @@
       "allowed": "Sí",
       "notAllowed": "No"
     }
+  },
+  "reservations": {
+    "title": "Reservas",
+    "subtitle": "Gestiona las reservas de alquiler",
+    "new": "Nueva reserva",
+    "create": "Crear reserva",
+    "detail": "Detalle de reserva",
+    "list": "Lista de reservas",
+    "steps": {
+      "dates": "Fechas",
+      "vehicle": "Vehículo",
+      "client": "Cliente",
+      "summary": "Resumen"
+    },
+    "fields": {
+      "pickupDate": "Fecha de recogida",
+      "pickupTime": "Hora de recogida",
+      "returnDate": "Fecha de devolución",
+      "returnTime": "Hora de devolución",
+      "pickupLocation": "Lugar de recogida",
+      "returnLocation": "Lugar de devolución",
+      "totalDays": "días",
+      "notes": "Notas"
+    },
+    "availability": {
+      "search": "Buscar disponibilidad",
+      "available": "Disponible",
+      "notAvailable": "No disponible",
+      "selectVehicle": "Seleccionar vehículo",
+      "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas"
+    },
+    "pricing": {
+      "pricePerDay": "Precio/día",
+      "basePrice": "Precio base",
+      "finalPrice": "Precio total",
+      "initialPayment": "Señal",
+      "remainingPayment": "Resto pendiente",
+      "deposit": "Fianza",
+      "dueDate": "Fecha de vencimiento",
+      "manualAdjustment": "Ajuste manual"
+    },
+    "client": {
+      "select": "Seleccionar cliente",
+      "search": "Buscar cliente...",
+      "createQuick": "Crear cliente rápido",
+      "fullName": "Nombre completo",
+      "phone": "Teléfono",
+      "email": "Correo electrónico",
+      "documentNumber": "Número de documento"
+    },
+    "status": {
+      "quote": "Presupuesto",
+      "reserved": "Reservado",
+      "confirmed": "Confirmado",
+      "delivered": "Entregado",
+      "returned": "Devuelto",
+      "closed": "Cerrado",
+      "cancelled": "Cancelado"
+    },
+    "paymentStatus": {
+      "pending": "Pendiente",
+      "partial": "Parcial",
+      "paid": "Pagado",
+      "refunded": "Reembolsado"
+    },
+    "contractStatus": {
+      "pending": "Pendiente",
+      "signed": "Firmado",
+      "completed": "Completado",
+      "cancelled": "Cancelado"
+    },
+    "actions": {
+      "cancel": "Cancelar reserva",
+      "createReservation": "Crear reserva",
+      "viewDetail": "Ver detalle"
+    },
+    "messages": {
+      "created": "Reserva creada correctamente",
+      "cancelled": "Reserva cancelada",
+      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
+      "vehicleNoLongerAvailable": "El vehículo ya no está disponible para estas fechas"
+    },
+    "placeholders": {
+      "contractFuture": "Firma de contrato en desarrollo",
+      "paymentsFuture": "Gestión de pagos en desarrollo",
+      "deliveryFuture": "Entrega/devolución en desarrollo"
+    },
+    "list": {
+      "empty": "No hay reservas todavía"
+    }
+  },
+  "clients": {
+    "title": "Clientes",
+    "subtitle": "Gestiona los clientes"
   }
 }

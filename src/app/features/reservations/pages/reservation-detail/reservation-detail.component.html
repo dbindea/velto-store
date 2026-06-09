@@ -1,0 +1,249 @@
+<div class="page">
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (reservation) {
+    <!-- Header -->
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <div class="title-row">
+          <h1>{{ 'reservations.detail' | translate }}</h1>
+          <span class="badge" [ngClass]="getStatusClass(reservation.reservationStatus)">
+            {{ getStatusLabel(reservation.reservationStatus) }}
+          </span>
+        </div>
+        <p class="subtitle">
+          {{ 'reservations.fields.totalDays' | translate }}: {{ reservation.totalDays }}
+        </p>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <!-- A. Vehicle Section -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-car"></i>
+          <span>{{ 'vehicles.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (reservation.vehicleSnapshot.mainImageUrl) {
+            <div class="vehicle-image">
+              <img [src]="reservation.vehicleSnapshot.mainImageUrl" [alt]="reservation.vehicleSnapshot.brand">
+            </div>
+          }
+          <div class="vehicle-info">
+            <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
+            <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>
+            @if (reservation.vehicleSnapshot.acrissCode) {
+              <p class="acriss">{{ reservation.vehicleSnapshot.acrissCode }}</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Client Section -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-user"></i>
+          <span>{{ 'clients.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="client-info">
+            <div class="client-avatar">
+              {{ reservation.clientSnapshot.fullName.charAt(0).toUpperCase() }}
+            </div>
+            <div class="client-details">
+              <h3>{{ reservation.clientSnapshot.fullName }}</h3>
+              @if (reservation.clientSnapshot.phone) {
+                <p><i class="pi pi-phone"></i> {{ reservation.clientSnapshot.phone }}</p>
+              }
+              @if (reservation.clientSnapshot.email) {
+                <p><i class="pi pi-envelope"></i> {{ reservation.clientSnapshot.email }}</p>
+              }
+              @if (reservation.clientSnapshot.documentNumber) {
+                <p><i class="pi pi-id-card"></i> {{ reservation.clientSnapshot.documentNumber }}</p>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Dates Section -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-calendar"></i>
+          <span>{{ 'reservations.fields.pickupDate' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="dates-display">
+            <div class="date-item">
+              <span class="date-label">{{ 'reservations.fields.pickupDate' | translate }}</span>
+              <span class="date-value">{{ getPickupDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            @if (reservation.pickupLocation) {
+              <p class="location">{{ reservation.pickupLocation }}</p>
+            }
+            
+            <div class="date-item">
+              <span class="date-label">{{ 'reservations.fields.returnDate' | translate }}</span>
+              <span class="date-value">{{ getReturnDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            @if (reservation.returnLocation) {
+              <p class="location">{{ reservation.returnLocation }}</p>
+            }
+            
+            <div class="total-days-badge">
+              {{ reservation.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D. Pricing Section -->
+      <div class="detail-card pricing-card">
+        <div class="card-header">
+          <i class="pi pi-euro"></i>
+          <span>{{ 'reservations.pricing.finalPrice' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="pricing-breakdown">
+            <div class="price-row">
+              <span>{{ 'reservations.pricing.pricePerDay' | translate }}:</span>
+              <span>{{ reservation.pricingSnapshot.pricePerDay }} €</span>
+            </div>
+            <div class="price-row">
+              <span>{{ reservation.totalDays }} x {{ reservation.pricingSnapshot.pricePerDay }} €:</span>
+              <span>{{ reservation.pricingSnapshot.basePrice }} €</span>
+            </div>
+            @if (reservation.pricingSnapshot.manualAdjustment) {
+              <div class="price-row adjustment">
+                <span>{{ 'reservations.pricing.manualAdjustment' | translate }}:</span>
+                <span>{{ reservation.pricingSnapshot.manualAdjustment > 0 ? '+' : '' }}{{ reservation.pricingSnapshot.manualAdjustment }} €</span>
+              </div>
+            }
+            <div class="price-row total">
+              <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
+              <span class="total-value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- E. Payments Section -->
+      <div class="detail-card payments-card">
+        <div class="card-header">
+          <i class="pi pi-wallet"></i>
+          <span>{{ 'reservations.paymentStatus.pending' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="payment-status-badge" [ngClass]="getPaymentStatusClass(reservation.paymentStatus)">
+            {{ getPaymentLabel(reservation.paymentStatus) }}
+          </div>
+          
+          <div class="payment-items">
+            <!-- Initial Payment -->
+            <div class="payment-item">
+              <span class="payment-label">{{ 'reservations.pricing.initialPayment' | translate }}</span>
+              <div class="payment-amounts">
+                <span class="required">{{ reservation.initialPayment.requiredAmount | number:'1.2-2' }} €</span>
+                @if (reservation.initialPayment.paidAmount > 0) {
+                  <span class="paid">{{ reservation.initialPayment.paidAmount | number:'1.2-2' }} € {{ 'paid' | translate }}</span>
+                }
+              </div>
+              <span class="payment-status" [ngClass]="reservation.initialPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
+                {{ reservation.initialPayment.status === 'paid' ? ('paid' | translate) : ('pending' | translate) }}
+              </span>
+            </div>
+
+            <!-- Remaining Payment -->
+            <div class="payment-item">
+              <span class="payment-label">{{ 'reservations.pricing.remainingPayment' | translate }}</span>
+              <div class="payment-amounts">
+                <span class="required">{{ reservation.remainingPayment.requiredAmount | number:'1.2-2' }} €</span>
+                @if (reservation.remainingPayment.paidAmount > 0) {
+                  <span class="paid">{{ reservation.remainingPayment.paidAmount | number:'1.2-2' }} € {{ 'paid' | translate }}</span>
+                }
+              </div>
+              <span class="payment-status" [ngClass]="reservation.remainingPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
+                {{ reservation.remainingPayment.status === 'paid' ? ('paid' | translate) : ('pending' | translate) }}
+              </span>
+            </div>
+
+            <!-- Deposit -->
+            <div class="payment-item">
+              <span class="payment-label">{{ 'reservations.pricing.deposit' | translate }}</span>
+              <div class="payment-amounts">
+                <span class="required">{{ reservation.deposit.requiredAmount | number:'1.2-2' }} €</span>
+                @if (reservation.deposit.paidAmount > 0) {
+                  <span class="paid">{{ reservation.deposit.paidAmount | number:'1.2-2' }} € {{ 'paid' | translate }}</span>
+                }
+              </div>
+              <span class="deposit-status" [ngClass]="getDepositStatusClass(reservation.deposit.status)">
+                {{ reservation.deposit.status }}
+              </span>
+            </div>
+          </div>
+
+          <p class="future-note">
+            <i class="pi pi-info-circle"></i>
+            {{ 'reservations.placeholders.paymentsFuture' | translate }}
+          </p>
+        </div>
+      </div>
+
+      <!-- F. Contract Section -->
+      <div class="detail-card contract-card">
+        <div class="card-header">
+          <i class="pi pi-file"></i>
+          <span>{{ 'contracts.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <span class="contract-status" [ngClass]="reservation.contractStatus === 'signed' ? 'status-signed' : 'status-pending'">
+            {{ getContractLabel(reservation.contractStatus) }}
+          </span>
+          <p class="future-note">
+            <i class="pi pi-info-circle"></i>
+            {{ 'reservations.placeholders.contractFuture' | translate }}
+          </p>
+        </div>
+      </div>
+
+      <!-- G. Notes Section -->
+      @if (reservation.notes) {
+        <div class="detail-card notes-card">
+          <div class="card-header">
+            <i class="pi pi-comment"></i>
+            <span>{{ 'reservations.fields.notes' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <p class="notes-text">{{ reservation.notes }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Actions -->
+    <div class="page-actions">
+      @if (canCancel()) {
+        <button 
+          class="btn-danger" 
+          type="button"
+          [disabled]="cancelling"
+          (click)="cancelReservation()">
+          @if (cancelling) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-times"></i>
+          }
+          {{ 'reservations.actions.cancel' | translate }}
+        </button>
+      }
+    </div>
+  }
+</div>
