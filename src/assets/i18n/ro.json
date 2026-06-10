@@ -345,5 +345,114 @@
   },
   "contracts": {
     "title": "Contracte"
+  },
+  "payments": {
+    "title": "Plăți",
+    "subtitle": "Gestionează plăți și garanții",
+    "new": "Plată nouă",
+    "detail": "Detalii plată",
+    "list": "Lista plăți",
+    "manualPayment": "Plată manuală",
+    "registerPayment": "Înregistrează plată",
+    "generatePaymentLink": "Generează link de plată",
+    "fields": {
+      "concept": "Concept",
+      "amount": "Sumă",
+      "paidAmount": "Plătit",
+      "pendingAmount": "Rest de plată",
+      "method": "Metodă",
+      "type": "Tip",
+      "status": "Status",
+      "source": "Sursă",
+      "dueDate": "Scadență",
+      "paidAt": "Data plății",
+      "notes": "Note",
+      "internalReference": "Referință internă",
+      "externalReference": "Referință externă"
+    },
+    "methods": {
+      "cash": "Numerar",
+      "bankTransfer": "Transfer bancar",
+      "bizum": "Bizum",
+      "physicalPos": "POS fizic",
+      "redsys": "Redsys (online)",
+      "manualCard": "Card manual",
+      "other": "Altul"
+    },
+    "types": {
+      "initialPayment": "Avans inițial",
+      "remainingPayment": "Rest plată",
+      "rentalPayment": "Plată închiriere",
+      "deposit": "Garanție",
+      "depositRefund": "Restituire garanție",
+      "depositRetention": "Reținere garanție",
+      "extraCharge": "Taxă extra",
+      "fuelCharge": "Combustibil",
+      "cleaningCharge": "Curățenie",
+      "extraKmCharge": "Km extra",
+      "penalty": "Penalizare",
+      "fine": "Amendă",
+      "other": "Altul"
+    },
+    "status": {
+      "pending": "În așteptare",
+      "paid": "Plătit",
+      "partial": "Parțial",
+      "failed": "Eșuat",
+      "cancelled": "Anulat",
+      "refunded": "Restituit"
+    },
+    "actions": {
+      "markAsPaid": "Marchează ca plătit",
+      "cancelPayment": "Anulează plata",
+      "refundDeposit": "Restituie garanția",
+      "retainDeposit": "Reține garanția",
+      "addExtraCharge": "Adaugă taxă extra",
+      "viewReservation": "Vezi rezervare"
+    },
+    "messages": {
+      "paymentCreated": "Plată creată",
+      "paymentUpdated": "Plată actualizată",
+      "paymentCancelled": "Plată anulată",
+      "paymentLinkCreated": "Link de plată creat",
+      "redsysNotConfigured": "Redsys nu este configurat. Contactează administratorul."
+    },
+    "summary": {
+      "title": "Rezumat",
+      "totalPaid": "Total plătit",
+      "totalPending": "Total restant",
+      "balance": "Balanță",
+      "rentalTotal": "Total închiriere",
+      "depositRequired": "Garanție necesară",
+      "depositPaid": "Garanție încasată",
+      "depositReturned": "Garanție restituită",
+      "depositRetained": "Garanție reținută",
+      "extraChargesTotal": "Taxe extra"
+    },
+    "deposit": {
+      "title": "Garanție",
+      "required": "Necesară",
+      "paid": "Încasată",
+      "returned": "Restituită",
+      "retained": "Reținută",
+      "pending": "În așteptare",
+      "refundFull": "Restituie total",
+      "refundPartial": "Restituie parțial",
+      "retain": "Reține"
+    },
+    "extraCharges": {
+      "title": "Taxe extra",
+      "add": "Adaugă taxă extra"
+    },
+    "redsys": {
+      "title": "Date Redsys",
+      "order": "Comandă",
+      "authorizationCode": "Cod autorizare",
+      "responseCode": "Cod răspuns",
+      "notificationReceived": "Notificare primită"
+    },
+    "list": {
+      "empty": "Nu există plăți"
+    }
   }
 }

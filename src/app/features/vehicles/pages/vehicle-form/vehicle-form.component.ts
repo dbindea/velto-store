@@ -13,6 +13,7 @@ import {
   VEHICLE_STATUS_LABELS,
   VehicleCategory,
   VehicleFormData,
+  VehicleImage,
   VehiclePricingRule,
   VehicleStatus,
 } from '@shared/models/vehicle.model';
@@ -41,6 +42,8 @@ export class VehicleFormComponent implements OnInit {
 
   formData: VehicleFormData = this.getEmptyForm();
   acrissCode = '';
+  existingImages: VehicleImage[] = [];
+  deletingImagePath: string | null = null;
 
   // Pricing validation errors
   pricingErrors: string[] = [];
@@ -105,6 +108,7 @@ export class VehicleFormComponent implements OnInit {
         };
         this.updateAcrissCode();
         this.pricingErrors = validatePricingRules(this.formData.pricingRules || []);
+        this.existingImages = vehicle.images || [];
         this.loading = false;
       },
       error: () => {
@@ -164,6 +168,38 @@ export class VehicleFormComponent implements OnInit {
     this.updateAcrissCode();
   }
 
+  /** Generic text input that capitalizes first letter of every word */
+  onTextCapitalize(event: Event, field: 'version' | 'color'): void {
+    const input = event.target as HTMLInputElement;
+    const value = this.capitalizeWords(input.value);
+    this.formData[field] = value;
+    input.value = value;
+  }
+
+  /** Brand: capitalize first letter of every word (e.g. "renault" -> "Renault") */
+  onBrandInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = this.capitalizeWords(input.value);
+    this.formData.brand = value;
+    input.value = value;
+  }
+
+  /** Model: capitalize first letter of every word (e.g. "megane" -> "Megane") */
+  onModelInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = this.capitalizeWords(input.value);
+    this.formData.model = value;
+    input.value = value;
+  }
+
+  private capitalizeWords(value: string): string {
+    if (!value) return value;
+    return value
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   onPlateInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     input.value = input.value.toUpperCase().trim();
@@ -188,10 +224,37 @@ export class VehicleFormComponent implements OnInit {
     this.saving = true;
     try {
       await this.vehicleService.uploadImage(this.vehicleId, file);
+      // Refresh image list
+      await this.refreshImages();
     } finally {
       this.saving = false;
       input.value = '';
     }
+  }
+
+  async deleteImage(image: VehicleImage): Promise<void> {
+    if (!this.vehicleId) return;
+
+    const confirmed = confirm('¿Eliminar esta foto definitivamente?');
+    if (!confirmed) return;
+
+    this.deletingImagePath = image.path;
+    try {
+      await this.vehicleService.deleteVehicleImage(this.vehicleId, image);
+      this.existingImages = this.existingImages.filter(img => img.path !== image.path);
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      alert('Error al eliminar la foto');
+    } finally {
+      this.deletingImagePath = null;
+    }
+  }
+
+  private async refreshImages(): Promise<void> {
+    if (!this.vehicleId) return;
+    this.vehicleService.getVehicleById(this.vehicleId).subscribe(v => {
+      this.existingImages = v.images || [];
+    });
   }
 
   validateImage(file: File): boolean {

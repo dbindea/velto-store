@@ -245,6 +245,53 @@ export class ReservationCreateComponent implements OnInit {
     return combineDateAndTime(this.pickupDate, this.pickupTime);
   }
 
+  // Today's date as YYYY-MM-DD for HTML5 date min attribute
+  get todayString(): string {
+    return toDateString(new Date());
+  }
+
+  /**
+   * When pickup location changes, auto-fill return location with same value
+   * (user can then edit it independently).
+   */
+  onPickupLocationChange(value: string): void {
+    const formatted = this.capitalizeWords(value);
+    this.pickupLocation = formatted;
+    // Auto-fill return location only if it was empty
+    if (!this.returnLocation) {
+      this.returnLocation = formatted;
+    }
+  }
+
+  /**
+   * Return location: capitalize but don't auto-change pickup.
+   */
+  onReturnLocationInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const formatted = this.capitalizeWords(input.value);
+    this.returnLocation = formatted;
+    input.value = formatted;
+  }
+
+  private capitalizeWords(value: string): string {
+    if (!value) return value;
+    return value
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  /**
+   * When pickup date changes, ensure return date is not before pickup.
+   */
+  onPickupDateChange(value: string): void {
+    this.pickupDate = value;
+    // If return date is now invalid, push it to pickup date
+    if (this.returnDate < this.pickupDate) {
+      this.returnDate = this.pickupDate;
+    }
+  }
+
   get returnDateTime(): Date {
     return combineDateAndTime(this.returnDate, this.returnTime);
   }

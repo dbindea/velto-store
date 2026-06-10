@@ -345,5 +345,114 @@
   },
   "contracts": {
     "title": "Contracts"
+  },
+  "payments": {
+    "title": "Payments",
+    "subtitle": "Manage payments and deposits",
+    "new": "New payment",
+    "detail": "Payment details",
+    "list": "Payment list",
+    "manualPayment": "Manual payment",
+    "registerPayment": "Register payment",
+    "generatePaymentLink": "Generate payment link",
+    "fields": {
+      "concept": "Concept",
+      "amount": "Amount",
+      "paidAmount": "Paid",
+      "pendingAmount": "Pending",
+      "method": "Method",
+      "type": "Type",
+      "status": "Status",
+      "source": "Source",
+      "dueDate": "Due date",
+      "paidAt": "Paid at",
+      "notes": "Notes",
+      "internalReference": "Internal reference",
+      "externalReference": "External reference"
+    },
+    "methods": {
+      "cash": "Cash",
+      "bankTransfer": "Bank transfer",
+      "bizum": "Bizum",
+      "physicalPos": "Physical POS",
+      "redsys": "Redsys (online)",
+      "manualCard": "Manual card",
+      "other": "Other"
+    },
+    "types": {
+      "initialPayment": "Initial signal",
+      "remainingPayment": "Remaining",
+      "rentalPayment": "Rental payment",
+      "deposit": "Deposit",
+      "depositRefund": "Deposit refund",
+      "depositRetention": "Deposit retention",
+      "extraCharge": "Extra charge",
+      "fuelCharge": "Fuel",
+      "cleaningCharge": "Cleaning",
+      "extraKmCharge": "Extra km",
+      "penalty": "Penalty",
+      "fine": "Fine",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "partial": "Partial",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded"
+    },
+    "actions": {
+      "markAsPaid": "Mark as paid",
+      "cancelPayment": "Cancel payment",
+      "refundDeposit": "Refund deposit",
+      "retainDeposit": "Retain deposit",
+      "addExtraCharge": "Add extra charge",
+      "viewReservation": "View reservation"
+    },
+    "messages": {
+      "paymentCreated": "Payment created",
+      "paymentUpdated": "Payment updated",
+      "paymentCancelled": "Payment cancelled",
+      "paymentLinkCreated": "Payment link created",
+      "redsysNotConfigured": "Redsys is not configured. Contact administrator."
+    },
+    "summary": {
+      "title": "Summary",
+      "totalPaid": "Total paid",
+      "totalPending": "Total pending",
+      "balance": "Balance",
+      "rentalTotal": "Rental total",
+      "depositRequired": "Deposit required",
+      "depositPaid": "Deposit collected",
+      "depositReturned": "Deposit returned",
+      "depositRetained": "Deposit retained",
+      "extraChargesTotal": "Extra charges"
+    },
+    "deposit": {
+      "title": "Deposit",
+      "required": "Required",
+      "paid": "Collected",
+      "returned": "Returned",
+      "retained": "Retained",
+      "pending": "Pending",
+      "refundFull": "Refund full",
+      "refundPartial": "Refund partial",
+      "retain": "Retain"
+    },
+    "extraCharges": {
+      "title": "Extra charges",
+      "add": "Add extra charge"
+    },
+    "redsys": {
+      "title": "Redsys data",
+      "order": "Order",
+      "authorizationCode": "Authorization code",
+      "responseCode": "Response code",
+      "notificationReceived": "Notification received"
+    },
+    "list": {
+      "empty": "No payments"
+    }
   }
 }

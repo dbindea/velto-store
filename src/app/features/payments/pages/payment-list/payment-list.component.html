@@ -1,0 +1,126 @@
+<div class="page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'payments.title' | translate }}</h1>
+      <p class="subtitle">{{ 'payments.subtitle' | translate }}</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    @for (option of statusOptions; track option.value) {
+      <button class="tab" [class.active]="statusFilter === option.value" (click)="statusFilter = option.value; onFilterChange()">
+        {{ option.label | translate }}
+      </button>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <i class="pi pi-search"></i>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChange()"
+        [placeholder]="'common.search' | translate"
+        class="form-control">
+    </div>
+
+    <select
+      class="form-control filter-select"
+      [(ngModel)]="methodFilter"
+      (ngModelChange)="onFilterChange()">
+      @for (option of methodOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (filteredPayments.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-wallet"></i>
+      <p>{{ 'payments.list.empty' | translate }}</p>
+    </div>
+  } @else {
+    <!-- Payment Cards -->
+    <div class="payment-list">
+      @for (payment of filteredPayments; track payment.id) {
+        <div class="payment-card" (click)="viewDetail(payment)">
+          <!-- Main info -->
+          <div class="card-main">
+            <div class="card-icon" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+              <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
+            </div>
+            <div class="card-info">
+              <h3>{{ payment.concept }}</h3>
+              <div class="info-row">
+                <span class="info-item">
+                  <i class="pi pi-user"></i>
+                  {{ payment.clientSnapshot?.fullName }}
+                </span>
+                @if (payment.vehicleSnapshot?.plateNumber) {
+                  <span class="info-item">
+                    <i class="pi pi-car"></i>
+                    {{ payment.vehicleSnapshot?.plateNumber }}
+                  </span>
+                }
+              </div>
+              <div class="type-badge">
+                {{ PAYMENT_TYPE_LABELS[payment.type] | translate }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Amount -->
+          <div class="card-amount">
+            <div class="amount-line">
+              <span class="amount-label">{{ 'payments.fields.amount' | translate }}:</span>
+              <span class="amount-value">{{ payment.amount | number:'1.2-2' }} €</span>
+            </div>
+            @if (payment.paidAmount > 0 && payment.status !== 'paid') {
+              <div class="amount-line">
+                <span class="amount-label">{{ 'payments.fields.paidAmount' | translate }}:</span>
+                <span class="amount-paid">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (payment.pendingAmount > 0 && payment.status !== 'paid') {
+              <div class="amount-line">
+                <span class="amount-label">{{ 'payments.fields.pendingAmount' | translate }}:</span>
+                <span class="amount-pending">{{ payment.pendingAmount | number:'1.2-2' }} €</span>
+              </div>
+            }
+          </div>
+
+          <!-- Status & Method -->
+          <div class="card-meta">
+            <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+              {{ PAYMENT_STATUS_LABELS[payment.status] | translate }}
+            </span>
+            <span class="method">
+              <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
+              {{ PAYMENT_METHOD_LABELS[payment.method] | translate }}
+            </span>
+            @if (getDueDate(payment); as due) {
+              <span class="due-date">
+                <i class="pi pi-calendar"></i>
+                {{ due | date:'dd/MM/yyyy' }}
+              </span>
+            }
+          </div>
+
+          <div class="card-arrow">
+            <i class="pi pi-chevron-right"></i>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

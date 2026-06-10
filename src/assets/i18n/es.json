@@ -345,5 +345,114 @@
   },
   "contracts": {
     "title": "Contratos"
+  },
+  "payments": {
+    "title": "Pagos",
+    "subtitle": "Gestiona pagos y fianzas",
+    "new": "Nuevo pago",
+    "detail": "Detalle de pago",
+    "list": "Lista de pagos",
+    "manualPayment": "Pago manual",
+    "registerPayment": "Registrar cobro",
+    "generatePaymentLink": "Generar link de pago",
+    "fields": {
+      "concept": "Concepto",
+      "amount": "Importe",
+      "paidAmount": "Pagado",
+      "pendingAmount": "Pendiente",
+      "method": "Método",
+      "type": "Tipo",
+      "status": "Estado",
+      "source": "Fuente",
+      "dueDate": "Vencimiento",
+      "paidAt": "Fecha de pago",
+      "notes": "Notas",
+      "internalReference": "Referencia interna",
+      "externalReference": "Referencia externa"
+    },
+    "methods": {
+      "cash": "Efectivo",
+      "bankTransfer": "Transferencia",
+      "bizum": "Bizum",
+      "physicalPos": "TPV físico",
+      "redsys": "Redsys (online)",
+      "manualCard": "Tarjeta manual",
+      "other": "Otro"
+    },
+    "types": {
+      "initialPayment": "Señal inicial",
+      "remainingPayment": "Resto alquiler",
+      "rentalPayment": "Pago alquiler",
+      "deposit": "Fianza",
+      "depositRefund": "Devolución fianza",
+      "depositRetention": "Retención fianza",
+      "extraCharge": "Cargo extra",
+      "fuelCharge": "Combustible",
+      "cleaningCharge": "Limpieza",
+      "extraKmCharge": "Km extra",
+      "penalty": "Penalización",
+      "fine": "Multa",
+      "other": "Otro"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "paid": "Pagado",
+      "partial": "Parcial",
+      "failed": "Fallido",
+      "cancelled": "Cancelado",
+      "refunded": "Reembolsado"
+    },
+    "actions": {
+      "markAsPaid": "Marcar como pagado",
+      "cancelPayment": "Cancelar pago",
+      "refundDeposit": "Devolver fianza",
+      "retainDeposit": "Retener fianza",
+      "addExtraCharge": "Añadir cargo extra",
+      "viewReservation": "Ver reserva"
+    },
+    "messages": {
+      "paymentCreated": "Pago creado correctamente",
+      "paymentUpdated": "Pago actualizado",
+      "paymentCancelled": "Pago cancelado",
+      "paymentLinkCreated": "Link de pago creado",
+      "redsysNotConfigured": "Redsys no está configurado. Contacta con el administrador."
+    },
+    "summary": {
+      "title": "Resumen",
+      "totalPaid": "Total pagado",
+      "totalPending": "Total pendiente",
+      "balance": "Balance",
+      "rentalTotal": "Total alquiler",
+      "depositRequired": "Fianza requerida",
+      "depositPaid": "Fianza cobrada",
+      "depositReturned": "Fianza devuelta",
+      "depositRetained": "Fianza retenida",
+      "extraChargesTotal": "Cargos extra"
+    },
+    "deposit": {
+      "title": "Fianza",
+      "required": "Requerida",
+      "paid": "Cobrada",
+      "returned": "Devuelta",
+      "retained": "Retenida",
+      "pending": "Pendiente",
+      "refundFull": "Devolver total",
+      "refundPartial": "Devolver parcial",
+      "retain": "Retener"
+    },
+    "extraCharges": {
+      "title": "Cargos extra",
+      "add": "Añadir cargo extra"
+    },
+    "redsys": {
+      "title": "Datos Redsys",
+      "order": "Orden",
+      "authorizationCode": "Código autorización",
+      "responseCode": "Código respuesta",
+      "notificationReceived": "Notificación recibida"
+    },
+    "list": {
+      "empty": "No hay pagos"
+    }
   }
 }

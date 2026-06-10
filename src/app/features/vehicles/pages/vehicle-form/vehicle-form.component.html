@@ -27,9 +27,11 @@
               <input
                 type="text"
                 id="brand"
-                [(ngModel)]="formData.brand"
+                [ngModel]="formData.brand"
+                (ngModelChange)="formData.brand = $event"
+                (input)="onBrandInput($event)"
+                (blur)="onFieldChange()"
                 name="brand"
-                (input)="onFieldChange()"
                 required
                 class="form-control"
               />
@@ -39,9 +41,11 @@
               <input
                 type="text"
                 id="model"
-                [(ngModel)]="formData.model"
+                [ngModel]="formData.model"
+                (ngModelChange)="formData.model = $event"
+                (input)="onModelInput($event)"
+                (blur)="onFieldChange()"
                 name="model"
-                (input)="onFieldChange()"
                 required
                 class="form-control"
               />
@@ -54,7 +58,9 @@
               <input
                 type="text"
                 id="version"
-                [(ngModel)]="formData.version"
+                [ngModel]="formData.version"
+                (ngModelChange)="formData.version = $event"
+                (input)="onTextCapitalize($event, 'version')"
                 name="version"
                 class="form-control"
               />
@@ -87,7 +93,9 @@
               <input
                 type="text"
                 id="color"
-                [(ngModel)]="formData.color"
+                [ngModel]="formData.color"
+                (ngModelChange)="formData.color = $event"
+                (input)="onTextCapitalize($event, 'color')"
                 name="color"
                 class="form-control"
               />
@@ -483,6 +491,31 @@
               </label>
               <p class="upload-hint">JPG, PNG o WebP. Max 5MB</p>
             </div>
+
+            <!-- Photo thumbnails -->
+            @if (existingImages.length > 0) {
+              <div class="photo-grid">
+                @for (img of existingImages; track img.path) {
+                  <div class="photo-thumb" [class.deleting]="deletingImagePath === img.path">
+                    <img [src]="img.url" alt="Vehicle photo">
+                    <button
+                      type="button"
+                      class="photo-remove"
+                      (click)="deleteImage(img)"
+                      [disabled]="deletingImagePath === img.path"
+                      title="Eliminar foto">
+                      @if (deletingImagePath === img.path) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      } @else {
+                        <i class="pi pi-times"></i>
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="empty-photos">No hay fotos todavía</p>
+            }
           </div>
         }
       </div>

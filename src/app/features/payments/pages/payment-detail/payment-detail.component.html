@@ -1,0 +1,221 @@
+<div class="page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (payment) {
+    <!-- Header -->
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <div class="title-row">
+          <h1>{{ payment.concept }}</h1>
+          <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+            {{ PAYMENT_STATUS_LABELS[payment.status] | translate }}
+          </span>
+        </div>
+        <p class="subtitle">
+          {{ PAYMENT_TYPE_LABELS[payment.type] | translate }} ·
+          <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
+          {{ PAYMENT_METHOD_LABELS[payment.method] | translate }}
+        </p>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <!-- Amount Card -->
+      <div class="detail-card pricing-card">
+        <div class="card-header">
+          <i class="pi pi-euro"></i>
+          <span>{{ 'payments.fields.amount' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="amount-row">
+            <span class="label">{{ 'payments.fields.amount' | translate }}:</span>
+            <span class="value">{{ payment.amount | number:'1.2-2' }} €</span>
+          </div>
+          <div class="amount-row">
+            <span class="label">{{ 'payments.fields.paidAmount' | translate }}:</span>
+            <span class="value paid">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+          </div>
+          <div class="amount-row">
+            <span class="label">{{ 'payments.fields.pendingAmount' | translate }}:</span>
+            <span class="value pending">{{ payment.pendingAmount | number:'1.2-2' }} €</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reservation & Client Card -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-link"></i>
+          <span>{{ 'reservations.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (payment.reservationSnapshot?.finalPrice) {
+            <div class="info-row">
+              <span class="label">{{ 'reservations.title' | translate }}:</span>
+              <span class="value">{{ payment.reservationSnapshot?.finalPrice | number:'1.2-2' }} €</span>
+            </div>
+          }
+          @if (payment.clientSnapshot?.fullName) {
+            <div class="info-row">
+              <span class="label">{{ 'clients.title' | translate }}:</span>
+              <span class="value">{{ payment.clientSnapshot?.fullName }}</span>
+            </div>
+          }
+          @if (payment.vehicleSnapshot?.plateNumber) {
+            <div class="info-row">
+              <span class="label">{{ 'vehicles.title' | translate }}:</span>
+              <span class="value">{{ payment.vehicleSnapshot?.brand }} {{ payment.vehicleSnapshot?.model }} · {{ payment.vehicleSnapshot?.plateNumber }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Dates Card -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-calendar"></i>
+          <span>{{ 'payments.fields.dueDate' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (getDueDate(); as due) {
+            <div class="info-row">
+              <span class="label">{{ 'payments.fields.dueDate' | translate }}:</span>
+              <span class="value">{{ due | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+          @if (getPaidAt(); as paid) {
+            <div class="info-row">
+              <span class="label">{{ 'payments.fields.paidAt' | translate }}:</span>
+              <span class="value">{{ paid | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+          @if (getCreatedAt(); as created) {
+            <div class="info-row">
+              <span class="label">{{ 'common.create' | translate }}:</span>
+              <span class="value">{{ created | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- References Card -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-id-card"></i>
+          <span>{{ 'payments.fields.internalReference' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="info-row">
+            <span class="label">{{ 'payments.fields.internalReference' | translate }}:</span>
+            <span class="value mono">{{ payment.internalReference }}</span>
+          </div>
+          @if (payment.externalReference) {
+            <div class="info-row">
+              <span class="label">{{ 'payments.fields.externalReference' | translate }}:</span>
+              <span class="value mono">{{ payment.externalReference }}</span>
+            </div>
+          }
+          <div class="info-row">
+            <span class="label">{{ 'payments.fields.source' | translate }}:</span>
+            <span class="value">{{ payment.source }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Redsys Card -->
+      @if (payment.redsys) {
+        <div class="detail-card">
+          <div class="card-header">
+            <i class="pi pi-credit-card"></i>
+            <span>{{ 'payments.redsys.title' | translate }}</span>
+          </div>
+          <div class="card-content">
+            @if (payment.redsys.order) {
+              <div class="info-row">
+                <span class="label">{{ 'payments.redsys.order' | translate }}:</span>
+                <span class="value mono">{{ payment.redsys.order }}</span>
+              </div>
+            }
+            @if (payment.redsys.merchantCode) {
+              <div class="info-row">
+                <span class="label">Merchant Code:</span>
+                <span class="value mono">{{ payment.redsys.merchantCode }}</span>
+              </div>
+            }
+            @if (payment.redsys.terminal) {
+              <div class="info-row">
+                <span class="label">Terminal:</span>
+                <span class="value mono">{{ payment.redsys.terminal }}</span>
+              </div>
+            }
+            @if (payment.redsys.responseCode) {
+              <div class="info-row">
+                <span class="label">{{ 'payments.redsys.responseCode' | translate }}:</span>
+                <span class="value mono">{{ payment.redsys.responseCode }}</span>
+              </div>
+            }
+            @if (payment.redsys.authorizationCode) {
+              <div class="info-row">
+                <span class="label">{{ 'payments.redsys.authorizationCode' | translate }}:</span>
+                <span class="value mono">{{ payment.redsys.authorizationCode }}</span>
+              </div>
+            }
+            @if (payment.redsys.notifiedAt) {
+              <div class="info-row">
+                <span class="label">{{ 'payments.redsys.notificationReceived' | translate }}:</span>
+                <span class="value">{{ payment.redsys.notifiedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Notes Card -->
+      @if (payment.notes) {
+        <div class="detail-card notes-card">
+          <div class="card-header">
+            <i class="pi pi-comment"></i>
+            <span>{{ 'payments.fields.notes' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <p class="notes-text">{{ payment.notes }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Actions -->
+    <div class="page-actions">
+      <button class="btn-secondary" type="button" (click)="viewReservation()">
+        <i class="pi pi-external-link"></i>
+        {{ 'payments.actions.viewReservation' | translate }}
+      </button>
+      @if (canMarkAsPaid()) {
+        <button class="btn-primary" type="button" [disabled]="marking" (click)="markAsPaid()">
+          @if (marking) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-check"></i>
+          }
+          {{ 'payments.actions.markAsPaid' | translate }}
+        </button>
+      }
+      @if (canCancel()) {
+        <button class="btn-danger" type="button" [disabled]="cancelling" (click)="cancelPayment()">
+          @if (cancelling) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-times"></i>
+          }
+          {{ 'payments.actions.cancelPayment' | translate }}
+        </button>
+      }
+    </div>
+  }
+</div>

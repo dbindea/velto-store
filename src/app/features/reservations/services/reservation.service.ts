@@ -19,6 +19,7 @@ import {
 } from '@shared/utils/reservation-date.util';
 import { calculateBasePrice, findPricingRuleByDays } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import { PaymentService } from '@features/payments/services/payment.service';
 
 export interface VehicleAvailabilityResult {
   vehicleId: string;
@@ -35,6 +36,7 @@ export class ReservationService {
   private firestore = inject(Firestore);
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
+  private paymentService = inject(PaymentService);
 
   constructor() {
     this.reservationsRef = collection(this.firestore, 'reservations');
@@ -370,6 +372,9 @@ export class ReservationService {
     };
 
     const docRef = await addDoc(this.reservationsRef, this.cleanData(reservation));
+    // Generate initial payment records
+    const savedReservation: Reservation = { id: docRef.id, ...reservation };
+    await this.paymentService.createInitialPaymentsForReservation(docRef.id, savedReservation);
     return docRef.id;
   }
 
@@ -467,6 +472,9 @@ export class ReservationService {
     };
 
     const docRef = await addDoc(this.reservationsRef, this.cleanData(reservation));
+    // Generate initial payment records
+    const savedReservation: Reservation = { id: docRef.id, ...reservation };
+    await this.paymentService.createInitialPaymentsForReservation(docRef.id, savedReservation);
     return docRef.id;
   }
 

@@ -498,3 +498,138 @@
 .payment-partial { background: var(--warning-bg); color: var(--warning-color); }
 .payment-paid { background: var(--success-bg); color: var(--success-color); }
 .payment-refunded { background: var(--info-bg); color: var(--info-color); }
+
+// Payments tab
+.payments-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.summary-card {
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+
+.card-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+
+  &.pending {
+    color: var(--warning-color);
+  }
+}
+
+.loading-mini,
+.empty-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.payments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.payment-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--accent-color);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  .payment-concept {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .payment-type {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+}
+
+.payment-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.85rem;
+
+  .amount-total { font-weight: 600; color: var(--text-primary); }
+  .amount-pending { font-size: 0.7rem; color: var(--warning-color); }
+
+  @media (max-width: 640px) {
+    display: none;
+  }
+}
+
+.payment-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .payment-date {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .status-pending,
+  .status-partial { background: var(--warning-bg); color: var(--warning-color); }
+  .status-paid { background: var(--success-bg); color: var(--success-color); }
+  .status-failed { background: var(--error-bg); color: var(--error-color); }
+  .status-cancelled { background: var(--text-muted); color: white; }
+  .status-refunded { background: var(--info-bg); color: var(--info-color); }
+}

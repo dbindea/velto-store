@@ -65,6 +65,29 @@ export interface ReservationRemainingPayment {
   status: 'pending' | 'paid';
 }
 
+/**
+ * Summary of the financial state of a reservation.
+ * Calculated from the payments collection - this is a denormalized
+ * cache for fast display, but the payments collection is the source of truth.
+ */
+export interface ReservationPaymentSummary {
+  rentalTotal: number;
+  initialPaymentRequired: number;
+  initialPaymentPaid: number;
+  remainingPaymentRequired: number;
+  remainingPaymentPaid: number;
+  depositRequired: number;
+  depositPaid: number;
+  depositReturned: number;
+  depositRetained: number;
+  extraChargesTotal: number;
+  refundsTotal: number;
+  totalPaid: number;
+  totalPending: number;
+  balance: number;
+  paymentStatus: ReservationPaymentStatus;
+}
+
 export interface Reservation {
   id?: string;
 
@@ -108,6 +131,12 @@ export interface Reservation {
   paymentStatus: ReservationPaymentStatus;
   contractStatus: ReservationContractStatus;
   reservationStatus: ReservationStatus;
+
+  /**
+   * Aggregated financial state, calculated from the payments collection.
+   * Optional to keep backward compatibility with existing reservations.
+   */
+  paymentSummary?: ReservationPaymentSummary;
 
   notes?: string;
 

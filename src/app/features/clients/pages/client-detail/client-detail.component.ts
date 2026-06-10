@@ -4,9 +4,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ClientService } from '@features/clients/services/client.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
-import { 
-  Client, 
-  ClientDocumentFile, 
+import { PaymentService } from '@features/payments/services/payment.service';
+import {
+  Client,
+  ClientDocumentFile,
   ClientTrustLevel,
   CLIENT_TRUST_LEVEL_LABELS,
   CLIENT_TRUST_LEVEL_COLORS,
@@ -14,9 +15,10 @@ import {
   DRIVING_LICENSE_COUNTRY_LABELS
 } from '@shared/models/client.model';
 import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
+import { Payment, PAYMENT_TYPE_LABELS, PAYMENT_STATUS_LABELS as PAYMENT_STATUS_LABELS_PAYMENT } from '@shared/models/payment.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 
-type Tab = 'summary' | 'license' | 'documents' | 'reservations';
+type Tab = 'summary' | 'license' | 'documents' | 'reservations' | 'payments';
 
 @Component({
   selector: 'app-client-detail',
@@ -30,12 +32,19 @@ export class ClientDetailComponent implements OnInit {
   private router = inject(Router);
   private clientService = inject(ClientService);
   private reservationService = inject(ReservationService);
+  private paymentService = inject(PaymentService);
 
   client: Client | null = null;
   reservations: Reservation[] = [];
+  payments: Payment[] = [];
   loading = true;
   loadingReservations = false;
+  loadingPayments = false;
   activeTab: Tab = 'summary';
+
+  // Payment labels exposed to template
+  PAYMENT_TYPE_LABELS = PAYMENT_TYPE_LABELS;
+  PAYMENT_STATUS_LABELS_PAYMENT = PAYMENT_STATUS_LABELS_PAYMENT;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -57,6 +66,7 @@ export class ClientDetailComponent implements OnInit {
         this.client = client;
         this.loading = false;
         this.loadReservations(id);
+        this.loadPayments(id);
       },
       error: () => {
         this.loading = false;
@@ -77,6 +87,42 @@ export class ClientDetailComponent implements OnInit {
         this.loadingReservations = false;
       }
     });
+  }
+
+  loadPayments(clientId: string): void {
+    this.loadingPayments = true;
+    this.paymentService.getPaymentsByClient(clientId).subscribe({
+      next: (payments) => {
+        this.payments = payments;
+        this.loadingPayments = false;
+      },
+      error: (error) => {
+        console.error('Error loading payments:', error);
+        this.loadingPayments = false;
+      }
+    });
+  }
+
+  viewPayment(paymentId: string | undefined): void {
+    if (paymentId) this.router.navigate(['/payments', paymentId]);
+  }
+
+  get totalPaid(): number {
+    return this.payments
+      .filter(p => p.status !== 'cancelled')
+      .reduce((sum, p) => sum + p.paidAmount, 0);
+  }
+
+  get totalPending(): number {
+    return this.payments
+      .filter(p => p.status === 'pending' || p.status === 'partial')
+      .reduce((sum, p) => sum + p.pendingAmount, 0);
+  }
+
+  get depositsRetained(): number {
+    return this.payments
+      .filter(p => p.type === 'deposit_retention' && p.status !== 'cancelled')
+      .reduce((sum, p) => sum + p.paidAmount, 0);
   }
 
   setTab(tab: Tab): void {

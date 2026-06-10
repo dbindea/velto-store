@@ -197,8 +197,19 @@ export class ClientService {
     const client = snap.data() as Client;
     const documents = [...(client.documents || []), document];
 
+    // Clean undefined values - Firestore doesn't accept them
+    const cleanDocuments = documents.map(d => {
+      const cleaned: any = { type: d.type, url: d.url, path: d.path };
+      if (d.label) cleaned.label = d.label;
+      if (d.fileName) cleaned.fileName = d.fileName;
+      if (d.size !== undefined) cleaned.size = d.size;
+      if (d.contentType) cleaned.contentType = d.contentType;
+      if (d.uploadedAt) cleaned.uploadedAt = d.uploadedAt;
+      return cleaned;
+    });
+
     await updateDoc(clientRef, {
-      documents,
+      documents: cleanDocuments,
       updatedAt: { seconds: Date.now() / 1000 }
     });
 
@@ -225,8 +236,19 @@ export class ClientService {
     const client = snap.data() as Client;
     const documents = (client.documents || []).filter(d => d.path !== document.path);
 
+    // Clean undefined values before writing to Firestore
+    const cleanDocuments = documents.map((d: any) => {
+      const cleaned: any = { type: d.type, url: d.url, path: d.path };
+      if (d.label) cleaned.label = d.label;
+      if (d.fileName) cleaned.fileName = d.fileName;
+      if (d.size !== undefined) cleaned.size = d.size;
+      if (d.contentType) cleaned.contentType = d.contentType;
+      if (d.uploadedAt) cleaned.uploadedAt = d.uploadedAt;
+      return cleaned;
+    });
+
     await updateDoc(clientRef, {
-      documents,
+      documents: cleanDocuments,
       updatedAt: { seconds: Date.now() / 1000 }
     });
   }
