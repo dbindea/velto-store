@@ -109,7 +109,8 @@
       "features": "Caracteristici",
       "photos": "Fotografii",
       "history": "Istoric",
-      "pricing": "Tarife și condiții"
+      "pricing": "Tarife și condiții",
+      "reservations": "Rezervări"
     },
     "tabs": {
       "info": "Informații",
@@ -152,6 +153,11 @@
     "changeStatusTitle": "Schimbă statusul vehiculului",
     "deleteTitle": "Șterge vehicul",
     "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
+    "reservations": {
+      "noReservations": "Nu există rezervări pentru acest vehicul",
+      "upcoming": "Rezervări viitoare",
+      "history": "Istoric"
+    },
     "pricing": {
       "title": "Tarife",
       "conditions": "Condiții",
@@ -276,6 +282,177 @@
   },
   "clients": {
     "title": "Clienți",
-    "subtitle": "Gestionează clienții"
+    "subtitle": "Gestionează clienți și documentație",
+    "new": "Client nou",
+    "edit": "Editează client",
+    "detail": "Detalii client",
+    "searchPlaceholder": "Caută după nume, telefon, email sau document...",
+    "noClients": "Nu există clienți",
+    "sections": {
+      "personalData": "Date personale",
+      "drivingLicense": "Permis de conducere",
+      "internalManagement": "Gestionare internă",
+      "documents": "Documente",
+      "reservations": "Rezervări"
+    },
+    "fields": {
+      "fullName": "Nume complet",
+      "phone": "Telefon",
+      "email": "Email",
+      "documentType": "Tip document",
+      "documentNumber": "Număr document",
+      "address": "Adresă",
+      "birthDate": "Data nașterii",
+      "drivingLicenseNumber": "Număr permis",
+      "drivingLicenseIssueDate": "Data emiterii",
+      "drivingLicenseExpiryDate": "Data expirării",
+      "drivingLicenseCountry": "Țara permisului",
+      "trustLevel": "Nivel de încredere",
+      "notes": "Note interne"
+    },
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "passport": "Pașaport",
+      "other": "Altul"
+    },
+    "trustLevel": {
+      "new": "Nou",
+      "known": "Cunoscut",
+      "regular": "Regulat",
+      "risk": "Risc",
+      "blocked": "Blocat"
+    },
+    "documents": {
+      "documentFront": "Document față",
+      "documentBack": "Document spate",
+      "drivingLicenseFront": "Permis față",
+      "drivingLicenseBack": "Permis spate",
+      "other": "Alt document",
+      "upload": "Încarcă document",
+      "delete": "Șterge document",
+      "open": "Deschide",
+      "noDocuments": "Nu există documente încărcate",
+      "invalidType": "Tip fișier invalid (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "Fișierul depășește dimensiunea maximă (5MB)",
+      "uploading": "Se încarcă..."
+    },
+    "reservations": {
+      "noReservations": "Nu există rezervări",
+      "upcoming": "Viitoare",
+      "history": "Istoric"
+    }
+  },
+  "contracts": {
+    "title": "Contracte"
+  },
+  "payments": {
+    "title": "Plăți",
+    "subtitle": "Gestionează plăți și garanții",
+    "new": "Plată nouă",
+    "detail": "Detalii plată",
+    "list": "Lista plăți",
+    "manualPayment": "Plată manuală",
+    "registerPayment": "Înregistrează plată",
+    "generatePaymentLink": "Generează link de plată",
+    "fields": {
+      "concept": "Concept",
+      "amount": "Sumă",
+      "paidAmount": "Plătit",
+      "pendingAmount": "Rest de plată",
+      "method": "Metodă",
+      "type": "Tip",
+      "status": "Status",
+      "source": "Sursă",
+      "dueDate": "Scadență",
+      "paidAt": "Data plății",
+      "notes": "Note",
+      "internalReference": "Referință internă",
+      "externalReference": "Referință externă"
+    },
+    "methods": {
+      "cash": "Numerar",
+      "bankTransfer": "Transfer bancar",
+      "bizum": "Bizum",
+      "physicalPos": "POS fizic",
+      "redsys": "Redsys (online)",
+      "manualCard": "Card manual",
+      "other": "Altul"
+    },
+    "types": {
+      "initialPayment": "Avans inițial",
+      "remainingPayment": "Rest plată",
+      "rentalPayment": "Plată închiriere",
+      "deposit": "Garanție",
+      "depositRefund": "Restituire garanție",
+      "depositRetention": "Reținere garanție",
+      "extraCharge": "Taxă extra",
+      "fuelCharge": "Combustibil",
+      "cleaningCharge": "Curățenie",
+      "extraKmCharge": "Km extra",
+      "penalty": "Penalizare",
+      "fine": "Amendă",
+      "other": "Altul"
+    },
+    "status": {
+      "pending": "În așteptare",
+      "paid": "Plătit",
+      "partial": "Parțial",
+      "failed": "Eșuat",
+      "cancelled": "Anulat",
+      "refunded": "Restituit"
+    },
+    "actions": {
+      "markAsPaid": "Marchează ca plătit",
+      "cancelPayment": "Anulează plata",
+      "refundDeposit": "Restituie garanția",
+      "retainDeposit": "Reține garanția",
+      "addExtraCharge": "Adaugă taxă extra",
+      "viewReservation": "Vezi rezervare"
+    },
+    "messages": {
+      "paymentCreated": "Plată creată",
+      "paymentUpdated": "Plată actualizată",
+      "paymentCancelled": "Plată anulată",
+      "paymentLinkCreated": "Link de plată creat",
+      "redsysNotConfigured": "Redsys nu este configurat. Contactează administratorul."
+    },
+    "summary": {
+      "title": "Rezumat",
+      "totalPaid": "Total plătit",
+      "totalPending": "Total restant",
+      "balance": "Balanță",
+      "rentalTotal": "Total închiriere",
+      "depositRequired": "Garanție necesară",
+      "depositPaid": "Garanție încasată",
+      "depositReturned": "Garanție restituită",
+      "depositRetained": "Garanție reținută",
+      "extraChargesTotal": "Taxe extra"
+    },
+    "deposit": {
+      "title": "Garanție",
+      "required": "Necesară",
+      "paid": "Încasată",
+      "returned": "Restituită",
+      "retained": "Reținută",
+      "pending": "În așteptare",
+      "refundFull": "Restituie total",
+      "refundPartial": "Restituie parțial",
+      "retain": "Reține"
+    },
+    "extraCharges": {
+      "title": "Taxe extra",
+      "add": "Adaugă taxă extra"
+    },
+    "redsys": {
+      "title": "Date Redsys",
+      "order": "Comandă",
+      "authorizationCode": "Cod autorizare",
+      "responseCode": "Cod răspuns",
+      "notificationReceived": "Notificare primită"
+    },
+    "list": {
+      "empty": "Nu există plăți"
+    }
   }
 }

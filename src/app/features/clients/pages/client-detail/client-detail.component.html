@@ -1,0 +1,382 @@
+<div class="page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (client) {
+    <!-- Header -->
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <div class="client-header">
+          <div class="client-avatar">
+            {{ getInitials(client.fullName) }}
+          </div>
+          <div class="client-title">
+            <h1>{{ client.fullName }}</h1>
+            <div class="badges">
+              <span class="trust-badge" [ngClass]="getTrustClass(client.trustLevel)">
+                {{ getTrustLabel(client.trustLevel) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" type="button" (click)="editClient()">
+        <i class="pi pi-pencil"></i>
+        {{ 'common.edit' | translate }}
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab" [class.active]="activeTab === 'summary'" (click)="setTab('summary')">
+        <i class="pi pi-user"></i>
+        <span>{{ 'clients.sections.personalData' | translate }}</span>
+      </button>
+      <button class="tab" [class.active]="activeTab === 'license'" (click)="setTab('license')">
+        <i class="pi pi-id-card"></i>
+        <span>{{ 'clients.sections.drivingLicense' | translate }}</span>
+      </button>
+      <button class="tab" [class.active]="activeTab === 'documents'" (click)="setTab('documents')">
+        <i class="pi pi-file"></i>
+        <span>{{ 'clients.sections.documents' | translate }}</span>
+        @if (client.documents?.length) {
+          <span class="tab-count">{{ client.documents?.length }}</span>
+        }
+      </button>
+      <button class="tab" [class.active]="activeTab === 'reservations'" (click)="setTab('reservations')">
+        <i class="pi pi-calendar"></i>
+        <span>{{ 'clients.sections.reservations' | translate }}</span>
+        @if (reservations.length) {
+          <span class="tab-count">{{ reservations.length }}</span>
+        }
+      </button>
+      <button class="tab" [class.active]="activeTab === 'payments'" (click)="setTab('payments')">
+        <i class="pi pi-wallet"></i>
+        <span>Pagos</span>
+        @if (payments.length) {
+          <span class="tab-count">{{ payments.length }}</span>
+        }
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Summary Tab -->
+      @if (activeTab === 'summary') {
+        <div class="info-grid">
+          @if (client.phone) {
+            <div class="info-item">
+              <i class="pi pi-phone"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.phone' | translate }}</span>
+                <span class="info-value">{{ client.phone }}</span>
+              </div>
+            </div>
+          }
+          @if (client.email) {
+            <div class="info-item">
+              <i class="pi pi-envelope"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.email' | translate }}</span>
+                <span class="info-value">{{ client.email }}</span>
+              </div>
+            </div>
+          }
+          @if (client.documentNumber) {
+            <div class="info-item">
+              <i class="pi pi-id-card"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.documentType' | translate }}: {{ getDocumentTypeLabel(client.documentType) }}</span>
+                <span class="info-value">{{ client.documentNumber }}</span>
+              </div>
+            </div>
+          }
+          @if (client.address) {
+            <div class="info-item">
+              <i class="pi pi-map-marker"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.address' | translate }}</span>
+                <span class="info-value">{{ client.address }}</span>
+              </div>
+            </div>
+          }
+          @if (client.birthDate) {
+            <div class="info-item">
+              <i class="pi pi-calendar"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.birthDate' | translate }}</span>
+                <span class="info-value">{{ client.birthDate | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </div>
+          }
+          @if (client.notes) {
+            <div class="info-item full">
+              <i class="pi pi-comment"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.notes' | translate }}</span>
+                <span class="info-value">{{ client.notes }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- License Tab -->
+      @if (activeTab === 'license') {
+        <div class="info-grid">
+          @if (client.drivingLicenseNumber) {
+            <div class="info-item">
+              <i class="pi pi-id-card"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.drivingLicenseNumber' | translate }}</span>
+                <span class="info-value">{{ client.drivingLicenseNumber }}</span>
+              </div>
+            </div>
+          }
+          @if (client.drivingLicenseIssueDate) {
+            <div class="info-item">
+              <i class="pi pi-calendar-plus"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.drivingLicenseIssueDate' | translate }}</span>
+                <span class="info-value">{{ client.drivingLicenseIssueDate | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </div>
+          }
+          @if (client.drivingLicenseExpiryDate) {
+            <div class="info-item">
+              <i class="pi pi-calendar-times"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.drivingLicenseExpiryDate' | translate }}</span>
+                <span class="info-value">{{ client.drivingLicenseExpiryDate | date:'dd/MM/yyyy' }}</span>
+              </div>
+            </div>
+          }
+          @if (client.drivingLicenseCountry) {
+            <div class="info-item">
+              <i class="pi pi-flag"></i>
+              <div>
+                <span class="info-label">{{ 'clients.fields.drivingLicenseCountry' | translate }}</span>
+                <span class="info-value">{{ getCountryLabel(client.drivingLicenseCountry) }}</span>
+              </div>
+            </div>
+          }
+          @if (!client.drivingLicenseNumber) {
+            <p class="empty-message">No hay información del carnet de conducir</p>
+          }
+        </div>
+      }
+
+      <!-- Documents Tab -->
+      @if (activeTab === 'documents') {
+        @if (!client.documents?.length) {
+          <div class="empty-state">
+            <i class="pi pi-file"></i>
+            <p>{{ 'clients.documents.noDocuments' | translate }}</p>
+          </div>
+        } @else {
+          <div class="documents-grid">
+            @for (doc of client.documents; track doc.path) {
+              <div class="document-card">
+                @if (isImage(doc.contentType)) {
+                  <div class="document-thumb">
+                    <img [src]="doc.url" [alt]="doc.fileName || ''">
+                  </div>
+                } @else {
+                  <div class="document-thumb file-icon">
+                    <i class="pi pi-file-pdf"></i>
+                  </div>
+                }
+                <div class="document-info">
+                  <span class="document-type">{{ getFileTypeLabel(doc.type) | translate }}</span>
+                  <span class="document-name">{{ doc.fileName }}</span>
+                </div>
+                <a [href]="doc.url" target="_blank" class="btn-open">
+                  <i class="pi pi-external-link"></i>
+                  {{ 'clients.documents.open' | translate }}
+                </a>
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <!-- Reservations Tab -->
+      @if (activeTab === 'reservations') {
+        @if (loadingReservations) {
+          <div class="loading-state">
+            <i class="pi pi-spin pi-spinner"></i>
+            <p>{{ 'common.loading' | translate }}</p>
+          </div>
+        } @else if (reservations.length === 0) {
+          <div class="empty-state">
+            <i class="pi pi-calendar"></i>
+            <p>{{ 'clients.reservations.noReservations' | translate }}</p>
+          </div>
+        } @else {
+          <!-- Upcoming -->
+          @if (upcomingReservations.length > 0) {
+            <div class="reservation-section">
+              <h3 class="section-title">
+                <i class="pi pi-clock"></i>
+                {{ 'clients.reservations.upcoming' | translate }}
+              </h3>
+              @for (r of upcomingReservations; track r.id) {
+                <div class="reservation-item" (click)="viewReservation(r.id)">
+                  <div class="reservation-vehicle">
+                    <i class="pi pi-car"></i>
+                    <span>{{ r.vehicleSnapshot.brand }} {{ r.vehicleSnapshot.model }}</span>
+                    <span class="plate-mini">{{ r.vehicleSnapshot.plateNumber }}</span>
+                  </div>
+                  <div class="reservation-dates">
+                    <div class="date-row">
+                      <i class="pi pi-sign-out"></i>
+                      <span>{{ getPickupDate(r) | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                    <div class="date-row">
+                      <i class="pi pi-sign-in"></i>
+                      <span>{{ getReturnDate(r) | date:'dd/MM/yyyy HH:mm' }}</span>
+                    </div>
+                  </div>
+                  <div class="reservation-pricing">
+                    <span class="price">{{ r.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+                    <span class="days">{{ r.totalDays }} días</span>
+                  </div>
+                  <div class="reservation-badges">
+                    <span class="badge" [ngClass]="getStatusClass(r.reservationStatus)">
+                      {{ getStatusLabel(r.reservationStatus) }}
+                    </span>
+                    <span class="badge" [ngClass]="getPaymentStatusClass(r.paymentStatus)">
+                      {{ getPaymentLabel(r.paymentStatus) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Past -->
+          @if (pastReservations.length > 0) {
+            <div class="reservation-section">
+              <h3 class="section-title">
+                <i class="pi pi-history"></i>
+                {{ 'clients.reservations.history' | translate }}
+              </h3>
+              @for (r of pastReservations; track r.id) {
+                <div class="reservation-item" (click)="viewReservation(r.id)">
+                  <div class="reservation-vehicle">
+                    <i class="pi pi-car"></i>
+                    <span>{{ r.vehicleSnapshot.brand }} {{ r.vehicleSnapshot.model }}</span>
+                    <span class="plate-mini">{{ r.vehicleSnapshot.plateNumber }}</span>
+                  </div>
+                  <div class="reservation-dates">
+                    <div class="date-row">
+                      <i class="pi pi-sign-out"></i>
+                      <span>{{ getPickupDate(r) | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                    <div class="date-row">
+                      <i class="pi pi-sign-in"></i>
+                      <span>{{ getReturnDate(r) | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                  </div>
+                  <div class="reservation-pricing">
+                    <span class="price">{{ r.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+                    <span class="days">{{ r.totalDays }} días</span>
+                  </div>
+                  <div class="reservation-badges">
+                    <span class="badge" [ngClass]="getStatusClass(r.reservationStatus)">
+                      {{ getStatusLabel(r.reservationStatus) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Cancelled -->
+          @if (cancelledReservations.length > 0) {
+            <div class="reservation-section">
+              <h3 class="section-title">
+                <i class="pi pi-ban"></i>
+                {{ 'reservations.status.cancelled' | translate }}
+              </h3>
+              @for (r of cancelledReservations; track r.id) {
+                <div class="reservation-item cancelled" (click)="viewReservation(r.id)">
+                  <div class="reservation-vehicle">
+                    <i class="pi pi-car"></i>
+                    <span>{{ r.vehicleSnapshot.brand }} {{ r.vehicleSnapshot.model }}</span>
+                    <span class="plate-mini">{{ r.vehicleSnapshot.plateNumber }}</span>
+                  </div>
+                  <div class="reservation-dates">
+                    <div class="date-row">
+                      <i class="pi pi-calendar"></i>
+                      <span>{{ getPickupDate(r) | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                  </div>
+                  <div class="reservation-pricing">
+                    <span class="price">{{ r.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+
+      <!-- Payments Tab -->
+      @if (activeTab === 'payments') {
+        <!-- Summary -->
+        <div class="payments-summary-cards">
+          <div class="summary-card">
+            <span class="card-label">Total pagado</span>
+            <span class="card-value">{{ totalPaid | number:'1.2-2' }} €</span>
+          </div>
+          <div class="summary-card">
+            <span class="card-label">Pendiente</span>
+            <span class="card-value pending">{{ totalPending | number:'1.2-2' }} €</span>
+          </div>
+          <div class="summary-card">
+            <span class="card-label">Fianzas retenidas</span>
+            <span class="card-value">{{ depositsRetained | number:'1.2-2' }} €</span>
+          </div>
+        </div>
+
+        @if (loadingPayments) {
+          <div class="loading-mini">
+            <i class="pi pi-spin pi-spinner"></i>
+            <span>{{ 'common.loading' | translate }}</span>
+          </div>
+        } @else if (payments.length === 0) {
+          <p class="empty-mini">No hay pagos registrados para este cliente</p>
+        } @else {
+          <div class="payments-list">
+            @for (payment of payments; track payment.id) {
+              <div class="payment-row" (click)="viewPayment(payment.id)">
+                <div class="payment-info">
+                  <span class="payment-concept">{{ payment.concept }}</span>
+                  <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
+                </div>
+                <div class="payment-amounts">
+                  <span class="amount-total">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+                  @if (payment.pendingAmount > 0 && payment.status !== 'paid') {
+                    <span class="amount-pending">-{{ payment.pendingAmount | number:'1.2-2' }} €</span>
+                  }
+                </div>
+                <div class="payment-meta">
+                  <span class="badge" [ngClass]="'status-' + payment.status">
+                    {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                  </span>
+                  <span class="payment-date">{{ payment.createdAt | date:'dd/MM/yyyy' }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+</div>

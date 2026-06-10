@@ -26,22 +26,64 @@
 
     <div class="detail-grid">
       <!-- A. Vehicle Section -->
-      <div class="detail-card">
+      <div class="detail-card vehicle-card">
         <div class="card-header">
           <i class="pi pi-car"></i>
           <span>{{ 'vehicles.title' | translate }}</span>
         </div>
         <div class="card-content">
-          @if (reservation.vehicleSnapshot.mainImageUrl) {
-            <div class="vehicle-image">
-              <img [src]="reservation.vehicleSnapshot.mainImageUrl" [alt]="reservation.vehicleSnapshot.brand">
-            </div>
-          }
-          <div class="vehicle-info">
+          <div class="vehicle-header">
             <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
-            <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>
+            <span class="plate-badge">{{ reservation.vehicleSnapshot.plateNumber }}</span>
+          </div>
+          <div class="vehicle-specs">
+            @if (reservation.vehicleSnapshot.year) {
+              <div class="spec-item">
+                <i class="pi pi-calendar"></i>
+                <span>{{ reservation.vehicleSnapshot.year }}</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.currentKm) {
+              <div class="spec-item">
+                <i class="pi pi-chart-bar"></i>
+                <span>{{ reservation.vehicleSnapshot.currentKm | number }} km</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.fuelType) {
+              <div class="spec-item">
+                <i class="pi pi-bolt"></i>
+                <span>{{ getFuelLabel(reservation.vehicleSnapshot.fuelType) }}</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.transmission) {
+              <div class="spec-item">
+                <i class="pi pi-cog"></i>
+                <span>{{ getTransmissionLabel(reservation.vehicleSnapshot.transmission) }}</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.seats) {
+              <div class="spec-item">
+                <i class="pi pi-users"></i>
+                <span>{{ reservation.vehicleSnapshot.seats }} plazas</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.luggageCapacity) {
+              <div class="spec-item">
+                <i class="pi pi-box"></i>
+                <span>{{ reservation.vehicleSnapshot.luggageCapacity }} maletas</span>
+              </div>
+            }
+            @if (reservation.vehicleSnapshot.color) {
+              <div class="spec-item">
+                <i class="pi pi-palette"></i>
+                <span>{{ reservation.vehicleSnapshot.color }}</span>
+              </div>
+            }
             @if (reservation.vehicleSnapshot.acrissCode) {
-              <p class="acriss">{{ reservation.vehicleSnapshot.acrissCode }}</p>
+              <div class="spec-item acriss">
+                <span class="acriss-label">ACRISS:</span>
+                <span>{{ reservation.vehicleSnapshot.acrissCode }}</span>
+              </div>
             }
           </div>
         </div>
@@ -228,22 +270,274 @@
       }
     </div>
 
+    <!-- Payments & Deposit Section -->
+    <div class="detail-card payments-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">
+      <div class="card-header">
+        <i class="pi pi-wallet"></i>
+        <span>{{ 'payments.summary.title' | translate }}</span>
+        <span class="badge" [ngClass]="getPaymentStatusClass(reservation.paymentStatus)">
+          {{ getPaymentLabel(reservation.paymentStatus) }}
+        </span>
+      </div>
+      <div class="card-content">
+        <!-- Summary tiles -->
+        <div class="payments-summary">
+          <div class="summary-tile">
+            <div class="tile-label">{{ 'payments.summary.rentalTotal' | translate }}</div>
+            <div class="tile-value">{{ reservation.pricingSnapshot?.finalPrice | number:'1.2-2' }} €</div>
+            <div class="tile-progress">
+              <span>Pagado: <strong>{{ initialPayment.paid + remainingPayment.paid | number:'1.2-2' }} €</strong></span>
+            </div>
+          </div>
+
+          <div class="summary-tile">
+            <div class="tile-label">{{ 'payments.fields.amount' | translate }} depositada</div>
+            <div class="tile-value">{{ deposit.paid | number:'1.2-2' }} €</div>
+            <div class="tile-progress">
+              <span>Devuelta: <strong>{{ deposit.returned | number:'1.2-2' }} €</strong> · Retenida: <strong>{{ deposit.retained | number:'1.2-2' }} €</strong></span>
+            </div>
+          </div>
+
+          <div class="summary-tile">
+            <div class="tile-label">{{ 'payments.summary.extraChargesTotal' | translate }}</div>
+            <div class="tile-value">{{ extraChargesTotal | number:'1.2-2' }} €</div>
+            <div class="tile-progress">
+              <span>{{ 'payments.summary.totalPaid' | translate }}: <strong>{{ totalPaid | number:'1.2-2' }} €</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="payment-actions">
+          <button class="btn-primary" type="button" (click)="togglePaymentForm()">
+            <i class="pi pi-plus"></i>
+            {{ 'payments.registerPayment' | translate }}
+          </button>
+          <button class="btn-secondary" type="button" (click)="toggleExtraChargeForm()">
+            <i class="pi pi-plus"></i>
+            {{ 'payments.extraCharges.add' | translate }}
+          </button>
+          <button class="btn-secondary" type="button" (click)="toggleDepositForm('refund')">
+            <i class="pi pi-undo"></i>
+            {{ 'payments.deposit.refundFull' | translate }}
+          </button>
+          <button class="btn-secondary" type="button" (click)="toggleDepositForm('retain')">
+            <i class="pi pi-lock"></i>
+            {{ 'payments.deposit.retain' | translate }}
+          </button>
+        </div>
+
+        <!-- Manual Payment Form -->
+        @if (showPaymentForm) {
+          <div class="inline-form">
+            <h4>{{ 'payments.registerPayment' | translate }}</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>{{ 'payments.fields.type' | translate }}</label>
+                <select class="form-control" [(ngModel)]="newPayment.type" name="ptype">
+                  @for (t of paymentTypeOptions; track t) {
+                    <option [value]="t">{{ PAYMENT_TYPE_LABELS[t] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.method' | translate }}</label>
+                <select class="form-control" [(ngModel)]="newPayment.method" name="pmethod">
+                  @for (m of methodOptions; track m) {
+                    <option [value]="m">{{ PAYMENT_METHOD_LABELS[m] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.amount' | translate }}</label>
+                <input type="number" class="form-control" [(ngModel)]="newPayment.amount" name="pamount" min="0" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.paidAmount' | translate }}</label>
+                <input type="number" class="form-control" [(ngModel)]="newPayment.paidAmount" name="ppaid" min="0" step="0.01">
+              </div>
+              <div class="form-group full">
+                <label>{{ 'payments.fields.concept' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="newPayment.concept" name="pconcept">
+              </div>
+              <div class="form-group full">
+                <label>{{ 'payments.fields.notes' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="newPayment.notes" name="pnotes">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-secondary" type="button" (click)="showPaymentForm = false">Cancelar</button>
+              <button class="btn-primary" type="button" [disabled]="savingPayment" (click)="registerPayment()">
+                <i class="pi pi-check"></i>
+                {{ 'common.save' | translate }}
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Extra Charge Form -->
+        @if (showExtraChargeForm) {
+          <div class="inline-form">
+            <h4>{{ 'payments.extraCharges.add' | translate }}</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>{{ 'payments.fields.type' | translate }}</label>
+                <select class="form-control" [(ngModel)]="newExtraCharge.type" name="ectype">
+                  @for (t of extraChargeTypeOptions; track t) {
+                    <option [value]="t">{{ PAYMENT_TYPE_LABELS[t] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.amount' | translate }}</label>
+                <input type="number" class="form-control" [(ngModel)]="newExtraCharge.amount" name="eamount" min="0" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.paidAmount' | translate }}</label>
+                <input type="number" class="form-control" [(ngModel)]="newExtraCharge.paidAmount" name="epaid" min="0" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.method' | translate }}</label>
+                <select class="form-control" [(ngModel)]="newExtraCharge.method" name="emethod">
+                  @for (m of methodOptions; track m) {
+                    <option [value]="m">{{ PAYMENT_METHOD_LABELS[m] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>{{ 'payments.fields.concept' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="newExtraCharge.concept" name="econcept">
+              </div>
+              <div class="form-group full">
+                <label>{{ 'payments.fields.notes' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="newExtraCharge.notes" name="enotes">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-secondary" type="button" (click)="showExtraChargeForm = false">Cancelar</button>
+              <button class="btn-primary" type="button" [disabled]="savingPayment" (click)="registerExtraCharge()">
+                <i class="pi pi-check"></i>
+                {{ 'common.save' | translate }}
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Deposit Form -->
+        @if (showDepositForm) {
+          <div class="inline-form">
+            <h4>{{ depositForm.type === 'refund' ? ('payments.deposit.refundFull' | translate) : ('payments.deposit.retain' | translate) }}</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>{{ 'payments.fields.amount' | translate }}</label>
+                <input type="number" class="form-control" [(ngModel)]="depositForm.amount" name="damount" min="0" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>{{ 'payments.fields.method' | translate }}</label>
+                <select class="form-control" [(ngModel)]="depositForm.method" name="dmethod">
+                  @for (m of methodOptions; track m) {
+                    <option [value]="m">{{ PAYMENT_METHOD_LABELS[m] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>{{ 'payments.fields.notes' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="depositForm.reason" name="dreason">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-secondary" type="button" (click)="showDepositForm = false">Cancelar</button>
+              <button class="btn-primary" type="button" [disabled]="savingDeposit" (click)="processDeposit()">
+                <i class="pi pi-check"></i>
+                {{ 'common.save' | translate }}
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Payments list -->
+        @if (loadingPayments) {
+          <div class="loading-mini">
+            <i class="pi pi-spin pi-spinner"></i>
+            <span>{{ 'common.loading' | translate }}</span>
+          </div>
+        } @else if (payments.length > 0) {
+          <div class="payments-list">
+            @for (payment of payments; track payment.id) {
+              <div class="payment-row" (click)="viewPayment(payment.id)">
+                <div class="payment-icon" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+                  <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
+                </div>
+                <div class="payment-info">
+                  <span class="payment-concept">{{ payment.concept }}</span>
+                  <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
+                </div>
+                <div class="payment-amounts">
+                  <span class="amount-total">{{ payment.amount | number:'1.2-2' }} €</span>
+                  @if (payment.paidAmount > 0 && payment.status !== 'paid') {
+                    <span class="amount-paid">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+                  }
+                  @if (payment.pendingAmount > 0 && payment.status !== 'paid') {
+                    <span class="amount-pending">-{{ payment.pendingAmount | number:'1.2-2' }} €</span>
+                  }
+                </div>
+                <div class="payment-status">
+                  <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+                    {{ getPaymentStatusLabel(payment.status) | translate }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="empty-mini">No hay pagos registrados para esta reserva</p>
+        }
+      </div>
+    </div>
+
     <!-- Actions -->
     <div class="page-actions">
       @if (canCancel()) {
-        <button 
-          class="btn-danger" 
+        <button
+          class="btn-danger"
           type="button"
-          [disabled]="cancelling"
-          (click)="cancelReservation()">
-          @if (cancelling) {
-            <i class="pi pi-spin pi-spinner"></i>
-          } @else {
-            <i class="pi pi-times"></i>
-          }
+          (click)="openCancelModal()">
+          <i class="pi pi-times"></i>
           {{ 'reservations.actions.cancel' | translate }}
         </button>
       }
     </div>
+
+    <!-- Cancel Modal -->
+    @if (showCancelModal) {
+      <div class="modal-overlay" (click)="closeCancelModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header danger">
+            <i class="pi pi-exclamation-triangle"></i>
+            <h3>{{ 'reservations.actions.cancel' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeCancelModal()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro de que quieres cancelar esta reserva?</p>
+            <p class="modal-hint">Esta acción no se puede deshacer. La reserva quedará marcada como cancelada pero los datos se conservarán en el historial.</p>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeCancelModal()">
+                Volver
+              </button>
+              <button class="btn btn-danger-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
+                @if (cancelling) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-times"></i>
+                }
+                {{ 'reservations.actions.cancel' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
   }
 </div>

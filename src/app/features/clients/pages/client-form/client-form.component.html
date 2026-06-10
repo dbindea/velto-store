@@ -1,0 +1,292 @@
+<div class="page">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn-back" type="button" (click)="goBack()">
+      <i class="pi pi-arrow-left"></i>
+    </button>
+    <div class="header-content">
+      <h1>{{ isEditMode ? ('clients.edit' | translate) : ('clients.new' | translate) }}</h1>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else {
+    <form (ngSubmit)="onSubmit()" class="client-form">
+      <!-- A. Personal Data -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-user"></i>
+          <h2>{{ 'clients.sections.personalData' | translate }}</h2>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="fullName">{{ 'clients.fields.fullName' | translate }} *</label>
+            <input 
+              type="text" 
+              id="fullName" 
+              [ngModel]="formData.fullName"
+              (ngModelChange)="formData.fullName = $event"
+              (input)="onFullNameInput($event)"
+              name="fullName"
+              class="form-control"
+              required>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">{{ 'clients.fields.phone' | translate }}</label>
+            <input 
+              type="tel" 
+              id="phone" 
+              [(ngModel)]="formData.phone"
+              name="phone"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="email">{{ 'clients.fields.email' | translate }}</label>
+            <input 
+              type="email" 
+              id="email" 
+              [(ngModel)]="formData.email"
+              name="email"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="documentType">{{ 'clients.fields.documentType' | translate }}</label>
+            <select 
+              id="documentType" 
+              [(ngModel)]="formData.documentType"
+              name="documentType"
+              class="form-control">
+              @for (type of documentTypeOptions; track type) {
+                <option [value]="type">{{ 'clients.documentTypes.' + type | translate }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="documentNumber">{{ 'clients.fields.documentNumber' | translate }}</label>
+            <input 
+              type="text" 
+              id="documentNumber" 
+              [ngModel]="formData.documentNumber"
+              (ngModelChange)="formData.documentNumber = $event"
+              (input)="onDocumentNumberInput($event)"
+              name="documentNumber"
+              class="form-control">
+          </div>
+
+          <div class="form-group full">
+            <label for="address">{{ 'clients.fields.address' | translate }}</label>
+            <input 
+              type="text" 
+              id="address" 
+              [(ngModel)]="formData.address"
+              name="address"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="birthDate">{{ 'clients.fields.birthDate' | translate }}</label>
+            <input 
+              type="date" 
+              id="birthDate" 
+              [ngModel]="formData.birthDate | date:'yyyy-MM-dd'"
+              (ngModelChange)="formData.birthDate = $event"
+              name="birthDate"
+              class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Driving License -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-id-card"></i>
+          <h2>{{ 'clients.sections.drivingLicense' | translate }}</h2>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="drivingLicenseNumber">{{ 'clients.fields.drivingLicenseNumber' | translate }}</label>
+            <input 
+              type="text" 
+              id="drivingLicenseNumber" 
+              [ngModel]="formData.drivingLicenseNumber"
+              (ngModelChange)="formData.drivingLicenseNumber = $event"
+              (input)="onLicenseNumberInput($event)"
+              name="drivingLicenseNumber"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="drivingLicenseIssueDate">{{ 'clients.fields.drivingLicenseIssueDate' | translate }}</label>
+            <input 
+              type="date" 
+              id="drivingLicenseIssueDate" 
+              [ngModel]="formData.drivingLicenseIssueDate | date:'yyyy-MM-dd'"
+              (ngModelChange)="formData.drivingLicenseIssueDate = $event"
+              name="drivingLicenseIssueDate"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="drivingLicenseExpiryDate">{{ 'clients.fields.drivingLicenseExpiryDate' | translate }}</label>
+            <input 
+              type="date" 
+              id="drivingLicenseExpiryDate" 
+              [ngModel]="formData.drivingLicenseExpiryDate | date:'yyyy-MM-dd'"
+              (ngModelChange)="formData.drivingLicenseExpiryDate = $event"
+              name="drivingLicenseExpiryDate"
+              class="form-control">
+          </div>
+
+          <div class="form-group full">
+            <label for="drivingLicenseCountry">{{ 'clients.fields.drivingLicenseCountry' | translate }}</label>
+            <select 
+              id="drivingLicenseCountry" 
+              [(ngModel)]="formData.drivingLicenseCountry"
+              name="drivingLicenseCountry"
+              class="form-control">
+              @for (country of countryOptions; track country) {
+                <option [value]="country">{{ getCountryLabel(country) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Internal Management -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-shield"></i>
+          <h2>{{ 'clients.sections.internalManagement' | translate }}</h2>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="trustLevel">{{ 'clients.fields.trustLevel' | translate }}</label>
+            <select 
+              id="trustLevel" 
+              [(ngModel)]="formData.trustLevel"
+              name="trustLevel"
+              class="form-control">
+              @for (level of trustLevelOptions; track level) {
+                <option [value]="level">{{ 'clients.trustLevel.' + level | translate }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label for="notes">{{ 'clients.fields.notes' | translate }}</label>
+            <textarea 
+              id="notes" 
+              [(ngModel)]="formData.notes"
+              name="notes"
+              class="form-control"
+              rows="3"
+              [placeholder]="'clients.fields.notes' | translate"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- D. Documents (only in edit mode) -->
+      @if (isEditMode) {
+        <div class="form-section">
+          <div class="section-header">
+            <i class="pi pi-file"></i>
+            <h2>{{ 'clients.sections.documents' | translate }}</h2>
+          </div>
+
+          @if (uploadError) {
+            <div class="error-message">{{ uploadError | translate }}</div>
+          }
+
+          <!-- Upload buttons -->
+          <div class="upload-grid">
+            @for (type of fileTypeOptions; track type) {
+              <div class="upload-item">
+                <label class="upload-label">
+                  <i class="pi pi-upload"></i>
+                  <span>{{ getFileTypeLabel(type) | translate }}</span>
+                  @if (uploadingType === type) {
+                    <i class="pi pi-spin pi-spinner uploading"></i>
+                  }
+                </label>
+                <input 
+                  type="file" 
+                  accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                  (change)="onDocumentSelected($event, type)"
+                  [disabled]="uploadingType !== null"
+                  class="upload-input">
+              </div>
+            }
+          </div>
+
+          <!-- Document list -->
+          @if (documents.length === 0) {
+            <p class="no-documents">{{ 'clients.documents.noDocuments' | translate }}</p>
+          } @else {
+            <div class="documents-list">
+              @for (doc of documents; track doc.path) {
+                <div class="document-item">
+                  @if (isImage(doc.contentType)) {
+                    <div class="document-thumb">
+                      <img [src]="doc.url" [alt]="doc.fileName || ''">
+                    </div>
+                  } @else {
+                    <div class="document-thumb file-icon">
+                      <i class="pi pi-file-pdf"></i>
+                    </div>
+                  }
+                  <div class="document-info">
+                    <span class="document-type">{{ getFileTypeLabel(doc.type) | translate }}</span>
+                    <span class="document-name">{{ doc.fileName }}</span>
+                    <span class="document-meta">{{ formatFileSize(doc.size) }}</span>
+                  </div>
+                  <div class="document-actions">
+                    <a [href]="doc.url" target="_blank" class="btn-icon" [title]="'clients.documents.open' | translate">
+                      <i class="pi pi-external-link"></i>
+                    </a>
+                    <button type="button" class="btn-icon danger" (click)="deleteDocument(doc)" [title]="'clients.documents.delete' | translate">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="form-section info-section">
+          <div class="info-message">
+            <i class="pi pi-info-circle"></i>
+            <span>Guarda primero el cliente para poder subir documentos.</span>
+          </div>
+        </div>
+      }
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="goBack()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="saving">
+          @if (saving) {
+            <i class="pi pi-spin pi-spinner"></i>
+            {{ 'common.loading' | translate }}
+          } @else {
+            <i class="pi pi-check"></i>
+            {{ 'common.save' | translate }}
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>

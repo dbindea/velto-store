@@ -60,8 +60,8 @@
         <div class="vehicle-card" (click)="viewDetail(vehicle)">
           <div class="vehicle-image">
             @if (vehicle.images && vehicle.images.length > 0) {
-              <img 
-                [src]="vehicle.images[0].url" 
+              <img
+                [src]="vehicle.images[0].url"
                 [alt]="vehicle.brand + ' ' + vehicle.model"
                 loading="lazy"
                 decoding="async"
@@ -98,7 +98,10 @@
               <div class="vehicle-pricing">
                 <span class="price-from">{{ 'vehicles.pricing.priceFrom' | translate }}</span>
                 <span class="price-value">{{ getLowestPrice(vehicle.pricingRules) }} €/día</span>
-                <span class="deposit">{{ 'vehicles.pricing.deposit' | translate }}: {{ vehicle.defaultDepositAmount || 300 }}€</span>
+                <span class="deposit"
+                  >{{ 'vehicles.pricing.deposit' | translate }}:
+                  {{ vehicle.defaultDepositAmount || 150 }}€</span
+                >
               </div>
             }
             <p class="plate">{{ vehicle.plateNumber }}</p>

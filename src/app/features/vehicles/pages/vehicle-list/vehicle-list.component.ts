@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { VehicleService } from '../../services/vehicle.service';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import {
   Vehicle,
   VehicleStatus,

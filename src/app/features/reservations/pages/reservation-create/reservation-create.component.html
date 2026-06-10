@@ -41,27 +41,34 @@
           <div class="form-row">
             <div class="form-group">
               <label for="pickupDate">{{ 'reservations.fields.pickupDate' | translate }}</label>
-              <input 
-                type="date" 
-                id="pickupDate" 
-                [(ngModel)]="pickupDate"
+              <input
+                type="date"
+                id="pickupDate"
+                [ngModel]="pickupDate"
+                (ngModelChange)="onPickupDateChange($event)"
+                [min]="todayString"
+                name="pickupDate"
                 class="form-control">
             </div>
             <div class="form-group">
               <label for="pickupTime">{{ 'reservations.fields.pickupTime' | translate }}</label>
-              <input 
-                type="time" 
-                id="pickupTime" 
-                [(ngModel)]="pickupTime"
+              <input
+                type="time"
+                id="pickupTime"
+                [ngModel]="pickupTime"
+                (ngModelChange)="pickupTime = $event"
+                name="pickupTime"
                 class="form-control">
             </div>
           </div>
           <div class="form-group">
             <label for="pickupLocation">{{ 'reservations.fields.pickupLocation' | translate }}</label>
-            <input 
-              type="text" 
-              id="pickupLocation" 
-              [(ngModel)]="pickupLocation"
+            <input
+              type="text"
+              id="pickupLocation"
+              [ngModel]="pickupLocation"
+              (ngModelChange)="onPickupLocationChange($event)"
+              name="pickupLocation"
               class="form-control"
               [placeholder]="'reservations.fields.pickupLocation' | translate">
           </div>
@@ -72,27 +79,34 @@
           <div class="form-row">
             <div class="form-group">
               <label for="returnDate">{{ 'reservations.fields.returnDate' | translate }}</label>
-              <input 
-                type="date" 
-                id="returnDate" 
-                [(ngModel)]="returnDate"
+              <input
+                type="date"
+                id="returnDate"
+                [ngModel]="returnDate"
+                (ngModelChange)="returnDate = $event"
+                [min]="pickupDate"
+                name="returnDate"
                 class="form-control">
             </div>
             <div class="form-group">
               <label for="returnTime">{{ 'reservations.fields.returnTime' | translate }}</label>
-              <input 
-                type="time" 
-                id="returnTime" 
-                [(ngModel)]="returnTime"
+              <input
+                type="time"
+                id="returnTime"
+                [ngModel]="returnTime"
+                (ngModelChange)="returnTime = $event"
+                name="returnTime"
                 class="form-control">
             </div>
           </div>
           <div class="form-group">
             <label for="returnLocation">{{ 'reservations.fields.returnLocation' | translate }}</label>
-            <input 
-              type="text" 
-              id="returnLocation" 
-              [(ngModel)]="returnLocation"
+            <input
+              type="text"
+              id="returnLocation"
+              [ngModel]="returnLocation"
+              (ngModelChange)="onReturnLocationInput($event)"
+              name="returnLocation"
               class="form-control"
               [placeholder]="'reservations.fields.returnLocation' | translate">
           </div>
@@ -249,6 +263,7 @@
                   type="text" 
                   id="fullName" 
                   [(ngModel)]="quickClient.fullName"
+                  (input)="formatFullName($event)"
                   class="form-control"
                   required>
               </div>

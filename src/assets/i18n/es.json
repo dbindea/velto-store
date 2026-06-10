@@ -109,7 +109,8 @@
       "features": "Características",
       "photos": "Fotos",
       "history": "Historial",
-      "pricing": "Tarifas y condiciones"
+      "pricing": "Tarifas y condiciones",
+      "reservations": "Reservas"
     },
     "tabs": {
       "info": "Información",
@@ -152,6 +153,11 @@
     "changeStatusTitle": "Cambiar estado del vehículo",
     "deleteTitle": "Eliminar vehículo",
     "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
+    "reservations": {
+      "noReservations": "No hay reservas para este vehículo",
+      "upcoming": "Próximas reservas",
+      "history": "Histórico"
+    },
     "pricing": {
       "title": "Tarifas",
       "conditions": "Condiciones",
@@ -276,6 +282,177 @@
   },
   "clients": {
     "title": "Clientes",
-    "subtitle": "Gestiona los clientes"
+    "subtitle": "Gestiona clientes y documentación",
+    "new": "Nuevo cliente",
+    "edit": "Editar cliente",
+    "detail": "Detalle del cliente",
+    "searchPlaceholder": "Buscar por nombre, teléfono, email o documento...",
+    "noClients": "No hay clientes todavía",
+    "sections": {
+      "personalData": "Datos personales",
+      "drivingLicense": "Carnet de conducir",
+      "internalManagement": "Gestión interna",
+      "documents": "Documentos",
+      "reservations": "Reservas"
+    },
+    "fields": {
+      "fullName": "Nombre completo",
+      "phone": "Teléfono",
+      "email": "Email",
+      "documentType": "Tipo documento",
+      "documentNumber": "Número documento",
+      "address": "Dirección",
+      "birthDate": "Fecha de nacimiento",
+      "drivingLicenseNumber": "Número carnet",
+      "drivingLicenseIssueDate": "Fecha expedición",
+      "drivingLicenseExpiryDate": "Fecha caducidad",
+      "drivingLicenseCountry": "País carnet",
+      "trustLevel": "Nivel de confianza",
+      "notes": "Notas internas"
+    },
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "passport": "Pasaporte",
+      "other": "Otro"
+    },
+    "trustLevel": {
+      "new": "Nuevo",
+      "known": "Conocido",
+      "regular": "Habitual",
+      "risk": "Riesgo",
+      "blocked": "Bloqueado"
+    },
+    "documents": {
+      "documentFront": "Documento frontal",
+      "documentBack": "Documento trasero",
+      "drivingLicenseFront": "Carnet frontal",
+      "drivingLicenseBack": "Carnet trasero",
+      "other": "Otro documento",
+      "upload": "Subir documento",
+      "delete": "Eliminar documento",
+      "open": "Abrir",
+      "noDocuments": "No hay documentos subidos",
+      "invalidType": "Tipo de archivo no válido (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "El archivo supera el tamaño máximo (5MB)",
+      "uploading": "Subiendo..."
+    },
+    "reservations": {
+      "noReservations": "No hay reservas",
+      "upcoming": "Próximas",
+      "history": "Histórico"
+    }
+  },
+  "contracts": {
+    "title": "Contratos"
+  },
+  "payments": {
+    "title": "Pagos",
+    "subtitle": "Gestiona pagos y fianzas",
+    "new": "Nuevo pago",
+    "detail": "Detalle de pago",
+    "list": "Lista de pagos",
+    "manualPayment": "Pago manual",
+    "registerPayment": "Registrar cobro",
+    "generatePaymentLink": "Generar link de pago",
+    "fields": {
+      "concept": "Concepto",
+      "amount": "Importe",
+      "paidAmount": "Pagado",
+      "pendingAmount": "Pendiente",
+      "method": "Método",
+      "type": "Tipo",
+      "status": "Estado",
+      "source": "Fuente",
+      "dueDate": "Vencimiento",
+      "paidAt": "Fecha de pago",
+      "notes": "Notas",
+      "internalReference": "Referencia interna",
+      "externalReference": "Referencia externa"
+    },
+    "methods": {
+      "cash": "Efectivo",
+      "bankTransfer": "Transferencia",
+      "bizum": "Bizum",
+      "physicalPos": "TPV físico",
+      "redsys": "Redsys (online)",
+      "manualCard": "Tarjeta manual",
+      "other": "Otro"
+    },
+    "types": {
+      "initialPayment": "Señal inicial",
+      "remainingPayment": "Resto alquiler",
+      "rentalPayment": "Pago alquiler",
+      "deposit": "Fianza",
+      "depositRefund": "Devolución fianza",
+      "depositRetention": "Retención fianza",
+      "extraCharge": "Cargo extra",
+      "fuelCharge": "Combustible",
+      "cleaningCharge": "Limpieza",
+      "extraKmCharge": "Km extra",
+      "penalty": "Penalización",
+      "fine": "Multa",
+      "other": "Otro"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "paid": "Pagado",
+      "partial": "Parcial",
+      "failed": "Fallido",
+      "cancelled": "Cancelado",
+      "refunded": "Reembolsado"
+    },
+    "actions": {
+      "markAsPaid": "Marcar como pagado",
+      "cancelPayment": "Cancelar pago",
+      "refundDeposit": "Devolver fianza",
+      "retainDeposit": "Retener fianza",
+      "addExtraCharge": "Añadir cargo extra",
+      "viewReservation": "Ver reserva"
+    },
+    "messages": {
+      "paymentCreated": "Pago creado correctamente",
+      "paymentUpdated": "Pago actualizado",
+      "paymentCancelled": "Pago cancelado",
+      "paymentLinkCreated": "Link de pago creado",
+      "redsysNotConfigured": "Redsys no está configurado. Contacta con el administrador."
+    },
+    "summary": {
+      "title": "Resumen",
+      "totalPaid": "Total pagado",
+      "totalPending": "Total pendiente",
+      "balance": "Balance",
+      "rentalTotal": "Total alquiler",
+      "depositRequired": "Fianza requerida",
+      "depositPaid": "Fianza cobrada",
+      "depositReturned": "Fianza devuelta",
+      "depositRetained": "Fianza retenida",
+      "extraChargesTotal": "Cargos extra"
+    },
+    "deposit": {
+      "title": "Fianza",
+      "required": "Requerida",
+      "paid": "Cobrada",
+      "returned": "Devuelta",
+      "retained": "Retenida",
+      "pending": "Pendiente",
+      "refundFull": "Devolver total",
+      "refundPartial": "Devolver parcial",
+      "retain": "Retener"
+    },
+    "extraCharges": {
+      "title": "Cargos extra",
+      "add": "Añadir cargo extra"
+    },
+    "redsys": {
+      "title": "Datos Redsys",
+      "order": "Orden",
+      "authorizationCode": "Código autorización",
+      "responseCode": "Código respuesta",
+      "notificationReceived": "Notificación recibida"
+    },
+    "list": {
+      "empty": "No hay pagos"
+    }
   }
 }

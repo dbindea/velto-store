@@ -109,7 +109,8 @@
       "features": "Features",
       "photos": "Photos",
       "history": "History",
-      "pricing": "Pricing and conditions"
+      "pricing": "Pricing and conditions",
+      "reservations": "Reservations"
     },
     "tabs": {
       "info": "Information",
@@ -152,6 +153,11 @@
     "changeStatusTitle": "Change vehicle status",
     "deleteTitle": "Delete vehicle",
     "deleteConfirm": "Are you sure you want to delete this vehicle? This action cannot be undone.",
+    "reservations": {
+      "noReservations": "No reservations for this vehicle",
+      "upcoming": "Upcoming reservations",
+      "history": "History"
+    },
     "pricing": {
       "title": "Pricing",
       "conditions": "Conditions",
@@ -276,6 +282,177 @@
   },
   "clients": {
     "title": "Clients",
-    "subtitle": "Manage clients"
+    "subtitle": "Manage clients and documentation",
+    "new": "New client",
+    "edit": "Edit client",
+    "detail": "Client details",
+    "searchPlaceholder": "Search by name, phone, email or document...",
+    "noClients": "No clients yet",
+    "sections": {
+      "personalData": "Personal data",
+      "drivingLicense": "Driving license",
+      "internalManagement": "Internal management",
+      "documents": "Documents",
+      "reservations": "Reservations"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "phone": "Phone",
+      "email": "Email",
+      "documentType": "Document type",
+      "documentNumber": "Document number",
+      "address": "Address",
+      "birthDate": "Birth date",
+      "drivingLicenseNumber": "License number",
+      "drivingLicenseIssueDate": "Issue date",
+      "drivingLicenseExpiryDate": "Expiry date",
+      "drivingLicenseCountry": "License country",
+      "trustLevel": "Trust level",
+      "notes": "Internal notes"
+    },
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "passport": "Passport",
+      "other": "Other"
+    },
+    "trustLevel": {
+      "new": "New",
+      "known": "Known",
+      "regular": "Regular",
+      "risk": "Risk",
+      "blocked": "Blocked"
+    },
+    "documents": {
+      "documentFront": "Document front",
+      "documentBack": "Document back",
+      "drivingLicenseFront": "License front",
+      "drivingLicenseBack": "License back",
+      "other": "Other document",
+      "upload": "Upload document",
+      "delete": "Delete document",
+      "open": "Open",
+      "noDocuments": "No documents uploaded",
+      "invalidType": "Invalid file type (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "File exceeds max size (5MB)",
+      "uploading": "Uploading..."
+    },
+    "reservations": {
+      "noReservations": "No reservations",
+      "upcoming": "Upcoming",
+      "history": "History"
+    }
+  },
+  "contracts": {
+    "title": "Contracts"
+  },
+  "payments": {
+    "title": "Payments",
+    "subtitle": "Manage payments and deposits",
+    "new": "New payment",
+    "detail": "Payment details",
+    "list": "Payment list",
+    "manualPayment": "Manual payment",
+    "registerPayment": "Register payment",
+    "generatePaymentLink": "Generate payment link",
+    "fields": {
+      "concept": "Concept",
+      "amount": "Amount",
+      "paidAmount": "Paid",
+      "pendingAmount": "Pending",
+      "method": "Method",
+      "type": "Type",
+      "status": "Status",
+      "source": "Source",
+      "dueDate": "Due date",
+      "paidAt": "Paid at",
+      "notes": "Notes",
+      "internalReference": "Internal reference",
+      "externalReference": "External reference"
+    },
+    "methods": {
+      "cash": "Cash",
+      "bankTransfer": "Bank transfer",
+      "bizum": "Bizum",
+      "physicalPos": "Physical POS",
+      "redsys": "Redsys (online)",
+      "manualCard": "Manual card",
+      "other": "Other"
+    },
+    "types": {
+      "initialPayment": "Initial signal",
+      "remainingPayment": "Remaining",
+      "rentalPayment": "Rental payment",
+      "deposit": "Deposit",
+      "depositRefund": "Deposit refund",
+      "depositRetention": "Deposit retention",
+      "extraCharge": "Extra charge",
+      "fuelCharge": "Fuel",
+      "cleaningCharge": "Cleaning",
+      "extraKmCharge": "Extra km",
+      "penalty": "Penalty",
+      "fine": "Fine",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "partial": "Partial",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded"
+    },
+    "actions": {
+      "markAsPaid": "Mark as paid",
+      "cancelPayment": "Cancel payment",
+      "refundDeposit": "Refund deposit",
+      "retainDeposit": "Retain deposit",
+      "addExtraCharge": "Add extra charge",
+      "viewReservation": "View reservation"
+    },
+    "messages": {
+      "paymentCreated": "Payment created",
+      "paymentUpdated": "Payment updated",
+      "paymentCancelled": "Payment cancelled",
+      "paymentLinkCreated": "Payment link created",
+      "redsysNotConfigured": "Redsys is not configured. Contact administrator."
+    },
+    "summary": {
+      "title": "Summary",
+      "totalPaid": "Total paid",
+      "totalPending": "Total pending",
+      "balance": "Balance",
+      "rentalTotal": "Rental total",
+      "depositRequired": "Deposit required",
+      "depositPaid": "Deposit collected",
+      "depositReturned": "Deposit returned",
+      "depositRetained": "Deposit retained",
+      "extraChargesTotal": "Extra charges"
+    },
+    "deposit": {
+      "title": "Deposit",
+      "required": "Required",
+      "paid": "Collected",
+      "returned": "Returned",
+      "retained": "Retained",
+      "pending": "Pending",
+      "refundFull": "Refund full",
+      "refundPartial": "Refund partial",
+      "retain": "Retain"
+    },
+    "extraCharges": {
+      "title": "Extra charges",
+      "add": "Add extra charge"
+    },
+    "redsys": {
+      "title": "Redsys data",
+      "order": "Order",
+      "authorizationCode": "Authorization code",
+      "responseCode": "Response code",
+      "notificationReceived": "Notification received"
+    },
+    "list": {
+      "empty": "No payments"
+    }
   }
 }
