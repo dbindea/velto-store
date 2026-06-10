@@ -109,7 +109,8 @@
       "features": "Features",
       "photos": "Photos",
       "history": "History",
-      "pricing": "Pricing and conditions"
+      "pricing": "Pricing and conditions",
+      "reservations": "Reservations"
     },
     "tabs": {
       "info": "Information",
@@ -152,6 +153,11 @@
     "changeStatusTitle": "Change vehicle status",
     "deleteTitle": "Delete vehicle",
     "deleteConfirm": "Are you sure you want to delete this vehicle? This action cannot be undone.",
+    "reservations": {
+      "noReservations": "No reservations for this vehicle",
+      "upcoming": "Upcoming reservations",
+      "history": "History"
+    },
     "pricing": {
       "title": "Pricing",
       "conditions": "Conditions",
@@ -276,6 +282,68 @@
   },
   "clients": {
     "title": "Clients",
-    "subtitle": "Manage clients"
+    "subtitle": "Manage clients and documentation",
+    "new": "New client",
+    "edit": "Edit client",
+    "detail": "Client details",
+    "searchPlaceholder": "Search by name, phone, email or document...",
+    "noClients": "No clients yet",
+    "sections": {
+      "personalData": "Personal data",
+      "drivingLicense": "Driving license",
+      "internalManagement": "Internal management",
+      "documents": "Documents",
+      "reservations": "Reservations"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "phone": "Phone",
+      "email": "Email",
+      "documentType": "Document type",
+      "documentNumber": "Document number",
+      "address": "Address",
+      "birthDate": "Birth date",
+      "drivingLicenseNumber": "License number",
+      "drivingLicenseIssueDate": "Issue date",
+      "drivingLicenseExpiryDate": "Expiry date",
+      "drivingLicenseCountry": "License country",
+      "trustLevel": "Trust level",
+      "notes": "Internal notes"
+    },
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "passport": "Passport",
+      "other": "Other"
+    },
+    "trustLevel": {
+      "new": "New",
+      "known": "Known",
+      "regular": "Regular",
+      "risk": "Risk",
+      "blocked": "Blocked"
+    },
+    "documents": {
+      "documentFront": "Document front",
+      "documentBack": "Document back",
+      "drivingLicenseFront": "License front",
+      "drivingLicenseBack": "License back",
+      "other": "Other document",
+      "upload": "Upload document",
+      "delete": "Delete document",
+      "open": "Open",
+      "noDocuments": "No documents uploaded",
+      "invalidType": "Invalid file type (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "File exceeds max size (5MB)",
+      "uploading": "Uploading..."
+    },
+    "reservations": {
+      "noReservations": "No reservations",
+      "upcoming": "Upcoming",
+      "history": "History"
+    }
+  },
+  "contracts": {
+    "title": "Contracts"
   }
 }

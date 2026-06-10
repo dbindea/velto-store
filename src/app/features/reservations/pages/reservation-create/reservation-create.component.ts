@@ -1,24 +1,21 @@
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { ReservationService, VehicleAvailabilityResult } from '../../services/reservation.service';
-import { ClientService } from '../../../clients/services/client.service';
-import { VehicleService } from '../../../vehicles/services/vehicle.service';
-import { Vehicle } from '@shared/models/vehicle.model';
 import { Client, QuickClientData } from '@shared/models/client.model';
-import { 
-  getDefaultPickupDateTime, 
+import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import {
+  calculateCalendarDays,
+  combineDateAndTime,
+  getDefaultPickupDateTime,
   getDefaultReturnDateTime,
   toDateString,
   toTimeString,
-  combineDateAndTime,
-  toDate,
-  formatDate,
-  formatTime
 } from '@shared/utils/reservation-date.util';
-import { calculateCalendarDays } from '@shared/utils/reservation-date.util';
+import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import { ClientService } from '@features/clients/services/client.service';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
+import { ReservationService, VehicleAvailabilityResult } from '@features/reservations/services/reservation.service';
 
 type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 
@@ -27,7 +24,7 @@ type Step = 'dates' | 'vehicle' | 'client' | 'summary';
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './reservation-create.component.html',
-  styleUrl: './reservation-create.component.scss'
+  styleUrl: './reservation-create.component.scss',
 })
 export class ReservationCreateComponent implements OnInit {
   private router = inject(Router);
@@ -38,7 +35,7 @@ export class ReservationCreateComponent implements OnInit {
   // Current step
   currentStep: Step = 'dates';
   steps: Step[] = ['dates', 'vehicle', 'client', 'summary'];
-  
+
   // Loading states
   loading = false;
   searching = false;
@@ -63,13 +60,13 @@ export class ReservationCreateComponent implements OnInit {
   searchResults: Client[] = [];
   selectedClient: Client | null = null;
   showQuickClientForm = false;
-  
+
   // Quick client form
   quickClient: QuickClientData = {
     fullName: '',
     phone: '',
     email: '',
-    documentNumber: ''
+    documentNumber: '',
   };
 
   // Notes
@@ -105,7 +102,7 @@ export class ReservationCreateComponent implements OnInit {
     // Can always go back, can only go forward if previous step is complete
     const currentIndex = this.steps.indexOf(this.currentStep);
     const targetIndex = this.steps.indexOf(step);
-    
+
     if (targetIndex <= currentIndex) {
       this.currentStep = step;
     } else if (this.isStepComplete(this.steps[targetIndex - 1])) {
@@ -117,21 +114,21 @@ export class ReservationCreateComponent implements OnInit {
     // Validate dates
     const pickupDateTime = combineDateAndTime(this.pickupDate, this.pickupTime);
     const returnDateTime = combineDateAndTime(this.returnDate, this.returnTime);
-    
+
     if (returnDateTime <= pickupDateTime) {
       this.dateError = 'reservations.messages.invalidDates';
       return;
     }
-    
+
     this.dateError = '';
     this.searching = true;
     this.selectedVehicle = null;
     this.selectedClient = null;
-    
+
     try {
       this.availabilityResults = await this.reservationService.searchAvailability(
         pickupDateTime,
-        returnDateTime
+        returnDateTime,
       );
       this.currentStep = 'vehicle';
     } catch (error) {
@@ -153,8 +150,8 @@ export class ReservationCreateComponent implements OnInit {
       this.searchResults = [];
       return;
     }
-    
-    this.clientService.searchClients(this.clientSearchTerm).subscribe(clients => {
+
+    this.clientService.searchClients(this.clientSearchTerm).subscribe((clients) => {
       this.searchResults = clients;
     });
   }
@@ -175,13 +172,13 @@ export class ReservationCreateComponent implements OnInit {
 
   async createQuickClient(): Promise<void> {
     if (!this.quickClient.fullName) return;
-    
+
     this.saving = true;
     try {
       const clientId = await this.clientService.createQuickClient(this.quickClient);
-      
+
       // Fetch the created client
-      this.clientService.getClientById(clientId).subscribe(client => {
+      this.clientService.getClientById(clientId).subscribe((client) => {
         if (client) {
           this.selectedClient = client;
           this.showQuickClientForm = false;
@@ -198,24 +195,24 @@ export class ReservationCreateComponent implements OnInit {
 
   async createReservation(): Promise<void> {
     if (!this.selectedVehicle || !this.selectedClient) return;
-    
+
     this.saving = true;
     try {
       const pickupDateTime = combineDateAndTime(this.pickupDate, this.pickupTime);
       const returnDateTime = combineDateAndTime(this.returnDate, this.returnTime);
-      
+
       const reservationId = await this.reservationService.createReservationWithClient(
         this.selectedVehicle.vehicle,
         this.selectedClient,
         pickupDateTime,
         returnDateTime,
-        50, // Initial payment required
-        this.selectedVehicle.vehicle.defaultDepositAmount || 300,
+        APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT, // Initial payment required
+        this.selectedVehicle.vehicle.defaultDepositAmount || APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
         this.notes || undefined,
         this.pickupLocation || undefined,
-        this.returnLocation || undefined
+        this.returnLocation || undefined,
       );
-      
+
       this.router.navigate(['/reservations', reservationId]);
     } catch (error) {
       console.error('Error creating reservation:', error);
@@ -238,9 +235,7 @@ export class ReservationCreateComponent implements OnInit {
   formatFullName(event: Event): void {
     const input = event.target as HTMLInputElement;
     const words = input.value.toLowerCase().split(' ');
-    const formatted = words.map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    const formatted = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     this.quickClient.fullName = formatted;
     input.value = formatted;
   }
@@ -263,7 +258,7 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   get initialPayment(): number {
-    return 50;
+    return APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT;
   }
 
   get remainingPayment(): number {
@@ -271,6 +266,6 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   get deposit(): number {
-    return this.selectedVehicle?.vehicle.defaultDepositAmount || 300;
+    return this.selectedVehicle?.vehicle.defaultDepositAmount || APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT;
   }
 }

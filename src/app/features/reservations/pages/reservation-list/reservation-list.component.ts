@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { ReservationService } from '../../services/reservation.service';
+import { ReservationService } from '@features/reservations/services/reservation.service';
 import { Reservation, ReservationStatus, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 

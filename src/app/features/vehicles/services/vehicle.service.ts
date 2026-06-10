@@ -1,10 +1,28 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy } from '@angular/fire/firestore';
-import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
+import {
+  CollectionReference,
+  Firestore,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+} from '@angular/fire/firestore';
+import { Storage, deleteObject, getDownloadURL, ref, uploadBytes } from '@angular/fire/storage';
+import {
+  Vehicle,
+  VehicleFormData,
+  VehicleImage,
+  VehicleStatus,
+} from '@shared/models/vehicle.model';
+import { getDefaultPricingRules, sortPricingRules } from '@shared/utils/pricing.util';
+import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { Observable, from, throwError } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
-import { Vehicle, VehicleImage, VehicleStatus, VehicleFormData } from '@shared/models/vehicle.model';
-import { sortPricingRules, getDefaultPricingRules } from '@shared/utils/pricing.util';
+import { map } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
@@ -21,9 +39,10 @@ export class VehicleService {
     const cleaned: any = {};
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined && value !== null) {
-        cleaned[key] = typeof value === 'object' && !Array.isArray(value) && value !== null
-          ? this.cleanData(value)
-          : value;
+        cleaned[key] =
+          typeof value === 'object' && !Array.isArray(value) && value !== null
+            ? this.cleanData(value)
+            : value;
       }
     }
     return cleaned;
@@ -32,24 +51,26 @@ export class VehicleService {
   getVehicles(): Observable<Vehicle[]> {
     const q = query(this.vehiclesRef, orderBy('createdAt', 'desc'));
     return from(getDocs(q)).pipe(
-      map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle)))
+      map((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Vehicle)),
     );
   }
 
   getVehicleById(id: string): Observable<Vehicle> {
     const docRef = doc(this.firestore, `vehicles/${id}`);
     return from(getDoc(docRef)).pipe(
-      map(snap => {
+      map((snap) => {
         if (!snap.exists()) throwError(() => new Error('Vehicle not found'));
         return { id: snap.id, ...snap.data() } as Vehicle;
-      })
+      }),
     );
   }
 
   async createVehicle(vehicle: VehicleFormData, acrissCode: string): Promise<string> {
     // Use default pricing rules if not provided
-    const pricingRules = vehicle.pricingRules?.length ? vehicle.pricingRules : getDefaultPricingRules();
-    
+    const pricingRules = vehicle.pricingRules?.length
+      ? vehicle.pricingRules
+      : getDefaultPricingRules();
+
     const data = this.cleanData({
       ...vehicle,
       acrissCode,
@@ -57,12 +78,12 @@ export class VehicleService {
       status: 'available',
       images: [],
       pricingRules: sortPricingRules(pricingRules),
-      defaultDepositAmount: vehicle.defaultDepositAmount ?? 300,
-      includedKmPerDay: vehicle.includedKmPerDay ?? 200,
-      extraKmPrice: vehicle.extraKmPrice ?? 0.25,
-      minimumRentalDays: vehicle.minimumRentalDays ?? 1,
+      defaultDepositAmount: vehicle.defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
+      includedKmPerDay: vehicle.includedKmPerDay ?? APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
+      extraKmPrice: vehicle.extraKmPrice ?? APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
+      minimumRentalDays: vehicle.minimumRentalDays ?? APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
       manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
-      createdAt: { seconds: Date.now() / 1000 }
+      createdAt: { seconds: Date.now() / 1000 },
     });
     const docRef = await addDoc(this.vehiclesRef, data);
     return docRef.id;
@@ -74,13 +95,16 @@ export class VehicleService {
     if (pricingRules?.length) {
       pricingRules = sortPricingRules(pricingRules);
     }
-    
+
     const docRef = doc(this.firestore, `vehicles/${id}`);
-    await updateDoc(docRef, this.cleanData({
-      ...data,
-      pricingRules,
-      updatedAt: { seconds: Date.now() / 1000 }
-    }));
+    await updateDoc(
+      docRef,
+      this.cleanData({
+        ...data,
+        pricingRules,
+        updatedAt: { seconds: Date.now() / 1000 },
+      }),
+    );
   }
 
   async deleteVehicle(id: string): Promise<void> {
@@ -105,7 +129,7 @@ export class VehicleService {
     const imageData: VehicleImage = {
       url,
       path: storagePath,
-      uploadedAt: { seconds: Date.now() / 1000 }
+      uploadedAt: { seconds: Date.now() / 1000 },
     };
 
     const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
@@ -128,7 +152,7 @@ export class VehicleService {
     const docRef = doc(this.firestore, `vehicles/${vehicleId}`);
     const vehicleSnap = await getDoc(docRef);
     const vehicle = vehicleSnap.data() as Vehicle;
-    const images = (vehicle.images || []).filter(img => img.path !== image.path);
+    const images = (vehicle.images || []).filter((img) => img.path !== image.path);
 
     await updateDoc(docRef, { images, updatedAt: { seconds: Date.now() / 1000 } });
   }

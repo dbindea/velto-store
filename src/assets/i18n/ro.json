@@ -109,7 +109,8 @@
       "features": "Caracteristici",
       "photos": "Fotografii",
       "history": "Istoric",
-      "pricing": "Tarife și condiții"
+      "pricing": "Tarife și condiții",
+      "reservations": "Rezervări"
     },
     "tabs": {
       "info": "Informații",
@@ -152,6 +153,11 @@
     "changeStatusTitle": "Schimbă statusul vehiculului",
     "deleteTitle": "Șterge vehicul",
     "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
+    "reservations": {
+      "noReservations": "Nu există rezervări pentru acest vehicul",
+      "upcoming": "Rezervări viitoare",
+      "history": "Istoric"
+    },
     "pricing": {
       "title": "Tarife",
       "conditions": "Condiții",
@@ -276,6 +282,68 @@
   },
   "clients": {
     "title": "Clienți",
-    "subtitle": "Gestionează clienții"
+    "subtitle": "Gestionează clienți și documentație",
+    "new": "Client nou",
+    "edit": "Editează client",
+    "detail": "Detalii client",
+    "searchPlaceholder": "Caută după nume, telefon, email sau document...",
+    "noClients": "Nu există clienți",
+    "sections": {
+      "personalData": "Date personale",
+      "drivingLicense": "Permis de conducere",
+      "internalManagement": "Gestionare internă",
+      "documents": "Documente",
+      "reservations": "Rezervări"
+    },
+    "fields": {
+      "fullName": "Nume complet",
+      "phone": "Telefon",
+      "email": "Email",
+      "documentType": "Tip document",
+      "documentNumber": "Număr document",
+      "address": "Adresă",
+      "birthDate": "Data nașterii",
+      "drivingLicenseNumber": "Număr permis",
+      "drivingLicenseIssueDate": "Data emiterii",
+      "drivingLicenseExpiryDate": "Data expirării",
+      "drivingLicenseCountry": "Țara permisului",
+      "trustLevel": "Nivel de încredere",
+      "notes": "Note interne"
+    },
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "passport": "Pașaport",
+      "other": "Altul"
+    },
+    "trustLevel": {
+      "new": "Nou",
+      "known": "Cunoscut",
+      "regular": "Regulat",
+      "risk": "Risc",
+      "blocked": "Blocat"
+    },
+    "documents": {
+      "documentFront": "Document față",
+      "documentBack": "Document spate",
+      "drivingLicenseFront": "Permis față",
+      "drivingLicenseBack": "Permis spate",
+      "other": "Alt document",
+      "upload": "Încarcă document",
+      "delete": "Șterge document",
+      "open": "Deschide",
+      "noDocuments": "Nu există documente încărcate",
+      "invalidType": "Tip fișier invalid (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "Fișierul depășește dimensiunea maximă (5MB)",
+      "uploading": "Se încarcă..."
+    },
+    "reservations": {
+      "noReservations": "Nu există rezervări",
+      "upcoming": "Viitoare",
+      "history": "Istoric"
+    }
+  },
+  "contracts": {
+    "title": "Contracte"
   }
 }

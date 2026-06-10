@@ -109,7 +109,8 @@
       "features": "Características",
       "photos": "Fotos",
       "history": "Historial",
-      "pricing": "Tarifas y condiciones"
+      "pricing": "Tarifas y condiciones",
+      "reservations": "Reservas"
     },
     "tabs": {
       "info": "Información",
@@ -152,6 +153,11 @@
     "changeStatusTitle": "Cambiar estado del vehículo",
     "deleteTitle": "Eliminar vehículo",
     "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
+    "reservations": {
+      "noReservations": "No hay reservas para este vehículo",
+      "upcoming": "Próximas reservas",
+      "history": "Histórico"
+    },
     "pricing": {
       "title": "Tarifas",
       "conditions": "Condiciones",
@@ -276,6 +282,68 @@
   },
   "clients": {
     "title": "Clientes",
-    "subtitle": "Gestiona los clientes"
+    "subtitle": "Gestiona clientes y documentación",
+    "new": "Nuevo cliente",
+    "edit": "Editar cliente",
+    "detail": "Detalle del cliente",
+    "searchPlaceholder": "Buscar por nombre, teléfono, email o documento...",
+    "noClients": "No hay clientes todavía",
+    "sections": {
+      "personalData": "Datos personales",
+      "drivingLicense": "Carnet de conducir",
+      "internalManagement": "Gestión interna",
+      "documents": "Documentos",
+      "reservations": "Reservas"
+    },
+    "fields": {
+      "fullName": "Nombre completo",
+      "phone": "Teléfono",
+      "email": "Email",
+      "documentType": "Tipo documento",
+      "documentNumber": "Número documento",
+      "address": "Dirección",
+      "birthDate": "Fecha de nacimiento",
+      "drivingLicenseNumber": "Número carnet",
+      "drivingLicenseIssueDate": "Fecha expedición",
+      "drivingLicenseExpiryDate": "Fecha caducidad",
+      "drivingLicenseCountry": "País carnet",
+      "trustLevel": "Nivel de confianza",
+      "notes": "Notas internas"
+    },
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "passport": "Pasaporte",
+      "other": "Otro"
+    },
+    "trustLevel": {
+      "new": "Nuevo",
+      "known": "Conocido",
+      "regular": "Habitual",
+      "risk": "Riesgo",
+      "blocked": "Bloqueado"
+    },
+    "documents": {
+      "documentFront": "Documento frontal",
+      "documentBack": "Documento trasero",
+      "drivingLicenseFront": "Carnet frontal",
+      "drivingLicenseBack": "Carnet trasero",
+      "other": "Otro documento",
+      "upload": "Subir documento",
+      "delete": "Eliminar documento",
+      "open": "Abrir",
+      "noDocuments": "No hay documentos subidos",
+      "invalidType": "Tipo de archivo no válido (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "El archivo supera el tamaño máximo (5MB)",
+      "uploading": "Subiendo..."
+    },
+    "reservations": {
+      "noReservations": "No hay reservas",
+      "upcoming": "Próximas",
+      "history": "Histórico"
+    }
+  },
+  "contracts": {
+    "title": "Contratos"
   }
 }

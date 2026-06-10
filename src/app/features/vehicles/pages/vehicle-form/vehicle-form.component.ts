@@ -1,35 +1,33 @@
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { VehicleService } from '../../services/vehicle.service';
-import { generateAcrissCode, AcrissInput } from '@shared/utils/acriss-code.util';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
-  VehicleFormData,
-  VehicleStatus,
-  VehicleCategory,
+  BODY_TYPE_LABELS,
   BodyType,
-  FuelType,
-  TransmissionType,
-  VehiclePricingRule,
-  VEHICLE_STATUS_LABELS,
-  VEHICLE_CATEGORY_LABELS,
   FUEL_TYPE_LABELS,
+  FuelType,
   TRANSMISSION_LABELS,
-  BODY_TYPE_LABELS
+  TransmissionType,
+  VEHICLE_CATEGORY_LABELS,
+  VEHICLE_STATUS_LABELS,
+  VehicleCategory,
+  VehicleFormData,
+  VehiclePricingRule,
+  VehicleStatus,
 } from '@shared/models/vehicle.model';
-import {
-  getDefaultPricingRules,
-  validatePricingRules
-} from '@shared/utils/pricing.util';
+import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
+import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
+import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
 
 @Component({
   selector: 'app-vehicle-form',
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './vehicle-form.component.html',
-  styleUrl: './vehicle-form.component.scss'
+  styleUrl: './vehicle-form.component.scss',
 })
 export class VehicleFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
@@ -96,12 +94,14 @@ export class VehicleFormComponent implements OnInit {
           description: vehicle.description || '',
           publicEnabled: vehicle.publicEnabled,
           features: { ...vehicle.features },
-          pricingRules: vehicle.pricingRules?.length ? vehicle.pricingRules : getDefaultPricingRules(),
-          defaultDepositAmount: vehicle.defaultDepositAmount ?? 300,
-          includedKmPerDay: vehicle.includedKmPerDay ?? 200,
-          extraKmPrice: vehicle.extraKmPrice ?? 0.25,
-          minimumRentalDays: vehicle.minimumRentalDays ?? 1,
-          manualPriceAllowed: vehicle.manualPriceAllowed ?? true
+          pricingRules: vehicle.pricingRules?.length
+            ? vehicle.pricingRules
+            : getDefaultPricingRules(),
+          defaultDepositAmount: vehicle.defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
+          includedKmPerDay: vehicle.includedKmPerDay ?? APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
+          extraKmPrice: vehicle.extraKmPrice ?? APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
+          minimumRentalDays: vehicle.minimumRentalDays ?? APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
+          manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
         };
         this.updateAcrissCode();
         this.pricingErrors = validatePricingRules(this.formData.pricingRules || []);
@@ -110,7 +110,7 @@ export class VehicleFormComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.router.navigate(['/vehicles']);
-      }
+      },
     });
   }
 
@@ -138,14 +138,14 @@ export class VehicleFormComponent implements OnInit {
         navigation: false,
         parkingSensors: false,
         rearCamera: false,
-        cruiseControl: false
+        cruiseControl: false,
       },
       pricingRules: getDefaultPricingRules(),
-      defaultDepositAmount: 300,
-      includedKmPerDay: 200,
-      extraKmPrice: 0.25,
-      minimumRentalDays: 1,
-      manualPriceAllowed: true
+      defaultDepositAmount: APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
+      includedKmPerDay: APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
+      extraKmPrice: APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
+      minimumRentalDays: APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
+      manualPriceAllowed: true,
     };
   }
 
@@ -155,7 +155,7 @@ export class VehicleFormComponent implements OnInit {
       bodyType: this.formData.bodyType,
       transmission: this.formData.transmission,
       fuelType: this.formData.fuelType,
-      features: this.formData.features
+      features: this.formData.features,
     };
     this.acrissCode = generateAcrissCode(input);
   }
@@ -265,13 +265,13 @@ export class VehicleFormComponent implements OnInit {
     const rules = this.formData.pricingRules || [];
     const lastRule = rules[rules.length - 1];
     const newMinDays = lastRule ? (lastRule.maxDays || lastRule.minDays) + 1 : 1;
-    
+
     rules.push({
       minDays: newMinDays,
       maxDays: newMinDays + 3,
-      pricePerDay: 40
+      pricePerDay: 40,
     });
-    
+
     this.formData.pricingRules = [...rules];
     this.pricingErrors = validatePricingRules(this.formData.pricingRules);
   }
@@ -290,12 +290,12 @@ export class VehicleFormComponent implements OnInit {
 
   updatePricingRule(index: number, field: keyof VehiclePricingRule, value: any): void {
     if (!this.formData.pricingRules) return;
-    
+
     this.formData.pricingRules = this.formData.pricingRules.map((rule, i) => {
       if (i !== index) return rule;
       return { ...rule, [field]: value };
     });
-    
+
     this.pricingErrors = validatePricingRules(this.formData.pricingRules);
   }
 }

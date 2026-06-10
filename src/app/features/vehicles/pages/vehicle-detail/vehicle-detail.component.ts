@@ -2,7 +2,8 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { VehicleService } from '../../services/vehicle.service';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
+import { ReservationService } from '@features/reservations/services/reservation.service';
 import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-gallery/image-gallery.component';
 import {
   Vehicle,
@@ -15,6 +16,8 @@ import {
   TRANSMISSION_LABELS,
   BODY_TYPE_LABELS
 } from '@shared/models/vehicle.model';
+import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
+import { toDate } from '@shared/utils/reservation-date.util';
 
 @Component({
   selector: 'app-vehicle-detail',
@@ -27,14 +30,19 @@ export class VehicleDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private vehicleService = inject(VehicleService);
+  private reservationService = inject(ReservationService);
 
   vehicle: Vehicle | null = null;
   loading = true;
-  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'history' = 'info';
+  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'history' | 'reservations' = 'info';
   showStatusModal = false;
   showDeleteModal = false;
   showGallery = false;
   galleryIndex = 0;
+
+  // Reservations
+  vehicleReservations: Reservation[] = [];
+  loadingReservations = false;
 
   statusOptions: VehicleStatus[] = ['available', 'rented', 'maintenance', 'out_of_service'];
 
@@ -51,6 +59,7 @@ export class VehicleDetailComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.loadVehicle(id);
+      this.loadReservations(id);
     }
   }
 
@@ -68,8 +77,87 @@ export class VehicleDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'history'): void {
+  loadReservations(vehicleId: string): void {
+    this.loadingReservations = true;
+    this.reservationService.getReservationsByVehicle(vehicleId).subscribe({
+      next: (reservations) => {
+        this.vehicleReservations = reservations;
+        this.loadingReservations = false;
+      },
+      error: () => {
+        this.loadingReservations = false;
+      }
+    });
+  }
+
+  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'history' | 'reservations'): void {
     this.activeTab = tab;
+  }
+
+  // Reservation helpers
+  getReservationStatusLabel(status: string): string {
+    return RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS] || status;
+  }
+
+  getReservationPaymentLabel(status: string): string {
+    return PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS] || status;
+  }
+
+  getReservationStatusClass(status: string): string {
+    const map: Record<string, string> = {
+      quote: 'status-quote',
+      reserved: 'status-reserved',
+      confirmed: 'status-confirmed',
+      delivered: 'status-delivered',
+      returned: 'status-returned',
+      closed: 'status-closed',
+      cancelled: 'status-cancelled'
+    };
+    return map[status] || '';
+  }
+
+  getReservationPaymentClass(status: string): string {
+    const map: Record<string, string> = {
+      pending: 'payment-pending',
+      partial: 'payment-partial',
+      paid: 'payment-paid',
+      refunded: 'payment-refunded'
+    };
+    return map[status] || '';
+  }
+
+  getUpcomingVehicleReservations(): Reservation[] {
+    const now = new Date();
+    return this.vehicleReservations.filter(r => {
+      const returnDate = toDate(r.returnDateTime);
+      return returnDate >= now && r.reservationStatus !== 'cancelled';
+    });
+  }
+
+  getPastVehicleReservations(): Reservation[] {
+    const now = new Date();
+    return this.vehicleReservations.filter(r => {
+      const returnDate = toDate(r.returnDateTime);
+      return returnDate < now && r.reservationStatus !== 'cancelled';
+    });
+  }
+
+  getCancelledVehicleReservations(): Reservation[] {
+    return this.vehicleReservations.filter(r => r.reservationStatus === 'cancelled');
+  }
+
+  getResPickupDate(r: Reservation): Date {
+    return toDate(r.pickupDateTime);
+  }
+
+  getResReturnDate(r: Reservation): Date {
+    return toDate(r.returnDateTime);
+  }
+
+  viewReservation(reservationId: string | undefined): void {
+    if (reservationId) {
+      this.router.navigate(['/reservations', reservationId]);
+    }
   }
 
   openGallery(index = 0): void {

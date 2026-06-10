@@ -1,9 +1,9 @@
-import { Injectable, inject } from '@angular/core';
+﻿import { Injectable, inject } from '@angular/core';
 import { Firestore, CollectionReference, collection, doc, addDoc, updateDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
 import { Observable, from, forkJoin, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
-import { VehicleService } from '../../vehicles/services/vehicle.service';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { 
   Reservation, 
   ReservationStatus, 
@@ -18,6 +18,7 @@ import {
   dateRangesOverlap 
 } from '@shared/utils/reservation-date.util';
 import { calculateBasePrice, findPricingRuleByDays } from '@shared/utils/pricing.util';
+import { APP_DEFAULTS } from '@shared/constants/app.constants';
 
 export interface VehicleAvailabilityResult {
   vehicleId: string;
@@ -57,6 +58,36 @@ export class ReservationService {
    */
   getReservations(): Observable<Reservation[]> {
     const q = query(this.reservationsRef, orderBy('pickupDateTime', 'asc'));
+    return from(getDocs(q)).pipe(
+      map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation)))
+    );
+  }
+
+  /**
+   * Get all reservations for a specific client.
+   * NOTE: Firestore may require a composite index for vehicleId + clientId + pickupDateTime.
+   */
+  getReservationsByClient(clientId: string): Observable<Reservation[]> {
+    const q = query(
+      this.reservationsRef,
+      where('clientId', '==', clientId),
+      orderBy('pickupDateTime', 'desc')
+    );
+    return from(getDocs(q)).pipe(
+      map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation)))
+    );
+  }
+
+  /**
+   * Get all reservations for a specific vehicle.
+   * NOTE: Firestore may require a composite index for vehicleId + pickupDateTime.
+   */
+  getReservationsByVehicle(vehicleId: string): Observable<Reservation[]> {
+    const q = query(
+      this.reservationsRef,
+      where('vehicleId', '==', vehicleId),
+      orderBy('pickupDateTime', 'desc')
+    );
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation)))
     );
@@ -157,7 +188,7 @@ export class ReservationService {
           available: false,
           totalDays,
           pricing: null,
-          conflictMessage: 'Vehículo no disponible en flota'
+          conflictMessage: 'VehÃ­culo no disponible en flota'
         });
         continue;
       }
@@ -320,7 +351,7 @@ export class ReservationService {
       remainingPayment: {
         requiredAmount: remainingPaymentRequired,
         paidAmount: 0,
-        dueDate: toTimestamp(new Date(pickupDateTime.getTime() - 7 * 24 * 60 * 60 * 1000)), // 7 days before pickup
+        dueDate: toTimestamp(new Date(pickupDateTime.getTime() - APP_DEFAULTS.REMAINING_PAYMENT_DUE_DAYS_BEFORE_PICKUP * 24 * 60 * 60 * 1000)), // days before pickup from APP_DEFAULTS
         status: 'pending'
       },
       deposit: {
@@ -417,7 +448,7 @@ export class ReservationService {
       remainingPayment: {
         requiredAmount: remainingPaymentRequired,
         paidAmount: 0,
-        dueDate: toTimestamp(new Date(pickupDateTime.getTime() - 7 * 24 * 60 * 60 * 1000)),
+        dueDate: toTimestamp(new Date(pickupDateTime.getTime() - APP_DEFAULTS.REMAINING_PAYMENT_DUE_DAYS_BEFORE_PICKUP * 24 * 60 * 60 * 1000)),
         status: 'pending'
       },
       deposit: {

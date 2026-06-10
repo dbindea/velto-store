@@ -1,0 +1,106 @@
+<div class="page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'clients.title' | translate }}</h1>
+      <p class="subtitle">{{ 'clients.subtitle' | translate }}</p>
+    </div>
+    <button class="btn-primary" type="button" (click)="createNew()">
+      <i class="pi pi-plus"></i>
+      {{ 'clients.new' | translate }}
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <i class="pi pi-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChange()"
+        [placeholder]="'clients.searchPlaceholder' | translate"
+        class="form-control">
+    </div>
+
+    <select 
+      class="form-control filter-select" 
+      [(ngModel)]="trustFilter"
+      (ngModelChange)="onFilterChange()">
+      @for (option of trustOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (filteredClients.length === 0) {
+    <!-- Empty State -->
+    <div class="empty-state">
+      <i class="pi pi-users"></i>
+      <p>{{ 'clients.noClients' | translate }}</p>
+      <button class="btn-primary" type="button" (click)="createNew()">
+        <i class="pi pi-plus"></i>
+        {{ 'clients.new' | translate }}
+      </button>
+    </div>
+  } @else {
+    <!-- Client List -->
+    <div class="client-list">
+      @for (client of filteredClients; track client.id) {
+        <div class="client-card" (click)="viewDetail(client)">
+          <!-- Avatar -->
+          <div class="client-avatar">
+            {{ getInitials(client.fullName) }}
+          </div>
+
+          <!-- Main Info -->
+          <div class="client-info">
+            <h3>{{ client.fullName }}</h3>
+            <div class="info-row">
+              @if (client.phone) {
+                <span class="info-item">
+                  <i class="pi pi-phone"></i>
+                  {{ client.phone }}
+                </span>
+              }
+              @if (client.email) {
+                <span class="info-item">
+                  <i class="pi pi-envelope"></i>
+                  {{ client.email }}
+                </span>
+              }
+            </div>
+            @if (client.documentNumber) {
+              <span class="info-item document">
+                <i class="pi pi-id-card"></i>
+                {{ client.documentNumber }}
+              </span>
+            }
+          </div>
+
+          <!-- Trust Level & Reservations -->
+          <div class="client-meta">
+            <span class="trust-badge" [ngClass]="getTrustClass(client.trustLevel)">
+              {{ getTrustLabel(client.trustLevel) }}
+            </span>
+            <span class="reservation-count">
+              <i class="pi pi-calendar"></i>
+              {{ getReservationCount(client.id) }} {{ 'reservations.title' | translate }}
+            </span>
+          </div>
+
+          <!-- Arrow -->
+          <div class="card-arrow">
+            <i class="pi pi-chevron-right"></i>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

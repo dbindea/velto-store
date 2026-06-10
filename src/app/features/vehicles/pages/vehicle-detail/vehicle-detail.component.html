@@ -8,278 +8,439 @@
 } @else if (vehicle) {
   <div class="page-container">
     <div class="detail-header">
-    <button class="btn-back" (click)="goBack()">
-      <i class="pi pi-arrow-left"></i>
-      <span>{{ 'common.back' | translate }}</span>
-    </button>
+      <button class="btn-back" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+        <span>{{ 'common.back' | translate }}</span>
+      </button>
 
-    <div class="header-actions">
-      <button class="btn btn-secondary" (click)="openStatusModal()">
-        <i class="pi pi-sync"></i>
-        {{ 'vehicles.actions.changeStatus' | translate }}
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="openStatusModal()">
+          <i class="pi pi-sync"></i>
+          {{ 'vehicles.actions.changeStatus' | translate }}
+        </button>
+        <button class="btn btn-primary" (click)="editVehicle()">
+          <i class="pi pi-pencil"></i>
+          {{ 'common.edit' | translate }}
+        </button>
+        <button class="btn btn-danger" (click)="openDeleteModal()">
+          <i class="pi pi-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="vehicle-title">
+      <h1>{{ vehicle.brand }} {{ vehicle.model }}</h1>
+      <p class="version">{{ vehicle.version }}</p>
+      <div class="acriss-badge">{{ vehicle.acrissCode }}</div>
+    </div>
+
+    <div class="main-image-section" (click)="openGallery(0)">
+      @if (vehicle.images && vehicle.images.length > 0) {
+        <img
+          [src]="vehicle.images[0].url"
+          [alt]="vehicle.brand + ' ' + vehicle.model"
+          class="main-image"
+          loading="lazy"
+          decoding="async"
+        />
+      } @else {
+        <div class="main-image-placeholder">
+          <i class="pi pi-car"></i>
+        </div>
+      }
+      <span class="vehicle-status-badge" [class]="getStatusClass(vehicle.status)">
+        {{ getStatusLabel(vehicle.status) | translate }}
+      </span>
+      @if (galleryImages().length > 1) {
+        <button class="gallery-btn" [title]="'vehicles.photos.openGallery' | translate">
+          <i class="pi pi-images"></i>
+          <span>{{ galleryImages().length }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="tabs">
+      <button class="tab" [class.active]="activeTab === 'info'" (click)="setTab('info')">
+        Info
       </button>
-      <button class="btn btn-primary" (click)="editVehicle()">
-        <i class="pi pi-pencil"></i>
-        {{ 'common.edit' | translate }}
+      <button class="tab" [class.active]="activeTab === 'features'" (click)="setTab('features')">
+        Features
       </button>
-      <button class="btn btn-danger" (click)="openDeleteModal()">
-        <i class="pi pi-trash"></i>
+      <button class="tab" [class.active]="activeTab === 'photos'" (click)="setTab('photos')">
+        Photos
+      </button>
+      <button class="tab" [class.active]="activeTab === 'pricing'" (click)="setTab('pricing')">
+        {{ 'vehicles.tabs.pricing' | translate }}
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab === 'reservations'"
+        (click)="setTab('reservations')"
+      >
+        <i class="pi pi-calendar"></i>
+        {{ 'vehicles.sections.reservations' | translate }}
+        @if (vehicleReservations.length) {
+          <span class="tab-count">{{ vehicleReservations.length }}</span>
+        }
+      </button>
+      <button class="tab" [class.active]="activeTab === 'history'" (click)="setTab('history')">
+        History
       </button>
     </div>
-  </div>
 
-  <div class="vehicle-title">
-    <h1>{{ vehicle.brand }} {{ vehicle.model }}</h1>
-    <p class="version">{{ vehicle.version }}</p>
-    <div class="acriss-badge">{{ vehicle.acrissCode }}</div>
-  </div>
-
-  <div class="main-image-section" (click)="openGallery(0)">
-    @if (vehicle.images && vehicle.images.length > 0) {
-      <img [src]="vehicle.images[0].url" [alt]="vehicle.brand + ' ' + vehicle.model" class="main-image" loading="lazy" decoding="async" />
-    } @else {
-      <div class="main-image-placeholder">
-        <i class="pi pi-car"></i>
-      </div>
-    }
-    <span class="vehicle-status-badge" [class]="getStatusClass(vehicle.status)">
-      {{ getStatusLabel(vehicle.status) | translate }}
-    </span>
-    @if (galleryImages().length > 1) {
-      <button class="gallery-btn" [title]="'vehicles.photos.openGallery' | translate">
-        <i class="pi pi-images"></i>
-        <span>{{ galleryImages().length }}</span>
-      </button>
-    }
-  </div>
-
-  <div class="tabs">
-    <button class="tab" [class.active]="activeTab === 'info'" (click)="setTab('info')">Info</button>
-    <button class="tab" [class.active]="activeTab === 'features'" (click)="setTab('features')">Features</button>
-    <button class="tab" [class.active]="activeTab === 'photos'" (click)="setTab('photos')">Photos</button>
-    <button class="tab" [class.active]="activeTab === 'pricing'" (click)="setTab('pricing')">{{ 'vehicles.tabs.pricing' | translate }}</button>
-    <button class="tab" [class.active]="activeTab === 'history'" (click)="setTab('history')">History</button>
-  </div>
-
-  <div class="tab-content">
-    @if (activeTab === 'info') {
-      <div class="info-grid">
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.plateNumber' | translate }}</label>
-          <span class="plate">{{ vehicle.plateNumber }}</span>
-        </div>
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.category' | translate }}</label>
-          <span>{{ getCategoryLabel(vehicle.category) | translate }}</span>
-        </div>
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.year' | translate }}</label>
-          <span>{{ vehicle.year }}</span>
-        </div>
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.fuelType' | translate }}</label>
-          <span>{{ getFuelLabel(vehicle.fuelType) | translate }}</span>
-        </div>
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.transmission' | translate }}</label>
-          <span>{{ getTransmissionLabel(vehicle.transmission) | translate }}</span>
-        </div>
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.bodyType' | translate }}</label>
-          <span>{{ getBodyTypeLabel(vehicle.bodyType) | translate }}</span>
-        </div>
-        <div class="info-item">
-          <label>{{ 'vehicles.fields.seats' | translate }}</label>
-          <span>{{ vehicle.seats }}</span>
-        </div>
-        @if (vehicle.luggageCapacity) {
+    <div class="tab-content">
+      @if (activeTab === 'info') {
+        <div class="info-grid">
           <div class="info-item">
-            <label>{{ 'vehicles.fields.luggageCapacity' | translate }}</label>
-            <span>{{ vehicle.luggageCapacity }}</span>
+            <label>{{ 'vehicles.fields.plateNumber' | translate }}</label>
+            <span class="plate">{{ vehicle.plateNumber }}</span>
           </div>
-        }
-        @if (vehicle.currentKm) {
           <div class="info-item">
-            <label>{{ 'vehicles.fields.currentKm' | translate }}</label>
-            <span>{{ vehicle.currentKm | number }} km</span>
+            <label>{{ 'vehicles.fields.category' | translate }}</label>
+            <span>{{ getCategoryLabel(vehicle.category) | translate }}</span>
           </div>
-        }
-        @if (vehicle.color) {
           <div class="info-item">
-            <label>{{ 'vehicles.fields.color' | translate }}</label>
-            <span>{{ vehicle.color }}</span>
+            <label>{{ 'vehicles.fields.year' | translate }}</label>
+            <span>{{ vehicle.year }}</span>
           </div>
-        }
-        @if (vehicle.vin) {
-          <div class="info-item full-width">
-            <label>{{ 'vehicles.fields.vin' | translate }}</label>
-            <span class="vin">{{ vehicle.vin }}</span>
+          <div class="info-item">
+            <label>{{ 'vehicles.fields.fuelType' | translate }}</label>
+            <span>{{ getFuelLabel(vehicle.fuelType) | translate }}</span>
           </div>
-        }
-        @if (vehicle.description) {
-          <div class="info-item full-width">
-            <label>{{ 'vehicles.fields.description' | translate }}</label>
-            <p class="description">{{ vehicle.description }}</p>
+          <div class="info-item">
+            <label>{{ 'vehicles.fields.transmission' | translate }}</label>
+            <span>{{ getTransmissionLabel(vehicle.transmission) | translate }}</span>
           </div>
-        }
-      </div>
-    }
-
-    @if (activeTab === 'features') {
-      <div class="features-grid">
-        <div class="feature-item" [class.active]="vehicle.features.airConditioning">
-          <i class="pi pi-sun"></i>
-          <span>{{ 'vehicles.features.airConditioning' | translate }}</span>
-          @if (vehicle.features.airConditioning) {
-            <i class="pi pi-check check-icon"></i>
-          }
-        </div>
-        <div class="feature-item" [class.active]="vehicle.features.navigation">
-          <i class="pi pi-compass"></i>
-          <span>{{ 'vehicles.features.navigation' | translate }}</span>
-          @if (vehicle.features.navigation) {
-            <i class="pi pi-check check-icon"></i>
-          }
-        </div>
-        <div class="feature-item" [class.active]="vehicle.features.parkingSensors">
-          <i class="pi pi-car"></i>
-          <span>{{ 'vehicles.features.parkingSensors' | translate }}</span>
-          @if (vehicle.features.parkingSensors) {
-            <i class="pi pi-check check-icon"></i>
-          }
-        </div>
-        <div class="feature-item" [class.active]="vehicle.features.rearCamera">
-          <i class="pi pi-video"></i>
-          <span>{{ 'vehicles.features.rearCamera' | translate }}</span>
-          @if (vehicle.features.rearCamera) {
-            <i class="pi pi-check check-icon"></i>
-          }
-        </div>
-        <div class="feature-item" [class.active]="vehicle.features.cruiseControl">
-          <i class="pi pi-stopwatch"></i>
-          <span>{{ 'vehicles.features.cruiseControl' | translate }}</span>
-          @if (vehicle.features.cruiseControl) {
-            <i class="pi pi-check check-icon"></i>
-          }
-        </div>
-      </div>
-    }
-
-    @if (activeTab === 'photos') {
-      <div class="photos-section">
-        @if (vehicle.images && vehicle.images.length > 0) {
-          <div class="photos-grid">
-            @for (image of vehicle.images; track image.path) {
-              <div class="photo-item" (click)="openGalleryByUrl(image.url)">
-                <img [src]="image.url" alt="Vehicle photo" loading="lazy" decoding="async" />
-              </div>
-            }
+          <div class="info-item">
+            <label>{{ 'vehicles.fields.bodyType' | translate }}</label>
+            <span>{{ getBodyTypeLabel(vehicle.bodyType) | translate }}</span>
           </div>
-        } @else {
-          <div class="no-photos">
-            <i class="pi pi-image"></i>
-            <p>{{ 'vehicles.noPhotos' | translate }}</p>
+          <div class="info-item">
+            <label>{{ 'vehicles.fields.seats' | translate }}</label>
+            <span>{{ vehicle.seats }}</span>
           </div>
-        }
-      </div>
-    }
-
-    @if (activeTab === 'pricing') {
-      <div class="pricing-section">
-        <div class="pricing-rules-list">
-          @for (rule of vehicle.pricingRules || []; track $index) {
-            <div class="pricing-rule-item">
-              <span class="rule-label">{{ getPricingRuleLabel(rule) }}</span>
-              <span class="rule-price">{{ rule.pricePerDay }} €/día</span>
+          @if (vehicle.luggageCapacity) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.luggageCapacity' | translate }}</label>
+              <span>{{ vehicle.luggageCapacity }}</span>
+            </div>
+          }
+          @if (vehicle.currentKm) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.currentKm' | translate }}</label>
+              <span>{{ vehicle.currentKm | number }} km</span>
+            </div>
+          }
+          @if (vehicle.color) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.color' | translate }}</label>
+              <span>{{ vehicle.color }}</span>
+            </div>
+          }
+          @if (vehicle.vin) {
+            <div class="info-item full-width">
+              <label>{{ 'vehicles.fields.vin' | translate }}</label>
+              <span class="vin">{{ vehicle.vin }}</span>
+            </div>
+          }
+          @if (vehicle.description) {
+            <div class="info-item full-width">
+              <label>{{ 'vehicles.fields.description' | translate }}</label>
+              <p class="description">{{ vehicle.description }}</p>
             </div>
           }
         </div>
+      }
 
-        <div class="pricing-conditions">
-          <div class="condition-item">
-            <span class="condition-label">{{ 'vehicles.pricing.defaultDepositAmount' | translate }}:</span>
-            <span class="condition-value">{{ vehicle.defaultDepositAmount || 300 }} €</span>
+      @if (activeTab === 'features') {
+        <div class="features-grid">
+          <div class="feature-item" [class.active]="vehicle.features.airConditioning">
+            <i class="pi pi-sun"></i>
+            <span>{{ 'vehicles.features.airConditioning' | translate }}</span>
+            @if (vehicle.features.airConditioning) {
+              <i class="pi pi-check check-icon"></i>
+            }
           </div>
-          <div class="condition-item">
-            <span class="condition-label">{{ 'vehicles.pricing.includedKmPerDay' | translate }}:</span>
-            <span class="condition-value">{{ vehicle.includedKmPerDay || 200 }} km</span>
+          <div class="feature-item" [class.active]="vehicle.features.navigation">
+            <i class="pi pi-compass"></i>
+            <span>{{ 'vehicles.features.navigation' | translate }}</span>
+            @if (vehicle.features.navigation) {
+              <i class="pi pi-check check-icon"></i>
+            }
           </div>
-          <div class="condition-item">
-            <span class="condition-label">{{ 'vehicles.pricing.extraKmPrice' | translate }}:</span>
-            <span class="condition-value">{{ vehicle.extraKmPrice || 0.25 }} €/km</span>
+          <div class="feature-item" [class.active]="vehicle.features.parkingSensors">
+            <i class="pi pi-car"></i>
+            <span>{{ 'vehicles.features.parkingSensors' | translate }}</span>
+            @if (vehicle.features.parkingSensors) {
+              <i class="pi pi-check check-icon"></i>
+            }
           </div>
-          <div class="condition-item">
-            <span class="condition-label">{{ 'vehicles.pricing.minimumRentalDays' | translate }}:</span>
-            <span class="condition-value">{{ vehicle.minimumRentalDays || 1 }}</span>
+          <div class="feature-item" [class.active]="vehicle.features.rearCamera">
+            <i class="pi pi-video"></i>
+            <span>{{ 'vehicles.features.rearCamera' | translate }}</span>
+            @if (vehicle.features.rearCamera) {
+              <i class="pi pi-check check-icon"></i>
+            }
           </div>
-          <div class="condition-item">
-            <span class="condition-label">{{ 'vehicles.pricing.manualPriceAllowed' | translate }}:</span>
-            <span class="condition-value">{{ (vehicle.manualPriceAllowed !== false) ? ('vehicles.pricing.allowed' | translate) : ('vehicles.pricing.notAllowed' | translate) }}</span>
-          </div>
-        </div>
-      </div>
-    }
-
-    @if (activeTab === 'history') {
-      <div class="history-placeholder">
-        <i class="pi pi-history"></i>
-        <p>{{ 'vehicles.historyPlaceholder' | translate }}</p>
-      </div>
-    }
-  </div>
-
-  @if (showStatusModal) {
-    <div class="modal-overlay" (click)="closeStatusModal()">
-      <div class="modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>{{ 'vehicles.changeStatusTitle' | translate }}</h3>
-          <button class="modal-close" (click)="closeStatusModal()">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="status-options">
-            @for (status of statusOptions; track status) {
-              <button class="status-option" [class.active]="vehicle.status === status" (click)="changeStatus(status)">
-                <span class="status-dot" [class]="getStatusClass(status)"></span>
-                {{ getStatusLabel(status) | translate }}
-              </button>
+          <div class="feature-item" [class.active]="vehicle.features.cruiseControl">
+            <i class="pi pi-stopwatch"></i>
+            <span>{{ 'vehicles.features.cruiseControl' | translate }}</span>
+            @if (vehicle.features.cruiseControl) {
+              <i class="pi pi-check check-icon"></i>
             }
           </div>
         </div>
-      </div>
-    </div>
-  }
+      }
 
-  @if (showDeleteModal) {
-    <div class="modal-overlay" (click)="closeDeleteModal()">
-      <div class="modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>{{ 'vehicles.deleteTitle' | translate }}</h3>
-          <button class="modal-close" (click)="closeDeleteModal()">
-            <i class="pi pi-times"></i>
-          </button>
+      @if (activeTab === 'photos') {
+        <div class="photos-section">
+          @if (vehicle.images && vehicle.images.length > 0) {
+            <div class="photos-grid">
+              @for (image of vehicle.images; track image.path) {
+                <div class="photo-item" (click)="openGalleryByUrl(image.url)">
+                  <img [src]="image.url" alt="Vehicle photo" loading="lazy" decoding="async" />
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="no-photos">
+              <i class="pi pi-image"></i>
+              <p>{{ 'vehicles.noPhotos' | translate }}</p>
+            </div>
+          }
         </div>
-        <div class="modal-body">
-          <p>{{ 'vehicles.deleteConfirm' | translate }}</p>
-          <div class="modal-actions">
-            <button class="btn btn-secondary" (click)="closeDeleteModal()">
-              {{ 'common.cancel' | translate }}
+      }
+
+      @if (activeTab === 'pricing') {
+        <div class="pricing-section">
+          <div class="pricing-rules-list">
+            @for (rule of vehicle.pricingRules || []; track $index) {
+              <div class="pricing-rule-item">
+                <span class="rule-label">{{ getPricingRuleLabel(rule) }}</span>
+                <span class="rule-price">{{ rule.pricePerDay }} €/día</span>
+              </div>
+            }
+          </div>
+
+          <div class="pricing-conditions">
+            <div class="condition-item">
+              <span class="condition-label"
+                >{{ 'vehicles.pricing.defaultDepositAmount' | translate }}:</span
+              >
+              <span class="condition-value">{{ vehicle.defaultDepositAmount || 150 }} €</span>
+            </div>
+            <div class="condition-item">
+              <span class="condition-label"
+                >{{ 'vehicles.pricing.includedKmPerDay' | translate }}:</span
+              >
+              <span class="condition-value">{{ vehicle.includedKmPerDay || 500 }} km</span>
+            </div>
+            <div class="condition-item">
+              <span class="condition-label"
+                >{{ 'vehicles.pricing.extraKmPrice' | translate }}:</span
+              >
+              <span class="condition-value">{{ vehicle.extraKmPrice || 0.25 }} €/km</span>
+            </div>
+            <div class="condition-item">
+              <span class="condition-label"
+                >{{ 'vehicles.pricing.minimumRentalDays' | translate }}:</span
+              >
+              <span class="condition-value">{{ vehicle.minimumRentalDays || 1 }}</span>
+            </div>
+            <div class="condition-item">
+              <span class="condition-label"
+                >{{ 'vehicles.pricing.manualPriceAllowed' | translate }}:</span
+              >
+              <span class="condition-value">{{
+                vehicle.manualPriceAllowed !== false
+                  ? ('vehicles.pricing.allowed' | translate)
+                  : ('vehicles.pricing.notAllowed' | translate)
+              }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (activeTab === 'reservations') {
+        @if (loadingReservations) {
+          <div class="loading-state">
+            <i class="pi pi-spin pi-spinner"></i>
+            <p>{{ 'common.loading' | translate }}</p>
+          </div>
+        } @else if (vehicleReservations.length === 0) {
+          <div class="history-placeholder">
+            <i class="pi pi-calendar"></i>
+            <p>{{ 'vehicles.reservations.noReservations' | translate }}</p>
+          </div>
+        } @else {
+          <!-- Upcoming -->
+          @if (getUpcomingVehicleReservations().length > 0) {
+            <div class="res-section">
+              <h3 class="section-title">
+                <i class="pi pi-clock"></i>
+                {{ 'vehicles.reservations.upcoming' | translate }}
+              </h3>
+              @for (r of getUpcomingVehicleReservations(); track r.id) {
+                <div class="res-item" (click)="viewReservation(r.id)">
+                  <div class="res-client">
+                    <i class="pi pi-user"></i>
+                    <span>{{ r.clientSnapshot.fullName }}</span>
+                  </div>
+                  <div class="res-dates">
+                    <i class="pi pi-calendar"></i>
+                    <span
+                      >{{ getResPickupDate(r) | date: 'dd/MM/yyyy HH:mm' }} →
+                      {{ getResReturnDate(r) | date: 'dd/MM/yyyy HH:mm' }}</span
+                    >
+                  </div>
+                  <div class="res-pricing">
+                    <span class="price"
+                      >{{ r.pricingSnapshot.finalPrice | number: '1.2-2' }} €</span
+                    >
+                    <span class="days">{{ r.totalDays }} días</span>
+                  </div>
+                  <div class="res-badges">
+                    <span class="badge" [ngClass]="getReservationStatusClass(r.reservationStatus)">
+                      {{ getReservationStatusLabel(r.reservationStatus) }}
+                    </span>
+                    <span class="badge" [ngClass]="getReservationPaymentClass(r.paymentStatus)">
+                      {{ getReservationPaymentLabel(r.paymentStatus) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Past -->
+          @if (getPastVehicleReservations().length > 0) {
+            <div class="res-section">
+              <h3 class="section-title">
+                <i class="pi pi-history"></i>
+                {{ 'vehicles.reservations.history' | translate }}
+              </h3>
+              @for (r of getPastVehicleReservations(); track r.id) {
+                <div class="res-item" (click)="viewReservation(r.id)">
+                  <div class="res-client">
+                    <i class="pi pi-user"></i>
+                    <span>{{ r.clientSnapshot.fullName }}</span>
+                  </div>
+                  <div class="res-dates">
+                    <i class="pi pi-calendar"></i>
+                    <span
+                      >{{ getResPickupDate(r) | date: 'dd/MM/yyyy' }} →
+                      {{ getResReturnDate(r) | date: 'dd/MM/yyyy' }}</span
+                    >
+                  </div>
+                  <div class="res-pricing">
+                    <span class="price"
+                      >{{ r.pricingSnapshot.finalPrice | number: '1.2-2' }} €</span
+                    >
+                    <span class="days">{{ r.totalDays }} días</span>
+                  </div>
+                  <div class="res-badges">
+                    <span class="badge" [ngClass]="getReservationStatusClass(r.reservationStatus)">
+                      {{ getReservationStatusLabel(r.reservationStatus) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Cancelled -->
+          @if (getCancelledVehicleReservations().length > 0) {
+            <div class="res-section">
+              <h3 class="section-title">
+                <i class="pi pi-ban"></i>
+                {{ 'reservations.status.cancelled' | translate }}
+              </h3>
+              @for (r of getCancelledVehicleReservations(); track r.id) {
+                <div class="res-item cancelled" (click)="viewReservation(r.id)">
+                  <div class="res-client">
+                    <i class="pi pi-user"></i>
+                    <span>{{ r.clientSnapshot.fullName }}</span>
+                  </div>
+                  <div class="res-dates">
+                    <i class="pi pi-calendar"></i>
+                    <span>{{ getResPickupDate(r) | date: 'dd/MM/yyyy' }}</span>
+                  </div>
+                  <div class="res-pricing">
+                    <span class="price"
+                      >{{ r.pricingSnapshot.finalPrice | number: '1.2-2' }} €</span
+                    >
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+
+      @if (activeTab === 'history') {
+        <div class="history-placeholder">
+          <i class="pi pi-history"></i>
+          <p>{{ 'vehicles.historyPlaceholder' | translate }}</p>
+        </div>
+      }
+    </div>
+
+    @if (showStatusModal) {
+      <div class="modal-overlay" (click)="closeStatusModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ 'vehicles.changeStatusTitle' | translate }}</h3>
+            <button class="modal-close" (click)="closeStatusModal()">
+              <i class="pi pi-times"></i>
             </button>
-            <button class="btn btn-danger" (click)="deleteVehicle()">
-              {{ 'common.delete' | translate }}
-            </button>
+          </div>
+          <div class="modal-body">
+            <div class="status-options">
+              @for (status of statusOptions; track status) {
+                <button
+                  class="status-option"
+                  [class.active]="vehicle.status === status"
+                  (click)="changeStatus(status)"
+                >
+                  <span class="status-dot" [class]="getStatusClass(status)"></span>
+                  {{ getStatusLabel(status) | translate }}
+                </button>
+              }
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  }
+    }
 
-  <app-image-gallery
-    [images]="galleryImages()"
-    [initialIndex]="galleryIndex"
-    [isOpen]="showGallery"
-    (close)="closeGallery()"
-  />
+    @if (showDeleteModal) {
+      <div class="modal-overlay" (click)="closeDeleteModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ 'vehicles.deleteTitle' | translate }}</h3>
+            <button class="modal-close" (click)="closeDeleteModal()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>{{ 'vehicles.deleteConfirm' | translate }}</p>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" (click)="closeDeleteModal()">
+                {{ 'common.cancel' | translate }}
+              </button>
+              <button class="btn btn-danger" (click)="deleteVehicle()">
+                {{ 'common.delete' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <app-image-gallery
+      [images]="galleryImages()"
+      [initialIndex]="galleryIndex"
+      [isOpen]="showGallery"
+      (close)="closeGallery()"
+    />
   </div>
 }
