@@ -8,8 +8,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-
-const db = admin.firestore();
+import { firestore } from './admin-guard';
 
 interface CreateRedsysLinkRequest {
   paymentId: string;
@@ -22,8 +21,9 @@ interface CreateRedsysLinkResponse {
 }
 
 export const createRedsysPaymentLink = functions.https.onCall(
-  async (data: CreateRedsysLinkRequest, context): Promise<CreateRedsysLinkResponse> => {
-    if (!context.auth) {
+  async (request): Promise<CreateRedsysLinkResponse> => {
+    const data = request.data as CreateRedsysLinkRequest;
+    if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     // TODO: check user role/authorization
@@ -32,6 +32,7 @@ export const createRedsysPaymentLink = functions.https.onCall(
       throw new functions.https.HttpsError('invalid-argument', 'paymentId es requerido');
     }
 
+    const db = firestore();
     const paymentSnap = await db.collection('payments').doc(data.paymentId).get();
     if (!paymentSnap.exists) {
       throw new functions.https.HttpsError('not-found', 'Pago no encontrado');

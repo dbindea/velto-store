@@ -17,9 +17,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { buildContractPdf } from './pdf';
-
-const db = admin.firestore();
-const storage = admin.storage();
+import { firestore, storageBucket } from '../admin-guard';
 
 const VELTO_COMPANY_NAME = process.env.VELTO_COMPANY_NAME || 'Velto Rent';
 const VELTO_COMPANY_EMAIL = process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com';
@@ -50,8 +48,9 @@ function asString(value: any, fallback = ''): string {
 }
 
 export const generateContractPdf = functions.https.onCall(
-  async (data: GenerateRequest, context): Promise<GenerateResponse> => {
-    if (!context.auth) {
+  async (request): Promise<GenerateResponse> => {
+    const data = request.data as GenerateRequest;
+    if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.reservationId) {
@@ -60,6 +59,9 @@ export const generateContractPdf = functions.https.onCall(
 
     const reservationId = data.reservationId;
     functions.logger.info(`generateContractPdf: reservation=${reservationId}`);
+
+    const db = firestore();
+    const storage = storageBucket();
 
     // 1. Load reservation
     const resSnap = await db.collection('reservations').doc(reservationId).get();
@@ -214,11 +216,11 @@ export const generateContractPdf = functions.https.onCall(
       pdfPath,
       generatedAt: now,
       updatedAt: now,
-      updatedBy: context.auth.uid || null
+      updatedBy: request.auth!.uid || null
     };
     if (!existing.exists) {
       baseUpdate.createdAt = now;
-      baseUpdate.createdBy = context.auth.uid || null;
+      baseUpdate.createdBy = request.auth!.uid || null;
     }
     await contractRef.set(baseUpdate, { merge: true });
 

@@ -20,9 +20,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-
-const db = admin.firestore();
-const storage = admin.storage();
+import { firestore, storageBucket } from '../admin-guard';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'reservas@veltorent.com';
@@ -70,8 +68,9 @@ function escapeHtml(s: string): string {
 }
 
 export const sendSignedContractEmail = functions.https.onCall(
-  async (data: SendRequest, context): Promise<SendResponse> => {
-    if (!context.auth) {
+  async (request): Promise<SendResponse> => {
+    const data = request.data as SendRequest;
+    if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.contractId) {
@@ -83,6 +82,9 @@ export const sendSignedContractEmail = functions.https.onCall(
         'Resend no está configurado. Configura RESEND_API_KEY.'
       );
     }
+
+    const db = firestore();
+    const storage = storageBucket();
 
     const contractRef = db.collection('contracts').doc(data.contractId);
     const snap = await contractRef.get();
@@ -169,7 +171,7 @@ export const sendSignedContractEmail = functions.https.onCall(
       {
         emailedAt: now,
         updatedAt: now,
-        updatedBy: context.auth.uid || null
+        updatedBy: request.auth!.uid || null
       },
       { merge: true }
     );

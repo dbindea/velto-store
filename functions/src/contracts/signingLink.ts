@@ -18,8 +18,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
-
-const db = admin.firestore();
+import { firestore } from '../admin-guard';
 
 const DEFAULT_EXPIRY_DAYS = Number(process.env.CONTRACT_LINK_EXPIRY_DAYS || 7);
 const VELTO_PUBLIC_BASE_URL = process.env.VELTO_PUBLIC_BASE_URL || '';
@@ -40,13 +39,15 @@ function generateToken(bytes = 32): string {
 }
 
 export const createContractSigningLink = functions.https.onCall(
-  async (data: CreateRequest, context): Promise<CreateResponse> => {
-    if (!context.auth) {
+  async (request): Promise<CreateResponse> => {
+    const data = request.data as CreateRequest;
+    if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.contractId) {
       throw new functions.https.HttpsError('invalid-argument', 'contractId es requerido');
     }
+    const db = firestore();
 
     const contractId = data.contractId;
     const contractRef = db.collection('contracts').doc(contractId);
@@ -104,7 +105,7 @@ export const createContractSigningLink = functions.https.onCall(
         signingTokenId: tokenRef.id,
         signingLinkPath,
         updatedAt: now,
-        updatedBy: context.auth.uid || null
+        updatedBy: request.auth!.uid || null
       },
       { merge: true }
     );
@@ -137,13 +138,15 @@ interface CancelRequest {
 }
 
 export const cancelContractSigningLink = functions.https.onCall(
-  async (data: CancelRequest, context): Promise<{ ok: true }> => {
-    if (!context.auth) {
+  async (request): Promise<{ ok: true }> => {
+    const data = request.data as CancelRequest;
+    if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.contractId) {
       throw new functions.https.HttpsError('invalid-argument', 'contractId es requerido');
     }
+    const db = firestore();
 
     const contractId = data.contractId;
     const contractRef = db.collection('contracts').doc(contractId);
@@ -174,7 +177,7 @@ export const cancelContractSigningLink = functions.https.onCall(
         signingTokenId: null,
         signingLinkPath: null,
         updatedAt: now,
-        updatedBy: context.auth.uid || null
+        updatedBy: request.auth!.uid || null
       },
       { merge: true }
     );
