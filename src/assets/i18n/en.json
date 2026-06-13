@@ -595,5 +595,78 @@
       "fuelRequired": "Select the fuel level",
       "damageDescRequired": "Damage description is required"
     }
+  },
+  "contracts": {
+    "title": "Contracts",
+    "subtitle": "Generate, sign and send rental contracts",
+    "new": "New contract",
+    "detail": "Contract detail",
+    "status": {
+      "draft": "Draft",
+      "generated": "Generated",
+      "pendingSignature": "Pending signature",
+      "signed": "Signed",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "actions": {
+      "title": "Actions",
+      "generate": "Generate contract",
+      "generateSigningLink": "Generate signing link",
+      "copySigningLink": "Copy signing link",
+      "cancelLink": "Cancel link",
+      "sendEmail": "Send by email",
+      "downloadPdf": "Download PDF",
+      "downloadSignedPdf": "Download signed PDF",
+      "viewOriginalPdf": "View original contract",
+      "viewContract": "View contract",
+      "cancel": "Cancel"
+    },
+    "messages": {
+      "generated": "Contract generated",
+      "signingLinkCreated": "Signing link created",
+      "linkCopied": "Link copied",
+      "emailSent": "Contract sent by email",
+      "emailError": "Error sending the email",
+      "alreadySigned": "The contract is already signed",
+      "expired": "The link has expired",
+      "invalidLink": "Invalid link"
+    },
+    "sign": {
+      "title": "Contract signature",
+      "subtitle": "Digital signature of the rental contract",
+      "readOnlyNotice": "Please review the contract details before signing.",
+      "acceptConditions": "I have read and accept the contract conditions.",
+      "clearSignature": "Clear signature",
+      "submitSignature": "Sign contract",
+      "successTitle": "Contract signed",
+      "successMessage": "Thank you. Your contract has been registered.",
+      "alreadySigned": "This contract is already signed.",
+      "expired": "The signing link has expired.",
+      "invalid": "Invalid link."
+    },
+    "fields": {
+      "contractNumber": "Contract number",
+      "client": "Client",
+      "vehicle": "Vehicle",
+      "reservation": "Reservation",
+      "generatedAt": "Generated at",
+      "signedAt": "Signed at",
+      "emailedAt": "Emailed at",
+      "depositAmount": "Deposit",
+      "allStatuses": "All statuses"
+    },
+    "email": {
+      "title": "Send contract by email",
+      "recipient": "Recipient email",
+      "subject": "Subject",
+      "send": "Send"
+    },
+    "signingLink": {
+      "title": "Active signing link"
+    },
+    "list": {
+      "empty": "No contracts"
+    }
   }
 }

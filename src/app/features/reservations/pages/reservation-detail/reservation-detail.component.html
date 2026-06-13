@@ -365,6 +365,114 @@
       </div>
     </div>
 
+    <!-- Contract Section -->
+    <div class="detail-card contract-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">
+      <div class="card-header">
+        <i class="pi pi-file-edit"></i>
+        <span>{{ 'contracts.title' | translate }}</span>
+        @if (contract) {
+          <span class="badge" [ngClass]="getContractStatusClass(contract.status)">
+            {{ getContractStatusLabel(contract.status) }}
+          </span>
+        }
+      </div>
+      <div class="card-content">
+        <div class="contract-actions">
+          @if (canGenerateContract()) {
+            <button class="btn-primary" type="button" (click)="generateContract()" [disabled]="generatingContract">
+              @if (generatingContract) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-file-pdf"></i> }
+              {{ 'contracts.actions.generate' | translate }}
+            </button>
+          }
+          @if (contract && canCreateContractSigningLink() && !hasActiveSigningLink()) {
+            <button class="btn-secondary" type="button" (click)="createContractSigningLink()" [disabled]="creatingSigningLink">
+              @if (creatingSigningLink) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-link"></i> }
+              {{ 'contracts.actions.generateSigningLink' | translate }}
+            </button>
+          }
+          @if (hasActiveSigningLink()) {
+            <button class="btn-secondary" type="button" (click)="copyContractSigningLink()">
+              <i class="pi pi-copy"></i>
+              {{ 'contracts.actions.copySigningLink' | translate }}
+            </button>
+          }
+          @if (canDownloadContractOriginal()) {
+            <button class="btn-secondary" type="button" (click)="downloadContractOriginal()">
+              <i class="pi pi-download"></i>
+              {{ 'contracts.actions.downloadPdf' | translate }}
+            </button>
+          }
+          @if (canDownloadContractSigned()) {
+            <button class="btn-secondary" type="button" (click)="downloadContractSigned()">
+              <i class="pi pi-download"></i>
+              {{ 'contracts.actions.downloadSignedPdf' | translate }}
+            </button>
+          }
+          @if (canSendContractEmail()) {
+            <button class="btn-primary" type="button" (click)="openContractEmailForm()">
+              <i class="pi pi-envelope"></i>
+              {{ 'contracts.actions.sendEmail' | translate }}
+            </button>
+          }
+          @if (contract) {
+            <button class="btn-secondary" type="button" (click)="viewContract()">
+              <i class="pi pi-external-link"></i>
+              {{ 'contracts.actions.viewContract' | translate }}
+            </button>
+          }
+        </div>
+
+        @if (hasActiveSigningLink() && contract?.signingLinkPath) {
+          <div class="signing-link-row">
+            <code class="signing-link">{{ getContractSigningUrl() }}</code>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Contract Email Modal -->
+    @if (showEmailForm) {
+      <div class="modal-overlay" (click)="closeContractEmailForm()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <i class="pi pi-envelope"></i>
+            <h3>{{ 'contracts.email.title' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeContractEmailForm()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>{{ 'contracts.email.recipient' | translate }}</label>
+              <input
+                type="email"
+                class="form-control"
+                [(ngModel)]="emailRecipient"
+                name="contractEmailRecipient"
+                placeholder="cliente@email.com"
+                [disabled]="sendingEmail"
+              />
+            </div>
+            @if (emailError) {
+              <div class="error-msg">{{ emailError }}</div>
+            }
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeContractEmailForm()" [disabled]="sendingEmail">
+                {{ 'common.cancel' | translate }}
+              </button>
+              <button class="btn btn-primary" type="button" (click)="sendContractEmail()" [disabled]="sendingEmail">
+                @if (sendingEmail) { <i class="pi pi-spin pi-spinner"></i> }
+                @else { <i class="pi pi-send"></i> }
+                {{ 'contracts.email.send' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Payments & Deposit Section -->
     <div class="detail-card payments-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">
       <div class="card-header">
@@ -636,3 +744,10 @@
     }
   }
 </div>
+
+@if (copyToast) {
+  <div class="toast">
+    <i class="pi pi-check"></i>
+    {{ 'contracts.messages.linkCopied' | translate }}
+  </div>
+}

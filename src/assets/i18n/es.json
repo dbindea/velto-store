@@ -595,5 +595,78 @@
       "fuelRequired": "Selecciona el nivel de combustible",
       "damageDescRequired": "La descripción del daño es obligatoria"
     }
+  },
+  "contracts": {
+    "title": "Contratos",
+    "subtitle": "Genera, firma y envía contratos de alquiler",
+    "new": "Nuevo contrato",
+    "detail": "Detalle del contrato",
+    "status": {
+      "draft": "Borrador",
+      "generated": "Generado",
+      "pendingSignature": "Pendiente de firma",
+      "signed": "Firmado",
+      "cancelled": "Cancelado",
+      "expired": "Caducado"
+    },
+    "actions": {
+      "title": "Acciones",
+      "generate": "Generar contrato",
+      "generateSigningLink": "Generar link de firma",
+      "copySigningLink": "Copiar link de firma",
+      "cancelLink": "Cancelar link",
+      "sendEmail": "Enviar por email",
+      "downloadPdf": "Descargar PDF",
+      "downloadSignedPdf": "Descargar PDF firmado",
+      "viewOriginalPdf": "Ver contrato original",
+      "viewContract": "Ver contrato",
+      "cancel": "Cancelar"
+    },
+    "messages": {
+      "generated": "Contrato generado",
+      "signingLinkCreated": "Link de firma creado",
+      "linkCopied": "Link copiado",
+      "emailSent": "Contrato enviado por email",
+      "emailError": "Error al enviar el email",
+      "alreadySigned": "El contrato ya está firmado",
+      "expired": "El link ha caducado",
+      "invalidLink": "Link no válido"
+    },
+    "sign": {
+      "title": "Firma del contrato",
+      "subtitle": "Firma digital de contrato de alquiler",
+      "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
+      "acceptConditions": "He leído y acepto las condiciones del contrato.",
+      "clearSignature": "Limpiar firma",
+      "submitSignature": "Firmar contrato",
+      "successTitle": "Contrato firmado",
+      "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
+      "alreadySigned": "Este contrato ya ha sido firmado.",
+      "expired": "El link de firma ha caducado.",
+      "invalid": "Link no válido."
+    },
+    "fields": {
+      "contractNumber": "Número de contrato",
+      "client": "Cliente",
+      "vehicle": "Vehículo",
+      "reservation": "Reserva",
+      "generatedAt": "Generado",
+      "signedAt": "Firmado",
+      "emailedAt": "Enviado por email",
+      "depositAmount": "Fianza",
+      "allStatuses": "Todos los estados"
+    },
+    "email": {
+      "title": "Enviar contrato por email",
+      "recipient": "Email del destinatario",
+      "subject": "Asunto",
+      "send": "Enviar"
+    },
+    "signingLink": {
+      "title": "Link de firma activo"
+    },
+    "list": {
+      "empty": "No hay contratos"
+    }
   }
 }

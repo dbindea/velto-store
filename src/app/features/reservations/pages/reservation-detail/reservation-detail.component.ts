@@ -6,6 +6,8 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
+import { ContractService } from '@features/contracts/services/contract.service';
+import { Contract, CONTRACT_STATUS_LABELS as CONTRACT_DOC_STATUS_LABELS, CONTRACT_STATUS_COLORS as CONTRACT_DOC_STATUS_COLORS } from '@shared/models/contract.model';
 import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS, CONTRACT_STATUS_LABELS } from '@shared/models/reservation.model';
 import {
   Payment,
@@ -33,12 +35,22 @@ export class ReservationDetailComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private paymentService = inject(PaymentService);
   private inspectionService = inject(InspectionService);
+  private contractService = inject(ContractService);
 
   reservation: Reservation | null = null;
   payments: Payment[] = [];
   pickupInspection: Inspection | null = null;
   returnInspection: Inspection | null = null;
+  contract: Contract | null = null;
   loading = true;
+  generatingContract = false;
+  creatingSigningLink = false;
+  sendingEmail = false;
+  showEmailForm = false;
+  emailRecipient = '';
+  emailError = '';
+  copyToast = false;
+  private copyToastTimer: any;
   loadingPayments = false;
   cancelling = false;
   savingPayment = false;
@@ -108,11 +120,24 @@ export class ReservationDetailComponent implements OnInit {
         this.loading = false;
         this.loadPayments(id);
         this.loadInspections(id);
+        this.loadContract(id);
       },
       error: (error) => {
         console.error('Error loading reservation:', error);
         this.loading = false;
       }
+    });
+  }
+
+  loadContract(reservationId: string): void {
+    this.contractService.getContractByReservation(reservationId).subscribe({
+      next: (c) => {
+        this.contract = c;
+        if (c && !this.emailRecipient) {
+          this.emailRecipient = c.clientSnapshot?.email || '';
+        }
+      },
+      error: (err) => console.error('Error loading contract:', err)
     });
   }
 
@@ -474,5 +499,159 @@ export class ReservationDetailComponent implements OnInit {
 
   getInspectionStatusLabel(status: string): string {
     return INSPECTION_STATUS_LABELS[status as keyof typeof INSPECTION_STATUS_LABELS] || status;
+  }
+
+  // === Contract ===
+
+  canGenerateContract(): boolean {
+    if (!this.reservation) return false;
+    if (!this.contract) return true;
+    return ['draft', 'cancelled', 'expired'].includes(this.contract.status);
+  }
+
+  canCreateContractSigningLink(): boolean {
+    if (!this.contract) return false;
+    return ['generated', 'draft', 'cancelled', 'expired'].includes(this.contract.status);
+  }
+
+  hasActiveSigningLink(): boolean {
+    return this.contract?.status === 'pending_signature';
+  }
+
+  canDownloadContractOriginal(): boolean {
+    return !!this.contract?.pdfPath;
+  }
+
+  canDownloadContractSigned(): boolean {
+    return !!this.contract?.signedPdfPath;
+  }
+
+  canSendContractEmail(): boolean {
+    return this.contract?.status === 'signed';
+  }
+
+  async generateContract(): Promise<void> {
+    if (!this.reservation?.id) return;
+    this.generatingContract = true;
+    try {
+      await this.contractService.generateContractFromReservation(this.reservation.id);
+      this.loadContract(this.reservation.id);
+    } catch (err) {
+      console.error('Error generating contract:', err);
+      alert('Error al generar el contrato');
+    } finally {
+      this.generatingContract = false;
+    }
+  }
+
+  async createContractSigningLink(): Promise<void> {
+    if (!this.contract?.id) return;
+    this.creatingSigningLink = true;
+    try {
+      await this.contractService.generateSigningLink(this.contract.id);
+      if (this.reservation?.id) this.loadContract(this.reservation.id);
+    } catch (err) {
+      console.error('Error creating signing link:', err);
+      alert('Error al crear el link de firma');
+    } finally {
+      this.creatingSigningLink = false;
+    }
+  }
+
+  async copyContractSigningLink(): Promise<void> {
+    if (!this.contract?.signingLinkPath) return;
+    const abs = this.contractService.buildAbsoluteSigningUrl(this.contract.signingLinkPath);
+    try {
+      await navigator.clipboard.writeText(abs);
+      this.showCopyToast();
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = abs;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); this.showCopyToast(); } catch { /* noop */ }
+      document.body.removeChild(ta);
+    }
+  }
+
+  getContractSigningUrl(): string {
+    if (!this.contract?.signingLinkPath) return '';
+    return this.contractService.buildAbsoluteSigningUrl(this.contract.signingLinkPath);
+  }
+
+  private showCopyToast(): void {
+    this.copyToast = true;
+    if (this.copyToastTimer) clearTimeout(this.copyToastTimer);
+    this.copyToastTimer = setTimeout(() => (this.copyToast = false), 2200);
+  }
+
+  async downloadContractOriginal(): Promise<void> {
+    if (!this.contract || !this.reservation) return;
+    const url = await this.contractService.getOriginalPdfUrl(this.contract);
+    if (!url) {
+      alert('PDF no disponible todavía');
+      return;
+    }
+    const filename = `contrato-${this.contract.contractNumber || this.contract.id}.pdf`;
+    await this.contractService.triggerDownload(url, filename);
+  }
+
+  async downloadContractSigned(): Promise<void> {
+    if (!this.contract) return;
+    const url = await this.contractService.getSignedPdfUrl(this.contract);
+    if (!url) {
+      alert('Contrato firmado no disponible todavía');
+      return;
+    }
+    const filename = `contrato-firmado-${this.contract.contractNumber || this.contract.id}.pdf`;
+    await this.contractService.triggerDownload(url, filename);
+  }
+
+  openContractEmailForm(): void {
+    this.showEmailForm = true;
+    this.emailError = '';
+    if (!this.emailRecipient && this.contract?.clientSnapshot?.email) {
+      this.emailRecipient = this.contract.clientSnapshot.email;
+    }
+  }
+
+  closeContractEmailForm(): void {
+    this.showEmailForm = false;
+    this.emailError = '';
+  }
+
+  async sendContractEmail(): Promise<void> {
+    if (!this.contract?.id) return;
+    const email = (this.emailRecipient || '').trim();
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      this.emailError = 'Introduce un email válido';
+      return;
+    }
+    this.sendingEmail = true;
+    this.emailError = '';
+    try {
+      await this.contractService.sendSignedContractByEmail(this.contract.id, email);
+      this.showEmailForm = false;
+      if (this.reservation?.id) this.loadContract(this.reservation.id);
+    } catch (err: any) {
+      console.error('Error sending email:', err);
+      this.emailError = err?.message || 'Error al enviar el email';
+    } finally {
+      this.sendingEmail = false;
+    }
+  }
+
+  viewContract(): void {
+    if (this.contract?.id) {
+      this.router.navigate(['/contracts', this.contract.id]);
+    }
+  }
+
+  getContractStatusLabel(status: string): string {
+    return CONTRACT_DOC_STATUS_LABELS[status as keyof typeof CONTRACT_DOC_STATUS_LABELS] || status;
+  }
+
+  getContractStatusClass(status: string): string {
+    return CONTRACT_DOC_STATUS_COLORS[status as keyof typeof CONTRACT_DOC_STATUS_COLORS] || '';
   }
 }

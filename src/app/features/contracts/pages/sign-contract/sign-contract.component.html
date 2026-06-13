@@ -1,0 +1,136 @@
+<div class="public-page">
+  <header class="public-header">
+    <div class="brand">
+      <span class="brand-mark">V</span>
+      <span class="brand-name">VELTO RENT</span>
+    </div>
+    <span class="brand-tagline">{{ 'contracts.sign.subtitle' | translate }}</span>
+  </header>
+
+  <main class="public-main">
+    @if (loading) {
+      <div class="status-card loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>{{ 'common.loading' | translate }}</p>
+      </div>
+    } @else if (finished) {
+      <div class="status-card success">
+        <i class="pi pi-check-circle"></i>
+        <h1>{{ 'contracts.sign.successTitle' | translate }}</h1>
+        <p>{{ 'contracts.sign.successMessage' | translate }}</p>
+      </div>
+    } @else if (errored || (view && view.status !== 'active')) {
+      <div class="status-card error">
+        @if (view?.status === 'expired') {
+          <i class="pi pi-clock"></i>
+          <h1>{{ 'contracts.sign.expired' | translate }}</h1>
+        } @else if (view?.status === 'used') {
+          <i class="pi pi-check"></i>
+          <h1>{{ 'contracts.sign.alreadySigned' | translate }}</h1>
+        } @else {
+          <i class="pi pi-times-circle"></i>
+          <h1>{{ 'contracts.sign.invalid' | translate }}</h1>
+        }
+      </div>
+    } @else if (view) {
+      <div class="contract-card">
+        <div class="contract-header">
+          <h1>{{ 'contracts.sign.title' | translate }}</h1>
+          @if (view.contractNumber) {
+            <span class="contract-number">Nº {{ view.contractNumber }}</span>
+          }
+        </div>
+        <p class="read-only-notice">
+          <i class="pi pi-info-circle"></i>
+          {{ 'contracts.sign.readOnlyNotice' | translate }}
+        </p>
+
+        <section class="summary-section">
+          <div class="summary-row">
+            <span class="label">{{ 'contracts.fields.client' | translate }}:</span>
+            <span class="value">{{ view.clientName }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="label">{{ 'contracts.fields.vehicle' | translate }}:</span>
+            <span class="value">{{ view.vehicleLabel }} ({{ view.vehiclePlate }})</span>
+          </div>
+          @if (view.pickupDate) {
+            <div class="summary-row">
+              <span class="label">{{ 'reservations.fields.pickupDate' | translate }}:</span>
+              <span class="value">{{ view.pickupDate }}</span>
+            </div>
+          }
+          @if (view.returnDate) {
+            <div class="summary-row">
+              <span class="label">{{ 'reservations.fields.returnDate' | translate }}:</span>
+              <span class="value">{{ view.returnDate }}</span>
+            </div>
+          }
+          @if (view.totalDays) {
+            <div class="summary-row">
+              <span class="label">{{ 'reservations.fields.totalDays' | translate }}:</span>
+              <span class="value">{{ view.totalDays }}</span>
+            </div>
+          }
+          @if (view.finalPrice !== undefined) {
+            <div class="summary-row">
+              <span class="label">{{ 'payments.summary.rentalTotal' | translate }}:</span>
+              <span class="value">{{ view.finalPrice | number:'1.2-2' }} €</span>
+            </div>
+          }
+          @if (view.depositAmount !== undefined) {
+            <div class="summary-row">
+              <span class="label">{{ 'contracts.fields.depositAmount' | translate }}:</span>
+              <span class="value">{{ view.depositAmount | number:'1.2-2' }} €</span>
+            </div>
+          }
+        </section>
+
+        @if (view.pdfUrl) {
+          <div class="pdf-link">
+            <button type="button" class="btn-secondary" (click)="viewOriginalPdf()">
+              <i class="pi pi-file-pdf"></i>
+              {{ 'contracts.actions.viewOriginalPdf' | translate }}
+            </button>
+          </div>
+        }
+
+        <div class="signature-block">
+          <label class="signature-label">{{ 'contracts.sign.title' | translate }}</label>
+          <app-signature-pad
+            (signatureChange)="onSignatureChange($event)"
+            (emptyChange)="signatureEmpty = $event"
+          ></app-signature-pad>
+        </div>
+
+        <label class="accept-row">
+          <input
+            type="checkbox"
+            [(ngModel)]="accepted"
+            name="accept"
+            [disabled]="signing"
+          />
+          <span>{{ 'contracts.sign.acceptConditions' | translate }}</span>
+        </label>
+
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!canSubmit() || signing"
+          (click)="submit()"
+        >
+          @if (signing) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-pen-to-square"></i>
+          }
+          {{ 'contracts.sign.submitSignature' | translate }}
+        </button>
+      </div>
+    }
+  </main>
+
+  <footer class="public-footer">
+    <span>Velto Rent · reservas@veltorent.com</span>
+  </footer>
+</div>

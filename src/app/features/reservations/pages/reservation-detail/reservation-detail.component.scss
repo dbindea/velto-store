@@ -701,6 +701,49 @@
   padding: 0.5rem 0;
 }
 
+// Contract Section
+.contract-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.signing-link-row {
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-main);
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+}
+
+.signing-link {
+  display: block;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--text-primary);
+  color: var(--bg-card);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 2000;
+
+  i { color: var(--success-color); }
+}
+
 .btn-danger-solid {
   background: var(--error-color);
   color: white;

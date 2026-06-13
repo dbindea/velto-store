@@ -595,5 +595,78 @@
       "fuelRequired": "Selectează nivelul de combustibil",
       "damageDescRequired": "Descrierea daunei este obligatorie"
     }
+  },
+  "contracts": {
+    "title": "Contracte",
+    "subtitle": "Generează, semnează și trimite contracte de închiriere",
+    "new": "Contract nou",
+    "detail": "Detalii contract",
+    "status": {
+      "draft": "Ciornă",
+      "generated": "Generat",
+      "pendingSignature": "Așteaptă semnare",
+      "signed": "Semnat",
+      "cancelled": "Anulat",
+      "expired": "Expirat"
+    },
+    "actions": {
+      "title": "Acțiuni",
+      "generate": "Generează contract",
+      "generateSigningLink": "Generează link de semnare",
+      "copySigningLink": "Copiază link de semnare",
+      "cancelLink": "Anulează link",
+      "sendEmail": "Trimite prin email",
+      "downloadPdf": "Descarcă PDF",
+      "downloadSignedPdf": "Descarcă PDF semnat",
+      "viewOriginalPdf": "Vezi contract original",
+      "viewContract": "Vezi contract",
+      "cancel": "Anulează"
+    },
+    "messages": {
+      "generated": "Contract generat",
+      "signingLinkCreated": "Link de semnare creat",
+      "linkCopied": "Link copiat",
+      "emailSent": "Contract trimis prin email",
+      "emailError": "Eroare la trimiterea emailului",
+      "alreadySigned": "Contractul este deja semnat",
+      "expired": "Link-ul a expirat",
+      "invalidLink": "Link invalid"
+    },
+    "sign": {
+      "title": "Semnarea contractului",
+      "subtitle": "Semnătură digitală pentru contractul de închiriere",
+      "readOnlyNotice": "Verifică datele contractului înainte de a semna.",
+      "acceptConditions": "Am citit și accept condițiile contractului.",
+      "clearSignature": "Șterge semnătura",
+      "submitSignature": "Semnează contractul",
+      "successTitle": "Contract semnat",
+      "successMessage": "Mulțumim. Contractul tău a fost înregistrat.",
+      "alreadySigned": "Acest contract este deja semnat.",
+      "expired": "Link-ul de semnare a expirat.",
+      "invalid": "Link invalid."
+    },
+    "fields": {
+      "contractNumber": "Număr contract",
+      "client": "Client",
+      "vehicle": "Vehicul",
+      "reservation": "Rezervare",
+      "generatedAt": "Generat",
+      "signedAt": "Semnat",
+      "emailedAt": "Trimis prin email",
+      "depositAmount": "Garanție",
+      "allStatuses": "Toate stările"
+    },
+    "email": {
+      "title": "Trimite contract prin email",
+      "recipient": "Email destinatar",
+      "subject": "Subiect",
+      "send": "Trimite"
+    },
+    "signingLink": {
+      "title": "Link de semnare activ"
+    },
+    "list": {
+      "empty": "Nu există contracte"
+    }
   }
 }

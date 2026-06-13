@@ -14,6 +14,10 @@ export const routes: Routes = [
     canActivate: [publicGuard]
   },
   {
+    path: 'sign-contract/:token',
+    loadComponent: () => import('./features/contracts/pages/sign-contract/sign-contract.component').then(m => m.SignContractComponent)
+  },
+  {
     path: '',
     loadComponent: () => import('./layout/private-layout/private-layout.component').then(m => m.PrivateLayoutComponent),
     canActivate: [authGuard],
@@ -108,7 +112,17 @@ export const routes: Routes = [
       },
       {
         path: 'contracts',
-        loadComponent: () => import('./features/contracts/contracts.component').then(m => m.ContractsComponent)
+        loadComponent: () => import('./features/contracts/contracts.component').then(m => m.ContractsComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/contracts/pages/contract-list/contract-list.component').then(m => m.ContractListComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/contracts/pages/contract-detail/contract-detail.component').then(m => m.ContractDetailComponent)
+          }
+        ]
       },
       {
         path: 'inspections',
