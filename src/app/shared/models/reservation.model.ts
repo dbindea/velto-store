@@ -23,11 +23,23 @@ export type ReservationPaymentStatus =
   | 'paid' 
   | 'refunded';
 
-export type ReservationContractStatus = 
-  | 'pending' 
-  | 'signed' 
-  | 'completed' 
-  | 'cancelled';
+export type ReservationContractStatus =
+  | 'pending'
+  | 'generated'
+  | 'pending_signature'
+  | 'signed'
+  | 'cancelled'
+  | 'expired';
+
+export interface ReservationContractInfo {
+  contractId?: string;
+  contractNumber?: string;
+  pdfUrl?: string;
+  signedPdfUrl?: string;
+  signedAt?: any;
+  /** The relative URL path used by the customer to sign the contract. */
+  signingUrl?: string;
+}
 
 export interface ReservationPricingSnapshot {
   totalDays: number;
@@ -132,11 +144,30 @@ export interface Reservation {
   contractStatus: ReservationContractStatus;
   reservationStatus: ReservationStatus;
 
+  /** Optional inspection snapshots (delivery + return) */
+  deliveryInfo?: {
+    pickupInspectionId?: string;
+    pickupKm?: number;
+    pickupFuelLevel?: string;
+    pickupCompletedAt?: any;
+  };
+
+  returnInfo?: {
+    returnInspectionId?: string;
+    returnKm?: number;
+    returnFuelLevel?: string;
+    returnCompletedAt?: any;
+    extraChargesTotal?: number;
+  };
+
   /**
    * Aggregated financial state, calculated from the payments collection.
    * Optional to keep backward compatibility with existing reservations.
    */
   paymentSummary?: ReservationPaymentSummary;
+
+  /** Denormalized contract status info for quick display in the reservation card. */
+  contractInfo?: ReservationContractInfo;
 
   notes?: string;
 
@@ -164,9 +195,11 @@ export const PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus, string> = {
 
 export const CONTRACT_STATUS_LABELS: Record<ReservationContractStatus, string> = {
   pending: 'Pendiente',
+  generated: 'Generado',
+  pending_signature: 'Pendiente de firma',
   signed: 'Firmado',
-  completed: 'Completado',
-  cancelled: 'Cancelado'
+  cancelled: 'Cancelado',
+  expired: 'Caducado'
 };
 
 // Statuses that block availability (vehicle is considered "in use")

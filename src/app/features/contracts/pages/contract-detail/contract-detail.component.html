@@ -1,0 +1,250 @@
+<div class="page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (contract) {
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <div class="title-row">
+          <h1>Contrato {{ contract.contractNumber || contract.id?.slice(0, 6) }}</h1>
+          <span class="badge" [ngClass]="getStatusClass(contract.status)">
+            {{ getStatusLabel(contract.status) }}
+          </span>
+        </div>
+        <p class="subtitle">
+          <span class="client-name">{{ contract.clientSnapshot?.fullName }}</span> ·
+          <span class="vehicle-name">{{ contract.vehicleSnapshot?.brand }} {{ contract.vehicleSnapshot?.model }}</span> ·
+          <span class="plate">{{ contract.vehicleSnapshot?.plateNumber }}</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions card -->
+    <div class="detail-card actions-card">
+      <div class="card-header">
+        <i class="pi pi-cog"></i>
+        <span>{{ 'contracts.actions.title' | translate }}</span>
+      </div>
+      <div class="card-content">
+        <div class="action-buttons">
+          @if (canGenerate()) {
+            <button class="btn-primary" type="button" (click)="generatePdf()" [disabled]="generating">
+              @if (generating) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-file-pdf"></i> }
+              {{ 'contracts.actions.generate' | translate }}
+            </button>
+          }
+          @if (canCreateLink() && !hasActiveLink()) {
+            <button class="btn-secondary" type="button" (click)="createLink()" [disabled]="creatingLink">
+              @if (creatingLink) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-link"></i> }
+              {{ 'contracts.actions.generateSigningLink' | translate }}
+            </button>
+          }
+          @if (hasActiveLink()) {
+            <button class="btn-secondary" type="button" (click)="copyLink()">
+              <i class="pi pi-copy"></i>
+              {{ 'contracts.actions.copySigningLink' | translate }}
+            </button>
+            <button class="btn-warn" type="button" (click)="cancelLink()">
+              <i class="pi pi-times"></i>
+              {{ 'contracts.actions.cancelLink' | translate }}
+            </button>
+          }
+          @if (canDownloadOriginal()) {
+            <button class="btn-secondary" type="button" (click)="downloadOriginal()">
+              <i class="pi pi-download"></i>
+              {{ 'contracts.actions.downloadPdf' | translate }}
+            </button>
+          }
+          @if (canDownloadSigned()) {
+            <button class="btn-secondary" type="button" (click)="downloadSigned()">
+              <i class="pi pi-download"></i>
+              {{ 'contracts.actions.downloadSignedPdf' | translate }}
+            </button>
+          }
+          @if (canSendEmail()) {
+            <button class="btn-primary" type="button" (click)="openEmailForm()">
+              <i class="pi pi-envelope"></i>
+              {{ 'contracts.actions.sendEmail' | translate }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Signing link (when pending) -->
+    @if (hasActiveLink() && contract.signingLinkPath) {
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-link"></i>
+          <span>{{ 'contracts.signingLink.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="signing-link-row">
+            <code class="signing-link">{{ getAbsoluteSigningUrl() }}</code>
+            <button class="btn-secondary" type="button" (click)="copyLink()">
+              <i class="pi pi-copy"></i>
+              {{ 'contracts.actions.copySigningLink' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Email form modal -->
+    @if (showEmailForm) {
+      <div class="modal-overlay" (click)="closeEmailForm()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <i class="pi pi-envelope"></i>
+            <h3>{{ 'contracts.email.title' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeEmailForm()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>{{ 'contracts.email.recipient' | translate }}</label>
+              <input
+                type="email"
+                class="form-control"
+                [(ngModel)]="emailRecipient"
+                name="emailRecipient"
+                placeholder="cliente@email.com"
+                [disabled]="sending"
+              />
+            </div>
+            @if (emailError) {
+              <div class="error-msg">{{ emailError }}</div>
+            }
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeEmailForm()" [disabled]="sending">
+                {{ 'common.cancel' | translate }}
+              </button>
+              <button class="btn btn-primary" type="button" (click)="sendEmail()" [disabled]="sending">
+                @if (sending) { <i class="pi pi-spin pi-spinner"></i> }
+                @else { <i class="pi pi-send"></i> }
+                {{ 'contracts.email.send' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Info cards -->
+    <div class="info-grid">
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-user"></i>
+          <span>{{ 'contracts.fields.client' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="info-row">
+            <span class="label">Nombre:</span>
+            <span class="value">{{ contract.clientSnapshot?.fullName }}</span>
+          </div>
+          @if (contract.clientSnapshot?.email) {
+            <div class="info-row">
+              <span class="label">Email:</span>
+              <span class="value">{{ contract.clientSnapshot?.email }}</span>
+            </div>
+          }
+          @if (contract.clientSnapshot?.phone) {
+            <div class="info-row">
+              <span class="label">Teléfono:</span>
+              <span class="value">{{ contract.clientSnapshot?.phone }}</span>
+            </div>
+          }
+          @if (contract.clientSnapshot?.documentNumber) {
+            <div class="info-row">
+              <span class="label">{{ contract.clientSnapshot?.documentType || 'Documento' }}:</span>
+              <span class="value">{{ contract.clientSnapshot?.documentNumber }}</span>
+            </div>
+          }
+          @if (contract.clientSnapshot?.drivingLicenseNumber) {
+            <div class="info-row">
+              <span class="label">Carnet:</span>
+              <span class="value">{{ contract.clientSnapshot?.drivingLicenseNumber }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-car"></i>
+          <span>{{ 'contracts.fields.vehicle' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="info-row">
+            <span class="label">Vehículo:</span>
+            <span class="value">
+              {{ contract.vehicleSnapshot?.brand }} {{ contract.vehicleSnapshot?.model }}
+              @if (contract.vehicleSnapshot?.version) {
+                <span class="muted">· {{ contract.vehicleSnapshot?.version }}</span>
+              }
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="label">Matrícula:</span>
+            <span class="value plate">{{ contract.vehicleSnapshot?.plateNumber }}</span>
+          </div>
+          @if (contract.vehicleSnapshot?.year) {
+            <div class="info-row">
+              <span class="label">Año:</span>
+              <span class="value">{{ contract.vehicleSnapshot?.year }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-calendar"></i>
+          <span>{{ 'contracts.fields.reservation' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (getCreatedAt(contract); as created) {
+            <div class="info-row">
+              <span class="label">{{ 'contracts.fields.generatedAt' | translate }}:</span>
+              <span class="value">{{ created | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+          @if (getSignedAt(contract); as signed) {
+            <div class="info-row">
+              <span class="label">{{ 'contracts.fields.signedAt' | translate }}:</span>
+              <span class="value success">{{ signed | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+          @if (getEmailedAt(contract); as emailed) {
+            <div class="info-row">
+              <span class="label">{{ 'contracts.fields.emailedAt' | translate }}:</span>
+              <span class="value">{{ emailed | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button class="btn-secondary" type="button" (click)="viewReservation()">
+        <i class="pi pi-external-link"></i>
+        {{ 'reservations.actions.viewReservation' | translate }}
+      </button>
+    </div>
+  }
+</div>
+
+@if (copyToast) {
+  <div class="toast">
+    <i class="pi pi-check"></i>
+    {{ 'contracts.messages.linkCopied' | translate }}
+  </div>
+}

@@ -454,5 +454,219 @@
     "list": {
       "empty": "No payments"
     }
+  },
+  "inspections": {
+    "title": "Inspections",
+    "subtitle": "Vehicle pickup and return inspections",
+    "startPickup": "Pickup inspection",
+    "startReturn": "Return inspection",
+    "completePickup": "Complete pickup",
+    "completeReturn": "Complete return",
+    "closeReservation": "Close reservation on completion",
+    "type": {
+      "pickup": "Pickup",
+      "return": "Return"
+    },
+    "status": {
+      "draft": "Draft",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "fuelLevel": {
+      "empty": "Empty",
+      "quarter": "1/4",
+      "half": "1/2",
+      "three_quarters": "3/4",
+      "full": "Full"
+    },
+    "cleanliness": {
+      "dirty": "Dirty",
+      "acceptable": "Acceptable",
+      "clean": "Clean",
+      "very_clean": "Very clean"
+    },
+    "photoCategory": {
+      "front": "Front",
+      "rear": "Rear",
+      "left_side": "Left side",
+      "right_side": "Right side",
+      "dashboard": "Dashboard",
+      "trunk": "Trunk",
+      "interior": "Interior",
+      "damage": "Damage",
+      "detail": "Detail",
+      "other": "Other"
+    },
+    "damageArea": {
+      "front_bumper": "Front bumper",
+      "rear_bumper": "Rear bumper",
+      "hood": "Hood",
+      "roof": "Roof",
+      "trunk": "Trunk",
+      "front_left_door": "Front left door",
+      "front_right_door": "Front right door",
+      "rear_left_door": "Rear left door",
+      "rear_right_door": "Rear right door",
+      "left_fender": "Left fender",
+      "right_fender": "Right fender",
+      "windshield": "Windshield",
+      "rear_window": "Rear window",
+      "left_mirror": "Left mirror",
+      "right_mirror": "Right mirror",
+      "front_left_wheel": "Front left wheel",
+      "front_right_wheel": "Front right wheel",
+      "rear_left_wheel": "Rear left wheel",
+      "rear_right_wheel": "Rear right wheel",
+      "interior": "Interior",
+      "other": "Other"
+    },
+    "damageSeverity": {
+      "minor": "Minor",
+      "medium": "Medium",
+      "serious": "Serious"
+    },
+    "fields": {
+      "km": "Mileage",
+      "fuelLevel": "Fuel level",
+      "cleanliness": "Cleanliness",
+      "notes": "Notes"
+    },
+    "sections": {
+      "deliveryAndReturn": "Delivery and return",
+      "reservationSummary": "Reservation summary",
+      "checklist": "Checklist",
+      "vehicleStatus": "Vehicle status",
+      "photos": "Photos",
+      "damages": "Recorded damages",
+      "extraCharges": "Extra charges",
+      "deposit": "Deposit"
+    },
+    "checklist": {
+      "clientIdentityChecked": "Client identity verified",
+      "drivingLicenseChecked": "Driving license verified",
+      "contractChecked": "Contract signed and reviewed",
+      "paymentChecked": "Payment received",
+      "depositChecked": "Deposit collected",
+      "keysDelivered": "Keys delivered",
+      "keysReturned": "Keys returned",
+      "vehicleDocumentsDelivered": "Documents delivered",
+      "accessoriesChecked": "Accessories checked"
+    },
+    "photos": {
+      "noPhotos": "No photos uploaded",
+      "addPhoto": "Add photo",
+      "category": "Category"
+    },
+    "damages": {
+      "add": "Add damage",
+      "area": "Area",
+      "severity": "Severity",
+      "description": "Description"
+    },
+    "extraCharges": {
+      "extraKm": "Extra km charge",
+      "fuel": "Fuel charge",
+      "refuelPenalty": "Refuel penalty",
+      "cleaning": "Cleaning charge",
+      "damage": "Damage charge",
+      "fine": "Fine",
+      "other": "Other charges",
+      "total": "Total extra charges"
+    },
+    "deposit": {
+      "actions": "Deposit actions",
+      "required": "Required deposit",
+      "paid": "Deposit paid",
+      "refund": "Refund deposit",
+      "retain": "Retain deposit",
+      "refundAndClose": "Refund and close"
+    },
+    "actions": {
+      "view": "View details",
+      "startPickup": "Start pickup",
+      "startReturn": "Start return"
+    },
+    "messages": {
+      "noPickup": "No pickup inspection",
+      "noReturn": "No return inspection",
+      "saved": "Inspection saved",
+      "kmRequired": "Enter the mileage",
+      "kmInvalid": "Return mileage must be greater than or equal to pickup mileage",
+      "fuelRequired": "Select the fuel level",
+      "damageDescRequired": "Damage description is required"
+    }
+  },
+  "contracts": {
+    "title": "Contracts",
+    "subtitle": "Generate, sign and send rental contracts",
+    "new": "New contract",
+    "detail": "Contract detail",
+    "status": {
+      "draft": "Draft",
+      "generated": "Generated",
+      "pendingSignature": "Pending signature",
+      "signed": "Signed",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "actions": {
+      "title": "Actions",
+      "generate": "Generate contract",
+      "generateSigningLink": "Generate signing link",
+      "copySigningLink": "Copy signing link",
+      "cancelLink": "Cancel link",
+      "sendEmail": "Send by email",
+      "downloadPdf": "Download PDF",
+      "downloadSignedPdf": "Download signed PDF",
+      "viewOriginalPdf": "View original contract",
+      "viewContract": "View contract",
+      "cancel": "Cancel"
+    },
+    "messages": {
+      "generated": "Contract generated",
+      "signingLinkCreated": "Signing link created",
+      "linkCopied": "Link copied",
+      "emailSent": "Contract sent by email",
+      "emailError": "Error sending the email",
+      "alreadySigned": "The contract is already signed",
+      "expired": "The link has expired",
+      "invalidLink": "Invalid link"
+    },
+    "sign": {
+      "title": "Contract signature",
+      "subtitle": "Digital signature of the rental contract",
+      "readOnlyNotice": "Please review the contract details before signing.",
+      "acceptConditions": "I have read and accept the contract conditions.",
+      "clearSignature": "Clear signature",
+      "submitSignature": "Sign contract",
+      "successTitle": "Contract signed",
+      "successMessage": "Thank you. Your contract has been registered.",
+      "alreadySigned": "This contract is already signed.",
+      "expired": "The signing link has expired.",
+      "invalid": "Invalid link."
+    },
+    "fields": {
+      "contractNumber": "Contract number",
+      "client": "Client",
+      "vehicle": "Vehicle",
+      "reservation": "Reservation",
+      "generatedAt": "Generated at",
+      "signedAt": "Signed at",
+      "emailedAt": "Emailed at",
+      "depositAmount": "Deposit",
+      "allStatuses": "All statuses"
+    },
+    "email": {
+      "title": "Send contract by email",
+      "recipient": "Recipient email",
+      "subject": "Subject",
+      "send": "Send"
+    },
+    "signingLink": {
+      "title": "Active signing link"
+    },
+    "list": {
+      "empty": "No contracts"
+    }
   }
 }

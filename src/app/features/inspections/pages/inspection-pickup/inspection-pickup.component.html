@@ -1,0 +1,184 @@
+<div class="page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (reservation) {
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <h1>{{ 'inspections.startPickup' | translate }}</h1>
+        <p class="subtitle">
+          <span class="client-name">{{ reservation.clientSnapshot.fullName }}</span> ·
+          <span class="vehicle-name">{{ reservation.vehicleSnapshot?.brand }} {{ reservation.vehicleSnapshot?.model }}</span> ·
+          <span class="plate">{{ reservation.vehicleSnapshot?.plateNumber }}</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <!-- Reservation summary -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-info-circle"></i>
+          <h2>{{ 'inspections.sections.reservationSummary' | translate }}</h2>
+        </div>
+        <div class="summary-card">
+          <div class="info-row">
+            <span class="label">{{ 'reservations.fields.pickupDate' | translate }}:</span>
+            <span class="value">{{ getPickupDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">{{ 'reservations.fields.returnDate' | translate }}:</span>
+            <span class="value">{{ getReturnDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">{{ 'reservations.title' | translate }}:</span>
+            <span class="value">{{ reservation.pricingSnapshot?.finalPrice | number:'1.2-2' }} €</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Fianza:</span>
+            <span class="value">{{ reservation.deposit?.requiredAmount | number:'1.2-2' }} €</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Checklist -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-check-square"></i>
+          <h2>{{ 'inspections.sections.checklist' | translate }}</h2>
+        </div>
+        <div class="checklist">
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.clientIdentityChecked" name="c1">
+            <span>{{ 'inspections.checklist.clientIdentityChecked' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.drivingLicenseChecked" name="c2">
+            <span>{{ 'inspections.checklist.drivingLicenseChecked' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.contractChecked" name="c3">
+            <span>{{ 'inspections.checklist.contractChecked' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.paymentChecked" name="c4">
+            <span>{{ 'inspections.checklist.paymentChecked' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.depositChecked" name="c5">
+            <span>{{ 'inspections.checklist.depositChecked' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.keysDelivered" name="c6">
+            <span>{{ 'inspections.checklist.keysDelivered' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.vehicleDocumentsDelivered" name="c7">
+            <span>{{ 'inspections.checklist.vehicleDocumentsDelivered' | translate }}</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" [(ngModel)]="formData.checklist!.accessoriesChecked" name="c8">
+            <span>{{ 'inspections.checklist.accessoriesChecked' | translate }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Vehicle status -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-car"></i>
+          <h2>{{ 'inspections.sections.vehicleStatus' | translate }}</h2>
+        </div>
+        <div class="form-grid-inner">
+          <div class="form-group">
+            <label>{{ 'inspections.fields.km' | translate }} *</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.km" name="km" min="0">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.fields.fuelLevel' | translate }} *</label>
+            <select class="form-control" [(ngModel)]="formData.fuelLevel" name="fuel">
+              <option [ngValue]="undefined" disabled>--</option>
+              @for (f of fuelLevels; track f) {
+                <option [ngValue]="f">{{ FUEL_LEVEL_LABELS[f] | translate }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.fields.cleanliness' | translate }} *</label>
+            <select class="form-control" [(ngModel)]="formData.cleanliness" name="clean">
+              <option [ngValue]="undefined" disabled>--</option>
+              @for (c of cleanlinessLevels; track c) {
+                <option [ngValue]="c">{{ CLEANLINESS_LABELS[c] | translate }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>{{ 'inspections.fields.notes' | translate }}</label>
+            <textarea class="form-control" rows="3" [(ngModel)]="formData.notes" name="notes"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Photos -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-image"></i>
+          <h2>{{ 'inspections.sections.photos' | translate }}</h2>
+        </div>
+        <p class="hint">Recomendado subir al menos 4 fotos (frontal, trasera, laterales, interior).</p>
+
+        <div class="photo-categories">
+          @for (cat of photoCategories; track cat) {
+            <label class="upload-btn">
+              <i class="pi pi-camera"></i>
+              <span>{{ PHOTO_CATEGORY_LABELS[cat] | translate }}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                (change)="onPhotoSelected($event, cat)"
+                [disabled]="uploadingPhoto"
+                hidden>
+            </label>
+          }
+        </div>
+
+        @if (formData.photos && formData.photos.length > 0) {
+          <div class="photo-grid">
+            @for (photo of formData.photos; track photo.path) {
+              <div class="photo-thumb">
+                <img [src]="photo.url" [alt]="photo.fileName || ''">
+                <button type="button" class="photo-remove" (click)="deletePhoto(photo)" title="Eliminar">
+                  <i class="pi pi-times"></i>
+                </button>
+                @if (photo.category) {
+                  <span class="photo-category">{{ PHOTO_CATEGORY_LABELS[photo.category] | translate }}</span>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="no-photos">{{ 'inspections.photos.noPhotos' | translate }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <button class="btn-secondary" type="button" (click)="goBack()">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button class="btn-primary" type="button" [disabled]="saving" (click)="completePickup()">
+        @if (saving) {
+          <i class="pi pi-spin pi-spinner"></i>
+        } @else {
+          <i class="pi pi-check"></i>
+        }
+        {{ 'inspections.completePickup' | translate }}
+      </button>
+    </div>
+  }
+</div>

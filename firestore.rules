@@ -65,6 +65,14 @@ service cloud.firestore {
       allow write: if isAuthorized(request.auth.token.email);
     }
 
+    // contractSigningTokens - NEVER read/write from the client.
+    // Only Cloud Functions (admin SDK) can read or write tokens.
+    // Public access is via the getContractForSigning / signContract
+    // HTTPS callables that accept a token, never direct Firestore access.
+    match /contractSigningTokens/{tokenId} {
+      allow read, write: if false;
+    }
+
     // inspections collection - only authorized users
     match /inspections/{inspectionId} {
       allow read: if isAuthorized(request.auth.token.email);

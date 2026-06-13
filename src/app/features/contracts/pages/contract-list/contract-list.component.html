@@ -1,0 +1,74 @@
+<div class="page">
+  <div class="page-header">
+    <h1>{{ 'contracts.title' | translate }}</h1>
+    <p class="subtitle">{{ 'contracts.subtitle' | translate }}</p>
+  </div>
+
+  <div class="filters">
+    <div class="search-input">
+      <i class="pi pi-search"></i>
+      <input
+        type="text"
+        [placeholder]="'common.search' | translate"
+        [(ngModel)]="searchTerm"
+        name="search"
+      />
+    </div>
+    <select [(ngModel)]="statusFilter" name="status" class="form-control">
+      <option value="">{{ 'contracts.fields.allStatuses' | translate }}</option>
+      @for (opt of statusOptions; track opt.value) {
+        <option [value]="opt.value">{{ opt.label | translate }}</option>
+      }
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (filteredContracts.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-file"></i>
+      <p>{{ 'contracts.list.empty' | translate }}</p>
+    </div>
+  } @else {
+    <div class="contracts-list">
+      @for (c of filteredContracts; track c.id) {
+        <div class="contract-row" (click)="viewContract(c)">
+          <div class="row-main">
+            <div class="row-title">
+              <span class="contract-number">Nº {{ c.contractNumber || c.id?.slice(0, 6) }}</span>
+              <span class="badge" [ngClass]="CONTRACT_STATUS_COLORS[c.status]">
+                {{ CONTRACT_STATUS_LABELS[c.status] | translate }}
+              </span>
+            </div>
+            <div class="row-info">
+              <div class="info-line">
+                <i class="pi pi-user"></i>
+                <span>{{ c.clientSnapshot?.fullName }}</span>
+              </div>
+              <div class="info-line">
+                <i class="pi pi-car"></i>
+                <span>{{ c.vehicleSnapshot?.brand }} {{ c.vehicleSnapshot?.model }} · {{ c.vehicleSnapshot?.plateNumber }}</span>
+              </div>
+              @if (getCreatedAt(c); as created) {
+                <div class="info-line muted">
+                  <i class="pi pi-calendar"></i>
+                  <span>{{ created | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              }
+              @if (getSignedAt(c); as signed) {
+                <div class="info-line success">
+                  <i class="pi pi-check"></i>
+                  <span>{{ 'contracts.fields.signedAt' | translate }}: {{ signed | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              }
+            </div>
+          </div>
+          <i class="pi pi-chevron-right row-chevron"></i>
+        </div>
+      }
+    </div>
+  }
+</div>

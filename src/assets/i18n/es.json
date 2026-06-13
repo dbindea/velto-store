@@ -454,5 +454,219 @@
     "list": {
       "empty": "No hay pagos"
     }
+  },
+  "inspections": {
+    "title": "Inspecciones",
+    "subtitle": "Entregas y devoluciones de vehículos",
+    "startPickup": "Inspección de entrega",
+    "startReturn": "Inspección de devolución",
+    "completePickup": "Completar entrega",
+    "completeReturn": "Completar devolución",
+    "closeReservation": "Cerrar reserva al completar",
+    "type": {
+      "pickup": "Entrega",
+      "return": "Devolución"
+    },
+    "status": {
+      "draft": "Borrador",
+      "completed": "Completada",
+      "cancelled": "Cancelada"
+    },
+    "fuelLevel": {
+      "empty": "Vacío",
+      "quarter": "1/4",
+      "half": "1/2",
+      "three_quarters": "3/4",
+      "full": "Lleno"
+    },
+    "cleanliness": {
+      "dirty": "Sucio",
+      "acceptable": "Aceptable",
+      "clean": "Limpio",
+      "very_clean": "Muy limpio"
+    },
+    "photoCategory": {
+      "front": "Frontal",
+      "rear": "Trasera",
+      "left_side": "Lateral izquierdo",
+      "right_side": "Lateral derecho",
+      "dashboard": "Cuadro",
+      "trunk": "Maletero",
+      "interior": "Interior",
+      "damage": "Daño",
+      "detail": "Detalle",
+      "other": "Otro"
+    },
+    "damageArea": {
+      "front_bumper": "Paragolpes delantero",
+      "rear_bumper": "Paragolpes trasero",
+      "hood": "Capó",
+      "roof": "Techo",
+      "trunk": "Maletero",
+      "front_left_door": "Puerta delantera izquierda",
+      "front_right_door": "Puerta delantera derecha",
+      "rear_left_door": "Puerta trasera izquierda",
+      "rear_right_door": "Puerta trasera derecha",
+      "left_fender": "Guardabarros izquierdo",
+      "right_fender": "Guardabarros derecho",
+      "windshield": "Parabrisas",
+      "rear_window": "Luneta trasera",
+      "left_mirror": "Retrovisor izquierdo",
+      "right_mirror": "Retrovisor derecho",
+      "front_left_wheel": "Rueda delantera izquierda",
+      "front_right_wheel": "Rueda delantera derecha",
+      "rear_left_wheel": "Rueda trasera izquierda",
+      "rear_right_wheel": "Rueda trasera derecha",
+      "interior": "Interior",
+      "other": "Otro"
+    },
+    "damageSeverity": {
+      "minor": "Leve",
+      "medium": "Medio",
+      "serious": "Grave"
+    },
+    "fields": {
+      "km": "Kilometraje",
+      "fuelLevel": "Nivel de combustible",
+      "cleanliness": "Limpieza",
+      "notes": "Observaciones"
+    },
+    "sections": {
+      "deliveryAndReturn": "Entrega y devolución",
+      "reservationSummary": "Resumen de la reserva",
+      "checklist": "Lista de verificación",
+      "vehicleStatus": "Estado del vehículo",
+      "photos": "Fotografías",
+      "damages": "Daños registrados",
+      "extraCharges": "Cargos extra",
+      "deposit": "Fianza"
+    },
+    "checklist": {
+      "clientIdentityChecked": "Identidad del cliente verificada",
+      "drivingLicenseChecked": "Carnet de conducir verificado",
+      "contractChecked": "Contrato firmado y revisado",
+      "paymentChecked": "Pago realizado",
+      "depositChecked": "Fianza depositada",
+      "keysDelivered": "Llaves entregadas",
+      "keysReturned": "Llaves devueltas",
+      "vehicleDocumentsDelivered": "Documentación entregada",
+      "accessoriesChecked": "Accesorios revisados"
+    },
+    "photos": {
+      "noPhotos": "No hay fotos subidas",
+      "addPhoto": "Añadir foto",
+      "category": "Categoría"
+    },
+    "damages": {
+      "add": "Añadir daño",
+      "area": "Zona",
+      "severity": "Gravedad",
+      "description": "Descripción"
+    },
+    "extraCharges": {
+      "extraKm": "Cargo por km extra",
+      "fuel": "Cargo de combustible",
+      "refuelPenalty": "Penalización por repostaje",
+      "cleaning": "Cargo de limpieza",
+      "damage": "Cargo por daños",
+      "fine": "Multa",
+      "other": "Otros cargos",
+      "total": "Total cargos extra"
+    },
+    "deposit": {
+      "actions": "Acciones sobre fianza",
+      "required": "Fianza requerida",
+      "paid": "Fianza depositada",
+      "refund": "Devolver fianza",
+      "retain": "Retener fianza",
+      "refundAndClose": "Devolver y cerrar"
+    },
+    "actions": {
+      "view": "Ver detalle",
+      "startPickup": "Iniciar entrega",
+      "startReturn": "Iniciar devolución"
+    },
+    "messages": {
+      "noPickup": "Sin inspección de entrega",
+      "noReturn": "Sin inspección de devolución",
+      "saved": "Inspección guardada",
+      "kmRequired": "Introduce el kilometraje",
+      "kmInvalid": "El kilometraje de devolución debe ser mayor o igual al de entrega",
+      "fuelRequired": "Selecciona el nivel de combustible",
+      "damageDescRequired": "La descripción del daño es obligatoria"
+    }
+  },
+  "contracts": {
+    "title": "Contratos",
+    "subtitle": "Genera, firma y envía contratos de alquiler",
+    "new": "Nuevo contrato",
+    "detail": "Detalle del contrato",
+    "status": {
+      "draft": "Borrador",
+      "generated": "Generado",
+      "pendingSignature": "Pendiente de firma",
+      "signed": "Firmado",
+      "cancelled": "Cancelado",
+      "expired": "Caducado"
+    },
+    "actions": {
+      "title": "Acciones",
+      "generate": "Generar contrato",
+      "generateSigningLink": "Generar link de firma",
+      "copySigningLink": "Copiar link de firma",
+      "cancelLink": "Cancelar link",
+      "sendEmail": "Enviar por email",
+      "downloadPdf": "Descargar PDF",
+      "downloadSignedPdf": "Descargar PDF firmado",
+      "viewOriginalPdf": "Ver contrato original",
+      "viewContract": "Ver contrato",
+      "cancel": "Cancelar"
+    },
+    "messages": {
+      "generated": "Contrato generado",
+      "signingLinkCreated": "Link de firma creado",
+      "linkCopied": "Link copiado",
+      "emailSent": "Contrato enviado por email",
+      "emailError": "Error al enviar el email",
+      "alreadySigned": "El contrato ya está firmado",
+      "expired": "El link ha caducado",
+      "invalidLink": "Link no válido"
+    },
+    "sign": {
+      "title": "Firma del contrato",
+      "subtitle": "Firma digital de contrato de alquiler",
+      "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
+      "acceptConditions": "He leído y acepto las condiciones del contrato.",
+      "clearSignature": "Limpiar firma",
+      "submitSignature": "Firmar contrato",
+      "successTitle": "Contrato firmado",
+      "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
+      "alreadySigned": "Este contrato ya ha sido firmado.",
+      "expired": "El link de firma ha caducado.",
+      "invalid": "Link no válido."
+    },
+    "fields": {
+      "contractNumber": "Número de contrato",
+      "client": "Cliente",
+      "vehicle": "Vehículo",
+      "reservation": "Reserva",
+      "generatedAt": "Generado",
+      "signedAt": "Firmado",
+      "emailedAt": "Enviado por email",
+      "depositAmount": "Fianza",
+      "allStatuses": "Todos los estados"
+    },
+    "email": {
+      "title": "Enviar contrato por email",
+      "recipient": "Email del destinatario",
+      "subject": "Asunto",
+      "send": "Enviar"
+    },
+    "signingLink": {
+      "title": "Link de firma activo"
+    },
+    "list": {
+      "empty": "No hay contratos"
+    }
   }
 }

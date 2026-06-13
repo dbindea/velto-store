@@ -23,8 +23,11 @@ service firebase.storage {
       allow write: if isAuthenticated();
     }
 
-    // Contracts - only authorized users
-    match /contracts/{contractId}/{allPaths=**} {
+    // Contracts - only authorized users.
+    // Path convention: contracts/{reservationId}/{file}
+    // The signing page does NOT access Storage directly; the backend
+    // generates short-lived signed URLs when needed.
+    match /contracts/{reservationId}/{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }

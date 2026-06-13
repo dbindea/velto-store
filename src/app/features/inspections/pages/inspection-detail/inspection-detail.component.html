@@ -1,0 +1,265 @@
+<div class="page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (inspection) {
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <div class="title-row">
+          <h1>{{ INSPECTION_TYPE_LABELS[inspection.type] | translate }}</h1>
+          <span class="badge" [ngClass]="INSPECTION_STATUS_COLORS[inspection.status]">
+            {{ INSPECTION_STATUS_LABELS[inspection.status] | translate }}
+          </span>
+        </div>
+        <p class="subtitle">
+          <span class="client-name">{{ inspection.clientSnapshot?.fullName }}</span> ·
+          <span class="vehicle-name">{{ inspection.vehicleSnapshot?.brand }} {{ inspection.vehicleSnapshot?.model }}</span> ·
+          <span class="plate">{{ inspection.vehicleSnapshot?.plateNumber }}</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <!-- Reservation summary -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-info-circle"></i>
+          <span>{{ 'inspections.sections.reservationSummary' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (getCreatedAt(); as created) {
+            <div class="info-row">
+              <span class="label">Fecha:</span>
+              <span class="value">{{ created | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+          @if (getCompletedAt(); as completed) {
+            <div class="info-row">
+              <span class="label">Completado:</span>
+              <span class="value">{{ completed | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Vehicle status -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-car"></i>
+          <span>Estado del vehículo</span>
+        </div>
+        <div class="card-content">
+          @if (inspection.km !== undefined) {
+            <div class="info-row">
+              <span class="label">{{ 'inspections.fields.km' | translate }}:</span>
+              <span class="value">{{ inspection.km | number }} km</span>
+            </div>
+          }
+          @if (inspection.fuelLevel) {
+            <div class="info-row">
+              <span class="label">{{ 'inspections.fields.fuelLevel' | translate }}:</span>
+              <span class="value">{{ FUEL_LEVEL_LABELS[inspection.fuelLevel] | translate }}</span>
+            </div>
+          }
+          @if (inspection.cleanliness) {
+            <div class="info-row">
+              <span class="label">{{ 'inspections.fields.cleanliness' | translate }}:</span>
+              <span class="value">{{ CLEANLINESS_LABELS[inspection.cleanliness] | translate }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Checklist -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-check-square"></i>
+          <span>{{ 'inspections.sections.checklist' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="checklist-grid">
+            <div class="check-display" [class.done]="inspection.checklist.clientIdentityChecked">
+              <i [class]="inspection.checklist.clientIdentityChecked ? 'pi pi-check' : 'pi pi-times'"></i>
+              <span>{{ 'inspections.checklist.clientIdentityChecked' | translate }}</span>
+            </div>
+            <div class="check-display" [class.done]="inspection.checklist.drivingLicenseChecked">
+              <i [class]="inspection.checklist.drivingLicenseChecked ? 'pi pi-check' : 'pi pi-times'"></i>
+              <span>{{ 'inspections.checklist.drivingLicenseChecked' | translate }}</span>
+            </div>
+            <div class="check-display" [class.done]="inspection.checklist.contractChecked">
+              <i [class]="inspection.checklist.contractChecked ? 'pi pi-check' : 'pi pi-times'"></i>
+              <span>{{ 'inspections.checklist.contractChecked' | translate }}</span>
+            </div>
+            <div class="check-display" [class.done]="inspection.checklist.paymentChecked">
+              <i [class]="inspection.checklist.paymentChecked ? 'pi pi-check' : 'pi pi-times'"></i>
+              <span>{{ 'inspections.checklist.paymentChecked' | translate }}</span>
+            </div>
+            <div class="check-display" [class.done]="inspection.checklist.depositChecked">
+              <i [class]="inspection.checklist.depositChecked ? 'pi pi-check' : 'pi pi-times'"></i>
+              <span>{{ 'inspections.checklist.depositChecked' | translate }}</span>
+            </div>
+            @if (inspection.checklist.keysDelivered !== undefined) {
+              <div class="check-display" [class.done]="inspection.checklist.keysDelivered">
+                <i [class]="inspection.checklist.keysDelivered ? 'pi pi-check' : 'pi pi-times'"></i>
+                <span>{{ 'inspections.checklist.keysDelivered' | translate }}</span>
+              </div>
+            }
+            @if (inspection.checklist.keysReturned !== undefined) {
+              <div class="check-display" [class.done]="inspection.checklist.keysReturned">
+                <i [class]="inspection.checklist.keysReturned ? 'pi pi-check' : 'pi pi-times'"></i>
+                <span>{{ 'inspections.checklist.keysReturned' | translate }}</span>
+              </div>
+            }
+            @if (inspection.checklist.vehicleDocumentsDelivered !== undefined) {
+              <div class="check-display" [class.done]="inspection.checklist.vehicleDocumentsDelivered">
+                <i [class]="inspection.checklist.vehicleDocumentsDelivered ? 'pi pi-check' : 'pi pi-times'"></i>
+                <span>{{ 'inspections.checklist.vehicleDocumentsDelivered' | translate }}</span>
+              </div>
+            }
+            @if (inspection.checklist.accessoriesChecked !== undefined) {
+              <div class="check-display" [class.done]="inspection.checklist.accessoriesChecked">
+                <i [class]="inspection.checklist.accessoriesChecked ? 'pi pi-check' : 'pi pi-times'"></i>
+                <span>{{ 'inspections.checklist.accessoriesChecked' | translate }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Damages (only return) -->
+      @if (inspection.type === 'return' && inspection.damages && inspection.damages.length > 0) {
+        <div class="detail-card">
+          <div class="card-header">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ 'inspections.sections.damages' | translate }}</span>
+            <span class="badge-count">{{ inspection.damages.length }}</span>
+          </div>
+          <div class="card-content">
+            <div class="damages-list">
+              @for (d of inspection.damages; track d.id) {
+                <div class="damage-item" [class]="'severity-' + (d.severity || 'minor')">
+                  <div class="damage-info">
+                    <span class="damage-area">{{ DAMAGE_AREA_LABELS[d.area] | translate }}</span>
+                    <span class="damage-severity">{{ DAMAGE_SEVERITY_LABELS[d.severity || 'minor'] | translate }}</span>
+                  </div>
+                  <span class="damage-desc">{{ d.description }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Photos -->
+      @if (inspection.photos && inspection.photos.length > 0) {
+        <div class="detail-card">
+          <div class="card-header">
+            <i class="pi pi-image"></i>
+            <span>{{ 'inspections.sections.photos' | translate }}</span>
+            <span class="badge-count">{{ inspection.photos.length }}</span>
+          </div>
+          <div class="card-content">
+            <div class="photo-grid">
+              @for (photo of inspection.photos; track photo.path) {
+                <a [href]="photo.url" target="_blank" class="photo-thumb">
+                  <img [src]="photo.url" [alt]="photo.fileName || ''">
+                  @if (photo.category) {
+                    <span class="photo-category">{{ PHOTO_CATEGORY_LABELS[photo.category] | translate }}</span>
+                  }
+                </a>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Extra charges (only return) -->
+      @if (inspection.type === 'return' && inspection.extraCharges && inspection.extraCharges.totalExtraCharges > 0) {
+        <div class="detail-card">
+          <div class="card-header">
+            <i class="pi pi-euro"></i>
+            <span>{{ 'inspections.sections.extraCharges' | translate }}</span>
+          </div>
+          <div class="card-content">
+            @if (inspection.extraCharges.extraKmCharge && inspection.extraCharges.extraKmCharge > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.extraKm' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.extraKmCharge | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.fuelCharge && inspection.extraCharges.fuelCharge > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.fuel' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.fuelCharge | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.refuelPenalty && inspection.extraCharges.refuelPenalty > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.refuelPenalty' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.refuelPenalty | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.cleaningCharge && inspection.extraCharges.cleaningCharge > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.cleaning' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.cleaningCharge | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.damageCharge && inspection.extraCharges.damageCharge > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.damage' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.damageCharge | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.fineCharge && inspection.extraCharges.fineCharge > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.fine' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.fineCharge | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.otherCharge && inspection.extraCharges.otherCharge > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'inspections.extraCharges.other' | translate }}:</span>
+                <span class="value">{{ inspection.extraCharges.otherCharge | number:'1.2-2' }} €</span>
+              </div>
+            }
+            @if (inspection.extraCharges.notes) {
+              <div class="notes-block">
+                <strong>Notas:</strong> {{ inspection.extraCharges.notes }}
+              </div>
+            }
+            <div class="total-bar">
+              <span class="total-label">{{ 'inspections.extraCharges.total' | translate }}:</span>
+              <span class="total-value">{{ inspection.extraCharges.totalExtraCharges | number:'1.2-2' }} €</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Notes -->
+      @if (inspection.notes) {
+        <div class="detail-card">
+          <div class="card-header">
+            <i class="pi pi-comment"></i>
+            <span>{{ 'inspections.fields.notes' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <p class="notes-text">{{ inspection.notes }}</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="page-actions">
+      <button class="btn-secondary" type="button" (click)="viewReservation()">
+        <i class="pi pi-external-link"></i>
+        {{ 'reservations.actions.viewReservation' | translate }}
+      </button>
+    </div>
+  }
+</div>

@@ -14,6 +14,10 @@ export const routes: Routes = [
     canActivate: [publicGuard]
   },
   {
+    path: 'sign-contract/:token',
+    loadComponent: () => import('./features/contracts/pages/sign-contract/sign-contract.component').then(m => m.SignContractComponent)
+  },
+  {
     path: '',
     loadComponent: () => import('./layout/private-layout/private-layout.component').then(m => m.PrivateLayoutComponent),
     canActivate: [authGuard],
@@ -108,11 +112,39 @@ export const routes: Routes = [
       },
       {
         path: 'contracts',
-        loadComponent: () => import('./features/contracts/contracts.component').then(m => m.ContractsComponent)
+        loadComponent: () => import('./features/contracts/contracts.component').then(m => m.ContractsComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/contracts/pages/contract-list/contract-list.component').then(m => m.ContractListComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/contracts/pages/contract-detail/contract-detail.component').then(m => m.ContractDetailComponent)
+          }
+        ]
       },
       {
         path: 'inspections',
-        loadComponent: () => import('./features/inspections/inspections.component').then(m => m.InspectionsComponent)
+        loadComponent: () => import('./features/inspections/inspections.component').then(m => m.InspectionsComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/inspections/pages/inspection-list/inspection-list.component').then(m => m.InspectionListComponent)
+          },
+          {
+            path: 'pickup/:reservationId',
+            loadComponent: () => import('./features/inspections/pages/inspection-pickup/inspection-pickup.component').then(m => m.InspectionPickupComponent)
+          },
+          {
+            path: 'return/:reservationId',
+            loadComponent: () => import('./features/inspections/pages/inspection-return/inspection-return.component').then(m => m.InspectionReturnComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/inspections/pages/inspection-detail/inspection-detail.component').then(m => m.InspectionDetailComponent)
+          }
+        ]
       },
       {
         path: 'reports',

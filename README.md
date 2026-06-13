@@ -273,3 +273,102 @@ Esto permitirá implementar:
 - Analytics con Firebase Analytics
 - Crashlytics para monitoring de errores
 - Remote Config para feature flags
+
+## Contratos y firma
+
+El módulo **Contratos** permite generar, firmar y enviar contratos de
+alquiler al cliente sin que el cliente necesite cuenta en la app.
+
+### Flujo
+
+1. Desde el detalle de una reserva, el operador pulsa **Generar contrato**.
+   El backend (`generateContractPdf`) construye un PDF (datos de la
+   reserva, cliente, vehículo, fechas, fianza, condiciones) y lo sube a
+   `contracts/{reservationId}/contract-original.pdf`.
+2. El operador pulsa **Generar link de firma**. Se crea un token
+   aleatorio de un solo uso (`createContractSigningLink`) con caducidad
+   por defecto de 7 días. El contrato pasa a `pending_signature` y la
+   reserva actualiza su `contractStatus`.
+3. El operador **copia el link** y lo envía al cliente por el canal que
+   prefiera (WhatsApp, email, SMS).
+4. El cliente abre `https://<host>/sign-contract/{token}` desde su
+   móvil **sin iniciar sesión**. La página (`SignContractComponent`)
+   llama a `getContractForSigning` (Cloud Function pública) y muestra
+   un resumen del contrato, un PDF embebido y un canvas de firma
+   (`SignaturePadComponent`).
+5. El cliente firma, marca la aceptación y pulsa **Firmar contrato**.
+   Se llama a `signContract` (Cloud Function pública) que guarda la
+   imagen de la firma, regenera el PDF con la firma incrustada y
+   marca el token como usado. El contrato pasa a `signed`.
+6. El operador pulsa **Enviar por email**. Se llama a
+   `sendSignedContractEmail` que envía el contrato firmado al cliente
+   usando **Resend** (con el PDF adjunto).
+
+### Decisiones de seguridad
+
+- La página pública `/sign-contract/:token` no requiere auth, pero el
+  token (256 bits URL-safe) es la única credencial válida. Es
+  aleatorio, no reutilizable y caduca.
+- Los tokens viven en la colección `contractSigningTokens` con reglas
+  de Firestore que deniegan cualquier acceso cliente. Solo las
+  Cloud Functions (admin SDK) pueden leerlos o escribirlos.
+- La clave de **Resend** (`RESEND_API_KEY`) nunca entra al frontend.
+  Vive en `firebase functions:secrets` y solo se usa en el runtime
+  de Cloud Functions.
+- El PDF y la firma se almacenan en `contracts/{reservationId}/` con
+  Storage rules que solo permiten acceso a usuarios autenticados.
+
+### Variables de entorno / secrets
+
+Configura los secrets del proyecto:
+
+```bash
+# Resend
+firebase functions:secrets:set RESEND_API_KEY
+firebase functions:secrets:set RESEND_FROM_EMAIL   # default: reservas@veltorent.com
+
+# Datos de la empresa (opcional, con defaults)
+firebase functions:secrets:set VELTO_COMPANY_NAME      # default: Velto Rent
+firebase functions:secrets:set VELTO_COMPANY_EMAIL     # default: reservas@veltorent.com
+firebase functions:secrets:set VELTO_COMPANY_PHONE
+firebase functions:secrets:set VELTO_COMPANY_ADDRESS
+
+# URL pública usada para construir links absolutos en el email
+firebase functions:secrets:set VELTO_PUBLIC_BASE_URL   # ej: https://velto-store.web.app
+
+# Caducidad del link de firma (en días, default 7)
+firebase functions:secrets:set CONTRACT_LINK_EXPIRY_DAYS
+```
+
+### Despliegue de las Cloud Functions
+
+```bash
+cd functions
+npm install
+npm run build
+firebase deploy --only functions
+```
+
+Funciones desplegadas:
+
+- `generateContractPdf` (auth)
+- `createContractSigningLink` (auth)
+- `cancelContractSigningLink` (auth)
+- `getContractForSigning` (público, token)
+- `signContract` (público, token)
+- `sendSignedContractEmail` (auth)
+- `createRedsysPaymentLink` (auth, skeleton)
+- `redsysNotificationWebhook` (público, skeleton)
+
+### Envío manual por WhatsApp
+
+El link de firma se puede **copiar** desde la app y pegar en una
+conversación de WhatsApp. El envío automático por WhatsApp está
+previsto para una iteración futura.
+
+### Roadmap
+
+- Firma electrónica avanzada / DocuSign (no implementado en esta iteración).
+- WhatsApp Business API con plantilla pre-aprobada.
+- OCR de DNI / carnet para auto-rellenar cliente.
+- Generación de facturas.
