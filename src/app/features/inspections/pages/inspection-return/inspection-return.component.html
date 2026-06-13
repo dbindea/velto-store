@@ -1,0 +1,303 @@
+<div class="page">
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (reservation) {
+    <div class="page-header">
+      <button class="btn-back" type="button" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div class="header-content">
+        <h1>{{ 'inspections.startReturn' | translate }}</h1>
+        <p class="subtitle">
+          <span class="client-name">{{ reservation.clientSnapshot.fullName }}</span> ·
+          <span class="vehicle-name">{{ reservation.vehicleSnapshot?.brand }} {{ reservation.vehicleSnapshot?.model }}</span> ·
+          <span class="plate">{{ reservation.vehicleSnapshot?.plateNumber }}</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <!-- Reservation summary -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-info-circle"></i>
+          <h2>{{ 'inspections.sections.reservationSummary' | translate }}</h2>
+        </div>
+        <div class="summary-grid">
+          <div class="info-row">
+            <span class="label">{{ 'reservations.fields.pickupDate' | translate }}:</span>
+            <span class="value">{{ getPickupDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">{{ 'reservations.fields.returnDate' | translate }}:</span>
+            <span class="value">{{ getReturnDate() | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">{{ 'reservations.fields.totalDays' | translate }}:</span>
+            <span class="value">{{ totalDays }} días</span>
+          </div>
+          <div class="info-row">
+            <span class="label">{{ 'reservations.title' | translate }}:</span>
+            <span class="value">{{ reservation.pricingSnapshot?.finalPrice | number:'1.2-2' }} €</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Fianza cobrada:</span>
+            <span class="value">{{ depositPaid | number:'1.2-2' }} €</span>
+          </div>
+          @if (pickupKm !== undefined) {
+            <div class="info-row">
+              <span class="label">Km salida:</span>
+              <span class="value">{{ pickupKm | number }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Vehicle status -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-car"></i>
+          <h2>Estado del vehículo</h2>
+        </div>
+        <div class="form-grid-inner">
+          <div class="form-group">
+            <label>{{ 'inspections.fields.km' | translate }} entrada *</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.km" (ngModelChange)="recalculateTotal()" name="km" min="0">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.fields.fuelLevel' | translate }} entrada *</label>
+            <select class="form-control" [(ngModel)]="formData.fuelLevel" name="fuel">
+              <option [ngValue]="undefined" disabled>--</option>
+              @for (f of fuelLevels; track f) {
+                <option [ngValue]="f">{{ FUEL_LEVEL_LABELS[f] | translate }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.fields.cleanliness' | translate }}</label>
+            <select class="form-control" [(ngModel)]="formData.cleanliness" name="clean">
+              <option [ngValue]="undefined" disabled>--</option>
+              @for (c of cleanlinessLevels; track c) {
+                <option [ngValue]="c">{{ CLEANLINESS_LABELS[c] | translate }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="check-inline">
+              <input type="checkbox" [(ngModel)]="formData.checklist!.keysReturned" name="keysR">
+              <span>{{ 'inspections.checklist.keysReturned' | translate }}</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="check-inline">
+              <input type="checkbox" [(ngModel)]="formData.checklist!.accessoriesChecked" name="accR">
+              <span>{{ 'inspections.checklist.accessoriesChecked' | translate }}</span>
+            </label>
+          </div>
+          <div class="form-group full">
+            <label>{{ 'inspections.fields.notes' | translate }}</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="formData.notes" name="notes"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Damages -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-exclamation-triangle"></i>
+          <h2>{{ 'inspections.sections.damages' | translate }}</h2>
+          <button class="btn-mini" type="button" (click)="showDamageForm = !showDamageForm">
+            <i class="pi" [class]="showDamageForm ? 'pi-times' : 'pi-plus'"></i>
+            {{ 'inspections.damages.add' | translate }}
+          </button>
+        </div>
+
+        @if (showDamageForm) {
+          <div class="damage-form">
+            <div class="form-grid-inner">
+              <div class="form-group">
+                <label>{{ 'inspections.damages.area' | translate }}</label>
+                <select class="form-control" [(ngModel)]="newDamage.area" name="darea">
+                  @for (a of damageAreas; track a) {
+                    <option [value]="a">{{ DAMAGE_AREA_LABELS[a] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ 'inspections.damages.severity' | translate }}</label>
+                <select class="form-control" [(ngModel)]="newDamage.severity" name="dsev">
+                  @for (s of damageSeverities; track s) {
+                    <option [value]="s">{{ DAMAGE_SEVERITY_LABELS[s] | translate }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>{{ 'inspections.damages.description' | translate }} *</label>
+                <input type="text" class="form-control" [(ngModel)]="newDamage.description" name="ddesc">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-secondary" type="button" (click)="showDamageForm = false">Cancelar</button>
+              <button class="btn-primary" type="button" (click)="addDamage()">
+                <i class="pi pi-plus"></i> Añadir
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (formData.damages && formData.damages.length > 0) {
+          <div class="damages-list">
+            @for (d of formData.damages; track d.id; let i = $index) {
+              <div class="damage-item" [class]="'severity-' + d.severity">
+                <div class="damage-info">
+                  <span class="damage-area">{{ DAMAGE_AREA_LABELS[d.area] | translate }}</span>
+                  <span class="damage-severity">{{ DAMAGE_SEVERITY_LABELS[d.severity || 'minor'] | translate }}</span>
+                </div>
+                <span class="damage-desc">{{ d.description }}</span>
+                <button type="button" class="btn-remove" (click)="removeDamage(i)">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Photos -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-image"></i>
+          <h2>{{ 'inspections.sections.photos' | translate }}</h2>
+        </div>
+
+        <div class="photo-categories">
+          @for (cat of photoCategories; track cat) {
+            <label class="upload-btn">
+              <i class="pi pi-camera"></i>
+              <span>{{ PHOTO_CATEGORY_LABELS[cat] | translate }}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                (change)="onPhotoSelected($event, cat)"
+                [disabled]="uploadingPhoto"
+                hidden>
+            </label>
+          }
+        </div>
+
+        @if (formData.photos && formData.photos.length > 0) {
+          <div class="photo-grid">
+            @for (photo of formData.photos; track photo.path) {
+              <div class="photo-thumb">
+                <img [src]="photo.url" [alt]="photo.fileName || ''">
+                <button type="button" class="photo-remove" (click)="deletePhoto(photo)" title="Eliminar">
+                  <i class="pi pi-times"></i>
+                </button>
+                @if (photo.category) {
+                  <span class="photo-category">{{ PHOTO_CATEGORY_LABELS[photo.category] | translate }}</span>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="no-photos">{{ 'inspections.photos.noPhotos' | translate }}</p>
+        }
+      </div>
+
+      <!-- Extra charges -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-euro"></i>
+          <h2>{{ 'inspections.sections.extraCharges' | translate }}</h2>
+        </div>
+        <div class="form-grid-inner">
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.extraKm' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.extraKmCharge" (ngModelChange)="recalculateTotal()" name="xkm" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.fuel' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.fuelCharge" (ngModelChange)="recalculateTotal()" name="xfuel" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.refuelPenalty' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.refuelPenalty" (ngModelChange)="recalculateTotal()" name="xref" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.cleaning' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.cleaningCharge" (ngModelChange)="recalculateTotal()" name="xclean" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.damage' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.damageCharge" (ngModelChange)="recalculateTotal()" name="xdmg" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.fine' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.fineCharge" (ngModelChange)="recalculateTotal()" name="xfine" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.extraCharges.other' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.otherCharge" (ngModelChange)="recalculateTotal()" name="xoth" min="0" step="0.01">
+          </div>
+          <div class="form-group full">
+            <label>Notas cargos</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="formData.extraCharges!.notes" name="xnotes"></textarea>
+          </div>
+        </div>
+        <div class="total-bar">
+          <span class="total-label">{{ 'inspections.extraCharges.total' | translate }}:</span>
+          <span class="total-value">{{ totalExtraCharges | number:'1.2-2' }} €</span>
+        </div>
+      </div>
+
+      <!-- Deposit -->
+      <div class="form-section">
+        <div class="section-header">
+          <i class="pi pi-shield"></i>
+          <h2>{{ 'inspections.sections.deposit' | translate }}</h2>
+        </div>
+        <div class="deposit-grid">
+          <div class="deposit-item">
+            <span class="d-label">Cobrada</span>
+            <span class="d-value">{{ depositPaid | number:'1.2-2' }} €</span>
+          </div>
+          <div class="deposit-item">
+            <span class="d-label">Cargos extra</span>
+            <span class="d-value warning">{{ totalExtraCharges | number:'1.2-2' }} €</span>
+          </div>
+          <div class="deposit-item danger">
+            <span class="d-label">A retener</span>
+            <span class="d-value">{{ toRetain | number:'1.2-2' }} €</span>
+          </div>
+          <div class="deposit-item success">
+            <span class="d-label">A devolver</span>
+            <span class="d-value">{{ toRefund | number:'1.2-2' }} €</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-actions">
+      <label class="check-inline big">
+        <input type="checkbox" [(ngModel)]="closeReservation" name="close">
+        <span>{{ 'inspections.closeReservation' | translate }}</span>
+      </label>
+      <div class="action-buttons">
+        <button class="btn-secondary" type="button" (click)="goBack()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button class="btn-primary" type="button" [disabled]="saving" (click)="completeReturn()">
+          @if (saving) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-check"></i>
+          }
+          {{ 'inspections.completeReturn' | translate }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,111 @@
+<div class="page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'inspections.title' | translate }}</h1>
+      <p class="subtitle">{{ 'inspections.subtitle' | translate }}</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <i class="pi pi-search"></i>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onFilterChange()"
+        [placeholder]="'common.search' | translate"
+        class="form-control">
+    </div>
+
+    <select
+      class="form-control filter-select"
+      [(ngModel)]="typeFilter"
+      (ngModelChange)="onFilterChange()">
+      @for (option of typeOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+
+    <select
+      class="form-control filter-select"
+      [(ngModel)]="statusFilter"
+      (ngModelChange)="onFilterChange()">
+      @for (option of statusOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (filteredInspections.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-clipboard"></i>
+      <p>No hay inspecciones</p>
+    </div>
+  } @else {
+    <div class="inspection-list">
+      @for (inspection of filteredInspections; track inspection.id) {
+        <div class="inspection-card" (click)="viewDetail(inspection)">
+          <div class="card-icon" [class]="'type-' + inspection.type">
+            <i [class]="inspection.type === 'pickup' ? 'pi pi-sign-out' : 'pi pi-sign-in'"></i>
+          </div>
+
+          <div class="card-info">
+            <h3>{{ INSPECTION_TYPE_LABELS[inspection.type] | translate }}</h3>
+            <div class="info-row">
+              <span class="info-item">
+                <i class="pi pi-user"></i>
+                {{ inspection.clientSnapshot?.fullName }}
+              </span>
+              <span class="info-item">
+                <i class="pi pi-car"></i>
+                {{ inspection.vehicleSnapshot?.brand }} {{ inspection.vehicleSnapshot?.model }}
+              </span>
+              @if (inspection.vehicleSnapshot?.plateNumber) {
+                <span class="info-item plate">
+                  {{ inspection.vehicleSnapshot?.plateNumber }}
+                </span>
+              }
+            </div>
+            <div class="info-meta">
+              @if (getCreatedAt(inspection); as created) {
+                <span class="meta-item">
+                  <i class="pi pi-calendar"></i>
+                  {{ created | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+              }
+              @if (inspection.km) {
+                <span class="meta-item">
+                  <i class="pi pi-compass"></i>
+                  {{ inspection.km | number }} km
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="card-badges">
+            <span class="badge" [ngClass]="INSPECTION_STATUS_COLORS[inspection.status]">
+              {{ INSPECTION_STATUS_LABELS[inspection.status] | translate }}
+            </span>
+            <button
+              type="button"
+              class="link-btn"
+              (click)="viewReservation(inspection.reservationId, $event)">
+              {{ 'reservations.title' | translate }}
+              <i class="pi pi-external-link"></i>
+            </button>
+          </div>
+
+          <div class="card-arrow">
+            <i class="pi pi-chevron-right"></i>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -112,7 +112,25 @@ export const routes: Routes = [
       },
       {
         path: 'inspections',
-        loadComponent: () => import('./features/inspections/inspections.component').then(m => m.InspectionsComponent)
+        loadComponent: () => import('./features/inspections/inspections.component').then(m => m.InspectionsComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/inspections/pages/inspection-list/inspection-list.component').then(m => m.InspectionListComponent)
+          },
+          {
+            path: 'pickup/:reservationId',
+            loadComponent: () => import('./features/inspections/pages/inspection-pickup/inspection-pickup.component').then(m => m.InspectionPickupComponent)
+          },
+          {
+            path: 'return/:reservationId',
+            loadComponent: () => import('./features/inspections/pages/inspection-return/inspection-return.component').then(m => m.InspectionReturnComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/inspections/pages/inspection-detail/inspection-detail.component').then(m => m.InspectionDetailComponent)
+          }
+        ]
       },
       {
         path: 'reports',

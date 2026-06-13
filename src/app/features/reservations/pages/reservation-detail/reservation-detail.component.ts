@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
+import { InspectionService } from '@features/inspections/services/inspection.service';
 import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS, CONTRACT_STATUS_LABELS } from '@shared/models/reservation.model';
 import {
   Payment,
@@ -15,6 +16,7 @@ import {
   PAYMENT_STATUS_COLORS,
   PAYMENT_METHOD_ICONS
 } from '@shared/models/payment.model';
+import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 
@@ -30,9 +32,12 @@ export class ReservationDetailComponent implements OnInit {
   private router = inject(Router);
   private reservationService = inject(ReservationService);
   private paymentService = inject(PaymentService);
+  private inspectionService = inject(InspectionService);
 
   reservation: Reservation | null = null;
   payments: Payment[] = [];
+  pickupInspection: Inspection | null = null;
+  returnInspection: Inspection | null = null;
   loading = true;
   loadingPayments = false;
   cancelling = false;
@@ -102,10 +107,23 @@ export class ReservationDetailComponent implements OnInit {
         this.reservation = reservation;
         this.loading = false;
         this.loadPayments(id);
+        this.loadInspections(id);
       },
       error: (error) => {
         console.error('Error loading reservation:', error);
         this.loading = false;
+      }
+    });
+  }
+
+  loadInspections(reservationId: string): void {
+    this.inspectionService.getInspectionsByReservation(reservationId).subscribe({
+      next: (inspections) => {
+        this.pickupInspection = inspections.find(i => i.type === 'pickup') || null;
+        this.returnInspection = inspections.find(i => i.type === 'return') || null;
+      },
+      error: (error) => {
+        console.error('Error loading inspections:', error);
       }
     });
   }
@@ -415,5 +433,46 @@ export class ReservationDetailComponent implements OnInit {
 
   getDueDate(payment: Payment): Date | null {
     return payment.dueDate ? toDate(payment.dueDate) : null;
+  }
+
+  // === Inspection helpers ===
+
+  canStartPickup(): boolean {
+    if (!this.reservation) return false;
+    if (this.pickupInspection?.status === 'completed') return false;
+    return ['reserved', 'confirmed', 'quoted', 'quote'].includes(this.reservation.reservationStatus);
+  }
+
+  canStartReturn(): boolean {
+    if (!this.reservation) return false;
+    if (this.pickupInspection?.status !== 'completed') return false;
+    if (this.returnInspection?.status === 'completed') return false;
+    return this.reservation.reservationStatus === 'delivered';
+  }
+
+  startPickup(): void {
+    if (!this.reservation?.id) return;
+    this.router.navigate(['/inspections/pickup', this.reservation.id]);
+  }
+
+  startReturn(): void {
+    if (!this.reservation?.id) return;
+    this.router.navigate(['/inspections/return', this.reservation.id]);
+  }
+
+  viewPickup(): void {
+    if (this.pickupInspection?.id) {
+      this.router.navigate(['/inspections', this.pickupInspection.id]);
+    }
+  }
+
+  viewReturn(): void {
+    if (this.returnInspection?.id) {
+      this.router.navigate(['/inspections', this.returnInspection.id]);
+    }
+  }
+
+  getInspectionStatusLabel(status: string): string {
+    return INSPECTION_STATUS_LABELS[status as keyof typeof INSPECTION_STATUS_LABELS] || status;
   }
 }

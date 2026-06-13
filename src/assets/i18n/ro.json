@@ -454,5 +454,146 @@
     "list": {
       "empty": "Nu există plăți"
     }
+  },
+  "inspections": {
+    "title": "Inspecții",
+    "subtitle": "Inspecții la predarea și returnarea vehiculelor",
+    "startPickup": "Inspecție predare",
+    "startReturn": "Inspecție returnare",
+    "completePickup": "Finalizează predarea",
+    "completeReturn": "Finalizează returnarea",
+    "closeReservation": "Închide rezervarea la finalizare",
+    "type": {
+      "pickup": "Predare",
+      "return": "Returnare"
+    },
+    "status": {
+      "draft": "Ciornă",
+      "completed": "Finalizată",
+      "cancelled": "Anulată"
+    },
+    "fuelLevel": {
+      "empty": "Gol",
+      "quarter": "1/4",
+      "half": "1/2",
+      "three_quarters": "3/4",
+      "full": "Plin"
+    },
+    "cleanliness": {
+      "dirty": "Murdar",
+      "acceptable": "Acceptabil",
+      "clean": "Curat",
+      "very_clean": "Foarte curat"
+    },
+    "photoCategory": {
+      "front": "Față",
+      "rear": "Spate",
+      "left_side": "Lateral stânga",
+      "right_side": "Lateral dreapta",
+      "dashboard": "Bord",
+      "trunk": "Portbagaj",
+      "interior": "Interior",
+      "damage": "Deteriorare",
+      "detail": "Detaliu",
+      "other": "Altul"
+    },
+    "damageArea": {
+      "front_bumper": "Bară față",
+      "rear_bumper": "Bară spate",
+      "hood": "Capotă",
+      "roof": "Acoperiș",
+      "trunk": "Portbagaj",
+      "front_left_door": "Ușă față stânga",
+      "front_right_door": "Ușă față dreapta",
+      "rear_left_door": "Ușă spate stânga",
+      "rear_right_door": "Ușă spate dreapta",
+      "left_fender": "Aripa stânga",
+      "right_fender": "Aripa dreapta",
+      "windshield": "Parbriz",
+      "rear_window": "Lunetă",
+      "left_mirror": "Oglindă stânga",
+      "right_mirror": "Oglindă dreapta",
+      "front_left_wheel": "Roată față stânga",
+      "front_right_wheel": "Roată față dreapta",
+      "rear_left_wheel": "Roată spate stânga",
+      "rear_right_wheel": "Roată spate dreapta",
+      "interior": "Interior",
+      "other": "Altul"
+    },
+    "damageSeverity": {
+      "minor": "Minor",
+      "medium": "Mediu",
+      "serious": "Grav"
+    },
+    "fields": {
+      "km": "Kilometraj",
+      "fuelLevel": "Nivel combustibil",
+      "cleanliness": "Curățenie",
+      "notes": "Observații"
+    },
+    "sections": {
+      "deliveryAndReturn": "Predare și returnare",
+      "reservationSummary": "Rezumat rezervare",
+      "checklist": "Listă verificare",
+      "vehicleStatus": "Stare vehicul",
+      "photos": "Fotografii",
+      "damages": "Daune înregistrate",
+      "extraCharges": "Taxe suplimentare",
+      "deposit": "Garanție"
+    },
+    "checklist": {
+      "clientIdentityChecked": "Identitate client verificată",
+      "drivingLicenseChecked": "Permis de conducere verificat",
+      "contractChecked": "Contract semnat și revizuit",
+      "paymentChecked": "Plată efectuată",
+      "depositChecked": "Garanție încasată",
+      "keysDelivered": "Chei predate",
+      "keysReturned": "Chei returnate",
+      "vehicleDocumentsDelivered": "Documentație predată",
+      "accessoriesChecked": "Accesorii verificate"
+    },
+    "photos": {
+      "noPhotos": "Nu există fotografii încărcate",
+      "addPhoto": "Adaugă fotografie",
+      "category": "Categorie"
+    },
+    "damages": {
+      "add": "Adaugă daună",
+      "area": "Zonă",
+      "severity": "Gravitate",
+      "description": "Descriere"
+    },
+    "extraCharges": {
+      "extraKm": "Taxă km suplimentari",
+      "fuel": "Taxă combustibil",
+      "refuelPenalty": "Penalizare realimentare",
+      "cleaning": "Taxă curățenie",
+      "damage": "Taxă daune",
+      "fine": "Amendă",
+      "other": "Alte taxe",
+      "total": "Total taxe suplimentare"
+    },
+    "deposit": {
+      "actions": "Acțiuni garanție",
+      "required": "Garanție necesară",
+      "paid": "Garanție încasată",
+      "refund": "Returnează garanție",
+      "retain": "Reține garanție",
+      "refundAndClose": "Returnează și închide"
+    },
+    "actions": {
+      "view": "Vezi detalii",
+      "startPickup": "Începe predare",
+      "startReturn": "Începe returnare"
+    },
+    "messages": {
+      "noPickup": "Fără inspecție de predare",
+      "noReturn": "Fără inspecție de returnare",
+      "saved": "Inspecție salvată",
+      "kmRequired": "Introdu kilometrajul",
+      "kmInvalid": "Kilometrajul la returnare trebuie să fie mai mare sau egal cu cel de la predare",
+      "fuelRequired": "Selectează nivelul de combustibil",
+      "damageDescRequired": "Descrierea daunei este obligatorie"
+    }
   }
 }

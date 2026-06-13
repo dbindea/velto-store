@@ -132,6 +132,22 @@ export interface Reservation {
   contractStatus: ReservationContractStatus;
   reservationStatus: ReservationStatus;
 
+  /** Optional inspection snapshots (delivery + return) */
+  deliveryInfo?: {
+    pickupInspectionId?: string;
+    pickupKm?: number;
+    pickupFuelLevel?: string;
+    pickupCompletedAt?: any;
+  };
+
+  returnInfo?: {
+    returnInspectionId?: string;
+    returnKm?: number;
+    returnFuelLevel?: string;
+    returnCompletedAt?: any;
+    extraChargesTotal?: number;
+  };
+
   /**
    * Aggregated financial state, calculated from the payments collection.
    * Optional to keep backward compatibility with existing reservations.

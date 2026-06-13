@@ -270,6 +270,101 @@
       }
     </div>
 
+    <!-- Inspections (Delivery & Return) Section -->
+    <div class="detail-card inspections-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">
+      <div class="card-header">
+        <i class="pi pi-search"></i>
+        <span>{{ 'inspections.sections.deliveryAndReturn' | translate }}</span>
+      </div>
+      <div class="card-content">
+        <div class="inspections-grid">
+          <!-- Pickup column -->
+          <div class="inspection-col">
+            <div class="inspection-col-header">
+              <i class="pi pi-sign-out"></i>
+              <h4>{{ 'inspections.type.pickup' | translate }}</h4>
+            </div>
+            @if (pickupInspection) {
+              <div class="inspection-info">
+                <span class="badge" [ngClass]="'status-' + pickupInspection.status">
+                  {{ getInspectionStatusLabel(pickupInspection.status) }}
+                </span>
+                @if (pickupInspection.km !== undefined) {
+                  <div class="info-line">
+                    <span class="lbl">{{ 'inspections.fields.km' | translate }}:</span>
+                    <span class="val">{{ pickupInspection.km | number }}</span>
+                  </div>
+                }
+                @if (pickupInspection.photos && pickupInspection.photos.length > 0) {
+                  <div class="info-line">
+                    <span class="lbl">{{ 'inspections.sections.photos' | translate }}:</span>
+                    <span class="val">{{ pickupInspection.photos.length }}</span>
+                  </div>
+                }
+              </div>
+              <button class="btn-secondary" type="button" (click)="viewPickup()">
+                <i class="pi pi-eye"></i>
+                {{ 'inspections.actions.view' | translate }}
+              </button>
+            } @else if (canStartPickup()) {
+              <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
+              <button class="btn-primary" type="button" (click)="startPickup()">
+                <i class="pi pi-play"></i>
+                {{ 'inspections.actions.startPickup' | translate }}
+              </button>
+            } @else {
+              <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
+            }
+          </div>
+
+          <!-- Return column -->
+          <div class="inspection-col">
+            <div class="inspection-col-header">
+              <i class="pi pi-sign-in"></i>
+              <h4>{{ 'inspections.type.return' | translate }}</h4>
+            </div>
+            @if (returnInspection) {
+              <div class="inspection-info">
+                <span class="badge" [ngClass]="'status-' + returnInspection.status">
+                  {{ getInspectionStatusLabel(returnInspection.status) }}
+                </span>
+                @if (returnInspection.km !== undefined) {
+                  <div class="info-line">
+                    <span class="lbl">{{ 'inspections.fields.km' | translate }}:</span>
+                    <span class="val">{{ returnInspection.km | number }}</span>
+                  </div>
+                }
+                @if (returnInspection.damages && returnInspection.damages.length > 0) {
+                  <div class="info-line">
+                    <span class="lbl">{{ 'inspections.sections.damages' | translate }}:</span>
+                    <span class="val">{{ returnInspection.damages.length }}</span>
+                  </div>
+                }
+                @if (returnInspection.extraCharges && returnInspection.extraCharges.totalExtraCharges > 0) {
+                  <div class="info-line">
+                    <span class="lbl">{{ 'inspections.extraCharges.total' | translate }}:</span>
+                    <span class="val">{{ returnInspection.extraCharges.totalExtraCharges | number:'1.2-2' }} €</span>
+                  </div>
+                }
+              </div>
+              <button class="btn-secondary" type="button" (click)="viewReturn()">
+                <i class="pi pi-eye"></i>
+                {{ 'inspections.actions.view' | translate }}
+              </button>
+            } @else if (canStartReturn()) {
+              <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
+              <button class="btn-primary" type="button" (click)="startReturn()">
+                <i class="pi pi-play"></i>
+                {{ 'inspections.actions.startReturn' | translate }}
+              </button>
+            } @else {
+              <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Payments & Deposit Section -->
     <div class="detail-card payments-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">
       <div class="card-header">
