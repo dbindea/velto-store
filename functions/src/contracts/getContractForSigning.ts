@@ -22,8 +22,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-
-const db = admin.firestore();
+import { firestore } from '../admin-guard';
 
 interface PublicContractView {
   contractNumber?: string;
@@ -72,10 +71,12 @@ interface Request {
 }
 
 export const getContractForSigning = functions.https.onCall(
-  async (data: Request): Promise<PublicContractView> => {
+  async (request): Promise<PublicContractView> => {
+    const data = request.data as Request;
     if (!data?.token) {
       return invalidView();
     }
+    const db = firestore();
 
     // 1. Find the token document
     const tokenQ = await db.collection('contractSigningTokens')

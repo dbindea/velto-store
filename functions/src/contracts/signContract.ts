@@ -22,9 +22,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { buildContractPdf } from './pdf';
-
-const db = admin.firestore();
-const storage = admin.storage();
+import { firestore, storageBucket } from '../admin-guard';
 
 interface SignRequest {
   token: string;
@@ -60,7 +58,8 @@ function downloadToken(): string {
 }
 
 export const signContract = functions.https.onCall(
-  async (data: SignRequest): Promise<SignResponse> => {
+  async (request): Promise<SignResponse> => {
+    const data = request.data as SignRequest;
     if (!data?.token || !data?.signatureDataUrl) {
       throw new functions.https.HttpsError('invalid-argument', 'Token y firma son requeridos');
     }
@@ -68,6 +67,9 @@ export const signContract = functions.https.onCall(
     if (!decoded) {
       throw new functions.https.HttpsError('invalid-argument', 'Firma no válida');
     }
+
+    const db = firestore();
+    const storage = storageBucket();
 
     // 1. Find the token
     const tokenQ = await db.collection('contractSigningTokens')
@@ -110,7 +112,7 @@ export const signContract = functions.https.onCall(
     }
 
     const reservationId: string = contract.reservationId;
-    const userAgent = data ? (data as any).userAgent : undefined;
+    const userAgent = (request as any).rawRequest?.headers?.['user-agent'];
 
     // 4. Upload signature image
     const sigPath = `contracts/${reservationId}/signature.png`;
