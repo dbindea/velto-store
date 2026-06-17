@@ -17,12 +17,22 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { buildContractPdf } from './pdf';
+import { CONTRACT_CLAUSES, pickBundle } from './clauses';
 import { firestore, storageBucket } from '../admin-guard';
+import type { ContractLocale } from './contract-types';
 
 const VELTO_COMPANY_NAME = process.env.VELTO_COMPANY_NAME || 'Velto Rent';
 const VELTO_COMPANY_EMAIL = process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com';
 const VELTO_COMPANY_PHONE = process.env.VELTO_COMPANY_PHONE || '';
 const VELTO_COMPANY_ADDRESS = process.env.VELTO_COMPANY_ADDRESS || '';
+const VELTO_COMPANY_TAX_ID = process.env.VELTO_COMPANY_TAX_ID || 'B88866900';
+const VELTO_COMPANY_REGISTRY =
+  process.env.VELTO_COMPANY_REGISTRY ||
+  'Sociedad Limitada inscrita en el Registro Mercantil de Madrid, Tomo 45067, Folio 44, Hoja M-793170';
+const VELTO_COMPANY_REP_NAME = process.env.VELTO_COMPANY_REP_NAME || '';
+const VELTO_COMPANY_REP_NIE = process.env.VELTO_COMPANY_REP_NIE || '';
+const VELTO_COMPANY_INSURANCE = process.env.VELTO_COMPANY_INSURANCE || '';
+const VELTO_COMPANY_WEBSITE = process.env.VELTO_COMPANY_WEBSITE || 'www.veltorent.com';
 
 interface GenerateRequest {
   reservationId: string;
@@ -134,14 +144,34 @@ export const generateContractPdf = functions.https.onCall(
     // 6. Determine contract number
     const contractNumber = `C-${reservationId.slice(0, 6).toUpperCase()}-${new Date().getFullYear()}`;
 
+    // 6b. Determine preferred contract locale: prefer reservation metadata,
+    //     then the company default, then 'es'.
+    const preferredLocale: ContractLocale = (() => {
+      const fromReservation = (reservation as any).contractLocale as ContractLocale | undefined;
+      if (fromReservation && CONTRACT_CLAUSES.available.includes(fromReservation)) {
+        return fromReservation;
+      }
+      const fromEnv = (process.env.VELTO_DEFAULT_CONTRACT_LOCALE || 'es') as ContractLocale;
+      if (CONTRACT_CLAUSES.available.includes(fromEnv)) return fromEnv;
+      return 'es';
+    })();
+
     // 7. Build the PDF
     const pdfBytes = await buildContractPdf(
       {
         contractNumber,
-        companyName: VELTO_COMPANY_NAME,
-        companyEmail: VELTO_COMPANY_EMAIL,
-        companyPhone: VELTO_COMPANY_PHONE,
-        companyAddress: VELTO_COMPANY_ADDRESS,
+        company: {
+          legalName: VELTO_COMPANY_NAME,
+          taxId: VELTO_COMPANY_TAX_ID,
+          registry: VELTO_COMPANY_REGISTRY,
+          address: VELTO_COMPANY_ADDRESS,
+          phone: VELTO_COMPANY_PHONE,
+          email: VELTO_COMPANY_EMAIL,
+          website: VELTO_COMPANY_WEBSITE,
+          insurancePolicy: VELTO_COMPANY_INSURANCE,
+          representativeName: VELTO_COMPANY_REP_NAME,
+          representativeNie: VELTO_COMPANY_REP_NIE
+        },
         client: clientSnapshot,
         vehicle: vehicleSnapshot,
         reservation: {
@@ -159,6 +189,8 @@ export const generateContractPdf = functions.https.onCall(
               pickupFuelLevel: pickupInspection.fuelLevel
             }
           : undefined,
+        clauses: CONTRACT_CLAUSES,
+        preferredLocale,
         generatedAt: new Date()
       },
       false
@@ -189,6 +221,7 @@ export const generateContractPdf = functions.https.onCall(
       vehicleId: reservation.vehicleId,
       status: 'generated',
       contractNumber,
+      locale: preferredLocale,
       reservationSnapshot: {
         pickupDateTime: reservation.pickupDateTime,
         returnDateTime: reservation.returnDateTime,
@@ -200,6 +233,21 @@ export const generateContractPdf = functions.https.onCall(
       },
       clientSnapshot,
       vehicleSnapshot,
+      companySnapshot: {
+        legalName: VELTO_COMPANY_NAME,
+        taxId: VELTO_COMPANY_TAX_ID,
+        registry: VELTO_COMPANY_REGISTRY,
+        address: VELTO_COMPANY_ADDRESS,
+        phone: VELTO_COMPANY_PHONE,
+        email: VELTO_COMPANY_EMAIL,
+        website: VELTO_COMPANY_WEBSITE,
+        insurancePolicy: VELTO_COMPANY_INSURANCE,
+        representativeName: VELTO_COMPANY_REP_NAME,
+        representativeNie: VELTO_COMPANY_REP_NIE
+      },
+      // Persist a copy of the clauses bundle so the contract is reproducible
+      // even if clauses.ts is edited later.
+      clauses: CONTRACT_CLAUSES,
       inspectionSnapshot: pickupInspection
         ? {
             pickupKm: pickupInspection.km,

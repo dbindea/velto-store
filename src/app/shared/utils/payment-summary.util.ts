@@ -68,15 +68,18 @@ export function calculateReservationPaymentSummary(
     depositRetentions.reduce((sum, p) => sum + (p.paidAmount || 0), 0)
   );
 
-  // Extra charges
-  const extraCharges = active.filter(p =>
-    p.type === 'extra_charge' ||
-    p.type === 'fuel_charge' ||
-    p.type === 'cleaning_charge' ||
-    p.type === 'extra_km_charge' ||
-    p.type === 'penalty' ||
-    p.type === 'fine'
-  );
+  // Extra charges (any payment whose concept indicates an add-on collected
+  // during or after the rental period).
+  const EXTRA_TYPES: Payment['type'][] = [
+    'extra_fuel',
+    'refuel_penalty',
+    'extra_cleaning',
+    'extra_km',
+    'extra_damage',
+    'extra_fine',
+    'extra_other'
+  ];
+  const extraCharges = active.filter(p => EXTRA_TYPES.includes(p.type));
   const extraChargesTotal = roundMoney(
     extraCharges.reduce((sum, p) => sum + (p.paidAmount || 0), 0)
   );
@@ -100,12 +103,15 @@ export function calculateReservationPaymentSummary(
 
   const balance = roundMoney(totalPaid - refundsTotal);
 
+  // Map to ReservationPaymentStatus. `settled` is reserved for the
+  // post-closure state (rental paid + return processed + deposit
+  // resolved). It is set by ReservationService.closeReservation, not
+  // here.
   const calculatedStatus = calculatePaymentStatus(
     initialPaymentRequired + remainingPaymentRequired,
     initialPaymentPaid + remainingPaymentPaid
   );
-  // Map to ReservationPaymentStatus
-  const paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded' =
+  const paymentStatus: 'pending' | 'partial' | 'paid' =
     calculatedStatus === 'paid' ? 'paid' :
     calculatedStatus === 'partial' ? 'partial' :
     'pending';
@@ -120,8 +126,7 @@ export function calculateReservationPaymentSummary(
     depositPaid,
     depositReturned,
     depositRetained,
-    extraChargesTotal,
-    refundsTotal,
+    extrasTotal: extraChargesTotal,
     totalPaid,
     totalPending,
     balance,

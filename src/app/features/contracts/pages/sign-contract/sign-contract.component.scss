@@ -134,6 +134,41 @@
   border: 1px solid var(--border-color);
 }
 
+.highlights-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.875rem;
+  background: var(--info-bg);
+  border-left: 4px solid var(--accent-color);
+  border-radius: 8px;
+}
+
+.highlights-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-color);
+
+  i { font-size: 1.1rem; }
+}
+
+.highlights-list {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+
+  li::marker { color: var(--accent-color); font-weight: 700; }
+}
+
 .summary-row {
   display: flex;
   justify-content: space-between;

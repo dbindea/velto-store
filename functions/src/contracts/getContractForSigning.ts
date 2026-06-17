@@ -11,6 +11,9 @@
  *   - contract number
  *   - status of the token (active / used / expired / cancelled)
  *   - PDF url so the customer can preview the contract
+ *   - 9 high-level highlights from the contract (the "front page")
+ *   - preferred locale of the body (so the signing page can show
+ *     clauses in es/en/ro)
  *
  * Internal fields (signing token id, original signed path, etc.) are
  * NOT returned. Internal-only fields never leak through this endpoint.
@@ -23,8 +26,10 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { firestore } from '../admin-guard';
+import type { ContractLocale } from './contract-types';
+import { pickBundle } from './clauses';
 
-interface PublicContractView {
+export interface PublicContractView {
   contractNumber?: string;
   clientName: string;
   vehicleLabel: string;
@@ -37,6 +42,10 @@ interface PublicContractView {
   pickupLocation?: string;
   returnLocation?: string;
   pdfUrl?: string;
+  /** The 9 front-page highlights for the public signing page. */
+  highlights: string[];
+  /** Locale of the highlights + clauses; 'es' by default. */
+  locale: ContractLocale;
   status: 'active' | 'used' | 'expired' | 'cancelled' | 'invalid';
   companyName: string;
 }
@@ -122,6 +131,8 @@ export const getContractForSigning = functions.https.onCall(
       pickupLocation: contract.reservationSnapshot?.pickupLocation,
       returnLocation: contract.reservationSnapshot?.returnLocation,
       pdfUrl: contract.pdfUrl,
+      highlights: buildHighlights(contract),
+      locale: resolveLocale(contract),
       status: effectiveStatus,
       companyName: VELTO_COMPANY_NAME
     };
@@ -133,7 +144,37 @@ function invalidView(): PublicContractView {
     clientName: '',
     vehicleLabel: '',
     vehiclePlate: '',
+    highlights: [],
+    locale: 'es',
     status: 'invalid',
     companyName: VELTO_COMPANY_NAME
   };
+}
+
+/**
+ * Pick the highlights (and locale) from the contract's frozen clause
+ * bundle. Falls back to the static import if the contract predates
+ * the schema.
+ */
+function buildHighlights(contract: any): string[] {
+  try {
+    const clauses = contract.clauses;
+    if (clauses && clauses.t) {
+      const { bundle } = pickBundle(clauses, contract.locale);
+      return bundle.highlights;
+    }
+    // Legacy: import the static bundle on demand
+    const { CONTRACT_CLAUSES } = require('./clauses');
+    const { bundle } = pickBundle(CONTRACT_CLAUSES, contract.locale);
+    return bundle.highlights;
+  } catch (err) {
+    functions.logger.warn('Failed to load contract highlights:', err);
+    return [];
+  }
+}
+
+function resolveLocale(contract: any): ContractLocale {
+  const loc = contract.locale as ContractLocale | undefined;
+  if (loc === 'es' || loc === 'en' || loc === 'ro') return loc;
+  return 'es';
 }

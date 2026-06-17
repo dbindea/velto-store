@@ -33,18 +33,36 @@
       <div class="card-content">
         <div class="action-buttons">
           @if (canGenerate()) {
-            <button class="btn-primary" type="button" (click)="generatePdf()" [disabled]="generating">
+            <button
+              class="btn-primary"
+              type="button"
+              (click)="generatePdf()"
+              [disabled]="generating || !canGenerate()"
+              [attr.title]="generateBlockReason() | translate"
+            >
               @if (generating) { <i class="pi pi-spin pi-spinner"></i> }
               @else { <i class="pi pi-file-pdf"></i> }
               {{ 'contracts.actions.generate' | translate }}
             </button>
+            @if (generateBlockReason()) {
+              <small class="action-blocked">{{ generateBlockReason() | translate }}</small>
+            }
           }
           @if (canCreateLink() && !hasActiveLink()) {
-            <button class="btn-secondary" type="button" (click)="createLink()" [disabled]="creatingLink">
+            <button
+              class="btn-secondary"
+              type="button"
+              (click)="createLink()"
+              [disabled]="creatingLink || !canCreateLink()"
+              [attr.title]="createLinkBlockReason() | translate"
+            >
               @if (creatingLink) { <i class="pi pi-spin pi-spinner"></i> }
               @else { <i class="pi pi-link"></i> }
               {{ 'contracts.actions.generateSigningLink' | translate }}
             </button>
+            @if (createLinkBlockReason()) {
+              <small class="action-blocked">{{ createLinkBlockReason() | translate }}</small>
+            }
           }
           @if (hasActiveLink()) {
             <button class="btn-secondary" type="button" (click)="copyLink()">

@@ -10,6 +10,13 @@ import { ContractService } from '@features/contracts/services/contract.service';
 import { Contract, CONTRACT_STATUS_LABELS as CONTRACT_DOC_STATUS_LABELS, CONTRACT_STATUS_COLORS as CONTRACT_DOC_STATUS_COLORS } from '@shared/models/contract.model';
 import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS, CONTRACT_STATUS_LABELS } from '@shared/models/reservation.model';
 import {
+  Workflow,
+  WorkflowDecision,
+  WorkflowContext,
+  canCancelReservation,
+  reasonOf
+} from '@shared/utils/reservation-workflow.util';
+import {
   Payment,
   PaymentMethod,
   PaymentType,
@@ -53,13 +60,13 @@ export class ReservationDetailComponent implements OnInit {
   private copyToastTimer: any;
   loadingPayments = false;
   cancelling = false;
+  closingReservation = false;
   savingPayment = false;
   savingDeposit = false;
 
   // Forms
   showPaymentForm = false;
   showDepositForm = false;
-  showExtraChargeForm = false;
 
   newPayment: {
     type: PaymentType;
@@ -69,15 +76,6 @@ export class ReservationDetailComponent implements OnInit {
     concept: string;
     notes?: string;
   } = { type: 'initial_payment', method: 'cash', amount: 0, paidAmount: 0, concept: '' };
-
-  newExtraCharge: {
-    type: 'extra_charge' | 'fuel_charge' | 'cleaning_charge' | 'extra_km_charge' | 'penalty' | 'fine';
-    method: PaymentMethod;
-    amount: number;
-    paidAmount: number;
-    concept: string;
-    notes?: string;
-  } = { type: 'fuel_charge', method: 'cash', amount: 0, paidAmount: 0, concept: '' };
 
   depositForm: {
     type: 'refund' | 'retain';
@@ -92,12 +90,9 @@ export class ReservationDetailComponent implements OnInit {
   PAYMENT_METHOD_ICONS = PAYMENT_METHOD_ICONS;
 
   paymentTypeOptions: PaymentType[] = [
-    'initial_payment', 'remaining_payment', 'deposit', 'other'
+    'initial_payment', 'remaining_payment', 'rental_payment', 'deposit'
   ];
-  extraChargeTypeOptions: Array<'extra_charge' | 'fuel_charge' | 'cleaning_charge' | 'extra_km_charge' | 'penalty' | 'fine'> = [
-    'fuel_charge', 'cleaning_charge', 'extra_km_charge', 'penalty', 'fine', 'extra_charge'
-  ];
-  methodOptions: PaymentMethod[] = ['cash', 'bank_transfer', 'bizum', 'physical_pos', 'manual_card', 'other'];
+  methodOptions: PaymentMethod[] = ['cash', 'bank_transfer', 'bizum', 'physical_pos', 'redsys', 'manual_card', 'other'];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -201,6 +196,23 @@ export class ReservationDetailComponent implements OnInit {
     return this.reservation ? toDate(this.reservation.pickupDateTime) : new Date();
   }
 
+  async closeReservation(): Promise<void> {
+    if (!this.reservation?.id) return;
+    this.closingReservation = true;
+    try {
+      await this.reservationService.closeReservation(this.reservation.id);
+      if (this.reservation) {
+        this.reservation.reservationStatus = 'closed';
+      }
+    } catch (error: any) {
+      console.error('Error closing reservation:', error);
+      const reason = error?.message || 'workflow.cannotClose';
+      alert(reason);
+    } finally {
+      this.closingReservation = false;
+    }
+  }
+
   getReturnDate(): Date {
     return this.reservation ? toDate(this.reservation.returnDateTime) : new Date();
   }
@@ -223,7 +235,6 @@ export class ReservationDetailComponent implements OnInit {
 
   getStatusClass(status: string): string {
     const statusClasses: Record<string, string> = {
-      quote: 'status-quote',
       reserved: 'status-reserved',
       confirmed: 'status-confirmed',
       delivered: 'status-delivered',
@@ -257,7 +268,7 @@ export class ReservationDetailComponent implements OnInit {
 
   canCancel(): boolean {
     if (!this.reservation) return false;
-    const cancellableStatuses = ['quote', 'reserved'];
+    const cancellableStatuses: Array<typeof this.reservation.reservationStatus> = ['reserved'];
     return cancellableStatuses.includes(this.reservation.reservationStatus);
   }
 
@@ -307,42 +318,6 @@ export class ReservationDetailComponent implements OnInit {
     }
   }
 
-  async registerExtraCharge(): Promise<void> {
-    if (!this.reservation?.id) return;
-    this.savingPayment = true;
-    try {
-      await this.paymentService.createExtraCharge({
-        reservationId: this.reservation.id,
-        clientId: this.reservation.clientId,
-        vehicleId: this.reservation.vehicleId,
-        type: this.newExtraCharge.type,
-        method: this.newExtraCharge.method,
-        amount: this.newExtraCharge.amount,
-        paidAmount: this.newExtraCharge.paidAmount,
-        concept: this.newExtraCharge.concept || this.newExtraCharge.type,
-        notes: this.newExtraCharge.notes,
-        source: 'manual',
-        reservationSnapshot: {
-          pickupDateTime: this.reservation.pickupDateTime,
-          returnDateTime: this.reservation.returnDateTime,
-          totalDays: this.reservation.totalDays,
-          finalPrice: this.reservation.pricingSnapshot?.finalPrice
-        },
-        clientSnapshot: this.reservation.clientSnapshot,
-        vehicleSnapshot: this.reservation.vehicleSnapshot
-      });
-      this.loadPayments(this.reservation.id);
-      this.loadReservation(this.reservation.id);
-      this.showExtraChargeForm = false;
-      this.resetExtraChargeForm();
-    } catch (error) {
-      console.error('Error creating extra charge:', error);
-      alert('Error al añadir el cargo extra');
-    } finally {
-      this.savingPayment = false;
-    }
-  }
-
   async processDeposit(): Promise<void> {
     if (!this.reservation?.id) return;
     this.savingDeposit = true;
@@ -377,14 +352,9 @@ export class ReservationDetailComponent implements OnInit {
     this.newPayment = { type: 'initial_payment', method: 'cash', amount: 0, paidAmount: 0, concept: '' };
   }
 
-  resetExtraChargeForm(): void {
-    this.newExtraCharge = { type: 'fuel_charge', method: 'cash', amount: 0, paidAmount: 0, concept: '' };
-  }
-
   togglePaymentForm(): void {
     this.showPaymentForm = !this.showPaymentForm;
     this.showDepositForm = false;
-    this.showExtraChargeForm = false;
     if (this.showPaymentForm) this.resetPaymentForm();
   }
 
@@ -394,16 +364,8 @@ export class ReservationDetailComponent implements OnInit {
     } else {
       this.showDepositForm = true;
       this.showPaymentForm = false;
-      this.showExtraChargeForm = false;
       this.depositForm = { type, amount: 0, method: 'cash' };
     }
-  }
-
-  toggleExtraChargeForm(): void {
-    this.showExtraChargeForm = !this.showExtraChargeForm;
-    this.showPaymentForm = false;
-    this.showDepositForm = false;
-    if (this.showExtraChargeForm) this.resetExtraChargeForm();
   }
 
   viewPayment(paymentId: string | undefined): void {
@@ -447,13 +409,9 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   get extraChargesTotal(): number {
-    return this.payments
-      .filter(p => p.status !== 'cancelled' && (
-        p.type === 'extra_charge' || p.type === 'fuel_charge' ||
-        p.type === 'cleaning_charge' || p.type === 'extra_km_charge' ||
-        p.type === 'penalty' || p.type === 'fine'
-      ))
-      .reduce((sum, p) => sum + p.paidAmount, 0);
+    // Always derived from the denormalized summary so we don't double-count
+    // when the inspection service also pushes extras to the collection.
+    return this.reservation?.paymentSummary?.extrasTotal || 0;
   }
 
   getDueDate(payment: Payment): Date | null {
@@ -461,18 +419,84 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   // === Inspection helpers ===
+  // These wrappers delegate to the central reservation-workflow util so
+  // the UI and the service agree on what is allowed at every step. The
+  // returned `WorkflowDecision` exposes the reason key for tooltips.
 
+  private get workflowCtx(): WorkflowContext | null {
+    if (!this.reservation) return null;
+    return {
+      reservation: this.reservation,
+      pickupInspection: this.pickupInspection,
+      returnInspection: this.returnInspection,
+      contract: this.contract
+    } as WorkflowContext;
+  }
+
+  /** Returns the workflow decision for "start pickup inspection". */
+  startPickupDecision(): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return Workflow.canStartPickup(ctx);
+  }
+
+  /** Boolean shorthand used by the template @if/@else blocks. */
   canStartPickup(): boolean {
-    if (!this.reservation) return false;
-    if (this.pickupInspection?.status === 'completed') return false;
-    return ['reserved', 'confirmed', 'quoted', 'quote'].includes(this.reservation.reservationStatus);
+    return this.startPickupDecision().ok;
+  }
+
+  /** Tooltip key when canStartPickup() is false. */
+  startPickupBlockReason(): string {
+    return reasonOf(this.startPickupDecision());
+  }
+
+  startReturnDecision(): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return Workflow.canStartReturn(ctx);
   }
 
   canStartReturn(): boolean {
-    if (!this.reservation) return false;
-    if (this.pickupInspection?.status !== 'completed') return false;
-    if (this.returnInspection?.status === 'completed') return false;
-    return this.reservation.reservationStatus === 'delivered';
+    return this.startReturnDecision().ok;
+  }
+
+  startReturnBlockReason(): string {
+    return reasonOf(this.startReturnDecision());
+  }
+
+  closeReservationDecision(): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return Workflow.canCloseReservation(ctx);
+  }
+
+  canCloseReservation(): boolean {
+    return this.closeReservationDecision().ok;
+  }
+
+  closeReservationBlockReason(): string {
+    return reasonOf(this.closeReservationDecision());
+  }
+
+  cancelReservationDecision(): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return canCancelReservation(ctx);
+  }
+
+  canCancelReservation(): boolean {
+    return this.cancelReservationDecision().ok;
+  }
+
+  cancelReservationBlockReason(): string {
+    return reasonOf(this.cancelReservationDecision());
+  }
+
+  /** One-line next required action for the dashboard / header chip. */
+  nextRequiredAction(): string {
+    const ctx = this.workflowCtx;
+    if (!ctx) return 'workflow.missingReservation';
+    return Workflow.getReservationNextRequiredAction(ctx);
   }
 
   startPickup(): void {
@@ -503,15 +527,32 @@ export class ReservationDetailComponent implements OnInit {
 
   // === Contract ===
 
+  generateContractDecision(): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return Workflow.canGenerateContract(ctx);
+  }
+
   canGenerateContract(): boolean {
-    if (!this.reservation) return false;
-    if (!this.contract) return true;
-    return ['draft', 'cancelled', 'expired'].includes(this.contract.status);
+    return this.generateContractDecision().ok;
+  }
+
+  generateContractBlockReason(): string {
+    return reasonOf(this.generateContractDecision());
+  }
+
+  createSigningLinkDecision(): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return Workflow.canGenerateSigningLink(ctx);
   }
 
   canCreateContractSigningLink(): boolean {
-    if (!this.contract) return false;
-    return ['generated', 'draft', 'cancelled', 'expired'].includes(this.contract.status);
+    return this.createSigningLinkDecision().ok;
+  }
+
+  createSigningLinkBlockReason(): string {
+    return reasonOf(this.createSigningLinkDecision());
   }
 
   hasActiveSigningLink(): boolean {

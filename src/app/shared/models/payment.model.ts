@@ -9,6 +9,9 @@
  * 
  * The full payment list is the source of truth.
  * A summary is also stored in the reservation for quick display.
+ *
+ * PaymentType keeps the categories narrow on purpose: only those the UI
+ * actually surfaces. Anything else goes through `extra_other`.
  */
 
 export type PaymentType =
@@ -18,13 +21,13 @@ export type PaymentType =
   | 'deposit'              // Fianza cobrada
   | 'deposit_refund'       // Devolución de fianza
   | 'deposit_retention'    // Retención de fianza
-  | 'extra_charge'         // Cargo extra genérico
-  | 'fuel_charge'          // Combustible faltante
-  | 'cleaning_charge'      // Limpieza especial
-  | 'extra_km_charge'      // Kilómetros extra
-  | 'penalty'              // Penalización (ej: repostaje)
-  | 'fine'                 // Multa
-  | 'other';
+  | 'extra_fuel'           // Combustible faltante
+  | 'refuel_penalty'       // Penalización por no repostar
+  | 'extra_cleaning'       // Limpieza especial
+  | 'extra_km'             // Kilómetros extra
+  | 'extra_damage'         // Daños nuevos
+  | 'extra_fine'           // Multas
+  | 'extra_other';         // Otros cargos
 
 export type PaymentDirection =
   | 'income'      // Cobro al cliente (pagos normales, fianza)
@@ -132,13 +135,13 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   deposit: 'payments.types.deposit',
   deposit_refund: 'payments.types.depositRefund',
   deposit_retention: 'payments.types.depositRetention',
-  extra_charge: 'payments.types.extraCharge',
-  fuel_charge: 'payments.types.fuelCharge',
-  cleaning_charge: 'payments.types.cleaningCharge',
-  extra_km_charge: 'payments.types.extraKmCharge',
-  penalty: 'payments.types.penalty',
-  fine: 'payments.types.fine',
-  other: 'payments.types.other'
+  extra_fuel: 'payments.types.extraFuel',
+  refuel_penalty: 'payments.types.refuelPenalty',
+  extra_cleaning: 'payments.types.extraCleaning',
+  extra_km: 'payments.types.extraKm',
+  extra_damage: 'payments.types.extraDamage',
+  extra_fine: 'payments.types.extraFine',
+  extra_other: 'payments.types.extraOther'
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

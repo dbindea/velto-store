@@ -29,7 +29,6 @@ export class ReservationListComponent implements OnInit {
   // Status options for filter
   statusOptions: Array<{ value: ReservationStatus | 'all'; label: string }> = [
     { value: 'all', label: 'common.all' },
-    { value: 'quote', label: 'reservations.status.quote' },
     { value: 'reserved', label: 'reservations.status.reserved' },
     { value: 'confirmed', label: 'reservations.status.confirmed' },
     { value: 'delivered', label: 'reservations.status.delivered' },
@@ -114,7 +113,6 @@ export class ReservationListComponent implements OnInit {
 
   getStatusClass(status: ReservationStatus): string {
     const statusClasses: Record<ReservationStatus, string> = {
-      quote: 'status-quote',
       reserved: 'status-reserved',
       confirmed: 'status-confirmed',
       delivered: 'status-delivered',

@@ -112,6 +112,16 @@
   gap: 0.5rem;
 }
 
+.action-blocked {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--warning-color);
+  background: var(--warning-bg);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+}
+
 .btn-primary,
 .btn-secondary,
 .btn-warn {

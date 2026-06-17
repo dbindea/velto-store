@@ -219,10 +219,11 @@
                     <i class="pi pi-spin pi-spinner uploading"></i>
                   }
                 </label>
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-                  (change)="onDocumentSelected($event, type)"
+                  capture="environment"
+                  (change)="onDocumentSelectedFromInput($event, type)"
                   [disabled]="uploadingType !== null"
                   class="upload-input">
               </div>

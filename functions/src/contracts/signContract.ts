@@ -134,14 +134,37 @@ export const signContract = functions.https.onCall(
     const VELTO_COMPANY_EMAIL = process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com';
     const VELTO_COMPANY_PHONE = process.env.VELTO_COMPANY_PHONE || '';
     const VELTO_COMPANY_ADDRESS = process.env.VELTO_COMPANY_ADDRESS || '';
+    const VELTO_COMPANY_TAX_ID = process.env.VELTO_COMPANY_TAX_ID || 'B88866900';
+    const VELTO_COMPANY_REGISTRY = process.env.VELTO_COMPANY_REGISTRY || '';
+    const VELTO_COMPANY_WEBSITE = process.env.VELTO_COMPANY_WEBSITE || 'www.veltorent.com';
+    const VELTO_COMPANY_INSURANCE = process.env.VELTO_COMPANY_INSURANCE || '';
+    const VELTO_COMPANY_REP_NAME = process.env.VELTO_COMPANY_REP_NAME || '';
+    const VELTO_COMPANY_REP_NIE = process.env.VELTO_COMPANY_REP_NIE || '';
+
+    // Use the persisted clauses bundle (frozen at generation time), falling
+    // back to the current static bundle if the contract predates the schema.
+    let clauses = contract.clauses;
+    if (!clauses) {
+      const { CONTRACT_CLAUSES } = await import('./clauses');
+      clauses = CONTRACT_CLAUSES;
+    }
+    const companySnapshot = contract.companySnapshot || {
+      legalName: VELTO_COMPANY_NAME,
+      taxId: VELTO_COMPANY_TAX_ID,
+      registry: VELTO_COMPANY_REGISTRY,
+      address: VELTO_COMPANY_ADDRESS,
+      phone: VELTO_COMPANY_PHONE,
+      email: VELTO_COMPANY_EMAIL,
+      website: VELTO_COMPANY_WEBSITE,
+      insurancePolicy: VELTO_COMPANY_INSURANCE,
+      representativeName: VELTO_COMPANY_REP_NAME,
+      representativeNie: VELTO_COMPANY_REP_NIE
+    };
 
     const signedPdfBytes = await buildContractPdf(
       {
         contractNumber: contract.contractNumber,
-        companyName: VELTO_COMPANY_NAME,
-        companyEmail: VELTO_COMPANY_EMAIL,
-        companyPhone: VELTO_COMPANY_PHONE,
-        companyAddress: VELTO_COMPANY_ADDRESS,
+        company: companySnapshot,
         client: {
           fullName: contract.clientSnapshot?.fullName || '',
           documentType: contract.clientSnapshot?.documentType,
@@ -175,6 +198,8 @@ export const signContract = functions.https.onCall(
               returnFuelLevel: contract.inspectionSnapshot.returnFuelLevel
             }
           : undefined,
+        clauses,
+        preferredLocale: contract.locale,
         generatedAt: toDate(contract.generatedAt) || toDate(contract.createdAt),
         signaturePng: new Uint8Array(decoded.buffer),
         signedAt: now,

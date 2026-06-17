@@ -19,6 +19,16 @@
       </div>
     </div>
 
+    @if (workflowBlockReason) {
+      <div class="workflow-block">
+        <i class="pi pi-exclamation-triangle"></i>
+        <div>
+          <strong>{{ 'workflow.blockedAction' | translate }}</strong>
+          <p>{{ workflowBlockReason | translate }}</p>
+        </div>
+      </div>
+    }
+
     <div class="form-grid">
       <!-- Reservation summary -->
       <div class="form-section">
@@ -134,16 +144,30 @@
 
         <div class="photo-categories">
           @for (cat of photoCategories; track cat) {
-            <label class="upload-btn">
-              <i class="pi pi-camera"></i>
-              <span>{{ PHOTO_CATEGORY_LABELS[cat] | translate }}</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-                (change)="onPhotoSelected($event, cat)"
-                [disabled]="uploadingPhoto"
-                hidden>
-            </label>
+            <div class="photo-category-row">
+              <span class="photo-category-label">{{ PHOTO_CATEGORY_LABELS[cat] | translate }}</span>
+              <div class="photo-category-actions">
+                <label class="upload-btn upload-btn--camera">
+                  <i class="pi pi-camera"></i>
+                  <span class="btn-label">{{ 'photos.takePhoto' | translate }}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    capture="environment"
+                    (change)="onPhotoSelected($event, cat)"
+                    [disabled]="uploadingPhoto">
+                </label>
+                <label class="upload-btn upload-btn--gallery">
+                  <i class="pi pi-image"></i>
+                  <span class="btn-label">{{ 'photos.uploadFromGallery' | translate }}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    (change)="onPhotoSelected($event, cat)"
+                    [disabled]="uploadingPhoto">
+                </label>
+              </div>
+            </div>
           }
         </div>
 

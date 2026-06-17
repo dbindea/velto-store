@@ -12,6 +12,13 @@ import {
   CONTRACT_STATUS_COLORS
 } from '@shared/models/contract.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import {
+  Workflow,
+  WorkflowContext,
+  WorkflowDecision,
+  canGenerateSigningLink,
+  reasonOf
+} from '@shared/utils/reservation-workflow.util';
 
 @Component({
   selector: 'app-contract-detail',
@@ -245,13 +252,35 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     return CONTRACT_STATUS_COLORS[status as keyof typeof CONTRACT_STATUS_COLORS] || '';
   }
 
+  generateDecision(): WorkflowDecision {
+    if (!this.contract) {
+      return { ok: false, reason: 'workflow.missingContract' };
+    }
+    return Workflow.canGenerateContract({
+      reservation: {} as any,
+      contract: this.contract
+    } as WorkflowContext);
+  }
   canGenerate(): boolean {
-    if (!this.contract) return false;
-    return ['draft', 'cancelled', 'expired'].includes(this.contract.status);
+    return this.generateDecision().ok;
+  }
+  generateBlockReason(): string {
+    return reasonOf(this.generateDecision());
+  }
+  createLinkDecision(): WorkflowDecision {
+    if (!this.contract) {
+      return { ok: false, reason: 'workflow.missingContract' };
+    }
+    return canGenerateSigningLink({
+      reservation: {} as any,
+      contract: this.contract
+    } as WorkflowContext);
   }
   canCreateLink(): boolean {
-    if (!this.contract) return false;
-    return ['generated', 'draft', 'cancelled', 'expired'].includes(this.contract.status);
+    return this.createLinkDecision().ok;
+  }
+  createLinkBlockReason(): string {
+    return reasonOf(this.createLinkDecision());
   }
   hasActiveLink(): boolean {
     return this.contract?.status === 'pending_signature';

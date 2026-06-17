@@ -13,8 +13,8 @@ import {
   where
 } from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
-import { Observable, from } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, from, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import {
   Inspection,
   InspectionType,
@@ -27,7 +27,14 @@ import {
 } from '@shared/models/inspection.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { PaymentService } from '@features/payments/services/payment.service';
+import { ContractService } from '@features/contracts/services/contract.service';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import {
+  Workflow,
+  WorkflowContext,
+  canStartPickup as assertCanStartPickup,
+  canStartReturn as assertCanStartReturn
+} from '@shared/utils/reservation-workflow.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 
 @Injectable({ providedIn: 'root' })
@@ -36,6 +43,7 @@ export class InspectionService {
   private storage = inject(Storage);
   private inspectionsRef: CollectionReference;
   private paymentService = inject(PaymentService);
+  private contractService = inject(ContractService);
 
   constructor() {
     this.inspectionsRef = collection(this.firestore, 'inspections');
@@ -146,7 +154,24 @@ export class InspectionService {
     const reservation = await this.getReservationData(reservationId);
     if (!reservation) throw new Error('Reservation not found');
 
+    // Workflow guard: refuse to deliver the vehicle if the reservation has
+    // not been paid, the contract has not been signed, or the deposit has
+    // not been settled. The UI hides the button when this fails, but the
+    // service must enforce it too.
     const existing = await this.getInspectionByReservationAndType(reservationId, 'pickup');
+    const contract = (await this.contractService
+      .getContractByReservation(reservationId)
+      .toPromise()) || null;
+    const pickupInspection = existing || null;
+    const decision = assertCanStartPickup({
+      reservation,
+      pickupInspection,
+      contract
+    } as WorkflowContext);
+    if (!decision.ok) {
+      throw new Error(decision.reason);
+    }
+
     const baseData: Partial<Inspection> = {
       reservationId,
       vehicleId: reservation.vehicleId,
@@ -232,7 +257,18 @@ export class InspectionService {
     const reservation = await this.getReservationData(reservationId);
     if (!reservation) throw new Error('Reservation not found');
 
+    // Workflow guard: return only allowed after a completed pickup.
     const existing = await this.getInspectionByReservationAndType(reservationId, 'return');
+    const pickup = await this.getInspectionByReservationAndType(reservationId, 'pickup');
+    const decision = assertCanStartReturn({
+      reservation,
+      pickupInspection: pickup || null,
+      returnInspection: existing || null
+    } as WorkflowContext);
+    if (!decision.ok) {
+      throw new Error(decision.reason);
+    }
+
     const baseData: Partial<Inspection> = {
       reservationId,
       vehicleId: reservation.vehicleId,
@@ -408,25 +444,42 @@ export class InspectionService {
   }
 
   /**
-   * Create payment records for each non-zero extra charge
+   * Create payment records for each non-zero extra charge. Each entry
+   * uses the simplified PaymentConcept taxonomy:
+   *   - extra_km       for km overage
+   *   - extra_fuel     for missing fuel
+   *   - refuel_penalty for not refuelling back to the pickup level
+   *   - extra_cleaning for special cleaning
+   *   - extra_damage   for new damage
+   *   - extra_fine     for fines
+   *   - extra_other    for everything else
    */
   private async createExtraChargePayments(
     reservation: Reservation,
     extra: InspectionExtraCharges
   ): Promise<void> {
-    const map: Array<{ amount?: number; type: 'extra_charge' | 'extra_km_charge' | 'fuel_charge' | 'cleaning_charge' | 'penalty' | 'fine'; concept: string }> = [
-      { amount: extra.extraKmCharge, type: 'extra_km_charge', concept: 'Cargos entrega/devolución: kilómetros extra' },
-      { amount: extra.fuelCharge, type: 'fuel_charge', concept: 'Cargos entrega/devolución: combustible' },
-      { amount: extra.refuelPenalty, type: 'penalty', concept: 'Cargos entrega/devolución: penalización repostaje' },
-      { amount: extra.cleaningCharge, type: 'cleaning_charge', concept: 'Cargos entrega/devolución: limpieza' },
-      { amount: extra.damageCharge, type: 'extra_charge', concept: 'Cargos entrega/devolución: daños' },
-      { amount: extra.fineCharge, type: 'fine', concept: 'Cargos entrega/devolución: multa' },
-      { amount: extra.otherCharge, type: 'extra_charge', concept: 'Cargos entrega/devolución: otros' }
+    type ChargeConcept =
+      | 'extra_km'
+      | 'extra_fuel'
+      | 'refuel_penalty'
+      | 'extra_cleaning'
+      | 'extra_damage'
+      | 'extra_fine'
+      | 'extra_other';
+
+    const map: Array<{ amount?: number; type: ChargeConcept; concept: string }> = [
+      { amount: extra.extraKmCharge, type: 'extra_km', concept: 'Cargos devolución: kilómetros extra' },
+      { amount: extra.fuelCharge, type: 'extra_fuel', concept: 'Cargos devolución: combustible' },
+      { amount: extra.refuelPenalty, type: 'refuel_penalty', concept: 'Cargos devolución: penalización repostaje' },
+      { amount: extra.cleaningCharge, type: 'extra_cleaning', concept: 'Cargos devolución: limpieza' },
+      { amount: extra.damageCharge, type: 'extra_damage', concept: 'Cargos devolución: daños' },
+      { amount: extra.fineCharge, type: 'extra_fine', concept: 'Cargos devolución: multa' },
+      { amount: extra.otherCharge, type: 'extra_other', concept: 'Cargos devolución: otros' }
     ];
 
     for (const item of map) {
       if (item.amount && item.amount > 0) {
-        await this.paymentService.createExtraCharge({
+        await this.paymentService.createManualPayment({
           reservationId: reservation.id!,
           clientId: reservation.clientId,
           vehicleId: reservation.vehicleId,

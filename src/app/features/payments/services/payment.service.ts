@@ -48,10 +48,6 @@ export interface CreateManualPaymentData {
   vehicleSnapshot?: Payment['vehicleSnapshot'];
 }
 
-export interface CreateExtraChargeData extends Omit<CreateManualPaymentData, 'type'> {
-  type: 'extra_charge' | 'fuel_charge' | 'cleaning_charge' | 'extra_km_charge' | 'penalty' | 'fine';
-}
-
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private firestore = inject(Firestore);
@@ -134,9 +130,10 @@ export class PaymentService {
     const direction: 'income' | 'refund' | 'retention' | 'charge' =
       data.type === 'deposit_refund' ? 'refund' :
       data.type === 'deposit_retention' ? 'retention' :
-      (data.type === 'extra_charge' || data.type === 'fuel_charge' ||
-       data.type === 'cleaning_charge' || data.type === 'extra_km_charge' ||
-       data.type === 'penalty' || data.type === 'fine') ? 'charge' :
+      (data.type === 'extra_fuel' || data.type === 'refuel_penalty' ||
+       data.type === 'extra_cleaning' || data.type === 'extra_km' ||
+       data.type === 'extra_damage' || data.type === 'extra_fine' ||
+       data.type === 'extra_other') ? 'charge' :
       'income';
 
     const payment: Payment = {
@@ -166,13 +163,6 @@ export class PaymentService {
     const docRef = await addDoc(this.paymentsRef, this.cleanData(payment));
     await this.recalculateReservationPaymentSummary(data.reservationId);
     return docRef.id;
-  }
-
-  /**
-   * Create an extra charge (fuel, cleaning, extra km, penalty, fine).
-   */
-  async createExtraCharge(data: CreateExtraChargeData): Promise<string> {
-    return this.createManualPayment({ ...data, source: data.source || 'manual' });
   }
 
   /**

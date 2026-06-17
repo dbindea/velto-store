@@ -21,6 +21,38 @@
         <p class="subtitle">
           {{ 'reservations.fields.totalDays' | translate }}: {{ reservation.totalDays }}
         </p>
+        @if (reservation.reservationStatus !== 'closed' && reservation.reservationStatus !== 'cancelled') {
+          <p class="next-action">
+            <i class="pi pi-arrow-right"></i>
+            <strong>{{ 'workflow.nextAction' | translate }}:</strong>
+            {{ nextRequiredAction() | translate }}
+          </p>
+        }
+        <div class="header-actions">
+          @if (canCloseReservation()) {
+            <button
+              class="btn-primary"
+              type="button"
+              (click)="closeReservation()"
+              [disabled]="closingReservation"
+            >
+              @if (closingReservation) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-check-circle"></i> }
+              {{ 'reservations.actions.close' | translate }}
+            </button>
+          } @else if (reservation.reservationStatus === 'returned') {
+            <button
+              class="btn-primary"
+              type="button"
+              disabled
+              [attr.title]="closeReservationBlockReason() | translate"
+            >
+              <i class="pi pi-check-circle"></i>
+              {{ 'reservations.actions.close' | translate }}
+            </button>
+            <small class="action-blocked">{{ closeReservationBlockReason() | translate }}</small>
+          }
+        </div>
       </div>
     </div>
 
@@ -231,11 +263,6 @@
               </span>
             </div>
           </div>
-
-          <p class="future-note">
-            <i class="pi pi-info-circle"></i>
-            {{ 'reservations.placeholders.paymentsFuture' | translate }}
-          </p>
         </div>
       </div>
 
@@ -249,10 +276,6 @@
           <span class="contract-status" [ngClass]="reservation.contractStatus === 'signed' ? 'status-signed' : 'status-pending'">
             {{ getContractLabel(reservation.contractStatus) }}
           </span>
-          <p class="future-note">
-            <i class="pi pi-info-circle"></i>
-            {{ 'reservations.placeholders.contractFuture' | translate }}
-          </p>
         </div>
       </div>
 
@@ -306,14 +329,21 @@
                 <i class="pi pi-eye"></i>
                 {{ 'inspections.actions.view' | translate }}
               </button>
-            } @else if (canStartPickup()) {
+            } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
-              <button class="btn-primary" type="button" (click)="startPickup()">
+              <button
+                class="btn-primary"
+                type="button"
+                [disabled]="!canStartPickup()"
+                [attr.title]="startPickupBlockReason() | translate"
+                (click)="startPickup()"
+              >
                 <i class="pi pi-play"></i>
                 {{ 'inspections.actions.startPickup' | translate }}
               </button>
-            } @else {
-              <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
+              @if (startPickupBlockReason()) {
+                <small class="action-blocked">{{ startPickupBlockReason() | translate }}</small>
+              }
             }
           </div>
 
@@ -351,13 +381,21 @@
                 <i class="pi pi-eye"></i>
                 {{ 'inspections.actions.view' | translate }}
               </button>
-            } @else if (canStartReturn()) {
+            } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
-              <button class="btn-primary" type="button" (click)="startReturn()">
+              <button
+                class="btn-primary"
+                type="button"
+                [disabled]="!canStartReturn()"
+                [attr.title]="startReturnBlockReason() | translate"
+                (click)="startReturn()"
+              >
                 <i class="pi pi-play"></i>
                 {{ 'inspections.actions.startReturn' | translate }}
               </button>
-            } @else {
+              @if (startReturnBlockReason()) {
+                <small class="action-blocked">{{ startReturnBlockReason() | translate }}</small>
+              }
               <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
             }
           </div>
@@ -378,15 +416,30 @@
       </div>
       <div class="card-content">
         <div class="contract-actions">
-          @if (canGenerateContract()) {
-            <button class="btn-primary" type="button" (click)="generateContract()" [disabled]="generatingContract">
+          @if (!contract || canGenerateContract()) {
+            <button
+              class="btn-primary"
+              type="button"
+              (click)="generateContract()"
+              [disabled]="generatingContract || !canGenerateContract()"
+              [attr.title]="generateContractBlockReason() | translate"
+            >
               @if (generatingContract) { <i class="pi pi-spin pi-spinner"></i> }
               @else { <i class="pi pi-file-pdf"></i> }
               {{ 'contracts.actions.generate' | translate }}
             </button>
+            @if (generateContractBlockReason()) {
+              <small class="action-blocked">{{ generateContractBlockReason() | translate }}</small>
+            }
           }
           @if (contract && canCreateContractSigningLink() && !hasActiveSigningLink()) {
-            <button class="btn-secondary" type="button" (click)="createContractSigningLink()" [disabled]="creatingSigningLink">
+            <button
+              class="btn-secondary"
+              type="button"
+              (click)="createContractSigningLink()"
+              [disabled]="creatingSigningLink || !canCreateContractSigningLink()"
+              [attr.title]="createSigningLinkBlockReason() | translate"
+            >
               @if (creatingSigningLink) { <i class="pi pi-spin pi-spinner"></i> }
               @else { <i class="pi pi-link"></i> }
               {{ 'contracts.actions.generateSigningLink' | translate }}
@@ -516,10 +569,6 @@
             <i class="pi pi-plus"></i>
             {{ 'payments.registerPayment' | translate }}
           </button>
-          <button class="btn-secondary" type="button" (click)="toggleExtraChargeForm()">
-            <i class="pi pi-plus"></i>
-            {{ 'payments.extraCharges.add' | translate }}
-          </button>
           <button class="btn-secondary" type="button" (click)="toggleDepositForm('refund')">
             <i class="pi pi-undo"></i>
             {{ 'payments.deposit.refundFull' | translate }}
@@ -571,54 +620,6 @@
             <div class="form-actions">
               <button class="btn-secondary" type="button" (click)="showPaymentForm = false">Cancelar</button>
               <button class="btn-primary" type="button" [disabled]="savingPayment" (click)="registerPayment()">
-                <i class="pi pi-check"></i>
-                {{ 'common.save' | translate }}
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Extra Charge Form -->
-        @if (showExtraChargeForm) {
-          <div class="inline-form">
-            <h4>{{ 'payments.extraCharges.add' | translate }}</h4>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>{{ 'payments.fields.type' | translate }}</label>
-                <select class="form-control" [(ngModel)]="newExtraCharge.type" name="ectype">
-                  @for (t of extraChargeTypeOptions; track t) {
-                    <option [value]="t">{{ PAYMENT_TYPE_LABELS[t] | translate }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group">
-                <label>{{ 'payments.fields.amount' | translate }}</label>
-                <input type="number" class="form-control" [(ngModel)]="newExtraCharge.amount" name="eamount" min="0" step="0.01">
-              </div>
-              <div class="form-group">
-                <label>{{ 'payments.fields.paidAmount' | translate }}</label>
-                <input type="number" class="form-control" [(ngModel)]="newExtraCharge.paidAmount" name="epaid" min="0" step="0.01">
-              </div>
-              <div class="form-group">
-                <label>{{ 'payments.fields.method' | translate }}</label>
-                <select class="form-control" [(ngModel)]="newExtraCharge.method" name="emethod">
-                  @for (m of methodOptions; track m) {
-                    <option [value]="m">{{ PAYMENT_METHOD_LABELS[m] | translate }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-group full">
-                <label>{{ 'payments.fields.concept' | translate }}</label>
-                <input type="text" class="form-control" [(ngModel)]="newExtraCharge.concept" name="econcept">
-              </div>
-              <div class="form-group full">
-                <label>{{ 'payments.fields.notes' | translate }}</label>
-                <input type="text" class="form-control" [(ngModel)]="newExtraCharge.notes" name="enotes">
-              </div>
-            </div>
-            <div class="form-actions">
-              <button class="btn-secondary" type="button" (click)="showExtraChargeForm = false">Cancelar</button>
-              <button class="btn-primary" type="button" [disabled]="savingPayment" (click)="registerExtraCharge()">
                 <i class="pi pi-check"></i>
                 {{ 'common.save' | translate }}
               </button>
@@ -705,6 +706,16 @@
           class="btn-danger"
           type="button"
           (click)="openCancelModal()">
+          <i class="pi pi-times"></i>
+          {{ 'reservations.actions.cancel' | translate }}
+        </button>
+      } @else if (reservation.reservationStatus === 'reserved' || reservation.reservationStatus === 'confirmed') {
+        <button
+          class="btn-danger"
+          type="button"
+          disabled
+          [attr.title]="cancelReservationBlockReason() | translate"
+        >
           <i class="pi pi-times"></i>
           {{ 'reservations.actions.cancel' | translate }}
         </button>

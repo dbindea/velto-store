@@ -20,6 +20,8 @@ interface PublicContractView {
   pickupLocation?: string;
   returnLocation?: string;
   pdfUrl?: string;
+  highlights: string[];
+  locale: 'es' | 'en' | 'ro';
   status: 'active' | 'expired' | 'used' | 'cancelled' | 'invalid';
   companyName?: string;
 }
@@ -74,7 +76,9 @@ export class SignContractComponent implements OnInit {
           status: 'invalid',
           clientName: '',
           vehicleLabel: '',
-          vehiclePlate: ''
+          vehiclePlate: '',
+          highlights: [],
+          locale: 'es'
         };
         this.errored = true;
         this.loading = false;

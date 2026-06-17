@@ -1,20 +1,189 @@
-<div class="page-container">
+<div class="page">
   <div class="page-header">
     <h1>{{ 'dashboard.title' | translate }}</h1>
-    <p>{{ 'dashboard.subtitle' | translate }}</p>
+    <p class="subtitle">{{ 'dashboard.subtitle' | translate }}</p>
   </div>
 
-  <div class="stats-grid">
-    @for (stat of stats; track stat.labelKey) {
-      <div class="stat-card" [class]="'stat-' + stat.color">
-        <div class="stat-info">
-          <p class="stat-label">{{ stat.labelKey | translate }}</p>
-          <p class="stat-value">{{ stat.value }}</p>
-        </div>
-        <div class="stat-icon">
-          <i [class]="stat.iconClass"></i>
-        </div>
-      </div>
-    }
-  </div>
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (cards.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-check-circle"></i>
+      <h2>{{ 'dashboard.allClearTitle' | translate }}</h2>
+      <p>{{ 'dashboard.allClearHint' | translate }}</p>
+    </div>
+  } @else {
+    <div class="cards-grid">
+      @for (card of cards; track $index) {
+        <!-- Fleet availability (always shown) -->
+        @if (card.type === 'fleet') {
+          <div class="card fleet-card" (click)="openVehicles()">
+            <div class="card-header">
+              <i class="pi pi-car fleet-icon"></i>
+              <span class="card-label">{{ 'dashboard.fleet.label' | translate }}</span>
+            </div>
+            <div class="card-stats">
+              <div class="stat">
+                <span class="stat-value stat-available">{{ card.available }}</span>
+                <span class="stat-label">{{ 'dashboard.fleet.available' | translate }}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-value stat-rented">{{ card.rented }}</span>
+                <span class="stat-label">{{ 'dashboard.fleet.rented' | translate }}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-value stat-muted">{{ card.total }}</span>
+                <span class="stat-label">{{ 'dashboard.fleet.total' | translate }}</span>
+              </div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewAll' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        <!-- Reservations awaiting first payment -->
+        @if (card.type === 'pending_payment') {
+          <div class="card warning-card" (click)="openReservation(card.reservation.id)">
+            <div class="card-header">
+              <i class="pi pi-wallet"></i>
+              <span class="card-label">{{ 'dashboard.pendingPayment.label' | translate }}</span>
+            </div>
+            <div class="card-body">
+              <div class="big-number">{{ card.pendingAmount | number:'1.2-2' }} €</div>
+              <div class="card-context">
+                {{ card.reservation.clientSnapshot.fullName }}
+                · {{ card.reservation.vehicleSnapshot.brand }} {{ card.reservation.vehicleSnapshot.model }}
+              </div>
+              <div class="card-subtext">{{ 'dashboard.pendingPayment.hint' | translate }}</div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewReservation' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        <!-- Contracts awaiting signature -->
+        @if (card.type === 'pending_signature') {
+          <div class="card warning-card" (click)="openContract(card.contract.id)">
+            <div class="card-header">
+              <i class="pi pi-file-edit"></i>
+              <span class="card-label">{{ 'dashboard.pendingSignature.label' | translate }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-context">
+                {{ card.contract.clientSnapshot.fullName }}
+                · {{ card.contract.vehicleSnapshot.brand }} {{ card.contract.vehicleSnapshot.model }}
+              </div>
+              <div class="card-subtext">{{ 'dashboard.pendingSignature.hint' | translate }}</div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewContract' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        <!-- Pickups scheduled for today -->
+        @if (card.type === 'pickup_today') {
+          <div class="card info-card" (click)="openReservation(card.reservation.id)">
+            <div class="card-header">
+              <i class="pi pi-sign-out"></i>
+              <span class="card-label">{{ 'dashboard.pickupToday.label' | translate }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-context">
+                {{ card.reservation.clientSnapshot.fullName }}
+                · {{ card.reservation.vehicleSnapshot.brand }} {{ card.reservation.vehicleSnapshot.model }}
+              </div>
+              <div class="card-subtext">
+                <i class="pi pi-clock"></i>
+                {{ 'dashboard.pickupToday.at' | translate }}
+                @if (card.reservation.pickupDateTime) {
+                  {{ card.reservation.pickupDateTime | date:'HH:mm' }}
+                }
+              </div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewReservation' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        <!-- Returns scheduled for today -->
+        @if (card.type === 'return_today') {
+          <div class="card info-card" (click)="openReservation(card.reservation.id)">
+            <div class="card-header">
+              <i class="pi pi-sign-in"></i>
+              <span class="card-label">{{ 'dashboard.returnToday.label' | translate }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-context">
+                {{ card.reservation.clientSnapshot.fullName }}
+                · {{ card.reservation.vehicleSnapshot.brand }} {{ card.reservation.vehicleSnapshot.model }}
+              </div>
+              <div class="card-subtext">
+                <i class="pi pi-clock"></i>
+                {{ 'dashboard.returnToday.at' | translate }}
+                @if (card.reservation.returnDateTime) {
+                  {{ card.reservation.returnDateTime | date:'HH:mm' }}
+                }
+              </div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewReservation' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        <!-- Returns pending close -->
+        @if (card.type === 'return_open') {
+          <div class="card warning-card" (click)="openReservation(card.reservation.id)">
+            <div class="card-header">
+              <i class="pi pi-clock"></i>
+              <span class="card-label">{{ 'dashboard.returnOpen.label' | translate }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-context">
+                {{ card.reservation.clientSnapshot.fullName }}
+                · {{ card.reservation.vehicleSnapshot.brand }} {{ card.reservation.vehicleSnapshot.model }}
+              </div>
+              <div class="card-subtext">{{ 'dashboard.returnOpen.hint' | translate }}</div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewReservation' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        <!-- Vehicles rented right now -->
+        @if (card.type === 'vehicle_rented') {
+          <div class="card info-card" (click)="openVehicle(card.vehicle.id)">
+            <div class="card-header">
+              <i class="pi pi-car"></i>
+              <span class="card-label">{{ 'dashboard.vehicleRented.label' | translate }}</span>
+            </div>
+            <div class="card-body">
+              <div class="card-context">
+                {{ card.vehicle.brand }} {{ card.vehicle.model }}
+                · <span class="plate">{{ card.vehicle.plateNumber }}</span>
+              </div>
+            </div>
+            <div class="card-action">
+              {{ 'dashboard.viewVehicle' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  }
 </div>

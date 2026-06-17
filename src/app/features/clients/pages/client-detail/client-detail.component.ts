@@ -116,13 +116,101 @@ export class ClientDetailComponent implements OnInit {
   get totalPending(): number {
     return this.payments
       .filter(p => p.status === 'pending' || p.status === 'partial')
-      .reduce((sum, p) => sum + p.pendingAmount, 0);
+      .reduce((sum, p) => sum + (p.pendingAmount || 0), 0);
+  }
+
+  get totalRentalPaid(): number {
+    // Pagos que son ingresos de alquiler: señal, resto, pago completo.
+    return this.payments
+      .filter(p =>
+        p.status !== 'cancelled' &&
+        (p.type === 'initial_payment' || p.type === 'remaining_payment' || p.type === 'rental_payment')
+      )
+      .reduce((sum, p) => sum + p.paidAmount, 0);
+  }
+
+  get totalExtrasPaid(): number {
+    const EXTRA_TYPES = [
+      'extra_fuel',
+      'refuel_penalty',
+      'extra_cleaning',
+      'extra_km',
+      'extra_damage',
+      'extra_fine',
+      'extra_other'
+    ];
+    return this.payments
+      .filter(p => p.status !== 'cancelled' && EXTRA_TYPES.includes(p.type))
+      .reduce((sum, p) => sum + p.paidAmount, 0);
+  }
+
+  get depositsCollected(): number {
+    return this.payments
+      .filter(p => p.type === 'deposit' && p.status !== 'cancelled')
+      .reduce((sum, p) => sum + p.paidAmount, 0);
   }
 
   get depositsRetained(): number {
     return this.payments
       .filter(p => p.type === 'deposit_retention' && p.status !== 'cancelled')
       .reduce((sum, p) => sum + p.paidAmount, 0);
+  }
+
+  get depositsReturned(): number {
+    return this.payments
+      .filter(p => p.type === 'deposit_refund' && p.status !== 'cancelled')
+      .reduce((sum, p) => sum + p.paidAmount, 0);
+  }
+
+  /** Reservas con deuda pendiente para este cliente. */
+  get reservationsWithDebt(): Reservation[] {
+    return this.reservations.filter(r => {
+      const summary = r.paymentSummary;
+      if (!summary) return false;
+      const pending = (summary.initialPaymentRequired - summary.initialPaymentPaid) +
+        (summary.remainingPaymentRequired - summary.remainingPaymentPaid);
+      return pending > 0.01 && r.reservationStatus !== 'cancelled';
+    });
+  }
+
+  /** Pagos separados por categoría, ordenados por fecha descendente. */
+  get rentalPayments(): Payment[] {
+    return this.payments
+      .filter(p => p.type === 'initial_payment' || p.type === 'remaining_payment' || p.type === 'rental_payment')
+      .sort((a, b) => this.dateOf(b.paidAt) - this.dateOf(a.paidAt));
+  }
+
+  get depositPayments(): Payment[] {
+    return this.payments
+      .filter(p => p.type === 'deposit' || p.type === 'deposit_refund' || p.type === 'deposit_retention')
+      .sort((a, b) => this.dateOf(b.paidAt) - this.dateOf(a.paidAt));
+  }
+
+  get extraPayments(): Payment[] {
+    const EXTRA_TYPES = [
+      'extra_fuel',
+      'refuel_penalty',
+      'extra_cleaning',
+      'extra_km',
+      'extra_damage',
+      'extra_fine',
+      'extra_other'
+    ];
+    return this.payments
+      .filter(p => EXTRA_TYPES.includes(p.type))
+      .sort((a, b) => this.dateOf(b.paidAt) - this.dateOf(a.paidAt));
+  }
+
+  getPaymentDate(p: Payment): Date | null {
+    return this.dateOf(p.paidAt) ? new Date(this.dateOf(p.paidAt)) : null;
+  }
+
+  private dateOf(value: any): number {
+    if (!value) return 0;
+    if (value instanceof Date) return value.getTime();
+    if (typeof value.toDate === 'function') return value.toDate().getTime();
+    if (value.seconds) return value.seconds * 1000;
+    return 0;
   }
 
   setTab(tab: Tab): void {
@@ -190,7 +278,6 @@ export class ClientDetailComponent implements OnInit {
 
   getStatusClass(status: string): string {
     const map: Record<string, string> = {
-      quote: 'status-quote',
       reserved: 'status-reserved',
       confirmed: 'status-confirmed',
       delivered: 'status-delivered',

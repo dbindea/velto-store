@@ -115,6 +115,19 @@ export class ContractService {
    * Returns a relative URL the frontend can show/copy.
    */
   async generateSigningLink(contractId: string): Promise<CreateSigningLinkResponse> {
+    // Workflow guard: refuse to issue a signing link if the contract has
+    // no PDF yet or has already been signed / cancelled.
+    const contract = await this.getContractById(contractId).toPromise();
+    if (!contract) throw new Error('Contrato no encontrado');
+    if (contract.status === 'draft') {
+      throw new Error('workflow.missingContract');
+    }
+    if (contract.status === 'signed') {
+      throw new Error('workflow.contractAlreadySigned');
+    }
+    if (contract.status === 'cancelled') {
+      throw new Error('workflow.contractCancelled');
+    }
     const fn = httpsCallable<{ contractId: string }, CreateSigningLinkResponse>(
       this.functions,
       'createContractSigningLink'

@@ -83,9 +83,6 @@
           <span class="tab-count">{{ vehicleReservations.length }}</span>
         }
       </button>
-      <button class="tab" [class.active]="activeTab === 'history'" (click)="setTab('history')">
-        History
-      </button>
     </div>
 
     <div class="tab-content">
@@ -312,6 +309,45 @@
             </div>
           }
 
+          <!-- In progress -->
+          @if (getInProgressVehicleReservations().length > 0) {
+            <div class="res-section">
+              <h3 class="section-title">
+                <i class="pi pi-play"></i>
+                {{ 'vehicles.reservations.inProgress' | translate }}
+              </h3>
+              @for (r of getInProgressVehicleReservations(); track r.id) {
+                <div class="res-item in-progress" (click)="viewReservation(r.id)">
+                  <div class="res-client">
+                    <i class="pi pi-user"></i>
+                    <span>{{ r.clientSnapshot.fullName }}</span>
+                  </div>
+                  <div class="res-dates">
+                    <i class="pi pi-calendar"></i>
+                    <span
+                      >{{ getResPickupDate(r) | date: 'dd/MM/yyyy HH:mm' }} →
+                      {{ getResReturnDate(r) | date: 'dd/MM/yyyy HH:mm' }}</span
+                    >
+                  </div>
+                  <div class="res-pricing">
+                    <span class="price"
+                      >{{ r.pricingSnapshot.finalPrice | number: '1.2-2' }} €</span
+                    >
+                    <span class="days">{{ r.totalDays }} días</span>
+                  </div>
+                  <div class="res-badges">
+                    <span class="badge" [ngClass]="getReservationStatusClass(r.reservationStatus)">
+                      {{ getReservationStatusLabel(r.reservationStatus) }}
+                    </span>
+                    <span class="badge" [ngClass]="getReservationPaymentClass(r.paymentStatus)">
+                      {{ getReservationPaymentLabel(r.paymentStatus) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
           <!-- Past -->
           @if (getPastVehicleReservations().length > 0) {
             <div class="res-section">
@@ -377,12 +413,6 @@
         }
       }
 
-      @if (activeTab === 'history') {
-        <div class="history-placeholder">
-          <i class="pi pi-history"></i>
-          <p>{{ 'vehicles.historyPlaceholder' | translate }}</p>
-        </div>
-      }
     </div>
 
     @if (showStatusModal) {
