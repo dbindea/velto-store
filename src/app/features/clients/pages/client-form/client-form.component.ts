@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
 import { 
@@ -20,7 +19,7 @@ import {
 @Component({
   selector: 'app-client-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, PhotoUploadButtonsComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './client-form.component.html',
   styleUrl: './client-form.component.scss'
 })

@@ -540,7 +540,7 @@
         <div class="payments-summary">
           <div class="summary-tile">
             <div class="tile-label">{{ 'payments.summary.rentalTotal' | translate }}</div>
-            <div class="tile-value">{{ reservation.pricingSnapshot?.finalPrice | number:'1.2-2' }} €</div>
+            <div class="tile-value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</div>
             <div class="tile-progress">
               <span>Pagado: <strong>{{ initialPayment.paid + remainingPayment.paid | number:'1.2-2' }} €</strong></span>
             </div>

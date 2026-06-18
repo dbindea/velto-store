@@ -46,11 +46,11 @@
             <div class="row-info">
               <div class="info-line">
                 <i class="pi pi-user"></i>
-                <span>{{ c.clientSnapshot?.fullName }}</span>
+                <span>{{ c.clientSnapshot.fullName }}</span>
               </div>
               <div class="info-line">
                 <i class="pi pi-car"></i>
-                <span>{{ c.vehicleSnapshot?.brand }} {{ c.vehicleSnapshot?.model }} · {{ c.vehicleSnapshot?.plateNumber }}</span>
+                <span>{{ c.vehicleSnapshot.brand }} {{ c.vehicleSnapshot.model }} · {{ c.vehicleSnapshot.plateNumber }}</span>
               </div>
               @if (getCreatedAt(c); as created) {
                 <div class="info-line muted">

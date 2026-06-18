@@ -13,8 +13,8 @@
         <h1>{{ 'inspections.startPickup' | translate }}</h1>
         <p class="subtitle">
           <span class="client-name">{{ reservation.clientSnapshot.fullName }}</span> ·
-          <span class="vehicle-name">{{ reservation.vehicleSnapshot?.brand }} {{ reservation.vehicleSnapshot?.model }}</span> ·
-          <span class="plate">{{ reservation.vehicleSnapshot?.plateNumber }}</span>
+          <span class="vehicle-name">{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</span> ·
+          <span class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</span>
         </p>
       </div>
     </div>
@@ -47,11 +47,11 @@
           </div>
           <div class="info-row">
             <span class="label">{{ 'reservations.title' | translate }}:</span>
-            <span class="value">{{ reservation.pricingSnapshot?.finalPrice | number:'1.2-2' }} €</span>
+            <span class="value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
           </div>
           <div class="info-row">
             <span class="label">Fianza:</span>
-            <span class="value">{{ reservation.deposit?.requiredAmount | number:'1.2-2' }} €</span>
+            <span class="value">{{ reservation.deposit.requiredAmount | number:'1.2-2' }} €</span>
           </div>
         </div>
       </div>

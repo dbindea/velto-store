@@ -17,9 +17,9 @@
           </span>
         </div>
         <p class="subtitle">
-          <span class="client-name">{{ contract.clientSnapshot?.fullName }}</span> ·
-          <span class="vehicle-name">{{ contract.vehicleSnapshot?.brand }} {{ contract.vehicleSnapshot?.model }}</span> ·
-          <span class="plate">{{ contract.vehicleSnapshot?.plateNumber }}</span>
+          <span class="client-name">{{ contract.clientSnapshot.fullName }}</span> ·
+          <span class="vehicle-name">{{ contract.vehicleSnapshot.brand }} {{ contract.vehicleSnapshot.model }}</span> ·
+          <span class="plate">{{ contract.vehicleSnapshot.plateNumber }}</span>
         </p>
       </div>
     </div>
@@ -166,30 +166,30 @@
         <div class="card-content">
           <div class="info-row">
             <span class="label">Nombre:</span>
-            <span class="value">{{ contract.clientSnapshot?.fullName }}</span>
+            <span class="value">{{ contract.clientSnapshot.fullName }}</span>
           </div>
-          @if (contract.clientSnapshot?.email) {
+          @if (contract.clientSnapshot.email) {
             <div class="info-row">
               <span class="label">Email:</span>
-              <span class="value">{{ contract.clientSnapshot?.email }}</span>
+              <span class="value">{{ contract.clientSnapshot.email }}</span>
             </div>
           }
-          @if (contract.clientSnapshot?.phone) {
+          @if (contract.clientSnapshot.phone) {
             <div class="info-row">
               <span class="label">Teléfono:</span>
-              <span class="value">{{ contract.clientSnapshot?.phone }}</span>
+              <span class="value">{{ contract.clientSnapshot.phone }}</span>
             </div>
           }
-          @if (contract.clientSnapshot?.documentNumber) {
+          @if (contract.clientSnapshot.documentNumber) {
             <div class="info-row">
-              <span class="label">{{ contract.clientSnapshot?.documentType || 'Documento' }}:</span>
-              <span class="value">{{ contract.clientSnapshot?.documentNumber }}</span>
+              <span class="label">{{ contract.clientSnapshot.documentType || 'Documento' }}:</span>
+              <span class="value">{{ contract.clientSnapshot.documentNumber }}</span>
             </div>
           }
-          @if (contract.clientSnapshot?.drivingLicenseNumber) {
+          @if (contract.clientSnapshot.drivingLicenseNumber) {
             <div class="info-row">
               <span class="label">Carnet:</span>
-              <span class="value">{{ contract.clientSnapshot?.drivingLicenseNumber }}</span>
+              <span class="value">{{ contract.clientSnapshot.drivingLicenseNumber }}</span>
             </div>
           }
         </div>
@@ -204,20 +204,20 @@
           <div class="info-row">
             <span class="label">Vehículo:</span>
             <span class="value">
-              {{ contract.vehicleSnapshot?.brand }} {{ contract.vehicleSnapshot?.model }}
-              @if (contract.vehicleSnapshot?.version) {
-                <span class="muted">· {{ contract.vehicleSnapshot?.version }}</span>
+              {{ contract.vehicleSnapshot.brand }} {{ contract.vehicleSnapshot.model }}
+              @if (contract.vehicleSnapshot.version) {
+                <span class="muted">· {{ contract.vehicleSnapshot.version }}</span>
               }
             </span>
           </div>
           <div class="info-row">
             <span class="label">Matrícula:</span>
-            <span class="value plate">{{ contract.vehicleSnapshot?.plateNumber }}</span>
+            <span class="value plate">{{ contract.vehicleSnapshot.plateNumber }}</span>
           </div>
-          @if (contract.vehicleSnapshot?.year) {
+          @if (contract.vehicleSnapshot.year) {
             <div class="info-row">
               <span class="label">Año:</span>
-              <span class="value">{{ contract.vehicleSnapshot?.year }}</span>
+              <span class="value">{{ contract.vehicleSnapshot.year }}</span>
             </div>
           }
         </div>
