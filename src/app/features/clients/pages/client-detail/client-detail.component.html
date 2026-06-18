@@ -329,21 +329,50 @@
 
       <!-- Payments Tab -->
       @if (activeTab === 'payments') {
-        <!-- Summary -->
+        <!-- Summary tiles -->
         <div class="payments-summary-cards">
           <div class="summary-card">
-            <span class="card-label">Total pagado</span>
+            <span class="card-label">{{ 'clients.payments.totalPaid' | translate }}</span>
             <span class="card-value">{{ totalPaid | number:'1.2-2' }} €</span>
           </div>
           <div class="summary-card">
-            <span class="card-label">Pendiente</span>
+            <span class="card-label">{{ 'clients.payments.totalPending' | translate }}</span>
             <span class="card-value pending">{{ totalPending | number:'1.2-2' }} €</span>
           </div>
           <div class="summary-card">
-            <span class="card-label">Fianzas retenidas</span>
-            <span class="card-value">{{ depositsRetained | number:'1.2-2' }} €</span>
+            <span class="card-label">{{ 'clients.payments.rentalPaid' | translate }}</span>
+            <span class="card-value">{{ totalRentalPaid | number:'1.2-2' }} €</span>
+          </div>
+          <div class="summary-card">
+            <span class="card-label">{{ 'clients.payments.depositsCollected' | translate }}</span>
+            <span class="card-value">{{ depositsCollected | number:'1.2-2' }} €</span>
+          </div>
+          <div class="summary-card">
+            <span class="card-label">{{ 'clients.payments.depositsRetained' | translate }}</span>
+            <span class="card-value warning">{{ depositsRetained | number:'1.2-2' }} €</span>
+          </div>
+          <div class="summary-card">
+            <span class="card-label">{{ 'clients.payments.depositsReturned' | translate }}</span>
+            <span class="card-value">{{ depositsReturned | number:'1.2-2' }} €</span>
+          </div>
+          <div class="summary-card">
+            <span class="card-label">{{ 'clients.payments.extrasPaid' | translate }}</span>
+            <span class="card-value">{{ totalExtrasPaid | number:'1.2-2' }} €</span>
           </div>
         </div>
+
+        @if (reservationsWithDebt.length > 0) {
+          <div class="debt-banner">
+            <i class="pi pi-exclamation-circle"></i>
+            <div>
+              <strong>{{ 'clients.payments.reservationsWithDebt' | translate }}</strong>
+              <p>
+                {{ reservationsWithDebt.length }}
+                {{ 'clients.payments.reservationsWithDebtHint' | translate }}
+              </p>
+            </div>
+          </div>
+        }
 
         @if (loadingPayments) {
           <div class="loading-mini">
@@ -351,30 +380,97 @@
             <span>{{ 'common.loading' | translate }}</span>
           </div>
         } @else if (payments.length === 0) {
-          <p class="empty-mini">No hay pagos registrados para este cliente</p>
+          <p class="empty-mini">{{ 'clients.payments.empty' | translate }}</p>
         } @else {
-          <div class="payments-list">
-            @for (payment of payments; track payment.id) {
-              <div class="payment-row" (click)="viewPayment(payment.id)">
-                <div class="payment-info">
-                  <span class="payment-concept">{{ payment.concept }}</span>
-                  <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
+          <!-- Rental payments -->
+          @if (rentalPayments.length > 0) {
+            <div class="payment-section">
+              <h3 class="section-title">
+                <i class="pi pi-credit-card"></i>
+                {{ 'clients.payments.rental' | translate }}
+              </h3>
+              @for (payment of rentalPayments; track payment.id) {
+                <div class="payment-row" (click)="viewPayment(payment.id)">
+                  <div class="payment-info">
+                    <span class="payment-concept">{{ payment.concept || (PAYMENT_TYPE_LABELS[payment.type] | translate) }}</span>
+                    <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
+                  </div>
+                  <div class="payment-amounts">
+                    <span class="amount-total">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+                  </div>
+                  <div class="payment-meta">
+                    <span class="badge" [ngClass]="'status-' + payment.status">
+                      {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                    </span>
+                    <span class="payment-date">
+                      {{ getPaymentDate(payment) ? (getPaymentDate(payment) | date:'dd/MM/yyyy') : (payment.createdAt | date:'dd/MM/yyyy') }}
+                    </span>
+                  </div>
                 </div>
-                <div class="payment-amounts">
-                  <span class="amount-total">{{ payment.paidAmount | number:'1.2-2' }} €</span>
-                  @if (payment.pendingAmount > 0 && payment.status !== 'paid') {
-                    <span class="amount-pending">-{{ payment.pendingAmount | number:'1.2-2' }} €</span>
-                  }
+              }
+            </div>
+          }
+
+          <!-- Deposit payments (collected, refunded, retained) -->
+          @if (depositPayments.length > 0) {
+            <div class="payment-section">
+              <h3 class="section-title">
+                <i class="pi pi-shield"></i>
+                {{ 'clients.payments.deposits' | translate }}
+              </h3>
+              @for (payment of depositPayments; track payment.id) {
+                <div class="payment-row" (click)="viewPayment(payment.id)">
+                  <div class="payment-info">
+                    <span class="payment-concept">{{ payment.concept || (PAYMENT_TYPE_LABELS[payment.type] | translate) }}</span>
+                    <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
+                  </div>
+                  <div class="payment-amounts">
+                    <span
+                      class="amount-total"
+                      [class.warning]="payment.type === 'deposit_retention'"
+                    >{{ payment.paidAmount | number:'1.2-2' }} €</span>
+                  </div>
+                  <div class="payment-meta">
+                    <span class="badge" [ngClass]="'status-' + payment.status">
+                      {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                    </span>
+                    <span class="payment-date">
+                      {{ getPaymentDate(payment) ? (getPaymentDate(payment) | date:'dd/MM/yyyy') : (payment.createdAt | date:'dd/MM/yyyy') }}
+                    </span>
+                  </div>
                 </div>
-                <div class="payment-meta">
-                  <span class="badge" [ngClass]="'status-' + payment.status">
-                    {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
-                  </span>
-                  <span class="payment-date">{{ payment.createdAt | date:'dd/MM/yyyy' }}</span>
+              }
+            </div>
+          }
+
+          <!-- Extras -->
+          @if (extraPayments.length > 0) {
+            <div class="payment-section">
+              <h3 class="section-title">
+                <i class="pi pi-plus-circle"></i>
+                {{ 'clients.payments.extras' | translate }}
+              </h3>
+              @for (payment of extraPayments; track payment.id) {
+                <div class="payment-row" (click)="viewPayment(payment.id)">
+                  <div class="payment-info">
+                    <span class="payment-concept">{{ payment.concept || (PAYMENT_TYPE_LABELS[payment.type] | translate) }}</span>
+                    <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
+                  </div>
+                  <div class="payment-amounts">
+                    <span class="amount-total">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+                  </div>
+                  <div class="payment-meta">
+                    <span class="badge" [ngClass]="'status-' + payment.status">
+                      {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                    </span>
+                    <span class="payment-date">
+                      {{ getPaymentDate(payment) ? (getPaymentDate(payment) | date:'dd/MM/yyyy') : (payment.createdAt | date:'dd/MM/yyyy') }}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            }
-          </div>
+              }
+            </div>
+          }
         }
       }
     </div>

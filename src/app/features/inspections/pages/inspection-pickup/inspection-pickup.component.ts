@@ -20,6 +20,12 @@ import {
 import { Reservation } from '@shared/models/reservation.model';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { toDate } from '@shared/utils/reservation-date.util';
+import {
+  Workflow,
+  WorkflowContext,
+  canStartPickup
+} from '@shared/utils/reservation-workflow.util';
+import { ContractService } from '@features/contracts/services/contract.service';
 
 @Component({
   selector: 'app-inspection-pickup',
@@ -33,6 +39,7 @@ export class InspectionPickupComponent implements OnInit {
   private router = inject(Router);
   private inspectionService = inject(InspectionService);
   private reservationService = inject(ReservationService);
+  private contractService = inject(ContractService);
 
   reservationId: string | null = null;
   reservation: Reservation | null = null;
@@ -79,7 +86,21 @@ export class InspectionPickupComponent implements OnInit {
         return;
       }
 
+      // Workflow guard: refuse to enter the pickup form if the workflow
+      // doesn't allow it. We still load the form so the user can review
+      // and recover, but we flag it for the UI.
       const existing = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'pickup');
+      const contract = (await this.contractService
+        .getContractByReservation(reservationId)
+        .toPromise()) || null;
+      const decision = canStartPickup({
+        reservation: this.reservation,
+        pickupInspection: existing || null,
+        returnInspection: null,
+        contract
+      } as WorkflowContext);
+      this.workflowBlockReason = decision.ok ? '' : decision.reason;
+
       if (existing) {
         this.formData = { ...this.formData, ...existing };
         if (!this.formData.photos) this.formData.photos = existing.photos || [];
@@ -91,6 +112,8 @@ export class InspectionPickupComponent implements OnInit {
       this.loading = false;
     }
   }
+
+  workflowBlockReason = '';
 
   getEmptyChecklist(): InspectionChecklist {
     return {

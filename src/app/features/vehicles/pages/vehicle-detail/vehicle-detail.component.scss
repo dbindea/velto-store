@@ -438,6 +438,11 @@
     opacity: 0.6;
   }
 
+  &.in-progress {
+    border-left: 4px solid var(--accent-color);
+    background: var(--info-bg);
+  }
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr auto;
   }

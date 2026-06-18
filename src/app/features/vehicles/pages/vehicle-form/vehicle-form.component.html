@@ -479,16 +479,9 @@
           <div class="form-section">
             <h2 class="section-title">{{ 'vehicles.tabs.photos' | translate }}</h2>
             <div class="photo-upload">
-              <label class="upload-btn">
-                <i class="pi pi-upload"></i>
-                {{ 'vehicles.actions.uploadPhoto' | translate }}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  (change)="onImageSelected($event)"
-                  hidden
-                />
-              </label>
+              <app-photo-upload-buttons
+                (filesPicked)="onImageSelected($event)"
+              ></app-photo-upload-buttons>
               <p class="upload-hint">JPG, PNG o WebP. Max 5MB</p>
             </div>
 

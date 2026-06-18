@@ -20,6 +20,12 @@ import {
 import { calculateBasePrice, findPricingRuleByDays } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PaymentService } from '@features/payments/services/payment.service';
+import { InspectionService } from '@features/inspections/services/inspection.service';
+import {
+  Workflow,
+  WorkflowContext,
+  canCloseReservation as assertCanClose
+} from '@shared/utils/reservation-workflow.util';
 
 export interface VehicleAvailabilityResult {
   vehicleId: string;
@@ -37,20 +43,32 @@ export class ReservationService {
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
   private paymentService = inject(PaymentService);
+  private inspectionService = inject(InspectionService);
 
   constructor() {
     this.reservationsRef = collection(this.firestore, 'reservations');
   }
 
-  /** Removes undefined/null fields recursively */
-  private cleanData<T extends object>(data: T): Partial<T> {
+  /**
+   * Removes undefined fields recursively.
+   * Dates, arrays and Firestore Timestamps are passed through untouched.
+   * Only plain object literals are recursed into.
+   */
+  private cleanData<T>(data: T): T {
+    if (data === null || typeof data !== 'object') return data;
+    if (data instanceof Date) return data;
+    if (Array.isArray(data)) return data;
     const cleaned: any = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined && value !== null) {
-        cleaned[key] = typeof value === 'object' && !Array.isArray(value) && value !== null
-          ? this.cleanData(value)
-          : value;
-      }
+    for (const [key, value] of Object.entries(data as object)) {
+      if (value === undefined) continue;
+      const isPlainObject =
+        typeof value === 'object' &&
+        value !== null &&
+        !(value instanceof Date) &&
+        !Array.isArray(value) &&
+        // Avoid recursing into Firestore Timestamp / GeoPoint
+        typeof (value as any).toDate !== 'function';
+      cleaned[key] = isPlainObject ? this.cleanData(value) : value;
     }
     return cleaned;
   }
@@ -490,12 +508,53 @@ export class ReservationService {
   }
 
   /**
-   * Cancel reservation.
+   * Cancel reservation. Only valid from `reserved` or `confirmed`.
+   * Throws if the reservation has already been delivered, returned or closed.
    */
   async cancelReservation(id: string): Promise<void> {
     const docRef = doc(this.firestore, `reservations/${id}`);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error('Reserva no encontrada');
+    }
+    const current = snap.data() as Reservation;
+    const cancellable: ReservationStatus[] = ['reserved', 'confirmed'];
+    if (!cancellable.includes(current.reservationStatus)) {
+      throw new Error(`No se puede cancelar una reserva en estado ${current.reservationStatus}`);
+    }
     await updateDoc(docRef, {
       reservationStatus: 'cancelled',
+      updatedAt: { seconds: Date.now() / 1000 }
+    });
+  }
+
+  /**
+   * Close reservation. Only allowed from `returned` with the return
+   * inspection completed and the deposit fully settled (refunded or
+   * retained). Throws with a workflow i18n key otherwise.
+   */
+  async closeReservation(id: string): Promise<void> {
+    const docRef = doc(this.firestore, `reservations/${id}`);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error('Reserva no encontrada');
+    const reservation = { id: snap.id, ...snap.data() } as Reservation;
+
+    const pickup = await this.inspectionService
+      .getInspectionByReservationAndType(id, 'pickup');
+    const ret = await this.inspectionService
+      .getInspectionByReservationAndType(id, 'return');
+
+    const decision = assertCanClose({
+      reservation,
+      pickupInspection: pickup || null,
+      returnInspection: ret || null
+    } as WorkflowContext);
+    if (!decision.ok) {
+      throw new Error(decision.reason);
+    }
+
+    await updateDoc(docRef, {
+      reservationStatus: 'closed',
       updatedAt: { seconds: Date.now() / 1000 }
     });
   }

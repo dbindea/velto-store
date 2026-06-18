@@ -71,6 +71,61 @@ export interface ContractPaymentSnapshot {
   totalPending?: number;
 }
 
+/**
+ * Snapshot of the company (lessor) at the time the contract was generated.
+ * Captured so the PDF and email are reproducible even if env vars change.
+ */
+export interface ContractCompanySnapshot {
+  legalName: string;
+  taxId: string;
+  registry?: string;
+  address: string;
+  phone?: string;
+  email: string;
+  website?: string;
+  /** Insurance policy reference, if any (for DGT / Guardia Civil). */
+  insurancePolicy?: string;
+  /** Authorized representatives signing on behalf of the company. */
+  representativeName?: string;
+  representativeNie?: string;
+}
+
+/**
+ * Multilingual contract body. The same clause id is used across all
+ * locales; the renderer picks the right translation from `t.{locale}`.
+ * `defaultLocale` is used when the requested locale is missing.
+ */
+export type ContractLocale = 'es' | 'en' | 'ro';
+
+export interface ContractClauses {
+  version: number;
+  defaultLocale: ContractLocale;
+  available: ContractLocale[];
+  t: Partial<Record<ContractLocale, ContractClauseBundle>>;
+}
+
+export interface ContractClauseBundle {
+  /** Big-text 1-liner used on the front-page "Resumen". */
+  highlights: string[];
+  /** Full numbered legal clauses, in order. */
+  clauses: ContractClauseItem[];
+  /** Closing acknowledgement line above the signature block. */
+  acknowledgement: string;
+  /** Footer legal notes (LOPD/RGPD, jurisdiction, etc.). */
+  footerNotes: string[];
+}
+
+export interface ContractClauseItem {
+  /** Stable id for diffing/audit. */
+  id: string;
+  /** Short title (all caps in print). */
+  title: string;
+  /** One or more paragraphs. Each entry is a paragraph. */
+  body: string[];
+  /** When true, this clause must be presented in the front-page summary. */
+  highlight?: boolean;
+}
+
 export interface Contract {
   id?: string;
 
@@ -82,11 +137,18 @@ export interface Contract {
 
   contractNumber?: string;
 
+  /** Locale of the contract body (drives clause language). */
+  locale?: ContractLocale;
+
   reservationSnapshot: ContractReservationSnapshot;
   clientSnapshot: ContractClientSnapshot;
   vehicleSnapshot: ContractVehicleSnapshot;
+  companySnapshot?: ContractCompanySnapshot;
   inspectionSnapshot?: ContractInspectionSnapshot;
   paymentSnapshot?: ContractPaymentSnapshot;
+
+  /** Frozen clause bundle used to render this contract. */
+  clauses?: ContractClauses;
 
   pdfUrl?: string;
   pdfPath?: string;

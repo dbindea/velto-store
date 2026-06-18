@@ -36,6 +36,7 @@ export class ClientFormComponent implements OnInit {
   // Form data
   formData: Client = this.getEmptyForm();
   documents: ClientDocumentFile[] = [];
+  selectedDocType: ClientDocumentType_File | null = null;
 
   // Upload state
   uploadingType: ClientDocumentType_File | null = null;
@@ -154,36 +155,37 @@ export class ClientFormComponent implements OnInit {
   }
 
   // Documents
-  async onDocumentSelected(event: Event, type: ClientDocumentType_File): Promise<void> {
+  onDocumentSelectedFromInput(event: Event, type: ClientDocumentType_File): void {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length) return;
+    this.onDocumentSelected(input.files, type);
+    input.value = '';
+  }
 
-    const file = input.files[0];
-    
-    if (!this.validateDocumentFile(file)) {
-      input.value = '';
-      return;
-    }
+  async onDocumentSelected(files: FileList | null, type?: ClientDocumentType_File): Promise<void> {
+    if (!files?.length) return;
+    const file = files[0];
+
+    if (!this.validateDocumentFile(file)) return;
 
     // Need a saved client before uploading documents
     if (!this.clientId) {
       this.uploadError = 'Guarda primero el cliente';
-      input.value = '';
       return;
     }
 
-    this.uploadingType = type;
+    const docType = type || this.fileTypeOptions[0];
+    this.uploadingType = docType;
     this.uploadError = '';
 
     try {
-      const doc = await this.clientService.uploadClientDocument(this.clientId, file, type);
+      const doc = await this.clientService.uploadClientDocument(this.clientId, file, docType);
       this.documents = [...this.documents, doc];
     } catch (error) {
       console.error('Error uploading document:', error);
       this.uploadError = 'Error al subir el documento';
     } finally {
       this.uploadingType = null;
-      input.value = '';
     }
   }
 

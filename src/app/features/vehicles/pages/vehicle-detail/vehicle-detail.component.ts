@@ -34,7 +34,7 @@ export class VehicleDetailComponent implements OnInit {
 
   vehicle: Vehicle | null = null;
   loading = true;
-  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'history' | 'reservations' = 'info';
+  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations' = 'info';
   showStatusModal = false;
   showDeleteModal = false;
   showGallery = false;
@@ -90,7 +90,7 @@ export class VehicleDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'history' | 'reservations'): void {
+  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations'): void {
     this.activeTab = tab;
   }
 
@@ -105,7 +105,6 @@ export class VehicleDetailComponent implements OnInit {
 
   getReservationStatusClass(status: string): string {
     const map: Record<string, string> = {
-      quote: 'status-quote',
       reserved: 'status-reserved',
       confirmed: 'status-confirmed',
       delivered: 'status-delivered',
@@ -129,8 +128,25 @@ export class VehicleDetailComponent implements OnInit {
   getUpcomingVehicleReservations(): Reservation[] {
     const now = new Date();
     return this.vehicleReservations.filter(r => {
-      const returnDate = toDate(r.returnDateTime);
-      return returnDate >= now && r.reservationStatus !== 'cancelled';
+      // Reserved or confirmed but pickup is in the future: upcoming.
+      const pickup = toDate(r.pickupDateTime);
+      return (
+        pickup > now &&
+        !['cancelled', 'delivered', 'returned', 'closed'].includes(r.reservationStatus)
+      );
+    });
+  }
+
+  getInProgressVehicleReservations(): Reservation[] {
+    const now = new Date();
+    return this.vehicleReservations.filter(r => {
+      const pickup = toDate(r.pickupDateTime);
+      const ret = toDate(r.returnDateTime);
+      // Vehicle physically handed over to the customer right now.
+      return (
+        r.reservationStatus === 'delivered' ||
+        (pickup <= now && ret >= now && r.reservationStatus !== 'cancelled')
+      );
     });
   }
 
@@ -138,7 +154,10 @@ export class VehicleDetailComponent implements OnInit {
     const now = new Date();
     return this.vehicleReservations.filter(r => {
       const returnDate = toDate(r.returnDateTime);
-      return returnDate < now && r.reservationStatus !== 'cancelled';
+      return (
+        returnDate < now &&
+        !['cancelled'].includes(r.reservationStatus)
+      );
     });
   }
 

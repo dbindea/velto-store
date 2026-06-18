@@ -18,6 +18,7 @@ import {
   VehicleStatus,
 } from '@shared/models/vehicle.model';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
@@ -26,7 +27,7 @@ import { VehicleService } from '@features/vehicles/services/vehicle.service';
 @Component({
   selector: 'app-vehicle-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, PhotoUploadButtonsComponent],
   templateUrl: './vehicle-form.component.html',
   styleUrl: './vehicle-form.component.scss',
 })
@@ -214,21 +215,16 @@ export class VehicleFormComponent implements OnInit {
     this.updateAcrissCode();
   }
 
-  async onImageSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length || !this.vehicleId) return;
-
-    const file = input.files[0];
+  async onImageSelected(files: FileList | null): Promise<void> {
+    if (!files?.length || !this.vehicleId) return;
+    const file = files[0];
     if (!this.validateImage(file)) return;
-
     this.saving = true;
     try {
       await this.vehicleService.uploadImage(this.vehicleId, file);
-      // Refresh image list
       await this.refreshImages();
     } finally {
       this.saving = false;
-      input.value = '';
     }
   }
 

@@ -184,27 +184,84 @@ src/app/
 │       └── firebase-status.service.ts
 ├── features/
 │   ├── calendar/
-│   ├── clients/
-│   ├── contracts/
-│   ├── dashboard/
+│   ├── clients/                     # CRUD + documentos + histórico de pagos
+│   ├── contracts/                   # PDF + signing link + email Resend
+│   ├── dashboard/                   # Tarjetas accionables por día
 │   ├── expenses/
-│   ├── inspections/
-│   ├── payments/
+│   ├── inspections/                 # Pickup + return + fotos + cargos extra
+│   ├── payments/                    # Pagos manuales + Redsys
 │   ├── reports/
-│   ├── reservations/
+│   ├── reservations/                # List + create 4 pasos + detail + workflow
 │   ├── settings/
-│   └── vehicles/
+│   └── vehicles/                    # CRUD + fotos + histórico de reservas
 ├── layout/
 │   └── private-layout/               # Layout principal con sidebar
 ├── login/                            # Pantalla de login
 └── shared/
     ├── components/
-    │   └── language-selector/      # Selector de idioma
+    │   ├── image-gallery/            # Lightbox para fotos
+    │   ├── language-selector/        # Selector de idioma
+    │   └── photo-upload-buttons/      # Cámara (móvil) + galería, mobile-first
     ├── models/
-    │   └── authorized-user.model.ts
-    └── pipes/
-        └── translate.pipe.ts         # Pipe para traducciones
+    │   ├── authorized-user.model.ts
+    │   ├── client.model.ts
+    │   ├── contract.model.ts
+    │   ├── inspection.model.ts
+    │   ├── payment.model.ts
+    │   ├── reservation.model.ts
+    │   └── vehicle.model.ts
+    ├── pipes/
+    │   └── translate.pipe.ts
+    └── utils/
+        ├── acriss-code.util.ts
+        ├── payment-summary.util.ts   # Cálculo del resumen financiero
+        ├── pricing.util.ts
+        ├── reservation-date.util.ts
+        └── reservation-workflow.util.ts # Guards de flujo (canStartPickup, etc.)
 ```
+
+## Flujo de producción
+
+El orden canónico del alquiler está modelado en `reservation-workflow.util.ts`:
+
+```
+Presupuesto
+  → Reserva                 (reservationStatus: reserved)
+  → Cliente
+  → Pago señal              (paymentStatus: partial → paid)
+  → Contrato PDF            (contractStatus: generated)
+  → Link de firma           (contractStatus: pending_signature)
+  → Firma del cliente       (contractStatus: signed)
+  → Pago resto + fianza     (paymentStatus: paid, deposit.paidAmount > 0)
+  → Entrega (inspección)    (reservationStatus: delivered)
+  → Devolución (inspección) (reservationStatus: returned)
+  → Cargos extra + fianza   (resolved)
+  → Cierre reserva          (reservationStatus: closed)
+```
+
+Los `canStartPickup`, `canStartReturn`, `canCloseReservation`, etc. del workflow util son la única fuente de verdad. La UI los usa para deshabilitar botones y los servicios los invocan antes de mutar estado (defensa en profundidad).
+
+Excepciones documentadas: si un operador necesita saltarse un paso, debe llamar `buildWorkflowException(action, reason, createdBy)` con motivo obligatorio (mínimo 3 caracteres) y se persiste en `reservation.workflowExceptions[]`. El util permite la acción solo si existe una excepción registrada para esa acción.
+
+## Módulos clave
+
+- **Dashboard**: muestra tarjetas accionables (señal pendiente, firma pendiente, entregas/devoluciones de hoy, fianzas abiertas, vehículos en alquiler, flota disponible). Las tarjetas sin contenido se ocultan automáticamente.
+
+- **Vehículos**: CRUD + fotos (cámara/galería en móvil) + status modal (available / rented / maintenance / out_of_service) + histórico de reservas agrupado en Próximas / En curso / Pasadas / Canceladas.
+
+- **Clientes**: CRUD + documentos (DNI, carnet, etc.) + trust level + histórico de pagos con resumen por categoría (alquiler / fianzas / extras).
+
+- **Reservas**: creación en 4 pasos (fechas → vehículo → cliente → resumen), listado con filtros, detalle con todas las secciones (vehículo, cliente, contrato, pagos, inspecciones), botón "Cerrar reserva" solo si `canCloseReservation` lo permite, chip "Siguiente acción" en cabecera.
+
+- **Pagos**: 3 acciones en la UI (Registrar cobro / Devolver fianza / Retener fianza). Los cargos extra solo nacen desde la inspección de devolución (un solo sistema, sin doble fuente). Resumen calculado desde la colección `payments` (source of truth).
+
+- **Inspecciones**: pickup y return con checklists, fotos por categoría, daños, cargos extra, decisión de devolver/retenir fianza. La entrada directa por URL se bloquea con un banner si no cumple el workflow.
+
+- **Contratos**: PDF generado por Cloud Function, link de firma de un solo uso (token 256-bit, expiración 7 días), página pública sin auth, envío por email con Resend.
+
+## Internacionalización
+
+Tres idiomas (es/en/ro) en `src/assets/i18n/`. Las claves siguen la jerarquía por módulo (`vehicles.*`, `reservations.*`, `payments.*`, `inspections.*`, `contracts.*`, `workflow.*`, `dashboard.*`, `clients.*`, `vehicles.*`). Las razones de bloqueo del workflow util usan prefijo `workflow.*` para que el pipe `translate` las muestre sin lógica adicional.
 
 ## Arquitectura Firebase
 
@@ -230,6 +287,17 @@ Las reglas están en `firestore.rules`. Resumen:
 - La colección `authorizedUsers` permite lectura solo al propio usuario
 - Solo admins pueden modificar `authorizedUsers`
 - Todas las demás colecciones requieren autorización
+- La colección `contractSigningTokens` **niega todo acceso directo** a clientes. Solo Cloud Functions (admin SDK) puede leer/escribir tokens; la página pública de firma valida el token vía HTTPS callable.
+
+### Firestore Indexes
+
+`firestore.indexes.json` declara los índices compuestos necesarios:
+
+- `reservations`: `clientId + pickupDateTime desc`
+- `reservations`: `vehicleId + pickupDateTime desc`
+- `payments`: `clientId + paidAt desc`
+
+Despliega con `firebase deploy --only firestore:indexes`. Sin estos índices, los queries de histórico en `vehicle-detail` y `client-detail` fallan con error de índice al primer uso.
 
 ### Storage Rules
 

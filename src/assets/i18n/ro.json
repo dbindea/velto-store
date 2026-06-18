@@ -1,672 +1,596 @@
 {
   "app": {
-    "name": "VELTO",
-    "subtitle": "Gestiune internă de flotă"
+    "name": "VELTO"
   },
   "auth": {
-    "loginTitle": "VELTO",
+    "loading": "Verificare...",
     "loginSubtitle": "Acces intern",
-    "loginWithGoogle": "Intră cu Google",
-    "logout": "Deconectare",
-    "notAuthorized": "Contul tău nu are autorizare pentru a accesa această aplicație.",
-    "loading": "Verificare..."
+    "loginWithGoogle": "Intră cu Google"
   },
-  "menu": {
-    "dashboard": "Dashboard",
-    "calendar": "Calendar",
-    "reservations": "Rezervări",
-    "vehicles": "Vehicule",
-    "clients": "Clienți",
-    "payments": "Plăți",
-    "expenses": "Cheltuieli",
-    "contracts": "Contracte",
-    "inspections": "Inspecții",
-    "reports": "Rapoarte",
-    "settings": "Setări"
+  "clients": {
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "other": "Altul",
+      "passport": "Pașaport"
+    },
+    "documents": {
+      "delete": "Șterge document",
+      "documentBack": "Document spate",
+      "documentFront": "Document față",
+      "drivingLicenseBack": "Permis spate",
+      "drivingLicenseFront": "Permis față",
+      "invalidType": "Tip fișier invalid (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "Fișierul depășește dimensiunea maximă (5MB)",
+      "noDocuments": "Nu există documente încărcate",
+      "open": "Deschide",
+      "other": "Alt document"
+    },
+    "edit": "Editează client",
+    "fields": {
+      "address": "Adresă",
+      "birthDate": "Data nașterii",
+      "documentNumber": "Număr document",
+      "documentType": "Tip document",
+      "drivingLicenseCountry": "Țara permisului",
+      "drivingLicenseExpiryDate": "Data expirării",
+      "drivingLicenseIssueDate": "Data emiterii",
+      "drivingLicenseNumber": "Număr permis",
+      "email": "Email",
+      "fullName": "Nume complet",
+      "notes": "Note interne",
+      "phone": "Telefon",
+      "trustLevel": "Nivel de încredere"
+    },
+    "new": "Client nou",
+    "noClients": "Nu există clienți",
+    "payments": {
+      "deposits": "Garanții",
+      "depositsCollected": "Garanții încasate",
+      "depositsRetained": "Garanții reținute",
+      "depositsReturned": "Garanții returnate",
+      "empty": "Nu există plăți înregistrate",
+      "extras": "Taxe extra",
+      "extrasPaid": "Taxe extra plătite",
+      "rental": "Închiriere",
+      "rentalPaid": "Închiriere plătită",
+      "reservationsWithDebt": "Rezervări cu datorii",
+      "reservationsWithDebtHint": "au plăți restante",
+      "totalPaid": "Total plătit",
+      "totalPending": "Restant"
+    },
+    "reservations": {
+      "history": "Istoric",
+      "noReservations": "Nu există rezervări",
+      "upcoming": "Viitoare"
+    },
+    "searchPlaceholder": "Caută după nume, telefon, email sau document...",
+    "sections": {
+      "documents": "Documente",
+      "drivingLicense": "Permis de conducere",
+      "internalManagement": "Gestionare internă",
+      "personalData": "Date personale",
+      "reservations": "Rezervări"
+    },
+    "subtitle": "Gestionează clienți și documentație",
+    "title": "Clienți",
+    "trustLevel": {
+      "blocked": "Blocat",
+      "known": "Cunoscut",
+      "new": "Nou",
+      "regular": "Regulat",
+      "risk": "Risc"
+    }
+  },
+  "common": {
+    "all": "Toate",
+    "back": "Înapoi",
+    "cancel": "Anulează",
+    "create": "Creează",
+    "delete": "Șterge",
+    "edit": "Editează",
+    "loading": "Se încarcă...",
+    "moduleInProgress": "Modul în pregătire",
+    "or": "sau",
+    "save": "Salvează",
+    "search": "Caută"
+  },
+  "contracts": {
+    "actions": {
+      "cancelLink": "Anulează link",
+      "copySigningLink": "Copiază link de semnare",
+      "downloadPdf": "Descarcă PDF",
+      "downloadSignedPdf": "Descarcă PDF semnat",
+      "generate": "Generează contract",
+      "generateSigningLink": "Generează link de semnare",
+      "sendEmail": "Trimite prin email",
+      "title": "Acțiuni",
+      "viewContract": "Vezi contract",
+      "viewOriginalPdf": "Vezi contract original"
+    },
+    "email": {
+      "recipient": "Email destinatar",
+      "send": "Trimite",
+      "title": "Trimite contract prin email"
+    },
+    "fields": {
+      "allStatuses": "Toate stările",
+      "client": "Client",
+      "depositAmount": "Garanție",
+      "emailedAt": "Trimis prin email",
+      "generatedAt": "Generat",
+      "reservation": "Rezervare",
+      "signedAt": "Semnat",
+      "vehicle": "Vehicul"
+    },
+    "list": {
+      "empty": "Nu există contracte"
+    },
+    "messages": {
+      "linkCopied": "Link copiat"
+    },
+    "sign": {
+      "acceptConditions": "Am citit și accept condițiile contractului.",
+      "alreadySigned": "Acest contract este deja semnat.",
+      "expired": "Link-ul de semnare a expirat.",
+      "highlightsTitle": "contracts.sign.highlightsTitle",
+      "invalid": "Link invalid.",
+      "readOnlyNotice": "Verifică datele contractului înainte de a semna.",
+      "submitSignature": "Semnează contractul",
+      "subtitle": "Semnătură digitală pentru contractul de închiriere",
+      "successMessage": "Mulțumim. Contractul tău a fost înregistrat.",
+      "successTitle": "Contract semnat",
+      "title": "Semnarea contractului"
+    },
+    "signingLink": {
+      "title": "Link de semnare activ"
+    },
+    "status": {
+      "cancelled": "Anulat",
+      "draft": "Ciornă",
+      "expired": "Expirat",
+      "generated": "Generat",
+      "pendingSignature": "Așteaptă semnare",
+      "signed": "Semnat"
+    },
+    "subtitle": "Generează, semnează și trimite contracte de închiriere",
+    "title": "Contracte"
+  },
+  "currentImage": {
+    "url": "URL imagine curentă"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Bine ai venit în sistemul de gestionare a flotei",
-    "vehicles": "Vehicule",
-    "activeReservations": "Rezervări active",
-    "clients": "Clienți",
-    "pendingInspections": "Inspecții în așteptare"
+    "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
+    "allClearTitle": "Totul e în regulă",
+    "fleet": {
+      "available": "Disponibile",
+      "label": "Flotă",
+      "rented": "Închiriate",
+      "total": "Total"
+    },
+    "pendingPayment": {
+      "hint": "Încasează înainte de a confirma predarea",
+      "label": "Avans neîncasat"
+    },
+    "pendingSignature": {
+      "hint": "Clientul nu a semnat încă contractul",
+      "label": "Semnătură lipsă"
+    },
+    "pickupToday": {
+      "at": "Ora",
+      "label": "Predare azi"
+    },
+    "returnOpen": {
+      "hint": "Vehicul returnat, mai rămâne de rezolvat garanția",
+      "label": "Închidere rezervare în așteptare"
+    },
+    "returnToday": {
+      "at": "Ora",
+      "label": "Returnare azi"
+    },
+    "subtitle": "Ce necesită atenția ta acum",
+    "title": "Panou",
+    "vehicleRented": {
+      "label": "Vehicul închiriat"
+    },
+    "viewAll": "Vezi toate",
+    "viewContract": "Vezi contractul",
+    "viewReservation": "Vezi rezervarea",
+    "viewVehicle": "Vezi vehiculul"
+  },
+  "inspections": {
+    "actions": {
+      "startPickup": "Începe predare",
+      "startReturn": "Începe returnare",
+      "view": "Vezi detalii"
+    },
+    "checklist": {
+      "accessoriesChecked": "Accesorii verificate",
+      "clientIdentityChecked": "Identitate client verificată",
+      "contractChecked": "Contract semnat și revizuit",
+      "depositChecked": "Garanție încasată",
+      "drivingLicenseChecked": "Permis de conducere verificat",
+      "keysDelivered": "Chei predate",
+      "keysReturned": "Chei returnate",
+      "paymentChecked": "Plată efectuată",
+      "vehicleDocumentsDelivered": "Documentație predată"
+    },
+    "cleanliness": {
+      "clean": "Curat",
+      "dirty": "Murdar",
+      "normal": "Normal",
+      "veryDirty": "Foarte murdar"
+    },
+    "closeReservation": "Închide rezervarea la finalizare",
+    "completePickup": "Finalizează predarea",
+    "completeReturn": "Finalizează returnarea",
+    "damages": {
+      "add": "Adaugă daună",
+      "area": "Zonă",
+      "areaFront": "Față",
+      "areaInterior": "Interior",
+      "areaLeftSide": "Stânga",
+      "areaOther": "Altul",
+      "areaRear": "Spate",
+      "areaRightSide": "Dreapta",
+      "areaRoof": "Acoperiș",
+      "areaWheels": "Roți",
+      "areaWindows": "Geamuri",
+      "description": "Descriere",
+      "medium": "Mediu",
+      "minor": "Minor",
+      "serious": "Grav",
+      "severity": "Gravitate"
+    },
+    "extraCharges": {
+      "cleaning": "Taxă curățenie",
+      "damage": "Taxă daune",
+      "extraKm": "Taxă km suplimentari",
+      "fine": "Amendă",
+      "fuel": "Taxă combustibil",
+      "other": "Alte taxe",
+      "refuelPenalty": "Penalizare realimentare",
+      "total": "Total taxe suplimentare"
+    },
+    "fields": {
+      "cleanliness": "Curățenie",
+      "fuelLevel": "Nivel combustibil",
+      "km": "Kilometraj",
+      "notes": "Observații"
+    },
+    "fuel": {
+      "empty": "Gol",
+      "full": "Plin",
+      "half": "1/2",
+      "quarter": "1/4",
+      "threeQuarters": "3/4"
+    },
+    "messages": {
+      "noPickup": "Fără inspecție de predare",
+      "noReturn": "Fără inspecție de returnare"
+    },
+    "photos": {
+      "damage": "Deteriorare",
+      "dashboard": "Bord",
+      "front": "Față",
+      "fuel": "Combustibil",
+      "interior": "Interior",
+      "leftSide": "Partea stângă",
+      "noPhotos": "Nu există fotografii încărcate",
+      "other": "Altul",
+      "rear": "Spate",
+      "rightSide": "Partea dreaptă"
+    },
+    "pickup": "Predare",
+    "return": "Returnare",
+    "sections": {
+      "checklist": "Listă verificare",
+      "damages": "Daune înregistrate",
+      "deliveryAndReturn": "Predare și returnare",
+      "deposit": "Garanție",
+      "extraCharges": "Taxe suplimentare",
+      "photos": "Fotografii",
+      "reservationSummary": "Rezumat rezervare",
+      "vehicleStatus": "Stare vehicul"
+    },
+    "startPickup": "Inspecție predare",
+    "startReturn": "Inspecție returnare",
+    "status": {
+      "cancelled": "Anulată",
+      "completed": "Finalizată",
+      "draft": "Ciornă"
+    },
+    "subtitle": "Inspecții la predarea și returnarea vehiculelor",
+    "title": "Inspecții",
+    "type": {
+      "pickup": "Predare",
+      "return": "Returnare"
+    }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrator",
     "userRoleEmployee": "Angajat"
   },
-  "common": {
-    "loading": "Se încarcă...",
-    "save": "Salvează",
-    "cancel": "Anulează",
-    "edit": "Editează",
-    "delete": "Șterge",
-    "search": "Caută",
-    "new": "Nou",
-    "back": "Înapoi",
-    "close": "Închide",
-    "moduleInProgress": "Modul în pregătire",
-    "welcome": "Bine ai venit",
-    "all": "Toate",
-    "paid": "Plătit",
-    "pending": "În așteptare",
-    "or": "sau"
-  },
-  "vehicles": {
-    "title": "Vehicule",
-    "subtitle": "Gestionează flota ta",
-    "new": "Vehicul nou",
-    "edit": "Editează vehicul",
-    "detail": "Detalii vehicul",
-    "searchPlaceholder": "Caută după marcă, model, placă...",
-    "noVehicles": "Nu există vehicule",
-    "addFirst": "Adaugă primul vehicul",
-    "viewDetail": "Vezi detalii",
-    "filterAllStatus": "Toate statusurile",
-    "filterAllCategories": "Toate categoriile",
-    "status": {
-      "available": "Disponibil",
-      "rented": "Închiriat",
-      "maintenance": "Întreținere",
-      "out_of_service": "Hors de funcțiune"
-    },
-    "fields": {
-      "brand": "Marcă",
-      "model": "Model",
-      "version": "Versiune",
-      "year": "An",
-      "plateNumber": "Număr de înmatriculare",
-      "category": "Categorie",
-      "bodyType": "Tip caroserie",
-      "acrissCode": "Cod ACRISS",
-      "fuelType": "Tip combustibil",
-      "transmission": "Transmisie",
-      "seats": "Locuri",
-      "luggageCapacity": "Bagaje",
-      "status": "Status",
-      "currentKm": "Kilometraj actual",
-      "color": "Culoare",
-      "vin": "NUMĂR ȘASIU",
-      "description": "Descriere",
-      "publicEnabled": "Publică pe web",
-      "mainImage": "Fotografie principală",
-      "gallery": "Galerie foto"
-    },
-    "bodyTypes": {
-      "2_4_doors": "2/4 uși",
-      "4_5_doors": "4/5 uși",
-      "estate": "Break",
-      "suv": "SUV",
-      "van": "Duba",
-      "cabrio": "Cabrio",
-      "mpv": "Monovolum"
-    },
-    "sections": {
-      "basicInfo": "Informații de bază",
-      "rentalClassification": "Clasificare de închiriere",
-      "features": "Caracteristici",
-      "photos": "Fotografii",
-      "history": "Istoric",
-      "pricing": "Tarife și condiții",
-      "reservations": "Rezervări"
-    },
-    "tabs": {
-      "info": "Informații",
-      "features": "Caracteristici",
-      "photos": "Fotografii",
-      "pricing": "Tarife",
-      "history": "Istoric"
-    },
-    "features": {
-      "airConditioning": "Aer condiționat",
-      "navigation": "Navigație",
-      "parkingSensors": "Senzori de parcare",
-      "rearCamera": "Cameră spate",
-      "cruiseControl": "Control tracțiune"
-    },
-    "actions": {
-      "changeStatus": "Schimbă status",
-      "setMainImage": "Setează ca principal",
-      "deleteImage": "Șterge imagine",
-      "uploadPhoto": "Încarcă fotografie",
-      "addGalleryPhoto": "Adaugă la galerie"
-    },
-    "help": {
-      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C"
-    },
-    "mainPhoto": "Principală",
-    "noPhotos": "Nu există fotografii",
-    "historyPlaceholder": "Istoric în dezvoltare",
-    "photos": {
-      "openGallery": "Vezi galeria",
-      "closeGallery": "Închide galeria",
-      "previous": "Anterior",
-      "next": "Următor",
-      "mainPhoto": "Principală",
-      "gallery": "Galerie",
-      "count": "{{count}} fotografii",
-      "imageAlt": "Fotografie vehicul",
-      "thumbnail": "Miniatură"
-    },
-    "changeStatusTitle": "Schimbă statusul vehiculului",
-    "deleteTitle": "Șterge vehicul",
-    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
-    "reservations": {
-      "noReservations": "Nu există rezervări pentru acest vehicul",
-      "upcoming": "Rezervări viitoare",
-      "history": "Istoric"
-    },
-    "pricing": {
-      "title": "Tarife",
-      "conditions": "Condiții",
-      "rules": "Reguli de preț",
-      "preview": "Previzualizare preț",
-      "defaultDepositAmount": "Avans",
-      "includedKmPerDay": "Km incluse/zi",
-      "extraKmPrice": "Preț km extra",
-      "minimumRentalDays": "Minim zile închiriere",
-      "manualPriceAllowed": "Permite preț manual",
-      "label": "Etichetă",
-      "minDays": "De la",
-      "maxDays": "Până la",
-      "pricePerDay": "€/zi",
-      "addRule": "Adaugă interval",
-      "removeRule": "Elimină interval",
-      "restoreDefaults": "Restabilește implicit",
-      "testDays": "Zile de test",
-      "appliedRule": "Regulă aplicată",
-      "totalPrice": "Total",
-      "noRuleFound": "Fără regulă pentru aceste zile",
-      "from": "De la",
-      "to": "Până la",
-      "moreThan": "+",
-      "days": "zile",
-      "day": "zi",
-      "priceFrom": "De la",
-      "deposit": "Avans",
-      "allowed": "Da",
-      "notAllowed": "Nu"
-    }
-  },
-  "reservations": {
-    "title": "Rezervări",
-    "subtitle": "Gestionează rezervările de închiriere",
-    "new": "Rezervare nouă",
-    "create": "Creare rezervare",
-    "detail": "Detalii rezervare",
-    "list": "Lista rezervărilor",
-    "steps": {
-      "dates": "Date",
-      "vehicle": "Vehicul",
-      "client": "Client",
-      "summary": "Rezumat"
-    },
-    "fields": {
-      "pickupDate": "Data preluării",
-      "pickupTime": "Ora preluării",
-      "returnDate": "Data returnării",
-      "returnTime": "Ora returnării",
-      "pickupLocation": "Locație preluare",
-      "returnLocation": "Locație returnare",
-      "totalDays": "zile",
-      "notes": "Note"
-    },
-    "availability": {
-      "search": "Caută disponibilitate",
-      "available": "Disponibil",
-      "notAvailable": "Nu este disponibil",
-      "selectVehicle": "Selectează vehicul",
-      "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date"
-    },
-    "pricing": {
-      "pricePerDay": "Preț/zi",
-      "basePrice": "Preț de bază",
-      "finalPrice": "Preț total",
-      "initialPayment": "Avans",
-      "remainingPayment": "Rest de plată",
-      "deposit": "Garanție",
-      "dueDate": "Dată scadență",
-      "manualAdjustment": "Ajustare manuală"
-    },
-    "client": {
-      "select": "Selectează client",
-      "search": "Caută client...",
-      "createQuick": "Creare rapidă client",
-      "fullName": "Nume complet",
-      "phone": "Telefon",
-      "email": "Email",
-      "documentNumber": "Număr document"
-    },
-    "status": {
-      "quote": "Ofertă",
-      "reserved": "Rezervat",
-      "confirmed": "Confirmat",
-      "delivered": "Predat",
-      "returned": "Returnat",
-      "closed": "Închis",
-      "cancelled": "Anulat"
-    },
-    "paymentStatus": {
-      "pending": "În așteptare",
-      "partial": "Parțial",
-      "paid": "Plătit",
-      "refunded": "Restituit"
-    },
-    "contractStatus": {
-      "pending": "În așteptare",
-      "signed": "Semnat",
-      "completed": "Finalizat",
-      "cancelled": "Anulat"
-    },
-    "actions": {
-      "cancel": "Anulează rezervarea",
-      "createReservation": "Creare rezervare",
-      "viewDetail": "Vezi detalii"
-    },
-    "messages": {
-      "created": "Rezervare creată cu succes",
-      "cancelled": "Rezervare anulată",
-      "invalidDates": "Data returnării trebuie să fie după data preluării",
-      "vehicleNoLongerAvailable": "Vehiculul nu mai este disponibil pentru aceste date"
-    },
-    "placeholders": {
-      "contractFuture": "Semnare contract în dezvoltare",
-      "paymentsFuture": "Gestionare plăți în dezvoltare",
-      "deliveryFuture": "Predare/returnare în dezvoltare"
-    },
-    "list": {
-      "empty": "Nu există rezervări"
-    }
-  },
-  "clients": {
-    "title": "Clienți",
-    "subtitle": "Gestionează clienți și documentație",
-    "new": "Client nou",
-    "edit": "Editează client",
-    "detail": "Detalii client",
-    "searchPlaceholder": "Caută după nume, telefon, email sau document...",
-    "noClients": "Nu există clienți",
-    "sections": {
-      "personalData": "Date personale",
-      "drivingLicense": "Permis de conducere",
-      "internalManagement": "Gestionare internă",
-      "documents": "Documente",
-      "reservations": "Rezervări"
-    },
-    "fields": {
-      "fullName": "Nume complet",
-      "phone": "Telefon",
-      "email": "Email",
-      "documentType": "Tip document",
-      "documentNumber": "Număr document",
-      "address": "Adresă",
-      "birthDate": "Data nașterii",
-      "drivingLicenseNumber": "Număr permis",
-      "drivingLicenseIssueDate": "Data emiterii",
-      "drivingLicenseExpiryDate": "Data expirării",
-      "drivingLicenseCountry": "Țara permisului",
-      "trustLevel": "Nivel de încredere",
-      "notes": "Note interne"
-    },
-    "documentTypes": {
-      "dni": "DNI",
-      "nie": "NIE",
-      "passport": "Pașaport",
-      "other": "Altul"
-    },
-    "trustLevel": {
-      "new": "Nou",
-      "known": "Cunoscut",
-      "regular": "Regulat",
-      "risk": "Risc",
-      "blocked": "Blocat"
-    },
-    "documents": {
-      "documentFront": "Document față",
-      "documentBack": "Document spate",
-      "drivingLicenseFront": "Permis față",
-      "drivingLicenseBack": "Permis spate",
-      "other": "Alt document",
-      "upload": "Încarcă document",
-      "delete": "Șterge document",
-      "open": "Deschide",
-      "noDocuments": "Nu există documente încărcate",
-      "invalidType": "Tip fișier invalid (jpg, png, webp, pdf)",
-      "maxSizeExceeded": "Fișierul depășește dimensiunea maximă (5MB)",
-      "uploading": "Se încarcă..."
-    },
-    "reservations": {
-      "noReservations": "Nu există rezervări",
-      "upcoming": "Viitoare",
-      "history": "Istoric"
-    }
-  },
-  "contracts": {
-    "title": "Contracte"
+  "menu": {
+    "calendar": "Calendar",
+    "clients": "Clienți",
+    "contracts": "Contracte",
+    "dashboard": "Dashboard",
+    "expenses": "Cheltuieli",
+    "inspections": "Inspecții",
+    "payments": "Plăți",
+    "reports": "Rapoarte",
+    "reservations": "Rezervări",
+    "settings": "Setări",
+    "vehicles": "Vehicule"
   },
   "payments": {
-    "title": "Plăți",
-    "subtitle": "Gestionează plăți și garanții",
-    "new": "Plată nouă",
-    "detail": "Detalii plată",
-    "list": "Lista plăți",
-    "manualPayment": "Plată manuală",
-    "registerPayment": "Înregistrează plată",
-    "generatePaymentLink": "Generează link de plată",
-    "fields": {
-      "concept": "Concept",
-      "amount": "Sumă",
-      "paidAmount": "Plătit",
-      "pendingAmount": "Rest de plată",
-      "method": "Metodă",
-      "type": "Tip",
-      "status": "Status",
-      "source": "Sursă",
-      "dueDate": "Scadență",
-      "paidAt": "Data plății",
-      "notes": "Note",
-      "internalReference": "Referință internă",
-      "externalReference": "Referință externă"
-    },
-    "methods": {
-      "cash": "Numerar",
-      "bankTransfer": "Transfer bancar",
-      "bizum": "Bizum",
-      "physicalPos": "POS fizic",
-      "redsys": "Redsys (online)",
-      "manualCard": "Card manual",
-      "other": "Altul"
-    },
-    "types": {
-      "initialPayment": "Avans inițial",
-      "remainingPayment": "Rest plată",
-      "rentalPayment": "Plată închiriere",
-      "deposit": "Garanție",
-      "depositRefund": "Restituire garanție",
-      "depositRetention": "Reținere garanție",
-      "extraCharge": "Taxă extra",
-      "fuelCharge": "Combustibil",
-      "cleaningCharge": "Curățenie",
-      "extraKmCharge": "Km extra",
-      "penalty": "Penalizare",
-      "fine": "Amendă",
-      "other": "Altul"
-    },
-    "status": {
-      "pending": "În așteptare",
-      "paid": "Plătit",
-      "partial": "Parțial",
-      "failed": "Eșuat",
-      "cancelled": "Anulat",
-      "refunded": "Restituit"
-    },
     "actions": {
-      "markAsPaid": "Marchează ca plătit",
       "cancelPayment": "Anulează plata",
-      "refundDeposit": "Restituie garanția",
-      "retainDeposit": "Reține garanția",
-      "addExtraCharge": "Adaugă taxă extra",
+      "markAsPaid": "Marchează ca plătit",
       "viewReservation": "Vezi rezervare"
     },
-    "messages": {
-      "paymentCreated": "Plată creată",
-      "paymentUpdated": "Plată actualizată",
-      "paymentCancelled": "Plată anulată",
-      "paymentLinkCreated": "Link de plată creat",
-      "redsysNotConfigured": "Redsys nu este configurat. Contactează administratorul."
-    },
-    "summary": {
-      "title": "Rezumat",
-      "totalPaid": "Total plătit",
-      "totalPending": "Total restant",
-      "balance": "Balanță",
-      "rentalTotal": "Total închiriere",
-      "depositRequired": "Garanție necesară",
-      "depositPaid": "Garanție încasată",
-      "depositReturned": "Garanție restituită",
-      "depositRetained": "Garanție reținută",
-      "extraChargesTotal": "Taxe extra"
-    },
     "deposit": {
-      "title": "Garanție",
-      "required": "Necesară",
-      "paid": "Încasată",
-      "returned": "Restituită",
-      "retained": "Reținută",
-      "pending": "În așteptare",
       "refundFull": "Restituie total",
-      "refundPartial": "Restituie parțial",
       "retain": "Reține"
     },
-    "extraCharges": {
-      "title": "Taxe extra",
-      "add": "Adaugă taxă extra"
-    },
-    "redsys": {
-      "title": "Date Redsys",
-      "order": "Comandă",
-      "authorizationCode": "Cod autorizare",
-      "responseCode": "Cod răspuns",
-      "notificationReceived": "Notificare primită"
+    "fields": {
+      "amount": "Sumă",
+      "concept": "Concept",
+      "dueDate": "Scadență",
+      "externalReference": "Referință externă",
+      "internalReference": "Referință internă",
+      "method": "Metodă",
+      "notes": "Note",
+      "paidAmount": "Plătit",
+      "paidAt": "Data plății",
+      "pendingAmount": "Rest de plată",
+      "source": "Sursă",
+      "type": "Tip"
     },
     "list": {
       "empty": "Nu există plăți"
-    }
-  },
-  "inspections": {
-    "title": "Inspecții",
-    "subtitle": "Inspecții la predarea și returnarea vehiculelor",
-    "startPickup": "Inspecție predare",
-    "startReturn": "Inspecție returnare",
-    "completePickup": "Finalizează predarea",
-    "completeReturn": "Finalizează returnarea",
-    "closeReservation": "Închide rezervarea la finalizare",
-    "type": {
-      "pickup": "Predare",
-      "return": "Returnare"
     },
+    "methods": {
+      "bankTransfer": "Transfer bancar",
+      "bizum": "Bizum",
+      "cash": "Numerar",
+      "manualCard": "Card manual",
+      "other": "Altul",
+      "physicalPos": "POS fizic",
+      "redsys": "Redsys (online)"
+    },
+    "redsys": {
+      "authorizationCode": "Cod autorizare",
+      "notificationReceived": "Notificare primită",
+      "order": "Comandă",
+      "responseCode": "Cod răspuns",
+      "title": "Date Redsys"
+    },
+    "registerPayment": "Înregistrează plată",
     "status": {
-      "draft": "Ciornă",
-      "completed": "Finalizată",
-      "cancelled": "Anulată"
-    },
-    "fuelLevel": {
-      "empty": "Gol",
-      "quarter": "1/4",
-      "half": "1/2",
-      "three_quarters": "3/4",
-      "full": "Plin"
-    },
-    "cleanliness": {
-      "dirty": "Murdar",
-      "acceptable": "Acceptabil",
-      "clean": "Curat",
-      "very_clean": "Foarte curat"
-    },
-    "photoCategory": {
-      "front": "Față",
-      "rear": "Spate",
-      "left_side": "Lateral stânga",
-      "right_side": "Lateral dreapta",
-      "dashboard": "Bord",
-      "trunk": "Portbagaj",
-      "interior": "Interior",
-      "damage": "Deteriorare",
-      "detail": "Detaliu",
-      "other": "Altul"
-    },
-    "damageArea": {
-      "front_bumper": "Bară față",
-      "rear_bumper": "Bară spate",
-      "hood": "Capotă",
-      "roof": "Acoperiș",
-      "trunk": "Portbagaj",
-      "front_left_door": "Ușă față stânga",
-      "front_right_door": "Ușă față dreapta",
-      "rear_left_door": "Ușă spate stânga",
-      "rear_right_door": "Ușă spate dreapta",
-      "left_fender": "Aripa stânga",
-      "right_fender": "Aripa dreapta",
-      "windshield": "Parbriz",
-      "rear_window": "Lunetă",
-      "left_mirror": "Oglindă stânga",
-      "right_mirror": "Oglindă dreapta",
-      "front_left_wheel": "Roată față stânga",
-      "front_right_wheel": "Roată față dreapta",
-      "rear_left_wheel": "Roată spate stânga",
-      "rear_right_wheel": "Roată spate dreapta",
-      "interior": "Interior",
-      "other": "Altul"
-    },
-    "damageSeverity": {
-      "minor": "Minor",
-      "medium": "Mediu",
-      "serious": "Grav"
-    },
-    "fields": {
-      "km": "Kilometraj",
-      "fuelLevel": "Nivel combustibil",
-      "cleanliness": "Curățenie",
-      "notes": "Observații"
-    },
-    "sections": {
-      "deliveryAndReturn": "Predare și returnare",
-      "reservationSummary": "Rezumat rezervare",
-      "checklist": "Listă verificare",
-      "vehicleStatus": "Stare vehicul",
-      "photos": "Fotografii",
-      "damages": "Daune înregistrate",
-      "extraCharges": "Taxe suplimentare",
-      "deposit": "Garanție"
-    },
-    "checklist": {
-      "clientIdentityChecked": "Identitate client verificată",
-      "drivingLicenseChecked": "Permis de conducere verificat",
-      "contractChecked": "Contract semnat și revizuit",
-      "paymentChecked": "Plată efectuată",
-      "depositChecked": "Garanție încasată",
-      "keysDelivered": "Chei predate",
-      "keysReturned": "Chei returnate",
-      "vehicleDocumentsDelivered": "Documentație predată",
-      "accessoriesChecked": "Accesorii verificate"
-    },
-    "photos": {
-      "noPhotos": "Nu există fotografii încărcate",
-      "addPhoto": "Adaugă fotografie",
-      "category": "Categorie"
-    },
-    "damages": {
-      "add": "Adaugă daună",
-      "area": "Zonă",
-      "severity": "Gravitate",
-      "description": "Descriere"
-    },
-    "extraCharges": {
-      "extraKm": "Taxă km suplimentari",
-      "fuel": "Taxă combustibil",
-      "refuelPenalty": "Penalizare realimentare",
-      "cleaning": "Taxă curățenie",
-      "damage": "Taxă daune",
-      "fine": "Amendă",
-      "other": "Alte taxe",
-      "total": "Total taxe suplimentare"
-    },
-    "deposit": {
-      "actions": "Acțiuni garanție",
-      "required": "Garanție necesară",
-      "paid": "Garanție încasată",
-      "refund": "Returnează garanție",
-      "retain": "Reține garanție",
-      "refundAndClose": "Returnează și închide"
-    },
-    "actions": {
-      "view": "Vezi detalii",
-      "startPickup": "Începe predare",
-      "startReturn": "Începe returnare"
-    },
-    "messages": {
-      "noPickup": "Fără inspecție de predare",
-      "noReturn": "Fără inspecție de returnare",
-      "saved": "Inspecție salvată",
-      "kmRequired": "Introdu kilometrajul",
-      "kmInvalid": "Kilometrajul la returnare trebuie să fie mai mare sau egal cu cel de la predare",
-      "fuelRequired": "Selectează nivelul de combustibil",
-      "damageDescRequired": "Descrierea daunei este obligatorie"
-    }
-  },
-  "contracts": {
-    "title": "Contracte",
-    "subtitle": "Generează, semnează și trimite contracte de închiriere",
-    "new": "Contract nou",
-    "detail": "Detalii contract",
-    "status": {
-      "draft": "Ciornă",
-      "generated": "Generat",
-      "pendingSignature": "Așteaptă semnare",
-      "signed": "Semnat",
       "cancelled": "Anulat",
-      "expired": "Expirat"
+      "failed": "Eșuat",
+      "paid": "Plătit",
+      "partial": "Parțial",
+      "pending": "În așteptare",
+      "refunded": "Restituit"
     },
+    "subtitle": "Gestionează plăți și garanții",
+    "summary": {
+      "extraChargesTotal": "Taxe extra",
+      "rentalTotal": "Total închiriere",
+      "title": "Rezumat",
+      "totalPaid": "Total plătit"
+    },
+    "title": "Plăți",
+    "types": {
+      "deposit": "Garanție",
+      "depositRefund": "Returnare garanție",
+      "depositRetention": "Reținere garanție",
+      "extraCleaning": "Curățenie",
+      "extraDamage": "Daune",
+      "extraFine": "Amendă",
+      "extraFuel": "Combustibil",
+      "extraKm": "Kilometri extra",
+      "extraOther": "Altele",
+      "initialPayment": "Avans",
+      "refuelPenalty": "Penalizare realimentare",
+      "remainingPayment": "Rest închiriere",
+      "rentalPayment": "Plată integrală"
+    }
+  },
+  "photos": {
+    "takePhoto": "Fă poză",
+    "uploadFromGallery": "Încarcă din galerie"
+  },
+  "reservations": {
     "actions": {
-      "title": "Acțiuni",
-      "generate": "Generează contract",
-      "generateSigningLink": "Generează link de semnare",
-      "copySigningLink": "Copiază link de semnare",
-      "cancelLink": "Anulează link",
-      "sendEmail": "Trimite prin email",
-      "downloadPdf": "Descarcă PDF",
-      "downloadSignedPdf": "Descarcă PDF semnat",
-      "viewOriginalPdf": "Vezi contract original",
-      "viewContract": "Vezi contract",
-      "cancel": "Anulează"
+      "cancel": "Anulează rezervarea",
+      "close": "Închide rezervarea",
+      "createReservation": "Creare rezervare",
+      "viewReservation": "Vezi rezervarea"
     },
-    "messages": {
-      "generated": "Contract generat",
-      "signingLinkCreated": "Link de semnare creat",
-      "linkCopied": "Link copiat",
-      "emailSent": "Contract trimis prin email",
-      "emailError": "Eroare la trimiterea emailului",
-      "alreadySigned": "Contractul este deja semnat",
-      "expired": "Link-ul a expirat",
-      "invalidLink": "Link invalid"
+    "availability": {
+      "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date",
+      "search": "Caută disponibilitate",
+      "selectVehicle": "Selectează vehicul"
     },
-    "sign": {
-      "title": "Semnarea contractului",
-      "subtitle": "Semnătură digitală pentru contractul de închiriere",
-      "readOnlyNotice": "Verifică datele contractului înainte de a semna.",
-      "acceptConditions": "Am citit și accept condițiile contractului.",
-      "clearSignature": "Șterge semnătura",
-      "submitSignature": "Semnează contractul",
-      "successTitle": "Contract semnat",
-      "successMessage": "Mulțumim. Contractul tău a fost înregistrat.",
-      "alreadySigned": "Acest contract este deja semnat.",
-      "expired": "Link-ul de semnare a expirat.",
-      "invalid": "Link invalid."
+    "client": {
+      "createQuick": "Creare rapidă client",
+      "documentNumber": "Număr document",
+      "email": "Email",
+      "fullName": "Nume complet",
+      "phone": "Telefon",
+      "search": "Caută client...",
+      "select": "Selectează client"
     },
+    "detail": "Detalii rezervare",
     "fields": {
-      "contractNumber": "Număr contract",
-      "client": "Client",
-      "vehicle": "Vehicul",
-      "reservation": "Rezervare",
-      "generatedAt": "Generat",
-      "signedAt": "Semnat",
-      "emailedAt": "Trimis prin email",
-      "depositAmount": "Garanție",
-      "allStatuses": "Toate stările"
-    },
-    "email": {
-      "title": "Trimite contract prin email",
-      "recipient": "Email destinatar",
-      "subject": "Subiect",
-      "send": "Trimite"
-    },
-    "signingLink": {
-      "title": "Link de semnare activ"
+      "notes": "Note",
+      "pickupDate": "Data preluării",
+      "pickupLocation": "Locație preluare",
+      "pickupTime": "Ora preluării",
+      "returnDate": "Data returnării",
+      "returnLocation": "Locație returnare",
+      "returnTime": "Ora returnării",
+      "totalDays": "zile"
     },
     "list": {
-      "empty": "Nu există contracte"
-    }
+      "empty": "Nu există rezervări"
+    },
+    "messages": {
+      "invalidDates": "Data returnării trebuie să fie după data preluării"
+    },
+    "new": "Rezervare nouă",
+    "paymentStatus": {
+      "pending": "În așteptare"
+    },
+    "pricing": {
+      "basePrice": "Preț de bază",
+      "deposit": "Garanție",
+      "finalPrice": "Preț total",
+      "initialPayment": "Avans",
+      "manualAdjustment": "Ajustare manuală",
+      "pricePerDay": "Preț/zi",
+      "remainingPayment": "Rest de plată"
+    },
+    "status": {
+      "cancelled": "Anulat",
+      "closed": "Închis",
+      "confirmed": "Confirmat",
+      "delivered": "Predat",
+      "reserved": "Rezervat",
+      "returned": "Returnat"
+    },
+    "subtitle": "Gestionează rezervările de închiriere",
+    "title": "Rezervări"
+  },
+  "vehicles": {
+    "actions": {
+      "changeStatus": "Schimbă status"
+    },
+    "addFirst": "Adaugă primul vehicul",
+    "bodyTypes": {
+      "2_4_doors": "2/4 uși",
+      "4_5_doors": "4/5 uși",
+      "cabrio": "Cabrio",
+      "estate": "Break",
+      "mpv": "Monovolum",
+      "suv": "SUV",
+      "van": "Duba"
+    },
+    "changeStatusTitle": "Schimbă statusul vehiculului",
+    "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
+    "deleteTitle": "Șterge vehicul",
+    "edit": "Editează vehicul",
+    "features": {
+      "airConditioning": "Aer condiționat",
+      "cruiseControl": "Control tracțiune",
+      "navigation": "Navigație",
+      "parkingSensors": "Senzori de parcare",
+      "rearCamera": "Cameră spate"
+    },
+    "fields": {
+      "acrissCode": "Cod ACRISS",
+      "bodyType": "Tip caroserie",
+      "brand": "Marcă",
+      "category": "Categorie",
+      "color": "Culoare",
+      "currentKm": "Kilometraj actual",
+      "description": "Descriere",
+      "fuelType": "Tip combustibil",
+      "luggageCapacity": "Bagaje",
+      "model": "Model",
+      "plateNumber": "Număr de înmatriculare",
+      "publicEnabled": "Publică pe web",
+      "seats": "Locuri",
+      "transmission": "Transmisie",
+      "version": "Versiune",
+      "vin": "NUMĂR ȘASIU",
+      "year": "An"
+    },
+    "filterAllCategories": "Toate categoriile",
+    "filterAllStatus": "Toate statusurile",
+    "help": {
+      "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C"
+    },
+    "new": "Vehicul nou",
+    "noPhotos": "Nu există fotografii",
+    "noVehicles": "Nu există vehicule",
+    "photos": {
+      "closeGallery": "Închide galeria",
+      "count": "{{count}} fotografii",
+      "imageAlt": "Fotografie vehicul",
+      "next": "Următor",
+      "openGallery": "Vezi galeria",
+      "previous": "Anterior",
+      "thumbnail": "Miniatură"
+    },
+    "pricing": {
+      "addRule": "Adaugă interval",
+      "allowed": "Da",
+      "conditions": "Condiții",
+      "day": "zi",
+      "days": "zile",
+      "defaultDepositAmount": "Avans",
+      "deposit": "Avans",
+      "extraKmPrice": "Preț km extra",
+      "includedKmPerDay": "Km incluse/zi",
+      "manualPriceAllowed": "Permite preț manual",
+      "maxDays": "Până la",
+      "minDays": "De la",
+      "minimumRentalDays": "Minim zile închiriere",
+      "notAllowed": "Nu",
+      "priceFrom": "De la",
+      "pricePerDay": "€/zi",
+      "removeRule": "Elimină interval",
+      "restoreDefaults": "Restabilește implicit",
+      "rules": "Reguli de preț"
+    },
+    "reservations": {
+      "history": "Istoric",
+      "inProgress": "În desfășurare",
+      "noReservations": "Acest vehicul nu are încă rezervări",
+      "upcoming": "Rezervări viitoare"
+    },
+    "searchPlaceholder": "Caută după marcă, model, placă...",
+    "sections": {
+      "basicInfo": "Informații de bază",
+      "features": "Caracteristici",
+      "pricing": "Tarife și condiții",
+      "rentalClassification": "Clasificare de închiriere",
+      "reservations": "Rezervări"
+    },
+    "subtitle": "Gestionează flota ta",
+    "tabs": {
+      "photos": "Fotografii",
+      "pricing": "Tarife"
+    },
+    "title": "Vehicule",
+    "viewDetail": "Vezi detalii"
+  },
+  "workflow": {
+    "blockedAction": "Acțiune blocată",
+    "cancelled": "Rezervare anulată sau închisă",
+    "cannotCancel": "Nu se poate anula rezervarea",
+    "cannotClose": "Nu se poate închide rezervarea",
+    "cannotDeliver": "Nu se poate începe predarea",
+    "cannotReturn": "Nu se poate începe returnarea",
+    "contractAlreadySigned": "Contractul este deja semnat",
+    "contractCancelled": "Contract anulat",
+    "missingContract": "Lipsește contractul",
+    "missingDeposit": "Lipsește garanția",
+    "missingInitialPayment": "Lipsește încasarea avansului",
+    "missingPickupInspection": "Lipsește inspecția de predare",
+    "missingRemainingPayment": "Lipsește restul de plată",
+    "missingReservation": "Rezervare inexistentă",
+    "missingReturnInspection": "Lipsește inspecția de returnare",
+    "missingSignature": "Lipsește semnătura contractului",
+    "nextAction": "Următoarea acțiune",
+    "pickupAlreadyCompleted": "Predarea este deja completă",
+    "returnAlreadyCompleted": "Returnarea este deja completă",
+    "unsettledDeposit": "Garanție nerezolvată"
   }
 }

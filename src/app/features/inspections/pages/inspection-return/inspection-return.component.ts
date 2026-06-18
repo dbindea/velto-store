@@ -26,6 +26,7 @@ import { Reservation } from '@shared/models/reservation.model';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { calculateCalendarDays } from '@shared/utils/reservation-date.util';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workflow.util';
 
 @Component({
   selector: 'app-inspection-return',
@@ -104,6 +105,15 @@ export class InspectionReturnComponent implements OnInit {
       this.pickupInspection = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'pickup');
 
       const existing = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'return');
+
+      // Workflow guard.
+      const decision = canStartReturn({
+        reservation: this.reservation,
+        pickupInspection: this.pickupInspection || null,
+        returnInspection: existing || null
+      } as WorkflowContext);
+      this.workflowBlockReason = decision.ok ? '' : decision.reason;
+
       if (existing) {
         this.formData = { ...this.formData, ...existing };
       }
@@ -113,6 +123,8 @@ export class InspectionReturnComponent implements OnInit {
       this.loading = false;
     }
   }
+
+  workflowBlockReason = '';
 
   getEmptyChecklist(): InspectionChecklist {
     return {

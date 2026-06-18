@@ -1,672 +1,596 @@
 {
   "app": {
-    "name": "VELTO",
-    "subtitle": "Gestión interna de flota"
+    "name": "VELTO"
   },
   "auth": {
-    "loginTitle": "VELTO",
+    "loading": "Verificando...",
     "loginSubtitle": "Acceso interno",
-    "loginWithGoogle": "Entrar con Google",
-    "logout": "Cerrar sesión",
-    "notAuthorized": "Tu cuenta no está autorizada para acceder a esta aplicación.",
-    "loading": "Verificando..."
+    "loginWithGoogle": "Entrar con Google"
   },
-  "menu": {
-    "dashboard": "Dashboard",
-    "calendar": "Calendario",
-    "reservations": "Reservas",
-    "vehicles": "Vehículos",
-    "clients": "Clientes",
-    "payments": "Pagos",
-    "expenses": "Gastos",
-    "contracts": "Contratos",
-    "inspections": "Inspecciones",
-    "reports": "Informes",
-    "settings": "Ajustes"
+  "clients": {
+    "documentTypes": {
+      "dni": "DNI",
+      "nie": "NIE",
+      "other": "Otro",
+      "passport": "Pasaporte"
+    },
+    "documents": {
+      "delete": "Eliminar documento",
+      "documentBack": "Documento trasero",
+      "documentFront": "Documento frontal",
+      "drivingLicenseBack": "Carnet trasero",
+      "drivingLicenseFront": "Carnet frontal",
+      "invalidType": "Tipo de archivo no válido (jpg, png, webp, pdf)",
+      "maxSizeExceeded": "El archivo supera el tamaño máximo (5MB)",
+      "noDocuments": "No hay documentos subidos",
+      "open": "Abrir",
+      "other": "Otro documento"
+    },
+    "edit": "Editar cliente",
+    "fields": {
+      "address": "Dirección",
+      "birthDate": "Fecha de nacimiento",
+      "documentNumber": "Número documento",
+      "documentType": "Tipo documento",
+      "drivingLicenseCountry": "País carnet",
+      "drivingLicenseExpiryDate": "Fecha caducidad",
+      "drivingLicenseIssueDate": "Fecha expedición",
+      "drivingLicenseNumber": "Número carnet",
+      "email": "Email",
+      "fullName": "Nombre completo",
+      "notes": "Notas internas",
+      "phone": "Teléfono",
+      "trustLevel": "Nivel de confianza"
+    },
+    "new": "Nuevo cliente",
+    "noClients": "No hay clientes todavía",
+    "payments": {
+      "deposits": "Fianzas",
+      "depositsCollected": "Fianzas cobradas",
+      "depositsRetained": "Fianzas retenidas",
+      "depositsReturned": "Fianzas devueltas",
+      "empty": "No hay pagos registrados",
+      "extras": "Cargos extra",
+      "extrasPaid": "Cargos extra pagados",
+      "rental": "Alquiler",
+      "rentalPaid": "Pagado alquiler",
+      "reservationsWithDebt": "Reservas con deuda",
+      "reservationsWithDebtHint": "tienen pagos pendientes",
+      "totalPaid": "Total pagado",
+      "totalPending": "Pendiente"
+    },
+    "reservations": {
+      "history": "Histórico",
+      "noReservations": "No hay reservas",
+      "upcoming": "Próximas"
+    },
+    "searchPlaceholder": "Buscar por nombre, teléfono, email o documento...",
+    "sections": {
+      "documents": "Documentos",
+      "drivingLicense": "Carnet de conducir",
+      "internalManagement": "Gestión interna",
+      "personalData": "Datos personales",
+      "reservations": "Reservas"
+    },
+    "subtitle": "Gestiona clientes y documentación",
+    "title": "Clientes",
+    "trustLevel": {
+      "blocked": "Bloqueado",
+      "known": "Conocido",
+      "new": "Nuevo",
+      "regular": "Habitual",
+      "risk": "Riesgo"
+    }
+  },
+  "common": {
+    "all": "Todos",
+    "back": "Volver",
+    "cancel": "Cancelar",
+    "create": "Crear",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "loading": "Cargando...",
+    "moduleInProgress": "Módulo en preparación",
+    "or": "o",
+    "save": "Guardar",
+    "search": "Buscar"
+  },
+  "contracts": {
+    "actions": {
+      "cancelLink": "Cancelar link",
+      "copySigningLink": "Copiar link de firma",
+      "downloadPdf": "Descargar PDF",
+      "downloadSignedPdf": "Descargar PDF firmado",
+      "generate": "Generar contrato",
+      "generateSigningLink": "Generar link de firma",
+      "sendEmail": "Enviar por email",
+      "title": "Acciones",
+      "viewContract": "Ver contrato",
+      "viewOriginalPdf": "Ver contrato original"
+    },
+    "email": {
+      "recipient": "Email del destinatario",
+      "send": "Enviar",
+      "title": "Enviar contrato por email"
+    },
+    "fields": {
+      "allStatuses": "Todos los estados",
+      "client": "Cliente",
+      "depositAmount": "Fianza",
+      "emailedAt": "Enviado por email",
+      "generatedAt": "Generado",
+      "reservation": "Reserva",
+      "signedAt": "Firmado",
+      "vehicle": "Vehículo"
+    },
+    "list": {
+      "empty": "No hay contratos"
+    },
+    "messages": {
+      "linkCopied": "Link copiado"
+    },
+    "sign": {
+      "acceptConditions": "He leído y acepto las condiciones del contrato.",
+      "alreadySigned": "Este contrato ya ha sido firmado.",
+      "expired": "El link de firma ha caducado.",
+      "highlightsTitle": "contracts.sign.highlightsTitle",
+      "invalid": "Link no válido.",
+      "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
+      "submitSignature": "Firmar contrato",
+      "subtitle": "Firma digital de contrato de alquiler",
+      "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
+      "successTitle": "Contrato firmado",
+      "title": "Firma del contrato"
+    },
+    "signingLink": {
+      "title": "Link de firma activo"
+    },
+    "status": {
+      "cancelled": "Cancelado",
+      "draft": "Borrador",
+      "expired": "Caducado",
+      "generated": "Generado",
+      "pendingSignature": "Pendiente de firma",
+      "signed": "Firmado"
+    },
+    "subtitle": "Genera, firma y envía contratos de alquiler",
+    "title": "Contratos"
+  },
+  "currentImage": {
+    "url": "URL de imagen actual"
   },
   "dashboard": {
+    "allClearHint": "No hay acciones pendientes. Buen trabajo.",
+    "allClearTitle": "Todo al día",
+    "fleet": {
+      "available": "Disponibles",
+      "label": "Flota",
+      "rented": "En alquiler",
+      "total": "Total"
+    },
+    "pendingPayment": {
+      "hint": "Cobrar antes de confirmar la entrega",
+      "label": "Señal pendiente"
+    },
+    "pendingSignature": {
+      "hint": "El cliente aún no ha firmado el contrato",
+      "label": "Firma pendiente"
+    },
+    "pickupToday": {
+      "at": "Hora",
+      "label": "Entrega hoy"
+    },
+    "returnOpen": {
+      "hint": "Devolución hecha, falta resolver fianza o cargos",
+      "label": "Cerrar reserva pendiente"
+    },
+    "returnToday": {
+      "at": "Hora",
+      "label": "Devolución hoy"
+    },
+    "subtitle": "Lo que necesita tu atención ahora mismo",
     "title": "Dashboard",
-    "subtitle": "Bienvenido al sistema de gestión de flota",
-    "vehicles": "Vehículos",
-    "activeReservations": "Reservas activas",
-    "clients": "Clientes",
-    "pendingInspections": "Inspecciones pendientes"
+    "vehicleRented": {
+      "label": "Vehículo en alquiler"
+    },
+    "viewAll": "Ver todos",
+    "viewContract": "Ver contrato",
+    "viewReservation": "Ver reserva",
+    "viewVehicle": "Ver vehículo"
+  },
+  "inspections": {
+    "actions": {
+      "startPickup": "Iniciar entrega",
+      "startReturn": "Iniciar devolución",
+      "view": "Ver detalle"
+    },
+    "checklist": {
+      "accessoriesChecked": "Accesorios revisados",
+      "clientIdentityChecked": "Identidad del cliente verificada",
+      "contractChecked": "Contrato firmado y revisado",
+      "depositChecked": "Fianza depositada",
+      "drivingLicenseChecked": "Carnet de conducir verificado",
+      "keysDelivered": "Llaves entregadas",
+      "keysReturned": "Llaves devueltas",
+      "paymentChecked": "Pago realizado",
+      "vehicleDocumentsDelivered": "Documentación entregada"
+    },
+    "cleanliness": {
+      "clean": "Limpio",
+      "dirty": "Sucio",
+      "normal": "Normal",
+      "veryDirty": "Muy sucio"
+    },
+    "closeReservation": "Cerrar reserva al completar",
+    "completePickup": "Completar entrega",
+    "completeReturn": "Completar devolución",
+    "damages": {
+      "add": "Añadir daño",
+      "area": "Zona",
+      "areaFront": "Frontal",
+      "areaInterior": "Interior",
+      "areaLeftSide": "Lateral izquierdo",
+      "areaOther": "Otro",
+      "areaRear": "Trasera",
+      "areaRightSide": "Lateral derecho",
+      "areaRoof": "Techo",
+      "areaWheels": "Ruedas",
+      "areaWindows": "Ventanas",
+      "description": "Descripción",
+      "medium": "Medio",
+      "minor": "Leve",
+      "serious": "Grave",
+      "severity": "Gravedad"
+    },
+    "extraCharges": {
+      "cleaning": "Cargo de limpieza",
+      "damage": "Cargo por daños",
+      "extraKm": "Cargo por km extra",
+      "fine": "Multa",
+      "fuel": "Cargo de combustible",
+      "other": "Otros cargos",
+      "refuelPenalty": "Penalización por repostaje",
+      "total": "Total cargos extra"
+    },
+    "fields": {
+      "cleanliness": "Limpieza",
+      "fuelLevel": "Nivel de combustible",
+      "km": "Kilometraje",
+      "notes": "Observaciones"
+    },
+    "fuel": {
+      "empty": "Vacío",
+      "full": "Lleno",
+      "half": "1/2",
+      "quarter": "1/4",
+      "threeQuarters": "3/4"
+    },
+    "messages": {
+      "noPickup": "Sin inspección de entrega",
+      "noReturn": "Sin inspección de devolución"
+    },
+    "photos": {
+      "damage": "Daño",
+      "dashboard": "Cuadro",
+      "front": "Frontal",
+      "fuel": "Combustible",
+      "interior": "Interior",
+      "leftSide": "Lateral izquierdo",
+      "noPhotos": "No hay fotos subidas",
+      "other": "Otro",
+      "rear": "Trasera",
+      "rightSide": "Lateral derecho"
+    },
+    "pickup": "Entrega",
+    "return": "Devolución",
+    "sections": {
+      "checklist": "Lista de verificación",
+      "damages": "Daños registrados",
+      "deliveryAndReturn": "Entrega y devolución",
+      "deposit": "Fianza",
+      "extraCharges": "Cargos extra",
+      "photos": "Fotografías",
+      "reservationSummary": "Resumen de la reserva",
+      "vehicleStatus": "Estado del vehículo"
+    },
+    "startPickup": "Inspección de entrega",
+    "startReturn": "Inspección de devolución",
+    "status": {
+      "cancelled": "Cancelada",
+      "completed": "Completada",
+      "draft": "Borrador"
+    },
+    "subtitle": "Entregas y devoluciones de vehículos",
+    "title": "Inspecciones",
+    "type": {
+      "pickup": "Entrega",
+      "return": "Devolución"
+    }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrador",
     "userRoleEmployee": "Empleado"
   },
-  "common": {
-    "loading": "Cargando...",
-    "save": "Guardar",
-    "cancel": "Cancelar",
-    "edit": "Editar",
-    "delete": "Eliminar",
-    "search": "Buscar",
-    "new": "Nuevo",
-    "back": "Volver",
-    "close": "Cerrar",
-    "moduleInProgress": "Módulo en preparación",
-    "welcome": "Bienvenido",
-    "all": "Todos",
-    "paid": "Pagado",
-    "pending": "Pendiente",
-    "or": "o"
-  },
-  "vehicles": {
-    "title": "Vehículos",
-    "subtitle": "Gestiona tu flota",
-    "new": "Nuevo vehículo",
-    "edit": "Editar vehículo",
-    "detail": "Detalle del vehículo",
-    "searchPlaceholder": "Buscar por marca, modelo, matrícula...",
-    "noVehicles": "No hay vehículos todavía",
-    "addFirst": "Añadir primer vehículo",
-    "viewDetail": "Ver detalle",
-    "filterAllStatus": "Todos los estados",
-    "filterAllCategories": "Todas las categorías",
-    "status": {
-      "available": "Disponible",
-      "rented": "En alquiler",
-      "maintenance": "Mantenimiento",
-      "out_of_service": "Fuera de servicio"
-    },
-    "fields": {
-      "brand": "Marca",
-      "model": "Modelo",
-      "version": "Versión",
-      "year": "Año",
-      "plateNumber": "Matrícula",
-      "category": "Categoría",
-      "bodyType": "Tipo de carrocería",
-      "acrissCode": "Código ACRISS",
-      "fuelType": "Combustible",
-      "transmission": "Transmisión",
-      "seats": "Plazas",
-      "luggageCapacity": "Equipaje",
-      "status": "Estado",
-      "currentKm": "Kilometraje actual",
-      "color": "Color",
-      "vin": "Número de bastidor",
-      "description": "Descripción",
-      "publicEnabled": "Publicar en web",
-      "mainImage": "Foto principal",
-      "gallery": "Galería de fotos"
-    },
-    "bodyTypes": {
-      "2_4_doors": "2/4 puertas",
-      "4_5_doors": "4/5 puertas",
-      "estate": "Familiar",
-      "suv": "SUV",
-      "van": "Furgoneta",
-      "cabrio": "Cabrio",
-      "mpv": "Monovolumen"
-    },
-    "sections": {
-      "basicInfo": "Información básica",
-      "rentalClassification": "Clasificación de alquiler",
-      "features": "Características",
-      "photos": "Fotos",
-      "history": "Historial",
-      "pricing": "Tarifas y condiciones",
-      "reservations": "Reservas"
-    },
-    "tabs": {
-      "info": "Información",
-      "features": "Características",
-      "photos": "Fotos",
-      "pricing": "Tarifas",
-      "history": "Historial"
-    },
-    "features": {
-      "airConditioning": "Aire acondicionado",
-      "navigation": "Navegador",
-      "parkingSensors": "Sensores de aparcamiento",
-      "rearCamera": "Cámara trasera",
-      "cruiseControl": "Control de crucero"
-    },
-    "actions": {
-      "changeStatus": "Cambiar estado",
-      "setMainImage": "Establecer como principal",
-      "deleteImage": "Eliminar imagen",
-      "uploadPhoto": "Subir foto",
-      "addGalleryPhoto": "Añadir a galería"
-    },
-    "help": {
-      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C"
-    },
-    "mainPhoto": "Principal",
-    "noPhotos": "No hay fotos disponibles",
-    "historyPlaceholder": "Historial en desarrollo",
-    "photos": {
-      "openGallery": "Ver galería",
-      "closeGallery": "Cerrar galería",
-      "previous": "Anterior",
-      "next": "Siguiente",
-      "mainPhoto": "Principal",
-      "gallery": "Galería",
-      "count": "{{count}} fotos",
-      "imageAlt": "Foto del vehículo",
-      "thumbnail": "Miniatura"
-    },
-    "changeStatusTitle": "Cambiar estado del vehículo",
-    "deleteTitle": "Eliminar vehículo",
-    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
-    "reservations": {
-      "noReservations": "No hay reservas para este vehículo",
-      "upcoming": "Próximas reservas",
-      "history": "Histórico"
-    },
-    "pricing": {
-      "title": "Tarifas",
-      "conditions": "Condiciones",
-      "rules": "Reglas de precio",
-      "preview": "Vista previa de precio",
-      "defaultDepositAmount": "Fianza",
-      "includedKmPerDay": "Km incluidos/día",
-      "extraKmPrice": "Precio km extra",
-      "minimumRentalDays": "Mínimo días alquiler",
-      "manualPriceAllowed": "Permitir precio manual",
-      "label": "Etiqueta",
-      "minDays": "Desde",
-      "maxDays": "Hasta",
-      "pricePerDay": "€/día",
-      "addRule": "Añadir rango",
-      "removeRule": "Eliminar rango",
-      "restoreDefaults": "Restaurar tarifas",
-      "testDays": "Días de prueba",
-      "appliedRule": "Regla aplicada",
-      "totalPrice": "Total",
-      "noRuleFound": "Sin regla para estos días",
-      "from": "Desde",
-      "to": "Hasta",
-      "moreThan": "+",
-      "days": "días",
-      "day": "día",
-      "priceFrom": "Desde",
-      "deposit": "Fianza",
-      "allowed": "Sí",
-      "notAllowed": "No"
-    }
-  },
-  "reservations": {
-    "title": "Reservas",
-    "subtitle": "Gestiona las reservas de alquiler",
-    "new": "Nueva reserva",
-    "create": "Crear reserva",
-    "detail": "Detalle de reserva",
-    "list": "Lista de reservas",
-    "steps": {
-      "dates": "Fechas",
-      "vehicle": "Vehículo",
-      "client": "Cliente",
-      "summary": "Resumen"
-    },
-    "fields": {
-      "pickupDate": "Fecha de recogida",
-      "pickupTime": "Hora de recogida",
-      "returnDate": "Fecha de devolución",
-      "returnTime": "Hora de devolución",
-      "pickupLocation": "Lugar de recogida",
-      "returnLocation": "Lugar de devolución",
-      "totalDays": "días",
-      "notes": "Notas"
-    },
-    "availability": {
-      "search": "Buscar disponibilidad",
-      "available": "Disponible",
-      "notAvailable": "No disponible",
-      "selectVehicle": "Seleccionar vehículo",
-      "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas"
-    },
-    "pricing": {
-      "pricePerDay": "Precio/día",
-      "basePrice": "Precio base",
-      "finalPrice": "Precio total",
-      "initialPayment": "Señal",
-      "remainingPayment": "Resto pendiente",
-      "deposit": "Fianza",
-      "dueDate": "Fecha de vencimiento",
-      "manualAdjustment": "Ajuste manual"
-    },
-    "client": {
-      "select": "Seleccionar cliente",
-      "search": "Buscar cliente...",
-      "createQuick": "Crear cliente rápido",
-      "fullName": "Nombre completo",
-      "phone": "Teléfono",
-      "email": "Correo electrónico",
-      "documentNumber": "Número de documento"
-    },
-    "status": {
-      "quote": "Presupuesto",
-      "reserved": "Reservado",
-      "confirmed": "Confirmado",
-      "delivered": "Entregado",
-      "returned": "Devuelto",
-      "closed": "Cerrado",
-      "cancelled": "Cancelado"
-    },
-    "paymentStatus": {
-      "pending": "Pendiente",
-      "partial": "Parcial",
-      "paid": "Pagado",
-      "refunded": "Reembolsado"
-    },
-    "contractStatus": {
-      "pending": "Pendiente",
-      "signed": "Firmado",
-      "completed": "Completado",
-      "cancelled": "Cancelado"
-    },
-    "actions": {
-      "cancel": "Cancelar reserva",
-      "createReservation": "Crear reserva",
-      "viewDetail": "Ver detalle"
-    },
-    "messages": {
-      "created": "Reserva creada correctamente",
-      "cancelled": "Reserva cancelada",
-      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
-      "vehicleNoLongerAvailable": "El vehículo ya no está disponible para estas fechas"
-    },
-    "placeholders": {
-      "contractFuture": "Firma de contrato en desarrollo",
-      "paymentsFuture": "Gestión de pagos en desarrollo",
-      "deliveryFuture": "Entrega/devolución en desarrollo"
-    },
-    "list": {
-      "empty": "No hay reservas todavía"
-    }
-  },
-  "clients": {
-    "title": "Clientes",
-    "subtitle": "Gestiona clientes y documentación",
-    "new": "Nuevo cliente",
-    "edit": "Editar cliente",
-    "detail": "Detalle del cliente",
-    "searchPlaceholder": "Buscar por nombre, teléfono, email o documento...",
-    "noClients": "No hay clientes todavía",
-    "sections": {
-      "personalData": "Datos personales",
-      "drivingLicense": "Carnet de conducir",
-      "internalManagement": "Gestión interna",
-      "documents": "Documentos",
-      "reservations": "Reservas"
-    },
-    "fields": {
-      "fullName": "Nombre completo",
-      "phone": "Teléfono",
-      "email": "Email",
-      "documentType": "Tipo documento",
-      "documentNumber": "Número documento",
-      "address": "Dirección",
-      "birthDate": "Fecha de nacimiento",
-      "drivingLicenseNumber": "Número carnet",
-      "drivingLicenseIssueDate": "Fecha expedición",
-      "drivingLicenseExpiryDate": "Fecha caducidad",
-      "drivingLicenseCountry": "País carnet",
-      "trustLevel": "Nivel de confianza",
-      "notes": "Notas internas"
-    },
-    "documentTypes": {
-      "dni": "DNI",
-      "nie": "NIE",
-      "passport": "Pasaporte",
-      "other": "Otro"
-    },
-    "trustLevel": {
-      "new": "Nuevo",
-      "known": "Conocido",
-      "regular": "Habitual",
-      "risk": "Riesgo",
-      "blocked": "Bloqueado"
-    },
-    "documents": {
-      "documentFront": "Documento frontal",
-      "documentBack": "Documento trasero",
-      "drivingLicenseFront": "Carnet frontal",
-      "drivingLicenseBack": "Carnet trasero",
-      "other": "Otro documento",
-      "upload": "Subir documento",
-      "delete": "Eliminar documento",
-      "open": "Abrir",
-      "noDocuments": "No hay documentos subidos",
-      "invalidType": "Tipo de archivo no válido (jpg, png, webp, pdf)",
-      "maxSizeExceeded": "El archivo supera el tamaño máximo (5MB)",
-      "uploading": "Subiendo..."
-    },
-    "reservations": {
-      "noReservations": "No hay reservas",
-      "upcoming": "Próximas",
-      "history": "Histórico"
-    }
-  },
-  "contracts": {
-    "title": "Contratos"
+  "menu": {
+    "calendar": "Calendario",
+    "clients": "Clientes",
+    "contracts": "Contratos",
+    "dashboard": "Dashboard",
+    "expenses": "Gastos",
+    "inspections": "Inspecciones",
+    "payments": "Pagos",
+    "reports": "Informes",
+    "reservations": "Reservas",
+    "settings": "Ajustes",
+    "vehicles": "Vehículos"
   },
   "payments": {
-    "title": "Pagos",
-    "subtitle": "Gestiona pagos y fianzas",
-    "new": "Nuevo pago",
-    "detail": "Detalle de pago",
-    "list": "Lista de pagos",
-    "manualPayment": "Pago manual",
-    "registerPayment": "Registrar cobro",
-    "generatePaymentLink": "Generar link de pago",
-    "fields": {
-      "concept": "Concepto",
-      "amount": "Importe",
-      "paidAmount": "Pagado",
-      "pendingAmount": "Pendiente",
-      "method": "Método",
-      "type": "Tipo",
-      "status": "Estado",
-      "source": "Fuente",
-      "dueDate": "Vencimiento",
-      "paidAt": "Fecha de pago",
-      "notes": "Notas",
-      "internalReference": "Referencia interna",
-      "externalReference": "Referencia externa"
-    },
-    "methods": {
-      "cash": "Efectivo",
-      "bankTransfer": "Transferencia",
-      "bizum": "Bizum",
-      "physicalPos": "TPV físico",
-      "redsys": "Redsys (online)",
-      "manualCard": "Tarjeta manual",
-      "other": "Otro"
-    },
-    "types": {
-      "initialPayment": "Señal inicial",
-      "remainingPayment": "Resto alquiler",
-      "rentalPayment": "Pago alquiler",
-      "deposit": "Fianza",
-      "depositRefund": "Devolución fianza",
-      "depositRetention": "Retención fianza",
-      "extraCharge": "Cargo extra",
-      "fuelCharge": "Combustible",
-      "cleaningCharge": "Limpieza",
-      "extraKmCharge": "Km extra",
-      "penalty": "Penalización",
-      "fine": "Multa",
-      "other": "Otro"
-    },
-    "status": {
-      "pending": "Pendiente",
-      "paid": "Pagado",
-      "partial": "Parcial",
-      "failed": "Fallido",
-      "cancelled": "Cancelado",
-      "refunded": "Reembolsado"
-    },
     "actions": {
-      "markAsPaid": "Marcar como pagado",
       "cancelPayment": "Cancelar pago",
-      "refundDeposit": "Devolver fianza",
-      "retainDeposit": "Retener fianza",
-      "addExtraCharge": "Añadir cargo extra",
+      "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
     },
-    "messages": {
-      "paymentCreated": "Pago creado correctamente",
-      "paymentUpdated": "Pago actualizado",
-      "paymentCancelled": "Pago cancelado",
-      "paymentLinkCreated": "Link de pago creado",
-      "redsysNotConfigured": "Redsys no está configurado. Contacta con el administrador."
-    },
-    "summary": {
-      "title": "Resumen",
-      "totalPaid": "Total pagado",
-      "totalPending": "Total pendiente",
-      "balance": "Balance",
-      "rentalTotal": "Total alquiler",
-      "depositRequired": "Fianza requerida",
-      "depositPaid": "Fianza cobrada",
-      "depositReturned": "Fianza devuelta",
-      "depositRetained": "Fianza retenida",
-      "extraChargesTotal": "Cargos extra"
-    },
     "deposit": {
-      "title": "Fianza",
-      "required": "Requerida",
-      "paid": "Cobrada",
-      "returned": "Devuelta",
-      "retained": "Retenida",
-      "pending": "Pendiente",
       "refundFull": "Devolver total",
-      "refundPartial": "Devolver parcial",
       "retain": "Retener"
     },
-    "extraCharges": {
-      "title": "Cargos extra",
-      "add": "Añadir cargo extra"
-    },
-    "redsys": {
-      "title": "Datos Redsys",
-      "order": "Orden",
-      "authorizationCode": "Código autorización",
-      "responseCode": "Código respuesta",
-      "notificationReceived": "Notificación recibida"
+    "fields": {
+      "amount": "Importe",
+      "concept": "Concepto",
+      "dueDate": "Vencimiento",
+      "externalReference": "Referencia externa",
+      "internalReference": "Referencia interna",
+      "method": "Método",
+      "notes": "Notas",
+      "paidAmount": "Pagado",
+      "paidAt": "Fecha de pago",
+      "pendingAmount": "Pendiente",
+      "source": "Fuente",
+      "type": "Tipo"
     },
     "list": {
       "empty": "No hay pagos"
-    }
-  },
-  "inspections": {
-    "title": "Inspecciones",
-    "subtitle": "Entregas y devoluciones de vehículos",
-    "startPickup": "Inspección de entrega",
-    "startReturn": "Inspección de devolución",
-    "completePickup": "Completar entrega",
-    "completeReturn": "Completar devolución",
-    "closeReservation": "Cerrar reserva al completar",
-    "type": {
-      "pickup": "Entrega",
-      "return": "Devolución"
     },
+    "methods": {
+      "bankTransfer": "Transferencia",
+      "bizum": "Bizum",
+      "cash": "Efectivo",
+      "manualCard": "Tarjeta manual",
+      "other": "Otro",
+      "physicalPos": "TPV físico",
+      "redsys": "Redsys (online)"
+    },
+    "redsys": {
+      "authorizationCode": "Código autorización",
+      "notificationReceived": "Notificación recibida",
+      "order": "Orden",
+      "responseCode": "Código respuesta",
+      "title": "Datos Redsys"
+    },
+    "registerPayment": "Registrar cobro",
     "status": {
-      "draft": "Borrador",
-      "completed": "Completada",
-      "cancelled": "Cancelada"
-    },
-    "fuelLevel": {
-      "empty": "Vacío",
-      "quarter": "1/4",
-      "half": "1/2",
-      "three_quarters": "3/4",
-      "full": "Lleno"
-    },
-    "cleanliness": {
-      "dirty": "Sucio",
-      "acceptable": "Aceptable",
-      "clean": "Limpio",
-      "very_clean": "Muy limpio"
-    },
-    "photoCategory": {
-      "front": "Frontal",
-      "rear": "Trasera",
-      "left_side": "Lateral izquierdo",
-      "right_side": "Lateral derecho",
-      "dashboard": "Cuadro",
-      "trunk": "Maletero",
-      "interior": "Interior",
-      "damage": "Daño",
-      "detail": "Detalle",
-      "other": "Otro"
-    },
-    "damageArea": {
-      "front_bumper": "Paragolpes delantero",
-      "rear_bumper": "Paragolpes trasero",
-      "hood": "Capó",
-      "roof": "Techo",
-      "trunk": "Maletero",
-      "front_left_door": "Puerta delantera izquierda",
-      "front_right_door": "Puerta delantera derecha",
-      "rear_left_door": "Puerta trasera izquierda",
-      "rear_right_door": "Puerta trasera derecha",
-      "left_fender": "Guardabarros izquierdo",
-      "right_fender": "Guardabarros derecho",
-      "windshield": "Parabrisas",
-      "rear_window": "Luneta trasera",
-      "left_mirror": "Retrovisor izquierdo",
-      "right_mirror": "Retrovisor derecho",
-      "front_left_wheel": "Rueda delantera izquierda",
-      "front_right_wheel": "Rueda delantera derecha",
-      "rear_left_wheel": "Rueda trasera izquierda",
-      "rear_right_wheel": "Rueda trasera derecha",
-      "interior": "Interior",
-      "other": "Otro"
-    },
-    "damageSeverity": {
-      "minor": "Leve",
-      "medium": "Medio",
-      "serious": "Grave"
-    },
-    "fields": {
-      "km": "Kilometraje",
-      "fuelLevel": "Nivel de combustible",
-      "cleanliness": "Limpieza",
-      "notes": "Observaciones"
-    },
-    "sections": {
-      "deliveryAndReturn": "Entrega y devolución",
-      "reservationSummary": "Resumen de la reserva",
-      "checklist": "Lista de verificación",
-      "vehicleStatus": "Estado del vehículo",
-      "photos": "Fotografías",
-      "damages": "Daños registrados",
-      "extraCharges": "Cargos extra",
-      "deposit": "Fianza"
-    },
-    "checklist": {
-      "clientIdentityChecked": "Identidad del cliente verificada",
-      "drivingLicenseChecked": "Carnet de conducir verificado",
-      "contractChecked": "Contrato firmado y revisado",
-      "paymentChecked": "Pago realizado",
-      "depositChecked": "Fianza depositada",
-      "keysDelivered": "Llaves entregadas",
-      "keysReturned": "Llaves devueltas",
-      "vehicleDocumentsDelivered": "Documentación entregada",
-      "accessoriesChecked": "Accesorios revisados"
-    },
-    "photos": {
-      "noPhotos": "No hay fotos subidas",
-      "addPhoto": "Añadir foto",
-      "category": "Categoría"
-    },
-    "damages": {
-      "add": "Añadir daño",
-      "area": "Zona",
-      "severity": "Gravedad",
-      "description": "Descripción"
-    },
-    "extraCharges": {
-      "extraKm": "Cargo por km extra",
-      "fuel": "Cargo de combustible",
-      "refuelPenalty": "Penalización por repostaje",
-      "cleaning": "Cargo de limpieza",
-      "damage": "Cargo por daños",
-      "fine": "Multa",
-      "other": "Otros cargos",
-      "total": "Total cargos extra"
-    },
-    "deposit": {
-      "actions": "Acciones sobre fianza",
-      "required": "Fianza requerida",
-      "paid": "Fianza depositada",
-      "refund": "Devolver fianza",
-      "retain": "Retener fianza",
-      "refundAndClose": "Devolver y cerrar"
-    },
-    "actions": {
-      "view": "Ver detalle",
-      "startPickup": "Iniciar entrega",
-      "startReturn": "Iniciar devolución"
-    },
-    "messages": {
-      "noPickup": "Sin inspección de entrega",
-      "noReturn": "Sin inspección de devolución",
-      "saved": "Inspección guardada",
-      "kmRequired": "Introduce el kilometraje",
-      "kmInvalid": "El kilometraje de devolución debe ser mayor o igual al de entrega",
-      "fuelRequired": "Selecciona el nivel de combustible",
-      "damageDescRequired": "La descripción del daño es obligatoria"
-    }
-  },
-  "contracts": {
-    "title": "Contratos",
-    "subtitle": "Genera, firma y envía contratos de alquiler",
-    "new": "Nuevo contrato",
-    "detail": "Detalle del contrato",
-    "status": {
-      "draft": "Borrador",
-      "generated": "Generado",
-      "pendingSignature": "Pendiente de firma",
-      "signed": "Firmado",
       "cancelled": "Cancelado",
-      "expired": "Caducado"
+      "failed": "Fallido",
+      "paid": "Pagado",
+      "partial": "Parcial",
+      "pending": "Pendiente",
+      "refunded": "Reembolsado"
     },
+    "subtitle": "Gestiona pagos y fianzas",
+    "summary": {
+      "extraChargesTotal": "Cargos extra",
+      "rentalTotal": "Total alquiler",
+      "title": "Resumen",
+      "totalPaid": "Total pagado"
+    },
+    "title": "Pagos",
+    "types": {
+      "deposit": "Fianza",
+      "depositRefund": "Devolución fianza",
+      "depositRetention": "Retención fianza",
+      "extraCleaning": "Limpieza",
+      "extraDamage": "Daños",
+      "extraFine": "Multa",
+      "extraFuel": "Combustible",
+      "extraKm": "Kilómetros extra",
+      "extraOther": "Otros",
+      "initialPayment": "Señal",
+      "refuelPenalty": "Penalización repostaje",
+      "remainingPayment": "Resto alquiler",
+      "rentalPayment": "Pago completo"
+    }
+  },
+  "photos": {
+    "takePhoto": "Hacer foto",
+    "uploadFromGallery": "Subir desde galería"
+  },
+  "reservations": {
     "actions": {
-      "title": "Acciones",
-      "generate": "Generar contrato",
-      "generateSigningLink": "Generar link de firma",
-      "copySigningLink": "Copiar link de firma",
-      "cancelLink": "Cancelar link",
-      "sendEmail": "Enviar por email",
-      "downloadPdf": "Descargar PDF",
-      "downloadSignedPdf": "Descargar PDF firmado",
-      "viewOriginalPdf": "Ver contrato original",
-      "viewContract": "Ver contrato",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar reserva",
+      "close": "Cerrar reserva",
+      "createReservation": "Crear reserva",
+      "viewReservation": "Ver reserva"
     },
-    "messages": {
-      "generated": "Contrato generado",
-      "signingLinkCreated": "Link de firma creado",
-      "linkCopied": "Link copiado",
-      "emailSent": "Contrato enviado por email",
-      "emailError": "Error al enviar el email",
-      "alreadySigned": "El contrato ya está firmado",
-      "expired": "El link ha caducado",
-      "invalidLink": "Link no válido"
+    "availability": {
+      "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas",
+      "search": "Buscar disponibilidad",
+      "selectVehicle": "Seleccionar vehículo"
     },
-    "sign": {
-      "title": "Firma del contrato",
-      "subtitle": "Firma digital de contrato de alquiler",
-      "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
-      "acceptConditions": "He leído y acepto las condiciones del contrato.",
-      "clearSignature": "Limpiar firma",
-      "submitSignature": "Firmar contrato",
-      "successTitle": "Contrato firmado",
-      "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
-      "alreadySigned": "Este contrato ya ha sido firmado.",
-      "expired": "El link de firma ha caducado.",
-      "invalid": "Link no válido."
+    "client": {
+      "createQuick": "Crear cliente rápido",
+      "documentNumber": "Número de documento",
+      "email": "Correo electrónico",
+      "fullName": "Nombre completo",
+      "phone": "Teléfono",
+      "search": "Buscar cliente...",
+      "select": "Seleccionar cliente"
     },
+    "detail": "Detalle de reserva",
     "fields": {
-      "contractNumber": "Número de contrato",
-      "client": "Cliente",
-      "vehicle": "Vehículo",
-      "reservation": "Reserva",
-      "generatedAt": "Generado",
-      "signedAt": "Firmado",
-      "emailedAt": "Enviado por email",
-      "depositAmount": "Fianza",
-      "allStatuses": "Todos los estados"
-    },
-    "email": {
-      "title": "Enviar contrato por email",
-      "recipient": "Email del destinatario",
-      "subject": "Asunto",
-      "send": "Enviar"
-    },
-    "signingLink": {
-      "title": "Link de firma activo"
+      "notes": "Notas",
+      "pickupDate": "Fecha de recogida",
+      "pickupLocation": "Lugar de recogida",
+      "pickupTime": "Hora de recogida",
+      "returnDate": "Fecha de devolución",
+      "returnLocation": "Lugar de devolución",
+      "returnTime": "Hora de devolución",
+      "totalDays": "días"
     },
     "list": {
-      "empty": "No hay contratos"
-    }
+      "empty": "No hay reservas todavía"
+    },
+    "messages": {
+      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida"
+    },
+    "new": "Nueva reserva",
+    "paymentStatus": {
+      "pending": "Pendiente"
+    },
+    "pricing": {
+      "basePrice": "Precio base",
+      "deposit": "Fianza",
+      "finalPrice": "Precio total",
+      "initialPayment": "Señal",
+      "manualAdjustment": "Ajuste manual",
+      "pricePerDay": "Precio/día",
+      "remainingPayment": "Resto pendiente"
+    },
+    "status": {
+      "cancelled": "Cancelado",
+      "closed": "Cerrado",
+      "confirmed": "Confirmado",
+      "delivered": "Entregado",
+      "reserved": "Reservado",
+      "returned": "Devuelto"
+    },
+    "subtitle": "Gestiona las reservas de alquiler",
+    "title": "Reservas"
+  },
+  "vehicles": {
+    "actions": {
+      "changeStatus": "Cambiar estado"
+    },
+    "addFirst": "Añadir primer vehículo",
+    "bodyTypes": {
+      "2_4_doors": "2/4 puertas",
+      "4_5_doors": "4/5 puertas",
+      "cabrio": "Cabrio",
+      "estate": "Familiar",
+      "mpv": "Monovolumen",
+      "suv": "SUV",
+      "van": "Furgoneta"
+    },
+    "changeStatusTitle": "Cambiar estado del vehículo",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
+    "deleteTitle": "Eliminar vehículo",
+    "edit": "Editar vehículo",
+    "features": {
+      "airConditioning": "Aire acondicionado",
+      "cruiseControl": "Control de crucero",
+      "navigation": "Navegador",
+      "parkingSensors": "Sensores de aparcamiento",
+      "rearCamera": "Cámara trasera"
+    },
+    "fields": {
+      "acrissCode": "Código ACRISS",
+      "bodyType": "Tipo de carrocería",
+      "brand": "Marca",
+      "category": "Categoría",
+      "color": "Color",
+      "currentKm": "Kilometraje actual",
+      "description": "Descripción",
+      "fuelType": "Combustible",
+      "luggageCapacity": "Equipaje",
+      "model": "Modelo",
+      "plateNumber": "Matrícula",
+      "publicEnabled": "Publicar en web",
+      "seats": "Plazas",
+      "transmission": "Transmisión",
+      "version": "Versión",
+      "vin": "Número de bastidor",
+      "year": "Año"
+    },
+    "filterAllCategories": "Todas las categorías",
+    "filterAllStatus": "Todos los estados",
+    "help": {
+      "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C"
+    },
+    "new": "Nuevo vehículo",
+    "noPhotos": "No hay fotos disponibles",
+    "noVehicles": "No hay vehículos todavía",
+    "photos": {
+      "closeGallery": "Cerrar galería",
+      "count": "{{count}} fotos",
+      "imageAlt": "Foto del vehículo",
+      "next": "Siguiente",
+      "openGallery": "Ver galería",
+      "previous": "Anterior",
+      "thumbnail": "Miniatura"
+    },
+    "pricing": {
+      "addRule": "Añadir rango",
+      "allowed": "Sí",
+      "conditions": "Condiciones",
+      "day": "día",
+      "days": "días",
+      "defaultDepositAmount": "Fianza",
+      "deposit": "Fianza",
+      "extraKmPrice": "Precio km extra",
+      "includedKmPerDay": "Km incluidos/día",
+      "manualPriceAllowed": "Permitir precio manual",
+      "maxDays": "Hasta",
+      "minDays": "Desde",
+      "minimumRentalDays": "Mínimo días alquiler",
+      "notAllowed": "No",
+      "priceFrom": "Desde",
+      "pricePerDay": "€/día",
+      "removeRule": "Eliminar rango",
+      "restoreDefaults": "Restaurar tarifas",
+      "rules": "Reglas de precio"
+    },
+    "reservations": {
+      "history": "Histórico",
+      "inProgress": "En curso",
+      "noReservations": "Este vehículo aún no tiene reservas",
+      "upcoming": "Próximas reservas"
+    },
+    "searchPlaceholder": "Buscar por marca, modelo, matrícula...",
+    "sections": {
+      "basicInfo": "Información básica",
+      "features": "Características",
+      "pricing": "Tarifas y condiciones",
+      "rentalClassification": "Clasificación de alquiler",
+      "reservations": "Reservas"
+    },
+    "subtitle": "Gestiona tu flota",
+    "tabs": {
+      "photos": "Fotos",
+      "pricing": "Tarifas"
+    },
+    "title": "Vehículos",
+    "viewDetail": "Ver detalle"
+  },
+  "workflow": {
+    "blockedAction": "Acción bloqueada",
+    "cancelled": "Reserva cancelada o cerrada",
+    "cannotCancel": "No se puede cancelar la reserva",
+    "cannotClose": "No se puede cerrar la reserva",
+    "cannotDeliver": "No se puede iniciar la entrega",
+    "cannotReturn": "No se puede iniciar la devolución",
+    "contractAlreadySigned": "El contrato ya está firmado",
+    "contractCancelled": "El contrato está cancelado",
+    "missingContract": "Falta el contrato",
+    "missingDeposit": "Falta cobrar o registrar la fianza",
+    "missingInitialPayment": "Falta cobrar la señal",
+    "missingPickupInspection": "Falta la inspección de entrega",
+    "missingRemainingPayment": "Falta cobrar el resto del alquiler",
+    "missingReservation": "Reserva no encontrada",
+    "missingReturnInspection": "Falta la inspección de devolución",
+    "missingSignature": "Falta firma del contrato",
+    "nextAction": "Siguiente acción",
+    "pickupAlreadyCompleted": "La entrega ya está completada",
+    "returnAlreadyCompleted": "La devolución ya está completada",
+    "unsettledDeposit": "Fianza pendiente de resolver"
   }
 }

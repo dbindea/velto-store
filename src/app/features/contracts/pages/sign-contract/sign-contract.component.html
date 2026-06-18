@@ -45,6 +45,20 @@
           {{ 'contracts.sign.readOnlyNotice' | translate }}
         </p>
 
+        @if (view.highlights && view.highlights.length > 0) {
+          <section class="highlights-section" aria-label="Lo principal a tener en cuenta">
+            <h2 class="highlights-title">
+              <i class="pi pi-exclamation-circle"></i>
+              {{ 'contracts.sign.highlightsTitle' | translate }}
+            </h2>
+            <ol class="highlights-list">
+              @for (hl of view.highlights; track $index) {
+                <li>{{ hl }}</li>
+              }
+            </ol>
+          </section>
+        }
+
         <section class="summary-section">
           <div class="summary-row">
             <span class="label">{{ 'contracts.fields.client' | translate }}:</span>

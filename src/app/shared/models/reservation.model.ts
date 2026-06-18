@@ -1,26 +1,35 @@
 /**
  * Reservation model for vehicle rental management.
- * 
- * Key design decisions:
- * - Stores snapshots of vehicle and client data to preserve historical accuracy
- * - Uses pricingSnapshot to freeze price calculation at creation time
- * - Supports multi-step payment tracking (signal + remainder)
- * - Separates reservation status from payment and contract status
+ *
+ * State machine (ReservationStatus):
+ *   reserved   → reservation created, vehicle blocked
+ *   confirmed  → initial payment (signal) collected
+ *   delivered  → pickup inspection completed, vehicle handed over
+ *   returned   → return inspection completed, awaiting close
+ *   closed     → deposit settled, extras settled, vehicle available again
+ *   cancelled  → reservation cancelled before delivery
+ *
+ * Contract state machine (ReservationContractStatus):
+ *   pending           → no PDF yet
+ *   generated         → PDF created in Storage
+ *   pending_signature → signing link issued
+ *   signed            → customer has signed
+ *   cancelled | expired → terminal states
  */
 
-export type ReservationStatus = 
-  | 'quote' 
-  | 'reserved' 
-  | 'confirmed' 
-  | 'delivered' 
-  | 'returned' 
-  | 'closed' 
+export type ReservationStatus =
+  | 'reserved'
+  | 'confirmed'
+  | 'delivered'
+  | 'returned'
+  | 'closed'
   | 'cancelled';
 
-export type ReservationPaymentStatus = 
-  | 'pending' 
-  | 'partial' 
-  | 'paid' 
+export type ReservationPaymentStatus =
+  | 'pending'
+  | 'partial'
+  | 'paid'
+  | 'settled'
   | 'refunded';
 
 export type ReservationContractStatus =
@@ -56,11 +65,29 @@ export interface ReservationPricingSnapshot {
 }
 
 export interface ReservationDeposit {
+  /** Total amount the customer must leave on hold. Can be 0 (waived). */
   requiredAmount: number;
   paidAmount: number;
   returnedAmount: number;
   retainedAmount: number;
-  status: 'pending' | 'paid' | 'partial_returned' | 'returned' | 'retained';
+  /**
+   * If the deposit was waived entirely (requiredAmount === 0 and paidAmount === 0),
+   * operators must record why. Surfaced as "Seguro a todo riesgo" or similar.
+   */
+  waivedReason?: string;
+  status: 'pending' | 'paid' | 'partial_returned' | 'returned' | 'retained' | 'waived';
+}
+
+/**
+ * Operator-authorised exception that allowed the workflow to advance
+ * past a guardrail (e.g. delivered without deposit). Required fields:
+ * action, reason, createdAt, createdBy.
+ */
+export interface WorkflowException {
+  action: string;
+  reason: string;
+  createdAt: any;
+  createdBy?: string;
 }
 
 export interface ReservationInitialPayment {
@@ -92,8 +119,7 @@ export interface ReservationPaymentSummary {
   depositPaid: number;
   depositReturned: number;
   depositRetained: number;
-  extraChargesTotal: number;
-  refundsTotal: number;
+  extrasTotal: number;
   totalPaid: number;
   totalPending: number;
   balance: number;
@@ -162,12 +188,17 @@ export interface Reservation {
 
   /**
    * Aggregated financial state, calculated from the payments collection.
-   * Optional to keep backward compatibility with existing reservations.
    */
   paymentSummary?: ReservationPaymentSummary;
 
   /** Denormalized contract status info for quick display in the reservation card. */
   contractInfo?: ReservationContractInfo;
+
+  /**
+   * Operator-authorised exceptions that allowed the workflow to advance
+   * past a guardrail. See WorkflowException.
+   */
+  workflowExceptions?: WorkflowException[];
 
   notes?: string;
 
@@ -177,7 +208,6 @@ export interface Reservation {
 
 // Status labels for display
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
-  quote: 'Presupuesto',
   reserved: 'Reservado',
   confirmed: 'Confirmado',
   delivered: 'Entregado',
@@ -190,6 +220,7 @@ export const PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus, string> = {
   pending: 'Pendiente',
   partial: 'Parcial',
   paid: 'Pagado',
+  settled: 'Liquidado',
   refunded: 'Reembolsado'
 };
 
@@ -206,4 +237,4 @@ export const CONTRACT_STATUS_LABELS: Record<ReservationContractStatus, string> =
 export const BLOCKING_STATUSES: ReservationStatus[] = ['reserved', 'confirmed', 'delivered'];
 
 // Statuses that do not block availability
-export const NON_BLOCKING_STATUSES: ReservationStatus[] = ['quote', 'returned', 'closed', 'cancelled'];
+export const NON_BLOCKING_STATUSES: ReservationStatus[] = ['returned', 'closed', 'cancelled'];
