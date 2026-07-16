@@ -1,0 +1,169 @@
+<div class="page page-free-payment">
+  <div class="page-header">
+    <a class="btn-back" routerLink="/payments">
+      <i class="pi pi-arrow-left"></i>
+      <span>{{ 'common.back' | translate }}</span>
+    </a>
+    <h1>{{ 'payments.free.title' | translate }}</h1>
+    <p class="subtitle">{{ 'payments.free.subtitle' | translate }}</p>
+  </div>
+
+  @if (!created()) {
+    <div class="form-card">
+      <div class="form-section">
+        <label class="field">
+          <span class="label">{{ 'payments.free.amount' | translate }} *</span>
+          <div class="amount-input">
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              class="form-control"
+              name="amount"
+              [(ngModel)]="form.amount"
+              required
+            />
+            <span class="currency">€</span>
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="label">{{ 'payments.free.concept' | translate }} *</span>
+          <input
+            type="text"
+            class="form-control"
+            name="concept"
+            [(ngModel)]="form.concept"
+            required
+            [placeholder]="'payments.free.conceptPlaceholder' | translate"
+          />
+        </label>
+
+        <label class="field">
+          <span class="label">{{ 'payments.fields.method' | translate }}</span>
+          <select class="form-control" name="method" [(ngModel)]="form.method">
+            @for (opt of methodOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label | translate }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="form-section">
+        <h3 class="section-title">
+          <i class="pi pi-user"></i>
+          {{ 'payments.free.payerSection' | translate }}
+        </h3>
+        <p class="section-hint">{{ 'payments.free.payerHint' | translate }}</p>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">{{ 'payments.free.payerName' | translate }}</span>
+            <input
+              type="text"
+              class="form-control"
+              name="payerName"
+              [(ngModel)]="form.payerName"
+            />
+          </label>
+          <label class="field">
+            <span class="label">{{ 'payments.free.payerEmail' | translate }}</span>
+            <input
+              type="email"
+              class="form-control"
+              name="payerEmail"
+              [(ngModel)]="form.payerEmail"
+            />
+          </label>
+          <label class="field">
+            <span class="label">{{ 'payments.free.payerPhone' | translate }}</span>
+            <input
+              type="tel"
+              class="form-control"
+              name="payerPhone"
+              [(ngModel)]="form.payerPhone"
+            />
+          </label>
+        </div>
+      </div>
+
+      <label class="field full-width">
+        <span class="label">{{ 'payments.fields.notes' | translate }}</span>
+        <textarea
+          class="form-control"
+          name="notes"
+          rows="3"
+          [(ngModel)]="form.notes"
+        ></textarea>
+      </label>
+
+      @if (error()) {
+        <div class="error-msg">
+          <i class="pi pi-exclamation-circle"></i>
+          {{ error()! | translate }}
+        </div>
+      }
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="generate()"
+          [disabled]="saving()"
+        >
+          @if (saving()) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-credit-card"></i>
+          }
+          {{ 'payments.free.generateRedsysLink' | translate }}
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="result-card">
+      <div class="result-header">
+        <i class="pi pi-check-circle success-icon"></i>
+        <h2>{{ 'payments.free.created' | translate }}</h2>
+        <p class="ref">Ref: {{ created()!.internalReference }}</p>
+      </div>
+
+      @if (created()!.redsys?.paymentUrl) {
+        <div class="redsys-actions">
+          <button class="btn btn-primary" type="button" (click)="openRedsys()">
+            <i class="pi pi-external-link"></i>
+            {{ 'payments.free.openRedsys' | translate }}
+          </button>
+          <button class="btn btn-secondary" type="button" (click)="copyLink()">
+            <i class="pi pi-copy"></i>
+            @if (copied()) {
+              {{ 'common.copied' | translate }}
+            } @else {
+              {{ 'payments.free.copyLink' | translate }}
+            }
+          </button>
+        </div>
+        <p class="hint">
+          <i class="pi pi-info-circle"></i>
+          {{ 'payments.free.webhookHint' | translate }}
+        </p>
+      } @else {
+        <p class="hint">
+          <i class="pi pi-info-circle"></i>
+          {{ 'payments.free.manualHint' | translate }}
+        </p>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn-secondary" type="button" (click)="reset()">
+          <i class="pi pi-plus"></i>
+          {{ 'payments.free.new' | translate }}
+        </button>
+        <a class="btn btn-primary" routerLink="/payments">
+          <i class="pi pi-list"></i>
+          {{ 'payments.title' | translate }}
+        </a>
+      </div>
+    </div>
+  }
+</div>

@@ -7,10 +7,13 @@
   <aside class="sidebar" [class.open]="sidebarOpen()">
     <div class="sidebar-header">
       <div class="logo">
-        <div class="logo-icon">
-          <i class="pi pi-car"></i>
-        </div>
-        <span class="logo-text">{{ 'app.name' | translate }}</span>
+        <img
+          class="logo-image"
+          src="assets/brand/logo.svg"
+          [alt]="'brand.logoAlt' | translate"
+          (error)="onLogoError($event)"
+        />
+        <span class="logo-text brand-font">{{ 'app.name' | translate }}</span>
       </div>
     </div>
 

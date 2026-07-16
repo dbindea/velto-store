@@ -74,4 +74,18 @@ export class PrivateLayoutComponent {
   async logout() {
     await this.authService.logout();
   }
+
+  /**
+   * If the brand SVG cannot be loaded (e.g. file missing in some
+   * hosting configuration) fall back to the inline isologo so the
+   * sidebar still shows the V mark instead of a broken image icon.
+   */
+  onLogoError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (!img || img.dataset['fallback'] === '1') {
+      return;
+    }
+    img.dataset['fallback'] = '1';
+    img.src = 'assets/brand/isologo.svg';
+  }
 }

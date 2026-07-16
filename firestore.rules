@@ -79,6 +79,13 @@ service cloud.firestore {
       allow write: if isAuthorized(request.auth.token.email);
     }
 
+    // vehicleMaintenance collection - only authorized users.
+    // Free-form maintenance records (oil change, ITV, insurance, etc.).
+    match /vehicleMaintenance/{maintenanceId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if isAuthorized(request.auth.token.email);
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

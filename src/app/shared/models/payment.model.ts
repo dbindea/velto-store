@@ -27,7 +27,8 @@ export type PaymentType =
   | 'extra_km'             // Kilómetros extra
   | 'extra_damage'         // Daños nuevos
   | 'extra_fine'           // Multas
-  | 'extra_other';         // Otros cargos
+  | 'extra_other'          // Otros cargos
+  | 'free_payment';        // Cobro libre (sin reserva)
 
 export type PaymentDirection =
   | 'income'      // Cobro al cliente (pagos normales, fianza)
@@ -61,9 +62,26 @@ export type PaymentSource =
 export interface Payment {
   id?: string;
 
-  reservationId: string;
-  clientId: string;
-  vehicleId: string;
+  /**
+   * Optional reservation link. Free payments (cobros libres) leave
+   * this null and set `isFreePayment: true`.
+   */
+  reservationId?: string;
+  /** Optional client link. Free payments may set this when the
+   *  payer happens to be an existing client. */
+  clientId?: string;
+  /** Optional vehicle link. */
+  vehicleId?: string;
+
+  /** True when this payment is a "cobro libre" — not attached to any
+   *  reservation. UI filters and lists use this to bucket payments. */
+  isFreePayment?: boolean;
+  /** Free-form payer name for cobros libres. */
+  payerName?: string;
+  /** Free-form payer email (used to send the Redsys link). */
+  payerEmail?: string;
+  /** Free-form payer phone. */
+  payerPhone?: string;
 
   // Snapshots to preserve historical data
   reservationSnapshot?: {
@@ -141,7 +159,8 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   extra_km: 'payments.types.extraKm',
   extra_damage: 'payments.types.extraDamage',
   extra_fine: 'payments.types.extraFine',
-  extra_other: 'payments.types.extraOther'
+  extra_other: 'payments.types.extraOther',
+  free_payment: 'payments.types.freePayment'
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

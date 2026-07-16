@@ -67,7 +67,210 @@ const T = {
 
   // contracts (sign page)
   'contracts.sign.invalid': { es: 'Enlace no válido o contrato no encontrado.', en: 'Invalid link or contract not found.', ro: 'Link nevalid sau contract negăsit.' },
-  'contracts.sign.highlightsTitle': { es: 'Lo principal a tener en cuenta', en: 'What you need to know', ro: 'Ce trebuie să știți' }
+  'contracts.sign.highlightsTitle': { es: 'Lo principal a tener en cuenta', en: 'What you need to know', ro: 'Ce trebuie să știți' },
+
+  // common
+  'common.viewAll': { es: 'Ver todo', en: 'View all', ro: 'Vezi tot' },
+  'common.copied': { es: 'Copiado', en: 'Copied', ro: 'Copiat' },
+
+  // photos
+  'photos.camera': { es: 'Cámara', en: 'Camera', ro: 'Cameră' },
+  'photos.gallery': { es: 'Galería', en: 'Gallery', ro: 'Galerie' },
+
+  // brand
+  'brand.logoAlt': { es: 'Velto Rent', en: 'Velto Rent', ro: 'Velto Rent' },
+  'brand.velto': { es: 'Velto', en: 'Velto', ro: 'Velto' },
+
+  // payments.types.freePayment
+  'payments.types.freePayment': { es: 'Cobro libre', en: 'Free payment', ro: 'Plată liberă' },
+
+  // payments.free
+  'payments.free.title': { es: 'Cobro libre', en: 'Free payment', ro: 'Plată liberă' },
+  'payments.free.subtitle': {
+    es: 'Crea un cobro sin reserva asociada (diferencias, penalizaciones, servicios sueltos).',
+    en: 'Create a charge without a reservation (differences, penalties, one-off services).',
+    ro: 'Creează o încasare fără rezervare asociată (diferențe, penalități, servicii ocazionale).'
+  },
+  'payments.free.new': { es: 'Nuevo cobro', en: 'New charge', ro: 'Încasare nouă' },
+  'payments.free.amount': { es: 'Importe', en: 'Amount', ro: 'Sumă' },
+  'payments.free.concept': { es: 'Concepto', en: 'Concept', ro: 'Concept' },
+  'payments.free.conceptPlaceholder': {
+    es: 'Ej: diferencia por combustible',
+    en: 'E.g. fuel difference',
+    ro: 'Ex: diferență combustibil'
+  },
+  'payments.free.payerSection': { es: 'Datos del pagador (opcional)', en: 'Payer details (optional)', ro: 'Datele plătitorului (opțional)' },
+  'payments.free.payerHint': {
+    es: 'Si los rellenas, te servirán para localizar al pagador y para enviarle el link de Redsys.',
+    en: 'If filled in, they help locate the payer and send them the Redsys link.',
+    ro: 'Dacă sunt completate, ajută la identificarea plătitorului și la trimiterea linkului Redsys.'
+  },
+  'payments.free.payerName': { es: 'Nombre del pagador', en: 'Payer name', ro: 'Nume plătitor' },
+  'payments.free.payerEmail': { es: 'Email del pagador', en: 'Payer email', ro: 'Email plătitor' },
+  'payments.free.payerPhone': { es: 'Teléfono del pagador', en: 'Payer phone', ro: 'Telefon plătitor' },
+  'payments.free.generateRedsysLink': {
+    es: 'Generar cobro',
+    en: 'Generate charge',
+    ro: 'Generează încasare'
+  },
+  'payments.free.openRedsys': { es: 'Abrir pasarela', en: 'Open gateway', ro: 'Deschide gateway' },
+  'payments.free.copyLink': { es: 'Copiar link', en: 'Copy link', ro: 'Copiază link' },
+  'payments.free.created': { es: 'Cobro creado', en: 'Charge created', ro: 'Încasare creată' },
+  'payments.free.paid': { es: 'Cobro pagado', en: 'Charge paid', ro: 'Încasare plătită' },
+  'payments.free.failed': { es: 'Cobro fallido', en: 'Charge failed', ro: 'Încasare eșuată' },
+  'payments.free.amountRequired': {
+    es: 'Introduce un importe mayor que 0.',
+    en: 'Enter an amount greater than 0.',
+    ro: 'Introdu o sumă mai mare decât 0.'
+  },
+  'payments.free.conceptRequired': {
+    es: 'El concepto es obligatorio.',
+    en: 'Concept is required.',
+    ro: 'Conceptul este obligatoriu.'
+  },
+  'payments.free.webhookHint': {
+    es: 'El estado se actualizará automáticamente cuando Redsys confirme el pago.',
+    en: 'Status will update automatically once Redsys confirms the payment.',
+    ro: 'Starea se va actualiza automat când Redsys confirmă plata.'
+  },
+  'payments.free.manualHint': {
+    es: 'Pago manual: márcalo como pagado desde el detalle cuando lo confirmes.',
+    en: 'Manual payment: mark it as paid from the detail once confirmed.',
+    ro: 'Plată manuală: marchează ca plătită din detaliu după confirmare.'
+  },
+
+  // payments.filters
+  'payments.filters.reservationPayments': {
+    es: 'Pagos de reservas',
+    en: 'Reservation payments',
+    ro: 'Plăți din rezervări'
+  },
+  'payments.filters.freePayments': {
+    es: 'Cobros libres',
+    en: 'Free payments',
+    ro: 'Plăți libere'
+  },
+
+  // maintenance
+  'maintenance.title': { es: 'Mantenimiento', en: 'Maintenance', ro: 'Mentenanță' },
+  'maintenance.subtitle': {
+    es: 'Historial y alertas de mantenimiento del vehículo.',
+    en: 'Maintenance history and alerts for this vehicle.',
+    ro: 'Istoric și alerte de mentenanță pentru acest vehicul.'
+  },
+  'maintenance.new': { es: 'Nuevo mantenimiento', en: 'New maintenance', ro: 'Mentenanță nouă' },
+  'maintenance.edit': { es: 'Editar mantenimiento', en: 'Edit maintenance', ro: 'Editează mentenanța' },
+  'maintenance.history': { es: 'Historial', en: 'History', ro: 'Istoric' },
+  'maintenance.upcoming': { es: 'Próximos', en: 'Upcoming', ro: 'Viitoare' },
+  'maintenance.overdue': { es: 'Vencidos', en: 'Overdue', ro: 'Întârziate' },
+  'maintenance.completed': { es: 'Realizados', en: 'Completed', ro: 'Efectuate' },
+  'maintenance.dueSoon': { es: 'Próximos a vencer', en: 'Due soon', ro: 'Aproape de scadență' },
+  'maintenance.empty': {
+    es: 'Sin registros de mantenimiento para este vehículo.',
+    en: 'No maintenance records for this vehicle.',
+    ro: 'Fără înregistrări de mentenanță pentru acest vehicul.'
+  },
+  'maintenance.itemSingular': { es: 'ítem', en: 'item', ro: 'element' },
+  'maintenance.itemPlural': { es: 'ítems', en: 'items', ro: 'elemente' },
+  'maintenance.type.oilChange': { es: 'Cambio de aceite', en: 'Oil change', ro: 'Schimb de ulei' },
+  'maintenance.type.tires': { es: 'Cambio de ruedas', en: 'Tire change', ro: 'Schimb de anvelope' },
+  'maintenance.type.itv': { es: 'ITV', en: 'MOT / ITV', ro: 'ITV' },
+  'maintenance.type.insurance': { es: 'Seguro', en: 'Insurance', ro: 'Asigurare' },
+  'maintenance.type.generalRevision': { es: 'Revisión general', en: 'General revision', ro: 'Revizie generală' },
+  'maintenance.type.brakes': { es: 'Frenos', en: 'Brakes', ro: 'Frâne' },
+  'maintenance.type.battery': { es: 'Batería', en: 'Battery', ro: 'Baterie' },
+  'maintenance.type.breakdown': { es: 'Avería', en: 'Breakdown', ro: 'Defecțiune' },
+  'maintenance.type.cleaning': { es: 'Limpieza', en: 'Cleaning', ro: 'Curățenie' },
+  'maintenance.type.other': { es: 'Otro', en: 'Other', ro: 'Altceva' },
+  'maintenance.status.pending': { es: 'Pendiente', en: 'Pending', ro: 'În așteptare' },
+  'maintenance.status.scheduled': { es: 'Programado', en: 'Scheduled', ro: 'Programat' },
+  'maintenance.status.completed': { es: 'Completado', en: 'Completed', ro: 'Efectuat' },
+  'maintenance.status.overdue': { es: 'Vencido', en: 'Overdue', ro: 'Întârziat' },
+  'maintenance.status.cancelled': { es: 'Cancelado', en: 'Cancelled', ro: 'Anulat' },
+  'maintenance.priority.low': { es: 'Baja', en: 'Low', ro: 'Scăzută' },
+  'maintenance.priority.medium': { es: 'Media', en: 'Medium', ro: 'Medie' },
+  'maintenance.priority.high': { es: 'Alta', en: 'High', ro: 'Ridicată' },
+  'maintenance.priority.critical': { es: 'Crítica', en: 'Critical', ro: 'Critică' },
+  'maintenance.fields.title': { es: 'Título', en: 'Title', ro: 'Titlu' },
+  'maintenance.fields.status': { es: 'Estado', en: 'Status', ro: 'Stare' },
+  'maintenance.fields.priority': { es: 'Prioridad', en: 'Priority', ro: 'Prioritate' },
+  'maintenance.fields.description': { es: 'Descripción', en: 'Description', ro: 'Descriere' },
+  'maintenance.fields.performedAt': { es: 'Realización', en: 'Performed', ro: 'Efectuare' },
+  'maintenance.fields.performedAtDate': { es: 'Fecha realizado', en: 'Date performed', ro: 'Data efectuarii' },
+  'maintenance.fields.performedAtKm': { es: 'Km realizado', en: 'Km performed', ro: 'Km la efectuare' },
+  'maintenance.fields.nextDue': { es: 'Próxima', en: 'Next due', ro: 'Următoarea' },
+  'maintenance.fields.nextDueDate': { es: 'Próxima fecha', en: 'Next due date', ro: 'Data următoare' },
+  'maintenance.fields.nextDueKm': { es: 'Próximo km', en: 'Next due km', ro: 'Km următor' },
+  'maintenance.fields.cost': { es: 'Coste', en: 'Cost', ro: 'Cost' },
+  'maintenance.fields.provider': { es: 'Proveedor', en: 'Provider', ro: 'Furnizor' },
+  'maintenance.fields.notes': { es: 'Notas', en: 'Notes', ro: 'Note' },
+  'maintenance.fields.invoice': { es: 'Factura / documento', en: 'Invoice / document', ro: 'Factură / document' },
+  'maintenance.actions.complete': { es: 'Completar', en: 'Complete', ro: 'Completează' },
+  'maintenance.actions.cancel': { es: 'Cancelar', en: 'Cancel', ro: 'Anulează' },
+  'maintenance.actions.uploadInvoice': { es: 'Subir factura', en: 'Upload invoice', ro: 'Încarcă factura' },
+  'maintenance.alerts.dueSoon': { es: 'Vence pronto', en: 'Due soon', ro: 'Aproape de scadență' },
+  'maintenance.alerts.overdue': { es: 'Vencido', en: 'Overdue', ro: 'Întârziat' },
+  'maintenance.alerts.kmSoon': { es: 'Km próximo', en: 'Km approaching', ro: 'Km aproape' },
+  'maintenance.alerts.kmOverdue': { es: 'Km superado', en: 'Km overdue', ro: 'Km depășit' },
+
+  // timeline
+  'timeline.title': { es: 'Estado de la reserva', en: 'Reservation status', ro: 'Starea rezervării' },
+  'timeline.reservationCreated': { es: 'Reserva creada', en: 'Reservation created', ro: 'Rezervare creată' },
+  'timeline.initialPaymentPaid': { es: 'Señal pagada', en: 'Deposit paid', ro: 'Avans plătit' },
+  'timeline.contractGenerated': { es: 'Contrato generado', en: 'Contract generated', ro: 'Contract generat' },
+  'timeline.contractSigned': { es: 'Contrato firmado', en: 'Contract signed', ro: 'Contract semnat' },
+  'timeline.remainingPaymentPaid': { es: 'Resto del alquiler pagado', en: 'Remaining rental paid', ro: 'Rest de închiriere plătit' },
+  'timeline.depositPaid': { es: 'Fianza cobrada', en: 'Deposit collected', ro: 'Garanție încasată' },
+  'timeline.pickupCompleted': { es: 'Entrega realizada', en: 'Pickup completed', ro: 'Predare efectuată' },
+  'timeline.returnCompleted': { es: 'Devolución realizada', en: 'Return completed', ro: 'Returnare efectuată' },
+  'timeline.depositSettled': { es: 'Fianza resuelta', en: 'Deposit settled', ro: 'Garanție soluționată' },
+  'timeline.reservationClosed': { es: 'Reserva cerrada', en: 'Reservation closed', ro: 'Rezervare închisă' },
+  'timeline.completed': { es: 'Completado', en: 'Completed', ro: 'Efectuat' },
+  'timeline.current': { es: 'En curso', en: 'In progress', ro: 'În curs' },
+  'timeline.pending': { es: 'Pendiente', en: 'Pending', ro: 'În așteptare' },
+  'timeline.blocked': { es: 'Bloqueado', en: 'Blocked', ro: 'Blocat' },
+  'timeline.skippedByException': {
+    es: 'Omitido por excepción',
+    en: 'Skipped by exception',
+    ro: 'Omis prin excepție'
+  },
+  'timeline.nextAction': {
+    es: 'Siguiente acción',
+    en: 'Next action',
+    ro: 'Acțiune următoare'
+  },
+
+  // workflow actions (timeline)
+  'workflow.payInitial': { es: 'Cobrar señal', en: 'Collect deposit', ro: 'Încasează avans' },
+  'workflow.generateContract': { es: 'Generar contrato', en: 'Generate contract', ro: 'Generează contract' },
+  'workflow.generateSigningLink': { es: 'Crear link de firma', en: 'Create signing link', ro: 'Creează link semnare' },
+  'workflow.contractPending': { es: 'Pendiente de firma', en: 'Pending signature', ro: 'În așteptarea semnării' },
+  'workflow.payRemaining': { es: 'Cobrar resto', en: 'Collect remaining', ro: 'Încasează rest' },
+  'workflow.payDeposit': { es: 'Cobrar fianza', en: 'Collect deposit (hold)', ro: 'Încasează garanție' },
+  'workflow.startPickup': { es: 'Iniciar entrega', en: 'Start pickup', ro: 'Începe predarea' },
+  'workflow.startReturn': { es: 'Iniciar devolución', en: 'Start return', ro: 'Începe returnarea' },
+  'workflow.settleDeposit': { es: 'Resolver fianza', en: 'Settle deposit', ro: 'Soluționează garanția' },
+  'workflow.closeReservation': { es: 'Cerrar reserva', en: 'Close reservation', ro: 'Închide rezervarea' },
+  'workflow.blockedPickup': {
+    es: 'Falta contrato firmado, resto pagado y fianza cobrada.',
+    en: 'Signed contract, remaining payment and deposit required first.',
+    ro: 'Contract semnat, rest plătit și garanție necesare mai întâi.'
+  },
+  'workflow.blockedReturn': {
+    es: 'Primero realiza la entrega.',
+    en: 'Complete the pickup first.',
+    ro: 'Efectuează întâi predarea.'
+  },
+  'workflow.blockedSettleDeposit': {
+    es: 'Espera a la devolución del vehículo.',
+    en: 'Wait for the vehicle return.',
+    ro: 'Așteaptă returnarea vehiculului.'
+  },
+  'workflow.blockedClose': {
+    es: 'Falta devolver el vehículo y resolver la fianza.',
+    en: 'Return the vehicle and settle the deposit first.',
+    ro: 'Returnează vehiculul și soluționează garanția mai întâi.'
+  }
 };
 
 // ---------------------------------------------------------------------------

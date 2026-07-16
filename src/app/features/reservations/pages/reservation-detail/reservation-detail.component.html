@@ -56,6 +56,10 @@
       </div>
     </div>
 
+    @if (timelineContext) {
+      <app-reservation-timeline [context]="timelineContext" />
+    }
+
     <div class="detail-grid">
       <!-- A. Vehicle Section -->
       <div class="detail-card vehicle-card">

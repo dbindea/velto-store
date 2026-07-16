@@ -39,6 +39,7 @@ export class PaymentListComponent implements OnInit {
   statusFilter: TabFilter = 'all';
   methodFilter: PaymentMethod | 'all' = 'all';
   typeFilter: PaymentType | 'all' = 'all';
+  scopeFilter: 'all' | 'reservation' | 'free' = 'all';
 
   // Labels & helpers (exposed to template)
   PAYMENT_STATUS_LABELS = PAYMENT_STATUS_LABELS;
@@ -63,6 +64,12 @@ export class PaymentListComponent implements OnInit {
     { value: 'redsys', label: 'payments.methods.redsys' },
     { value: 'manual_card', label: 'payments.methods.manualCard' },
     { value: 'other', label: 'payments.methods.other' }
+  ];
+
+  scopeOptions: Array<{ value: 'all' | 'reservation' | 'free'; label: string }> = [
+    { value: 'all', label: 'common.all' },
+    { value: 'reservation', label: 'payments.filters.reservationPayments' },
+    { value: 'free', label: 'payments.filters.freePayments' }
   ];
 
   ngOnInit(): void {
@@ -101,6 +108,12 @@ export class PaymentListComponent implements OnInit {
 
     if (this.typeFilter !== 'all') {
       result = result.filter(p => p.type === this.typeFilter);
+    }
+
+    if (this.scopeFilter === 'free') {
+      result = result.filter(p => p.isFreePayment);
+    } else if (this.scopeFilter === 'reservation') {
+      result = result.filter(p => !p.isFreePayment && !!p.reservationId);
     }
 
     if (this.searchTerm) {

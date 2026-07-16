@@ -49,7 +49,9 @@ const SCHEMA = {
     moduleInProgress: null,
     all: null,
     or: null,
-    create: null
+    create: null,
+    viewAll: null,
+    copied: null
   },
   vehicles: {
     title: null,
@@ -338,7 +340,8 @@ const SCHEMA = {
       extraKm: null,
       extraDamage: null,
       extraFine: null,
-      extraOther: null
+      extraOther: null,
+      freePayment: null
     },
     status: {
       pending: null,
@@ -372,6 +375,33 @@ const SCHEMA = {
       authorizationCode: null,
       responseCode: null,
       notificationReceived: null
+    },
+    free: {
+      title: null,
+      subtitle: null,
+      new: null,
+      amount: null,
+      concept: null,
+      conceptPlaceholder: null,
+      payerSection: null,
+      payerHint: null,
+      payerName: null,
+      payerEmail: null,
+      payerPhone: null,
+      generateRedsysLink: null,
+      openRedsys: null,
+      copyLink: null,
+      created: null,
+      paid: null,
+      failed: null,
+      amountRequired: null,
+      conceptRequired: null,
+      webhookHint: null,
+      manualHint: null
+    },
+    filters: {
+      reservationPayments: null,
+      freePayments: null
     }
   },
   inspections: {
@@ -564,7 +594,21 @@ const SCHEMA = {
     contractAlreadySigned: null,
     contractCancelled: null,
     pickupAlreadyCompleted: null,
-    returnAlreadyCompleted: null
+    returnAlreadyCompleted: null,
+    payInitial: null,
+    generateContract: null,
+    generateSigningLink: null,
+    contractPending: null,
+    payRemaining: null,
+    payDeposit: null,
+    startPickup: null,
+    startReturn: null,
+    settleDeposit: null,
+    closeReservation: null,
+    blockedPickup: null,
+    blockedReturn: null,
+    blockedSettleDeposit: null,
+    blockedClose: null
   },
   dashboard: {
     title: null,
@@ -607,7 +651,98 @@ const SCHEMA = {
   },
   photos: {
     takePhoto: null,
-    uploadFromGallery: null
+    uploadFromGallery: null,
+    camera: null,
+    gallery: null
+  },
+  brand: {
+    logoAlt: null,
+    velto: null
+  },
+  maintenance: {
+    title: null,
+    subtitle: null,
+    new: null,
+    edit: null,
+    history: null,
+    upcoming: null,
+    overdue: null,
+    completed: null,
+    dueSoon: null,
+    empty: null,
+    itemSingular: null,
+    itemPlural: null,
+    type: {
+      oilChange: null,
+      tires: null,
+      itv: null,
+      insurance: null,
+      generalRevision: null,
+      brakes: null,
+      battery: null,
+      breakdown: null,
+      cleaning: null,
+      other: null
+    },
+    status: {
+      pending: null,
+      scheduled: null,
+      completed: null,
+      overdue: null,
+      cancelled: null
+    },
+    priority: {
+      low: null,
+      medium: null,
+      high: null,
+      critical: null
+    },
+    fields: {
+      title: null,
+      status: null,
+      priority: null,
+      description: null,
+      performedAt: null,
+      performedAtDate: null,
+      performedAtKm: null,
+      nextDue: null,
+      nextDueDate: null,
+      nextDueKm: null,
+      cost: null,
+      provider: null,
+      notes: null,
+      invoice: null
+    },
+    actions: {
+      complete: null,
+      cancel: null,
+      uploadInvoice: null
+    },
+    alerts: {
+      dueSoon: null,
+      overdue: null,
+      kmSoon: null,
+      kmOverdue: null
+    }
+  },
+  timeline: {
+    title: null,
+    reservationCreated: null,
+    initialPaymentPaid: null,
+    contractGenerated: null,
+    contractSigned: null,
+    remainingPaymentPaid: null,
+    depositPaid: null,
+    pickupCompleted: null,
+    returnCompleted: null,
+    depositSettled: null,
+    reservationClosed: null,
+    completed: null,
+    current: null,
+    pending: null,
+    blocked: null,
+    skippedByException: null,
+    nextAction: null
   }
 };
 

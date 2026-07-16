@@ -28,11 +28,12 @@ import {
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
+import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
 
 @Component({
   selector: 'app-reservation-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, ReservationTimelineComponent],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
@@ -431,6 +432,14 @@ export class ReservationDetailComponent implements OnInit {
       returnInspection: this.returnInspection,
       contract: this.contract
     } as WorkflowContext;
+  }
+
+  /**
+   * Public counterpart of `workflowCtx` for the <app-reservation-timeline>
+   * component.  Returns null until the reservation doc is loaded.
+   */
+  get timelineContext(): WorkflowContext | null {
+    return this.workflowCtx;
   }
 
   /** Returns the workflow decision for "start pickup inspection". */

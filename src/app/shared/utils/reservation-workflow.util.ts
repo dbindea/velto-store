@@ -339,6 +339,7 @@ export const Workflow = {
   canWithException,
   hasWorkflowException,
   buildWorkflowException,
+  getReservationTimelineSteps,
   // Exposed for convenience to service code.
   isDepositSettled,
   isInitialPaid,
@@ -346,3 +347,227 @@ export const Workflow = {
 };
 
 export type { ReservationContractStatus };
+
+// ---------------------------------------------------------------------------
+// Timeline — visual representation of the 10 logical steps of a rental.
+// Pure / dependency-free: takes a WorkflowContext (which the parent
+// component builds) and returns a typed list of TimelineStep ready
+// to render.  The reservation-detail page uses this to power the
+// <app-reservation-timeline> component.
+// ---------------------------------------------------------------------------
+
+export type TimelineStepKey =
+  | 'reservationCreated'
+  | 'initialPaymentPaid'
+  | 'contractGenerated'
+  | 'contractSigned'
+  | 'remainingPaymentPaid'
+  | 'depositPaid'
+  | 'pickupCompleted'
+  | 'returnCompleted'
+  | 'depositSettled'
+  | 'reservationClosed';
+
+export type TimelineStepState =
+  | 'completed'
+  | 'current'
+  | 'pending'
+  | 'blocked'
+  | 'skipped_by_exception';
+
+export interface TimelineStep {
+  key: TimelineStepKey;
+  labelKey: string;
+  state: TimelineStepState;
+  /** Optional i18n key explaining why the step is blocked. */
+  blockedReasonKey?: string;
+  /** Optional action the operator can take to advance this step. */
+  action?:
+    | 'pay_initial'
+    | 'generate_contract'
+    | 'create_signing_link'
+    | 'pay_remaining'
+    | 'pay_deposit'
+    | 'start_pickup'
+    | 'start_return'
+    | 'settle_deposit'
+    | 'close_reservation';
+  /** True when the step is associated with a workflow exception. */
+  skipped?: boolean;
+}
+
+const TIMELINE_ORDER: TimelineStepKey[] = [
+  'reservationCreated',
+  'initialPaymentPaid',
+  'contractGenerated',
+  'contractSigned',
+  'remainingPaymentPaid',
+  'depositPaid',
+  'pickupCompleted',
+  'returnCompleted',
+  'depositSettled',
+  'reservationClosed'
+];
+
+/**
+ * Compute the full timeline for a reservation.
+ *
+ * The function is tolerant of partial contexts (dashboard mini-cards
+ * may not have inspections loaded) — it falls back to the
+ * reservation status + contract status to decide completed/pending.
+ */
+export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[] {
+  const r = ctx.reservation;
+  const contract = ctx.contract;
+  const cancelled = r.reservationStatus === 'cancelled';
+  const closed = r.reservationStatus === 'closed';
+
+  const initialPaid = ctx.initialPaid ?? isInitialPaid(r);
+  const remainingPaid = ctx.remainingPaid ?? isRemainingPaid(r);
+  const depositSettled =
+    ctx.depositSettled ?? isDepositSettled(r);
+
+  const pickupDone = !!ctx.pickupInspection;
+  const returnDone = !!ctx.returnInspection;
+
+  const contractGenerated = !!contract && contract.status !== 'cancelled' && contract.status !== 'expired';
+  const contractSigned = contract?.status === 'signed';
+
+  // ----- Pre-compute next-required-action so we can mark exactly
+  // one step as "current" (and the rest as "pending").
+  const nextActionKey = getReservationNextRequiredAction(ctx);
+
+  return TIMELINE_ORDER.map((key) => {
+    let state: TimelineStepState = 'pending';
+    let action: TimelineStep['action'];
+    let blockedReasonKey: string | undefined;
+    let skipped = false;
+
+    // Step 1 — Reservation created (always completed by virtue of
+    // the doc existing).
+    if (key === 'reservationCreated') {
+      state = 'completed';
+    }
+
+    // Step 2 — Initial payment paid.
+    if (key === 'initialPaymentPaid') {
+      if (initialPaid) state = 'completed';
+      else if (nextActionKey === 'workflow.payInitial') {
+        state = 'current';
+        action = 'pay_initial';
+      }
+    }
+
+    // Step 3 — Contract generated.
+    if (key === 'contractGenerated') {
+      if (contractGenerated) state = 'completed';
+      else if (nextActionKey === 'workflow.generateContract') {
+        state = 'current';
+        action = 'generate_contract';
+      }
+    }
+
+    // Step 4 — Contract signed.
+    if (key === 'contractSigned') {
+      if (contractSigned) state = 'completed';
+      else if (nextActionKey === 'workflow.generateSigningLink' || nextActionKey === 'workflow.contractPending') {
+        state = 'current';
+        action = 'create_signing_link';
+      } else if (contractGenerated && !contractSigned) {
+        state = 'pending';
+      }
+    }
+
+    // Step 5 — Remaining payment paid.
+    if (key === 'remainingPaymentPaid') {
+      if (remainingPaid) state = 'completed';
+      else if (nextActionKey === 'workflow.payRemaining') {
+        state = 'current';
+        action = 'pay_remaining';
+      }
+    }
+
+    // Step 6 — Deposit paid.
+    if (key === 'depositPaid') {
+      if (depositSettled) state = 'completed';
+      else if (nextActionKey === 'workflow.payDeposit') {
+        state = 'current';
+        action = 'pay_deposit';
+      }
+    }
+
+    // Step 7 — Pickup completed.
+    if (key === 'pickupCompleted') {
+      if (pickupDone || r.reservationStatus === 'delivered' || closed) {
+        state = 'completed';
+      } else if (nextActionKey === 'workflow.startPickup') {
+        state = 'current';
+        action = 'start_pickup';
+      } else if (contractSigned && remainingPaid && depositSettled) {
+        // Ready but not started yet — pending.
+        state = 'pending';
+      } else {
+        state = 'blocked';
+        blockedReasonKey = 'workflow.blockedPickup';
+      }
+    }
+
+    // Step 8 — Return completed.
+    if (key === 'returnCompleted') {
+      if (returnDone || closed) {
+        state = 'completed';
+      } else if (nextActionKey === 'workflow.startReturn') {
+        state = 'current';
+        action = 'start_return';
+      } else if (r.reservationStatus === 'delivered') {
+        state = 'pending';
+      } else {
+        state = 'blocked';
+        blockedReasonKey = 'workflow.blockedReturn';
+      }
+    }
+
+    // Step 9 — Deposit settled (refunded or retained).
+    if (key === 'depositSettled') {
+      if (depositSettled && (returnDone || closed)) state = 'completed';
+      else if (nextActionKey === 'workflow.settleDeposit') {
+        state = 'current';
+        action = 'settle_deposit';
+      } else if (returnDone) {
+        state = 'pending';
+      } else {
+        state = 'blocked';
+        blockedReasonKey = 'workflow.blockedSettleDeposit';
+      }
+    }
+
+    // Step 10 — Reservation closed.
+    if (key === 'reservationClosed') {
+      if (closed) state = 'completed';
+      else if (nextActionKey === 'workflow.closeReservation') {
+        state = 'current';
+        action = 'close_reservation';
+      } else {
+        state = 'blocked';
+        blockedReasonKey = 'workflow.blockedClose';
+      }
+    }
+
+    // Mark cancelled reservation steps as "skipped" so the UI
+    // can render them as struck-through.  Closed reservations are
+    // fully completed.
+    if (cancelled && state === 'pending') {
+      state = 'skipped_by_exception';
+      skipped = true;
+    }
+
+    return {
+      key,
+      labelKey: `timeline.${key}`,
+      state,
+      action,
+      blockedReasonKey,
+      skipped
+    };
+  });
+}

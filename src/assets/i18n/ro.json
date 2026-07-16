@@ -86,6 +86,7 @@
     "all": "Toate",
     "back": "Înapoi",
     "cancel": "Anulează",
+    "copied": "Copiat",
     "create": "Creează",
     "delete": "Șterge",
     "edit": "Editează",
@@ -93,7 +94,8 @@
     "moduleInProgress": "Modul în pregătire",
     "or": "sau",
     "save": "Salvează",
-    "search": "Caută"
+    "search": "Caută",
+    "viewAll": "Vezi tot"
   },
   "contracts": {
     "actions": {
@@ -349,6 +351,31 @@
       "source": "Sursă",
       "type": "Tip"
     },
+    "filters": {
+      "freePayments": "Plăți libere",
+      "reservationPayments": "Plăți din rezervări"
+    },
+    "free": {
+      "amount": "Sumă",
+      "amountRequired": "Introdu o sumă mai mare decât 0.",
+      "concept": "Concept",
+      "conceptPlaceholder": "Ex: diferență combustibil",
+      "conceptRequired": "Conceptul este obligatoriu.",
+      "copyLink": "Copiază link",
+      "created": "Încasare creată",
+      "generateRedsysLink": "Generează încasare",
+      "manualHint": "Plată manuală: marchează ca plătită din detaliu după confirmare.",
+      "new": "Încasare nouă",
+      "openRedsys": "Deschide gateway",
+      "payerEmail": "Email plătitor",
+      "payerHint": "Dacă sunt completate, ajută la identificarea plătitorului și la trimiterea linkului Redsys.",
+      "payerName": "Nume plătitor",
+      "payerPhone": "Telefon plătitor",
+      "payerSection": "Datele plătitorului (opțional)",
+      "subtitle": "Creează o încasare fără rezervare asociată (diferențe, penalități, servicii ocazionale).",
+      "title": "Plată liberă",
+      "webhookHint": "Starea se va actualiza automat când Redsys confirmă plata."
+    },
     "list": {
       "empty": "Nu există plăți"
     },
@@ -395,6 +422,7 @@
       "extraFuel": "Combustibil",
       "extraKm": "Kilometri extra",
       "extraOther": "Altele",
+      "freePayment": "Plată liberă",
       "initialPayment": "Avans",
       "refuelPenalty": "Penalizare realimentare",
       "remainingPayment": "Rest închiriere",
@@ -402,6 +430,8 @@
     }
   },
   "photos": {
+    "camera": "Cameră",
+    "gallery": "Galerie",
     "takePhoto": "Fă poză",
     "uploadFromGallery": "Încarcă din galerie"
   },
@@ -573,13 +603,21 @@
   },
   "workflow": {
     "blockedAction": "Acțiune blocată",
+    "blockedClose": "Returnează vehiculul și soluționează garanția mai întâi.",
+    "blockedPickup": "Contract semnat, rest plătit și garanție necesare mai întâi.",
+    "blockedReturn": "Efectuează întâi predarea.",
+    "blockedSettleDeposit": "Așteaptă returnarea vehiculului.",
     "cancelled": "Rezervare anulată sau închisă",
     "cannotCancel": "Nu se poate anula rezervarea",
     "cannotClose": "Nu se poate închide rezervarea",
     "cannotDeliver": "Nu se poate începe predarea",
     "cannotReturn": "Nu se poate începe returnarea",
+    "closeReservation": "Închide rezervarea",
     "contractAlreadySigned": "Contractul este deja semnat",
     "contractCancelled": "Contract anulat",
+    "contractPending": "În așteptarea semnării",
+    "generateContract": "Generează contract",
+    "generateSigningLink": "Creează link semnare",
     "missingContract": "Lipsește contractul",
     "missingDeposit": "Lipsește garanția",
     "missingInitialPayment": "Lipsește încasarea avansului",
@@ -589,8 +627,14 @@
     "missingReturnInspection": "Lipsește inspecția de returnare",
     "missingSignature": "Lipsește semnătura contractului",
     "nextAction": "Următoarea acțiune",
+    "payDeposit": "Încasează garanție",
+    "payInitial": "Încasează avans",
+    "payRemaining": "Încasează rest",
     "pickupAlreadyCompleted": "Predarea este deja completă",
     "returnAlreadyCompleted": "Returnarea este deja completă",
+    "settleDeposit": "Soluționează garanția",
+    "startPickup": "Începe predarea",
+    "startReturn": "Începe returnarea",
     "unsettledDeposit": "Garanție nerezolvată"
   }
 }

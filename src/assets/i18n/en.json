@@ -86,6 +86,7 @@
     "all": "All",
     "back": "Back",
     "cancel": "Cancel",
+    "copied": "Copied",
     "create": "Create",
     "delete": "Delete",
     "edit": "Edit",
@@ -93,7 +94,8 @@
     "moduleInProgress": "Module in preparation",
     "or": "or",
     "save": "Save",
-    "search": "Search"
+    "search": "Search",
+    "viewAll": "View all"
   },
   "contracts": {
     "actions": {
@@ -349,6 +351,31 @@
       "source": "Source",
       "type": "Type"
     },
+    "filters": {
+      "freePayments": "Free payments",
+      "reservationPayments": "Reservation payments"
+    },
+    "free": {
+      "amount": "Amount",
+      "amountRequired": "Enter an amount greater than 0.",
+      "concept": "Concept",
+      "conceptPlaceholder": "E.g. fuel difference",
+      "conceptRequired": "Concept is required.",
+      "copyLink": "Copy link",
+      "created": "Charge created",
+      "generateRedsysLink": "Generate charge",
+      "manualHint": "Manual payment: mark it as paid from the detail once confirmed.",
+      "new": "New charge",
+      "openRedsys": "Open gateway",
+      "payerEmail": "Payer email",
+      "payerHint": "If filled in, they help locate the payer and send them the Redsys link.",
+      "payerName": "Payer name",
+      "payerPhone": "Payer phone",
+      "payerSection": "Payer details (optional)",
+      "subtitle": "Create a charge without a reservation (differences, penalties, one-off services).",
+      "title": "Free payment",
+      "webhookHint": "Status will update automatically once Redsys confirms the payment."
+    },
     "list": {
       "empty": "No payments"
     },
@@ -395,6 +422,7 @@
       "extraFuel": "Fuel",
       "extraKm": "Extra km",
       "extraOther": "Other",
+      "freePayment": "Free payment",
       "initialPayment": "Signal",
       "refuelPenalty": "Refuel penalty",
       "remainingPayment": "Remaining rental",
@@ -402,6 +430,8 @@
     }
   },
   "photos": {
+    "camera": "Camera",
+    "gallery": "Gallery",
     "takePhoto": "Take photo",
     "uploadFromGallery": "Upload from gallery"
   },
@@ -573,13 +603,21 @@
   },
   "workflow": {
     "blockedAction": "Blocked action",
+    "blockedClose": "Return the vehicle and settle the deposit first.",
+    "blockedPickup": "Signed contract, remaining payment and deposit required first.",
+    "blockedReturn": "Complete the pickup first.",
+    "blockedSettleDeposit": "Wait for the vehicle return.",
     "cancelled": "Reservation cancelled or closed",
     "cannotCancel": "Cannot cancel reservation",
     "cannotClose": "Cannot close reservation",
     "cannotDeliver": "Cannot start pickup",
     "cannotReturn": "Cannot start return",
+    "closeReservation": "Close reservation",
     "contractAlreadySigned": "Contract already signed",
     "contractCancelled": "Contract cancelled",
+    "contractPending": "Pending signature",
+    "generateContract": "Generate contract",
+    "generateSigningLink": "Create signing link",
     "missingContract": "Contract missing",
     "missingDeposit": "Deposit missing or not registered",
     "missingInitialPayment": "Initial payment missing",
@@ -589,8 +627,14 @@
     "missingReturnInspection": "Return inspection missing",
     "missingSignature": "Contract signature missing",
     "nextAction": "Next action",
+    "payDeposit": "Collect deposit (hold)",
+    "payInitial": "Collect deposit",
+    "payRemaining": "Collect remaining",
     "pickupAlreadyCompleted": "Pickup already completed",
     "returnAlreadyCompleted": "Return already completed",
+    "settleDeposit": "Settle deposit",
+    "startPickup": "Start pickup",
+    "startReturn": "Start return",
     "unsettledDeposit": "Deposit still pending settlement"
   }
 }

@@ -49,16 +49,17 @@
   gap: 0.75rem;
 }
 
-.logo-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--accent-color);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.1rem;
+// Brand logo image — the wordmark SVG is the same file used on
+// sign-contract and PDF.  Rendered at a fixed height so it sits
+// nicely in the sidebar header regardless of wordmark proportions.
+.logo-image {
+  height: 32px;
+  width: auto;
+  max-width: 170px;
+  display: block;
+  // Sidebar background is dark slate — make sure the white parts of
+  // the wordmark remain visible.
+  filter: brightness(0) invert(1);
 }
 
 .logo-text {

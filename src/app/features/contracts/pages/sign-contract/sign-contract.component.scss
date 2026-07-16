@@ -23,6 +23,13 @@
   align-items: center;
   gap: 0.625rem;
 
+  .brand-image {
+    height: 36px;
+    width: auto;
+    max-width: 200px;
+    display: block;
+  }
+
   .brand-mark {
     display: inline-flex;
     align-items: center;

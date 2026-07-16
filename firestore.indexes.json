@@ -23,6 +23,22 @@
         { "fieldPath": "clientId", "arrayConfig": "CONTAINS" },
         { "fieldPath": "paidAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "vehicleMaintenance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vehicleId", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "nextDueDate", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "vehicleMaintenance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "nextDueDate", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
