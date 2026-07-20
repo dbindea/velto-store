@@ -197,6 +197,59 @@
   }
 }
 
+// Search trigger — visible on both desktop and mobile.  On
+// desktop it grows to a wider pill that mimics a search bar.
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  min-height: 40px;
+
+  &:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+
+  .search-trigger-text {
+    display: none;
+  }
+
+  .search-trigger-kbd {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    padding: 0.5rem 0.875rem;
+    min-width: 220px;
+    justify-content: flex-start;
+
+    .search-trigger-text {
+      display: inline;
+      flex: 1;
+      text-align: left;
+    }
+
+    .search-trigger-kbd {
+      display: inline-block;
+      padding: 0.05rem 0.375rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.7rem;
+    }
+  }
+}
+
 .header-spacer {
   flex: 1;
 }

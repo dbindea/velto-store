@@ -1,3 +1,23 @@
+/**
+ * Reservation timeline.
+ *
+ * Layout strategy (mobile-first, no horizontal scroll ever):
+ *
+ *  - < 640px   → vertical list (one step per row)
+ *  - 640 – 1023 → vertical list, but condensed (smaller icons, no rail)
+ *  - 1024 – 1199 → SNAKE: 2 rows of 5, alternating direction so the
+ *                 connector snakes left-to-right then right-to-left.
+ *                 Connector drawn as per-step right/bottom borders
+ *                 so the visual continuity is preserved in both
+ *                 directions.
+ *  - ≥ 1200     → horizontal: 5 columns × 2 rows. Each row is
+ *                 forced to wrap via `flex-basis: 20%`, never
+ *                 overflows, never scrolls.
+ *
+ * This avoids the previous "10 columns at 1024px" trap that
+ * caused horizontal overflow on a typical laptop.
+ */
+
 .reservation-timeline {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -10,60 +30,81 @@
 }
 
 .timeline-track {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
   position: relative;
 
-  // Vertical line on the left of each step (mobile-first).
-  &::before {
-    content: '';
-    position: absolute;
-    top: 1.5rem;
-    bottom: 1.5rem;
-    left: 1.25rem;
-    width: 2px;
-    background: var(--border-color);
-    z-index: 0;
+  // Snake layout: 2 rows, alternating direction.
+  @media (min-width: 1024px) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.25rem;
   }
 
-  // Desktop: switch to a horizontal layout.  The connector line
-  // becomes a top bar instead of a left rail.
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(10, 1fr);
-    gap: 0;
-
-    &::before {
-      top: 1.25rem;
-      bottom: auto;
-      left: 1.25rem;
-      right: 1.25rem;
-      width: auto;
-      height: 2px;
-    }
+  // Wide layout: 2 rows of 5 — no horizontal scroll.
+  @media (min-width: 1200px) {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }
 
+// Single step — used as a grid cell.  In all layouts we let the
+// flex container decide where it wraps, and we draw a connector
+// arrow with ::after so the visual continuity is preserved.
 .timeline-step {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  z-index: 1;
+  gap: 0.625rem;
+  padding: 0.375rem 0.25rem;
+  flex: 1 1 100%;
+  min-width: 0;
 
-  @media (min-width: 1024px) {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0 0.25rem;
+  // Tablet: 2 per row.
+  @media (min-width: 640px) and (max-width: 1023.98px) {
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
+  // Snake layout (1024-1199): 5 per row, alternating direction.
+  @media (min-width: 1024px) and (max-width: 1199.98px) {
+    flex: 0 0 calc(20% - 0.25rem);
+
+    // Reverse the visual order of every other step to create the
+    // snake pattern.  The DOM order stays linear so the
+    // `trackStep($index, s)` still works for animations.
+    &:nth-child(10n + 6),
+    &:nth-child(10n + 7),
+    &:nth-child(10n + 8),
+    &:nth-child(10n + 9),
+    &:nth-child(10n + 10) {
+      flex-direction: row-reverse;
+    }
+  }
+
+  // Wide layout (≥1200): 5 per row, normal direction.
+  @media (min-width: 1200px) {
+    flex: 0 0 calc(20% - 0.25rem);
   }
 }
 
+// Step body — sits to the right of the icon by default; on the
+// snake layout the reversed rows get text aligned to the right.
+.step-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.25rem;
+}
+
+// --- Icons ---
 .step-icon {
   flex-shrink: 0;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 50%;
   background: var(--bg-card);
   border: 2px solid var(--border-color);
@@ -71,31 +112,106 @@
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
+  position: relative;
   z-index: 1;
 
   i {
-    font-size: 1.125rem;
+    font-size: 1rem;
   }
-}
-
-.step-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding-top: 0.375rem;
 
   @media (min-width: 1024px) {
-    padding-top: 0.625rem;
-    align-items: center;
+    width: 2rem;
+    height: 2rem;
+
+    i {
+      font-size: 0.9rem;
+    }
   }
 }
 
+// --- Labels ---
 .step-label {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-primary);
+  line-height: 1.25;
+  word-wrap: break-word;
+
+  @media (min-width: 1024px) {
+    font-size: 0.8rem;
+  }
+}
+
+// --- Connector arrow (between two adjacent steps in a row) ---
+// In the mobile / tablet layouts (vertical), the connector is a
+// vertical line drawn with a tiny ::after box.  In horizontal
+// layouts (snake / wide), the connector is a horizontal arrow.
+//
+// We always position the connector RELATIVE TO THE ICON, so it
+// works regardless of label height / number of lines.
+.timeline-step::after {
+  content: '';
+  position: absolute;
+  display: none;
+}
+
+// Vertical connector for the single-column list (< 1024px).
+.timeline-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 1.0625rem; // icon radius (1.125rem) - half border (1px) ≈ centre
+  top: 2.25rem;    // below the icon
+  bottom: -0.5rem; // -gap
+  width: 2px;
+  background: var(--border-color);
+  z-index: 0;
+
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+// Hide the connector on the last item.
+.timeline-step:last-child::before {
+  display: none;
+}
+
+// Horizontal arrow connector for the snake + wide layouts.
+// We only draw it between consecutive steps that share a row —
+// this is the case for indices 1-4, 6-9 (snake) and 1-4, 6-9
+// (wide).  Easier: draw it for every step except the last in
+// every row, and let CSS hide it on row ends.
+@media (min-width: 1024px) {
+  .timeline-step::after {
+    display: block;
+    position: absolute;
+    top: 1.125rem; // icon centre
+    left: calc(50% + 1rem);
+    right: calc(-50% + 1rem);
+    width: auto;
+    height: 0;
+    border-top: 1px dashed var(--border-color);
+    z-index: 0;
+  }
+
+  // Hide on row ends (every 5th).
+  .timeline-step:nth-child(5n)::after,
+  .timeline-step:nth-child(10n)::after {
+    display: none;
+  }
+
+  // Reverse the arrow direction in reversed rows of the snake
+  // layout.  The reversed body sits on the left, so the arrow
+  // must point right-to-left.
+  @media (max-width: 1199.98px) {
+    .timeline-step:nth-child(10n + 6)::after,
+    .timeline-step:nth-child(10n + 7)::after,
+    .timeline-step:nth-child(10n + 8)::after,
+    .timeline-step:nth-child(10n + 9)::after {
+      left: calc(-50% + 1rem);
+      right: calc(50% + 1rem);
+    }
+  }
 }
 
 // --- States ---
@@ -115,7 +231,7 @@
   background: var(--accent-color);
   border-color: var(--accent-color);
   color: white;
-  box-shadow: 0 0 0 6px var(--accent-light);
+  box-shadow: 0 0 0 5px var(--accent-light);
   animation: pulse 2s ease-in-out infinite;
 }
 .step-current .step-label {
@@ -145,38 +261,41 @@
 
 .step-blocked-reason,
 .step-skipped-reason {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  line-height: 1.3;
 }
 
 .step-action-btn {
-  margin-top: 0.5rem;
+  margin-top: 0.375rem;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 8px;
   border: none;
   background: var(--accent-color);
   color: white;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  align-self: flex-start;
+  white-space: nowrap;
 
   &:hover {
     background: var(--accent-hover);
   }
 
   i {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 6px var(--accent-light); }
-  50% { box-shadow: 0 0 0 10px var(--accent-light); }
+  0%, 100% { box-shadow: 0 0 0 5px var(--accent-light); }
+  50% { box-shadow: 0 0 0 9px var(--accent-light); }
 }

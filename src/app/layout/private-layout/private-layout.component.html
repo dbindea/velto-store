@@ -46,11 +46,17 @@
     </div>
   </aside>
 
-  <!-- Main Content -->
+    <!-- Main Content -->
   <div class="main-wrapper">
     <header class="header">
       <button class="menu-toggle" (click)="toggleSidebar()">
         <i class="pi pi-bars"></i>
+      </button>
+
+      <button class="search-trigger" type="button" (click)="toggleSearch()" [title]="'search.open' | translate">
+        <i class="pi pi-search"></i>
+        <span class="search-trigger-text">{{ 'search.trigger' | translate }}</span>
+        <span class="search-trigger-kbd">Ctrl K</span>
       </button>
 
       <div class="header-spacer"></div>
@@ -78,6 +84,11 @@
       <span>{{ 'layout.footer' | translate }}</span>
     </footer>
   </div>
+
+  <!-- Global search overlay -->
+  @if (searchOpen()) {
+    <app-global-search (close)="closeSearch()" />
+  }
 
   <!-- Mobile Bottom Navigation -->
   <nav class="mobile-nav">

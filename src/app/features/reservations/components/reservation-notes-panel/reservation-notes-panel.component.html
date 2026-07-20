@@ -1,0 +1,63 @@
+<div class="notes-panel">
+  <div class="notes-header">
+    <h3>
+      <i class="pi pi-comment"></i>
+      {{ 'reservations.notes.title' | translate }}
+    </h3>
+    <span class="count">{{ sortedNotes().length }}</span>
+  </div>
+
+  <p class="notes-hint">
+    <i class="pi pi-info-circle"></i>
+    {{ 'reservations.notes.hint' | translate }}
+  </p>
+
+  <div class="notes-form">
+    <textarea
+      class="form-control"
+      rows="2"
+      [placeholder]="'reservations.notes.placeholder' | translate"
+      [ngModel]="draft()"
+      (ngModelChange)="onInputChange($event)"
+      name="newNote"
+    ></textarea>
+    <div class="form-actions">
+      @if (error()) {
+        <span class="error-msg">{{ error() }}</span>
+      }
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="!draft().trim() || saving()"
+        (click)="submit()"
+      >
+        @if (saving()) {
+          <i class="pi pi-spin pi-spinner"></i>
+        } @else {
+          <i class="pi pi-send"></i>
+        }
+        {{ 'reservations.notes.add' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <ul class="notes-list">
+    @for (n of sortedNotes(); track n.id) {
+      <li class="note-item">
+        <div class="note-meta">
+          <span class="note-author">
+            <i class="pi pi-user"></i>
+            {{ n.createdBy || n.createdByEmail || ('reservations.notes.systemUser' | translate) }}
+          </span>
+          <span class="note-date">{{ noteDate(n) | date: 'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="note-text">{{ n.text }}</div>
+      </li>
+    } @empty {
+      <li class="notes-empty">
+        <i class="pi pi-comments"></i>
+        {{ 'reservations.notes.empty' | translate }}
+      </li>
+    }
+  </ul>
+</div>

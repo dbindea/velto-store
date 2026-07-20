@@ -270,7 +270,98 @@ const T = {
     es: 'Falta devolver el vehículo y resolver la fianza.',
     en: 'Return the vehicle and settle the deposit first.',
     ro: 'Returnează vehiculul și soluționează garanția mai întâi.'
-  }
+  },
+
+  // common
+  'common.refresh': { es: 'Actualizar', en: 'Refresh', ro: 'Reîmprospătează' },
+  'common.error': { es: 'Algo ha ido mal', en: 'Something went wrong', ro: 'Ceva nu a mers bine' },
+  'common.systemUser': { es: 'Sistema', en: 'System', ro: 'Sistem' },
+
+  // reservations.notes
+  'reservations.notes.title': { es: 'Notas internas', en: 'Internal notes', ro: 'Note interne' },
+  'reservations.notes.hint': {
+    es: 'Estas notas son privadas y no aparecen en el contrato. Se conservan como histórico del operador.',
+    en: 'These notes are private and never appear on the contract. They are kept as operator history.',
+    ro: 'Aceste note sunt private și nu apar pe contract. Sunt păstrate ca istoric al operatorului.'
+  },
+  'reservations.notes.placeholder': {
+    es: 'Añade una nota para el equipo…',
+    en: 'Add a note for the team…',
+    ro: 'Adaugă o notă pentru echipă…'
+  },
+  'reservations.notes.add': { es: 'Añadir nota', en: 'Add note', ro: 'Adaugă notă' },
+  'reservations.notes.empty': {
+    es: 'Sin notas internas todavía.',
+    en: 'No internal notes yet.',
+    ro: 'Încă nu există note interne.'
+  },
+  'reservations.notes.systemUser': { es: 'Sistema', en: 'System', ro: 'Sistem' },
+
+  // search (global)
+  'search.placeholder': { es: 'Buscar cliente, vehículo o reserva…', en: 'Search client, vehicle or reservation…', ro: 'Caută client, vehicul sau rezervare…' },
+  'search.trigger': { es: 'Buscar…', en: 'Search…', ro: 'Caută…' },
+  'search.open': { es: 'Abrir búsqueda', en: 'Open search', ro: 'Deschide căutarea' },
+  'search.minChars': { es: 'Escribe al menos 2 caracteres.', en: 'Type at least 2 characters.', ro: 'Scrie cel puțin 2 caractere.' },
+  'search.empty': { es: 'No hay coincidencias.', en: 'No matches.', ro: 'Nicio potrivire.' },
+  'search.navigate': { es: 'Navegar', en: 'Navigate', ro: 'Navighează' },
+  'search.openHint': { es: 'Abrir', en: 'Open', ro: 'Deschide' },
+  'search.close': { es: 'Cerrar', en: 'Close', ro: 'Închide' },
+  'search.groups.clients': { es: 'Cliente', en: 'Clients', ro: 'Clienți' },
+  'search.groups.vehicles': { es: 'Vehículos', en: 'Vehicles', ro: 'Vehicule' },
+  'search.groups.reservations': { es: 'Reservas', en: 'Reservations', ro: 'Rezervări' },
+
+  // calendar
+  'calendar.subtitle': {
+    es: 'Vista mensual de las reservas. Pulsa un día para ver el detalle.',
+    en: 'Monthly view of all reservations. Tap a day to see the details.',
+    ro: 'Vizualizare lunară a rezervărilor. Apasă pe o zi pentru detalii.'
+  },
+  'calendar.today': { es: 'Hoy', en: 'Today', ro: 'Astăzi' },
+  'calendar.prev': { es: 'Mes anterior', en: 'Previous month', ro: 'Luna anterioară' },
+  'calendar.next': { es: 'Mes siguiente', en: 'Next month', ro: 'Luna următoare' },
+  'calendar.emptyDay': {
+    es: 'No hay reservas para este día.',
+    en: 'No reservations for this day.',
+    ro: 'Nicio rezervare pentru această zi.'
+  },
+  'calendar.weekdays.mon': { es: 'Lun', en: 'Mon', ro: 'Lun' },
+  'calendar.weekdays.tue': { es: 'Mar', en: 'Tue', ro: 'Mar' },
+  'calendar.weekdays.wed': { es: 'Mié', en: 'Wed', ro: 'Mie' },
+  'calendar.weekdays.thu': { es: 'Jue', en: 'Thu', ro: 'Joi' },
+  'calendar.weekdays.fri': { es: 'Vie', en: 'Fri', ro: 'Vin' },
+  'calendar.weekdays.sat': { es: 'Sáb', en: 'Sat', ro: 'Sâm' },
+  'calendar.weekdays.sun': { es: 'Dom', en: 'Sun', ro: 'Dum' },
+
+  // reports
+  'reports.subtitle': {
+    es: 'Ingresos, ocupación y pagos pendientes de los últimos meses.',
+    en: 'Revenue, fleet utilization and outstanding balances for the last few months.',
+    ro: 'Venituri, utilizare flotă și solduri restante pentru ultimele luni.'
+  },
+  'reports.range.1m': { es: 'Último mes', en: 'Last month', ro: 'Ultima lună' },
+  'reports.range.3m': { es: 'Últimos 3 meses', en: 'Last 3 months', ro: 'Ultimele 3 luni' },
+  'reports.range.6m': { es: 'Últimos 6 meses', en: 'Last 6 months', ro: 'Ultimele 6 luni' },
+  'reports.range.12m': { es: 'Último año', en: 'Last year', ro: 'Ultimul an' },
+  'reports.windowLabel': { es: 'en el período seleccionado', en: 'in the selected window', ro: 'în perioada selectată' },
+  'reports.totalRevenue': { es: 'Ingresos cobrados', en: 'Collected revenue', ro: 'Venituri încasate' },
+  'reports.utilization': { es: 'Ocupación de flota', en: 'Fleet utilization', ro: 'Utilizare flotă' },
+  'reports.outstanding': { es: 'Pagos pendientes', en: 'Outstanding payments', ro: 'Plăți restante' },
+  'reports.outstandingHint': {
+    es: 'Reservas activas con saldo a favor del cliente.',
+    en: 'Active reservations with a balance in the customer\'s favor.',
+    ro: 'Rezervări active cu sold în favoarea clientului.'
+  },
+  'reports.outstandingTitle': { es: 'Reservas con saldo pendiente', en: 'Reservations with outstanding balance', ro: 'Rezervări cu sold restant' },
+  'reports.noOutstanding': { es: 'Todo al día: no hay pagos pendientes.', en: 'All clear: no outstanding payments.', ro: 'Totul în ordine: nu există plăți restante.' },
+  'reports.days': { es: 'días', en: 'days', ro: 'zile' },
+  'reports.monthlyRevenue': { es: 'Ingresos por mes', en: 'Monthly revenue', ro: 'Venituri lunare' },
+  'reports.topVehicles': { es: 'Vehículos con más ingresos', en: 'Top-earning vehicles', ro: 'Vehicule cu cele mai multe venituri' },
+  'reports.noData': {
+    es: 'Sin datos en este período.',
+    en: 'No data in this period.',
+    ro: 'Fără date în această perioadă.'
+  },
+  'reports.reservations': { es: 'reservas', en: 'reservations', ro: 'rezervări' }
 };
 
 // ---------------------------------------------------------------------------

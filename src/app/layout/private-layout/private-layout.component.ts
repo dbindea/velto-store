@@ -1,10 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '@core/auth/auth.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { LanguageSelectorComponent } from '@shared/components/language-selector/language-selector.component';
+import { GlobalSearchComponent } from '@shared/components/global-search/global-search.component';
 
 interface MenuItem {
   path: string;
@@ -22,7 +23,8 @@ interface MenuItem {
     RouterLink,
     RouterLinkActive,
     TranslatePipe,
-    LanguageSelectorComponent
+    LanguageSelectorComponent,
+    GlobalSearchComponent
   ],
   templateUrl: './private-layout.component.html',
   styleUrl: './private-layout.component.scss'
@@ -54,6 +56,7 @@ export class PrivateLayoutComponent {
   }
 
   moreMenuOpen = signal(false);
+  searchOpen = signal(false);
 
   toggleSidebar() {
     this.sidebarOpen.update(v => !v);
@@ -65,6 +68,35 @@ export class PrivateLayoutComponent {
 
   toggleMoreMenu() {
     this.moreMenuOpen.update(v => !v);
+  }
+
+  toggleSearch() {
+    this.searchOpen.update(v => !v);
+  }
+
+  closeSearch() {
+    this.searchOpen.set(false);
+  }
+
+  /**
+   * Ctrl+K / Cmd+K opens the global search from anywhere inside
+   * the authenticated app — except when the user is already
+   * typing into an input/textarea.
+   */
+  @HostListener('document:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isEditable =
+        tag === 'input' || tag === 'textarea' || target?.isContentEditable;
+      if (!isEditable) {
+        event.preventDefault();
+        this.searchOpen.set(true);
+      }
+    } else if (event.key === 'Escape' && this.searchOpen()) {
+      this.searchOpen.set(false);
+    }
   }
 
   toggleDarkMode() {

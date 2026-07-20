@@ -7,6 +7,25 @@
     "loginSubtitle": "Acces intern",
     "loginWithGoogle": "Intră cu Google"
   },
+  "brand": {
+    "logoAlt": "Velto Rent"
+  },
+  "calendar": {
+    "emptyDay": "Nicio rezervare pentru această zi.",
+    "next": "Luna următoare",
+    "prev": "Luna anterioară",
+    "subtitle": "Vizualizare lunară a rezervărilor. Apasă pe o zi pentru detalii.",
+    "today": "Astăzi",
+    "weekdays": {
+      "fri": "Vin",
+      "mon": "Lun",
+      "sat": "Sâm",
+      "sun": "Dum",
+      "thu": "Joi",
+      "tue": "Mar",
+      "wed": "Mie"
+    }
+  },
   "clients": {
     "documentTypes": {
       "dni": "DNI",
@@ -90,9 +109,11 @@
     "create": "Creează",
     "delete": "Șterge",
     "edit": "Editează",
+    "error": "Ceva nu a mers bine",
     "loading": "Se încarcă...",
     "moduleInProgress": "Modul în pregătire",
     "or": "sau",
+    "refresh": "Reîmprospătează",
     "save": "Salvează",
     "search": "Caută",
     "viewAll": "Vezi tot"
@@ -314,6 +335,62 @@
     "userRoleAdmin": "Administrator",
     "userRoleEmployee": "Angajat"
   },
+  "maintenance": {
+    "actions": {
+      "complete": "Completează"
+    },
+    "completed": "Efectuate",
+    "dueSoon": "Aproape de scadență",
+    "edit": "Editează mentenanța",
+    "empty": "Fără înregistrări de mentenanță pentru acest vehicul.",
+    "fields": {
+      "cost": "Cost",
+      "description": "Descriere",
+      "invoice": "Factură / document",
+      "nextDue": "Următoarea",
+      "nextDueDate": "Data următoare",
+      "nextDueKm": "Km următor",
+      "notes": "Note",
+      "performedAt": "Efectuare",
+      "performedAtDate": "Data efectuarii",
+      "performedAtKm": "Km la efectuare",
+      "priority": "Prioritate",
+      "provider": "Furnizor",
+      "status": "Stare",
+      "title": "Titlu"
+    },
+    "itemPlural": "elemente",
+    "itemSingular": "element",
+    "new": "Mentenanță nouă",
+    "overdue": "Întârziate",
+    "priority": {
+      "critical": "Critică",
+      "high": "Ridicată",
+      "low": "Scăzută",
+      "medium": "Medie"
+    },
+    "status": {
+      "cancelled": "Anulat",
+      "completed": "Efectuat",
+      "overdue": "Întârziat",
+      "pending": "În așteptare",
+      "scheduled": "Programat"
+    },
+    "title": "Mentenanță",
+    "type": {
+      "battery": "Baterie",
+      "brakes": "Frâne",
+      "breakdown": "Defecțiune",
+      "cleaning": "Curățenie",
+      "generalRevision": "Revizie generală",
+      "insurance": "Asigurare",
+      "itv": "ITV",
+      "oilChange": "Schimb de ulei",
+      "other": "Altceva",
+      "tires": "Schimb de anvelope"
+    },
+    "upcoming": "Viitoare"
+  },
   "menu": {
     "calendar": "Calendar",
     "clients": "Clienți",
@@ -435,6 +512,27 @@
     "takePhoto": "Fă poză",
     "uploadFromGallery": "Încarcă din galerie"
   },
+  "reports": {
+    "days": "zile",
+    "monthlyRevenue": "Venituri lunare",
+    "noData": "Fără date în această perioadă.",
+    "noOutstanding": "Totul în ordine: nu există plăți restante.",
+    "outstanding": "Plăți restante",
+    "outstandingHint": "Rezervări active cu sold în favoarea clientului.",
+    "outstandingTitle": "Rezervări cu sold restant",
+    "range": {
+      "12m": "Ultimul an",
+      "1m": "Ultima lună",
+      "3m": "Ultimele 3 luni",
+      "6m": "Ultimele 6 luni"
+    },
+    "reservations": "rezervări",
+    "subtitle": "Venituri, utilizare flotă și solduri restante pentru ultimele luni.",
+    "topVehicles": "Vehicule cu cele mai multe venituri",
+    "totalRevenue": "Venituri încasate",
+    "utilization": "Utilizare flotă",
+    "windowLabel": "în perioada selectată"
+  },
   "reservations": {
     "actions": {
       "cancel": "Anulează rezervarea",
@@ -474,6 +572,14 @@
       "invalidDates": "Data returnării trebuie să fie după data preluării"
     },
     "new": "Rezervare nouă",
+    "notes": {
+      "add": "Adaugă notă",
+      "empty": "Încă nu există note interne.",
+      "hint": "Aceste note sunt private și nu apar pe contract. Sunt păstrate ca istoric al operatorului.",
+      "placeholder": "Adaugă o notă pentru echipă…",
+      "systemUser": "Sistem",
+      "title": "Note interne"
+    },
     "paymentStatus": {
       "pending": "În așteptare"
     },
@@ -496,6 +602,24 @@
     },
     "subtitle": "Gestionează rezervările de închiriere",
     "title": "Rezervări"
+  },
+  "search": {
+    "close": "Închide",
+    "empty": "Nicio potrivire.",
+    "groups": {
+      "clients": "Clienți",
+      "reservations": "Rezervări",
+      "vehicles": "Vehicule"
+    },
+    "minChars": "Scrie cel puțin 2 caractere.",
+    "navigate": "Navighează",
+    "open": "Deschide căutarea",
+    "placeholder": "Caută client, vehicul sau rezervare…",
+    "trigger": "Caută…"
+  },
+  "timeline": {
+    "nextAction": "Acțiune următoare",
+    "skippedByException": "Omis prin excepție"
   },
   "vehicles": {
     "actions": {

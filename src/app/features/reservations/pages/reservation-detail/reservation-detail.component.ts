@@ -29,11 +29,19 @@ import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.
 import { toDate } from '@shared/utils/reservation-date.util';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
+import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
+import { ReservationNote } from '@shared/models/reservation.model';
 
 @Component({
   selector: 'app-reservation-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, ReservationTimelineComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    ReservationTimelineComponent,
+    ReservationNotesPanelComponent
+  ],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
@@ -165,6 +173,18 @@ export class ReservationDetailComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/reservations']);
+  }
+
+  /**
+   * Refresh the local reservation snapshot when a new internal note
+   * is added through the notes panel.  We do NOT re-fetch the
+   * entire reservation (lightweight) — just patch the array so the
+   * panel re-renders with the new entry.
+   */
+  onInternalNotesChanged(notes: ReservationNote[]): void {
+    if (this.reservation) {
+      this.reservation = { ...this.reservation, internalNotes: notes };
+    }
   }
 
   showCancelModal = false;

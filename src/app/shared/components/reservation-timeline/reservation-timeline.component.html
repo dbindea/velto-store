@@ -1,5 +1,5 @@
-<div class="reservation-timeline">
-  <div class="timeline-track">
+<div class="reservation-timeline" role="region" [attr.aria-label]="'timeline.title' | translate">
+  <div class="timeline-track" role="list">
     @for (s of steps(); track trackStep($index, s)) {
       <div
         class="timeline-step"
@@ -8,8 +8,10 @@
         [class.step-blocked]="s.state === 'blocked'"
         [class.step-skipped]="s.state === 'skipped_by_exception'"
         [class.step-pending]="s.state === 'pending'"
+        [attr.aria-current]="s.state === 'current' ? 'step' : null"
+        role="listitem"
       >
-        <div class="step-icon">
+        <div class="step-icon" aria-hidden="true">
           <i [class]="iconFor(s.state)"></i>
         </div>
 
@@ -20,7 +22,7 @@
 
           @if (s.state === 'blocked' && s.blockedReasonKey) {
             <div class="step-blocked-reason">
-              <i class="pi pi-info-circle"></i>
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
               {{ s.blockedReasonKey | translate }}
             </div>
           }
@@ -33,8 +35,8 @@
 
           @if (s.state === 'current' && !readOnly && s.action) {
             <button class="step-action-btn" type="button" (click)="runAction(s)">
-              <i class="pi pi-arrow-right"></i>
               {{ 'timeline.nextAction' | translate }}
+              <i class="pi pi-arrow-right" aria-hidden="true"></i>
             </button>
           }
         </div>

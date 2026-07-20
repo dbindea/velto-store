@@ -1,0 +1,45 @@
+<div class="month-grid-wrapper">
+  <div class="weekdays">
+    @for (label of weekdayLabels(); track label) {
+      <div class="weekday">{{ label | translate }}</div>
+    }
+  </div>
+
+  <div class="grid">
+    @for (cell of cells; track $index) {
+      <div
+        class="cell"
+        [class.out-of-month]="!cell.inMonth"
+        [class.today]="cell.isToday"
+        [class.weekend]="cell.isWeekend"
+        (click)="onDayClick(cell)"
+      >
+        <div class="cell-header">
+          <span class="day-num">{{ cell.date.getDate() }}</span>
+        </div>
+        <div class="cell-body">
+          @for (r of cell.reservations.slice(0, 3); track r.id) {
+            <button
+              type="button"
+              class="bar"
+              [class.bar-start]="r.startsHere"
+              [class.bar-end]="r.endsHere"
+              [class.bar-mid]="!r.startsHere && !r.endsHere"
+              [class.bar-continues-left]="r.continuesFrom"
+              [class.bar-continues-right]="r.continuesTo"
+              [class]="statusClass(r)"
+              (click)="onReservationClick($event, r)"
+              [title]="r.clientSnapshot.fullName + ' · ' + statusLabel(r.reservationStatus)"
+            >
+              <i class="pi pi-car bar-icon"></i>
+              <span class="bar-text">{{ shortLabel(r) }}</span>
+            </button>
+          }
+          @if (cell.reservations.length > 3) {
+            <div class="bar-overflow">+{{ cell.reservations.length - 3 }}</div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

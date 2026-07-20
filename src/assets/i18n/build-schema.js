@@ -51,7 +51,10 @@ const SCHEMA = {
     or: null,
     create: null,
     viewAll: null,
-    copied: null
+    copied: null,
+    refresh: null,
+    error: null,
+    systemUser: null
   },
   vehicles: {
     title: null,
@@ -298,6 +301,14 @@ const SCHEMA = {
     },
     list: {
       empty: null
+    },
+    notes: {
+      title: null,
+      hint: null,
+      placeholder: null,
+      add: null,
+      empty: null,
+      systemUser: null
     }
   },
   payments: {
@@ -743,6 +754,58 @@ const SCHEMA = {
     blocked: null,
     skippedByException: null,
     nextAction: null
+  },
+  search: {
+    placeholder: null,
+    trigger: null,
+    open: null,
+    minChars: null,
+    empty: null,
+    navigate: null,
+    openHint: null,
+    close: null,
+    groups: {
+      clients: null,
+      vehicles: null,
+      reservations: null
+    }
+  },
+  calendar: {
+    subtitle: null,
+    today: null,
+    prev: null,
+    next: null,
+    emptyDay: null,
+    weekdays: {
+      mon: null,
+      tue: null,
+      wed: null,
+      thu: null,
+      fri: null,
+      sat: null,
+      sun: null
+    }
+  },
+  reports: {
+    subtitle: null,
+    range: {
+      '1m': null,
+      '3m': null,
+      '6m': null,
+      '12m': null
+    },
+    windowLabel: null,
+    totalRevenue: null,
+    utilization: null,
+    outstanding: null,
+    outstandingHint: null,
+    outstandingTitle: null,
+    noOutstanding: null,
+    days: null,
+    monthlyRevenue: null,
+    topVehicles: null,
+    noData: null,
+    reservations: null
   }
 };
 

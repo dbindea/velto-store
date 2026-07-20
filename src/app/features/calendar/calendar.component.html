@@ -1,0 +1,80 @@
+<div class="page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'menu.calendar' | translate }}</h1>
+      <p class="subtitle">{{ 'calendar.subtitle' | translate }}</p>
+    </div>
+  </div>
+
+  <div class="calendar-toolbar">
+    <button class="btn btn-secondary" type="button" (click)="prevMonth()" [title]="'calendar.prev' | translate">
+      <i class="pi pi-chevron-left"></i>
+    </button>
+    <button class="btn btn-secondary today-btn" type="button" (click)="today()">
+      {{ 'calendar.today' | translate }}
+    </button>
+    <button class="btn btn-secondary" type="button" (click)="nextMonth()" [title]="'calendar.next' | translate">
+      <i class="pi pi-chevron-right"></i>
+    </button>
+    <h2 class="month-label">{{ monthLabel() }}</h2>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else {
+    <app-month-grid
+      [month]="currentMonth()"
+      [reservations]="reservations()"
+      (dayClick)="onDayClick($event)"
+      (reservationClick)="onReservationClick($event)"
+    />
+
+    <div class="legend">
+      <span class="legend-item"><span class="dot status-reserved"></span>{{ 'reservations.status.reserved' | translate }}</span>
+      <span class="legend-item"><span class="dot status-confirmed"></span>{{ 'reservations.status.confirmed' | translate }}</span>
+      <span class="legend-item"><span class="dot status-delivered"></span>{{ 'reservations.status.delivered' | translate }}</span>
+      <span class="legend-item"><span class="dot status-returned"></span>{{ 'reservations.status.returned' | translate }}</span>
+      <span class="legend-item"><span class="dot status-closed"></span>{{ 'reservations.status.closed' | translate }}</span>
+      <span class="legend-item"><span class="dot status-cancelled"></span>{{ 'reservations.status.cancelled' | translate }}</span>
+    </div>
+  }
+
+  @if (dayDetail()) {
+    <div class="modal-overlay" (click)="closeDayDetail()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>
+            <i class="pi pi-calendar"></i>
+            {{ dayDetailDate() }}
+          </h3>
+          <button class="modal-close" (click)="closeDayDetail()">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (dayDetail()!.reservations.length === 0) {
+            <p class="empty-day">{{ 'calendar.emptyDay' | translate }}</p>
+          } @else {
+            <ul class="day-reservations">
+              @for (r of dayDetail()!.reservations; track r.id) {
+                <li class="day-reservation" (click)="onReservationClick(r); closeDayDetail()">
+                  <span class="res-client">{{ r.clientSnapshot.fullName }}</span>
+                  <span class="res-vehicle">
+                    <i class="pi pi-car"></i>
+                    {{ r.vehicleSnapshot.plateNumber }}
+                  </span>
+                  <span class="res-status" [class]="'status-' + r.reservationStatus">
+                    {{ ('reservations.status.' + r.reservationStatus) | translate }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

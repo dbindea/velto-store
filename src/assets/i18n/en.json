@@ -7,6 +7,25 @@
     "loginSubtitle": "Internal access",
     "loginWithGoogle": "Sign in with Google"
   },
+  "brand": {
+    "logoAlt": "Velto Rent"
+  },
+  "calendar": {
+    "emptyDay": "No reservations for this day.",
+    "next": "Next month",
+    "prev": "Previous month",
+    "subtitle": "Monthly view of all reservations. Tap a day to see the details.",
+    "today": "Today",
+    "weekdays": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sat": "Sat",
+      "sun": "Sun",
+      "thu": "Thu",
+      "tue": "Tue",
+      "wed": "Wed"
+    }
+  },
   "clients": {
     "documentTypes": {
       "dni": "DNI",
@@ -90,9 +109,11 @@
     "create": "Create",
     "delete": "Delete",
     "edit": "Edit",
+    "error": "Something went wrong",
     "loading": "Loading...",
     "moduleInProgress": "Module in preparation",
     "or": "or",
+    "refresh": "Refresh",
     "save": "Save",
     "search": "Search",
     "viewAll": "View all"
@@ -314,6 +335,62 @@
     "userRoleAdmin": "Administrator",
     "userRoleEmployee": "Employee"
   },
+  "maintenance": {
+    "actions": {
+      "complete": "Complete"
+    },
+    "completed": "Completed",
+    "dueSoon": "Due soon",
+    "edit": "Edit maintenance",
+    "empty": "No maintenance records for this vehicle.",
+    "fields": {
+      "cost": "Cost",
+      "description": "Description",
+      "invoice": "Invoice / document",
+      "nextDue": "Next due",
+      "nextDueDate": "Next due date",
+      "nextDueKm": "Next due km",
+      "notes": "Notes",
+      "performedAt": "Performed",
+      "performedAtDate": "Date performed",
+      "performedAtKm": "Km performed",
+      "priority": "Priority",
+      "provider": "Provider",
+      "status": "Status",
+      "title": "Title"
+    },
+    "itemPlural": "items",
+    "itemSingular": "item",
+    "new": "New maintenance",
+    "overdue": "Overdue",
+    "priority": {
+      "critical": "Critical",
+      "high": "High",
+      "low": "Low",
+      "medium": "Medium"
+    },
+    "status": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "overdue": "Overdue",
+      "pending": "Pending",
+      "scheduled": "Scheduled"
+    },
+    "title": "Maintenance",
+    "type": {
+      "battery": "Battery",
+      "brakes": "Brakes",
+      "breakdown": "Breakdown",
+      "cleaning": "Cleaning",
+      "generalRevision": "General revision",
+      "insurance": "Insurance",
+      "itv": "MOT / ITV",
+      "oilChange": "Oil change",
+      "other": "Other",
+      "tires": "Tire change"
+    },
+    "upcoming": "Upcoming"
+  },
   "menu": {
     "calendar": "Calendar",
     "clients": "Clients",
@@ -435,6 +512,27 @@
     "takePhoto": "Take photo",
     "uploadFromGallery": "Upload from gallery"
   },
+  "reports": {
+    "days": "days",
+    "monthlyRevenue": "Monthly revenue",
+    "noData": "No data in this period.",
+    "noOutstanding": "All clear: no outstanding payments.",
+    "outstanding": "Outstanding payments",
+    "outstandingHint": "Active reservations with a balance in the customer's favor.",
+    "outstandingTitle": "Reservations with outstanding balance",
+    "range": {
+      "12m": "Last year",
+      "1m": "Last month",
+      "3m": "Last 3 months",
+      "6m": "Last 6 months"
+    },
+    "reservations": "reservations",
+    "subtitle": "Revenue, fleet utilization and outstanding balances for the last few months.",
+    "topVehicles": "Top-earning vehicles",
+    "totalRevenue": "Collected revenue",
+    "utilization": "Fleet utilization",
+    "windowLabel": "in the selected window"
+  },
   "reservations": {
     "actions": {
       "cancel": "Cancel reservation",
@@ -474,6 +572,14 @@
       "invalidDates": "Return date must be after pickup date"
     },
     "new": "New reservation",
+    "notes": {
+      "add": "Add note",
+      "empty": "No internal notes yet.",
+      "hint": "These notes are private and never appear on the contract. They are kept as operator history.",
+      "placeholder": "Add a note for the team…",
+      "systemUser": "System",
+      "title": "Internal notes"
+    },
     "paymentStatus": {
       "pending": "Pending"
     },
@@ -496,6 +602,24 @@
     },
     "subtitle": "Manage rental reservations",
     "title": "Reservations"
+  },
+  "search": {
+    "close": "Close",
+    "empty": "No matches.",
+    "groups": {
+      "clients": "Clients",
+      "reservations": "Reservations",
+      "vehicles": "Vehicles"
+    },
+    "minChars": "Type at least 2 characters.",
+    "navigate": "Navigate",
+    "open": "Open search",
+    "placeholder": "Search client, vehicle or reservation…",
+    "trigger": "Search…"
+  },
+  "timeline": {
+    "nextAction": "Next action",
+    "skippedByException": "Skipped by exception"
   },
   "vehicles": {
     "actions": {
