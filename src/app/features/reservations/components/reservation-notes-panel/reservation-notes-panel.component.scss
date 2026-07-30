@@ -1,0 +1,155 @@
+.notes-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+
+  h3 {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+
+    i {
+      color: var(--accent-color);
+    }
+  }
+
+  .count {
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--accent-light);
+    color: var(--accent-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+.notes-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0 0 0.875rem;
+
+  i {
+    color: var(--accent-color);
+    margin-top: 0.125rem;
+  }
+}
+
+.notes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 60px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-msg {
+  font-size: 0.8rem;
+  color: #b91c1c;
+  flex: 1;
+}
+
+.notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.note-item {
+  background: var(--bg-main);
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  border-left: 3px solid var(--accent-color);
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.note-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.note-date {
+  font-family: monospace;
+}
+
+.note-text {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.notes-empty {
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  i {
+    color: var(--text-muted);
+  }
+}

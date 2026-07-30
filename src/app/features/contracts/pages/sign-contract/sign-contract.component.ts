@@ -118,4 +118,19 @@ export class SignContractComponent implements OnInit {
       window.open(this.view.pdfUrl, '_blank', 'noopener');
     }
   }
+
+  /**
+   * If the brand SVG cannot be loaded (e.g. hosting served a 404
+   * because the asset was not deployed) fall back to the isologo.
+   * If the isologo is also missing, the inline brand-name wordmark
+   * next to the image remains visible.
+   */
+  onLogoError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (!img || img.dataset['fallback'] === '1') {
+      return;
+    }
+    img.dataset['fallback'] = '1';
+    img.src = 'assets/brand/isologo.svg';
+  }
 }

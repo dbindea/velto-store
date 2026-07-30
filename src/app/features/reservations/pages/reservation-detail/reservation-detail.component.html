@@ -56,6 +56,10 @@
       </div>
     </div>
 
+    @if (timelineContext) {
+      <app-reservation-timeline [context]="timelineContext" />
+    }
+
     <div class="detail-grid">
       <!-- A. Vehicle Section -->
       <div class="detail-card vehicle-card">
@@ -279,18 +283,14 @@
         </div>
       </div>
 
-      <!-- G. Notes Section -->
-      @if (reservation.notes) {
-        <div class="detail-card notes-card">
-          <div class="card-header">
-            <i class="pi pi-comment"></i>
-            <span>{{ 'reservations.fields.notes' | translate }}</span>
-          </div>
-          <div class="card-content">
-            <p class="notes-text">{{ reservation.notes }}</p>
-          </div>
-        </div>
-      }
+      <!-- G. Internal Notes Section -->
+      <div class="detail-card notes-card" style="grid-column: 1 / -1;">
+        <app-reservation-notes-panel
+          [reservationId]="reservation.id!"
+          [notes]="reservation.internalNotes || []"
+          (notesChanged)="onInternalNotesChanged($event)"
+        />
+      </div>
     </div>
 
     <!-- Inspections (Delivery & Return) Section -->

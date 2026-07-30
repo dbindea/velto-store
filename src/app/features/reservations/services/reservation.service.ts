@@ -1,14 +1,15 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, collection, doc, addDoc, updateDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
 import { Observable, from, forkJoin, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
-import { 
-  Reservation, 
-  ReservationStatus, 
+import {
+  Reservation,
+  ReservationStatus,
   BLOCKING_STATUSES,
-  ReservationPricingSnapshot 
+  ReservationPricingSnapshot,
+  ReservationNote
 } from '@shared/models/reservation.model';
 import { Client } from '@shared/models/client.model';
 import { 
@@ -21,6 +22,7 @@ import { calculateBasePrice, findPricingRuleByDays } from '@shared/utils/pricing
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
+import { AuthService } from '@core/auth/auth.service';
 import {
   Workflow,
   WorkflowContext,
@@ -44,6 +46,7 @@ export class ReservationService {
   private vehicleService = inject(VehicleService);
   private paymentService = inject(PaymentService);
   private inspectionService = inject(InspectionService);
+  private authService = inject(AuthService);
 
   constructor() {
     this.reservationsRef = collection(this.firestore, 'reservations');
@@ -505,6 +508,50 @@ export class ReservationService {
       ...data,
       updatedAt: { seconds: Date.now() / 1000 }
     }));
+  }
+
+  /**
+   * Append a new internal note to the reservation's `internalNotes`
+   * log.  Notes are append-only — never edited or deleted.
+   *
+   * @param id reservation id
+   * @param text note body (trimmed; must be non-empty)
+   * @param author optional author (display name + email of the
+   *               operator).  Falls back to the AuthService user.
+   */
+  async addInternalNote(
+    id: string,
+    text: string,
+    author?: { displayName?: string; email?: string }
+  ): Promise<ReservationNote> {
+    const trimmed = (text || '').trim();
+    if (!trimmed) throw new Error('Note text is required');
+
+    // Fall back to the signed-in operator if no author is passed.
+    const fallbackAuthor = this.authService.authorizedUser?.();
+    const finalAuthor = {
+      displayName: author?.displayName ?? fallbackAuthor?.displayName ?? undefined,
+      email: author?.email ?? fallbackAuthor?.email ?? undefined
+    };
+
+    const note: ReservationNote = {
+      id:
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `n_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      text: trimmed,
+      createdAt: { seconds: Date.now() / 1000 },
+      createdBy: finalAuthor.displayName,
+      createdByEmail: finalAuthor.email
+    };
+
+    const docRef = doc(this.firestore, `reservations/${id}`);
+    await updateDoc(docRef, this.cleanData({
+      internalNotes: arrayUnion(note),
+      updatedAt: { seconds: Date.now() / 1000 }
+    }));
+
+    return note;
   }
 
   /**

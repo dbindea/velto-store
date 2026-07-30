@@ -1,8 +1,13 @@
 <div class="public-page">
   <header class="public-header">
     <div class="brand">
-      <span class="brand-mark">V</span>
-      <span class="brand-name">VELTO RENT</span>
+      <img
+        class="brand-image"
+        src="assets/brand/logo.svg"
+        [alt]="'brand.logoAlt' | translate"
+        (error)="onLogoError($event)"
+      />
+      <span class="brand-name brand-font">VELTO RENT</span>
     </div>
     <span class="brand-tagline">{{ 'contracts.sign.subtitle' | translate }}</span>
   </header>

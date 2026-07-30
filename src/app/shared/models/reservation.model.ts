@@ -90,6 +90,22 @@ export interface WorkflowException {
   createdBy?: string;
 }
 
+/**
+ * Internal note added by an operator (Velto staff) on a reservation.
+ * Notes are NOT shown to the customer and are NOT included in the
+ * contract PDF body — they live in the backoffice only.
+ *
+ * Notes are append-only: existing entries are never edited, only
+ * new ones appended.  This preserves an audit trail per reservation.
+ */
+export interface ReservationNote {
+  id: string;
+  text: string;
+  createdAt: any;
+  createdBy?: string;
+  createdByEmail?: string;
+}
+
 export interface ReservationInitialPayment {
   requiredAmount: number;
   paidAmount: number;
@@ -201,6 +217,14 @@ export interface Reservation {
   workflowExceptions?: WorkflowException[];
 
   notes?: string;
+
+  /**
+   * Append-only internal notes log.  Distinct from the legacy
+   * `notes` scalar (which is a free-form single string used as a
+   * quick summary).  Each entry is timestamped + authored so the
+   * reservation-detail page can show a chronological feed.
+   */
+  internalNotes?: ReservationNote[];
 
   createdAt?: any;
   updatedAt?: any;

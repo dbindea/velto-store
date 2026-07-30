@@ -183,6 +183,78 @@
             </div>
           </div>
         }
+
+        @if (card.type === 'maintenance_overdue') {
+          <div class="dashboard-card card-overdue">
+            <div class="card-header">
+              <span class="card-icon"><i class="pi pi-exclamation-triangle"></i></span>
+              <div class="card-title">
+                <h3>{{ 'maintenance.overdue' | translate }}</h3>
+                <p class="card-subtitle">
+                  {{ card.items.length }}
+                  {{
+                    card.items.length === 1
+                      ? ('maintenance.itemSingular' | translate)
+                      : ('maintenance.itemPlural' | translate)
+                  }}
+                </p>
+              </div>
+            </div>
+            <ul class="card-list">
+              @for (m of card.items.slice(0, 5); track m.id) {
+                <li class="card-list-item" (click)="openVehicleMaintenanceTab(m.vehicleId)">
+                  <span class="list-title">{{ m.title }}</span>
+                  <span class="list-meta">
+                    {{ m.vehicleSnapshot?.plateNumber }}
+                    @if (m.nextDueDate) {
+                      · {{ toDateSafe(m.nextDueDate) | date: 'dd/MM/yyyy' }}
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+            <div class="card-action">
+              {{ 'common.viewAll' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
+        @if (card.type === 'maintenance_due_soon') {
+          <div class="dashboard-card card-due-soon">
+            <div class="card-header">
+              <span class="card-icon"><i class="pi pi-clock"></i></span>
+              <div class="card-title">
+                <h3>{{ 'maintenance.dueSoon' | translate }}</h3>
+                <p class="card-subtitle">
+                  {{ card.items.length }}
+                  {{
+                    card.items.length === 1
+                      ? ('maintenance.itemSingular' | translate)
+                      : ('maintenance.itemPlural' | translate)
+                  }}
+                </p>
+              </div>
+            </div>
+            <ul class="card-list">
+              @for (m of card.items.slice(0, 5); track m.id) {
+                <li class="card-list-item" (click)="openVehicleMaintenanceTab(m.vehicleId)">
+                  <span class="list-title">{{ m.title }}</span>
+                  <span class="list-meta">
+                    {{ m.vehicleSnapshot?.plateNumber }}
+                    @if (m.nextDueDate) {
+                      · {{ toDateSafe(m.nextDueDate) | date: 'dd/MM/yyyy' }}
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+            <div class="card-action">
+              {{ 'common.viewAll' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
       }
     </div>
   }

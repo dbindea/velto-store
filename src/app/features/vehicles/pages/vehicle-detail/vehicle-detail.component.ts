@@ -1,10 +1,13 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
+import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-maintenance.service';
 import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-gallery/image-gallery.component';
+import { VehicleMaintenanceFormComponent } from '@features/vehicles/components/vehicle-maintenance-form/vehicle-maintenance-form.component';
 import {
   Vehicle,
   VehicleStatus,
@@ -18,11 +21,27 @@ import {
 } from '@shared/models/vehicle.model';
 import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import {
+  MAINTENANCE_PRIORITY_COLORS,
+  MAINTENANCE_PRIORITY_LABELS,
+  MAINTENANCE_STATUS_COLORS,
+  MAINTENANCE_STATUS_LABELS,
+  MAINTENANCE_TYPE_ICONS,
+  MAINTENANCE_TYPE_LABELS,
+  MaintenanceStatus,
+  VehicleMaintenance
+} from '@shared/models/vehicle-maintenance.model';
 
 @Component({
   selector: 'app-vehicle-detail',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, ImageGalleryComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    ImageGalleryComponent,
+    VehicleMaintenanceFormComponent
+  ],
   templateUrl: './vehicle-detail.component.html',
   styleUrl: './vehicle-detail.component.scss'
 })
@@ -31,10 +50,11 @@ export class VehicleDetailComponent implements OnInit {
   private router = inject(Router);
   private vehicleService = inject(VehicleService);
   private reservationService = inject(ReservationService);
+  private maintenanceService = inject(VehicleMaintenanceService);
 
   vehicle: Vehicle | null = null;
   loading = true;
-  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations' = 'info';
+  activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations' | 'maintenance' = 'info';
   showStatusModal = false;
   showDeleteModal = false;
   showGallery = false;
@@ -43,6 +63,16 @@ export class VehicleDetailComponent implements OnInit {
   // Reservations
   vehicleReservations: Reservation[] = [];
   loadingReservations = false;
+
+  // Maintenance
+  maintenanceItems: VehicleMaintenance[] = [];
+  loadingMaintenance = false;
+  showMaintenanceForm = false;
+  maintenanceEditing: VehicleMaintenance | null = null;
+  maintenanceSaving = false;
+  pendingInvoiceFile: File | null = null;
+  pendingInvoiceUrl: string | null = null;
+  pendingInvoicePath: string | null = null;
 
   statusOptions: VehicleStatus[] = ['available', 'rented', 'maintenance', 'out_of_service'];
 
@@ -60,6 +90,18 @@ export class VehicleDetailComponent implements OnInit {
     if (id) {
       this.loadVehicle(id);
       this.loadReservations(id);
+      this.loadMaintenance(id);
+      const tab = this.route.snapshot.queryParamMap.get('tab');
+      if (
+        tab === 'info' ||
+        tab === 'features' ||
+        tab === 'photos' ||
+        tab === 'pricing' ||
+        tab === 'reservations' ||
+        tab === 'maintenance'
+      ) {
+        this.activeTab = tab;
+      }
     }
   }
 
@@ -90,8 +132,185 @@ export class VehicleDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations'): void {
+  setTab(
+    tab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations' | 'maintenance'
+  ): void {
     this.activeTab = tab;
+  }
+
+  // -----------------------------------------------------------------------
+  // Maintenance
+  // -----------------------------------------------------------------------
+
+  loadMaintenance(vehicleId: string): void {
+    this.loadingMaintenance = true;
+    this.maintenanceService.getMaintenanceByVehicle(vehicleId).subscribe({
+      next: (items) => {
+        this.maintenanceItems = items;
+        this.loadingMaintenance = false;
+      },
+      error: () => {
+        this.loadingMaintenance = false;
+      }
+    });
+  }
+
+  getEffectiveStatus(m: VehicleMaintenance): MaintenanceStatus {
+    return this.maintenanceService.computeEffectiveStatus(m, this.vehicle?.currentKm);
+  }
+
+  getMaintenanceTypeLabel(t: VehicleMaintenance['type']): string {
+    return MAINTENANCE_TYPE_LABELS[t];
+  }
+  getMaintenanceTypeIcon(t: VehicleMaintenance['type']): string {
+    return MAINTENANCE_TYPE_ICONS[t];
+  }
+  getMaintenanceStatusLabel(s: MaintenanceStatus): string {
+    return MAINTENANCE_STATUS_LABELS[s];
+  }
+  getMaintenanceStatusClass(s: MaintenanceStatus): string {
+    return MAINTENANCE_STATUS_COLORS[s];
+  }
+  getMaintenancePriorityLabel(p: VehicleMaintenance['priority']): string {
+    return MAINTENANCE_PRIORITY_LABELS[p];
+  }
+  getMaintenancePriorityClass(p: VehicleMaintenance['priority']): string {
+    return MAINTENANCE_PRIORITY_COLORS[p];
+  }
+
+  getMaintenanceBuckets() {
+    const upcoming: VehicleMaintenance[] = [];
+    const overdue: VehicleMaintenance[] = [];
+    const completed: VehicleMaintenance[] = [];
+    for (const m of this.maintenanceItems) {
+      const s = this.getEffectiveStatus(m);
+      if (s === 'overdue') overdue.push(m);
+      else if (s === 'completed' || s === 'cancelled') completed.push(m);
+      else upcoming.push(m);
+    }
+    return { upcoming, overdue, completed };
+  }
+
+  openCreateMaintenance(): void {
+    this.maintenanceEditing = null;
+    this.pendingInvoiceFile = null;
+    this.pendingInvoiceUrl = null;
+    this.pendingInvoicePath = null;
+    this.showMaintenanceForm = true;
+  }
+
+  openEditMaintenance(m: VehicleMaintenance): void {
+    this.maintenanceEditing = m;
+    this.pendingInvoiceFile = null;
+    this.pendingInvoiceUrl = m.invoiceUrl || null;
+    this.pendingInvoicePath = m.invoicePath || null;
+    this.showMaintenanceForm = true;
+  }
+
+  cancelMaintenanceForm(): void {
+    this.showMaintenanceForm = false;
+    this.maintenanceEditing = null;
+    this.pendingInvoiceFile = null;
+  }
+
+  async onMaintenanceInvoiceSelected(file: File): Promise<void> {
+    if (!this.vehicle?.id) return;
+    this.maintenanceSaving = true;
+    try {
+      const id = this.maintenanceEditing?.id || 'pending';
+      const { path, url } = await this.maintenanceService.uploadMaintenanceInvoice(
+        this.vehicle.id,
+        id,
+        file
+      );
+      this.pendingInvoiceFile = file;
+      this.pendingInvoiceUrl = url;
+      this.pendingInvoicePath = path;
+    } catch (err) {
+      console.error('Failed to upload maintenance invoice', err);
+    } finally {
+      this.maintenanceSaving = false;
+    }
+  }
+
+  async submitMaintenanceForm(form: {
+    type: VehicleMaintenance['type'];
+    status: VehicleMaintenance['status'];
+    priority: VehicleMaintenance['priority'];
+    title: string;
+    description: string;
+    performedAtKm: number | null;
+    performedAtDate: string;
+    nextDueKm: number | null;
+    nextDueDate: string;
+    cost: number | null;
+    provider: string;
+    notes: string;
+    invoiceUrl: string;
+    invoicePath: string;
+  }): Promise<void> {
+    if (!this.vehicle?.id) return;
+    this.maintenanceSaving = true;
+    try {
+      const snapshot = {
+        brand: this.vehicle.brand,
+        model: this.vehicle.model,
+        plateNumber: this.vehicle.plateNumber,
+        mainImageUrl: this.vehicle.images?.[0]?.url
+      };
+      const data: Omit<VehicleMaintenance, 'id'> = {
+        vehicleId: this.vehicle.id,
+        vehicleSnapshot: snapshot,
+        type: form.type,
+        status: form.status,
+        priority: form.priority,
+        title: form.title,
+        description: form.description || undefined,
+        performedAtKm: form.performedAtKm ?? undefined,
+        performedAtDate: form.performedAtDate || undefined,
+        nextDueKm: form.nextDueKm ?? undefined,
+        nextDueDate: form.nextDueDate || undefined,
+        cost: form.cost ?? undefined,
+        provider: form.provider || undefined,
+        invoiceUrl: this.pendingInvoiceUrl || undefined,
+        invoicePath: this.pendingInvoicePath || undefined,
+        notes: form.notes || undefined
+      };
+
+      if (this.maintenanceEditing?.id) {
+        await this.maintenanceService.updateMaintenance(this.maintenanceEditing.id, data);
+      } else {
+        await this.maintenanceService.createMaintenance(data);
+      }
+      this.loadMaintenance(this.vehicle.id);
+      this.showMaintenanceForm = false;
+      this.maintenanceEditing = null;
+    } catch (err) {
+      console.error('Failed to save maintenance', err);
+    } finally {
+      this.maintenanceSaving = false;
+    }
+  }
+
+  async completeMaintenanceItem(m: VehicleMaintenance): Promise<void> {
+    if (!m.id) return;
+    await this.maintenanceService.completeMaintenance(m.id, {
+      performedAtDate: new Date(),
+      performedAtKm: m.nextDueKm // best-effort: assume current km = next due
+    });
+    if (this.vehicle?.id) this.loadMaintenance(this.vehicle.id);
+  }
+
+  async cancelMaintenanceItem(m: VehicleMaintenance): Promise<void> {
+    if (!m.id) return;
+    await this.maintenanceService.cancelMaintenance(m.id);
+    if (this.vehicle?.id) this.loadMaintenance(this.vehicle.id);
+  }
+
+  async deleteMaintenanceItem(m: VehicleMaintenance): Promise<void> {
+    if (!m.id) return;
+    await this.maintenanceService.deleteMaintenance(m.id);
+    if (this.vehicle?.id) this.loadMaintenance(this.vehicle.id);
   }
 
   // Reservation helpers
@@ -171,6 +390,12 @@ export class VehicleDetailComponent implements OnInit {
 
   getResReturnDate(r: Reservation): Date {
     return toDate(r.returnDateTime);
+  }
+
+  /** Used by the maintenance tab template to normalise Firestore
+   *  Timestamps into JS Dates for the | date pipe. */
+  toDate(value: any): Date {
+    return toDate(value);
   }
 
   viewReservation(reservationId: string | undefined): void {

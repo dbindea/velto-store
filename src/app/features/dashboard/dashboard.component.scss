@@ -186,3 +186,44 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+// Maintenance alert cards
+.card-overdue {
+  border-left: 4px solid #b91c1c;
+}
+.card-due-soon {
+  border-left: 4px solid #f59e0b;
+}
+
+.card-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-list-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.625rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: var(--bg-main);
+  }
+
+  .list-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .list-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}

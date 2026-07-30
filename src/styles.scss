@@ -1,12 +1,59 @@
 @use "tailwindcss";
 
+// ---------------------------------------------------------------------------
+// Brand identity — Velto
+// ---------------------------------------------------------------------------
+// Gotham is the brand font.  If the .ttf files are missing in
+// src/assets/fonts/ the @font-face block below is still valid (the
+// browser just skips the unknown src and falls back to the system
+// stack).  Same for the brand mark SVGs — the UI keeps working
+// because we always wrap images in <img onerror> fallbacks.
+// ---------------------------------------------------------------------------
+
+@font-face {
+  font-family: 'Gotham';
+  src: url('/assets/fonts/GothamLight.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/assets/fonts/GothamBook.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/assets/fonts/GothamMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/assets/fonts/GothamBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 // CSS Variables - Clean, modern palette
 :root {
-  // Green accent (from logo)
-  --accent-color: #248f7d;
-  --accent-hover: #1d7267;
-  --accent-light: rgba(36, 143, 125, 0.1);
-  --accent-bg: rgba(36, 143, 125, 0.08);
+  // Brand colours (canonical — see src/app/core/config/brand.config.ts)
+  --color-brand-green: #20A48F;
+  --color-brand-green-dark: #1a8775;
+  --color-brand-green-light: rgba(32, 164, 143, 0.12);
+  --color-brand-black: #000000;
+  --color-brand-white: #FFFFFF;
+
+  // App accent — alias of brand green so existing components keep
+  // working untouched.
+  --accent-color: var(--color-brand-green);
+  --accent-hover: var(--color-brand-green-dark);
+  --accent-light: rgba(32, 164, 143, 0.1);
+  --accent-bg: rgba(32, 164, 143, 0.08);
 
   // Sidebar (dark slate)
   --sidebar-bg: #1e293b;
@@ -46,7 +93,7 @@
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --accent-bg: rgba(36, 143, 125, 0.15);
+  --accent-bg: rgba(32, 164, 143, 0.18);
 }
 
 // System preference (light default)
@@ -80,6 +127,25 @@ body {
   color: var(--text-primary);
   background: var(--bg-main);
   line-height: 1.5;
+}
+
+// Gotham is reserved for headings and brand marks so the body copy
+// stays readable.  Anything that needs the brand typeface should
+// add the .brand-font utility (defined in components as needed) or
+// rely on this default for h1-h6.
+h1, h2, h3 {
+  font-family: 'Gotham', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+// Brand name / logo utility — apply to any wrapper that should
+// render the wordmark in Gotham.  Used by sidebar, sign-contract
+// header and PDF cover.
+.brand-font {
+  font-family: 'Gotham', 'Inter', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 // Smooth transitions for theme changes

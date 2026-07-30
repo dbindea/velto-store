@@ -2,9 +2,14 @@
   <div class="login-card">
     <div class="login-header">
       <div class="logo">
-        <i class="pi pi-car"></i>
+        <img
+          class="logo-image"
+          src="assets/brand/isologo.svg"
+          [alt]="'brand.logoAlt' | translate"
+          (error)="onLogoError($event)"
+        />
       </div>
-      <h1 class="title">{{ 'app.name' | translate }}</h1>
+      <h1 class="title brand-font">{{ 'app.name' | translate }}</h1>
       <p class="subtitle">{{ 'auth.loginSubtitle' | translate }}</p>
     </div>
 

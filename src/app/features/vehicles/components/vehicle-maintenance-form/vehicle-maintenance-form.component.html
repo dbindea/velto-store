@@ -1,0 +1,208 @@
+<form class="maintenance-form" (ngSubmit)="onSubmit()" #f="ngForm">
+  <div class="form-section">
+    <h3 class="section-title">
+      <i class="pi pi-info-circle"></i>
+      {{ 'maintenance.fields.title' | translate }}
+    </h3>
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.title' | translate }} *</span>
+        <input
+          type="text"
+          class="form-control"
+          name="title"
+          [(ngModel)]="form.title"
+          required
+          [placeholder]="'maintenance.fields.title' | translate"
+        />
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.type.' + form.type | translate }}</span>
+        <select class="form-control" name="type" [(ngModel)]="form.type">
+          @for (opt of typeOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label | translate }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.status' | translate }}</span>
+        <select class="form-control" name="status" [(ngModel)]="form.status">
+          @for (opt of statusOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label | translate }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.priority' | translate }}</span>
+        <select class="form-control" name="priority" [(ngModel)]="form.priority">
+          @for (opt of priorityOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label | translate }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <label class="field full-width">
+      <span class="label">{{ 'maintenance.fields.description' | translate }}</span>
+      <textarea
+        class="form-control"
+        name="description"
+        rows="2"
+        [(ngModel)]="form.description"
+        [placeholder]="'maintenance.fields.description' | translate"
+      ></textarea>
+    </label>
+  </div>
+
+  <div class="form-section">
+    <h3 class="section-title">
+      <i class="pi pi-check-circle"></i>
+      {{ 'maintenance.fields.performedAt' | translate }}
+    </h3>
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.performedAtDate' | translate }}</span>
+        <input
+          type="date"
+          class="form-control"
+          name="performedAtDate"
+          [(ngModel)]="form.performedAtDate"
+        />
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.performedAtKm' | translate }}</span>
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          name="performedAtKm"
+          [(ngModel)]="form.performedAtKm"
+        />
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.cost' | translate }} (€)</span>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          class="form-control"
+          name="cost"
+          [(ngModel)]="form.cost"
+        />
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.provider' | translate }}</span>
+        <input
+          type="text"
+          class="form-control"
+          name="provider"
+          [(ngModel)]="form.provider"
+        />
+      </label>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3 class="section-title">
+      <i class="pi pi-clock"></i>
+      {{ 'maintenance.fields.nextDue' | translate }}
+    </h3>
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.nextDueDate' | translate }}</span>
+        <input
+          type="date"
+          class="form-control"
+          name="nextDueDate"
+          [(ngModel)]="form.nextDueDate"
+        />
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.nextDueKm' | translate }}</span>
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          name="nextDueKm"
+          [(ngModel)]="form.nextDueKm"
+        />
+      </label>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3 class="section-title">
+      <i class="pi pi-paperclip"></i>
+      {{ 'maintenance.fields.invoice' | translate }}
+    </h3>
+
+    <div class="upload-row">
+      <label class="upload-btn upload-btn--camera">
+        <i class="pi pi-camera"></i>
+        <span>{{ 'photos.camera' | translate }}</span>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          (change)="onFileChosen($event)"
+          hidden
+        />
+      </label>
+      <label class="upload-btn upload-btn--gallery">
+        <i class="pi pi-image"></i>
+        <span>{{ 'photos.gallery' | translate }}</span>
+        <input
+          type="file"
+          accept="image/*,.pdf"
+          (change)="onFileChosen($event)"
+          hidden
+        />
+      </label>
+    </div>
+
+    @if (form.invoiceUrl) {
+      <a class="invoice-link" [href]="form.invoiceUrl" target="_blank" rel="noopener">
+        <i class="pi pi-external-link"></i>
+        {{ 'maintenance.fields.invoice' | translate }}
+      </a>
+    }
+  </div>
+
+  <label class="field full-width">
+    <span class="label">{{ 'maintenance.fields.notes' | translate }}</span>
+    <textarea
+      class="form-control"
+      name="notes"
+      rows="3"
+      [(ngModel)]="form.notes"
+    ></textarea>
+  </label>
+
+  @if (error()) {
+    <div class="error-msg">
+      <i class="pi pi-exclamation-circle"></i>
+      {{ error() }}
+    </div>
+  }
+
+  <div class="form-actions">
+    <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="saving">
+      {{ 'common.cancel' | translate }}
+    </button>
+    <button type="submit" class="btn btn-primary" [disabled]="saving || !form.title.trim()">
+      @if (saving) {
+        <i class="pi pi-spin pi-spinner"></i>
+      } @else {
+        <i class="pi pi-save"></i>
+      }
+      {{ 'common.save' | translate }}
+    </button>
+  </div>
+</form>

@@ -1,0 +1,74 @@
+<div class="search-overlay" (click)="onBackdropClick($event)">
+  <div class="search-modal" role="dialog" aria-modal="true">
+    <div class="search-header">
+      <i class="pi pi-search"></i>
+      <input
+        #searchInput
+        type="text"
+        class="search-input"
+        [placeholder]="'search.placeholder' | translate"
+        [ngModel]="query()"
+        (ngModelChange)="onInput($event)"
+        (keydown)="onKeyDown($event)"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
+      @if (loading()) {
+        <i class="pi pi-spin pi-spinner loading-icon"></i>
+      } @else {
+        <button type="button" class="close-btn" (click)="close.emit()" aria-label="Close">
+          <i class="pi pi-times"></i>
+        </button>
+      }
+    </div>
+
+    <div class="search-body">
+      @if (query().trim().length < 2) {
+        <div class="hint">
+          <i class="pi pi-info-circle"></i>
+          {{ 'search.minChars' | translate }}
+        </div>
+      } @else if (loading()) {
+        <div class="hint">
+          <i class="pi pi-spin pi-spinner"></i>
+          {{ 'common.loading' | translate }}
+        </div>
+      } @else if (hits().length === 0) {
+        <div class="empty">
+          <i class="pi pi-search"></i>
+          {{ 'search.empty' | translate }}
+        </div>
+      } @else {
+        <ul class="hits" role="listbox">
+          @for (hit of hits(); track trackHit($index, hit)) {
+            <li
+              class="hit"
+              [class.selected]="$index === selectedIndex()"
+              (click)="navigate(hit)"
+              (mouseenter)="selectedIndex.set($index)"
+              role="option"
+              [attr.aria-selected]="$index === selectedIndex()"
+            >
+              <span class="hit-icon"><i [class]="iconFor(hit.kind)"></i></span>
+              <div class="hit-body">
+                <div class="hit-title">{{ hit.title }}</div>
+                @if (hit.subtitle) {
+                  <div class="hit-subtitle">{{ hit.subtitle }}</div>
+                }
+                <div class="hit-kind">{{ groupLabelFor(hit.kind) | translate }}</div>
+              </div>
+              <i class="pi pi-arrow-right hit-arrow"></i>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="search-footer">
+      <span><kbd>↑↓</kbd> {{ 'search.navigate' | translate }}</span>
+      <span><kbd>Enter</kbd> {{ 'search.open' | translate }}</span>
+      <span><kbd>Esc</kbd> {{ 'search.close' | translate }}</span>
+    </div>
+  </div>
+</div>

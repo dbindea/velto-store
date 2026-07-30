@@ -83,6 +83,19 @@
           <span class="tab-count">{{ vehicleReservations.length }}</span>
         }
       </button>
+      <button
+        class="tab"
+        [class.active]="activeTab === 'maintenance'"
+        (click)="setTab('maintenance')"
+      >
+        <i class="pi pi-wrench"></i>
+        {{ 'maintenance.title' | translate }}
+        @if (getMaintenanceBuckets().overdue.length) {
+          <span class="tab-count tab-count--overdue">{{
+            getMaintenanceBuckets().overdue.length
+          }}</span>
+        }
+      </button>
     </div>
 
     <div class="tab-content">
@@ -413,6 +426,173 @@
         }
       }
 
+      @if (activeTab === 'maintenance') {
+        <div class="maintenance-section">
+          <div class="maintenance-toolbar">
+            <button class="btn btn-primary" (click)="openCreateMaintenance()">
+              <i class="pi pi-plus"></i>
+              {{ 'maintenance.new' | translate }}
+            </button>
+          </div>
+
+          @if (loadingMaintenance) {
+            <div class="loading-state">
+              <i class="pi pi-spin pi-spinner"></i>
+              <p>{{ 'common.loading' | translate }}</p>
+            </div>
+          } @else if (maintenanceItems.length === 0) {
+            <div class="history-placeholder">
+              <i class="pi pi-wrench"></i>
+              <p>{{ 'maintenance.empty' | translate }}</p>
+            </div>
+          } @else {
+            @if (getMaintenanceBuckets().overdue.length > 0) {
+              <div class="res-section">
+                <h3 class="section-title section-title--overdue">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  {{ 'maintenance.overdue' | translate }}
+                </h3>
+                @for (m of getMaintenanceBuckets().overdue; track m.id) {
+                  <div class="maintenance-item overdue">
+                    <div class="m-header">
+                      <span class="m-icon"><i [class]="getMaintenanceTypeIcon(m.type)"></i></span>
+                      <span class="m-title">{{ m.title }}</span>
+                      <span class="m-badge" [class]="getMaintenanceStatusClass(getEffectiveStatus(m))">
+                        {{ getMaintenanceStatusLabel(getEffectiveStatus(m)) | translate }}
+                      </span>
+                    </div>
+                    <div class="m-meta">
+                      <span class="m-type">{{ getMaintenanceTypeLabel(m.type) | translate }}</span>
+                      @if (m.nextDueDate) {
+                        <span class="m-due">
+                          <i class="pi pi-calendar"></i>
+                          {{ toDate(m.nextDueDate) | date: 'dd/MM/yyyy' }}
+                        </span>
+                      }
+                      @if (m.nextDueKm !== undefined) {
+                        <span class="m-km">
+                          <i class="pi pi-compass"></i>
+                          {{ m.nextDueKm | number }} km
+                        </span>
+                      }
+                    </div>
+                    <div class="m-actions">
+                      <button class="btn-icon" (click)="openEditMaintenance(m)" [title]="'common.edit' | translate">
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                      <button class="btn-icon" (click)="completeMaintenanceItem(m)" [title]="'maintenance.actions.complete' | translate">
+                        <i class="pi pi-check"></i>
+                      </button>
+                      <button class="btn-icon btn-icon--danger" (click)="deleteMaintenanceItem(m)" [title]="'common.delete' | translate">
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (getMaintenanceBuckets().upcoming.length > 0) {
+              <div class="res-section">
+                <h3 class="section-title">
+                  <i class="pi pi-clock"></i>
+                  {{ 'maintenance.upcoming' | translate }}
+                </h3>
+                @for (m of getMaintenanceBuckets().upcoming; track m.id) {
+                  <div class="maintenance-item">
+                    <div class="m-header">
+                      <span class="m-icon"><i [class]="getMaintenanceTypeIcon(m.type)"></i></span>
+                      <span class="m-title">{{ m.title }}</span>
+                      <span class="m-badge" [class]="getMaintenanceStatusClass(getEffectiveStatus(m))">
+                        {{ getMaintenanceStatusLabel(getEffectiveStatus(m)) | translate }}
+                      </span>
+                    </div>
+                    <div class="m-meta">
+                      <span class="m-type">{{ getMaintenanceTypeLabel(m.type) | translate }}</span>
+                      @if (m.nextDueDate) {
+                        <span class="m-due">
+                          <i class="pi pi-calendar"></i>
+                          {{ toDate(m.nextDueDate) | date: 'dd/MM/yyyy' }}
+                        </span>
+                      }
+                      @if (m.nextDueKm !== undefined) {
+                        <span class="m-km">
+                          <i class="pi pi-compass"></i>
+                          {{ m.nextDueKm | number }} km
+                        </span>
+                      }
+                      <span class="m-priority" [class]="getMaintenancePriorityClass(m.priority)">
+                        {{ getMaintenancePriorityLabel(m.priority) | translate }}
+                      </span>
+                    </div>
+                    <div class="m-actions">
+                      <button class="btn-icon" (click)="openEditMaintenance(m)" [title]="'common.edit' | translate">
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                      <button class="btn-icon" (click)="completeMaintenanceItem(m)" [title]="'maintenance.actions.complete' | translate">
+                        <i class="pi pi-check"></i>
+                      </button>
+                      <button class="btn-icon btn-icon--danger" (click)="deleteMaintenanceItem(m)" [title]="'common.delete' | translate">
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (getMaintenanceBuckets().completed.length > 0) {
+              <div class="res-section">
+                <h3 class="section-title">
+                  <i class="pi pi-history"></i>
+                  {{ 'maintenance.completed' | translate }}
+                </h3>
+                @for (m of getMaintenanceBuckets().completed; track m.id) {
+                  <div class="maintenance-item completed">
+                    <div class="m-header">
+                      <span class="m-icon"><i [class]="getMaintenanceTypeIcon(m.type)"></i></span>
+                      <span class="m-title">{{ m.title }}</span>
+                      <span class="m-badge" [class]="getMaintenanceStatusClass(m.status)">
+                        {{ getMaintenanceStatusLabel(m.status) | translate }}
+                      </span>
+                    </div>
+                    <div class="m-meta">
+                      <span class="m-type">{{ getMaintenanceTypeLabel(m.type) | translate }}</span>
+                      @if (m.performedAtDate) {
+                        <span class="m-due">
+                          <i class="pi pi-check"></i>
+                          {{ toDate(m.performedAtDate) | date: 'dd/MM/yyyy' }}
+                        </span>
+                      }
+                      @if (m.performedAtKm !== undefined) {
+                        <span class="m-km">
+                          <i class="pi pi-compass"></i>
+                          {{ m.performedAtKm | number }} km
+                        </span>
+                      }
+                      @if (m.cost !== undefined) {
+                        <span class="m-cost">
+                          <i class="pi pi-euro"></i>
+                          {{ m.cost | number: '1.2-2' }} €
+                        </span>
+                      }
+                    </div>
+                    <div class="m-actions">
+                      <button class="btn-icon" (click)="openEditMaintenance(m)" [title]="'common.edit' | translate">
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                      <button class="btn-icon btn-icon--danger" (click)="deleteMaintenanceItem(m)" [title]="'common.delete' | translate">
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+
     </div>
 
     @if (showStatusModal) {
@@ -461,6 +641,45 @@
                 {{ 'common.delete' | translate }}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showMaintenanceForm) {
+      <div class="modal-overlay" (click)="cancelMaintenanceForm()">
+        <div class="modal modal-wide" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>
+              <i class="pi pi-wrench"></i>
+              {{
+                maintenanceEditing
+                  ? ('maintenance.edit' | translate)
+                  : ('maintenance.new' | translate)
+              }}
+            </h3>
+            <button class="modal-close" (click)="cancelMaintenanceForm()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <app-vehicle-maintenance-form
+              [vehicleId]="vehicle.id!"
+              [vehicleSnapshot]="{
+                brand: vehicle.brand,
+                model: vehicle.model,
+                plateNumber: vehicle.plateNumber,
+                mainImageUrl: vehicle.images?.[0]?.url
+              }"
+              [initial]="maintenanceEditing"
+              [mode]="maintenanceEditing ? 'edit' : 'create'"
+              [saving]="maintenanceSaving"
+              [invoiceUrl]="pendingInvoiceUrl"
+              [invoicePath]="pendingInvoicePath"
+              (submitForm)="submitMaintenanceForm($event)"
+              (cancel)="cancelMaintenanceForm()"
+              (invoiceSelected)="onMaintenanceInvoiceSelected($event)"
+            />
           </div>
         </div>
       </div>

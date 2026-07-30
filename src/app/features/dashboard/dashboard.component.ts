@@ -30,6 +30,10 @@ import {
 import { Reservation } from '@shared/models/reservation.model';
 import { Contract } from '@shared/models/contract.model';
 import { Vehicle } from '@shared/models/vehicle.model';
+import {
+  MAINTENANCE_DUE_SOON_DAYS,
+  VehicleMaintenance
+} from '@shared/models/vehicle-maintenance.model';
 
 interface PendingPaymentCard {
   type: 'pending_payment';
@@ -64,13 +68,25 @@ interface FleetCard {
   total: number;
 }
 
+interface MaintenanceOverdueCard {
+  type: 'maintenance_overdue';
+  items: VehicleMaintenance[];
+}
+
+interface MaintenanceDueSoonCard {
+  type: 'maintenance_due_soon';
+  items: VehicleMaintenance[];
+}
+
 type DashboardCard =
   | PendingPaymentCard
   | ContractCard
   | CalendarCard
   | ReturnOpenCard
   | VehicleRentedCard
-  | FleetCard;
+  | FleetCard
+  | MaintenanceOverdueCard
+  | MaintenanceDueSoonCard;
 
 @Component({
   selector: 'app-dashboard',
@@ -126,7 +142,23 @@ export class DashboardComponent implements OnInit {
         (d) => ({ id: d.id, ...d.data() }) as Vehicle
       );
 
-      this.cards = this.buildCards(reservations, pendingContracts, vehicles, todayStart, todayEnd);
+      // Maintenance: pull scheduled/pending/overdue items
+      const maintenanceRef = collection(this.firestore, 'vehicleMaintenance');
+      const maintenanceSnap = await getDocs(
+        query(maintenanceRef, where('status', 'in', ['pending', 'scheduled', 'overdue']))
+      );
+      const maintenanceItems = maintenanceSnap.docs.map(
+        (d) => ({ id: d.id, ...d.data() }) as VehicleMaintenance
+      );
+
+      this.cards = this.buildCards(
+        reservations,
+        pendingContracts,
+        vehicles,
+        maintenanceItems,
+        todayStart,
+        todayEnd
+      );
     } catch (error) {
       console.error('Dashboard load error:', error);
       this.cards = [];
@@ -139,6 +171,7 @@ export class DashboardComponent implements OnInit {
     reservations: Reservation[],
     pendingContracts: Contract[],
     vehicles: Vehicle[],
+    maintenanceItems: VehicleMaintenance[],
     todayStart: Date,
     todayEnd: Date
   ): DashboardCard[] {
@@ -212,6 +245,28 @@ export class DashboardComponent implements OnInit {
       total
     });
 
+    // 8) Maintenance overdue.
+    const now = new Date();
+    const horizon = new Date(now.getTime() + MAINTENANCE_DUE_SOON_DAYS * 24 * 60 * 60 * 1000);
+    const overdueItems = maintenanceItems.filter((m) => {
+      if (!m.nextDueDate) return false;
+      const d = this.toDateSafe(m.nextDueDate);
+      return d ? d.getTime() < now.getTime() : false;
+    });
+    if (overdueItems.length) {
+      cards.push({ type: 'maintenance_overdue', items: overdueItems });
+    }
+
+    // 9) Maintenance due soon (next 30 days).
+    const dueSoonItems = maintenanceItems.filter((m) => {
+      if (!m.nextDueDate) return false;
+      const d = this.toDateSafe(m.nextDueDate);
+      return d ? d.getTime() >= now.getTime() && d.getTime() <= horizon.getTime() : false;
+    });
+    if (dueSoonItems.length) {
+      cards.push({ type: 'maintenance_due_soon', items: dueSoonItems });
+    }
+
     // Add actionable cards (skip empty ones to avoid noise).
     if (pendingPayments.length) {
       cards.push(...pendingPayments);
@@ -235,7 +290,7 @@ export class DashboardComponent implements OnInit {
     return cards;
   }
 
-  private toDateSafe(value: any): Date | null {
+  toDateSafe(value: any): Date | null {
     if (!value) return null;
     if (value instanceof Date) return value;
     if (typeof value.toDate === 'function') return value.toDate();
@@ -275,6 +330,17 @@ export class DashboardComponent implements OnInit {
 
   openVehicle(vehicleId?: string): void {
     if (vehicleId) this.router.navigate(['/vehicles', vehicleId]);
+  }
+
+  /**
+   * Open the vehicle that owns the maintenance record, jumping
+   * straight to the Maintenance tab.  Vehicle-detail honours the
+   * optional `?tab=maintenance` query param.
+   */
+  openVehicleMaintenanceTab(vehicleId?: string): void {
+    if (vehicleId) {
+      this.router.navigate(['/vehicles', vehicleId], { queryParams: { tab: 'maintenance' } });
+    }
   }
 
   formatTime(d: Date): string {

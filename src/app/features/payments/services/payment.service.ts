@@ -31,9 +31,16 @@ import {
 } from '@shared/utils/payment-summary.util';
 
 export interface CreateManualPaymentData {
-  reservationId: string;
-  clientId: string;
-  vehicleId: string;
+  /** Required for reservation-linked payments. Optional for free payments. */
+  reservationId?: string;
+  clientId?: string;
+  vehicleId?: string;
+  /** True when this is a "cobro libre". */
+  isFreePayment?: boolean;
+  /** Free-payment payer fields (only used when isFreePayment). */
+  payerName?: string;
+  payerEmail?: string;
+  payerPhone?: string;
   type: PaymentType;
   method: PaymentMethod;
   amount: number;
@@ -123,9 +130,13 @@ export class PaymentService {
   // === Mutations ===
 
   /**
-   * Create a manual payment (signal, remaining, deposit, etc.).
+   * Create a manual payment (signal, remaining, deposit, etc.) or
+   * a "cobro libre" (free payment) when isFreePayment is true.
    */
   async createManualPayment(data: CreateManualPaymentData): Promise<string> {
+    if (!data.isFreePayment && !data.reservationId) {
+      throw new Error('reservationId is required for non-free payments');
+    }
     const status = calculatePaymentStatus(data.amount, data.paidAmount);
     const direction: 'income' | 'refund' | 'retention' | 'charge' =
       data.type === 'deposit_refund' ? 'refund' :
@@ -140,6 +151,10 @@ export class PaymentService {
       reservationId: data.reservationId,
       clientId: data.clientId,
       vehicleId: data.vehicleId,
+      isFreePayment: data.isFreePayment || false,
+      payerName: data.payerName,
+      payerEmail: data.payerEmail,
+      payerPhone: data.payerPhone,
       reservationSnapshot: data.reservationSnapshot,
       clientSnapshot: data.clientSnapshot,
       vehicleSnapshot: data.vehicleSnapshot,
@@ -156,13 +171,43 @@ export class PaymentService {
       paidAt: data.paidAt || (data.paidAmount > 0 ? { seconds: Date.now() / 1000 } : undefined),
       concept: data.concept,
       notes: data.notes,
-      internalReference: generateInternalReference('PMT'),
+      internalReference: generateInternalReference(data.isFreePayment ? 'FRE' : 'PMT'),
       createdAt: { seconds: Date.now() / 1000 }
     };
 
     const docRef = await addDoc(this.paymentsRef, this.cleanData(payment));
-    await this.recalculateReservationPaymentSummary(data.reservationId);
+    if (data.reservationId) {
+      await this.recalculateReservationPaymentSummary(data.reservationId);
+    }
     return docRef.id;
+  }
+
+  /**
+   * Convenience: create a free payment with a minimal interface.
+   * Always sets `isFreePayment: true` and `type: 'free_payment'`.
+   */
+  async createFreePayment(input: {
+    amount: number;
+    paidAmount: number;
+    concept: string;
+    payerName?: string;
+    payerEmail?: string;
+    payerPhone?: string;
+    method?: PaymentMethod;
+    notes?: string;
+  }): Promise<string> {
+    return this.createManualPayment({
+      isFreePayment: true,
+      type: 'free_payment',
+      method: input.method || 'other',
+      amount: input.amount,
+      paidAmount: input.paidAmount,
+      concept: input.concept,
+      payerName: input.payerName,
+      payerEmail: input.payerEmail,
+      payerPhone: input.payerPhone,
+      notes: input.notes
+    });
   }
 
   /**
@@ -179,11 +224,13 @@ export class PaymentService {
       update.status = calculatePaymentStatus(data.amount, data.paidAmount);
     }
     await updateDoc(docRef, this.cleanData(update));
-    // Recalc summary
+    // Recalc summary if the payment is linked to a reservation.
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       const payment = snap.data() as Payment;
-      await this.recalculateReservationPaymentSummary(payment.reservationId);
+      if (payment.reservationId) {
+        await this.recalculateReservationPaymentSummary(payment.reservationId);
+      }
     }
   }
 
@@ -212,7 +259,9 @@ export class PaymentService {
       updatedAt: { seconds: Date.now() / 1000 }
     }));
 
-    await this.recalculateReservationPaymentSummary(payment.reservationId);
+    if (payment.reservationId) {
+      await this.recalculateReservationPaymentSummary(payment.reservationId);
+    }
   }
 
   /**
@@ -228,7 +277,9 @@ export class PaymentService {
       notes: reason,
       updatedAt: { seconds: Date.now() / 1000 }
     }));
-    await this.recalculateReservationPaymentSummary(payment.reservationId);
+    if (payment.reservationId) {
+      await this.recalculateReservationPaymentSummary(payment.reservationId);
+    }
   }
 
   /**
@@ -243,7 +294,9 @@ export class PaymentService {
       status: 'cancelled',
       updatedAt: { seconds: Date.now() / 1000 }
     }));
-    await this.recalculateReservationPaymentSummary(payment.reservationId);
+    if (payment.reservationId) {
+      await this.recalculateReservationPaymentSummary(payment.reservationId);
+    }
   }
 
   /**

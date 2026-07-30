@@ -101,6 +101,15 @@ export const routes: Routes = [
             loadComponent: () => import('./features/payments/pages/payment-list/payment-list.component').then(m => m.PaymentListComponent)
           },
           {
+            path: 'new',
+            loadComponent: () => import('./features/payments/pages/payment-free/payment-free.component').then(m => m.PaymentFreeComponent)
+          },
+          {
+            path: 'free',
+            redirectTo: 'new',
+            pathMatch: 'full'
+          },
+          {
             path: ':id',
             loadComponent: () => import('./features/payments/pages/payment-detail/payment-detail.component').then(m => m.PaymentDetailComponent)
           }

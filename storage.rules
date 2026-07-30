@@ -38,6 +38,14 @@ service firebase.storage {
       allow write: if isAuthenticated();
     }
 
+    // Vehicle maintenance documents (invoices, photos) - only
+    // authorized users.  Path convention:
+    //   vehicle-maintenance/{vehicleId}/{maintenanceId}/{file}
+    match /vehicle-maintenance/{vehicleId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

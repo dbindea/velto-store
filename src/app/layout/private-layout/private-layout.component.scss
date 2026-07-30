@@ -49,16 +49,17 @@
   gap: 0.75rem;
 }
 
-.logo-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--accent-color);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.1rem;
+// Brand logo image — the wordmark SVG is the same file used on
+// sign-contract and PDF.  Rendered at a fixed height so it sits
+// nicely in the sidebar header regardless of wordmark proportions.
+.logo-image {
+  height: 32px;
+  width: auto;
+  max-width: 170px;
+  display: block;
+  // Sidebar background is dark slate — make sure the white parts of
+  // the wordmark remain visible.
+  filter: brightness(0) invert(1);
 }
 
 .logo-text {
@@ -193,6 +194,59 @@
 
   @media (max-width: 1023px) {
     display: flex;
+  }
+}
+
+// Search trigger — visible on both desktop and mobile.  On
+// desktop it grows to a wider pill that mimics a search bar.
+.search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  min-height: 40px;
+
+  &:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+
+  .search-trigger-text {
+    display: none;
+  }
+
+  .search-trigger-kbd {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    padding: 0.5rem 0.875rem;
+    min-width: 220px;
+    justify-content: flex-start;
+
+    .search-trigger-text {
+      display: inline;
+      flex: 1;
+      text-align: left;
+    }
+
+    .search-trigger-kbd {
+      display: inline-block;
+      padding: 0.05rem 0.375rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.7rem;
+    }
   }
 }
 

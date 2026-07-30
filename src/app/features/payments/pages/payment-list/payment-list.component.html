@@ -5,6 +5,12 @@
       <h1>{{ 'payments.title' | translate }}</h1>
       <p class="subtitle">{{ 'payments.subtitle' | translate }}</p>
     </div>
+    <div class="header-actions">
+      <a class="btn btn-primary" routerLink="/payments/new">
+        <i class="pi pi-plus"></i>
+        {{ 'payments.free.new' | translate }}
+      </a>
+    </div>
   </div>
 
   <!-- Tabs -->
@@ -33,6 +39,15 @@
       [(ngModel)]="methodFilter"
       (ngModelChange)="onFilterChange()">
       @for (option of methodOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+
+    <select
+      class="form-control filter-select"
+      [(ngModel)]="scopeFilter"
+      (ngModelChange)="onFilterChange()">
+      @for (option of scopeOptions; track option.value) {
         <option [value]="option.value">{{ option.label | translate }}</option>
       }
     </select>

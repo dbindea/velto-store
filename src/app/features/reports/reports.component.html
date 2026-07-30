@@ -1,0 +1,161 @@
+<div class="page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'menu.reports' | translate }}</h1>
+      <p class="subtitle">{{ 'reports.subtitle' | translate }}</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" type="button" (click)="refresh()" [disabled]="loading()">
+        <i class="pi pi-refresh"></i>
+        {{ 'common.refresh' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <div class="range-bar">
+    @for (opt of rangeOptions; track opt.value) {
+      <button
+        type="button"
+        class="range-pill"
+        [class.active]="selectedRange() === opt.value"
+        (click)="setRange(opt.value)"
+      >
+        {{ opt.label | translate }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  }   @else if (error()) {
+    <div class="error-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>{{ error()! | translate }}</p>
+    </div>
+  } @else if (snapshot()) {
+    <div class="reports-grid">
+      <!-- KPI: total revenue -->
+      <div class="kpi-card kpi-revenue">
+        <div class="kpi-label">
+          <i class="pi pi-euro"></i>
+          {{ 'reports.totalRevenue' | translate }}
+        </div>
+        <div class="kpi-value">{{ formatCurrency(totalRevenue()) }}</div>
+        <div class="kpi-sub">{{ 'reports.windowLabel' | translate }}</div>
+      </div>
+
+      <!-- KPI: utilization -->
+      <div class="kpi-card kpi-util">
+        <div class="kpi-label">
+          <i class="pi pi-chart-pie"></i>
+          {{ 'reports.utilization' | translate }}
+        </div>
+        <div class="kpi-value">{{ snapshot()!.utilization.utilizationPct }}%</div>
+        <div class="kpi-sub">
+          {{ snapshot()!.utilization.totalReservationDays }} /
+          {{ snapshot()!.utilization.totalFleetDays }} {{ 'reports.days' | translate }}
+        </div>
+        <div class="util-bar">
+          <div
+            class="util-bar-fill"
+            [style.width.%]="snapshot()!.utilization.utilizationPct"
+          ></div>
+        </div>
+      </div>
+
+      <!-- KPI: outstanding -->
+      <div class="kpi-card kpi-outstanding">
+        <div class="kpi-label">
+          <i class="pi pi-clock"></i>
+          {{ 'reports.outstanding' | translate }}
+        </div>
+        <div class="kpi-value">
+          {{ snapshot()!.outstandingBalances.length }}
+        </div>
+        <div class="kpi-sub">
+          {{ 'reports.outstandingHint' | translate }}
+        </div>
+      </div>
+
+      <!-- Revenue chart (inline SVG-free, just CSS bars) -->
+      <div class="card revenue-chart">
+        <div class="card-header">
+          <i class="pi pi-chart-bar"></i>
+          <span>{{ 'reports.monthlyRevenue' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="bars">
+            @for (p of snapshot()!.monthlyRevenue; track p.date) {
+              <div class="bar-col" [title]="formatCurrency(p.revenue) + ' · ' + p.reservationCount + ' ' + ('reports.reservations' | translate)">
+                <div class="bar-value">{{ formatCurrency(p.revenue) }}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.height.%]="barHeightPct(p.revenue)"></div>
+                </div>
+                <div class="bar-label">{{ monthLabel(p.date) }}</div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Top vehicles -->
+      <div class="card top-vehicles">
+        <div class="card-header">
+          <i class="pi pi-star"></i>
+          <span>{{ 'reports.topVehicles' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (snapshot()!.topVehicles.length === 0) {
+            <p class="empty">{{ 'reports.noData' | translate }}</p>
+          } @else {
+            <ul class="top-list">
+              @for (v of snapshot()!.topVehicles; track v.vehicleId) {
+                <li class="top-item">
+                  <span class="top-rank">#{{ $index + 1 }}</span>
+                  <span class="top-name">
+                    {{ v.brand }} {{ v.model }}
+                    <small class="top-plate">{{ v.plateNumber }}</small>
+                  </span>
+                  <span class="top-meta">
+                    {{ v.reservationCount }} {{ 'reports.reservations' | translate }}
+                  </span>
+                  <span class="top-revenue">{{ formatCurrency(v.revenue) }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+      <!-- Outstanding balances -->
+      <div class="card outstanding-card">
+        <div class="card-header">
+          <i class="pi pi-wallet"></i>
+          <span>{{ 'reports.outstandingTitle' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (snapshot()!.outstandingBalances.length === 0) {
+            <p class="empty success">
+              <i class="pi pi-check-circle"></i>
+              {{ 'reports.noOutstanding' | translate }}
+            </p>
+          } @else {
+            <ul class="outstanding-list">
+              @for (b of snapshot()!.outstandingBalances; track b.reservationId) {
+                <li class="outstanding-item" (click)="goToReservation(b.reservationId)">
+                  <span class="out-client">{{ b.clientName }}</span>
+                  <span class="out-plate">{{ b.vehiclePlate }}</span>
+                  <span class="out-date">{{ b.pickupDate | date: 'dd/MM/yyyy' }}</span>
+                  <span class="out-amount">{{ formatCurrency(b.pendingAmount) }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -4,7 +4,8 @@ const locales = ['es', 'en', 'ro'];
 const MODULES = new Set([
   'app','auth','menu','dashboard','layout','common',
   'vehicles','clients','reservations','inspections',
-  'contracts','payments','workflow','photos','currentImage'
+  'contracts','payments','workflow','photos','currentImage',
+  'maintenance','timeline','brand','search','calendar','reports'
 ]);
 
 // Dynamic-key prefixes used in template strings like 'foo.' + bar.

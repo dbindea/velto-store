@@ -5,7 +5,8 @@ const lines = text.split('\n').filter(Boolean);
 const MODULES = new Set([
   'app', 'auth', 'menu', 'dashboard', 'layout', 'common',
   'vehicles', 'clients', 'reservations', 'inspections',
-  'contracts', 'payments', 'workflow', 'photos', 'currentImage'
+  'contracts', 'payments', 'workflow', 'photos', 'currentImage',
+  'maintenance', 'timeline', 'brand', 'search', 'calendar', 'reports'
 ]);
 const filtered = lines.filter(k => MODULES.has(k.split('.')[0]));
 const unique = [...new Set(filtered)].sort();
