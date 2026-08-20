@@ -46,7 +46,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { firestore } from './admin-guard';
-import { createHmac, randomBytes } from 'crypto';
+import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 // ----- Secrets / config -----
 const REDSYS_SECRET_KEY = defineSecret('REDSYS_SECRET_KEY');
@@ -106,12 +106,15 @@ export const createRedsysPaymentLink = functions.https.onCall(
       );
     }
 
-    // Idempotent order: 4-char prefix + 8-char timestamp + 4 random
-    // hex chars = 16 chars (well under the 12-char limit Redsys
-    // actually accepts; we keep the trailing 8 chars of the
-    // timestamp + 4 random for uniqueness within a second).
-    const random = randomBytes(2).toString('hex').toUpperCase();
-    const order = `VEL${Date.now().toString().slice(-8)}${random}`.slice(0, 12);
+    // Redsys requires Ds_Merchant_Order to be 4-12 characters with the
+    // FIRST FOUR NUMERIC and the rest alphanumeric. A `VEL...` prefix
+    // is rejected by the gateway.
+    //
+    // We build exactly 12 chars: 4 digits from the tail of the epoch
+    // millis, then 32 bits of randomness as 8 hex chars.
+    const orderPrefix = Date.now().toString().slice(-4);
+    const orderSuffix = randomBytes(4).toString('hex').toUpperCase();
+    const order = `${orderPrefix}${orderSuffix}`;
     const amount = Math.round((payment.amount || 0) * 100).toString();
 
     const params: { [k: string]: string } = {
@@ -121,9 +124,13 @@ export const createRedsysPaymentLink = functions.https.onCall(
       Ds_Merchant_MerchantCode: MERCHANT_CODE,
       Ds_Merchant_Terminal: TERMINAL,
       Ds_Merchant_TransactionType: TRANSACTION_TYPE,
+      // Gen-2 Cloud Functions URLs are {region}-{project}, not
+      // {project}-{region}. Getting this backwards points Redsys at a
+      // host that does not resolve, so the payment silently never
+      // reaches the webhook.
       Ds_Merchant_MerchantURL:
         process.env.REDSYS_NOTIFICATION_URL ||
-        `https://${process.env.GCLOUD_PROJECT}-${process.env.GCLOUD_REGION || 'us-central1'}.cloudfunctions.net/redsysNotificationWebhook`,
+        `https://${process.env.GCLOUD_REGION || 'us-central1'}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redsysNotificationWebhook`,
       Ds_Merchant_UrlOK: process.env.REDSYS_URL_OK || '',
       Ds_Merchant_UrlKO: process.env.REDSYS_URL_KO || '',
       Ds_Merchant_ProductDescription: (payment.concept || 'Cobro Velto').slice(0, 125),
@@ -187,7 +194,6 @@ export const redsysNotificationWebhook = functions.https.onRequest(
     // Redsys sends the fields in the POST body.  We accept either
     // application/x-www-form-urlencoded or JSON-encoded bodies.
     const body: any = (req.body && Object.keys(req.body).length > 0) ? req.body : req.query;
-    const dsVersion = body.Ds_SignatureVersion || body['Ds_SignatureVersion'];
     const dsParams = body.Ds_MerchantParameters || body['Ds_MerchantParameters'];
     const dsSignature = body.Ds_Signature || body['Ds_Signature'];
 
@@ -197,12 +203,12 @@ export const redsysNotificationWebhook = functions.https.onRequest(
       return;
     }
 
-    // Parse the params to extract the order before verifying the
-    // signature (Redsys signs over Ds_Order + Ds_MerchantParameters
-    // when using HMAC_SHA256_V1).
+    // Parse the params to extract the order first: the order is what
+    // diversifies the signing key, so we cannot verify the signature
+    // without it. Redsys base64url-encodes this field.
     let parsed: any;
     try {
-      parsed = JSON.parse(Buffer.from(dsParams, 'base64').toString('utf8'));
+      parsed = JSON.parse(Buffer.from(dsParams, 'base64url').toString('utf8'));
     } catch (err) {
       console.error('Failed to decode Ds_MerchantParameters', err);
       res.status(400).send('Invalid parameters');
@@ -216,12 +222,11 @@ export const redsysNotificationWebhook = functions.https.onRequest(
       return;
     }
 
-    // Verify signature with the same key derivation Redsys uses:
-    //   1. Base64-decode the SECRET_KEY
-    //   2. HMAC-SHA256(key, order + dsMerchantParameters)
-    //   3. Base64-encode the digest and compare
+    // Verify the signature BEFORE touching Firestore, using the same
+    // per-order key derivation the gateway uses (see
+    // signRedsysParameters).
     const expected = signRedsysParameters(dsParams, order, SECRET);
-    if (expected !== dsSignature) {
+    if (!signaturesMatch(expected, dsSignature)) {
       console.warn('Invalid signature', { order });
       res.status(403).send('Invalid signature');
       return;
@@ -301,22 +306,70 @@ export const redsysNotificationWebhook = functions.https.onRequest(
 // ---------------------------------------------------------------------------
 
 /**
- * Compute the Redsys HMAC-SHA256_V1 signature.
+ * Compute the Redsys `HMAC_SHA256_V1` signature.
  *
- *   key  = Base64Decode(REDSYS_SECRET_KEY)
- *   data = order + dsMerchantParameters
- *   sig  = Base64(HMAC-SHA256(key, data))
+ * The algorithm has three steps, and the middle one is the part that
+ * is easy to miss — the merchant key is NOT used to sign directly.
+ * It is first diversified per operation by 3DES-encrypting the order:
+ *
+ *   1. key        = Base64Decode(REDSYS_SECRET_KEY)        (24 bytes)
+ *   2. derivedKey = 3DES-CBC(order, key, IV = 8 zero bytes)
+ *                   with zero padding, no PKCS#7
+ *   3. signature  = Base64(HMAC-SHA256(derivedKey, dsMerchantParameters))
+ *
+ * Note that the HMAC covers ONLY `dsMerchantParameters`. Signing
+ * `order + dsMerchantParameters` produces a signature the gateway
+ * always rejects.
  *
  * Reference:
  *   https://pagosonline.redsys.es/desarrolladores.html
  */
-function signRedsysParameters(
+function deriveOperationKey(order: string, secretKey: string): Buffer {
+  let key = Buffer.from(secretKey, 'base64');
+
+  // 3DES needs a 24-byte key. Redsys issues 24-byte keys, but a
+  // 16-byte (two-key) variant is expanded as K1|K2|K1.
+  if (key.length === 16) {
+    key = Buffer.concat([key, key.subarray(0, 8)]);
+  }
+  if (key.length !== 24) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      `REDSYS_SECRET_KEY debe decodificar a 16 o 24 bytes (son ${key.length})`
+    );
+  }
+
+  // Zero-pad the order to a multiple of the 8-byte block size.
+  const orderBytes = Buffer.from(order, 'utf8');
+  const padded = Buffer.alloc(Math.ceil(orderBytes.length / 8) * 8, 0);
+  orderBytes.copy(padded);
+
+  const cipher = createCipheriv('des-ede3-cbc', key, Buffer.alloc(8, 0));
+  cipher.setAutoPadding(false);
+  return Buffer.concat([cipher.update(padded), cipher.final()]);
+}
+
+export function signRedsysParameters(
   dsMerchantParameters: string,
   order: string,
   secretKey: string
 ): string {
-  const keyBytes = Buffer.from(secretKey, 'base64');
-  const hmac = createHmac('sha256', keyBytes);
-  hmac.update(order + dsMerchantParameters, 'utf8');
-  return hmac.digest('base64');
+  const derivedKey = deriveOperationKey(order, secretKey);
+  return createHmac('sha256', derivedKey).update(dsMerchantParameters, 'utf8').digest('base64');
+}
+
+/**
+ * Compare two Redsys signatures.
+ *
+ * Redsys sends the notification signature in URL-safe Base64 (`-` and
+ * `_`) while we produce standard Base64, so both sides are normalised
+ * before comparing. The comparison is constant-time to avoid leaking
+ * information about the expected value.
+ */
+export function signaturesMatch(a: string, b: string): boolean {
+  const normalise = (s: string) => s.replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
+  const bufA = Buffer.from(normalise(a), 'utf8');
+  const bufB = Buffer.from(normalise(b), 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }
