@@ -39,16 +39,29 @@ npx tsc -p tsconfig.app.json --noEmit
 cd functions && npx tsc --noEmit
 ```
 
+## Tests
+
+Hay dos suites independientes, ambas con Vitest:
+
+```bash
+npm test                      # app (src/**/*.spec.ts) vía @angular/build:unit-test
+npm --prefix functions test   # Cloud Functions (functions/src/**/*.spec.ts)
+```
+
+Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar dinero:
+
+- `reservation-workflow.util.spec.ts` — los guards `can*`, los overrides de `WorkflowContext`, y las excepciones de workflow
+- `functions/src/redsys.spec.ts` — la firma `HMAC_SHA256_V1` contra un vector de referencia congelado
+
+El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
+
+⚠️ `functions/tsconfig.json` excluye `**/*.spec.ts` del build. No quites esa exclusión: `firebase deploy` sube todo lo que haya en `lib/`, y el bundle acabaría importando vitest en runtime.
+
 ## Lo que NO existe en este proyecto
 
-Importante — no asumas estas herramientas ni inventes comandos:
-
-- **No hay tests.** Cero archivos `.spec.ts`, ningún target `test` en `angular.json`, ninguna dependencia de testing instalada. `npm test` está declarado en `package.json` pero **falla**.
 - **No hay lint.** No hay ESLint configurado ni script `lint`.
-- **No hay CI de calidad.** El único workflow (`.github/workflows/firebase-hosting-merge.yml`) hace `npm ci && npm run build` y despliega. No corre tests ni lint.
-- **El CI no despliega Cloud Functions.** Se despliegan a mano con `npm --prefix functions run deploy`.
-
-Si añades tests o lint, actualiza esta sección.
+- **El CI no despliega Cloud Functions.** Solo hosting. Las functions se despliegan a mano con `npm --prefix functions run deploy` — incluido el fix de Redsys.
+- **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
 ## Ramas y despliegue
 
@@ -205,8 +218,8 @@ Sin ellos, los históricos de `vehicle-detail` y `client-detail` fallan al prime
 
 ## Deuda técnica conocida
 
-- **Redsys**: la firma en `functions/src/redsys.ts` no aplica la derivación de clave 3DES que exige `HMAC_SHA256_V1`, y firma sobre `order + params` en vez de solo `params`. Además `Ds_Merchant_Order` empieza por letras (`VEL...`) cuando Redsys exige 4 dígitos iniciales, y el fallback de `Ds_Merchant_MerchantURL` construye `{project}-{region}.cloudfunctions.net` con el orden invertido (las functions están desplegadas en `us-central1`, así que lo correcto es `us-central1-velto-store.cloudfunctions.net`). **Los pagos no pueden validarse contra la pasarela real.**
-- Sin tests ni lint (ver arriba).
+- **Redsys**: la firma, el formato del `Ds_Merchant_Order` y la URL del webhook están corregidos y cubiertos por tests contra un vector de referencia. **Falta la validación end-to-end contra el entorno de test real de Redsys**, que no puede hacerse desde el repo — y las Cloud Functions hay que desplegarlas a mano para que el fix llegue a producción.
+- Sin lint.
 - `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
 - `CREDENTIALS.md` no está en `.gitignore`.
 - `client.service.ts` tiene un `TODO`: al borrar cliente no elimina sus documentos de Storage.

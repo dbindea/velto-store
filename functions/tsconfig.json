@@ -9,5 +9,8 @@
     "target": "es2020"
   },
   "compileOnSave": true,
-  "include": ["src"]
+  "include": ["src"],
+  // Specs must never reach lib/ — firebase deploy ships whatever is there,
+  // and the bundle would then import vitest at runtime.
+  "exclude": ["src/**/*.spec.ts"]
 }
