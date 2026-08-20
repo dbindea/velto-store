@@ -2,6 +2,9 @@
 
 Velto Store — SPA de gestión de flota de alquiler de vehículos. Angular 20 + Firebase.
 
+Este archivo cubre el **cómo** (stack, comandos, convenciones). Para el **qué y el porqué**
+—negocio, estado real de cada módulo, decisiones abiertas y roadmap— ver [FUNCIONAL.md](FUNCIONAL.md).
+
 ## Stack
 
 - **Angular 20.3** — standalone components, sin NgModules
@@ -206,8 +209,12 @@ No hay colección para `expenses` — coherente con que el módulo sea un placeh
 - `reservations`: `clientId + pickupDateTime desc`
 - `reservations`: `vehicleId + pickupDateTime desc`
 - `payments`: `clientId + paidAt desc`
+- `vehicleMaintenance`: `vehicleId + nextDueDate desc`
+- `vehicleMaintenance`: `status + nextDueDate asc`
 
 Sin ellos, los históricos de `vehicle-detail` y `client-detail` fallan al primer uso. Desplegar con `firebase deploy --only firestore:indexes`.
+
+⚠️ **Falta el índice de `inspections`.** `inspection.service.ts` consulta `reservationId ==` + `orderBy('createdAt')`, que exige índice compuesto y no está declarado. La colección `inspections` está vacía en producción, así que el fallo aún no se ha manifestado — aparecerá en el primer uso real del módulo.
 
 ## Estilo de código
 
