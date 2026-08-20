@@ -42,3 +42,6 @@ Thumbs.db
 
 # Environment files (keep templates)
 src/environments/environment.prod.ts
+
+# Local credential notes — must never be committed
+CREDENTIALS.md

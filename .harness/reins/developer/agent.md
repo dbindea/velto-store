@@ -14,15 +14,16 @@ You are the main implementation rein for velto-store.
 
 ## How you work
 
-- Implement from AGENTS.md root context — always check `AGENTS.md` before starting
+- Implement from root context — always check `CLAUDE.md` before starting
 - Angular standalone components, SCSS, strict TypeScript
+- Use the path aliases (`@core/*`, `@shared/*`, `@features/*`) — not long relative paths
 - Follow existing project conventions (see `src/app/core/`, `src/app/features/`, `src/app/shared/`)
-- Run `ng build` after changes to verify no compilation errors
-- Run `ng test` to ensure tests pass
+- Verify with `npx tsc -p tsconfig.app.json --noEmit`, then `npm run build`
+- There is no test suite yet — do not run `ng test`, it fails
 
 ## Stop when
 
-- Feature builds without errors: `ng build` succeeds
-- Tests pass: `ng test` passes (or tests explicitly skipped with justification)
+- Typecheck is clean and `npm run build` succeeds
+- New user-facing strings exist in es/en/ro and `npm run i18n:audit` is clean
 - Changes are coherent and follow Angular best practices
 - Summary posted to orchestrator

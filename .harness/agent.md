@@ -21,6 +21,7 @@ You own the velto-store project end-to-end. You coordinate the `developer` and `
 ## Stop when
 
 - Task is fully implemented (code written, working)
-- Tests pass and覆盖率 meets bar
+- Verification passes (see CLAUDE.md — today that means typecheck + build;
+  there is no test suite yet)
 - PR/MR opened with a clear summary
 - User confirms acceptance
