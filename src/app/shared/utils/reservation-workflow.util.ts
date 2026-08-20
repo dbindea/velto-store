@@ -97,6 +97,29 @@ function isRemainingPaid(reservation: Reservation): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Context-aware resolvers.
+//
+// `WorkflowContext` lets a caller pass `depositSettled` / `initialPaid` /
+// `remainingPaid` already derived from the payments collection, which is
+// the source of truth for money. Always read those flags through these
+// resolvers: reading the reservation directly makes the guards disagree
+// with the timeline, so the operator would see a step marked done while
+// the matching button stays disabled.
+// ---------------------------------------------------------------------------
+
+function depositSettledOf(ctx: WorkflowContext): boolean {
+  return ctx.depositSettled ?? isDepositSettled(ctx.reservation);
+}
+
+function initialPaidOf(ctx: WorkflowContext): boolean {
+  return ctx.initialPaid ?? isInitialPaid(ctx.reservation);
+}
+
+function remainingPaidOf(ctx: WorkflowContext): boolean {
+  return ctx.remainingPaid ?? isRemainingPaid(ctx.reservation);
+}
+
+// ---------------------------------------------------------------------------
 // Guards for every action in the workflow.
 // ---------------------------------------------------------------------------
 
@@ -136,7 +159,7 @@ export function canRegisterPayment(ctx: WorkflowContext): WorkflowDecision {
 /** Refund all or part of the deposit to the customer. */
 export function canRefundDeposit(ctx: WorkflowContext): WorkflowDecision {
   if (!ctx.reservation) return deny('workflow.missingReservation');
-  if (!isDepositSettled(ctx.reservation)) return deny('workflow.unsettledDeposit');
+  if (!depositSettledOf(ctx)) return deny('workflow.unsettledDeposit');
   if ((ctx.reservation.deposit?.paidAmount || 0) <= 0) {
     return deny('workflow.unsettledDeposit');
   }
@@ -146,7 +169,7 @@ export function canRefundDeposit(ctx: WorkflowContext): WorkflowDecision {
 /** Retain all or part of the deposit to cover charges. */
 export function canRetainDeposit(ctx: WorkflowContext): WorkflowDecision {
   if (!ctx.reservation) return deny('workflow.missingReservation');
-  if (!isDepositSettled(ctx.reservation)) return deny('workflow.unsettledDeposit');
+  if (!depositSettledOf(ctx)) return deny('workflow.unsettledDeposit');
   if ((ctx.reservation.deposit?.paidAmount || 0) <= 0) {
     return deny('workflow.unsettledDeposit');
   }
@@ -168,13 +191,13 @@ export function canStartPickup(ctx: WorkflowContext): WorkflowDecision {
   if (!ctx.contract || ctx.contract.status !== 'signed') {
     return deny('workflow.missingSignature');
   }
-  if (!isInitialPaid(r)) {
+  if (!initialPaidOf(ctx)) {
     return deny('workflow.missingInitialPayment');
   }
-  if (!isRemainingPaid(r)) {
+  if (!remainingPaidOf(ctx)) {
     return deny('workflow.missingRemainingPayment');
   }
-  if (!isDepositSettled(r)) {
+  if (!depositSettledOf(ctx)) {
     return deny('workflow.missingDeposit');
   }
   return ALLOW;
@@ -202,7 +225,7 @@ export function canCloseReservation(ctx: WorkflowContext): WorkflowDecision {
   if (ctx.returnInspection?.status !== 'completed') {
     return deny('workflow.missingReturnInspection');
   }
-  if (!isRemainingPaid(r)) return deny('workflow.missingRemainingPayment');
+  if (!remainingPaidOf(ctx)) return deny('workflow.missingRemainingPayment');
   // Deposit must be either refunded or explicitly retained; the
   // current values come from the payments collection.
   const d = r.deposit;
@@ -422,10 +445,9 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
   const cancelled = r.reservationStatus === 'cancelled';
   const closed = r.reservationStatus === 'closed';
 
-  const initialPaid = ctx.initialPaid ?? isInitialPaid(r);
-  const remainingPaid = ctx.remainingPaid ?? isRemainingPaid(r);
-  const depositSettled =
-    ctx.depositSettled ?? isDepositSettled(r);
+  const initialPaid = initialPaidOf(ctx);
+  const remainingPaid = remainingPaidOf(ctx);
+  const depositSettled = depositSettledOf(ctx);
 
   const pickupDone = !!ctx.pickupInspection;
   const returnDone = !!ctx.returnInspection;
