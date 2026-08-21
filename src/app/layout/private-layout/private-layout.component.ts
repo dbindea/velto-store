@@ -6,6 +6,7 @@ import { ThemeService } from '@core/theme/theme.service';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { LanguageSelectorComponent } from '@shared/components/language-selector/language-selector.component';
 import { GlobalSearchComponent } from '@shared/components/global-search/global-search.component';
+import { BrandLogoComponent } from '@shared/components/brand-logo/brand-logo.component';
 
 interface MenuItem {
   path: string;
@@ -24,7 +25,8 @@ interface MenuItem {
     RouterLinkActive,
     TranslatePipe,
     LanguageSelectorComponent,
-    GlobalSearchComponent
+    GlobalSearchComponent,
+    BrandLogoComponent
   ],
   templateUrl: './private-layout.component.html',
   styleUrl: './private-layout.component.scss'
@@ -107,17 +109,4 @@ export class PrivateLayoutComponent {
     await this.authService.logout();
   }
 
-  /**
-   * If the brand SVG cannot be loaded (e.g. file missing in some
-   * hosting configuration) fall back to the inline isologo so the
-   * sidebar still shows the V mark instead of a broken image icon.
-   */
-  onLogoError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    if (!img || img.dataset['fallback'] === '1') {
-      return;
-    }
-    img.dataset['fallback'] = '1';
-    img.src = 'assets/brand/isologo.svg';
-  }
 }

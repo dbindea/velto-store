@@ -54,10 +54,3 @@ export interface ContractSigningToken {
   createdAt?: any;
   updatedAt?: any;
 }
-
-export const SIGNING_TOKEN_STATUS_LABELS: Record<ContractSigningTokenStatus, string> = {
-  active: 'Activo',
-  used: 'Usado',
-  expired: 'Caducado',
-  cancelled: 'Cancelado'
-};

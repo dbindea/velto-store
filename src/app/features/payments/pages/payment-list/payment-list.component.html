@@ -75,7 +75,7 @@
               <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
             </div>
             <div class="card-info">
-              <h3>{{ payment.concept }}</h3>
+              <h3>{{ payment | paymentConcept }}</h3>
               <div class="info-row">
                 <span class="info-item">
                   <i class="pi pi-user"></i>

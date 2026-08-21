@@ -12,6 +12,7 @@ import {
   CONTRACT_STATUS_COLORS
 } from '@shared/models/contract.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { TranslateService } from '@core/i18n/translate.service';
 import {
   Workflow,
   WorkflowContext,
@@ -31,6 +32,7 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private contractService = inject(ContractService);
+  private translateService = inject(TranslateService);
   private reservationService = inject(ReservationService);
 
   contract: Contract | null = null;
@@ -245,8 +247,11 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     return c.emailedAt ? toDate(c.emailedAt) : null;
   }
 
+  // CONTRACT_STATUS_LABELS holds i18n keys; resolve here because the template
+  // renders this getter without a `| translate`.
   getStatusLabel(status: string): string {
-    return CONTRACT_STATUS_LABELS[status as keyof typeof CONTRACT_STATUS_LABELS] || status;
+    const key = CONTRACT_STATUS_LABELS[status as keyof typeof CONTRACT_STATUS_LABELS];
+    return key ? this.translateService.translate(key) : status;
   }
   getStatusClass(status: string): string {
     return CONTRACT_STATUS_COLORS[status as keyof typeof CONTRACT_STATUS_COLORS] || '';

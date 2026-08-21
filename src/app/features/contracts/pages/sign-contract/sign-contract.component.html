@@ -1,13 +1,7 @@
 <div class="public-page">
   <header class="public-header">
     <div class="brand">
-      <img
-        class="brand-image"
-        src="assets/brand/logo.svg"
-        [alt]="'brand.logoAlt' | translate"
-        (error)="onLogoError($event)"
-      />
-      <span class="brand-name brand-font">VELTO RENT</span>
+      <app-brand-logo variant="wordmark" [alt]="'brand.logoAlt' | translate" />
     </div>
     <span class="brand-tagline">{{ 'contracts.sign.subtitle' | translate }}</span>
   </header>
@@ -87,8 +81,10 @@
           }
           @if (view.totalDays) {
             <div class="summary-row">
-              <span class="label">{{ 'reservations.fields.totalDays' | translate }}:</span>
-              <span class="value">{{ view.totalDays }}</span>
+              <span class="label">{{ 'reservations.fields.duration' | translate }}:</span>
+              <span class="value">
+                {{ view.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
+              </span>
             </div>
           }
           @if (view.finalPrice !== undefined) {

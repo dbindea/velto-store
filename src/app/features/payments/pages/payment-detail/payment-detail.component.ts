@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { PaymentService } from '@features/payments/services/payment.service';
 import {
   Payment,
@@ -17,7 +18,7 @@ import { toDate } from '@shared/utils/reservation-date.util';
 @Component({
   selector: 'app-payment-detail',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, PaymentConceptPipe],
   templateUrl: './payment-detail.component.html',
   styleUrl: './payment-detail.component.scss'
 })

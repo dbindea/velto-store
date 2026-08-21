@@ -30,10 +30,13 @@
  * lives only inside `client.service.ts` — it is not shared, and it
  * does not cover any other service.
  *
- * NOTE: `settings()` must run before the first Firestore call.
- * That holds as long as every module obtains Firestore through the
- * `firestore()` helper below rather than calling `admin.firestore()`
- * directly at module load.
+ * `settings()` is applied inside `firestore()` below, not at module
+ * load: resolving the Firestore service at top level is exactly what
+ * rule 2 forbids, and it made the deploy-time analysis pass fail with
+ * "User code failed to load. Cannot determine backend specification."
+ * Applying it on first use still satisfies the SDK requirement that
+ * `settings()` run before any other Firestore call, as long as every
+ * module goes through this helper.
  */
 
 import * as admin from 'firebase-admin';
@@ -42,18 +45,20 @@ if (admin.apps.length === 0) {
   admin.initializeApp();
 }
 
-// Apply global Firestore settings exactly once.  These settings are
-// per-process, not per-request.
-try {
-  admin.firestore().settings({ ignoreUndefinedProperties: true });
-} catch {
-  // settings() throws if called after the first Firestore use, or
-  // more than once per app (e.g. a test that hot-reloads this
-  // module).  Either way the flag is already applied — ignore.
-}
+let settingsApplied = false;
 
 export function firestore(): FirebaseFirestore.Firestore {
-  return admin.firestore();
+  const db = admin.firestore();
+  if (!settingsApplied) {
+    settingsApplied = true;
+    try {
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch {
+      // Throws if the instance has already been used or configured.
+      // Either way the flag is in place — nothing to do.
+    }
+  }
+  return db;
 }
 
 export function storageBucket() {

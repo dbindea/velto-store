@@ -57,33 +57,17 @@ function asString(value: any, fallback = ''): string {
   return String(value);
 }
 
-/**
- * Deep-strip `undefined` values from an object.
- *
- * This is deliberately redundant: `ignoreUndefinedProperties` in
- * admin-guard.ts already makes Firestore skip undefined fields, and
- * that setting is the primary defence.  We keep this local filter
- * anyway because the contract path writes the legally binding
- * document, and we want the payload handed to `.set()` to be
- * explicit rather than relying on a process-wide SDK flag that a
- * future refactor could drop.
- *
- * If you remove it, make sure admin-guard.ts still applies the
- * setting before the first Firestore call.
- */
-function stripUndefined<T>(value: T): T {
-  if (value === null || value === undefined) return value;
-  if (Array.isArray(value)) {
-    return value.map((v) => stripUndefined(v)) as unknown as T;
-  }
-  if (typeof value !== 'object') return value;
-  const cleaned: { [k: string]: any } = {};
-  for (const [k, v] of Object.entries(value as { [k: string]: any })) {
-    if (v === undefined) continue;
-    cleaned[k] = stripUndefined(v);
-  }
-  return cleaned as T;
-}
+// A `stripUndefined()` helper used to sit here and wrap every payload before
+// `.set()`. It corrupted data: it rebuilt each object with `Object.entries()`,
+// and a `FieldValue.serverTimestamp()` sentinel is an object with no own
+// enumerable properties, so it was flattened to `{}`. Contracts were written
+// with `createdAt` and `generatedAt` as empty maps instead of timestamps, and
+// the contract list then crashed the Angular date pipe with "Invalid Date".
+//
+// It was redundant anyway: `ignoreUndefinedProperties` in admin-guard.ts
+// already makes Firestore skip undefined fields, and unlike the helper it
+// leaves sentinels, Timestamps and DocumentReferences untouched.
+// Do not reintroduce a generic deep-clean on Firestore payloads.
 
 export const generateContractPdf = functions.https.onCall(
   async (request): Promise<GenerateResponse> => {
@@ -298,11 +282,11 @@ export const generateContractPdf = functions.https.onCall(
       baseUpdate.createdAt = now;
       baseUpdate.createdBy = request.auth!.uid || null;
     }
-    await contractRef.set(stripUndefined(baseUpdate), { merge: true });
+    await contractRef.set(baseUpdate, { merge: true });
 
     // 10. Update reservation contractStatus and contractInfo
     await db.collection('reservations').doc(reservationId).set(
-      stripUndefined({
+      {
         contractStatus: 'generated',
         contractInfo: {
           contractId: reservationId,
@@ -310,7 +294,7 @@ export const generateContractPdf = functions.https.onCall(
           pdfUrl
         },
         updatedAt: now
-      }),
+      },
       { merge: true }
     );
 

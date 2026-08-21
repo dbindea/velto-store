@@ -61,13 +61,13 @@
 
     <div class="tabs">
       <button class="tab" [class.active]="activeTab === 'info'" (click)="setTab('info')">
-        Info
+        {{ 'vehicles.tabs.info' | translate }}
       </button>
       <button class="tab" [class.active]="activeTab === 'features'" (click)="setTab('features')">
-        Features
+        {{ 'vehicles.tabs.features' | translate }}
       </button>
       <button class="tab" [class.active]="activeTab === 'photos'" (click)="setTab('photos')">
-        Photos
+        {{ 'vehicles.tabs.photos' | translate }}
       </button>
       <button class="tab" [class.active]="activeTab === 'pricing'" (click)="setTab('pricing')">
         {{ 'vehicles.tabs.pricing' | translate }}

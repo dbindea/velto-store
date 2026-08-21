@@ -168,6 +168,16 @@ function pickBundle(
   };
 }
 
+/**
+ * Timezone the rental operates in.
+ *
+ * Cloud Functions run with TZ=UTC, so formatting without an explicit zone
+ * printed every contract two hours early in summer: a pickup booked for 12:00
+ * appeared as 10:00 on the signed PDF. This is the legally binding document,
+ * so the zone has to be pinned rather than inherited from the runtime.
+ */
+const CONTRACT_TIME_ZONE = process.env.VELTO_TIME_ZONE || 'Europe/Madrid';
+
 function formatDate(d?: Date, locale: ContractLocale = 'es'): string {
   if (!d) return '—';
   try {
@@ -177,7 +187,8 @@ function formatDate(d?: Date, locale: ContractLocale = 'es'): string {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: CONTRACT_TIME_ZONE
     });
   } catch {
     return '—';

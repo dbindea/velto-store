@@ -89,35 +89,39 @@ export interface VehicleFormData {
   manualPriceAllowed?: boolean;
 }
 
+// Every *_LABELS map holds i18n KEYS, never display text. A map that holds
+// Spanish reaches the template unchanged, so `| translate` returns it as-is
+// and Spanish leaks into the English and Romanian UIs.
+
 export const VEHICLE_STATUS_LABELS: Record<VehicleStatus, string> = {
-  available: 'Disponible',
-  rented: 'En alquiler',
-  maintenance: 'Mantenimiento',
-  out_of_service: 'Fuera de servicio'
+  available: 'vehicles.status.available',
+  rented: 'vehicles.status.rented',
+  maintenance: 'vehicles.status.maintenance',
+  out_of_service: 'vehicles.status.outOfService'
 };
 
 export const VEHICLE_CATEGORY_LABELS: Record<VehicleCategory, string> = {
-  mini: 'Mini',
-  economy: 'Económico',
-  compact: 'Compacto',
-  intermediate: 'Intermedio',
-  standard: 'Estándar',
-  fullsize: 'Tamaño completo',
-  premium: 'Premium',
-  suv: 'SUV',
-  van: 'Furgoneta'
+  mini: 'vehicles.categories.mini',
+  economy: 'vehicles.categories.economy',
+  compact: 'vehicles.categories.compact',
+  intermediate: 'vehicles.categories.intermediate',
+  standard: 'vehicles.categories.standard',
+  fullsize: 'vehicles.categories.fullsize',
+  premium: 'vehicles.categories.premium',
+  suv: 'vehicles.categories.suv',
+  van: 'vehicles.categories.van'
 };
 
 export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
-  diesel: 'Diésel',
-  petrol: 'Gasolina',
-  hybrid: 'Híbrido',
-  electric: 'Eléctrico'
+  diesel: 'vehicles.fuelTypes.diesel',
+  petrol: 'vehicles.fuelTypes.petrol',
+  hybrid: 'vehicles.fuelTypes.hybrid',
+  electric: 'vehicles.fuelTypes.electric'
 };
 
 export const TRANSMISSION_LABELS: Record<TransmissionType, string> = {
-  manual: 'Manual',
-  automatic: 'Automático'
+  manual: 'vehicles.transmissions.manual',
+  automatic: 'vehicles.transmissions.automatic'
 };
 
 export const BODY_TYPE_LABELS: Record<BodyType, string> = {

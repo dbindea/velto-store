@@ -46,15 +46,17 @@
             <span class="value">{{ getReturnDate() | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
           <div class="info-row">
-            <span class="label">{{ 'reservations.fields.totalDays' | translate }}:</span>
-            <span class="value">{{ totalDays }} días</span>
+            <span class="label">{{ 'reservations.fields.duration' | translate }}:</span>
+            <span class="value">{{ totalDays }} {{ 'reservations.fields.totalDays' | translate }}</span>
           </div>
           <div class="info-row">
-            <span class="label">{{ 'reservations.title' | translate }}:</span>
+            <!-- Was `reservations.title`, i.e. the module name "Reservas" used
+                 as the label of a money amount. -->
+            <span class="label">{{ 'payments.summary.totalRental' | translate }}:</span>
             <span class="value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
           </div>
           <div class="info-row">
-            <span class="label">Fianza cobrada:</span>
+            <span class="label">{{ 'inspections.fields.depositCollected' | translate }}:</span>
             <span class="value">{{ depositPaid | number:'1.2-2' }} €</span>
           </div>
           @if (pickupKm !== undefined) {
@@ -70,7 +72,7 @@
       <div class="form-section">
         <div class="section-header">
           <i class="pi pi-car"></i>
-          <h2>Estado del vehículo</h2>
+          <h2>{{ 'inspections.sections.vehicleCondition' | translate }}</h2>
         </div>
         <div class="form-grid-inner">
           <div class="form-group">
@@ -190,7 +192,7 @@
               <div class="photo-category-actions">
                 <label class="upload-btn upload-btn--camera">
                   <i class="pi pi-camera"></i>
-                  <span class="btn-label">{{ 'photos.takePhoto' | translate }}</span>
+                  <span class="btn-label">{{ 'common.photos.takePhoto' | translate }}</span>
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -200,7 +202,7 @@
                 </label>
                 <label class="upload-btn upload-btn--gallery">
                   <i class="pi pi-image"></i>
-                  <span class="btn-label">{{ 'photos.uploadFromGallery' | translate }}</span>
+                  <span class="btn-label">{{ 'common.photos.uploadFromGallery' | translate }}</span>
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"

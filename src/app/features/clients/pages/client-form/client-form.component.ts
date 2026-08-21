@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
+import { TranslateService } from '@core/i18n/translate.service';
 import { 
   Client, 
   ClientDocumentType, 
@@ -27,6 +28,7 @@ export class ClientFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private clientService = inject(ClientService);
+  private translateService = inject(TranslateService);
 
   isEditMode = false;
   clientId: string | null = null;
@@ -232,12 +234,14 @@ export class ClientFormComponent implements OnInit {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
+  // Both maps hold i18n keys; the template renders these getters without a
+  // `| translate`, so they resolve the key here.
   getFileTypeLabel(type: ClientDocumentType_File): string {
-    return CLIENT_FILE_TYPE_LABELS[type];
+    return this.translateService.translate(CLIENT_FILE_TYPE_LABELS[type]);
   }
 
   getCountryLabel(country: DrivingLicenseCountry): string {
-    return DRIVING_LICENSE_COUNTRY_LABELS[country];
+    return this.translateService.translate(DRIVING_LICENSE_COUNTRY_LABELS[country]);
   }
 
   goBack(): void {

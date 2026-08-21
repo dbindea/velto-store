@@ -1,5 +1,5 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where } from '@angular/fire/firestore';
 import { Observable, from, forkJoin, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
@@ -119,14 +119,26 @@ export class ReservationService {
   /**
    * Get reservation by ID.
    */
+  /**
+   * Live subscription to a single reservation.
+   *
+   * The detail view changes underneath the operator while they work: signing a
+   * contract updates `contractStatus`, completing an inspection moves
+   * `reservationStatus`. With a one-shot `getDoc()` the screen kept showing
+   * "Pendiente de firma" after the customer had already signed on their phone.
+   */
   getReservationById(id: string): Observable<Reservation | null> {
     const docRef = doc(this.firestore, `reservations/${id}`);
-    return from(getDoc(docRef)).pipe(
-      map(snap => {
-        if (!snap.exists()) return null;
-        return { id: snap.id, ...snap.data() } as Reservation;
-      })
-    );
+    return new Observable<Reservation | null>((subscriber) => {
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => {
+          subscriber.next(snap.exists() ? ({ id: snap.id, ...snap.data() } as Reservation) : null);
+        },
+        (error) => subscriber.error(error)
+      );
+      return () => unsubscribe();
+    });
   }
 
   /**

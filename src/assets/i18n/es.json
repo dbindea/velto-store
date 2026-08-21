@@ -1,7 +1,4 @@
 {
-  "app": {
-    "name": "VELTO"
-  },
   "auth": {
     "loading": "Verificando...",
     "loginSubtitle": "Acceso interno",
@@ -61,6 +58,15 @@
       "phone": "Teléfono",
       "trustLevel": "Nivel de confianza"
     },
+    "license": {
+      "noInfo": "No hay información del carnet de conducir"
+    },
+    "licenseCountries": {
+      "ES": "España",
+      "EU": "Unión Europea",
+      "OTHER": "Otro",
+      "RO": "Rumanía"
+    },
     "new": "Nuevo cliente",
     "noClients": "No hay clientes todavía",
     "payments": {
@@ -88,6 +94,7 @@
       "documents": "Documentos",
       "drivingLicense": "Carnet de conducir",
       "internalManagement": "Gestión interna",
+      "payments": "Pagos",
       "personalData": "Datos personales",
       "reservations": "Reservas"
     },
@@ -113,6 +120,12 @@
     "loading": "Cargando...",
     "moduleInProgress": "Módulo en preparación",
     "or": "o",
+    "photos": {
+      "camera": "Cámara",
+      "gallery": "Galería",
+      "takePhoto": "Hacer foto",
+      "uploadFromGallery": "Subir desde galería"
+    },
     "refresh": "Actualizar",
     "save": "Guardar",
     "search": "Buscar",
@@ -142,9 +155,12 @@
       "depositAmount": "Fianza",
       "emailedAt": "Enviado por email",
       "generatedAt": "Generado",
+      "phone": "Teléfono",
+      "plateNumber": "Matrícula",
       "reservation": "Reserva",
       "signedAt": "Firmado",
-      "vehicle": "Vehículo"
+      "vehicle": "Vehículo",
+      "year": "Año"
     },
     "list": {
       "empty": "No hay contratos"
@@ -156,7 +172,7 @@
       "acceptConditions": "He leído y acepto las condiciones del contrato.",
       "alreadySigned": "Este contrato ya ha sido firmado.",
       "expired": "El link de firma ha caducado.",
-      "highlightsTitle": "contracts.sign.highlightsTitle",
+      "highlightsTitle": "Puntos clave del contrato",
       "invalid": "Link no válido.",
       "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
       "submitSignature": "Firmar contrato",
@@ -179,9 +195,6 @@
     "subtitle": "Genera, firma y envía contratos de alquiler",
     "title": "Contratos"
   },
-  "currentImage": {
-    "url": "URL de imagen actual"
-  },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
     "allClearTitle": "Todo al día",
@@ -191,6 +204,9 @@
       "rented": "En alquiler",
       "total": "Total"
     },
+    "loadFailedHint": "Revisa tu conexión y vuelve a intentarlo. No des por hecho que no hay tareas pendientes.",
+    "loadFailedTitle": "No se pudieron cargar los datos",
+    "partialFailure": "Algunos datos no se han podido cargar, la lista puede estar incompleta.",
     "pendingPayment": {
       "hint": "Cobrar antes de confirmar la entrega",
       "label": "Señal pendiente"
@@ -277,6 +293,7 @@
     },
     "fields": {
       "cleanliness": "Limpieza",
+      "depositCollected": "Fianza cobrada",
       "fuelLevel": "Nivel de combustible",
       "km": "Kilometraje",
       "notes": "Observaciones"
@@ -314,6 +331,7 @@
       "extraCharges": "Cargos extra",
       "photos": "Fotografías",
       "reservationSummary": "Resumen de la reserva",
+      "vehicleCondition": "Estado del vehículo",
       "vehicleStatus": "Estado del vehículo"
     },
     "startPickup": "Inspección de entrega",
@@ -486,7 +504,8 @@
       "extraChargesTotal": "Cargos extra",
       "rentalTotal": "Total alquiler",
       "title": "Resumen",
-      "totalPaid": "Total pagado"
+      "totalPaid": "Total pagado",
+      "totalRental": "Total alquiler"
     },
     "title": "Pagos",
     "types": {
@@ -505,12 +524,6 @@
       "remainingPayment": "Resto alquiler",
       "rentalPayment": "Pago completo"
     }
-  },
-  "photos": {
-    "camera": "Cámara",
-    "gallery": "Galería",
-    "takePhoto": "Hacer foto",
-    "uploadFromGallery": "Subir desde galería"
   },
   "reports": {
     "days": "días",
@@ -545,6 +558,10 @@
       "search": "Buscar disponibilidad",
       "selectVehicle": "Seleccionar vehículo"
     },
+    "cancel": {
+      "confirm": "¿Seguro que quieres cancelar esta reserva?",
+      "hint": "No se puede deshacer. La reserva quedará cancelada, pero se conserva en el historial."
+    },
     "client": {
       "createQuick": "Crear cliente rápido",
       "documentNumber": "Número de documento",
@@ -554,8 +571,29 @@
       "search": "Buscar cliente...",
       "select": "Seleccionar cliente"
     },
+    "contractStatus": {
+      "cancelled": "Cancelado",
+      "expired": "Caducado",
+      "generated": "Generado",
+      "pending": "Pendiente",
+      "pendingSignature": "Pendiente de firma",
+      "signed": "Firmado"
+    },
+    "deposit": {
+      "retained": "Retenida",
+      "returned": "Devuelta"
+    },
+    "depositStatus": {
+      "paid": "Cobrada",
+      "partialReturned": "Devuelta en parte",
+      "pending": "Pendiente",
+      "retained": "Retenida",
+      "returned": "Devuelta",
+      "waived": "Exenta"
+    },
     "detail": "Detalle de reserva",
     "fields": {
+      "duration": "Duración",
       "notes": "Notas",
       "pickupDate": "Fecha de recogida",
       "pickupLocation": "Lugar de recogida",
@@ -581,7 +619,11 @@
       "title": "Notas internas"
     },
     "paymentStatus": {
-      "pending": "Pendiente"
+      "paid": "Pagado",
+      "partial": "Parcial",
+      "pending": "Pendiente",
+      "refunded": "Reembolsado",
+      "settled": "Liquidado"
     },
     "pricing": {
       "basePrice": "Precio base",
@@ -600,7 +642,28 @@
       "reserved": "Reservado",
       "returned": "Devuelto"
     },
+    "steps": {
+      "client": "Cliente",
+      "dates": "Fechas",
+      "summary": "Resumen",
+      "vehicle": "Vehículo"
+    },
     "subtitle": "Gestiona las reservas de alquiler",
+    "timeline": {
+      "contractGenerated": "Contrato generado",
+      "contractSigned": "Contrato firmado",
+      "depositPaid": "Fianza cobrada",
+      "depositSettled": "Fianza resuelta",
+      "initialPaymentPaid": "Señal cobrada",
+      "nextAction": "Siguiente acción",
+      "pickupCompleted": "Entrega realizada",
+      "remainingPaymentPaid": "Resto cobrado",
+      "reservationClosed": "Reserva cerrada",
+      "reservationCreated": "Reserva creada",
+      "returnCompleted": "Devolución realizada",
+      "skippedByException": "Omitido por excepción",
+      "title": "Progreso de la reserva"
+    },
     "title": "Reservas"
   },
   "search": {
@@ -617,10 +680,6 @@
     "placeholder": "Buscar cliente, vehículo o reserva…",
     "trigger": "Buscar…"
   },
-  "timeline": {
-    "nextAction": "Siguiente acción",
-    "skippedByException": "Omitido por excepción"
-  },
   "vehicles": {
     "actions": {
       "changeStatus": "Cambiar estado"
@@ -632,6 +691,17 @@
       "cabrio": "Cabrio",
       "estate": "Familiar",
       "mpv": "Monovolumen",
+      "suv": "SUV",
+      "van": "Furgoneta"
+    },
+    "categories": {
+      "compact": "Compacto",
+      "economy": "Económico",
+      "fullsize": "Tamaño completo",
+      "intermediate": "Intermedio",
+      "mini": "Mini",
+      "premium": "Premium",
+      "standard": "Estándar",
       "suv": "SUV",
       "van": "Furgoneta"
     },
@@ -667,6 +737,12 @@
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
+    "fuelTypes": {
+      "diesel": "Diésel",
+      "electric": "Eléctrico",
+      "hybrid": "Híbrido",
+      "petrol": "Gasolina"
+    },
     "help": {
       "acrissGenerated": "Código ACRISS/SIPP: Categoría + Carrocería + Transmisión + Combustible/A/C"
     },
@@ -676,6 +752,7 @@
     "photos": {
       "closeGallery": "Cerrar galería",
       "count": "{{count}} fotos",
+      "empty": "No hay fotos todavía",
       "imageAlt": "Foto del vehículo",
       "next": "Siguiente",
       "openGallery": "Ver galería",
@@ -717,12 +794,24 @@
       "rentalClassification": "Clasificación de alquiler",
       "reservations": "Reservas"
     },
+    "status": {
+      "available": "Disponible",
+      "maintenance": "Mantenimiento",
+      "outOfService": "Fuera de servicio",
+      "rented": "En alquiler"
+    },
     "subtitle": "Gestiona tu flota",
     "tabs": {
+      "features": "Equipamiento",
+      "info": "Datos",
       "photos": "Fotos",
       "pricing": "Tarifas"
     },
     "title": "Vehículos",
+    "transmissions": {
+      "automatic": "Automático",
+      "manual": "Manual"
+    },
     "viewDetail": "Ver detalle"
   },
   "workflow": {
@@ -737,6 +826,7 @@
     "cannotDeliver": "No se puede iniciar la entrega",
     "cannotReturn": "No se puede iniciar la devolución",
     "closeReservation": "Cerrar reserva",
+    "completed": "Reserva completada",
     "contractAlreadySigned": "El contrato ya está firmado",
     "contractCancelled": "El contrato está cancelado",
     "contractPending": "Pendiente de firma",

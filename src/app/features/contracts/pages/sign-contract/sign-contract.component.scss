@@ -23,29 +23,10 @@
   align-items: center;
   gap: 0.625rem;
 
-  .brand-image {
-    height: 36px;
-    width: auto;
-    max-width: 200px;
+  app-brand-logo {
     display: block;
-  }
-
-  .brand-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: var(--accent-color);
-    color: white;
-    border-radius: 8px;
-    font-weight: 800;
-    font-size: 1rem;
-  }
-
-  .brand-name {
-    font-weight: 700;
-    letter-spacing: 0.05em;
+    height: 36px;
+    max-width: 200px;
   }
 }
 

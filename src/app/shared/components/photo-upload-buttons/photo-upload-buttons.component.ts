@@ -34,9 +34,9 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
   template: `
     <div class="photo-upload-buttons">
       <!-- Rear camera: only meaningful on mobile/tablet -->
-      <label class="upload-btn upload-btn--camera" [attr.title]="'photos.takePhoto' | translate">
+      <label class="upload-btn upload-btn--camera" [attr.title]="'common.photos.takePhoto' | translate">
         <i class="pi pi-camera"></i>
-        <span class="btn-label">{{ 'photos.takePhoto' | translate }}</span>
+        <span class="btn-label">{{ 'common.photos.takePhoto' | translate }}</span>
         <input
           #cameraInput
           type="file"
@@ -48,9 +48,9 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
       </label>
 
       <!-- Gallery / file picker: works everywhere -->
-      <label class="upload-btn upload-btn--gallery" [attr.title]="'photos.uploadFromGallery' | translate">
+      <label class="upload-btn upload-btn--gallery" [attr.title]="'common.photos.uploadFromGallery' | translate">
         <i class="pi pi-image"></i>
-        <span class="btn-label">{{ 'photos.uploadFromGallery' | translate }}</span>
+        <span class="btn-label">{{ 'common.photos.uploadFromGallery' | translate }}</span>
         <input
           #galleryInput
           type="file"

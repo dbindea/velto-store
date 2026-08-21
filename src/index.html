@@ -9,14 +9,21 @@
     <meta name="theme-color" content="#20A48F" />
     <meta name="color-scheme" content="light dark" />
 
+    <!--
+      favicon.svg adapts its ink via prefers-color-scheme, because browser
+      chrome follows the OS theme rather than the app's own toggle.
+      apple-touch-icon is composited onto the user's home screen wallpaper,
+      so it must use the dark-background (white ink) artwork.
+    -->
     <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="apple-touch-icon" href="assets/brand/isologo.svg" />
+    <link rel="apple-touch-icon" href="assets/brand/isologo-on-dark.svg" />
 
     <meta property="og:title" content="Velto Rent · Backoffice" />
     <meta property="og:description" content="Plataforma de gestión de alquiler de vehículos" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="assets/brand/logo.svg" />
+    <!-- Social previews render on white cards, so use the light-background art. -->
+    <meta property="og:image" content="assets/brand/logo-on-light.svg" />
   </head>
   <body>
     <app-root></app-root>

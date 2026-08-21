@@ -231,30 +231,52 @@ export interface Reservation {
 }
 
 // Status labels for display
+// i18n KEYS, never display text — see the note in vehicle.model.ts.
+//
+// The two maps below are named for the reservation's own view of payment and
+// contract state. They deliberately do NOT reuse the names in payment.model.ts
+// and contract.model.ts, which describe the payment and contract entities and
+// have different value sets. Importing both under one name is what forced the
+// `PAYMENT_STATUS_LABELS_PAYMENT` alias in client-detail.
+
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
-  reserved: 'Reservado',
-  confirmed: 'Confirmado',
-  delivered: 'Entregado',
-  returned: 'Devuelto',
-  closed: 'Cerrado',
-  cancelled: 'Cancelado'
+  reserved: 'reservations.status.reserved',
+  confirmed: 'reservations.status.confirmed',
+  delivered: 'reservations.status.delivered',
+  returned: 'reservations.status.returned',
+  closed: 'reservations.status.closed',
+  cancelled: 'reservations.status.cancelled'
 };
 
-export const PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus, string> = {
-  pending: 'Pendiente',
-  partial: 'Parcial',
-  paid: 'Pagado',
-  settled: 'Liquidado',
-  refunded: 'Reembolsado'
+export const RESERVATION_PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus, string> = {
+  pending: 'reservations.paymentStatus.pending',
+  partial: 'reservations.paymentStatus.partial',
+  paid: 'reservations.paymentStatus.paid',
+  settled: 'reservations.paymentStatus.settled',
+  refunded: 'reservations.paymentStatus.refunded'
 };
 
-export const CONTRACT_STATUS_LABELS: Record<ReservationContractStatus, string> = {
-  pending: 'Pendiente',
-  generated: 'Generado',
-  pending_signature: 'Pendiente de firma',
-  signed: 'Firmado',
-  cancelled: 'Cancelado',
-  expired: 'Caducado'
+/**
+ * Deposit status. This map was missing entirely, so reservation-detail rendered
+ * `reservation.deposit.status` raw — the operator saw the Firestore value
+ * "pending" in English regardless of the selected language.
+ */
+export const RESERVATION_DEPOSIT_STATUS_LABELS: Record<ReservationDeposit['status'], string> = {
+  pending: 'reservations.depositStatus.pending',
+  paid: 'reservations.depositStatus.paid',
+  partial_returned: 'reservations.depositStatus.partialReturned',
+  returned: 'reservations.depositStatus.returned',
+  retained: 'reservations.depositStatus.retained',
+  waived: 'reservations.depositStatus.waived'
+};
+
+export const RESERVATION_CONTRACT_STATUS_LABELS: Record<ReservationContractStatus, string> = {
+  pending: 'reservations.contractStatus.pending',
+  generated: 'reservations.contractStatus.generated',
+  pending_signature: 'reservations.contractStatus.pendingSignature',
+  signed: 'reservations.contractStatus.signed',
+  cancelled: 'reservations.contractStatus.cancelled',
+  expired: 'reservations.contractStatus.expired'
 };
 
 // Statuses that block availability (vehicle is considered "in use")
