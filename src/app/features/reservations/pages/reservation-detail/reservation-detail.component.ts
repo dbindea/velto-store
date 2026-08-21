@@ -1,8 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
@@ -12,7 +14,8 @@ import {
   Reservation,
   RESERVATION_STATUS_LABELS,
   RESERVATION_PAYMENT_STATUS_LABELS,
-  RESERVATION_CONTRACT_STATUS_LABELS
+  RESERVATION_CONTRACT_STATUS_LABELS,
+  RESERVATION_DEPOSIT_STATUS_LABELS
 } from '@shared/models/reservation.model';
 import {
   Workflow,
@@ -45,6 +48,7 @@ import { ReservationNote } from '@shared/models/reservation.model';
     CommonModule,
     FormsModule,
     TranslatePipe,
+    PaymentConceptPipe,
     ReservationTimelineComponent,
     ReservationNotesPanelComponent
   ],
@@ -59,6 +63,7 @@ export class ReservationDetailComponent implements OnInit {
   private inspectionService = inject(InspectionService);
   private contractService = inject(ContractService);
   private translateService = inject(TranslateService);
+  private destroyRef = inject(DestroyRef);
 
   reservation: Reservation | null = null;
   payments: Payment[] = [];
@@ -119,37 +124,63 @@ export class ReservationDetailComponent implements OnInit {
     }
   }
 
+  /**
+   * Live subscription: the reservation document changes while this screen is
+   * open (the customer signs, an inspection completes). The related
+   * collections are loaded once, on the first emission — re-running them on
+   * every field change would refetch payments and inspections needlessly.
+   */
   loadReservation(id: string): void {
     this.loading = true;
-    this.reservationService.getReservationById(id).subscribe({
-      next: (reservation) => {
-        if (!reservation) {
-          this.router.navigate(['/reservations']);
-          return;
+    let relatedLoaded = false;
+
+    this.reservationService
+      .getReservationById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (reservation: Reservation | null) => {
+          if (!reservation) {
+            this.router.navigate(['/reservations']);
+            return;
+          }
+          this.reservation = reservation;
+          this.loading = false;
+
+          if (!relatedLoaded) {
+            relatedLoaded = true;
+            this.loadPayments(id);
+            this.loadInspections(id);
+            this.loadContract(id);
+          }
+        },
+        error: (error) => {
+          console.error('Error loading reservation:', error);
+          this.loading = false;
         }
-        this.reservation = reservation;
-        this.loading = false;
-        this.loadPayments(id);
-        this.loadInspections(id);
-        this.loadContract(id);
-      },
-      error: (error) => {
-        console.error('Error loading reservation:', error);
-        this.loading = false;
-      }
-    });
+      });
   }
 
+  /**
+   * Live subscription: the contract status changes underneath this screen when
+   * the operator issues a signing link and, more importantly, when the customer
+   * signs on their own phone. `takeUntilDestroyed` closes the Firestore
+   * listener when the view goes away.
+   */
   loadContract(reservationId: string): void {
-    this.contractService.getContractByReservation(reservationId).subscribe({
-      next: (c) => {
-        this.contract = c;
-        if (c && !this.emailRecipient) {
-          this.emailRecipient = c.clientSnapshot?.email || '';
-        }
-      },
-      error: (err) => console.error('Error loading contract:', err)
-    });
+    this.contractService
+      .getContractByReservation(reservationId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (c: Contract | null) => {
+          this.contract = c;
+          if (c && !this.emailRecipient) {
+            this.emailRecipient = c.clientSnapshot?.email || '';
+          }
+          // `workflowCtx` is a getter, so the guards and the timeline pick the
+          // new status up on the next change detection pass by themselves.
+        },
+        error: (err) => console.error('Error loading contract:', err)
+      });
   }
 
   loadInspections(reservationId: string): void {
@@ -260,6 +291,13 @@ export class ReservationDetailComponent implements OnInit {
 
   getPaymentStatusLabel(status: string): string {
     return this.getPaymentLabel(status);
+  }
+
+  getDepositStatusLabel(status: string): string {
+    return this.t(
+      RESERVATION_DEPOSIT_STATUS_LABELS[status as keyof typeof RESERVATION_DEPOSIT_STATUS_LABELS],
+      status
+    );
   }
 
   getContractLabel(status: string): string {
@@ -521,6 +559,30 @@ export class ReservationDetailComponent implements OnInit {
 
   canCloseReservation(): boolean {
     return this.closeReservationDecision().ok;
+  }
+
+  /**
+   * Deposit actions. These two buttons had no guard at all: "Devolver total"
+   * and "Retener" were clickable with the deposit uncollected (0 € of 150 €),
+   * which lets an operator refund money that was never taken. The workflow util
+   * is the single authority, so the UI must ask it like every other action.
+   */
+  private depositDecision(kind: 'refund' | 'retain'): WorkflowDecision {
+    const ctx = this.workflowCtx;
+    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
+    return kind === 'refund' ? Workflow.canRefundDeposit(ctx) : Workflow.canRetainDeposit(ctx);
+  }
+
+  canRefundDeposit(): boolean {
+    return this.depositDecision('refund').ok;
+  }
+
+  canRetainDeposit(): boolean {
+    return this.depositDecision('retain').ok;
+  }
+
+  depositBlockReason(kind: 'refund' | 'retain'): string {
+    return reasonOf(this.depositDecision(kind));
   }
 
   closeReservationBlockReason(): string {

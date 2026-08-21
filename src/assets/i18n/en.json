@@ -58,6 +58,9 @@
       "phone": "Phone",
       "trustLevel": "Trust level"
     },
+    "license": {
+      "noInfo": "No driving licence information"
+    },
     "licenseCountries": {
       "ES": "Spain",
       "EU": "European Union",
@@ -91,6 +94,7 @@
       "documents": "Documents",
       "drivingLicense": "Driving license",
       "internalManagement": "Internal management",
+      "payments": "Payments",
       "personalData": "Personal data",
       "reservations": "Reservations"
     },
@@ -151,9 +155,12 @@
       "depositAmount": "Deposit",
       "emailedAt": "Emailed at",
       "generatedAt": "Generated at",
+      "phone": "Phone",
+      "plateNumber": "Plate",
       "reservation": "Reservation",
       "signedAt": "Signed at",
-      "vehicle": "Vehicle"
+      "vehicle": "Vehicle",
+      "year": "Year"
     },
     "list": {
       "empty": "No contracts"
@@ -165,7 +172,7 @@
       "acceptConditions": "I have read and accept the contract conditions.",
       "alreadySigned": "This contract is already signed.",
       "expired": "The signing link has expired.",
-      "highlightsTitle": "contracts.sign.highlightsTitle",
+      "highlightsTitle": "Key contract terms",
       "invalid": "Invalid link.",
       "readOnlyNotice": "Please review the contract details before signing.",
       "submitSignature": "Sign contract",
@@ -197,6 +204,9 @@
       "rented": "On rental",
       "total": "Total"
     },
+    "loadFailedHint": "Check your connection and try again. Do not assume there is nothing pending.",
+    "loadFailedTitle": "Could not load data",
+    "partialFailure": "Some data could not be loaded, this list may be incomplete.",
     "pendingPayment": {
       "hint": "Collect before confirming pickup",
       "label": "Signal pending"
@@ -283,6 +293,7 @@
     },
     "fields": {
       "cleanliness": "Cleanliness",
+      "depositCollected": "Deposit collected",
       "fuelLevel": "Fuel level",
       "km": "Mileage",
       "notes": "Notes"
@@ -320,6 +331,7 @@
       "extraCharges": "Extra charges",
       "photos": "Photos",
       "reservationSummary": "Reservation summary",
+      "vehicleCondition": "Vehicle condition",
       "vehicleStatus": "Vehicle status"
     },
     "startPickup": "Pickup inspection",
@@ -492,7 +504,8 @@
       "extraChargesTotal": "Extra charges",
       "rentalTotal": "Rental total",
       "title": "Summary",
-      "totalPaid": "Total paid"
+      "totalPaid": "Total paid",
+      "totalRental": "Rental total"
     },
     "title": "Payments",
     "types": {
@@ -545,6 +558,10 @@
       "search": "Search availability",
       "selectVehicle": "Select vehicle"
     },
+    "cancel": {
+      "confirm": "Cancel this reservation?",
+      "hint": "This cannot be undone. The reservation stays in the history as cancelled."
+    },
     "client": {
       "createQuick": "Create quick client",
       "documentNumber": "Document number",
@@ -562,8 +579,21 @@
       "pendingSignature": "Pending signature",
       "signed": "Signed"
     },
+    "deposit": {
+      "retained": "Retained",
+      "returned": "Returned"
+    },
+    "depositStatus": {
+      "paid": "Collected",
+      "partialReturned": "Partly returned",
+      "pending": "Pending",
+      "retained": "Retained",
+      "returned": "Returned",
+      "waived": "Waived"
+    },
     "detail": "Reservation details",
     "fields": {
+      "duration": "Duration",
       "notes": "Notes",
       "pickupDate": "Pickup date",
       "pickupLocation": "Pickup location",
@@ -722,6 +752,7 @@
     "photos": {
       "closeGallery": "Close gallery",
       "count": "{{count}} photos",
+      "empty": "No photos yet",
       "imageAlt": "Vehicle photo",
       "next": "Next",
       "openGallery": "View gallery",
@@ -771,6 +802,8 @@
     },
     "subtitle": "Manage your fleet",
     "tabs": {
+      "features": "Features",
+      "info": "Details",
       "photos": "Photos",
       "pricing": "Pricing"
     },
@@ -793,6 +826,7 @@
     "cannotDeliver": "Cannot start pickup",
     "cannotReturn": "Cannot start return",
     "closeReservation": "Close reservation",
+    "completed": "Reservation complete",
     "contractAlreadySigned": "Contract already signed",
     "contractCancelled": "Contract cancelled",
     "contractPending": "Pending signature",

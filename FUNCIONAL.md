@@ -361,6 +361,15 @@ sin necesidad.
 
 ---
 
+## 9.b Seguimiento
+
+- [docs/pruebas-modulos-2026-08-21.md](docs/pruebas-modulos-2026-08-21.md) —
+  fallos encontrados en las pruebas end‑to‑end y cómo se corrigieron.
+- [docs/mejoras-pendientes.md](docs/mejoras-pendientes.md) — lista viva de
+  mejoras sobre lo ya programado, y qué falta por probar.
+
+---
+
 ## 10. Decisiones pendientes
 
 No son bugs, son preguntas de producto sin responder:

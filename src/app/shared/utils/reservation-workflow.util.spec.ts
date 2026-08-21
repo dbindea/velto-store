@@ -10,6 +10,7 @@ import {
   canStartPickup,
   canStartReturn,
   canWithException,
+  getReservationNextRequiredAction,
   getReservationTimelineSteps,
   reasonOf,
   type WorkflowContext
@@ -241,6 +242,62 @@ describe('canGenerateSigningLink', () => {
       contract: { status: 'pending_signature' } as unknown as Contract
     };
     expect(canGenerateSigningLink(ctx).ok).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: the "next action" chip pointed backwards.
+//
+// The first version returned the reason of the first guard that said no. A
+// guard also says no when its step is already finished, so a fully paid and
+// signed reservation waiting for pickup announced "El contrato ya está
+// firmado" instead of "Iniciar entrega".
+// ---------------------------------------------------------------------------
+
+describe('getReservationNextRequiredAction', () => {
+  it('asks for the contract when there is none', () => {
+    expect(getReservationNextRequiredAction({ reservation: makeReservation() }))
+      .toBe('workflow.generateContract');
+  });
+
+  it('asks for the signing link once the contract exists but is unsigned', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation(),
+      contract: { status: 'generated' } as unknown as Contract
+    };
+    expect(getReservationNextRequiredAction(ctx)).toBe('workflow.generateSigningLink');
+  });
+
+  it('asks for the pickup once signed and fully paid', () => {
+    expect(getReservationNextRequiredAction(readyForPickup())).toBe('workflow.startPickup');
+  });
+
+  it('explains what is missing instead of naming the action when blocked', () => {
+    const ctx = readyForPickup();
+    ctx.reservation = makeReservation({
+      deposit: { requiredAmount: 300, paidAmount: 0, returnedAmount: 0, retainedAmount: 0 }
+    } as Partial<Reservation>);
+    ctx.contract = signedContract;
+    expect(getReservationNextRequiredAction(ctx)).toBe('workflow.missingDeposit');
+  });
+
+  it('asks for the return once the pickup is done', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'delivered' }),
+      contract: signedContract,
+      pickupInspection: completedInspection
+    };
+    expect(getReservationNextRequiredAction(ctx)).toBe('workflow.startReturn');
+  });
+
+  it('reports completion for a closed reservation', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'closed' }),
+      contract: signedContract,
+      pickupInspection: completedInspection,
+      returnInspection: completedInspection
+    };
+    expect(getReservationNextRequiredAction(ctx)).toBe('workflow.completed');
   });
 });
 

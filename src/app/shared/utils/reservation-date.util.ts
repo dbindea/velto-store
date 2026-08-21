@@ -53,20 +53,29 @@ export function toTimestamp(date: Date): any {
  */
 export function toDate(timestampOrDate: any): Date {
   if (!timestampOrDate) return new Date();
-  
+
   if (timestampOrDate instanceof Date) {
     return timestampOrDate;
   }
-  
+
   if (typeof timestampOrDate?.toDate === 'function') {
     return timestampOrDate.toDate();
   }
-  
-  if (timestampOrDate?.seconds) {
-    return new Date(timestampOrDate.seconds * 1000);
+
+  // Firestore Timestamps arrive as `seconds` from the web SDK and `_seconds`
+  // from documents written through the admin SDK.
+  const seconds = timestampOrDate?.seconds ?? timestampOrDate?._seconds;
+  if (typeof seconds === 'number') {
+    return new Date(seconds * 1000);
   }
-  
-  return new Date(timestampOrDate);
+
+  // Last resort. `new Date({})` yields an Invalid Date, which the Angular date
+  // pipe rejects with a runtime error that blanks the whole view — some stored
+  // contracts have `createdAt` as an empty map, so this really happens.
+  // Falling back to the current date keeps the view alive; callers that care
+  // about a missing value should check for it before calling.
+  const parsed = new Date(timestampOrDate);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 /**

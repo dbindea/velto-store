@@ -266,11 +266,14 @@ export class ReservationCreateComponent implements OnInit {
   /**
    * Return location: capitalize but don't auto-change pickup.
    */
-  onReturnLocationInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const formatted = this.capitalizeWords(input.value);
-    this.returnLocation = formatted;
-    input.value = formatted;
+  /**
+   * Bound to `(ngModelChange)`, which emits the new value — not a DOM Event.
+   * This used to take an `Event` and read `event.target.value`, so typing in
+   * the return location threw `Cannot read properties of undefined`.
+   * Matches the signature of onPickupLocationInput above.
+   */
+  onReturnLocationInput(value: string): void {
+    this.returnLocation = this.capitalizeWords(value);
   }
 
   private capitalizeWords(value: string): string {

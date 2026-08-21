@@ -1,4 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -78,9 +80,12 @@ export class InspectionPickupComponent implements OnInit {
   async loadData(reservationId: string): Promise<void> {
     this.loading = true;
     try {
-      this.reservation = await new Promise<Reservation | null>((resolve) => {
-        this.reservationService.getReservationById(reservationId).subscribe(r => resolve(r));
-      });
+      // `first()` matters: getReservationById and getContractByReservation are
+      // live onSnapshot streams that never complete. Awaiting them without it
+      // hangs forever — the form sat on "Cargando…" and never appeared.
+      this.reservation = await firstValueFrom(
+        this.reservationService.getReservationById(reservationId).pipe(first())
+      );
       if (!this.reservation) {
         this.router.navigate(['/inspections']);
         return;
@@ -90,9 +95,9 @@ export class InspectionPickupComponent implements OnInit {
       // doesn't allow it. We still load the form so the user can review
       // and recover, but we flag it for the UI.
       const existing = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'pickup');
-      const contract = (await this.contractService
-        .getContractByReservation(reservationId)
-        .toPromise()) || null;
+      const contract = await firstValueFrom(
+        this.contractService.getContractByReservation(reservationId).pipe(first())
+      );
       const decision = canStartPickup({
         reservation: this.reservation,
         pickupInspection: existing || null,

@@ -75,22 +75,44 @@ export class ContractService {
     );
   }
 
+  /**
+   * Live subscription to the reservation's contract.
+   *
+   * This used to be a one-shot `getDocs()`, which meant the operator's screen
+   * never reflected a status change: generating the signing link moved the
+   * contract to `pending_signature` in Firestore while the UI still read
+   * "Generado", and a customer signing on their phone produced no visible
+   * change at all until the page was reloaded by hand.
+   *
+   * `onSnapshot` keeps the detail view in step with the document, which is what
+   * the signing flow needs — the operator is typically watching this screen
+   * while the customer signs.
+   */
   getContractByReservation(reservationId: string): Observable<Contract | null> {
     const colRef = collection(this.firestore, 'contracts');
     const q = query(colRef, where('reservationId', '==', reservationId));
-    return from(getDocs(q)).pipe(
-      map((snap) => {
-        if (snap.empty) return null;
-        // Most recent first if there are multiple
-        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Contract);
-        docs.sort((a, b) => {
-          const aT = a.createdAt?.seconds || 0;
-          const bT = b.createdAt?.seconds || 0;
-          return bT - aT;
-        });
-        return docs[0];
-      })
-    );
+
+    return new Observable<Contract | null>((subscriber) => {
+      const unsubscribe = onSnapshot(
+        q,
+        (snap) => {
+          if (snap.empty) {
+            subscriber.next(null);
+            return;
+          }
+          // Most recent first if there are multiple
+          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Contract);
+          docs.sort((a, b) => {
+            const aT = a.createdAt?.seconds || 0;
+            const bT = b.createdAt?.seconds || 0;
+            return bT - aT;
+          });
+          subscriber.next(docs[0]);
+        },
+        (error) => subscriber.error(error)
+      );
+      return () => unsubscribe();
+    });
   }
 
   // ============================================================

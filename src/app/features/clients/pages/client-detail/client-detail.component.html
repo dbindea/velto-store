@@ -57,7 +57,7 @@
       </button>
       <button class="tab" [class.active]="activeTab === 'payments'" (click)="setTab('payments')">
         <i class="pi pi-wallet"></i>
-        <span>Pagos</span>
+        <span>{{ 'clients.sections.payments' | translate }}</span>
         @if (payments.length) {
           <span class="tab-count">{{ payments.length }}</span>
         }
@@ -166,7 +166,7 @@
             </div>
           }
           @if (!client.drivingLicenseNumber) {
-            <p class="empty-message">No hay información del carnet de conducir</p>
+            <p class="empty-message">{{ 'clients.license.noInfo' | translate }}</p>
           }
         </div>
       }
@@ -392,7 +392,7 @@
               @for (payment of rentalPayments; track payment.id) {
                 <div class="payment-row" (click)="viewPayment(payment.id)">
                   <div class="payment-info">
-                    <span class="payment-concept">{{ payment.concept || (PAYMENT_TYPE_LABELS[payment.type] | translate) }}</span>
+                    <span class="payment-concept">{{ payment | paymentConcept }}</span>
                     <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
                   </div>
                   <div class="payment-amounts">
@@ -421,7 +421,7 @@
               @for (payment of depositPayments; track payment.id) {
                 <div class="payment-row" (click)="viewPayment(payment.id)">
                   <div class="payment-info">
-                    <span class="payment-concept">{{ payment.concept || (PAYMENT_TYPE_LABELS[payment.type] | translate) }}</span>
+                    <span class="payment-concept">{{ payment | paymentConcept }}</span>
                     <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
                   </div>
                   <div class="payment-amounts">
@@ -453,7 +453,7 @@
               @for (payment of extraPayments; track payment.id) {
                 <div class="payment-row" (click)="viewPayment(payment.id)">
                   <div class="payment-info">
-                    <span class="payment-concept">{{ payment.concept || (PAYMENT_TYPE_LABELS[payment.type] | translate) }}</span>
+                    <span class="payment-concept">{{ payment | paymentConcept }}</span>
                     <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
                   </div>
                   <div class="payment-amounts">

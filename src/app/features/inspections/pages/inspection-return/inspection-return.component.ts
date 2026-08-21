@@ -1,4 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -95,9 +97,11 @@ export class InspectionReturnComponent implements OnInit {
   async loadData(reservationId: string): Promise<void> {
     this.loading = true;
     try {
-      this.reservation = await new Promise<Reservation | null>((resolve) => {
-        this.reservationService.getReservationById(reservationId).subscribe(r => resolve(r));
-      });
+      // `first()` closes the live onSnapshot stream once it has emitted;
+      // subscribing without it would leave a Firestore listener open forever.
+      this.reservation = await firstValueFrom(
+        this.reservationService.getReservationById(reservationId).pipe(first())
+      );
       if (!this.reservation) {
         this.router.navigate(['/inspections']);
         return;

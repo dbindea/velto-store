@@ -58,6 +58,9 @@
       "phone": "Teléfono",
       "trustLevel": "Nivel de confianza"
     },
+    "license": {
+      "noInfo": "No hay información del carnet de conducir"
+    },
     "licenseCountries": {
       "ES": "España",
       "EU": "Unión Europea",
@@ -91,6 +94,7 @@
       "documents": "Documentos",
       "drivingLicense": "Carnet de conducir",
       "internalManagement": "Gestión interna",
+      "payments": "Pagos",
       "personalData": "Datos personales",
       "reservations": "Reservas"
     },
@@ -151,9 +155,12 @@
       "depositAmount": "Fianza",
       "emailedAt": "Enviado por email",
       "generatedAt": "Generado",
+      "phone": "Teléfono",
+      "plateNumber": "Matrícula",
       "reservation": "Reserva",
       "signedAt": "Firmado",
-      "vehicle": "Vehículo"
+      "vehicle": "Vehículo",
+      "year": "Año"
     },
     "list": {
       "empty": "No hay contratos"
@@ -165,7 +172,7 @@
       "acceptConditions": "He leído y acepto las condiciones del contrato.",
       "alreadySigned": "Este contrato ya ha sido firmado.",
       "expired": "El link de firma ha caducado.",
-      "highlightsTitle": "contracts.sign.highlightsTitle",
+      "highlightsTitle": "Puntos clave del contrato",
       "invalid": "Link no válido.",
       "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
       "submitSignature": "Firmar contrato",
@@ -197,6 +204,9 @@
       "rented": "En alquiler",
       "total": "Total"
     },
+    "loadFailedHint": "Revisa tu conexión y vuelve a intentarlo. No des por hecho que no hay tareas pendientes.",
+    "loadFailedTitle": "No se pudieron cargar los datos",
+    "partialFailure": "Algunos datos no se han podido cargar, la lista puede estar incompleta.",
     "pendingPayment": {
       "hint": "Cobrar antes de confirmar la entrega",
       "label": "Señal pendiente"
@@ -283,6 +293,7 @@
     },
     "fields": {
       "cleanliness": "Limpieza",
+      "depositCollected": "Fianza cobrada",
       "fuelLevel": "Nivel de combustible",
       "km": "Kilometraje",
       "notes": "Observaciones"
@@ -320,6 +331,7 @@
       "extraCharges": "Cargos extra",
       "photos": "Fotografías",
       "reservationSummary": "Resumen de la reserva",
+      "vehicleCondition": "Estado del vehículo",
       "vehicleStatus": "Estado del vehículo"
     },
     "startPickup": "Inspección de entrega",
@@ -492,7 +504,8 @@
       "extraChargesTotal": "Cargos extra",
       "rentalTotal": "Total alquiler",
       "title": "Resumen",
-      "totalPaid": "Total pagado"
+      "totalPaid": "Total pagado",
+      "totalRental": "Total alquiler"
     },
     "title": "Pagos",
     "types": {
@@ -545,6 +558,10 @@
       "search": "Buscar disponibilidad",
       "selectVehicle": "Seleccionar vehículo"
     },
+    "cancel": {
+      "confirm": "¿Seguro que quieres cancelar esta reserva?",
+      "hint": "No se puede deshacer. La reserva quedará cancelada, pero se conserva en el historial."
+    },
     "client": {
       "createQuick": "Crear cliente rápido",
       "documentNumber": "Número de documento",
@@ -562,8 +579,21 @@
       "pendingSignature": "Pendiente de firma",
       "signed": "Firmado"
     },
+    "deposit": {
+      "retained": "Retenida",
+      "returned": "Devuelta"
+    },
+    "depositStatus": {
+      "paid": "Cobrada",
+      "partialReturned": "Devuelta en parte",
+      "pending": "Pendiente",
+      "retained": "Retenida",
+      "returned": "Devuelta",
+      "waived": "Exenta"
+    },
     "detail": "Detalle de reserva",
     "fields": {
+      "duration": "Duración",
       "notes": "Notas",
       "pickupDate": "Fecha de recogida",
       "pickupLocation": "Lugar de recogida",
@@ -722,6 +752,7 @@
     "photos": {
       "closeGallery": "Cerrar galería",
       "count": "{{count}} fotos",
+      "empty": "No hay fotos todavía",
       "imageAlt": "Foto del vehículo",
       "next": "Siguiente",
       "openGallery": "Ver galería",
@@ -771,6 +802,8 @@
     },
     "subtitle": "Gestiona tu flota",
     "tabs": {
+      "features": "Equipamiento",
+      "info": "Datos",
       "photos": "Fotos",
       "pricing": "Tarifas"
     },
@@ -793,6 +826,7 @@
     "cannotDeliver": "No se puede iniciar la entrega",
     "cannotReturn": "No se puede iniciar la devolución",
     "closeReservation": "Cerrar reserva",
+    "completed": "Reserva completada",
     "contractAlreadySigned": "El contrato ya está firmado",
     "contractCancelled": "El contrato está cancelado",
     "contractPending": "Pendiente de firma",

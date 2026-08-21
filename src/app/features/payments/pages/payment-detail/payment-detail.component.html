@@ -12,7 +12,7 @@
       </button>
       <div class="header-content">
         <div class="title-row">
-          <h1>{{ payment.concept }}</h1>
+          <h1>{{ payment | paymentConcept }}</h1>
           <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
             {{ PAYMENT_STATUS_LABELS[payment.status] | translate }}
           </span>

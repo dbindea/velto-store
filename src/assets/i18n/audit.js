@@ -239,6 +239,21 @@ for (const locale of LOCALES.filter((l) => l !== REFERENCE)) {
   }
 }
 
+// 3b. Placeholder values: a leaf whose value IS its own key. TranslateService
+//     finds it and returns it, so the raw key is rendered on screen with no
+//     error anywhere — `contracts.sign.highlightsTitle` shipped like this and
+//     was only caught by looking at the signing page.
+for (const locale of LOCALES) {
+  const selfReferential = Object.keys(flat[locale])
+    .filter((k) => flat[locale][k] === k)
+    .sort();
+  if (selfReferential.length) {
+    failed = true;
+    console.log(`\n  ✗ ${locale}.json — ${selfReferential.length} valores son su propia clave (marcador sin traducir)`);
+    console.log(list(selfReferential));
+  }
+}
+
 // 4. Untranslated values (warning only)
 console.log('');
 for (const locale of LOCALES.filter((l) => l !== REFERENCE)) {

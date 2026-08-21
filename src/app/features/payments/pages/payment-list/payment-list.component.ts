@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { PaymentService } from '@features/payments/services/payment.service';
 import {
   Payment,
@@ -22,7 +23,7 @@ type TabFilter = 'all' | 'pending' | 'paid' | 'failed';
 @Component({
   selector: 'app-payment-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, PaymentConceptPipe],
   templateUrl: './payment-list.component.html',
   styleUrl: './payment-list.component.scss'
 })

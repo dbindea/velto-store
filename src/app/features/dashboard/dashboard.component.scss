@@ -37,7 +37,29 @@
 
   i { font-size: 2rem; color: var(--success-color); }
   h2 { margin: 0; font-size: 1.1rem; color: var(--text-primary); }
-  p { margin: 0; font-size: 0.9rem; }
+  p { margin: 0; font-size: 0.9rem; max-width: 42ch; }
+}
+
+// Load failure. Deliberately NOT the green check of the "all clear" state —
+// the two must never be mistaken for one another.
+.error-state {
+  i { color: var(--danger-color, #ef4444); }
+}
+
+// Shown above the cards when part of the data failed to load.
+.partial-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--danger-color, #ef4444);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+
+  i { color: var(--danger-color, #ef4444); }
 }
 
 .cards-grid {

@@ -287,19 +287,57 @@ export function isClosed(status: ReservationStatus): boolean {
  * if everything is done. Used by the dashboard and reservation header to
  * display a one-line "next required action".
  */
+/**
+ * The single thing the operator should do next, as an i18n key.
+ *
+ * Walks the canonical order and stops at the first step that is NOT already
+ * done: if that step is allowed it names the action ("Iniciar entrega"), and if
+ * it is blocked it explains what is missing ("Falta cobrar la fianza").
+ *
+ * The `done` check matters. A previous version just returned the reason of the
+ * first guard that said no, but a guard also says no when the step is already
+ * finished — so a fully paid, signed reservation ready for pickup reported
+ * "El contrato ya está firmado", pointing the operator backwards instead of
+ * forwards.
+ */
 export function getReservationNextRequiredAction(ctx: WorkflowContext): string {
-  const checks: Array<() => WorkflowDecision> = [
-    () => canGenerateContract(ctx),
-    () => canGenerateSigningLink(ctx),
-    () => canStartPickup(ctx),
-    () => canStartReturn(ctx),
-    () => canCloseReservation(ctx)
+  const r = ctx.reservation;
+
+  const steps: Array<{ done: boolean; decide: () => WorkflowDecision; action: string }> = [
+    {
+      done: !!ctx.contract,
+      decide: () => canGenerateContract(ctx),
+      action: 'workflow.generateContract'
+    },
+    {
+      done: ctx.contract?.status === 'signed',
+      decide: () => canGenerateSigningLink(ctx),
+      action: 'workflow.generateSigningLink'
+    },
+    {
+      done: ctx.pickupInspection?.status === 'completed',
+      decide: () => canStartPickup(ctx),
+      action: 'workflow.startPickup'
+    },
+    {
+      done: ctx.returnInspection?.status === 'completed',
+      decide: () => canStartReturn(ctx),
+      action: 'workflow.startReturn'
+    },
+    {
+      done: r?.reservationStatus === 'closed',
+      decide: () => canCloseReservation(ctx),
+      action: 'workflow.closeReservation'
+    }
   ];
-  for (const check of checks) {
-    const d = check();
-    if (!d.ok) return d.reason;
+
+  for (const step of steps) {
+    if (step.done) continue;
+    const decision = step.decide();
+    return decision.ok ? step.action : decision.reason;
   }
-  return 'completed';
+
+  return 'workflow.completed';
 }
 
 /** True if at least one `workflowExceptions[]` entry exists for the action. */

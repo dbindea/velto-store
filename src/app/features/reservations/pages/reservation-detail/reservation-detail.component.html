@@ -19,7 +19,7 @@
           </span>
         </div>
         <p class="subtitle">
-          {{ 'reservations.fields.totalDays' | translate }}: {{ reservation.totalDays }}
+          {{ reservation.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
         </p>
         @if (reservation.reservationStatus !== 'closed' && reservation.reservationStatus !== 'cancelled') {
           <p class="next-action">
@@ -263,7 +263,7 @@
                 }
               </div>
               <span class="deposit-status" [ngClass]="getDepositStatusClass(reservation.deposit.status)">
-                {{ reservation.deposit.status }}
+                {{ getDepositStatusLabel(reservation.deposit.status) }}
               </span>
             </div>
           </div>
@@ -550,7 +550,13 @@
             <div class="tile-label">{{ 'payments.fields.amount' | translate }} depositada</div>
             <div class="tile-value">{{ deposit.paid | number:'1.2-2' }} €</div>
             <div class="tile-progress">
-              <span>Devuelta: <strong>{{ deposit.returned | number:'1.2-2' }} €</strong> · Retenida: <strong>{{ deposit.retained | number:'1.2-2' }} €</strong></span>
+              <span>
+                {{ 'reservations.deposit.returned' | translate }}:
+                <strong>{{ deposit.returned | number:'1.2-2' }} €</strong>
+                ·
+                {{ 'reservations.deposit.retained' | translate }}:
+                <strong>{{ deposit.retained | number:'1.2-2' }} €</strong>
+              </span>
             </div>
           </div>
 
@@ -569,11 +575,23 @@
             <i class="pi pi-plus"></i>
             {{ 'payments.registerPayment' | translate }}
           </button>
-          <button class="btn-secondary" type="button" (click)="toggleDepositForm('refund')">
+          <button
+            class="btn-secondary"
+            type="button"
+            (click)="toggleDepositForm('refund')"
+            [disabled]="!canRefundDeposit()"
+            [attr.title]="canRefundDeposit() ? null : (depositBlockReason('refund') | translate)"
+          >
             <i class="pi pi-undo"></i>
             {{ 'payments.deposit.refundFull' | translate }}
           </button>
-          <button class="btn-secondary" type="button" (click)="toggleDepositForm('retain')">
+          <button
+            class="btn-secondary"
+            type="button"
+            (click)="toggleDepositForm('retain')"
+            [disabled]="!canRetainDeposit()"
+            [attr.title]="canRetainDeposit() ? null : (depositBlockReason('retain') | translate)"
+          >
             <i class="pi pi-lock"></i>
             {{ 'payments.deposit.retain' | translate }}
           </button>
@@ -673,7 +691,7 @@
                   <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
                 </div>
                 <div class="payment-info">
-                  <span class="payment-concept">{{ payment.concept }}</span>
+                  <span class="payment-concept">{{ payment | paymentConcept }}</span>
                   <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
                 </div>
                 <div class="payment-amounts">
@@ -734,8 +752,8 @@
             </button>
           </div>
           <div class="modal-body">
-            <p>¿Estás seguro de que quieres cancelar esta reserva?</p>
-            <p class="modal-hint">Esta acción no se puede deshacer. La reserva quedará marcada como cancelada pero los datos se conservarán en el historial.</p>
+            <p>{{ 'reservations.cancel.confirm' | translate }}</p>
+            <p class="modal-hint">{{ 'reservations.cancel.hint' | translate }}</p>
             <div class="modal-actions">
               <button class="btn btn-secondary" type="button" (click)="closeCancelModal()">
                 Volver

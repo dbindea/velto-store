@@ -45,3 +45,6 @@ src/environments/environment.prod.ts
 
 # Local credential notes — must never be committed
 CREDENTIALS.md
+
+# Playwright MCP scratch output (snapshots, console logs, screenshots)
+.playwright-mcp/

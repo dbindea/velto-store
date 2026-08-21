@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { ClientService } from '@features/clients/services/client.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
@@ -28,7 +29,7 @@ type Tab = 'summary' | 'license' | 'documents' | 'reservations' | 'payments';
 @Component({
   selector: 'app-client-detail',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, PaymentConceptPipe],
   templateUrl: './client-detail.component.html',
   styleUrl: './client-detail.component.scss'
 })

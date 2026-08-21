@@ -4,10 +4,20 @@
     <p class="subtitle">{{ 'dashboard.subtitle' | translate }}</p>
   </div>
 
+  <!--
+    The load-failure branch comes BEFORE the empty state on purpose: when the
+    data does not load, "Todo al día" is a lie the operator would act on.
+  -->
   @if (loading) {
     <div class="loading-state">
       <i class="pi pi-spin pi-spinner"></i>
       <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (loadFailed) {
+    <div class="empty-state error-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <h2>{{ 'dashboard.loadFailedTitle' | translate }}</h2>
+      <p>{{ 'dashboard.loadFailedHint' | translate }}</p>
     </div>
   } @else if (cards.length === 0) {
     <div class="empty-state">
@@ -16,6 +26,12 @@
       <p>{{ 'dashboard.allClearHint' | translate }}</p>
     </div>
   } @else {
+    @if (partialFailure) {
+      <div class="partial-warning">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ 'dashboard.partialFailure' | translate }}</span>
+      </div>
+    }
     <div class="cards-grid">
       @for (card of cards; track $index) {
         <!-- Fleet availability (always shown) -->

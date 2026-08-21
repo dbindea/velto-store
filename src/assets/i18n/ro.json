@@ -58,6 +58,9 @@
       "phone": "Telefon",
       "trustLevel": "Nivel de încredere"
     },
+    "license": {
+      "noInfo": "Nu există informații despre permisul de conducere"
+    },
     "licenseCountries": {
       "ES": "Spania",
       "EU": "Uniunea Europeană",
@@ -91,6 +94,7 @@
       "documents": "Documente",
       "drivingLicense": "Permis de conducere",
       "internalManagement": "Gestionare internă",
+      "payments": "Plăți",
       "personalData": "Date personale",
       "reservations": "Rezervări"
     },
@@ -151,9 +155,12 @@
       "depositAmount": "Garanție",
       "emailedAt": "Trimis prin email",
       "generatedAt": "Generat",
+      "phone": "Telefon",
+      "plateNumber": "Număr",
       "reservation": "Rezervare",
       "signedAt": "Semnat",
-      "vehicle": "Vehicul"
+      "vehicle": "Vehicul",
+      "year": "An"
     },
     "list": {
       "empty": "Nu există contracte"
@@ -165,7 +172,7 @@
       "acceptConditions": "Am citit și accept condițiile contractului.",
       "alreadySigned": "Acest contract este deja semnat.",
       "expired": "Link-ul de semnare a expirat.",
-      "highlightsTitle": "contracts.sign.highlightsTitle",
+      "highlightsTitle": "Puncte cheie ale contractului",
       "invalid": "Link invalid.",
       "readOnlyNotice": "Verifică datele contractului înainte de a semna.",
       "submitSignature": "Semnează contractul",
@@ -197,6 +204,9 @@
       "rented": "Închiriate",
       "total": "Total"
     },
+    "loadFailedHint": "Verifică conexiunea și încearcă din nou. Nu presupune că nu există sarcini în așteptare.",
+    "loadFailedTitle": "Datele nu au putut fi încărcate",
+    "partialFailure": "Unele date nu au putut fi încărcate, lista poate fi incompletă.",
     "pendingPayment": {
       "hint": "Încasează înainte de a confirma predarea",
       "label": "Avans neîncasat"
@@ -283,6 +293,7 @@
     },
     "fields": {
       "cleanliness": "Curățenie",
+      "depositCollected": "Garanție încasată",
       "fuelLevel": "Nivel combustibil",
       "km": "Kilometraj",
       "notes": "Observații"
@@ -320,6 +331,7 @@
       "extraCharges": "Taxe suplimentare",
       "photos": "Fotografii",
       "reservationSummary": "Rezumat rezervare",
+      "vehicleCondition": "Starea vehiculului",
       "vehicleStatus": "Stare vehicul"
     },
     "startPickup": "Inspecție predare",
@@ -492,7 +504,8 @@
       "extraChargesTotal": "Taxe extra",
       "rentalTotal": "Total închiriere",
       "title": "Rezumat",
-      "totalPaid": "Total plătit"
+      "totalPaid": "Total plătit",
+      "totalRental": "Total închiriere"
     },
     "title": "Plăți",
     "types": {
@@ -545,6 +558,10 @@
       "search": "Caută disponibilitate",
       "selectVehicle": "Selectează vehicul"
     },
+    "cancel": {
+      "confirm": "Anulezi această rezervare?",
+      "hint": "Nu se poate anula. Rezervarea rămâne în istoric ca anulată."
+    },
     "client": {
       "createQuick": "Creare rapidă client",
       "documentNumber": "Număr document",
@@ -562,8 +579,21 @@
       "pendingSignature": "Așteaptă semnare",
       "signed": "Semnat"
     },
+    "deposit": {
+      "retained": "Reținută",
+      "returned": "Returnată"
+    },
+    "depositStatus": {
+      "paid": "Încasată",
+      "partialReturned": "Parțial returnată",
+      "pending": "În așteptare",
+      "retained": "Reținută",
+      "returned": "Returnată",
+      "waived": "Scutită"
+    },
     "detail": "Detalii rezervare",
     "fields": {
+      "duration": "Durată",
       "notes": "Note",
       "pickupDate": "Data preluării",
       "pickupLocation": "Locație preluare",
@@ -722,6 +752,7 @@
     "photos": {
       "closeGallery": "Închide galeria",
       "count": "{{count}} fotografii",
+      "empty": "Încă nu există fotografii",
       "imageAlt": "Fotografie vehicul",
       "next": "Următor",
       "openGallery": "Vezi galeria",
@@ -771,6 +802,8 @@
     },
     "subtitle": "Gestionează flota ta",
     "tabs": {
+      "features": "Dotare",
+      "info": "Date",
       "photos": "Fotografii",
       "pricing": "Tarife"
     },
@@ -793,6 +826,7 @@
     "cannotDeliver": "Nu se poate începe predarea",
     "cannotReturn": "Nu se poate începe returnarea",
     "closeReservation": "Închide rezervarea",
+    "completed": "Rezervare finalizată",
     "contractAlreadySigned": "Contractul este deja semnat",
     "contractCancelled": "Contract anulat",
     "contractPending": "În așteptarea semnării",

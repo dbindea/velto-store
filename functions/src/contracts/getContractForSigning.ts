@@ -60,6 +60,9 @@ function toDate(value: any): Date | undefined {
   return undefined;
 }
 
+/** See the note in pdf.ts — Cloud Functions run with TZ=UTC. */
+const CONTRACT_TIME_ZONE = process.env.VELTO_TIME_ZONE || 'Europe/Madrid';
+
 function formatDate(d?: Date): string | undefined {
   if (!d) return undefined;
   try {
@@ -68,7 +71,8 @@ function formatDate(d?: Date): string | undefined {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: CONTRACT_TIME_ZONE
     });
   } catch {
     return undefined;

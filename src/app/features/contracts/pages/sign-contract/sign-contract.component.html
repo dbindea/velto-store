@@ -81,8 +81,10 @@
           }
           @if (view.totalDays) {
             <div class="summary-row">
-              <span class="label">{{ 'reservations.fields.totalDays' | translate }}:</span>
-              <span class="value">{{ view.totalDays }}</span>
+              <span class="label">{{ 'reservations.fields.duration' | translate }}:</span>
+              <span class="value">
+                {{ view.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
+              </span>
             </div>
           }
           @if (view.finalPrice !== undefined) {

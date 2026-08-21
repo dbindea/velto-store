@@ -176,7 +176,7 @@
           }
           @if (contract.clientSnapshot.phone) {
             <div class="info-row">
-              <span class="label">Teléfono:</span>
+              <span class="label">{{ 'contracts.fields.phone' | translate }}:</span>
               <span class="value">{{ contract.clientSnapshot.phone }}</span>
             </div>
           }
@@ -202,7 +202,7 @@
         </div>
         <div class="card-content">
           <div class="info-row">
-            <span class="label">Vehículo:</span>
+            <span class="label">{{ 'contracts.fields.vehicle' | translate }}:</span>
             <span class="value">
               {{ contract.vehicleSnapshot.brand }} {{ contract.vehicleSnapshot.model }}
               @if (contract.vehicleSnapshot.version) {
@@ -211,12 +211,12 @@
             </span>
           </div>
           <div class="info-row">
-            <span class="label">Matrícula:</span>
+            <span class="label">{{ 'contracts.fields.plateNumber' | translate }}:</span>
             <span class="value plate">{{ contract.vehicleSnapshot.plateNumber }}</span>
           </div>
           @if (contract.vehicleSnapshot.year) {
             <div class="info-row">
-              <span class="label">Año:</span>
+              <span class="label">{{ 'contracts.fields.year' | translate }}:</span>
               <span class="value">{{ contract.vehicleSnapshot.year }}</span>
             </div>
           }

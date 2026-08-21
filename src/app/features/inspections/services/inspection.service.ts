@@ -13,8 +13,8 @@ import {
   where
 } from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
-import { Observable, from, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, from, of, firstValueFrom } from 'rxjs';
+import { map, switchMap, first } from 'rxjs/operators';
 import {
   Inspection,
   InspectionType,
@@ -159,9 +159,11 @@ export class InspectionService {
     // not been settled. The UI hides the button when this fails, but the
     // service must enforce it too.
     const existing = await this.getInspectionByReservationAndType(reservationId, 'pickup');
-    const contract = (await this.contractService
-      .getContractByReservation(reservationId)
-      .toPromise()) || null;
+    // `first()` is required: getContractByReservation is a live onSnapshot
+    // stream that never completes, so awaiting it directly would hang.
+    const contract = await firstValueFrom(
+      this.contractService.getContractByReservation(reservationId).pipe(first())
+    );
     const pickupInspection = existing || null;
     const decision = assertCanStartPickup({
       reservation,

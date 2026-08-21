@@ -102,6 +102,11 @@ export class DashboardComponent implements OnInit {
   loading = true;
   cards: DashboardCard[] = [];
 
+  /** Some data could not be loaded, so the cards shown are incomplete. */
+  partialFailure = false;
+  /** Nothing could be loaded at all. */
+  loadFailed = false;
+
   ngOnInit(): void {
     this.loadDashboard();
   }
@@ -142,14 +147,27 @@ export class DashboardComponent implements OnInit {
         (d) => ({ id: d.id, ...d.data() }) as Vehicle
       );
 
-      // Maintenance: pull scheduled/pending/overdue items
-      const maintenanceRef = collection(this.firestore, 'vehicleMaintenance');
-      const maintenanceSnap = await getDocs(
-        query(maintenanceRef, where('status', 'in', ['pending', 'scheduled', 'overdue']))
-      );
-      const maintenanceItems = maintenanceSnap.docs.map(
-        (d) => ({ id: d.id, ...d.data() }) as VehicleMaintenance
-      );
+      // Maintenance is queried separately and its failure is contained.
+      //
+      // It used to sit inside the same try as the three queries above, so a
+      // permission error on `vehicleMaintenance` threw away the reservations,
+      // contracts and vehicles that had already loaded fine. The dashboard then
+      // rendered its empty state — telling the operator "all clear" when in
+      // reality nothing had loaded. A degraded dashboard is fine; a dashboard
+      // that silently claims there is nothing to do is not.
+      let maintenanceItems: VehicleMaintenance[] = [];
+      try {
+        const maintenanceRef = collection(this.firestore, 'vehicleMaintenance');
+        const maintenanceSnap = await getDocs(
+          query(maintenanceRef, where('status', 'in', ['pending', 'scheduled', 'overdue']))
+        );
+        maintenanceItems = maintenanceSnap.docs.map(
+          (d) => ({ id: d.id, ...d.data() }) as VehicleMaintenance
+        );
+      } catch (error) {
+        console.error('Dashboard: no se pudo cargar el mantenimiento', error);
+        this.partialFailure = true;
+      }
 
       this.cards = this.buildCards(
         reservations,
@@ -162,6 +180,7 @@ export class DashboardComponent implements OnInit {
     } catch (error) {
       console.error('Dashboard load error:', error);
       this.cards = [];
+      this.loadFailed = true;
     } finally {
       this.loading = false;
     }

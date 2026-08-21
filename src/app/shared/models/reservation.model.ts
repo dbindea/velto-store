@@ -256,6 +256,20 @@ export const RESERVATION_PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus,
   refunded: 'reservations.paymentStatus.refunded'
 };
 
+/**
+ * Deposit status. This map was missing entirely, so reservation-detail rendered
+ * `reservation.deposit.status` raw — the operator saw the Firestore value
+ * "pending" in English regardless of the selected language.
+ */
+export const RESERVATION_DEPOSIT_STATUS_LABELS: Record<ReservationDeposit['status'], string> = {
+  pending: 'reservations.depositStatus.pending',
+  paid: 'reservations.depositStatus.paid',
+  partial_returned: 'reservations.depositStatus.partialReturned',
+  returned: 'reservations.depositStatus.returned',
+  retained: 'reservations.depositStatus.retained',
+  waived: 'reservations.depositStatus.waived'
+};
+
 export const RESERVATION_CONTRACT_STATUS_LABELS: Record<ReservationContractStatus, string> = {
   pending: 'reservations.contractStatus.pending',
   generated: 'reservations.contractStatus.generated',
