@@ -1,4 +1,4 @@
-<div class="reservation-timeline" role="region" [attr.aria-label]="'timeline.title' | translate">
+<div class="reservation-timeline" role="region" [attr.aria-label]="'reservations.timeline.title' | translate">
   <div class="timeline-track" role="list">
     @for (s of steps(); track trackStep($index, s)) {
       <div
@@ -29,13 +29,13 @@
 
           @if (s.state === 'skipped_by_exception') {
             <div class="step-skipped-reason">
-              {{ 'timeline.skippedByException' | translate }}
+              {{ 'reservations.timeline.skippedByException' | translate }}
             </div>
           }
 
           @if (s.state === 'current' && !readOnly && s.action) {
             <button class="step-action-btn" type="button" (click)="runAction(s)">
-              {{ 'timeline.nextAction' | translate }}
+              {{ 'reservations.timeline.nextAction' | translate }}
               <i class="pi pi-arrow-right" aria-hidden="true"></i>
             </button>
           }

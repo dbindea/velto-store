@@ -19,7 +19,12 @@ import {
   TRANSMISSION_LABELS,
   BODY_TYPE_LABELS
 } from '@shared/models/vehicle.model';
-import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
+import {
+  Reservation,
+  RESERVATION_STATUS_LABELS,
+  RESERVATION_PAYMENT_STATUS_LABELS
+} from '@shared/models/reservation.model';
+import { TranslateService } from '@core/i18n/translate.service';
 import { toDate } from '@shared/utils/reservation-date.util';
 import {
   MAINTENANCE_PRIORITY_COLORS,
@@ -51,6 +56,7 @@ export class VehicleDetailComponent implements OnInit {
   private vehicleService = inject(VehicleService);
   private reservationService = inject(ReservationService);
   private maintenanceService = inject(VehicleMaintenanceService);
+  private translateService = inject(TranslateService);
 
   vehicle: Vehicle | null = null;
   loading = true;
@@ -160,19 +166,19 @@ export class VehicleDetailComponent implements OnInit {
   }
 
   getMaintenanceTypeLabel(t: VehicleMaintenance['type']): string {
-    return MAINTENANCE_TYPE_LABELS[t];
+    return this.translateService.translate(MAINTENANCE_TYPE_LABELS[t]);
   }
   getMaintenanceTypeIcon(t: VehicleMaintenance['type']): string {
     return MAINTENANCE_TYPE_ICONS[t];
   }
   getMaintenanceStatusLabel(s: MaintenanceStatus): string {
-    return MAINTENANCE_STATUS_LABELS[s];
+    return this.translateService.translate(MAINTENANCE_STATUS_LABELS[s]);
   }
   getMaintenanceStatusClass(s: MaintenanceStatus): string {
     return MAINTENANCE_STATUS_COLORS[s];
   }
   getMaintenancePriorityLabel(p: VehicleMaintenance['priority']): string {
-    return MAINTENANCE_PRIORITY_LABELS[p];
+    return this.translateService.translate(MAINTENANCE_PRIORITY_LABELS[p]);
   }
   getMaintenancePriorityClass(p: VehicleMaintenance['priority']): string {
     return MAINTENANCE_PRIORITY_COLORS[p];
@@ -313,13 +319,22 @@ export class VehicleDetailComponent implements OnInit {
     if (this.vehicle?.id) this.loadMaintenance(this.vehicle.id);
   }
 
-  // Reservation helpers
+  // Reservation helpers. The *_LABELS maps hold i18n keys and the template
+  // calls these getters without a `| translate`, so they resolve the key here.
   getReservationStatusLabel(status: string): string {
-    return RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS] || status;
+    return this.t(RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS], status);
   }
 
   getReservationPaymentLabel(status: string): string {
-    return PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS] || status;
+    return this.t(
+      RESERVATION_PAYMENT_STATUS_LABELS[status as keyof typeof RESERVATION_PAYMENT_STATUS_LABELS],
+      status
+    );
+  }
+
+  /** Resolve an i18n key, falling back to the raw value for unknown states. */
+  private t(key: string | undefined, fallback: string): string {
+    return key ? this.translateService.translate(key) : fallback;
   }
 
   getReservationStatusClass(status: string): string {
@@ -420,23 +435,23 @@ export class VehicleDetailComponent implements OnInit {
   }
 
   getStatusLabel(status: VehicleStatus): string {
-    return VEHICLE_STATUS_LABELS[status];
+    return this.t(VEHICLE_STATUS_LABELS[status], status);
   }
 
   getCategoryLabel(category: string): string {
-    return VEHICLE_CATEGORY_LABELS[category as keyof typeof VEHICLE_CATEGORY_LABELS] || category;
+    return this.t(VEHICLE_CATEGORY_LABELS[category as keyof typeof VEHICLE_CATEGORY_LABELS], category);
   }
 
   getFuelLabel(fuel: string): string {
-    return FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS] || fuel;
+    return this.t(FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS], fuel);
   }
 
   getTransmissionLabel(trans: string): string {
-    return TRANSMISSION_LABELS[trans as keyof typeof TRANSMISSION_LABELS] || trans;
+    return this.t(TRANSMISSION_LABELS[trans as keyof typeof TRANSMISSION_LABELS], trans);
   }
 
   getBodyTypeLabel(body: BodyType): string {
-    return BODY_TYPE_LABELS[body] || body;
+    return this.t(BODY_TYPE_LABELS[body], body);
   }
 
   getPricingRuleLabel(rule: VehiclePricingRule): string {

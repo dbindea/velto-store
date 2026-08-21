@@ -231,11 +231,11 @@
               <div class="payment-amounts">
                 <span class="required">{{ reservation.initialPayment.requiredAmount | number:'1.2-2' }} €</span>
                 @if (reservation.initialPayment.paidAmount > 0) {
-                  <span class="paid">{{ reservation.initialPayment.paidAmount | number:'1.2-2' }} € {{ 'paid' | translate }}</span>
+                  <span class="paid">{{ reservation.initialPayment.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
                 }
               </div>
               <span class="payment-status" [ngClass]="reservation.initialPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
-                {{ reservation.initialPayment.status === 'paid' ? ('paid' | translate) : ('pending' | translate) }}
+                {{ reservation.initialPayment.status === 'paid' ? ('reservations.paymentStatus.paid' | translate) : ('reservations.paymentStatus.pending' | translate) }}
               </span>
             </div>
 
@@ -245,11 +245,11 @@
               <div class="payment-amounts">
                 <span class="required">{{ reservation.remainingPayment.requiredAmount | number:'1.2-2' }} €</span>
                 @if (reservation.remainingPayment.paidAmount > 0) {
-                  <span class="paid">{{ reservation.remainingPayment.paidAmount | number:'1.2-2' }} € {{ 'paid' | translate }}</span>
+                  <span class="paid">{{ reservation.remainingPayment.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
                 }
               </div>
               <span class="payment-status" [ngClass]="reservation.remainingPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
-                {{ reservation.remainingPayment.status === 'paid' ? ('paid' | translate) : ('pending' | translate) }}
+                {{ reservation.remainingPayment.status === 'paid' ? ('reservations.paymentStatus.paid' | translate) : ('reservations.paymentStatus.pending' | translate) }}
               </span>
             </div>
 
@@ -259,7 +259,7 @@
               <div class="payment-amounts">
                 <span class="required">{{ reservation.deposit.requiredAmount | number:'1.2-2' }} €</span>
                 @if (reservation.deposit.paidAmount > 0) {
-                  <span class="paid">{{ reservation.deposit.paidAmount | number:'1.2-2' }} € {{ 'paid' | translate }}</span>
+                  <span class="paid">{{ reservation.deposit.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
                 }
               </div>
               <span class="deposit-status" [ngClass]="getDepositStatusClass(reservation.deposit.status)">

@@ -14,8 +14,13 @@ import {
   CLIENT_FILE_TYPE_LABELS,
   DRIVING_LICENSE_COUNTRY_LABELS
 } from '@shared/models/client.model';
-import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
-import { Payment, PAYMENT_TYPE_LABELS, PAYMENT_STATUS_LABELS as PAYMENT_STATUS_LABELS_PAYMENT } from '@shared/models/payment.model';
+import {
+  Reservation,
+  RESERVATION_STATUS_LABELS,
+  RESERVATION_PAYMENT_STATUS_LABELS
+} from '@shared/models/reservation.model';
+import { Payment, PAYMENT_TYPE_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/payment.model';
+import { TranslateService } from '@core/i18n/translate.service';
 import { toDate } from '@shared/utils/reservation-date.util';
 
 type Tab = 'summary' | 'license' | 'documents' | 'reservations' | 'payments';
@@ -33,6 +38,7 @@ export class ClientDetailComponent implements OnInit {
   private clientService = inject(ClientService);
   private reservationService = inject(ReservationService);
   private paymentService = inject(PaymentService);
+  private translateService = inject(TranslateService);
 
   client: Client | null = null;
   reservations: Reservation[] = [];
@@ -44,7 +50,7 @@ export class ClientDetailComponent implements OnInit {
 
   // Payment labels exposed to template
   PAYMENT_TYPE_LABELS = PAYMENT_TYPE_LABELS;
-  PAYMENT_STATUS_LABELS_PAYMENT = PAYMENT_STATUS_LABELS_PAYMENT;
+  PAYMENT_STATUS_LABELS = PAYMENT_STATUS_LABELS;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -242,7 +248,7 @@ export class ClientDetailComponent implements OnInit {
   }
 
   getTrustLabel(level: ClientTrustLevel | undefined): string {
-    return CLIENT_TRUST_LEVEL_LABELS[level || 'new'];
+    return this.t(CLIENT_TRUST_LEVEL_LABELS[level || 'new'], level || 'new');
   }
 
   getTrustClass(level: ClientTrustLevel | undefined): string {
@@ -250,11 +256,14 @@ export class ClientDetailComponent implements OnInit {
   }
 
   getFileTypeLabel(type: ClientDocumentFile['type']): string {
-    return CLIENT_FILE_TYPE_LABELS[type];
+    return this.t(CLIENT_FILE_TYPE_LABELS[type], type);
   }
 
   getCountryLabel(country: any): string {
-    return DRIVING_LICENSE_COUNTRY_LABELS[country as keyof typeof DRIVING_LICENSE_COUNTRY_LABELS] || country;
+    return this.t(
+      DRIVING_LICENSE_COUNTRY_LABELS[country as keyof typeof DRIVING_LICENSE_COUNTRY_LABELS],
+      country
+    );
   }
 
   getDocumentTypeLabel(type: string | undefined): string {
@@ -268,12 +277,22 @@ export class ClientDetailComponent implements OnInit {
     return labels[type] || type;
   }
 
+  // The *_LABELS maps hold i18n keys, and these getters are called straight
+  // from the template without a `| translate`, so they resolve the key here.
   getStatusLabel(status: string): string {
-    return RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS] || status;
+    return this.t(RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS], status);
   }
 
   getPaymentLabel(status: string): string {
-    return PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS] || status;
+    return this.t(
+      RESERVATION_PAYMENT_STATUS_LABELS[status as keyof typeof RESERVATION_PAYMENT_STATUS_LABELS],
+      status
+    );
+  }
+
+  /** Resolve an i18n key, falling back to the raw value for unknown states. */
+  private t(key: string | undefined, fallback: string): string {
+    return key ? this.translateService.translate(key) : fallback;
   }
 
   getStatusClass(status: string): string {

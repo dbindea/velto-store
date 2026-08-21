@@ -22,30 +22,20 @@
   margin-bottom: 2rem;
 }
 
+// Holds the full wordmark, which is wide (roughly 6.5:1). The old 96x96
+// square was sized for the isologo and would squash the lockup.
 .logo {
-  width: 96px;
-  height: 96px;
-  background: transparent;
-  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.25rem;
-  color: white;
-  font-size: 1.75rem;
+  margin: 0 auto 1.5rem;
 
-  .logo-image {
-    width: 96px;
-    height: 96px;
+  app-brand-logo {
     display: block;
+    height: 44px;
+    max-width: 100%;
   }
-}
 
-.title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem;
 }
 
 .subtitle {

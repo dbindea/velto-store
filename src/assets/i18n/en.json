@@ -1,7 +1,4 @@
 {
-  "app": {
-    "name": "VELTO"
-  },
   "auth": {
     "loading": "Verifying...",
     "loginSubtitle": "Internal access",
@@ -61,6 +58,12 @@
       "phone": "Phone",
       "trustLevel": "Trust level"
     },
+    "licenseCountries": {
+      "ES": "Spain",
+      "EU": "European Union",
+      "OTHER": "Other",
+      "RO": "Romania"
+    },
     "new": "New client",
     "noClients": "No clients yet",
     "payments": {
@@ -113,6 +116,12 @@
     "loading": "Loading...",
     "moduleInProgress": "Module in preparation",
     "or": "or",
+    "photos": {
+      "camera": "Camera",
+      "gallery": "Gallery",
+      "takePhoto": "Take photo",
+      "uploadFromGallery": "Upload from gallery"
+    },
     "refresh": "Refresh",
     "save": "Save",
     "search": "Search",
@@ -178,9 +187,6 @@
     },
     "subtitle": "Generate, sign and send rental contracts",
     "title": "Contracts"
-  },
-  "currentImage": {
-    "url": "Current image URL"
   },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",
@@ -506,12 +512,6 @@
       "rentalPayment": "Full payment"
     }
   },
-  "photos": {
-    "camera": "Camera",
-    "gallery": "Gallery",
-    "takePhoto": "Take photo",
-    "uploadFromGallery": "Upload from gallery"
-  },
   "reports": {
     "days": "days",
     "monthlyRevenue": "Monthly revenue",
@@ -554,6 +554,14 @@
       "search": "Search client...",
       "select": "Select client"
     },
+    "contractStatus": {
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "generated": "Generated",
+      "pending": "Pending",
+      "pendingSignature": "Pending signature",
+      "signed": "Signed"
+    },
     "detail": "Reservation details",
     "fields": {
       "notes": "Notes",
@@ -581,7 +589,11 @@
       "title": "Internal notes"
     },
     "paymentStatus": {
-      "pending": "Pending"
+      "paid": "Paid",
+      "partial": "Partial",
+      "pending": "Pending",
+      "refunded": "Refunded",
+      "settled": "Settled"
     },
     "pricing": {
       "basePrice": "Base price",
@@ -600,7 +612,28 @@
       "reserved": "Reserved",
       "returned": "Returned"
     },
+    "steps": {
+      "client": "Client",
+      "dates": "Dates",
+      "summary": "Summary",
+      "vehicle": "Vehicle"
+    },
     "subtitle": "Manage rental reservations",
+    "timeline": {
+      "contractGenerated": "Contract generated",
+      "contractSigned": "Contract signed",
+      "depositPaid": "Deposit paid",
+      "depositSettled": "Deposit settled",
+      "initialPaymentPaid": "Down payment paid",
+      "nextAction": "Next action",
+      "pickupCompleted": "Pickup completed",
+      "remainingPaymentPaid": "Balance paid",
+      "reservationClosed": "Reservation closed",
+      "reservationCreated": "Reservation created",
+      "returnCompleted": "Return completed",
+      "skippedByException": "Skipped by exception",
+      "title": "Reservation progress"
+    },
     "title": "Reservations"
   },
   "search": {
@@ -617,10 +650,6 @@
     "placeholder": "Search client, vehicle or reservation…",
     "trigger": "Search…"
   },
-  "timeline": {
-    "nextAction": "Next action",
-    "skippedByException": "Skipped by exception"
-  },
   "vehicles": {
     "actions": {
       "changeStatus": "Change status"
@@ -634,6 +663,17 @@
       "mpv": "MPV",
       "suv": "SUV",
       "van": "Van/Passengers"
+    },
+    "categories": {
+      "compact": "Compact",
+      "economy": "Economy",
+      "fullsize": "Full size",
+      "intermediate": "Intermediate",
+      "mini": "Mini",
+      "premium": "Premium",
+      "standard": "Standard",
+      "suv": "SUV",
+      "van": "Van"
     },
     "changeStatusTitle": "Change vehicle status",
     "deleteConfirm": "Are you sure you want to delete this vehicle? This action cannot be undone.",
@@ -667,6 +707,12 @@
     },
     "filterAllCategories": "All categories",
     "filterAllStatus": "All statuses",
+    "fuelTypes": {
+      "diesel": "Diesel",
+      "electric": "Electric",
+      "hybrid": "Hybrid",
+      "petrol": "Petrol"
+    },
     "help": {
       "acrissGenerated": "ACRISS/SIPP code: Category + Body type + Transmission + Fuel/A/C"
     },
@@ -717,12 +763,22 @@
       "rentalClassification": "Rental classification",
       "reservations": "Reservations"
     },
+    "status": {
+      "available": "Available",
+      "maintenance": "Maintenance",
+      "outOfService": "Out of service",
+      "rented": "Rented"
+    },
     "subtitle": "Manage your fleet",
     "tabs": {
       "photos": "Photos",
       "pricing": "Pricing"
     },
     "title": "Vehicles",
+    "transmissions": {
+      "automatic": "Automatic",
+      "manual": "Manual"
+    },
     "viewDetail": "View details"
   },
   "workflow": {

@@ -27,7 +27,7 @@ npm run deploy:all        # build + firebase deploy (todo)
 npm run firebase:emulators
 
 # i18n (ver sección abajo)
-npm run i18n:all          # extract → schema → build → audit
+npm run i18n:audit        # verifica claves faltantes, huérfanas y paridad es/en/ro
 
 # Cloud Functions
 npm --prefix functions run build    # tsc + copia de fuentes TTF
@@ -170,7 +170,23 @@ Las claves siguen jerarquía por módulo: `vehicles.*`, `reservations.*`, `payme
 
 Las razones de bloqueo del workflow usan prefijo `workflow.*` para que el pipe `translate` las muestre sin lógica extra.
 
-**Al añadir texto visible:** añade la clave a los tres idiomas y ejecuta `npm run i18n:all`. El paso `i18n:audit` detecta claves huérfanas y faltantes.
+**Los tres JSON son la única fuente de verdad.** Se editan a mano; no hay generador. Existió un pipeline (`used.js` → `filter.js` → `build-schema.js` → `build-translations.js`) que mantenía una segunda copia del árbol de claves y regeneraba los JSON desde ella: las dos copias divergieron y el auditor no lo detectaba porque filtraba usadas y presentes por la misma lista blanca de módulos, así que una clave con prefijo desconocido desaparecía de ambos lados. Está retirado.
+
+**Al añadir texto visible:** añade la clave a los tres idiomas y ejecuta `npm run i18n:audit`, que falla con código 1 si hay claves faltantes, huérfanas o desalineadas.
+
+### Claves compuestas
+
+Varias plantillas construyen la clave al vuelo: `'reservations.steps.' + step`, y el workflow util usa `` `reservations.timeline.${key}` ``. Esas hojas no se pueden localizar buscando el literal, así que el auditor lleva un registro explícito en `DYNAMIC_KEY_SETS` (dentro de `audit.js`) con los valores posibles de cada prefijo.
+
+**Si añades un prefijo compuesto nuevo, regístralo ahí.** El auditor falla al detectar un prefijo sin registrar — es lo que impide que se repita el caso de los 4 pasos del asistente y los 10 hitos del timeline, que se desplegaron sin traducir mientras el auditor daba el visto bueno.
+
+### Regla de oro de los mapas `*_LABELS`
+
+Los `Record<Enum, string>` de `shared/models/` contienen **claves i18n, nunca texto**. Un mapa con español dentro atraviesa el pipe sin cambios y el español se cuela en la UI inglesa y rumana.
+
+Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelven la clave con `translateService.translate()`, porque las plantillas los pintan sin `| translate`.
+
+⚠️ `TranslateService.translate()` devuelve **la propia clave** si no la encuentra, y **no hay fallback a español**: si falta en `ro.json`, el usuario rumano ve la clave en crudo.
 
 ## Cloud Functions
 

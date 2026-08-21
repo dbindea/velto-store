@@ -400,7 +400,7 @@
                   </div>
                   <div class="payment-meta">
                     <span class="badge" [ngClass]="'status-' + payment.status">
-                      {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                      {{ PAYMENT_STATUS_LABELS[payment.status] | translate }}
                     </span>
                     <span class="payment-date">
                       {{ getPaymentDate(payment) ? (getPaymentDate(payment) | date:'dd/MM/yyyy') : (payment.createdAt | date:'dd/MM/yyyy') }}
@@ -432,7 +432,7 @@
                   </div>
                   <div class="payment-meta">
                     <span class="badge" [ngClass]="'status-' + payment.status">
-                      {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                      {{ PAYMENT_STATUS_LABELS[payment.status] | translate }}
                     </span>
                     <span class="payment-date">
                       {{ getPaymentDate(payment) ? (getPaymentDate(payment) | date:'dd/MM/yyyy') : (payment.createdAt | date:'dd/MM/yyyy') }}
@@ -461,7 +461,7 @@
                   </div>
                   <div class="payment-meta">
                     <span class="badge" [ngClass]="'status-' + payment.status">
-                      {{ PAYMENT_STATUS_LABELS_PAYMENT[payment.status] | translate }}
+                      {{ PAYMENT_STATUS_LABELS[payment.status] | translate }}
                     </span>
                     <span class="payment-date">
                       {{ getPaymentDate(payment) ? (getPaymentDate(payment) | date:'dd/MM/yyyy') : (payment.createdAt | date:'dd/MM/yyyy') }}

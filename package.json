@@ -13,11 +13,7 @@
     "deploy:all": "npm run build && firebase deploy",
     "serve:hosting": "npm run build && firebase emulators:start --only hosting",
     "firebase:emulators": "firebase emulators:start",
-    "i18n:extract": "node src/assets/i18n/used.js && node src/assets/i18n/filter.js",
-    "i18n:schema": "node src/assets/i18n/build-schema.js",
-    "i18n:build": "node src/assets/i18n/build-translations.js",
-    "i18n:audit": "node src/assets/i18n/audit.js",
-    "i18n:all": "npm run i18n:extract && npm run i18n:schema && npm run i18n:build && npm run i18n:audit"
+    "i18n:audit": "node src/assets/i18n/audit.js"
   },
   "prettier": {
     "printWidth": 100,

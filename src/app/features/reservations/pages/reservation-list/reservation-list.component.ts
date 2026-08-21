@@ -4,7 +4,13 @@ import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
-import { Reservation, ReservationStatus, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/reservation.model';
+import {
+  Reservation,
+  ReservationStatus,
+  RESERVATION_STATUS_LABELS,
+  RESERVATION_PAYMENT_STATUS_LABELS
+} from '@shared/models/reservation.model';
+import { TranslateService } from '@core/i18n/translate.service';
 import { toDate } from '@shared/utils/reservation-date.util';
 
 @Component({
@@ -17,6 +23,7 @@ import { toDate } from '@shared/utils/reservation-date.util';
 export class ReservationListComponent implements OnInit {
   private router = inject(Router);
   private reservationService = inject(ReservationService);
+  private translateService = inject(TranslateService);
 
   reservations: Reservation[] = [];
   filteredReservations: Reservation[] = [];
@@ -90,12 +97,22 @@ export class ReservationListComponent implements OnInit {
     this.router.navigate(['/reservations', 'new']);
   }
 
+  // The *_LABELS maps hold i18n keys, and the template calls these getters
+  // without a `| translate`, so they resolve the key here.
   getStatusLabel(status: ReservationStatus): string {
-    return RESERVATION_STATUS_LABELS[status] || status;
+    return this.t(RESERVATION_STATUS_LABELS[status], status);
   }
 
   getPaymentLabel(status: string): string {
-    return PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS] || status;
+    return this.t(
+      RESERVATION_PAYMENT_STATUS_LABELS[status as keyof typeof RESERVATION_PAYMENT_STATUS_LABELS],
+      status
+    );
+  }
+
+  /** Resolve an i18n key, falling back to the raw value for unknown states. */
+  private t(key: string | undefined, fallback: string): string {
+    return key ? this.translateService.translate(key) : fallback;
   }
 
   getPickupDate(reservation: Reservation): Date {

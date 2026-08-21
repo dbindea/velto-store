@@ -8,7 +8,12 @@ import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
 import { ContractService } from '@features/contracts/services/contract.service';
 import { Contract, CONTRACT_STATUS_LABELS as CONTRACT_DOC_STATUS_LABELS, CONTRACT_STATUS_COLORS as CONTRACT_DOC_STATUS_COLORS } from '@shared/models/contract.model';
-import { Reservation, RESERVATION_STATUS_LABELS, PAYMENT_STATUS_LABELS, CONTRACT_STATUS_LABELS } from '@shared/models/reservation.model';
+import {
+  Reservation,
+  RESERVATION_STATUS_LABELS,
+  RESERVATION_PAYMENT_STATUS_LABELS,
+  RESERVATION_CONTRACT_STATUS_LABELS
+} from '@shared/models/reservation.model';
 import {
   Workflow,
   WorkflowDecision,
@@ -28,6 +33,7 @@ import {
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
+import { TranslateService } from '@core/i18n/translate.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
 import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
 import { ReservationNote } from '@shared/models/reservation.model';
@@ -52,6 +58,7 @@ export class ReservationDetailComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private inspectionService = inject(InspectionService);
   private contractService = inject(ContractService);
+  private translateService = inject(TranslateService);
 
   reservation: Reservation | null = null;
   payments: Payment[] = [];
@@ -238,20 +245,33 @@ export class ReservationDetailComponent implements OnInit {
     return this.reservation ? toDate(this.reservation.returnDateTime) : new Date();
   }
 
+  // The *_LABELS maps hold i18n keys, and the template calls these getters
+  // without a `| translate`, so they resolve the key here.
   getStatusLabel(status: string): string {
-    return RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS] || status;
+    return this.t(RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS], status);
   }
 
   getPaymentLabel(status: string): string {
-    return PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS] || status;
+    return this.t(
+      RESERVATION_PAYMENT_STATUS_LABELS[status as keyof typeof RESERVATION_PAYMENT_STATUS_LABELS],
+      status
+    );
   }
 
   getPaymentStatusLabel(status: string): string {
-    return PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS] || status;
+    return this.getPaymentLabel(status);
   }
 
   getContractLabel(status: string): string {
-    return CONTRACT_STATUS_LABELS[status as keyof typeof CONTRACT_STATUS_LABELS] || status;
+    return this.t(
+      RESERVATION_CONTRACT_STATUS_LABELS[status as keyof typeof RESERVATION_CONTRACT_STATUS_LABELS],
+      status
+    );
+  }
+
+  /** Resolve an i18n key, falling back to the raw value for unknown states. */
+  private t(key: string | undefined, fallback: string): string {
+    return key ? this.translateService.translate(key) : fallback;
   }
 
   getStatusClass(status: string): string {
@@ -294,11 +314,11 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   getFuelLabel(fuel: string): string {
-    return FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS] || fuel;
+    return this.t(FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS], fuel);
   }
 
   getTransmissionLabel(trans: string): string {
-    return TRANSMISSION_LABELS[trans as keyof typeof TRANSMISSION_LABELS] || trans;
+    return this.t(TRANSMISSION_LABELS[trans as keyof typeof TRANSMISSION_LABELS], trans);
   }
 
   // === Payment methods ===
@@ -551,7 +571,7 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   getInspectionStatusLabel(status: string): string {
-    return INSPECTION_STATUS_LABELS[status as keyof typeof INSPECTION_STATUS_LABELS] || status;
+    return this.t(INSPECTION_STATUS_LABELS[status as keyof typeof INSPECTION_STATUS_LABELS], status);
   }
 
   // === Contract ===
@@ -718,7 +738,7 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   getContractStatusLabel(status: string): string {
-    return CONTRACT_DOC_STATUS_LABELS[status as keyof typeof CONTRACT_DOC_STATUS_LABELS] || status;
+    return this.t(CONTRACT_DOC_STATUS_LABELS[status as keyof typeof CONTRACT_DOC_STATUS_LABELS], status);
   }
 
   getContractStatusClass(status: string): string {

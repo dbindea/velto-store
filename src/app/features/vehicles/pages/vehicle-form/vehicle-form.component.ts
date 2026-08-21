@@ -23,6 +23,7 @@ import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util'
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
+import { TranslateService } from '@core/i18n/translate.service';
 
 @Component({
   selector: 'app-vehicle-form',
@@ -35,6 +36,7 @@ export class VehicleFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private vehicleService = inject(VehicleService);
+  private translateService = inject(TranslateService);
 
   isEditMode = false;
   vehicleId: string | null = null;
@@ -299,24 +301,26 @@ export class VehicleFormComponent implements OnInit {
     }
   }
 
+  // These maps hold i18n keys; the template renders the getters without a
+  // `| translate`, so they resolve the key here.
   getStatusLabel(status: VehicleStatus): string {
-    return VEHICLE_STATUS_LABELS[status];
+    return this.translateService.translate(VEHICLE_STATUS_LABELS[status]);
   }
 
   getCategoryLabel(category: VehicleCategory): string {
-    return VEHICLE_CATEGORY_LABELS[category];
+    return this.translateService.translate(VEHICLE_CATEGORY_LABELS[category]);
   }
 
   getFuelLabel(fuel: FuelType): string {
-    return FUEL_TYPE_LABELS[fuel];
+    return this.translateService.translate(FUEL_TYPE_LABELS[fuel]);
   }
 
   getTransmissionLabel(trans: TransmissionType): string {
-    return TRANSMISSION_LABELS[trans];
+    return this.translateService.translate(TRANSMISSION_LABELS[trans]);
   }
 
   getBodyTypeLabel(body: BodyType): string {
-    return BODY_TYPE_LABELS[body];
+    return this.translateService.translate(BODY_TYPE_LABELS[body]);
   }
 
   // Pricing methods

@@ -172,13 +172,14 @@ export interface Contract {
   updatedBy?: string;
 }
 
+// i18n KEYS, never display text — see the note in vehicle.model.ts.
 export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
-  draft: 'Borrador',
-  generated: 'Generado',
-  pending_signature: 'Pendiente de firma',
-  signed: 'Firmado',
-  cancelled: 'Cancelado',
-  expired: 'Caducado'
+  draft: 'contracts.status.draft',
+  generated: 'contracts.status.generated',
+  pending_signature: 'contracts.status.pendingSignature',
+  signed: 'contracts.status.signed',
+  cancelled: 'contracts.status.cancelled',
+  expired: 'contracts.status.expired'
 };
 
 export const CONTRACT_STATUS_COLORS: Record<ContractStatus, string> = {

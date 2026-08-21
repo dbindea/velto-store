@@ -13,6 +13,7 @@ import {
   VEHICLE_CATEGORY_LABELS
 } from '@shared/models/vehicle.model';
 import { getLowestPricePerDay } from '@shared/utils/pricing.util';
+import { TranslateService } from '@core/i18n/translate.service';
 
 @Component({
   selector: 'app-vehicle-list',
@@ -23,6 +24,7 @@ import { getLowestPricePerDay } from '@shared/utils/pricing.util';
 })
 export class VehicleListComponent implements OnInit {
   private vehicleService = inject(VehicleService);
+  private translateService = inject(TranslateService);
   private router = inject(Router);
 
   vehicles: Vehicle[] = [];
@@ -94,12 +96,14 @@ export class VehicleListComponent implements OnInit {
     this.router.navigate(['/vehicles', vehicle.id]);
   }
 
+  // Both maps hold i18n keys; the template renders these getters without a
+  // `| translate`, so they resolve the key here.
   getStatusLabel(status: VehicleStatus): string {
-    return VEHICLE_STATUS_LABELS[status];
+    return this.translateService.translate(VEHICLE_STATUS_LABELS[status]);
   }
 
   getCategoryLabel(category: VehicleCategory): string {
-    return VEHICLE_CATEGORY_LABELS[category];
+    return this.translateService.translate(VEHICLE_CATEGORY_LABELS[category]);
   }
 
   getStatusClass(status: VehicleStatus): string {

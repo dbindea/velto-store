@@ -585,7 +585,9 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
 
     return {
       key,
-      labelKey: `timeline.${key}`,
+      // Composed key: every TimelineStepKey must have a matching leaf under
+      // reservations.timeline.* in the three locale files.
+      labelKey: `reservations.timeline.${key}`,
       state,
       action,
       blockedReasonKey,

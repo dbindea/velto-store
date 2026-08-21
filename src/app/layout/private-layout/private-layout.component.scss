@@ -49,23 +49,16 @@
   gap: 0.75rem;
 }
 
-// Brand logo image — the wordmark SVG is the same file used on
-// sign-contract and PDF.  Rendered at a fixed height so it sits
-// nicely in the sidebar header regardless of wordmark proportions.
-.logo-image {
-  height: 32px;
-  width: auto;
-  max-width: 170px;
+// Brand logo — <app-brand-logo> serves the dark-surface artwork here,
+// because --sidebar-bg is dark slate in BOTH themes.
+//
+// This used to force `filter: brightness(0) invert(1)` to make the wordmark
+// visible, which flattened the green accent to white along with everything
+// else. Serving the correct file keeps the brand colour intact.
+app-brand-logo {
   display: block;
-  // Sidebar background is dark slate — make sure the white parts of
-  // the wordmark remain visible.
-  filter: brightness(0) invert(1);
-}
-
-.logo-text {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--sidebar-text);
+  height: 32px;
+  max-width: 170px;
 }
 
 .sidebar-nav {

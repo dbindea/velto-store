@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { SignaturePadComponent } from '@shared/components/signature-pad/signature-pad.component';
+import { BrandLogoComponent } from '@shared/components/brand-logo/brand-logo.component';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { Contract } from '@shared/models/contract.model';
 
 interface PublicContractView {
   contractNumber?: string;
@@ -29,7 +29,7 @@ interface PublicContractView {
 @Component({
   selector: 'app-sign-contract',
   standalone: true,
-  imports: [CommonModule, FormsModule, SignaturePadComponent, TranslatePipe],
+  imports: [CommonModule, FormsModule, SignaturePadComponent, BrandLogoComponent, TranslatePipe],
   templateUrl: './sign-contract.component.html',
   styleUrl: './sign-contract.component.scss'
 })
@@ -119,18 +119,4 @@ export class SignContractComponent implements OnInit {
     }
   }
 
-  /**
-   * If the brand SVG cannot be loaded (e.g. hosting served a 404
-   * because the asset was not deployed) fall back to the isologo.
-   * If the isologo is also missing, the inline brand-name wordmark
-   * next to the image remains visible.
-   */
-  onLogoError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    if (!img || img.dataset['fallback'] === '1') {
-      return;
-    }
-    img.dataset['fallback'] = '1';
-    img.src = 'assets/brand/isologo.svg';
-  }
 }

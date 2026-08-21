@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { TranslateService } from '@core/i18n/translate.service';
 import { Reservation } from '@shared/models/reservation.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { RESERVATION_STATUS_LABELS } from '@shared/models/reservation.model';
@@ -129,8 +130,15 @@ export class MonthGridComponent {
     this.reservationClick.emit(r);
   }
 
-  /** Status labels for accessibility. */
+  private translateService = inject(TranslateService);
+
+  /**
+   * Status label for accessibility. RESERVATION_STATUS_LABELS holds i18n keys,
+   * so the key is resolved here rather than relying on a `| translate` in the
+   * template.
+   */
   statusLabel(status: string): string {
-    return RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS] || status;
+    const key = RESERVATION_STATUS_LABELS[status as keyof typeof RESERVATION_STATUS_LABELS];
+    return key ? this.translateService.translate(key) : status;
   }
 }

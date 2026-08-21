@@ -1,7 +1,4 @@
 {
-  "app": {
-    "name": "VELTO"
-  },
   "auth": {
     "loading": "Verificare...",
     "loginSubtitle": "Acces intern",
@@ -61,6 +58,12 @@
       "phone": "Telefon",
       "trustLevel": "Nivel de încredere"
     },
+    "licenseCountries": {
+      "ES": "Spania",
+      "EU": "Uniunea Europeană",
+      "OTHER": "Altul",
+      "RO": "România"
+    },
     "new": "Client nou",
     "noClients": "Nu există clienți",
     "payments": {
@@ -113,6 +116,12 @@
     "loading": "Se încarcă...",
     "moduleInProgress": "Modul în pregătire",
     "or": "sau",
+    "photos": {
+      "camera": "Cameră",
+      "gallery": "Galerie",
+      "takePhoto": "Fă poză",
+      "uploadFromGallery": "Încarcă din galerie"
+    },
     "refresh": "Reîmprospătează",
     "save": "Salvează",
     "search": "Caută",
@@ -178,9 +187,6 @@
     },
     "subtitle": "Generează, semnează și trimite contracte de închiriere",
     "title": "Contracte"
-  },
-  "currentImage": {
-    "url": "URL imagine curentă"
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
@@ -506,12 +512,6 @@
       "rentalPayment": "Plată integrală"
     }
   },
-  "photos": {
-    "camera": "Cameră",
-    "gallery": "Galerie",
-    "takePhoto": "Fă poză",
-    "uploadFromGallery": "Încarcă din galerie"
-  },
   "reports": {
     "days": "zile",
     "monthlyRevenue": "Venituri lunare",
@@ -554,6 +554,14 @@
       "search": "Caută client...",
       "select": "Selectează client"
     },
+    "contractStatus": {
+      "cancelled": "Anulat",
+      "expired": "Expirat",
+      "generated": "Generat",
+      "pending": "În așteptare",
+      "pendingSignature": "Așteaptă semnare",
+      "signed": "Semnat"
+    },
     "detail": "Detalii rezervare",
     "fields": {
       "notes": "Note",
@@ -581,7 +589,11 @@
       "title": "Note interne"
     },
     "paymentStatus": {
-      "pending": "În așteptare"
+      "paid": "Plătit",
+      "partial": "Parțial",
+      "pending": "În așteptare",
+      "refunded": "Rambursat",
+      "settled": "Achitat"
     },
     "pricing": {
       "basePrice": "Preț de bază",
@@ -600,7 +612,28 @@
       "reserved": "Rezervat",
       "returned": "Returnat"
     },
+    "steps": {
+      "client": "Client",
+      "dates": "Perioadă",
+      "summary": "Rezumat",
+      "vehicle": "Vehicul"
+    },
     "subtitle": "Gestionează rezervările de închiriere",
+    "timeline": {
+      "contractGenerated": "Contract generat",
+      "contractSigned": "Contract semnat",
+      "depositPaid": "Garanție încasată",
+      "depositSettled": "Garanție rezolvată",
+      "initialPaymentPaid": "Avans încasat",
+      "nextAction": "Acțiune următoare",
+      "pickupCompleted": "Predare finalizată",
+      "remainingPaymentPaid": "Rest încasat",
+      "reservationClosed": "Rezervare închisă",
+      "reservationCreated": "Rezervare creată",
+      "returnCompleted": "Returnare finalizată",
+      "skippedByException": "Omis prin excepție",
+      "title": "Progresul rezervării"
+    },
     "title": "Rezervări"
   },
   "search": {
@@ -617,10 +650,6 @@
     "placeholder": "Caută client, vehicul sau rezervare…",
     "trigger": "Caută…"
   },
-  "timeline": {
-    "nextAction": "Acțiune următoare",
-    "skippedByException": "Omis prin excepție"
-  },
   "vehicles": {
     "actions": {
       "changeStatus": "Schimbă status"
@@ -634,6 +663,17 @@
       "mpv": "Monovolum",
       "suv": "SUV",
       "van": "Duba"
+    },
+    "categories": {
+      "compact": "Compact",
+      "economy": "Economic",
+      "fullsize": "Dimensiune mare",
+      "intermediate": "Intermediar",
+      "mini": "Mini",
+      "premium": "Premium",
+      "standard": "Standard",
+      "suv": "SUV",
+      "van": "Furgonetă"
     },
     "changeStatusTitle": "Schimbă statusul vehiculului",
     "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
@@ -667,6 +707,12 @@
     },
     "filterAllCategories": "Toate categoriile",
     "filterAllStatus": "Toate statusurile",
+    "fuelTypes": {
+      "diesel": "Motorină",
+      "electric": "Electric",
+      "hybrid": "Hibrid",
+      "petrol": "Benzină"
+    },
     "help": {
       "acrissGenerated": "Cod ACRISS/SIPP: Categorie + Caroserie + Transmisie + Combustibil/A/C"
     },
@@ -717,12 +763,22 @@
       "rentalClassification": "Clasificare de închiriere",
       "reservations": "Rezervări"
     },
+    "status": {
+      "available": "Disponibil",
+      "maintenance": "Mentenanță",
+      "outOfService": "Scos din uz",
+      "rented": "Închiriat"
+    },
     "subtitle": "Gestionează flota ta",
     "tabs": {
       "photos": "Fotografii",
       "pricing": "Tarife"
     },
     "title": "Vehicule",
+    "transmissions": {
+      "automatic": "Automată",
+      "manual": "Manuală"
+    },
     "viewDetail": "Vezi detalii"
   },
   "workflow": {

@@ -6,6 +6,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ClientService } from '@features/clients/services/client.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { Client, ClientTrustLevel, CLIENT_TRUST_LEVEL_LABELS, CLIENT_TRUST_LEVEL_COLORS } from '@shared/models/client.model';
+import { TranslateService } from '@core/i18n/translate.service';
 
 @Component({
   selector: 'app-client-list',
@@ -18,6 +19,7 @@ export class ClientListComponent implements OnInit {
   private router = inject(Router);
   private clientService = inject(ClientService);
   private reservationService = inject(ReservationService);
+  private translateService = inject(TranslateService);
 
   clients: Client[] = [];
   filteredClients: Client[] = [];
@@ -103,8 +105,10 @@ export class ClientListComponent implements OnInit {
     this.router.navigate(['/clients', 'new']);
   }
 
+  // CLIENT_TRUST_LEVEL_LABELS holds i18n keys; resolve here because the
+  // template renders this getter without a `| translate`.
   getTrustLabel(level: ClientTrustLevel | undefined): string {
-    return CLIENT_TRUST_LEVEL_LABELS[level || 'new'];
+    return this.translateService.translate(CLIENT_TRUST_LEVEL_LABELS[level || 'new']);
   }
 
   getTrustClass(level: ClientTrustLevel | undefined): string {

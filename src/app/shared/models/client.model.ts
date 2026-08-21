@@ -99,11 +99,12 @@ export const CLIENT_TRUST_LEVEL_COLORS: Record<ClientTrustLevel, string> = {
   blocked: 'trust-blocked'
 };
 
+// i18n KEYS, never display text — see the note in vehicle.model.ts.
 export const DRIVING_LICENSE_COUNTRY_LABELS: Record<DrivingLicenseCountry, string> = {
-  ES: 'España',
-  RO: 'România',
-  EU: 'UE',
-  OTHER: 'Otro'
+  ES: 'clients.licenseCountries.ES',
+  RO: 'clients.licenseCountries.RO',
+  EU: 'clients.licenseCountries.EU',
+  OTHER: 'clients.licenseCountries.OTHER'
 };
 
 export const CLIENT_FILE_TYPE_LABELS: Record<ClientDocumentType_File, string> = {
