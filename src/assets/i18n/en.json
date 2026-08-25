@@ -119,7 +119,6 @@
     "error": "Something went wrong",
     "loading": "Loading...",
     "moduleInProgress": "Module in preparation",
-    "or": "or",
     "photos": {
       "camera": "Camera",
       "gallery": "Gallery",
@@ -432,6 +431,9 @@
       "refundFull": "Refund full",
       "retain": "Retain"
     },
+    "errors": {
+      "invalidAmount": "Enter an amount greater than 0."
+    },
     "fields": {
       "amount": "Amount",
       "concept": "Concept",
@@ -564,11 +566,15 @@
     },
     "client": {
       "createQuick": "Create quick client",
+      "createQuickHint": "Not on the list? Add them here",
       "documentNumber": "Document number",
       "email": "Email",
       "fullName": "Full name",
+      "noResults": "No client matches",
       "phone": "Phone",
+      "recent": "Recent clients",
       "search": "Search client...",
+      "searchResults": "Results",
       "select": "Select client"
     },
     "contractStatus": {
@@ -604,7 +610,8 @@
       "totalDays": "days"
     },
     "list": {
-      "empty": "No reservations yet"
+      "empty": "No reservations yet",
+      "emptyFiltered": "No reservations match this filter"
     },
     "messages": {
       "invalidDates": "Return date must be after pickup date"
@@ -632,7 +639,8 @@
       "initialPayment": "Signal",
       "manualAdjustment": "Manual adjustment",
       "pricePerDay": "Price/day",
-      "remainingPayment": "Remaining"
+      "remainingPayment": "Remaining",
+      "resetToCalculated": "Back to calculated price"
     },
     "status": {
       "cancelled": "Cancelled",

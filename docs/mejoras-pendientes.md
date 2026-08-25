@@ -33,20 +33,38 @@ Marca con `[x]` lo que se cierre y añade la fecha.
   producción el secret está puesto y el link que se copia para WhatsApp apunta
   al dominio real.
 
-- [ ] **M-14 · Los cobros manuales duplican los pagos preparados.**
+- [x] **M-14 · Los cobros manuales duplican los pagos preparados.** *(24 ago 2026)*
   Al crear una reserva, `createInitialPaymentsForReservation` siembra tres
   documentos de pago en estado `pending` (señal, resto, fianza). Pero
-  «Registrar cobro» **crea documentos nuevos** en vez de liquidar aquellos.
+  «Registrar cobro» **creaba documentos nuevos** en vez de liquidar aquellos.
 
   Resultado observado al cerrar la reserva de prueba: seis filas donde debería
-  haber tres, y tres pagos que se quedan en «Pendiente» para siempre sobre una
-  reserva ya cerrada. El resumen derivado sí es correcto —la reserva queda
-  `paid` y `closed`— pero la lista que ve el operador dice lo contrario.
+  haber tres, y tres pagos que se quedaban en «Pendiente» para siempre sobre una
+  reserva ya cerrada. El resumen derivado sí era correcto —la reserva quedaba
+  `paid` y `closed`— pero la lista que veía el operador decía lo contrario.
 
-  Decidir el modelo: o «Registrar cobro» liquida el pago pendiente que
-  corresponde al tipo elegido, o no se siembran placeholders y los pagos se
-  crean solo cuando existen de verdad. Es una decisión de diseño con
-  implicaciones en los datos ya guardados.
+  **Decisión: se mantienen los placeholders y el cobro los liquida.** Se
+  descartó eliminarlos porque son lo único que da contenido a la pestaña
+  «Pendientes» del módulo de pagos y lo que conserva el vencimiento del resto
+  como fila accionable. Lo aplicado:
+
+  - `selectSettleablePayment` / `applySettlement` en `payment-summary.util.ts`
+    (lógica pura, 11 tests nuevos). El importe **se acumula**, no se sustituye:
+    dos cobros parciales cierran la misma fila. Un cobro de más sube el `amount`
+    de la fila en vez de dejar un pendiente negativo.
+  - `PaymentService.registerReservationPayment()` busca la fila abierta del tipo
+    elegido y la liquida; solo crea documento nuevo si no hay nada que liquidar
+    (cargos extra, `rental_payment`, o un cobro sobre un concepto ya pagado).
+  - Cerrar o cancelar una reserva cancela sus pagos sembrados que nunca
+    cobraron un euro (`cancelUncollectedPayments`). Los parciales se respetan:
+    cancelarlos borraría su `paidAmount` del resumen.
+
+- [ ] **M-16 · Los `alert()` de la pantalla de reserva están en español duro.**
+  `registerPayment()` y `processDeposit()` avisan con
+  `alert('Error al registrar el pago')` y `alert('Error al procesar la fianza')`,
+  sin pasar por i18n. Son cadenas escritas a mano, el mismo problema que F-13
+  pero en código en vez de plantilla. Decidir si se traducen o si se sustituyen
+  los `alert` por un aviso en pantalla.
 
 - [ ] **M-15 · «Total pagado» suma la devolución de fianza como ingreso.**
   Tras cerrar la reserva mostraba 693 €, que es
@@ -68,10 +86,13 @@ Marca con `[x]` lo que se cierre y añade la fecha.
   se come el coche. Además se descarga la imagen completa para pintarla a 347 px.
   Generar miniaturas al subir, o al menos servir tamaños responsivos.
 
-- [ ] **M-7 · El formulario de cobro empieza en 0 €.**
-  «Registrar cobro» abre con importe y pagado a 0, cuando la pantalla ya sabe
-  que faltan 300 € de resto y 150 € de fianza. Prerrellenar según el tipo
-  elegido ahorra el error de teclear mal una cifra.
+- [x] **M-7 · El formulario de cobro empieza en 0 €.** *(24 ago 2026, con M-14)*
+  «Registrar cobro» abría con importe y pagado a 0, cuando la pantalla ya sabe
+  que faltan 300 € de resto y 150 € de fianza. Cerrado como parte de M-14, donde
+  además pasó a ser obligatorio: con el modelo de liquidar la fila pendiente, un
+  formulario a 0 la habría saldado con 0 €. `onPaymentTypeChange()` prerrellena
+  importe y pagado con lo que falta del concepto elegido, y `registerPayment()`
+  rechaza los importes a 0.
 
 - [ ] **M-8 · El PDF del contrato no lleva logo.**
   `pdf.ts` no dibuja ninguna imagen de marca. El documento que firma el cliente
@@ -95,7 +116,9 @@ Marca con `[x]` lo que se cierre y añade la fecha.
 
 - [ ] **M-12 · Producción tiene 4 índices que no están en el repo.**
   Lo avisó el despliegue de índices. Revisar si sobran (y borrarlos) o si
-  faltan en `firestore.indexes.json`.
+  faltan en `firestore.indexes.json`. Uno identificado al revisar M-14:
+  `getPaymentsByReservation` consulta `reservationId ==` + `orderBy('createdAt')`
+  y funciona en producción, luego el índice existe allí pero no está declarado.
 
 - [ ] **M-13 · Avisos de `Cross-Origin-Opener-Policy` en el login.**
   Los emite el popup de Google Auth en el servidor de desarrollo. No afectan a

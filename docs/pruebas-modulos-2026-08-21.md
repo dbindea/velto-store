@@ -333,6 +333,31 @@ todos los `await` sobre ese observable.
 
 ---
 
+## F-21 · El lugar de devolución solo copiaba la primera letra
+
+**Gravedad:** media · **Estado:** ✅ corregido
+**Reportado por Dorel**, no detectado en la pasada automática.
+
+Al escribir «Arganda» en «Lugar de recogida», el campo «Lugar de devolución»
+se quedaba en «A».
+
+El autorrelleno estaba guardado por `if (!this.returnLocation)` — «copia solo
+si está vacío». Como corre en **cada pulsación**, la primera tecla copiaba la
+«A» y a partir de la segunda el campo ya no estaba vacío, así que dejaba de
+copiarse.
+
+La condición quería saber si el operador había escrito en el campo de
+devolución, no si el campo tenía texto en ese instante.
+
+**Corrección:** una bandera `returnLocationEdited` que se activa cuando el
+operador escribe en el campo de devolución. Vaciarlo reanuda el espejo, para no
+obligar a reescribirlo entero tras un borrado accidental.
+
+Verificado en navegador escribiendo letra a letra: ambos campos quedan en
+«Arganda Del Rey», y al editar la devolución deja de pisarse.
+
+---
+
 ## Datos de prueba creados
 
 Todos ficticios, sobre producción, con autorización expresa:

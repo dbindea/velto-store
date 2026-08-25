@@ -231,27 +231,6 @@ textarea.form-control {
   }
 }
 
-.btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px dashed var(--border-color);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-
-  &:hover {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-  }
-}
-
 .btn-lg {
   width: 100%;
   padding: 1rem 2rem;
@@ -512,23 +491,6 @@ textarea.form-control {
   }
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1.5rem 0;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border-color);
-  }
-}
-
 // Quick Client Form
 .quick-client-form {
   padding: 1.5rem;
@@ -676,6 +638,160 @@ textarea.form-control {
 .badge-pending {
   background: var(--warning-bg);
   color: var(--warning-color);
+}
+
+// Quick client shortcut — sits above the search box, so it reads as the
+// primary escape hatch rather than a last resort under the results.
+.btn-quick-client {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--accent-color);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+
+    .quick-client-icon {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+
+    .quick-client-text strong,
+    .quick-client-text small,
+    .quick-client-arrow {
+      color: #fff;
+    }
+  }
+}
+
+.quick-client-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: #fff;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.quick-client-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: color 0.2s;
+  }
+
+  small {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: color 0.2s;
+  }
+}
+
+.quick-client-arrow {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.client-list-header {
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+// Editable final price — the operator can overwrite the tariff calculation
+// with the price actually agreed, in the same row that shows it.
+.editable-price {
+  .price-input-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .price-input {
+    width: 7rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--bg-input, var(--bg-card));
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--accent-color);
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: right;
+    transition: all 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    &.overridden {
+      border-color: var(--warning-color);
+      color: var(--warning-color);
+    }
+  }
+
+  .price-currency {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-color);
+  }
+}
+
+.price-row.adjustment {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+
+  .adjustment-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--warning-color);
+    font-weight: 600;
+  }
+}
+
+.btn-reset-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
 }
 
 // Notes

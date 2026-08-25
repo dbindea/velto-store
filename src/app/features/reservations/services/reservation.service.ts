@@ -19,6 +19,7 @@ import {
   dateRangesOverlap 
 } from '@shared/utils/reservation-date.util';
 import { calculateBasePrice, findPricingRuleByDays } from '@shared/utils/pricing.util';
+import { roundMoney } from '@shared/utils/payment-summary.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
@@ -423,7 +424,13 @@ export class ReservationService {
     depositRequired: number,
     notes?: string,
     pickupLocation?: string,
-    returnLocation?: string
+    returnLocation?: string,
+    /**
+     * Price agreed with the customer, overriding the tariff calculation.
+     * The snapshot keeps the calculated figures and records the difference in
+     * `manualAdjustment`, so the discount stays auditable.
+     */
+    finalPriceOverride?: number
   ): Promise<string> {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicle.id!, pickupDateTime, returnDateTime);
@@ -435,9 +442,23 @@ export class ReservationService {
     const totalDays = calculateCalendarDays(pickupDateTime, returnDateTime);
     const pricingRules = vehicle.pricingRules || [];
     const basePriceResult = calculateBasePrice(pricingRules, totalDays);
-    
-    const finalPrice = basePriceResult.basePrice;
-    const remainingPaymentRequired = Math.max(0, finalPrice - initialPaymentRequired);
+
+    const calculatedPrice = basePriceResult.basePrice;
+    const hasOverride =
+      typeof finalPriceOverride === 'number' &&
+      isFinite(finalPriceOverride) &&
+      finalPriceOverride >= 0 &&
+      roundMoney(finalPriceOverride) !== roundMoney(calculatedPrice);
+
+    const finalPrice = hasOverride ? roundMoney(finalPriceOverride!) : calculatedPrice;
+    const manualAdjustment = hasOverride
+      ? roundMoney(finalPrice - calculatedPrice)
+      : undefined;
+
+    // A signal larger than the whole rental would leave the reservation
+    // impossible to settle, so it is capped at the agreed price.
+    const initialPayment = Math.min(initialPaymentRequired, finalPrice);
+    const remainingPaymentRequired = Math.max(0, finalPrice - initialPayment);
 
     const reservation: Omit<Reservation, 'id'> = {
       vehicleId: vehicle.id!,
@@ -476,10 +497,11 @@ export class ReservationService {
         } : null,
         pricePerDay: basePriceResult.pricePerDay,
         basePrice: basePriceResult.basePrice,
+        manualAdjustment,
         finalPrice
       },
       initialPayment: {
-        requiredAmount: initialPaymentRequired,
+        requiredAmount: initialPayment,
         paidAmount: 0,
         status: 'pending'
       },
@@ -585,6 +607,8 @@ export class ReservationService {
       reservationStatus: 'cancelled',
       updatedAt: { seconds: Date.now() / 1000 }
     });
+    // A cancelled reservation must not keep advertising money to collect.
+    await this.paymentService.cancelUncollectedPayments(id);
   }
 
   /**
@@ -616,5 +640,8 @@ export class ReservationService {
       reservationStatus: 'closed',
       updatedAt: { seconds: Date.now() / 1000 }
     });
+    // Anything still seeded and untouched is not going to be collected on a
+    // closed rental — otherwise the payment list contradicts the status.
+    await this.paymentService.cancelUncollectedPayments(id);
   }
 }

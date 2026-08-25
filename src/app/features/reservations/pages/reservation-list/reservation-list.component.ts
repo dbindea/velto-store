@@ -29,8 +29,9 @@ export class ReservationListComponent implements OnInit {
   filteredReservations: Reservation[] = [];
   loading = true;
 
-  // Filters
-  statusFilter: ReservationStatus | 'all' = 'all';
+  // Filters. Defaults to `reserved`: the day-to-day question is "what have I
+  // got booked", not "everything that ever happened".
+  statusFilter: ReservationStatus | 'all' = 'reserved';
   searchTerm = '';
 
   // Status options for filter
@@ -82,10 +83,28 @@ export class ReservationListComponent implements OnInit {
       );
     }
 
+    // Newest first, whatever the filter. `getReservations()` returns them
+    // ascending because other screens want a chronological run; here the
+    // useful end of the list is the recent one, so it is sorted on arrival
+    // instead of changing the shared query.
+    result.sort((a, b) =>
+      toDate(b.pickupDateTime).getTime() - toDate(a.pickupDateTime).getTime()
+    );
+
     this.filteredReservations = result;
   }
 
   onFilterChange(): void {
+    this.applyFilters();
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.statusFilter !== 'all' || this.searchTerm.trim().length > 0;
+  }
+
+  clearFilters(): void {
+    this.statusFilter = 'all';
+    this.searchTerm = '';
     this.applyFilters();
   }
 

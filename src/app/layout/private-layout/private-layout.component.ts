@@ -60,6 +60,19 @@ export class PrivateLayoutComponent {
   moreMenuOpen = signal(false);
   searchOpen = signal(false);
 
+  /**
+   * The logo is the way home. `routerLink` handles the navigation; this
+   * clears everything that could survive it — open sidebar, "more" menu,
+   * search overlay — and scrolls back to the top, so the dashboard is reached
+   * in the same state as when entering the app.
+   */
+  goHome() {
+    this.sidebarOpen.set(false);
+    this.moreMenuOpen.set(false);
+    this.searchOpen.set(false);
+    window.scrollTo({ top: 0 });
+  }
+
   toggleSidebar() {
     this.sidebarOpen.update(v => !v);
   }

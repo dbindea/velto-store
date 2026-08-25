@@ -23,11 +23,13 @@ import {
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
 import {
+  applySettlement,
   calculateReservationPaymentSummary,
   calculatePaymentStatus,
   calculatePendingAmount,
   generateInternalReference,
-  roundMoney
+  roundMoney,
+  selectSettleablePayment
 } from '@shared/utils/payment-summary.util';
 
 export interface CreateManualPaymentData {
@@ -180,6 +182,131 @@ export class PaymentService {
       await this.recalculateReservationPaymentSummary(data.reservationId);
     }
     return docRef.id;
+  }
+
+  /**
+   * Register a collection against a reservation.
+   *
+   * `createInitialPaymentsForReservation` seeds one `pending` document per
+   * expected concept (señal, resto, fianza). Collecting money must **settle
+   * that document**, not create a second one alongside it — otherwise a
+   * closed reservation ends up showing six rows, three of them "Pendiente"
+   * forever. So: look for an open payment of the same type and settle it;
+   * only create a new document when there is nothing to settle (extras,
+   * `rental_payment`, or a second collection over an already-paid concept).
+   *
+   * Returns the id of the payment that ended up holding the money.
+   */
+  async registerReservationPayment(data: CreateManualPaymentData): Promise<string> {
+    if (!data.reservationId) {
+      throw new Error('reservationId is required to register a reservation payment');
+    }
+
+    if (data.paidAmount > 0) {
+      const open = await this.findSettleablePayment(data.reservationId, data.type);
+      if (open?.id) {
+        await this.settlePendingPayment(open.id, {
+          paidAmount: data.paidAmount,
+          method: data.method,
+          paidAt: data.paidAt,
+          notes: data.notes,
+          concept: data.concept
+        });
+        return open.id;
+      }
+    }
+
+    return this.createManualPayment(data);
+  }
+
+  /**
+   * Find the oldest still-open payment of a given type for a reservation.
+   * `partial` counts as open: a second collection tops up the same row.
+   */
+  async findSettleablePayment(
+    reservationId: string,
+    type: PaymentType
+  ): Promise<Payment | null> {
+    const payments = await this.fetchReservationPayments(reservationId);
+    return selectSettleablePayment(payments, type);
+  }
+
+  /**
+   * Add money to an open payment. Unlike `markPaymentAsPaid`, which
+   * *replaces* `paidAmount`, this **accumulates** — registering 250 € over a
+   * row that already holds 100 € means the customer handed over 250 € more.
+   *
+   * If the collected total exceeds the expected amount, `amount` grows to
+   * match it: the row records what actually happened, and `pendingAmount`
+   * never goes negative.
+   */
+  async settlePendingPayment(
+    id: string,
+    input: {
+      paidAmount: number;
+      method?: PaymentMethod;
+      paidAt?: any;
+      notes?: string;
+      concept?: string;
+    }
+  ): Promise<void> {
+    const docRef = doc(this.firestore, `payments/${id}`);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error('Payment not found');
+    const payment = snap.data() as Payment;
+
+    const settlement = applySettlement(payment, input.paidAmount);
+
+    // Keep the seeded concept ("Señal reserva") unless the operator typed a
+    // real one. A concept that just echoes the payment type is what callers
+    // send when the field was left empty — same convention as PaymentConceptPipe.
+    const typedConcept = input.concept?.trim();
+    const concept =
+      typedConcept && typedConcept !== payment.type ? typedConcept : payment.concept;
+
+    await updateDoc(docRef, this.cleanData({
+      ...settlement,
+      method: input.method || payment.method,
+      // The seeded rows are `system`; once a human collects against them the
+      // movement is manual.
+      source: 'manual' as PaymentSource,
+      paidAt: input.paidAt || { seconds: Date.now() / 1000 },
+      concept,
+      notes: input.notes,
+      updatedAt: { seconds: Date.now() / 1000 }
+    }));
+
+    if (payment.reservationId) {
+      await this.recalculateReservationPaymentSummary(payment.reservationId);
+    }
+  }
+
+  /**
+   * Cancel the payments of a reservation that never collected a cent.
+   *
+   * Called when a reservation is closed or cancelled, so it cannot end up
+   * `closed` while its payment list still advertises pending money. Rows with
+   * a partial collection are left alone: cancelling them would drop their
+   * `paidAmount` from the summary, which filters out `cancelled`.
+   *
+   * Returns how many rows were cancelled.
+   */
+  async cancelUncollectedPayments(reservationId: string): Promise<number> {
+    const payments = await this.fetchReservationPayments(reservationId);
+    const stale = payments.filter(p =>
+      p.id && p.status === 'pending' && (p.paidAmount || 0) === 0
+    );
+    if (stale.length === 0) return 0;
+
+    for (const payment of stale) {
+      await updateDoc(doc(this.firestore, `payments/${payment.id}`), {
+        status: 'cancelled',
+        updatedAt: { seconds: Date.now() / 1000 }
+      });
+    }
+
+    await this.recalculateReservationPaymentSummary(reservationId);
+    return stale.length;
   }
 
   /**
@@ -477,9 +604,7 @@ export class PaymentService {
    * Recalculate the payment summary on the reservation from its payments.
    */
   async recalculateReservationPaymentSummary(reservationId: string): Promise<void> {
-    const payments = await new Promise<Payment[]>((resolve) => {
-      this.getPaymentsByReservation(reservationId).subscribe(p => resolve(p));
-    });
+    const payments = await this.fetchReservationPayments(reservationId);
 
     const reservation = await this.getReservationData(reservationId);
     if (!reservation) return;
@@ -512,6 +637,17 @@ export class PaymentService {
   }
 
   // === Private helpers ===
+
+  /** Payments of a reservation, oldest first. Plain read, not a live query. */
+  private async fetchReservationPayments(reservationId: string): Promise<Payment[]> {
+    const q = query(
+      this.paymentsRef,
+      where('reservationId', '==', reservationId),
+      orderBy('createdAt', 'asc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
+  }
 
   private async getReservationData(reservationId: string): Promise<Reservation | null> {
     const docRef = doc(this.firestore, `reservations/${reservationId}`);

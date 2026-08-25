@@ -6,9 +6,15 @@
   <!-- Sidebar -->
   <aside class="sidebar" [class.open]="sidebarOpen()">
     <div class="sidebar-header">
-      <div class="logo">
+      <a
+        class="logo"
+        routerLink="/dashboard"
+        (click)="goHome()"
+        [attr.aria-label]="'menu.dashboard' | translate"
+        [attr.title]="'menu.dashboard' | translate"
+      >
         <app-brand-logo variant="wordmark" on="dark" [alt]="'brand.logoAlt' | translate" />
-      </div>
+      </a>
     </div>
 
     <nav class="sidebar-nav">
