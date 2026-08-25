@@ -119,7 +119,6 @@
     "error": "Algo ha ido mal",
     "loading": "Cargando...",
     "moduleInProgress": "Módulo en preparación",
-    "or": "o",
     "photos": {
       "camera": "Cámara",
       "gallery": "Galería",
@@ -432,6 +431,9 @@
       "refundFull": "Devolver total",
       "retain": "Retener"
     },
+    "errors": {
+      "invalidAmount": "Introduce un importe mayor que 0."
+    },
     "fields": {
       "amount": "Importe",
       "concept": "Concepto",
@@ -564,11 +566,15 @@
     },
     "client": {
       "createQuick": "Crear cliente rápido",
+      "createQuickHint": "Si no está en la lista, dalo de alta aquí",
       "documentNumber": "Número de documento",
       "email": "Correo electrónico",
       "fullName": "Nombre completo",
+      "noResults": "Ningún cliente coincide",
       "phone": "Teléfono",
+      "recent": "Clientes recientes",
       "search": "Buscar cliente...",
+      "searchResults": "Resultados",
       "select": "Seleccionar cliente"
     },
     "contractStatus": {
@@ -604,7 +610,8 @@
       "totalDays": "días"
     },
     "list": {
-      "empty": "No hay reservas todavía"
+      "empty": "No hay reservas todavía",
+      "emptyFiltered": "Ninguna reserva con este filtro"
     },
     "messages": {
       "invalidDates": "La fecha de devolución debe ser posterior a la de recogida"
@@ -632,7 +639,8 @@
       "initialPayment": "Señal",
       "manualAdjustment": "Ajuste manual",
       "pricePerDay": "Precio/día",
-      "remainingPayment": "Resto pendiente"
+      "remainingPayment": "Resto pendiente",
+      "resetToCalculated": "Volver al precio calculado"
     },
     "status": {
       "cancelled": "Cancelado",

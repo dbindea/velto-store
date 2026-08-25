@@ -113,6 +113,15 @@ Al crear la reserva se calcula con estas reglas y **se guarda un snapshot del pr
 la tarifa del vehículo no altera reservas ya creadas. Lo mismo aplica a los snapshots de
 vehículo y cliente.
 
+### Precio acordado
+
+La tarifa propone, el operador dispone: en el resumen del asistente, antes de crear la reserva,
+**el precio final es editable**. Un cálculo de 600 € puede cerrarse en 515 €.
+
+El snapshot conserva el cálculo original (`pricePerDay`, `basePrice`, `appliedRule`) y registra
+la diferencia en `manualAdjustment`, de modo que el descuento queda auditable y visible en el
+detalle de la reserva. La señal nunca supera el precio acordado.
+
 ### Cliente
 
 Nombre, teléfono, email, documento, dirección, carnet (número, expedición, caducidad, país),
@@ -259,6 +268,22 @@ En la UI hay **tres acciones**: Registrar cobro · Devolver fianza · Retener fi
 
 **Los cargos extra solo nacen desde la inspección de devolución.** Un único origen, sin
 doble fuente. Pueden cobrarse aparte o compensarse contra la fianza retenida.
+
+### Una fila por concepto
+
+Al crear la reserva se siembra un pago en estado `pending` por cada concepto esperado:
+señal, resto y fianza. **Cobrar liquida esa fila, no crea otra al lado.** Es lo que hace
+que la lista de pagos de una reserva cerrada diga lo mismo que su estado.
+
+- El importe **se acumula**: dos cobros parciales cierran la misma fila.
+- Cobrar de más sube el importe esperado de la fila; nunca queda un pendiente negativo.
+- Solo se crea documento nuevo cuando no hay nada que liquidar: cargos extra, pago
+  completo del alquiler, o un segundo cobro sobre un concepto ya pagado.
+- Cerrar o cancelar una reserva **cancela sus filas sembradas que nunca cobraron nada**.
+  Las parciales se respetan: cancelarlas borraría dinero real del resumen.
+
+El formulario de cobro se abre con lo que falta del concepto elegido. No es cosmética:
+guardar a 0 € saldaría la fila con 0.
 
 ### Fianza
 

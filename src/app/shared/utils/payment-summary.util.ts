@@ -6,7 +6,7 @@
  * do not trust accumulated fields, always recalculate.
  */
 
-import { Payment, PaymentStatus } from '@shared/models/payment.model';
+import { Payment, PaymentStatus, PaymentType } from '@shared/models/payment.model';
 import { Reservation, ReservationPaymentSummary } from '@shared/models/reservation.model';
 
 const ROUND = 100;
@@ -131,6 +131,55 @@ export function calculateReservationPaymentSummary(
     totalPending,
     balance,
     paymentStatus
+  };
+}
+
+/**
+ * Pick the payment row that a manual collection should settle.
+ *
+ * A reservation is seeded with one `pending` row per expected concept
+ * (señal, resto, fianza). Collecting money settles that row instead of
+ * creating a duplicate next to it. `partial` rows count as open, so a second
+ * collection tops up the same row. `null` means "nothing to settle" — the
+ * caller creates a new payment (extras, `rental_payment`, or an extra
+ * collection over an already-paid concept).
+ *
+ * Oldest first, mirroring the query order.
+ */
+export function selectSettleablePayment(
+  payments: Payment[],
+  type: PaymentType
+): Payment | null {
+  return payments.find(p =>
+    p.type === type && (p.status === 'pending' || p.status === 'partial')
+  ) || null;
+}
+
+export interface PaymentSettlement {
+  amount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  status: PaymentStatus;
+}
+
+/**
+ * Apply a collection to an existing payment row. **Accumulates**: registering
+ * 250 € over a row already holding 100 € means 250 € more changed hands.
+ *
+ * Over-collection grows `amount` to match, so the row records what actually
+ * happened and `pendingAmount` never goes negative.
+ */
+export function applySettlement(
+  payment: Pick<Payment, 'amount' | 'paidAmount'>,
+  addPaidAmount: number
+): PaymentSettlement {
+  const paidAmount = roundMoney((payment.paidAmount || 0) + addPaidAmount);
+  const amount = roundMoney(Math.max(payment.amount || 0, paidAmount));
+  return {
+    amount,
+    paidAmount,
+    pendingAmount: calculatePendingAmount(amount, paidAmount),
+    status: calculatePaymentStatus(amount, paidAmount)
   };
 }
 

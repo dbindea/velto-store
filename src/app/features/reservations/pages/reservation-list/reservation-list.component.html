@@ -40,14 +40,23 @@
       <p>{{ 'common.loading' | translate }}</p>
     </div>
   } @else if (filteredReservations.length === 0) {
-    <!-- Empty State -->
+    <!-- Empty State. With a filter on, say so: the list defaults to
+         "reserved", and "no reservations" would otherwise look like data loss. -->
     <div class="empty-state">
       <i class="pi pi-calendar"></i>
-      <p>{{ 'reservations.list.empty' | translate }}</p>
-      <button class="btn-primary" type="button" (click)="createNew()">
-        <i class="pi pi-plus"></i>
-        {{ 'reservations.new' | translate }}
-      </button>
+      @if (hasActiveFilters) {
+        <p>{{ 'reservations.list.emptyFiltered' | translate }}</p>
+        <button class="btn-secondary" type="button" (click)="clearFilters()">
+          <i class="pi pi-filter-slash"></i>
+          {{ 'common.viewAll' | translate }}
+        </button>
+      } @else {
+        <p>{{ 'reservations.list.empty' | translate }}</p>
+        <button class="btn-primary" type="button" (click)="createNew()">
+          <i class="pi pi-plus"></i>
+          {{ 'reservations.new' | translate }}
+        </button>
+      }
     </div>
   } @else {
     <!-- Reservation List -->

@@ -43,10 +43,18 @@
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+// Clickable: it is the way back to the dashboard from anywhere in the app.
 .logo {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
 }
 
 // Brand logo — <app-brand-logo> serves the dark-surface artwork here,

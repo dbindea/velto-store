@@ -46,6 +46,42 @@ export class ClientService {
   }
 
   /**
+   * The most recently created clients, newest first.
+   *
+   * Sorted in memory instead of with `orderBy('createdAt', 'desc')`: Firestore
+   * drops documents that lack the ordering field, so any client created before
+   * `createdAt` existed would silently vanish from the list. Reading the
+   * collection is cheap at this fleet size and needs no extra index.
+   */
+  getRecentClients(max = 10): Observable<Client[]> {
+    return from(getDocs(this.clientsRef)).pipe(
+      map(snapshot => snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Client))
+        .sort((a, b) => this.createdAtMillis(b) - this.createdAtMillis(a))
+        .slice(0, max)
+      ),
+      catchError(() => of([]))
+    );
+  }
+
+  /**
+   * Creation time in milliseconds, 0 when missing.
+   *
+   * Deliberately not `toDate()`: that one falls back to *now* for missing
+   * values, which would float undated clients to the top of "most recent".
+   */
+  private createdAtMillis(client: Client): number {
+    const value: any = client.createdAt;
+    if (!value) return 0;
+    if (value instanceof Date) return value.getTime();
+    if (typeof value.toDate === 'function') return value.toDate().getTime();
+    const seconds = value.seconds ?? value._seconds;
+    if (typeof seconds === 'number') return seconds * 1000;
+    const parsed = new Date(value).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
    * Search clients by name, phone, email or document.
    * Client-side filter (suitable for small fleet).
    */

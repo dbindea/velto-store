@@ -211,19 +211,48 @@
           <h2>{{ 'reservations.client.select' | translate }}</h2>
           
           @if (!showQuickClientForm) {
+            <!-- Above the search on purpose: when the client is not in the
+                 recent list, creating one is the way out. -->
+            <button
+              class="btn-quick-client"
+              type="button"
+              (click)="toggleQuickClientForm()">
+              <span class="quick-client-icon">
+                <i class="pi pi-user-plus"></i>
+              </span>
+              <span class="quick-client-text">
+                <strong>{{ 'reservations.client.createQuick' | translate }}</strong>
+                <small>{{ 'reservations.client.createQuickHint' | translate }}</small>
+              </span>
+              <i class="pi pi-chevron-right quick-client-arrow"></i>
+            </button>
+
             <div class="search-box">
               <i class="pi pi-search"></i>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 [(ngModel)]="clientSearchTerm"
                 (ngModelChange)="searchClients()"
                 [placeholder]="'reservations.client.search' | translate"
                 class="form-control">
             </div>
 
-            @if (searchResults.length > 0) {
+            <div class="client-list-header">
+              @if (isSearchingClients) {
+                {{ 'reservations.client.searchResults' | translate }}
+              } @else {
+                {{ 'reservations.client.recent' | translate }}
+              }
+            </div>
+
+            @if (loadingRecentClients && !isSearchingClients) {
+              <div class="loading-state">
+                <i class="pi pi-spin pi-spinner"></i>
+                <p>{{ 'common.loading' | translate }}</p>
+              </div>
+            } @else if (clientOptions.length > 0) {
               <div class="client-list">
-                @for (client of searchResults; track client.id) {
+                @for (client of clientOptions; track client.id) {
                   <div class="client-card" (click)="selectClient(client)">
                     <div class="client-avatar">
                       {{ client.fullName.charAt(0).toUpperCase() }}
@@ -240,19 +269,12 @@
                   </div>
                 }
               </div>
+            } @else {
+              <div class="empty-state">
+                <i class="pi pi-users"></i>
+                <p>{{ 'reservations.client.noResults' | translate }}</p>
+              </div>
             }
-
-            <div class="divider">
-              <span>{{ 'common.or' | translate }}</span>
-            </div>
-
-            <button 
-              class="btn-outline" 
-              type="button"
-              (click)="toggleQuickClientForm()">
-              <i class="pi pi-plus"></i>
-              {{ 'reservations.client.createQuick' | translate }}
-            </button>
           } @else {
             <div class="quick-client-form">
               <h3>{{ 'reservations.client.createQuick' | translate }}</h3>
@@ -381,10 +403,40 @@
                   <span>{{ totalDays }} x {{ selectedVehicle?.pricing?.pricePerDay }} €:</span>
                   <span>{{ selectedVehicle?.pricing?.basePrice }} €</span>
                 </div>
-                <div class="price-row total">
+                <!-- Editable: the agreed price wins over the tariff. -->
+                <div class="price-row total editable-price">
                   <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
-                  <span>{{ finalPrice }} €</span>
+                  <span class="price-input-wrap">
+                    <input
+                      type="number"
+                      class="price-input"
+                      [class.overridden]="priceOverridden"
+                      [ngModel]="finalPrice"
+                      (ngModelChange)="onFinalPriceChange($event)"
+                      name="finalPrice"
+                      min="0"
+                      step="0.01"
+                      [attr.aria-label]="'reservations.pricing.finalPrice' | translate">
+                    <span class="price-currency">€</span>
+                  </span>
                 </div>
+
+                @if (priceOverridden) {
+                  <div class="price-row adjustment">
+                    <span>{{ 'reservations.pricing.manualAdjustment' | translate }}:</span>
+                    <span class="adjustment-value">
+                      {{ manualAdjustment > 0 ? '+' : '' }}{{ manualAdjustment | number:'1.2-2' }} €
+                      <button
+                        class="btn-reset-price"
+                        type="button"
+                        (click)="resetFinalPrice()"
+                        [attr.title]="'reservations.pricing.resetToCalculated' | translate">
+                        <i class="pi pi-replay"></i>
+                        {{ calculatedFinalPrice | number:'1.2-2' }} €
+                      </button>
+                    </span>
+                  </div>
+                }
               </div>
             </div>
 

@@ -604,7 +604,12 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>{{ 'payments.fields.type' | translate }}</label>
-                <select class="form-control" [(ngModel)]="newPayment.type" name="ptype">
+                <select
+                  class="form-control"
+                  [(ngModel)]="newPayment.type"
+                  (ngModelChange)="onPaymentTypeChange()"
+                  name="ptype"
+                >
                   @for (t of paymentTypeOptions; track t) {
                     <option [value]="t">{{ PAYMENT_TYPE_LABELS[t] | translate }}</option>
                   }

@@ -363,9 +363,15 @@ export class ReservationDetailComponent implements OnInit {
 
   async registerPayment(): Promise<void> {
     if (!this.reservation?.id) return;
+    if (this.newPayment.amount <= 0 && this.newPayment.paidAmount <= 0) {
+      alert(this.translateService.translate('payments.errors.invalidAmount'));
+      return;
+    }
     this.savingPayment = true;
     try {
-      await this.paymentService.createManualPayment({
+      // `registerReservationPayment` settles the pending row seeded at
+      // reservation time instead of adding a duplicate next to it.
+      await this.paymentService.registerReservationPayment({
         reservationId: this.reservation.id,
         clientId: this.reservation.clientId,
         vehicleId: this.reservation.vehicleId,
@@ -429,6 +435,40 @@ export class ReservationDetailComponent implements OnInit {
 
   resetPaymentForm(): void {
     this.newPayment = { type: 'initial_payment', method: 'cash', amount: 0, paidAmount: 0, concept: '' };
+    this.onPaymentTypeChange();
+  }
+
+  /**
+   * Prefill the amounts with what is still owed for the selected concept.
+   * The screen already knows the figure, and with the settle-the-pending-row
+   * model an empty form would otherwise settle a row with 0 €.
+   */
+  onPaymentTypeChange(): void {
+    const outstanding = this.outstandingFor(this.newPayment.type);
+    this.newPayment.amount = outstanding;
+    this.newPayment.paidAmount = outstanding;
+  }
+
+  private outstandingFor(type: PaymentType): number {
+    if (!this.reservation) return 0;
+    const owed = (required: number, paid: number) =>
+      Math.round(Math.max(0, required - paid) * 100) / 100;
+
+    switch (type) {
+      case 'initial_payment':
+        return owed(this.initialPayment.required, this.initialPayment.paid);
+      case 'remaining_payment':
+        return owed(this.remainingPayment.required, this.remainingPayment.paid);
+      case 'deposit':
+        return owed(this.deposit.required, this.deposit.paid);
+      case 'rental_payment':
+        return owed(
+          this.reservation.pricingSnapshot?.finalPrice || 0,
+          this.initialPayment.paid + this.remainingPayment.paid
+        );
+      default:
+        return 0;
+    }
   }
 
   togglePaymentForm(): void {

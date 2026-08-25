@@ -119,7 +119,6 @@
     "error": "Ceva nu a mers bine",
     "loading": "Se încarcă...",
     "moduleInProgress": "Modul în pregătire",
-    "or": "sau",
     "photos": {
       "camera": "Cameră",
       "gallery": "Galerie",
@@ -432,6 +431,9 @@
       "refundFull": "Restituie total",
       "retain": "Reține"
     },
+    "errors": {
+      "invalidAmount": "Introdu o sumă mai mare decât 0."
+    },
     "fields": {
       "amount": "Sumă",
       "concept": "Concept",
@@ -564,11 +566,15 @@
     },
     "client": {
       "createQuick": "Creare rapidă client",
+      "createQuickHint": "Nu e în listă? Adaugă-l aici",
       "documentNumber": "Număr document",
       "email": "Email",
       "fullName": "Nume complet",
+      "noResults": "Niciun client nu corespunde",
       "phone": "Telefon",
+      "recent": "Clienți recenți",
       "search": "Caută client...",
+      "searchResults": "Rezultate",
       "select": "Selectează client"
     },
     "contractStatus": {
@@ -604,7 +610,8 @@
       "totalDays": "zile"
     },
     "list": {
-      "empty": "Nu există rezervări"
+      "empty": "Nu există rezervări",
+      "emptyFiltered": "Nicio rezervare cu acest filtru"
     },
     "messages": {
       "invalidDates": "Data returnării trebuie să fie după data preluării"
@@ -632,7 +639,8 @@
       "initialPayment": "Avans",
       "manualAdjustment": "Ajustare manuală",
       "pricePerDay": "Preț/zi",
-      "remainingPayment": "Rest de plată"
+      "remainingPayment": "Rest de plată",
+      "resetToCalculated": "Revino la prețul calculat"
     },
     "status": {
       "cancelled": "Anulat",
