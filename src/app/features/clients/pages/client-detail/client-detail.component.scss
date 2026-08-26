@@ -19,11 +19,31 @@
 }
 
 // Header
+// Back button · client · edit. Without min-width:0 the flex children refuse
+// to shrink below their content, and a long client name stretched the whole
+// page to ~700px on a 360px screen.
 .page-header {
   display: flex;
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  min-width: 0;
+
+  // On phones the identity takes the whole first row and the edit action
+  // drops to its own full-width row underneath, so the name has room to
+  // wrap between words instead of being squeezed beside a button.
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    .header-content {
+      flex: 1 1 auto;
+    }
+
+    .btn-primary {
+      flex: 1 1 100%;
+    }
+  }
 }
 
 .btn-back {
@@ -47,12 +67,14 @@
 
 .header-content {
   flex: 1;
+  min-width: 0;
 }
 
 .client-header {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
 }
 
 .client-avatar {
@@ -70,11 +92,20 @@
 }
 
 .client-title {
+  min-width: 0;
+
   h1 {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+
+    // Wraps between words onto a second line. Not `anywhere`: with the edit
+    // button competing for the row, that broke "Mendoza" across lines.
+    @media (max-width: 768px) {
+      font-size: 1.2rem;
+      line-height: 1.25;
+    }
   }
 }
 
@@ -121,14 +152,22 @@
   }
 }
 
-// Tabs
+// Tabs — five of them never fit on a phone, so they scroll sideways inside
+// their own strip. min-width:0 is what keeps that scroll contained instead
+// of pushing the page wider.
 .tabs {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
   overflow-x: auto;
+  min-width: 0;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 0.5rem;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .tab {
@@ -223,6 +262,8 @@
 
   > div {
     flex: 1;
+    // Lets a long email break instead of setting the row's minimum width.
+    min-width: 0;
   }
 
   .info-label {
@@ -441,8 +482,13 @@
     }
   }
 
+  // A rental history without dates is just a list of prices; the two dates
+  // move onto one wrapping line rather than disappearing.
   @media (max-width: 768px) {
-    display: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    grid-column: 1 / -1;
   }
 }
 
@@ -649,8 +695,11 @@
   .amount-total { font-weight: 600; color: var(--text-primary); }
   .amount-pending { font-size: 0.7rem; color: var(--warning-color); }
 
+  // Same fix as the reservation and payment lists: the figure is the point
+  // of the row, so it stays on phones.
   @media (max-width: 640px) {
-    display: none;
+    align-items: flex-start;
+    white-space: nowrap;
   }
 }
 

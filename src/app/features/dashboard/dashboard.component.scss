@@ -2,6 +2,11 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem;
+
+  // Matches the 1rem gutter every other page uses on phones.
+  @media (max-width: 767px) {
+    padding: 0 1rem;
+  }
 }
 
 .page-header {

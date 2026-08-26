@@ -406,6 +406,26 @@ No son bugs, son preguntas de producto sin responder:
 4. ¿El calendario y los informes cubren la necesidad real, o se construyeron sin uso?
 5. ¿Se factura? La generación de facturas aparece como idea, sin definir.
 
+### Pedidas el 26 de agosto de 2026
+
+Cuatro funcionalidades nuevas, con sus preguntas abiertas detalladas en
+[docs/mejoras-pendientes.md](docs/mejoras-pendientes.md) (sección «Funcionalidades
+nuevas», `N-1` a `N-4`):
+
+6. **Presupuesto en PDF antes de cerrar la reserva** (`N-1`). ¿Se persiste como estado
+   `quote` —y entonces bloquea o no el coche— o se genera y se olvida? Ojo: el flujo
+   canónico de §5 ya empieza por «Presupuesto», y hay CSS `.status-quote` en cuatro
+   componentes, pero ese estado **nunca existió en el modelo**.
+7. **PDF de reserva confirmada sin firmar** (`N-2`). El cliente quiere su confirmación al
+   pagar la señal y firmar días después. ¿Documento propio, o el contrato sin firmar con
+   marca de agua? En ningún caso puede habilitar la entrega: los guards mandan.
+8. **IVA desglosado en el contrato** (`N-3`). El precio actual **ya lleva IVA incluido**, así
+   que se extrae, no se suma. Falta decidir el tipo y, sobre todo, qué conceptos lo llevan:
+   la fianza no —es depósito— y las multas tampoco —son sanción repercutida—.
+9. **Descuento de fidelidad por cliente** (`N-4`). Un porcentaje en la ficha, revocable y
+   visible en el contrato. Se solapa con el precio acordado a mano (`manualAdjustment`,
+   §3): hay que fijar el orden de aplicación y guardarlos por separado.
+
 ---
 
 ## 11. Futuro

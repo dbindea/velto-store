@@ -89,7 +89,7 @@
       "noReservations": "No hay reservas",
       "upcoming": "Próximas"
     },
-    "searchPlaceholder": "Buscar por nombre, teléfono, email o documento...",
+    "searchPlaceholder": "Buscar cliente...",
     "sections": {
       "documents": "Documentos",
       "drivingLicense": "Carnet de conducir",
@@ -503,6 +503,7 @@
     },
     "subtitle": "Gestiona pagos y fianzas",
     "summary": {
+      "depositHeld": "Fianza depositada",
       "extraChargesTotal": "Cargos extra",
       "rentalTotal": "Total alquiler",
       "title": "Resumen",
@@ -794,7 +795,7 @@
       "noReservations": "Este vehículo aún no tiene reservas",
       "upcoming": "Próximas reservas"
     },
-    "searchPlaceholder": "Buscar por marca, modelo, matrícula...",
+    "searchPlaceholder": "Buscar vehículo...",
     "sections": {
       "basicInfo": "Información básica",
       "features": "Características",

@@ -89,7 +89,7 @@
       "noReservations": "Nu există rezervări",
       "upcoming": "Viitoare"
     },
-    "searchPlaceholder": "Caută după nume, telefon, email sau document...",
+    "searchPlaceholder": "Caută client...",
     "sections": {
       "documents": "Documente",
       "drivingLicense": "Permis de conducere",
@@ -503,6 +503,7 @@
     },
     "subtitle": "Gestionează plăți și garanții",
     "summary": {
+      "depositHeld": "Garanție depusă",
       "extraChargesTotal": "Taxe extra",
       "rentalTotal": "Total închiriere",
       "title": "Rezumat",
@@ -794,7 +795,7 @@
       "noReservations": "Acest vehicul nu are încă rezervări",
       "upcoming": "Rezervări viitoare"
     },
-    "searchPlaceholder": "Caută după marcă, model, placă...",
+    "searchPlaceholder": "Caută vehicul...",
     "sections": {
       "basicInfo": "Informații de bază",
       "features": "Caracteristici",

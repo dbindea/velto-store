@@ -166,6 +166,9 @@
 // Revenue chart
 .revenue-chart {
   grid-column: 1 / -1;
+  // Grid items default to min-width:auto, so the chart's intrinsic width
+  // was pushing the whole page to 400px on a 360px screen.
+  min-width: 0;
 }
 
 .bars {
@@ -175,6 +178,12 @@
   height: 220px;
   padding: 0.5rem 0;
   overflow-x: auto;
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    height: 180px;
+    gap: 0.25rem;
+  }
 }
 
 .bar-col {
@@ -186,6 +195,12 @@
   gap: 0.25rem;
   height: 100%;
   justify-content: flex-end;
+
+  // Six months at 60px plus gaps needs 400px. Narrower columns let the
+  // year fit on the phone instead of dragging the page sideways.
+  @media (max-width: 768px) {
+    min-width: 40px;
+  }
 }
 
 .bar-value {
@@ -193,6 +208,11 @@
   color: var(--text-muted);
   font-weight: 500;
   white-space: nowrap;
+
+  // Narrow columns: shrink the caption so neighbouring months do not touch.
+  @media (max-width: 768px) {
+    font-size: 0.6rem;
+  }
 }
 
 .bar-track {
@@ -218,6 +238,27 @@
 }
 
 // Top vehicles
+// The global .card-header only sets padding, so the icon rendered flush
+// against the title. Same treatment the other feature cards use.
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+
+  i {
+    color: var(--accent-color);
+    font-size: 1rem;
+  }
+}
+
+.card-content {
+  padding: 0 1rem 1rem;
+}
+
 .top-vehicles {
   grid-column: 1 / -1;
 

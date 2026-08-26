@@ -89,6 +89,12 @@
   font-size: 0.875rem;
   cursor: pointer;
 
+  // Full width on narrow phones: side by side, "Todas las categorías" was
+  // clipped mid-word, and a native select cannot wrap its own label.
+  @media (max-width: 480px) {
+    flex: 1 1 100%;
+  }
+
   &:focus {
     outline: none;
     border-color: var(--accent-color);
@@ -145,6 +151,12 @@
   background: var(--bg-main);
   overflow: hidden;
 
+  // Shorter on phones so the card's actual information — price, plate,
+  // status — is reachable without scrolling past a photo.
+  @media (max-width: 768px) {
+    height: 140px;
+  }
+
   img {
     width: 100%;
     height: 100%;
@@ -166,6 +178,9 @@
     }
   }
 
+  // Sits on top of a photo (or of the green placeholder gradient), so it
+  // carries its own dark plate instead of a 15%-alpha tint — "DISPONIBLE"
+  // in green-on-green was invisible.
   .vehicle-status {
     position: absolute;
     top: 0.75rem;
@@ -173,9 +188,12 @@
     padding: 0.35rem 0.75rem;
     border-radius: 20px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+    background: rgba(15, 23, 42, 0.78);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
   .photo-count {
@@ -197,25 +215,11 @@
     }
   }
 
-  .status-available {
-    background: rgba(36, 143, 125, 0.15);
-    color: var(--accent-color);
-  }
-
-  .status-rented {
-    background: rgba(245, 158, 11, 0.15);
-    color: #d97706;
-  }
-
-  .status-maintenance {
-    background: rgba(59, 130, 246, 0.15);
-    color: #3b82f6;
-  }
-
-  .status-out {
-    background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
-  }
+  // Light inks: they always sit on the dark plate above.
+  .status-available { color: #4ade80; }
+  .status-rented { color: #fbbf24; }
+  .status-maintenance { color: #60a5fa; }
+  .status-out { color: #f87171; }
 }
 
 .vehicle-info {
@@ -275,11 +279,18 @@
     }
   }
 
+  // The plate identifies the car in conversation with the customer; it was
+  // the dimmest thing on the card.
   .plate {
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
     margin: 0;
     font-family: monospace;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 768px) {
+    padding: 1rem;
   }
 }
 
@@ -287,6 +298,12 @@
   padding: 0 1.25rem 1.25rem;
   display: flex;
   justify-content: flex-end;
+
+  // The whole card already navigates to the detail, so on phones this
+  // decorative eye only costs a row of screen.
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .btn-icon {

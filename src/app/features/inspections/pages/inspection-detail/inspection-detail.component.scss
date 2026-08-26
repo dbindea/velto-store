@@ -171,9 +171,11 @@
   font-size: 0.8rem;
   color: var(--text-muted);
 
+  // Unchecked items carry the same amber the rest of the app uses for
+  // "pending": on a delivery checklist, what is missing is the point.
   i {
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: var(--warning-color);
   }
 
   &.done {
