@@ -100,13 +100,13 @@
             @if (reservation.vehicleSnapshot.seats) {
               <div class="spec-item">
                 <i class="pi pi-users"></i>
-                <span>{{ reservation.vehicleSnapshot.seats }} plazas</span>
+                <span>{{ reservation.vehicleSnapshot.seats }} {{ 'vehicles.fields.seats' | translate }}</span>
               </div>
             }
             @if (reservation.vehicleSnapshot.luggageCapacity) {
               <div class="spec-item">
                 <i class="pi pi-box"></i>
-                <span>{{ reservation.vehicleSnapshot.luggageCapacity }} maletas</span>
+                <span>{{ reservation.vehicleSnapshot.luggageCapacity }} {{ 'vehicles.fields.luggageCapacity' | translate }}</span>
               </div>
             }
             @if (reservation.vehicleSnapshot.color) {
@@ -165,15 +165,21 @@
               <span class="date-value">{{ getPickupDate() | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
             @if (reservation.pickupLocation) {
-              <p class="location">{{ reservation.pickupLocation }}</p>
+              <p class="location">
+                <i class="pi pi-map-marker"></i>
+                <span>{{ reservation.pickupLocation }}</span>
+              </p>
             }
-            
+
             <div class="date-item">
               <span class="date-label">{{ 'reservations.fields.returnDate' | translate }}</span>
               <span class="date-value">{{ getReturnDate() | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
             @if (reservation.returnLocation) {
-              <p class="location">{{ reservation.returnLocation }}</p>
+              <p class="location">
+                <i class="pi pi-map-marker"></i>
+                <span>{{ reservation.returnLocation }}</span>
+              </p>
             }
             
             <div class="total-days-badge">
@@ -542,12 +548,12 @@
             <div class="tile-label">{{ 'payments.summary.rentalTotal' | translate }}</div>
             <div class="tile-value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</div>
             <div class="tile-progress">
-              <span>Pagado: <strong>{{ initialPayment.paid + remainingPayment.paid | number:'1.2-2' }} €</strong></span>
+              <span>{{ 'payments.fields.paidAmount' | translate }}: <strong>{{ initialPayment.paid + remainingPayment.paid | number:'1.2-2' }} €</strong></span>
             </div>
           </div>
 
           <div class="summary-tile">
-            <div class="tile-label">{{ 'payments.fields.amount' | translate }} depositada</div>
+            <div class="tile-label">{{ 'payments.summary.depositHeld' | translate }}</div>
             <div class="tile-value">{{ deposit.paid | number:'1.2-2' }} €</div>
             <div class="tile-progress">
               <span>
@@ -641,7 +647,7 @@
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn-secondary" type="button" (click)="showPaymentForm = false">Cancelar</button>
+              <button class="btn-secondary" type="button" (click)="showPaymentForm = false">{{ 'common.cancel' | translate }}</button>
               <button class="btn-primary" type="button" [disabled]="savingPayment" (click)="registerPayment()">
                 <i class="pi pi-check"></i>
                 {{ 'common.save' | translate }}
@@ -673,7 +679,7 @@
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn-secondary" type="button" (click)="showDepositForm = false">Cancelar</button>
+              <button class="btn-secondary" type="button" (click)="showDepositForm = false">{{ 'common.cancel' | translate }}</button>
               <button class="btn-primary" type="button" [disabled]="savingDeposit" (click)="processDeposit()">
                 <i class="pi pi-check"></i>
                 {{ 'common.save' | translate }}
@@ -717,7 +723,7 @@
             }
           </div>
         } @else {
-          <p class="empty-mini">No hay pagos registrados para esta reserva</p>
+          <p class="empty-mini">{{ 'payments.list.empty' | translate }}</p>
         }
       </div>
     </div>

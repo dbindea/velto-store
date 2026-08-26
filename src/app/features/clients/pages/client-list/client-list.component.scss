@@ -205,6 +205,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // "Ana Carolina Ruiz Men…" helps nobody: on phones the full name wraps.
+    @media (max-width: 768px) {
+      white-space: normal;
+      overflow: visible;
+    }
   }
 
   .info-row {
@@ -220,6 +226,9 @@
     gap: 0.375rem;
     font-size: 0.8rem;
     color: var(--text-secondary);
+    // Lets a long email wrap inside the row rather than widen it.
+    min-width: 0;
+    overflow-wrap: anywhere;
 
     i {
       font-size: 0.75rem;
@@ -245,8 +254,16 @@
   align-items: flex-end;
   gap: 0.25rem;
 
+  // The trust level lives here, and "blocked" means do not rent to this
+  // person — precisely the thing that must not disappear on a phone.
   @media (max-width: 480px) {
-    display: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    // Sits under the details, aligned with them rather than with the avatar.
+    grid-column: 2 / -1;
+    margin-top: 0.5rem;
   }
 }
 

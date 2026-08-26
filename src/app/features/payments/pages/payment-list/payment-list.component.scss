@@ -45,6 +45,15 @@
   white-space: nowrap;
   transition: all 0.2s;
 
+  // Four short filters share the width instead of scrolling off-screen —
+  // "Fallido" was cut in half at the right edge.
+  @media (max-width: 768px) {
+    flex: 1;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
   &:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
@@ -158,8 +167,12 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
+  // Stacked on phones. Amount and meta used to be hidden here, which left a
+  // payments list with no money on it — concept and client only.
   @media (max-width: 768px) {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
   }
 }
 
@@ -203,6 +216,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    @media (max-width: 768px) {
+      white-space: normal;
+      overflow: visible;
+    }
   }
 
   .info-row {
@@ -242,8 +260,12 @@
   flex-direction: column;
   gap: 0.125rem;
 
+  // Set apart from the concept above it, and given room to breathe: this is
+  // the number the operator opened the screen for.
   @media (max-width: 768px) {
-    display: none;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-light);
+    font-size: 0.875rem;
   }
 }
 
@@ -279,8 +301,12 @@
   gap: 0.25rem;
   align-items: flex-start;
 
+  // Status, method and date read as one line of qualifiers under the amount.
   @media (max-width: 768px) {
-    display: none;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
   }
 }
 

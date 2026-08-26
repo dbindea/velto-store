@@ -64,6 +64,14 @@
   font-size: 0.9rem;
   cursor: pointer;
   &:focus { outline: none; border-color: var(--accent-color); }
+
+  // Two filters share the row instead of each taking half the width and
+  // stacking, which left the right half of the screen empty.
+  @media (max-width: 640px) {
+    flex: 1;
+    min-width: 0;
+    padding: 0.75rem 0.5rem;
+  }
 }
 
 .loading-state,
@@ -108,8 +116,19 @@
   }
 
   @media (max-width: 768px) {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'icon info'
+      'badges badges';
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
   }
+}
+
+@media (max-width: 768px) {
+  .card-icon { grid-area: icon; }
+  .card-info { grid-area: info; }
+  .card-badges { grid-area: badges; }
 }
 
 .card-icon {
@@ -187,8 +206,16 @@
   align-items: flex-end;
   gap: 0.25rem;
 
+  // Draft / completed / cancelled is the reason to open the row; it used to
+  // be dropped on phones.
   @media (max-width: 768px) {
-    display: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--border-light);
   }
 }
 

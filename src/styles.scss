@@ -76,13 +76,40 @@
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
 
+  // Form surfaces
+  --bg-input: #ffffff;
+
+  // ---------------------------------------------------------------------
+  // Semantic status palette
+  //
+  // Used by every status badge, pending amount and inline warning across
+  // the app (250+ references). These were referenced from day one but
+  // never declared, so `var(--warning-color)` resolved to nothing: badges
+  // rendered with no background and warnings inherited body text colour.
+  // Declaring them here fixes every one of those call sites at once.
+  // ---------------------------------------------------------------------
+  --success-color: #15803d;
+  --success-bg: #dcfce7;
+  --warning-color: #b45309;
+  --warning-bg: #fef3c7;
+  --error-color: #b91c1c;
+  --error-bg: #fee2e2;
+  --danger-color: var(--error-color);
+  --info-color: #1d4ed8;
+  --info-bg: #dbeafe;
+
+  // Accent as raw channels, for rgba() composition.
+  --accent-color-rgb: 32, 164, 143;
+
   // Shadows
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
 
-// Dark mode
+// Dark mode — the theme this app is actually used in, so contrast is tuned
+// here first. Secondary and muted text were one step too dark to read
+// comfortably against the slate surfaces; both moved up a shade.
 .dark {
   --sidebar-bg: #0f172a;
   --border-color: #334155;
@@ -90,10 +117,22 @@
   --bg-main: #0f172a;
   --bg-card: #1e293b;
   --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-input: #0f172a;
   --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
   --accent-bg: rgba(32, 164, 143, 0.18);
+
+  // Lighter inks on translucent fills: on dark surfaces the light-theme
+  // pairings would be unreadable.
+  --success-color: #4ade80;
+  --success-bg: rgba(34, 197, 94, 0.16);
+  --warning-color: #fbbf24;
+  --warning-bg: rgba(245, 158, 11, 0.16);
+  --error-color: #f87171;
+  --error-bg: rgba(239, 68, 68, 0.16);
+  --info-color: #60a5fa;
+  --info-bg: rgba(59, 130, 246, 0.16);
 }
 
 // System preference (light default)
@@ -127,6 +166,51 @@ body {
   color: var(--text-primary);
   background: var(--bg-main);
   line-height: 1.5;
+
+  // Long unbroken strings — emails, plates, references, URLs — wrap onto a
+  // second line instead of widening the page. On a 360px phone one long
+  // address is enough to push every screen into horizontal scroll.
+  overflow-wrap: break-word;
+}
+
+// Emails and references break mid-token if they have to: seeing the whole
+// value on two lines beats truncating it or scrolling sideways.
+.email,
+.mono,
+[data-wrap='anywhere'] {
+  overflow-wrap: anywhere;
+}
+
+// Media never overflows its container.
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+// Placeholders must stay legible in dark mode: the browser default is a
+// low-opacity version of the text colour, which disappears on slate.
+::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+// Form controls inherit the app font instead of the OS default, and never
+// trigger the iOS zoom-on-focus (which needs >=16px).
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
 }
 
 // Gotham is reserved for headings and brand marks so the body copy

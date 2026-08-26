@@ -239,6 +239,37 @@ Sin ellos, los históricos de `vehicle-detail` y `client-detail` fallan al prime
 - SCSS; variables CSS para tema (`--bg-card`, `--text-primary`, `--border-color`, `--text-muted`)
 - Servicios Firestore por feature en `features/<x>/services/`
 
+### Tema y color
+
+**Todas las variables de color viven en `src/styles.scss`**, con dos bloques: `:root`
+(claro) y `.dark`. Ahí están tanto las de superficie (`--bg-card`, `--text-primary`,
+`--border-color`, `--bg-input`) como las semánticas: `--success-*`, `--warning-*`,
+`--error-*`, `--info-*`, `--danger-color`.
+
+⚠️ Un `var(--x)` sin declarar **no falla, desaparece**: el navegador descarta la
+declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
+de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
+
+El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#1e293b).
+
+### Mobile-first en la práctica
+
+Es una app de móvil, y la regla es **recolocar, nunca ocultar**: un `display: none` dentro
+de una media query que se lleve por delante un importe, un estado o una fecha es un fallo,
+no una adaptación. Para eso están las áreas de rejilla.
+
+Dos trampas de CSS que ya han roto esta app entera:
+
+- **`min-width: 0` en los flex items que contienen texto.** El valor por defecto es `auto`,
+  que impide encoger por debajo del contenido. Sin él en `.main-wrapper`, cualquier
+  elemento ancho estiraba toda la aplicación y las pantallas se veían tamaño escritorio.
+- **`minmax(0, 1fr)` en vez de `1fr`** en rejillas cuyas celdas llevan texto sin partir.
+  Es lo que hacía que el calendario midiera 1200 px.
+
+Prosa larga (emails, matrículas, referencias): parte en dos líneas antes que truncar con
+puntos suspensivos o forzar scroll horizontal. `body` ya lleva `overflow-wrap: break-word`
+y las clases `.email` / `.mono` usan `anywhere`.
+
 ## Deuda técnica conocida
 
 - **Redsys**: la firma, el formato del `Ds_Merchant_Order` y la URL del webhook están corregidos y cubiertos por tests contra un vector de referencia. **Falta la validación end-to-end contra el entorno de test real de Redsys**, que no puede hacerse desde el repo — y las Cloud Functions hay que desplegarlas a mano para que el fix llegue a producción.

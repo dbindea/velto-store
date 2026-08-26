@@ -121,7 +121,7 @@
                 <i class="pi pi-clock"></i>
                 {{ 'dashboard.pickupToday.at' | translate }}
                 @if (card.reservation.pickupDateTime) {
-                  {{ card.reservation.pickupDateTime | date:'HH:mm' }}
+                  {{ toDateSafe(card.reservation.pickupDateTime) | date:'HH:mm' }}
                 }
               </div>
             </div>
@@ -148,7 +148,7 @@
                 <i class="pi pi-clock"></i>
                 {{ 'dashboard.returnToday.at' | translate }}
                 @if (card.reservation.returnDateTime) {
-                  {{ card.reservation.returnDateTime | date:'HH:mm' }}
+                  {{ toDateSafe(card.reservation.returnDateTime) | date:'HH:mm' }}
                 }
               </div>
             </div>

@@ -166,6 +166,15 @@ textarea.form-control {
   .btn {
     min-width: 140px;
   }
+
+  // Full-width primary action on phones: easier to hit with a thumb than a
+  // button hugging the right edge.
+  @media (max-width: 640px) {
+    .btn {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+  }
 }
 
 // --- Result ---

@@ -150,8 +150,19 @@ app-brand-logo {
 }
 
 // Main wrapper
+//
+// `min-width: 0` is load-bearing. This is a flex item of `.app-layout`, and
+// flex items default to `min-width: auto`, meaning they refuse to shrink
+// below their content's intrinsic width. Any single wide thing on a page —
+// the calendar grid, a long client name, a row of tabs — therefore widened
+// this wrapper, and every page inside it inherited that width. That is what
+// made screens render desktop-wide on a phone and forced zooming out.
+//
+// With it, the shell stays exactly as wide as the viewport and anything that
+// genuinely cannot fit scrolls or wraps inside its own container.
 .main-wrapper {
   flex: 1;
+  min-width: 0;
   margin-left: 260px;
   display: flex;
   flex-direction: column;
@@ -174,6 +185,11 @@ app-brand-logo {
   position: sticky;
   top: 0;
   z-index: 50;
+
+  @media (max-width: 767px) {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
 }
 
 .menu-toggle {
@@ -279,9 +295,17 @@ app-brand-logo {
   flex: 1;
   padding: 1.5rem;
 
+  // Every page already indents itself by 1rem. Repeating it here cost 32px
+  // of a 360px screen — an 18% gutter — so on phones the shell keeps only
+  // the vertical rhythm and the room for the bottom nav.
+  //
+  // The bottom padding clears the fixed nav *plus* a margin: at 5rem the
+  // last button on a page ended up underneath it and could not be tapped —
+  // "Buscar disponibilidad" at the end of the new-reservation form was
+  // physically unreachable.
   @media (max-width: 767px) {
-    padding: 1rem;
-    padding-bottom: 5rem;
+    padding: 0.75rem 0;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -309,6 +333,9 @@ app-brand-logo {
   border-top: 1px solid var(--border-color);
   padding: 0.5rem 0;
   z-index: 50;
+
+  // Honours the home-indicator inset on phones that have one.
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
 
   @media (max-width: 767px) {
     display: flex;

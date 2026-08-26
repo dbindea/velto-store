@@ -89,7 +89,7 @@
       "noReservations": "No reservations",
       "upcoming": "Upcoming"
     },
-    "searchPlaceholder": "Search by name, phone, email or document...",
+    "searchPlaceholder": "Search client...",
     "sections": {
       "documents": "Documents",
       "drivingLicense": "Driving license",
@@ -503,6 +503,7 @@
     },
     "subtitle": "Manage payments and deposits",
     "summary": {
+      "depositHeld": "Deposit held",
       "extraChargesTotal": "Extra charges",
       "rentalTotal": "Rental total",
       "title": "Summary",
@@ -794,7 +795,7 @@
       "noReservations": "This vehicle has no reservations yet",
       "upcoming": "Upcoming reservations"
     },
-    "searchPlaceholder": "Search by brand, model, plate...",
+    "searchPlaceholder": "Search vehicle...",
     "sections": {
       "basicInfo": "Basic information",
       "features": "Features",

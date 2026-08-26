@@ -358,6 +358,136 @@ Verificado en navegador escribiendo letra a letra: ambos campos quedan en
 
 ---
 
+# Pasada móvil — 26 de agosto de 2026
+
+Revisión completa en simulador de teléfono (viewport 360 × 800, equivalente a
+un Samsung S25) sobre datos reales de producción, con el tema oscuro activo.
+El punto de partida era el síntoma reportado: **varias pantallas se veían «como
+en desktop» y había que alejar el zoom para leerlas**.
+
+## F-22 · Once variables de color no existían
+
+**Gravedad:** alta · **Estado:** ✅ corregido
+
+`--warning-color`, `--warning-bg`, `--success-color`, `--success-bg`,
+`--error-color`, `--error-bg`, `--info-color`, `--info-bg`, `--danger-color`,
+`--bg-input` y `--accent-color-rgb` se usaban **261 veces** repartidas por todo
+el CSS de la aplicación y **no estaban declaradas en ninguna parte**.
+
+Un `var()` sin valor y sin *fallback* hace que el navegador descarte la
+declaración entera. Consecuencia visible: todos los badges de estado se
+pintaban sin fondo, los importes pendientes salían del color del texto normal
+en vez de ámbar, y los avisos no se distinguían del resto.
+
+Se detectó comparando las variables usadas en `src/**/*.scss` contra las
+declaradas en `styles.scss`, y se confirmó en el navegador leyendo
+`getComputedStyle(document.documentElement)`.
+
+**Corrección:** las once quedan declaradas en `src/styles.scss`, con dos
+paletas. La de tema claro usa tintas oscuras sobre fondos suaves; la de tema
+oscuro usa tintas claras (`#4ade80`, `#fbbf24`, `#f87171`, `#60a5fa`) sobre
+rellenos translúcidos, porque los pares del tema claro son ilegibles sobre
+superficies de pizarra.
+
+## F-23 · La app entera se ensanchaba hasta su elemento más ancho
+
+**Gravedad:** alta · **Estado:** ✅ corregido
+
+**Esta es la causa raíz del «se ve como en desktop».**
+
+`.main-wrapper` es un *flex item* de `.app-layout`. Los flex items nacen con
+`min-width: auto`, es decir, **se niegan a encogerse por debajo del ancho
+intrínseco de su contenido**. Cualquier cosa ancha dentro de una página —la
+rejilla del calendario, un nombre largo, una fila de pestañas— estiraba el
+contenedor, y todas las páginas de dentro heredaban ese ancho.
+
+Medido en el detalle de cliente: `scrollWidth` de **723 px** en un viewport de
+360. El usuario solo podía leerlo alejando el zoom.
+
+**Corrección:** `min-width: 0` en `.main-wrapper`. El armazón queda exactamente
+del ancho del viewport y lo que de verdad no cabe hace su propio scroll dentro
+de su contenedor. Tras el cambio, las once rutas dan `scrollWidth === clientWidth`.
+
+## F-24 · Información crítica oculta con `display: none` en móvil
+
+**Gravedad:** alta · **Estado:** ✅ corregido
+
+Patrón repetido en seis pantallas: en vez de recolocar la información al
+estrecharse la pantalla, se ocultaba. Lo que desaparecía en un teléfono:
+
+| Pantalla | Se ocultaba |
+|---|---|
+| Lista de reservas | **cliente y fechas** — quedaba coche y precio |
+| Lista de pagos | **importe, pendiente, estado, método y fecha** |
+| Pagos de una reserva | **todos los importes** |
+| Lista de inspecciones | estado (borrador / completada / cancelada) |
+| Detalle de cliente | fechas del histórico e importes de sus pagos |
+| Lista de clientes | nivel de confianza, incluido `blocked` |
+
+Es decir: la pantalla de pagos no mostraba dinero y la de reservas no mostraba
+a quién ni cuándo, justo en el dispositivo desde el que se opera.
+
+**Corrección:** cada bloque se reorganiza en lugar de esconderse, con áreas de
+rejilla donde hacía falta para que el importe y el estado que lo califica
+queden juntos. Solo siguen ocultos los elementos decorativos —la flecha de
+«ver detalle» y el botón-ojo de la tarjeta de vehículo—, porque la tarjeta
+entera ya es el área pulsable.
+
+## F-25 · El calendario medía 1200 px
+
+**Gravedad:** alta · **Estado:** ✅ corregido
+
+`grid-template-columns: repeat(7, 1fr)`. Un `1fr` equivale a
+`minmax(auto, 1fr)`, y ese `auto` toma como mínimo el ancho de contenido: los
+nombres de cliente con `white-space: nowrap` dentro de las celdas fijaban el
+suelo de cada columna. Resultado: **1199 px** de rejilla en una pantalla de 360.
+
+**Corrección:** `repeat(7, minmax(0, 1fr))` y, por debajo de 640 px, las barras
+se reducen a franjas de color de 7 px sin texto. La ocupación del mes y la
+continuidad de cada alquiler se siguen leyendo de un vistazo, y el detalle se
+abre pulsando el día, que es el gesto que la propia pantalla ya anuncia.
+
+## F-26 · El dashboard rompía el pipe `date`
+
+**Gravedad:** media · **Estado:** ✅ corregido
+
+`NG02100: Unable to convert "[object Object]" into a date`. Dos plantillas del
+dashboard pasaban el Timestamp de Firestore crudo a `| date`, en lugar de
+convertirlo con el `toDateSafe()` que el propio componente ya tenía y usaba en
+otras cuatro líneas. La tarjeta de entregas mostraba la etiqueta «Hora» sin
+hora al lado, y la consola arrancaba con un error.
+
+**Corrección:** `toDateSafe()` en las dos líneas. Dashboard con 0 errores.
+
+## F-27 · La barra de navegación tapaba el botón de acción
+
+**Gravedad:** media · **Estado:** ✅ corregido
+
+La barra inferior es `position: fixed`, y el hueco reservado bajo el contenido
+(`5rem`) no llegaba a cubrirla del todo. El último botón de una página quedaba
+por debajo: «Buscar disponibilidad», al final del formulario de nueva reserva,
+era **físicamente impulsable** — Playwright lo confirmó al informar de que la
+barra interceptaba el evento.
+
+**Corrección:** el hueco pasa a `calc(5.5rem + env(safe-area-inset-bottom))`, y
+la propia barra respeta el *inset* inferior de los teléfonos con indicador de
+inicio.
+
+## F-28 · Español escrito a mano en el detalle de reserva
+
+**Gravedad:** media · **Estado:** ✅ corregido
+
+Mismo problema que F-13 pero en código en vez de plantilla: `Pagado:`,
+`Cancelar` (dos veces), `No hay pagos registrados para esta reserva`,
+`plazas`, `maletas`, y un `{{ 'payments.fields.amount' | translate }}
+depositada` que concatenaba una traducción con una palabra suelta en español y
+producía «Importe depositada».
+
+**Corrección:** todos pasan por `translate`. Se añade `payments.summary.depositHeld`
+(«Fianza depositada» / «Deposit held» / «Garanție depusă») a los tres idiomas.
+
+---
+
 ## Datos de prueba creados
 
 Todos ficticios, sobre producción, con autorización expresa:
@@ -400,3 +530,22 @@ correcciones.
   registrar cobro) para no ensuciar datos reales de producción.
 - Los avisos de consola sobre `Cross-Origin-Opener-Policy` proceden del popup de
   Google Auth en el servidor de desarrollo y no afectan a producción.
+
+---
+
+## Verificación de la pasada móvil (26 ago 2026)
+
+Sobre datos nuevos creados en producción durante la propia prueba.
+
+| Comprobación | Resultado |
+|---|---|
+| Desbordamiento horizontal en las 11 rutas | `scrollWidth === clientWidth` en todas |
+| Contraste en tema oscuro | 5,7 : 1 a 12 : 1 en los textos secundarios (antes ~3,3 : 1) |
+| Errores de consola | 0 en todas las pantallas recorridas |
+| M-14 — el cobro liquida el pendiente | ✅ la señal pasó a «Pagado» sobre la misma fila, sin duplicar |
+| M-7 — formulario prerrellenado | ✅ abrió con 45 € en importe y pagado |
+| Precio final editable | ✅ 60 € → 45 €, `manualAdjustment: -15` guardado |
+| Tope de la señal al precio acordado | ✅ señal sembrada de 45 €, no de 50 € |
+
+Reserva de prueba creada: `76846uDuZmLARW5M1fQC` (Dacia Duster · Marius
+Ionescu Pavel · 26–27 ago 2026 · 60 € calculados, 45 € acordados).
