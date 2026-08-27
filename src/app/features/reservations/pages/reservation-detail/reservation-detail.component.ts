@@ -87,6 +87,7 @@ export class ReservationDetailComponent implements OnInit {
   // nothing back to the reservation.
   generatingBookingConfirmation = false;
   bookingConfirmationUrl = '';
+  bookingConfirmationStorageUrl = '';
   bookingConfirmationError = '';
   cancelling = false;
   closingReservation = false;
@@ -162,7 +163,9 @@ export class ReservationDetailComponent implements OnInit {
     this.bookingConfirmationError = '';
     try {
       const response = await this.documentService.generateBookingConfirmation(this.reservation.id);
+      // Short link for the customer, Storage URL for the operator's own view.
       this.bookingConfirmationUrl = response.pdfUrl;
+      this.bookingConfirmationStorageUrl = response.storageUrl;
       await this.copyBookingConfirmationLink();
     } catch (error) {
       console.error('Error generating booking confirmation:', error);

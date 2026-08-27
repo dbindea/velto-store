@@ -20,6 +20,7 @@
 import * as functions from 'firebase-functions';
 import { buildBookingConfirmationPdf } from './documents-pdf';
 import { uploadPdf } from './storage';
+import { documentLinkUrl, shortIdFor } from './documentLink';
 import { companyConfig } from '../company-config';
 import { firestore } from '../admin-guard';
 import type { ContractLocale } from '../contracts/contract-types';
@@ -39,7 +40,10 @@ interface BookingConfirmationRequest {
 }
 
 interface BookingConfirmationResponse {
+  /** Short branded link, for pasting into WhatsApp. */
   pdfUrl: string;
+  /** Direct Storage URL. Kept for the operator's own "open" button. */
+  storageUrl: string;
   pdfPath: string;
   locator: string;
 }
@@ -160,6 +164,13 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
       pdfBytes
     );
 
-    return { ...uploaded, locator };
+    return {
+      ...uploaded,
+      // Derived from the reservation id, so regenerating the document keeps
+      // the link the customer already has in their chat alive.
+      pdfUrl: documentLinkUrl(shortIdFor('booking', reservationId)),
+      storageUrl: uploaded.pdfUrl,
+      locator
+    };
   }
 );

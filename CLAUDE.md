@@ -225,7 +225,36 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
 
-**Escritas pero SIN desplegar:** `generateQuotePdf` y `generateBookingConfirmationPdf`.
+También desplegadas: `generateQuotePdf` y `generateBookingConfirmationPdf`.
+
+**Escrita pero SIN desplegar:** `documentLink` (pública) — necesita además `firebase deploy --only hosting` porque depende de un rewrite.
+
+### Enlaces cortos para WhatsApp
+
+La URL de Firebase Storage mide ~160 caracteres y en WhatsApp parece un intento de phishing.
+`documentLink` sirve el mismo PDF desde el dominio propio a través de un rewrite de hosting:
+
+```
+https://velto-store.web.app/d/qA1b2C3d4E5f6G7h      (~46 caracteres)
+```
+
+⚠️ **No hay tabla de búsqueda ni documento en Firestore detrás.** El id **es** la ruta:
+
+```
+/d/q{id}  →  quotes/{id}/quote.pdf
+/d/r{id}  →  reservations/{id}/booking-confirmation.pdf
+```
+
+Así el presupuesto sigue siendo tan efímero como era. El id es el secreto, igual que lo era
+el token de descarga de Storage. El del presupuesto es aleatorio; el de la reserva es estable
+a propósito, para que regenerar el justificante no mate el enlace que el cliente ya tiene.
+
+Como el id aterriza directo en una ruta de Storage, `resolveDocumentPath()` **rechaza todo lo
+que no sea el alfabeto URL-safe** — sin barras ni puntos, así que no se puede salir de su
+carpeta ni llegar a `contracts/`. Está cubierto por tests.
+
+El orden de los `rewrites` en `firebase.json` importa: `/d/**` va **antes** del catch-all de
+la SPA, o lo captura `index.html`.
 
 ### Idioma de los documentos
 
@@ -341,6 +370,21 @@ Sin ellos, los históricos de `vehicle-detail` y `client-detail` fallan al prime
 - Prettier: comillas simples, ancho 100, parser `angular` para HTML (config en `package.json`)
 - SCSS; variables CSS para tema (`--bg-card`, `--text-primary`, `--border-color`, `--text-muted`)
 - Servicios Firestore por feature en `features/<x>/services/`
+
+### Controles nativos (`select`, fechas)
+
+⚠️ **La lista desplegable de un `<select>` y el calendario de un `input[type=date]` los pinta
+el sistema operativo, no el CSS.** Ninguna regla los alcanza. El único mecanismo es
+**`color-scheme`**, declarado en `:root` (claro) y `.dark` (oscuro) en `styles.scss`.
+
+Tiene que ir en la clase del tema, **no** en el `<meta name="color-scheme">` de `index.html`:
+el meta solo declara qué esquemas soportamos y luego sigue al sistema operativo, así que un
+usuario con Windows en claro y la app en oscuro seguía viendo desplegables blancos. Era la
+causa de que los selects parecieran «en bruto».
+
+Lo que sí es nuestro —el control cerrado— se estiliza **globalmente** en `styles.scss`:
+`appearance: none` + chevron SVG propio, y el icono del calendario invertido en tema oscuro.
+Global a propósito: son 30 `select` y 9 campos de fecha repartidos por 13 componentes.
 
 ### Tema y color
 

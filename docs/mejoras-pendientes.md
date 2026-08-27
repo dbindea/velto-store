@@ -200,6 +200,15 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [ ] **Los tres PDF abiertos en un visor real.** El rediseño se verificó
       extrayendo texto y midiendo cajas, no mirándolos: falta la comprobación
       visual del logo, los filetes y el color.
+- [ ] **Conectar `veltorent.com` a Firebase Hosting.** Hoy el dominio está
+      registrado pero **no apunta a hosting**: `www.veltorent.com` ni siquiera
+      resuelve. Mientras tanto los enlaces cortos salen con
+      `velto-store.web.app`, que ya es 3,5 veces más corto que la URL de
+      Storage. Al conectarlo, basta con apuntar `VELTO_PUBLIC_BASE_URL` al
+      dominio nuevo: **no hay que tocar código**, y los links de firma se
+      mueven con él.
+- [ ] **Probar un enlace corto desde el móvil**, fuera de la sesión del
+      operador, para confirmar que abre el PDF en el navegador de WhatsApp
 - [ ] **Revisar los secrets de empresa** antes de dar por buena la marca:
       `VELTO_COMPANY_NAME`, `_ADDRESS`, `_PHONE`, `_REGISTRY`. Si están puestos
       con los valores antiguos, el código nuevo no los cambia.
@@ -224,16 +233,19 @@ Nota transversal: todo lo que se guarde en el snapshot es **histórico
 congelado**. Si mañana cambia el IVA o se le retira el descuento a un cliente,
 los contratos ya emitidos tienen que seguir cuadrando.
 
-⚠️ **Nada de esto llega a producción hasta desplegar las functions a mano**
-(`npm --prefix functions run deploy`): el CI solo despliega hosting. Afecta a
-las cuatro:
+✅ **Desplegado el 27 de agosto de 2026.** Las cuatro están en producción:
+`generateQuotePdf`, `generateBookingConfirmationPdf` y `generateContractPdf`
+responden (verificado: devuelven `UNAUTHENTICATED` a una llamada sin sesión, no
+404), y el hosting sirve ya la app con la marca nueva.
 
-- el desglose de IVA y los descuentos en el PDF del contrato (N-3, N-4)
-- `generateQuotePdf` y `generateBookingConfirmationPdf`, que **todavía no
-  existen** en producción (N-1, N-2)
+⚠️ **Queda un despliegue pendiente**, el de los enlaces cortos:
 
-Mientras tanto la app muestra los botones y falla con un aviso traducido al
-pulsarlos, que es como se verificó el camino de error.
+```bash
+npm --prefix functions run deploy      # añade documentLink
+firebase deploy --only hosting         # añade el rewrite /d/**
+```
+
+Los dos son necesarios: sin el rewrite, el enlace corto da 404.
 
 ---
 

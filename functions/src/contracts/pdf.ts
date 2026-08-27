@@ -1623,6 +1623,7 @@ export async function buildContractPdf(
     rentalTotal:
       loc === 'en' ? 'Total rental (VAT incl.)' : loc === 'ro' ? 'Total închiriere (TVA inclus)' : 'Total alquiler (IVA incl.)',
     deposit: loc === 'en' ? 'Security deposit' : loc === 'ro' ? 'Garanție (fianță)' : 'Fianza',
+    noDeposit: loc === 'en' ? 'Not required' : loc === 'ro' ? 'Nu se solicită' : 'No se solicita',
     depositVatNote:
       loc === 'en'
         ? 'Security deposit (not subject to VAT)'
@@ -1826,7 +1827,14 @@ export async function buildContractPdf(
     { label: L.vatBase, value: formatMoney(vat.base, loc) },
     { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
     { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
-    { label: L.depositVatNote, value: formatMoney(input.reservation.depositAmount, loc) }
+    // Not every rental carries a deposit. Printing "0,00 €" against "Fianza"
+    // reads like something failed to load; saying it is not required does not.
+    {
+      label: input.reservation.depositAmount ? L.depositVatNote : L.deposit,
+      value: input.reservation.depositAmount
+        ? formatMoney(input.reservation.depositAmount, loc)
+        : L.noDeposit
+    }
   ]);
 
   // Vehicle condition

@@ -52,14 +52,20 @@ export interface QuoteDocumentRequest {
 }
 
 export interface QuoteDocumentResponse {
+  /** Short link on the company's own domain — this is what goes to WhatsApp. */
   pdfUrl: string;
+  /** Direct Storage URL, for the operator's own "open" button. */
+  storageUrl: string;
   pdfPath: string;
   /** ISO date. The quote is offered until then. */
   validUntil: string;
 }
 
 export interface BookingConfirmationResponse {
+  /** Short link on the company's own domain — this is what goes to WhatsApp. */
   pdfUrl: string;
+  /** Direct Storage URL, for the operator's own "open" button. */
+  storageUrl: string;
   pdfPath: string;
   /** Human-readable reference the customer can quote back. */
   locator: string;
