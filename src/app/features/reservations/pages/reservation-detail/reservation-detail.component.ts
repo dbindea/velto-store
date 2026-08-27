@@ -35,6 +35,8 @@ import {
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { extractVat, resolveVatRate, VatBreakdown } from '@shared/utils/pricing.util';
+import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 import { TranslateService } from '@core/i18n/translate.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
@@ -62,6 +64,7 @@ export class ReservationDetailComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private inspectionService = inject(InspectionService);
   private contractService = inject(ContractService);
+  private documentService = inject(ReservationDocumentService);
   private translateService = inject(TranslateService);
   private destroyRef = inject(DestroyRef);
 
@@ -80,6 +83,11 @@ export class ReservationDetailComponent implements OnInit {
   copyToast = false;
   private copyToastTimer: any;
   loadingPayments = false;
+  // Booking confirmation (N-2). Informative document: generating it writes
+  // nothing back to the reservation.
+  generatingBookingConfirmation = false;
+  bookingConfirmationUrl = '';
+  bookingConfirmationError = '';
   cancelling = false;
   closingReservation = false;
   savingPayment = false;
@@ -114,6 +122,61 @@ export class ReservationDetailComponent implements OnInit {
     'initial_payment', 'remaining_payment', 'rental_payment', 'deposit'
   ];
   methodOptions: PaymentMethod[] = ['cash', 'bank_transfer', 'bizum', 'physical_pos', 'redsys', 'manual_card', 'other'];
+
+  /**
+   * Tax split of the rental, at the rate frozen on the reservation. The price
+   * already includes VAT, so this extracts it: no total ever moves.
+   */
+  get vat(): VatBreakdown {
+    const snapshot = this.reservation?.pricingSnapshot;
+    return extractVat(snapshot?.finalPrice ?? 0, resolveVatRate(snapshot?.vatRate));
+  }
+
+  /** The rate as a percentage, for the "IVA (21 %)" label. */
+  get vatPercent(): number {
+    return Math.round(this.vat.rate * 100);
+  }
+
+  /**
+   * The booking confirmation only makes sense once the signal is in: before
+   * that, a document titled "reserva confirmada" would be claiming something
+   * that has not happened. The Cloud Function refuses it too.
+   */
+  get canIssueBookingConfirmation(): boolean {
+    const status = this.reservation?.reservationStatus;
+    return status === 'confirmed' || status === 'delivered' || status === 'returned' || status === 'closed';
+  }
+
+  /**
+   * Generates the booking confirmation and copies its link, ready to paste
+   * into WhatsApp.
+   *
+   * This does NOT touch the reservation: it is an informative document, not a
+   * step of the workflow. Handing the customer this PDF must not bring the
+   * pickup any closer — only a signed contract does that.
+   */
+  async generateBookingConfirmation(): Promise<void> {
+    if (!this.reservation?.id) return;
+
+    this.generatingBookingConfirmation = true;
+    this.bookingConfirmationError = '';
+    try {
+      const response = await this.documentService.generateBookingConfirmation(this.reservation.id);
+      this.bookingConfirmationUrl = response.pdfUrl;
+      await this.copyBookingConfirmationLink();
+    } catch (error) {
+      console.error('Error generating booking confirmation:', error);
+      this.bookingConfirmationError = 'reservations.bookingConfirmation.error';
+    } finally {
+      this.generatingBookingConfirmation = false;
+    }
+  }
+
+  async copyBookingConfirmationLink(): Promise<void> {
+    if (!this.bookingConfirmationUrl) return;
+    const copied = await this.documentService.copyToClipboard(this.bookingConfirmationUrl);
+    if (copied) this.showCopyToast();
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

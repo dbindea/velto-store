@@ -120,6 +120,65 @@
   }
 }
 
+.percent-input {
+  position: relative;
+
+  .form-control {
+    padding-right: 2rem;
+  }
+
+  .percent-sign {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-weight: 600;
+    pointer-events: none;
+  }
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+
+  &.warning {
+    color: var(--warning-color);
+  }
+}
+
+.loyalty-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+
+  .change {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}
+
 .form-control {
   width: 100%;
   padding: 0.625rem 0.75rem;

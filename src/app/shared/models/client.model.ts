@@ -42,6 +42,23 @@ export interface ClientDocumentFile {
   uploadedAt?: any;
 }
 
+/**
+ * One change to a client's loyalty discount. Raising or removing a discount is
+ * a commercial decision with money behind it, so it is kept append-only with
+ * its author, in the same spirit as `reservation.workflowExceptions[]`.
+ */
+export interface LoyaltyDiscountChange {
+  /** The percentage after the change (5 = 5 %). */
+  percent: number;
+  /** The percentage before it. */
+  previousPercent: number;
+  changedAt: any;
+  changedBy?: string;
+  changedByEmail?: string;
+  /** Why it changed. Filled automatically when the trigger was a block. */
+  reason?: string;
+}
+
 export interface Client {
   id?: string;
   fullName: string;
@@ -60,7 +77,15 @@ export interface Client {
   drivingLicenseCountry?: DrivingLicenseCountry;
   
   trustLevel: ClientTrustLevel;
-  
+
+  /**
+   * Loyalty discount applied to this client's rentals, as a PERCENTAGE
+   * (5 = 5 %). Absent or 0 means none. Independent of `trustLevel`, except that
+   * blocking a client withdraws it — see `ClientService.updateClient`.
+   */
+  loyaltyDiscountPercent?: number;
+  loyaltyDiscountHistory?: LoyaltyDiscountChange[];
+
   notes?: string;
   
   documents?: ClientDocumentFile[];

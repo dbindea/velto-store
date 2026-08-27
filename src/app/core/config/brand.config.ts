@@ -15,8 +15,13 @@
 export const BRAND_CONFIG = {
   /** Short product name (sidebar / favicon title). */
   name: 'Velto',
-  /** Full legal name used in invoices, contracts and email footers. */
-  legalName: 'Velto Mobility, S.L.',
+  /**
+   * Full legal name used in invoices, contracts and email footers.
+   * Stored in capitals: that is how it is set on every document the company
+   * issues, and uppercasing at each render is one template away from being
+   * forgotten.
+   */
+  legalName: 'VELTO MOBILITY, S.L.',
   /** Public tax id shown in contracts and footer. */
   taxId: 'B88866900',
   /** Public contact email for support and reservations. */

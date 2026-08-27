@@ -205,6 +205,15 @@
               <span>{{ reservation.totalDays }} x {{ reservation.pricingSnapshot.pricePerDay }} €:</span>
               <span>{{ reservation.pricingSnapshot.basePrice }} €</span>
             </div>
+            @if (reservation.pricingSnapshot.loyaltyDiscount) {
+              <div class="price-row discount">
+                <span>
+                  {{ 'reservations.pricing.loyaltyDiscount' | translate }}
+                  ({{ reservation.pricingSnapshot.loyaltyDiscountPercent }} %):
+                </span>
+                <span class="discount-value">{{ reservation.pricingSnapshot.loyaltyDiscount | number:'1.2-2' }} €</span>
+              </div>
+            }
             @if (reservation.pricingSnapshot.manualAdjustment) {
               <div class="price-row adjustment">
                 <span>{{ 'reservations.pricing.manualAdjustment' | translate }}:</span>
@@ -214,6 +223,18 @@
             <div class="price-row total">
               <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
               <span class="total-value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+            </div>
+
+            <!-- Extracted from the final price, which is already VAT-inclusive. -->
+            <div class="vat-breakdown">
+              <div class="price-row vat-row">
+                <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
+                <span>{{ vat.base | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row vat-row">
+                <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+                <span>{{ vat.vat | number:'1.2-2' }} €</span>
+              </div>
             </div>
           </div>
         </div>
@@ -408,6 +429,49 @@
         </div>
       </div>
     </div>
+
+    <!--
+      Booking confirmation (N-2). Deliberately its own card, ABOVE the contract
+      and visually distinct: it is a proof of booking, not a step of the signing
+      flow, and it must never read as a substitute for the contract.
+    -->
+    @if (canIssueBookingConfirmation) {
+      <div class="detail-card booking-confirmation-card" style="grid-column: 1 / -1; margin-top: 1rem;">
+        <div class="card-header">
+          <i class="pi pi-verified"></i>
+          <span>{{ 'reservations.bookingConfirmation.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <p class="booking-confirmation-hint">
+            {{ 'reservations.bookingConfirmation.hint' | translate }}
+          </p>
+          <div class="contract-actions">
+            <button
+              class="btn-secondary"
+              type="button"
+              [disabled]="generatingBookingConfirmation"
+              (click)="generateBookingConfirmation()">
+              @if (generatingBookingConfirmation) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-file-pdf"></i> }
+              {{ 'reservations.bookingConfirmation.generate' | translate }}
+            </button>
+            @if (bookingConfirmationUrl) {
+              <a class="btn-secondary" [href]="bookingConfirmationUrl" target="_blank" rel="noopener">
+                <i class="pi pi-external-link"></i>
+                {{ 'reservations.bookingConfirmation.open' | translate }}
+              </a>
+              <button class="btn-secondary" type="button" (click)="copyBookingConfirmationLink()">
+                <i class="pi pi-copy"></i>
+                {{ 'reservations.bookingConfirmation.copyLink' | translate }}
+              </button>
+            }
+          </div>
+          @if (bookingConfirmationError) {
+            <small class="action-blocked">{{ bookingConfirmationError | translate }}</small>
+          }
+        </div>
+      </div>
+    }
 
     <!-- Contract Section -->
     <div class="detail-card contract-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">

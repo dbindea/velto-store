@@ -23,6 +23,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { buildContractPdf } from './pdf';
 import { firestore, storageBucket } from '../admin-guard';
+import { companyConfig } from '../company-config';
 
 interface SignRequest {
   token: string;
@@ -130,17 +131,7 @@ export const signContract = functions.https.onCall(
     const sigUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(sigPath)}?alt=media&token=${sigToken}`;
 
     // 5. Build the signed PDF
-    const VELTO_COMPANY_NAME = process.env.VELTO_COMPANY_NAME || 'Velto Rent';
-    const VELTO_COMPANY_EMAIL = process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com';
-    const VELTO_COMPANY_PHONE = process.env.VELTO_COMPANY_PHONE || '';
-    const VELTO_COMPANY_ADDRESS = process.env.VELTO_COMPANY_ADDRESS || '';
-    const VELTO_COMPANY_TAX_ID = process.env.VELTO_COMPANY_TAX_ID || 'B88866900';
-    const VELTO_COMPANY_REGISTRY = process.env.VELTO_COMPANY_REGISTRY || '';
-    const VELTO_COMPANY_WEBSITE = process.env.VELTO_COMPANY_WEBSITE || 'www.veltorent.com';
-    const VELTO_COMPANY_INSURANCE = process.env.VELTO_COMPANY_INSURANCE || '';
-    const VELTO_COMPANY_REP_NAME = process.env.VELTO_COMPANY_REP_NAME || '';
-    const VELTO_COMPANY_REP_NIE = process.env.VELTO_COMPANY_REP_NIE || '';
-
+    //
     // Use the persisted clauses bundle (frozen at generation time), falling
     // back to the current static bundle if the contract predates the schema.
     let clauses = contract.clauses;
@@ -148,18 +139,10 @@ export const signContract = functions.https.onCall(
       const { CONTRACT_CLAUSES } = await import('./clauses');
       clauses = CONTRACT_CLAUSES;
     }
-    const companySnapshot = contract.companySnapshot || {
-      legalName: VELTO_COMPANY_NAME,
-      taxId: VELTO_COMPANY_TAX_ID,
-      registry: VELTO_COMPANY_REGISTRY,
-      address: VELTO_COMPANY_ADDRESS,
-      phone: VELTO_COMPANY_PHONE,
-      email: VELTO_COMPANY_EMAIL,
-      website: VELTO_COMPANY_WEBSITE,
-      insurancePolicy: VELTO_COMPANY_INSURANCE,
-      representativeName: VELTO_COMPANY_REP_NAME,
-      representativeNie: VELTO_COMPANY_REP_NIE
-    };
+    // The snapshot taken when the contract was generated wins: the signed PDF
+    // has to reproduce the document the customer agreed to, not today's
+    // company details.
+    const companySnapshot = contract.companySnapshot || companyConfig();
 
     const signedPdfBytes = await buildContractPdf(
       {
@@ -188,7 +171,12 @@ export const signContract = functions.https.onCall(
           pickupLocation: contract.reservationSnapshot?.pickupLocation,
           returnLocation: contract.reservationSnapshot?.returnLocation,
           finalPrice: contract.reservationSnapshot?.finalPrice,
-          depositAmount: contract.reservationSnapshot?.depositAmount
+          depositAmount: contract.reservationSnapshot?.depositAmount,
+          tariffPrice: contract.reservationSnapshot?.tariffPrice,
+          loyaltyDiscountPercent: contract.reservationSnapshot?.loyaltyDiscountPercent,
+          loyaltyDiscount: contract.reservationSnapshot?.loyaltyDiscount,
+          manualAdjustment: contract.reservationSnapshot?.manualAdjustment,
+          vatRate: contract.reservationSnapshot?.vatRate
         },
         inspection: contract.inspectionSnapshot
           ? {

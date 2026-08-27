@@ -113,14 +113,54 @@ Al crear la reserva se calcula con estas reglas y **se guarda un snapshot del pr
 la tarifa del vehículo no altera reservas ya creadas. Lo mismo aplica a los snapshots de
 vehículo y cliente.
 
-### Precio acordado
+### Los tres escalones del precio
 
-La tarifa propone, el operador dispone: en el resumen del asistente, antes de crear la reserva,
-**el precio final es editable**. Un cálculo de 600 € puede cerrarse en 515 €.
+El precio se resuelve en un solo sitio —`resolveRentalPrice()` en `pricing.util.ts`— y siempre
+en este orden:
 
-El snapshot conserva el cálculo original (`pricePerDay`, `basePrice`, `appliedRule`) y registra
-la diferencia en `manualAdjustment`, de modo que el descuento queda auditable y visible en el
-detalle de la reserva. La señal nunca supera el precio acordado.
+```
+tarifa del vehículo → descuento de fidelidad del cliente → precio acordado a mano
+```
+
+**Descuento de fidelidad.** Un porcentaje en la ficha del cliente (`loyaltyDiscountPercent`,
+máx. 30 %) que se aplica solo a sus reservas nuevas. Se asigna a mano; no se gana por umbrales.
+Es independiente de `trustLevel`, con una excepción: **bloquear a un cliente se lo retira**, y la
+retirada queda registrada como cualquier otro cambio. Cada subida o bajada se anota en
+`loyaltyDiscountHistory[]` con autor y fecha, append-only, al estilo de `workflowExceptions[]`.
+
+**Precio acordado.** La tarifa propone, el operador dispone: en el resumen del asistente,
+**el precio final es editable**. Un cálculo de 600 € puede cerrarse en 500 €.
+
+Los dos descuentos **se guardan por separado** en el snapshot —`loyaltyDiscount` y
+`manualAdjustment`, ambos con signo— porque responden a preguntas distintas: a qué tiene derecho
+este cliente, frente a a qué cerramos este trato. Fundidos en un solo número, el contrato no
+podría justificar cada línea. El `manualAdjustment` mide contra el precio **ya descontado**, no
+contra la tarifa.
+
+El snapshot conserva además el cálculo original (`pricePerDay`, `basePrice`, `appliedRule`). La
+señal nunca supera el precio acordado. Cambiar de cliente en el asistente descarta un precio
+acordado previo: la base sobre la que se pactó ya no es la misma.
+
+### IVA
+
+**El precio de tarifa ya lleva el IVA incluido.** El desglose lo **extrae** (`base = total / 1,21`);
+no lo suma. Hacerlo al revés subiría todos los precios un 21 % de golpe.
+
+El tipo aplicado se congela en `pricingSnapshot.vatRate` al crear la reserva, como fracción
+(`0.21`). Una reserva anterior a este campo cae al tipo general, que es el que su precio ya
+incluía. Qué lleva IVA y qué no:
+
+| Concepto | IVA |
+|---|---|
+| Alquiler | Sí, 21 % general (península) |
+| **Fianza** | **No** — es depósito en garantía, no una venta |
+| Combustible, limpieza, kilómetros, daños | Sí |
+| **Multas** | **No** — sanción repercutida, no un servicio |
+
+El desglose se ve en el resumen del asistente, en el detalle de la reserva y en el contrato PDF,
+que imprime base imponible, IVA y total, y etiqueta la fianza como no sujeta. Los cargos extra
+de la inspección de devolución **todavía no se desglosan**: el contrato se genera antes de que
+existan.
 
 ### Cliente
 
@@ -348,6 +388,31 @@ Cloud Functions.
 
 No hay firma avanzada tipo DocuSign, y no se busca en esta fase.
 
+### Los tres documentos
+
+El contrato no es el único papel que ve el cliente. Son tres, en el orden de la conversación:
+
+| Documento | Cuándo | Qué es |
+|---|---|---|
+| **Presupuesto** | Antes de crear nada | Precio ofertado, válido 7 días. **No reserva el coche.** |
+| **Justificante de reserva** | Al cobrar la señal (`confirmed`) | Prueba de la reserva y de lo que falta. **No es el contrato.** |
+| **Contrato** | Antes de la entrega | El documento vinculante, con cláusulas y firma. |
+
+Los tres comparten plantilla, desglose de precio con IVA y datos de empresa, para que el
+cliente pueda ponerlos uno al lado del otro y leer los mismos números.
+
+Los dos primeros son **informativos y no tocan la reserva**: generarlos no escribe nada en
+Firestore que el workflow mire. Es deliberado y es la regla que no se puede relajar —que el
+cliente tenga un PDF en la mano no puede habilitar `canStartPickup`. Solo el contrato firmado
+mueve el flujo.
+
+El presupuesto además **no se persiste**: no existe el estado `quote`, y el coche sigue libre
+para cualquier otro hasta que se cree la reserva. Lo único que queda es el PDF en Storage,
+porque el enlace tiene que apuntar a algo.
+
+Ambos se comparten como enlace, para pegar en WhatsApp, que es el canal real. Regenerar el
+justificante conserva el token de descarga: el enlace que el cliente ya tiene sigue vivo.
+
 ---
 
 ## 9. Divergencias conocidas entre visión y código
@@ -406,25 +471,15 @@ No son bugs, son preguntas de producto sin responder:
 4. ¿El calendario y los informes cubren la necesidad real, o se construyeron sin uso?
 5. ¿Se factura? La generación de facturas aparece como idea, sin definir.
 
-### Pedidas el 26 de agosto de 2026
+### Pedidas el 26 de agosto de 2026 — todas construidas
 
-Cuatro funcionalidades nuevas, con sus preguntas abiertas detalladas en
-[docs/mejoras-pendientes.md](docs/mejoras-pendientes.md) (sección «Funcionalidades
-nuevas», `N-1` a `N-4`):
+Las cuatro funcionalidades nuevas (`N-1` a `N-4`) están hechas, con el detalle de qué se
+decidió y por qué en [docs/mejoras-pendientes.md](docs/mejoras-pendientes.md):
 
-6. **Presupuesto en PDF antes de cerrar la reserva** (`N-1`). ¿Se persiste como estado
-   `quote` —y entonces bloquea o no el coche— o se genera y se olvida? Ojo: el flujo
-   canónico de §5 ya empieza por «Presupuesto», y hay CSS `.status-quote` en cuatro
-   componentes, pero ese estado **nunca existió en el modelo**.
-7. **PDF de reserva confirmada sin firmar** (`N-2`). El cliente quiere su confirmación al
-   pagar la señal y firmar días después. ¿Documento propio, o el contrato sin firmar con
-   marca de agua? En ningún caso puede habilitar la entrega: los guards mandan.
-8. **IVA desglosado en el contrato** (`N-3`). El precio actual **ya lleva IVA incluido**, así
-   que se extrae, no se suma. Falta decidir el tipo y, sobre todo, qué conceptos lo llevan:
-   la fianza no —es depósito— y las multas tampoco —son sanción repercutida—.
-9. **Descuento de fidelidad por cliente** (`N-4`). Un porcentaje en la ficha, revocable y
-   visible en el contrato. Se solapa con el precio acordado a mano (`manualAdjustment`,
-   §3): hay que fijar el orden de aplicación y guardarlos por separado.
+- `N-3` IVA y `N-4` descuento de fidelidad — ver §3.
+- `N-1` presupuesto y `N-2` justificante de reserva — ver «Los tres documentos» más abajo.
+
+⚠️ Ninguna llega al cliente hasta **desplegar las Cloud Functions a mano**.
 
 ---
 

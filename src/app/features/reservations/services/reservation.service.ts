@@ -18,8 +18,12 @@ import {
   toDate,
   dateRangesOverlap 
 } from '@shared/utils/reservation-date.util';
-import { calculateBasePrice, findPricingRuleByDays } from '@shared/utils/pricing.util';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+import {
+  calculateBasePrice,
+  findPricingRuleByDays,
+  resolveRentalPrice,
+  DEFAULT_VAT_RATE
+} from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
@@ -443,17 +447,15 @@ export class ReservationService {
     const pricingRules = vehicle.pricingRules || [];
     const basePriceResult = calculateBasePrice(pricingRules, totalDays);
 
-    const calculatedPrice = basePriceResult.basePrice;
-    const hasOverride =
-      typeof finalPriceOverride === 'number' &&
-      isFinite(finalPriceOverride) &&
-      finalPriceOverride >= 0 &&
-      roundMoney(finalPriceOverride) !== roundMoney(calculatedPrice);
-
-    const finalPrice = hasOverride ? roundMoney(finalPriceOverride!) : calculatedPrice;
-    const manualAdjustment = hasOverride
-      ? roundMoney(finalPrice - calculatedPrice)
-      : undefined;
+    // Tariff → loyalty discount → hand-agreed price. The service recomputes it
+    // instead of trusting the figure the wizard showed: this is the value that
+    // gets frozen into the contract.
+    const pricing = resolveRentalPrice(
+      basePriceResult.basePrice,
+      client.loyaltyDiscountPercent,
+      finalPriceOverride
+    );
+    const finalPrice = pricing.finalPrice;
 
     // A signal larger than the whole rental would leave the reservation
     // impossible to settle, so it is capped at the agreed price.
@@ -497,8 +499,13 @@ export class ReservationService {
         } : null,
         pricePerDay: basePriceResult.pricePerDay,
         basePrice: basePriceResult.basePrice,
-        manualAdjustment,
-        finalPrice
+        // Both discounts are frozen separately. Withdrawing the client's
+        // discount tomorrow must not move a contract signed today.
+        loyaltyDiscountPercent: pricing.loyaltyDiscountPercent || undefined,
+        loyaltyDiscount: pricing.loyaltyDiscount || undefined,
+        manualAdjustment: pricing.priceOverridden ? pricing.manualAdjustment : undefined,
+        finalPrice,
+        vatRate: DEFAULT_VAT_RATE
       },
       initialPayment: {
         requiredAmount: initialPayment,

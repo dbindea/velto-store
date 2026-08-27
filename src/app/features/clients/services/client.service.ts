@@ -1,14 +1,17 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, DocumentReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { Client, QuickClientData, ClientDocumentFile, ClientDocumentType_File } from '@shared/models/client.model';
+import { Client, QuickClientData, ClientDocumentFile, ClientDocumentType_File, LoyaltyDiscountChange } from '@shared/models/client.model';
+import { normalizeLoyaltyDiscountPercent } from '@shared/utils/pricing.util';
+import { AuthService } from '@core/auth/auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class ClientService {
   private firestore = inject(Firestore);
   private storage = inject(Storage);
+  private authService = inject(AuthService);
   private clientsRef: CollectionReference;
 
   constructor() {
@@ -131,6 +134,11 @@ export class ClientService {
       documentNumber: client.documentNumber?.toUpperCase().trim() || undefined,
       drivingLicenseNumber: client.drivingLicenseNumber?.toUpperCase().trim() || undefined,
       trustLevel: client.trustLevel || 'new',
+      // A brand-new client blocked on creation has no discount to keep.
+      loyaltyDiscountPercent:
+        client.trustLevel === 'blocked'
+          ? 0
+          : normalizeLoyaltyDiscountPercent(client.loyaltyDiscountPercent),
       documents: client.documents || [],
       createdAt: { seconds: Date.now() / 1000 }
     };
@@ -165,11 +173,17 @@ export class ClientService {
    */
   async updateClient(id: string, data: Partial<Client>): Promise<void> {
     const docRef = doc(this.firestore, `clients/${id}`);
-    
+
     const update: any = {
       ...data,
       updatedAt: { seconds: Date.now() / 1000 }
     };
+
+    // The history is append-only and rebuilt below when the discount actually
+    // moves. Writing back whatever the caller happened to be holding would let
+    // a stale form overwrite an entry appended in the meantime.
+    delete update.loyaltyDiscountHistory;
+    await this.applyLoyaltyDiscountChange(docRef, data, update);
 
     if (data.fullName) {
       update.fullName = this.normalizeFullName(data.fullName);
@@ -185,6 +199,59 @@ export class ClientService {
     }
 
     await updateDoc(docRef, this.cleanData(update));
+  }
+
+  /**
+   * Clamp the loyalty discount, withdraw it when the client is being blocked,
+   * and append an audit entry whenever the percentage actually moves.
+   *
+   * A `blocked` client keeping a 10 % discount is absurd, so blocking removes
+   * it — and the removal is recorded like any other change, with its reason.
+   *
+   * The history array is rebuilt in JS rather than with `arrayUnion()` on
+   * purpose: `cleanData()` walks the payload with `Object.entries()`, and a
+   * Firestore sentinel has no enumerable own properties, so it would be
+   * flattened to `{}` — the same way `stripUndefined()` corrupted contract
+   * timestamps (F-4).
+   */
+  private async applyLoyaltyDiscountChange(
+    docRef: DocumentReference,
+    data: Partial<Client>,
+    update: any
+  ): Promise<void> {
+    const touchesDiscount = data.loyaltyDiscountPercent !== undefined;
+    const isBeingBlocked = data.trustLevel === 'blocked';
+    if (!touchesDiscount && !isBeingBlocked) return;
+
+    const snap = await getDoc(docRef);
+    const current = snap.exists() ? (snap.data() as Client) : undefined;
+    const previousPercent = normalizeLoyaltyDiscountPercent(current?.loyaltyDiscountPercent);
+
+    let percent = touchesDiscount
+      ? normalizeLoyaltyDiscountPercent(data.loyaltyDiscountPercent)
+      : previousPercent;
+
+    let reason: string | undefined;
+    if (isBeingBlocked && percent > 0) {
+      percent = 0;
+      reason = 'clients.loyalty.withdrawnOnBlock';
+    }
+
+    update.loyaltyDiscountPercent = percent;
+
+    if (percent === previousPercent) return;
+
+    const author = this.authService.authorizedUser?.();
+    const entry: LoyaltyDiscountChange = {
+      percent,
+      previousPercent,
+      changedAt: { seconds: Date.now() / 1000 },
+      changedBy: author?.displayName,
+      changedByEmail: author?.email,
+      reason
+    };
+
+    update.loyaltyDiscountHistory = [...(current?.loyaltyDiscountHistory ?? []), entry];
   }
 
   /**

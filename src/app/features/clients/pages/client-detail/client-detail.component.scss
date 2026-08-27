@@ -111,8 +111,21 @@
 
 .badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.25rem;
+}
+
+.loyalty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: var(--success-bg);
+  color: var(--success-color);
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .trust-badge {

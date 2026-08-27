@@ -118,17 +118,17 @@ export const sendSignedContractEmail = functions.https.onCall(
     const pickup = formatDate(toDate(contract.reservationSnapshot?.pickupDateTime));
     const ret = formatDate(toDate(contract.reservationSnapshot?.returnDateTime));
 
-    const subject = 'Contrato de alquiler Velto Rent';
+    const subject = 'Contrato de alquiler VELTO MOBILITY';
     const html = `
       <p>Hola ${escapeHtml(clientName)},</p>
       <p>Adjuntamos el contrato firmado correspondiente a la reserva del vehículo
         <strong>${escapeHtml(vehicleLabel)}</strong> con fechas
         <strong>${escapeHtml(pickup)}</strong> a <strong>${escapeHtml(ret)}</strong>.
       </p>
-      <p>Gracias por confiar en Velto Rent.</p>
-      <p>Velto Rent<br/>reservas@veltorent.com</p>
+      <p>Gracias por confiar en VELTO MOBILITY.</p>
+      <p>VELTO MOBILITY<br/>reservas@veltorent.com</p>
     `;
-    const text = `Hola ${clientName},\n\nAdjuntamos el contrato firmado correspondiente a la reserva del vehículo ${vehicleLabel} con fechas ${pickup} a ${ret}.\n\nGracias por confiar en Velto Rent.\n\nVelto Rent\nreservas@veltorent.com`;
+    const text = `Hola ${clientName},\n\nAdjuntamos el contrato firmado correspondiente a la reserva del vehículo ${vehicleLabel} con fechas ${pickup} a ${ret}.\n\nGracias por confiar en VELTO MOBILITY.\n\nVELTO MOBILITY\nreservas@veltorent.com`;
 
     const filename = `contrato-firmado-${contract.contractNumber || contract.id}.pdf`;
 

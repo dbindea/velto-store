@@ -6,16 +6,22 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
 import { TranslateService } from '@core/i18n/translate.service';
-import { 
-  Client, 
-  ClientDocumentType, 
-  ClientTrustLevel, 
+import {
+  Client,
+  ClientDocumentType,
+  ClientTrustLevel,
   DrivingLicenseCountry,
   ClientDocumentFile,
   ClientDocumentType_File,
+  LoyaltyDiscountChange,
   CLIENT_FILE_TYPE_LABELS,
   DRIVING_LICENSE_COUNTRY_LABELS
 } from '@shared/models/client.model';
+import {
+  MAX_LOYALTY_DISCOUNT_PERCENT,
+  normalizeLoyaltyDiscountPercent
+} from '@shared/utils/pricing.util';
+import { toDate } from '@shared/utils/reservation-date.util';
 
 @Component({
   selector: 'app-client-form',
@@ -43,6 +49,20 @@ export class ClientFormComponent implements OnInit {
   // Upload state
   uploadingType: ClientDocumentType_File | null = null;
   uploadError = '';
+
+  readonly maxLoyaltyDiscount = MAX_LOYALTY_DISCOUNT_PERCENT;
+  /** Timestamps arrive in several shapes; the template needs a real Date. */
+  readonly toDate = toDate;
+
+  /** Blocking a client withdraws the discount, so the field stops being editable. */
+  get isBlocked(): boolean {
+    return this.formData.trustLevel === 'blocked';
+  }
+
+  /** Newest change first: what an operator wants to see is the last decision. */
+  get loyaltyHistory(): LoyaltyDiscountChange[] {
+    return [...(this.formData.loyaltyDiscountHistory ?? [])].reverse();
+  }
 
   // Options
   documentTypeOptions: ClientDocumentType[] = ['dni', 'nie', 'passport', 'other'];
@@ -79,6 +99,7 @@ export class ClientFormComponent implements OnInit {
       drivingLicenseExpiryDate: null,
       drivingLicenseCountry: 'ES',
       trustLevel: 'new',
+      loyaltyDiscountPercent: 0,
       notes: ''
     };
   }
@@ -122,6 +143,17 @@ export class ClientFormComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     this.formData.documentNumber = input.value.toUpperCase().trim();
     input.value = this.formData.documentNumber;
+  }
+
+  /**
+   * Bound to `(ngModelChange)`, which emits the value — not a DOM Event.
+   *
+   * Clamping here rather than only in the service means an operator who types
+   * 50 sees it snap to the ceiling instead of saving and silently getting 30.
+   */
+  onLoyaltyDiscountChange(value: unknown): void {
+    const parsed = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+    this.formData.loyaltyDiscountPercent = normalizeLoyaltyDiscountPercent(parsed);
   }
 
   onLicenseNumberInput(event: Event): void {

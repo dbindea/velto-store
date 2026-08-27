@@ -21,6 +21,13 @@
               <span class="trust-badge" [ngClass]="getTrustClass(client.trustLevel)">
                 {{ getTrustLabel(client.trustLevel) }}
               </span>
+              @if (client.loyaltyDiscountPercent) {
+                <span class="loyalty-badge">
+                  <i class="pi pi-percentage"></i>
+                  {{ client.loyaltyDiscountPercent }} %
+                  {{ 'clients.fields.loyaltyDiscount' | translate }}
+                </span>
+              }
             </div>
           </div>
         </div>
