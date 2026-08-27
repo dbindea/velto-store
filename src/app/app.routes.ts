@@ -17,6 +17,18 @@ export const routes: Routes = [
     path: 'sign-contract/:token',
     loadComponent: () => import('./features/contracts/pages/sign-contract/sign-contract.component').then(m => m.SignContractComponent)
   },
+  /**
+   * Customer-facing document links. PUBLIC on purpose — a customer must never
+   * be asked to log in to read their own quote.
+   *
+   * Normally Hosting rewrites `/d/**` to the `documentLink` function and this
+   * route is never reached. It exists so that a missing rewrite degrades into
+   * an extra redirect instead of a login screen.
+   */
+  {
+    path: 'd/:id',
+    loadComponent: () => import('./features/documents/document-redirect.component').then(m => m.DocumentRedirectComponent)
+  },
   {
     path: '',
     loadComponent: () => import('./layout/private-layout/private-layout.component').then(m => m.PrivateLayoutComponent),

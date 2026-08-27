@@ -256,6 +256,19 @@ carpeta ni llegar a `contracts/`. Está cubierto por tests.
 El orden de los `rewrites` en `firebase.json` importa: `/d/**` va **antes** del catch-all de
 la SPA, o lo captura `index.html`.
 
+⚠️ **Si falta el rewrite, el fallo es silencioso y feo:** la ruta cae en el catch-all, se
+sirve la SPA con `200`, el router no encuentra `/d/…` y el cliente **acaba en la pantalla de
+login**. Un cliente al que se le pide iniciar sesión para ver su propio presupuesto.
+
+Por eso existe además la ruta pública `d/:id` en `app.routes.ts`
+([document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts)),
+que reenvía directamente a la function. Es el paracaídas, no el plan: convierte un rewrite
+olvidado en un salto extra en vez de una pantalla de login.
+
+**El login es solo para la agencia.** Las dos rutas de cliente —`sign-contract/:token` y
+`d/:id`— van declaradas **antes** del bloque con `authGuard`, así que el router las resuelve
+primero y el guard nunca las ve.
+
 ### Idioma de los documentos
 
 Los tres PDF se emiten en **el idioma que tiene puesto la plataforma** cuando el operador
