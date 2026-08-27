@@ -488,6 +488,73 @@ producía «Importe depositada».
 
 ---
 
+---
+
+# Pasada de verificación — 27 de agosto de 2026
+
+Sobre el código ya desplegado, con el dev server de :4200 contra el Firebase de
+producción.
+
+## F-29 · Los `select` se quedaron sin flecha
+
+**Gravedad:** media · **Estado:** ✅ corregido
+
+El estilo global nuevo hacía `appearance: none` —para sustituir la flecha del
+sistema por un chevron propio— pero **once hojas de componente declaran
+`background:` en sus selects**, el shorthand, que reinicia `background-image` a
+`none`. Su `.filter-select[_ngcontent-…]` (0-2-0) gana a un `select` pelado
+(0-0-1).
+
+Resultado: la flecha nativa quitada, la nuestra pisada, **desplegables sin
+ninguna flecha**. Peor que el punto de partida.
+
+Pasó `tsc`, pasó el build y pasaron los 134 tests. Solo se ve abriendo la
+página y leyendo `getComputedStyle`.
+
+**Corrección:** `!important` acotado al chevron y al hueco que necesita
+(`background-image`, `-repeat`, `-position`, `-size` y `padding-right`). Los
+colores siguen siendo del componente. Verificado: `backgroundImage` distinto de
+`none` y `padding-right: 33.6px` en los selects reales.
+
+## F-30 · El enlace de presupuesto pedía login al cliente
+
+**Gravedad:** alta · **Estado:** ✅ mitigado en código · ⚠️ pendiente de desplegar hosting
+
+Reportado por Dorel: al abrir `https://velto-store.web.app/d/q06fa82e4da5d421d`
+la página pedía iniciar sesión.
+
+**No era permisos ni dominio.** El rewrite `/d/**` no está desplegado, así que
+la ruta cae en el catch-all de la SPA, Angular no encuentra `/d/…`, y el
+`authGuard` manda a `/login`. Medido con el mismo id:
+
+| Vía | Resultado |
+|---|---|
+| `velto-store.web.app/d/q06fa…` | `200 text/html` → SPA → login |
+| function directa | `200 application/pdf`, 1,2 MB, `%PDF-` |
+
+El PDF llevaba todo el rato ahí. Lo que faltaba era enrutarlo.
+
+**Corrección:** además de desplegar hosting, se añade la ruta pública `d/:id`
+que reenvía a la function. Un rewrite olvidado pasa a costar un salto extra en
+vez de enseñarle una pantalla de login a un cliente. Declarada **antes** del
+bloque con `authGuard`, igual que `sign-contract/:token`.
+
+## Verificado en esta pasada
+
+| Comprobación | Resultado |
+|---|---|
+| `color-scheme: dark` aplicado en runtime | ✅ los desplegables y el calendario siguen el tema de la app, no el del SO |
+| Chevron propio en los `select` | ✅ tras corregir F-29 |
+| Fianza editable a 0 | ✅ pide motivo, «Crear reserva» se deshabilita y se rehabilita al rellenarlo |
+| Presupuesto contra la function desplegada | ✅ generado, 1,2 MB |
+| Enlace corto (function directa) | ✅ `200 application/pdf`, empieza por `%PDF-` |
+| Enlace corto (vía hosting) | ❌ devuelve la SPA — **falta desplegar hosting** |
+| Longitud del enlace | 47 car. frente a 168 de la URL de Storage |
+| Móvil 360 × 800 | ✅ sin desbordamiento horizontal |
+| Errores de consola | 0 |
+
+---
+
 ## Datos de prueba creados
 
 Todos ficticios, sobre producción, con autorización expresa:

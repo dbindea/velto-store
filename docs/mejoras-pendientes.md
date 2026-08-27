@@ -200,13 +200,17 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [ ] **Los tres PDF abiertos en un visor real.** El rediseño se verificó
       extrayendo texto y midiendo cajas, no mirándolos: falta la comprobación
       visual del logo, los filetes y el color.
-- [ ] **Conectar `veltorent.com` a Firebase Hosting.** Hoy el dominio está
-      registrado pero **no apunta a hosting**: `www.veltorent.com` ni siquiera
-      resuelve. Mientras tanto los enlaces cortos salen con
-      `velto-store.web.app`, que ya es 3,5 veces más corto que la URL de
-      Storage. Al conectarlo, basta con apuntar `VELTO_PUBLIC_BASE_URL` al
-      dominio nuevo: **no hay que tocar código**, y los links de firma se
-      mueven con él.
+- [ ] **Elegir y conectar el dominio de los enlaces al cliente.** Hoy salen con
+      `velto-store.web.app`. Al conectarlo basta con apuntar
+      `VELTO_PUBLIC_BASE_URL` al dominio nuevo: **no hay que tocar código**, y
+      los enlaces de firma se mueven con él.
+
+      ⚠️ **No apuntar la raíz de `veltorent.com` a este hosting.** La §11 del
+      documento funcional reserva ese dominio para la **web pública** de coches
+      y deja la app interna en `store.veltorent.com`. Este proyecto de Firebase
+      sirve el backoffice: si se le cuelga la raíz, se cierra la puerta a la web
+      pública. Usar un subdominio (`store.` o uno propio para documentos).
+      `veltomobility.com` sirve igual; la elección es comercial, no técnica.
 - [ ] **Probar un enlace corto desde el móvil**, fuera de la sesión del
       operador, para confirmar que abre el PDF en el navegador de WhatsApp
 - [ ] **Revisar los secrets de empresa** antes de dar por buena la marca:
@@ -238,14 +242,23 @@ los contratos ya emitidos tienen que seguir cuadrando.
 responden (verificado: devuelven `UNAUTHENTICATED` a una llamada sin sesión, no
 404), y el hosting sirve ya la app con la marca nueva.
 
-⚠️ **Queda un despliegue pendiente**, el de los enlaces cortos:
+⚠️ **Falta desplegar hosting** (verificado el 27 de agosto de 2026):
 
 ```bash
-npm --prefix functions run deploy      # añade documentLink
-firebase deploy --only hosting         # añade el rewrite /d/**
+firebase deploy --only hosting         # activa el rewrite /d/**
 ```
 
-Los dos son necesarios: sin el rewrite, el enlace corto da 404.
+`documentLink` **ya está desplegada y funciona**: sirve el PDF con
+`200 application/pdf`, 1,2 MB, llamándola directamente. Lo que no está activo es
+el rewrite, así que `velto-store.web.app/d/q…` devuelve el `index.html` de la SPA.
+
+⚠️ **El fallo es silencioso**: sin el rewrite la ruta la captura el catch-all de
+la SPA y responde `200`, así que parece que va. Hay que mirar el `content-type`:
+
+```bash
+curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://velto-store.web.app/d/qXXXX
+# application/pdf → bien | text/html → el rewrite no está
+```
 
 ---
 
