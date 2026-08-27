@@ -35,7 +35,7 @@ import {
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
-import { extractVat, resolveVatRate, VatBreakdown } from '@shared/utils/pricing.util';
+import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -125,12 +125,13 @@ export class ReservationDetailComponent implements OnInit {
   methodOptions: PaymentMethod[] = ['cash', 'bank_transfer', 'bizum', 'physical_pos', 'redsys', 'manual_card', 'other'];
 
   /**
-   * Tax split of the rental, at the rate frozen on the reservation. The price
-   * already includes VAT, so this extracts it: no total ever moves.
+   * Tax split of the rental, at the rate AND in the direction frozen on the
+   * reservation. No total ever moves.
    */
   get vat(): VatBreakdown {
-    const snapshot = this.reservation?.pricingSnapshot;
-    return extractVat(snapshot?.finalPrice ?? 0, resolveVatRate(snapshot?.vatRate));
+    // Reads the direction frozen on the reservation, not today's default: a
+    // reservation priced when tariffs were VAT-inclusive still splits that way.
+    return vatBreakdownOf(this.reservation?.pricingSnapshot ?? {});
   }
 
   /** The rate as a percentage, for the "IVA (21 %)" label. */
@@ -285,12 +286,6 @@ export class ReservationDetailComponent implements OnInit {
    * entire reservation (lightweight) — just patch the array so the
    * panel re-renders with the new entry.
    */
-  onInternalNotesChanged(notes: ReservationNote[]): void {
-    if (this.reservation) {
-      this.reservation = { ...this.reservation, internalNotes: notes };
-    }
-  }
-
   showCancelModal = false;
 
   openCancelModal(): void {

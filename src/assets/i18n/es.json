@@ -658,6 +658,7 @@
       "initialPayment": "Señal",
       "loyaltyDiscount": "Descuento fidelidad",
       "manualAdjustment": "Ajuste manual",
+      "netPrice": "Precio sin IVA",
       "pricePerDay": "Precio/día",
       "remainingPayment": "Resto pendiente",
       "resetToCalculated": "Volver al precio calculado",

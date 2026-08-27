@@ -74,13 +74,29 @@ export interface ReservationPricingSnapshot {
    * justify each line separately.
    */
   manualAdjustment?: number;
+  /**
+   * Taxable base actually agreed, after both discounts. This is the round
+   * number the operator negotiates, and what a customer who wants no invoice
+   * pays. Absent on reservations created when tariffs were VAT-inclusive.
+   */
+  netPrice?: number;
+  /** What the customer pays: `netPrice` plus VAT. */
   finalPrice: number;
   /**
-   * VAT rate frozen at creation, as a FRACTION (0.21 = 21 %). `finalPrice`
-   * already includes it: the breakdown extracts the tax, never adds it.
+   * VAT rate frozen at creation, as a FRACTION (0.21 = 21 %).
    * Absent on reservations created before VAT was introduced.
    */
   vatRate?: number;
+  /**
+   * Which direction this reservation's price was calculated in, frozen at
+   * creation.
+   *
+   * `false` (current behaviour): the tariff is NET and VAT was added on top.
+   * **Absent means `true`** — reservations created before the change priced
+   * VAT-inclusive, and they have to keep splitting that way or every contract
+   * already signed stops adding up. Never infer this from today's constant.
+   */
+  tariffIncludesVat?: boolean;
 }
 
 export interface ReservationDeposit {

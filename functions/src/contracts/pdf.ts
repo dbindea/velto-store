@@ -144,8 +144,12 @@ export interface ContractPdfInput {
     loyaltyDiscount?: number;
     /** Signed difference agreed by hand, on top of the loyalty discount. */
     manualAdjustment?: number;
+    /** Taxable base actually agreed. Drives the split when the tariff is net. */
+    netPrice?: number;
     /** VAT rate frozen on the reservation, as a FRACTION (0.21 = 21 %). */
     vatRate?: number;
+    /** Absent means the old VAT-inclusive tariffs. */
+    tariffIncludesVat?: boolean;
   };
   inspection?: {
     pickupKm?: number;
@@ -337,6 +341,37 @@ export function extractVat(
     total: roundedTotal,
     percent: Math.round(safeRate * 100)
   };
+}
+
+/**
+ * The tax split of a rental, in the direction that rental was priced in.
+ *
+ * ⚠️ Tariffs are NET now: a vehicle at 30 €/day means 30 € of base and the
+ * customer pays 36,30 €. But reservations created before that switch stored
+ * VAT-INCLUSIVE prices, and they have to keep splitting the old way or every
+ * contract already signed stops adding up. `tariffIncludesVat` is frozen on
+ * the reservation; **absent means inclusive**, never today's default.
+ */
+export function vatBreakdownOf(pricing: {
+  finalPrice?: number;
+  netPrice?: number;
+  vatRate?: number;
+  tariffIncludesVat?: boolean;
+}): { base: number; vat: number; total: number; percent: number } {
+  const includesVat = pricing.tariffIncludesVat ?? true;
+  if (includesVat) return extractVat(pricing.finalPrice, pricing.vatRate);
+
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const rate =
+    typeof pricing.vatRate === 'number' && isFinite(pricing.vatRate) && pricing.vatRate >= 0
+      ? pricing.vatRate
+      : DEFAULT_VAT_RATE;
+  const net = typeof pricing.netPrice === 'number' && pricing.netPrice > 0
+    ? round(pricing.netPrice)
+    : 0;
+  const total = round(net * (1 + rate));
+
+  return { base: net, vat: round(total - net), total, percent: Math.round(rate * 100) };
 }
 
 export function formatMoney(n?: number, locale: ContractLocale = 'es'): string {
@@ -757,7 +792,7 @@ export class PdfBuilder {
       tracking?: number;
     } = {}
   ): void {
-    const size = opts.size ?? 10;
+    const size = opts.size ?? 9;
     const role: FontRole =
       opts.role ?? (opts.bold ? 'bodyBold' : opts.italic ? 'bodyItalic' : 'body');
     const font = this.fontFor(role, s);
@@ -935,7 +970,9 @@ export class PdfBuilder {
     const titleMax = this.pageWidth - this.margin * 2 - refWidth - 16;
     const title = opts.title.toUpperCase();
     const titleFont = this.fontFor('display', title);
-    const titleSize = this.fitSize(title, 'display', 26, 15, titleMax);
+    // One line, always. The Spanish title is 45 characters and wrapped at 15pt;
+    // a two-line masthead reads like a mistake, and a shrunk one does not.
+    const titleSize = this.fitSize(title, 'display', 24, 10, titleMax);
     const titleLines = this.wrap(title, titleSize, titleFont, titleMax);
 
     this.ensureSpace(titleSize * 1.4 * titleLines.length + 8);
@@ -976,13 +1013,13 @@ export class PdfBuilder {
       opts.numbered !== undefined
         ? `${opts.numbered}. ${title.toUpperCase()}`
         : title.toUpperCase();
-    this.text(label, { size: 7.5, role: 'display', color: BRAND, tracking: 0.7, gap: 4 });
+    this.text(label, { size: 9.5, role: 'display', color: BRAND, tracking: 0.6, gap: 4 });
   }
 
   /** Sub-section title (smaller). */
   subsection(title: string): void {
     this.y -= 4;
-    this.text(title, { size: 9.5, role: 'displayMedium', color: INK, gap: 2 });
+    this.text(title, { size: 8.8, role: 'displayMedium', color: INK, gap: 2 });
   }
 
   /**
@@ -995,7 +1032,7 @@ export class PdfBuilder {
    * if the value alone would not fit, the pair wraps onto two lines instead.
    */
   twoColumn(left: string, right: string, leftBold = false, rightBold = false): void {
-    const size = 9.5;
+    const size = 8.2;
     const lf = leftBold ? this.bold : this.font;
     const rf = rightBold ? this.bold : this.font;
     const gap = 12;
@@ -1037,8 +1074,8 @@ export class PdfBuilder {
     right: InfoEntry[],
     opts: { size?: number } = {}
   ): void {
-    const size = opts.size ?? 9;
-    const lineHeight = size * 1.55;
+    const size = opts.size ?? 8.2;
+    const lineHeight = size * 1.5;
     const gutter = 24;
     const colWidth = (this.pageWidth - this.margin * 2 - gutter) / 2;
     const rows = Math.max(left.length, right.length);
@@ -1092,17 +1129,18 @@ export class PdfBuilder {
   }
 
   /**
-   * The totals stack the invoice puts bottom-right: hairline above each row,
-   * the final line larger and in brand colour.
+   * The totals stack the invoice puts bottom-right: hairline above each row.
+   *
+   * The total line is the SAME SIZE as the rows above it and stands out by
+   * colour and weight alone. Set larger it shouted, and it does not need to
+   * shout: it is visibly the sum of the two lines directly above.
    */
   totalsBlock(rows: { label: string; value: string; total?: boolean }[]): void {
     const width = (this.pageWidth - this.margin * 2) * 0.62;
     const x = this.pageWidth - this.margin - width;
+    const size = 8.8;
 
     for (const row of rows) {
-      const size = row.total
-        ? this.fitSize(row.label.toUpperCase(), 'display', 14, 10, width * 0.62)
-        : 9.5;
       const height = size * 2;
       this.ensureSpace(height);
 
@@ -1113,8 +1151,8 @@ export class PdfBuilder {
         color: row.total ? INK : RULE
       });
 
-      const labelRole: FontRole = row.total ? 'display' : 'bodyBold';
-      const labelFont = this.fontFor(labelRole, row.label);
+      // Same face and size throughout; the total is told apart by colour.
+      const labelFont = this.fontFor(row.total ? 'display' : 'bodyBold', row.label);
       const valueFont = row.total ? this.fontFor('display', row.value) : this.bold;
       const valueWidth = valueFont.widthOfTextAtSize(row.value, size);
       const baseline = this.y - size - 4;
@@ -1125,7 +1163,7 @@ export class PdfBuilder {
         baseline,
         size,
         labelFont,
-        row.total ? INK : MUTED
+        row.total ? BRAND : MUTED
       );
       this.put(
         row.value,
@@ -1147,7 +1185,7 @@ export class PdfBuilder {
    * together on the first line.
    */
   twoColumnWrap(left: string, right: string, leftBold = false, rightWidth?: number): void {
-    const size = 9.5;
+    const size = 8.2;
     const lf = leftBold ? this.bold : this.font;
     const gap = 12;
     const labelWidth = lf.widthOfTextAtSize(left, size);
@@ -1180,64 +1218,53 @@ export class PdfBuilder {
     this.y -= lineHeight * Math.max(1, lines.length) + 2;
   }
 
-  /** Render a highlight box (numbered, big-font, bordered). */
+  /**
+   * One of the front-page highlights: a number, the text, a hairline under it.
+   *
+   * It used to be a tinted, bordered box with the number reversed out of a
+   * solid green square — nine of those stacked read as a warning notice rather
+   * than a summary, and the squares were the loudest thing on the page. The
+   * quiet version keeps the same information and the same reading order: the
+   * number in brand colour does the counting, the rule does the separating.
+   *
+   * The text is also smaller than it was (11.5 → 9.2, the clause size), so the
+   * summary no longer looks more important than the contract it summarises.
+   */
   highlightBox(index: number, text: string): void {
-    const size = 11.5;
-    const padX = 8;
-    const padY = 8;
-    const numW = 28;
-    const lineHeight = size * 1.35;
+    const size = 9.2;
+    const numberColumn = 16;
+    const lineHeight = size * 1.45;
+    const gapAfter = 7;
+
     const lines = this.wrap(
       text,
       size,
       this.font,
-      this.pageWidth - this.margin * 2 - numW - padX * 3
+      this.pageWidth - this.margin * 2 - numberColumn
     );
-    const boxH = padY * 2 + lineHeight * lines.length;
-    this.ensureSpace(boxH + 4);
+    const blockHeight = lineHeight * lines.length + gapAfter;
+    this.ensureSpace(blockHeight + 4);
 
-    // Background
-    this.page.drawRectangle({
-      x: this.margin,
-      y: this.y - boxH,
-      width: this.pageWidth - this.margin * 2,
-      height: boxH,
-      color: TINT,
-      borderColor: RULE,
-      borderWidth: 0.5
-    });
-
-    // Number badge
-    const badgeSize = 18;
-    const badgeX = this.margin + padX;
-    const badgeY = this.y - padY - badgeSize;
-    this.page.drawRectangle({
-      x: badgeX,
-      y: badgeY,
-      width: badgeSize,
-      height: badgeSize,
-      color: BRAND
-    });
     const numStr = String(index);
     const numFont = this.fontFor('display', numStr);
-    const numTextWidth = numFont.widthOfTextAtSize(numStr, 11);
-    this.page.drawText(numStr, {
-      x: badgeX + (badgeSize - numTextWidth) / 2,
-      y: badgeY + 4,
-      size: 11,
-      font: numFont,
-      color: rgb(1, 1, 1)
-    });
+    const firstBaseline = this.y - size;
+    this.put(numStr, this.margin, firstBaseline, size, numFont, BRAND);
 
-    // Body text
-    const tx = badgeX + badgeSize + padX;
-    let ty = this.y - padY - size;
+    const tx = this.margin + numberColumn;
+    let ty = firstBaseline;
     for (const ln of lines) {
       this.put(ln, tx, ty, size, this.font, BODY);
       ty -= lineHeight;
     }
 
-    this.y -= boxH + 4;
+    this.y = ty - gapAfter * 0.5;
+    this.page.drawLine({
+      start: { x: this.margin, y: this.y },
+      end: { x: this.pageWidth - this.margin, y: this.y },
+      thickness: 0.4,
+      color: RULE
+    });
+    this.y -= gapAfter * 0.5;
   }
 
   /**
@@ -1411,6 +1438,8 @@ export class PdfBuilder {
     renterId: string;
     renterPng?: { img: any; w: number; h: number } | null;
     boxHeight?: number;
+    /** Wording for the lessor's digital signature. */
+    digitallySignedLabel: string;
   }): void {
     const boxH = opts.boxHeight ?? 90;
     const innerW = this.pageWidth - this.margin * 2 - 30;
@@ -1421,15 +1450,7 @@ export class PdfBuilder {
     const leftX = this.margin;
     const rightX = this.margin + colW + 30;
 
-    // Boxes
-    this.page.drawRectangle({
-      x: leftX,
-      y: topY - boxH,
-      width: colW,
-      height: boxH,
-      borderColor: BOX_BORDER,
-      borderWidth: 0.5
-    });
+    // Only the renter gets a box: it is the one that has to be filled in.
     this.page.drawRectangle({
       x: rightX,
       y: topY - boxH,
@@ -1439,20 +1460,24 @@ export class PdfBuilder {
       borderWidth: 0.5
     });
 
-    // Lessor block: empty signature line (we sign via sello / already-signed company)
-    this.page.drawLine({
-      start: { x: leftX + 12, y: topY - 50 },
-      end: { x: leftX + colW - 12, y: topY - 50 },
-      thickness: 0.6,
-      color: rgb(0.3, 0.3, 0.3)
-    });
-    this.page.drawText('Firma / Signature / Semnătura', {
-      x: leftX + 12,
-      y: topY - 60,
-      size: 7,
-      font: this.italic,
-      color: MUTED
-    });
+    /**
+     * The lessor does not sign here.
+     *
+     * VELTO MOBILITY signs with a digital certificate, so an empty ruled box on
+     * its side was asking for a handwritten signature that is never coming —
+     * and an unsigned-looking box on a contract reads badly.
+     *
+     * TODO: apply the actual certificate to the generated PDF. Until then this
+     * states the intent; the note is not a substitute for the signature.
+     */
+    this.put(
+      opts.digitallySignedLabel,
+      leftX,
+      topY - 46,
+      8,
+      this.fontFor('displayMedium', opts.digitallySignedLabel),
+      BRAND
+    );
 
     // Renter block: signature image if provided, else empty line
     if (opts.renterPng) {
@@ -1620,10 +1645,18 @@ export async function buildContractPdf(
       loc === 'en' ? 'Agreed adjustment' : loc === 'ro' ? 'Ajustare convenită' : 'Ajuste acordado',
     vatBase: loc === 'en' ? 'Taxable base' : loc === 'ro' ? 'Bază impozabilă' : 'Base imponible',
     vat: loc === 'en' ? 'VAT' : loc === 'ro' ? 'TVA' : 'IVA',
+    // No "(VAT incl.)": it sits directly under the base and the tax, so the
+    // sum is self-evident and the qualifier only made the line longer.
     rentalTotal:
-      loc === 'en' ? 'Total rental (VAT incl.)' : loc === 'ro' ? 'Total închiriere (TVA inclus)' : 'Total alquiler (IVA incl.)',
+      loc === 'en' ? 'Total rental' : loc === 'ro' ? 'Total închiriere' : 'Total alquiler',
     deposit: loc === 'en' ? 'Security deposit' : loc === 'ro' ? 'Garanție (fianță)' : 'Fianza',
     noDeposit: loc === 'en' ? 'Not required' : loc === 'ro' ? 'Nu se solicită' : 'No se solicita',
+    digitallySigned:
+      loc === 'en'
+        ? 'Digitally signed with a qualified certificate'
+        : loc === 'ro'
+          ? 'Semnat digital cu certificat calificat'
+          : 'Firmado digitalmente con certificado digital',
     depositVatNote:
       loc === 'en'
         ? 'Security deposit (not subject to VAT)'
@@ -1822,7 +1855,7 @@ export async function buildContractPdf(
     }
   }
 
-  const vat = extractVat(finalPrice, input.reservation.vatRate);
+  const vat = vatBreakdownOf(input.reservation);
   b.totalsBlock([
     { label: L.vatBase, value: formatMoney(vat.base, loc) },
     { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
@@ -1914,7 +1947,8 @@ export async function buildContractPdf(
     renterRole: L.renter,
     renterName: input.client.fullName,
     renterId,
-    renterPng
+    renterPng,
+    digitallySignedLabel: L.digitallySigned
   });
 
   if (signed && input.signedAt) {
@@ -1926,14 +1960,9 @@ export async function buildContractPdf(
     );
   }
 
-  b.separator();
-  // Final small print — document metadata
-  b.text(
-    `${input.company.legalName} · ${L.taxId} ${input.company.taxId} · ${input.company.address} · ${input.company.email}${
-      input.company.phone ? ' · ' + input.company.phone : ''
-    }`,
-    { size: 7, color: [0.4, 0.4, 0.4] }
-  );
+  // The company's identity block used to be repeated here, under the
+  // signatures. It is already on the footer of every page, this one included,
+  // so it said the same thing twice within a few centimetres.
 
   // Stamp page numbers
   b.finalizeFooters();

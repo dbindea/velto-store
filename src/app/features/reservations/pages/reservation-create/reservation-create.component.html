@@ -416,18 +416,18 @@
 
                 <!-- Editable: the agreed price wins over the tariff. -->
                 <div class="price-row total editable-price">
-                  <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
+                  <span>{{ 'reservations.pricing.netPrice' | translate }}:</span>
                   <span class="price-input-wrap">
                     <input
                       type="number"
                       class="price-input"
                       [class.overridden]="priceOverridden"
-                      [ngModel]="finalPrice"
-                      (ngModelChange)="onFinalPriceChange($event)"
-                      name="finalPrice"
+                      [ngModel]="netPrice"
+                      (ngModelChange)="onNetPriceChange($event)"
+                      name="netPrice"
                       min="0"
                       step="0.01"
-                      [attr.aria-label]="'reservations.pricing.finalPrice' | translate">
+                      [attr.aria-label]="'reservations.pricing.netPrice' | translate">
                     <span class="price-currency">€</span>
                   </span>
                 </div>
@@ -452,12 +452,12 @@
                 <!-- VAT is extracted from the final price, never added to it. -->
                 <div class="vat-breakdown">
                   <div class="price-row vat-row">
-                    <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
-                    <span>{{ vat.base | number:'1.2-2' }} €</span>
-                  </div>
-                  <div class="price-row vat-row">
                     <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
                     <span>{{ vat.vat | number:'1.2-2' }} €</span>
+                  </div>
+                  <div class="price-row vat-total">
+                    <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
+                    <span>{{ finalPrice | number:'1.2-2' }} €</span>
                   </div>
                 </div>
               </div>

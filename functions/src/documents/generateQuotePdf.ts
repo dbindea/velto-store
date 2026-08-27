@@ -62,7 +62,9 @@ interface QuoteRequest {
     loyaltyDiscountPercent?: number;
     loyaltyDiscount?: number;
     manualAdjustment?: number;
+    netPrice?: number;
     vatRate?: number;
+    tariffIncludesVat?: boolean;
   };
   locale?: ContractLocale;
 }
@@ -146,7 +148,9 @@ export const generateQuotePdf = functions.https.onCall(
         loyaltyDiscountPercent: finiteOrUndefined(data.pricing?.loyaltyDiscountPercent),
         loyaltyDiscount: finiteOrUndefined(data.pricing?.loyaltyDiscount),
         manualAdjustment: finiteOrUndefined(data.pricing?.manualAdjustment),
-        vatRate: finiteOrUndefined(data.pricing?.vatRate)
+        netPrice: finiteOrUndefined(data.pricing?.netPrice),
+        vatRate: finiteOrUndefined(data.pricing?.vatRate),
+        tariffIncludesVat: data.pricing?.tariffIncludesVat
       },
       locale,
       generatedAt,

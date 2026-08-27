@@ -5,6 +5,7 @@ import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Client, QuickClientData, ClientDocumentFile, ClientDocumentType_File, LoyaltyDiscountChange } from '@shared/models/client.model';
 import { normalizeLoyaltyDiscountPercent } from '@shared/utils/pricing.util';
+import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { AuthService } from '@core/auth/auth.service';
 
 @Injectable({ providedIn: 'root' })
@@ -18,21 +19,12 @@ export class ClientService {
     this.clientsRef = collection(this.firestore, 'clients');
   }
 
-  /** Removes undefined/null fields recursively. Preserves arrays. */
+  /**
+   * Removes `undefined` and `null` before writing. Delegates to the shared
+   * cleaner, which leaves Firestore sentinels intact.
+   */
   private cleanData<T>(data: T): T {
-    if (data === null || data === undefined) return data;
-    if (Array.isArray(data)) {
-      return data.map(item => this.cleanData(item)) as any;
-    }
-    if (typeof data !== 'object') return data;
-
-    const cleaned: any = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined && value !== null) {
-        cleaned[key] = this.cleanData(value);
-      }
-    }
-    return cleaned;
+    return cleanForFirestore(data, { stripNulls: true });
   }
 
   /** Normalize fullName: trim + collapse spaces */

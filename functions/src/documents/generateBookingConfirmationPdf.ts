@@ -142,7 +142,9 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
         loyaltyDiscountPercent: pricingSnapshot.loyaltyDiscountPercent,
         loyaltyDiscount: pricingSnapshot.loyaltyDiscount,
         manualAdjustment: pricingSnapshot.manualAdjustment,
-        vatRate: pricingSnapshot.vatRate
+        netPrice: pricingSnapshot.netPrice,
+        vatRate: pricingSnapshot.vatRate,
+        tariffIncludesVat: pricingSnapshot.tariffIncludesVat
       },
       payments: {
         initialRequired: reservation.initialPayment?.requiredAmount,

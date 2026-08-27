@@ -22,9 +22,12 @@ import {
   calculateBasePrice,
   findPricingRuleByDays,
   resolveRentalPrice,
-  DEFAULT_VAT_RATE
+  DEFAULT_VAT_RATE,
+  TARIFF_INCLUDES_VAT
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { buildReservationNote } from '@shared/utils/reservation-note.util';
+import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
@@ -59,27 +62,14 @@ export class ReservationService {
   }
 
   /**
-   * Removes undefined fields recursively.
-   * Dates, arrays and Firestore Timestamps are passed through untouched.
-   * Only plain object literals are recursed into.
+   * Removes `undefined` before writing. Delegates to the shared cleaner, which
+   * also strips `undefined` from inside arrays — the local version returned
+   * arrays untouched — and leaves Firestore sentinels alone.
+   *
+   * Nulls are kept: this service writes them meaningfully.
    */
   private cleanData<T>(data: T): T {
-    if (data === null || typeof data !== 'object') return data;
-    if (data instanceof Date) return data;
-    if (Array.isArray(data)) return data;
-    const cleaned: any = {};
-    for (const [key, value] of Object.entries(data as object)) {
-      if (value === undefined) continue;
-      const isPlainObject =
-        typeof value === 'object' &&
-        value !== null &&
-        !(value instanceof Date) &&
-        !Array.isArray(value) &&
-        // Avoid recursing into Firestore Timestamp / GeoPoint
-        typeof (value as any).toDate !== 'function';
-      cleaned[key] = isPlainObject ? this.cleanData(value) : value;
-    }
-    return cleaned;
+    return cleanForFirestore(data);
   }
 
   /**
@@ -341,7 +331,11 @@ export class ReservationService {
     const pricingRules = vehicle.pricingRules || [];
     const basePriceResult = calculateBasePrice(pricingRules, totalDays);
     
-    const finalPrice = basePriceResult.basePrice;
+    // Same authority as `createReservationWithClient`: the tariff is net and
+    // VAT is added on top. Without this the two entry points would create
+    // reservations priced differently.
+    const pricing = resolveRentalPrice(basePriceResult.basePrice, 0);
+    const finalPrice = pricing.finalPrice;
     const remainingPaymentRequired = Math.max(0, finalPrice - initialPaymentRequired);
 
     // TODO: Use Firestore transaction or Cloud Function for atomic operations
@@ -384,7 +378,10 @@ export class ReservationService {
         } : null,
         pricePerDay: basePriceResult.pricePerDay,
         basePrice: basePriceResult.basePrice,
-        finalPrice
+        netPrice: pricing.netPrice,
+        finalPrice,
+        vatRate: DEFAULT_VAT_RATE,
+        tariffIncludesVat: TARIFF_INCLUDES_VAT
       },
       initialPayment: {
         requiredAmount: initialPaymentRequired,
@@ -507,8 +504,12 @@ export class ReservationService {
         loyaltyDiscountPercent: pricing.loyaltyDiscountPercent || undefined,
         loyaltyDiscount: pricing.loyaltyDiscount || undefined,
         manualAdjustment: pricing.priceOverridden ? pricing.manualAdjustment : undefined,
+        netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: DEFAULT_VAT_RATE
+        vatRate: DEFAULT_VAT_RATE,
+        // Frozen, not inferred: reservations priced before the switch were
+        // VAT-inclusive and have to keep splitting that way.
+        tariffIncludesVat: TARIFF_INCLUDES_VAT
       },
       initialPayment: {
         requiredAmount: initialPayment,
@@ -566,32 +567,25 @@ export class ReservationService {
     text: string,
     author?: { displayName?: string; email?: string }
   ): Promise<ReservationNote> {
-    const trimmed = (text || '').trim();
-    if (!trimmed) throw new Error('Note text is required');
-
     // Fall back to the signed-in operator if no author is passed.
     const fallbackAuthor = this.authService.authorizedUser?.();
-    const finalAuthor = {
-      displayName: author?.displayName ?? fallbackAuthor?.displayName ?? undefined,
-      email: author?.email ?? fallbackAuthor?.email ?? undefined
-    };
-
-    const note: ReservationNote = {
-      id:
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `n_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      text: trimmed,
-      createdAt: { seconds: Date.now() / 1000 },
-      createdBy: finalAuthor.displayName,
-      createdByEmail: finalAuthor.email
-    };
+    const note = buildReservationNote(text, {
+      displayName: author?.displayName ?? fallbackAuthor?.displayName,
+      email: author?.email ?? fallbackAuthor?.email
+    });
 
     const docRef = doc(this.firestore, `reservations/${id}`);
-    await updateDoc(docRef, this.cleanData({
+    // ⚠️ The payload is NOT passed through `cleanData`.
+    //
+    // `arrayUnion()` is a sentinel with ordinary enumerable properties, so a
+    // recursive clean rebuilds it as a plain map: the append turns into an
+    // overwrite, and the `undefined` hiding in `_elements` surfaces as
+    // "Unsupported field value: undefined". The note is built free of
+    // `undefined` instead, which is where the problem actually belonged.
+    await updateDoc(docRef, {
       internalNotes: arrayUnion(note),
       updatedAt: { seconds: Date.now() / 1000 }
-    }));
+    });
 
     return note;
   }

@@ -143,8 +143,13 @@ acordado previo: la base sobre la que se pactó ya no es la misma.
 
 ### IVA
 
-**El precio de tarifa ya lleva el IVA incluido.** El desglose lo **extrae** (`base = total / 1,21`);
-no lo suma. Hacerlo al revés subiría todos los precios un 21 % de golpe.
+**El precio de tarifa es NETO y el IVA se le suma.** Un coche a 30 €/día son 30 € de base
+imponible; el cliente paga 36,30 €. Se hace así porque el número redondo es el que se negocia
+por teléfono, y el cliente que no quiere factura paga justo ese neto sin decimales.
+
+⚠️ **Las reservas anteriores al 27 de agosto de 2026 se crearon con la tarifa CON IVA
+incluido.** La dirección se congela en cada reserva, así que los contratos ya emitidos siguen
+cuadrando. Lo que se edita en el asistente es el **neto**; el total se calcula debajo.
 
 El tipo aplicado se congela en `pricingSnapshot.vatRate` al crear la reserva, como fracción
 (`0.21`). Una reserva anterior a este campo cae al tipo general, que es el que su precio ya

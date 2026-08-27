@@ -20,7 +20,7 @@ import {
   PdfBuilder,
   companyFooterLines,
   companyHeaderLines,
-  extractVat,
+  vatBreakdownOf,
   formatDate,
   formatDayOnly,
   formatIdDocument,
@@ -78,7 +78,11 @@ export interface DocumentPricing {
   loyaltyDiscountPercent?: number;
   loyaltyDiscount?: number;
   manualAdjustment?: number;
+  /** Taxable base actually agreed. Drives the split when the tariff is net. */
+  netPrice?: number;
   vatRate?: number;
+  /** Absent means the old VAT-inclusive tariffs. */
+  tariffIncludesVat?: boolean;
 }
 
 export interface DocumentPayments {
@@ -185,11 +189,8 @@ function labels(loc: ContractLocale) {
     agreedAdj: en ? 'Agreed adjustment' : ro ? 'Ajustare convenită' : 'Ajuste acordado',
     vatBase: en ? 'Taxable base' : ro ? 'Bază impozabilă' : 'Base imponible',
     vat: en ? 'VAT' : ro ? 'TVA' : 'IVA',
-    rentalTotal: en
-      ? 'Total rental (VAT incl.)'
-      : ro
-        ? 'Total închiriere (TVA inclus)'
-        : 'Total alquiler (IVA incl.)',
+    // No "(VAT incl.)": it sits directly under the base and the tax.
+    rentalTotal: en ? 'Total rental' : ro ? 'Total închiriere' : 'Total alquiler',
     depositVatNote: en
       ? 'Security deposit (not subject to VAT)'
       : ro
@@ -361,7 +362,7 @@ function drawPriceBlock(
     }
   }
 
-  const vat = extractVat(pricing.finalPrice, pricing.vatRate);
+  const vat = vatBreakdownOf(pricing);
   b.totalsBlock([
     { label: L.vatBase, value: formatMoney(vat.base, loc) },
     { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },

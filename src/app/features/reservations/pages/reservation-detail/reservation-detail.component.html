@@ -220,21 +220,17 @@
                 <span>{{ reservation.pricingSnapshot.manualAdjustment > 0 ? '+' : '' }}{{ reservation.pricingSnapshot.manualAdjustment }} €</span>
               </div>
             }
+            <div class="price-row">
+              <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
+              <span>{{ vat.base | number:'1.2-2' }} €</span>
+            </div>
+            <div class="price-row">
+              <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+              <span>{{ vat.vat | number:'1.2-2' }} €</span>
+            </div>
             <div class="price-row total">
               <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
-              <span class="total-value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
-            </div>
-
-            <!-- Extracted from the final price, which is already VAT-inclusive. -->
-            <div class="vat-breakdown">
-              <div class="price-row vat-row">
-                <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
-                <span>{{ vat.base | number:'1.2-2' }} €</span>
-              </div>
-              <div class="price-row vat-row">
-                <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
-                <span>{{ vat.vat | number:'1.2-2' }} €</span>
-              </div>
+              <span class="total-value">{{ vat.total | number:'1.2-2' }} €</span>
             </div>
           </div>
         </div>
@@ -323,7 +319,6 @@
         <app-reservation-notes-panel
           [reservationId]="reservation.id!"
           [notes]="reservation.internalNotes || []"
-          (notesChanged)="onInternalNotesChanged($event)"
         />
       </div>
     </div>

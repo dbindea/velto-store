@@ -159,9 +159,17 @@ Dos convenciones distintas que conviene no confundir, y por eso los nombres son 
 - `vatRate` es una **fracción** (`0.21`)
 - `loyaltyDiscountPercent` es un **porcentaje** (`5`)
 
-⚠️ **El precio de tarifa ya lleva el IVA incluido.** `extractVat()` lo **extrae**
-(`base = total / 1,21`); no lo suma. Al revés subiría toda la flota un 21 %. El IVA se
-calcula por resta (`vat = total − base`) para que `base + vat` cuadre al céntimo.
+⚠️ **El precio de tarifa es NETO: el IVA se SUMA.** Un coche a 30 €/día son 30 € de base
+y el cliente paga 36,30 €. Es lo contrario de como empezó la app, y es deliberado: el número
+redondo es el que se negocia, y el cliente que no quiere factura paga exactamente ese neto.
+
+⚠️ **Las reservas creadas antes del cambio se guardaron con tarifa CON IVA incluido** y
+tienen que seguir leyéndose así, o los contratos ya firmados dejan de cuadrar. La dirección
+se congela por reserva en `pricingSnapshot.tariffIncludesVat`; **ausente significa
+inclusivo**. `vatBreakdownOf()` es quien decide — nunca deduzcas la dirección de la
+constante de hoy.
+
+En ambas direcciones el IVA se calcula por resta para que `base + vat` cuadre al céntimo.
 
 La constante y la aritmética están **duplicadas en `functions/src/contracts/pdf.ts`** a
 propósito: app y functions compilan con tsconfigs separados y no pueden compartir módulo.
@@ -189,11 +197,20 @@ Firestore lanza `Cannot use 'undefined' as a Firestore value`. Hay dos defensas 
 
 Al escribir en Firestore desde código nuevo, comprueba cuál de las dos aplica.
 
-⚠️ **No metas centinelas por `cleanData()`.** `serverTimestamp()`, `arrayUnion()` y compañía
-son objetos **sin propiedades enumerables propias**: un recorrido con `Object.entries()` los
-aplana a `{}`. Es lo que corrompió los timestamps de los contratos (F-4). Cuando hay que
-añadir a un array bajo `cleanData`, se lee el documento y se reconstruye el array en JS —así
-lo hace `applyLoyaltyDiscountChange()` en `client.service.ts`.
+⚠️ **Los centinelas no se pueden limpiar.** `serverTimestamp()`, `arrayUnion()` e
+`increment()` son objetos con propiedades propias (`_methodName`, `_elements`). Recorrerlos
+con `Object.entries()` los convierte en **un mapa normal**, y a partir de ahí Firestore o
+escribe ese mapa —así se corrompieron los timestamps de los contratos (F-4)— o entra en
+`_elements` y delata el `undefined` de dentro (F-31, las notas internas).
+
+El frontend usa un único limpiador, `cleanForFirestore()` en
+[firestore-clean.util.ts](src/app/shared/utils/firestore-clean.util.ts), que invierte la
+regla: **solo reconstruye objetos planos de verdad**. Cualquier cosa con prototipo propio
+—centinelas, `Timestamp`, `DocumentReference`, `GeoPoint`, `Date`— pasa intacta. Los tres
+`cleanData` duplicados de `reservation`, `client` y `vehicle-maintenance` delegan en él.
+
+Aun así, **lo que viaja dentro de un `arrayUnion()` tiene que nacer sin `undefined`**: el
+centinela no se limpia, así que el objeto se construye ya limpio (`buildReservationNote()`).
 
 ## i18n
 

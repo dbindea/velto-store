@@ -658,6 +658,7 @@
       "initialPayment": "Signal",
       "loyaltyDiscount": "Loyalty discount",
       "manualAdjustment": "Manual adjustment",
+      "netPrice": "Price excl. VAT",
       "pricePerDay": "Price/day",
       "remainingPayment": "Remaining",
       "resetToCalculated": "Back to calculated price",
