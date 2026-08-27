@@ -177,6 +177,7 @@ Si cambia el tipo, se cambia en los dos sitios.
 - Los **cargos extra solo nacen desde la inspección de devolución**. Un solo sistema, sin doble fuente. Todavía **no llevan desglose de IVA**: el contrato se genera antes de que existan.
 - El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
+- La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
 ## Firestore: `undefined` está prohibido
@@ -225,6 +226,18 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
 
 **Escritas pero SIN desplegar:** `generateQuotePdf` y `generateBookingConfirmationPdf`.
+
+### Idioma de los documentos
+
+Los tres PDF se emiten en **el idioma que tiene puesto la plataforma** cuando el operador
+pulsa el botón: es el idioma en el que está hablando con el cliente. El orden de preferencia
+es idioma del llamante → lo congelado en la reserva (`contractLocale`) →
+`VELTO_DEFAULT_CONTRACT_LOCALE` → **español**.
+
+⚠️ Los enums de vehículo (`fuelType`, `transmission`) llegan crudos de Firestore —`diesel`,
+`manual`— y **hay que traducirlos al idioma del documento**, no pintarlos tal cual. No son
+texto libre que se pueda capitalizar en el formulario: son códigos. `fuelTypeLabel()` y
+`transmissionLabel()` en `pdf.ts` los resuelven en los tres idiomas.
 
 ### Identidad visual de los PDF
 

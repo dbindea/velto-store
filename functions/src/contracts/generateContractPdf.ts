@@ -24,6 +24,8 @@ import type { ContractLocale } from './contract-types';
 
 interface GenerateRequest {
   reservationId: string;
+  /** Language of the platform when the operator pressed the button. */
+  locale?: ContractLocale;
 }
 
 interface GenerateResponse {
@@ -144,15 +146,21 @@ export const generateContractPdf = functions.https.onCall(
     // 6. Determine contract number
     const contractNumber = `C-${reservationId.slice(0, 6).toUpperCase()}-${new Date().getFullYear()}`;
 
-    // 6b. Determine preferred contract locale: prefer reservation metadata,
-    //     then the company default, then 'es'.
+    // 6b. Contract language.
+    //
+    // The caller's language wins: the operator issues the document in whatever
+    // language the platform is set to, which is the one they are speaking to
+    // the customer in. Then anything frozen on the reservation, then the
+    // configured default, and finally Spanish.
     const preferredLocale: ContractLocale = (() => {
-      const fromReservation = (reservation as any).contractLocale as ContractLocale | undefined;
-      if (fromReservation && CONTRACT_CLAUSES.available.includes(fromReservation)) {
-        return fromReservation;
+      const candidates = [
+        data.locale,
+        (reservation as any).contractLocale as ContractLocale | undefined,
+        process.env.VELTO_DEFAULT_CONTRACT_LOCALE as ContractLocale | undefined
+      ];
+      for (const candidate of candidates) {
+        if (candidate && CONTRACT_CLAUSES.available.includes(candidate)) return candidate;
       }
-      const fromEnv = (process.env.VELTO_DEFAULT_CONTRACT_LOCALE || 'es') as ContractLocale;
-      if (CONTRACT_CLAUSES.available.includes(fromEnv)) return fromEnv;
       return 'es';
     })();
 

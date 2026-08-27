@@ -388,6 +388,20 @@ Cloud Functions.
 
 No hay firma avanzada tipo DocuSign, y no se busca en esta fase.
 
+### Fianza
+
+**No todos los alquileres llevan fianza.** A los clientes conocidos no se les cobra; se pide
+sobre todo a quien alquila por primera vez. Por eso la fianza es **editable** en el asistente
+y 0 es una respuesta legítima.
+
+Una fianza a 0 **no es una fianza pendiente de cobrar**: nace en estado `waived` y **exige
+motivo**. La distinción no es burocracia — `isDepositSettled()` solo da por resuelta una
+fianza a 0 si hay motivo registrado, así que sin él la reserva se quedaría esperando para
+siempre un dinero que nadie va a pagar, y no se podría cerrar.
+
+El motivo se muestra en el detalle de la reserva. La decisión de a quién se le exime sigue
+siendo del operador, caso por caso: **no se aplica sola** según el nivel de confianza.
+
 ### Los tres documentos
 
 El contrato no es el único papel que ve el cliente. Son tres, en el orden de la conversación:

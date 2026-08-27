@@ -478,10 +478,41 @@
                   <span>{{ 'reservations.pricing.remainingPayment' | translate }}:</span>
                   <span>{{ remainingPayment }} €</span>
                 </div>
-                <div class="price-row">
+                <!-- Editable: not every rental carries a deposit. -->
+                <div class="price-row editable-price">
                   <span>{{ 'reservations.pricing.deposit' | translate }}:</span>
-                  <span class="highlight">{{ deposit }} €</span>
+                  <span class="price-input-wrap">
+                    <input
+                      type="number"
+                      class="price-input"
+                      [class.overridden]="depositWaived"
+                      [ngModel]="deposit"
+                      (ngModelChange)="onDepositChange($event)"
+                      name="deposit"
+                      min="0"
+                      step="0.01"
+                      [attr.aria-label]="'reservations.pricing.deposit' | translate">
+                    <span class="price-currency">€</span>
+                  </span>
                 </div>
+
+                @if (depositWaived) {
+                  <div class="deposit-waived">
+                    <label for="depositWaivedReason">
+                      {{ 'reservations.deposit.waivedReason' | translate }} *
+                    </label>
+                    <input
+                      type="text"
+                      id="depositWaivedReason"
+                      [(ngModel)]="depositWaivedReason"
+                      name="depositWaivedReason"
+                      class="form-control"
+                      [placeholder]="'reservations.deposit.waivedReasonPlaceholder' | translate">
+                    <small class="field-hint" [class.error]="depositReasonMissing">
+                      {{ 'reservations.deposit.waivedHint' | translate }}
+                    </small>
+                  </div>
+                }
               </div>
             </div>
 
@@ -560,10 +591,16 @@
           </div>
 
           <div class="actions">
+            @if (depositReasonMissing) {
+              <p class="quote-feedback error">
+                <i class="pi pi-exclamation-triangle"></i>
+                {{ 'reservations.deposit.waivedHint' | translate }}
+              </p>
+            }
             <button
               class="btn-primary btn-lg"
               type="button"
-              [disabled]="saving"
+              [disabled]="saving || depositReasonMissing"
               (click)="createReservation()">
               @if (saving) {
                 <i class="pi pi-spin pi-spinner"></i>

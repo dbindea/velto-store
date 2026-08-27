@@ -191,6 +191,40 @@ const FUEL_LABELS_EN: Record<string, string> = {
   full: 'Full'
 };
 
+/**
+ * Fuel type and gearbox, per language.
+ *
+ * These arrive from Firestore as the raw enum — `diesel`, `manual` — because
+ * that is what the vehicle form stores, and the contract printed them exactly
+ * like that: lower case, in English, next to Spanish labels. They are not
+ * free text an operator could capitalise on entry; they are codes, and the
+ * document has to translate them.
+ */
+const VEHICLE_FUEL_TYPES: Record<ContractLocale, Record<string, string>> = {
+  es: { diesel: 'Diésel', petrol: 'Gasolina', hybrid: 'Híbrido', electric: 'Eléctrico' },
+  en: { diesel: 'Diesel', petrol: 'Petrol', hybrid: 'Hybrid', electric: 'Electric' },
+  ro: { diesel: 'Motorină', petrol: 'Benzină', hybrid: 'Hibrid', electric: 'Electric' }
+};
+
+const TRANSMISSIONS: Record<ContractLocale, Record<string, string>> = {
+  es: { manual: 'Manual', automatic: 'Automático' },
+  en: { manual: 'Manual', automatic: 'Automatic' },
+  ro: { manual: 'Manuală', automatic: 'Automată' }
+};
+
+/** Capitalise whatever we were given, so an unknown code still reads properly. */
+function capitalise(value: string): string {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
+export function fuelTypeLabel(value: string, loc: ContractLocale): string {
+  return VEHICLE_FUEL_TYPES[loc]?.[value.toLowerCase()] ?? capitalise(value);
+}
+
+export function transmissionLabel(value: string, loc: ContractLocale): string {
+  return TRANSMISSIONS[loc]?.[value.toLowerCase()] ?? capitalise(value);
+}
+
 function pickBundle(
   input: ContractPdfInput
 ): { locale: ContractLocale; bundle: ContractClauseBundle; fuelLabels: Record<string, string> } {
@@ -1206,29 +1240,101 @@ export class PdfBuilder {
     this.y -= boxH + 4;
   }
 
-  /** Clause block: bold title + paragraph body. */
+  /**
+   * Clause block: title in the brand face, then justified paragraphs.
+   *
+   * Three deliberate choices, all about how a page of legal text reads:
+   *
+   *   - **Condensed.** DejaVu is a wide face and set at 10pt it sprawled.
+   *     9.2pt over a 1.38 line brings the measure back to something you can
+   *     actually read a column of.
+   *   - **Justified.** Legal text with a ragged right edge reads like a draft.
+   *   - **Air between paragraphs.** They used to run into each other with 2pt
+   *     between them, so a clause looked like one undifferentiated block.
+   */
   clause(clauseNumber: number, title: string, paragraphs: string[]): void {
-    const size = 10;
-    const titleSize = 10.5;
-    const lineHeight = size * 1.45;
+    const size = 9.2;
+    const titleSize = 10;
+    const lineHeight = size * 1.38;
+    const paragraphGap = size * 0.75;
+    const width = this.pageWidth - this.margin * 2;
+
     // Title — strip any existing "N. " prefix from the schema-stored title
     // (we render the number ourselves), and uppercase for the legal style.
     const cleaned = title.replace(/^\d+\.\s*/, '').toUpperCase();
     const titleStr = `${clauseNumber}. ${cleaned}`;
     this.ensureSpace(titleSize * 1.6);
-    this.text(titleStr, { size: titleSize, role: 'display', color: INK, gap: 3 });
+    this.text(titleStr, { size: titleSize, role: 'display', color: INK, gap: 4 });
+
     // Body — each line goes through ensureSpace so a paragraph that reaches
     // the bottom breaks onto the next page instead of over the legal footer.
     for (const para of paragraphs) {
-      const lines = this.wrap(para, size, this.font, this.pageWidth - this.margin * 2);
-      for (const ln of lines) {
+      const lines = this.wrap(para, size, this.font, width);
+      lines.forEach((ln, i) => {
         this.ensureSpace(lineHeight);
-        this.put(ln, this.margin, this.y - size, size, this.font, BODY);
+        // The last line of a paragraph keeps its natural width; justifying it
+        // would stretch two words across the page.
+        const isLast = i === lines.length - 1;
+        if (isLast) {
+          this.put(ln, this.margin, this.y - size, size, this.font, BODY);
+        } else {
+          this.putJustified(ln, this.margin, this.y - size, size, this.font, BODY, width);
+        }
         this.y -= lineHeight;
-      }
-      this.y += 2;
+      });
+      this.y -= paragraphGap;
     }
-    this.y += 2;
+    this.y -= 2;
+  }
+
+  /**
+   * Draw a line of text stretched to exactly `targetWidth` by widening the
+   * spaces between words.
+   *
+   * pdf-lib has no justification, so the words are placed one by one. A line
+   * with a single word is left alone — there is nowhere to put the slack.
+   */
+  private putJustified(
+    line: string,
+    x: number,
+    baselineY: number,
+    size: number,
+    font: PDFFont,
+    color: RGB,
+    targetWidth: number
+  ): void {
+    const words = line.split(' ').filter((w) => w.length);
+    if (words.length < 2) {
+      this.put(line, x, baselineY, size, font, color);
+      return;
+    }
+
+    const wordsWidth = words.reduce((sum, w) => sum + font.widthOfTextAtSize(w, size), 0);
+    const slack = targetWidth - wordsWidth;
+    const gap = slack / (words.length - 1);
+
+    // A wrapped line should never need to shrink; if the maths says otherwise,
+    // fall back rather than overlapping words.
+    if (gap <= 0) {
+      this.put(line, x, baselineY, size, font, color);
+      return;
+    }
+
+    let cx = x;
+    for (const word of words) {
+      this.page.drawText(word, { x: cx, y: baselineY, size, font, color });
+      cx += font.widthOfTextAtSize(word, size) + gap;
+    }
+    this.boxes.push({
+      page: this.pageNumber,
+      x,
+      y: baselineY,
+      width: targetWidth,
+      height: size,
+      text: line,
+      font,
+      isChrome: this.drawingChrome
+    });
   }
 
   /** Render an empty signature block with a line. */
@@ -1609,7 +1715,6 @@ export async function buildContractPdf(
   b.text(L.lessorDetails, { size: 9, bold: true });
   b.twoColumn(L.company + ':', input.company.legalName, false, true);
   b.twoColumn(L.taxId + ':', input.company.taxId);
-  if (input.company.registry) b.twoColumnWrap(L.registry + ':', input.company.registry);
   b.twoColumnWrap(L.address + ':', input.company.address);
   if (input.company.phone) b.twoColumn(L.phone + ':', input.company.phone);
   b.twoColumn(L.email + ':', input.company.email);
@@ -1627,7 +1732,6 @@ export async function buildContractPdf(
   b.subsection(L.company);
   b.twoColumn(L.legalName + ':', input.company.legalName, false, true);
   b.twoColumn(L.taxId + ':', input.company.taxId);
-  if (input.company.registry) b.twoColumn(L.registry + ':', input.company.registry);
   b.twoColumnWrap(L.address + ':', input.company.address);
   if (input.company.phone) b.twoColumn(L.phone + ':', input.company.phone);
   b.twoColumn(L.email + ':', input.company.email);
@@ -1668,8 +1772,8 @@ export async function buildContractPdf(
   );
   b.twoColumn(L.plate + ':', input.vehicle.plateNumber, false, true);
   if (input.vehicle.year) b.twoColumn(L.year + ':', String(input.vehicle.year));
-  if (input.vehicle.fuelType) b.twoColumn(L.fuel + ':', input.vehicle.fuelType);
-  if (input.vehicle.transmission) b.twoColumn(L.transmission + ':', input.vehicle.transmission);
+  if (input.vehicle.fuelType) b.twoColumn(L.fuel + ':', fuelTypeLabel(input.vehicle.fuelType, loc));
+  if (input.vehicle.transmission) b.twoColumn(L.transmission + ':', transmissionLabel(input.vehicle.transmission, loc));
 
   // Reservation
   b.section(L.resData);

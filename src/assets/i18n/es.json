@@ -603,7 +603,10 @@
     },
     "deposit": {
       "retained": "Retenida",
-      "returned": "Devuelta"
+      "returned": "Devuelta",
+      "waivedHint": "Obligatorio: sin motivo la reserva no se podrá cerrar.",
+      "waivedReason": "Motivo de no cobrar fianza",
+      "waivedReasonPlaceholder": "Ej.: cliente habitual, seguro a todo riesgo"
     },
     "depositStatus": {
       "paid": "Cobrada",

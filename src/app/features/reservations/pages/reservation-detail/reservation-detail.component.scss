@@ -340,6 +340,14 @@
   font-weight: 600;
 }
 
+.deposit-waived-reason {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 // Booking confirmation: a proof of booking, not part of the signing flow.
 .booking-confirmation-card {
   .booking-confirmation-hint {

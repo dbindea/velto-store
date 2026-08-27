@@ -661,6 +661,10 @@ export class PaymentService {
     if (summary.depositReturned === summary.depositPaid && summary.depositPaid > 0) return 'returned';
     if (summary.depositReturned > 0) return 'partial_returned';
     if (summary.depositPaid >= summary.depositRequired && summary.depositRequired > 0) return 'paid';
+    // Nothing to ask for and nothing collected: the deposit was waived, not
+    // left pending. Falling through to 'pending' would relabel a deliberate
+    // decision as an outstanding debt every time payments were recalculated.
+    if ((summary.depositRequired || 0) === 0 && (summary.depositPaid || 0) === 0) return 'waived';
     return 'pending';
   }
 }

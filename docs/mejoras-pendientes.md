@@ -107,6 +107,14 @@ Dos numeraciones, para no mezclar cosas distintas:
   documento funcional dice que la fianza no debe contar como ingreso de
   alquiler. Separar ingresos reales de movimientos de fianza.
 
+- [ ] **M-21 · Eximir la fianza automáticamente a clientes conocidos.**
+  Hoy la fianza es editable y puede ponerse a 0 con motivo, pero la decisión es
+  manual en cada reserva. Lo natural sería que un cliente con `trustLevel`
+  distinto de `new` viniera ya con la fianza a 0 y un motivo propuesto. **No se
+  ha hecho a propósito**: es un cambio de lógica de negocio —quién paga fianza y
+  quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
+  seguir quedando registrado, porque es lo que permite cerrar la reserva.
+
 ## Prioridad media
 
 - [ ] **M-5 · Subida de fotos de una en una.**
@@ -184,6 +192,11 @@ cargos extra, resolución de fianza y cierre. Queda:
       que se ve desde un móvil sin sesión
 - [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
       y verificar que **el primer enlace sigue funcionando**
+- [ ] **Fianza a 0**: crear una reserva sin fianza, comprobar que no siembra
+      fila de pago, que el estado es «Exenta» y que la reserva **se puede
+      cerrar** (es lo que el motivo obligatorio protege)
+- [ ] **Los tres PDF en los tres idiomas**, cambiando el idioma de la
+      plataforma antes de generarlos
 - [ ] **Los tres PDF abiertos en un visor real.** El rediseño se verificó
       extrayendo texto y midiendo cajas, no mirándolos: falta la comprobación
       visual del logo, los filetes y el color.
