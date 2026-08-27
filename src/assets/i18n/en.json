@@ -603,7 +603,10 @@
     },
     "deposit": {
       "retained": "Retained",
-      "returned": "Returned"
+      "returned": "Returned",
+      "waivedHint": "Required: without a reason the reservation cannot be closed.",
+      "waivedReason": "Reason for waiving the deposit",
+      "waivedReasonPlaceholder": "E.g. regular customer, fully comprehensive insurance"
     },
     "depositStatus": {
       "paid": "Collected",

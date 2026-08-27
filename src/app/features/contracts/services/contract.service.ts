@@ -20,6 +20,7 @@ import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Contract } from '@shared/models/contract.model';
+import { TranslateService } from '@core/i18n/translate.service';
 
 export interface GenerateContractResponse {
   contractId: string;
@@ -47,6 +48,7 @@ export class ContractService {
   private firestore = inject(Firestore);
   private storage = inject(Storage);
   private functions = inject(Functions);
+  private translateService = inject(TranslateService);
 
   // ============================================================
   // Firestore reads (allowed by rules for authenticated users)
@@ -123,12 +125,19 @@ export class ContractService {
    * Generates the original contract PDF and creates/updates the contract
    * document. Returns the new contract id and the PDF download URL.
    */
+  /**
+   * The contract is issued in the language the platform is set to — the one
+   * the operator is speaking to the customer in. Spanish is the fallback.
+   */
   async generateContractFromReservation(reservationId: string): Promise<GenerateContractResponse> {
-    const fn = httpsCallable<{ reservationId: string }, GenerateContractResponse>(
-      this.functions,
-      'generateContractPdf'
-    );
-    const result = await fn({ reservationId });
+    const fn = httpsCallable<
+      { reservationId: string; locale: string },
+      GenerateContractResponse
+    >(this.functions, 'generateContractPdf');
+    const result = await fn({
+      reservationId,
+      locale: this.translateService.getCurrentLanguage()
+    });
     return result.data;
   }
 

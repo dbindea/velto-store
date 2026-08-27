@@ -25,6 +25,8 @@ import {
   formatDayOnly,
   formatIdDocument,
   formatMoney,
+  fuelTypeLabel,
+  transmissionLabel,
   type InfoEntry
 } from '../contracts/pdf';
 import type { ContractLocale } from '../contracts/contract-types';
@@ -292,7 +294,12 @@ function clientColumn(L: Labels, client?: DocumentClient): InfoEntry[] {
   ];
 }
 
-function drawVehicleBlock(b: PdfBuilder, L: Labels, vehicle: DocumentVehicle): void {
+function drawVehicleBlock(
+  b: PdfBuilder,
+  L: Labels,
+  vehicle: DocumentVehicle,
+  loc: ContractLocale
+): void {
   b.section(L.vehicleData);
   b.twoColumn(
     L.vehicle + ':',
@@ -302,8 +309,12 @@ function drawVehicleBlock(b: PdfBuilder, L: Labels, vehicle: DocumentVehicle): v
   );
   b.twoColumn(L.plate + ':', vehicle.plateNumber, false, true);
   if (vehicle.year) b.twoColumn(L.year + ':', String(vehicle.year));
-  if (vehicle.fuelType) b.twoColumn(L.fuel + ':', vehicle.fuelType);
-  if (vehicle.transmission) b.twoColumn(L.transmission + ':', vehicle.transmission);
+  // Raw enums from Firestore ('diesel', 'manual') translated into the document
+  // language, rather than printed as stored.
+  if (vehicle.fuelType) b.twoColumn(L.fuel + ':', fuelTypeLabel(vehicle.fuelType, loc));
+  if (vehicle.transmission) {
+    b.twoColumn(L.transmission + ':', transmissionLabel(vehicle.transmission, loc));
+  }
 }
 
 function drawRentalBlock(
@@ -392,7 +403,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<Uint8Array> {
   );
   b.y -= 8;
 
-  drawVehicleBlock(b, L, input.vehicle);
+  drawVehicleBlock(b, L, input.vehicle, loc);
   drawRentalBlock(b, L, input.rental, loc);
   drawPriceBlock(b, L, input.pricing, loc);
 
@@ -427,7 +438,7 @@ export async function buildBookingConfirmationPdf(
   );
   b.y -= 8;
 
-  drawVehicleBlock(b, L, input.vehicle);
+  drawVehicleBlock(b, L, input.vehicle, loc);
   drawRentalBlock(b, L, input.rental, loc);
   drawPriceBlock(b, L, input.pricing, loc);
 

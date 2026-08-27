@@ -847,6 +847,35 @@ textarea.form-control {
   }
 }
 
+// Waiving the deposit is a decision that has to be justified: the workflow
+// cannot close a reservation whose zero deposit has no recorded reason.
+.deposit-waived {
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--warning-color);
+  border-radius: 8px;
+  background: var(--warning-bg);
+
+  label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--warning-color);
+  }
+
+  .field-hint {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+
+    &.error {
+      color: var(--error-color);
+    }
+  }
+}
+
 .price-row.discount {
   color: var(--text-muted);
   font-size: 0.85rem;

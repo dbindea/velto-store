@@ -292,6 +292,14 @@
               <span class="deposit-status" [ngClass]="getDepositStatusClass(reservation.deposit.status)">
                 {{ getDepositStatusLabel(reservation.deposit.status) }}
               </span>
+              <!-- Why no deposit was taken. Without it the reservation cannot
+                   be closed, so it is worth showing rather than hiding. -->
+              @if (reservation.deposit.waivedReason) {
+                <small class="deposit-waived-reason">
+                  {{ 'reservations.deposit.waivedReason' | translate }}:
+                  {{ reservation.deposit.waivedReason }}
+                </small>
+              }
             </div>
           </div>
         </div>

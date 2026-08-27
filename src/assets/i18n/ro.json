@@ -603,7 +603,10 @@
     },
     "deposit": {
       "retained": "Reținută",
-      "returned": "Returnată"
+      "returned": "Returnată",
+      "waivedHint": "Obligatoriu: fără motiv rezervarea nu poate fi închisă.",
+      "waivedReason": "Motivul renunțării la garanție",
+      "waivedReasonPlaceholder": "Ex.: client fidel, asigurare full CASCO"
     },
     "depositStatus": {
       "paid": "Încasată",

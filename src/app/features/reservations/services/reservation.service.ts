@@ -24,6 +24,7 @@ import {
   resolveRentalPrice,
   DEFAULT_VAT_RATE
 } from '@shared/utils/pricing.util';
+import { buildDeposit } from '@shared/utils/deposit.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
@@ -317,7 +318,9 @@ export class ReservationService {
     depositRequired: number,
     notes?: string,
     pickupLocation?: string,
-    returnLocation?: string
+    returnLocation?: string,
+    /** Required when `depositRequired` is 0. See `buildDeposit`. */
+    depositWaivedReason?: string
   ): Promise<string> {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicleId, pickupDateTime, returnDateTime);
@@ -394,13 +397,11 @@ export class ReservationService {
         dueDate: toTimestamp(new Date(pickupDateTime.getTime() - APP_DEFAULTS.REMAINING_PAYMENT_DUE_DAYS_BEFORE_PICKUP * 24 * 60 * 60 * 1000)), // days before pickup from APP_DEFAULTS
         status: 'pending'
       },
-      deposit: {
-        requiredAmount: depositRequired,
-        paidAmount: 0,
-        returnedAmount: 0,
-        retainedAmount: 0,
-        status: 'pending'
-      },
+      // A deposit of 0 is a legitimate business decision — known customers
+      // are not asked for one — but it is not the same thing as a deposit
+      // nobody has collected yet. It is born `waived`, with its reason, so
+      // the workflow never sits waiting for money no one intends to pay.
+      deposit: buildDeposit(depositRequired, depositWaivedReason),
       paymentStatus: 'pending',
       contractStatus: 'pending',
       reservationStatus: 'reserved',
@@ -434,7 +435,9 @@ export class ReservationService {
      * The snapshot keeps the calculated figures and records the difference in
      * `manualAdjustment`, so the discount stays auditable.
      */
-    finalPriceOverride?: number
+    finalPriceOverride?: number,
+    /** Required when `depositRequired` is 0. See `buildDeposit`. */
+    depositWaivedReason?: string
   ): Promise<string> {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicle.id!, pickupDateTime, returnDateTime);
@@ -518,13 +521,11 @@ export class ReservationService {
         dueDate: toTimestamp(new Date(pickupDateTime.getTime() - APP_DEFAULTS.REMAINING_PAYMENT_DUE_DAYS_BEFORE_PICKUP * 24 * 60 * 60 * 1000)),
         status: 'pending'
       },
-      deposit: {
-        requiredAmount: depositRequired,
-        paidAmount: 0,
-        returnedAmount: 0,
-        retainedAmount: 0,
-        status: 'pending'
-      },
+      // A deposit of 0 is a legitimate business decision — known customers
+      // are not asked for one — but it is not the same thing as a deposit
+      // nobody has collected yet. It is born `waived`, with its reason, so
+      // the workflow never sits waiting for money no one intends to pay.
+      deposit: buildDeposit(depositRequired, depositWaivedReason),
       paymentStatus: 'pending',
       contractStatus: 'pending',
       reservationStatus: 'reserved',

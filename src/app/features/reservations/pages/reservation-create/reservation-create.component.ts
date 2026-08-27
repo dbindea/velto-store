@@ -19,6 +19,7 @@ import {
   RentalPriceBreakdown,
   VatBreakdown
 } from '@shared/utils/pricing.util';
+import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
@@ -85,6 +86,14 @@ export class ReservationCreateComponent implements OnInit {
    * `null` means "use the calculation".
    */
   finalPriceOverride: number | null = null;
+
+  /**
+   * Deposit agreed with the customer. `null` means "use the vehicle's
+   * default". 0 is a real answer: regular customers are often not asked for a
+   * deposit, and then `depositWaivedReason` becomes mandatory.
+   */
+  depositOverride: number | null = null;
+  depositWaivedReason = '';
 
   // Notes
   notes = '';
@@ -265,6 +274,9 @@ export class ReservationCreateComponent implements OnInit {
 
   async createReservation(): Promise<void> {
     if (!this.selectedVehicle || !this.selectedClient) return;
+    // A waived deposit with no reason would create a reservation the workflow
+    // can never close, so this is refused here as well as in the service.
+    if (this.depositReasonMissing) return;
 
     this.saving = true;
     try {
@@ -277,11 +289,12 @@ export class ReservationCreateComponent implements OnInit {
         pickupDateTime,
         returnDateTime,
         this.initialPayment, // Initial payment required, capped at the agreed price
-        this.selectedVehicle.vehicle.defaultDepositAmount || APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
+        this.deposit, // Agreed with the customer; 0 when waived
         this.notes || undefined,
         this.pickupLocation || undefined,
         this.returnLocation || undefined,
         this.priceOverridden ? this.finalPrice : undefined,
+        this.depositWaived ? this.depositWaivedReason.trim() : undefined,
       );
 
       this.router.navigate(['/reservations', reservationId]);
@@ -544,7 +557,41 @@ export class ReservationCreateComponent implements OnInit {
     return Math.max(0, this.finalPrice - this.initialPayment);
   }
 
+  /** What the vehicle asks for by default, before the operator decides. */
+  get defaultDeposit(): number {
+    return this.selectedVehicle?.vehicle.defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT;
+  }
+
+  /**
+   * The deposit actually agreed. Editable, and legitimately 0: known customers
+   * are not asked for one.
+   */
   get deposit(): number {
-    return this.selectedVehicle?.vehicle.defaultDepositAmount || APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT;
+    return this.depositOverride ?? this.defaultDeposit;
+  }
+
+  /** True when this rental carries no deposit, which needs a recorded reason. */
+  get depositWaived(): boolean {
+    return isDepositWaived(this.deposit);
+  }
+
+  /** True while the operator has waived the deposit without saying why. */
+  get depositReasonMissing(): boolean {
+    return needsWaivedReason(this.deposit, this.depositWaivedReason);
+  }
+
+  /**
+   * Bound to `(ngModelChange)`, which emits the value — not a DOM Event.
+   * Anything unparseable falls back to the vehicle default rather than
+   * writing a nonsense deposit.
+   */
+  onDepositChange(value: unknown): void {
+    const parsed = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+    this.depositOverride = !isFinite(parsed) || parsed < 0 ? null : Math.round(parsed * 100) / 100;
+  }
+
+  resetDeposit(): void {
+    this.depositOverride = null;
+    this.depositWaivedReason = '';
   }
 }
