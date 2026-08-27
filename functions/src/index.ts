@@ -38,3 +38,5 @@ export { sendSignedContractEmail } from './contracts/sendSignedContractEmail';
 // reservation, so neither can advance the workflow.
 export { generateQuotePdf } from './documents/generateQuotePdf';
 export { generateBookingConfirmationPdf } from './documents/generateBookingConfirmationPdf';
+// Public, reached through the /d/** Hosting rewrite: short links for WhatsApp.
+export { documentLink } from './documents/documentLink';

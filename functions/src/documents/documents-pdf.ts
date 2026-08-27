@@ -200,6 +200,7 @@ function labels(loc: ContractLocale) {
     signal: en ? 'Deposit paid on booking' : ro ? 'Avans' : 'Señal',
     remaining: en ? 'Outstanding balance' : ro ? 'Rest de plată' : 'Resto pendiente',
     deposit: en ? 'Security deposit' : ro ? 'Garanție' : 'Fianza',
+    noDeposit: en ? 'Not required' : ro ? 'Nu se solicită' : 'No se solicita',
     paidOf: en ? 'paid of' : ro ? 'plătit din' : 'pagado de',
     dueOn: en ? 'due on' : ro ? 'scadent la' : 'a pagar antes del',
 
@@ -365,7 +366,10 @@ function drawPriceBlock(
     { label: L.vatBase, value: formatMoney(vat.base, loc) },
     { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
     { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
-    { label: L.depositVatNote, value: formatMoney(pricing.depositAmount, loc) }
+    {
+      label: pricing.depositAmount ? L.depositVatNote : L.deposit,
+      value: pricing.depositAmount ? formatMoney(pricing.depositAmount, loc) : L.noDeposit
+    }
   ]);
 }
 
@@ -455,9 +459,13 @@ export async function buildBookingConfirmationPdf(
     ? `${formatMoney(remainingPending, loc)} — ${L.dueOn} ${formatDayOnly(p.remainingDueDate, loc)}`
     : formatMoney(remainingPending, loc);
   b.twoColumn(L.remaining + ':', remainingText, false, true);
+  // "0,00 € pagado de 0,00 €" reads like a bug. A waived deposit is a
+  // decision, and the document should say so.
   b.twoColumn(
     L.deposit + ':',
-    `${formatMoney(p.depositPaid ?? 0, loc)} ${L.paidOf} ${formatMoney(p.depositRequired ?? 0, loc)}`,
+    (p.depositRequired ?? 0) > 0
+      ? `${formatMoney(p.depositPaid ?? 0, loc)} ${L.paidOf} ${formatMoney(p.depositRequired ?? 0, loc)}`
+      : L.noDeposit,
     false,
     true
   );

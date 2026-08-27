@@ -105,6 +105,7 @@ export class ReservationCreateComponent implements OnInit {
   // Storage, and no reservation exists until "Crear reserva" is pressed.
   generatingQuote = false;
   quoteUrl = '';
+  quoteStorageUrl = '';
   quoteError = '';
   quoteCopied = false;
   private quoteCopiedTimer: any;
@@ -358,7 +359,10 @@ export class ReservationCreateComponent implements OnInit {
         }
       });
 
+      // The short link is what the customer gets; the Storage URL is the
+      // operator's own shortcut to eyeball the PDF straight away.
       this.quoteUrl = response.pdfUrl;
+      this.quoteStorageUrl = response.storageUrl;
       await this.copyQuoteLink();
     } catch (error) {
       console.error('Error generating quote:', error);

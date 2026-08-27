@@ -23,6 +23,7 @@ import * as functions from 'firebase-functions';
 import { randomUUID } from 'crypto';
 import { buildQuotePdf } from './documents-pdf';
 import { uploadPdf } from './storage';
+import { documentLinkUrl, shortIdFor } from './documentLink';
 import { companyConfig } from '../company-config';
 import type { ContractLocale } from '../contracts/contract-types';
 
@@ -67,9 +68,20 @@ interface QuoteRequest {
 }
 
 interface QuoteResponse {
+  /** Short branded link, for pasting into WhatsApp. */
   pdfUrl: string;
+  /** Direct Storage URL. Kept for the operator's own "open" button. */
+  storageUrl: string;
   pdfPath: string;
   validUntil: string;
+}
+
+/**
+ * URL-safe id, short enough to read over the phone and long enough to be the
+ * secret that guards the document (~95 bits).
+ */
+function shortRandomId(): string {
+  return randomUUID().replace(/-/g, '').slice(0, 16);
 }
 
 function toDate(value: any): Date | undefined {
@@ -144,8 +156,15 @@ export const generateQuotePdf = functions.https.onCall(
     // A fresh folder per quote: two quotes for the same car on the same day are
     // different offers, and overwriting one with the other would change a
     // document already sent to somebody.
-    const uploaded = await uploadPdf(`quotes/${randomUUID()}/quote.pdf`, pdfBytes);
+    const quoteId = shortRandomId();
+    const uploaded = await uploadPdf(`quotes/${quoteId}/quote.pdf`, pdfBytes);
 
-    return { ...uploaded, validUntil: validUntil.toISOString() };
+    return {
+      ...uploaded,
+      // What the operator sends: short, on the company's own domain.
+      pdfUrl: documentLinkUrl(shortIdFor('quote', quoteId)),
+      storageUrl: uploaded.pdfUrl,
+      validUntil: validUntil.toISOString()
+    };
   }
 );
