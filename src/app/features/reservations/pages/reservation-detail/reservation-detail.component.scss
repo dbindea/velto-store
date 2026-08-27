@@ -112,6 +112,14 @@
 }
 
 // Detail Grid
+// The timeline sits above the card grid. Same 1rem the grid uses between its
+// own cards, so the page keeps one rhythm instead of the timeline butting
+// straight up against the vehicle card.
+app-reservation-timeline {
+  display: block;
+  margin-bottom: 1rem;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr;

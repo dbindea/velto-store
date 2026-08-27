@@ -539,6 +539,63 @@ que reenvía a la function. Un rewrite olvidado pasa a costar un salto extra en
 vez de enseñarle una pantalla de login a un cliente. Declarada **antes** del
 bloque con `authGuard`, igual que `sign-contract/:token`.
 
+## F-31 · Añadir una nota interna fallaba con `undefined`
+
+**Gravedad:** alta · **Estado:** ✅ corregido
+**Reportado por Dorel.**
+
+```
+Function updateDoc() called with invalid data.
+Unsupported field value: undefined (found in document reservations/vCwvSzOFfUnRP9pWrBMy)
+```
+
+Dos fallos encadenados:
+
+1. `createdBy` y `createdByEmail` se asignaban como `undefined` cuando el
+   usuario autorizado no tiene `displayName` o `email`.
+2. Y el motivo de que `cleanData()` no lo salvara: la nota viaja dentro de
+   `arrayUnion()`, y **el limpiador reconstruía el centinela**. Un centinela
+   tiene propiedades propias (`_methodName`, `_elements`), así que
+   `Object.entries()` lo convertía en un mapa normal; Firestore entraba en
+   `_elements` y encontraba el `undefined`.
+
+El segundo era el peligroso: aunque no hubiera `undefined`, el `arrayUnion`
+degradado a mapa habría **sobrescrito** `internalNotes` en vez de añadir. Misma
+familia que F-4.
+
+**Corrección:** un único `cleanForFirestore()` compartido que invierte la
+regla —solo reconstruye objetos planos, todo lo que tenga prototipo propio pasa
+intacto—, y `buildReservationNote()`, que construye la nota sin `undefined`
+porque el centinela no se puede limpiar. Los tres `cleanData` duplicados
+delegan en él. 20 tests nuevos.
+
+**De regalo:** el mismo `cleanData` corrompía los `serverTimestamp()` de
+`vehicle-maintenance.service.ts`. No había saltado porque la colección sigue
+vacía en producción.
+
+## F-32 · La nota se guardaba pero no aparecía hasta recargar
+
+**Gravedad:** media · **Estado:** ✅ corregido
+
+Al destapar F-31 se vio el siguiente: la nota se escribía bien y el panel
+seguía diciendo «0».
+
+`sortedNotes` es un `computed()` que leía `this.notes`, un `@Input()` normal.
+**Un `computed` solo reacciona a señales**: leer una propiedad corriente no
+registra dependencia, así que la lista se calculaba una vez y nunca más. El
+operador no veía nada al añadir la nota, lo que invita a escribirla dos veces.
+
+**Corrección:** `input()` de señal en vez de `@Input()`.
+
+Y al arreglarlo apareció un tercero: el panel además añadía la nota
+**optimistamente** a la lista, lo que ahora competía con el `onSnapshot` vivo y
+la mostraba **duplicada** (solo en pantalla; en Firestore había una). Se retira
+el añadido optimista: la reserva es una suscripción viva desde F-15 y Firestore
+devuelve la nota sola.
+
+Verificado en el navegador: 2 → 3 notas, la nueva arriba, sin duplicado, sin
+recargar y con el campo vaciado.
+
 ## Verificado en esta pasada
 
 | Comprobación | Resultado |

@@ -19,12 +19,24 @@ import { roundMoney } from '@shared/utils/payment-summary.util';
  * mainland. The rate is frozen into `pricingSnapshot.vatRate` when the
  * reservation is created, so a future change never moves the figures of a
  * contract already signed.
- *
- * ⚠️ Tariff prices are VAT-INCLUSIVE. The breakdown EXTRACTS the tax from the
- * price (base = total / 1.21); it never adds it on top. Getting this backwards
- * raises every price in the fleet by 21 %.
  */
 export const DEFAULT_VAT_RATE = 0.21;
+
+/**
+ * ⚠️ **Tariff prices are NET — VAT is added on top.**
+ *
+ * This is the opposite of how the app started. A vehicle priced at 30 €/day
+ * means 30 € of taxable base, and the customer pays 36,30 €. The reason is
+ * commercial: the round number is the one that gets negotiated, and a customer
+ * who does not want an invoice pays exactly that round net.
+ *
+ * ⚠️ **Reservations created before this change stored the tariff as
+ * VAT-INCLUSIVE**, and they must keep reading that way or every contract
+ * already signed stops adding up. The direction is therefore frozen per
+ * reservation in `pricingSnapshot.tariffIncludesVat`; missing means the old,
+ * inclusive behaviour. Never infer it from anything else.
+ */
+export const TARIFF_INCLUDES_VAT = false;
 
 /**
  * Ceiling for the per-client loyalty discount, as a PERCENTAGE (30 = 30 %).
@@ -64,6 +76,50 @@ export function extractVat(total: number, rate: number = DEFAULT_VAT_RATE): VatB
 }
 
 /**
+ * Add VAT to a net amount: the direction the tariff works in now.
+ *
+ * `vat` is derived by subtraction from the rounded total for the same reason
+ * `extractVat` does it: `base + vat === total` has to hold to the cent, or the
+ * contract does not add up.
+ */
+export function addVat(net: number, rate: number = DEFAULT_VAT_RATE): VatBreakdown {
+  const safeNet = isFinite(net) && net > 0 ? roundMoney(net) : 0;
+  const safeRate = isFinite(rate) && rate > 0 ? rate : 0;
+  const total = roundMoney(safeNet * (1 + safeRate));
+
+  return {
+    rate: safeRate,
+    base: safeNet,
+    vat: roundMoney(total - safeNet),
+    total
+  };
+}
+
+/**
+ * The tax breakdown of a reservation, in whichever direction that reservation
+ * was created with.
+ *
+ * Reading `tariffIncludesVat` off the snapshot rather than off today's constant
+ * is what keeps old contracts intact: they were priced VAT-inclusive and have
+ * to keep splitting that way.
+ */
+export function vatBreakdownOf(snapshot: {
+  finalPrice?: number;
+  netPrice?: number;
+  vatRate?: number;
+  tariffIncludesVat?: boolean;
+}): VatBreakdown {
+  const rate = resolveVatRate(snapshot.vatRate);
+
+  // Absent means "created before the change", i.e. VAT-inclusive tariffs.
+  const includesVat = snapshot.tariffIncludesVat ?? true;
+  if (includesVat) return extractVat(snapshot.finalPrice ?? 0, rate);
+
+  // Exclusive: the net is the number that was agreed, so it drives the split.
+  return addVat(snapshot.netPrice ?? 0, rate);
+}
+
+/**
  * The rate to apply to a reservation created before VAT was recorded.
  *
  * Reservations from before this feature have no `vatRate` in their snapshot,
@@ -86,17 +142,27 @@ export function normalizeLoyaltyDiscountPercent(percent: number | null | undefin
 }
 
 export interface RentalPriceBreakdown {
-  /** What the vehicle's pricing rules say, before any discount. */
+  /**
+   * What the vehicle's pricing rules say, before any discount. NET: a vehicle
+   * at 30 €/day for 7 days is 210 € of taxable base.
+   */
   tariffPrice: number;
   /** The clamped percentage actually applied (5 = 5 %). 0 when there is none. */
   loyaltyDiscountPercent: number;
-  /** Signed money taken off by the loyalty discount. Negative, or 0. */
+  /** Signed money taken off by the loyalty discount. Negative, or 0. Net. */
   loyaltyDiscount: number;
-  /** Tariff after the loyalty discount, before any hand-agreed price. */
+  /** Tariff after the loyalty discount, before any hand-agreed price. Net. */
   discountedPrice: number;
-  /** Signed difference between the agreed price and `discountedPrice`. */
+  /** Signed difference between the agreed price and `discountedPrice`. Net. */
   manualAdjustment: number;
-  /** What will actually be charged. */
+  /**
+   * Taxable base actually agreed — the round number the operator negotiates
+   * and the amount a customer who wants no invoice pays.
+   */
+  netPrice: number;
+  /** The tax on `netPrice`. */
+  vatAmount: number;
+  /** What the customer actually pays: `netPrice + vatAmount`. */
   finalPrice: number;
   /** True when an operator overrode `discountedPrice` by hand. */
   priceOverridden: boolean;
@@ -115,11 +181,17 @@ export interface RentalPriceBreakdown {
  * `agreedPrice` of `undefined`/`null` means "no override": use the discounted
  * tariff. A negative or unparseable override is ignored rather than written as
  * a nonsense price.
+ *
+ * ⚠️ **Everything up to `netPrice` is NET.** The tariff, both discounts and the
+ * hand-agreed price are all taxable base, so the number an operator types is
+ * the round one they agreed over the phone. VAT is added last, and only
+ * `finalPrice` is what the customer pays.
  */
 export function resolveRentalPrice(
   tariffPrice: number,
   loyaltyPercent: number | null | undefined,
-  agreedPrice?: number | null
+  agreedPrice?: number | null,
+  vatRate: number = DEFAULT_VAT_RATE
 ): RentalPriceBreakdown {
   const tariff = isFinite(tariffPrice) && tariffPrice > 0 ? roundMoney(tariffPrice) : 0;
   const percent = normalizeLoyaltyDiscountPercent(loyaltyPercent);
@@ -135,15 +207,18 @@ export function resolveRentalPrice(
     agreedPrice >= 0 &&
     roundMoney(agreedPrice) !== discountedPrice;
 
-  const finalPrice = hasOverride ? roundMoney(agreedPrice!) : discountedPrice;
+  const netPrice = hasOverride ? roundMoney(agreedPrice!) : discountedPrice;
+  const vat = addVat(netPrice, vatRate);
 
   return {
     tariffPrice: tariff,
     loyaltyDiscountPercent: percent,
     loyaltyDiscount,
     discountedPrice,
-    manualAdjustment: hasOverride ? roundMoney(finalPrice - discountedPrice) : 0,
-    finalPrice,
+    manualAdjustment: hasOverride ? roundMoney(netPrice - discountedPrice) : 0,
+    netPrice,
+    vatAmount: vat.vat,
+    finalPrice: vat.total,
     priceOverridden: hasOverride
   };
 }

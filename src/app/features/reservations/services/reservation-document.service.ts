@@ -46,7 +46,9 @@ export interface QuoteDocumentRequest {
     loyaltyDiscountPercent?: number;
     loyaltyDiscount?: number;
     manualAdjustment?: number;
+    netPrice?: number;
     vatRate?: number;
+    tariffIncludesVat?: boolean;
   };
   locale?: string;
 }

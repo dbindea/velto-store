@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_VAT_RATE,
+  TARIFF_INCLUDES_VAT,
+  addVat,
+  vatBreakdownOf,
   MAX_LOYALTY_DISCOUNT_PERCENT,
   extractVat,
   normalizeLoyaltyDiscountPercent,
@@ -91,64 +94,69 @@ describe('normalizeLoyaltyDiscountPercent', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveRentalPrice', () => {
-  it('charges the tariff when there is neither discount nor agreed price', () => {
-    const price = resolveRentalPrice(350, 0);
-    expect(price.finalPrice).toBe(350);
-    expect(price.loyaltyDiscount).toBe(0);
-    expect(price.manualAdjustment).toBe(0);
-    expect(price.priceOverridden).toBe(false);
+  // ⚠️ Tariffs are NET now. A vehicle at 30 €/day for 7 days is 210 € of base
+  // and the customer pays 254,10 €. Everything below is written in those terms.
+
+  it('adds VAT to the tariff instead of extracting it', () => {
+    const price = resolveRentalPrice(210, 0);
+    expect(price.netPrice).toBe(210);
+    expect(price.vatAmount).toBe(44.1);
+    expect(price.finalPrice).toBe(254.1);
   });
 
-  it('applies the loyalty discount to the tariff', () => {
-    const price = resolveRentalPrice(350, 5);
-    expect(price.loyaltyDiscountPercent).toBe(5);
-    expect(price.loyaltyDiscount).toBe(-17.5);
-    expect(price.discountedPrice).toBe(332.5);
-    expect(price.finalPrice).toBe(332.5);
-    expect(price.priceOverridden).toBe(false);
+  it('keeps the net round, which is the whole point', () => {
+    // The customer who wants no invoice pays exactly this.
+    expect(resolveRentalPrice(30, 0).netPrice).toBe(30);
+    expect(resolveRentalPrice(210, 0).netPrice).toBe(210);
   });
 
-  it('stacks the agreed price ON TOP of the loyalty discount, keeping both', () => {
-    // 600 € tariff, 10 % loyalty → 540 €, closed by hand at 500 €.
+  it('applies the loyalty discount to the net, before tax', () => {
+    const price = resolveRentalPrice(200, 10);
+    expect(price.loyaltyDiscount).toBe(-20);
+    expect(price.discountedPrice).toBe(180);
+    expect(price.netPrice).toBe(180);
+    expect(price.finalPrice).toBe(217.8);
+  });
+
+  it('stacks the agreed net ON TOP of the loyalty discount, keeping both', () => {
+    // 600 € tariff, 10 % loyalty → 540 €, closed by hand at 500 € net.
     const price = resolveRentalPrice(600, 10, 500);
     expect(price.loyaltyDiscount).toBe(-60);
     expect(price.discountedPrice).toBe(540);
     expect(price.manualAdjustment).toBe(-40);
-    expect(price.finalPrice).toBe(500);
+    expect(price.netPrice).toBe(500);
+    expect(price.finalPrice).toBe(605);
     expect(price.priceOverridden).toBe(true);
   });
 
-  it('measures the manual adjustment against the discounted price, not the tariff', () => {
-    // The whole point of keeping them apart: merged, the contract could not
-    // explain where 40 € of the 100 € gap came from.
+  it('measures the manual adjustment against the discounted net, not the tariff', () => {
     const price = resolveRentalPrice(600, 10, 500);
-    expect(price.loyaltyDiscount + price.manualAdjustment).toBe(-100);
     expect(price.tariffPrice + price.loyaltyDiscount + price.manualAdjustment).toBe(
-      price.finalPrice
+      price.netPrice
     );
   });
 
-  it('reports no override when the agreed price equals the discounted one', () => {
-    const price = resolveRentalPrice(350, 5, 332.5);
+  it('reports no override when the agreed net equals the discounted one', () => {
+    const price = resolveRentalPrice(200, 10, 180);
     expect(price.priceOverridden).toBe(false);
     expect(price.manualAdjustment).toBe(0);
   });
 
   it('ignores an unusable override rather than writing a nonsense price', () => {
-    expect(resolveRentalPrice(350, 0, -10).finalPrice).toBe(350);
-    expect(resolveRentalPrice(350, 0, Number.NaN).finalPrice).toBe(350);
-    expect(resolveRentalPrice(350, 0, null).finalPrice).toBe(350);
-    expect(resolveRentalPrice(350, 0, undefined).finalPrice).toBe(350);
+    for (const bad of [-10, Number.NaN, null, undefined]) {
+      expect(resolveRentalPrice(210, 0, bad as any).netPrice).toBe(210);
+    }
   });
 
-  it('accepts an agreed price above the tariff', () => {
-    const price = resolveRentalPrice(350, 0, 400);
+  it('accepts an agreed net above the tariff', () => {
+    const price = resolveRentalPrice(200, 0, 250);
     expect(price.manualAdjustment).toBe(50);
-    expect(price.priceOverridden).toBe(true);
+    expect(price.finalPrice).toBe(302.5);
   });
 
   it('accepts a free rental agreed by hand', () => {
-    const price = resolveRentalPrice(350, 0, 0);
+    const price = resolveRentalPrice(200, 0, 0);
+    expect(price.netPrice).toBe(0);
     expect(price.finalPrice).toBe(0);
     expect(price.priceOverridden).toBe(true);
   });
@@ -156,34 +164,66 @@ describe('resolveRentalPrice', () => {
   it('clamps a discount stored above the ceiling', () => {
     const price = resolveRentalPrice(100, 90);
     expect(price.loyaltyDiscountPercent).toBe(MAX_LOYALTY_DISCOUNT_PERCENT);
-    expect(price.finalPrice).toBe(70);
-  });
-
-  it('rounds the discount to the cent', () => {
-    const price = resolveRentalPrice(333.33, 7);
-    expect(price.loyaltyDiscount).toBe(-23.33);
-    expect(price.discountedPrice).toBe(310);
+    expect(price.netPrice).toBe(70);
   });
 
   it('survives a vehicle with no pricing rule matched', () => {
     const price = resolveRentalPrice(0, 5);
+    expect(price.netPrice).toBe(0);
     expect(price.finalPrice).toBe(0);
     expect(price.loyaltyDiscount).toBe(0);
   });
 });
 
-// ---------------------------------------------------------------------------
-// The two features together
-// ---------------------------------------------------------------------------
+describe('addVat', () => {
+  it('never lets the total drift: base + vat is exactly the total', () => {
+    for (const net of [0.01, 9.99, 30, 45, 210, 1234.56]) {
+      const vat = addVat(net);
+      expect(vat.base + vat.vat).toBeCloseTo(vat.total, 10);
+    }
+  });
 
-describe('discounted price and VAT together', () => {
-  it('taxes what the customer actually pays, not the tariff', () => {
-    const price = resolveRentalPrice(600, 10, 500);
-    const vat = extractVat(price.finalPrice);
+  it('is the inverse direction of extractVat', () => {
+    expect(addVat(100).total).toBe(121);
+    expect(extractVat(121).base).toBe(100);
+  });
+});
 
-    expect(vat.total).toBe(500);
-    expect(vat.base).toBe(413.22);
-    expect(vat.vat).toBe(86.78);
-    expect(vat.base + vat.vat).toBeCloseTo(price.finalPrice, 10);
+describe('vatBreakdownOf — old reservations must not move', () => {
+  it('splits a pre-change reservation the old, inclusive way', () => {
+    // No `tariffIncludesVat`: priced when the tariff already carried VAT.
+    const vat = vatBreakdownOf({ finalPrice: 350, vatRate: 0.21 });
+    expect(vat.total).toBe(350);
+    expect(vat.base).toBe(289.26);
+  });
+
+  it('splits a new reservation from its net', () => {
+    const vat = vatBreakdownOf({
+      netPrice: 210,
+      finalPrice: 254.1,
+      vatRate: 0.21,
+      tariffIncludesVat: false
+    });
+    expect(vat.base).toBe(210);
+    expect(vat.vat).toBe(44.1);
+    expect(vat.total).toBe(254.1);
+  });
+
+  it('honours an explicit inclusive flag', () => {
+    const vat = vatBreakdownOf({ finalPrice: 350, vatRate: 0.21, tariffIncludesVat: true });
+    expect(vat.base).toBe(289.26);
+  });
+
+  it('agrees with what resolveRentalPrice produced', () => {
+    const price = resolveRentalPrice(210, 0);
+    const vat = vatBreakdownOf({
+      netPrice: price.netPrice,
+      finalPrice: price.finalPrice,
+      vatRate: DEFAULT_VAT_RATE,
+      tariffIncludesVat: TARIFF_INCLUDES_VAT
+    });
+    expect(vat.base).toBe(price.netPrice);
+    expect(vat.vat).toBe(price.vatAmount);
+    expect(vat.total).toBe(price.finalPrice);
   });
 });

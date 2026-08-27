@@ -39,7 +39,9 @@
 }
 
 .sidebar-header {
-  padding: 1.5rem;
+  // Narrower side padding than the rest of the sidebar: the logo is the only
+  // thing in this row, and the reclaimed width is what lets the wordmark grow.
+  padding: 1.35rem 1rem;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -65,8 +67,19 @@
 // else. Serving the correct file keeps the brand colour intact.
 app-brand-logo {
   display: block;
-  height: 32px;
-  max-width: 170px;
+
+  /**
+   * Sized from the sidebar's width rather than a fixed height, so the wordmark
+   * uses whatever room the rail actually has instead of a number that stops
+   * being right the moment the sidebar changes.
+   *
+   * `aspect-ratio` is the logo file's own 1133.86 × 311.81, which is what keeps
+   * it from ever distorting; `max-height` is the safety rail so it cannot grow
+   * into the navigation below.
+   */
+  width: 100%;
+  aspect-ratio: 1133.86 / 311.81;
+  max-height: 48px;
 }
 
 .sidebar-nav {

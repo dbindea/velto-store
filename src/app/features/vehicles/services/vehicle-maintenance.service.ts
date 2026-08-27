@@ -18,6 +18,7 @@ import {
 import { Storage, deleteObject, getDownloadURL, ref, uploadBytes } from '@angular/fire/storage';
 import { Observable, from, of } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import {
   MaintenanceStatus,
   MAINTENANCE_DUE_SOON_DAYS,
@@ -44,17 +45,24 @@ export class VehicleMaintenanceService {
   }
 
   /** Removes undefined/null fields recursively — required by Firestore. */
+  /**
+   * Removes `undefined` and `null` before writing.
+   *
+   * The previous local version rebuilt every object it walked, which turned
+   * the `serverTimestamp()` sentinels below into plain maps — the same
+   * corruption that hit contract timestamps in F-4. It never showed because
+   * the collection is still empty in production.
+   */
+  /**
+   * Removes `undefined` and `null` before writing.
+   *
+   * The previous local version rebuilt every object it walked, which turned
+   * the `serverTimestamp()` sentinels below into plain maps — the same
+   * corruption that hit contract timestamps in F-4. It never showed because
+   * the collection is still empty in production.
+   */
   private cleanData<T extends object>(data: T): Partial<T> {
-    const cleaned: any = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined && value !== null) {
-        cleaned[key] =
-          typeof value === 'object' && !Array.isArray(value) && value !== null
-            ? this.cleanData(value)
-            : value;
-      }
-    }
-    return cleaned;
+    return cleanForFirestore(data, { stripNulls: true });
   }
 
   /** All maintenance records for a given vehicle, newest first. */

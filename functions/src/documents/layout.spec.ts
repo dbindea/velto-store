@@ -297,7 +297,8 @@ describe('no text overlaps', () => {
         lessorId: 'NIF B88866900',
         renterRole: 'EL ARRENDATARIO',
         renterName: client.fullName,
-        renterId: formatIdDocument('nie', client.documentNumber)
+        renterId: formatIdDocument('nie', client.documentNumber),
+        digitallySignedLabel: 'Firmado digitalmente con certificado digital'
       });
     });
     expect(problems).toEqual([]);

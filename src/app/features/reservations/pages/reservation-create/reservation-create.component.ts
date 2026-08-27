@@ -13,9 +13,10 @@ import {
   toTimeString,
 } from '@shared/utils/reservation-date.util';
 import {
-  extractVat,
+  addVat,
   resolveRentalPrice,
   DEFAULT_VAT_RATE,
+  TARIFF_INCLUDES_VAT,
   RentalPriceBreakdown,
   VatBreakdown
 } from '@shared/utils/pricing.util';
@@ -355,7 +356,9 @@ export class ReservationCreateComponent implements OnInit {
           loyaltyDiscountPercent: breakdown.loyaltyDiscountPercent || undefined,
           loyaltyDiscount: breakdown.loyaltyDiscount || undefined,
           manualAdjustment: breakdown.priceOverridden ? breakdown.manualAdjustment : undefined,
-          vatRate: DEFAULT_VAT_RATE
+          netPrice: breakdown.netPrice,
+          vatRate: DEFAULT_VAT_RATE,
+          tariffIncludesVat: TARIFF_INCLUDES_VAT
         }
       });
 
@@ -509,7 +512,17 @@ export class ReservationCreateComponent implements OnInit {
     return this.priceBreakdown.discountedPrice;
   }
 
-  /** The price that will actually be charged: the agreed one, or the calculated one. */
+  /**
+   * The editable figure, and it is the NET one.
+   *
+   * That is the number worth negotiating: it is round, and it is exactly what
+   * a customer who does not want an invoice hands over. VAT is added below.
+   */
+  get netPrice(): number {
+    return this.priceBreakdown.netPrice;
+  }
+
+  /** What the customer actually pays: net plus VAT. */
   get finalPrice(): number {
     return this.priceBreakdown.finalPrice;
   }
@@ -524,9 +537,9 @@ export class ReservationCreateComponent implements OnInit {
     return this.priceBreakdown.manualAdjustment;
   }
 
-  /** VAT extracted from the final price — never added on top of it. */
+  /** VAT added on top of the net — the tariff is net now. */
   get vat(): VatBreakdown {
-    return extractVat(this.finalPrice);
+    return addVat(this.netPrice);
   }
 
   /** The rate as a percentage, for the "IVA (21 %)" label. */
@@ -536,10 +549,13 @@ export class ReservationCreateComponent implements OnInit {
 
   /**
    * The operator can overwrite the calculated price on the summary — a deal
-   * closed at 515 € on a 600 € tariff. Anything unparseable or negative falls
-   * back to the calculation instead of writing a nonsense price.
+   * closed at 500 € net on a 540 € tariff.
+   *
+   * ⚠️ The figure typed here is the NET. That is the number that gets
+   * negotiated, and VAT is added to it below; binding this to the gross while
+   * the label said "sin IVA" made the two disagree by 21 %.
    */
-  onFinalPriceChange(value: unknown): void {
+  onNetPriceChange(value: unknown): void {
     const parsed = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
     this.finalPriceOverride =
       !isFinite(parsed) || parsed < 0 ? null : Math.round(parsed * 100) / 100;

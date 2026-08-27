@@ -15,6 +15,22 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## ⚠️ Revisar tras el cambio de IVA (27 ago 2026)
+
+- [ ] **Repasar las tarifas de los vehículos.** Desde el 27 de agosto el
+  `pricePerDay` es **neto** y el IVA se suma encima. Las tarifas existentes no
+  se han tocado, así que **lo que cobras por el mismo alquiler sube un 21 %**:
+  7 días a 50 €/día pasan de 350 € totales a 350 € + 73,50 € = **423,50 €**.
+
+  Si la intención era mantener el precio final, hay que bajar las tarifas
+  dividiendo por 1,21 (50 → 41,32). Si la intención era subir, no hay nada que
+  hacer. **Es una decisión comercial, no técnica** — el código hace lo que
+  pediste, pero conviene mirarlo antes de la próxima reserva real.
+
+- [ ] **Comprobar una reserva antigua** después de desplegar: su desglose debe
+  seguir dando los mismos números que antes (dirección congelada en
+  `tariffIncludesVat`).
+
 ## Prioridad alta
 
 - [ ] **M-1 · Un cliente `blocked` no bloquea nada.**

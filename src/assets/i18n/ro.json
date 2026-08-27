@@ -658,6 +658,7 @@
       "initialPayment": "Avans",
       "loyaltyDiscount": "Reducere fidelitate",
       "manualAdjustment": "Ajustare manuală",
+      "netPrice": "Preț fără TVA",
       "pricePerDay": "Preț/zi",
       "remainingPayment": "Rest de plată",
       "resetToCalculated": "Revino la prețul calculat",

@@ -18,6 +18,15 @@
  * caused horizontal overflow on a typical laptop.
  */
 
+/**
+ * A custom element is `display: inline` until told otherwise, and an inline box
+ * ignores vertical margins — so whatever a consumer set as spacing around this
+ * component did nothing, and the timeline sat flush against the next block.
+ */
+:host {
+  display: block;
+}
+
 .reservation-timeline {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
