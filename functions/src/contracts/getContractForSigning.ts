@@ -50,7 +50,7 @@ export interface PublicContractView {
   companyName: string;
 }
 
-const VELTO_COMPANY_NAME = process.env.VELTO_COMPANY_NAME || 'Velto Rent';
+const VELTO_COMPANY_NAME = process.env.VELTO_COMPANY_NAME || 'VELTO MOBILITY';
 
 function toDate(value: any): Date | undefined {
   if (!value) return undefined;

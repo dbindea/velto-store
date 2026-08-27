@@ -5,7 +5,7 @@
     "loginWithGoogle": "Sign in with Google"
   },
   "brand": {
-    "logoAlt": "Velto Rent"
+    "logoAlt": "VELTO MOBILITY"
   },
   "calendar": {
     "emptyDay": "No reservations for this day.",
@@ -54,6 +54,7 @@
       "drivingLicenseNumber": "License number",
       "email": "Email",
       "fullName": "Full name",
+      "loyaltyDiscount": "Loyalty discount",
       "notes": "Internal notes",
       "phone": "Phone",
       "trustLevel": "Trust level"
@@ -66,6 +67,12 @@
       "EU": "European Union",
       "OTHER": "Other",
       "RO": "Romania"
+    },
+    "loyalty": {
+      "hint": "Applied to their new reservations.",
+      "history": "Change history",
+      "max": "Maximum",
+      "withdrawnOnBlock": "Withdrawn when the client was blocked"
     },
     "new": "New client",
     "noClients": "No clients yet",
@@ -561,6 +568,14 @@
       "search": "Search availability",
       "selectVehicle": "Select vehicle"
     },
+    "bookingConfirmation": {
+      "copyLink": "Copy link",
+      "error": "The confirmation could not be generated",
+      "generate": "Generate confirmation",
+      "hint": "Informative document for the customer. It is not the contract and does not enable pickup.",
+      "open": "Open PDF",
+      "title": "Booking confirmation"
+    },
     "cancel": {
       "confirm": "Cancel this reservation?",
       "hint": "This cannot be undone. The reservation stays in the history as cancelled."
@@ -638,10 +653,21 @@
       "deposit": "Deposit",
       "finalPrice": "Total price",
       "initialPayment": "Signal",
+      "loyaltyDiscount": "Loyalty discount",
       "manualAdjustment": "Manual adjustment",
       "pricePerDay": "Price/day",
       "remainingPayment": "Remaining",
-      "resetToCalculated": "Back to calculated price"
+      "resetToCalculated": "Back to calculated price",
+      "vat": "VAT",
+      "vatBase": "Taxable base"
+    },
+    "quote": {
+      "copied": "Link copied. You can paste it into WhatsApp.",
+      "copyLink": "Copy link",
+      "error": "The quote could not be generated",
+      "generate": "Generate quote",
+      "hint": "Does not create the booking or hold the vehicle. Valid for 7 days.",
+      "open": "Open PDF"
     },
     "status": {
       "cancelled": "Cancelled",

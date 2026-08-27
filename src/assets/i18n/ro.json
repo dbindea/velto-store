@@ -5,7 +5,7 @@
     "loginWithGoogle": "Intră cu Google"
   },
   "brand": {
-    "logoAlt": "Velto Rent"
+    "logoAlt": "VELTO MOBILITY"
   },
   "calendar": {
     "emptyDay": "Nicio rezervare pentru această zi.",
@@ -54,6 +54,7 @@
       "drivingLicenseNumber": "Număr permis",
       "email": "Email",
       "fullName": "Nume complet",
+      "loyaltyDiscount": "Reducere fidelitate",
       "notes": "Note interne",
       "phone": "Telefon",
       "trustLevel": "Nivel de încredere"
@@ -66,6 +67,12 @@
       "EU": "Uniunea Europeană",
       "OTHER": "Altul",
       "RO": "România"
+    },
+    "loyalty": {
+      "hint": "Se aplică rezervărilor sale noi.",
+      "history": "Istoricul modificărilor",
+      "max": "Maxim",
+      "withdrawnOnBlock": "Retrasă la blocarea clientului"
     },
     "new": "Client nou",
     "noClients": "Nu există clienți",
@@ -561,6 +568,14 @@
       "search": "Caută disponibilitate",
       "selectVehicle": "Selectează vehicul"
     },
+    "bookingConfirmation": {
+      "copyLink": "Copiază linkul",
+      "error": "Confirmarea nu a putut fi generată",
+      "generate": "Generează confirmarea",
+      "hint": "Document informativ pentru client. Nu este contractul și nu permite predarea.",
+      "open": "Deschide PDF",
+      "title": "Confirmare rezervare"
+    },
     "cancel": {
       "confirm": "Anulezi această rezervare?",
       "hint": "Nu se poate anula. Rezervarea rămâne în istoric ca anulată."
@@ -638,10 +653,21 @@
       "deposit": "Garanție",
       "finalPrice": "Preț total",
       "initialPayment": "Avans",
+      "loyaltyDiscount": "Reducere fidelitate",
       "manualAdjustment": "Ajustare manuală",
       "pricePerDay": "Preț/zi",
       "remainingPayment": "Rest de plată",
-      "resetToCalculated": "Revino la prețul calculat"
+      "resetToCalculated": "Revino la prețul calculat",
+      "vat": "TVA",
+      "vatBase": "Bază impozabilă"
+    },
+    "quote": {
+      "copied": "Link copiat. Îl poți lipi în WhatsApp.",
+      "copyLink": "Copiază linkul",
+      "error": "Oferta nu a putut fi generată",
+      "generate": "Generează oferta",
+      "hint": "Nu creează rezervarea și nu blochează vehiculul. Valabil 7 zile.",
+      "open": "Deschide PDF"
     },
     "status": {
       "cancelled": "Anulat",

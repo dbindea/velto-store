@@ -340,6 +340,19 @@
   font-weight: 600;
 }
 
+// Booking confirmation: a proof of booking, not part of the signing flow.
+.booking-confirmation-card {
+  .booking-confirmation-hint {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  a.btn-secondary {
+    text-decoration: none;
+  }
+}
+
 // Pricing
 .pricing-card {
   .card-content {
@@ -361,6 +374,11 @@
         color: var(--warning-color);
       }
 
+      &.discount .discount-value {
+        color: var(--success-color);
+        font-weight: 600;
+      }
+
       &.total {
         border-top: 1px solid var(--border-color);
         margin-top: 0.5rem;
@@ -373,6 +391,19 @@
           font-weight: 700;
           color: var(--accent-color);
         }
+      }
+    }
+
+    // Informative split of the total: it is not another line to add up.
+    .vat-breakdown {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed var(--border-color);
+
+      .price-row.vat-row {
+        padding: 0.15rem 0;
+        font-size: 0.8rem;
+        color: var(--text-muted);
       }
     }
   }

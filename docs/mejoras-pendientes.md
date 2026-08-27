@@ -174,6 +174,25 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [ ] Registro de daños en la devolución
 - [ ] Cancelación de una reserva
 - [ ] Excepciones de workflow (`buildWorkflowException`) desde la UI
+- [ ] **N-4 end-to-end**: poner un 10 % a un cliente, crear reserva y comprobar
+      que el snapshot congela el porcentaje; luego retirárselo y verificar que
+      la reserva anterior no se mueve
+- [ ] **N-4 + bloqueo**: marcar `blocked` a un cliente con descuento y
+      comprobar que se retira y queda anotado en el histórico
+- [ ] **N-3 en el PDF real**, tras desplegar las functions a mano
+- [ ] **N-1 end-to-end**: generar un presupuesto, abrir el enlace y comprobar
+      que se ve desde un móvil sin sesión
+- [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
+      y verificar que **el primer enlace sigue funcionando**
+- [ ] **Los tres PDF abiertos en un visor real.** El rediseño se verificó
+      extrayendo texto y midiendo cajas, no mirándolos: falta la comprobación
+      visual del logo, los filetes y el color.
+- [ ] **Revisar los secrets de empresa** antes de dar por buena la marca:
+      `VELTO_COMPANY_NAME`, `_ADDRESS`, `_PHONE`, `_REGISTRY`. Si están puestos
+      con los valores antiguos, el código nuevo no los cambia.
+- [ ] **Confirmar los datos registrales con la gestoría.** El código traía
+      «Tomo 45067, Folio 44, Hoja M-793170» y la factura dice «Hoja M-893718 ·
+      IRUS 1000477431057». Se ha adoptado el de la factura.
 
 ---
 
@@ -183,136 +202,167 @@ Anotadas el **26 de agosto de 2026**. No son mejoras de algo existente: hay que
 construirlas. Cada una lleva lo que ya hay en el código y **lo que falta decidir
 antes de programar**.
 
-Tres notas transversales, porque afectan al orden en que conviene atacarlas:
+**Las cuatro están construidas.** N-3 y N-4 el 26 de agosto de 2026, porque
+modificaban el mismo sitio —`pricingSnapshot`— y el mismo PDF; N-1 y N-2 el 27,
+por la misma razón entre ellas: los dos son documentos cortos que comparten
+plantilla, subida a Storage y enlace.
 
-- **N-1, N-2 y N-3 tocan Cloud Functions.** El CI solo despliega hosting: las
-  functions van a mano con `npm --prefix functions run deploy`.
-- **N-3 y N-4 modifican el mismo sitio**, `pricingSnapshot` de la reserva.
-  Hacerlas juntas evita tocar dos veces el snapshot y el PDF.
-- Todo lo que se guarde en el snapshot es **histórico congelado**: si mañana
-  cambia el IVA o se le retira el descuento a un cliente, los contratos ya
-  emitidos tienen que seguir cuadrando.
+Nota transversal: todo lo que se guarde en el snapshot es **histórico
+congelado**. Si mañana cambia el IVA o se le retira el descuento a un cliente,
+los contratos ya emitidos tienen que seguir cuadrando.
+
+⚠️ **Nada de esto llega a producción hasta desplegar las functions a mano**
+(`npm --prefix functions run deploy`): el CI solo despliega hosting. Afecta a
+las cuatro:
+
+- el desglose de IVA y los descuentos en el PDF del contrato (N-3, N-4)
+- `generateQuotePdf` y `generateBookingConfirmationPdf`, que **todavía no
+  existen** en producción (N-1, N-2)
+
+Mientras tanto la app muestra los botones y falla con un aviso traducido al
+pulsarlos, que es como se verificó el camino de error.
 
 ---
 
-## N-1 · PDF de presupuesto, antes de cerrar la reserva
+## ✅ N-1 · PDF de presupuesto, antes de cerrar la reserva *(27 ago 2026)*
 
-Poder enviar al cliente un PDF de presupuesto —cliente, coche, fechas, precio,
-fianza— **sin finalizar la reserva**.
+Botón **«Generar presupuesto»** en el resumen del asistente, justo encima de
+«Crear reserva», porque es el paso que va antes en una conversación real.
 
-**Lo que hay hoy:** `generateContractPdf` exige una reserva y un contrato ya
-persistidos en Firestore. El asistente de creación no guarda nada hasta pulsar
-«Crear reserva», así que en el momento del presupuesto no existe ningún
-documento al que apuntar.
+**Decisiones tomadas:**
 
-**Rastro curioso:** `ReservationStatus` **no** tiene `quote`, pero hay CSS
-`.status-quote` en cuatro componentes y CLAUDE.md describe el flujo canónico
-empezando por «Presupuesto → Reserva». Se pensó y nunca se construyó.
+1. **Efímero.** No se crea documento en Firestore, no existe el estado `quote`,
+   y el coche **sigue disponible** para cualquier otro. El PDF lo dice con esas
+   palabras, para que el cliente no crea que tiene el coche apartado.
+2. **Validez de 7 días**, impresa como «Válido hasta». Es un compromiso
+   comercial, no técnico: sin persistencia no hay nada que respete ese precio
+   automáticamente.
+3. **Se comparte por enlace**, pensado para pegar en WhatsApp.
 
-**Lo que hay que decidir:**
+**La tensión, y cómo se resolvió.** «Efímero» y «enlace para WhatsApp» se
+contradicen a medias: un enlace exige que el archivo viva en algún sitio. El PDF
+se sube a Storage y se devuelve su URL, pero no se escribe **nada** en
+Firestore. Es efímero en lo que importa —no hay presupuesto que gestionar,
+caducar ni limpiar—; lo único que queda es el archivo.
 
-1. **¿El presupuesto se guarda o es de usar y tirar?**
-   - *Persistido* (estado `quote` nuevo): queda histórico, se puede recuperar y
-     convertir en reserva. A cambio hay que responder si un presupuesto
-     **bloquea la disponibilidad del coche** —hoy solo bloquean `reserved`,
-     `confirmed` y `delivered`— y si caduca solo o hay que limpiarlo a mano.
-   - *Efímero*: se genera el PDF con los datos del formulario y no se guarda
-     nada. Mucho más simple, pero no hay rastro de qué se ofreció ni a quién.
-2. **Plantilla propia.** Un presupuesto no es un contrato: sin cláusulas de
-   firma, sin hueco de firma, y con una validez explícita («válido hasta»).
-   Decidir esa validez.
-3. **Precio no comprometido.** Si el presupuesto se acepta días después y la
-   tarifa cambió, ¿se respeta el precio ofertado? Con `quote` persistido el
-   snapshot lo resuelve solo; en efímero, no.
+**Lo aplicado:**
 
-## N-2 · PDF de la reserva confirmada, sin contrato firmado
+- `generateQuotePdf` (callable, auth). Cada presupuesto va a
+  `quotes/{uuid}/quote.pdf`: dos presupuestos del mismo coche el mismo día son
+  ofertas distintas, y sobrescribir una con otra cambiaría un documento ya
+  enviado.
+- A diferencia de la reserva, **no recalcula el precio**: no hay reserva de la
+  que derivarlo y duplicar el motor de tarifas en functions daría dos copias que
+  mantener. Es aceptable porque el documento no es vinculante y quien llama es
+  un operador autenticado que ya puede pactar cualquier precio a mano.
 
-El cliente quiere ver su reserva confirmada en cuanto paga, y firmar unos días
-después. Hoy el único PDF que existe es el contrato, y va ligado al circuito de
-firma.
+**Rastro pendiente:** sigue habiendo CSS `.status-quote` en cuatro componentes
+para un estado que ahora ya sabemos que **no va a existir**. Es CSS muerto.
 
-**Lo que hay hoy:** cobrar la señal ya pasa la reserva a `confirmed`, que es
-anterior a generar el contrato. O sea, el estado que el cliente quiere ver
-documentado **ya existe**; lo que no hay es forma de enseñárselo.
+## ✅ N-2 · PDF de la reserva confirmada, sin contrato firmado *(27 ago 2026)*
 
-**Lo que hay que decidir:**
+**Justificante de reserva**: documento corto y propio —localizador, coche,
+fechas, importes, estado de los pagos y qué falta por hacer—. Se descartó
+mandar el contrato sin firmar: por muy marcado que fuera, es un contrato en las
+manos del cliente antes de tiempo.
 
-1. **¿Documento nuevo o el contrato sin firmar?**
-   - *Justificante de reserva*: documento corto y propio —localizador, coche,
-     fechas, importes, qué falta por hacer—. No se confunde con el contrato.
-   - *El contrato en estado `generated`*, enviado tal cual. Cero trabajo de
-     plantilla, pero se le manda al cliente un contrato sin firmar que podría
-     tomar por definitivo. Si se elige esto, decidir si lleva marca de agua.
-2. **No debe abrir la puerta a entregar sin firma.** Los guards del workflow
-   siguen mandando: esto es un documento informativo, no un paso del flujo.
-   Que el cliente tenga un PDF en la mano no puede habilitar `canStartPickup`.
-3. **Envío.** Reutilizar Resend como en `sendSignedContractEmail`, o dar solo un
-   enlace para descargar y que se mande por WhatsApp, que es el canal real.
+**Decisiones tomadas:**
 
-## N-3 · Desglose del IVA en el contrato
+1. **Documento propio**, no el contrato en estado `generated`.
+2. **Solo desde `confirmed`.** Antes de cobrar la señal, un papel titulado
+   «justificante de reserva» afirmaría algo que no ha pasado. Lo comprueban las
+   dos capas: la tarjeta no aparece en la UI y la function lo rechaza con
+   `failed-precondition`.
+3. **Se comparte por enlace**, igual que el presupuesto.
 
-El precio que se muestra hoy es el final, con IVA incluido. En el contrato debe
-aparecer desglosado: base imponible, IVA y total.
+**Lo aplicado:**
 
-**Lo que hay hoy:** ninguna noción de impuestos en todo el proyecto. El PDF
-imprime dos líneas sueltas, «Importe del alquiler» y «Fianza», tomadas de
-`finalPrice` y `depositAmount` ([pdf.ts:975](../functions/src/contracts/pdf.ts#L975)).
+- `generateBookingConfirmationPdf` (callable, auth), que lee la reserva y
+  **no escribe nada de vuelta**. Ni `contractStatus`, ni `contractInfo`, ni
+  cambio de estado. Es la salvaguarda que pedía el planteamiento: que el cliente
+  tenga este PDF no puede acercar la entrega ni un paso. Los guards siguen
+  siendo lo único que decide.
+- El PDF dice explícitamente **«NO es el contrato de alquiler»**, y la lista de
+  «qué falta por hacer» se adapta: firmar, pagar el resto, dejar la fianza,
+  traer la documentación — solo aparece lo que de verdad está pendiente.
+- Al regenerarlo se **reutiliza el token de descarga** del archivo anterior, así
+  que el enlace que el cliente ya tiene en su chat sigue funcionando. Escribir un
+  token nuevo lo habría roto en silencio.
 
-⚠️ **Es un cambio de presentación, no de importe.** El precio de tarifa ya es el
-que paga el cliente: hay que **extraer** el IVA de él (`base = total / 1,21`), no
-añadírselo. Si se hace al revés, todos los precios suben un 21 % de golpe.
+**Localizador:** `R-XXXXXX` a partir del id, misma convención que el número de
+contrato, para que los dos documentos de un alquiler se citen igual.
 
-**Lo que hay que decidir:**
+## ✅ N-3 · Desglose del IVA en el contrato *(26 ago 2026)*
 
-1. **El tipo aplicable.** El alquiler de vehículos sin conductor va al 21 %
-   general en península, pero conviene confirmarlo con la gestoría —y ver si
-   Canarias, Ceuta o Melilla entran alguna vez en juego—.
-2. **Qué conceptos llevan IVA y cuáles no.** No es uniforme:
-   - Alquiler: sí.
-   - **Fianza: no.** Es un depósito en garantía, no una venta.
-   - Cargos extra: combustible, limpieza, kilómetros y daños, sí. **Las multas
-     no** — es una sanción que se repercute, no un servicio.
-   Esto afecta a cómo se presentan los cargos de la inspección de devolución.
-3. **Snapshot del tipo.** Guardar `vatRate` en `pricingSnapshot` al crear la
-   reserva. Si el tipo cambia, los contratos antiguos deben conservar el suyo.
-4. **Etiquetas en tres idiomas** en `clauses.ts` (es/en/ro), y `npm run i18n:audit`
-   para lo que se muestre en la app.
-5. ¿Aparece el desglose también en la app, o solo en el PDF?
+El precio mostraba solo el total con IVA incluido. Ahora el contrato, el
+asistente y el detalle de la reserva enseñan base imponible, IVA y total.
 
-## N-4 · Descuento de fidelidad por cliente
+**Decisiones tomadas:**
 
-Un numérico en la ficha del cliente —`5` = 5 % de descuento— que se aplica a sus
-reservas, puede retirarse o cambiarse, y **aparece en el contrato**.
+1. **21 % fijo en constante**, `DEFAULT_VAT_RATE = 0.21` en `pricing.util.ts`.
+   Se descartó hacerlo configurable en Ajustes —que sigue siendo un
+   placeholder— y por vehículo, que solo tendría sentido con flota en Canarias.
+2. **Se ve en el PDF y en la app** (resumen del asistente y detalle de la
+   reserva), no solo en el contrato: el operador ve lo mismo que el cliente.
+3. **La fianza no lleva IVA** y las multas tampoco; combustible, limpieza,
+   kilómetros y daños sí.
 
-**Lo que hay hoy:** `Client` no tiene ningún campo de descuento. Existe
-`ClientTrustLevel` (`new` · `known` · `regular` · `risk` · `blocked`), pero es
-informativo y no interviene en nada (ver [M-1]).
+**Lo aplicado:**
 
-**Cuidado con el solape:** desde el 24 de agosto el resumen del asistente ya
-permite **sobrescribir el precio final a mano**, y eso se guarda como
-`manualAdjustment` en el snapshot. Son dos descuentos distintos sobre el mismo
-importe.
+- `extractVat()` en `pricing.util.ts`. El IVA se calcula **por resta**
+  (`vat = total − base`), no multiplicando la base, para que `base + vat` sea
+  exactamente el total: redondear las dos partes por separado desviaba un
+  céntimo con frecuencia suficiente como para que se notara en un contrato.
+- `pricingSnapshot.vatRate` congela el tipo al crear la reserva. Una reserva
+  anterior a este campo cae al tipo general vía `resolveVatRate()`, que es el
+  que su precio ya incluía —el campo registra el tipo, nunca lo cambió—.
+- El PDF imprime base, IVA y «Total alquiler (IVA incl.)», y etiqueta la fianza
+  como **«no sujeta a IVA»**. Etiquetas en los tres idiomas en `pdf.ts`. La
+  cláusula 4 ya decía que el precio «figura desglosado»; ahora es cierto.
+- En functions la constante y la aritmética están **duplicadas a propósito**:
+  app y functions compilan con tsconfigs distintos y no pueden compartir módulo.
+  Va comentado en ambos lados.
 
-**Lo que hay que decidir:**
+**Verificado** renderizando el PDF en local en tres escenarios —sin descuentos,
+con los dos descuentos, y una reserva antigua sin `vatRate`—: los tres imprimen
+289,26 + 60,74 = 350,00 y 413,22 + 86,78 = 500,00 respectivamente.
 
-1. **Orden de aplicación y convivencia con el ajuste manual.** Lo natural es
-   tarifa → descuento de fidelidad → precio acordado a mano. Pero hay que
-   decidir si el ajuste manual **sustituye** al descuento o se aplica **encima**,
-   y guardarlos por separado en el snapshot para que el contrato pueda
-   explicar cada línea. Si se mezclan en un solo número, el desglose de N-3
-   no podrá justificarlos.
-2. **¿Se asigna a mano o se gana solo?** Si es automático, con qué umbral:
-   ¿número de alquileres cerrados, importe acumulado, antigüedad? Y quién lo
-   recalcula: ¿al cerrar cada reserva?
-3. **¿Se relaciona con `trustLevel` o es independiente?** Un `regular` no tiene
-   por qué tener descuento, y un `blocked` con un 10 % guardado sería absurdo.
-   Decidir si al bloquear a alguien se le retira.
-4. **Snapshot obligatorio.** El porcentaje aplicado se congela en la reserva.
-   Si mañana se le retira el descuento al cliente, el contrato firmado tiene que
-   seguir cuadrando con lo que se cobró.
-5. **¿Queda rastro de los cambios?** Subir o quitar un descuento es una decisión
-   comercial con dinero detrás. Decidir si basta con el valor actual o si hace
-   falta histórico de quién lo cambió y por qué, al estilo de
-   `reservation.workflowExceptions[]`.
-6. **Tope y validación.** Un descuento del 100 % debería ser imposible sin una
-   confirmación explícita.
+**Queda fuera:** los cargos extra de la inspección de devolución no se
+desglosan. El contrato se genera antes de que existan, y tocarlo implicaba
+entrar en la lógica de pagos recién estabilizada en M-14.
+
+## ✅ N-4 · Descuento de fidelidad por cliente *(26 ago 2026)*
+
+Un porcentaje en la ficha del cliente que se aplica a sus reservas nuevas.
+
+**Decisiones tomadas:**
+
+1. **Separados y acumulativos.** Tarifa → descuento de fidelidad → ajuste
+   manual encima. `loyaltyDiscount` y `manualAdjustment` viven como campos
+   distintos del snapshot, ambos con signo. Fundidos en un solo número, el
+   desglose de N-3 no habría podido justificar cada línea.
+2. **Se asigna a mano**, no se gana por umbrales. Independiente de
+   `trustLevel`, salvo que **bloquear a un cliente retira el descuento**.
+3. **Tope del 30 %** y registro de cada cambio con autor y fecha.
+
+**Lo aplicado:**
+
+- `resolveRentalPrice()` en `pricing.util.ts` es ahora **la única autoridad
+  sobre el precio**: la usan el asistente y `reservation.service.ts`, que lo
+  recalcula en vez de fiarse de la cifra que enseñó la UI. 22 tests nuevos.
+- El `manualAdjustment` mide contra el precio **ya descontado**, no contra la
+  tarifa. Cambiar de cliente en el asistente descarta un precio acordado
+  previo: la base sobre la que se pactó ya no es la misma.
+- `Client.loyaltyDiscountPercent` + `loyaltyDiscountHistory[]`, append-only con
+  autor, fecha y motivo, al estilo de `workflowExceptions[]`. El histórico se
+  reconstruye en JS y **no** con `arrayUnion()`: `cleanData()` recorre el
+  payload con `Object.entries()` y habría aplanado el centinela a `{}`, que es
+  exactamente cómo `stripUndefined()` corrompió los timestamps en F-4.
+- El formulario recorta al tope mientras se escribe, para que nadie teclee 50 y
+  guarde 30 sin enterarse. La ficha del cliente muestra el descuento como badge.
+- El contrato imprime tarifa, descuento con su porcentaje y ajuste acordado,
+  **solo cuando movieron el precio**: un alquiler sin descuentos se lee igual
+  que antes.
+
+**Queda fuera:** el descuento no se aplica a reservas ya creadas, por diseño —
+el snapshot es histórico congelado.

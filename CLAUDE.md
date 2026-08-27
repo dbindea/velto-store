@@ -54,6 +54,8 @@ npm --prefix functions test   # Cloud Functions (functions/src/**/*.spec.ts)
 Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar dinero:
 
 - `reservation-workflow.util.spec.ts` — los guards `can*`, los overrides de `WorkflowContext`, y las excepciones de workflow
+- `payment-summary.util.spec.ts` — la liquidación de pagos sembrados (M-14)
+- `pricing.util.spec.ts` — que el IVA se **extrae** y no se suma, que `base + vat` cuadra al céntimo, y que el descuento de fidelidad y el precio acordado se acumulan sin fundirse
 - `functions/src/redsys.spec.ts` — la firma `HMAC_SHA256_V1` contra un vector de referencia congelado
 
 El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
@@ -117,10 +119,13 @@ src/app/
 
 functions/src/
 ├── admin-guard.ts                    # init lazy del admin SDK
+├── company-config.ts                 # datos de empresa, leídos en cada llamada
 ├── redsys.ts                         # createRedsysPaymentLink + webhook
-└── contracts/                        # generateContractPdf, signingLink,
-                                      # getContractForSigning, signContract,
-                                      # sendSignedContractEmail, clauses, pdf
+├── contracts/                        # generateContractPdf, signingLink,
+│                                     # getContractForSigning, signContract,
+│                                     # sendSignedContractEmail, clauses, pdf
+└── documents/                        # presupuesto y justificante de reserva
+                                      # (documents-pdf, storage, los 2 callables)
 ```
 
 `expenses` y `settings` son **placeholders**: componentes con template inline que solo muestran `common.moduleInProgress`.
@@ -142,14 +147,35 @@ Presupuesto → Reserva → Cliente → Pago señal → Contrato PDF
 
 Para saltarse un paso hay que llamar `buildWorkflowException(action, reason, createdBy)` con motivo obligatorio (mín. 3 caracteres), que se persiste en `reservation.workflowExceptions[]`.
 
+### `pricing.util.ts` es la única autoridad sobre el precio
+
+`resolveRentalPrice()` resuelve los tres escalones en orden — tarifa → descuento de
+fidelidad del cliente → precio acordado a mano — y devuelve cada tramo por separado.
+La usan el asistente de creación y `reservation.service.ts`, que **recalcula** en vez de
+fiarse de la cifra que enseñó la UI. No dupliques la aritmética en un componente.
+
+Dos convenciones distintas que conviene no confundir, y por eso los nombres son explícitos:
+
+- `vatRate` es una **fracción** (`0.21`)
+- `loyaltyDiscountPercent` es un **porcentaje** (`5`)
+
+⚠️ **El precio de tarifa ya lleva el IVA incluido.** `extractVat()` lo **extrae**
+(`base = total / 1,21`); no lo suma. Al revés subiría toda la flota un 21 %. El IVA se
+calcula por resta (`vat = total − base`) para que `base + vat` cuadre al céntimo.
+
+La constante y la aritmética están **duplicadas en `functions/src/contracts/pdf.ts`** a
+propósito: app y functions compilan con tsconfigs separados y no pueden compartir módulo.
+Si cambia el tipo, se cambia en los dos sitios.
+
 ### Otros utils
 
 - `payment-summary.util.ts` — resumen financiero, derivado de la colección `payments` (source of truth)
-- `pricing.util.ts`, `reservation-date.util.ts`, `acriss-code.util.ts`
+- `reservation-date.util.ts`, `acriss-code.util.ts`
 
 ### Reglas de dominio
 
-- Los **cargos extra solo nacen desde la inspección de devolución**. Un solo sistema, sin doble fuente.
+- Los **cargos extra solo nacen desde la inspección de devolución**. Un solo sistema, sin doble fuente. Todavía **no llevan desglose de IVA**: el contrato se genera antes de que existan.
+- El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
@@ -161,6 +187,12 @@ Firestore lanza `Cannot use 'undefined' as a Firestore value`. Hay dos defensas 
 - **Functions:** `admin-guard.ts` activa `ignoreUndefinedProperties: true` en la instancia de Firestore, y `generateContractPdf.ts` tiene además `stripUndefined()` local.
 
 Al escribir en Firestore desde código nuevo, comprueba cuál de las dos aplica.
+
+⚠️ **No metas centinelas por `cleanData()`.** `serverTimestamp()`, `arrayUnion()` y compañía
+son objetos **sin propiedades enumerables propias**: un recorrido con `Object.entries()` los
+aplana a `{}`. Es lo que corrompió los timestamps de los contratos (F-4). Cuando hay que
+añadir a un array bajo `cleanData`, se lee el documento y se reconstruye el array en JS —así
+lo hace `applyLoyaltyDiscountChange()` en `client.service.ts`.
 
 ## i18n
 
@@ -192,9 +224,67 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
 
+**Escritas pero SIN desplegar:** `generateQuotePdf` y `generateBookingConfirmationPdf`.
+
+### Identidad visual de los PDF
+
+La referencia es **la factura que la empresa ya emite**: Gotham para marca y titulares,
+etiquetas de sección en versalitas turquesa con tracking, filetes finos y un pie legal gris
+repetido en cada página. Todo vive en `functions/src/contracts/brand.ts`.
+
+⚠️ **Gotham no puede ser la fuente del cuerpo.** No tiene los diacríticos rumanos
+(`ă ș ț`) **ni el símbolo `€`**. Un precio o una frase en rumano compuestos en Gotham salen
+como cajas vacías, y pdf-lib **no avisa**: dibuja el hueco y sigue. Por eso `PdfBuilder`
+comprueba la cobertura de glifos por cadena y cae a DejaVu cuando hace falta — la misma regla
+que la app declara en `styles.scss`. Consecuencia visible: en español e inglés los titulares
+salen en Gotham; en rumano, los que llevan `ș`/`ț` caen a DejaVu.
+
+La Gotham y el logo **no se duplican** en `functions/`: `scripts/copy-fonts.js` los copia desde
+`src/assets/` de la app al compilar. Rediseñar el logo actualiza los PDF en el siguiente
+despliegue. El logo se dibuja como vectores con `drawSvgPath`, leyendo el SVG real.
+
+**Los tres invariantes de maquetación están cubiertos por tests** (`documents/layout.spec.ts`,
+los tres documentos × tres idiomas):
+
+- ningún texto se solapa con otro (`assertNoOverlaps`)
+- ningún glifo falta en la fuente en que se compuso (`assertNoMissingGlyphs`)
+- nada se sale del margen ni invade el pie legal (`assertInsideMargins`)
+- ningún titular sale cortado con puntos suspensivos
+
+Son tests porque los cuatro han fallado de verdad: el título salía como
+«CONTRATO DE ALQUILER …» y una razón social larga como «EUROCONSTRUCCIONES 2020, SOC…».
+Los titulares **encogen y parten**, nunca se truncan.
+
+### Los documentos que no son el contrato
+
+`functions/src/documents/` genera el **presupuesto** (antes de que exista la reserva) y el
+**justificante de reserva** (desde `confirmed`, con el contrato aún sin firmar).
+
+⚠️ **Ninguno de los dos escribe en Firestore.** Es la regla que sostiene el diseño: son
+documentos informativos, no pasos del flujo, y el workflow sigue siendo la única autoridad.
+Si alguna vez uno de ellos toca `contractStatus` o el estado de la reserva, se ha abierto la
+puerta a entregar un coche sin contrato firmado.
+
+El presupuesto además **no persiste nada**: no existe el estado `quote` y el coche no se
+bloquea. Lo único que queda es el PDF en Storage, que es lo que el enlace necesita.
+
+`uploadPdf()` **reutiliza el token de descarga** si el archivo ya existe. Un token nuevo
+rompería en silencio el enlace que el cliente ya tiene en su WhatsApp.
+
 ### Firma de contratos
 
 El cliente firma **sin cuenta**: `/sign-contract/:token`, ruta pública fuera del `authGuard`. El token (256 bits URL-safe) es de un solo uso y caduca (7 días por defecto). Los tokens viven en `contractSigningTokens`, colección con reglas de Firestore que **deniegan todo acceso desde cliente** — solo el admin SDK entra.
+
+### Datos de empresa
+
+`functions/src/company-config.ts` es la única fuente. La razón social se guarda **en
+mayúsculas** (`VELTO MOBILITY, S.L.`) en vez de pasarla a mayúsculas al pintar: así ninguna
+plantilla se puede olvidar.
+
+⚠️ **Los valores por defecto solo se aplican si el secret correspondiente NO está puesto.**
+Si `VELTO_COMPANY_NAME` sigue valiendo «Velto Rent» en producción, el PDF seguirá diciendo
+«Velto Rent» por mucho que el código diga otra cosa. Al cambiar datos de empresa hay que
+revisar los secrets, no solo el código.
 
 ### Secrets
 

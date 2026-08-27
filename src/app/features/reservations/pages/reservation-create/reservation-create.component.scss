@@ -790,6 +790,86 @@ textarea.form-control {
   }
 }
 
+// Quote block: secondary to "Crear reserva", but on the same page because it
+// is the same conversation with the customer.
+.quote-block {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+
+  .quote-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .quote-hint {
+    margin: 0.6rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .quote-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.5rem 0 0;
+    font-size: 0.8rem;
+
+    &.ok {
+      color: var(--success-color);
+    }
+
+    &.error {
+      color: var(--error-color);
+    }
+  }
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+  }
+}
+
+.price-row.discount {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+
+  .discount-value {
+    color: var(--success-color);
+    font-weight: 600;
+  }
+}
+
+// The tax breakdown sits under the total: informative, not part of the sum.
+.vat-breakdown {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-color);
+
+  .price-row.vat-row {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 0.15rem 0;
+  }
+}
+
 .price-row.adjustment {
   color: var(--text-muted);
   font-size: 0.85rem;

@@ -12,10 +12,18 @@ import {
   toDateString,
   toTimeString,
 } from '@shared/utils/reservation-date.util';
+import {
+  extractVat,
+  resolveRentalPrice,
+  DEFAULT_VAT_RATE,
+  RentalPriceBreakdown,
+  VatBreakdown
+} from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { ReservationService, VehicleAvailabilityResult } from '@features/reservations/services/reservation.service';
+import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 
 type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 
@@ -31,6 +39,7 @@ export class ReservationCreateComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private clientService = inject(ClientService);
   private vehicleService = inject(VehicleService);
+  private documentService = inject(ReservationDocumentService);
 
   // Current step
   currentStep: Step = 'dates';
@@ -82,6 +91,14 @@ export class ReservationCreateComponent implements OnInit {
 
   // Validation
   dateError = '';
+
+  // Quote (N-1). Nothing here is persisted: the URL points at a PDF in
+  // Storage, and no reservation exists until "Crear reserva" is pressed.
+  generatingQuote = false;
+  quoteUrl = '';
+  quoteError = '';
+  quoteCopied = false;
+  private quoteCopiedTimer: any;
 
   ngOnInit(): void {
     // Preloaded so the client step opens with something to click on: most
@@ -200,6 +217,12 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   selectClient(client: Client): void {
+    // A different client can carry a different loyalty discount, which moves
+    // the calculated price. An agreed price measured against the previous
+    // baseline no longer means what the operator intended.
+    if (this.selectedClient?.id !== client.id) {
+      this.finalPriceOverride = null;
+    }
     this.selectedClient = client;
     this.searchResults = [];
     this.clientSearchTerm = '';
@@ -223,6 +246,8 @@ export class ReservationCreateComponent implements OnInit {
       // Fetch the created client
       this.clientService.getClientById(clientId).subscribe((client) => {
         if (client) {
+          // Same reasoning as selectClient(): a new baseline for the price.
+          this.finalPriceOverride = null;
           this.selectedClient = client;
           this.showQuickClientForm = false;
           this.quickClient = { fullName: '', phone: '', email: '', documentNumber: '' };
@@ -265,6 +290,78 @@ export class ReservationCreateComponent implements OnInit {
       alert('Error al crear la reserva. Por favor, inténtalo de nuevo.');
     } finally {
       this.saving = false;
+    }
+  }
+
+  /**
+   * Quote PDF for what the summary currently shows, without creating anything.
+   *
+   * This is the answer to "send the customer a price before they commit": no
+   * reservation, no `quote` status, and the vehicle stays available to anyone
+   * else — which is why the PDF says so in as many words.
+   */
+  async generateQuote(): Promise<void> {
+    if (!this.selectedVehicle) return;
+
+    this.generatingQuote = true;
+    this.quoteError = '';
+    try {
+      const vehicle = this.selectedVehicle.vehicle;
+      const breakdown = this.priceBreakdown;
+
+      const response = await this.documentService.generateQuote({
+        client: this.selectedClient
+          ? {
+              fullName: this.selectedClient.fullName,
+              documentNumber: this.selectedClient.documentNumber,
+              phone: this.selectedClient.phone,
+              email: this.selectedClient.email
+            }
+          : undefined,
+        vehicle: {
+          brand: vehicle.brand,
+          model: vehicle.model,
+          version: vehicle.version,
+          plateNumber: vehicle.plateNumber,
+          year: vehicle.year,
+          fuelType: vehicle.fuelType,
+          transmission: vehicle.transmission
+        },
+        rental: {
+          pickupDateTime: this.pickupDateTime.toISOString(),
+          returnDateTime: this.returnDateTime.toISOString(),
+          totalDays: this.totalDays,
+          pickupLocation: this.pickupLocation || undefined,
+          returnLocation: this.returnLocation || undefined
+        },
+        pricing: {
+          finalPrice: this.finalPrice,
+          depositAmount: this.deposit,
+          tariffPrice: breakdown.tariffPrice,
+          loyaltyDiscountPercent: breakdown.loyaltyDiscountPercent || undefined,
+          loyaltyDiscount: breakdown.loyaltyDiscount || undefined,
+          manualAdjustment: breakdown.priceOverridden ? breakdown.manualAdjustment : undefined,
+          vatRate: DEFAULT_VAT_RATE
+        }
+      });
+
+      this.quoteUrl = response.pdfUrl;
+      await this.copyQuoteLink();
+    } catch (error) {
+      console.error('Error generating quote:', error);
+      this.quoteError = 'reservations.quote.error';
+    } finally {
+      this.generatingQuote = false;
+    }
+  }
+
+  async copyQuoteLink(): Promise<void> {
+    if (!this.quoteUrl) return;
+    const copied = await this.documentService.copyToClipboard(this.quoteUrl);
+    if (copied) {
+      this.quoteCopied = true;
+      if (this.quoteCopiedTimer) clearTimeout(this.quoteCopiedTimer);
+      this.quoteCopiedTimer = setTimeout(() => (this.quoteCopied = false), 2200);
     }
   }
 
@@ -362,25 +459,62 @@ export class ReservationCreateComponent implements OnInit {
     return calculateCalendarDays(this.pickupDateTime, this.returnDateTime);
   }
 
-  /** What the tariff rules say the rental costs. */
+  /**
+   * The whole price, resolved in one place: tariff → loyalty discount →
+   * agreed price. Recomputed on read because it depends on the vehicle, the
+   * client and the override, any of which the operator can still change.
+   */
+  private get priceBreakdown(): RentalPriceBreakdown {
+    return resolveRentalPrice(
+      this.selectedVehicle?.pricing?.finalPrice || 0,
+      this.selectedClient?.loyaltyDiscountPercent,
+      this.finalPriceOverride
+    );
+  }
+
+  /** What the tariff rules say, before any discount. */
+  get tariffPrice(): number {
+    return this.priceBreakdown.tariffPrice;
+  }
+
+  /** The client's frozen-at-creation loyalty percentage. 0 when there is none. */
+  get loyaltyDiscountPercent(): number {
+    return this.priceBreakdown.loyaltyDiscountPercent;
+  }
+
+  /** Money taken off by the loyalty discount. Negative, or 0. */
+  get loyaltyDiscount(): number {
+    return this.priceBreakdown.loyaltyDiscount;
+  }
+
+  /** The tariff after the loyalty discount: what the price input starts at. */
   get calculatedFinalPrice(): number {
-    return this.selectedVehicle?.pricing?.finalPrice || 0;
+    return this.priceBreakdown.discountedPrice;
   }
 
   /** The price that will actually be charged: the agreed one, or the calculated one. */
   get finalPrice(): number {
-    return this.finalPriceOverride ?? this.calculatedFinalPrice;
+    return this.priceBreakdown.finalPrice;
   }
 
   /** True when the operator agreed a price other than the calculated one. */
   get priceOverridden(): boolean {
-    return this.finalPriceOverride !== null &&
-      this.finalPriceOverride !== this.calculatedFinalPrice;
+    return this.priceBreakdown.priceOverridden;
   }
 
   /** Signed difference against the calculation. Negative is a discount. */
   get manualAdjustment(): number {
-    return Math.round((this.finalPrice - this.calculatedFinalPrice) * 100) / 100;
+    return this.priceBreakdown.manualAdjustment;
+  }
+
+  /** VAT extracted from the final price — never added on top of it. */
+  get vat(): VatBreakdown {
+    return extractVat(this.finalPrice);
+  }
+
+  /** The rate as a percentage, for the "IVA (21 %)" label. */
+  get vatPercent(): number {
+    return Math.round(this.vat.rate * 100);
   }
 
   /**

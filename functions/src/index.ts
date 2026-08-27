@@ -9,7 +9,7 @@
  *   REDSYS_ENVIRONMENT (test | live)
  *   RESEND_API_KEY
  *   RESEND_FROM_EMAIL (default: reservas@veltorent.com)
- *   VELTO_COMPANY_NAME (default: Velto Rent)
+ *   VELTO_COMPANY_NAME (default: VELTO MOBILITY)
  *   VELTO_PUBLIC_BASE_URL (origin used to build absolute signing URLs)
  *
  * Functions:
@@ -21,6 +21,8 @@
  *   - getContractForSigning             (public, token) — read-only summary
  *   - signContract                      (public, token) — apply signature
  *   - sendSignedContractEmail           (auth) — Resend email
+ *   - generateQuotePdf                  (auth) — quote, before any reservation
+ *   - generateBookingConfirmationPdf    (auth) — booking proof, before signing
  */
 
 export { createRedsysPaymentLink, redsysNotificationWebhook } from './redsys';
@@ -31,3 +33,8 @@ export { createContractSigningLink, cancelContractSigningLink } from './contract
 export { getContractForSigning } from './contracts/getContractForSigning';
 export { signContract } from './contracts/signContract';
 export { sendSignedContractEmail } from './contracts/sendSignedContractEmail';
+
+// Customer-facing documents that are NOT the contract. Neither touches the
+// reservation, so neither can advance the workflow.
+export { generateQuotePdf } from './documents/generateQuotePdf';
+export { generateBookingConfirmationPdf } from './documents/generateBookingConfirmationPdf';

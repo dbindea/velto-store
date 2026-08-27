@@ -403,6 +403,17 @@
                   <span>{{ totalDays }} x {{ selectedVehicle?.pricing?.pricePerDay }} €:</span>
                   <span>{{ selectedVehicle?.pricing?.basePrice }} €</span>
                 </div>
+
+                @if (loyaltyDiscountPercent > 0) {
+                  <div class="price-row discount">
+                    <span>
+                      {{ 'reservations.pricing.loyaltyDiscount' | translate }}
+                      ({{ loyaltyDiscountPercent }} %):
+                    </span>
+                    <span class="discount-value">{{ loyaltyDiscount | number:'1.2-2' }} €</span>
+                  </div>
+                }
+
                 <!-- Editable: the agreed price wins over the tariff. -->
                 <div class="price-row total editable-price">
                   <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
@@ -437,6 +448,18 @@
                     </span>
                   </div>
                 }
+
+                <!-- VAT is extracted from the final price, never added to it. -->
+                <div class="vat-breakdown">
+                  <div class="price-row vat-row">
+                    <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
+                    <span>{{ vat.base | number:'1.2-2' }} €</span>
+                  </div>
+                  <div class="price-row vat-row">
+                    <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+                    <span>{{ vat.vat | number:'1.2-2' }} €</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -488,9 +511,57 @@
               [placeholder]="'reservations.fields.notes' | translate"></textarea>
           </div>
 
+          <!--
+            Quote: generates a PDF from what is on screen without saving
+            anything. Deliberately placed before "Crear reserva", because it is
+            the step that comes earlier in a real conversation.
+          -->
+          <div class="quote-block">
+            <div class="quote-actions">
+              <button
+                class="btn-secondary"
+                type="button"
+                [disabled]="generatingQuote"
+                (click)="generateQuote()">
+                @if (generatingQuote) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                  {{ 'common.loading' | translate }}
+                } @else {
+                  <i class="pi pi-file-pdf"></i>
+                  {{ 'reservations.quote.generate' | translate }}
+                }
+              </button>
+              @if (quoteUrl) {
+                <a class="btn-ghost" [href]="quoteUrl" target="_blank" rel="noopener">
+                  <i class="pi pi-external-link"></i>
+                  {{ 'reservations.quote.open' | translate }}
+                </a>
+                <button class="btn-ghost" type="button" (click)="copyQuoteLink()">
+                  <i class="pi pi-copy"></i>
+                  {{ 'reservations.quote.copyLink' | translate }}
+                </button>
+              }
+            </div>
+
+            <p class="quote-hint">{{ 'reservations.quote.hint' | translate }}</p>
+
+            @if (quoteCopied) {
+              <p class="quote-feedback ok">
+                <i class="pi pi-check"></i>
+                {{ 'reservations.quote.copied' | translate }}
+              </p>
+            }
+            @if (quoteError) {
+              <p class="quote-feedback error">
+                <i class="pi pi-exclamation-triangle"></i>
+                {{ quoteError | translate }}
+              </p>
+            }
+          </div>
+
           <div class="actions">
-            <button 
-              class="btn-primary btn-lg" 
+            <button
+              class="btn-primary btn-lg"
               type="button"
               [disabled]="saving"
               (click)="createReservation()">

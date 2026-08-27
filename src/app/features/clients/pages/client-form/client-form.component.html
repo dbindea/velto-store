@@ -183,6 +183,59 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label for="loyaltyDiscountPercent">
+              {{ 'clients.fields.loyaltyDiscount' | translate }}
+            </label>
+            <div class="percent-input">
+              <input
+                type="number"
+                id="loyaltyDiscountPercent"
+                [ngModel]="formData.loyaltyDiscountPercent"
+                (ngModelChange)="onLoyaltyDiscountChange($event)"
+                name="loyaltyDiscountPercent"
+                class="form-control"
+                min="0"
+                [max]="maxLoyaltyDiscount"
+                step="1"
+                [disabled]="isBlocked"
+                placeholder="0">
+              <span class="percent-sign">%</span>
+            </div>
+            @if (isBlocked) {
+              <small class="field-hint warning">
+                {{ 'clients.loyalty.withdrawnOnBlock' | translate }}
+              </small>
+            } @else {
+              <small class="field-hint">
+                {{ 'clients.loyalty.hint' | translate }}
+                {{ 'clients.loyalty.max' | translate }}: {{ maxLoyaltyDiscount }} %
+              </small>
+            }
+          </div>
+
+          @if (loyaltyHistory.length) {
+            <div class="form-group full">
+              <label>{{ 'clients.loyalty.history' | translate }}</label>
+              <ul class="loyalty-history">
+                @for (change of loyaltyHistory; track $index) {
+                  <li>
+                    <span class="change">{{ change.previousPercent }} % → {{ change.percent }} %</span>
+                    <span class="meta">
+                      {{ toDate(change.changedAt) | date:'dd/MM/yyyy HH:mm' }}
+                      @if (change.changedBy || change.changedByEmail) {
+                        · {{ change.changedBy || change.changedByEmail }}
+                      }
+                      @if (change.reason) {
+                        · {{ change.reason | translate }}
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
           <div class="form-group full">
             <label for="notes">{{ 'clients.fields.notes' | translate }}</label>
             <textarea 

@@ -59,9 +59,28 @@ export interface ReservationPricingSnapshot {
     label?: string;
   } | null;
   pricePerDay: number;
+  /** Tariff price before any discount: totalDays × pricePerDay. */
   basePrice: number;
+  /**
+   * The client's loyalty discount, frozen at creation, as a PERCENTAGE
+   * (5 = 5 %). Withdrawing the discount later must not move this reservation.
+   */
+  loyaltyDiscountPercent?: number;
+  /** Money taken off by the loyalty discount. Negative, or absent. */
+  loyaltyDiscount?: number;
+  /**
+   * Signed difference between the price agreed by hand and the tariff *after*
+   * the loyalty discount. Kept apart from `loyaltyDiscount` so the contract can
+   * justify each line separately.
+   */
   manualAdjustment?: number;
   finalPrice: number;
+  /**
+   * VAT rate frozen at creation, as a FRACTION (0.21 = 21 %). `finalPrice`
+   * already includes it: the breakdown extracts the tax, never adds it.
+   * Absent on reservations created before VAT was introduced.
+   */
+  vatRate?: number;
 }
 
 export interface ReservationDeposit {
