@@ -8,7 +8,7 @@ import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { getStorage, provideStorage } from '@angular/fire/storage';
@@ -42,6 +42,15 @@ export const appConfig: ApplicationConfig = {
     provideFirestore(() => getFirestore()),
     provideAuth(() => getAuth()),
     provideStorage(() => getStorage()),
-    provideFunctions(() => getFunctions())
+    // ⚠️ La región va explícita. `getFunctions()` sin argumentos apunta a
+    // us-central1, que es el defecto del SDK y NO donde están desplegadas:
+    // corren en europe-west1, junto a Firestore y Storage. Sin esto, cada
+    // callable —generar contrato, presupuesto, link de firma— falla con un
+    // 404 que parece un problema de permisos y no lo es.
+    //
+    // Tiene que coincidir con `FUNCTIONS_REGION` de
+    // functions/src/global-options.ts y con la región del rewrite /d/** de
+    // firebase.json. Las tres se mueven juntas.
+    provideFunctions(() => getFunctions(getApp(), 'europe-west1'))
   ]
 };
