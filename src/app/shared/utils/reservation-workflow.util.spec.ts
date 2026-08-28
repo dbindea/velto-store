@@ -15,6 +15,7 @@ import {
   getReservationNextRequiredAction,
   getReservationTimelineSteps,
   reasonOf,
+  reservationStatusAfterPayment,
   type WorkflowContext
 } from './reservation-workflow.util';
 
@@ -379,5 +380,30 @@ describe('clientTrustWarning', () => {
   it('says nothing about an ordinary customer', () => {
     expect(clientTrustWarning('known')).toBe('');
     expect(clientTrustWarning(undefined)).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Step 2 of the flow: the signal confirms the reservation
+//
+// Nothing implemented this. The payment service recalculated `paymentStatus`
+// and left `reservationStatus` at `reserved` for good, so `confirmed` was a
+// state the app could never reach — and the booking confirmation PDF, which
+// requires it, could never be issued.
+// ---------------------------------------------------------------------------
+
+describe('reservationStatusAfterPayment', () => {
+  it('confirms a reserved booking once the signal is fully paid', () => {
+    expect(reservationStatusAfterPayment('reserved', true)).toBe('confirmed');
+  });
+
+  it('leaves it reserved while the signal is short', () => {
+    expect(reservationStatusAfterPayment('reserved', false)).toBeNull();
+  });
+
+  it('never walks a reservation backwards', () => {
+    for (const status of ['confirmed', 'delivered', 'returned', 'closed', 'cancelled'] as const) {
+      expect(reservationStatusAfterPayment(status, true)).toBeNull();
+    }
   });
 });

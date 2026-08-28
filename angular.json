@@ -76,7 +76,7 @@
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
+                  "with": "src/environments/environment.production.ts"
                 }
               ]
             },
@@ -84,6 +84,21 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "dev": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1MB",
+                  "maximumError": "1.5MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "20kB",
+                  "maximumError": "28kB"
+                }
+              ],
+              "outputHashing": "all"
             }
           },
           "defaultConfiguration": "production"
@@ -96,6 +111,9 @@
             },
             "development": {
               "buildTarget": "velto-store:build:development"
+            },
+            "dev": {
+              "buildTarget": "velto-store:build:dev"
             }
           },
           "defaultConfiguration": "development"

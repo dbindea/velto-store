@@ -40,7 +40,11 @@
       "maxSizeExceeded": "File exceeds max size (5MB)",
       "noDocuments": "No documents uploaded",
       "open": "Open",
-      "other": "Other document"
+      "other": "Other document",
+      "uploadError": "The document could not be uploaded",
+      "deleteError": "The document could not be deleted",
+      "saveFirst": "Save the client first to upload documents",
+      "confirmDelete": "Delete this document?"
     },
     "edit": "Edit client",
     "fields": {
@@ -130,7 +134,10 @@
       "camera": "Camera",
       "gallery": "Gallery",
       "takePhoto": "Take photo",
-      "uploadFromGallery": "Upload from gallery"
+      "uploadFromGallery": "Upload from gallery",
+      "hint": "JPG, PNG or WebP · max. 5 MB",
+      "invalidType": "Only JPG, PNG or WebP images are allowed",
+      "tooLarge": "The image is over the maximum size (5 MB)"
     },
     "refresh": "Refresh",
     "save": "Save",
@@ -796,7 +803,13 @@
       "next": "Next",
       "openGallery": "View gallery",
       "previous": "Previous",
-      "thumbnail": "Thumbnail"
+      "thumbnail": "Thumbnail",
+      "add": "Add photos",
+      "delete": "Delete photo",
+      "confirmDelete": "Delete this photo for good?",
+      "uploadError": "The photo could not be uploaded",
+      "deleteError": "The photo could not be deleted",
+      "saveFirst": "Save the vehicle first to upload photos"
     },
     "pricing": {
       "addRule": "Add range",

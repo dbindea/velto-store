@@ -261,25 +261,15 @@
             <div class="error-message">{{ uploadError | translate }}</div>
           }
 
-          <!-- Upload buttons -->
+          <!-- Upload slots: same control the vehicle photos use. -->
           <div class="upload-grid">
             @for (type of fileTypeOptions; track type) {
-              <div class="upload-item">
-                <label class="upload-label">
-                  <i class="pi pi-upload"></i>
-                  <span>{{ getFileTypeLabel(type) | translate }}</span>
-                  @if (uploadingType === type) {
-                    <i class="pi pi-spin pi-spinner uploading"></i>
-                  }
-                </label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-                  capture="environment"
-                  (change)="onDocumentSelectedFromInput($event, type)"
-                  [disabled]="uploadingType !== null"
-                  class="upload-input">
-              </div>
+              <app-photo-upload-buttons
+                [label]="getFileTypeLabel(type) | translate"
+                [busy]="uploadingType === type"
+                accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                (filesPicked)="onDocumentsPicked($event, type)"
+              />
             }
           </div>
 

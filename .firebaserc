@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "velto-store"
+    "default": "rentalcar-veltomobility",
+    "dev": "velto-store",
+    "prod": "rentalcar-veltomobility"
   }
 }

@@ -22,6 +22,7 @@ import {
   PaymentStatus
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { reservationStatusAfterPayment } from '@shared/utils/reservation-workflow.util';
 import {
   applySettlement,
   calculateReservationPaymentSummary,
@@ -611,11 +612,23 @@ export class PaymentService {
 
     const summary = calculateReservationPaymentSummary(payments, reservation);
 
+    // Step 2 of the flow: a fully collected signal confirms the reservation.
+    // The decision is the workflow util's, not this service's — and it only
+    // ever moves `reserved` forward.
+    const initialPaid =
+      summary.initialPaymentRequired > 0 &&
+      summary.initialPaymentPaid >= summary.initialPaymentRequired;
+    const nextStatus = reservationStatusAfterPayment(
+      reservation.reservationStatus,
+      initialPaid
+    );
+
     // Also update the legacy fields to keep backward compatibility
     const reservationRef = doc(this.firestore, `reservations/${reservationId}`);
     await updateDoc(reservationRef, this.cleanData({
       paymentSummary: summary,
       paymentStatus: summary.paymentStatus,
+      ...(nextStatus ? { reservationStatus: nextStatus } : {}),
       'initialPayment.paidAmount': summary.initialPaymentPaid,
       'initialPayment.status': summary.initialPaymentPaid >= summary.initialPaymentRequired && summary.initialPaymentRequired > 0 ? 'paid' :
                                  summary.initialPaymentPaid > 0 ? 'pending' : 'pending',

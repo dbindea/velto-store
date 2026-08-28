@@ -40,7 +40,11 @@
       "maxSizeExceeded": "El archivo supera el tamaño máximo (5MB)",
       "noDocuments": "No hay documentos subidos",
       "open": "Abrir",
-      "other": "Otro documento"
+      "other": "Otro documento",
+      "uploadError": "No se ha podido subir el documento",
+      "deleteError": "No se ha podido eliminar el documento",
+      "saveFirst": "Guarda primero el cliente para poder subir documentos",
+      "confirmDelete": "¿Eliminar este documento?"
     },
     "edit": "Editar cliente",
     "fields": {
@@ -130,7 +134,10 @@
       "camera": "Cámara",
       "gallery": "Galería",
       "takePhoto": "Hacer foto",
-      "uploadFromGallery": "Subir desde galería"
+      "uploadFromGallery": "Subir desde galería",
+      "hint": "JPG, PNG o WebP · máx. 5 MB",
+      "invalidType": "Solo se admiten imágenes JPG, PNG o WebP",
+      "tooLarge": "La imagen supera el tamaño máximo (5 MB)"
     },
     "refresh": "Actualizar",
     "save": "Guardar",
@@ -796,7 +803,13 @@
       "next": "Siguiente",
       "openGallery": "Ver galería",
       "previous": "Anterior",
-      "thumbnail": "Miniatura"
+      "thumbnail": "Miniatura",
+      "add": "Añadir fotos",
+      "delete": "Eliminar foto",
+      "confirmDelete": "¿Eliminar esta foto definitivamente?",
+      "uploadError": "No se ha podido subir la foto",
+      "deleteError": "No se ha podido eliminar la foto",
+      "saveFirst": "Guarda primero el vehículo para poder subir fotos"
     },
     "pricing": {
       "addRule": "Añadir rango",

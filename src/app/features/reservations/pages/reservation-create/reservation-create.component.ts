@@ -20,7 +20,7 @@ import {
   VatBreakdown
 } from '@shared/utils/pricing.util';
 import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
-import { capitalizeWords } from '@shared/utils/text-case.util';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import {
   canCreateReservationForClient,
@@ -406,10 +406,7 @@ export class ReservationCreateComponent implements OnInit {
   // Format fullName - capitalize first letter of each word
   formatFullName(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const words = input.value.toLowerCase().split(' ');
-    const formatted = words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    this.quickClient.fullName = formatted;
-    input.value = formatted;
+    this.quickClient.fullName = transformInput(input, capitalizeWords);
   }
 
   // Computed values for summary

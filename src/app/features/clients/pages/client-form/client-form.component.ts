@@ -22,11 +22,13 @@ import {
   normalizeLoyaltyDiscountPercent
 } from '@shared/utils/pricing.util';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
+import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 
 @Component({
   selector: 'app-client-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, PhotoUploadButtonsComponent],
   templateUrl: './client-form.component.html',
   styleUrl: './client-form.component.scss'
 })
@@ -127,22 +129,20 @@ export class ClientFormComponent implements OnInit {
     });
   }
 
-  // Formatters
+  // Formatters. All three rewrite the field as you type and go through
+  // `transformInput()`, which keeps the caret where the operator left it —
+  // assigning `input.value` sent it to the end on every keystroke.
+
   onFullNameInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = input.value;
-    // Capitalize each word, keep the rest lowercase
-    const formatted = value.split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
-    this.formData.fullName = formatted;
-    input.value = formatted;
+    // Was a private copy that split on spaces only, so "josé-maría" and
+    // "o'brien" came out half capitalised. Shared util now.
+    this.formData.fullName = transformInput(input, capitalizeWords);
   }
 
   onDocumentNumberInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.formData.documentNumber = input.value.toUpperCase().trim();
-    input.value = this.formData.documentNumber;
+    this.formData.documentNumber = transformInput(input, toReference);
   }
 
   /**
@@ -158,8 +158,7 @@ export class ClientFormComponent implements OnInit {
 
   onLicenseNumberInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.formData.drivingLicenseNumber = input.value.toUpperCase().trim();
-    input.value = this.formData.drivingLicenseNumber;
+    this.formData.drivingLicenseNumber = transformInput(input, toReference);
   }
 
   async onSubmit(): Promise<void> {
@@ -188,12 +187,11 @@ export class ClientFormComponent implements OnInit {
     }
   }
 
-  // Documents
-  onDocumentSelectedFromInput(event: Event, type: ClientDocumentType_File): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-    this.onDocumentSelected(input.files, type);
-    input.value = '';
+  // Documents. The upload control resets its own input, so this only has to
+  // decide what to do with the files.
+  onDocumentsPicked(files: FileList | null, type: ClientDocumentType_File): void {
+    if (!files?.length) return;
+    this.onDocumentSelected(files, type);
   }
 
   async onDocumentSelected(files: FileList | null, type?: ClientDocumentType_File): Promise<void> {
@@ -204,7 +202,7 @@ export class ClientFormComponent implements OnInit {
 
     // Need a saved client before uploading documents
     if (!this.clientId) {
-      this.uploadError = 'Guarda primero el cliente';
+      this.uploadError = 'clients.documents.saveFirst';
       return;
     }
 
@@ -217,7 +215,7 @@ export class ClientFormComponent implements OnInit {
       this.documents = [...this.documents, doc];
     } catch (error) {
       console.error('Error uploading document:', error);
-      this.uploadError = 'Error al subir el documento';
+      this.uploadError = 'clients.documents.uploadError';
     } finally {
       this.uploadingType = null;
     }
@@ -242,15 +240,18 @@ export class ClientFormComponent implements OnInit {
 
   async deleteDocument(doc: ClientDocumentFile): Promise<void> {
     if (!this.clientId) return;
-    
-    const confirmed = confirm('¿Eliminar este documento?');
+
+    const confirmed = confirm(this.translateService.translate('clients.documents.confirmDelete'));
     if (!confirmed) return;
 
+    this.uploadError = '';
     try {
       await this.clientService.deleteClientDocument(this.clientId, doc);
       this.documents = this.documents.filter(d => d.path !== doc.path);
     } catch (error) {
       console.error('Error deleting document:', error);
+      // Failing silently left the row on screen as if nothing had happened.
+      this.uploadError = 'clients.documents.deleteError';
     }
   }
 
