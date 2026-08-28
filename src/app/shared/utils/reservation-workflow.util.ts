@@ -157,6 +157,27 @@ export function clientTrustWarning(trustLevel: ClientTrustLevel | undefined): st
   return '';
 }
 
+/**
+ * The status a reservation moves to once its money situation changes, or
+ * `null` when it stays where it is.
+ *
+ * Step 2 of the canonical flow is "cobrar señal → confirmed", and nothing
+ * implemented it: the payment service recalculated `paymentStatus` and left
+ * `reservationStatus` at `reserved` for good. Two things depended on that
+ * transition and were therefore unreachable — the `confirmed` state itself, and
+ * the booking confirmation PDF, which refuses to be issued before it.
+ *
+ * Only ever moves `reserved` forward. A reservation that is already delivered,
+ * returned, closed or cancelled is not walked backwards by a late payment.
+ */
+export function reservationStatusAfterPayment(
+  current: ReservationStatus,
+  initialPaid: boolean
+): ReservationStatus | null {
+  if (current !== 'reserved') return null;
+  return initialPaid ? 'confirmed' : null;
+}
+
 /** Generate the original PDF contract from the reservation. */
 export function canGenerateContract(ctx: WorkflowContext): WorkflowDecision {
   if (!ctx.reservation) return deny('workflow.missingReservation');

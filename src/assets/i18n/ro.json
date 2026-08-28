@@ -40,7 +40,11 @@
       "maxSizeExceeded": "Fișierul depășește dimensiunea maximă (5MB)",
       "noDocuments": "Nu există documente încărcate",
       "open": "Deschide",
-      "other": "Alt document"
+      "other": "Alt document",
+      "uploadError": "Documentul nu a putut fi încărcat",
+      "deleteError": "Documentul nu a putut fi șters",
+      "saveFirst": "Salvează întâi clientul pentru a încărca documente",
+      "confirmDelete": "Ștergi acest document?"
     },
     "edit": "Editează client",
     "fields": {
@@ -130,7 +134,10 @@
       "camera": "Cameră",
       "gallery": "Galerie",
       "takePhoto": "Fă poză",
-      "uploadFromGallery": "Încarcă din galerie"
+      "uploadFromGallery": "Încarcă din galerie",
+      "hint": "JPG, PNG sau WebP · max. 5 MB",
+      "invalidType": "Se acceptă doar imagini JPG, PNG sau WebP",
+      "tooLarge": "Imaginea depășește dimensiunea maximă (5 MB)"
     },
     "refresh": "Reîmprospătează",
     "save": "Salvează",
@@ -796,7 +803,13 @@
       "next": "Următor",
       "openGallery": "Vezi galeria",
       "previous": "Anterior",
-      "thumbnail": "Miniatură"
+      "thumbnail": "Miniatură",
+      "add": "Adaugă fotografii",
+      "delete": "Șterge fotografia",
+      "confirmDelete": "Ștergi definitiv această fotografie?",
+      "uploadError": "Fotografia nu a putut fi încărcată",
+      "deleteError": "Fotografia nu a putut fi ștearsă",
+      "saveFirst": "Salvează întâi vehiculul pentru a încărca fotografii"
     },
     "pricing": {
       "addRule": "Adaugă interval",

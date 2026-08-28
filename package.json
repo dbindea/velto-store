@@ -4,16 +4,19 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --configuration dev",
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "deploy": "npm run build && firebase deploy --only hosting",
-    "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:all": "npm run build && firebase deploy",
     "serve:hosting": "npm run build && firebase emulators:start --only hosting",
     "firebase:emulators": "firebase emulators:start",
-    "i18n:audit": "node src/assets/i18n/audit.js"
+    "i18n:audit": "node src/assets/i18n/audit.js",
+    "deploy:dev:hosting": "npm run build && firebase deploy --only hosting --project dev",
+    "deploy:dev:functions": "npm --prefix functions run build && firebase deploy --only functions --project dev",
+    "deploy:dev:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage --project dev",
+    "deploy:prod:hosting": "npm run build:prod && firebase deploy --only hosting --project prod",
+    "deploy:prod:functions": "npm --prefix functions run build && firebase deploy --only functions --project prod",
+    "deploy:prod:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage --project prod"
   },
   "prettier": {
     "printWidth": 100,

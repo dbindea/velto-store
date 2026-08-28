@@ -19,20 +19,24 @@ Este archivo cubre el **cómo** (stack, comandos, convenciones). Para el **qué 
 Todos verificados contra `package.json`.
 
 ```bash
-npm start                 # ng serve → http://localhost:4200
-npm run build             # build desarrollo
-npm run build:prod        # build producción
-npm run deploy:hosting    # build + firebase deploy --only hosting
-npm run deploy:all        # build + firebase deploy (todo)
+npm start                 # ng serve → http://localhost:4200 (apunta a velto-store)
+npm run build             # build optimizada → velto-store   (configuración dev)
+npm run build:prod        # build optimizada → rentalcar-veltomobility (configuración production)
+
+# Despliegues. El nombre del script dice a dónde va, y el destino viaja en
+# --project: nunca dependas del `firebase use` que quedara de la última vez.
+npm run deploy:dev:hosting     npm run deploy:prod:hosting
+npm run deploy:dev:functions   npm run deploy:prod:functions
+npm run deploy:dev:rules       npm run deploy:prod:rules   # reglas + índices + storage
+
 npm run firebase:emulators
 
 # i18n (ver sección abajo)
 npm run i18n:audit        # verifica claves faltantes, huérfanas y paridad es/en/ro
 
 # Cloud Functions
-npm --prefix functions run build    # tsc + copia de fuentes TTF
-npm --prefix functions run deploy
-npm --prefix functions run logs
+npm --prefix functions run build      # tsc + copia de fuentes TTF
+npm --prefix functions run logs:dev   # o logs:prod
 ```
 
 **Typecheck sin compilar** (lo más rápido para validar un cambio):
@@ -65,17 +69,53 @@ El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa 
 ## Lo que NO existe en este proyecto
 
 - **No hay lint.** No hay ESLint configurado ni script `lint`.
-- **El CI no despliega Cloud Functions.** Solo hosting. Las functions se despliegan a mano con `npm --prefix functions run deploy` — incluido el fix de Redsys.
+- **El CI no despliega Cloud Functions.** Solo hosting. Van a mano y con destino explícito: `npm run deploy:dev:functions` o `deploy:prod:functions`. Es el punto más frágil de los dos entornos — es fácil arreglar algo en uno y olvidarlo en el otro.
 - **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
-## Ramas y despliegue
+## Dos entornos, dos proyectos de Firebase
 
-- **`develop`** — rama de trabajo. Es donde se commitea.
-- **`master`** — rama de producción. **Un push a `master` despliega automáticamente** a Firebase Hosting vía GitHub Actions.
-- No existe rama `main`.
+Una sola base de código. Lo único que cambia entre entornos es **qué fichero de
+entorno se compila** y **a qué proyecto apunta el CLI**. No hay `if (production)`
+en el código de la app, y no debe haberlo.
+
+| | Desarrollo | Producción |
+|---|---|---|
+| Proyecto Firebase | `velto-store` | `rentalcar-veltomobility` |
+| Rama | `develop` | `master` |
+| Entorno compilado | `environment.ts` | `environment.production.ts` |
+| Configuración de build | `dev` | `production` |
+| Dominio | `store.veltorent.com` | `rentalcar.veltomobility.com` |
+| Alias del CLI | `--project dev` | `--project prod` |
+
+⚠️ **Las dos configuraciones producen bundle optimizado.** La diferencia no es
+cuánto optimizan, es a qué proyecto apuntan. `development` (sin `--configuration`
+propia en los scripts) es solo para `ng serve`.
+
+⚠️ **El `fileReplacements` estuvo invertido hasta el 28 de agosto de 2026**: la
+configuración `production` metía el fichero de desarrollo. Con un solo proyecto
+no se notaba; con dos, `master` habría desplegado la web de producción contra la
+base de datos de desarrollo. Si tocas `angular.json`, compruébalo con:
+
+```bash
+npm run build:prod && grep -o 'projectId:"[a-z-]*"' dist/velto-store/browser/*.js | head -1
+```
+
 - Commits en formato convencional (`feat:` / `fix:` / `docs:` / `refactor:`).
+- No existe rama `main`.
 
-⚠️ Merge a `master` = despliegue a producción. Confirma antes.
+⚠️ Merge a `master` = despliegue a **producción con datos reales**. Confirma antes.
+
+### Los datos de producción son sagrados
+
+Desde que `rentalcar-veltomobility` tiene datos reales, un cambio de forma ya no se puede
+hacer como se hizo con `tariffIncludesVat`, que se borró de un día para otro
+porque la base se iba a vaciar. La regla pasa a ser:
+
+- Los campos **solo se añaden**. Nunca se renombra ni se reutiliza uno existente.
+- Si una forma tiene que cambiar: escribir el campo nuevo → seguir leyendo el
+  viejo → migrar los documentos → quitar la lectura vieja. En despliegues
+  separados, no en uno.
+- Todo se prueba antes en `velto-store` con datos de `velto-store`.
 
 ## Estructura
 

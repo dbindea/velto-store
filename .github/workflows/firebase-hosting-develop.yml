@@ -1,0 +1,33 @@
+# Despliegue de DESARROLLO.
+#
+# develop -> build con la configuración `dev` (optimizada, pero sin sustituir
+# el entorno, así que se queda con environment.ts -> velto-store) -> proyecto
+# velto-store, que sirve store.veltorent.com.
+#
+# Es el mismo pipeline que producción salvo por dos líneas: la configuración de
+# build y el proyecto de destino. Deliberado: si las pruebas no pasan aquí,
+# tampoco tienen por qué pasar en master.
+name: Deploy to Firebase Hosting on develop
+on:
+  push:
+    branches:
+      - develop
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+      - run: npm --prefix functions ci
+      - run: npm --prefix functions test
+      - run: npm run build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VELTO_STORE }}
+          channelId: live
+          projectId: velto-store

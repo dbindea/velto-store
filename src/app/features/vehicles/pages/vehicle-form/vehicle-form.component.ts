@@ -21,7 +21,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
-import { capitalizeWords } from '@shared/utils/text-case.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -48,6 +48,10 @@ export class VehicleFormComponent implements OnInit {
   acrissCode = '';
   existingImages: VehicleImage[] = [];
   deletingImagePath: string | null = null;
+  /** True while photos are being uploaded, so the slot can show a spinner. */
+  uploadingImage = false;
+  /** i18n key of the last upload/delete problem. Shown in the form, not in an alert. */
+  uploadError = '';
 
   // Pricing validation errors
   pricingErrors: string[] = [];
@@ -172,70 +176,85 @@ export class VehicleFormComponent implements OnInit {
     this.updateAcrissCode();
   }
 
+  // All five rewrite the field as you type, and all five go through
+  // `transformInput()` so the caret stays where the operator put it. Assigning
+  // `input.value` directly sent it to the end of the field on every keystroke.
+
   /** Generic text input that capitalizes first letter of every word */
   onTextCapitalize(event: Event, field: 'version' | 'color'): void {
     const input = event.target as HTMLInputElement;
-    const value = capitalizeWords(input.value);
-    this.formData[field] = value;
-    input.value = value;
+    this.formData[field] = transformInput(input, capitalizeWords);
   }
 
   /** Brand: capitalize first letter of every word (e.g. "renault" -> "Renault") */
   onBrandInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = capitalizeWords(input.value);
-    this.formData.brand = value;
-    input.value = value;
+    this.formData.brand = transformInput(input, capitalizeWords);
   }
 
   /** Model: capitalize first letter of every word (e.g. "megane" -> "Megane") */
   onModelInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = capitalizeWords(input.value);
-    this.formData.model = value;
-    input.value = value;
+    this.formData.model = transformInput(input, capitalizeWords);
   }
 
   onPlateInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    input.value = input.value.toUpperCase().trim();
-    this.formData.plateNumber = input.value;
+    this.formData.plateNumber = transformInput(input, toReference);
     this.updateAcrissCode();
   }
 
   onVinInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    input.value = input.value.toUpperCase().replace(/\s/g, '');
-    this.formData.vin = input.value;
+    this.formData.vin = transformInput(input, toReference);
     this.updateAcrissCode();
   }
 
+  /**
+   * Upload every picked photo, one after the other.
+   *
+   * It used to take `files[0]` and drop the rest, so selecting eight photos of
+   * a car uploaded one and silently discarded seven. Errors are shown in the
+   * form now instead of in an `alert()`, which is what the client documents
+   * already did.
+   */
   async onImageSelected(files: FileList | null): Promise<void> {
-    if (!files?.length || !this.vehicleId) return;
-    const file = files[0];
-    if (!this.validateImage(file)) return;
-    this.saving = true;
+    if (!files?.length) return;
+    if (!this.vehicleId) {
+      this.uploadError = 'vehicles.photos.saveFirst';
+      return;
+    }
+
+    this.uploadError = '';
+    this.uploadingImage = true;
     try {
-      await this.vehicleService.uploadImage(this.vehicleId, file);
+      for (const file of Array.from(files)) {
+        if (!this.validateImage(file)) continue;
+        await this.vehicleService.uploadImage(this.vehicleId, file);
+      }
       await this.refreshImages();
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      this.uploadError = 'vehicles.photos.uploadError';
     } finally {
-      this.saving = false;
+      this.uploadingImage = false;
     }
   }
 
   async deleteImage(image: VehicleImage): Promise<void> {
     if (!this.vehicleId) return;
 
-    const confirmed = confirm('¿Eliminar esta foto definitivamente?');
+    const confirmed = confirm(this.translateService.translate('vehicles.photos.confirmDelete'));
     if (!confirmed) return;
 
     this.deletingImagePath = image.path;
+    this.uploadError = '';
     try {
       await this.vehicleService.deleteVehicleImage(this.vehicleId, image);
       this.existingImages = this.existingImages.filter(img => img.path !== image.path);
     } catch (error) {
       console.error('Error deleting image:', error);
-      alert('Error al eliminar la foto');
+      this.uploadError = 'vehicles.photos.deleteError';
     } finally {
       this.deletingImagePath = null;
     }
@@ -253,12 +272,12 @@ export class VehicleFormComponent implements OnInit {
     const maxSize = 5 * 1024 * 1024;
 
     if (!validTypes.includes(file.type)) {
-      alert('Solo se permiten imagenes JPG, PNG o WebP');
+      this.uploadError = 'common.photos.invalidType';
       return false;
     }
 
     if (file.size > maxSize) {
-      alert('El tamano maximo es 5MB');
+      this.uploadError = 'common.photos.tooLarge';
       return false;
     }
 

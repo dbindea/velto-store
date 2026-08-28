@@ -225,42 +225,24 @@ textarea.form-control {
   }
 }
 
-.photo-upload {
-  text-align: center;
-  padding: 1.5rem;
-  border: 2px dashed var(--border-color);
-  border-radius: 12px;
-
-  .upload-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--accent-light);
-    color: var(--accent-color);
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.2s;
-
-    &:hover {
-      background: var(--accent-color);
-      color: white;
-    }
-
-    i {
-      font-size: 1rem;
-    }
-  }
+// Photos
+//
+// Same upload slot and the same file-list language as the client documents:
+// one control, one look. The old block wrapped everything in a dashed box and
+// nested the thumbnail rules inside it, so pulling the wrapper out left the
+// photos unstyled and full-bleed.
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
 
 .upload-hint {
   font-size: 0.75rem;
   color: var(--text-muted);
-  margin: 0;
+  margin: 0.5rem 0 0;
 }
 
-// Photo grid (edit mode)
 .photo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -270,7 +252,7 @@ textarea.form-control {
 
 .photo-thumb {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
   border-radius: 8px;
   overflow: hidden;
   background: var(--bg-main);
@@ -279,6 +261,8 @@ textarea.form-control {
   img {
     width: 100%;
     height: 100%;
+    // 4:3 rather than a square, because that is the shape a phone takes a
+    // photo of a car in: a square crop ate the front of the vehicle (M-6).
     object-fit: cover;
     display: block;
   }
@@ -331,6 +315,16 @@ textarea.form-control {
   border: 1px dashed var(--border-color);
   border-radius: 6px;
 }
+
+// Upload problems are shown here, the way the client documents do it, instead
+// of in an alert() the operator has to dismiss.
+.error-message {
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--error-bg);
+  color: var(--error-color);
+  border-radius: 8px;
+  font-size: 0.85rem;
 }
 
 .form-actions {

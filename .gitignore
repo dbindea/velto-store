@@ -48,3 +48,9 @@ CREDENTIALS.md
 
 # Playwright MCP scratch output (snapshots, console logs, screenshots)
 .playwright-mcp/
+
+# Herramientas locales, no del proyecto
+.claude/
+.agents/
+skills-lock.json
+.playwright-mcp/

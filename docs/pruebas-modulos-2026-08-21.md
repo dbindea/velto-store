@@ -1018,3 +1018,118 @@ estado que N-1 decidió que no iba a existir.
 
 **Verificación:** i18n OK (el auditor cazó de paso una clave que quedó huérfana)
 · `tsc` app y functions OK · build OK · **114 tests de app + 61 de functions**.
+
+---
+
+# Alta de datos y flujo completo sobre base vacía — 28 de agosto de 2026
+
+Firestore borrado entero (salvo `authorizedUsers`) y funciones ya desplegadas.
+Se crearon **2 vehículos y 2 clientes desde cero** y se recorrió el ciclo
+completo. Lo que sigue son los fallos que aparecieron por el camino.
+
+## Índices: ninguno falla
+
+Recorridas las nueve rutas con datos reales —dashboard, calendario, reservas,
+vehículos, clientes, pagos, contratos, inspecciones e informes— y **cero errores
+de índice**. La consulta de `inspections` (`reservationId ==` + `orderBy`), que
+era la que nunca se había ejercitado, funcionó al completar la entrega real.
+
+⚠️ Los índices declarados en el repo **siguen sin desplegarse**; lo que responde
+en producción son los creados a mano. Desplegarlos igualmente
+(`firebase deploy --only firestore:indexes`): el fichero ya declara los ocho que
+las consultas piden, y hoy el repo y producción no coinciden.
+
+## C-11 · El cursor saltaba al final en todos los campos que se reescriben
+
+Escribir «1234abc» en la matrícula, volver al carácter 3 y corregir dejaba el
+texto bien —`12X34ABC`— pero el **cursor al final**, así que la siguiente tecla
+caía en otro sitio. Pasaba en marca, modelo, versión, color, matrícula y
+bastidor del vehículo; nombre, documento y carnet del cliente; y el nombre del
+cliente rápido del asistente. En el móvil, donde se toca para colocar el cursor,
+esos campos parecían rotos.
+
+La causa es la misma en los nueve sitios: asignar `input.value` mueve el cursor
+al final. `transformInput()` en `text-case.util.ts` calcula la posición nueva
+transformando el texto **anterior al cursor** y midiéndolo, así que también
+funciona cuando la transformación borra caracteres (los espacios del bastidor).
+Comprobado en el navegador: cursor en 3, donde debe estar.
+
+## C-12 · «dCi» se convertía en «Dci»
+
+`capitalizeWords` pasaba a minúscula el resto de cada palabra, y las versiones
+de coche están llenas de mayúsculas intencionadas: `dCi`, `TCe`, `BlueHDi`.
+Ahora una palabra que **ya mezcla mayúsculas y minúsculas se respeta tal cual**;
+las que van todas en mayúsculas se siguen domando («MEGANE» → «Megane»).
+
+## C-13 · La subida de fotos y la de documentos, unificadas
+
+Eran dos cosas distintas para la misma tarea: el coche tenía una caja de puntos
+con «Hacer foto / Subir desde galería» y el cliente una rejilla de botones por
+tipo de documento. Ahora ambas usan **el mismo control**
+(`app-photo-upload-buttons`), con la misma etiqueta, el mismo borde y el mismo
+spinner mientras sube.
+
+De hacerlo salieron tres fallos:
+
+- ⚠️ **Los documentos de cliente llevaban `capture="environment"`**, que en el
+  móvil **fuerza la cámara**: un DNI ya fotografiado y guardado en la galería no
+  se podía subir. Atributo eliminado; el selector del sistema ofrece cámara y
+  galería, que es su trabajo.
+- **Las fotos de coche subían solo la primera.** `onImageSelected` cogía
+  `files[0]` y descartaba el resto en silencio. Ahora sube todas, una tras otra
+  (parte de M-5).
+- Los errores de subida salían por `alert()` y en español duro; ahora se
+  muestran en el formulario y con clave i18n, como ya hacía el cliente.
+
+Las miniaturas pasan de cuadradas a **4:3**, que es la forma en la que se
+fotografía un coche — el recorte cuadrado se comía el morro (M-6).
+
+## C-14 · La reserva no pasaba nunca a «Confirmada»
+
+Cobrada la señal entera, la reserva se quedaba en `reserved`. El paso 2 del flujo
+canónico —«cobrar señal → confirmed»— **no estaba implementado**: el servicio de
+pagos recalculaba `paymentStatus` y no tocaba `reservationStatus`.
+
+Consecuencia: el estado `confirmed` era inalcanzable y **el justificante de
+reserva no se podía emitir jamás**, porque exige `confirmed`. Es decir, N-2 no
+funcionaba en ningún caso, y no se había detectado porque las reservas de prueba
+anteriores venían de datos sembrados a mano.
+
+`reservationStatusAfterPayment()` en el workflow util, con 3 tests: solo mueve
+`reserved` hacia delante, nunca al revés.
+
+## C-15 · Una clave que falte en un mapa `*_LABELS` tumbaba la lista entera
+
+Con un vehículo cuya `category` no estaba en `VEHICLE_CATEGORY_LABELS`, el mapa
+devolvía `undefined`, `translate()` llamaba a `.split()` sobre él y el listado de
+flota **no renderizaba nada**. Un dato malo, una pantalla en blanco.
+
+`translate()` acepta ahora `null`/`undefined` y devuelve cadena vacía. La regla
+de oro de los mapas de etiquetas no cambia; lo que cambia es que incumplirla ya
+no se lleva la pantalla por delante.
+
+## C-16 · Los números salían en formato inglés
+
+«9,200 km» —que en español se lee nueve coma dos— y «423.50 €». Angular formatea
+en `en-US` salvo que se le diga otra cosa. Registrado el locale `es` y
+`LOCALE_ID`: ahora **9.200 km** y **423,50 €**, como ya hacían los PDF.
+
+⚠️ `LOCALE_ID` se fija al arrancar, así que **no sigue al selector de idioma**.
+Español y rumano comparten convención; en inglés se verán números españoles.
+
+## El ciclo completo, sobre datos nuevos
+
+| Paso | Resultado |
+|---|---|
+| Alta de 2 vehículos | ✅ ACRISS automático (EDAD, SFMV), tarifas por defecto |
+| Alta de 2 clientes | ✅ «María José Pérez-Gómez», «Andrei O'Neill Popescu» |
+| Subida de foto de coche y de 2 documentos de cliente | ✅ |
+| Presupuesto (7 días, Duster) | ✅ 350,00 + 73,50 = **423,50 €**, enlace corto sirve el PDF |
+| Crear reserva | ✅ señal 50 €, resto 373,50 €, fianza 150 € |
+| Cobrar señal | ✅ pasa a **Confirmada** (tras C-14) |
+| Justificante de reserva | ✅ una página, con la fianza ya cobrada fuera de la lista de pendientes |
+| Generar contrato | ✅ |
+| Link de firma + firma del cliente | ✅ sin sesión, «Contrato firmado» |
+| Cobrar resto | ✅ 423,50 € cobrados |
+| Entrega (inspección de recogida) | ✅ reserva **Entregada**, km 9.200 |
+| Errores de consola en todo el recorrido | **0** |

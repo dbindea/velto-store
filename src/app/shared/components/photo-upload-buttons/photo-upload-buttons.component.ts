@@ -1,7 +1,5 @@
 import {
   Component,
-  ElementRef,
-  ViewChild,
   Input,
   Output,
   EventEmitter,
@@ -11,20 +9,23 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 
 /**
- * Mobile-first photo upload control.
+ * The one upload control in the app: a labelled slot that opens the picker.
  *
- * On mobile (touch + camera) it shows two buttons side by side:
- *   - "Hacer foto"   → opens the rear camera directly
- *   - "Subir desde galería" → opens the file picker
+ * Vehicle photos and client documents used to do this two different ways — a
+ * dashed box with "Hacer foto" / "Subir desde galería" on one side, a grid of
+ * labelled buttons on the other — so the same task looked like two features.
+ * This is both, and it fixes what each got wrong:
  *
- * On desktop it collapses into a single button ("Subir archivo") because
- * there is no rear camera to bind to. CSS hides whichever button isn't
- * relevant per breakpoint so the same component works on both form
- * factors without extra plumbing in the host.
+ * - The client slots carried `capture="environment"`, which on a phone **forces
+ *   the camera**: a customer's ID already photographed and sitting in the
+ *   gallery could not be uploaded at all. The attribute is gone; the system
+ *   picker offers camera and gallery, and it is the OS's job to know which.
+ * - The vehicle box hard-coded its own hint in Spanish and let the label float
+ *   between the two buttons.
  *
- * Each button is a hidden `<input type="file">` styled as a button via
- * `::file-selector-button` — no JS indirection, no extra inputs that
- * desync from the form state.
+ * `label` is what the slot is for ("Documento frontal", "Fotos del vehículo").
+ * The host passes an already-translated string, because the labels come from
+ * different key sets on each side.
  */
 @Component({
   selector: 'app-photo-upload-buttons',
@@ -32,65 +33,53 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
   imports: [CommonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="photo-upload-buttons">
-      <!-- Rear camera: only meaningful on mobile/tablet -->
-      <label class="upload-btn upload-btn--camera" [attr.title]="'common.photos.takePhoto' | translate">
-        <i class="pi pi-camera"></i>
-        <span class="btn-label">{{ 'common.photos.takePhoto' | translate }}</span>
-        <input
-          #cameraInput
-          type="file"
-          [attr.accept]="accept"
-          capture="environment"
-          [attr.multiple]="multiple ? '' : null"
-          (change)="onFilePicked($event, cameraInput)"
-        />
-      </label>
-
-      <!-- Gallery / file picker: works everywhere -->
-      <label class="upload-btn upload-btn--gallery" [attr.title]="'common.photos.uploadFromGallery' | translate">
-        <i class="pi pi-image"></i>
-        <span class="btn-label">{{ 'common.photos.uploadFromGallery' | translate }}</span>
-        <input
-          #galleryInput
-          type="file"
-          [attr.accept]="accept"
-          [attr.capture]="null"
-          [attr.multiple]="multiple ? '' : null"
-          (change)="onFilePicked($event, galleryInput)"
-        />
-      </label>
-    </div>
+    <label class="upload-slot" [class.busy]="busy" [attr.title]="label">
+      @if (busy) {
+        <i class="pi pi-spin pi-spinner"></i>
+      } @else {
+        <i class="pi pi-upload"></i>
+      }
+      <span class="slot-label">{{ label || ('common.photos.uploadFromGallery' | translate) }}</span>
+      <input
+        type="file"
+        [attr.accept]="accept"
+        [attr.multiple]="multiple ? '' : null"
+        [disabled]="busy"
+        (change)="onFilePicked($event)"
+      />
+    </label>
   `,
   styles: [`
     :host { display: block; }
 
-    .photo-upload-buttons {
+    .upload-slot {
       display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .upload-btn {
-      flex: 1 1 auto;
-      min-width: 140px;
-      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
       padding: 0.75rem 1rem;
-      background: var(--bg-card);
+      background: var(--bg-main);
       border: 1px dashed var(--border-color);
       border-radius: 8px;
-      color: var(--text-primary);
-      cursor: pointer;
+      color: var(--text-secondary);
       font-size: 0.85rem;
-      font-weight: 500;
-      transition: background 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
 
-      i { color: var(--accent-color); font-size: 1rem; }
-      &:hover { background: var(--bg-hover); border-color: var(--accent-color); }
+      i { color: var(--accent-color); }
 
+      &:hover {
+        border-color: var(--accent-color);
+        color: var(--text-primary);
+      }
+
+      &.busy {
+        cursor: progress;
+        opacity: 0.7;
+      }
+
+      /* Visually hidden, still focusable and still the real control. */
       input[type="file"] {
         position: absolute;
         width: 1px;
@@ -103,42 +92,27 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
         border: 0;
       }
     }
-
-    .upload-btn--camera {
-      background: var(--accent-bg);
-      border-color: var(--accent-color);
-      color: var(--accent-color);
-    }
-
-    /* On screens with no rear camera (typical desktop), the camera
-       button is decorative. We keep it visible but de-emphasize it,
-       so users fall back to the gallery button. */
-    @media (min-width: 1024px) {
-      .upload-btn--camera {
-        opacity: 0.65;
-      }
-    }
   `]
 })
 export class PhotoUploadButtonsComponent {
-  @ViewChild('cameraInput') cameraInputRef?: ElementRef<HTMLInputElement>;
-  @ViewChild('galleryInput') galleryInputRef?: ElementRef<HTMLInputElement>;
-
-  /** MIME types accepted by the underlying inputs. */
+  /** MIME types accepted by the underlying input. */
   @Input() accept = 'image/jpeg,image/jpg,image/png,image/webp';
   /** Allow selecting more than one file per click. */
   @Input() multiple = false;
+  /** Already-translated text for the slot. */
+  @Input() label = '';
+  /** Shows a spinner and blocks the input while the host is uploading. */
+  @Input() busy = false;
 
-  /** Emitted every time the user picks files from any of the two buttons. */
+  /** Emitted every time the user picks files. */
   @Output() filesPicked = new EventEmitter<FileList | null>();
 
-  onFilePicked(event: Event, input: HTMLInputElement): void {
-    const target = event.target as HTMLInputElement;
-    if (target.files && target.files.length > 0) {
-      this.filesPicked.emit(target.files);
+  onFilePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.filesPicked.emit(input.files);
     }
     // Reset so picking the same file twice still fires `change`.
-    target.value = '';
-    void input;
+    input.value = '';
   }
 }

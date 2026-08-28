@@ -85,7 +85,20 @@ export class TranslateService {
     }
   }
 
-  translate(key: string): string {
+  /**
+   * Resolve an i18n key. Unknown keys come back as themselves, which is ugly
+   * on screen but visible — and visible is the point.
+   *
+   * ⚠️ **A missing key must never throw.** The label maps in `shared/models`
+   * are `Record<Enum, string>`, so a value that is not in the enum — a field
+   * saved before an option was renamed, or anything that reached Firestore by
+   * another route — indexes to `undefined`. This used to call `.split()` on it
+   * and take down the whole list with an unhandled error: one bad vehicle and
+   * the fleet screen rendered nothing.
+   */
+  translate(key: string | null | undefined): string {
+    if (typeof key !== 'string' || !key) return '';
+
     const trans = this.translations();
     const keys = key.split('.');
     let value: any = trans;
