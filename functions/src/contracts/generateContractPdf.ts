@@ -186,8 +186,7 @@ export const generateContractPdf = functions.https.onCall(
           loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
           manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
           netPrice: reservation.pricingSnapshot?.netPrice,
-          vatRate: reservation.pricingSnapshot?.vatRate,
-          tariffIncludesVat: reservation.pricingSnapshot?.tariffIncludesVat
+          vatRate: reservation.pricingSnapshot?.vatRate
         },
         inspection: pickupInspection
           ? {
@@ -244,8 +243,7 @@ export const generateContractPdf = functions.https.onCall(
         loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
         manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
         netPrice: reservation.pricingSnapshot?.netPrice,
-          vatRate: reservation.pricingSnapshot?.vatRate,
-          tariffIncludesVat: reservation.pricingSnapshot?.tariffIncludesVat
+        vatRate: reservation.pricingSnapshot?.vatRate
       },
       clientSnapshot,
       vehicleSnapshot,

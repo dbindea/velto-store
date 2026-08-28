@@ -514,8 +514,8 @@
       "extraChargesTotal": "Extra charges",
       "rentalTotal": "Rental total",
       "title": "Summary",
-      "totalPaid": "Total paid",
-      "totalRental": "Rental total"
+      "totalRental": "Rental total",
+      "incomeTotal": "Collected (excl. deposit)"
     },
     "title": "Payments",
     "types": {
@@ -888,6 +888,8 @@
     "settleDeposit": "Settle deposit",
     "startPickup": "Start pickup",
     "startReturn": "Start return",
-    "unsettledDeposit": "Deposit still pending settlement"
+    "unsettledDeposit": "Deposit still pending settlement",
+    "clientBlocked": "Blocked customer: no reservation can be created. Change their trust level in their file if you really mean to rent to them.",
+    "clientRisk": "Customer flagged as a risk. You can continue, but check first."
   }
 }

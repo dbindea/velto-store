@@ -147,6 +147,11 @@ Presupuesto → Reserva → Cliente → Pago señal → Contrato PDF
 
 Para saltarse un paso hay que llamar `buildWorkflowException(action, reason, createdBy)` con motivo obligatorio (mín. 3 caracteres), que se persiste en `reservation.workflowExceptions[]`.
 
+⚠️ **`canCreateReservationForClient()` no admite excepción.** Un cliente `blocked` no puede
+tener reserva nueva, y punto: saltarse un paso es un atajo operativo, pero alquilar a alguien
+a quien has bloqueado es una decisión sobre ese cliente y se toma en su ficha, cambiándole el
+nivel de confianza. `risk` no bloquea; solo avisa vía `clientTrustWarning()`.
+
 ### `pricing.util.ts` es la única autoridad sobre el precio
 
 `resolveRentalPrice()` resuelve los tres escalones en orden — tarifa → descuento de
@@ -163,17 +168,24 @@ Dos convenciones distintas que conviene no confundir, y por eso los nombres son 
 y el cliente paga 36,30 €. Es lo contrario de como empezó la app, y es deliberado: el número
 redondo es el que se negocia, y el cliente que no quiere factura paga exactamente ese neto.
 
-⚠️ **Las reservas creadas antes del cambio se guardaron con tarifa CON IVA incluido** y
-tienen que seguir leyéndose así, o los contratos ya firmados dejan de cuadrar. La dirección
-se congela por reserva en `pricingSnapshot.tariffIncludesVat`; **ausente significa
-inclusivo**. `vatBreakdownOf()` es quien decide — nunca deduzcas la dirección de la
-constante de hoy.
+`vatBreakdownOf()` parte siempre de `pricingSnapshot.netPrice`, **nunca de `finalPrice`**,
+que es el derivado. El IVA se calcula por resta para que `base + vat` cuadre al céntimo.
 
-En ambas direcciones el IVA se calcula por resta para que `base + vat` cuadre al céntimo.
+El tipo sí se congela por reserva en `pricingSnapshot.vatRate`, para que una subida futura
+del tipo general no mueva un contrato ya firmado.
+
+> Hubo un `tariffIncludesVat` que congelaba también la **dirección**, porque las reservas
+> anteriores al 27 de agosto de 2026 se guardaron con el IVA incluido. Se retiró el 28 de
+> agosto, al borrar los datos de producción y empezar de cero: ya no existe ninguna reserva
+> inclusiva. Si algún día vuelve a haberlas, el parche está en el historial de git.
 
 La constante y la aritmética están **duplicadas en `functions/src/contracts/pdf.ts`** a
 propósito: app y functions compilan con tsconfigs separados y no pueden compartir módulo.
 Si cambia el tipo, se cambia en los dos sitios.
+
+⚠️ **Redondea el dinero derivado.** `108.9 - 50` es `58.900000000000006`: el asistente lo
+enseñaba tal cual y lo sembraba así en la fila de pago. Todo importe calculado pasa por
+`roundMoney()` antes de mostrarse o escribirse.
 
 ### Otros utils
 
@@ -382,17 +394,23 @@ No hay colección para `expenses` — coherente con que el módulo sea un placeh
 
 ## Índices de Firestore
 
-`firestore.indexes.json` declara índices compuestos necesarios:
+`firestore.indexes.json` declara un índice compuesto por cada consulta que combina
+`where('x','==')` con un `orderBy` de otro campo:
 
-- `reservations`: `clientId + pickupDateTime desc`
-- `reservations`: `vehicleId + pickupDateTime desc`
-- `payments`: `clientId + paidAt desc`
-- `vehicleMaintenance`: `vehicleId + nextDueDate desc`
-- `vehicleMaintenance`: `status + nextDueDate asc`
+- `reservations`: `clientId + pickupDateTime desc` · `vehicleId + pickupDateTime desc`
+- `payments`: `reservationId + createdAt asc` · `clientId + createdAt desc` · `vehicleId + createdAt desc`
+- `inspections`: `reservationId + createdAt asc`
+- `vehicleMaintenance`: `vehicleId + nextDueDate desc` · `status + nextDueDate asc`
 
-Sin ellos, los históricos de `vehicle-detail` y `client-detail` fallan al primer uso. Desplegar con `firebase deploy --only firestore:indexes`.
+Sin ellos la consulta **falla en tiempo de ejecución** la primera vez que se usa. Desplegar
+con `firebase deploy --only firestore:indexes`.
 
-⚠️ **Falta el índice de `inspections`.** `inspection.service.ts` consulta `reservationId ==` + `orderBy('createdAt')`, que exige índice compuesto y no está declarado. La colección `inspections` está vacía en producción, así que el fallo aún no se ha manifestado — aparecerá en el primer uso real del módulo.
+⚠️ **El campo se declara con `order`, no con `arrayConfig`.** El fichero llevaba
+`"arrayConfig": "CONTAINS"` en `clientId`, `vehicleId` y `status`, que es el índice de
+`array-contains` — otra consulta distinta. Es decir: los índices declarados no servían a
+ninguna de las consultas de la app, y las que funcionaban en producción lo hacían gracias a
+índices creados a mano desde el enlace del error en consola, que no estaban en el repo.
+Corregido el 28 de agosto de 2026, junto con el índice que faltaba de `inspections`.
 
 ## Estilo de código
 

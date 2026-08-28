@@ -147,13 +147,18 @@ acordado previo: la base sobre la que se pactó ya no es la misma.
 imponible; el cliente paga 36,30 €. Se hace así porque el número redondo es el que se negocia
 por teléfono, y el cliente que no quiere factura paga justo ese neto sin decimales.
 
-⚠️ **Las reservas anteriores al 27 de agosto de 2026 se crearon con la tarifa CON IVA
-incluido.** La dirección se congela en cada reserva, así que los contratos ya emitidos siguen
-cuadrando. Lo que se edita en el asistente es el **neto**; el total se calcula debajo.
+Lo que se edita en el asistente es el **neto**; el total se calcula debajo, y el desglose
+sale siempre de `netPrice`, nunca del total.
 
 El tipo aplicado se congela en `pricingSnapshot.vatRate` al crear la reserva, como fracción
-(`0.21`). Una reserva anterior a este campo cae al tipo general, que es el que su precio ya
-incluía. Qué lleva IVA y qué no:
+(`0.21`), para que una subida futura del tipo general no mueva un contrato ya firmado.
+
+> Entre el 27 y el 28 de agosto de 2026 convivieron las dos direcciones: las reservas
+> anteriores al cambio se habían creado con el IVA incluido, y `tariffIncludesVat` congelaba
+> cuál le tocaba a cada una. Al borrar los datos de producción y empezar de cero, ese
+> mecanismo se retiró: hoy **toda** reserva es neta + IVA.
+
+Qué lleva IVA y qué no:
 
 | Concepto | IVA |
 |---|---|
@@ -176,7 +181,10 @@ nivel de confianza, notas internas, documentos.
 ClientTrustLevel: new | known | regular | risk | blocked
 ```
 
-`blocked` significa no alquilar. Hoy el nivel es informativo: **no bloquea el flujo**. Ver §10.
+`blocked` significa no alquilar, y desde el 28 de agosto de 2026 **lo impide de verdad**: el
+asistente deshabilita «Crear reserva» y `reservation.service.ts` rechaza la llamada. No hay
+excepción de workflow para esto — la salida es cambiarle el nivel al cliente en su ficha,
+que queda registrado. `risk` solo avisa y deja continuar. Los demás niveles son informativos.
 
 ### Reserva
 
@@ -445,17 +453,16 @@ La parte que más valor tiene mantener al día.
 - Los guards del workflow ignoraban los overrides de `WorkflowContext` mientras el timeline
   sí los respetaba. Alineados.
 - `generateContractPdf` fallaba al escribir `undefined` en Firestore.
+- **Los índices de Firestore declarados no servían a ninguna consulta.** El fichero usaba
+  `arrayConfig: CONTAINS` donde las consultas filtran por igualdad; lo que funcionaba en
+  producción eran índices creados a mano que no estaban en el repo. Reescrito el 28 de
+  agosto de 2026, con el de `inspections` que además faltaba.
+- **El nivel de confianza del cliente no hacía nada.** `blocked` ya impide crear la
+  reserva, en la UI y en el servicio; `risk` avisa. Ver §3.
+- **«Total pagado» sumaba la devolución de fianza como ingreso.** El resumen de la reserva
+  separa ahora lo cobrado de los movimientos de fianza.
 
 ### Abierto
-
-**Falta el índice compuesto de `inspections`.** `getByReservation()` consulta
-`where('reservationId','==',x)` + `orderBy('createdAt','asc')`, que exige un índice compuesto.
-`firestore.indexes.json` declara índices para `reservations`, `payments` y `vehicleMaintenance`,
-**pero ninguno para `inspections`**. Como la colección nunca se ha usado en producción, nadie
-ha llegado a toparse con el fallo. Se manifestará en el primer uso real del módulo.
-
-**El nivel de confianza del cliente no hace nada.** `blocked` y `risk` se muestran, pero no
-intervienen en el workflow. Falta decidir si `blocked` debe impedir crear una reserva.
 
 **Gastos y ajustes son placeholders.** Las reglas de Firestore ya contemplan una colección
 `expenses`, pero no hay ni modelo ni servicio. Sin definición funcional no se puede avanzar:
@@ -483,7 +490,8 @@ sin necesidad.
 
 No son bugs, son preguntas de producto sin responder:
 
-1. ¿Un cliente `blocked` debe impedir crear la reserva, o solo avisar?
+1. ~~¿Un cliente `blocked` debe impedir crear la reserva, o solo avisar?~~ **Respondida el
+   28 de agosto de 2026: `blocked` lo impide, `risk` solo avisa.** Ver §3.
 2. ¿Qué es exactamente un gasto y contra qué se imputa?
 3. ¿Qué debe poder configurarse en Ajustes? (¿tarifas por defecto, datos de empresa,
    textos del contrato, usuarios autorizados?)

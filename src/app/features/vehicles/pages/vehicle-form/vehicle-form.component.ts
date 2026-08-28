@@ -21,6 +21,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
+import { capitalizeWords } from '@shared/utils/text-case.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -174,7 +175,7 @@ export class VehicleFormComponent implements OnInit {
   /** Generic text input that capitalizes first letter of every word */
   onTextCapitalize(event: Event, field: 'version' | 'color'): void {
     const input = event.target as HTMLInputElement;
-    const value = this.capitalizeWords(input.value);
+    const value = capitalizeWords(input.value);
     this.formData[field] = value;
     input.value = value;
   }
@@ -182,7 +183,7 @@ export class VehicleFormComponent implements OnInit {
   /** Brand: capitalize first letter of every word (e.g. "renault" -> "Renault") */
   onBrandInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = this.capitalizeWords(input.value);
+    const value = capitalizeWords(input.value);
     this.formData.brand = value;
     input.value = value;
   }
@@ -190,17 +191,9 @@ export class VehicleFormComponent implements OnInit {
   /** Model: capitalize first letter of every word (e.g. "megane" -> "Megane") */
   onModelInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = this.capitalizeWords(input.value);
+    const value = capitalizeWords(input.value);
     this.formData.model = value;
     input.value = value;
-  }
-
-  private capitalizeWords(value: string): string {
-    if (!value) return value;
-    return value
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
   }
 
   onPlateInput(event: Event): void {

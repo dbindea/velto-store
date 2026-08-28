@@ -31,6 +31,37 @@ import {
 } from '../contracts/pdf';
 import type { ContractLocale } from '../contracts/contract-types';
 
+/**
+ * The type scale of the two short documents.
+ *
+ * They are read on a phone, in a chat, next to the contract — so they have to
+ * look like the contract, and they did not: the same builder defaults produced
+ * a 24pt masthead over 8.2pt body with the totals set LARGER than the labels
+ * above them. Nothing was wrong line by line; there was just no hierarchy.
+ *
+ * One descending ladder, tight leading, and the title handled by the builder
+ * (`TITLE_SIZE`, identical on all three documents):
+ *
+ *   section 8.6  >  totals 8.2  >  body 7.8  >  footnote 7.4
+ *
+ * The contract keeps the builder's own defaults — it was already condensed by
+ * hand, and moving its metrics would reflow eight pages of legal text.
+ */
+const D = {
+  section: 8.6,
+  // Air BEFORE each section label, not after: it is what separates one block
+  // from the last row of the previous one. Cut along with everything else, the
+  // page turned into a single grey slab where "CONDICIONES DEL ALQUILER" read
+  // as another data row.
+  sectionLead: 11,
+  body: 7.8,
+  bodyLeading: 1.45,
+  totals: 8.2,
+  totalsLeading: 1.85,
+  step: 8.4,
+  footnote: 7.4
+} as const;
+
 export interface DocumentCompany {
   legalName: string;
   taxId: string;
@@ -68,21 +99,20 @@ export interface DocumentRental {
 }
 
 /**
- * Same shape the contract renderer uses. `finalPrice` is VAT-INCLUSIVE; the
- * breakdown extracts the tax rather than adding it.
+ * Same shape the contract renderer uses. Everything here is NET except
+ * `finalPrice`, which is what the customer pays and is derived from `netPrice`.
  */
 export interface DocumentPricing {
+  /** Net plus VAT. Derived; the breakdown recomputes it from `netPrice`. */
   finalPrice?: number;
   depositAmount?: number;
   tariffPrice?: number;
   loyaltyDiscountPercent?: number;
   loyaltyDiscount?: number;
   manualAdjustment?: number;
-  /** Taxable base actually agreed. Drives the split when the tariff is net. */
+  /** Taxable base actually agreed. This is what drives the split. */
   netPrice?: number;
   vatRate?: number;
-  /** Absent means the old VAT-inclusive tariffs. */
-  tariffIncludesVat?: boolean;
 }
 
 export interface DocumentPayments {
@@ -296,26 +326,36 @@ function clientColumn(L: Labels, client?: DocumentClient): InfoEntry[] {
   ];
 }
 
+/** Section label at the documents' own size, so every block matches. */
+function section(b: PdfBuilder, title: string): void {
+  b.section(title, { size: D.section, lead: D.sectionLead });
+}
+
+/** A label/value row at the documents' own size. */
+function row(b: PdfBuilder, label: string, value: string, bold = false): void {
+  b.twoColumn(label, value, false, bold, { size: D.body, leading: D.bodyLeading });
+}
+
 function drawVehicleBlock(
   b: PdfBuilder,
   L: Labels,
   vehicle: DocumentVehicle,
   loc: ContractLocale
 ): void {
-  b.section(L.vehicleData);
-  b.twoColumn(
+  section(b, L.vehicleData);
+  row(
+    b,
     L.vehicle + ':',
     `${vehicle.brand} ${vehicle.model}${vehicle.version ? ' ' + vehicle.version : ''}`,
-    false,
     true
   );
-  b.twoColumn(L.plate + ':', vehicle.plateNumber, false, true);
-  if (vehicle.year) b.twoColumn(L.year + ':', String(vehicle.year));
+  row(b, L.plate + ':', vehicle.plateNumber, true);
+  if (vehicle.year) row(b, L.year + ':', String(vehicle.year));
   // Raw enums from Firestore ('diesel', 'manual') translated into the document
   // language, rather than printed as stored.
-  if (vehicle.fuelType) b.twoColumn(L.fuel + ':', fuelTypeLabel(vehicle.fuelType, loc));
+  if (vehicle.fuelType) row(b, L.fuel + ':', fuelTypeLabel(vehicle.fuelType, loc));
   if (vehicle.transmission) {
-    b.twoColumn(L.transmission + ':', transmissionLabel(vehicle.transmission, loc));
+    row(b, L.transmission + ':', transmissionLabel(vehicle.transmission, loc));
   }
 }
 
@@ -325,14 +365,25 @@ function drawRentalBlock(
   rental: DocumentRental,
   loc: ContractLocale
 ): void {
-  b.section(L.rentalData);
-  b.twoColumn(L.pickup + ':', formatDate(rental.pickupDateTime, loc), true, true);
-  b.twoColumn(L.ret + ':', formatDate(rental.returnDateTime, loc), true, true);
+  section(b, L.rentalData);
+  b.twoColumn(L.pickup + ':', formatDate(rental.pickupDateTime, loc), true, true, {
+    size: D.body,
+    leading: D.bodyLeading
+  });
+  b.twoColumn(L.ret + ':', formatDate(rental.returnDateTime, loc), true, true, {
+    size: D.body,
+    leading: D.bodyLeading
+  });
   if (rental.totalDays) {
-    b.twoColumn(L.days + ':', `${rental.totalDays} ${L.dayUnit}`, false, true);
+    row(b, L.days + ':', `${rental.totalDays} ${L.dayUnit}`, true);
   }
-  if (rental.pickupLocation) b.twoColumnWrap(L.pickupLoc + ':', rental.pickupLocation);
-  if (rental.returnLocation) b.twoColumnWrap(L.retLoc + ':', rental.returnLocation);
+  const wrapOpts = { size: D.body, leading: D.bodyLeading };
+  if (rental.pickupLocation) {
+    b.twoColumnWrap(L.pickupLoc + ':', rental.pickupLocation, false, undefined, wrapOpts);
+  }
+  if (rental.returnLocation) {
+    b.twoColumnWrap(L.retLoc + ':', rental.returnLocation, false, undefined, wrapOpts);
+  }
 }
 
 /**
@@ -347,46 +398,57 @@ function drawPriceBlock(
   pricing: DocumentPricing,
   loc: ContractLocale
 ): void {
-  b.section(L.priceSection);
+  section(b, L.priceSection);
 
   const hasDiscounts = !!pricing.loyaltyDiscount || !!pricing.manualAdjustment;
   if (hasDiscounts && pricing.tariffPrice !== undefined) {
-    b.twoColumn(L.tariffAmt + ':', formatMoney(pricing.tariffPrice, loc), false, true);
+    row(b, L.tariffAmt + ':', formatMoney(pricing.tariffPrice, loc), true);
     if (pricing.loyaltyDiscount) {
       const pct = pricing.loyaltyDiscountPercent;
       const label = pct ? `${L.loyaltyDisc} (${pct} %)` : L.loyaltyDisc;
-      b.twoColumn(label + ':', formatMoney(pricing.loyaltyDiscount, loc), false, true);
+      row(b, label + ':', formatMoney(pricing.loyaltyDiscount, loc), true);
     }
     if (pricing.manualAdjustment) {
-      b.twoColumn(L.agreedAdj + ':', formatMoney(pricing.manualAdjustment, loc), false, true);
+      row(b, L.agreedAdj + ':', formatMoney(pricing.manualAdjustment, loc), true);
     }
   }
 
   const vat = vatBreakdownOf(pricing);
-  b.totalsBlock([
-    { label: L.vatBase, value: formatMoney(vat.base, loc) },
-    { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
-    { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
-    {
-      label: pricing.depositAmount ? L.depositVatNote : L.deposit,
-      value: pricing.depositAmount ? formatMoney(pricing.depositAmount, loc) : L.noDeposit
-    }
-  ]);
+  b.totalsBlock(
+    [
+      { label: L.vatBase, value: formatMoney(vat.base, loc) },
+      { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
+      { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
+      {
+        label: pricing.depositAmount ? L.depositVatNote : L.deposit,
+        value: pricing.depositAmount ? formatMoney(pricing.depositAmount, loc) : L.noDeposit
+      }
+    ],
+    { size: D.totals, leading: D.totalsLeading }
+  );
 }
 
-/** Contact details. The legal identity is already on every page footer. */
-function drawContactBlock(b: PdfBuilder, L: Labels, company: DocumentCompany): void {
-  b.section(L.lessor);
-  b.twoColumn(L.name + ':', company.legalName, false, true);
-  if (company.phone) b.twoColumn(L.phone + ':', company.phone);
-  if (company.email) b.twoColumnWrap(L.email + ':', company.email);
-  if (company.website) b.twoColumn(L.website + ':', company.website);
+/**
+ * The closing line: who to write to.
+ *
+ * There used to be an "ARRENDADOR" section here with four label/value rows —
+ * name, phone, email, web — every one of them repeating something already
+ * printed twice on the same sheet: in the masthead at the top and in the legal
+ * footer at the bottom of every page. On the booking confirmation those four
+ * rows did not fit, so the document went to a second page whose entire content
+ * was a phone number the customer already had in three other places.
+ *
+ * What was actually missing is the invitation to reply, and that is one line.
+ */
+function drawClosingLine(b: PdfBuilder, L: Labels): void {
+  b.keepTogether(D.footnote * 2.5);
+  b.text(L.questions, { size: D.footnote, italic: true, color: [0.3, 0.3, 0.3] });
 }
 
 function drawDisclaimer(b: PdfBuilder, text: string): void {
-  b.y -= 8;
+  b.y -= 6;
   b.separator();
-  b.text(text, { size: 8.5, italic: true, color: [0.35, 0.35, 0.35], gap: 4 });
+  b.text(text, { size: D.footnote, italic: true, color: [0.35, 0.35, 0.35], gap: 4 });
 }
 
 // ---------------------------------------------------------------------------
@@ -404,17 +466,17 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<Uint8Array> {
       { label: L.issuedOn, value: formatDate(input.generatedAt, loc) },
       { label: L.validUntil, value: formatDayOnly(input.validUntil, loc) }
     ],
-    clientColumn(L, input.client)
+    clientColumn(L, input.client),
+    { size: D.body }
   );
-  b.y -= 8;
+  b.y -= 6;
 
   drawVehicleBlock(b, L, input.vehicle, loc);
   drawRentalBlock(b, L, input.rental, loc);
   drawPriceBlock(b, L, input.pricing, loc);
 
   drawDisclaimer(b, L.quoteDisclaimer);
-  drawContactBlock(b, L, input.company);
-  b.text(L.questions, { size: 9, italic: true, color: [0.3, 0.3, 0.3] });
+  drawClosingLine(b, L);
 
   b.finalizeFooters();
   input.onLayout?.(b);
@@ -439,35 +501,36 @@ export async function buildBookingConfirmationPdf(
       { label: L.locator, value: input.locator },
       { label: L.issuedOn, value: formatDate(input.generatedAt, loc) }
     ],
-    clientColumn(L, input.client)
+    clientColumn(L, input.client),
+    { size: D.body }
   );
-  b.y -= 8;
+  b.y -= 6;
 
   drawVehicleBlock(b, L, input.vehicle, loc);
   drawRentalBlock(b, L, input.rental, loc);
   drawPriceBlock(b, L, input.pricing, loc);
 
   // Payment status
-  b.section(L.paymentsSection);
-  b.twoColumn(
+  section(b, L.paymentsSection);
+  row(
+    b,
     L.signal + ':',
     `${formatMoney(p.initialPaid ?? 0, loc)} ${L.paidOf} ${formatMoney(p.initialRequired ?? 0, loc)}`,
-    false,
     true
   );
   const remainingPending = Math.max(0, (p.remainingRequired ?? 0) - (p.remainingPaid ?? 0));
   const remainingText = p.remainingDueDate
     ? `${formatMoney(remainingPending, loc)} — ${L.dueOn} ${formatDayOnly(p.remainingDueDate, loc)}`
     : formatMoney(remainingPending, loc);
-  b.twoColumn(L.remaining + ':', remainingText, false, true);
+  row(b, L.remaining + ':', remainingText, true);
   // "0,00 € pagado de 0,00 €" reads like a bug. A waived deposit is a
   // decision, and the document should say so.
-  b.twoColumn(
+  row(
+    b,
     L.deposit + ':',
     (p.depositRequired ?? 0) > 0
       ? `${formatMoney(p.depositPaid ?? 0, loc)} ${L.paidOf} ${formatMoney(p.depositRequired ?? 0, loc)}`
       : L.noDeposit,
-    false,
     true
   );
 
@@ -479,14 +542,17 @@ export async function buildBookingConfirmationPdf(
   pending.push(L.pendingIdDocs);
 
   if (pending.length) {
-    b.y -= 4;
-    b.section(L.pendingSection);
-    pending.forEach((line, i) => b.highlightBox(i + 1, line));
+    b.y -= 2;
+    section(b, L.pendingSection);
+    // Tighter than the contract's front-page summary: four short steps, and
+    // the block below them (the disclaimer and who to call) has to stay on the
+    // same page. At the builder's default spacing the confirmation broke in
+    // two and page 2 held nothing but a phone number.
+    pending.forEach((line, i) => b.highlightBox(i + 1, line, { size: D.step, gap: 4.5 }));
   }
 
   drawDisclaimer(b, L.bookingDisclaimer);
-  drawContactBlock(b, L, input.company);
-  b.text(L.questions, { size: 9, italic: true, color: [0.3, 0.3, 0.3] });
+  drawClosingLine(b, L);
 
   b.finalizeFooters();
   input.onLayout?.(b);

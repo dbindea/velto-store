@@ -177,8 +177,7 @@ export const signContract = functions.https.onCall(
           loyaltyDiscount: contract.reservationSnapshot?.loyaltyDiscount,
           manualAdjustment: contract.reservationSnapshot?.manualAdjustment,
           netPrice: contract.reservationSnapshot?.netPrice,
-          vatRate: contract.reservationSnapshot?.vatRate,
-          tariffIncludesVat: contract.reservationSnapshot?.tariffIncludesVat
+          vatRate: contract.reservationSnapshot?.vatRate
         },
         inspection: contract.inspectionSnapshot
           ? {

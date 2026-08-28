@@ -514,8 +514,8 @@
       "extraChargesTotal": "Taxe extra",
       "rentalTotal": "Total închiriere",
       "title": "Rezumat",
-      "totalPaid": "Total plătit",
-      "totalRental": "Total închiriere"
+      "totalRental": "Total închiriere",
+      "incomeTotal": "Încasat (fără garanție)"
     },
     "title": "Plăți",
     "types": {
@@ -888,6 +888,8 @@
     "settleDeposit": "Soluționează garanția",
     "startPickup": "Începe predarea",
     "startReturn": "Începe returnarea",
-    "unsettledDeposit": "Garanție nerezolvată"
+    "unsettledDeposit": "Garanție nerezolvată",
+    "clientBlocked": "Client blocat: nu i se poate crea o rezervare. Schimbă-i nivelul de încredere în fișa lui dacă chiar vrei să îi închiriezi.",
+    "clientRisk": "Client marcat ca risc. Poți continua, dar verifică înainte."
   }
 }

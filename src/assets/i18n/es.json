@@ -514,8 +514,8 @@
       "extraChargesTotal": "Cargos extra",
       "rentalTotal": "Total alquiler",
       "title": "Resumen",
-      "totalPaid": "Total pagado",
-      "totalRental": "Total alquiler"
+      "totalRental": "Total alquiler",
+      "incomeTotal": "Cobrado (sin fianza)"
     },
     "title": "Pagos",
     "types": {
@@ -888,6 +888,8 @@
     "settleDeposit": "Resolver fianza",
     "startPickup": "Iniciar entrega",
     "startReturn": "Iniciar devolución",
-    "unsettledDeposit": "Fianza pendiente de resolver"
+    "unsettledDeposit": "Fianza pendiente de resolver",
+    "clientBlocked": "Cliente bloqueado: no se le puede crear una reserva. Cambia su nivel de confianza en su ficha si de verdad quieres alquilarle.",
+    "clientRisk": "Cliente marcado como riesgo. Puedes continuar, pero revísalo antes."
   }
 }

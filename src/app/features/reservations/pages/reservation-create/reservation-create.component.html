@@ -472,11 +472,11 @@
               <div class="summary-content">
                 <div class="price-row">
                   <span>{{ 'reservations.pricing.initialPayment' | translate }}:</span>
-                  <span class="highlight">{{ initialPayment }} €</span>
+                  <span class="highlight">{{ initialPayment | number:'1.2-2' }} €</span>
                 </div>
                 <div class="price-row">
                   <span>{{ 'reservations.pricing.remainingPayment' | translate }}:</span>
-                  <span>{{ remainingPayment }} €</span>
+                  <span>{{ remainingPayment | number:'1.2-2' }} €</span>
                 </div>
                 <!-- Editable: not every rental carries a deposit. -->
                 <div class="price-row editable-price">
@@ -591,6 +591,14 @@
           </div>
 
           <div class="actions">
+            <!-- The customer's trust level, at the moment it decides something.
+                 `blocked` stops the reservation; `risk` only warns. -->
+            @if (clientTrustWarning) {
+              <p class="trust-notice" [class.blocked]="clientBlocked">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ clientTrustWarning | translate }}</span>
+              </p>
+            }
             @if (depositReasonMissing) {
               <p class="quote-feedback error">
                 <i class="pi pi-exclamation-triangle"></i>
@@ -600,7 +608,7 @@
             <button
               class="btn-primary btn-lg"
               type="button"
-              [disabled]="saving || depositReasonMissing"
+              [disabled]="saving || depositReasonMissing || clientBlocked"
               (click)="createReservation()">
               @if (saving) {
                 <i class="pi pi-spin pi-spinner"></i>

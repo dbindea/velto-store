@@ -130,6 +130,12 @@ app-reservation-timeline {
   }
 }
 
+// The money blocks sit at the foot of the page, after the full-width sections,
+// so they need the same 1rem those carry inline.
+.money-grid {
+  margin-top: 1rem;
+}
+
 // Detail Card
 .detail-card {
   background: var(--bg-card);
@@ -256,6 +262,9 @@ app-reservation-timeline {
 
 .client-details {
   flex: 1;
+  // Without this the column keeps its content's width and the email pushes
+  // past the card edge instead of wrapping.
+  min-width: 0;
 
   h3 {
     font-size: 1rem;
@@ -388,6 +397,13 @@ app-reservation-timeline {
 
       &.adjustment {
         color: var(--warning-color);
+
+        // A negative adjustment is a discount, and reads like one: green,
+        // with the minus sign the number pipe writes itself.
+        .adjustment-value.negative {
+          color: var(--success-color);
+          font-weight: 600;
+        }
       }
 
       &.discount .discount-value {
@@ -524,25 +540,21 @@ app-reservation-timeline {
   }
 }
 
-// Contract
-.contract-status {
-  display: inline-block;
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
+// Contract status badge, in the header of the (single) contract block.
+//
+// The semantic classes come from CONTRACT_STATUS_COLORS and were never
+// declared here, so the badge rendered as bare text on no background — the
+// same failure mode as the missing colour variables: nothing errors, the
+// colour just does not arrive.
+.status-info { background: var(--info-bg); color: var(--info-color); }
+.status-warning { background: var(--warning-bg); color: var(--warning-color); }
+.status-success { background: var(--success-bg); color: var(--success-color); }
+.status-muted { background: var(--text-muted); color: white; }
+.status-error { background: var(--error-bg); color: var(--error-color); }
 
-  &.status-pending {
-    background: var(--warning-bg);
-    color: var(--warning-color);
-  }
-
-  &.status-signed {
-    background: var(--success-bg);
-    color: var(--success-color);
-  }
-}
+// Fallback badge, shown while no contract document exists yet.
+.badge.status-pending { background: var(--warning-bg); color: var(--warning-color); }
+.badge.status-signed { background: var(--success-bg); color: var(--success-color); }
 
 // Notes
 .notes-card {
@@ -608,7 +620,6 @@ app-reservation-timeline {
 }
 
 // Status Colors
-.status-quote { background: var(--info-bg); color: var(--info-color); }
 .status-reserved { background: var(--info-bg); color: var(--info-color); }
 .status-confirmed { background: var(--success-bg); color: var(--success-color); }
 .status-delivered { background: var(--accent-bg); color: var(--accent-color); }

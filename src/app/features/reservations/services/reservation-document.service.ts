@@ -48,7 +48,6 @@ export interface QuoteDocumentRequest {
     manualAdjustment?: number;
     netPrice?: number;
     vatRate?: number;
-    tariffIncludesVat?: boolean;
   };
   locale?: string;
 }

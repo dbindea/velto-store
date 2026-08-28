@@ -33,6 +33,7 @@ import {
 } from '@shared/models/reservation.model';
 import { Inspection } from '@shared/models/inspection.model';
 import { Contract } from '@shared/models/contract.model';
+import { ClientTrustLevel } from '@shared/models/client.model';
 
 // ---------------------------------------------------------------------------
 // Inputs that capture everything the workflow needs to decide.
@@ -122,6 +123,39 @@ function remainingPaidOf(ctx: WorkflowContext): boolean {
 // ---------------------------------------------------------------------------
 // Guards for every action in the workflow.
 // ---------------------------------------------------------------------------
+
+/**
+ * Whether a reservation may be created for a customer at this trust level.
+ *
+ * `blocked` means "do not rent to this person", and until now it meant nothing
+ * at all: the level was painted in colour and the workflow ignored it, so the
+ * whole point of marking somebody was lost at the one moment it mattered.
+ *
+ * There is deliberately **no exception mechanism** here, unlike the rest of the
+ * workflow. Skipping a step is an operational shortcut; renting to a customer
+ * you have blocked is a decision about that customer, and it belongs in their
+ * file. The way through is to change their trust level, which is recorded.
+ *
+ * `risk` does not block — see `clientTrustWarning()`.
+ */
+export function canCreateReservationForClient(
+  trustLevel: ClientTrustLevel | undefined
+): WorkflowDecision {
+  return trustLevel === 'blocked' ? deny('workflow.clientBlocked') : ALLOW;
+}
+
+/**
+ * An i18n key warning about the customer, or '' when there is nothing to say.
+ *
+ * Separate from the guard on purpose: a warning is shown and stepped over, a
+ * denial is not. Merging them would mean either blocking `risk` (too strict) or
+ * letting `blocked` through with a note (which is what happens today).
+ */
+export function clientTrustWarning(trustLevel: ClientTrustLevel | undefined): string {
+  if (trustLevel === 'blocked') return 'workflow.clientBlocked';
+  if (trustLevel === 'risk') return 'workflow.clientRisk';
+  return '';
+}
 
 /** Generate the original PDF contract from the reservation. */
 export function canGenerateContract(ctx: WorkflowContext): WorkflowDecision {

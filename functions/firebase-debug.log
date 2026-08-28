@@ -1,0 +1,37 @@
+[debug] [2026-08-28T12:05:42.234Z] ----------------------------------------------------------------------
+[debug] [2026-08-28T12:05:42.239Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\dorel\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-08-28T12:05:42.239Z] CLI Version:   15.19.1
+[debug] [2026-08-28T12:05:42.239Z] Platform:      win32
+[debug] [2026-08-28T12:05:42.239Z] Node Version:  v24.16.0
+[debug] [2026-08-28T12:05:42.240Z] Time:          Fri Aug 28 2026 14:05:42 GMT+0200 (hora de verano de Europa central)
+[debug] [2026-08-28T12:05:42.240Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-28T12:05:42.244Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-08-28T12:06:27.181Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-28T12:06:27.182Z] > authorizing via signed-in user (veltorent@gmail.com)
+[debug] [2026-08-28T12:06:27.183Z] [iam] checking project velto-store for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-08-28T12:06:27.184Z] Checked if tokens are valid: false, expires at: 1787869258154
+[debug] [2026-08-28T12:06:27.184Z] Checked if tokens are valid: false, expires at: 1787869258154
+[debug] [2026-08-28T12:06:27.184Z] > refreshing access token with scopes: []
+[debug] [2026-08-28T12:06:27.186Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-08-28T12:06:27.186Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-08-28T12:06:27.291Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-08-28T12:06:27.292Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-08-28T12:06:27.308Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/velto-store:testIamPermissions [none]
+[debug] [2026-08-28T12:06:27.309Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/velto-store:testIamPermissions  x-goog-user-project=velto-store
+[debug] [2026-08-28T12:06:27.309Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/velto-store:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-28T12:06:27.459Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-08-28T12:06:27.459Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-08-28T12:06:27.528Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/velto-store:testIamPermissions 200
+[debug] [2026-08-28T12:06:27.529Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/velto-store:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-08-28T12:06:27.530Z] Checked if tokens are valid: true, expires at: 1787922386292
+[debug] [2026-08-28T12:06:27.530Z] Checked if tokens are valid: true, expires at: 1787922386292
+[debug] [2026-08-28T12:06:27.530Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/velto-store/serviceAccounts/velto-store@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-08-28T12:06:27.530Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/velto-store/serviceAccounts/velto-store@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-08-28T12:06:28.208Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/velto-store/serviceAccounts/velto-store@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-08-28T12:06:28.208Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/velto-store/serviceAccounts/velto-store@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'velto-store'...
+[info] 
+[info] i  deploying functions 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run build
