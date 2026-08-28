@@ -86,6 +86,9 @@ en el código de la app, y no debe haberlo.
 | Configuración de build | `dev` | `production` |
 | Dominio | `store.veltorent.com` | `rentalcar.veltomobility.com` |
 | Alias del CLI | `--project dev` | `--project prod` |
+| Firestore | `eur3` | `eur3` |
+| Storage | `eu` multirregión | `eu` multirregión |
+| Cloud Functions | `europe-west1` | `europe-west1` |
 
 ⚠️ **Las dos configuraciones producen bundle optimizado.** La diferencia no es
 cuánto optimizan, es a qué proyecto apuntan. `development` (sin `--configuration`
@@ -104,6 +107,30 @@ npm run build:prod && grep -o 'projectId:"[a-z-]*"' dist/velto-store/browser/*.j
 - No existe rama `main`.
 
 ⚠️ Merge a `master` = despliegue a **producción con datos reales**. Confirma antes.
+
+### La región de las functions está en TRES sitios
+
+`europe-west1`, junto a Firestore y Storage. Todo lo que corre allí está al lado
+de sus datos; hasta el 28 de agosto de 2026 las functions vivían en
+`us-central1` y cada PDF cruzaba el Atlántico dos veces, con datos personales de
+contratos procesándose en Estados Unidos aunque se guardaran en Europa.
+
+Si se cambia, se cambian **los tres a la vez** o algo deja de encontrarse:
+
+1. `functions/src/global-options.ts` — `FUNCTIONS_REGION`, donde se despliegan.
+2. `src/app/app.config.ts` — `getFunctions(getApp(), 'europe-west1')`. Sin el
+   segundo argumento el SDK pide **us-central1**, y todos los callables fallan
+   con un 404 que parece un problema de permisos y no lo es.
+3. `firebase.json` — la región del rewrite `/d/**`. Esta viaja con el
+   **hosting**, no con las functions: al mover la región los enlaces cortos
+   dieron 404 hasta redesplegar hosting. Verificado ese día: 404 antes,
+   `200 application/pdf` después.
+
+⚠️ `setGlobalOptions` solo afecta a lo declarado **después** de llamarlo, y los
+`export ... from` de `index.ts` evalúan sus módulos antes que cualquier
+sentencia escrita en ese fichero. Por eso vive en su propio módulo importado en
+la primera línea y no como una llamada suelta: ahí llegaría tarde y las
+functions se desplegarían en la región por defecto sin que nadie se enterase.
 
 ### Los datos de producción son sagrados
 

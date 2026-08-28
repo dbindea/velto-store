@@ -45,6 +45,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
+import { FUNCTIONS_REGION } from './global-options';
 import { firestore } from './admin-guard';
 import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
@@ -128,9 +129,12 @@ export const createRedsysPaymentLink = functions.https.onCall(
       // {project}-{region}. Getting this backwards points Redsys at a
       // host that does not resolve, so the payment silently never
       // reaches the webhook.
+      // El respaldo usa FUNCTIONS_REGION, no un literal: las functions se
+      // movieron a europe-west1 el 28 de agosto de 2026 y este fallback se
+      // habría quedado apuntando a us-central1, a un host que ya no resuelve.
       Ds_Merchant_MerchantURL:
         process.env.REDSYS_NOTIFICATION_URL ||
-        `https://${process.env.GCLOUD_REGION || 'us-central1'}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redsysNotificationWebhook`,
+        `https://${process.env.GCLOUD_REGION || FUNCTIONS_REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redsysNotificationWebhook`,
       Ds_Merchant_UrlOK: process.env.REDSYS_URL_OK || '',
       Ds_Merchant_UrlKO: process.env.REDSYS_URL_KO || '',
       Ds_Merchant_ProductDescription: (payment.concept || 'Cobro Velto').slice(0, 125),

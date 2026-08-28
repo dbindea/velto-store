@@ -1133,3 +1133,111 @@ Español y rumano comparten convención; en inglés se verán números españole
 | Cobrar resto | ✅ 423,50 € cobrados |
 | Entrega (inspección de recogida) | ✅ reserva **Entregada**, km 9.200 |
 | Errores de consola en todo el recorrido | **0** |
+
+---
+
+# Separación de entornos y traslado a Europa — 28 de agosto de 2026 (noche)
+
+`velto-store` pasa a ser **desarrollo** y nace `rentalcar-veltomobility` como
+**producción**. Una sola base de código; lo único que cambia es qué fichero de
+entorno se compila y a qué proyecto apunta el CLI.
+
+## C-17 · Las configuraciones de entorno estaban invertidas
+
+`angular.json` tenía, dentro de la configuración `production`:
+
+```json
+{ "replace": "environment.ts", "with": "environment.development.ts" }
+```
+
+La build de producción compilaba el fichero de desarrollo. Y `environment.ts`
+declaraba `production: true` mientras que el de desarrollo decía `false`, así
+que `ng serve` servía el marcado como producción. Con un solo proyecto de
+Firebase no se notaba nada. Con dos, **un push a `master` habría publicado la
+web de producción hablando con la base de datos de desarrollo**.
+
+Ahora hay dos configuraciones **las dos optimizadas** —`dev` y `production`—
+que se diferencian solo en el proyecto al que apuntan. Verificado sobre el
+bundle, no sobre el código:
+
+```
+build:prod → rentalcar-veltomobility
+build      → velto-store
+```
+
+## C-18 · `firebase init hosting:github` reescribió el workflow de producción
+
+Al generar la cuenta de servicio, el CLI sobrescribió
+`firebase-hosting-merge.yml` sin avisar. Se llevó el `setup-node`, los tests de
+app y de functions, y dejó:
+
+```yaml
+- run: npm ci && npm run build        # compila contra DESARROLLO
+  projectId: rentalcar-veltomobility  # y lo publica en PRODUCCIÓN
+```
+
+El mismo cruce de C-17, reintroducido por la herramienta. Se detectó porque el
+contenido del fichero no era el escrito. La copia de seguridad que se hizo
+"por si acaso" **ya estaba dañada**: se tomó después de que el CLI pasara.
+
+Reescrito, y con el aviso dentro del propio fichero para la próxima vez.
+
+## C-19 · El Storage de desarrollo estaba en Estados Unidos
+
+Al comparar entornos apareció que el bucket de `velto-store` se creó en junio en
+`us-east1`, con el valor por defecto. Ahí habían estado los contratos de prueba,
+los DNI y las fotos. Producción se creó en `eu` desde el principio.
+
+La ubicación de un bucket no se puede cambiar: hay que borrarlo y recrearlo.
+Dorel vació desarrollo entero —Firestore, Storage y el bucket— y se rehizo en
+`eu`. Con la base se fueron también las reglas y los 8 índices, que son
+configuración de la base y no del proyecto; redesplegados.
+
+## C-20 · Las functions corrían lejos de sus datos
+
+Firestore en `eur3` (Europa) y las once functions en `us-central1` (Iowa): cada
+generación de PDF leía la reserva y escribía el documento cruzando el Atlántico,
+y los datos personales de los contratos se procesaban fuera de la UE aunque se
+guardaran dentro. Nadie lo hizo mal: `us-central1` es el defecto cuando el
+código no dice nada, y el código no decía nada.
+
+Movidas las de **los dos entornos** a `europe-west1`, que está dentro de `eur3`.
+Tres sitios, y hacen falta los tres:
+
+| Dónde | Qué |
+|---|---|
+| `functions/src/global-options.ts` | `setGlobalOptions({ region })` — dónde se despliegan |
+| `src/app/app.config.ts` | `getFunctions(getApp(), 'europe-west1')` — dónde las busca el cliente |
+| `firebase.json` | la región del rewrite `/d/**` |
+
+⚠️ **La trampa del orden.** `setGlobalOptions` solo afecta a lo declarado
+después de llamarlo, y los `export ... from` de `index.ts` evalúan sus módulos
+antes que cualquier sentencia de ese fichero. Puesto como una línea al principio
+de `index.ts` habría llegado tarde y las functions se habrían desplegado en la
+región por defecto sin decir nada. Vive en su propio módulo, importado el
+primero.
+
+⚠️ **El rewrite viaja con el hosting, no con las functions.** Tras mover la
+región, el enlace corto de un presupuesto real dio **404**; después de
+redesplegar hosting, **`200 application/pdf`**. Es el fallo silencioso del que
+avisa `CLAUDE.md`, esta vez provocado a propósito para comprobarlo.
+
+## Verificación de extremo a extremo
+
+Sobre desarrollo recién vaciado, con datos nuevos:
+
+| | |
+|---|---|
+| Alta de vehículo y cliente | ✅ |
+| Presupuesto | ✅ 350,00 + 73,50 = **423,50 €** |
+| Endpoint al que llamó el SDK | `europe-west1-velto-store.cloudfunctions.net/generateQuotePdf` |
+| Enlace corto tras redesplegar hosting | ✅ `200 application/pdf` |
+| Errores de consola | 0 |
+
+Y en producción: CI de `master` funcionando (publicó a las 22:15, después del
+despliegue manual de las 21:26), las 11 functions en `europe-west1`, los 8
+índices, reglas de Firestore y Storage desplegadas.
+
+**Estado final: los dos entornos idénticos** — Firestore `eur3`, Storage `eu`
+multirregión, functions `europe-west1` — y cada uno hablando solo con su propia
+base de datos, comprobado leyendo los bundles servidos.

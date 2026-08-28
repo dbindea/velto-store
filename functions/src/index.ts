@@ -25,6 +25,11 @@
  *   - generateBookingConfirmationPdf    (auth) — booking proof, before signing
  */
 
+// ⚠️ PRIMERA línea ejecutable del backend: fija la región de todas las
+// functions. Tiene que ir antes que cualquier 'export ... from', porque esos
+// evalúan sus módulos —y definen sus functions— antes que nada de aquí.
+import './global-options';
+
 export { createRedsysPaymentLink, redsysNotificationWebhook } from './redsys';
 
 // Contracts
