@@ -22,10 +22,10 @@ import {
   calculateBasePrice,
   findPricingRuleByDays,
   resolveRentalPrice,
-  DEFAULT_VAT_RATE,
-  TARIFF_INCLUDES_VAT
+  DEFAULT_VAT_RATE
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { roundMoney } from '@shared/utils/payment-summary.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
@@ -35,7 +35,8 @@ import { AuthService } from '@core/auth/auth.service';
 import {
   Workflow,
   WorkflowContext,
-  canCloseReservation as assertCanClose
+  canCloseReservation as assertCanClose,
+  canCreateReservationForClient
 } from '@shared/utils/reservation-workflow.util';
 
 export interface VehicleAvailabilityResult {
@@ -380,8 +381,7 @@ export class ReservationService {
         basePrice: basePriceResult.basePrice,
         netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: DEFAULT_VAT_RATE,
-        tariffIncludesVat: TARIFF_INCLUDES_VAT
+        vatRate: DEFAULT_VAT_RATE
       },
       initialPayment: {
         requiredAmount: initialPaymentRequired,
@@ -431,11 +431,24 @@ export class ReservationService {
      * Price agreed with the customer, overriding the tariff calculation.
      * The snapshot keeps the calculated figures and records the difference in
      * `manualAdjustment`, so the discount stays auditable.
+     *
+     * ⚠️ **NET**, like everything else `resolveRentalPrice()` compares against.
+     * Handing it the gross turns a discount into a surcharge of roughly the VAT
+     * rate, because the tariff it is measured against is a taxable base.
      */
-    finalPriceOverride?: number,
+    agreedNetPrice?: number,
     /** Required when `depositRequired` is 0. See `buildDeposit`. */
     depositWaivedReason?: string
   ): Promise<string> {
+    // Do not rent to a customer marked `blocked`. The wizard disables the
+    // button; this is the half that a stale tab or a direct call cannot skip.
+    // The way through is to change the customer's trust level, which leaves a
+    // trail — not to bypass this.
+    const trust = canCreateReservationForClient(client.trustLevel);
+    if (!trust.ok) {
+      throw new Error(trust.reason);
+    }
+
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicle.id!, pickupDateTime, returnDateTime);
     if (!availability.available) {
@@ -453,14 +466,18 @@ export class ReservationService {
     const pricing = resolveRentalPrice(
       basePriceResult.basePrice,
       client.loyaltyDiscountPercent,
-      finalPriceOverride
+      agreedNetPrice
     );
     const finalPrice = pricing.finalPrice;
 
     // A signal larger than the whole rental would leave the reservation
     // impossible to settle, so it is capped at the agreed price.
-    const initialPayment = Math.min(initialPaymentRequired, finalPrice);
-    const remainingPaymentRequired = Math.max(0, finalPrice - initialPayment);
+    //
+    // ⚠️ Rounded: `108.9 - 50` is `58.900000000000006` in binary floating
+    // point, and this figure is written to Firestore and seeded as a payment
+    // row that the operator then has to collect to the cent.
+    const initialPayment = roundMoney(Math.min(initialPaymentRequired, finalPrice));
+    const remainingPaymentRequired = roundMoney(Math.max(0, finalPrice - initialPayment));
 
     const reservation: Omit<Reservation, 'id'> = {
       vehicleId: vehicle.id!,
@@ -506,10 +523,9 @@ export class ReservationService {
         manualAdjustment: pricing.priceOverridden ? pricing.manualAdjustment : undefined,
         netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: DEFAULT_VAT_RATE,
-        // Frozen, not inferred: reservations priced before the switch were
-        // VAT-inclusive and have to keep splitting that way.
-        tariffIncludesVat: TARIFF_INCLUDES_VAT
+        // Frozen so a future change of the general rate never moves a contract
+        // already signed.
+        vatRate: DEFAULT_VAT_RATE
       },
       initialPayment: {
         requiredAmount: initialPayment,

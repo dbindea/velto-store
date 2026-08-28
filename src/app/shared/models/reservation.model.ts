@@ -87,16 +87,6 @@ export interface ReservationPricingSnapshot {
    * Absent on reservations created before VAT was introduced.
    */
   vatRate?: number;
-  /**
-   * Which direction this reservation's price was calculated in, frozen at
-   * creation.
-   *
-   * `false` (current behaviour): the tariff is NET and VAT was added on top.
-   * **Absent means `true`** — reservations created before the change priced
-   * VAT-inclusive, and they have to keep splitting that way or every contract
-   * already signed stops adding up. Never infer this from today's constant.
-   */
-  tariffIncludesVat?: boolean;
 }
 
 export interface ReservationDeposit {

@@ -605,10 +605,105 @@ recargar y con el campo vaciado.
 | Fianza editable a 0 | ✅ pide motivo, «Crear reserva» se deshabilita y se rehabilita al rellenarlo |
 | Presupuesto contra la function desplegada | ✅ generado, 1,2 MB |
 | Enlace corto (function directa) | ✅ `200 application/pdf`, empieza por `%PDF-` |
-| Enlace corto (vía hosting) | ❌ devuelve la SPA — **falta desplegar hosting** |
+| Enlace corto (vía hosting) | ✅ tras desplegar hosting: `200 application/pdf` |
 | Longitud del enlace | 47 car. frente a 168 de la URL de Storage |
 | Móvil 360 × 800 | ✅ sin desbordamiento horizontal |
 | Errores de consola | 0 |
+
+---
+
+# Rediseño del contrato y cambio de IVA — 27 de agosto de 2026 (tarde)
+
+Cambios pedidos por Dorel sobre el PDF, más el giro en el cálculo del IVA.
+Todo **verificado renderizando el contrato** en español y rumano: 0 solapes,
+0 glifos ausentes, 0 desbordes de margen, y el contrato bajó de **9 a 8
+páginas** por el condensado.
+
+## C-1 · El IVA cambia de dirección
+
+**La tarifa pasa a ser NETA y el IVA se suma encima.** Un coche a 30 €/día son
+30 € de base y el cliente paga 36,30 €. El motivo es comercial: el número
+redondo es el que se negocia, y quien no quiere factura paga justo ese neto.
+
+Es lo contrario de como estaba, así que:
+
+- La dirección se **congela por reserva** en `pricingSnapshot.tariffIncludesVat`.
+  **Ausente significa inclusivo**, que es como se crearon todas las reservas
+  anteriores. `vatBreakdownOf()` es quien decide, en app y en functions.
+- `resolveRentalPrice()` trabaja **en neto** hasta el final: tarifa, descuento
+  de fidelidad y precio acordado son todos base imponible. Solo `finalPrice`
+  es lo que paga el cliente.
+- El campo editable del asistente es ahora el **neto**.
+- Se añade `pricingSnapshot.netPrice`.
+- La fianza **no** cambia: sigue sin IVA.
+
+⚠️ **Consecuencia con dinero detrás:** las tarifas existentes no se tocaron, así
+que lo cobrado por el mismo alquiler **sube un 21 %**. Anotado el primero en
+[mejoras-pendientes.md](mejoras-pendientes.md).
+
+### C-1b · El input mostraba el bruto con la etiqueta «sin IVA»
+
+Encontrado probando en el navegador, no por los tests. La etiqueta decía
+«Precio sin IVA» pero el input seguía enlazado a `finalPrice` (el bruto),
+mientras que lo tecleado se interpretaba como neto: **un 21 % de desfase
+silencioso** en cuanto alguien tocara el precio. Corregido y verificado — el
+campo muestra 280 sobre 40 €/día × 7 días, y el total 338,80 €.
+
+## C-2 · Tipografía del contrato
+
+| | Antes | Ahora |
+|---|---|---|
+| Filas de datos | 9,5 pt | 8,2 pt |
+| Columnas de cabecera | 9 pt | 8,2 pt |
+| Totales | 9,5 / 14 pt | 8,8 pt |
+| Puntos del resumen | 11,5 pt | 9,2 pt |
+
+DejaVu es una fuente ancha y a los tamaños antiguos se desparramaba.
+
+## C-3 · Jerarquía de REUNIDOS invertida
+
+Estaba al revés: el título era **más pequeño** que el subtítulo, y este más
+pequeño que el campo. Ahora desciende, medido sobre el PDF real:
+
+| Elemento | Tamaño |
+|---|---|
+| REUNIDOS (sección) | 9,5 pt |
+| Arrendatario (subsección) | 8,8 pt |
+| Nombre y apellidos (campo) | 8,2 pt |
+
+## C-4 · Título en una sola línea
+
+«CONTRATO DE ALQUILER DE VEHÍCULO SIN CONDUCTOR» partía en dos porque el ajuste
+automático tenía el suelo en 15 pt. Bajado a 10 pt: entra entero.
+
+## C-5 · Puntos numerados minimalistas
+
+Fuera la caja tintada, el borde y el cuadrado verde relleno. Ahora: número en
+turquesa, texto al lado, filete fino de separación. Nueve cuadrados verdes
+apilados leían como un aviso de peligro, no como un resumen.
+
+## C-6 · Total del alquiler
+
+Mismo tamaño que BASE IMPONIBLE, conservando el turquesa. Y sin «(IVA incl.)»:
+está justo debajo de la base y el impuesto, la suma se ve sola.
+
+## C-7 · Firma del arrendador
+
+Fuera la casilla: VELTO MOBILITY firma con certificado digital. Ahora pone
+**«Firmado digitalmente con certificado digital»** en los tres idiomas.
+
+⚠️ **La nota no es la firma.** Queda un `TODO` en `signatureBlocks()`: falta
+aplicar el certificado real al PDF generado.
+
+## C-8 · Datos de empresa bajo las firmas
+
+Eliminados: ya salen en el pie de **todas** las páginas, esa incluida.
+
+## C-9 · Logo del sidebar
+
+De 116×32 a **175×48 px**, llegando 59 px más a la derecha. Dimensionado desde
+el ancho del sidebar con el `aspect-ratio` del propio SVG, con tope de altura
+para no invadir el menú: si cambia el ancho del rail, el logo se ajusta solo.
 
 ---
 
@@ -673,3 +768,253 @@ Sobre datos nuevos creados en producción durante la propia prueba.
 
 Reserva de prueba creada: `76846uDuZmLARW5M1fQC` (Dacia Duster · Marius
 Ionescu Pavel · 26–27 ago 2026 · 60 € calculados, 45 € acordados).
+
+---
+
+# Revisión de la pantalla de reserva y del presupuesto — 27 de agosto de 2026 (noche)
+
+Cambios pedidos por Dorel tras leer una reserva real y el PDF de presupuesto.
+
+## C-2 · El ajuste manual se guardaba en POSITIVO
+
+**Síntoma:** bajar el precio 10 € en el asistente y crear la reserva daba
+«Ajuste manual: **+11,00 €**» en el detalle, y un total mayor que la tarifa.
+
+**Causa:** el asistente enviaba a `createReservationWithClient()` el precio
+**bruto** (`finalPrice`, con IVA) donde `resolveRentalPrice()` espera el **neto**.
+El servicio comparaba 121 € contra una tarifa de 110 € —que es base imponible— y
+registraba, correctamente para lo que le habían dado, un ajuste de **+11 €**.
+El asistente enseñaba −10 € porque él sí trabajaba en neto: la cifra solo se
+torcía al guardar.
+
+No era un fallo de `pricing.util.ts` ni del cambio de IVA: era el paso del dato
+entre la pantalla y el servicio, un sitio que ningún test cubre porque no hay
+tests de componentes.
+
+**Lo aplicado:**
+
+- El asistente pasa `netPrice`. Una línea, con el porqué al lado.
+- El parámetro del servicio se llama ahora `agreedNetPrice` y su doc dice en
+  mayúsculas que viaja NETO. Nombrarlo `finalPriceOverride` era media invitación
+  a pasarle el `finalPrice` que tenía la pantalla al lado.
+- El detalle imprime el ajuste con dos decimales y su signo, en verde cuando es
+  un descuento. Antes componía el signo a mano y sin decimales.
+
+**Verificado en producción** (reserva creada y cancelada después): tarifa 110 €,
+precio acordado 100 € → ajuste **−10,00 €**, base 100,00 €, IVA 21,00 €,
+total **121,00 €**.
+
+⚠️ Las reservas creadas con el fallo conservan su snapshot torcido —es histórico
+congelado, no se toca—. La de 146,41 € del listado es una de ellas.
+
+## C-3 · Reordenación de la pantalla de reserva
+
+El orden era vehículo → cliente → fechas → **precio → importes** → contrato →
+notas → entrega → contrato (otra vez) → resumen de pagos. El dinero cortaba el
+relato del alquiler por la mitad y «contrato» aparecía dos veces.
+
+Orden nuevo, de arriba abajo:
+
+```
+vehículo · cliente · recogida → justificante → contrato → entrega y devolución
+→ importes pendientes → precio total → resumen de pagos → notas internas
+```
+
+- **Los dos bloques de contrato son uno.** El de arriba solo mostraba el estado;
+  ahora ese estado es el badge de la cabecera del bloque de acciones. Cuando
+  todavía no hay documento de contrato se muestra el `contractStatus` de la
+  reserva, que es lo único que hay.
+- Las clases de color del badge (`status-info`, `status-success`, …) **no
+  estaban declaradas** en el SCSS de esta pantalla: el badge salía sin fondo.
+  Mismo modo de fallo que las variables semánticas que faltaban.
+- Las notas internas quedan las últimas: no son ni el alquiler ni el dinero.
+
+## C-4 · El presupuesto y el justificante, a la escala del contrato
+
+El contrato se condensó el 27 por la tarde; los dos documentos cortos se
+quedaron con los valores por defecto del constructor y no se parecían a él.
+
+| | Antes | Ahora |
+|---|---|---|
+| Título | 24 pt (contrato es: 12,5 · en: 18 · ro: 17) | **12,5 pt en los tres documentos y los tres idiomas** |
+| Cuerpo | 8,2 pt / interlínea 1,6 | 7,8 pt / 1,45 |
+| Etiqueta de sección | 9,5 pt | 8,6 pt, con más aire **antes** |
+| Totales | 8,8 pt (más grandes que las filas de arriba) | 8,2 pt |
+| Pie legal del documento | 8,5–9 pt | 7,4 pt |
+
+Jerarquía resultante: título 12,5 > sección 8,6 > totales 8,2 > cuerpo 7,8 >
+nota 7,4. **El contrato conserva sus métricas**: los tamaños nuevos se pasan
+como opciones desde `documents-pdf.ts`, sin mover los valores por defecto del
+constructor, para no reflujar ocho páginas de texto legal.
+
+### El recorte fantasma: «Lugar de entre…»
+
+`twoColumnWrap()` calculaba el ancho del valor a partir del ancho de la
+etiqueta, y después recalculaba el hueco de la etiqueta a partir de ese ancho.
+En coma flotante el resultado caía **una millonésima por debajo** de su propio
+ancho medido, así que la etiqueta se recortaba con puntos suspensivos en una
+línea que le sobraba sitio. En un PDF no hay tooltip que revele el resto.
+
+Ahora solo se recorta cuando de verdad no cabe. Comprobado en los **tres
+documentos × tres idiomas**: **ninguna cadena termina en «…»**.
+
+### El justificante ya no se va a dos páginas
+
+Con cuatro pasos pendientes, el bloque «ARRENDADOR» no cabía y se llevaba a una
+segunda página el nombre, el teléfono, el email y la web de la empresa — los
+mismos cuatro datos que ya están en la cabecera de la página 1 y en el pie de
+**todas** las páginas. Se ha sustituido por la línea que sí faltaba: «¿Dudas?
+Responde a este mensaje o llámanos». El justificante cabe en una página.
+
+Se añadió `keepTogether()` al constructor para lo que quedaba: un salto de
+página dejaba el rótulo de una sección solo al pie con su contenido detrás.
+
+**Verificación:** i18n OK · `tsc` app y functions OK · build OK ·
+98 tests de app + 61 de functions en verde · los tres PDF mirados en un visor
+real (no solo medidos).
+
+---
+
+## Verificación tras desplegar las Cloud Functions — 27 ago 2026, 23:30
+
+Functions desplegadas por Dorel. **Hosting sigue sin desplegar**, así que todo
+esto se ejercitó desde `localhost:4200` contra las functions reales.
+
+| Comprobación | Resultado |
+|---|---|
+| Presupuesto **es** por la function desplegada | ✅ formato nuevo, 280,00 + 58,80 = **338,80 €** |
+| Presupuesto **en** | ✅ «RENTAL QUOTE», 350,00 + 73,50 = 423,50 € |
+| Presupuesto **ro** | ✅ «OFERTĂ DE ÎNCHIRIERE»; `ă ș ț` y `€` correctos, sin cajas vacías |
+| Título al mismo tamaño en los tres | ✅ 12,5 pt, como el contrato |
+| «Lugar de entrega / devolución» | ✅ enteros, sin puntos suspensivos |
+| Enlace corto `/d/q…` por hosting | ✅ sirve el PDF (el rewrite sigue vivo) |
+| **Reserva anterior al cambio de IVA** | ✅ ver abajo |
+
+### La reserva antigua sigue cuadrando
+
+Contrato regenerado para `76846uDuZmLARW5M1fQC` (creada el 26 ago, **sin**
+`tariffIncludesVat` en su snapshot):
+
+```
+Importe alquiler (tarifa):        60,00 €
+Ajuste acordado:                 -15,00 €
+BASE IMPONIBLE                    37,19 €
+IVA (21 %)                         7,81 €
+TOTAL ALQUILER                    45,00 €
+FIANZA (NO SUJETA A IVA)         150,00 €
+```
+
+Los mismos números que antes del cambio y que los que enseña la app. Si la
+hubiera leído como neta habría impreso 45,00 + 9,45 = 54,45 €. **La dirección
+congelada funciona en producción**, que era el riesgo real del giro del IVA.
+
+El «Ajuste acordado» también sale en negativo en el PDF.
+
+### Encontrado de paso
+
+**M-9 ya se ve en un documento del cliente.** `capitalizeWords()` no trata los
+guiones, así que el lugar de entrega salió impreso como «Aeropuerto Adolfo
+Suárez Madrid-**b**arajas, Terminal 4» en el presupuesto en inglés. Antes era un
+detalle de un formulario; ahora está en un PDF que se le manda al cliente.
+
+---
+
+# Limpieza de compatibilidad y backlog alto — 28 de agosto de 2026
+
+Dorel va a **borrar todos los datos de producción** y empezar de cero, así que
+lo primero fue quitar lo que existía solo para leer los datos viejos.
+
+## C-5 · Fuera la dirección congelada del IVA
+
+`pricingSnapshot.tariffIncludesVat` existía por una única razón: las reservas
+anteriores al 27 de agosto se guardaron con la tarifa **con IVA incluido** y
+tenían que seguir leyéndose así. Con la base vacía ya no hay ninguna, y el
+documento funcional dice explícitamente que no se mantiene compatibilidad
+mientras las colecciones se vayan a borrar.
+
+Retirado de los dos lados —app y functions— junto con `extractVat()`, que solo
+servía a esa rama. `vatBreakdownOf()` es ahora una línea: **neto + IVA, siempre**,
+partiendo de `netPrice` y nunca del total.
+
+⚠️ **Consecuencia, y por eso hay que borrar antes de usar:** una reserva creada
+antes de hoy se leería ahora como neta. La de 45,00 € pasaría a mostrar
+45,00 + 9,45 = 54,45 €. Los datos y el código ya no son compatibles en ese
+sentido, que es exactamente lo que se pidió.
+
+De paso se corrigió un comentario del contrato que seguía diciendo «el precio ya
+incluye IVA, la base se EXTRAE» — falso desde el 27 y justo el tipo de nota que
+manda a alguien en la dirección contraria.
+
+## C-6 · M-1 · Un cliente bloqueado ya bloquea
+
+`canCreateReservationForClient()` y `clientTrustWarning()` en el workflow util,
+que sigue siendo la única autoridad. `blocked` deniega; `risk` avisa y deja
+seguir. Las dos capas de siempre: el asistente deshabilita «Crear reserva» y
+explica por qué, y `createReservationWithClient()` lanza aunque le llamen desde
+otro sitio.
+
+**No hay excepción de workflow para esto.** Saltarse un paso es un atajo
+operativo; alquilar a alguien a quien has bloqueado es una decisión sobre ese
+cliente, y se toma en su ficha cambiándole el nivel — que queda registrado.
+
+Probado en vivo: cliente marcado `blocked`, aviso rojo bajo el resumen y botón
+deshabilitado (`disabled`, cursor `not-allowed`).
+
+## C-7 · M-15 · «Total pagado» ya no cuenta la fianza
+
+El resumen derivado (`calculateReservationPaymentSummary`) siempre lo calculó
+bien; quien sumaba mal era el **detalle de la reserva**, que recorría todos los
+pagos y sumaba cada `paidAmount`: alquiler + fianza + extras + retención + **la
+devolución**. 693 € sobre un alquiler de 350 €.
+
+`collectedTotalsOf()` separa ingresos de movimientos de fianza. La retención
+**no** cuenta como ingreso: es cómo se pagaron los cargos extra, y contar los dos
+facturaría el mismo daño dos veces.
+
+Verificado en producción: fianza de 150 € cobrada, señal de 50 € →
+**«Cobrado (sin fianza): 50,00 €»**. Antes habría puesto 200 €.
+
+## C-8 · Un céntimo que no era un céntimo
+
+Al mirar el asistente apareció «Resto pendiente: **58.900000000000006 €**».
+`108.9 − 50` en coma flotante binaria. No era solo la pantalla: ese número se
+escribía en Firestore y se sembraba como fila de pago, así que el operador tenía
+que cobrar 58,900000000000006 € para dejarla a cero.
+
+`roundMoney()` en los dos sitios, y los importes del asistente pasan ya por el
+pipe de número.
+
+## C-9 · M-3 + M-12 · Los índices de Firestore no servían para nada
+
+Buscando dónde añadir el índice que faltaba de `inspections` apareció algo peor:
+los cinco declarados usan `"arrayConfig": "CONTAINS"` en `clientId`, `vehicleId`
+y `status`. Ése es el índice de `array-contains`, y las consultas de la app
+filtran por **igualdad**. Ninguno de los cinco servía a ninguna consulta; lo que
+funcionaba en producción eran índices creados a mano desde el enlace del error de
+la consola, que nunca llegaron al repo. Eso explica los «4 índices que no están
+en el repo» de M-12.
+
+Reescrito con los ocho que las consultas piden de verdad, con `order`:
+
+| Colección | Índice |
+|---|---|
+| `reservations` | `clientId + pickupDateTime desc` · `vehicleId + pickupDateTime desc` |
+| `payments` | `reservationId + createdAt asc` · `clientId + createdAt desc` · `vehicleId + createdAt desc` |
+| `inspections` | `reservationId + createdAt asc` |
+| `vehicleMaintenance` | `vehicleId + nextDueDate desc` · `status + nextDueDate asc` |
+
+⚠️ **Hay que desplegarlos**: `firebase deploy --only firestore:indexes`. Sin eso,
+la primera inspección real seguiría fallando.
+
+## C-10 · M-9 · «Madrid-barajas», ya no
+
+`capitalizeWords()` estaba duplicada en dos componentes y partía solo por
+espacios. Ahora es `shared/utils/text-case.util.ts` y respeta guiones, barras y
+apóstrofos. Comprobado escribiendo en el asistente: «aeropuerto madrid-barajas
+t4» → «Aeropuerto Madrid-Barajas T4».
+
+También se ha borrado el CSS `.status-quote` de los cuatro componentes: era el
+estado que N-1 decidió que no iba a existir.
+
+**Verificación:** i18n OK (el auditor cazó de paso una clave que quedó huérfana)
+· `tsc` app y functions OK · build OK · **114 tests de app + 61 de functions**.

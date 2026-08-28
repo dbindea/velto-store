@@ -36,6 +36,7 @@ import {
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
+import { collectedTotalsOf } from '@shared/utils/payment-summary.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -582,10 +583,16 @@ export class ReservationDetailComponent implements OnInit {
     };
   }
 
+  /**
+   * What the customer has actually paid US: rental plus extra charges.
+   *
+   * It used to add up every `paidAmount` on the reservation, which folded the
+   * deposit, the part retained out of it and the part handed back into one
+   * figure — 693 € on a 350 € rental, with a refund counted as income. The
+   * split lives in `payment-summary.util.ts` and is covered by tests.
+   */
   get totalPaid(): number {
-    return this.payments
-      .filter(p => p.status !== 'cancelled')
-      .reduce((sum, p) => sum + p.paidAmount, 0);
+    return collectedTotalsOf(this.payments).income;
   }
 
   get extraChargesTotal(): number {

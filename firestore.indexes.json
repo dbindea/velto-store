@@ -4,7 +4,7 @@
       "collectionGroup": "reservations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "clientId", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "clientId", "order": "ASCENDING" },
         { "fieldPath": "pickupDateTime", "order": "DESCENDING" }
       ]
     },
@@ -12,7 +12,7 @@
       "collectionGroup": "reservations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "vehicleId", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "vehicleId", "order": "ASCENDING" },
         { "fieldPath": "pickupDateTime", "order": "DESCENDING" }
       ]
     },
@@ -20,15 +20,39 @@
       "collectionGroup": "payments",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "clientId", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "paidAt", "order": "DESCENDING" }
+        { "fieldPath": "reservationId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vehicleId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "inspections",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reservationId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "vehicleMaintenance",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "vehicleId", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "vehicleId", "order": "ASCENDING" },
         { "fieldPath": "nextDueDate", "order": "DESCENDING" }
       ]
     },
@@ -36,7 +60,7 @@
       "collectionGroup": "vehicleMaintenance",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "nextDueDate", "order": "ASCENDING" }
       ]
     }

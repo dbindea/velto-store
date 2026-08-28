@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Payment, PaymentStatus, PaymentType } from '@shared/models/payment.model';
-import { applySettlement, selectSettleablePayment } from './payment-summary.util';
+import {
+  applySettlement,
+  collectedTotalsOf,
+  selectSettleablePayment
+} from './payment-summary.util';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -98,5 +102,78 @@ describe('applySettlement', () => {
     const result = applySettlement({ amount: 100, paidAmount: 0.1 }, 0.2);
     expect(result.paidAmount).toBe(0.3);
     expect(result.pendingAmount).toBe(99.7);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Income vs deposit movements (M-15)
+//
+// The reservation screen used to add up every `paidAmount` on the reservation
+// and call it "Total pagado": 693 € on a rental of 350 €, because it counted
+// the deposit, the part retained out of it, and the part handed back to the
+// customer — money leaving — as income.
+// ---------------------------------------------------------------------------
+
+describe('collectedTotalsOf', () => {
+  /** The closed reservation from the 21 Aug test run, payment by payment. */
+  const closedReservation: Payment[] = [
+    makePayment('initial_payment', 'paid', 50, 50, 'signal'),
+    makePayment('remaining_payment', 'paid', 300, 300, 'balance'),
+    makePayment('deposit', 'paid', 150, 150, 'deposit'),
+    makePayment('extra_fuel', 'paid', 18, 18, 'fuel'),
+    makePayment('extra_cleaning', 'paid', 25, 25, 'cleaning'),
+    makePayment('deposit_retention', 'paid', 43, 43, 'retention'),
+    makePayment('deposit_refund', 'paid', 107, 107, 'refund')
+  ];
+
+  it('counts the rental and its extras, and nothing else, as income', () => {
+    const totals = collectedTotalsOf(closedReservation);
+    expect(totals.rental).toBe(350);
+    expect(totals.extras).toBe(43);
+    expect(totals.income).toBe(393);
+  });
+
+  it('never lets a refund inflate what was collected', () => {
+    // The old figure. If this ever comes back, it comes back here first.
+    const everything = closedReservation.reduce((sum, p) => sum + p.paidAmount, 0);
+    expect(everything).toBe(693);
+    expect(collectedTotalsOf(closedReservation).income).toBeLessThan(everything);
+  });
+
+  it('does not bill the retention twice on top of the charges it covers', () => {
+    const totals = collectedTotalsOf(closedReservation);
+    expect(totals.depositRetained).toBe(43);
+    expect(totals.income).toBe(totals.rental + totals.extras);
+  });
+
+  it('reports the deposit as its own movements', () => {
+    const totals = collectedTotalsOf(closedReservation);
+    expect(totals.depositCollected).toBe(150);
+    expect(totals.depositReturned).toBe(107);
+    expect(totals.depositHeld).toBe(0);
+  });
+
+  it('keeps the deposit still held when nothing has been resolved yet', () => {
+    const totals = collectedTotalsOf([makePayment('deposit', 'paid', 150, 150)]);
+    expect(totals.depositHeld).toBe(150);
+    expect(totals.income).toBe(0);
+  });
+
+  it('counts a one-off full rental payment and a free collection as income', () => {
+    const totals = collectedTotalsOf([
+      makePayment('rental_payment', 'paid', 400, 400, 'full'),
+      makePayment('free_payment', 'paid', 20, 20, 'free')
+    ]);
+    expect(totals.rental).toBe(400);
+    expect(totals.other).toBe(20);
+    expect(totals.income).toBe(420);
+  });
+
+  it('ignores cancelled rows', () => {
+    const totals = collectedTotalsOf([
+      makePayment('initial_payment', 'paid', 50, 50, 'ok'),
+      makePayment('initial_payment', 'cancelled', 50, 50, 'void')
+    ]);
+    expect(totals.income).toBe(50);
   });
 });

@@ -28,6 +28,79 @@ export function calculatePaymentStatus(amount: number, paidAmount: number): Paym
   return 'partial';
 }
 
+/** Rental money proper: the signal, the balance, or a single full payment. */
+const RENTAL_TYPES: PaymentType[] = ['initial_payment', 'remaining_payment', 'rental_payment'];
+
+/** Add-ons billed during or after the rental. */
+const EXTRA_TYPES: PaymentType[] = [
+  'extra_fuel',
+  'refuel_penalty',
+  'extra_cleaning',
+  'extra_km',
+  'extra_damage',
+  'extra_fine',
+  'extra_other'
+];
+
+export interface CollectedTotals {
+  /** Rental collected: signal + balance + one-off full payment. */
+  rental: number;
+  /** Extra charges collected. */
+  extras: number;
+  /** Free-standing collections not tied to a rental concept. */
+  other: number;
+  /** What the business actually earned: rental + extras + other. */
+  income: number;
+  /** Deposit taken in. Not income — it is money held in trust. */
+  depositCollected: number;
+  /** Deposit handed back. Money OUT. */
+  depositReturned: number;
+  /** Deposit kept to cover charges. */
+  depositRetained: number;
+  /** Still held: collected − returned − retained. */
+  depositHeld: number;
+}
+
+/**
+ * Split what has been collected into income and deposit movements.
+ *
+ * ⚠️ **A deposit is not income and a refund is not a collection.** Summing every
+ * `paidAmount` in the reservation is what produced "Total pagado 693 €" on a
+ * rental of 350 €: it added the 150 € deposit, the 43 € retained out of it and
+ * the 107 € handed back — money going the other way — into the same figure.
+ *
+ * A retention is deliberately **not** counted as income either. It is how the
+ * extra charges got paid, not extra money: counting both the 43 € of damages
+ * and the 43 € retained to cover them would bill the same event twice.
+ */
+export function collectedTotalsOf(payments: Payment[]): CollectedTotals {
+  const active = payments.filter(p => p.status !== 'cancelled');
+  const sum = (types: PaymentType[]) =>
+    roundMoney(
+      active
+        .filter(p => types.includes(p.type))
+        .reduce((total, p) => total + (p.paidAmount || 0), 0)
+    );
+
+  const rental = sum(RENTAL_TYPES);
+  const extras = sum(EXTRA_TYPES);
+  const other = sum(['free_payment']);
+  const depositCollected = sum(['deposit']);
+  const depositReturned = sum(['deposit_refund']);
+  const depositRetained = sum(['deposit_retention']);
+
+  return {
+    rental,
+    extras,
+    other,
+    income: roundMoney(rental + extras + other),
+    depositCollected,
+    depositReturned,
+    depositRetained,
+    depositHeld: roundMoney(Math.max(0, depositCollected - depositReturned - depositRetained))
+  };
+}
+
 /**
  * Calculate the complete payment summary for a reservation from its payments.
  * The reservation is used for finalPrice and initial payment config.
@@ -69,16 +142,7 @@ export function calculateReservationPaymentSummary(
   );
 
   // Extra charges (any payment whose concept indicates an add-on collected
-  // during or after the rental period).
-  const EXTRA_TYPES: Payment['type'][] = [
-    'extra_fuel',
-    'refuel_penalty',
-    'extra_cleaning',
-    'extra_km',
-    'extra_damage',
-    'extra_fine',
-    'extra_other'
-  ];
+  // during or after the rental period). Same list the income split uses.
   const extraCharges = active.filter(p => EXTRA_TYPES.includes(p.type));
   const extraChargesTotal = roundMoney(
     extraCharges.reduce((sum, p) => sum + (p.paidAmount || 0), 0)

@@ -16,11 +16,16 @@ import {
   addVat,
   resolveRentalPrice,
   DEFAULT_VAT_RATE,
-  TARIFF_INCLUDES_VAT,
   RentalPriceBreakdown,
   VatBreakdown
 } from '@shared/utils/pricing.util';
 import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
+import { capitalizeWords } from '@shared/utils/text-case.util';
+import { roundMoney } from '@shared/utils/payment-summary.util';
+import {
+  canCreateReservationForClient,
+  clientTrustWarning as trustWarningOf
+} from '@shared/utils/reservation-workflow.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
@@ -295,7 +300,12 @@ export class ReservationCreateComponent implements OnInit {
         this.notes || undefined,
         this.pickupLocation || undefined,
         this.returnLocation || undefined,
-        this.priceOverridden ? this.finalPrice : undefined,
+        // ⚠️ The agreed price travels NET, because that is what
+        // `resolveRentalPrice()` measures against. Sending the gross made the
+        // service read 121 € as a hand-agreed base over a 110 € tariff and
+        // record a +11 € adjustment on a rental the operator had just
+        // discounted by 10 €.
+        this.priceOverridden ? this.netPrice : undefined,
         this.depositWaived ? this.depositWaivedReason.trim() : undefined,
       );
 
@@ -357,8 +367,7 @@ export class ReservationCreateComponent implements OnInit {
           loyaltyDiscount: breakdown.loyaltyDiscount || undefined,
           manualAdjustment: breakdown.priceOverridden ? breakdown.manualAdjustment : undefined,
           netPrice: breakdown.netPrice,
-          vatRate: DEFAULT_VAT_RATE,
-          tariffIncludesVat: TARIFF_INCLUDES_VAT
+          vatRate: DEFAULT_VAT_RATE
         }
       });
 
@@ -433,7 +442,7 @@ export class ReservationCreateComponent implements OnInit {
    * the return field, not whether it currently holds text.
    */
   onPickupLocationChange(value: string): void {
-    const formatted = this.capitalizeWords(value);
+    const formatted = capitalizeWords(value);
     this.pickupLocation = formatted;
     if (!this.returnLocationEdited) {
       this.returnLocation = formatted;
@@ -449,15 +458,7 @@ export class ReservationCreateComponent implements OnInit {
    */
   onReturnLocationInput(value: string): void {
     this.returnLocationEdited = !!value;
-    this.returnLocation = this.capitalizeWords(value);
-  }
-
-  private capitalizeWords(value: string): string {
-    if (!value) return value;
-    return value
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+    this.returnLocation = capitalizeWords(value);
   }
 
   /**
@@ -570,11 +571,17 @@ export class ReservationCreateComponent implements OnInit {
    * would leave the reservation impossible to settle.
    */
   get initialPayment(): number {
-    return Math.min(APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT, this.finalPrice);
+    return roundMoney(Math.min(APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT, this.finalPrice));
   }
 
+  /**
+   * ⚠️ Rounded, because this is money that gets written down.
+   *
+   * `108.9 - 50` is `58.900000000000006` in binary floating point, and the
+   * summary printed exactly that — then seeded a payment row with it.
+   */
   get remainingPayment(): number {
-    return Math.max(0, this.finalPrice - this.initialPayment);
+    return roundMoney(Math.max(0, this.finalPrice - this.initialPayment));
   }
 
   /** What the vehicle asks for by default, before the operator decides. */
@@ -598,6 +605,20 @@ export class ReservationCreateComponent implements OnInit {
   /** True while the operator has waived the deposit without saying why. */
   get depositReasonMissing(): boolean {
     return needsWaivedReason(this.deposit, this.depositWaivedReason);
+  }
+
+  /**
+   * True when the selected customer is marked "do not rent". The button is
+   * disabled and the service refuses it as well — the rule lives in the
+   * workflow util, not here.
+   */
+  get clientBlocked(): boolean {
+    return !canCreateReservationForClient(this.selectedClient?.trustLevel).ok;
+  }
+
+  /** i18n key of the notice about this customer, or '' when there is none. */
+  get clientTrustWarning(): string {
+    return trustWarningOf(this.selectedClient?.trustLevel);
   }
 
   /**

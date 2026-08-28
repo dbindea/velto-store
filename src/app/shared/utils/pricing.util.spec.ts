@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_VAT_RATE,
-  TARIFF_INCLUDES_VAT,
   addVat,
   vatBreakdownOf,
   MAX_LOYALTY_DISCOUNT_PERCENT,
-  extractVat,
   normalizeLoyaltyDiscountPercent,
   resolveRentalPrice,
   resolveVatRate
@@ -14,48 +12,12 @@ import {
 // ---------------------------------------------------------------------------
 // VAT
 //
-// The rule that costs money if broken: the tariff price ALREADY includes the
-// tax. These tests exist mostly to pin that direction down.
+// The rule that costs money if broken: the tariff price is NET and the tax is
+// ADDED to it. These tests exist mostly to pin that direction down.
 // ---------------------------------------------------------------------------
 
-describe('extractVat', () => {
-  it('extracts the tax from the price instead of adding it', () => {
-    const vat = extractVat(350);
-    expect(vat.total).toBe(350);
-    expect(vat.base).toBe(289.26);
-    expect(vat.vat).toBe(60.74);
-  });
-
-  it('never lets the total drift: base + vat is exactly the price', () => {
-    // 0.01 steps around a value that rounds badly if both parts are rounded
-    // independently.
-    for (const total of [0.01, 9.99, 45, 60, 318.02, 350, 1234.56]) {
-      const vat = extractVat(total);
-      expect(vat.base + vat.vat).toBeCloseTo(vat.total, 10);
-    }
-  });
-
-  it('honours a rate other than the default', () => {
-    const vat = extractVat(107, 0.07);
-    expect(vat.base).toBe(100);
-    expect(vat.vat).toBe(7);
-  });
-
-  it('treats a zero rate as no tax at all', () => {
-    const vat = extractVat(100, 0);
-    expect(vat.base).toBe(100);
-    expect(vat.vat).toBe(0);
-  });
-
-  it('returns zeroes for a missing or nonsense price', () => {
-    expect(extractVat(0).total).toBe(0);
-    expect(extractVat(-50).base).toBe(0);
-    expect(extractVat(Number.NaN).vat).toBe(0);
-  });
-});
-
 describe('resolveVatRate', () => {
-  it('falls back to the general rate when a reservation predates the field', () => {
+  it('falls back to the general rate when no rate is frozen', () => {
     expect(resolveVatRate(undefined)).toBe(DEFAULT_VAT_RATE);
     expect(resolveVatRate(null)).toBe(DEFAULT_VAT_RATE);
   });
@@ -176,6 +138,13 @@ describe('resolveRentalPrice', () => {
 });
 
 describe('addVat', () => {
+  it('adds the tax on top instead of extracting it', () => {
+    const vat = addVat(350);
+    expect(vat.base).toBe(350);
+    expect(vat.vat).toBe(73.5);
+    expect(vat.total).toBe(423.5);
+  });
+
   it('never lets the total drift: base + vat is exactly the total', () => {
     for (const net of [0.01, 9.99, 30, 45, 210, 1234.56]) {
       const vat = addVat(net);
@@ -183,45 +152,33 @@ describe('addVat', () => {
     }
   });
 
-  it('is the inverse direction of extractVat', () => {
-    expect(addVat(100).total).toBe(121);
-    expect(extractVat(121).base).toBe(100);
+  it('honours a rate other than the default, including zero', () => {
+    expect(addVat(100, 0.07).total).toBe(107);
+    expect(addVat(100, 0).vat).toBe(0);
+  });
+
+  it('returns zeroes for a missing or nonsense net', () => {
+    expect(addVat(0).total).toBe(0);
+    expect(addVat(-50).base).toBe(0);
+    expect(addVat(Number.NaN).vat).toBe(0);
   });
 });
 
-describe('vatBreakdownOf — old reservations must not move', () => {
-  it('splits a pre-change reservation the old, inclusive way', () => {
-    // No `tariffIncludesVat`: priced when the tariff already carried VAT.
-    const vat = vatBreakdownOf({ finalPrice: 350, vatRate: 0.21 });
-    expect(vat.total).toBe(350);
-    expect(vat.base).toBe(289.26);
-  });
-
-  it('splits a new reservation from its net', () => {
-    const vat = vatBreakdownOf({
-      netPrice: 210,
-      finalPrice: 254.1,
-      vatRate: 0.21,
-      tariffIncludesVat: false
-    });
+describe('vatBreakdownOf', () => {
+  it('splits a reservation from its net, never from its total', () => {
+    const vat = vatBreakdownOf({ netPrice: 210, vatRate: 0.21 });
     expect(vat.base).toBe(210);
     expect(vat.vat).toBe(44.1);
     expect(vat.total).toBe(254.1);
   });
 
-  it('honours an explicit inclusive flag', () => {
-    const vat = vatBreakdownOf({ finalPrice: 350, vatRate: 0.21, tariffIncludesVat: true });
-    expect(vat.base).toBe(289.26);
+  it('falls back to the general rate when the snapshot has none', () => {
+    expect(vatBreakdownOf({ netPrice: 100 }).total).toBe(121);
   });
 
   it('agrees with what resolveRentalPrice produced', () => {
     const price = resolveRentalPrice(210, 0);
-    const vat = vatBreakdownOf({
-      netPrice: price.netPrice,
-      finalPrice: price.finalPrice,
-      vatRate: DEFAULT_VAT_RATE,
-      tariffIncludesVat: TARIFF_INCLUDES_VAT
-    });
+    const vat = vatBreakdownOf({ netPrice: price.netPrice, vatRate: DEFAULT_VAT_RATE });
     expect(vat.base).toBe(price.netPrice);
     expect(vat.vat).toBe(price.vatAmount);
     expect(vat.total).toBe(price.finalPrice);

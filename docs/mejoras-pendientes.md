@@ -17,37 +17,48 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ## ⚠️ Revisar tras el cambio de IVA (27 ago 2026)
 
-- [ ] **Repasar las tarifas de los vehículos.** Desde el 27 de agosto el
-  `pricePerDay` es **neto** y el IVA se suma encima. Las tarifas existentes no
-  se han tocado, así que **lo que cobras por el mismo alquiler sube un 21 %**:
-  7 días a 50 €/día pasan de 350 € totales a 350 € + 73,50 € = **423,50 €**.
+- [x] **Repasar las tarifas de los vehículos.** *(27 ago 2026 — decidido: no se
+  tocan.)* Desde el 27 de agosto el `pricePerDay` es **neto** y el IVA se suma
+  encima. Las tarifas no se han cambiado, así que **lo que se cobra por el mismo
+  alquiler sube un 21 %**: 7 días a 50 €/día pasan de 350 € totales a
+  350 € + 73,50 € = **423,50 €**.
 
-  Si la intención era mantener el precio final, hay que bajar las tarifas
-  dividiendo por 1,21 (50 → 41,32). Si la intención era subir, no hay nada que
-  hacer. **Es una decisión comercial, no técnica** — el código hace lo que
-  pediste, pero conviene mirarlo antes de la próxima reserva real.
+  Decisión de Dorel: **se dejan como están**. La tarifa pasa a ser el precio
+  neto que se negocia y el IVA va encima; el ingreso sube. No hay nada que
+  programar.
 
-- [ ] **Comprobar una reserva antigua** después de desplegar: su desglose debe
-  seguir dando los mismos números que antes (dirección congelada en
-  `tariffIncludesVat`).
+- [x] **Comprobar una reserva antigua** después de desplegar. *(27 ago 2026,
+  23:30 — hecho contra las functions ya desplegadas.)* Contrato regenerado de
+  una reserva del 26 de agosto: 37,19 + 7,81 = **45,00 €**, los mismos números
+  que antes. La dirección congelada en `tariffIncludesVat` aguanta.
 
 ## Prioridad alta
 
-- [ ] **M-1 · Un cliente `blocked` no bloquea nada.**
+- [x] **M-1 · Un cliente `blocked` no bloquea nada.**
   `ClientTrustLevel` tiene `risk` y `blocked`, se muestran con color, y el
   workflow los ignora por completo: se puede crear una reserva a un cliente
   marcado como «no alquilar». Decidir si `blocked` impide crear la reserva o
   solo avisa con confirmación. Es la §10.1 del documento funcional.
+
+  **Resuelto el 28 de agosto de 2026.** Decisión de Dorel: `blocked` **impide**
+  crear la reserva, `risk` **solo avisa**. `canCreateReservationForClient()` y
+  `clientTrustWarning()` viven en el workflow util, con 9 tests. La UI deshabilita
+  el botón y explica por qué; el servicio rechaza la llamada igualmente.
+  **Sin excepción de workflow**: la salida es cambiarle el nivel al cliente en su
+  ficha, que queda registrado.
 
 - [ ] **M-2 · `TranslateService` no cae al español.**
   Si una clave falta en `ro.json`, el usuario rumano ve la clave en crudo aunque
   el español exista. Hoy la paridad está al 100 %, así que no se manifiesta,
   pero es un fallo latente de una línea. Añadir fallback a `es`.
 
-- [ ] **M-3 · Falta el índice compuesto de `inspections`.**
+- [x] **M-3 · Falta el índice compuesto de `inspections`.**
   `inspection.service.ts` consulta `reservationId ==` + `orderBy('createdAt')`,
   que exige índice compuesto y no está en `firestore.indexes.json`. La colección
   está vacía, por eso no ha saltado. Saltará en la primera inspección real.
+
+  **Resuelto el 28 de agosto de 2026**, junto con M-12: el fichero entero estaba
+  mal, no solo faltaba este índice.
 
 - [ ] **M-4 · Verificar `VELTO_PUBLIC_BASE_URL` en producción.**
   El link de firma se construyó con `localhost:4321` en las pruebas porque el
@@ -116,12 +127,20 @@ Dos numeraciones, para no mezclar cosas distintas:
   pero en código en vez de plantilla. Decidir si se traducen o si se sustituyen
   los `alert` por un aviso en pantalla.
 
-- [ ] **M-15 · «Total pagado» suma la devolución de fianza como ingreso.**
+- [x] **M-15 · «Total pagado» suma la devolución de fianza como ingreso.**
   Tras cerrar la reserva mostraba 693 €, que es
   350 + 150 + 18 + 25 + 43 + 107: mete en el mismo saco el alquiler, la fianza,
   los cargos extra, la retención **y la devolución** —dinero que sale—. El
   documento funcional dice que la fianza no debe contar como ingreso de
   alquiler. Separar ingresos reales de movimientos de fianza.
+
+  **Resuelto el 28 de agosto de 2026.** El resumen ya lo calculaba bien; era el
+  detalle de la reserva el que sumaba por su cuenta todos los `paidAmount`.
+  `collectedTotalsOf()` en `payment-summary.util.ts` separa ingresos
+  (alquiler + extras + cobro libre) de movimientos de fianza, con la reserva
+  cerrada del 21 de agosto como caso de prueba. La retención **no** cuenta como
+  ingreso: es cómo se pagaron los cargos extra, no dinero adicional. La etiqueta
+  pasa a ser «Cobrado (sin fianza)», porque el número cambió de significado.
 
 - [ ] **M-21 · Eximir la fianza automáticamente a clientes conocidos.**
   Hoy la fianza es editable y puede ponerse a 0 con motivo, pero la decisión es
@@ -157,9 +176,15 @@ Dos numeraciones, para no mezclar cosas distintas:
   sale sin identidad visual. Ahora que los SVG están ordenados es fácil de
   añadir.
 
-- [ ] **M-9 · `capitalizeWords` no trata los guiones.**
+- [x] **M-9 · `capitalizeWords` no trata los guiones.**
   «madrid-barajas» se queda en «Madrid-barajas». Capitalizar también tras
-  guion y apóstrofo.
+  guion y apóstrofo. ⚠️ **Sube de prioridad:** desde N-1 esto ya no se queda en
+  el formulario — el 27 de agosto salió impreso en un presupuesto real como
+  «Aeropuerto Adolfo Suárez Madrid-barajas, Terminal 4».
+
+  **Resuelto el 28 de agosto de 2026.** Las dos copias privadas —asistente y
+  formulario de vehículo— se sustituyen por `shared/utils/text-case.util.ts`,
+  que respeta guiones, barras y apóstrofos. 7 tests.
 
 ## Prioridad baja
 
@@ -172,11 +197,20 @@ Dos numeraciones, para no mezclar cosas distintas:
   invita a perseguir un cobro que ya no toca. Decidir si se ocultan esos
   importes o se marcan como no exigibles.
 
-- [ ] **M-12 · Producción tiene 4 índices que no están en el repo.**
+- [x] **M-12 · Producción tiene 4 índices que no están en el repo.**
   Lo avisó el despliegue de índices. Revisar si sobran (y borrarlos) o si
   faltan en `firestore.indexes.json`. Uno identificado al revisar M-14:
   `getPaymentsByReservation` consulta `reservationId ==` + `orderBy('createdAt')`
   y funciona en producción, luego el índice existe allí pero no está declarado.
+
+  **Resuelto el 28 de agosto de 2026, y era peor de lo que decía esta nota.** Los
+  cinco índices declarados usaban `"arrayConfig": "CONTAINS"` en `clientId`,
+  `vehicleId` y `status`, que es el índice de `array-contains` — otra consulta
+  distinta. Ninguno servía a las consultas de la app: las que funcionaban lo
+  hacían con índices creados a mano desde el enlace del error de la consola. El
+  fichero se ha reescrito con los ocho que las consultas piden de verdad,
+  declarados con `order`. **Hay que desplegarlos:**
+  `firebase deploy --only firestore:indexes`.
 
 - [ ] **M-13 · Avisos de `Cross-Origin-Opener-Policy` en el login.**
   Los emite el popup de Google Auth en el servidor de desarrollo. No afectan a
@@ -203,7 +237,9 @@ cargos extra, resolución de fianza y cierre. Queda:
       la reserva anterior no se mueve
 - [ ] **N-4 + bloqueo**: marcar `blocked` a un cliente con descuento y
       comprobar que se retira y queda anotado en el histórico
-- [ ] **N-3 en el PDF real**, tras desplegar las functions a mano
+- [x] **N-3 en el PDF real**, tras desplegar las functions a mano.
+      *(27 ago 2026, 23:30)* Desglose correcto en presupuesto y contrato, en las
+      dos direcciones de IVA.
 - [ ] **N-1 end-to-end**: generar un presupuesto, abrir el enlace y comprobar
       que se ve desde un móvil sin sesión
 - [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
@@ -211,11 +247,16 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [ ] **Fianza a 0**: crear una reserva sin fianza, comprobar que no siembra
       fila de pago, que el estado es «Exenta» y que la reserva **se puede
       cerrar** (es lo que el motivo obligatorio protege)
-- [ ] **Los tres PDF en los tres idiomas**, cambiando el idioma de la
-      plataforma antes de generarlos
-- [ ] **Los tres PDF abiertos en un visor real.** El rediseño se verificó
-      extrayendo texto y midiendo cajas, no mirándolos: falta la comprobación
-      visual del logo, los filetes y el color.
+- [x] **El presupuesto en los tres idiomas**, cambiando el idioma de la
+      plataforma antes de generarlo. *(27 ago 2026, 23:30)* es/en/ro correctos
+      contra la function desplegada; el rumano con `ă ș ț` y `€` sin cajas
+      vacías. Falta repetirlo con el **justificante** y el **contrato**.
+- [x] **Los tres PDF abiertos en un visor real.** *(27 ago 2026, noche)* Vistos
+      en el visor del navegador, en español. El logo, los filetes y el turquesa
+      salen bien. De mirarlos salieron dos correcciones que las medidas no
+      detectaban: el título del presupuesto al doble de tamaño que el del
+      contrato y las etiquetas «Lugar de entre…» recortadas. Falta repetirlo en
+      **en** y **ro**.
 - [ ] **Elegir y conectar el dominio de los enlaces al cliente.** Hoy salen con
       `velto-store.web.app`. Al conectarlo basta con apuntar
       `VELTO_PUBLIC_BASE_URL` al dominio nuevo: **no hay que tocar código**, y
@@ -258,21 +299,36 @@ los contratos ya emitidos tienen que seguir cuadrando.
 responden (verificado: devuelven `UNAUTHENTICATED` a una llamada sin sesión, no
 404), y el hosting sirve ya la app con la marca nueva.
 
-⚠️ **Falta desplegar hosting** (verificado el 27 de agosto de 2026):
+## Estado de despliegue — 27 de agosto de 2026, tarde
+
+✅ **Verificado en vivo:** el rewrite `/d/**` ya funciona
+(`velto-store.web.app/d/q…` devuelve `200 application/pdf`). Los enlaces
+cortos de presupuesto y justificante están operativos.
+
+⚠️ **Todo lo commiteado el 27 por la tarde está SIN desplegar.** Comprobado
+leyendo el CSS vivo: no contiene el `aspect-ratio` del logo nuevo, así que el
+hosting es anterior a esa tanda. Hacen falta **los dos** despliegues:
 
 ```bash
-firebase deploy --only hosting         # activa el rewrite /d/**
+npm --prefix functions run deploy   # PDF: IVA, tipografía, firmas, títulos
+firebase deploy --only hosting      # logo, precio neto en el asistente
 ```
 
-`documentLink` **ya está desplegada y funciona**: sirve el PDF con
-`200 application/pdf`, 1,2 MB, llamándola directamente. Lo que no está activo es
-el rewrite, así que `velto-store.web.app/d/q…` devuelve el `index.html` de la SPA.
+Sin el de functions, los PDF siguen saliendo con el formato viejo **y con el
+IVA en la dirección antigua**, que ahora ya no coincide con lo que enseña la
+app: la app mostraría neto + IVA y el PDF extraería el IVA del total.
 
-⚠️ **El fallo es silencioso**: sin el rewrite la ruta la captura el catch-all de
-la SPA y responde `200`, así que parece que va. Hay que mirar el `content-type`:
+Los dos despliegues siguen pendientes al cierre del 27 por la noche, y ahora
+arrastran además lo de esa noche: el ajuste manual en negativo y la pantalla de
+reserva reordenada (hosting), y la escala tipográfica del presupuesto y del
+justificante (functions). Ver
+[pruebas-modulos-2026-08-21.md](pruebas-modulos-2026-08-21.md), C-2 a C-4.
+
+Para comprobar que el rewrite sigue vivo tras cualquier despliegue de hosting:
 
 ```bash
-curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://velto-store.web.app/d/qXXXX
+curl -s -o /dev/null -w "%{http_code} %{content_type}
+" https://velto-store.web.app/d/qXXXX
 # application/pdf → bien | text/html → el rewrite no está
 ```
 

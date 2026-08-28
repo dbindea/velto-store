@@ -23,22 +23,6 @@ import { roundMoney } from '@shared/utils/payment-summary.util';
 export const DEFAULT_VAT_RATE = 0.21;
 
 /**
- * ⚠️ **Tariff prices are NET — VAT is added on top.**
- *
- * This is the opposite of how the app started. A vehicle priced at 30 €/day
- * means 30 € of taxable base, and the customer pays 36,30 €. The reason is
- * commercial: the round number is the one that gets negotiated, and a customer
- * who does not want an invoice pays exactly that round net.
- *
- * ⚠️ **Reservations created before this change stored the tariff as
- * VAT-INCLUSIVE**, and they must keep reading that way or every contract
- * already signed stops adding up. The direction is therefore frozen per
- * reservation in `pricingSnapshot.tariffIncludesVat`; missing means the old,
- * inclusive behaviour. Never infer it from anything else.
- */
-export const TARIFF_INCLUDES_VAT = false;
-
-/**
  * Ceiling for the per-client loyalty discount, as a PERCENTAGE (30 = 30 %).
  * Note the different convention from `DEFAULT_VAT_RATE`, which is a fraction.
  */
@@ -56,31 +40,11 @@ export interface VatBreakdown {
 }
 
 /**
- * Split a VAT-inclusive amount into base and tax.
+ * Add VAT to a net amount.
  *
- * `vat` is derived by subtraction rather than by multiplying the base, so
- * `base + vat === total` exactly. Rounding both independently drifts by a cent
- * often enough to be noticed on a contract.
- */
-export function extractVat(total: number, rate: number = DEFAULT_VAT_RATE): VatBreakdown {
-  const safeTotal = isFinite(total) && total > 0 ? roundMoney(total) : 0;
-  const safeRate = isFinite(rate) && rate > 0 ? rate : 0;
-  const base = roundMoney(safeTotal / (1 + safeRate));
-
-  return {
-    rate: safeRate,
-    base,
-    vat: roundMoney(safeTotal - base),
-    total: safeTotal
-  };
-}
-
-/**
- * Add VAT to a net amount: the direction the tariff works in now.
- *
- * `vat` is derived by subtraction from the rounded total for the same reason
- * `extractVat` does it: `base + vat === total` has to hold to the cent, or the
- * contract does not add up.
+ * `vat` is derived by subtraction from the rounded total rather than by
+ * multiplying: `base + vat === total` has to hold to the cent, and rounding
+ * both parts independently drifts often enough to be noticed on a contract.
  */
 export function addVat(net: number, rate: number = DEFAULT_VAT_RATE): VatBreakdown {
   const safeNet = isFinite(net) && net > 0 ? roundMoney(net) : 0;
@@ -96,36 +60,27 @@ export function addVat(net: number, rate: number = DEFAULT_VAT_RATE): VatBreakdo
 }
 
 /**
- * The tax breakdown of a reservation, in whichever direction that reservation
- * was created with.
+ * The tax breakdown of a reservation.
  *
- * Reading `tariffIncludesVat` off the snapshot rather than off today's constant
- * is what keeps old contracts intact: they were priced VAT-inclusive and have
- * to keep splitting that way.
+ * ⚠️ **The tariff is NET and VAT is added on top.** A vehicle at 30 €/day means
+ * 30 € of taxable base and the customer pays 36,30 €. The reason is commercial:
+ * the round number is the one that gets negotiated, and a customer who does not
+ * want an invoice pays exactly that round net.
+ *
+ * `netPrice` is the number that was agreed, so it is what drives the split —
+ * never `finalPrice`, which is derived from it.
  */
-export function vatBreakdownOf(snapshot: {
-  finalPrice?: number;
-  netPrice?: number;
-  vatRate?: number;
-  tariffIncludesVat?: boolean;
-}): VatBreakdown {
-  const rate = resolveVatRate(snapshot.vatRate);
-
-  // Absent means "created before the change", i.e. VAT-inclusive tariffs.
-  const includesVat = snapshot.tariffIncludesVat ?? true;
-  if (includesVat) return extractVat(snapshot.finalPrice ?? 0, rate);
-
-  // Exclusive: the net is the number that was agreed, so it drives the split.
-  return addVat(snapshot.netPrice ?? 0, rate);
+export function vatBreakdownOf(snapshot: { netPrice?: number; vatRate?: number }): VatBreakdown {
+  return addVat(snapshot.netPrice ?? 0, resolveVatRate(snapshot.vatRate));
 }
 
 /**
- * The rate to apply to a reservation created before VAT was recorded.
+ * The rate to apply, defaulting to the general one.
  *
- * Reservations from before this feature have no `vatRate` in their snapshot,
- * but their price was always VAT-inclusive at the general rate — the field
- * records the rate, it never changed it. Falling back keeps old contracts and
- * old detail screens showing the same figures as new ones.
+ * The rate is frozen per reservation in `pricingSnapshot.vatRate` so that a
+ * future change of the general rate never moves a contract already signed. The
+ * fallback is a safety net for a snapshot that somehow lacks it, not a
+ * compatibility path.
  */
 export function resolveVatRate(rate: number | null | undefined): number {
   return typeof rate === 'number' && isFinite(rate) && rate >= 0 ? rate : DEFAULT_VAT_RATE;

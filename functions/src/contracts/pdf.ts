@@ -49,6 +49,16 @@ import {
 
 const BOX_BORDER = rgb(0.8, 0.8, 0.8);
 
+/**
+ * The size every document title is set at, in every language.
+ *
+ * It is the size of the tightest case — the Spanish contract title beside its
+ * reference — so no document has to shrink to match the others. Raising it
+ * silently re-introduces the old inconsistency: the long titles would fit down
+ * again while the short ones stayed big.
+ */
+const TITLE_SIZE = 12.5;
+
 /** Which family a run of text belongs to. */
 export type FontRole = 'body' | 'bodyBold' | 'bodyItalic' | 'display' | 'displayMedium';
 
@@ -148,8 +158,6 @@ export interface ContractPdfInput {
     netPrice?: number;
     /** VAT rate frozen on the reservation, as a FRACTION (0.21 = 21 %). */
     vatRate?: number;
-    /** Absent means the old VAT-inclusive tariffs. */
-    tariffIncludesVat?: boolean;
   };
   inspection?: {
     pickupKm?: number;
@@ -314,53 +322,24 @@ export function formatDayOnly(d?: Date, locale: ContractLocale = 'es'): string {
 const DEFAULT_VAT_RATE = 0.21;
 
 /**
- * Split a VAT-INCLUSIVE amount into base and tax.
+ * The tax split of a rental.
+ *
+ * ⚠️ **Tariffs are NET: VAT is added on top.** A vehicle at 30 €/day means 30 €
+ * of taxable base and the customer pays 36,30 €. `netPrice` is the number that
+ * was agreed, so it drives the split — never `finalPrice`, which is derived
+ * from it.
  *
  * `vat` is derived by subtraction so `base + vat === total` to the cent;
  * rounding both independently drifts, and a contract that does not add up is
  * the kind of detail a customer notices.
  *
- * A reservation created before VAT was recorded has no rate in its snapshot.
- * It falls back to the general rate, which is the one its price always
- * included — the field records the rate, it never changed it.
- */
-export function extractVat(
-  total?: number,
-  rate?: number
-): { base: number; vat: number; total: number; percent: number } {
-  const safeTotal = typeof total === 'number' && isFinite(total) && total > 0 ? total : 0;
-  const safeRate = typeof rate === 'number' && isFinite(rate) && rate >= 0 ? rate : DEFAULT_VAT_RATE;
-  const round = (n: number) => Math.round(n * 100) / 100;
-
-  const roundedTotal = round(safeTotal);
-  const base = round(roundedTotal / (1 + safeRate));
-
-  return {
-    base,
-    vat: round(roundedTotal - base),
-    total: roundedTotal,
-    percent: Math.round(safeRate * 100)
-  };
-}
-
-/**
- * The tax split of a rental, in the direction that rental was priced in.
- *
- * ⚠️ Tariffs are NET now: a vehicle at 30 €/day means 30 € of base and the
- * customer pays 36,30 €. But reservations created before that switch stored
- * VAT-INCLUSIVE prices, and they have to keep splitting the old way or every
- * contract already signed stops adding up. `tariffIncludesVat` is frozen on
- * the reservation; **absent means inclusive**, never today's default.
+ * Mirrors `vatBreakdownOf()` in `src/app/shared/utils/pricing.util.ts`. The
+ * duplication is deliberate — separate tsconfigs — so both sides move together.
  */
 export function vatBreakdownOf(pricing: {
-  finalPrice?: number;
   netPrice?: number;
   vatRate?: number;
-  tariffIncludesVat?: boolean;
 }): { base: number; vat: number; total: number; percent: number } {
-  const includesVat = pricing.tariffIncludesVat ?? true;
-  if (includesVat) return extractVat(pricing.finalPrice, pricing.vatRate);
-
   const round = (n: number) => Math.round(n * 100) / 100;
   const rate =
     typeof pricing.vatRate === 'number' && isFinite(pricing.vatRate) && pricing.vatRate >= 0
@@ -694,6 +673,18 @@ export class PdfBuilder {
   }
 
   /**
+   * Break to a new page unless `height` still fits below the cursor.
+   *
+   * Every drawing primitive protects its own line, which is not the same as
+   * protecting a block: a section label would fit, its rows would not, and the
+   * heading was left stranded alone at the foot of the page with its contents
+   * overleaf. Call this before a group that has to stay whole.
+   */
+  keepTogether(height: number): void {
+    this.ensureSpace(height);
+  }
+
+  /**
    * Every run of text that was set in a font missing one of its glyphs.
    *
    * pdf-lib does not complain: it draws a blank box. That is how "€" or a
@@ -970,9 +961,15 @@ export class PdfBuilder {
     const titleMax = this.pageWidth - this.margin * 2 - refWidth - 16;
     const title = opts.title.toUpperCase();
     const titleFont = this.fontFor('display', title);
-    // One line, always. The Spanish title is 45 characters and wrapped at 15pt;
-    // a two-line masthead reads like a mistake, and a shrunk one does not.
-    const titleSize = this.fitSize(title, 'display', 24, 10, titleMax);
+    // One line, always, and the SAME size on every document in every language.
+    //
+    // The size used to be "as big as fits", which is not a size at all: the
+    // quote and the booking confirmation came out at 24pt while the Spanish
+    // contract — the longest title, next to the longest reference — was fitted
+    // down to 12.5, and the English contract landed at 18. Three documents the
+    // customer reads side by side, three different mastheads. TITLE_SIZE is the
+    // size the tightest of them can hold, so nothing has to shrink to agree.
+    const titleSize = this.fitSize(title, 'display', TITLE_SIZE, 9, titleMax);
     const titleLines = this.wrap(title, titleSize, titleFont, titleMax);
 
     this.ensureSpace(titleSize * 1.4 * titleLines.length + 8);
@@ -1007,13 +1004,19 @@ export class PdfBuilder {
    * Small letter-spaced teal caps, the way the invoice labels each block.
    * Replaces the old 11pt bold heading: same call sites, quieter type.
    */
-  section(title: string, opts: { numbered?: number } = {}): void {
-    this.y -= 10;
+  section(title: string, opts: { numbered?: number; size?: number; lead?: number } = {}): void {
+    this.y -= opts.lead ?? 10;
     const label =
       opts.numbered !== undefined
         ? `${opts.numbered}. ${title.toUpperCase()}`
         : title.toUpperCase();
-    this.text(label, { size: 9.5, role: 'display', color: BRAND, tracking: 0.6, gap: 4 });
+    this.text(label, {
+      size: opts.size ?? 9.5,
+      role: 'display',
+      color: BRAND,
+      tracking: 0.6,
+      gap: 4
+    });
   }
 
   /** Sub-section title (smaller). */
@@ -1031,8 +1034,15 @@ export class PdfBuilder {
    * value keeps its place and the label is clipped to whatever room is left;
    * if the value alone would not fit, the pair wraps onto two lines instead.
    */
-  twoColumn(left: string, right: string, leftBold = false, rightBold = false): void {
-    const size = 8.2;
+  twoColumn(
+    left: string,
+    right: string,
+    leftBold = false,
+    rightBold = false,
+    opts: { size?: number; leading?: number } = {}
+  ): void {
+    const size = opts.size ?? 8.2;
+    const leading = opts.leading ?? 1.6;
     const lf = leftBold ? this.bold : this.font;
     const rf = rightBold ? this.bold : this.font;
     const gap = 12;
@@ -1047,7 +1057,7 @@ export class PdfBuilder {
       return;
     }
 
-    this.ensureSpace(size * 1.6);
+    this.ensureSpace(size * leading);
     this.put(
       this.truncate(left, lf, size, available),
       this.margin,
@@ -1057,7 +1067,7 @@ export class PdfBuilder {
       left.endsWith(':') || leftBold ? BODY : MUTED
     );
     this.put(right, this.pageWidth - this.margin - rightWidth, this.y - size, size, rf, BODY);
-    this.y -= size * 1.6;
+    this.y -= size * leading;
   }
 
   /**
@@ -1135,13 +1145,17 @@ export class PdfBuilder {
    * colour and weight alone. Set larger it shouted, and it does not need to
    * shout: it is visibly the sum of the two lines directly above.
    */
-  totalsBlock(rows: { label: string; value: string; total?: boolean }[]): void {
+  totalsBlock(
+    rows: { label: string; value: string; total?: boolean }[],
+    opts: { size?: number; leading?: number } = {}
+  ): void {
     const width = (this.pageWidth - this.margin * 2) * 0.62;
     const x = this.pageWidth - this.margin - width;
-    const size = 8.8;
+    const size = opts.size ?? 8.8;
+    const leading = opts.leading ?? 2;
 
     for (const row of rows) {
-      const height = size * 2;
+      const height = size * leading;
       this.ensureSpace(height);
 
       this.page.drawLine({
@@ -1184,8 +1198,14 @@ export class PdfBuilder {
    * a long label used to leave the value nowhere to go and the two ran
    * together on the first line.
    */
-  twoColumnWrap(left: string, right: string, leftBold = false, rightWidth?: number): void {
-    const size = 8.2;
+  twoColumnWrap(
+    left: string,
+    right: string,
+    leftBold = false,
+    rightWidth?: number,
+    opts: { size?: number; leading?: number } = {}
+  ): void {
+    const size = opts.size ?? 8.2;
     const lf = leftBold ? this.bold : this.font;
     const gap = 12;
     const labelWidth = lf.widthOfTextAtSize(left, size);
@@ -1193,10 +1213,18 @@ export class PdfBuilder {
     const width = Math.max(120, Math.min(rightWidth ?? maxRight, maxRight));
 
     const lines = this.wrap(right, size, this.font, width);
-    const lineHeight = size * 1.5;
+    const lineHeight = size * (opts.leading ?? 1.5);
     this.ensureSpace(lineHeight * Math.max(1, lines.length) + 2);
+    // The label's allowance is derived from a wrap width that was itself
+    // derived from the label, so recomputing it lands a hair BELOW the label's
+    // own measured width in floating point — and the ellipsis machinery then
+    // ate two characters off a label that fits. "Lugar de entre…" on a line
+    // with room to spare, on a PDF where there is no tooltip to reveal the
+    // rest. Only truncate when the label genuinely does not fit, which now
+    // only happens once the 120pt floor above has claimed the room.
+    const labelMax = this.pageWidth - this.margin * 2 - width - gap;
     this.put(
-      this.truncate(left, lf, size, this.pageWidth - this.margin * 2 - width - gap),
+      labelWidth <= labelMax + 0.25 ? left : this.truncate(left, lf, size, labelMax),
       this.margin,
       this.y - size,
       size,
@@ -1230,11 +1258,11 @@ export class PdfBuilder {
    * The text is also smaller than it was (11.5 → 9.2, the clause size), so the
    * summary no longer looks more important than the contract it summarises.
    */
-  highlightBox(index: number, text: string): void {
-    const size = 9.2;
+  highlightBox(index: number, text: string, opts: { size?: number; gap?: number } = {}): void {
+    const size = opts.size ?? 9.2;
     const numberColumn = 16;
     const lineHeight = size * 1.45;
-    const gapAfter = 7;
+    const gapAfter = opts.gap ?? 7;
 
     const lines = this.wrap(
       text,
@@ -1833,12 +1861,11 @@ export async function buildContractPdf(
   // The tariff and the two discounts are only printed when they moved the
   // price: a rental with no discount reads exactly as it did before.
   //
-  // ⚠️ The price is already VAT-inclusive. The base is EXTRACTED from it
-  // (base = total / 1.21). Adding the tax on top instead would inflate every
-  // contract by 21 %.
+  // ⚠️ Everything down to the taxable base is NET, including the tariff and
+  // both discounts. VAT is ADDED on top of `netPrice`; extracting it from the
+  // total instead would shrink every contract by 21 %.
   b.section(L.priceDeposit);
 
-  const finalPrice = input.reservation.finalPrice;
   const loyaltyDiscount = input.reservation.loyaltyDiscount;
   const manualAdjustment = input.reservation.manualAdjustment;
   const hasDiscounts = !!loyaltyDiscount || !!manualAdjustment;

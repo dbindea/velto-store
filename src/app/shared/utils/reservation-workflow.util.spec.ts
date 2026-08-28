@@ -5,6 +5,8 @@ import type { Inspection } from '@shared/models/inspection.model';
 import {
   buildWorkflowException,
   canCloseReservation,
+  canCreateReservationForClient,
+  clientTrustWarning,
   canGenerateSigningLink,
   canRefundDeposit,
   canStartPickup,
@@ -335,5 +337,47 @@ describe('buildWorkflowException', () => {
       contract: { status: 'generated' } as unknown as Contract
     };
     expect(canWithException(canStartPickup(ctx), ctx, 'startPickup').ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Customer trust level (M-1)
+//
+// `blocked` used to mean nothing: it was painted in the client's file and the
+// workflow ignored it, so a customer marked "do not rent" could be handed a
+// car. These pin down that `blocked` denies and `risk` only warns.
+// ---------------------------------------------------------------------------
+
+describe('canCreateReservationForClient', () => {
+  it('refuses a blocked customer', () => {
+    const decision = canCreateReservationForClient('blocked');
+    expect(decision.ok).toBe(false);
+    expect(reasonOf(decision)).toBe('workflow.clientBlocked');
+  });
+
+  it('allows every other level, including risk', () => {
+    for (const level of ['new', 'known', 'regular', 'risk'] as const) {
+      expect(canCreateReservationForClient(level).ok).toBe(true);
+    }
+  });
+
+  it('allows a customer with no level recorded', () => {
+    expect(canCreateReservationForClient(undefined).ok).toBe(true);
+  });
+});
+
+describe('clientTrustWarning', () => {
+  it('warns about a risk customer without blocking them', () => {
+    expect(clientTrustWarning('risk')).toBe('workflow.clientRisk');
+    expect(canCreateReservationForClient('risk').ok).toBe(true);
+  });
+
+  it('also has something to say about a blocked one', () => {
+    expect(clientTrustWarning('blocked')).toBe('workflow.clientBlocked');
+  });
+
+  it('says nothing about an ordinary customer', () => {
+    expect(clientTrustWarning('known')).toBe('');
+    expect(clientTrustWarning(undefined)).toBe('');
   });
 });
