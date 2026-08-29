@@ -63,6 +63,9 @@ const D = {
 } as const;
 
 export interface DocumentCompany {
+  /** Marca, para cabecera y metadatos. Ver `company-config.ts`. */
+  brandName: string;
+  /** Razón social: aquí solo la usa el pie legal, junto al NIF. */
   legalName: string;
   taxId: string;
   address: string;
@@ -288,17 +291,18 @@ async function startDocument(
   reference: string
 ): Promise<{ doc: PDFDocument; b: PdfBuilder }> {
   const doc = await PDFDocument.create();
-  doc.setTitle(`${company.legalName} — ${title}${reference ? ' ' + reference : ''}`.trim());
-  doc.setAuthor(company.legalName);
+  doc.setTitle(`${company.brandName} — ${title}${reference ? ' ' + reference : ''}`.trim());
+  doc.setAuthor(company.brandName);
   doc.setSubject(title);
-  doc.setCreator(company.legalName);
-  doc.setProducer(`${company.legalName} · pdf-lib`);
+  doc.setCreator(company.brandName);
+  doc.setProducer(`${company.brandName} · pdf-lib`);
 
   const b = new PdfBuilder(doc);
   await b.init(title, reference, companyFooterLines(company));
 
   b.documentHeader({
-    companyName: company.legalName,
+    // Marca arriba; el pie legal de cada página lleva la razón social y el NIF.
+    companyName: company.brandName,
     companyLines: companyHeaderLines(company),
     title,
     reference

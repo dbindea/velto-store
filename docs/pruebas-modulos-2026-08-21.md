@@ -1241,3 +1241,94 @@ despliegue manual de las 21:26), las 11 functions en `europe-west1`, los 8
 **Estado final: los dos entornos idénticos** — Firestore `eur3`, Storage `eu`
 multirregión, functions `europe-west1` — y cada uno hablando solo con su propia
 base de datos, comprobado leyendo los bundles servidos.
+
+---
+
+# El login obligaba a refrescar — 29 de agosto de 2026
+
+## C-21 · La caché del estado de autorización servía una respuesta caducada
+
+**Síntoma:** entras con Google, la ventana de Google se cierra, y la pantalla de
+login se queda ahí. Hay que refrescar el navegador para entrar.
+
+**Causa.** `authorizedState$` llevaba `shareReplay({ bufferSize: 1 })` para no
+releer `authorizedUsers` en cada navegación. El orden lo estropea:
+
+1. Al abrir `/login`, el `publicGuard` se suscribe. No hay sesión → emite
+   `false`, y el buffer **se lo queda**.
+2. El operador entra. `loginWithGoogle()` comprueba la autorización, sale bien y
+   navega a `/dashboard`.
+3. El `authGuard` se suscribe y el buffer le sirve **el `false` de antes**, antes
+   de que la relectura del nuevo usuario termine. Con `take(1)`, esa es la
+   respuesta definitiva → de vuelta a `/login`.
+4. Al refrescar, el buffer nace vacío y la sesión ya está restaurada: entra. De
+   ahí que «refrescando sí funciona».
+
+Es una carrera, así que fallaba casi siempre pero no siempre — lo peor para
+diagnosticarlo desde fuera.
+
+**Lo aplicado.** Fuera el `shareReplay`: cada suscripción parte del usuario
+**actual**, que es lo único correcto justo cuando el usuario acaba de cambiar. El
+ahorro de lecturas se conserva con una caché **por email** dentro de
+`checkAuthorization()`, que es la diferencia que importa: la clave es el usuario,
+así que uno nuevo no puede recibir la respuesta del anterior. Se guarda la
+promesa —dos guards simultáneos comparten una sola lectura— y un fallo de red no
+se cachea. Se vacía al cerrar sesión.
+
+**Verificado en el navegador:** login → `/dashboard` directo, sidebar y
+contenido cargados, sin refrescar.
+
+## Logo de marca más grande
+
+En el carril lateral y en la tarjeta de login el logo se dimensionaba por
+**alto**, y el ancho sobraba: 174×48 px en un carril de 260, y 160 px de ancho
+en una tarjeta con 316 útiles. Ahora manda el ancho —con `aspect-ratio` del
+propio fichero, que es lo que impide deformarlo— y queda un margen pequeño a
+cada lado: **240×66** en el carril y **92%** del ancho útil en el login.
+
+## C-22 · Ciclo completo con contrato firmado y email — 29 de agosto de 2026
+
+Primer recorrido de extremo a extremo sobre la base **vacía** de `velto-store`,
+después de separar los dos entornos. Objetivo real: comprobar que
+`sendSignedContractEmail` envía, que era lo que arreglaba M-22.
+
+**Lo recorrido**, en orden, sin saltarse ningún paso del workflow:
+
+| Paso | Resultado |
+|---|---|
+| Vehículo desde cero | Renault Clio 1234KDB · ACRISS `EDMN` |
+| Cliente desde cero | Dorel Bindea · `dbindea@gmail.com` |
+| Presupuesto (sin crear reserva) | PDF en Storage + enlace corto |
+| Reserva | 4 días · 200 € base + 42 € IVA = **242 €** |
+| Cobro de la señal | 50 € · estado → **Confirmado** |
+| Contrato PDF | `C-TUKT8S-2026` |
+| Link de firma | ruta pública, sin login |
+| Firma del cliente | firmado a las 11:18:57 |
+| **Email del contrato firmado** | **enviado a las 11:20:03** |
+
+**Lo que confirma cada cosa.**
+
+`emailedAt: 2026-08-29T11:20:03.933Z` en el documento del contrato es la prueba
+del envío, no un mensaje de la UI: ese campo se escribe **después** de que la
+API de Resend responda `ok`, así que no puede existir si el envío falló.
+
+El enlace corto del presupuesto respondió `200 application/pdf` (1,2 MB) tanto
+por el dominio propio como por Storage, lo que confirma que el rewrite `/d/**`
+sobrevivió al cambio de región.
+
+El estado pasó a `confirmed` al cobrar la señal, y la fila sembrada quedó
+liquidada en vez de duplicarse — M-14 y `reservationStatusAfterPayment` siguen
+en pie sobre datos nuevos.
+
+**Transformaciones de texto, verificadas campo a campo.** Escribiendo todo en
+minúsculas: `renault` → `Renault`, `1234 kdb` → `1234KDB` (mayúsculas y sin
+espacio), `x1234567l` → `X1234567L`, y `1.5 dCi Zen` **conserva el `dCi`**.
+
+**Dos fallos encontrados**, ninguno bloqueante, los dos anotados:
+
+- **M-24** · «oficina arganda del rey» sale «Oficina Arganda **Del** Rey». El
+  capitalizado no respeta las preposiciones, y esto **se imprime en el contrato**.
+- **M-25** · La dirección del cliente es el único campo de texto que no recibe
+  ninguna transformación, aunque también va impresa en el contrato.
+
+**Sin probar en producción**: el ciclo se hizo entero contra `velto-store`.

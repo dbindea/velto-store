@@ -60,7 +60,110 @@ Dos numeraciones, para no mezclar cosas distintas:
   **Resuelto el 28 de agosto de 2026**, junto con M-12: el fichero entero estaba
   mal, no solo faltaba este índice.
 
+- [x] **M-22 · Los secrets no llegaban a las functions que los usan.** *(29 ago 2026)*
+  `sendSignedContractEmail` leía `process.env.RESEND_API_KEY` **sin declarar el
+  secret** en las opciones del callable. En Cloud Functions v2 un secret que no
+  aparece en `secrets: [...]` no se monta en el runtime: la variable sale
+  `undefined` y la función abortaba con «Resend no está configurado» aunque el
+  secret estuviera puesto. **El envío del contrato firmado por email no ha
+  funcionado nunca en ninguno de los dos entornos.**
+
+  Corregido: `defineSecret('RESEND_API_KEY')`, declarado en `secrets: [...]` y
+  leído **dentro** del handler con `.value()` — en el módulo se evalúa antes de
+  que el runtime resuelva los secrets (F-12).
+
+  De paso, el remitente deja de ser un secret: `RESEND_FROM_EMAIL` no existía en
+  ningún proyecto y era la dirección de la empresa duplicada. Ahora sale de
+  `companyConfig().email`, igual que la razón social del asunto y de la firma.
+
+  **Falta por tu parte:** crear `RESEND_API_KEY` en producción
+  (`firebase functions:secrets:set RESEND_API_KEY --project prod`). Sin él el
+  despliegue de producción **falla**, porque el secret ya está declarado.
+
+- [~] **M-24 · El capitalizado escribe «Del» con mayúscula.** *(29 ago 2026)*
+  «oficina arganda del rey» sale «Oficina Arganda **Del** Rey», porque
+  `capitalizeWords()` no distingue preposiciones.
+
+  **Descartado por Dorel el mismo día: «es insignificante el error».** No se
+  toca. Si algún día se retoma, el arreglo es una lista de partículas que no se
+  capitalizan salvo en primera posición, cuidando de no romper `dCi` / `TCe`,
+  que sí están cubiertos por tests.
+
+- [x] **M-25 · La dirección del cliente no se transforma.** *(29 ago 2026)*
+  Es el único campo de texto que se guarda tal cual se teclea, aunque se imprime
+  en el contrato como domicilio del arrendatario.
+
+  **Decisión de Dorel: se queda como está, «a elección del cliente».** Una
+  dirección lleva abreviaturas, números y códigos postales; automatizarla tiene
+  más formas de salir mal que de salir bien.
+
+- [x] **M-26 · La razón social se colaba donde tocaba la marca.** *(29 ago 2026)*
+  `VELTO MOBILITY, S.L.` salía en el asunto del email, en el «Gracias por
+  confiar en…» —con el punto doble de regalo, porque `S.L.` ya acaba en punto—,
+  en la cabecera de los tres PDF, en sus metadatos y en la pantalla pública de
+  firma.
+
+  **Criterio de Dorel:** la razón social solo donde la empresa comparece como
+  persona jurídica, o sea **acompañada del NIF**. Todo lo demás, la marca: el
+  cliente no sabe qué es una S.L. ni tiene por qué saberlo.
+
+  Resuelto con `brandName` en `CompanyConfig`, separado de `legalName`. Quedan
+  con razón social exactamente cuatro sitios, los cuatro con NIF al lado: bloque
+  de datos del arrendador, «Razón social:» de la página 2, casilla de firma del
+  arrendador y pie legal de cada página. Verificado sobre el PDF real desplegado.
+
+- [x] **M-27 · La constancia de firma salía en la casilla del arrendador.** *(29 ago 2026)*
+  «Firmado el 29/08/2026, 13:18 por Dorel Bindea» se pintaba **debajo de la
+  columna izquierda**, la de la empresa: leía como si hubiera firmado el
+  arrendador con el nombre del cliente.
+
+  La causa era de maquetación, no de datos: la línea se dibujaba como texto
+  normal **después** del bloque de firmas, y el texto normal del builder arranca
+  en el margen izquierdo. Ahora viaja dentro de `signatureBlocks()` como
+  `renterSignedNote` y se pinta en la columna del arrendatario, partida en
+  líneas en vez de truncada — lleva dentro el nombre del firmante.
+
+  **Cubierto por un test**: `layout.spec.ts` renderiza el contrato **firmado** y
+  comprueba que la constancia cae en la mitad derecha y el arrendador en la
+  izquierda, en la misma página.
+
+- [x] **M-28 · Correo distinto en cada entorno.** *(29 ago 2026)*
+  Producción pasa a `reservas@veltomobility.com`; desarrollo se queda en
+  `reservas@veltorent.com`.
+
+  Resuelto con `functions/.env.<proyecto>`, que Firebase inyecta **sin declarar
+  nada** — al contrario que los secrets. Es además la salida natural para el
+  resto de `VELTO_COMPANY_*` y para lo pendiente en M-23 y M-4: ninguno de esos
+  valores es un secreto.
+
+  **Verificado, no supuesto**: se puso un correo distinguible en desarrollo, se
+  desplegó, se generó un justificante y salió impreso `prueba-env@veltorent.com`
+  en el PDF. Después se devolvió el valor bueno y se redesplegó.
+
+  ⚠️ **Pendiente por tu parte: verificar `veltomobility.com` en Resend.** Sin
+  eso, el envío del contrato en producción falla con 403. Y el 403 no explica
+  por qué.
+
+- [ ] **M-23 · Redsys tiene el mismo fallo, y sigue abierto.**
+  `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero lee
+  `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL` y `REDSYS_ENVIRONMENT` de
+  `process.env` sin declararlos. Salen `undefined` y la función responde «Redsys
+  no está configurado» **en los dos entornos**, aunque en dev los tres secrets
+  existen.
+
+  No se ha arreglado a la vez que M-22 a propósito: en producción **no existe
+  ninguno de los tres**, y declarar un secret inexistente tumba el despliegue.
+  El orden es crearlos en prod y después añadirlos al `secrets: [...]`.
+
+  Alternativa a decidir: ninguno de los tres es un secreto de verdad —el código
+  de comercio y el terminal van en el formulario que ve el cliente— así que
+  encajarían mejor en `functions/.env.<proyecto>`, que Firebase inyecta sin
+  declarar nada. Solo `REDSYS_SECRET_KEY` necesita Secret Manager.
+
 - [ ] **M-4 · Verificar `VELTO_PUBLIC_BASE_URL` en producción.**
+  ⚠️ Ampliado el 29 de agosto: además de no estar puesto en producción,
+  **tampoco está declarado** en `signingLink` ni en `documentLink`, así que en
+  dev tampoco llega. Mismo caso que M-23.
   El link de firma se construyó con `localhost:4321` en las pruebas porque el
   frontend sustituye el marcador con su propio origen. Confirmar que en
   producción el secret está puesto y el link que se copia para WhatsApp apunta
@@ -265,7 +368,14 @@ cliente, cliente rápido, reserva, contrato, firma, entrega, devolución con
 cargos extra, resolución de fianza y cierre. Queda:
 
 - [ ] Cobro libre con Redsys (`free_payment`) contra el entorno de test real
-- [ ] Envío del contrato firmado por email con Resend
+      — **bloqueado por M-23**: la function aborta antes de llamar a Redsys
+- [x] Envío del contrato firmado por email con Resend — **probado de extremo a
+      extremo el 29 de agosto de 2026** en `velto-store`, ciclo completo desde
+      cero: vehículo → cliente → presupuesto → reserva → señal → contrato →
+      link de firma → firma del cliente → email. Contrato `C-TUKT8S-2026`,
+      `emailedAt: 2026-08-29T11:20:03.933Z` en Firestore, que solo se escribe si
+      Resend devolvió `ok`. Remitente `reservas@veltorent.com`, destinatario
+      `dbindea@gmail.com`. **Sin probar todavía en producción.**
 - [ ] Módulo de mantenimiento de vehículos (colección aún vacía)
 - [ ] Subida de fotos dentro de una inspección (probada en vehículos, no en
       inspecciones)
@@ -516,3 +626,46 @@ Un porcentaje en la ficha del cliente que se aplica a sus reservas nuevas.
 
 **Queda fuera:** el descuento no se aplica a reservas ya creadas, por diseño —
 el snapshot es histórico congelado.
+
+## N-5 · Pre-reserva desde la web pública *(anotado el 29 ago 2026 — sin decidir)*
+
+El cliente elige coche en una web pública, recibe por WhatsApp un enlace de
+pre-reserva con **validez de 3 horas**, y en ese plazo paga la señal por TPV o
+contacta para pagarla en efectivo. Si es conocido y es horario de oficina,
+Dorel puede darla por confirmada **sin señal**. Lo que no se paga, se
+autocancela.
+
+**Lo que se propuso, y por qué.** Una colección aparte, `preReservations`, y no
+un estado más dentro de `reservations`:
+
+- Una pre-reserva **no tiene cliente** — alguien de la web deja un teléfono y
+  poco más. Meterla en `reservations` obliga a inventar clientes fantasma.
+- Sus reglas de Firestore son distintas: la lee un desconocido con un token.
+- Al caducar se queda donde está y **no ensucia** el listado de reservas ni los
+  informes, como sí hace hoy una `cancelled`.
+- Al pagar **se convierte**: nace la reserva de verdad y el flujo arranca en el
+  paso 1, sin que el workflow sepa que existió la pre-reserva.
+
+Forma tentativa: vehículo y precio congelados como en la reserva, `contact`
+suelto, `status`, **`expiresAt`**, `token`, `holdMinutes`, y `confirmedBy` /
+`confirmedReason` para cuando se confirma a mano sin cobro.
+
+⚠️ **Lo delicado es la disponibilidad.** `searchAvailability()` tendría que
+mirar también las pre-reservas vivas, y con una regla escrita: *una caducada no
+bloquea aunque el trigger todavía no la haya marcado*. Fiarse solo del trigger
+deja una ventana en la que el coche está bloqueado por algo muerto.
+
+El trigger sería una function **programada** (`onSchedule`, cada 10-15 min) —
+la primera del proyecto, hoy todas son llamables o webhooks — y trae consigo
+Cloud Scheduler, que hay que habilitar en los dos proyectos.
+
+**Cuatro decisiones antes de tocar nada:**
+
+1. ¿La pre-reserva **bloquea** el coche de verdad durante las 3 horas, o pueden
+   convivir varias y gana quien paga? Lo primero es honesto, lo segundo vende.
+2. Al confirmar a mano sin señal, ¿la reserva nace `confirmed` con señal 0 y
+   motivo obligatorio —como la fianza exenta— o `reserved` esperando cobro?
+3. Si el pago por TPV llega **dos minutos después** de caducar, ¿se acepta o se
+   devuelve? Redsys puede confirmar tarde.
+4. El PDF: ¿un cuarto documento, o el presupuesto con una caja de «válido hasta
+   las HH:MM»? Lo segundo reaprovecha plantilla, precios e IVA.

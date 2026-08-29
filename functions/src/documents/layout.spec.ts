@@ -16,10 +16,16 @@ import { PDFDocument } from 'pdf-lib';
 import { buildContractPdf, PdfBuilder, formatIdDocument, companyFooterLines } from '../contracts/pdf';
 import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
 import { CONTRACT_CLAUSES } from '../contracts/clauses';
-import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_REGISTRY } from '../company-config';
+import {
+  COMPANY_ADDRESS,
+  COMPANY_BRAND_NAME,
+  COMPANY_LEGAL_NAME,
+  COMPANY_REGISTRY
+} from '../company-config';
 import type { ContractLocale } from '../contracts/contract-types';
 
 const company = {
+  brandName: COMPANY_BRAND_NAME,
   legalName: COMPANY_LEGAL_NAME,
   taxId: 'B88866900',
   registry: COMPANY_REGISTRY,
@@ -223,6 +229,56 @@ describe('the real documents, in every language', () => {
       }, 30_000);
     }
   }
+
+  /**
+   * La constancia de firma pertenece a quien firmó.
+   *
+   * Salía debajo de la casilla del ARRENDADOR —la columna izquierda— porque se
+   * pintaba como una línea de texto normal después del bloque de firmas, y el
+   * texto normal arranca en el margen izquierdo. El resultado leía como si la
+   * empresa hubiese firmado con el nombre del cliente.
+   */
+  it('la constancia de firma va en la columna del arrendatario', async () => {
+    let captured: any = null;
+    await buildContractPdf(
+      {
+        contractNumber: 'C-P2RJP0-2026',
+        company,
+        client,
+        vehicle,
+        reservation: { ...rental, ...pricing },
+        clauses: CONTRACT_CLAUSES,
+        preferredLocale: 'es',
+        generatedAt: new Date('2026-08-27T09:00:00Z'),
+        signedAt: new Date('2026-08-29T11:18:57Z'),
+        signerName: client.fullName,
+        onLayout: (b: any) => (captured = b)
+      },
+      true
+    );
+    if (!captured) throw new Error('onLayout was never called');
+
+    const note = captured.boxes.find((box: any) => box.text.startsWith('Firmado el'));
+    expect(note, 'no se pintó la constancia de firma').toBeTruthy();
+
+    // A4 mide 595,28 pt: cualquier cosa que empiece antes de la mitad está en
+    // la columna del arrendador.
+    expect(note.x).toBeGreaterThan(595.28 / 2);
+
+    // Y en esa misma página el arrendatario está a la derecha y el arrendador a
+    // la izquierda, que es lo que hace que la comprobación de arriba signifique
+    // algo. Se filtra por página: la razón social también sale en el pie legal
+    // de todas, y el pie va centrado.
+    const sigPage = captured.boxes.filter(
+      (box: any) => box.page === note.page && Math.abs(box.y - note.y) < 60
+    );
+    // Por el principio del nombre, no por el nombre entero: la casilla trunca
+    // los nombres largos, y el de este cliente lo es a propósito.
+    const renter = sigPage.find((box: any) => box.text.startsWith('EUROCONSTRUCCIONES'));
+    const lessor = sigPage.find((box: any) => box.text.startsWith('VELTO MOBILITY, S.L.'));
+    expect(renter.x).toBeGreaterThan(595.28 / 2);
+    expect(lessor.x).toBeLessThan(595.28 / 2);
+  }, 30_000);
 
   it('renders every document to a non-trivial PDF', async () => {
     for (const locale of LOCALES) {

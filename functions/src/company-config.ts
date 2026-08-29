@@ -9,6 +9,22 @@
  */
 
 export interface CompanyConfig {
+  /**
+   * La marca: **VELTO MOBILITY**, sin forma societaria.
+   *
+   * Es la que se usa al hablarle al cliente — asunto del email, cabecera de un
+   * documento, agradecimiento, pie de la página de firma. Un cliente no sabe
+   * qué es una S.L. y no tiene por qué saberlo.
+   */
+  brandName: string;
+  /**
+   * La razón social: **VELTO MOBILITY, S.L.**
+   *
+   * Solo donde la empresa comparece como persona jurídica, es decir **donde va
+   * acompañada del NIF y del resto de datos fiscales**: el bloque de datos del
+   * arrendador, la casilla de firma del arrendador y el pie legal de cada
+   * página. En cualquier otro sitio va la marca.
+   */
   legalName: string;
   taxId: string;
   registry: string;
@@ -28,6 +44,7 @@ export interface CompanyConfig {
  */
 export function companyConfig(): CompanyConfig {
   return {
+    brandName: process.env.VELTO_COMPANY_BRAND || COMPANY_BRAND_NAME,
     legalName: process.env.VELTO_COMPANY_NAME || COMPANY_LEGAL_NAME,
     taxId: process.env.VELTO_COMPANY_TAX_ID || 'B88866900',
     registry: process.env.VELTO_COMPANY_REGISTRY || COMPANY_REGISTRY,
@@ -42,9 +59,19 @@ export function companyConfig(): CompanyConfig {
 }
 
 /**
+ * La marca, sin forma societaria. Este es el nombre por defecto: si dudas entre
+ * los dos, es este.
+ */
+export const COMPANY_BRAND_NAME = 'VELTO MOBILITY';
+
+/**
  * Written in capitals on purpose. The name is set this way on every document
  * the company issues, so it is stored uppercase rather than uppercased at each
  * render — otherwise one template forgets and the branding goes soft.
+ *
+ * ⚠️ **Acaba en punto** (`S.L.`). Cualquier plantilla que lo meta al final de
+ * una frase produce dos puntos seguidos: «Gracias por confiar en VELTO
+ * MOBILITY, S.L..». Otra razón para que en prosa vaya `brandName`.
  */
 export const COMPANY_LEGAL_NAME = 'VELTO MOBILITY, S.L.';
 

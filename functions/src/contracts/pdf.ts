@@ -108,6 +108,9 @@ function resolveFontPath(filename: string): string {
 export interface ContractPdfInput {
   contractNumber?: string;
   company: {
+    /** Marca, para todo lo que le habla al cliente. Ver `company-config.ts`. */
+    brandName: string;
+    /** Razón social, solo donde comparece junto al NIF. */
     legalName: string;
     taxId: string;
     registry?: string;
@@ -1468,6 +1471,15 @@ export class PdfBuilder {
     boxHeight?: number;
     /** Wording for the lessor's digital signature. */
     digitallySignedLabel: string;
+    /**
+     * «Firmado el {fecha} por {nombre}», bajo la columna del ARRENDATARIO.
+     *
+     * Viaja aquí y no como una línea suelta después del bloque porque el texto
+     * normal del builder arranca en el margen izquierdo, que es la columna del
+     * arrendador: la frase acababa debajo de la casilla de la empresa,
+     * atribuyéndole a ella la firma que había hecho el cliente.
+     */
+    renterSignedNote?: string;
   }): void {
     const boxH = opts.boxHeight ?? 90;
     const innerW = this.pageWidth - this.margin * 2 - 30;
@@ -1557,6 +1569,19 @@ export class PdfBuilder {
       this.put(this.truncate(opts.renterId, this.font, 8, colW), rightX, this.y - 8, 8, this.font, MUTED);
     }
     this.y -= 12;
+
+    // La constancia de la firma, en la columna de quien firmó. Se parte en
+    // varias líneas en vez de truncarse: lleva dentro el nombre del firmante,
+    // y un nombre cortado con puntos suspensivos en una constancia de firma no
+    // vale para nada.
+    if (opts.renterSignedNote) {
+      const noteFont = this.italic;
+      for (const line of this.wrap(opts.renterSignedNote, 8, noteFont, colW)) {
+        this.put(line, rightX, this.y - 8, 8, noteFont, MUTED);
+        this.y -= 10;
+      }
+      this.y -= 2;
+    }
   }
 
   skip(dy: number): void {
@@ -1719,11 +1744,13 @@ export async function buildContractPdf(
   };
 
   const doc = await PDFDocument.create();
-  doc.setTitle(`${input.company.legalName} — ${L.headerLabel} ${input.contractNumber || ''}`.trim());
-  doc.setAuthor(input.company.legalName);
+  // Metadatos: marca. El título del PDF es lo que el cliente ve en la pestaña
+  // del navegador y en el nombre de la descarga.
+  doc.setTitle(`${input.company.brandName} — ${L.headerLabel} ${input.contractNumber || ''}`.trim());
+  doc.setAuthor(input.company.brandName);
   doc.setSubject(`${L.headerLabel} — ${input.contractNumber || ''}`);
-  doc.setCreator(input.company.legalName);
-  doc.setProducer(`${input.company.legalName} · pdf-lib`);
+  doc.setCreator(input.company.brandName);
+  doc.setProducer(`${input.company.brandName} · pdf-lib`);
 
   const b = new PdfBuilder(doc);
   await b.init(L.headerLabel, input.contractNumber || '', companyFooterLines(input.company));
@@ -1732,7 +1759,9 @@ export async function buildContractPdf(
   // PAGE 1 — COVER + FRONT-PAGE SUMMARY
   // -------------------------------------------------------------------------
   b.documentHeader({
-    companyName: input.company.legalName,
+    // Cabecera: marca. Los datos fiscales van justo debajo, en `companyLines`,
+    // y la razón social completa en el pie legal de cada página.
+    companyName: input.company.brandName,
     companyLines: companyHeaderLines(input.company),
     title: L.headerLabel,
     reference: input.contractNumber
@@ -1975,17 +2004,14 @@ export async function buildContractPdf(
     renterName: input.client.fullName,
     renterId,
     renterPng,
-    digitallySignedLabel: L.digitallySigned
+    digitallySignedLabel: L.digitallySigned,
+    renterSignedNote:
+      signed && input.signedAt
+        ? `${L.signedOn} ${formatDate(input.signedAt, loc)} ${L.by} ${
+            input.signerName || input.client.fullName
+          }`
+        : undefined
   });
-
-  if (signed && input.signedAt) {
-    b.text(
-      `${L.signedOn} ${formatDate(input.signedAt, loc)} ${L.by} ${
-        input.signerName || input.client.fullName
-      }`,
-      { size: 9, italic: true, color: [0.3, 0.3, 0.3], gap: 6 }
-    );
-  }
 
   // The company's identity block used to be repeated here, under the
   // signatures. It is already on the footer of every page, this one included,
