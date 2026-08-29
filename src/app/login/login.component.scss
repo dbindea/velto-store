@@ -30,10 +30,20 @@
   justify-content: center;
   margin: 0 auto 1.5rem;
 
+  /**
+   * Dimensionado por ANCHO, no por alto, igual que en el carril lateral: con
+   * `height: 44px` el logo salía a 160px dentro de una tarjeta de 316px útiles
+   * y sobraba la mitad del sitio.
+   *
+   * El 92% es el «poquito» de margen a cada lado — a 100% quedaría pegado al
+   * borde del texto de debajo. `aspect-ratio` es la proporción del propio
+   * fichero, que es lo que impide que se deforme.
+   */
   app-brand-logo {
     display: block;
-    height: 44px;
-    max-width: 100%;
+    width: 92%;
+    aspect-ratio: 1133.86 / 311.81;
+    max-height: 96px;
   }
 
 }

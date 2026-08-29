@@ -26,6 +26,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { firestore } from '../admin-guard';
+import { companyConfig } from '../company-config';
 import type { ContractLocale } from './contract-types';
 import { pickBundle } from './clauses';
 
@@ -50,7 +51,14 @@ export interface PublicContractView {
   companyName: string;
 }
 
-const VELTO_COMPANY_NAME = process.env.VELTO_COMPANY_NAME || 'VELTO MOBILITY';
+/**
+ * La página pública de firma habla de tú a tú con el cliente, así que lleva la
+ * **marca**. Antes leía `VELTO_COMPANY_NAME`, que es la razón social: coincidía
+ * de puro azar, porque ese valor no está puesto y caía al literal de aquí. En
+ * cuanto alguien lo configurase, al cliente le habría aparecido «S.L.» en la
+ * cabecera de la pantalla donde firma.
+ */
+const brandName = () => companyConfig().brandName;
 
 function toDate(value: any): Date | undefined {
   if (!value) return undefined;
@@ -138,7 +146,7 @@ export const getContractForSigning = functions.https.onCall(
       highlights: buildHighlights(contract),
       locale: resolveLocale(contract),
       status: effectiveStatus,
-      companyName: VELTO_COMPANY_NAME
+      companyName: brandName()
     };
   }
 );
@@ -151,7 +159,7 @@ function invalidView(): PublicContractView {
     highlights: [],
     locale: 'es',
     status: 'invalid',
-    companyName: VELTO_COMPANY_NAME
+    companyName: brandName()
   };
 }
 

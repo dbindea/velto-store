@@ -41,7 +41,7 @@
 .sidebar-header {
   // Narrower side padding than the rest of the sidebar: the logo is the only
   // thing in this row, and the reclaimed width is what lets the wordmark grow.
-  padding: 1.35rem 1rem;
+  padding: 1.2rem 0.6rem;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -79,7 +79,16 @@ app-brand-logo {
    */
   width: 100%;
   aspect-ratio: 1133.86 / 311.81;
-  max-height: 48px;
+
+  /**
+   * El tope tiene que quedar POR ENCIMA de lo que da el ancho, o manda él y
+   * sobra sitio a los lados: con 48px el logo salía a 174px en un carril de
+   * 260px y quedaban 27px muertos a cada lado. Con el padding actual el ancho
+   * disponible es ~241px, que a esta proporción son ~66px de alto — así que
+   * 72px deja que mande el ancho y sigue protegiendo de que el logo invada la
+   * navegación si algún día se ensancha el carril.
+   */
+  max-height: 72px;
 }
 
 .sidebar-nav {

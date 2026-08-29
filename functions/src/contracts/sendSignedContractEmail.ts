@@ -5,8 +5,14 @@
  * Resend's HTTPS API.
  *
  * Secrets (set with `firebase functions:secrets:set`):
- *   RESEND_API_KEY
- *   RESEND_FROM_EMAIL (default: reservas@veltorent.com)
+ *   RESEND_API_KEY  — declarado abajo con `defineSecret` Y listado en las
+ *                     opciones del callable. Las dos cosas: un secret que no
+ *                     aparece en `secrets: [...]` no se monta en el runtime,
+ *                     así que `process.env.RESEND_API_KEY` sale `undefined`
+ *                     por mucho que el secret exista en Secret Manager.
+ *
+ * El remitente NO es un secret: es la dirección de la empresa, la misma que
+ * va impresa en los documentos, y sale de `companyConfig()`.
  *
  * The signed PDF is downloaded from Storage and attached to the email
  * (filename: contrato-firmado-{contractNumber}.pdf).
@@ -20,10 +26,11 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { defineSecret } from 'firebase-functions/params';
 import { firestore, storageBucket } from '../admin-guard';
+import { companyConfig } from '../company-config';
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'reservas@veltorent.com';
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
 interface SendRequest {
@@ -68,6 +75,9 @@ function escapeHtml(s: string): string {
 }
 
 export const sendSignedContractEmail = functions.https.onCall(
+  {
+    secrets: [RESEND_API_KEY]
+  },
   async (request): Promise<SendResponse> => {
     const data = request.data as SendRequest;
     if (!request.auth) {
@@ -76,12 +86,17 @@ export const sendSignedContractEmail = functions.https.onCall(
     if (!data?.contractId) {
       throw new functions.https.HttpsError('invalid-argument', 'contractId es requerido');
     }
-    if (!RESEND_API_KEY) {
+
+    // Dentro del handler, no al cargar el módulo: el runtime resuelve los
+    // secrets después de construir el grafo de módulos (F-12).
+    const apiKey = RESEND_API_KEY.value();
+    if (!apiKey) {
       throw new functions.https.HttpsError(
         'failed-precondition',
         'Resend no está configurado. Configura RESEND_API_KEY.'
       );
     }
+    const company = companyConfig();
 
     const db = firestore();
     const storage = storageBucket();
@@ -118,22 +133,28 @@ export const sendSignedContractEmail = functions.https.onCall(
     const pickup = formatDate(toDate(contract.reservationSnapshot?.pickupDateTime));
     const ret = formatDate(toDate(contract.reservationSnapshot?.returnDateTime));
 
-    const subject = 'Contrato de alquiler VELTO MOBILITY';
+    // Todo el email va con la MARCA, no con la razón social: es un mensaje al
+    // cliente, no un documento fiscal. El contrato adjunto ya lleva la razón
+    // social donde corresponde, junto al NIF.
+    const subject = `Contrato de alquiler ${company.brandName}`;
     const html = `
       <p>Hola ${escapeHtml(clientName)},</p>
       <p>Adjuntamos el contrato firmado correspondiente a la reserva del vehículo
         <strong>${escapeHtml(vehicleLabel)}</strong> con fechas
         <strong>${escapeHtml(pickup)}</strong> a <strong>${escapeHtml(ret)}</strong>.
       </p>
-      <p>Gracias por confiar en VELTO MOBILITY.</p>
-      <p>VELTO MOBILITY<br/>reservas@veltorent.com</p>
+      <p>Gracias por confiar en ${escapeHtml(company.brandName)}.</p>
+      <p>${escapeHtml(company.brandName)}<br/>${escapeHtml(company.email)}</p>
     `;
-    const text = `Hola ${clientName},\n\nAdjuntamos el contrato firmado correspondiente a la reserva del vehículo ${vehicleLabel} con fechas ${pickup} a ${ret}.\n\nGracias por confiar en VELTO MOBILITY.\n\nVELTO MOBILITY\nreservas@veltorent.com`;
+    const text = `Hola ${clientName},\n\nAdjuntamos el contrato firmado correspondiente a la reserva del vehículo ${vehicleLabel} con fechas ${pickup} a ${ret}.\n\nGracias por confiar en ${company.brandName}.\n\n${company.brandName}\n${company.email}`;
 
     const filename = `contrato-firmado-${contract.contractNumber || contract.id}.pdf`;
 
+    // ⚠️ Resend solo acepta remitentes de un dominio verificado en la cuenta.
+    // Si `company.email` cambia a un dominio sin verificar, la API responde 403
+    // y el contrato se queda sin enviar.
     const resendPayload = {
-      from: RESEND_FROM_EMAIL,
+      from: company.email,
       to: [to],
       subject,
       html,
@@ -150,7 +171,7 @@ export const sendSignedContractEmail = functions.https.onCall(
     const res = await fetch(RESEND_API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(resendPayload)

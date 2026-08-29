@@ -94,6 +94,25 @@ en el código de la app, y no debe haberlo.
 cuánto optimizan, es a qué proyecto apuntan. `development` (sin `--configuration`
 propia en los scripts) es solo para `ng serve`.
 
+⚠️ **El `default` de `.firebaserc` es `velto-store`, y tiene que seguir
+siéndolo.** Es el proyecto al que va cualquier comando del CLI lanzado sin
+`--project`: un `firebase deploy` a secas, un `firestore:delete`, un
+`functions:secrets:set`. Con producción como defecto, el despiste se paga caro;
+con desarrollo, no pasa nada. Los scripts de `package.json` llevan el destino
+explícito precisamente para no depender de esto, pero el defecto es la última
+red. Estuvo apuntando a producción el 29 de agosto de 2026 y se devolvió a
+desarrollo el mismo día.
+
+⚠️ **`.firebaserc` no es el único sitio.** El CLI guarda además cuál es el
+proyecto **activo por carpeta**, fuera del repositorio, y ese manda sobre el
+`default` del fichero. Editar `.firebaserc` no lo cambia. Para comprobarlo y
+corregirlo:
+
+```bash
+firebase use          # dice a dónde irían los comandos sin --project
+firebase use dev      # lo devuelve a desarrollo
+```
+
 ⚠️ **El `fileReplacements` estuvo invertido hasta el 28 de agosto de 2026**: la
 configuración `production` metía el fichero de desarrollo. Con un solo proyecto
 no se notaba; con dos, `master` habría desplegado la web de producción contra la
@@ -132,17 +151,26 @@ sentencia escrita en ese fichero. Por eso vive en su propio módulo importado en
 la primera línea y no como una llamada suelta: ahí llegaría tarde y las
 functions se desplegarían en la región por defecto sin que nadie se enterase.
 
-### Los datos de producción son sagrados
+### Los datos todavía se pueden borrar — NO escribas parches de compatibilidad
 
-Desde que `rentalcar-veltomobility` tiene datos reales, un cambio de forma ya no se puede
-hacer como se hizo con `tariffIncludesVat`, que se borró de un día para otro
-porque la base se iba a vaciar. La regla pasa a ser:
+⚠️ **Vigente desde el 29 de agosto de 2026 y hasta que Dorel diga lo contrario.**
+Aunque `rentalcar-veltomobility` sea el entorno de producción, sus datos **aún
+son desechables**: se pueden borrar colecciones, cambiar índices, renombrar
+campos y cambiar la forma de un documento sin migración.
 
-- Los campos **solo se añaden**. Nunca se renombra ni se reutiliza uno existente.
-- Si una forma tiene que cambiar: escribir el campo nuevo → seguir leyendo el
-  viejo → migrar los documentos → quitar la lectura vieja. En despliegues
-  separados, no en uno.
-- Todo se prueba antes en `velto-store` con datos de `velto-store`.
+Por tanto, y esto es lo importante:
+
+- **No se escribe código para leer datos viejos.** Nada de `campo ?? valorAntiguo`,
+  ni ramas «si no tiene X, entonces era el formato anterior», ni banderas
+  congeladas por documento. Eso fue `tariffIncludesVat`, y costó más quitarlo
+  que ponerlo.
+- Si una forma tiene que cambiar: se cambia, se borran los datos y se vuelven a
+  crear. Es más barato y deja el código limpio.
+- Todo se prueba antes en `velto-store`.
+
+Cuando Dorel avise de que los datos ya son reales, esta sección se sustituye por
+la regla contraria: campos solo aditivos, migración en despliegues separados y
+nunca renombrar en sitio.
 
 ## Estructura
 
@@ -321,9 +349,12 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
 
-También desplegadas: `generateQuotePdf` y `generateBookingConfirmationPdf`.
+También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf` y `documentLink` (pública).
 
-**Escrita pero SIN desplegar:** `documentLink` (pública) — necesita además `firebase deploy --only hosting` porque depende de un rewrite.
+Son **once functions, y las once están vivas en los dos proyectos** (verificado el 29 de
+agosto de 2026). `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que
+desplegarla no basta: el rewrite `/d/**` viaja con el **hosting** y necesita su propio
+`firebase deploy --only hosting`.
 
 ### Enlaces cortos para WhatsApp
 
@@ -432,21 +463,134 @@ El cliente firma **sin cuenta**: `/sign-contract/:token`, ruta pública fuera de
 mayúsculas** (`VELTO MOBILITY, S.L.`) en vez de pasarla a mayúsculas al pintar: así ninguna
 plantilla se puede olvidar.
 
+#### Marca o razón social: `brandName` por defecto
+
+Hay **dos nombres**, y confundirlos se ve enseguida en lo que recibe el cliente:
+
+| | Valor | Dónde |
+|---|---|---|
+| `brandName` | `VELTO MOBILITY` | Todo lo que le habla al cliente |
+| `legalName` | `VELTO MOBILITY, S.L.` | **Solo junto al NIF** |
+
+La regla, en una línea: **la razón social solo aparece donde la empresa comparece como
+persona jurídica, es decir acompañada del NIF.** En el contrato son exactamente tres
+sitios —bloque «Datos del arrendador», casilla de firma del arrendador y pie legal de cada
+página— y en los tres el NIF va al lado. Todo lo demás —asunto del email, cuerpo, cabecera
+de cualquier documento, metadatos del PDF, pantalla pública de firma— lleva la marca.
+
+El criterio es de Dorel y es de negocio, no de estilo: un cliente no sabe qué es una S.L.
+ni tiene por qué saberlo, y meterlo en un «Gracias por confiar en…» suena a notaría.
+
+⚠️ **`legalName` acaba en punto.** Cualquier plantilla que lo ponga al final de una frase
+produce «Gracias por confiar en VELTO MOBILITY, S.L..». Ya pasó.
+
+⚠️ `getContractForSigning` leía `VELTO_COMPANY_NAME` —la razón social— para la cabecera de
+la pantalla de firma, y **coincidía de puro azar**: ese valor no está puesto en ningún
+entorno, así que caía al literal `'VELTO MOBILITY'` escrito al lado. El día que alguien
+configurase el secret, al cliente le habría salido la S.L. en la pantalla donde firma.
+
 ⚠️ **Los valores por defecto solo se aplican si el secret correspondiente NO está puesto.**
 Si `VELTO_COMPANY_NAME` sigue valiendo «Velto Rent» en producción, el PDF seguirá diciendo
 «Velto Rent» por mucho que el código diga otra cosa. Al cambiar datos de empresa hay que
 revisar los secrets, no solo el código.
 
+Y al revés, que es el caso de hoy: ningún `VELTO_COMPANY_*` está puesto en ningún entorno
+—**ni declarado en las functions que los leen**, así que no llegarían aunque lo estuvieran—
+y los documentos salen con los valores del código. Ver la tabla en «Secrets».
+
+### Configuración por entorno: `functions/.env.<proyecto>`
+
+Lo que **no es un secreto** pero cambia entre entornos vive en un fichero por
+proyecto, que Firebase carga y sube al desplegar:
+
+```
+functions/.env.velto-store              → desarrollo
+functions/.env.rentalcar-veltomobility  → producción
+```
+
+La ventaja sobre Secret Manager es la que costó descubrir: **estas variables no
+hay que declararlas en ninguna function**. Llegan a `process.env` sin más, que es
+justo lo que los `VELTO_COMPANY_*` nunca hicieron estando puestos como secrets.
+
+Hoy solo llevan `VELTO_COMPANY_EMAIL`, y **son distintos a propósito**:
+
+| | Correo |
+|---|---|
+| desarrollo | `reservas@veltorent.com` |
+| producción | `reservas@veltomobility.com` |
+
+⚠️ **Ese correo hace dos cosas a la vez**: es el remitente de los emails de
+Resend **y** el correo impreso en el contrato y en los documentos. Cambiarlo
+cambia ambas.
+
+⚠️ **Resend solo acepta remitentes de un dominio verificado.** Si
+`veltomobility.com` no está verificado en la cuenta de Resend, el envío del
+contrato en producción falla con un 403 — y el 403 no dice «dominio sin
+verificar», dice «Error al enviar el email (403)».
+
+⚠️ **Estos ficheros están en el repositorio: aquí no van credenciales.** Nada que
+no puedas enseñar. Las claves siguen en Secret Manager, declaradas con
+`defineSecret`.
+
+Verificado el 29 de agosto de 2026 poniendo un valor distinguible en desarrollo:
+salió impreso en el PDF, se comprobó, y se devolvió el valor bueno.
+
+⚠️ **El `.env` forma parte del hash de despliegue.** Cambiarlo actualiza las once
+functions aunque no se haya tocado una línea de código; y a la inversa, un
+`Skipped (No changes detected)` en las once significa que el fichero que tienes
+delante es el que está desplegado.
+
 ### Secrets
 
-Nunca en el frontend. Se configuran con `firebase functions:secrets:set`:
+Nunca en el frontend. Se configuran con `firebase functions:secrets:set`.
 
+⚠️ **Poner el secret no basta: hay que DECLARARLO en la function que lo usa.**
+Un secret que existe en Secret Manager pero no aparece en el `secrets: [...]` de
+su callable **no se monta en el runtime**, así que `process.env.EL_SECRET` sale
+`undefined` y el código se va por la rama del «no está configurado». Es
+silencioso desde fuera: el secret está puesto, el despliegue va bien, y la
+función responde que falta configuración.
+
+El patrón correcto son tres piezas, y las tres hacen falta:
+
+```ts
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');       // 1. declarar
+
+export const x = functions.https.onCall(
+  { secrets: [RESEND_API_KEY] },                             // 2. montar
+  async (request) => {
+    const apiKey = RESEND_API_KEY.value();                   // 3. leer DENTRO
 ```
-RESEND_API_KEY, RESEND_FROM_EMAIL
-REDSYS_SECRET_KEY, REDSYS_MERCHANT_CODE, REDSYS_TERMINAL, REDSYS_ENVIRONMENT
-VELTO_COMPANY_NAME / _EMAIL / _PHONE / _ADDRESS
-VELTO_PUBLIC_BASE_URL, CONTRACT_LINK_EXPIRY_DAYS
+
+El paso 3 no es estilo: leer en el módulo (`const K = process.env.K`) se evalúa
+antes de que el runtime resuelva los secrets (F-12).
+
+⚠️ **Declarar un secret que no existe rompe el despliegue.** Si se añade a
+`secrets: [...]`, tiene que existir **en los dos proyectos** o el deploy del que
+falte se cae. Comprobar existencia sin imprimir el valor:
+
+```bash
+firebase functions:secrets:access NOMBRE --project prod >/dev/null 2>&1; echo $?   # 0 = existe
 ```
+
+Inventario real (verificado el 29 de agosto de 2026):
+
+| Variable | dev | prod | Declarada | Qué pasa si falta |
+|---|---|---|---|---|
+| `RESEND_API_KEY` | sí | **no** | sí | `sendSignedContractEmail` no envía |
+| `REDSYS_SECRET_KEY` | sí | sí | sí | — |
+| `REDSYS_MERCHANT_CODE` / `_TERMINAL` / `_ENVIRONMENT` | sí | **no** | **no** | `createRedsysPaymentLink` dice «Redsys no está configurado» |
+| `VELTO_PUBLIC_BASE_URL` | sí | **no** | **no** | enlaces de firma y cortos al dominio por defecto |
+| `CONTRACT_LINK_EXPIRY_DAYS` | sí | **no** | **no** | caducidad por defecto (7 días) |
+| `VELTO_COMPANY_*` | no | no | **no** | valores por defecto del código; `_EMAIL` se movió a `.env.<proyecto>` |
+
+`RESEND_FROM_EMAIL` **ya no existe**: el remitente es `companyConfig().email`, el
+mismo que va impreso en los documentos. Un correo de empresa no es un secreto, y
+tener dos sitios donde vivía la misma dirección solo servía para que divergieran.
+
+Los `VELTO_COMPANY_*` nunca se llegaron a poner en ningún entorno, así que los
+PDF salen con los valores por defecto de `company-config.ts`. Hoy son los
+correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 
 ## Colecciones de Firestore
 
@@ -535,6 +679,7 @@ y las clases `.email` / `.mono` usan `anywhere`.
 ## Deuda técnica conocida
 
 - **Redsys**: la firma, el formato del `Ds_Merchant_Order` y la URL del webhook están corregidos y cubiertos por tests contra un vector de referencia. **Falta la validación end-to-end contra el entorno de test real de Redsys**, que no puede hacerse desde el repo — y las Cloud Functions hay que desplegarlas a mano para que el fix llegue a producción.
+- **Redsys no puede funcionar todavía en ninguno de los dos entornos**: `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero **no** `REDSYS_MERCHANT_CODE`, `_TERMINAL` ni `_ENVIRONMENT`, así que los lee como `undefined` y aborta con «Redsys no está configurado». Arreglarlo es añadirlos al `secrets: [...]`, pero **antes hay que crearlos en producción**, donde no existen: declarar un secret inexistente tumba el despliegue. Mismo fallo que tenía el email, ya corregido.
 - Sin lint.
 - `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
 - `CREDENTIALS.md` no está en `.gitignore`.
