@@ -1381,3 +1381,127 @@ columna del arrendatario (M-26 y M-27, verificados ya en producción).
 
 **Avisos de consola en el login**: los cuatro de `Cross-Origin-Opener-Policy`,
 ya conocidos como M-13. No impiden el login.
+
+## C-24 · La otra mitad del ciclo: entrega, devolución, daños y cierre — 31 de agosto de 2026
+
+Recorrido de lo que **nunca se había ejecutado**. El motivo de hacerlo era el
+patrón de esta semana: el email, Redsys y la sincronización del webhook estaban
+escritos, desplegados y rotos, y nadie lo sabía porque nadie los había usado.
+
+Sobre la reserva `ZRlBfmb4JWR4cO9QgDio` de `velto-store`, ya confirmada y con
+contrato firmado.
+
+| Paso | Resultado |
+|---|---|
+| Cobro del resto y de la fianza | correcto; al elegir tipo autocompleta el importe |
+| Inspección de **entrega** | checklist de 8 puntos, km, combustible, limpieza |
+| **Subida de foto** en la inspección | sube a `inspections/` en Storage y se muestra |
+| Estado tras entregar | **Entregado** |
+| Inspección de **devolución** | km, combustible, limpieza, llaves, accesorios |
+| **Registro de daños** | zona TRASERA, gravedad Leve, descripción — registrado |
+| Cargos extra | 62,50 km + 30 limpieza + 80 daños = **172,50 €** |
+| Retención de fianza | automática, 150,00 € |
+| Estado final | **Cerrado** |
+
+**Lo que funciona y queda probado:** la subida de fotos dentro de una inspección
+y el registro de daños en la devolución, los dos pendientes desde agosto. Los
+cargos extra se convierten en filas de pago con su tipo (`extra_km`,
+`extra_cleaning`, `extra_damage`) y la retención de fianza se crea sola.
+
+**Tres fallos encontrados**, todos anotados:
+
+- **M-33** · Los cargos extra nacen `paid` sin que nadie los haya cobrado. Con
+  172,50 € de cargos y 150 € de fianza, **los 22,50 € de diferencia se dan por
+  cobrados** y desaparecen. Es dinero y es silencioso.
+- **M-34** · El cargo por km extra no se calcula, aunque la app tiene los km de
+  salida, los de entrada, los incluidos por día y el precio del km extra.
+- **M-35** · «Registrar cobro» abre siempre en «Señal» con importe 0, aun con la
+  señal ya cobrada.
+
+**Un detalle de método, para el que venga detrás:** en los campos de cargos, fijar
+`value` por JavaScript deja el input `ng-dirty` con el valor correcto pero **no
+dispara el recálculo del total**. Con escritura real sí. No es un fallo de la
+app; es que la comprobación automatizada puede mentir si se hace así.
+
+## C-25 · M-33, y los tres agujeros que aparecieron al taparlo — 31 de agosto de 2026
+
+El fallo de partida era que los cargos de la devolución se creaban marcados como
+pagados. Al dejar de mentir sobre eso, quedaron a la vista otros tres por los que
+el dinero se escapaba igual. Ninguno se habría visto sin ejecutar el flujo.
+
+| # | Dónde | Qué pasaba |
+|---|---|---|
+| 1 | `createExtraChargePayments` | `paidAmount = amount` con el comentario `// assumed already paid` |
+| 2 | Retención de fianza | no liquidaba los cargos: iba por su cuenta |
+| 3 | `cancelUncollectedPayments` | **cancelaba los cargos pendientes al cerrar** |
+| 4 | `calculateReservationPaymentSummary` | `paymentStatus` ignoraba los cargos → **PAGADO** debiendo |
+
+El tercero es el que más enseña: tapar el primero sin tapar ese solo habría
+cambiado la etiqueta con la que se perdía el dinero, de «pagado» a «cancelado».
+
+**Cómo quedó.** Los cargos nacen `pending`. La retención los liquida de mayor a
+menor hasta donde alcance —`distributeRetentionAcrossCharges`, util puro con
+5 tests, incluido el caso de los 22,50 € que faltaban y el de la fianza a 0—.
+Lo que no cubre queda pendiente, sale con su importe y se cobra con el botón de
+tarjeta que se añadió con Redsys.
+
+**Verificado en el caso peor**, que es el que el negocio usa a diario: reserva
+con **fianza a 0** (cliente conocido, con su motivo obligatorio) y 160 € de
+cargos.
+
+```
+antes:  ambos cargos «Pagado» · reserva PAGADO · 160 € evaporados
+ahora:  ambos «Pendiente» con botón de cobro · reserva PARCIAL
+        y siguen ahí después de cerrar la reserva
+```
+
+De paso quedan probados dos pendientes más: **fianza a 0** —no siembra fila, la
+marca «Exenta» y exige motivo— y el **cierre** de una reserva con deuda viva.
+
+**Sobre el método.** Este arreglo no se podía validar con tests solos: los tres
+agujeros nuevos estaban en sitios distintos del código y solo se tocan entre sí
+al recorrer el flujo entero. Los tests fijan la aritmética; el recorrido es lo
+que encontró el problema.
+
+## C-26 · Cancelación, mantenimiento y excepciones — 31 de agosto de 2026
+
+Lo que quedaba del ciclo sin ejecutar. Tres fallos y un hallazgo distinto.
+
+**Cancelación de una reserva.** El botón salía **deshabilitado y sin explicar
+por qué** en cuanto se cobraba la señal. La causa: dos reglas contradictorias en
+el mismo componente —`canCancel()` copiada a mano (solo `reserved`) y
+`canCancelReservation()` delegando en el workflow (`reserved` y `confirmed`)—.
+El template preguntaba a una y pedía el motivo a la otra, que no tenía nada que
+objetar: de ahí el `title` vacío. Retirada la copia (M-36).
+
+Una vez cancelada, los pagos aparecían como **`cancelled` en inglés**: el getter
+usaba el mapa de estados *de la reserva* para pintar el estado *de un pago*
+(M-37). La traducción existía desde siempre.
+
+Comprobado en Firestore que la cancelación hace lo correcto: la señal cobrada se
+conserva `paid` —el dinero entró— y el resto y la fianza pasan a `cancelled`.
+
+**Mantenimiento de vehículos.** Primera alta de la colección
+`vehicleMaintenance`, que llevaba vacía desde el principio: tipo, estado,
+prioridad, descripción, fecha, km, coste, proveedor y próxima revisión. Se
+guarda y se lista bajo «Realizados».
+
+El formulario pintaba **`maintenance.type.oil_change` en crudo** sobre el
+desplegable (M-38): la etiqueta se construía con el valor seleccionado en vez de
+con el nombre del campo, y además las claves están en camelCase mientras el
+valor llega en snake_case, así que no habría resuelto ni con la clave correcta.
+
+Los kilómetros se guardan como **texto** y `cost` como número (M-39).
+
+**Excepciones de workflow: no están implementadas.** Y esto no es un fallo, es
+otra cosa. `buildWorkflowException()` existe, está cubierta por tests, el modelo
+tiene `workflowExceptions[]` y el workflow las respeta… pero **no hay una sola
+llamada desde la UI ni desde los servicios**. La pieza está construida y no
+conectada, así que no hay manera de crear una excepción.
+
+Consecuencia concreta: si un cliente firma en papel, la entrega queda bloqueada
+sin salida. Anotado como **N-7**, con las decisiones que hay que tomar antes.
+
+**El patrón, otra vez.** Cinco de los seis hallazgos de hoy son de la misma
+familia que el email o Redsys: código escrito, desplegado y nunca ejecutado.
+Ninguno lo habría encontrado un test.

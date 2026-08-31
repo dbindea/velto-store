@@ -6,7 +6,8 @@ import {
   MAX_LOYALTY_DISCOUNT_PERCENT,
   normalizeLoyaltyDiscountPercent,
   resolveRentalPrice,
-  resolveVatRate
+  resolveVatRate,
+  suggestExtraKmCharge
 } from './pricing.util';
 
 // ---------------------------------------------------------------------------
@@ -182,5 +183,65 @@ describe('vatBreakdownOf', () => {
     expect(vat.base).toBe(price.netPrice);
     expect(vat.vat).toBe(price.vatAmount);
     expect(vat.total).toBe(price.finalPrice);
+  });
+});
+
+/**
+ * La sugerencia del cargo por kilómetros de más.
+ *
+ * Es solo un aviso: hoy no se cobra el kilometraje extra (decisión de Dorel,
+ * 31 de agosto de 2026, durante el primer año) y el campo se deja a 0 a
+ * propósito, para que un importe prerrellenado no se guarde de un despiste.
+ */
+describe('suggestExtraKmCharge', () => {
+  // El caso del recorrido del 31 de agosto.
+  const base = {
+    pickupKm: 42150,
+    returnKm: 43900,
+    totalDays: 3,
+    includedKmPerDay: 500,
+    extraKmPrice: 0.25
+  };
+
+  it('calcula el exceso sobre los km incluidos', () => {
+    // 1.750 recorridos − 1.500 incluidos = 250 × 0,25 €
+    expect(suggestExtraKmCharge(base)).toEqual({
+      extraKm: 250,
+      includedKm: 1500,
+      amount: 62.5
+    });
+  });
+
+  it('no sugiere nada si no se pasó de los incluidos', () => {
+    expect(suggestExtraKmCharge({ ...base, returnKm: 43000 })).toBeNull();
+    // Justo en el límite tampoco: 1.500 recorridos, 1.500 incluidos.
+    expect(suggestExtraKmCharge({ ...base, returnKm: 43650 })).toBeNull();
+  });
+
+  it('no inventa una cifra cuando falta un dato', () => {
+    // Sin tarifa de km extra, sin km incluidos, sin días o sin la entrega,
+    // no hay cálculo posible y no se propone nada.
+    expect(suggestExtraKmCharge({ ...base, extraKmPrice: undefined })).toBeNull();
+    expect(suggestExtraKmCharge({ ...base, includedKmPerDay: undefined })).toBeNull();
+    expect(suggestExtraKmCharge({ ...base, totalDays: undefined })).toBeNull();
+    expect(suggestExtraKmCharge({ ...base, pickupKm: undefined })).toBeNull();
+    expect(suggestExtraKmCharge({ ...base, returnKm: undefined })).toBeNull();
+  });
+
+  it('ignora un kilometraje de entrada menor que el de salida', () => {
+    // Un error de tecleo no debe producir un cargo negativo.
+    expect(suggestExtraKmCharge({ ...base, returnKm: 41000 })).toBeNull();
+  });
+
+  it('redondea a céntimos', () => {
+    // 333 km × 0,17 € = 56,61 exacto; sin redondear arrastra coma flotante.
+    const r = suggestExtraKmCharge({
+      pickupKm: 0,
+      returnKm: 333,
+      totalDays: 1,
+      includedKmPerDay: 0.0001,
+      extraKmPrice: 0.17
+    });
+    expect(r?.amount).toBe(56.61);
   });
 });

@@ -790,7 +790,7 @@
                 </div>
                 <div class="payment-status">
                   <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
-                    {{ getPaymentStatusLabel(payment.status) | translate }}
+                    {{ getPaymentStatusLabel(payment.status) }}
                   </span>
                 </div>
                 @if (payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) {
@@ -826,7 +826,7 @@
 
     <!-- Actions -->
     <div class="page-actions">
-      @if (canCancel()) {
+      @if (canCancelReservation()) {
         <button
           class="btn-danger"
           type="button"
@@ -834,7 +834,7 @@
           <i class="pi pi-times"></i>
           {{ 'reservations.actions.cancel' | translate }}
         </button>
-      } @else if (reservation.reservationStatus === 'reserved' || reservation.reservationStatus === 'confirmed') {
+      } @else if (reservation.reservationStatus !== 'cancelled') {
         <button
           class="btn-danger"
           type="button"

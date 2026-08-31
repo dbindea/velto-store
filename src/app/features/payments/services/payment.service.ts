@@ -30,7 +30,8 @@ import {
   calculatePendingAmount,
   generateInternalReference,
   roundMoney,
-  selectSettleablePayment
+  selectSettleablePayment,
+  EXTRA_TYPES
 } from '@shared/utils/payment-summary.util';
 
 export interface CreateManualPaymentData {
@@ -295,7 +296,15 @@ export class PaymentService {
   async cancelUncollectedPayments(reservationId: string): Promise<number> {
     const payments = await this.fetchReservationPayments(reservationId);
     const stale = payments.filter(p =>
-      p.id && p.status === 'pending' && (p.paidAmount || 0) === 0
+      p.id &&
+      p.status === 'pending' &&
+      (p.paidAmount || 0) === 0 &&
+      // ⚠️ Un cargo extra NO es una fila sembrada que se quedó sin usar: nace
+      // de un hecho —un daño, kilómetros de más, el depósito sin llenar— y es
+      // deuda del cliente. Cancelarlo al cerrar hacía desaparecer el dinero
+      // igual que marcarlo pagado sin cobrarlo, solo que con otra etiqueta.
+      // Se nota sobre todo con la fianza a 0, donde nada los cubre.
+      !EXTRA_TYPES.includes(p.type)
     );
     if (stale.length === 0) return 0;
 

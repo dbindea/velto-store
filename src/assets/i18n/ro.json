@@ -297,6 +297,7 @@
       "cleaning": "Taxă curățenie",
       "damage": "Taxă daune",
       "extraKm": "Taxă km suplimentari",
+      "extraKmHint": "Netaxat. Exces detectat:",
       "fine": "Amendă",
       "fuel": "Taxă combustibil",
       "other": "Alte taxe",
@@ -387,7 +388,8 @@
       "priority": "Prioritate",
       "provider": "Furnizor",
       "status": "Stare",
-      "title": "Titlu"
+      "title": "Titlu",
+      "type": "Tip"
     },
     "itemPlural": "elemente",
     "itemSingular": "element",

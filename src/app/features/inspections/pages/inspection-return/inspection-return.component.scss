@@ -161,6 +161,34 @@
   &.full { grid-column: 1 / -1; }
 }
 
+/**
+ * Aviso bajo un campo: informa, no rellena.
+ *
+ * En el cargo por kilómetros dice cuánto se cobraría, y el operador decide si
+ * lo escribe. Va en gris y con el icono de información, no en color de alerta:
+ * no es un error ni una acción pendiente, y hoy además el kilometraje extra no
+ * se cobra a propósito.
+ */
+.field-hint {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+
+  i {
+    font-size: 0.8rem;
+  }
+
+  strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+}
+
 .form-control {
   width: 100%;
   padding: 0.5rem 0.625rem;

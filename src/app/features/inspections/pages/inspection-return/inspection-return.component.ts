@@ -25,6 +25,9 @@ import {
   DAMAGE_SEVERITY_LABELS
 } from '@shared/models/inspection.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { Vehicle } from '@shared/models/vehicle.model';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
+import { suggestExtraKmCharge } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { calculateCalendarDays } from '@shared/utils/reservation-date.util';
 import { toDate } from '@shared/utils/reservation-date.util';
@@ -42,9 +45,12 @@ export class InspectionReturnComponent implements OnInit {
   private router = inject(Router);
   private inspectionService = inject(InspectionService);
   private reservationService = inject(ReservationService);
+  private vehicleService = inject(VehicleService);
 
   reservationId: string | null = null;
   reservation: Reservation | null = null;
+  /** Solo por su tarifa de km extra, para el aviso del cargo sugerido. */
+  vehicle: Vehicle | null = null;
   pickupInspection: Inspection | null = null;
   loading = true;
   saving = false;
@@ -107,6 +113,17 @@ export class InspectionReturnComponent implements OnInit {
         return;
       }
       this.pickupInspection = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'pickup');
+
+      // Solo para el aviso de kilómetros: la tarifa de km extra vive en la
+      // ficha del vehículo y no viaja en `vehicleSnapshot`. Si la lectura
+      // falla, no pasa nada — el aviso simplemente no sale.
+      try {
+        this.vehicle = await firstValueFrom(
+          this.vehicleService.getVehicleById(this.reservation.vehicleId).pipe(first())
+        );
+      } catch {
+        this.vehicle = null;
+      }
 
       const existing = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'return');
 
@@ -182,6 +199,27 @@ export class InspectionReturnComponent implements OnInit {
 
   get pickupKm(): number | undefined {
     return this.pickupInspection?.km || this.reservation?.deliveryInfo?.pickupKm;
+  }
+
+  /**
+   * Cargo por kilómetros de más que **se sugiere**, sin escribirlo.
+   *
+   * Hoy no se cobra el kilometraje extra —decisión de Dorel: el primer año no,
+   * para captar clientela— así que el campo se queda a 0. Y aunque se cobrara,
+   * prerrellenarlo sería peor: un importe puesto por la aplicación se guarda de
+   * un despiste y le cobra al cliente algo que no querías cobrarle. Un aviso
+   * hay que leerlo y teclearlo.
+   *
+   * `null` cuando no hay exceso o falta algún dato, y entonces no se pinta nada.
+   */
+  get extraKmSuggestion(): { extraKm: number; amount: number; includedKm: number } | null {
+    return suggestExtraKmCharge({
+      pickupKm: this.pickupKm,
+      returnKm: this.formData.km,
+      totalDays: this.totalDays,
+      includedKmPerDay: this.vehicle?.includedKmPerDay,
+      extraKmPrice: this.vehicle?.extraKmPrice
+    });
   }
 
   get totalDays(): number {

@@ -297,6 +297,7 @@
       "cleaning": "Cleaning charge",
       "damage": "Damage charge",
       "extraKm": "Extra km charge",
+      "extraKmHint": "Not charged. Excess detected:",
       "fine": "Fine",
       "fuel": "Fuel charge",
       "other": "Other charges",
@@ -387,7 +388,8 @@
       "priority": "Priority",
       "provider": "Provider",
       "status": "Status",
-      "title": "Title"
+      "title": "Title",
+      "type": "Type"
     },
     "itemPlural": "items",
     "itemSingular": "item",

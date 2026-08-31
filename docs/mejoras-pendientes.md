@@ -47,6 +47,129 @@ Dos numeraciones, para no mezclar cosas distintas:
   **Sin excepción de workflow**: la salida es cambiarle el nivel al cliente en su
   ficha, que queda registrado.
 
+- [x] **M-33 · Los cargos extra nacían «pagados» sin que nadie los cobrara.** *(31 ago 2026)*
+  Al completar la devolución, cada cargo se creaba con `status: paid` y
+  `paidAmount = amount` — el código lo admitía en un comentario:
+  `// assumed already paid`. Nadie había cobrado nada.
+
+  Con 172,50 € de cargos contra 150 € de fianza, la reserva salía **PAGADA** y
+  los 22,50 € de diferencia desaparecían. Con **fianza a 0** —lo normal en un
+  cliente conocido— se daba por cobrado el cargo entero sin cobrar un céntimo.
+
+  **Eran cuatro agujeros, no uno.** Los tres últimos aparecieron al tapar el
+  primero:
+
+  1. Los cargos nacen ahora `pending`, no `paid`.
+  2. La retención de fianza los **liquida de verdad**, de mayor a menor y hasta
+     donde alcance (`distributeRetentionAcrossCharges`, util puro con 5 tests).
+     Lo que no cubre queda pendiente y se cobra con el botón de tarjeta.
+  3. **`cancelUncollectedPayments` los cancelaba al cerrar la reserva.** Estaba
+     pensado para limpiar filas sembradas que nunca se usaron; un cargo extra
+     nace de un hecho —un daño, kilómetros de más— y es deuda del cliente. Sin
+     esto, el arreglo solo cambiaba la etiqueta con la que se perdía el dinero.
+  4. **`paymentStatus` solo miraba señal y resto**, así que una reserva con
+     160 € de cargos sin cobrar seguía anunciándose como **PAGADA**. No se veía
+     porque los cargos nacían pagados.
+
+  **Verificado en el caso peor**, reserva con fianza a 0 y 160 € de cargos
+  (120 daños + 40 limpieza):
+
+  ```
+  antes:  los dos cargos → «Pagado», reserva PAGADO, 160 € perdidos
+  ahora:  los dos cargos → «Pendiente» con botón de cobro
+          reserva PARCIAL, y siguen ahí después de cerrarla
+  ```
+
+- [x] **M-36 · No se podía cancelar una reserva confirmada.** *(31 ago 2026)*
+  El botón «Cancelar reserva» salía **deshabilitado y sin explicar por qué**
+  (`title=""`) en cuanto se cobraba la señal.
+
+  Había **dos reglas contradictorias en el mismo fichero**: `canCancel()`, que
+  copiaba la regla a mano y solo admitía `reserved`, y `canCancelReservation()`,
+  que delega en el workflow —la única autoridad— y también admite `confirmed`.
+  El template usaba la primera; el `title` lo pedía a la segunda, que no tenía
+  nada que objetar, y por eso salía vacío.
+
+  Es justo lo que CLAUDE.md prohíbe: duplicar reglas del workflow en un
+  componente. Retirado `canCancel()`; el template usa el workflow. Verificado:
+  se cancela una reserva confirmada, la señal cobrada se conserva como `paid` y
+  el resto y la fianza pasan a `cancelled`.
+
+- [x] **M-37 · El estado de un pago salía en inglés.** *(31 ago 2026)*
+  Al cancelar una reserva, sus pagos aparecían como **`cancelled`** en crudo.
+
+  `getPaymentStatusLabel()` resolvía contra `RESERVATION_PAYMENT_STATUS_LABELS`
+  —el estado de pago **de la reserva**, que solo conoce `pending`, `partial` y
+  `paid`— en lugar de `PAYMENT_STATUS_LABELS`, que es el de **un pago** y sí
+  tiene `cancelled`, `failed` y `refunded`. Al no encontrar la clave caía al
+  respaldo, que es el valor crudo. **La traducción existía desde siempre.**
+
+  De paso se quitó un `| translate` redundante: el getter ya devuelve el texto.
+
+- [x] **M-38 · La etiqueta del tipo de mantenimiento salía como clave.** *(31 ago 2026)*
+  El formulario pintaba **`maintenance.type.oil_change`** sobre el desplegable.
+  Dos errores en la misma línea: se construía la clave con el **valor
+  seleccionado** en vez del nombre del campo, y las claves de
+  `maintenance.type.*` están en camelCase (`oilChange`) mientras el valor llega
+  en snake_case (`oil_change`), así que no resolvía nunca.
+
+  Añadida `maintenance.fields.type` en los tres idiomas.
+
+- [ ] **M-39 · Los kilómetros de mantenimiento se guardan como texto.** *(31 ago 2026)*
+  `performedAtKm` y `nextDueKm` acaban en Firestore como `"44200"`, mientras
+  `cost` sí es número. Hoy no molesta porque solo se pintan, pero cualquier
+  orden o comparación por kilómetros saldría mal: como texto, `"9000"` es mayor
+  que `"44200"`. `nextDueDate` va también como cadena `"2027-08-31"` en vez de
+  fecha; ordena bien por ser ISO, pero no es una fecha.
+
+- [ ] **N-7 · Las excepciones de workflow no existen en la aplicación.** *(31 ago 2026)*
+  ⚠️ **No es que estén sin probar: no están implementadas.**
+  `buildWorkflowException()` está escrita y cubierta por tests, el modelo tiene
+  `workflowExceptions[]` y el workflow las respeta con `hasWorkflowException()`
+  … pero **no hay una sola llamada desde la UI ni desde los servicios**. No hay
+  forma de crear una.
+
+  La consecuencia es concreta: si un cliente firma el contrato **en papel**, el
+  botón de entrega queda bloqueado y no hay salida. Hoy la única vía es tocar
+  Firestore a mano.
+
+  Antes de construirlo hay que decidir: qué acciones admiten excepción (el
+  workflow ya excluye `canCreateReservationForClient`), si basta con el motivo
+  obligatorio o hace falta confirmación aparte, y dónde se ven las excepciones
+  ya usadas — la ficha de la reserva parece el sitio, junto a las notas.
+
+- [x] **M-34 · El cargo por km extra: se avisa, no se rellena.** *(31 ago 2026)*
+  El vehículo lleva `includedKmPerDay` y `extraKmPrice`, y la inspección conoce
+  los km de salida y de entrada, pero el campo se dejaba a 0 sin más y la cuenta
+  la hacía el operador a mano.
+
+  **Decisión de Dorel, y el criterio es suyo:** el primer año **no se cobra** el
+  kilometraje extra, para captar clientela. Y aunque se cobrara, prerrellenar el
+  campo es peligroso — *«si se me olvida lo guardo sin querer»*—: un importe
+  puesto por la aplicación acaba cobrándole al cliente algo que no querías
+  cobrarle. Un texto no se guarda solo.
+
+  Así que el campo **sigue a 0** y debajo aparece un aviso:
+
+  ```
+  Cargo por km extra  [ 0 ]
+  ⓘ Sin cobrar. Exceso detectado: 600 km · 150,00 €
+  ```
+
+  La aritmética vive en `suggestExtraKmCharge()` (`pricing.util.ts`), con
+  5 tests: el caso real, el límite exacto de los km incluidos, el kilometraje de
+  entrada menor que el de salida —un error de tecleo no puede producir un cargo—
+  y la ausencia de cualquier dato, que **no propone nada** en vez de inventar
+  una cifra.
+
+  Queda pendiente lo mismo para el **combustible**, que necesita antes un precio
+  por depósito o por cuarto en la ficha del vehículo: ese campo no existe.
+
+- [ ] **M-35 · «Registrar cobro» nace en Señal con importe 0.** *(31 ago 2026)*
+  Con la señal ya cobrada, el formulario sigue abriendo en `initial_payment` y
+  a 0 €. Al elegir el tipo sí autocompleta el importe pendiente —eso funciona—,
+  así que basta con que arranque en **el primer tipo que quede pendiente**.
+
 - [ ] **M-2 · `TranslateService` no cae al español.**
   Si una clave falta en `ro.json`, el usuario rumano ve la clave en crudo aunque
   el español exista. Hoy la paridad está al 100 %, así que no se manifiesta,
@@ -543,12 +666,19 @@ cargos extra, resolución de fianza y cierre. Queda:
       contrato `C-1342VA-2026`, remitente `reservas@veltomobility.com`,
       respuesta `200` y no `403` — que es lo que prueba que Resend tiene el
       dominio verificado.
-- [ ] Módulo de mantenimiento de vehículos (colección aún vacía)
-- [ ] Subida de fotos dentro de una inspección (probada en vehículos, no en
-      inspecciones)
-- [ ] Registro de daños en la devolución
-- [ ] Cancelación de una reserva
-- [ ] Excepciones de workflow (`buildWorkflowException`) desde la UI
+- [x] Módulo de mantenimiento de vehículos — **probado el 31 de agosto de 2026**:
+      alta completa (tipo, estado, prioridad, coste, proveedor, próxima revisión)
+      y guardado en `vehicleMaintenance`, que hasta hoy estaba vacía. Salieron
+      M-38 y M-39.
+- [x] Subida de fotos dentro de una inspección — **probada el 31 de agosto de
+      2026**: sube a Storage bajo `inspections/` y se muestra en la ficha.
+- [x] Registro de daños en la devolución — **probado el 31 de agosto de 2026**:
+      zona, gravedad y descripción quedan registrados en la inspección.
+- [x] Cancelación de una reserva — **probada el 31 de agosto de 2026**. Sacó
+      M-36 (no se podía cancelar una reserva confirmada) y M-37 (el estado del
+      pago en inglés).
+- [~] Excepciones de workflow desde la UI — **no se pueden probar: no están
+      implementadas**. Ver N-7.
 - [ ] **N-4 end-to-end**: poner un 10 % a un cliente, crear reserva y comprobar
       que el snapshot congela el porcentaje; luego retirárselo y verificar que
       la reserva anterior no se mueve
@@ -561,9 +691,9 @@ cargos extra, resolución de fianza y cierre. Queda:
       que se ve desde un móvil sin sesión
 - [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
       y verificar que **el primer enlace sigue funcionando**
-- [ ] **Fianza a 0**: crear una reserva sin fianza, comprobar que no siembra
-      fila de pago, que el estado es «Exenta» y que la reserva **se puede
-      cerrar** (es lo que el motivo obligatorio protege)
+- [x] **Fianza a 0** — **probado el 31 de agosto de 2026**: no siembra fila de
+      fianza, la marca «Exenta» con su motivo, y el motivo es obligatorio en el
+      asistente. Usada además como caso peor de M-33.
 - [x] **El presupuesto en los tres idiomas**, cambiando el idioma de la
       plataforma antes de generarlo. *(27 ago 2026, 23:30)* es/en/ro correctos
       contra la function desplegada; el rumano con `ă ș ț` y `€` sin cajas

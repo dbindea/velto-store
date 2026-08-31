@@ -30,13 +30,17 @@ import {
   PaymentType,
   PAYMENT_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_COLORS,
   PAYMENT_METHOD_ICONS
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
-import { collectedTotalsOf } from '@shared/utils/payment-summary.util';
+import {
+  collectedTotalsOf,
+  calculateReservationPaymentSummary
+} from '@shared/utils/payment-summary.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
@@ -305,19 +309,22 @@ export class ReservationDetailComponent implements OnInit {
   private async reconcileAfterExternalPayment(reservationId: string): Promise<void> {
     if (!this.reservation) return;
 
-    const paidOf = (type: PaymentType) =>
-      this.payments
-        .filter((p) => p.type === type && p.status !== 'cancelled')
-        .reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+    // Se compara contra el resumen recalculado, no contra tres importes
+    // sueltos: así entra cualquier divergencia, incluida la del estado de pago
+    // cuando quedan cargos extra pendientes.
+    const fresco = calculateReservationPaymentSummary(this.payments, this.reservation);
+    const guardado = this.reservation.paymentSummary;
 
-    const divergencias: [number, number][] = [
-      [paidOf('initial_payment'), this.reservation.initialPayment?.paidAmount || 0],
-      [paidOf('remaining_payment'), this.reservation.remainingPayment?.paidAmount || 0],
-      [paidOf('deposit'), this.reservation.deposit?.paidAmount || 0]
-    ];
     // Céntimo de tolerancia: el resumen redondea y no queremos reescribir en
     // bucle por un error de coma flotante.
-    const desincronizada = divergencias.some(([real, guardado]) => Math.abs(real - guardado) > 0.005);
+    const difiere = (a?: number, b?: number) => Math.abs((a || 0) - (b || 0)) > 0.005;
+    const desincronizada =
+      !guardado ||
+      fresco.paymentStatus !== this.reservation.paymentStatus ||
+      difiere(fresco.initialPaymentPaid, guardado.initialPaymentPaid) ||
+      difiere(fresco.remainingPaymentPaid, guardado.remainingPaymentPaid) ||
+      difiere(fresco.depositPaid, guardado.depositPaid) ||
+      difiere(fresco.totalPending, guardado.totalPending);
     if (!desincronizada) return;
 
     try {
@@ -403,8 +410,20 @@ export class ReservationDetailComponent implements OnInit {
     );
   }
 
+  /**
+   * Estado de **un pago** (`pending`, `paid`, `cancelled`, `refunded`…).
+   *
+   * Ojo con el mapa: esto usaba `RESERVATION_PAYMENT_STATUS_LABELS`, que es el
+   * estado de pago **de la reserva** y solo conoce `pending`, `partial` y
+   * `paid`. Un pago `cancelled` no estaba ahí, así que caía al respaldo y se
+   * pintaba **«cancelled» en crudo, en inglés** — visible al cancelar una
+   * reserva. La traducción existía desde siempre en `payments.status.*`.
+   */
   getPaymentStatusLabel(status: string): string {
-    return this.getPaymentLabel(status);
+    return this.t(
+      PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS],
+      status
+    );
   }
 
   getDepositStatusLabel(status: string): string {
@@ -459,11 +478,12 @@ export class ReservationDetailComponent implements OnInit {
     return statusClasses[status] || '';
   }
 
-  canCancel(): boolean {
-    if (!this.reservation) return false;
-    const cancellableStatuses: Array<typeof this.reservation.reservationStatus> = ['reserved'];
-    return cancellableStatuses.includes(this.reservation.reservationStatus);
-  }
+  // `canCancel()` vivía aquí y copiaba la regla a mano: solo dejaba cancelar en
+  // `reserved`, mientras `canCancelReservation()` —que delega en el workflow,
+  // la única autoridad— también lo permite en `confirmed`. Las dos reglas
+  // convivían en este mismo fichero, así que una reserva con la señal cobrada
+  // mostraba un botón «Cancelar» **muerto y sin explicar por qué**: el `title`
+  // salía vacío porque el workflow no tenía nada que objetar.
 
   getFuelLabel(fuel: string): string {
     return this.t(FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS], fuel);

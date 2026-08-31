@@ -297,6 +297,7 @@
       "cleaning": "Cargo de limpieza",
       "damage": "Cargo por daños",
       "extraKm": "Cargo por km extra",
+      "extraKmHint": "Sin cobrar. Exceso detectado:",
       "fine": "Multa",
       "fuel": "Cargo de combustible",
       "other": "Otros cargos",
@@ -387,7 +388,8 @@
       "priority": "Prioridad",
       "provider": "Proveedor",
       "status": "Estado",
-      "title": "Título"
+      "title": "Título",
+      "type": "Tipo"
     },
     "itemPlural": "ítems",
     "itemSingular": "ítem",
