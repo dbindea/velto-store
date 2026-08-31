@@ -144,6 +144,22 @@ Dos numeraciones, para no mezclar cosas distintas:
   eso, el envío del contrato en producción falla con 403. Y el 403 no explica
   por qué.
 
+- [ ] **M-29 · `sendSignedContractEmail` devuelve `contractId: null`.** *(31 ago 2026)*
+  La función lee el contrato con `snap.data()`, que **no incluye el id del
+  documento**, y luego devuelve `contractId: contract.id` — siempre `undefined`,
+  que viaja como `null`. Visto en la respuesta real de producción:
+
+  ```json
+  {"contractId":null,"emailedAt":"2026-08-31T12:26:58.263Z","to":"dbindea@gmail.com"}
+  ```
+
+  Hoy no rompe nada: el email se envía, `emailedAt` se escribe y el nombre del
+  adjunto usa `contractNumber`. Pero el mismo `contract.id` es el **fallback**
+  del nombre del fichero, así que un contrato sin número se adjuntaría como
+  `contrato-firmado-undefined.pdf`. Arreglo de una línea: usar `snap.id` (o el
+  `contractId` que ya llega en la petición). Va en el próximo despliegue de
+  functions, no merece uno para él solo.
+
 - [ ] **M-23 · Redsys tiene el mismo fallo, y sigue abierto.**
   `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero lee
   `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL` y `REDSYS_ENVIRONMENT` de
