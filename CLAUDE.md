@@ -512,12 +512,24 @@ La ventaja sobre Secret Manager es la que costó descubrir: **estas variables no
 hay que declararlas en ninguna function**. Llegan a `process.env` sin más, que es
 justo lo que los `VELTO_COMPANY_*` nunca hicieron estando puestos como secrets.
 
-Hoy solo llevan `VELTO_COMPANY_EMAIL`, y **son distintos a propósito**:
+Llevan `VELTO_COMPANY_EMAIL` y `VELTO_PUBLIC_BASE_URL`, **distintos a propósito**:
 
-| | Correo |
-|---|---|
-| desarrollo | `reservas@veltorent.com` |
-| producción | `reservas@veltomobility.com` |
+| | Correo | Dominio público |
+|---|---|---|
+| desarrollo | `reservas@veltorent.com` | `https://store.veltorent.com` |
+| producción | `reservas@veltomobility.com` | `https://rentalcar.veltomobility.com` |
+
+`VELTO_PUBLIC_BASE_URL` gobierna **las dos URL que recibe el cliente**: el enlace
+de firma del contrato y los enlaces cortos `/d/…` de presupuestos y
+justificantes. Sin ella, los cortos caen al dominio `.web.app` del proyecto y el
+enlace de firma sale relativo para que lo complete el frontend — funcionan, pero
+lo que el cliente ve por WhatsApp no es el dominio de la empresa.
+
+⚠️ **Hay un secret `VELTO_PUBLIC_BASE_URL` en Secret Manager, en desarrollo, que
+no sirve para nada.** `signingLink` y `documentLink` lo leen de `process.env`
+sin declararlo, así que nunca llegó al runtime: el enlace de firma llevaba meses
+saliendo relativo con el secret puesto. Manda el `.env`. El secret puede
+borrarse.
 
 ⚠️ **Ese correo hace dos cosas a la vez**: es el remitente de los emails de
 Resend **y** el correo impreso en el contrato y en los documentos. Cambiarlo

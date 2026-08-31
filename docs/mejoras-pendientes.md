@@ -160,14 +160,31 @@ Dos numeraciones, para no mezclar cosas distintas:
   encajarían mejor en `functions/.env.<proyecto>`, que Firebase inyecta sin
   declarar nada. Solo `REDSYS_SECRET_KEY` necesita Secret Manager.
 
-- [ ] **M-4 · Verificar `VELTO_PUBLIC_BASE_URL` en producción.**
-  ⚠️ Ampliado el 29 de agosto: además de no estar puesto en producción,
-  **tampoco está declarado** en `signingLink` ni en `documentLink`, así que en
-  dev tampoco llega. Mismo caso que M-23.
-  El link de firma se construyó con `localhost:4321` en las pruebas porque el
-  frontend sustituye el marcador con su propio origen. Confirmar que en
-  producción el secret está puesto y el link que se copia para WhatsApp apunta
-  al dominio real.
+- [x] **M-4 · `VELTO_PUBLIC_BASE_URL` no llegaba a ninguna function.** *(31 ago 2026)*
+  En producción no estaba puesta. En desarrollo estaba puesta **como secret sin
+  declarar**, así que tampoco llegaba: el enlace de firma llevaba meses saliendo
+  relativo y los cortos apuntando al dominio `.web.app`. El secret existía, y eso
+  bastaba para dar el asunto por resuelto sin estarlo.
+
+  Resuelto por la misma vía que M-28, `functions/.env.<proyecto>`:
+
+  | | Dominio |
+  |---|---|
+  | desarrollo | `https://store.veltorent.com` |
+  | producción | `https://rentalcar.veltomobility.com` |
+
+  **Verificado en desarrollo de punta a punta**: la respuesta de
+  `generateBookingConfirmationPdf` trae ya
+  `pdfUrl: https://store.veltorent.com/d/rtuKt8s4DW2ivAOBZru65`, y ese enlace
+  responde `200 application/pdf`.
+
+  El rewrite `/d/**` está activo en **los dos dominios propios**: con un id
+  inexistente responden `404`, no `200 text/html`, que es lo que devolvería la
+  SPA si el rewrite faltara.
+
+  ⚠️ Queda el secret `VELTO_PUBLIC_BASE_URL` en Secret Manager de desarrollo,
+  inútil pero inofensivo. Se puede borrar con
+  `firebase functions:secrets:destroy VELTO_PUBLIC_BASE_URL --project dev`.
 
 - [x] **M-14 · Los cobros manuales duplican los pagos preparados.** *(24 ago 2026)*
   Al crear una reserva, `createInitialPaymentsForReservation` siembra tres
