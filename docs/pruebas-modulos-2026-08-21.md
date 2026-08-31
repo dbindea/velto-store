@@ -1332,3 +1332,52 @@ espacio), `x1234567l` → `X1234567L`, y `1.5 dCi Zen` **conserva el `dCi`**.
   ninguna transformación, aunque también va impresa en el contrato.
 
 **Sin probar en producción**: el ciclo se hizo entero contra `velto-store`.
+
+## C-23 · Ciclo completo en PRODUCCIÓN — 31 de agosto de 2026
+
+Primer alquiler recorrido de principio a fin en `rentalcar-veltomobility`, sobre
+el dominio propio y con la base vacía. Lo que se quería saber no era si la app
+funciona —eso ya estaba probado en desarrollo— sino si funcionan **las tres
+cosas que solo existen en producción**: el dominio, el correo nuevo y su
+verificación en Resend.
+
+| Paso | Resultado |
+|---|---|
+| Login con Google | entra al dashboard **sin refrescar** (confirma C-21 en producción) |
+| Vehículo | Seat Leon · 5678MJK |
+| Cliente | Dorel Bindea · dbindea@gmail.com |
+| Presupuesto | `https://rentalcar.veltomobility.com/d/q6aa902610b3249f1` → `200 application/pdf` |
+| Reserva | 3 días · estado `confirmed` tras la señal |
+| Contrato | `C-1342VA-2026` |
+| Link de firma | **absoluto y con el dominio propio** |
+| Firma del cliente | 14:26 |
+| **Email** | **enviado 12:26:58 UTC a dbindea@gmail.com** |
+
+**Lo que confirma cada cosa.**
+
+El email devolvió `200`, no `403`. Ese era el riesgo real: Resend solo acepta
+remitentes de dominio verificado, así que un `200` prueba que
+`veltomobility.com` está verificado y que `reservas@veltomobility.com` puede
+enviar. `emailedAt` quedó escrito, y solo se escribe si Resend responde `ok`.
+
+El enlace de firma salió **absoluto**. Antes salía relativo, porque
+`VELTO_PUBLIC_BASE_URL` nunca llegaba al runtime (M-4).
+
+En el PDF firmado de producción, la separación marca / razón social es la
+correcta:
+
+```
+cabecera:  VELTO MOBILITY · NIF B88866900 · … · reservas@veltomobility.com
+firmas:    x=50  Arrendador (Sociedad)      x=313  Arrendatario
+           x=50  VELTO MOBILITY, S.L.       x=313  Dorel Bindea
+           x=50  NIF/CIF B88866900          x=313  Firmado el 31/08/2026, 14:26 por Dorel Bindea
+```
+
+Marca arriba, razón social solo junto al NIF, y la constancia de firma en la
+columna del arrendatario (M-26 y M-27, verificados ya en producción).
+
+**Un fallo menor encontrado**, anotado como M-29: la respuesta de
+`sendSignedContractEmail` devuelve `contractId: null`.
+
+**Avisos de consola en el login**: los cuatro de `Cross-Origin-Opener-Policy`,
+ya conocidos como M-13. No impiden el login.
