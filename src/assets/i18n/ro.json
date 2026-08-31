@@ -123,7 +123,6 @@
     "all": "Toate",
     "back": "Înapoi",
     "cancel": "Anulează",
-    "copied": "Copiat",
     "create": "Creează",
     "delete": "Șterge",
     "edit": "Editează",
@@ -438,6 +437,8 @@
   "payments": {
     "actions": {
       "cancelPayment": "Anulează plata",
+      "chargeCard": "Plată cu cardul",
+      "chargeCardError": "Nu s-a putut deschide pasarela de plată",
       "markAsPaid": "Marchează ca plătit",
       "viewReservation": "Vezi rezervare"
     },
@@ -472,7 +473,6 @@
       "concept": "Concept",
       "conceptPlaceholder": "Ex: diferență combustibil",
       "conceptRequired": "Conceptul este obligatoriu.",
-      "copyLink": "Copiază link",
       "created": "Încasare creată",
       "generateRedsysLink": "Generează încasare",
       "manualHint": "Plată manuală: marchează ca plătită din detaliu după confirmare.",

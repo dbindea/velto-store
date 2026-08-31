@@ -123,7 +123,6 @@
     "all": "All",
     "back": "Back",
     "cancel": "Cancel",
-    "copied": "Copied",
     "create": "Create",
     "delete": "Delete",
     "edit": "Edit",
@@ -438,6 +437,8 @@
   "payments": {
     "actions": {
       "cancelPayment": "Cancel payment",
+      "chargeCard": "Pay by card",
+      "chargeCardError": "Could not open the payment gateway",
       "markAsPaid": "Mark as paid",
       "viewReservation": "View reservation"
     },
@@ -472,7 +473,6 @@
       "concept": "Concept",
       "conceptPlaceholder": "E.g. fuel difference",
       "conceptRequired": "Concept is required.",
-      "copyLink": "Copy link",
       "created": "Charge created",
       "generateRedsysLink": "Generate charge",
       "manualHint": "Manual payment: mark it as paid from the detail once confirmed.",
