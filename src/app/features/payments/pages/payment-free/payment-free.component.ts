@@ -57,7 +57,6 @@ export class PaymentFreeComponent implements OnInit {
   saving = signal(false);
   error = signal<string | null>(null);
   created = signal<CreatedPayment | null>(null);
-  copied = signal(false);
 
   methodOptions: { value: PaymentMethod; label: string }[] = [
     { value: 'redsys', label: 'payments.methods.redsys' },
@@ -129,20 +128,11 @@ export class PaymentFreeComponent implements OnInit {
     }
   }
 
+  /** Abre la pasarela. El POST y su porqué viven en el servicio. */
   openRedsys(): void {
     const r = this.created()?.redsys;
-    if (r?.paymentUrl) {
-      window.open(r.paymentUrl, '_blank', 'noopener');
-    }
-  }
-
-  copyLink(): void {
-    const link = this.created()?.redsys?.paymentUrl;
-    if (!link) return;
-    navigator.clipboard.writeText(link).then(() => {
-      this.copied.set(true);
-      setTimeout(() => this.copied.set(false), 2000);
-    });
+    if (!r?.paymentUrl || !r.formData) return;
+    this.redsysService.openGateway({ paymentUrl: r.paymentUrl, formData: r.formData, reference: r.order || '' });
   }
 
   reset(): void {

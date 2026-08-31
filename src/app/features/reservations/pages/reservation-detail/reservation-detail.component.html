@@ -793,6 +793,18 @@
                     {{ getPaymentStatusLabel(payment.status) | translate }}
                   </span>
                 </div>
+                @if (payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) {
+                  <div class="payment-actions">
+                    <button
+                      type="button"
+                      class="btn-charge-card"
+                      [disabled]="chargingPaymentId() === payment.id"
+                      (click)="chargeWithCard(payment, $event)">
+                      <i class="pi pi-credit-card"></i>
+                      {{ 'payments.actions.chargeCard' | translate }}
+                    </button>
+                  </div>
+                }
               </div>
             }
           </div>

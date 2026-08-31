@@ -1022,7 +1022,7 @@ app-reservation-timeline {
 
 .payment-row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   gap: 0.75rem;
   align-items: center;
   padding: 0.625rem 0.75rem;
@@ -1040,7 +1040,12 @@ app-reservation-timeline {
   // stacked on the right so the amount reads next to what qualifies it.
   @media (max-width: 640px) {
     grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: 'icon info money';
+    // El botón de cobro NO cabe en la fila del importe sin apretarlo: baja a
+    // una línea propia a todo lo ancho, que además le da un área táctil
+    // decente. Recolocar, no ocultar.
+    grid-template-areas:
+      'icon info money'
+      'actions actions actions';
     align-items: start;
     gap: 0.625rem;
   }
@@ -1053,6 +1058,52 @@ app-reservation-timeline {
   // The badge repeats what the coloured icon already says; the amount is
   // what was missing.
   .payment-status { display: none; }
+  // El botón sí sobrevive al móvil: no es redundante con nada, y es la app
+  // que se usa con el cliente delante.
+  .payment-actions { grid-area: actions; }
+}
+
+// Cobro con tarjeta desde una fila pendiente. Discreto: la acción principal de
+// la fila sigue siendo abrir el detalle del pago.
+.payment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-charge-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  min-height: 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  i { font-size: 0.85rem; }
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+
+  @media (max-width: 640px) {
+    width: 100%;
+    min-height: 40px;
+    font-size: 0.8rem;
+  }
 }
 
 .payment-icon {

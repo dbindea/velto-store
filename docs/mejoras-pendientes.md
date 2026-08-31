@@ -160,7 +160,120 @@ Dos numeraciones, para no mezclar cosas distintas:
   `contractId` que ya llega en la petición). Va en el próximo despliegue de
   functions, no merece uno para él solo.
 
-- [ ] **M-23 · Redsys tiene el mismo fallo, y sigue abierto.**
+- [x] **M-30 · El botón de pago hacía GET a Redsys, que solo admite POST.** *(31 ago 2026)*
+  `openRedsys()` hacía `window.open(paymentUrl)`, es decir un **GET** a
+  `https://sis-t.redsys.es:25443/sis/realizarPago` **sin ningún parámetro**. El
+  importe, el pedido y la firma viajaban en `formData`, que el componente
+  recibía, guardaba… y no usaba nunca. El cliente llegaba a una pantalla de
+  error del banco: **ningún cobro con tarjeta podía completarse**.
+
+  Ahora se construye un formulario efímero con los tres campos
+  (`Ds_SignatureVersion`, `Ds_MerchantParameters`, `Ds_Signature`), se autoenvía
+  por POST y se retira del DOM.
+
+  Retirado también el botón **«Copiar enlace»**: copiaba esa misma URL sin
+  parámetros, idéntica para todos los cobros. Pegada en un WhatsApp no llevaba a
+  ningún pago. Para eso hace falta una página pública de pago — ver N-6.
+
+- [x] **M-31 · Cobrar con tarjeta una fila pendiente de la reserva.** *(31 ago 2026)*
+  Hasta ahora `redsys` era solo una opción del desplegable de método: registraba
+  el cobro **como si ya estuviera hecho**, sin abrir ninguna pasarela. Cobrar la
+  señal con tarjeta desde la reserva era imposible.
+
+  Cada fila pendiente (señal, resto, fianza) lleva ya un botón **Cobrar con
+  tarjeta** que pide el enlace para *ese* pago y abre la pasarela. No crea un
+  pago nuevo: liquida el que ya estaba sembrado, con su importe y su concepto.
+
+  El POST vive ahora en `RedsysPaymentService.openGateway()`, compartido con el
+  cobro libre, para que el fallo de M-30 no se pueda repetir en un sitio y en el
+  otro no.
+
+  En móvil el botón **baja a una línea propia** en vez de desaparecer: la celda
+  de estado se oculta a 640px, y meterlo ahí lo habría escondido justo en la
+  pantalla donde se cobra con el cliente delante.
+
+- [x] **M-32 · Un cobro por Redsys dejaba la reserva desincronizada.** *(31 ago 2026)*
+  Encontrado al probar M-31 de punta a punta. El webhook marcaba el pago como
+  `paid` —correctamente— pero la reserva se quedaba así:
+
+  ```
+  reservationStatus: reserved      ← debería ser confirmed
+  paymentStatus:     pending
+  initialPayment:    pending, paidAmount 0
+  ```
+
+  Es decir: **el dinero entraba y el workflow no se enteraba**. La fila decía
+  «Pagado» y el resumen «pendiente» a la vez. Con la señal cobrada, la reserva
+  no llegaba a `confirmed`, así que no se podía emitir el justificante ni
+  avanzar.
+
+  La causa es de reparto: el webhook solo escribe en `payments`, y los campos
+  que la reserva lleva embebidos los calcula el frontend.
+
+  **No se ha duplicado la aritmética en la function.** Habría creado una segunda
+  fuente de verdad para el dinero, que es justo lo que el proyecto prohíbe. En
+  su lugar, `reservation-detail` compara al cargar los pagos reales contra lo
+  que dice la reserva y, **solo si difieren**, llama a la reconciliación que ya
+  existía (`syncReservationPaymentStatus`). Converge y para: una visita normal
+  no escribe nada.
+
+  ⚠️ **Esto cuadra la reserva cuando alguien la abre.** Basta mientras el
+  operador esté delante del cobro. El día que un cliente pague solo desde la web
+  (N-5), el cálculo tendrá que vivir en la Cloud Function: nadie garantiza que
+  alguien abra la pantalla.
+
+- [x] **M-23 · Redsys funciona de extremo a extremo.** *(31 ago 2026)*
+  Resuelto lo que era mío: `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL` y
+  `REDSYS_ENVIRONMENT` viven ya en `functions/.env.<proyecto>`, que llegan sin
+  declarar nada. Ni el código de comercio ni el terminal son secretos: viajan
+  firmados dentro del formulario que ve el cliente.
+
+  | | Comercio | Terminal | Entorno |
+  |---|---|---|---|
+  | desarrollo | 361040215 | 1 | `test` |
+  | producción | 361040215 | 1 | `live` |
+
+  **Probado contra la pasarela real de test.** `createRedsysPaymentLink`
+  devuelve `200` —ya no aborta con «Redsys no está configurado»— con importe,
+  pedido de 12 caracteres, comercio, terminal y el webhook apuntando a
+  `europe-west1`. El POST llega y **Redsys reconoce el comercio**: pinta
+  `Terminal: 361040215-1` en su propia pantalla.
+
+  Con la primera clave se quedaba en `SIS0042` (error de firma). Dorel puso las
+  claves buenas el mismo día — las dos con formato válido (24 bytes) — y el
+  ciclo pasó entero:
+
+  | Paso | Resultado |
+  |---|---|
+  | Pasarela | «Pantalla de pago Redsys», 9,90 € |
+  | Tarjeta de prueba + 3DS | **OPERACIÓN AUTORIZADA, código 002329** |
+  | Webhook | notificación recibida y validada |
+  | Firestore | `status: paid` · `responseCode: 0000` · `authorizationCode: 002329` |
+
+  El código de autorización guardado coincide con el del ticket del banco, que
+  es la prueba de que la notificación asíncrona es la que manda.
+
+  Comprobado además que el webhook es **públicamente accesible** en los dos
+  proyectos, que es condición para que Redsys pueda notificar: responde `400` a
+  un POST vacío y `405` a un GET — respuestas nuestras, no un `403` de Google.
+
+- [ ] **N-6 · Enlace de pago para enviar por WhatsApp.** *(31 ago 2026 — sin decidir)*
+  Hoy solo se puede cobrar con el operador delante, porque abrir la pasarela
+  exige un POST firmado desde la propia pantalla. Para mandar un enlace al
+  cliente hacen falta dos piezas y una decisión:
+
+  - una **ruta pública** `/pay/:paymentId` que reciba el id, pida la firma a la
+    function y autoenvíe el formulario;
+  - o **Paygold**, el servicio del propio Redsys que envía el enlace por SMS o
+    email desde el banco (es otro tipo de operación, no un `TransactionType` 0).
+
+  La ruta propia expone importe, concepto y titular a quien tenga el id — no es
+  grave (pagar de más no es un ataque), pero hay que quererlo. Es además la
+  pieza que necesita la pre-reserva de N-5.
+
+  Falta también decidir **a dónde vuelve el cliente**: `Ds_Merchant_UrlOK` y
+  `UrlKO` van hoy vacías, así que se queda en la pantalla de Redsys. Apuntarlas
+  al dominio sin más lo dejaría en el login, que es peor.
   `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero lee
   `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL` y `REDSYS_ENVIRONMENT` de
   `process.env` sin declararlos. Salen `undefined` y la función responde «Redsys
@@ -400,15 +513,36 @@ El ciclo completo del alquiler está ejercitado de principio a fin: vehículo,
 cliente, cliente rápido, reserva, contrato, firma, entrega, devolución con
 cargos extra, resolución de fianza y cierre. Queda:
 
-- [ ] Cobro libre con Redsys (`free_payment`) contra el entorno de test real
-      — **bloqueado por M-23**: la function aborta antes de llamar a Redsys
+- [x] Cobro libre con Redsys contra el entorno de test real — **probado el 31 de
+      agosto de 2026**: pago autorizado (código 002329), webhook recibido y
+      pago en `paid` en Firestore. También probado el cobro de una fila
+      pendiente desde la reserva (M-31), con la reserva pasando a `confirmed`.
+- [x] Redsys **en producción, con dinero real** — *31 de agosto de 2026*. Cobro
+      libre de 10,00 € contra `sis.redsys.es`, pedido `14182A8C727F`:
+
+      ```
+      status: paid · paidAmount: 10
+      responseCode: 0000 · authorizationCode: 379521
+      notifiedAt: 2026-08-31T17:27:55.981Z
+      ```
+
+      El webhook de producción recibió la notificación, validó la firma con la
+      clave real y escribió el resultado. **Quedan 10 € cobrados de verdad a
+      GATE2FLY: devolver desde el panel de Redsys.**
+
+      ⚠️ La pasarela se abrió lanzando el POST **a mano desde la consola**,
+      porque el hosting de producción servía aún el bundle anterior. Falta
+      repetirlo con el botón ya desplegado.
 - [x] Envío del contrato firmado por email con Resend — **probado de extremo a
       extremo el 29 de agosto de 2026** en `velto-store`, ciclo completo desde
       cero: vehículo → cliente → presupuesto → reserva → señal → contrato →
       link de firma → firma del cliente → email. Contrato `C-TUKT8S-2026`,
       `emailedAt: 2026-08-29T11:20:03.933Z` en Firestore, que solo se escribe si
       Resend devolvió `ok`. Remitente `reservas@veltorent.com`, destinatario
-      `dbindea@gmail.com`. **Sin probar todavía en producción.**
+      `dbindea@gmail.com`. **Repetido en producción el 31 de agosto** (C-23):
+      contrato `C-1342VA-2026`, remitente `reservas@veltomobility.com`,
+      respuesta `200` y no `403` — que es lo que prueba que Resend tiene el
+      dominio verificado.
 - [ ] Módulo de mantenimiento de vehículos (colección aún vacía)
 - [ ] Subida de fotos dentro de una inspección (probada en vehículos, no en
       inspecciones)

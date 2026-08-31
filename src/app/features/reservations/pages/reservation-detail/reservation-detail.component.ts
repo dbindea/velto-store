@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -38,6 +38,7 @@ import { toDate } from '@shared/utils/reservation-date.util';
 import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
 import { collectedTotalsOf } from '@shared/utils/payment-summary.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
+import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 import { TranslateService } from '@core/i18n/translate.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
@@ -66,8 +67,12 @@ export class ReservationDetailComponent implements OnInit {
   private inspectionService = inject(InspectionService);
   private contractService = inject(ContractService);
   private documentService = inject(ReservationDocumentService);
+  private redsysService = inject(RedsysPaymentService);
   private translateService = inject(TranslateService);
   private destroyRef = inject(DestroyRef);
+
+  /** Id del pago cuya pasarela se está pidiendo, para no permitir dos clics. */
+  readonly chargingPaymentId = signal<string | null>(null);
 
   reservation: Reservation | null = null;
   payments: Payment[] = [];
@@ -269,12 +274,59 @@ export class ReservationDetailComponent implements OnInit {
       next: (payments) => {
         this.payments = payments;
         this.loadingPayments = false;
+        void this.reconcileAfterExternalPayment(reservationId);
       },
       error: (error) => {
         console.error('Error loading payments:', error);
         this.loadingPayments = false;
       }
     });
+  }
+
+  /**
+   * Vuelve a cuadrar la reserva cuando un pago se ha cobrado **fuera de esta
+   * pantalla**, que hoy significa: por Redsys.
+   *
+   * El webhook es quien da un pago por bueno —es la única confirmación que
+   * vale— pero solo escribe en la colección `payments`. Los campos que la
+   * reserva lleva embebidos (`initialPayment`, `paymentStatus`, y la
+   * transición a `confirmed`) los calcula el frontend, así que sin esto se
+   * cobraba la señal con tarjeta y la reserva seguía diciendo «Reservado» y
+   * «pendiente» con el dinero ya en la cuenta.
+   *
+   * Se compara contra los pagos reales y solo se escribe si difieren, así que
+   * converge y para: una visita normal no genera escrituras.
+   *
+   * ⚠️ Esto cuadra la reserva **cuando alguien la abre**. Es suficiente
+   * mientras el operador esté delante del cobro, que es el caso de hoy. El día
+   * que un cliente pague solo desde la web (N-5), el cálculo tendrá que vivir
+   * en la Cloud Function: nadie garantiza que alguien abra la pantalla.
+   */
+  private async reconcileAfterExternalPayment(reservationId: string): Promise<void> {
+    if (!this.reservation) return;
+
+    const paidOf = (type: PaymentType) =>
+      this.payments
+        .filter((p) => p.type === type && p.status !== 'cancelled')
+        .reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+
+    const divergencias: [number, number][] = [
+      [paidOf('initial_payment'), this.reservation.initialPayment?.paidAmount || 0],
+      [paidOf('remaining_payment'), this.reservation.remainingPayment?.paidAmount || 0],
+      [paidOf('deposit'), this.reservation.deposit?.paidAmount || 0]
+    ];
+    // Céntimo de tolerancia: el resumen redondea y no queremos reescribir en
+    // bucle por un error de coma flotante.
+    const desincronizada = divergencias.some(([real, guardado]) => Math.abs(real - guardado) > 0.005);
+    if (!desincronizada) return;
+
+    try {
+      // No hace falta recargar: la reserva llega por una suscripción viva, así
+      // que la propia escritura la refresca en pantalla.
+      await this.paymentService.syncReservationPaymentStatus(reservationId);
+    } catch (error) {
+      console.error('Error reconciling reservation after external payment:', error);
+    }
   }
 
   goBack(): void {
@@ -552,6 +604,35 @@ export class ReservationDetailComponent implements OnInit {
   viewPayment(paymentId: string | undefined): void {
     if (paymentId) {
       this.router.navigate(['/payments', paymentId]);
+    }
+  }
+
+  /**
+   * Cobra con tarjeta una fila **ya sembrada** (señal, resto o fianza).
+   *
+   * No crea un pago nuevo: `createRedsysPaymentLink` recibe el id del que ya
+   * existe, le adjunta el pedido de Redsys y lo deja en `pending`. Quien lo da
+   * por bueno es el webhook, no esta pantalla — por eso aquí no se toca el
+   * estado. Si el operador cierra la pasarela sin pagar, la fila se queda
+   * pendiente, que es lo correcto.
+   *
+   * `stopPropagation` porque la fila entera navega al detalle del pago.
+   */
+  async chargeWithCard(payment: Payment, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!payment.id || this.chargingPaymentId()) return;
+
+    this.chargingPaymentId.set(payment.id);
+    try {
+      const link = await this.redsysService.createRedsysPaymentLink(payment.id);
+      this.redsysService.openGateway(link);
+    } catch (err: any) {
+      alert(
+        this.translateService.translate('payments.actions.chargeCardError') +
+          (err?.message ? `: ${err.message}` : '')
+      );
+    } finally {
+      this.chargingPaymentId.set(null);
     }
   }
 

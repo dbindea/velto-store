@@ -134,14 +134,6 @@
             <i class="pi pi-external-link"></i>
             {{ 'payments.free.openRedsys' | translate }}
           </button>
-          <button class="btn btn-secondary" type="button" (click)="copyLink()">
-            <i class="pi pi-copy"></i>
-            @if (copied()) {
-              {{ 'common.copied' | translate }}
-            } @else {
-              {{ 'payments.free.copyLink' | translate }}
-            }
-          </button>
         </div>
         <p class="hint">
           <i class="pi pi-info-circle"></i>

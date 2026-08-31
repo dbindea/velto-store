@@ -123,7 +123,6 @@
     "all": "Todos",
     "back": "Volver",
     "cancel": "Cancelar",
-    "copied": "Copiado",
     "create": "Crear",
     "delete": "Eliminar",
     "edit": "Editar",
@@ -438,6 +437,8 @@
   "payments": {
     "actions": {
       "cancelPayment": "Cancelar pago",
+      "chargeCard": "Cobrar con tarjeta",
+      "chargeCardError": "No se pudo abrir la pasarela de pago",
       "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
     },
@@ -472,7 +473,6 @@
       "concept": "Concepto",
       "conceptPlaceholder": "Ej: diferencia por combustible",
       "conceptRequired": "El concepto es obligatorio.",
-      "copyLink": "Copiar link",
       "created": "Cobro creado",
       "generateRedsysLink": "Generar cobro",
       "manualHint": "Pago manual: márcalo como pagado desde el detalle cuando lo confirmes.",

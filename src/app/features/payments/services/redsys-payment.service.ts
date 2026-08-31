@@ -62,6 +62,42 @@ export class RedsysPaymentService {
   }
 
   /**
+   * Abre la pasarela **enviando un POST**, que es la única forma que Redsys
+   * admite.
+   *
+   * Vive aquí y no en el componente porque lo necesitan dos pantallas —el cobro
+   * libre y las filas pendientes de una reserva— y es justo el detalle que ya
+   * se hizo mal una vez: se abría `paymentUrl` con un GET, sin parámetros, y el
+   * cliente aterrizaba en una pantalla de error del banco. La firma y el
+   * importe van en `formData`, así que **el formulario es el pago**.
+   *
+   * El formulario se crea, se envía y se retira: no queda nada en el DOM.
+   */
+  openGateway(link: RedsysLinkResponse): void {
+    if (!link.paymentUrl || !link.formData) {
+      throw new Error('Redsys no devolvió los datos del formulario');
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = link.paymentUrl;
+    form.target = '_blank';
+    form.style.display = 'none';
+
+    for (const [name, value] of Object.entries(link.formData)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  }
+
+  /**
    * Get the current status of a Redsys payment.
    * Reads from Firestore (the backend updates it after webhook).
    */
