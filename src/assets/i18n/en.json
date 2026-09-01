@@ -573,9 +573,12 @@
       "viewReservation": "View reservation"
     },
     "availability": {
+      "conflict": "There is already a booking for these dates",
+      "notInFleet": "The vehicle is not available in the fleet",
       "noVehiclesAvailable": "No vehicles available for these dates",
       "search": "Search availability",
-      "selectVehicle": "Select vehicle"
+      "selectVehicle": "Select vehicle",
+      "unavailable": "Not available"
     },
     "bookingConfirmation": {
       "copyLink": "Copy link",
@@ -626,6 +629,15 @@
       "waived": "Waived"
     },
     "detail": "Reservation details",
+    "errors": {
+      "cancel": "Could not cancel the reservation",
+      "registerPayment": "Could not register the payment",
+      "processDeposit": "Could not process the deposit",
+      "generateContract": "Could not generate the contract",
+      "createSigningLink": "Could not create the signing link",
+      "pdfNotReady": "The PDF is not available yet",
+      "signedPdfNotReady": "The signed contract is not available yet"
+    },
     "fields": {
       "duration": "Duration",
       "notes": "Notes",
@@ -879,11 +891,17 @@
     "cannotClose": "Cannot close reservation",
     "cannotDeliver": "Cannot start pickup",
     "cannotReturn": "Cannot start return",
+    "clientBlocked": "Blocked customer: no reservation can be created. Change their trust level in their file if you really mean to rent to them.",
+    "clientRisk": "Customer flagged as a risk. You can continue, but check first.",
     "closeReservation": "Close reservation",
     "completed": "Reservation complete",
     "contractAlreadySigned": "Contract already signed",
     "contractCancelled": "Contract cancelled",
     "contractPending": "Pending signature",
+    "exceptionReason": "Reason",
+    "exceptionReasonPlaceholder": "E.g.: the customer signed the contract on paper at the office",
+    "exceptionReasonRequired": "A reason is required (minimum 3 characters).",
+    "exceptionsTitle": "Skipped steps",
     "generateContract": "Generate contract",
     "generateSigningLink": "Create signing link",
     "missingContract": "Contract missing",
@@ -901,10 +919,12 @@
     "pickupAlreadyCompleted": "Pickup already completed",
     "returnAlreadyCompleted": "Return already completed",
     "settleDeposit": "Settle deposit",
+    "skipStep": "Skip this step",
+    "skipStepConfirm": "You are about to skip a workflow check:",
+    "skipStepConfirmAction": "Skip the step",
+    "skipStepHint": "It is recorded with your name, the date and the reason. Use it only when the step was met another way — a contract signed on paper, for instance.",
     "startPickup": "Start pickup",
     "startReturn": "Start return",
-    "unsettledDeposit": "Deposit still pending settlement",
-    "clientBlocked": "Blocked customer: no reservation can be created. Change their trust level in their file if you really mean to rent to them.",
-    "clientRisk": "Customer flagged as a risk. You can continue, but check first."
+    "unsettledDeposit": "Deposit still pending settlement"
   }
 }

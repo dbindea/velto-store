@@ -130,6 +130,18 @@ const DYNAMIC_KEY_SETS = {
     'depositSettled',
     'reservationClosed'
   ],
+  // reservation-workflow.util.ts › EXCEPTIONABLE_ACTIONS
+  //
+  // Los pasos que se pueden saltar con una excepción documentada. La ficha de
+  // la reserva los pinta con `'workflow.' + action`, así que sus hojas no se
+  // pueden encontrar buscando el literal.
+  'workflow.': [
+    'generateContract',
+    'generateSigningLink',
+    'startPickup',
+    'startReturn',
+    'closeReservation'
+  ],
   // client.model.ts › ClientDocumentType
   'clients.documentTypes.': ['dni', 'nie', 'passport', 'other'],
   // client.model.ts › ClientTrustLevel

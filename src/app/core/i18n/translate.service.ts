@@ -99,19 +99,52 @@ export class TranslateService {
   translate(key: string | null | undefined): string {
     if (typeof key !== 'string' || !key) return '';
 
-    const trans = this.translations();
-    const keys = key.split('.');
-    let value: any = trans;
+    const own = this.lookup(this.translations(), key);
+    if (own !== null) return own;
 
-    for (const k of keys) {
+    // Respaldo al español antes de rendirse.
+    //
+    // Sin esto, una clave que falte en `ro.json` se le pinta **en crudo** al
+    // usuario rumano aunque el español exista: ve `payments.status.cancelled`
+    // donde debería leer una palabra. Hoy la paridad está al 100 % y el
+    // auditor la vigila, así que esto no debería activarse nunca — pero el día
+    // que se escape una, es mejor que el rumano lea español a que lea una
+    // clave.
+    if (this.language() !== 'es') {
+      const spanish = this.translationsCache['es'] ?? this.loadLanguageSync('es');
+      const fallback = spanish ? this.lookup(spanish, key) : null;
+      if (fallback !== null) return fallback;
+    }
+
+    return key;
+  }
+
+  /** Recorre la clave con puntos. `null` si no lleva a una cadena. */
+  private lookup(translations: TranslationMap, key: string): string | null {
+    let value: any = translations;
+    for (const k of key.split('.')) {
       if (value && typeof value === 'object' && k in value) {
         value = value[k];
       } else {
-        return key;
+        return null;
       }
     }
+    return typeof value === 'string' ? value : null;
+  }
 
-    return typeof value === 'string' ? value : key;
+  /** Carga un idioma y lo cachea. Devuelve `null` si no se pudo. */
+  private loadLanguageSync(lang: Language): TranslationMap | null {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', `/assets/i18n/${lang}.json`, false);
+      xhr.send(null);
+      if (xhr.status !== 200) return null;
+      const data = JSON.parse(xhr.responseText);
+      this.translationsCache[lang] = data;
+      return data;
+    } catch {
+      return null;
+    }
   }
 
   getCurrentLanguage(): Language {

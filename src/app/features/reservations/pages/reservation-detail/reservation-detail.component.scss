@@ -1164,3 +1164,106 @@ app-reservation-timeline {
     .amount-total { font-size: 0.9rem; }
   }
 }
+/**
+ * Saltarse un paso del workflow (N-7).
+ *
+ * Discreto a propósito: aparece **solo** cuando el paso está bloqueado, y es la
+ * salida de emergencia, no una alternativa al camino normal. Si compitiera
+ * visualmente con el botón principal, acabaría usándose por comodidad.
+ */
+.btn-skip-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  i { font-size: 0.8rem; }
+
+  &:hover {
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+  }
+}
+
+.exceptions-card {
+  .badge-count {
+    margin-left: auto;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--warning-bg);
+    color: var(--warning-color);
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+}
+
+.exceptions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exception-item {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--warning-color);
+  border-radius: 6px;
+  background: var(--bg-main);
+}
+
+.exception-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.exception-date {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.exception-reason {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  // Un motivo es prosa: parte antes que truncar.
+  overflow-wrap: break-word;
+}
+
+.exception-author {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.modal-error {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--error-color);
+}
+
+.field-label {
+  display: block;
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}

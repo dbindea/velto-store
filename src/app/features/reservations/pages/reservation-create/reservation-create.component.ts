@@ -162,7 +162,11 @@ export class ReservationCreateComponent implements OnInit {
       case 'client':
         return this.selectedClient !== null;
       case 'summary':
-        return true;
+        // Nunca «completo». Devolvía `true` siempre, así que el cuarto paso
+        // nacía con el check verde desde que se abría el asistente, sin haber
+        // creado nada. Lo que completa el resumen es crear la reserva, y en ese
+        // momento se navega fuera: aquí el check no puede significar nada.
+        return false;
       default:
         return false;
     }

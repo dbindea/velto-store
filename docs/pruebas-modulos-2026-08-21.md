@@ -1505,3 +1505,40 @@ sin salida. Anotado como **N-7**, con las decisiones que hay que tomar antes.
 **El patrón, otra vez.** Cinco de los seis hallazgos de hoy son de la misma
 familia que el email o Redsys: código escrito, desplegado y nunca ejecutado.
 Ninguno lo habría encontrado un test.
+
+## C-27 · Tanda de arreglos pequeños — 1 de septiembre de 2026
+
+Ocho puntos del backlog que no necesitaban decisión. Ninguno era grave por
+separado; juntos son la diferencia entre una pantalla que ayuda y una que
+estorba.
+
+| | Qué pasaba | Cómo queda |
+|---|---|---|
+| **M-35** | «Registrar cobro» abría siempre en Señal y a 0 € | Abre en el primer concepto pendiente, con su importe |
+| **M-18** | «Reservado (confirmed)» — enum en inglés y español duro | «Ya hay una reserva para estas fechas», traducible |
+| **M-16** | Siete `alert()` en español duro | Los siete a `reservations.errors.*` |
+| **M-19** | El paso «Resumen» nacía con el check verde | Nunca completo: lo completa crear la reserva |
+| **M-29** | `contractId: null` en la respuesta del email | `snap.id`: `snap.data()` no trae el id |
+| **M-39** | Kilómetros de mantenimiento como texto | Números, con `null` para el campo vacío |
+| **M-2** | Una clave sin traducir se pintaba en crudo | Respaldo al español antes de rendirse |
+| **M-8** | «El contrato no lleva logo» | **Ya estaba resuelto**; el documento iba retrasado |
+
+**Lo que se encontró de más.** M-16 hablaba de dos `alert()` y había **siete**.
+M-18 apuntaba a un sitio y el texto real venía de **otro**: el que edité primero
+era el de `checkVehicleAvailability`, pero el que ve el operador en el paso 2 lo
+compone `searchAvailability`. Solo se descubrió porque, tras el arreglo, la
+pantalla seguía diciendo «Reservado (confirmed)».
+
+Al lado de ese apareció un tercero: `'VehÃ­culo no disponible en flota'`, con la
+tilde rota por un guardado en la codificación equivocada. Se leía así en
+pantalla. También pasó a clave i18n.
+
+**M-2, con matiz.** El respaldo al español no debería activarse nunca —la
+paridad está al 100 % y el auditor la vigila— pero el día que se escape una
+clave, es mejor que el usuario rumano lea español a que lea
+`payments.status.cancelled`.
+
+**Verificado en pantalla**, no solo compilado: el cobro abre en «Señal» con 50 €
+con la señal pendiente y en «Resto alquiler» con 149,65 € una vez cobrada; el
+paso 4 sale con su número; y el coche ocupado dice «Ya hay una reserva para
+estas fechas».

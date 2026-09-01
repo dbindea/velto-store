@@ -147,7 +147,23 @@ export class VehicleMaintenanceFormComponent implements OnChanges {
       return;
     }
     this.error.set(null);
-    this.submitForm.emit(this.form);
+    this.submitForm.emit({
+      ...this.form,
+      // Los kilómetros iban a Firestore como **texto** (`"44200"`), mientras el
+      // coste sí era número. Hoy solo se pintan, así que no se nota; pero como
+      // texto `"9000"` es mayor que `"44200"`, y hay un índice por
+      // `nextDueDate` esperando para ordenar mantenimientos.
+      performedAtKm: this.toNumber(this.form.performedAtKm),
+      nextDueKm: this.toNumber(this.form.nextDueKm),
+      cost: this.toNumber(this.form.cost)
+    });
+  }
+
+  /** `null` en vez de `NaN` o `''`: un km vacío es ausencia, no cero. */
+  private toNumber(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   onCancel(): void {

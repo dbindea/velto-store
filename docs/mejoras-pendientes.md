@@ -115,28 +115,46 @@ Dos numeraciones, para no mezclar cosas distintas:
 
   Añadida `maintenance.fields.type` en los tres idiomas.
 
-- [ ] **M-39 · Los kilómetros de mantenimiento se guardan como texto.** *(31 ago 2026)*
+- [x] **M-39 · Los kilómetros de mantenimiento se guardan como texto.** *(1 sep 2026)*
   `performedAtKm` y `nextDueKm` acaban en Firestore como `"44200"`, mientras
   `cost` sí es número. Hoy no molesta porque solo se pintan, pero cualquier
   orden o comparación por kilómetros saldría mal: como texto, `"9000"` es mayor
   que `"44200"`. `nextDueDate` va también como cadena `"2027-08-31"` en vez de
   fecha; ordena bien por ser ISO, pero no es una fecha.
 
-- [ ] **N-7 · Las excepciones de workflow no existen en la aplicación.** *(31 ago 2026)*
-  ⚠️ **No es que estén sin probar: no están implementadas.**
-  `buildWorkflowException()` está escrita y cubierta por tests, el modelo tiene
-  `workflowExceptions[]` y el workflow las respeta con `hasWorkflowException()`
-  … pero **no hay una sola llamada desde la UI ni desde los servicios**. No hay
-  forma de crear una.
+- [x] **N-7 · Excepciones de workflow, conectadas por fin.** *(1 sep 2026)*
+  `buildWorkflowException()`, `hasWorkflowException()` y `canWithException()`
+  estaban escritas y cubiertas por tests desde el principio, y **nadie las
+  llamaba**. Se podían escribir excepciones en el modelo y el workflow las
+  respetaba en teoría, pero ninguna pantalla las consultaba ni había forma de
+  crear una: un cliente que firmaba en papel dejaba la entrega bloqueada sin
+  salida, y el único arreglo era entrar a Firestore a mano.
 
-  La consecuencia es concreta: si un cliente firma el contrato **en papel**, el
-  botón de entrega queda bloqueado y no hay salida. Hoy la única vía es tocar
-  Firestore a mano.
+  **Decisiones de Dorel:** admiten excepción **todos los pasos menos alquilar a
+  un cliente bloqueado**, y basta con el **motivo escrito** que ya exigía
+  `buildWorkflowException` (mínimo 3 caracteres).
 
-  Antes de construirlo hay que decidir: qué acciones admiten excepción (el
-  workflow ya excluye `canCreateReservationForClient`), si basta con el motivo
-  obligatorio o hace falta confirmación aparte, y dónde se ven las excepciones
-  ya usadas — la ficha de la reserva parece el sitio, junto a las notas.
+  Lo construido:
+
+  - `EXCEPTIONABLE_ACTIONS` en el workflow, que es donde vive la lista y donde
+    queda escrito por qué `createReservationForClient` **no** está.
+  - `ReservationService.addWorkflowException()`, que persiste con `arrayUnion` y
+    el objeto ya limpio de `undefined` — el centinela no se puede limpiar
+    después.
+  - Las cinco decisiones de la ficha pasan por `canWithException()`, que es lo
+    que hace que registrar una excepción sirva de algo.
+  - Botón **«Saltar este paso»** bajo el motivo del bloqueo, visible solo cuando
+    el paso está bloqueado, y con trazo discontinuo: es la salida de emergencia,
+    no una alternativa al camino normal.
+  - Tarjeta **«Pasos saltados»** con acción, motivo, autor y fecha. Solo aparece
+    si hay alguna.
+
+  **Verificado**: motivo vacío → rechazado con su explicación; con motivo → la
+  entrega se desbloquea, la excepción aparece en la ficha y queda en Firestore
+  con `action`, `reason`, `createdBy` y `createdAt`.
+
+  El prefijo dinámico `workflow.` quedó registrado en `DYNAMIC_KEY_SETS`; el
+  auditor lo detectó y falló hasta hacerlo, que es exactamente su trabajo.
 
 - [x] **M-34 · El cargo por km extra: se avisa, no se rellena.** *(31 ago 2026)*
   El vehículo lleva `includedKmPerDay` y `extraKmPrice`, y la inspección conoce
@@ -165,12 +183,12 @@ Dos numeraciones, para no mezclar cosas distintas:
   Queda pendiente lo mismo para el **combustible**, que necesita antes un precio
   por depósito o por cuarto en la ficha del vehículo: ese campo no existe.
 
-- [ ] **M-35 · «Registrar cobro» nace en Señal con importe 0.** *(31 ago 2026)*
+- [x] **M-35 · «Registrar cobro» nace en Señal con importe 0.** *(1 sep 2026)*
   Con la señal ya cobrada, el formulario sigue abriendo en `initial_payment` y
   a 0 €. Al elegir el tipo sí autocompleta el importe pendiente —eso funciona—,
   así que basta con que arranque en **el primer tipo que quede pendiente**.
 
-- [ ] **M-2 · `TranslateService` no cae al español.**
+- [x] **M-2 · `TranslateService` no cae al español.** *(1 sep 2026)*
   Si una clave falta en `ro.json`, el usuario rumano ve la clave en crudo aunque
   el español exista. Hoy la paridad está al 100 %, así que no se manifiesta,
   pero es un fallo latente de una línea. Añadir fallback a `es`.
@@ -267,7 +285,7 @@ Dos numeraciones, para no mezclar cosas distintas:
   eso, el envío del contrato en producción falla con 403. Y el 403 no explica
   por qué.
 
-- [ ] **M-29 · `sendSignedContractEmail` devuelve `contractId: null`.** *(31 ago 2026)*
+- [x] **M-29 · `sendSignedContractEmail` devuelve `contractId: null`.** *(1 sep 2026)*
   La función lee el contrato con `snap.data()`, que **no incluye el id del
   documento**, y luego devuelve `contractId: contract.id` — siempre `undefined`,
   que viaja como `null`. Visto en la respuesta real de producción:
@@ -472,13 +490,13 @@ Dos numeraciones, para no mezclar cosas distintas:
   además tiene forma *few*, «2 zile» frente a «21 de zile»— o un pipe propio.
   No es solo cosmético: son tres idiomas con reglas distintas.
 
-- [ ] **M-18 · El vehículo no disponible muestra el estado en inglés.**
+- [x] **M-18 · El vehículo no disponible muestra el estado en inglés.** *(1 sep 2026)*
   En el paso 2 del asistente, un coche ocupado se etiqueta «Reservado
   (reserved)»: `conflictMessage` compone el texto traducido y añade entre
   paréntesis el valor crudo del enum. Decidir si el paréntesis aporta algo al
   operador o se quita.
 
-- [ ] **M-19 · El paso «Resumen» del asistente nace marcado como completado.**
+- [x] **M-19 · El paso «Resumen» del asistente nace marcado como completado.** *(1 sep 2026)*
   `isStepComplete('summary')` devuelve `true` siempre, así que el cuarto paso
   aparece con el check verde desde que se abre el formulario, cuando todavía
   no se ha creado nada. Decidir si el último paso debe considerarse completo
@@ -492,7 +510,7 @@ Dos numeraciones, para no mezclar cosas distintas:
   Generar miniaturas al subir sigue siendo la solución; la decisión es dónde
   —Cloud Function al subir, o `<img srcset>` con tamaños de Storage—.
 
-- [ ] **M-16 · Los `alert()` de la pantalla de reserva están en español duro.**
+- [x] **M-16 · Los `alert()` de la pantalla de reserva están en español duro.** *(1 sep 2026)*
   `registerPayment()` y `processDeposit()` avisan con
   `alert('Error al registrar el pago')` y `alert('Error al procesar la fianza')`,
   sin pasar por i18n. Son cadenas escritas a mano, el mismo problema que F-13
@@ -583,7 +601,7 @@ fallo: son convenciones que hay que elegir.
   importe y pagado con lo que falta del concepto elegido, y `registerPayment()`
   rechaza los importes a 0.
 
-- [ ] **M-8 · El PDF del contrato no lleva logo.**
+- [x] **M-8 · El PDF del contrato no lleva logo.** *(ya estaba resuelto)*
   `pdf.ts` no dibuja ninguna imagen de marca. El documento que firma el cliente
   sale sin identidad visual. Ahora que los SVG están ordenados es fácil de
   añadir.
@@ -677,8 +695,9 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [x] Cancelación de una reserva — **probada el 31 de agosto de 2026**. Sacó
       M-36 (no se podía cancelar una reserva confirmada) y M-37 (el estado del
       pago en inglés).
-- [~] Excepciones de workflow desde la UI — **no se pueden probar: no están
-      implementadas**. Ver N-7.
+- [x] Excepciones de workflow desde la UI — **implementadas y probadas el 1 de
+      septiembre de 2026** (N-7): motivo obligatorio, el paso se desbloquea y
+      queda registrado con autor y fecha en la ficha de la reserva.
 - [ ] **N-4 end-to-end**: poner un 10 % a un cliente, crear reserva y comprobar
       que el snapshot congela el porcentaje; luego retirárselo y verificar que
       la reserva anterior no se mueve
