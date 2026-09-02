@@ -14,6 +14,7 @@
  *
  * Functions:
  *   - createRedsysPaymentLink           (auth) — Redsys checkout
+ *   - getPaymentCheckout                (public) — el cliente paga desde su móvil
  *   - redsysNotificationWebhook         (public, signed) — Redsys webhook
  *   - generateContractPdf               (auth) — build PDF from a reservation
  *   - createContractSigningLink         (auth) — issue one-time token
@@ -30,7 +31,7 @@
 // evalúan sus módulos —y definen sus functions— antes que nada de aquí.
 import './global-options';
 
-export { createRedsysPaymentLink, redsysNotificationWebhook } from './redsys';
+export { createRedsysPaymentLink, getPaymentCheckout, redsysNotificationWebhook } from './redsys';
 
 // Contracts
 export { generateContractPdf } from './contracts/generateContractPdf';

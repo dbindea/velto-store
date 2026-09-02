@@ -35,7 +35,13 @@ import {
   canStartPickup as assertCanStartPickup,
   canStartReturn as assertCanStartReturn
 } from '@shared/utils/reservation-workflow.util';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+import { roundMoney, distributeRetentionAcrossCharges } from '@shared/utils/payment-summary.util';
+import {
+  MAX_IMAGE_SIZE,
+  MAX_THUMBNAIL_SIZE,
+  resizeImage,
+  resizedFilename
+} from '@shared/utils/image-resize.util';
 
 @Injectable({ providedIn: 'root' })
 export class InspectionService {
@@ -327,9 +333,11 @@ export class InspectionService {
       updatedAt: { seconds: Date.now() / 1000 }
     }));
 
-    // Create extra charge payments
+    // Create extra charge payments. Nacen PENDIENTES: quien los cobra es la
+    // fianza retenida, justo debajo, y solo hasta donde llegue.
+    let cargosCreados: Array<{ id: string; amount: number }> = [];
     if (inspection.extraCharges) {
-      await this.createExtraChargePayments(
+      cargosCreados = await this.createExtraChargePayments(
         reservation,
         inspection.extraCharges
       );
@@ -342,6 +350,11 @@ export class InspectionService {
         options.retainDepositAmount,
         inspection.extraCharges?.notes || 'Retención fianza - cargos entrega/devolución'
       );
+      // El orden importa: primero se registra la retención —que es el
+      // movimiento real de dinero— y después se aplica a los cargos.
+      if (cargosCreados.length > 0) {
+        await this.settleChargesWithRetention(cargosCreados, options.retainDepositAmount);
+      }
     }
     if (options.refundDepositAmount && options.refundDepositAmount > 0) {
       await this.paymentService.refundDeposit(
@@ -365,22 +378,42 @@ export class InspectionService {
     label?: string
   ): Promise<InspectionPhoto> {
     const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}-${safeName}`;
-    const storagePath = `inspections/${reservationId}/${type}/${filename}`;
+    const base = `inspections/${reservationId}/${type}`;
+
+    // Reducida antes de salir del móvil. Aquí importa el doble que en la ficha
+    // del vehículo: la inspección se hace en la calle, con el cliente delante y
+    // la cobertura que haya, y son varias fotos seguidas.
+    const resized = await resizeImage(file, MAX_IMAGE_SIZE);
+    const body = resized ?? file;
+    const safeName = resized
+      ? resizedFilename(file.name)
+      : file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `${base}/${timestamp}-${safeName}`;
     const storageRef = ref(this.storage, storagePath);
 
-    await uploadBytes(storageRef, file);
+    await uploadBytes(storageRef, body);
     const url = await getDownloadURL(storageRef);
+
+    let thumbnailUrl: string | undefined;
+    let thumbnailPath: string | undefined;
+    const thumb = await resizeImage(file, MAX_THUMBNAIL_SIZE);
+    if (thumb) {
+      thumbnailPath = `${base}/${timestamp}-${resizedFilename(file.name, '-thumb')}`;
+      await uploadBytes(ref(this.storage, thumbnailPath), thumb);
+      thumbnailUrl = await getDownloadURL(ref(this.storage, thumbnailPath));
+    }
 
     return {
       url,
       path: storagePath,
+      ...(thumbnailUrl ? { thumbnailUrl, thumbnailPath } : {}),
       label,
       category,
       fileName: file.name,
-      size: file.size,
-      contentType: file.type,
+      // El tamaño y el tipo son los de lo que se guarda, no los del original:
+      // si dijeran 4 MB estarían describiendo un fichero que no existe.
+      size: body.size,
+      contentType: resized ? 'image/jpeg' : file.type,
       uploadedAt: { seconds: Date.now() / 1000 }
     };
   }
@@ -459,7 +492,7 @@ export class InspectionService {
   private async createExtraChargePayments(
     reservation: Reservation,
     extra: InspectionExtraCharges
-  ): Promise<void> {
+  ): Promise<Array<{ id: string; amount: number }>> {
     type ChargeConcept =
       | 'extra_km'
       | 'extra_fuel'
@@ -479,16 +512,32 @@ export class InspectionService {
       { amount: extra.otherCharge, type: 'extra_other', concept: 'Cargos devolución: otros' }
     ];
 
+    const creados: Array<{ id: string; amount: number }> = [];
+
     for (const item of map) {
       if (item.amount && item.amount > 0) {
-        await this.paymentService.createManualPayment({
+        const id = await this.paymentService.createManualPayment({
           reservationId: reservation.id!,
           clientId: reservation.clientId,
           vehicleId: reservation.vehicleId,
           type: item.type,
           method: 'other',
           amount: item.amount,
-          paidAmount: item.amount, // assumed already paid
+          /**
+           * Nace **pendiente**, no pagado.
+           *
+           * Antes se creaba con `paidAmount = amount` «asumiendo» que ya estaba
+           * cobrado. No lo estaba: nadie había pasado una tarjeta ni tocado la
+           * fianza. Con cargos por 172,50 € y una fianza de 150 €, los 22,50 €
+           * de diferencia quedaban marcados como cobrados y desaparecían — y
+           * con la fianza a 0, que es lo normal en un cliente conocido, se daba
+           * por cobrado **todo** el cargo sin haber cobrado un céntimo.
+           *
+           * Quien lo liquida es la retención de fianza, abajo, y solo hasta
+           * donde alcance. Lo que sobre se queda pendiente y se puede cobrar
+           * con el botón de tarjeta.
+           */
+          paidAmount: 0,
           concept: item.concept,
           notes: extra.notes,
           source: 'manual',
@@ -501,7 +550,31 @@ export class InspectionService {
           clientSnapshot: reservation.clientSnapshot || { fullName: '' },
           vehicleSnapshot: reservation.vehicleSnapshot
         });
+        creados.push({ id, amount: item.amount });
       }
+    }
+
+    return creados;
+  }
+
+  /**
+   * Liquida los cargos con la fianza retenida.
+   *
+   * El reparto vive en `distributeRetentionAcrossCharges`, con sus tests: aquí
+   * solo se escribe lo que decida. Lo que la fianza no cubra se queda
+   * `pending`, sale en la lista de la reserva con su importe y se puede cobrar
+   * con el botón de tarjeta.
+   */
+  private async settleChargesWithRetention(
+    charges: Array<{ id: string; amount: number }>,
+    retainedAmount: number
+  ): Promise<void> {
+    for (const { id, apply } of distributeRetentionAcrossCharges(charges, retainedAmount)) {
+      await this.paymentService.settlePendingPayment(id, {
+        paidAmount: apply,
+        method: 'other',
+        notes: 'Cobrado con la fianza retenida'
+      });
     }
   }
 

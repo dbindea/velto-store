@@ -148,7 +148,10 @@ export const sendSignedContractEmail = functions.https.onCall(
     `;
     const text = `Hola ${clientName},\n\nAdjuntamos el contrato firmado correspondiente a la reserva del vehículo ${vehicleLabel} con fechas ${pickup} a ${ret}.\n\nGracias por confiar en ${company.brandName}.\n\n${company.brandName}\n${company.email}`;
 
-    const filename = `contrato-firmado-${contract.contractNumber || contract.id}.pdf`;
+    // `snap.id`, no `contract.id`: `snap.data()` NO incluye el id del documento,
+    // así que el respaldo era siempre `undefined` y un contrato sin número se
+    // habría adjuntado como `contrato-firmado-undefined.pdf`.
+    const filename = `contrato-firmado-${contract.contractNumber || snap.id}.pdf`;
 
     // ⚠️ Resend solo acepta remitentes de un dominio verificado en la cuenta.
     // Si `company.email` cambia a un dominio sin verificar, la API responde 403
@@ -167,7 +170,7 @@ export const sendSignedContractEmail = functions.https.onCall(
       ]
     };
 
-    functions.logger.info(`Sending signed contract ${contract.id} to ${to}`);
+    functions.logger.info(`Sending signed contract ${snap.id} to ${to}`);
     const res = await fetch(RESEND_API_URL, {
       method: 'POST',
       headers: {
@@ -205,7 +208,8 @@ export const sendSignedContractEmail = functions.https.onCall(
     );
 
     return {
-      contractId: contract.id,
+      // Mismo motivo: la respuesta devolvía siempre `null`.
+      contractId: snap.id,
       emailedAt: nowIso,
       to
     };

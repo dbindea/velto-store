@@ -47,7 +47,148 @@ Dos numeraciones, para no mezclar cosas distintas:
   **Sin excepción de workflow**: la salida es cambiarle el nivel al cliente en su
   ficha, que queda registrado.
 
-- [ ] **M-2 · `TranslateService` no cae al español.**
+- [x] **M-33 · Los cargos extra nacían «pagados» sin que nadie los cobrara.** *(31 ago 2026)*
+  Al completar la devolución, cada cargo se creaba con `status: paid` y
+  `paidAmount = amount` — el código lo admitía en un comentario:
+  `// assumed already paid`. Nadie había cobrado nada.
+
+  Con 172,50 € de cargos contra 150 € de fianza, la reserva salía **PAGADA** y
+  los 22,50 € de diferencia desaparecían. Con **fianza a 0** —lo normal en un
+  cliente conocido— se daba por cobrado el cargo entero sin cobrar un céntimo.
+
+  **Eran cuatro agujeros, no uno.** Los tres últimos aparecieron al tapar el
+  primero:
+
+  1. Los cargos nacen ahora `pending`, no `paid`.
+  2. La retención de fianza los **liquida de verdad**, de mayor a menor y hasta
+     donde alcance (`distributeRetentionAcrossCharges`, util puro con 5 tests).
+     Lo que no cubre queda pendiente y se cobra con el botón de tarjeta.
+  3. **`cancelUncollectedPayments` los cancelaba al cerrar la reserva.** Estaba
+     pensado para limpiar filas sembradas que nunca se usaron; un cargo extra
+     nace de un hecho —un daño, kilómetros de más— y es deuda del cliente. Sin
+     esto, el arreglo solo cambiaba la etiqueta con la que se perdía el dinero.
+  4. **`paymentStatus` solo miraba señal y resto**, así que una reserva con
+     160 € de cargos sin cobrar seguía anunciándose como **PAGADA**. No se veía
+     porque los cargos nacían pagados.
+
+  **Verificado en el caso peor**, reserva con fianza a 0 y 160 € de cargos
+  (120 daños + 40 limpieza):
+
+  ```
+  antes:  los dos cargos → «Pagado», reserva PAGADO, 160 € perdidos
+  ahora:  los dos cargos → «Pendiente» con botón de cobro
+          reserva PARCIAL, y siguen ahí después de cerrarla
+  ```
+
+- [x] **M-36 · No se podía cancelar una reserva confirmada.** *(31 ago 2026)*
+  El botón «Cancelar reserva» salía **deshabilitado y sin explicar por qué**
+  (`title=""`) en cuanto se cobraba la señal.
+
+  Había **dos reglas contradictorias en el mismo fichero**: `canCancel()`, que
+  copiaba la regla a mano y solo admitía `reserved`, y `canCancelReservation()`,
+  que delega en el workflow —la única autoridad— y también admite `confirmed`.
+  El template usaba la primera; el `title` lo pedía a la segunda, que no tenía
+  nada que objetar, y por eso salía vacío.
+
+  Es justo lo que CLAUDE.md prohíbe: duplicar reglas del workflow en un
+  componente. Retirado `canCancel()`; el template usa el workflow. Verificado:
+  se cancela una reserva confirmada, la señal cobrada se conserva como `paid` y
+  el resto y la fianza pasan a `cancelled`.
+
+- [x] **M-37 · El estado de un pago salía en inglés.** *(31 ago 2026)*
+  Al cancelar una reserva, sus pagos aparecían como **`cancelled`** en crudo.
+
+  `getPaymentStatusLabel()` resolvía contra `RESERVATION_PAYMENT_STATUS_LABELS`
+  —el estado de pago **de la reserva**, que solo conoce `pending`, `partial` y
+  `paid`— en lugar de `PAYMENT_STATUS_LABELS`, que es el de **un pago** y sí
+  tiene `cancelled`, `failed` y `refunded`. Al no encontrar la clave caía al
+  respaldo, que es el valor crudo. **La traducción existía desde siempre.**
+
+  De paso se quitó un `| translate` redundante: el getter ya devuelve el texto.
+
+- [x] **M-38 · La etiqueta del tipo de mantenimiento salía como clave.** *(31 ago 2026)*
+  El formulario pintaba **`maintenance.type.oil_change`** sobre el desplegable.
+  Dos errores en la misma línea: se construía la clave con el **valor
+  seleccionado** en vez del nombre del campo, y las claves de
+  `maintenance.type.*` están en camelCase (`oilChange`) mientras el valor llega
+  en snake_case (`oil_change`), así que no resolvía nunca.
+
+  Añadida `maintenance.fields.type` en los tres idiomas.
+
+- [x] **M-39 · Los kilómetros de mantenimiento se guardan como texto.** *(1 sep 2026)*
+  `performedAtKm` y `nextDueKm` acaban en Firestore como `"44200"`, mientras
+  `cost` sí es número. Hoy no molesta porque solo se pintan, pero cualquier
+  orden o comparación por kilómetros saldría mal: como texto, `"9000"` es mayor
+  que `"44200"`. `nextDueDate` va también como cadena `"2027-08-31"` en vez de
+  fecha; ordena bien por ser ISO, pero no es una fecha.
+
+- [x] **N-7 · Excepciones de workflow, conectadas por fin.** *(1 sep 2026)*
+  `buildWorkflowException()`, `hasWorkflowException()` y `canWithException()`
+  estaban escritas y cubiertas por tests desde el principio, y **nadie las
+  llamaba**. Se podían escribir excepciones en el modelo y el workflow las
+  respetaba en teoría, pero ninguna pantalla las consultaba ni había forma de
+  crear una: un cliente que firmaba en papel dejaba la entrega bloqueada sin
+  salida, y el único arreglo era entrar a Firestore a mano.
+
+  **Decisiones de Dorel:** admiten excepción **todos los pasos menos alquilar a
+  un cliente bloqueado**, y basta con el **motivo escrito** que ya exigía
+  `buildWorkflowException` (mínimo 3 caracteres).
+
+  Lo construido:
+
+  - `EXCEPTIONABLE_ACTIONS` en el workflow, que es donde vive la lista y donde
+    queda escrito por qué `createReservationForClient` **no** está.
+  - `ReservationService.addWorkflowException()`, que persiste con `arrayUnion` y
+    el objeto ya limpio de `undefined` — el centinela no se puede limpiar
+    después.
+  - Las cinco decisiones de la ficha pasan por `canWithException()`, que es lo
+    que hace que registrar una excepción sirva de algo.
+  - Botón **«Saltar este paso»** bajo el motivo del bloqueo, visible solo cuando
+    el paso está bloqueado, y con trazo discontinuo: es la salida de emergencia,
+    no una alternativa al camino normal.
+  - Tarjeta **«Pasos saltados»** con acción, motivo, autor y fecha. Solo aparece
+    si hay alguna.
+
+  **Verificado**: motivo vacío → rechazado con su explicación; con motivo → la
+  entrega se desbloquea, la excepción aparece en la ficha y queda en Firestore
+  con `action`, `reason`, `createdBy` y `createdAt`.
+
+  El prefijo dinámico `workflow.` quedó registrado en `DYNAMIC_KEY_SETS`; el
+  auditor lo detectó y falló hasta hacerlo, que es exactamente su trabajo.
+
+- [x] **M-34 · El cargo por km extra: se avisa, no se rellena.** *(31 ago 2026)*
+  El vehículo lleva `includedKmPerDay` y `extraKmPrice`, y la inspección conoce
+  los km de salida y de entrada, pero el campo se dejaba a 0 sin más y la cuenta
+  la hacía el operador a mano.
+
+  **Decisión de Dorel, y el criterio es suyo:** el primer año **no se cobra** el
+  kilometraje extra, para captar clientela. Y aunque se cobrara, prerrellenar el
+  campo es peligroso — *«si se me olvida lo guardo sin querer»*—: un importe
+  puesto por la aplicación acaba cobrándole al cliente algo que no querías
+  cobrarle. Un texto no se guarda solo.
+
+  Así que el campo **sigue a 0** y debajo aparece un aviso:
+
+  ```
+  Cargo por km extra  [ 0 ]
+  ⓘ Sin cobrar. Exceso detectado: 600 km · 150,00 €
+  ```
+
+  La aritmética vive en `suggestExtraKmCharge()` (`pricing.util.ts`), con
+  5 tests: el caso real, el límite exacto de los km incluidos, el kilometraje de
+  entrada menor que el de salida —un error de tecleo no puede producir un cargo—
+  y la ausencia de cualquier dato, que **no propone nada** en vez de inventar
+  una cifra.
+
+  Queda pendiente lo mismo para el **combustible**, que necesita antes un precio
+  por depósito o por cuarto en la ficha del vehículo: ese campo no existe.
+
+- [x] **M-35 · «Registrar cobro» nace en Señal con importe 0.** *(1 sep 2026)*
+  Con la señal ya cobrada, el formulario sigue abriendo en `initial_payment` y
+  a 0 €. Al elegir el tipo sí autocompleta el importe pendiente —eso funciona—,
+  así que basta con que arranque en **el primer tipo que quede pendiente**.
+
+- [x] **M-2 · `TranslateService` no cae al español.** *(1 sep 2026)*
   Si una clave falta en `ro.json`, el usuario rumano ve la clave en crudo aunque
   el español exista. Hoy la paridad está al 100 %, así que no se manifiesta,
   pero es un fallo latente de una línea. Añadir fallback a `es`.
@@ -144,7 +285,7 @@ Dos numeraciones, para no mezclar cosas distintas:
   eso, el envío del contrato en producción falla con 403. Y el 403 no explica
   por qué.
 
-- [ ] **M-29 · `sendSignedContractEmail` devuelve `contractId: null`.** *(31 ago 2026)*
+- [x] **M-29 · `sendSignedContractEmail` devuelve `contractId: null`.** *(1 sep 2026)*
   La función lee el contrato con `snap.data()`, que **no incluye el id del
   documento**, y luego devuelve `contractId: contract.id` — siempre `undefined`,
   que viaja como `null`. Visto en la respuesta real de producción:
@@ -257,23 +398,44 @@ Dos numeraciones, para no mezclar cosas distintas:
   proyectos, que es condición para que Redsys pueda notificar: responde `400` a
   un POST vacío y `405` a un GET — respuestas nuestras, no un `403` de Google.
 
-- [ ] **N-6 · Enlace de pago para enviar por WhatsApp.** *(31 ago 2026 — sin decidir)*
-  Hoy solo se puede cobrar con el operador delante, porque abrir la pasarela
-  exige un POST firmado desde la propia pantalla. Para mandar un enlace al
-  cliente hacen falta dos piezas y una decisión:
+- [x] **N-6 · El cliente paga desde su móvil, sin ti delante.** *(2 sep 2026)*
+  Hasta ahora solo se podía cobrar con tarjeta desde el backoffice y con el
+  cliente al lado, porque abrir la pasarela exige un POST firmado.
 
-  - una **ruta pública** `/pay/:paymentId` que reciba el id, pida la firma a la
-    function y autoenvíe el formulario;
-  - o **Paygold**, el servicio del propio Redsys que envía el enlace por SMS o
-    email desde el banco (es otro tipo de operación, no un `TransactionType` 0).
+  **Decisión de Dorel:** ruta pública propia, no Paygold.
 
-  La ruta propia expone importe, concepto y titular a quien tenga el id — no es
-  grave (pagar de más no es un ataque), pero hay que quererlo. Es además la
-  pieza que necesita la pre-reserva de N-5.
+  Lo construido:
 
-  Falta también decidir **a dónde vuelve el cliente**: `Ds_Merchant_UrlOK` y
-  `UrlKO` van hoy vacías, así que se queda en la pantalla de Redsys. Apuntarlas
-  al dominio sin más lo dejaría en el login, que es peor.
+  - `getPaymentCheckout`, Cloud Function **pública** que devuelve el formulario
+    firmado. Comparte con `createRedsysPaymentLink` la preparación del pago
+    (`prepareRedsysCheckout`), para no duplicar la firma, el formato del pedido
+    ni la URL del webhook — tres cosas que ya han estado mal alguna vez.
+  - Ruta pública `/pay/:paymentId`, **antes** del bloque con `authGuard`: pedirle
+    a un cliente que inicie sesión para pagar es pedirle que no pague.
+  - Pantalla pensada para el móvil, que es como llega el enlace: el importe
+    grande y primero, botón de 52 px, y la marca de la empresa arriba.
+  - Botón **«Copiar enlace de pago»** en cada fila pendiente de la reserva.
+
+  **Lo que devuelve y lo que no.** Solo importe, concepto y marca. Nunca el
+  nombre del pagador, su email, el cliente, el vehículo ni la reserva: quien
+  abre un enlace reenviado no debe enterarse de con quién trabajas. Comprobado
+  llamando a la function sin ninguna cabecera de autenticación.
+
+  Un pago **ya cobrado no genera formulario**: devuelve `paid` y la pantalla lo
+  dice. Sin eso, reenviar el enlace después de pagar cobraría dos veces. Un id
+  inexistente y uno cancelado responden lo mismo, para no confirmar desde fuera
+  si un identificador es real.
+
+  `Ds_Merchant_UrlOK` y `UrlKO` apuntan ya a la propia pantalla de pago, que
+  consulta el estado. Y como la notificación de Redsys puede llegar un instante
+  después que el navegador, hay un **«Ya he pagado, actualizar»**: en vez de
+  fingir que sabemos el resultado, se vuelve a preguntar.
+
+  **Probado de extremo a extremo** en desarrollo: enlace → pantalla en móvil →
+  tarjeta de prueba → 3DS → «Pago recibido», y la reserva pasó sola a
+  **Pagado: 199,65 €** por el webhook.
+
+  ⚠️ Falta desplegar `getPaymentCheckout` **en producción**.
   `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero lee
   `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL` y `REDSYS_ENVIRONMENT` de
   `process.env` sin declararlos. Salen `undefined` y la función responde «Redsys
@@ -341,7 +503,7 @@ Dos numeraciones, para no mezclar cosas distintas:
     cobraron un euro (`cancelUncollectedPayments`). Los parciales se respetan:
     cancelarlos borraría su `paidAmount` del resumen.
 
-- [ ] **M-17 · No hay pluralización en ningún sitio.**
+- [~] **M-17 · No hay pluralización en ningún sitio.** *(descartado el 1 sep 2026)*
   El asistente y el detalle escriben «1 días» porque concatenan el número con
   `reservations.fields.totalDays`, que es una cadena fija en plural. Pasa en
   la tarjeta del vehículo del paso 2, en el resumen y en el detalle de la
@@ -349,27 +511,63 @@ Dos numeraciones, para no mezclar cosas distintas:
   además tiene forma *few*, «2 zile» frente a «21 de zile»— o un pipe propio.
   No es solo cosmético: son tres idiomas con reglas distintas.
 
-- [ ] **M-18 · El vehículo no disponible muestra el estado en inglés.**
+- [x] **M-18 · El vehículo no disponible muestra el estado en inglés.** *(1 sep 2026)*
   En el paso 2 del asistente, un coche ocupado se etiqueta «Reservado
   (reserved)»: `conflictMessage` compone el texto traducido y añade entre
   paréntesis el valor crudo del enum. Decidir si el paréntesis aporta algo al
   operador o se quita.
 
-- [ ] **M-19 · El paso «Resumen» del asistente nace marcado como completado.**
+- [x] **M-19 · El paso «Resumen» del asistente nace marcado como completado.** *(1 sep 2026)*
   `isStepComplete('summary')` devuelve `true` siempre, así que el cuarto paso
   aparece con el check verde desde que se abre el formulario, cuando todavía
   no se ha creado nada. Decidir si el último paso debe considerarse completo
   solo tras crear la reserva, o si el check ahí no significa nada y conviene
   no pintarlo.
 
-- [ ] **M-20 · Las fotos de vehículo se sirven a tamaño completo en móvil.**
-  Relacionado con [M-6], pero ahora medido en teléfono: la caja de la imagen
-  en la tarjeta es de 140 px de alto y se descarga el original. En una lista
-  de flota son varios megas por pantalla y con datos móviles se nota.
-  Generar miniaturas al subir sigue siendo la solución; la decisión es dónde
-  —Cloud Function al subir, o `<img srcset>` con tamaños de Storage—.
+- [x] **M-20 · Las fotos se subían y se servían a tamaño completo.** *(1 sep 2026)*
+  La caja de la tarjeta mide 140 px y se descargaba el original: en una lista de
+  flota, varios megas por pantalla. Pero el problema tenía **dos mitades**, y la
+  que nadie había medido era la otra: el operador **subía** 3-5 MB por foto,
+  desde la calle y con la cobertura que hubiera.
 
-- [ ] **M-16 · Los `alert()` de la pantalla de reserva están en español duro.**
+  **Decisión de Dorel:** reducir **en el navegador antes de subir**, y guardar
+  solo la versión reducida. Es lo único que arregla las dos mitades a la vez, y
+  no añade infraestructura ni coste — frente a la extensión `Resize Images` o
+  una Cloud Function con `sharp`, que solo habrían mejorado la descarga.
+
+  Se guardan dos ficheros: la versión de uso (máx. 1600 px) y una miniatura
+  (máx. 400 px). Medido con una foto de 4032×3024:
+
+  | | Peso | Dimensiones |
+  |---|---|---|
+  | Entrada | 2.527 KB | 4032×3024 |
+  | Guardada | 906 KB | 1600×1200 |
+  | Miniatura | **74 KB** | 400×300 |
+
+  La lista de flota pasa de 2,5 MB por coche a **74 KB**. Y la imagen de prueba
+  era ruido, el peor caso para JPEG: una foto real comprime bastante más.
+
+  Aplicado también a las **fotos de inspección**, donde importa más todavía:
+  son varias seguidas, en la calle y con el cliente delante.
+
+  Detalles que no se ven pero cuestan si faltan:
+
+  - Si el navegador no sabe reducir el fichero —HEIC, por ejemplo— se sube el
+    original y se sigue. **Una miniatura que falla no puede costar la foto.**
+  - El borrado se lleva las **dos**, o la miniatura se queda huérfana en Storage
+    para siempre. Verificado: tras borrar, ninguna de las dos responde.
+  - `size` y `contentType` describen lo que se guarda, no el original: si
+    dijeran 4 MB estarían describiendo un fichero que no existe.
+  - Los `ImageBitmap` se cierran. Con varias fotos seguidas desde el móvil, no
+    hacerlo es la diferencia entre que la pestaña aguante o se recargue sola.
+
+  La aritmética está en `image-resize.util.ts` con **11 tests** —incluido que
+  una imagen pequeña no se amplía y que una panorámica no acaba con un lado de
+  0 px—. El redimensionado en sí usa `canvas`, que jsdom no implementa: eso se
+  verificó subiendo una foto de verdad.
+
+
+- [x] **M-16 · Los `alert()` de la pantalla de reserva están en español duro.** *(1 sep 2026)*
   `registerPayment()` y `processDeposit()` avisan con
   `alert('Error al registrar el pago')` y `alert('Error al procesar la fianza')`,
   sin pasar por i18n. Son cadenas escritas a mano, el mismo problema que F-13
@@ -460,7 +658,7 @@ fallo: son convenciones que hay que elegir.
   importe y pagado con lo que falta del concepto elegido, y `registerPayment()`
   rechaza los importes a 0.
 
-- [ ] **M-8 · El PDF del contrato no lleva logo.**
+- [x] **M-8 · El PDF del contrato no lleva logo.** *(ya estaba resuelto)*
   `pdf.ts` no dibuja ninguna imagen de marca. El documento que firma el cliente
   sale sin identidad visual. Ahora que los SVG están ordenados es fácil de
   añadir.
@@ -543,12 +741,20 @@ cargos extra, resolución de fianza y cierre. Queda:
       contrato `C-1342VA-2026`, remitente `reservas@veltomobility.com`,
       respuesta `200` y no `403` — que es lo que prueba que Resend tiene el
       dominio verificado.
-- [ ] Módulo de mantenimiento de vehículos (colección aún vacía)
-- [ ] Subida de fotos dentro de una inspección (probada en vehículos, no en
-      inspecciones)
-- [ ] Registro de daños en la devolución
-- [ ] Cancelación de una reserva
-- [ ] Excepciones de workflow (`buildWorkflowException`) desde la UI
+- [x] Módulo de mantenimiento de vehículos — **probado el 31 de agosto de 2026**:
+      alta completa (tipo, estado, prioridad, coste, proveedor, próxima revisión)
+      y guardado en `vehicleMaintenance`, que hasta hoy estaba vacía. Salieron
+      M-38 y M-39.
+- [x] Subida de fotos dentro de una inspección — **probada el 31 de agosto de
+      2026**: sube a Storage bajo `inspections/` y se muestra en la ficha.
+- [x] Registro de daños en la devolución — **probado el 31 de agosto de 2026**:
+      zona, gravedad y descripción quedan registrados en la inspección.
+- [x] Cancelación de una reserva — **probada el 31 de agosto de 2026**. Sacó
+      M-36 (no se podía cancelar una reserva confirmada) y M-37 (el estado del
+      pago en inglés).
+- [x] Excepciones de workflow desde la UI — **implementadas y probadas el 1 de
+      septiembre de 2026** (N-7): motivo obligatorio, el paso se desbloquea y
+      queda registrado con autor y fecha en la ficha de la reserva.
 - [ ] **N-4 end-to-end**: poner un 10 % a un cliente, crear reserva y comprobar
       que el snapshot congela el porcentaje; luego retirárselo y verificar que
       la reserva anterior no se mueve
@@ -561,9 +767,9 @@ cargos extra, resolución de fianza y cierre. Queda:
       que se ve desde un móvil sin sesión
 - [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
       y verificar que **el primer enlace sigue funcionando**
-- [ ] **Fianza a 0**: crear una reserva sin fianza, comprobar que no siembra
-      fila de pago, que el estado es «Exenta» y que la reserva **se puede
-      cerrar** (es lo que el motivo obligatorio protege)
+- [x] **Fianza a 0** — **probado el 31 de agosto de 2026**: no siembra fila de
+      fianza, la marca «Exenta» con su motivo, y el motivo es obligatorio en el
+      asistente. Usada además como caso peor de M-33.
 - [x] **El presupuesto en los tres idiomas**, cambiando el idioma de la
       plataforma antes de generarlo. *(27 ago 2026, 23:30)* es/en/ro correctos
       contra la function desplegada; el rumano con `ă ș ț` y `€` sin cajas
@@ -836,3 +1042,49 @@ Cloud Scheduler, que hay que habilitar en los dos proyectos.
    devuelve? Redsys puede confirmar tarde.
 4. El PDF: ¿un cuarto documento, o el presupuesto con una caja de «válido hasta
    las HH:MM»? Lo segundo reaprovecha plantilla, precios e IVA.
+
+## N-8 · Sellar el contrato con el certificado FNMT de la empresa *(anotado el 2 sep 2026 — acordado hacerlo)*
+
+Dorel ya tiene el certificado FNMT de representante de la empresa. La idea es
+sellar con él el PDF del contrato, después de que el cliente firme.
+
+⚠️ **Hoy el contrato afirma algo que no es cierto.** En la casilla del
+arrendador se imprime «Firmado digitalmente con certificado digital», y el
+código lo reconoce en un TODO de `pdf.ts`:
+
+> *apply the actual certificate to the generated PDF. Until then this states the
+> intent; the note is not a substitute for the signature.*
+
+Es una frase que va al cliente afirmando una firma que no existe. **Si N-8 se
+retrasa, esa línea debería quitarse mientras tanto.**
+
+**Qué implica.** El sellado va como último paso, después de incrustar la firma
+manuscrita del cliente: un PDF firmado no se puede tocar sin romper la firma.
+Son cuatro pasos —reservar el hueco de firma, calcular el hash, firmar con la
+clave privada del `.p12`, reinsertar— y `pdf-lib` no firma, así que entra
+`@signpdf` con `node-forge`. Las dos son JavaScript puro, sin binarios que
+compilar. El `.p12` va a Secret Manager en base64, nunca al repositorio.
+
+**Coste: prácticamente cero.** Librerías libres, certificado ya comprado, y
+firmar son milisegundos de CPU. Lo único que puede costar es el **sellado de
+tiempo**, que acredita *cuándo* se firmó; se puede empezar sin él y añadirlo
+después.
+
+**Complejidad: media, un par de días.** La mayor parte del tiempo se va en
+comprobar que Adobe Reader valida la firma, que es donde esto suele fallar.
+
+Tres cosas que vigilar:
+
+- El certificado FNMT de representante **caduca a los dos años**. Si expira sin
+  renovar, los contratos nuevos dejan de firmarse.
+- El **orden importa**: sellar antes de incrustar la firma del cliente
+  invalidaría el documento.
+- Probarlo en los dos entornos.
+
+**Lo que NO arregla, y conviene tener claro.** El certificado firma *como la
+empresa*: acredita que el documento no se ha alterado y que lo emitiste tú. La
+firma **del cliente** sigue siendo un trazo en un canvas —firma electrónica
+simple, válida pero con poco peso probatorio si él la niega—. Sellar con el
+certificado de la empresa no la convierte en cualificada. Para eso haría falta
+un prestador de servicios de confianza, que cobra por firma y es otro
+desarrollo.

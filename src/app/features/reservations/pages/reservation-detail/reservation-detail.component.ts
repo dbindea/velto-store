@@ -22,6 +22,7 @@ import {
   WorkflowDecision,
   WorkflowContext,
   canCancelReservation,
+  ExceptionableAction,
   reasonOf
 } from '@shared/utils/reservation-workflow.util';
 import {
@@ -30,13 +31,17 @@ import {
   PaymentType,
   PAYMENT_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_COLORS,
   PAYMENT_METHOD_ICONS
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
-import { collectedTotalsOf } from '@shared/utils/payment-summary.util';
+import {
+  collectedTotalsOf,
+  calculateReservationPaymentSummary
+} from '@shared/utils/payment-summary.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
@@ -73,6 +78,14 @@ export class ReservationDetailComponent implements OnInit {
 
   /** Id del pago cuya pasarela se está pidiendo, para no permitir dos clics. */
   readonly chargingPaymentId = signal<string | null>(null);
+
+  // === Excepciones de workflow (N-7) ===
+  /** Paso que se está saltando ahora mismo; `null` con el diálogo cerrado. */
+  readonly skippingAction = signal<ExceptionableAction | null>(null);
+  /** Motivo tecleado por el operador. Obligatorio. */
+  skipReason = '';
+  skipError = '';
+  savingSkip = false;
 
   reservation: Reservation | null = null;
   payments: Payment[] = [];
@@ -305,19 +318,22 @@ export class ReservationDetailComponent implements OnInit {
   private async reconcileAfterExternalPayment(reservationId: string): Promise<void> {
     if (!this.reservation) return;
 
-    const paidOf = (type: PaymentType) =>
-      this.payments
-        .filter((p) => p.type === type && p.status !== 'cancelled')
-        .reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+    // Se compara contra el resumen recalculado, no contra tres importes
+    // sueltos: así entra cualquier divergencia, incluida la del estado de pago
+    // cuando quedan cargos extra pendientes.
+    const fresco = calculateReservationPaymentSummary(this.payments, this.reservation);
+    const guardado = this.reservation.paymentSummary;
 
-    const divergencias: [number, number][] = [
-      [paidOf('initial_payment'), this.reservation.initialPayment?.paidAmount || 0],
-      [paidOf('remaining_payment'), this.reservation.remainingPayment?.paidAmount || 0],
-      [paidOf('deposit'), this.reservation.deposit?.paidAmount || 0]
-    ];
     // Céntimo de tolerancia: el resumen redondea y no queremos reescribir en
     // bucle por un error de coma flotante.
-    const desincronizada = divergencias.some(([real, guardado]) => Math.abs(real - guardado) > 0.005);
+    const difiere = (a?: number, b?: number) => Math.abs((a || 0) - (b || 0)) > 0.005;
+    const desincronizada =
+      !guardado ||
+      fresco.paymentStatus !== this.reservation.paymentStatus ||
+      difiere(fresco.initialPaymentPaid, guardado.initialPaymentPaid) ||
+      difiere(fresco.remainingPaymentPaid, guardado.remainingPaymentPaid) ||
+      difiere(fresco.depositPaid, guardado.depositPaid) ||
+      difiere(fresco.totalPending, guardado.totalPending);
     if (!desincronizada) return;
 
     try {
@@ -359,7 +375,7 @@ export class ReservationDetailComponent implements OnInit {
       this.showCancelModal = false;
     } catch (error) {
       console.error('Error cancelling reservation:', error);
-      alert('Error al cancelar la reserva');
+      alert(this.t('reservations.errors.cancel', ''));
     } finally {
       this.cancelling = false;
     }
@@ -403,8 +419,20 @@ export class ReservationDetailComponent implements OnInit {
     );
   }
 
+  /**
+   * Estado de **un pago** (`pending`, `paid`, `cancelled`, `refunded`…).
+   *
+   * Ojo con el mapa: esto usaba `RESERVATION_PAYMENT_STATUS_LABELS`, que es el
+   * estado de pago **de la reserva** y solo conoce `pending`, `partial` y
+   * `paid`. Un pago `cancelled` no estaba ahí, así que caía al respaldo y se
+   * pintaba **«cancelled» en crudo, en inglés** — visible al cancelar una
+   * reserva. La traducción existía desde siempre en `payments.status.*`.
+   */
   getPaymentStatusLabel(status: string): string {
-    return this.getPaymentLabel(status);
+    return this.t(
+      PAYMENT_STATUS_LABELS[status as keyof typeof PAYMENT_STATUS_LABELS],
+      status
+    );
   }
 
   getDepositStatusLabel(status: string): string {
@@ -459,11 +487,12 @@ export class ReservationDetailComponent implements OnInit {
     return statusClasses[status] || '';
   }
 
-  canCancel(): boolean {
-    if (!this.reservation) return false;
-    const cancellableStatuses: Array<typeof this.reservation.reservationStatus> = ['reserved'];
-    return cancellableStatuses.includes(this.reservation.reservationStatus);
-  }
+  // `canCancel()` vivía aquí y copiaba la regla a mano: solo dejaba cancelar en
+  // `reserved`, mientras `canCancelReservation()` —que delega en el workflow,
+  // la única autoridad— también lo permite en `confirmed`. Las dos reglas
+  // convivían en este mismo fichero, así que una reserva con la señal cobrada
+  // mostraba un botón «Cancelar» **muerto y sin explicar por qué**: el `title`
+  // salía vacío porque el workflow no tenía nada que objetar.
 
   getFuelLabel(fuel: string): string {
     return this.t(FUEL_TYPE_LABELS[fuel as keyof typeof FUEL_TYPE_LABELS], fuel);
@@ -511,7 +540,7 @@ export class ReservationDetailComponent implements OnInit {
       this.resetPaymentForm();
     } catch (error) {
       console.error('Error registering payment:', error);
-      alert('Error al registrar el pago');
+      alert(this.t('reservations.errors.registerPayment', ''));
     } finally {
       this.savingPayment = false;
     }
@@ -541,15 +570,43 @@ export class ReservationDetailComponent implements OnInit {
       this.depositForm = { type: 'refund', amount: 0, method: 'cash' };
     } catch (error) {
       console.error('Error processing deposit:', error);
-      alert('Error al procesar la fianza');
+      alert(this.t('reservations.errors.processDeposit', ''));
     } finally {
       this.savingDeposit = false;
     }
   }
 
   resetPaymentForm(): void {
-    this.newPayment = { type: 'initial_payment', method: 'cash', amount: 0, paidAmount: 0, concept: '' };
+    this.newPayment = {
+      type: this.firstPendingPaymentType(),
+      method: 'cash',
+      amount: 0,
+      paidAmount: 0,
+      concept: ''
+    };
+    // Rellena el importe del tipo elegido. Ya funcionaba al cambiar el
+    // desplegable a mano; lo que faltaba era abrir en el tipo correcto.
     this.onPaymentTypeChange();
+  }
+
+  /**
+   * El primer concepto que queda por cobrar, en el orden del alquiler.
+   *
+   * El formulario abría siempre en «Señal» y a 0 €, aun con la señal cobrada:
+   * el operador tenía que elegir el tipo a mano cada vez, y ese es el botón que
+   * más se toca al día. Con todo cobrado se queda en el resto, que es lo último
+   * que se suele ampliar.
+   */
+  private firstPendingPaymentType(): PaymentType {
+    const pendiente = (type: PaymentType) =>
+      this.payments.some(
+        (p) => p.type === type && p.status !== 'paid' && p.status !== 'cancelled'
+      );
+
+    if (pendiente('initial_payment')) return 'initial_payment';
+    if (pendiente('remaining_payment')) return 'remaining_payment';
+    if (pendiente('deposit')) return 'deposit';
+    return 'remaining_payment';
   }
 
   /**
@@ -709,11 +766,98 @@ export class ReservationDetailComponent implements OnInit {
     return this.workflowCtx;
   }
 
-  /** Returns the workflow decision for "start pickup inspection". */
-  startPickupDecision(): WorkflowDecision {
+  /**
+   * Resuelve un guard **honrando las excepciones documentadas**.
+   *
+   * `canWithException` existía desde el principio y no la llamaba nadie: las
+   * excepciones se podían escribir en el modelo y el workflow las respetaba en
+   * teoría, pero ninguna pantalla las consultaba. Pasar por aquí es lo que hace
+   * que registrar una excepción sirva de algo.
+   */
+  private decide(action: ExceptionableAction, guard: (ctx: WorkflowContext) => WorkflowDecision): WorkflowDecision {
     const ctx = this.workflowCtx;
     if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
-    return Workflow.canStartPickup(ctx);
+    return Workflow.canWithException(guard(ctx), ctx, action);
+  }
+
+  /**
+   * Abre el diálogo para saltarse un paso.
+   *
+   * Se ofrece **solo cuando el paso está bloqueado**: si el workflow permite
+   * seguir, no hay nada que saltar y el botón normal hace el trabajo.
+   */
+  openSkipDialog(action: ExceptionableAction): void {
+    this.skipReason = '';
+    this.skipError = '';
+    this.skippingAction.set(action);
+  }
+
+  closeSkipDialog(): void {
+    this.skippingAction.set(null);
+    this.skipReason = '';
+    this.skipError = '';
+  }
+
+  /**
+   * Registra la excepción. A partir de aquí el guard deja pasar ese paso.
+   *
+   * El motivo no se valida aquí: lo hace `buildWorkflowException()`, que lanza
+   * si no llega a tres caracteres. Tener la regla en dos sitios es como
+   * empezaron los líos de la cancelación.
+   */
+  async confirmSkip(): Promise<void> {
+    const action = this.skippingAction();
+    if (!action || !this.reservation?.id || this.savingSkip) return;
+
+    this.savingSkip = true;
+    this.skipError = '';
+    try {
+      await this.reservationService.addWorkflowException(this.reservation.id, action, this.skipReason);
+      this.closeSkipDialog();
+    } catch (error: any) {
+      this.skipError = error?.message || this.t('workflow.exceptionReasonRequired', '');
+    } finally {
+      this.savingSkip = false;
+    }
+  }
+
+  /**
+   * Copia el enlace de pago de una fila pendiente, listo para WhatsApp.
+   *
+   * El cliente lo abre en su móvil y paga sin que tú estés delante, que era el
+   * hueco: hasta ahora solo se podía cobrar con tarjeta desde aquí, con el
+   * cliente al lado.
+   *
+   * Se construye con el **origen actual**, no con una constante: en local
+   * apunta a localhost y en producción al dominio propio, sin configurar nada.
+   */
+  async copyPaymentLink(payment: Payment, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!payment.id) return;
+
+    const link = `${window.location.origin}/pay/${payment.id}`;
+    const copied = await this.documentService.copyToClipboard(link);
+    if (copied) this.showCopyToast();
+  }
+
+  /** Excepciones ya registradas, para poder mostrarlas en la ficha. */
+  get workflowExceptions(): Array<{ action: string; reason: string; createdBy?: string; createdAt?: any }> {
+    return this.reservation?.workflowExceptions ?? [];
+  }
+
+  /** Etiqueta traducible del paso saltado. */
+  exceptionActionLabel(action: string): string {
+    return this.t('workflow.' + action, action);
+  }
+
+  /** Los timestamps de Firestore no los entiende el pipe `date` a secas. */
+  toDateValue(value: any): Date | null {
+    return value ? toDate(value) : null;
+  }
+
+  /** Returns the workflow decision for "start pickup inspection". */
+  startPickupDecision(): WorkflowDecision {
+    return this.decide('startPickup', Workflow.canStartPickup);
   }
 
   /** Boolean shorthand used by the template @if/@else blocks. */
@@ -727,9 +871,7 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   startReturnDecision(): WorkflowDecision {
-    const ctx = this.workflowCtx;
-    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
-    return Workflow.canStartReturn(ctx);
+    return this.decide('startReturn', Workflow.canStartReturn);
   }
 
   canStartReturn(): boolean {
@@ -741,9 +883,7 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   closeReservationDecision(): WorkflowDecision {
-    const ctx = this.workflowCtx;
-    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
-    return Workflow.canCloseReservation(ctx);
+    return this.decide('closeReservation', Workflow.canCloseReservation);
   }
 
   canCloseReservation(): boolean {
@@ -828,9 +968,7 @@ export class ReservationDetailComponent implements OnInit {
   // === Contract ===
 
   generateContractDecision(): WorkflowDecision {
-    const ctx = this.workflowCtx;
-    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
-    return Workflow.canGenerateContract(ctx);
+    return this.decide('generateContract', Workflow.canGenerateContract);
   }
 
   canGenerateContract(): boolean {
@@ -842,9 +980,7 @@ export class ReservationDetailComponent implements OnInit {
   }
 
   createSigningLinkDecision(): WorkflowDecision {
-    const ctx = this.workflowCtx;
-    if (!ctx) return { ok: false, reason: 'workflow.missingReservation' };
-    return Workflow.canGenerateSigningLink(ctx);
+    return this.decide('generateSigningLink', Workflow.canGenerateSigningLink);
   }
 
   canCreateContractSigningLink(): boolean {
@@ -879,7 +1015,7 @@ export class ReservationDetailComponent implements OnInit {
       this.loadContract(this.reservation.id);
     } catch (err) {
       console.error('Error generating contract:', err);
-      alert('Error al generar el contrato');
+      alert(this.t('reservations.errors.generateContract', ''));
     } finally {
       this.generatingContract = false;
     }
@@ -893,7 +1029,7 @@ export class ReservationDetailComponent implements OnInit {
       if (this.reservation?.id) this.loadContract(this.reservation.id);
     } catch (err) {
       console.error('Error creating signing link:', err);
-      alert('Error al crear el link de firma');
+      alert(this.t('reservations.errors.createSigningLink', ''));
     } finally {
       this.creatingSigningLink = false;
     }
@@ -930,7 +1066,7 @@ export class ReservationDetailComponent implements OnInit {
     if (!this.contract || !this.reservation) return;
     const url = await this.contractService.getOriginalPdfUrl(this.contract);
     if (!url) {
-      alert('PDF no disponible todavía');
+      alert(this.t('reservations.errors.pdfNotReady', ''));
       return;
     }
     const filename = `contrato-${this.contract.contractNumber || this.contract.id}.pdf`;
@@ -941,7 +1077,7 @@ export class ReservationDetailComponent implements OnInit {
     if (!this.contract) return;
     const url = await this.contractService.getSignedPdfUrl(this.contract);
     if (!url) {
-      alert('Contrato firmado no disponible todavía');
+      alert(this.t('reservations.errors.signedPdfNotReady', ''));
       return;
     }
     const filename = `contrato-firmado-${this.contract.contractNumber || this.contract.id}.pdf`;

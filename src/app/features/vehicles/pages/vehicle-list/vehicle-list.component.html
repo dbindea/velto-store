@@ -60,8 +60,11 @@
         <div class="vehicle-card" (click)="viewDetail(vehicle)">
           <div class="vehicle-image">
             @if (vehicle.images && vehicle.images.length > 0) {
+              <!-- La miniatura, no el original: esta caja mide 140 px de alto
+                   y una lista de flota descargaba varios megas por pantalla.
+                   Cae a `url` si la foto se subió sin miniatura. -->
               <img
-                [src]="vehicle.images[0].url"
+                [src]="vehicle.images[0].thumbnailUrl || vehicle.images[0].url"
                 [alt]="vehicle.brand + ' ' + vehicle.model"
                 loading="lazy"
                 decoding="async"

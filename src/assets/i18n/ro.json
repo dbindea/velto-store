@@ -297,6 +297,7 @@
       "cleaning": "Taxă curățenie",
       "damage": "Taxă daune",
       "extraKm": "Taxă km suplimentari",
+      "extraKmHint": "Netaxat. Exces detectat:",
       "fine": "Amendă",
       "fuel": "Taxă combustibil",
       "other": "Alte taxe",
@@ -387,7 +388,8 @@
       "priority": "Prioritate",
       "provider": "Furnizor",
       "status": "Stare",
-      "title": "Titlu"
+      "title": "Titlu",
+      "type": "Tip"
     },
     "itemPlural": "elemente",
     "itemSingular": "element",
@@ -439,8 +441,22 @@
       "cancelPayment": "Anulează plata",
       "chargeCard": "Plată cu cardul",
       "chargeCardError": "Nu s-a putut deschide pasarela de plată",
+      "copyPaymentLink": "Copiază linkul de plată",
       "markAsPaid": "Marchează ca plătit",
       "viewReservation": "Vezi rezervare"
+    },
+    "checkout": {
+      "subtitle": "Plată securizată",
+      "payTo": "Plătești către",
+      "payNow": "Plătește cu cardul",
+      "secureNote": "Plată procesată de Redsys. Nu păstrăm datele cardului tău.",
+      "refresh": "Am plătit, actualizează",
+      "paidTitle": "Plată primită",
+      "paidMessage": "Mulțumim. Nu mai trebuie să faci nimic.",
+      "notFoundTitle": "Link invalid",
+      "notFoundMessage": "Acest link de plată nu există sau nu mai este disponibil. Solicită unul nou.",
+      "unavailableTitle": "Plată indisponibilă",
+      "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi."
     },
     "deposit": {
       "refundFull": "Restituie total",
@@ -571,9 +587,12 @@
       "viewReservation": "Vezi rezervarea"
     },
     "availability": {
+      "conflict": "Există deja o rezervare pentru aceste date",
+      "notInFleet": "Vehiculul nu este disponibil în flotă",
       "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date",
       "search": "Caută disponibilitate",
-      "selectVehicle": "Selectează vehicul"
+      "selectVehicle": "Selectează vehicul",
+      "unavailable": "Indisponibil"
     },
     "bookingConfirmation": {
       "copyLink": "Copiază linkul",
@@ -624,6 +643,15 @@
       "waived": "Scutită"
     },
     "detail": "Detalii rezervare",
+    "errors": {
+      "cancel": "Nu s-a putut anula rezervarea",
+      "registerPayment": "Nu s-a putut înregistra plata",
+      "processDeposit": "Nu s-a putut procesa garanția",
+      "generateContract": "Nu s-a putut genera contractul",
+      "createSigningLink": "Nu s-a putut crea linkul de semnare",
+      "pdfNotReady": "PDF-ul nu este încă disponibil",
+      "signedPdfNotReady": "Contractul semnat nu este încă disponibil"
+    },
     "fields": {
       "duration": "Durată",
       "notes": "Note",
@@ -877,11 +905,17 @@
     "cannotClose": "Nu se poate închide rezervarea",
     "cannotDeliver": "Nu se poate începe predarea",
     "cannotReturn": "Nu se poate începe returnarea",
+    "clientBlocked": "Client blocat: nu i se poate crea o rezervare. Schimbă-i nivelul de încredere în fișa lui dacă chiar vrei să îi închiriezi.",
+    "clientRisk": "Client marcat ca risc. Poți continua, dar verifică înainte.",
     "closeReservation": "Închide rezervarea",
     "completed": "Rezervare finalizată",
     "contractAlreadySigned": "Contractul este deja semnat",
     "contractCancelled": "Contract anulat",
     "contractPending": "În așteptarea semnării",
+    "exceptionReason": "Motiv",
+    "exceptionReasonPlaceholder": "Ex.: clientul a semnat contractul pe hârtie la birou",
+    "exceptionReasonRequired": "Motivul este obligatoriu (minimum 3 caractere).",
+    "exceptionsTitle": "Pași săriți",
     "generateContract": "Generează contract",
     "generateSigningLink": "Creează link semnare",
     "missingContract": "Lipsește contractul",
@@ -899,10 +933,12 @@
     "pickupAlreadyCompleted": "Predarea este deja completă",
     "returnAlreadyCompleted": "Returnarea este deja completă",
     "settleDeposit": "Soluționează garanția",
+    "skipStep": "Sari peste acest pas",
+    "skipStepConfirm": "Vei sări peste o verificare a fluxului:",
+    "skipStepConfirmAction": "Sari peste pas",
+    "skipStepHint": "Se înregistrează cu numele tău, data și motivul. Folosește-l doar când pasul a fost îndeplinit altfel — de exemplu, un contract semnat pe hârtie.",
     "startPickup": "Începe predarea",
     "startReturn": "Începe returnarea",
-    "unsettledDeposit": "Garanție nerezolvată",
-    "clientBlocked": "Client blocat: nu i se poate crea o rezervare. Schimbă-i nivelul de încredere în fișa lui dacă chiar vrei să îi închiriezi.",
-    "clientRisk": "Client marcat ca risc. Poți continua, dar verifică înainte."
+    "unsettledDeposit": "Garanție nerezolvată"
   }
 }

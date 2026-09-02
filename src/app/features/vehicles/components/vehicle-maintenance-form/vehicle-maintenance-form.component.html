@@ -18,7 +18,16 @@
       </label>
 
       <label class="field">
-        <span class="label">{{ 'maintenance.type.' + form.type | translate }}</span>
+        <!--
+          Esto ponía `'maintenance.type.' + form.type`, es decir la clave del
+          VALOR seleccionado en lugar del nombre del campo. Y ni siquiera
+          resolvía: las claves de `maintenance.type.*` están en camelCase
+          (`oilChange`) y el valor llega en snake_case (`oil_change`), así que
+          se pintaba **`maintenance.type.oil_change` en crudo** sobre el
+          desplegable. Aquí va la etiqueta del campo, y las opciones ya traen
+          la suya en `typeOptions`.
+        -->
+        <span class="label">{{ 'maintenance.fields.type' | translate }}</span>
         <select class="form-control" name="type" [(ngModel)]="form.type">
           @for (opt of typeOptions; track opt.value) {
             <option [value]="opt.value">{{ opt.label | translate }}</option>

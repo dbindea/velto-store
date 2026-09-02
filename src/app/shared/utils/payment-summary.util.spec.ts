@@ -3,6 +3,7 @@ import type { Payment, PaymentStatus, PaymentType } from '@shared/models/payment
 import {
   applySettlement,
   collectedTotalsOf,
+  distributeRetentionAcrossCharges,
   selectSettleablePayment
 } from './payment-summary.util';
 
@@ -175,5 +176,60 @@ describe('collectedTotalsOf', () => {
       makePayment('initial_payment', 'cancelled', 50, 50, 'void')
     ]);
     expect(totals.income).toBe(50);
+  });
+});
+
+/**
+ * El reparto de la fianza retenida entre los cargos de la devolución.
+ *
+ * Nace de un fallo real (M-33): los cargos se creaban marcados como pagados
+ * «asumiendo» que ya se habían cobrado, así que todo lo que excediera de la
+ * fianza desaparecía sin dejar rastro.
+ */
+describe('distributeRetentionAcrossCharges', () => {
+  it('reparte de mayor a menor y deja pendiente lo que no cubre', () => {
+    // El caso encontrado en el recorrido del 31 de agosto: 172,50 € de cargos
+    // contra 150 € de fianza. Faltan 22,50 € y tienen que quedar a deber.
+    const aplicado = distributeRetentionAcrossCharges(
+      [
+        { id: 'km', amount: 62.5 },
+        { id: 'limpieza', amount: 30 },
+        { id: 'daños', amount: 80 }
+      ],
+      150
+    );
+
+    expect(aplicado).toEqual([
+      { id: 'daños', apply: 80 },
+      { id: 'km', apply: 62.5 },
+      { id: 'limpieza', apply: 7.5 }
+    ]);
+
+    const total = aplicado.reduce((s, a) => s + a.apply, 0);
+    expect(total).toBe(150);
+  });
+
+  it('con la fianza a 0 no da por cobrado ningún cargo', () => {
+    // El caso peor: al cliente conocido no se le pide fianza, así que nada
+    // cubre los cargos y todos deben quedar pendientes.
+    expect(distributeRetentionAcrossCharges([{ id: 'daños', amount: 200 }], 0)).toEqual([]);
+  });
+
+  it('no reparte más de lo retenido aunque sobre fianza', () => {
+    const aplicado = distributeRetentionAcrossCharges([{ id: 'km', amount: 20 }], 150);
+    expect(aplicado).toEqual([{ id: 'km', apply: 20 }]);
+  });
+
+  it('no deja céntimos de coma flotante', () => {
+    // 108.9 - 50 es 58.900000000000006 sin redondear.
+    const aplicado = distributeRetentionAcrossCharges(
+      [{ id: 'a', amount: 108.9 }, { id: 'b', amount: 33.3 }],
+      50
+    );
+    expect(aplicado).toEqual([{ id: 'a', apply: 50 }]);
+  });
+
+  it('ignora cargos a cero', () => {
+    expect(distributeRetentionAcrossCharges([{ id: 'x', amount: 0 }], 100)).toEqual([]);
   });
 });

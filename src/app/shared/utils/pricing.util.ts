@@ -308,3 +308,52 @@ export function getLowestPricePerDay(rules: VehiclePricingRule[]): number | null
   
   return Math.min(...rules.map(r => r.pricePerDay));
 }
+
+/**
+ * Cuánto habría que cobrar por los kilómetros de más, si se cobraran.
+ *
+ * ⚠️ **Devuelve una sugerencia, no un cargo.** La decisión de Dorel del 31 de
+ * agosto de 2026 es **no cobrar el kilometraje extra durante el primer año**,
+ * para captar clientela. Y el motivo de que esto no rellene el campo es suyo y
+ * es bueno: un importe prerrellenado se guarda de un despiste y le acaba
+ * cobrando al cliente algo que no quería cobrarle. Un texto no se guarda solo.
+ *
+ * Así que esto alimenta un aviso bajo el campo; quien lo escribe es el
+ * operador, a mano y a sabiendas.
+ *
+ * Devuelve `null` cuando no hay nada que sugerir, que incluye el caso de que
+ * falte cualquier dato: sin kilómetros de entrega, sin tarifa o sin días no se
+ * inventa una cifra.
+ */
+export function suggestExtraKmCharge(input: {
+  pickupKm?: number;
+  returnKm?: number;
+  totalDays?: number;
+  includedKmPerDay?: number;
+  extraKmPrice?: number;
+}): { extraKm: number; amount: number; includedKm: number } | null {
+  const { pickupKm, returnKm, totalDays, includedKmPerDay, extraKmPrice } = input;
+
+  if (
+    pickupKm === undefined ||
+    returnKm === undefined ||
+    !totalDays ||
+    !includedKmPerDay ||
+    !extraKmPrice
+  ) {
+    return null;
+  }
+
+  const driven = returnKm - pickupKm;
+  if (driven <= 0) return null;
+
+  const includedKm = includedKmPerDay * totalDays;
+  const extraKm = driven - includedKm;
+  if (extraKm <= 0) return null;
+
+  return {
+    extraKm,
+    includedKm,
+    amount: roundMoney(extraKm * extraKmPrice)
+  };
+}

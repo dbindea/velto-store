@@ -50,7 +50,7 @@
               [class.active]="currentIndex() === $index"
               (click)="goToIndex($index)"
             >
-              <img [src]="image.url" [alt]="'vehicles.photos.thumbnail' | translate" loading="lazy" />
+              <img [src]="image.thumbnailUrl || image.url" [alt]="'vehicles.photos.thumbnail' | translate" loading="lazy" />
             </button>
           }
         </div>

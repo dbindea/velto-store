@@ -395,6 +395,34 @@ export function getReservationNextRequiredAction(ctx: WorkflowContext): string {
   return 'workflow.completed';
 }
 
+/**
+ * Los pasos que se pueden saltar con una excepción documentada.
+ *
+ * Decisión de Dorel del 31 de agosto de 2026: **todos menos alquilar a un
+ * cliente bloqueado**. El caso que lo motiva es concreto y pasa: el cliente
+ * firma el contrato en papel, y sin excepción la entrega se queda bloqueada con
+ * el coche listo y el cliente delante.
+ *
+ * ⚠️ `createReservationForClient` **no está aquí y no debe estarlo.**
+ * `canCreateReservationForClient()` no admite excepción por decisión de
+ * negocio: saltarse un paso es un atajo operativo, pero alquilar a alguien a
+ * quien has bloqueado es una decisión sobre ese cliente, y se toma en su ficha
+ * cambiándole el nivel de confianza — donde queda registrada.
+ *
+ * Las acciones de dinero tampoco están. Sus guards no bloquean el avance del
+ * alquiler: dicen si hay algo que cobrar o si la fianza está resuelta, y
+ * saltárselos no destrabaría nada, solo descuadraría las cuentas.
+ */
+export const EXCEPTIONABLE_ACTIONS = [
+  'generateContract',
+  'generateSigningLink',
+  'startPickup',
+  'startReturn',
+  'closeReservation'
+] as const;
+
+export type ExceptionableAction = (typeof EXCEPTIONABLE_ACTIONS)[number];
+
 /** True if at least one `workflowExceptions[]` entry exists for the action. */
 export function hasWorkflowException(
   ctx: WorkflowContext,

@@ -186,7 +186,7 @@
                     } @else {
                       <div class="unavailable-badge">
                         <i class="pi pi-ban"></i>
-                        {{ result.conflictMessage || 'No disponible' }}
+                        {{ (result.conflictMessage || 'reservations.availability.unavailable') | translate }}
                       </div>
                     }
                   </div>

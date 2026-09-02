@@ -9,7 +9,8 @@ import {
   ReservationStatus,
   BLOCKING_STATUSES,
   ReservationPricingSnapshot,
-  ReservationNote
+  ReservationNote,
+  WorkflowException
 } from '@shared/models/reservation.model';
 import { Client } from '@shared/models/client.model';
 import { 
@@ -36,7 +37,9 @@ import {
   Workflow,
   WorkflowContext,
   canCloseReservation as assertCanClose,
-  canCreateReservationForClient
+  canCreateReservationForClient,
+  buildWorkflowException,
+  ExceptionableAction
 } from '@shared/utils/reservation-workflow.util';
 
 export interface VehicleAvailabilityResult {
@@ -172,7 +175,12 @@ export class ReservationService {
         return {
           available: false,
           conflictId: docSnap.id,
-          conflictMessage: `Ya existe una reserva (${reservation.reservationStatus}) para estas fechas`
+          // Clave i18n, no una frase. Antes era español duro **y** metía el
+          // valor crudo del enum entre paréntesis: al operador le salía
+          // «Ya existe una reserva (reserved) para estas fechas». El estado en
+          // inglés no le dice nada a quien atiende el mostrador, y la frase no
+          // se traducía en los otros dos idiomas.
+          conflictMessage: 'reservations.availability.conflict'
         };
       }
     }
@@ -220,7 +228,9 @@ export class ReservationService {
           available: false,
           totalDays,
           pricing: null,
-          conflictMessage: 'VehÃ­culo no disponible en flota'
+          // Estaba en español duro y además con la tilde corrupta:
+          // 'VehÃ­culo no disponible en flota', que es lo que leía el operador.
+          conflictMessage: 'reservations.availability.notInFleet'
         });
         continue;
       }
@@ -242,7 +252,11 @@ export class ReservationService {
         
         if (dateRangesOverlap(existingPickup, existingReturn, pickupDateTime, returnDateTime)) {
           conflictId = reservation.id;
-          conflictMessage = `Reservado (${reservation.reservationStatus})`;
+          // Este es el que ve el operador en el paso 2 del asistente. Ponía
+          // «Reservado (confirmed)»: el estado en inglés entre paréntesis no le
+          // dice nada a quien atiende el mostrador, y la frase iba en español
+          // duro para los tres idiomas.
+          conflictMessage = 'reservations.availability.conflict';
           break;
         }
       }
@@ -604,6 +618,45 @@ export class ReservationService {
     });
 
     return note;
+  }
+
+  /**
+   * Registra una excepción de workflow: deja constancia de que se salta un paso
+   * y por qué.
+   *
+   * `buildWorkflowException()` existía desde el principio, con sus tests, y
+   * **nadie la llamaba**: no había forma de crear una excepción desde la
+   * aplicación. La consecuencia era concreta — un cliente que firmaba en papel
+   * dejaba la entrega bloqueada sin salida, y el único arreglo era entrar a
+   * Firestore a mano.
+   *
+   * El motivo es obligatorio y lo valida el propio `buildWorkflowException`,
+   * que lanza si no llega a tres caracteres. No se valida aquí para no tener
+   * dos reglas del mismo asunto.
+   *
+   * Mismo cuidado que con las notas: el objeto se construye **sin `undefined`**
+   * antes de entrar en el `arrayUnion()`, porque el centinela no se puede
+   * limpiar después.
+   */
+  async addWorkflowException(
+    id: string,
+    action: ExceptionableAction,
+    reason: string
+  ): Promise<WorkflowException> {
+    const operator = this.authService.authorizedUser?.();
+    const exception = buildWorkflowException(
+      action,
+      reason,
+      operator?.email || operator?.displayName || undefined
+    );
+
+    const docRef = doc(this.firestore, `reservations/${id}`);
+    await updateDoc(docRef, {
+      workflowExceptions: arrayUnion(exception),
+      updatedAt: { seconds: Date.now() / 1000 }
+    });
+
+    return exception;
   }
 
   /**

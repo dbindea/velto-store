@@ -32,7 +32,7 @@ export function calculatePaymentStatus(amount: number, paidAmount: number): Paym
 const RENTAL_TYPES: PaymentType[] = ['initial_payment', 'remaining_payment', 'rental_payment'];
 
 /** Add-ons billed during or after the rental. */
-const EXTRA_TYPES: PaymentType[] = [
+export const EXTRA_TYPES: PaymentType[] = [
   'extra_fuel',
   'refuel_penalty',
   'extra_cleaning',
@@ -171,9 +171,23 @@ export function calculateReservationPaymentSummary(
   // post-closure state (rental paid + return processed + deposit
   // resolved). It is set by ReservationService.closeReservation, not
   // here.
+  /**
+   * Los cargos extra **cuentan** para el estado.
+   *
+   * Solo se miraban la señal y el resto, así que una reserva con 160 € de
+   * daños y limpieza sin cobrar seguía anunciándose como **PAGADA**. No se
+   * notaba porque los cargos nacían marcados como cobrados (M-33); al dejar de
+   * mentir sobre eso, el hueco quedó a la vista.
+   *
+   * Es deuda del cliente igual que el resto del alquiler, y el operador tiene
+   * que verla antes de cerrar.
+   */
+  const extraChargesRequired = roundMoney(
+    extraCharges.reduce((sum, p) => sum + (p.amount || 0), 0)
+  );
   const calculatedStatus = calculatePaymentStatus(
-    initialPaymentRequired + remainingPaymentRequired,
-    initialPaymentPaid + remainingPaymentPaid
+    initialPaymentRequired + remainingPaymentRequired + extraChargesRequired,
+    initialPaymentPaid + remainingPaymentPaid + extraChargesTotal
   );
   const paymentStatus: 'pending' | 'partial' | 'paid' =
     calculatedStatus === 'paid' ? 'paid' :
@@ -245,6 +259,40 @@ export function applySettlement(
     pendingAmount: calculatePendingAmount(amount, paidAmount),
     status: calculatePaymentStatus(amount, paidAmount)
   };
+}
+
+/**
+ * Reparte la fianza retenida entre los cargos de la devolución.
+ *
+ * La retención **es** la forma de cobrar esos cargos, así que tiene que
+ * liquidarlos de verdad. Antes cada cargo nacía marcado como pagado «asumiendo»
+ * que ya estaba cobrado, y el exceso sobre la fianza se evaporaba: 172,50 € de
+ * cargos contra 150 € de fianza daban una reserva PAGADA y 22,50 € que nadie
+ * reclamaba. Con la fianza a 0 —lo normal en un cliente conocido— se daba por
+ * cobrado el cargo entero sin haber cobrado nada.
+ *
+ * Se reparte **de mayor a menor**: si no llega para todo, es preferible dejar
+ * pendiente un cargo pequeño que uno grande a medias. Lo que no se cubre queda
+ * pendiente y se puede cobrar aparte.
+ *
+ * Devuelve solo los cargos a los que toca aplicar algo, con su importe.
+ */
+export function distributeRetentionAcrossCharges<T extends { id: string; amount: number }>(
+  charges: T[],
+  retainedAmount: number
+): Array<{ id: string; apply: number }> {
+  let available = roundMoney(Math.max(0, retainedAmount || 0));
+  const result: Array<{ id: string; apply: number }> = [];
+
+  for (const charge of [...charges].sort((a, b) => b.amount - a.amount)) {
+    if (available <= 0) break;
+    const apply = roundMoney(Math.min(available, charge.amount || 0));
+    if (apply <= 0) continue;
+    result.push({ id: charge.id, apply });
+    available = roundMoney(available - apply);
+  }
+
+  return result;
 }
 
 /** Generate unique internal reference for a payment */

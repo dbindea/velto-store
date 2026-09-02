@@ -51,6 +51,10 @@
               {{ 'reservations.actions.close' | translate }}
             </button>
             <small class="action-blocked">{{ closeReservationBlockReason() | translate }}</small>
+            <button class="btn-skip-step" type="button" (click)="openSkipDialog('closeReservation')">
+              <i class="pi pi-directions-alt"></i>
+              {{ 'workflow.skipStep' | translate }}
+            </button>
           }
         </div>
       </div>
@@ -273,6 +277,10 @@
             </button>
             @if (generateContractBlockReason()) {
               <small class="action-blocked">{{ generateContractBlockReason() | translate }}</small>
+                <button class="btn-skip-step" type="button" (click)="openSkipDialog('generateContract')">
+                  <i class="pi pi-directions-alt"></i>
+                  {{ 'workflow.skipStep' | translate }}
+                </button>
             }
           }
           @if (contract && canCreateContractSigningLink() && !hasActiveSigningLink()) {
@@ -419,6 +427,16 @@
               </button>
               @if (startPickupBlockReason()) {
                 <small class="action-blocked">{{ startPickupBlockReason() | translate }}</small>
+                <!--
+                  La salida cuando el paso está bloqueado pero hay que seguir:
+                  el caso real es el cliente que firma el contrato en papel.
+                  Solo aparece si el workflow dice que no; si deja pasar, el
+                  botón de arriba ya sirve.
+                -->
+                <button class="btn-skip-step" type="button" (click)="openSkipDialog('startPickup')">
+                  <i class="pi pi-directions-alt"></i>
+                  {{ 'workflow.skipStep' | translate }}
+                </button>
               }
             }
           </div>
@@ -471,6 +489,10 @@
               </button>
               @if (startReturnBlockReason()) {
                 <small class="action-blocked">{{ startReturnBlockReason() | translate }}</small>
+                <button class="btn-skip-step" type="button" (click)="openSkipDialog('startReturn')">
+                  <i class="pi pi-directions-alt"></i>
+                  {{ 'workflow.skipStep' | translate }}
+                </button>
               }
               <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
             }
@@ -790,7 +812,7 @@
                 </div>
                 <div class="payment-status">
                   <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
-                    {{ getPaymentStatusLabel(payment.status) | translate }}
+                    {{ getPaymentStatusLabel(payment.status) }}
                   </span>
                 </div>
                 @if (payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) {
@@ -803,6 +825,15 @@
                       <i class="pi pi-credit-card"></i>
                       {{ 'payments.actions.chargeCard' | translate }}
                     </button>
+                    <!-- Para cobrar SIN el cliente delante: se le manda el
+                         enlace y paga desde su móvil cuando pueda. -->
+                    <button
+                      type="button"
+                      class="btn-charge-card"
+                      (click)="copyPaymentLink(payment, $event)">
+                      <i class="pi pi-link"></i>
+                      {{ 'payments.actions.copyPaymentLink' | translate }}
+                    </button>
                   </div>
                 }
               </div>
@@ -813,6 +844,36 @@
         }
       </div>
     </div>
+
+    <!-- Pasos saltados. Solo aparece si hay alguno: saltarse un paso es la
+         excepción, y una tarjeta vacía sugeriría lo contrario. Va antes de las
+         notas porque no es el operador hablando consigo mismo — es algo que
+         pasó en el alquiler y hay que poder auditar. -->
+    @if (workflowExceptions.length > 0) {
+      <div class="detail-card exceptions-card" style="margin-top: 1rem;">
+        <div class="card-header">
+          <i class="pi pi-directions-alt"></i>
+          <span>{{ 'workflow.exceptionsTitle' | translate }}</span>
+          <span class="badge-count">{{ workflowExceptions.length }}</span>
+        </div>
+        <div class="card-content">
+          <ul class="exceptions-list">
+            @for (e of workflowExceptions; track e.createdAt) {
+              <li class="exception-item">
+                <div class="exception-head">
+                  <strong>{{ exceptionActionLabel(e.action) }}</strong>
+                  <span class="exception-date">{{ toDateValue(e.createdAt) | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <p class="exception-reason">{{ e.reason }}</p>
+                @if (e.createdBy) {
+                  <span class="exception-author">{{ e.createdBy }}</span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
 
     <!-- Internal notes: the last block on the page, because it is the only one
          that is neither the rental nor the money — it is the operator talking
@@ -826,7 +887,7 @@
 
     <!-- Actions -->
     <div class="page-actions">
-      @if (canCancel()) {
+      @if (canCancelReservation()) {
         <button
           class="btn-danger"
           type="button"
@@ -834,7 +895,7 @@
           <i class="pi pi-times"></i>
           {{ 'reservations.actions.cancel' | translate }}
         </button>
-      } @else if (reservation.reservationStatus === 'reserved' || reservation.reservationStatus === 'confirmed') {
+      } @else if (reservation.reservationStatus !== 'cancelled') {
         <button
           class="btn-danger"
           type="button"
@@ -846,6 +907,56 @@
         </button>
       }
     </div>
+
+    <!-- Saltarse un paso del workflow (N-7).
+         El motivo es obligatorio y queda registrado con autor y fecha: la
+         excepción es una decisión que alguien toma, no un botón de escape. -->
+    @if (skippingAction(); as accion) {
+      <div class="modal-overlay" (click)="closeSkipDialog()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <i class="pi pi-directions-alt"></i>
+            <h3>{{ 'workflow.skipStep' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeSkipDialog()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>
+              {{ 'workflow.skipStepConfirm' | translate }}
+              <strong>{{ exceptionActionLabel(accion) }}</strong>
+            </p>
+            <p class="modal-hint">{{ 'workflow.skipStepHint' | translate }}</p>
+
+            <label class="field-label" for="skip-reason">
+              {{ 'workflow.exceptionReason' | translate }} *
+            </label>
+            <textarea
+              id="skip-reason"
+              class="form-control"
+              rows="3"
+              [(ngModel)]="skipReason"
+              [placeholder]="'workflow.exceptionReasonPlaceholder' | translate"
+            ></textarea>
+
+            @if (skipError) {
+              <p class="modal-error"><i class="pi pi-exclamation-circle"></i> {{ skipError }}</p>
+            }
+
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeSkipDialog()">
+                {{ 'common.cancel' | translate }}
+              </button>
+              <button class="btn btn-primary" type="button" [disabled]="savingSkip" (click)="confirmSkip()">
+                @if (savingSkip) { <i class="pi pi-spin pi-spinner"></i> }
+                @else { <i class="pi pi-check"></i> }
+                {{ 'workflow.skipStepConfirmAction' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
 
     <!-- Cancel Modal -->
     @if (showCancelModal) {

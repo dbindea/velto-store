@@ -297,6 +297,7 @@
       "cleaning": "Cargo de limpieza",
       "damage": "Cargo por daños",
       "extraKm": "Cargo por km extra",
+      "extraKmHint": "Sin cobrar. Exceso detectado:",
       "fine": "Multa",
       "fuel": "Cargo de combustible",
       "other": "Otros cargos",
@@ -387,7 +388,8 @@
       "priority": "Prioridad",
       "provider": "Proveedor",
       "status": "Estado",
-      "title": "Título"
+      "title": "Título",
+      "type": "Tipo"
     },
     "itemPlural": "ítems",
     "itemSingular": "ítem",
@@ -439,8 +441,22 @@
       "cancelPayment": "Cancelar pago",
       "chargeCard": "Cobrar con tarjeta",
       "chargeCardError": "No se pudo abrir la pasarela de pago",
+      "copyPaymentLink": "Copiar enlace de pago",
       "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
+    },
+    "checkout": {
+      "subtitle": "Pago seguro",
+      "payTo": "Vas a pagar a",
+      "payNow": "Pagar con tarjeta",
+      "secureNote": "Pago procesado por Redsys. No guardamos los datos de tu tarjeta.",
+      "refresh": "Ya he pagado, actualizar",
+      "paidTitle": "Pago recibido",
+      "paidMessage": "Gracias. No hace falta que hagas nada más.",
+      "notFoundTitle": "Enlace no válido",
+      "notFoundMessage": "Este enlace de pago no existe o ya no está disponible. Pide uno nuevo.",
+      "unavailableTitle": "Pago no disponible",
+      "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros."
     },
     "deposit": {
       "refundFull": "Devolver total",
@@ -571,9 +587,12 @@
       "viewReservation": "Ver reserva"
     },
     "availability": {
+      "conflict": "Ya hay una reserva para estas fechas",
+      "notInFleet": "El vehículo no está disponible en la flota",
       "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas",
       "search": "Buscar disponibilidad",
-      "selectVehicle": "Seleccionar vehículo"
+      "selectVehicle": "Seleccionar vehículo",
+      "unavailable": "No disponible"
     },
     "bookingConfirmation": {
       "copyLink": "Copiar enlace",
@@ -624,6 +643,15 @@
       "waived": "Exenta"
     },
     "detail": "Detalle de reserva",
+    "errors": {
+      "cancel": "Error al cancelar la reserva",
+      "registerPayment": "Error al registrar el pago",
+      "processDeposit": "Error al procesar la fianza",
+      "generateContract": "Error al generar el contrato",
+      "createSigningLink": "Error al crear el link de firma",
+      "pdfNotReady": "El PDF todavía no está disponible",
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible"
+    },
     "fields": {
       "duration": "Duración",
       "notes": "Notas",
@@ -877,11 +905,17 @@
     "cannotClose": "No se puede cerrar la reserva",
     "cannotDeliver": "No se puede iniciar la entrega",
     "cannotReturn": "No se puede iniciar la devolución",
+    "clientBlocked": "Cliente bloqueado: no se le puede crear una reserva. Cambia su nivel de confianza en su ficha si de verdad quieres alquilarle.",
+    "clientRisk": "Cliente marcado como riesgo. Puedes continuar, pero revísalo antes.",
     "closeReservation": "Cerrar reserva",
     "completed": "Reserva completada",
     "contractAlreadySigned": "El contrato ya está firmado",
     "contractCancelled": "El contrato está cancelado",
     "contractPending": "Pendiente de firma",
+    "exceptionReason": "Motivo",
+    "exceptionReasonPlaceholder": "Ej.: el cliente firmó el contrato en papel en la oficina",
+    "exceptionReasonRequired": "El motivo es obligatorio (mínimo 3 caracteres).",
+    "exceptionsTitle": "Pasos saltados",
     "generateContract": "Generar contrato",
     "generateSigningLink": "Crear link de firma",
     "missingContract": "Falta el contrato",
@@ -899,10 +933,12 @@
     "pickupAlreadyCompleted": "La entrega ya está completada",
     "returnAlreadyCompleted": "La devolución ya está completada",
     "settleDeposit": "Resolver fianza",
+    "skipStep": "Saltar este paso",
+    "skipStepConfirm": "Vas a saltarte un control del flujo:",
+    "skipStepConfirmAction": "Saltar el paso",
+    "skipStepHint": "Queda registrado con tu nombre, la fecha y el motivo. Úsalo solo cuando el paso se haya cumplido por otra vía — por ejemplo, un contrato firmado en papel.",
     "startPickup": "Iniciar entrega",
     "startReturn": "Iniciar devolución",
-    "unsettledDeposit": "Fianza pendiente de resolver",
-    "clientBlocked": "Cliente bloqueado: no se le puede crear una reserva. Cambia su nivel de confianza en su ficha si de verdad quieres alquilarle.",
-    "clientRisk": "Cliente marcado como riesgo. Puedes continuar, pero revísalo antes."
+    "unsettledDeposit": "Fianza pendiente de resolver"
   }
 }

@@ -1,0 +1,202 @@
+/**
+ * Pantalla pública de pago.
+ *
+ * Misma estructura que la de firma del contrato —cabecera con la marca, tarjeta
+ * centrada, pie— porque el cliente puede recibir las dos el mismo día y deben
+ * parecer de la misma empresa.
+ *
+ * Se diseña **para el móvil**: el enlace llega por WhatsApp, así que el teléfono
+ * no es un caso raro sino el único que importa.
+ */
+.public-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.public-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+
+  app-brand-logo {
+    display: block;
+    height: 36px;
+    max-width: 200px;
+  }
+}
+
+.brand-tagline {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.public-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 1.5rem 1rem;
+}
+
+.checkout-card,
+.status-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.status-card {
+  h1 {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  i {
+    font-size: 2.5rem;
+  }
+
+  &.success i { color: var(--success-color); }
+  &.error i { color: var(--error-color); }
+  &.loading i { color: var(--text-muted); }
+}
+
+.pay-to {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+
+  strong {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+}
+
+/**
+ * El importe manda.
+ *
+ * Es lo único que el cliente tiene que comprobar antes de sacar la tarjeta, así
+ * que va grande y sin nada que compita con él. `tabular-nums` para que no baile
+ * al recargar.
+ */
+.amount {
+  margin: 0.25rem 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-paid {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--success-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.concept {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  // Un concepto es prosa escrita a mano: parte antes que desbordar.
+  overflow-wrap: anywhere;
+}
+
+.btn-pay {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  // 52px: se pulsa con el pulgar, de pie y con prisa.
+  min-height: 52px;
+  padding: 0.875rem 1.5rem;
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: progress;
+  }
+}
+
+.secure-note {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+
+  i { font-size: 0.8rem; }
+}
+
+/**
+ * Discreto a propósito: la acción es pagar, no recargar. Solo tiene sentido
+ * para quien vuelve de la pasarela y la notificación aún no ha llegado.
+ */
+.btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+
+  &:hover { color: var(--accent-color); }
+}
+
+.public-footer {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+}

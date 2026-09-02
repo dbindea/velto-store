@@ -1381,3 +1381,239 @@ columna del arrendatario (M-26 y M-27, verificados ya en producción).
 
 **Avisos de consola en el login**: los cuatro de `Cross-Origin-Opener-Policy`,
 ya conocidos como M-13. No impiden el login.
+
+## C-24 · La otra mitad del ciclo: entrega, devolución, daños y cierre — 31 de agosto de 2026
+
+Recorrido de lo que **nunca se había ejecutado**. El motivo de hacerlo era el
+patrón de esta semana: el email, Redsys y la sincronización del webhook estaban
+escritos, desplegados y rotos, y nadie lo sabía porque nadie los había usado.
+
+Sobre la reserva `ZRlBfmb4JWR4cO9QgDio` de `velto-store`, ya confirmada y con
+contrato firmado.
+
+| Paso | Resultado |
+|---|---|
+| Cobro del resto y de la fianza | correcto; al elegir tipo autocompleta el importe |
+| Inspección de **entrega** | checklist de 8 puntos, km, combustible, limpieza |
+| **Subida de foto** en la inspección | sube a `inspections/` en Storage y se muestra |
+| Estado tras entregar | **Entregado** |
+| Inspección de **devolución** | km, combustible, limpieza, llaves, accesorios |
+| **Registro de daños** | zona TRASERA, gravedad Leve, descripción — registrado |
+| Cargos extra | 62,50 km + 30 limpieza + 80 daños = **172,50 €** |
+| Retención de fianza | automática, 150,00 € |
+| Estado final | **Cerrado** |
+
+**Lo que funciona y queda probado:** la subida de fotos dentro de una inspección
+y el registro de daños en la devolución, los dos pendientes desde agosto. Los
+cargos extra se convierten en filas de pago con su tipo (`extra_km`,
+`extra_cleaning`, `extra_damage`) y la retención de fianza se crea sola.
+
+**Tres fallos encontrados**, todos anotados:
+
+- **M-33** · Los cargos extra nacen `paid` sin que nadie los haya cobrado. Con
+  172,50 € de cargos y 150 € de fianza, **los 22,50 € de diferencia se dan por
+  cobrados** y desaparecen. Es dinero y es silencioso.
+- **M-34** · El cargo por km extra no se calcula, aunque la app tiene los km de
+  salida, los de entrada, los incluidos por día y el precio del km extra.
+- **M-35** · «Registrar cobro» abre siempre en «Señal» con importe 0, aun con la
+  señal ya cobrada.
+
+**Un detalle de método, para el que venga detrás:** en los campos de cargos, fijar
+`value` por JavaScript deja el input `ng-dirty` con el valor correcto pero **no
+dispara el recálculo del total**. Con escritura real sí. No es un fallo de la
+app; es que la comprobación automatizada puede mentir si se hace así.
+
+## C-25 · M-33, y los tres agujeros que aparecieron al taparlo — 31 de agosto de 2026
+
+El fallo de partida era que los cargos de la devolución se creaban marcados como
+pagados. Al dejar de mentir sobre eso, quedaron a la vista otros tres por los que
+el dinero se escapaba igual. Ninguno se habría visto sin ejecutar el flujo.
+
+| # | Dónde | Qué pasaba |
+|---|---|---|
+| 1 | `createExtraChargePayments` | `paidAmount = amount` con el comentario `// assumed already paid` |
+| 2 | Retención de fianza | no liquidaba los cargos: iba por su cuenta |
+| 3 | `cancelUncollectedPayments` | **cancelaba los cargos pendientes al cerrar** |
+| 4 | `calculateReservationPaymentSummary` | `paymentStatus` ignoraba los cargos → **PAGADO** debiendo |
+
+El tercero es el que más enseña: tapar el primero sin tapar ese solo habría
+cambiado la etiqueta con la que se perdía el dinero, de «pagado» a «cancelado».
+
+**Cómo quedó.** Los cargos nacen `pending`. La retención los liquida de mayor a
+menor hasta donde alcance —`distributeRetentionAcrossCharges`, util puro con
+5 tests, incluido el caso de los 22,50 € que faltaban y el de la fianza a 0—.
+Lo que no cubre queda pendiente, sale con su importe y se cobra con el botón de
+tarjeta que se añadió con Redsys.
+
+**Verificado en el caso peor**, que es el que el negocio usa a diario: reserva
+con **fianza a 0** (cliente conocido, con su motivo obligatorio) y 160 € de
+cargos.
+
+```
+antes:  ambos cargos «Pagado» · reserva PAGADO · 160 € evaporados
+ahora:  ambos «Pendiente» con botón de cobro · reserva PARCIAL
+        y siguen ahí después de cerrar la reserva
+```
+
+De paso quedan probados dos pendientes más: **fianza a 0** —no siembra fila, la
+marca «Exenta» y exige motivo— y el **cierre** de una reserva con deuda viva.
+
+**Sobre el método.** Este arreglo no se podía validar con tests solos: los tres
+agujeros nuevos estaban en sitios distintos del código y solo se tocan entre sí
+al recorrer el flujo entero. Los tests fijan la aritmética; el recorrido es lo
+que encontró el problema.
+
+## C-26 · Cancelación, mantenimiento y excepciones — 31 de agosto de 2026
+
+Lo que quedaba del ciclo sin ejecutar. Tres fallos y un hallazgo distinto.
+
+**Cancelación de una reserva.** El botón salía **deshabilitado y sin explicar
+por qué** en cuanto se cobraba la señal. La causa: dos reglas contradictorias en
+el mismo componente —`canCancel()` copiada a mano (solo `reserved`) y
+`canCancelReservation()` delegando en el workflow (`reserved` y `confirmed`)—.
+El template preguntaba a una y pedía el motivo a la otra, que no tenía nada que
+objetar: de ahí el `title` vacío. Retirada la copia (M-36).
+
+Una vez cancelada, los pagos aparecían como **`cancelled` en inglés**: el getter
+usaba el mapa de estados *de la reserva* para pintar el estado *de un pago*
+(M-37). La traducción existía desde siempre.
+
+Comprobado en Firestore que la cancelación hace lo correcto: la señal cobrada se
+conserva `paid` —el dinero entró— y el resto y la fianza pasan a `cancelled`.
+
+**Mantenimiento de vehículos.** Primera alta de la colección
+`vehicleMaintenance`, que llevaba vacía desde el principio: tipo, estado,
+prioridad, descripción, fecha, km, coste, proveedor y próxima revisión. Se
+guarda y se lista bajo «Realizados».
+
+El formulario pintaba **`maintenance.type.oil_change` en crudo** sobre el
+desplegable (M-38): la etiqueta se construía con el valor seleccionado en vez de
+con el nombre del campo, y además las claves están en camelCase mientras el
+valor llega en snake_case, así que no habría resuelto ni con la clave correcta.
+
+Los kilómetros se guardan como **texto** y `cost` como número (M-39).
+
+**Excepciones de workflow: no están implementadas.** Y esto no es un fallo, es
+otra cosa. `buildWorkflowException()` existe, está cubierta por tests, el modelo
+tiene `workflowExceptions[]` y el workflow las respeta… pero **no hay una sola
+llamada desde la UI ni desde los servicios**. La pieza está construida y no
+conectada, así que no hay manera de crear una excepción.
+
+Consecuencia concreta: si un cliente firma en papel, la entrega queda bloqueada
+sin salida. Anotado como **N-7**, con las decisiones que hay que tomar antes.
+
+**El patrón, otra vez.** Cinco de los seis hallazgos de hoy son de la misma
+familia que el email o Redsys: código escrito, desplegado y nunca ejecutado.
+Ninguno lo habría encontrado un test.
+
+## C-27 · Tanda de arreglos pequeños — 1 de septiembre de 2026
+
+Ocho puntos del backlog que no necesitaban decisión. Ninguno era grave por
+separado; juntos son la diferencia entre una pantalla que ayuda y una que
+estorba.
+
+| | Qué pasaba | Cómo queda |
+|---|---|---|
+| **M-35** | «Registrar cobro» abría siempre en Señal y a 0 € | Abre en el primer concepto pendiente, con su importe |
+| **M-18** | «Reservado (confirmed)» — enum en inglés y español duro | «Ya hay una reserva para estas fechas», traducible |
+| **M-16** | Siete `alert()` en español duro | Los siete a `reservations.errors.*` |
+| **M-19** | El paso «Resumen» nacía con el check verde | Nunca completo: lo completa crear la reserva |
+| **M-29** | `contractId: null` en la respuesta del email | `snap.id`: `snap.data()` no trae el id |
+| **M-39** | Kilómetros de mantenimiento como texto | Números, con `null` para el campo vacío |
+| **M-2** | Una clave sin traducir se pintaba en crudo | Respaldo al español antes de rendirse |
+| **M-8** | «El contrato no lleva logo» | **Ya estaba resuelto**; el documento iba retrasado |
+
+**Lo que se encontró de más.** M-16 hablaba de dos `alert()` y había **siete**.
+M-18 apuntaba a un sitio y el texto real venía de **otro**: el que edité primero
+era el de `checkVehicleAvailability`, pero el que ve el operador en el paso 2 lo
+compone `searchAvailability`. Solo se descubrió porque, tras el arreglo, la
+pantalla seguía diciendo «Reservado (confirmed)».
+
+Al lado de ese apareció un tercero: `'VehÃ­culo no disponible en flota'`, con la
+tilde rota por un guardado en la codificación equivocada. Se leía así en
+pantalla. También pasó a clave i18n.
+
+**M-2, con matiz.** El respaldo al español no debería activarse nunca —la
+paridad está al 100 % y el auditor la vigila— pero el día que se escape una
+clave, es mejor que el usuario rumano lea español a que lea
+`payments.status.cancelled`.
+
+**Verificado en pantalla**, no solo compilado: el cobro abre en «Señal» con 50 €
+con la señal pendiente y en «Resto alquiler» con 149,65 € una vez cobrada; el
+paso 4 sale con su número; y el coche ocupado dice «Ya hay una reserva para
+estas fechas».
+
+## C-28 · Fotos reducidas antes de subir — 1 de septiembre de 2026
+
+M-20 estaba escrito como un problema de descarga: la caja de la tarjeta mide
+140 px y se bajaba el original. Al mirarlo de cerca eran **dos** problemas, y el
+que nadie había medido era el otro: el operador **sube** 3-5 MB por foto, desde
+la calle, con la cobertura que haya, y varias seguidas en una inspección.
+
+Decisión de Dorel: reducir en el navegador antes de subir. Es la única de las
+tres opciones que arregla las dos mitades — la extensión `Resize Images` y una
+Cloud Function con `sharp` solo habrían mejorado la descarga, y las dos añaden
+infraestructura y coste por foto.
+
+**Medido con una imagen de 4032×3024**, que es lo que da un móvil:
+
+| | Peso | Dimensiones |
+|---|---|---|
+| Entrada | 2.527 KB | 4032×3024 |
+| Guardada | 906 KB | 1600×1200 |
+| Miniatura | **74 KB** | 400×300 |
+
+La lista de flota pasa de 2,5 MB por coche a 74 KB. Y la imagen de prueba era
+ruido pseudoaleatorio, el peor caso posible para JPEG: una foto real comprime
+bastante más.
+
+**Verificado en pantalla y en Storage**, no solo en el código: la tarjeta usa la
+miniatura (`naturalWidth` 400 en una caja de 180) y se ve nítida; el documento
+guarda `path` y `thumbnailPath`; y tras borrar la foto **ninguno de los dos
+ficheros responde** — la miniatura no se queda huérfana.
+
+**Lo que no se ve pero cuesta si falta.** Si el navegador no sabe reducir el
+fichero (HEIC), se sube el original y se sigue: una miniatura que falla no puede
+costar la foto. `size` y `contentType` describen lo guardado y no el original,
+que si no estarían describiendo un fichero que no existe. Y los `ImageBitmap` se
+cierran, porque con varias fotos seguidas desde el móvil no hacerlo es la
+diferencia entre que la pestaña aguante o se recargue sola.
+
+**Un tropiezo del que dejar constancia**, porque ya me había pasado: escribir
+esta documentación con `node -e` y comillas invertidas dentro de bash hizo que
+el shell **ejecutara** los nombres de fichero y los borrara del texto. Para
+prosa, Write y Edit; `node -e` es para datos.
+
+## C-29 · Pago desde el móvil del cliente (N-6) — 2 de septiembre de 2026
+
+El hueco que quedaba: cobrar con tarjeta exigía tener al cliente delante, porque
+abrir la pasarela requiere un POST firmado desde la propia pantalla. Ahora se le
+manda un enlace y paga cuando puede.
+
+**Probado de extremo a extremo en desarrollo**, con la pantalla a 390 px que es
+como la va a ver:
+
+1. Botón «Copiar enlace de pago» en la fila pendiente de la reserva
+2. `/pay/{id}` abre sin sesión: importe grande, concepto, marca de la empresa
+3. «Pagar con tarjeta» → pasarela de test → 3D Secure → autorizado
+4. «Ya he pagado, actualizar» → **«Pago recibido»**, sin ofrecer pagar de nuevo
+5. La reserva pasó sola a **Pagado: 199,65 €**, por el webhook
+
+**Comprobado que no filtra nada.** Llamando a la function sin ninguna cabecera
+de autenticación, la respuesta trae importe, moneda, concepto, marca y el
+formulario firmado. Ni pagador, ni cliente, ni vehículo, ni reserva: un enlace
+reenviado no debe contar con quién trabajas.
+
+**Dos tropiezos del día, los dos míos.**
+
+`npx tsc --noEmit` **no valida las plantillas de Angular**. Había cambiado la
+galería para usar `thumbnailUrl` sin declararlo en `GalleryImage`: tsc daba OK y
+lo que falló fue el build del dev server. Para cambios en plantillas, el
+typecheck a secas no basta.
+
+Y `navigator.clipboard.readText()` desde el navegador automatizado **se queda
+esperando un permiso que nadie concede**: colgó la herramienta media hora. Para
+comprobar un enlace copiado, construirlo aparte y navegar a él.
+
+**Antes del despliegue a producción**: `getPaymentCheckout` es nueva y solo está
+en desarrollo.
