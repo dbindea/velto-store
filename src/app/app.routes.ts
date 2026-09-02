@@ -29,6 +29,18 @@ export const routes: Routes = [
     path: 'd/:id',
     loadComponent: () => import('./features/documents/document-redirect.component').then(m => m.DocumentRedirectComponent)
   },
+  /**
+   * Pago desde el móvil del cliente. PÚBLICA, y va **antes** del bloque con
+   * `authGuard` para que el router la resuelva primero: pedirle a un cliente
+   * que inicie sesión para pagar es pedirle que no pague.
+   *
+   * El id del pago es el secreto, como en `/d/…`. La function que hay detrás
+   * devuelve solo importe, concepto y marca.
+   */
+  {
+    path: 'pay/:paymentId',
+    loadComponent: () => import('./features/payments/pages/payment-checkout/payment-checkout.component').then(m => m.PaymentCheckoutComponent)
+  },
   {
     path: '',
     loadComponent: () => import('./layout/private-layout/private-layout.component').then(m => m.PrivateLayoutComponent),

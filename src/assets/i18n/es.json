@@ -441,8 +441,22 @@
       "cancelPayment": "Cancelar pago",
       "chargeCard": "Cobrar con tarjeta",
       "chargeCardError": "No se pudo abrir la pasarela de pago",
+      "copyPaymentLink": "Copiar enlace de pago",
       "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
+    },
+    "checkout": {
+      "subtitle": "Pago seguro",
+      "payTo": "Vas a pagar a",
+      "payNow": "Pagar con tarjeta",
+      "secureNote": "Pago procesado por Redsys. No guardamos los datos de tu tarjeta.",
+      "refresh": "Ya he pagado, actualizar",
+      "paidTitle": "Pago recibido",
+      "paidMessage": "Gracias. No hace falta que hagas nada más.",
+      "notFoundTitle": "Enlace no válido",
+      "notFoundMessage": "Este enlace de pago no existe o ya no está disponible. Pide uno nuevo.",
+      "unavailableTitle": "Pago no disponible",
+      "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros."
     },
     "deposit": {
       "refundFull": "Devolver total",

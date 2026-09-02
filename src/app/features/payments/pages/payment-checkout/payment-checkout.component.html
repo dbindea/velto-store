@@ -1,0 +1,76 @@
+<div class="public-page">
+  <header class="public-header">
+    <div class="brand">
+      <app-brand-logo variant="wordmark" [alt]="'brand.logoAlt' | translate" />
+    </div>
+    <span class="brand-tagline">{{ 'payments.checkout.subtitle' | translate }}</span>
+  </header>
+
+  <main class="public-main">
+    @if (loading()) {
+      <div class="status-card loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>{{ 'common.loading' | translate }}</p>
+      </div>
+    } @else if (errored() || !view()) {
+      <div class="status-card error">
+        <i class="pi pi-times-circle"></i>
+        <h1>{{ 'payments.checkout.notFoundTitle' | translate }}</h1>
+        <p>{{ 'payments.checkout.notFoundMessage' | translate }}</p>
+      </div>
+    } @else if (view()!.state === 'paid') {
+      <!-- Un pago ya cobrado NO vuelve a generar formulario: reenviar el enlace
+           después de pagar cobraría dos veces. -->
+      <div class="status-card success">
+        <i class="pi pi-check-circle"></i>
+        <h1>{{ 'payments.checkout.paidTitle' | translate }}</h1>
+        <p>{{ 'payments.checkout.paidMessage' | translate }}</p>
+        <p class="amount-paid">{{ view()!.amount | number:'1.2-2' }} €</p>
+      </div>
+    } @else if (view()!.state === 'unavailable') {
+      <div class="status-card error">
+        <i class="pi pi-ban"></i>
+        <h1>{{ 'payments.checkout.unavailableTitle' | translate }}</h1>
+        <p>{{ 'payments.checkout.unavailableMessage' | translate }}</p>
+      </div>
+    } @else {
+      <div class="checkout-card">
+        <p class="pay-to">
+          {{ 'payments.checkout.payTo' | translate }}
+          <strong>{{ view()!.brandName }}</strong>
+        </p>
+
+        <!-- El importe es lo primero y lo más grande: es lo único que el
+             cliente necesita comprobar antes de meter la tarjeta. -->
+        <p class="amount">{{ view()!.amount | number:'1.2-2' }} €</p>
+
+        @if (view()!.concept) {
+          <p class="concept">{{ view()!.concept }}</p>
+        }
+
+        <button class="btn-pay" type="button" [disabled]="paying()" (click)="pay()">
+          @if (paying()) { <i class="pi pi-spin pi-spinner"></i> }
+          @else { <i class="pi pi-credit-card"></i> }
+          {{ 'payments.checkout.payNow' | translate }}
+        </button>
+
+        <p class="secure-note">
+          <i class="pi pi-lock"></i>
+          {{ 'payments.checkout.secureNote' | translate }}
+        </p>
+
+        <!-- Redsys devuelve aquí al terminar, pero su notificación viaja por
+             otro camino y puede llegar un instante después. En vez de fingir
+             que sabemos el resultado, se ofrece volver a preguntar. -->
+        <button class="btn-refresh" type="button" (click)="refresh()">
+          <i class="pi pi-refresh"></i>
+          {{ 'payments.checkout.refresh' | translate }}
+        </button>
+      </div>
+    }
+  </main>
+
+  <footer class="public-footer">
+    <span>{{ view()?.brandName || '' }}</span>
+  </footer>
+</div>

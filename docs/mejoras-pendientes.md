@@ -398,23 +398,44 @@ Dos numeraciones, para no mezclar cosas distintas:
   proyectos, que es condición para que Redsys pueda notificar: responde `400` a
   un POST vacío y `405` a un GET — respuestas nuestras, no un `403` de Google.
 
-- [ ] **N-6 · Enlace de pago para enviar por WhatsApp.** *(31 ago 2026 — sin decidir)*
-  Hoy solo se puede cobrar con el operador delante, porque abrir la pasarela
-  exige un POST firmado desde la propia pantalla. Para mandar un enlace al
-  cliente hacen falta dos piezas y una decisión:
+- [x] **N-6 · El cliente paga desde su móvil, sin ti delante.** *(2 sep 2026)*
+  Hasta ahora solo se podía cobrar con tarjeta desde el backoffice y con el
+  cliente al lado, porque abrir la pasarela exige un POST firmado.
 
-  - una **ruta pública** `/pay/:paymentId` que reciba el id, pida la firma a la
-    function y autoenvíe el formulario;
-  - o **Paygold**, el servicio del propio Redsys que envía el enlace por SMS o
-    email desde el banco (es otro tipo de operación, no un `TransactionType` 0).
+  **Decisión de Dorel:** ruta pública propia, no Paygold.
 
-  La ruta propia expone importe, concepto y titular a quien tenga el id — no es
-  grave (pagar de más no es un ataque), pero hay que quererlo. Es además la
-  pieza que necesita la pre-reserva de N-5.
+  Lo construido:
 
-  Falta también decidir **a dónde vuelve el cliente**: `Ds_Merchant_UrlOK` y
-  `UrlKO` van hoy vacías, así que se queda en la pantalla de Redsys. Apuntarlas
-  al dominio sin más lo dejaría en el login, que es peor.
+  - `getPaymentCheckout`, Cloud Function **pública** que devuelve el formulario
+    firmado. Comparte con `createRedsysPaymentLink` la preparación del pago
+    (`prepareRedsysCheckout`), para no duplicar la firma, el formato del pedido
+    ni la URL del webhook — tres cosas que ya han estado mal alguna vez.
+  - Ruta pública `/pay/:paymentId`, **antes** del bloque con `authGuard`: pedirle
+    a un cliente que inicie sesión para pagar es pedirle que no pague.
+  - Pantalla pensada para el móvil, que es como llega el enlace: el importe
+    grande y primero, botón de 52 px, y la marca de la empresa arriba.
+  - Botón **«Copiar enlace de pago»** en cada fila pendiente de la reserva.
+
+  **Lo que devuelve y lo que no.** Solo importe, concepto y marca. Nunca el
+  nombre del pagador, su email, el cliente, el vehículo ni la reserva: quien
+  abre un enlace reenviado no debe enterarse de con quién trabajas. Comprobado
+  llamando a la function sin ninguna cabecera de autenticación.
+
+  Un pago **ya cobrado no genera formulario**: devuelve `paid` y la pantalla lo
+  dice. Sin eso, reenviar el enlace después de pagar cobraría dos veces. Un id
+  inexistente y uno cancelado responden lo mismo, para no confirmar desde fuera
+  si un identificador es real.
+
+  `Ds_Merchant_UrlOK` y `UrlKO` apuntan ya a la propia pantalla de pago, que
+  consulta el estado. Y como la notificación de Redsys puede llegar un instante
+  después que el navegador, hay un **«Ya he pagado, actualizar»**: en vez de
+  fingir que sabemos el resultado, se vuelve a preguntar.
+
+  **Probado de extremo a extremo** en desarrollo: enlace → pantalla en móvil →
+  tarjeta de prueba → 3DS → «Pago recibido», y la reserva pasó sola a
+  **Pagado: 199,65 €** por el webhook.
+
+  ⚠️ Falta desplegar `getPaymentCheckout` **en producción**.
   `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero lee
   `REDSYS_MERCHANT_CODE`, `REDSYS_TERMINAL` y `REDSYS_ENVIRONMENT` de
   `process.env` sin declararlos. Salen `undefined` y la función responde «Redsys
@@ -1021,3 +1042,49 @@ Cloud Scheduler, que hay que habilitar en los dos proyectos.
    devuelve? Redsys puede confirmar tarde.
 4. El PDF: ¿un cuarto documento, o el presupuesto con una caja de «válido hasta
    las HH:MM»? Lo segundo reaprovecha plantilla, precios e IVA.
+
+## N-8 · Sellar el contrato con el certificado FNMT de la empresa *(anotado el 2 sep 2026 — acordado hacerlo)*
+
+Dorel ya tiene el certificado FNMT de representante de la empresa. La idea es
+sellar con él el PDF del contrato, después de que el cliente firme.
+
+⚠️ **Hoy el contrato afirma algo que no es cierto.** En la casilla del
+arrendador se imprime «Firmado digitalmente con certificado digital», y el
+código lo reconoce en un TODO de `pdf.ts`:
+
+> *apply the actual certificate to the generated PDF. Until then this states the
+> intent; the note is not a substitute for the signature.*
+
+Es una frase que va al cliente afirmando una firma que no existe. **Si N-8 se
+retrasa, esa línea debería quitarse mientras tanto.**
+
+**Qué implica.** El sellado va como último paso, después de incrustar la firma
+manuscrita del cliente: un PDF firmado no se puede tocar sin romper la firma.
+Son cuatro pasos —reservar el hueco de firma, calcular el hash, firmar con la
+clave privada del `.p12`, reinsertar— y `pdf-lib` no firma, así que entra
+`@signpdf` con `node-forge`. Las dos son JavaScript puro, sin binarios que
+compilar. El `.p12` va a Secret Manager en base64, nunca al repositorio.
+
+**Coste: prácticamente cero.** Librerías libres, certificado ya comprado, y
+firmar son milisegundos de CPU. Lo único que puede costar es el **sellado de
+tiempo**, que acredita *cuándo* se firmó; se puede empezar sin él y añadirlo
+después.
+
+**Complejidad: media, un par de días.** La mayor parte del tiempo se va en
+comprobar que Adobe Reader valida la firma, que es donde esto suele fallar.
+
+Tres cosas que vigilar:
+
+- El certificado FNMT de representante **caduca a los dos años**. Si expira sin
+  renovar, los contratos nuevos dejan de firmarse.
+- El **orden importa**: sellar antes de incrustar la firma del cliente
+  invalidaría el documento.
+- Probarlo en los dos entornos.
+
+**Lo que NO arregla, y conviene tener claro.** El certificado firma *como la
+empresa*: acredita que el documento no se ha alterado y que lo emitiste tú. La
+firma **del cliente** sigue siendo un trazo en un canvas —firma electrónica
+simple, válida pero con poco peso probatorio si él la niega—. Sellar con el
+certificado de la empresa no la convierte en cualificada. Para eso haría falta
+un prestador de servicios de confianza, que cobra por firma y es otro
+desarrollo.

@@ -825,6 +825,15 @@
                       <i class="pi pi-credit-card"></i>
                       {{ 'payments.actions.chargeCard' | translate }}
                     </button>
+                    <!-- Para cobrar SIN el cliente delante: se le manda el
+                         enlace y paga desde su móvil cuando pueda. -->
+                    <button
+                      type="button"
+                      class="btn-charge-card"
+                      (click)="copyPaymentLink(payment, $event)">
+                      <i class="pi pi-link"></i>
+                      {{ 'payments.actions.copyPaymentLink' | translate }}
+                    </button>
                   </div>
                 }
               </div>

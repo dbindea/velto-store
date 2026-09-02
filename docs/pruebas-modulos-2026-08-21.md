@@ -1583,3 +1583,37 @@ diferencia entre que la pestaña aguante o se recargue sola.
 esta documentación con `node -e` y comillas invertidas dentro de bash hizo que
 el shell **ejecutara** los nombres de fichero y los borrara del texto. Para
 prosa, Write y Edit; `node -e` es para datos.
+
+## C-29 · Pago desde el móvil del cliente (N-6) — 2 de septiembre de 2026
+
+El hueco que quedaba: cobrar con tarjeta exigía tener al cliente delante, porque
+abrir la pasarela requiere un POST firmado desde la propia pantalla. Ahora se le
+manda un enlace y paga cuando puede.
+
+**Probado de extremo a extremo en desarrollo**, con la pantalla a 390 px que es
+como la va a ver:
+
+1. Botón «Copiar enlace de pago» en la fila pendiente de la reserva
+2. `/pay/{id}` abre sin sesión: importe grande, concepto, marca de la empresa
+3. «Pagar con tarjeta» → pasarela de test → 3D Secure → autorizado
+4. «Ya he pagado, actualizar» → **«Pago recibido»**, sin ofrecer pagar de nuevo
+5. La reserva pasó sola a **Pagado: 199,65 €**, por el webhook
+
+**Comprobado que no filtra nada.** Llamando a la function sin ninguna cabecera
+de autenticación, la respuesta trae importe, moneda, concepto, marca y el
+formulario firmado. Ni pagador, ni cliente, ni vehículo, ni reserva: un enlace
+reenviado no debe contar con quién trabajas.
+
+**Dos tropiezos del día, los dos míos.**
+
+`npx tsc --noEmit` **no valida las plantillas de Angular**. Había cambiado la
+galería para usar `thumbnailUrl` sin declararlo en `GalleryImage`: tsc daba OK y
+lo que falló fue el build del dev server. Para cambios en plantillas, el
+typecheck a secas no basta.
+
+Y `navigator.clipboard.readText()` desde el navegador automatizado **se queda
+esperando un permiso que nadie concede**: colgó la herramienta media hora. Para
+comprobar un enlace copiado, construirlo aparte y navegar a él.
+
+**Antes del despliegue a producción**: `getPaymentCheckout` es nueva y solo está
+en desarrollo.

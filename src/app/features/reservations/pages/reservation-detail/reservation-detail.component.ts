@@ -821,6 +821,25 @@ export class ReservationDetailComponent implements OnInit {
     }
   }
 
+  /**
+   * Copia el enlace de pago de una fila pendiente, listo para WhatsApp.
+   *
+   * El cliente lo abre en su móvil y paga sin que tú estés delante, que era el
+   * hueco: hasta ahora solo se podía cobrar con tarjeta desde aquí, con el
+   * cliente al lado.
+   *
+   * Se construye con el **origen actual**, no con una constante: en local
+   * apunta a localhost y en producción al dominio propio, sin configurar nada.
+   */
+  async copyPaymentLink(payment: Payment, event: Event): Promise<void> {
+    event.stopPropagation();
+    if (!payment.id) return;
+
+    const link = `${window.location.origin}/pay/${payment.id}`;
+    const copied = await this.documentService.copyToClipboard(link);
+    if (copied) this.showCopyToast();
+  }
+
   /** Excepciones ya registradas, para poder mostrarlas en la ficha. */
   get workflowExceptions(): Array<{ action: string; reason: string; createdBy?: string; createdAt?: any }> {
     return this.reservation?.workflowExceptions ?? [];

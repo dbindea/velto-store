@@ -5,6 +5,11 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 export interface GalleryImage {
   url: string;
   path?: string;
+  /**
+   * Miniatura ~400 px para la tira inferior. Opcional: generarla puede fallar
+   * —un HEIC, por ejemplo— y entonces se cae a `url`.
+   */
+  thumbnailUrl?: string;
   uploadedAt?: any;
   fileName?: string;
 }

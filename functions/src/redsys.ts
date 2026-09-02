@@ -47,6 +47,7 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { FUNCTIONS_REGION } from './global-options';
 import { firestore } from './admin-guard';
+import { companyConfig } from './company-config';
 import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 // ----- Secrets / config -----
@@ -65,6 +66,113 @@ interface CreateRedsysLinkResponse {
 // ---------------------------------------------------------------------------
 // createRedsysPaymentLink — callable
 // ---------------------------------------------------------------------------
+
+/**
+ * Prepara el pago en Redsys y devuelve el formulario firmado.
+ *
+ * Compartido por las dos entradas —la del operador, con sesión, y la pública
+ * que abre el cliente en su móvil— porque la operación es exactamente la misma
+ * y duplicarla sería duplicar la firma, el formato del pedido y la URL del
+ * webhook. Tres cosas que ya han estado mal alguna vez.
+ */
+async function prepareRedsysCheckout(
+  paymentSnap: FirebaseFirestore.DocumentSnapshot,
+  secret: string
+): Promise<CreateRedsysLinkResponse> {
+  const payment = paymentSnap.data() as any;
+
+  const MERCHANT_CODE = process.env.REDSYS_MERCHANT_CODE;
+  const TERMINAL = process.env.REDSYS_TERMINAL;
+  const ENVIRONMENT = process.env.REDSYS_ENVIRONMENT || 'test';
+  const CURRENCY = process.env.REDSYS_CURRENCY || '978';
+  const TRANSACTION_TYPE = process.env.REDSYS_TRANSACTION_TYPE || '0';
+
+  if (!MERCHANT_CODE || !TERMINAL || !secret) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Redsys no está configurado. Configura las variables de entorno / secrets.'
+    );
+  }
+
+  // Redsys requires Ds_Merchant_Order to be 4-12 characters with the
+  // FIRST FOUR NUMERIC and the rest alphanumeric. A `VEL...` prefix
+  // is rejected by the gateway.
+  //
+  // We build exactly 12 chars: 4 digits from the tail of the epoch
+  // millis, then 32 bits of randomness as 8 hex chars.
+  const orderPrefix = Date.now().toString().slice(-4);
+  const orderSuffix = randomBytes(4).toString('hex').toUpperCase();
+  const order = `${orderPrefix}${orderSuffix}`;
+  const amount = Math.round((payment.amount || 0) * 100).toString();
+
+  const paymentUrl =
+    ENVIRONMENT === 'live'
+      ? 'https://sis.redsys.es/sis/realizarPago'
+      : 'https://sis-t.redsys.es:25443/sis/realizarPago';
+
+  /**
+   * A dónde vuelve el cliente al terminar.
+   *
+   * Va a la misma página de pago, que consulta el estado y enseña el resultado.
+   * Una ruta aparte por cada desenlace obligaría a mantener dos pantallas para
+   * decir «bien» o «mal», y el que manda no es este retorno: es el webhook.
+   *
+   * Sin `VELTO_PUBLIC_BASE_URL` se quedan vacías, que es lo que hacían siempre:
+   * el cliente se queda en la pantalla de Redsys. Funciona, pero es peor.
+   */
+  const base = (process.env.VELTO_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+  const returnUrl = base ? `${base}/pay/${paymentSnap.id}` : '';
+
+  const params: { [k: string]: string } = {
+    Ds_Merchant_Amount: amount,
+    Ds_Merchant_Currency: CURRENCY,
+    Ds_Merchant_Order: order,
+    Ds_Merchant_MerchantCode: MERCHANT_CODE,
+    Ds_Merchant_Terminal: TERMINAL,
+    Ds_Merchant_TransactionType: TRANSACTION_TYPE,
+    // Gen-2 Cloud Functions URLs are {region}-{project}, not
+    // {project}-{region}. Getting this backwards points Redsys at a
+    // host that does not resolve, so the payment silently never
+    // reaches the webhook.
+    // El respaldo usa FUNCTIONS_REGION, no un literal: las functions se
+    // movieron a europe-west1 el 28 de agosto de 2026 y este fallback se
+    // habría quedado apuntando a us-central1, a un host que ya no resuelve.
+    Ds_Merchant_MerchantURL:
+      process.env.REDSYS_NOTIFICATION_URL ||
+      `https://${process.env.GCLOUD_REGION || FUNCTIONS_REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redsysNotificationWebhook`,
+    Ds_Merchant_UrlOK: process.env.REDSYS_URL_OK || returnUrl,
+    Ds_Merchant_UrlKO: process.env.REDSYS_URL_KO || returnUrl,
+    Ds_Merchant_ProductDescription: (payment.concept || 'Cobro Velto').slice(0, 125),
+    Ds_Merchant_Titular: (payment.payerName || payment.clientSnapshot?.fullName || '').slice(0, 60),
+    Ds_Merchant_ConsumerLanguage: '001'
+  };
+
+  const dsMerchantParameters = Buffer.from(JSON.stringify(params)).toString('base64');
+  const signature = signRedsysParameters(dsMerchantParameters, order, secret);
+
+  await paymentSnap.ref.update({
+    'redsys.order': order,
+    'redsys.merchantCode': MERCHANT_CODE,
+    'redsys.terminal': TERMINAL,
+    'redsys.transactionType': TRANSACTION_TYPE,
+    'redsys.paymentUrl': paymentUrl,
+    externalReference: order,
+    status: 'pending',
+    method: 'redsys',
+    source: 'redsys',
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  return {
+    paymentUrl,
+    formData: {
+      Ds_SignatureVersion: 'HMAC_SHA256_V1',
+      Ds_MerchantParameters: dsMerchantParameters,
+      Ds_Signature: signature
+    },
+    reference: order
+  };
+}
 
 export const createRedsysPaymentLink = functions.https.onCall(
   {
@@ -85,91 +193,88 @@ export const createRedsysPaymentLink = functions.https.onCall(
 
     const db = firestore();
     const paymentSnap = await db.collection('payments').doc(data.paymentId).get();
-    if (!paymentSnap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Pago no encontrado');
-    }
-    const payment = paymentSnap.data() as any;
-    if (!payment) {
+    if (!paymentSnap.exists || !paymentSnap.data()) {
       throw new functions.https.HttpsError('not-found', 'Pago no encontrado');
     }
 
-    const MERCHANT_CODE = process.env.REDSYS_MERCHANT_CODE;
-    const TERMINAL = process.env.REDSYS_TERMINAL;
-    const SECRET = REDSYS_SECRET_KEY.value();
-    const ENVIRONMENT = process.env.REDSYS_ENVIRONMENT || 'test';
-    const CURRENCY = process.env.REDSYS_CURRENCY || '978';
-    const TRANSACTION_TYPE = process.env.REDSYS_TRANSACTION_TYPE || '0';
+    return prepareRedsysCheckout(paymentSnap, REDSYS_SECRET_KEY.value());
+  }
+);
 
-    if (!MERCHANT_CODE || !TERMINAL || !SECRET) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Redsys no está configurado. Configura las variables de entorno / secrets.'
-      );
+// ---------------------------------------------------------------------------
+// getPaymentCheckout — PÚBLICA. La abre el cliente en su móvil.
+// ---------------------------------------------------------------------------
+
+interface PublicCheckoutResponse {
+  /** `pending` se puede pagar; el resto solo se muestra. */
+  state: 'pending' | 'paid' | 'unavailable';
+  amount: number;
+  currency: string;
+  concept: string;
+  /** Marca de la empresa, para que el cliente sepa a quién paga. */
+  brandName: string;
+  /** Solo cuando `state` es `pending`. */
+  paymentUrl?: string;
+  formData?: { [key: string]: string };
+}
+
+/**
+ * Datos mínimos para que el cliente pague desde su teléfono, sin cuenta.
+ *
+ * **Pública a propósito**, como la pantalla de firma del contrato: pedirle a un
+ * cliente que inicie sesión para pagar es pedirle que no pague. El secreto es
+ * el id del pago, igual que en los enlaces `/d/…` de presupuestos — un id de
+ * Firestore de 20 caracteres aleatorios.
+ *
+ * ⚠️ **Devuelve lo mínimo y nada más.** Importe, concepto y marca. Nunca el
+ * nombre del pagador, su email, el cliente, el vehículo ni la reserva: quien
+ * abre el enlace puede no ser su destinatario, y un enlace reenviado no debe
+ * filtrar con quién trabajas.
+ *
+ * Un pago ya cobrado **no genera formulario**: devuelve `paid` y la pantalla lo
+ * dice. Sin eso, reenviar el enlace después de pagar cobraría dos veces.
+ */
+export const getPaymentCheckout = functions.https.onCall(
+  {
+    secrets: [REDSYS_SECRET_KEY]
+  },
+  async (request): Promise<PublicCheckoutResponse> => {
+    const data = request.data as { paymentId?: string };
+    if (!data?.paymentId) {
+      throw new functions.https.HttpsError('invalid-argument', 'paymentId es requerido');
     }
 
-    // Redsys requires Ds_Merchant_Order to be 4-12 characters with the
-    // FIRST FOUR NUMERIC and the rest alphanumeric. A `VEL...` prefix
-    // is rejected by the gateway.
-    //
-    // We build exactly 12 chars: 4 digits from the tail of the epoch
-    // millis, then 32 bits of randomness as 8 hex chars.
-    const orderPrefix = Date.now().toString().slice(-4);
-    const orderSuffix = randomBytes(4).toString('hex').toUpperCase();
-    const order = `${orderPrefix}${orderSuffix}`;
-    const amount = Math.round((payment.amount || 0) * 100).toString();
+    const db = firestore();
+    const paymentSnap = await db.collection('payments').doc(data.paymentId).get();
+    const payment = paymentSnap.exists ? (paymentSnap.data() as any) : null;
 
-    const params: { [k: string]: string } = {
-      Ds_Merchant_Amount: amount,
-      Ds_Merchant_Currency: CURRENCY,
-      Ds_Merchant_Order: order,
-      Ds_Merchant_MerchantCode: MERCHANT_CODE,
-      Ds_Merchant_Terminal: TERMINAL,
-      Ds_Merchant_TransactionType: TRANSACTION_TYPE,
-      // Gen-2 Cloud Functions URLs are {region}-{project}, not
-      // {project}-{region}. Getting this backwards points Redsys at a
-      // host that does not resolve, so the payment silently never
-      // reaches the webhook.
-      // El respaldo usa FUNCTIONS_REGION, no un literal: las functions se
-      // movieron a europe-west1 el 28 de agosto de 2026 y este fallback se
-      // habría quedado apuntando a us-central1, a un host que ya no resuelve.
-      Ds_Merchant_MerchantURL:
-        process.env.REDSYS_NOTIFICATION_URL ||
-        `https://${process.env.GCLOUD_REGION || FUNCTIONS_REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redsysNotificationWebhook`,
-      Ds_Merchant_UrlOK: process.env.REDSYS_URL_OK || '',
-      Ds_Merchant_UrlKO: process.env.REDSYS_URL_KO || '',
-      Ds_Merchant_ProductDescription: (payment.concept || 'Cobro Velto').slice(0, 125),
-      Ds_Merchant_Titular: (payment.payerName || payment.clientSnapshot?.fullName || '').slice(0, 60),
-      Ds_Merchant_ConsumerLanguage: '001'
+    // Un id que no existe y uno cancelado responden lo mismo: no se confirma
+    // desde fuera si un identificador es real.
+    if (!payment || payment.status === 'cancelled') {
+      throw new functions.https.HttpsError('not-found', 'Pago no encontrado');
+    }
+
+    const company = companyConfig();
+    const base = {
+      amount: Number(payment.amount) || 0,
+      currency: payment.currency || 'EUR',
+      concept: String(payment.concept || ''),
+      brandName: company.brandName
     };
 
-    const dsMerchantParameters = Buffer.from(JSON.stringify(params)).toString('base64');
-    const signature = signRedsysParameters(dsMerchantParameters, order, SECRET);
+    if (payment.status === 'paid') {
+      return { ...base, state: 'paid' };
+    }
+    if (payment.status === 'failed' || (Number(payment.amount) || 0) <= 0) {
+      return { ...base, state: 'unavailable' };
+    }
 
-    await paymentSnap.ref.update({
-      'redsys.order': order,
-      'redsys.merchantCode': MERCHANT_CODE,
-      'redsys.terminal': TERMINAL,
-      'redsys.transactionType': TRANSACTION_TYPE,
-      'redsys.paymentUrl': ENVIRONMENT === 'live'
-        ? 'https://sis.redsys.es/sis/realizarPago'
-        : 'https://sis-t.redsys.es:25443/sis/realizarPago',
-      externalReference: order,
-      status: 'pending',
-      method: 'redsys',
-      source: 'redsys',
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-
+    const checkout = await prepareRedsysCheckout(paymentSnap, REDSYS_SECRET_KEY.value());
     return {
-      paymentUrl: ENVIRONMENT === 'live'
-        ? 'https://sis.redsys.es/sis/realizarPago'
-        : 'https://sis-t.redsys.es:25443/sis/realizarPago',
-      formData: {
-        Ds_SignatureVersion: 'HMAC_SHA256_V1',
-        Ds_MerchantParameters: dsMerchantParameters,
-        Ds_Signature: signature
-      },
-      reference: order
+      ...base,
+      state: 'pending',
+      paymentUrl: checkout.paymentUrl,
+      formData: checkout.formData
     };
   }
 );

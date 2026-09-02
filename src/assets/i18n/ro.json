@@ -441,8 +441,22 @@
       "cancelPayment": "Anulează plata",
       "chargeCard": "Plată cu cardul",
       "chargeCardError": "Nu s-a putut deschide pasarela de plată",
+      "copyPaymentLink": "Copiază linkul de plată",
       "markAsPaid": "Marchează ca plătit",
       "viewReservation": "Vezi rezervare"
+    },
+    "checkout": {
+      "subtitle": "Plată securizată",
+      "payTo": "Plătești către",
+      "payNow": "Plătește cu cardul",
+      "secureNote": "Plată procesată de Redsys. Nu păstrăm datele cardului tău.",
+      "refresh": "Am plătit, actualizează",
+      "paidTitle": "Plată primită",
+      "paidMessage": "Mulțumim. Nu mai trebuie să faci nimic.",
+      "notFoundTitle": "Link invalid",
+      "notFoundMessage": "Acest link de plată nu există sau nu mai este disponibil. Solicită unul nou.",
+      "unavailableTitle": "Plată indisponibilă",
+      "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi."
     },
     "deposit": {
       "refundFull": "Restituie total",

@@ -441,8 +441,22 @@
       "cancelPayment": "Cancel payment",
       "chargeCard": "Pay by card",
       "chargeCardError": "Could not open the payment gateway",
+      "copyPaymentLink": "Copy payment link",
       "markAsPaid": "Mark as paid",
       "viewReservation": "View reservation"
+    },
+    "checkout": {
+      "subtitle": "Secure payment",
+      "payTo": "You are paying",
+      "payNow": "Pay by card",
+      "secureNote": "Payment processed by Redsys. We never store your card details.",
+      "refresh": "I have paid, refresh",
+      "paidTitle": "Payment received",
+      "paidMessage": "Thank you. There is nothing else to do.",
+      "notFoundTitle": "Invalid link",
+      "notFoundMessage": "This payment link does not exist or is no longer available. Please ask for a new one.",
+      "unavailableTitle": "Payment unavailable",
+      "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us."
     },
     "deposit": {
       "refundFull": "Refund full",
