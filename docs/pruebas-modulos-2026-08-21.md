@@ -1542,3 +1542,44 @@ clave, es mejor que el usuario rumano lea español a que lea
 con la señal pendiente y en «Resto alquiler» con 149,65 € una vez cobrada; el
 paso 4 sale con su número; y el coche ocupado dice «Ya hay una reserva para
 estas fechas».
+
+## C-28 · Fotos reducidas antes de subir — 1 de septiembre de 2026
+
+M-20 estaba escrito como un problema de descarga: la caja de la tarjeta mide
+140 px y se bajaba el original. Al mirarlo de cerca eran **dos** problemas, y el
+que nadie había medido era el otro: el operador **sube** 3-5 MB por foto, desde
+la calle, con la cobertura que haya, y varias seguidas en una inspección.
+
+Decisión de Dorel: reducir en el navegador antes de subir. Es la única de las
+tres opciones que arregla las dos mitades — la extensión `Resize Images` y una
+Cloud Function con `sharp` solo habrían mejorado la descarga, y las dos añaden
+infraestructura y coste por foto.
+
+**Medido con una imagen de 4032×3024**, que es lo que da un móvil:
+
+| | Peso | Dimensiones |
+|---|---|---|
+| Entrada | 2.527 KB | 4032×3024 |
+| Guardada | 906 KB | 1600×1200 |
+| Miniatura | **74 KB** | 400×300 |
+
+La lista de flota pasa de 2,5 MB por coche a 74 KB. Y la imagen de prueba era
+ruido pseudoaleatorio, el peor caso posible para JPEG: una foto real comprime
+bastante más.
+
+**Verificado en pantalla y en Storage**, no solo en el código: la tarjeta usa la
+miniatura (`naturalWidth` 400 en una caja de 180) y se ve nítida; el documento
+guarda `path` y `thumbnailPath`; y tras borrar la foto **ninguno de los dos
+ficheros responde** — la miniatura no se queda huérfana.
+
+**Lo que no se ve pero cuesta si falta.** Si el navegador no sabe reducir el
+fichero (HEIC), se sube el original y se sigue: una miniatura que falla no puede
+costar la foto. `size` y `contentType` describen lo guardado y no el original,
+que si no estarían describiendo un fichero que no existe. Y los `ImageBitmap` se
+cierran, porque con varias fotos seguidas desde el móvil no hacerlo es la
+diferencia entre que la pestaña aguante o se recargue sola.
+
+**Un tropiezo del que dejar constancia**, porque ya me había pasado: escribir
+esta documentación con `node -e` y comillas invertidas dentro de bash hizo que
+el shell **ejecutara** los nombres de fichero y los borrara del texto. Para
+prosa, Write y Edit; `node -e` es para datos.

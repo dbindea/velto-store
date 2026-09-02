@@ -27,6 +27,9 @@ export interface InspectionPhoto {
   id?: string;
   url: string;
   path: string;
+  /** Miniatura ~400 px. Opcional: si falla generarla, la foto se guarda igual. */
+  thumbnailUrl?: string;
+  thumbnailPath?: string;
   label?: string;
   category?: PhotoCategory;
   uploadedAt?: any;

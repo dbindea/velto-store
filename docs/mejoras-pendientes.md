@@ -482,7 +482,7 @@ Dos numeraciones, para no mezclar cosas distintas:
     cobraron un euro (`cancelUncollectedPayments`). Los parciales se respetan:
     cancelarlos borraría su `paidAmount` del resumen.
 
-- [ ] **M-17 · No hay pluralización en ningún sitio.**
+- [~] **M-17 · No hay pluralización en ningún sitio.** *(descartado el 1 sep 2026)*
   El asistente y el detalle escriben «1 días» porque concatenan el número con
   `reservations.fields.totalDays`, que es una cadena fija en plural. Pasa en
   la tarjeta del vehículo del paso 2, en el resumen y en el detalle de la
@@ -503,12 +503,48 @@ Dos numeraciones, para no mezclar cosas distintas:
   solo tras crear la reserva, o si el check ahí no significa nada y conviene
   no pintarlo.
 
-- [ ] **M-20 · Las fotos de vehículo se sirven a tamaño completo en móvil.**
-  Relacionado con [M-6], pero ahora medido en teléfono: la caja de la imagen
-  en la tarjeta es de 140 px de alto y se descarga el original. En una lista
-  de flota son varios megas por pantalla y con datos móviles se nota.
-  Generar miniaturas al subir sigue siendo la solución; la decisión es dónde
-  —Cloud Function al subir, o `<img srcset>` con tamaños de Storage—.
+- [x] **M-20 · Las fotos se subían y se servían a tamaño completo.** *(1 sep 2026)*
+  La caja de la tarjeta mide 140 px y se descargaba el original: en una lista de
+  flota, varios megas por pantalla. Pero el problema tenía **dos mitades**, y la
+  que nadie había medido era la otra: el operador **subía** 3-5 MB por foto,
+  desde la calle y con la cobertura que hubiera.
+
+  **Decisión de Dorel:** reducir **en el navegador antes de subir**, y guardar
+  solo la versión reducida. Es lo único que arregla las dos mitades a la vez, y
+  no añade infraestructura ni coste — frente a la extensión `Resize Images` o
+  una Cloud Function con `sharp`, que solo habrían mejorado la descarga.
+
+  Se guardan dos ficheros: la versión de uso (máx. 1600 px) y una miniatura
+  (máx. 400 px). Medido con una foto de 4032×3024:
+
+  | | Peso | Dimensiones |
+  |---|---|---|
+  | Entrada | 2.527 KB | 4032×3024 |
+  | Guardada | 906 KB | 1600×1200 |
+  | Miniatura | **74 KB** | 400×300 |
+
+  La lista de flota pasa de 2,5 MB por coche a **74 KB**. Y la imagen de prueba
+  era ruido, el peor caso para JPEG: una foto real comprime bastante más.
+
+  Aplicado también a las **fotos de inspección**, donde importa más todavía:
+  son varias seguidas, en la calle y con el cliente delante.
+
+  Detalles que no se ven pero cuestan si faltan:
+
+  - Si el navegador no sabe reducir el fichero —HEIC, por ejemplo— se sube el
+    original y se sigue. **Una miniatura que falla no puede costar la foto.**
+  - El borrado se lleva las **dos**, o la miniatura se queda huérfana en Storage
+    para siempre. Verificado: tras borrar, ninguna de las dos responde.
+  - `size` y `contentType` describen lo que se guarda, no el original: si
+    dijeran 4 MB estarían describiendo un fichero que no existe.
+  - Los `ImageBitmap` se cierran. Con varias fotos seguidas desde el móvil, no
+    hacerlo es la diferencia entre que la pestaña aguante o se recargue sola.
+
+  La aritmética está en `image-resize.util.ts` con **11 tests** —incluido que
+  una imagen pequeña no se amplía y que una panorámica no acaba con un lado de
+  0 px—. El redimensionado en sí usa `canvas`, que jsdom no implementa: eso se
+  verificó subiendo una foto de verdad.
+
 
 - [x] **M-16 · Los `alert()` de la pantalla de reserva están en español duro.** *(1 sep 2026)*
   `registerPayment()` y `processDeposit()` avisan con

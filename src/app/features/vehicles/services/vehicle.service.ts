@@ -14,6 +14,12 @@ import {
 } from '@angular/fire/firestore';
 import { Storage, deleteObject, getDownloadURL, ref, uploadBytes } from '@angular/fire/storage';
 import {
+  MAX_IMAGE_SIZE,
+  MAX_THUMBNAIL_SIZE,
+  resizeImage,
+  resizedFilename
+} from '@shared/utils/image-resize.util';
+import {
   Vehicle,
   VehicleFormData,
   VehicleImage,
@@ -117,18 +123,45 @@ export class VehicleService {
     await updateDoc(docRef, { status, updatedAt: { seconds: Date.now() / 1000 } });
   }
 
+  /**
+   * Sube una foto de vehículo **reducida en el navegador**, más su miniatura.
+   *
+   * Antes se subía el fichero tal cual: una foto de móvil son 3-5 MB, y la
+   * lista de flota los descargaba enteros para pintarlos en una caja de 140 px.
+   * Ahora se sube una versión de uso (máx. 1600 px) y una miniatura (400 px),
+   * unos 300 KB entre las dos.
+   *
+   * Si el navegador no sabe reducir el fichero —un HEIC, por ejemplo— se sube
+   * el original y se sigue: **una miniatura que falla no puede costar la foto**.
+   */
   async uploadImage(vehicleId: string, file: File): Promise<VehicleImage> {
     const timestamp = Date.now();
-    const filename = `${timestamp}-${file.name}`;
+
+    const resized = await resizeImage(file, MAX_IMAGE_SIZE);
+    const body = resized ?? file;
+    const filename = resized
+      ? `${timestamp}-${resizedFilename(file.name)}`
+      : `${timestamp}-${file.name}`;
     const storagePath = `vehicles/${vehicleId}/gallery/${filename}`;
     const storageRef = ref(this.storage, storagePath);
 
-    await uploadBytes(storageRef, file);
+    await uploadBytes(storageRef, body);
     const url = await getDownloadURL(storageRef);
+
+    // La miniatura va aparte y su fallo no aborta nada.
+    let thumbnailUrl: string | undefined;
+    let thumbnailPath: string | undefined;
+    const thumb = await resizeImage(file, MAX_THUMBNAIL_SIZE);
+    if (thumb) {
+      thumbnailPath = `vehicles/${vehicleId}/gallery/${timestamp}-${resizedFilename(file.name, '-thumb')}`;
+      await uploadBytes(ref(this.storage, thumbnailPath), thumb);
+      thumbnailUrl = await getDownloadURL(ref(this.storage, thumbnailPath));
+    }
 
     const imageData: VehicleImage = {
       url,
       path: storagePath,
+      ...(thumbnailUrl ? { thumbnailUrl, thumbnailPath } : {}),
       uploadedAt: { seconds: Date.now() / 1000 },
     };
 
@@ -142,11 +175,14 @@ export class VehicleService {
   }
 
   async deleteVehicleImage(vehicleId: string, image: VehicleImage): Promise<void> {
-    try {
-      const storageRef = ref(this.storage, image.path);
-      await deleteObject(storageRef);
-    } catch (e) {
-      // Ignore storage delete errors
+    // Las dos, o la miniatura se queda huérfana en Storage para siempre.
+    for (const path of [image.path, image.thumbnailPath]) {
+      if (!path) continue;
+      try {
+        await deleteObject(ref(this.storage, path));
+      } catch (e) {
+        // Ignore storage delete errors
+      }
     }
 
     const docRef = doc(this.firestore, `vehicles/${vehicleId}`);

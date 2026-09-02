@@ -218,7 +218,7 @@
           <div class="photo-grid">
             @for (photo of formData.photos; track photo.path) {
               <div class="photo-thumb">
-                <img [src]="photo.url" [alt]="photo.fileName || ''">
+                <img [src]="photo.thumbnailUrl || photo.url" [alt]="photo.fileName || ''">
                 <button type="button" class="photo-remove" (click)="deletePhoto(photo)" title="Eliminar">
                   <i class="pi pi-times"></i>
                 </button>

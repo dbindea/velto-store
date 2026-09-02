@@ -11,6 +11,15 @@ export type TransmissionType = 'manual' | 'automatic';
 export interface VehicleImage {
   url: string;
   path: string;
+  /**
+   * Miniatura para listados, ~400 px.
+   *
+   * Opcional porque generarla puede fallar —un HEIC que el navegador no
+   * decodifica, por ejemplo— y **perder la miniatura no puede impedir guardar
+   * la foto**. Quien la pinta cae a `url` si no está.
+   */
+  thumbnailUrl?: string;
+  thumbnailPath?: string;
   uploadedAt?: any;
 }
 

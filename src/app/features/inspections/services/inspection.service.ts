@@ -36,6 +36,12 @@ import {
   canStartReturn as assertCanStartReturn
 } from '@shared/utils/reservation-workflow.util';
 import { roundMoney, distributeRetentionAcrossCharges } from '@shared/utils/payment-summary.util';
+import {
+  MAX_IMAGE_SIZE,
+  MAX_THUMBNAIL_SIZE,
+  resizeImage,
+  resizedFilename
+} from '@shared/utils/image-resize.util';
 
 @Injectable({ providedIn: 'root' })
 export class InspectionService {
@@ -372,22 +378,42 @@ export class InspectionService {
     label?: string
   ): Promise<InspectionPhoto> {
     const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}-${safeName}`;
-    const storagePath = `inspections/${reservationId}/${type}/${filename}`;
+    const base = `inspections/${reservationId}/${type}`;
+
+    // Reducida antes de salir del móvil. Aquí importa el doble que en la ficha
+    // del vehículo: la inspección se hace en la calle, con el cliente delante y
+    // la cobertura que haya, y son varias fotos seguidas.
+    const resized = await resizeImage(file, MAX_IMAGE_SIZE);
+    const body = resized ?? file;
+    const safeName = resized
+      ? resizedFilename(file.name)
+      : file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `${base}/${timestamp}-${safeName}`;
     const storageRef = ref(this.storage, storagePath);
 
-    await uploadBytes(storageRef, file);
+    await uploadBytes(storageRef, body);
     const url = await getDownloadURL(storageRef);
+
+    let thumbnailUrl: string | undefined;
+    let thumbnailPath: string | undefined;
+    const thumb = await resizeImage(file, MAX_THUMBNAIL_SIZE);
+    if (thumb) {
+      thumbnailPath = `${base}/${timestamp}-${resizedFilename(file.name, '-thumb')}`;
+      await uploadBytes(ref(this.storage, thumbnailPath), thumb);
+      thumbnailUrl = await getDownloadURL(ref(this.storage, thumbnailPath));
+    }
 
     return {
       url,
       path: storagePath,
+      ...(thumbnailUrl ? { thumbnailUrl, thumbnailPath } : {}),
       label,
       category,
       fileName: file.name,
-      size: file.size,
-      contentType: file.type,
+      // El tamaño y el tipo son los de lo que se guarda, no los del original:
+      // si dijeran 4 MB estarían describiendo un fichero que no existe.
+      size: body.size,
+      contentType: resized ? 'image/jpeg' : file.type,
       uploadedAt: { seconds: Date.now() / 1000 }
     };
   }
