@@ -25,16 +25,18 @@
 
         <div class="form-grid">
           <div class="form-group full">
-            <label for="fullName">{{ 'clients.fields.fullName' | translate }} *</label>
-            <input 
-              type="text" 
-              id="fullName" 
+            <label class="required" for="fullName">{{ 'clients.fields.fullName' | translate }}</label>
+            <input
+              type="text"
+              id="fullName"
               [ngModel]="formData.fullName"
               (ngModelChange)="formData.fullName = $event"
               (input)="onFullNameInput($event)"
               name="fullName"
               class="form-control"
+              [class.is-invalid]="submitted && problems['fullName']"
               required>
+            <app-form-error [problems]="problems['fullName']" [show]="submitted" />
           </div>
 
           <div class="form-group">
@@ -315,6 +317,11 @@
           </div>
         </div>
       }
+
+      <!-- El resumen sí va aquí: el nombre está arriba del todo y el botón al
+           final de un formulario largo, así que el campo en rojo puede quedar
+           fuera de la pantalla. -->
+      <app-form-error [problems]="problemList" [show]="submitted" [summary]="true" />
 
       <!-- Actions -->
       <div class="form-actions">

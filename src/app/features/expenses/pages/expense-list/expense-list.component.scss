@@ -1,0 +1,281 @@
+/**
+ * Listado de gastos.
+ *
+ * Mobile-first: la regla es **recolocar, nunca ocultar**. En una fila de gasto
+ * no sobra nada —importe, fecha, matrícula y proveedor son justo lo que se
+ * busca—, así que en pantalla estrecha el importe baja de línea en vez de
+ * desaparecer.
+ */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+}
+
+.totals {
+  display: grid;
+  // minmax(0, 1fr) y no 1fr: una celda con texto que no parte estira la rejilla
+  // entera, que es lo que llegó a hacer el calendario medir 1200 px.
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.total-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+
+  &.main {
+    border-color: var(--accent-color);
+  }
+
+  .total-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  .total-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .total-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+/**
+ * ⚠️ `.form-control` **no es global**: cada componente la declara. Sin ella el
+ * buscador sale sin caja, como texto suelto sobre el fondo, mientras el `select`
+ * de al lado parece normal porque a ese sí lo estiliza `styles.scss`.
+ */
+.form-control {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 36, 143, 125), 0.1);
+  }
+}
+
+.search-box {
+  position: relative;
+  flex: 1 1 16rem;
+  // Sin esto, el campo estira la fila por encima del ancho de la pantalla.
+  min-width: 0;
+
+  i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  input {
+    width: 100%;
+    padding-left: 2.25rem;
+  }
+}
+
+.filter-select {
+  flex: 0 1 14rem;
+  min-width: 0;
+}
+
+.expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.expense-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: auto minmax(0, 1fr);
+
+    .card-amount {
+      grid-column: 1 / -1;
+      align-items: flex-start;
+      text-align: left;
+      padding-top: 0.25rem;
+      border-top: 1px solid var(--border-color);
+    }
+  }
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+  color: var(--accent-color);
+  font-size: 1.05rem;
+}
+
+.card-info {
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 0.3rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    // Un concepto es texto escrito a mano: parte antes que truncar.
+    overflow-wrap: anywhere;
+  }
+}
+
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+
+  &.muted {
+    margin-top: 0.3rem;
+    color: var(--text-muted);
+  }
+
+  i {
+    font-size: 0.72rem;
+    margin-right: 0.2rem;
+  }
+}
+
+.badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  white-space: nowrap;
+
+  &.scope {
+    color: var(--info-color, var(--accent-color));
+  }
+
+  &.origin {
+    color: var(--warning-color);
+    background: var(--warning-bg, var(--bg-input));
+  }
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.card-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  white-space: nowrap;
+
+  .amount {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vat {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+
+    &.none {
+      font-style: italic;
+    }
+  }
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-align: center;
+
+  i {
+    font-size: 2.25rem;
+    color: var(--text-muted);
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+}

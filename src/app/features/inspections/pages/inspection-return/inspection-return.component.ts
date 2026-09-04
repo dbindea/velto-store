@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { InspectionService } from '@features/inspections/services/inspection.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import {
@@ -36,7 +38,7 @@ import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workf
 @Component({
   selector: 'app-inspection-return',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, FormErrorComponent],
   templateUrl: './inspection-return.component.html',
   styleUrl: './inspection-return.component.scss'
 })
@@ -235,36 +237,67 @@ export class InspectionReturnComponent implements OnInit {
     }
   }
 
-  addDamage(): void {
-    if (!this.newDamage.description) {
-      alert('La descripción del daño es obligatoria');
-      return;
+  /** Si ya se ha intentado añadir el daño. */
+  damageSubmitted = false;
+
+  /** Lo que impide añadir un daño. */
+  get damageProblems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (!this.newDamage.description?.trim()) {
+      problems['description'] = 'inspections.errors.damageDescriptionRequired';
     }
+    return problems;
+  }
+
+  addDamage(): void {
+    this.damageSubmitted = true;
+    if (hasProblems(this.damageProblems)) return;
+
     this.formData.damages = [...(this.formData.damages || []), { ...this.newDamage, id: Date.now().toString() }];
     this.newDamage = { area: 'front', description: '', severity: 'minor', isNewDamage: true };
     this.showDamageForm = false;
+    this.damageSubmitted = false;
   }
 
   removeDamage(index: number): void {
     this.formData.damages = (this.formData.damages || []).filter((_, i) => i !== index);
   }
 
+  /** Si ya se ha intentado completar. Hasta entonces no se marca nada en rojo. */
+  submitted = false;
+  saveError = '';
+
+  /**
+   * Lo que impide completar la devolución.
+   *
+   * ⚠️ La tercera no es un campo vacío sino una **incoherencia**: el kilometraje
+   * de entrada menor que el de salida es casi siempre un dedazo, y dejarlo pasar
+   * arrastra al cálculo de kilómetros extra.
+   */
+  get problems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (this.formData.km === undefined || this.formData.km === null) {
+      problems['km'] = 'inspections.errors.kmRequired';
+    } else if (this.pickupKm !== undefined && this.formData.km < this.pickupKm) {
+      problems['km'] = 'inspections.errors.kmLowerThanPickup';
+    }
+    if (!this.formData.fuelLevel) {
+      problems['fuelLevel'] = 'inspections.errors.fuelRequired';
+    }
+    return problems;
+  }
+
+  get problemList(): string[] {
+    return problemKeys(this.problems);
+  }
+
   async completeReturn(): Promise<void> {
     if (!this.reservationId) return;
 
-    // Validation
-    if (this.formData.km === undefined || this.formData.km === null) {
-      alert('El kilometraje de entrada es obligatorio');
-      return;
-    }
-    if (!this.formData.fuelLevel) {
-      alert('El nivel de combustible de entrada es obligatorio');
-      return;
-    }
-    if (this.pickupKm !== undefined && this.formData.km < this.pickupKm) {
-      alert('El kilometraje de entrada no puede ser menor que el de salida');
-      return;
-    }
+    this.submitted = true;
+    this.saveError = '';
+    if (hasProblems(this.problems)) return;
+
     if (!this.formData.checklist?.keysReturned) {
       const confirmed = confirm('No has marcado la devolución de llaves. ¿Continuar?');
       if (!confirmed) return;
@@ -285,7 +318,7 @@ export class InspectionReturnComponent implements OnInit {
       this.router.navigate(['/reservations', this.reservationId]);
     } catch (error) {
       console.error('Error completing return:', error);
-      alert('Error al completar la devolución');
+      this.saveError = 'inspections.errors.returnFailed';
     } finally {
       this.saving = false;
     }

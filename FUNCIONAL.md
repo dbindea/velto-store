@@ -64,8 +64,8 @@ De ahí se deduce el estado real:
 | **Inspecciones** | ✅ completo | ❌ **colección vacía** | **Nunca ejercitado** |
 | **Mantenimiento** | ✅ completo | ❌ **colección vacía** | **Nunca ejercitado** |
 | Redsys | ✅ completo | ✅ sí | Probado con dinero real (31 ago 2026) |
-| Gastos | ❌ placeholder | — | Solo `moduleInProgress` |
-| Ajustes | ❌ placeholder | — | Solo `moduleInProgress` |
+| Gastos | ✅ completo | — | Construido el 4 sep 2026, probado en desarrollo |
+| Ajustes | ✅ completo | — | Construido el 4 sep 2026, probado en desarrollo |
 | Web pública | ❌ no existe | — | Futuro |
 | WhatsApp / IA | ❌ no existe | — | Futuro, con campos ya preparados |
 
@@ -370,6 +370,49 @@ de la clave, y el botón que abría la pasarela con un GET cuando Redsys solo ad
 
 ---
 
+## 6.b Gastos
+
+Lo que sale, frente a Pagos, que es lo que entra. Colección `expenses`, plana.
+
+Un gasto se imputa a **una de tres cosas**, y esa elección decide qué categorías se
+ofrecen:
+
+| Se imputa a | Para qué sirve | Ejemplos |
+|---|---|---|
+| **Vehículo** | Saber cuánto cuesta y cuánto deja cada coche | Seguro, ITV, reparación, neumáticos, impuesto |
+| **Reserva** | Ver el margen real de un alquiler | Gasolina que pones tú, un traslado, una limpieza extra |
+| **Empresa** | Lo que no cuelga de nada | Gestoría, publicidad, teléfono, comisiones bancarias |
+
+Un gasto de vehículo **exige vehículo** y uno de reserva **exige reserva**: sin ellos sería
+un gasto general con la etiqueta equivocada, y falsearía el coste por coche. Lo comprueban
+las dos capas, la pantalla y el servicio.
+
+### El IVA va al revés que en el alquiler
+
+**En un gasto el IVA se extrae del total.** Lo que se teclea es el número que pone la
+factura y la base se deduce; en un alquiler es al contrario, porque lo que se negocia es
+el neto. Las dos aritméticas viven en ficheros distintos a propósito.
+
+El tipo se elige entre 21 %, 10 %, 4 % y 0, y se congela en el gasto. **Una multa propone
+0 %** — es una sanción repercutida, no un servicio, igual que la fianza en el otro lado.
+
+### El mantenimiento se lee, no se duplica
+
+Una reparación se registra en `vehicleMaintenance`, que es donde vive junto al aviso de la
+próxima ITV y de la próxima revisión por km. Gastos **lee** su coste y lo suma; la fila
+aparece marcada como «Mantenimiento» y lleva a su ficha en lugar de a un formulario de
+edición. Escribirla en los dos sitios daría dos fuentes de verdad para el mismo euro.
+
+Solo cuenta el mantenimiento **realizado y con coste**: una ITV agendada para dentro de
+tres meses no es dinero que haya salido.
+
+⚠️ **Los totales no cuadran, y es correcto.** El coste de un mantenimiento entra en el
+bruto pero no tiene base ni IVA conocidos —se teclea como un importe suelto—, así que la
+suma de bases es menor que el total. La pantalla dice sobre cuántas filas se ha calculado
+el IVA. Igualar los tres números sería inventarse ese impuesto.
+
+---
+
 ## 7. Inspecciones
 
 ### Entrega
@@ -482,10 +525,9 @@ La parte que más valor tiene mantener al día.
 
 ### Abierto
 
-**Gastos y ajustes son placeholders.** Las reglas de Firestore ya contemplan una colección
-`expenses`, pero no hay ni modelo ni servicio. Sin definición funcional no se puede avanzar:
-qué campos tiene un gasto, si se asocia a vehículo o reserva, y qué debe ser configurable
-en ajustes.
+**Los permisos por rol están a medias.** Un empleado no ve Informes, Gastos ni Ajustes,
+pero dentro de las pantallas que sí ve puede tocar precios, borrar y cancelar: los permisos
+finos están declarados y sin conectar. Ver N-11.
 
 **No hay tests de componentes ni E2E.** Solo utils y lógica pura (32 tests). El flujo
 completo de alquiler no tiene cobertura automatizada.
@@ -510,9 +552,12 @@ No son bugs, son preguntas de producto sin responder:
 
 1. ~~¿Un cliente `blocked` debe impedir crear la reserva, o solo avisar?~~ **Respondida el
    28 de agosto de 2026: `blocked` lo impide, `risk` solo avisa.** Ver §3.
-2. ¿Qué es exactamente un gasto y contra qué se imputa?
-3. ¿Qué debe poder configurarse en Ajustes? (¿tarifas por defecto, datos de empresa,
-   textos del contrato, usuarios autorizados?)
+2. ~~¿Qué es exactamente un gasto y contra qué se imputa?~~ **Respondida el 4 de
+   septiembre de 2026: contra un vehículo, contra una reserva o contra la empresa.** Ver
+   §6.b.
+3. ~~¿Qué debe poder configurarse en Ajustes?~~ **Respondida el 4 de septiembre de 2026:
+   valores por defecto de la operación y usuarios autorizados.** Los datos de empresa y los
+   textos del contrato quedan fuera por ahora. Ver §12.b.
 4. ¿El calendario y los informes cubren la necesidad real, o se construyeron sin uso?
 5. ¿Se factura? La generación de facturas aparece como idea, sin definir.
 
@@ -559,6 +604,51 @@ históricos independientes del dato vivo, y los estados están limpios.
 - Bloquear en UI **y** validar en servicios. Defensa en profundidad.
 - Snapshots en reservas, contratos y pagos: el histórico no depende del dato vivo.
 - Sin compatibilidad legacy mientras las colecciones estén vacías o se vayan a borrar.
+
+---
+
+## 12.b Ajustes y permisos
+
+Dos pestañas, y solo dos por ahora:
+
+**Valores por defecto de la operación** — fianza propuesta, IVA general, validez del
+presupuesto, caducidad del enlace de firma y km incluidos por día.
+
+⚠️ **Rigen para lo que se cree a partir de ahora, nunca hacia atrás.** El IVA se congela en
+cada reserva, el precio en su snapshot y la caducidad en el propio token de firma. Es lo que
+permite que el IVA sea configurable sin poner en riesgo un contrato ya firmado.
+
+Quedan fuera, por decisión del 4 de septiembre de 2026: los **datos de la empresa** —hoy los
+leen las Cloud Functions de su propia configuración y moverlos a Firestore es otro trabajo— y
+los **textos del contrato**, que son texto legal.
+
+**Usuarios autorizados** — alta por correo de Google, rol, quitar y dar acceso. Antes se hacía
+entrando a Firestore a mano.
+
+### Roles
+
+Dos, con permisos por rol; se descartó la matriz por persona, que con dos o tres compañeros
+acaba en «cópiale los permisos a Juan».
+
+| | Administrador | Empleado |
+|---|---|---|
+| Operación diaria: reservas, clientes, vehículos, cobros, entregas | Sí | Sí |
+| Saltarse un paso del workflow (queda registrado) | Sí | **Sí** |
+| Informes y gastos | Sí | No |
+| Ajustes y dar acceso a otros | Sí | No |
+| Precios, descuentos y eximir fianza | Sí | No *(pendiente, N-11)* |
+| Borrar y cancelar | Sí | No *(pendiente, N-11)* |
+
+Los tres límites los eligió Dorel: **precios y descuentos** porque es donde se regala dinero
+sin que se note, **borrar y cancelar** porque es lo irreversible, e **informes y gastos**
+porque son la cuenta de resultados del negocio. Saltarse un paso del workflow sí lo puede
+hacer: es la salida de emergencia de quien tiene el coche en la puerta, y queda con autor y
+motivo.
+
+⚠️ **Hoy solo se aplican los tres primeros bloques.** Un empleado no ve ni entra en Informes,
+Gastos ni Ajustes; dentro de lo que sí ve, todavía puede tocar precios, borrar y cancelar. Los
+permisos existen en la tabla y falta conectarlos y respaldarlos con reglas de Firestore: es
+N-11.
 
 ### Branding
 

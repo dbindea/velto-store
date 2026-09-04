@@ -23,12 +23,24 @@ import {
 } from '@shared/utils/pricing.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
+import {
+  FieldProblems,
+  hasProblems,
+  problemKeys
+} from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 
 @Component({
   selector: 'app-client-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, PhotoUploadButtonsComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    PhotoUploadButtonsComponent,
+    FormErrorComponent
+  ],
   templateUrl: './client-form.component.html',
   styleUrl: './client-form.component.scss'
 })
@@ -161,11 +173,31 @@ export class ClientFormComponent implements OnInit {
     this.formData.drivingLicenseNumber = transformInput(input, toReference);
   }
 
-  async onSubmit(): Promise<void> {
+  /**
+   * Si ya se ha intentado guardar. Hasta entonces no se pinta nada en rojo.
+   */
+  submitted = false;
+
+  /** Lo que impide guardar el cliente: campo → clave de i18n. */
+  get problems(): FieldProblems {
+    const problems: FieldProblems = {};
     if (!this.formData.fullName.trim()) {
-      alert('El nombre completo es obligatorio');
-      return;
+      problems['fullName'] = 'clients.errors.fullNameRequired';
     }
+    return problems;
+  }
+
+  get problemList(): string[] {
+    return problemKeys(this.problems);
+  }
+
+  async onSubmit(): Promise<void> {
+    // Antes era `alert('El nombre completo es obligatorio')`: español duro, sin
+    // traducir, y una ventana modal del navegador que hay que cerrar para poder
+    // arreglar lo que te está diciendo. Ahora se marca el campo y se explica
+    // donde está el problema.
+    this.submitted = true;
+    if (hasProblems(this.problems)) return;
 
     this.saving = true;
     try {

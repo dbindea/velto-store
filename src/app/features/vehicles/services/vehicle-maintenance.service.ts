@@ -65,16 +65,45 @@ export class VehicleMaintenanceService {
     return cleanForFirestore(data, { stripNulls: true });
   }
 
-  /** All maintenance records for a given vehicle, newest first. */
+  /**
+   * Todo el mantenimiento de un vehículo, de más reciente a más antiguo.
+   *
+   * ⚠️ **Sin `orderBy` en la consulta, y no es por ahorrarse un índice.**
+   * Firestore **excluye del resultado los documentos que no tienen el campo por
+   * el que se ordena**. Con `orderBy('nextDueDate')`, una reparación ya hecha y
+   * sin próxima revisión programada —el caso más normal de todos: un cambio de
+   * aceite que se paga y se olvida— **desaparecía de la ficha del coche**. Se
+   * guardaba bien en Firestore y la pantalla decía «Sin registros de
+   * mantenimiento para este vehículo».
+   *
+   * Salió al construir el módulo de Gastos (4 de septiembre de 2026): el gasto
+   * aparecía en Gastos, leído de esta misma colección, y no en la pestaña del
+   * vehículo. El orden se hace ahora en memoria, que con estos volúmenes no
+   * cuesta nada y no puede esconder una fila.
+   */
   getMaintenanceByVehicle(vehicleId: string): Observable<VehicleMaintenance[]> {
-    const q = query(
-      this.maintenanceRef,
-      where('vehicleId', '==', vehicleId),
-      orderBy('nextDueDate', 'desc')
-    );
+    const q = query(this.maintenanceRef, where('vehicleId', '==', vehicleId));
     return from(getDocs(q)).pipe(
-      map((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }) as VehicleMaintenance))
+      map((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }) as VehicleMaintenance)),
+      map((records) => records.sort((a, b) => this.sortKey(b) - this.sortKey(a)))
     );
+  }
+
+  /**
+   * Por qué fecha se ordena una ficha de mantenimiento.
+   *
+   * La de cuando se hizo manda sobre la de cuando toca, y `createdAt` es el
+   * último recurso: lo que importa es que **ninguna quede fuera** por no tener
+   * una de las tres.
+   */
+  private sortKey(m: VehicleMaintenance): number {
+    const value = m.performedAtDate || m.nextDueDate || m.createdAt;
+    if (!value) return 0;
+    const date =
+      value instanceof Timestamp ? value.toDate()
+      : value instanceof Date ? value
+      : new Date(value);
+    return isNaN(date.getTime()) ? 0 : date.getTime();
   }
 
   getMaintenanceById(id: string): Observable<VehicleMaintenance | null> {

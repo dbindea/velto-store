@@ -147,7 +147,13 @@ export class AuthService {
         return false;
       }
 
-      const userData = userDoc.data() as AuthorizedUser;
+      // ⚠️ `data()` NO incluye el id del documento, y aquí el id **es el email**.
+      // Sin esto, `authorizedUser()?.email` sale `undefined` para cualquier
+      // documento que no repita el email dentro, y la pantalla de Ajustes deja
+      // de reconocer al usuario que está mirando: le ofrece quitarse el acceso a
+      // sí mismo, que es la única acción de la que no se puede volver desde la
+      // aplicación. Es el mismo despiste que M-29 con `contract.id`.
+      const userData = { ...(userDoc.data() as AuthorizedUser), email: userDoc.id };
       this._authorizedUser.set(userData);
 
       return userData.active === true;

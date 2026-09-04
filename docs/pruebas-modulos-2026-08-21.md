@@ -1656,3 +1656,103 @@ cliente que su contrato está alterado.
 Desplegado en los dos entornos el mismo día; producción responde y es pública.
 **Los contratos firmados antes de hoy no tienen código**: su QR no existe y la
 página los da por no encontrados. Correcto, y no se migra nada.
+
+---
+
+## C-31 · Módulo de Gastos (N-10) — 4 de septiembre de 2026
+
+Construido sobre las bases ya vacías, así que se probó creando los datos a mano.
+
+| Comprobación | Resultado |
+|---|---|
+| Gasto general de 121 € al 21 % | Guardado; el desglose en vivo dijo 100,00 + 21,00 |
+| Reabrir el gasto desde Firestore | Vuelven ámbito, categoría, importe, tipo, **fecha**, método, proveedor y nº de factura |
+| Categoría «Multa» | Pone el tipo de IVA a 0 sola, y el desglose lo refleja |
+| Gasto de vehículo sin vehículo | Rechazado con «Elige el vehículo al que se imputa» |
+| Mantenimiento de 180 € ya realizado | Aparece en Gastos con matrícula, proveedor y la etiqueta «Mantenimiento» |
+| Totales con las dos fuentes | 481 € de bruto · 21 € de IVA **sobre 1/3**, que es lo que hay que contar |
+
+Queda por probar el gasto imputado a **una reserva** —no había ninguna tras
+vaciar las bases— y la subida de la factura a Storage.
+
+**El fallo del día no estaba en Gastos: lo destapó Gastos.** El mantenimiento de
+prueba salía en la lista de gastos y **no** en la pestaña del propio vehículo,
+que insistía en «Sin registros de mantenimiento para este vehículo». Las dos
+pantallas leen la misma colección.
+
+La causa es una trampa de Firestore que conviene no olvidar: **un `orderBy`
+excluye del resultado los documentos que no tienen ese campo**. La consulta
+ordenaba por `nextDueDate`, así que una reparación hecha y sin próxima revisión
+programada —lo más normal del mundo— se guardaba bien y desaparecía de la ficha.
+Llevaba ahí desde que existe el módulo; no salió el 31 de agosto porque aquella
+prueba rellenó la próxima revisión. Corregido en M-40: el orden se hace en
+memoria.
+
+**Y un fallo de CSS que solo se ve mirando.** Los `input` del formulario salieron
+sin caja ni borde, como texto suelto, mientras los `select` de al lado se veían
+perfectos. `.form-control` **no es global** en este proyecto: cada componente la
+declara. Compilaba, pasaba los tests y el typecheck no tenía nada que decir.
+
+---
+
+## C-32 · Ajustes y permisos por rol (N-12) — 4 de septiembre de 2026
+
+| Comprobación | Resultado |
+|---|---|
+| Guardar ajustes y recargar | Vuelven de Firestore: fianza 250, validez 15 |
+| Presupuesto generado con validez 15 | PDF: emitido 04/09/2026 → **«Válido hasta: 19/09/2026»** |
+| Asistente de reservas | Propone fianza **250**, la de Ajustes, no la constante 150 |
+| Alta de vehículo nuevo | Nace con fianza 250 y 500 km incluidos |
+| Alta de usuario `Companero.Prueba@Gmail.com` | Guardado como `companero.prueba@gmail.com` |
+| Listar usuarios siendo administrador | Funciona con las reglas nuevas |
+| Fila del propio usuario | Marca «Tú» y sin botones de quitarse el acceso |
+
+La prueba que importaba era la del PDF: **la cadena pantalla → Firestore → Cloud
+Function funciona**, y sin ella los dos campos de validez habrían sido dos cajas
+que no cambian nada.
+
+**Dos fallos, los dos encontrados mirando.**
+
+`AuthService` guardaba `userDoc.data()`, y **`data()` no trae el id del
+documento** — que en `authorizedUsers` *es* el email. Resultado: la pantalla no
+reconocía al usuario en sesión y le ofrecía **quitarse el acceso a sí mismo**, la
+única acción de la que no se puede volver desde la aplicación. Es el mismo
+despiste que M-29 con `contract.id`, y salió a la primera captura.
+
+Y el asistente seguía diciendo **«Válido 7 días»** con un 7 escrito dentro de la
+traducción, mientras el PDF ya imprimía los 15 de Ajustes. La pantalla y el papel
+contando cosas distintas sobre lo mismo. Ahora el aviso lee el ajuste.
+
+**Un tropiezo del entorno, no del código:** el servidor de desarrollo aplicó la
+plantilla nueva con el TypeScript viejo y mostró un error de compilación por una
+propiedad que sí existía. El build de producción pasaba. Recargar lo resolvió.
+
+---
+
+## C-33 · Validación visible en todos los formularios (M-42) — 4 de septiembre de 2026
+
+Probado pulsando el botón de guardar con el formulario vacío, pantalla por
+pantalla:
+
+| Formulario | Resultado |
+|---|---|
+| Alta de usuario (Ajustes) | Campo en rojo, «Escribe el correo de la persona», sin resumen: son tres campos y el botón está al lado |
+| Vehículo | Marca, modelo y matrícula en rojo **a la vez**, y el resumen junto al botón con los tres |
+| Cliente | Nombre en rojo + resumen; ya no hay `alert()` |
+| Cobro libre | Importe **y** concepto marcados de una vez, no de uno en uno |
+| Móvil (390 px) | El mensaje cabe bajo el campo sin desbordar ni truncarse |
+
+**El fallo del día se veía solo mirando.** El campo recibía la clase
+`is-invalid` —comprobado en el DOM— y seguía pintado del mismo color. La causa:
+`.form-control` la declara cada componente, y con la encapsulación de Angular su
+regla es `.form-control[_ngcontent-xxx]`, que **empata en especificidad** con
+`.form-control.is-invalid`; al empatar gana la que se inyecta después, la del
+componente. Con `input.form-control.is-invalid` la especificidad sube y el estado
+gana. Un `getComputedStyle` lo confirmó: `rgb(248, 113, 113)`.
+
+También se corrigió sobre la marcha un resumen que el script de aplicación
+insertó en el `form-actions` equivocado —el del alta de daño en vez del de
+completar la devolución— y tres expresiones de plantilla que quedaron con
+sintaxis rota (`problems[''+"fuelLevel"]`). Las dos cosas las cazó mirar el
+fichero después, no el compilador: la primera era HTML válido en el sitio
+equivocado.

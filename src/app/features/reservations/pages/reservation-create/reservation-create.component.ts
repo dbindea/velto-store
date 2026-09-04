@@ -15,11 +15,13 @@ import {
 import {
   addVat,
   resolveRentalPrice,
-  DEFAULT_VAT_RATE,
   RentalPriceBreakdown,
   VatBreakdown
 } from '@shared/utils/pricing.util';
 import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
+import { SettingsService } from '@features/settings/services/settings.service';
+import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import {
@@ -37,7 +39,7 @@ type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 @Component({
   selector: 'app-reservation-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
   templateUrl: './reservation-create.component.html',
   styleUrl: './reservation-create.component.scss',
 })
@@ -47,6 +49,7 @@ export class ReservationCreateComponent implements OnInit {
   private clientService = inject(ClientService);
   private vehicleService = inject(VehicleService);
   private documentService = inject(ReservationDocumentService);
+  private settingsService = inject(SettingsService);
 
   // Current step
   currentStep: Step = 'dates';
@@ -120,6 +123,10 @@ export class ReservationCreateComponent implements OnInit {
     // Preloaded so the client step opens with something to click on: most
     // bookings are for someone who rented recently.
     this.loadRecentClients();
+    // Los ajustes deciden la fianza propuesta y el tipo de IVA de la reserva
+    // nueva. Se piden aquí, al abrir el asistente, para que ya estén cuando el
+    // operador llegue al resumen. Si fallan, rigen los valores del código.
+    void this.settingsService.load();
   }
 
   private loadRecentClients(): void {
@@ -256,8 +263,23 @@ export class ReservationCreateComponent implements OnInit {
     }
   }
 
+  /** Si ya se ha intentado crear el cliente rápido. */
+  quickClientSubmitted = false;
+
+  /** Lo que impide crearlo: campo → clave de i18n. */
+  get quickClientProblems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (!this.quickClient.fullName?.trim()) {
+      problems['fullName'] = 'reservations.errors.clientNameRequired';
+    }
+    return problems;
+  }
+
   async createQuickClient(): Promise<void> {
-    if (!this.quickClient.fullName) return;
+    // El botón ya no se deshabilita por el nombre vacío: se pulsa y es aquí
+    // donde se marca el campo. Antes no pasaba nada y no había forma de saberlo.
+    this.quickClientSubmitted = true;
+    if (hasProblems(this.quickClientProblems)) return;
 
     this.saving = true;
     try {
@@ -371,7 +393,7 @@ export class ReservationCreateComponent implements OnInit {
           loyaltyDiscount: breakdown.loyaltyDiscount || undefined,
           manualAdjustment: breakdown.priceOverridden ? breakdown.manualAdjustment : undefined,
           netPrice: breakdown.netPrice,
-          vatRate: DEFAULT_VAT_RATE
+          vatRate: this.vatRate
         }
       });
 
@@ -539,9 +561,32 @@ export class ReservationCreateComponent implements OnInit {
     return this.priceBreakdown.manualAdjustment;
   }
 
+  /**
+   * El tipo que se va a aplicar a esta reserva.
+   *
+   * Sale de Ajustes y **se congela en el snapshot** al crearla, así que una
+   * subida futura del tipo general no mueve un contrato ya firmado. Ese
+   * congelado es lo que hace que sea seguro tenerlo configurable.
+   */
+  get vatRate(): number {
+    return this.settingsService.settings().vatRate;
+  }
+
+  /**
+   * Los días que el presupuesto se anuncia como válido.
+   *
+   * Lo lee de Ajustes, igual que la Cloud Function que compone el PDF. Antes era
+   * un literal de traducción con un 7 dentro, así que el día que alguien cambió
+   * la validez, la pantalla siguió prometiendo siete días y el papel decía otra
+   * cosa.
+   */
+  get quoteValidityDays(): number {
+    return this.settingsService.settings().quoteValidityDays;
+  }
+
   /** VAT added on top of the net — the tariff is net now. */
   get vat(): VatBreakdown {
-    return addVat(this.netPrice);
+    return addVat(this.netPrice, this.vatRate);
   }
 
   /** The rate as a percentage, for the "IVA (21 %)" label. */
@@ -585,9 +630,20 @@ export class ReservationCreateComponent implements OnInit {
     return roundMoney(Math.max(0, this.finalPrice - this.initialPayment));
   }
 
-  /** What the vehicle asks for by default, before the operator decides. */
+  /**
+   * What the vehicle asks for by default, before the operator decides.
+   *
+   * Manda la fianza del coche; si no la tiene, la de **Ajustes**; y si tampoco
+   * —porque nadie ha guardado ajustes todavía— la constante del código. El orden
+   * es de lo más concreto a lo más general, que es el mismo criterio que sigue
+   * el precio: tarifa del vehículo antes que nada global.
+   */
   get defaultDeposit(): number {
-    return this.selectedVehicle?.vehicle.defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT;
+    return (
+      this.selectedVehicle?.vehicle.defaultDepositAmount ??
+      this.settingsService.settings().defaultDepositAmount ??
+      APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT
+    );
   }
 
   /**

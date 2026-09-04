@@ -1,0 +1,136 @@
+<div class="page">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>{{ 'expenses.title' | translate }}</h1>
+      <p class="subtitle">{{ 'expenses.subtitle' | translate }}</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-primary" routerLink="/expenses/new">
+        <i class="pi pi-plus"></i>
+        {{ 'expenses.new' | translate }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Totales de lo que se está mirando: si se busca «taller», el total es el
+       de esa búsqueda. Un total que no corresponde a las filas de la pantalla
+       hace desconfiar de toda la cifra. -->
+  <div class="totals">
+    <div class="total-card main">
+      <span class="total-label">{{ 'expenses.totals.spent' | translate }}</span>
+      <span class="total-value">{{ totals.gross | number:'1.2-2' }} €</span>
+      <span class="total-hint">{{ totals.count }} {{ 'expenses.totals.entries' | translate }}</span>
+    </div>
+    <div class="total-card">
+      <span class="total-label">{{ 'expenses.totals.vat' | translate }}</span>
+      <span class="total-value">{{ totals.vat | number:'1.2-2' }} €</span>
+      <!-- ⚠️ Base + IVA NO suman el bruto cuando hay mantenimiento, porque su
+           coste se teclea sin tipo. Se dice cuántas filas lo llevan en vez de
+           enseñar tres números que no encajan. -->
+      <span class="total-hint">
+        {{ 'expenses.totals.vatOver' | translate }}
+        {{ totals.withVatBreakdown }}/{{ totals.count }}
+      </span>
+    </div>
+    <div class="total-card">
+      <span class="total-label">{{ 'expenses.scope.vehicle' | translate }}</span>
+      <span class="total-value">{{ totals.byScope.vehicle | number:'1.2-2' }} €</span>
+    </div>
+    <div class="total-card">
+      <span class="total-label">{{ 'expenses.scope.general' | translate }}</span>
+      <span class="total-value">{{ totals.byScope.general | number:'1.2-2' }} €</span>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="search-box">
+      <i class="pi pi-search"></i>
+      <input
+        type="text"
+        class="form-control"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="applySearch()"
+        [placeholder]="'common.search' | translate" />
+    </div>
+
+    <select class="form-control filter-select" [(ngModel)]="scopeFilter" (ngModelChange)="onScopeChange()">
+      @for (option of scopeOptions; track option.value) {
+        <option [value]="option.value">{{ option.label | translate }}</option>
+      }
+    </select>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (errored) {
+    <div class="empty-state">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>{{ 'expenses.list.error' | translate }}</p>
+      <button class="btn btn-secondary" type="button" (click)="load()">
+        <i class="pi pi-refresh"></i>
+        {{ 'common.retry' | translate }}
+      </button>
+    </div>
+  } @else if (filteredRows.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-wallet"></i>
+      <p>{{ 'expenses.list.empty' | translate }}</p>
+      <a class="btn btn-primary" routerLink="/expenses/new">
+        {{ 'expenses.list.addFirst' | translate }}
+      </a>
+    </div>
+  } @else {
+    <div class="expense-list">
+      @for (row of filteredRows; track row.origin + row.id) {
+        <div class="expense-card" (click)="open(row)">
+          <div class="card-icon">
+            <i [class]="EXPENSE_CATEGORY_ICONS[row.category]"></i>
+          </div>
+
+          <div class="card-info">
+            <h3>{{ row.concept }}</h3>
+            <div class="info-row">
+              <span class="badge">{{ categoryLabel(row) }}</span>
+              <span class="badge scope">{{ scopeLabel(row) }}</span>
+              <!-- Lo que nace en mantenimiento se edita en mantenimiento, y la
+                   fila tiene que decirlo: si no, el operador busca aquí un
+                   botón de editar que no puede existir. -->
+              @if (row.origin === 'maintenance') {
+                <span class="badge origin">
+                  <i class="pi pi-wrench"></i>
+                  {{ 'expenses.fromMaintenance' | translate }}
+                </span>
+              }
+            </div>
+            <div class="info-row muted">
+              @if (row.date) {
+                <span><i class="pi pi-calendar"></i> {{ row.date | date:'dd/MM/yyyy' }}</span>
+              }
+              @if (row.vehiclePlate) {
+                <span class="mono"><i class="pi pi-car"></i> {{ row.vehiclePlate }}</span>
+              }
+              @if (row.supplier) {
+                <span><i class="pi pi-building"></i> {{ row.supplier }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="card-amount">
+            <span class="amount">{{ row.amount | number:'1.2-2' }} €</span>
+            @if (row.vatAmount !== undefined) {
+              <span class="vat">
+                {{ 'expenses.fields.vatShort' | translate }}
+                {{ row.vatAmount | number:'1.2-2' }} €
+              </span>
+            } @else {
+              <span class="vat none">{{ 'expenses.noVatBreakdown' | translate }}</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

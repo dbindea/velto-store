@@ -106,26 +106,29 @@
         </div>
         <div class="form-grid-inner">
           <div class="form-group">
-            <label>{{ 'inspections.fields.km' | translate }} *</label>
-            <input type="number" class="form-control" [(ngModel)]="formData.km" name="km" min="0">
+            <label class="required">{{ 'inspections.fields.km' | translate }}</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.km" name="km" min="0" [class.is-invalid]="submitted && problems['km']">
+            <app-form-error [problems]="problems['km']" [show]="submitted" />
           </div>
           <div class="form-group">
-            <label>{{ 'inspections.fields.fuelLevel' | translate }} *</label>
-            <select class="form-control" [(ngModel)]="formData.fuelLevel" name="fuel">
+            <label class="required">{{ 'inspections.fields.fuelLevel' | translate }}</label>
+            <select class="form-control" [(ngModel)]="formData.fuelLevel" name="fuel" [class.is-invalid]="submitted && problems['fuelLevel']">
               <option [ngValue]="undefined" disabled>--</option>
               @for (f of fuelLevels; track f) {
                 <option [ngValue]="f">{{ FUEL_LEVEL_LABELS[f] | translate }}</option>
               }
             </select>
+            <app-form-error [problems]="problems['fuelLevel']" [show]="submitted" />
           </div>
           <div class="form-group">
-            <label>{{ 'inspections.fields.cleanliness' | translate }} *</label>
-            <select class="form-control" [(ngModel)]="formData.cleanliness" name="clean">
+            <label class="required">{{ 'inspections.fields.cleanliness' | translate }}</label>
+            <select class="form-control" [(ngModel)]="formData.cleanliness" name="clean" [class.is-invalid]="submitted && problems['cleanliness']">
               <option [ngValue]="undefined" disabled>--</option>
               @for (c of cleanlinessLevels; track c) {
                 <option [ngValue]="c">{{ CLEANLINESS_LABELS[c] | translate }}</option>
               }
             </select>
+            <app-form-error [problems]="problems['cleanliness']" [show]="submitted" />
           </div>
           <div class="form-group full">
             <label>{{ 'inspections.fields.notes' | translate }}</label>
@@ -190,6 +193,13 @@
         }
       </div>
     </div>
+
+    <!-- El resumen aquí: los km y el combustible están arriba del todo y el
+         botón al final, así que el campo en rojo queda fuera de la vista. -->
+    <app-form-error [problems]="problemList" [show]="submitted" [summary]="true" />
+    @if (saveError) {
+      <app-form-error [problems]="saveError" [show]="true" [summary]="true" />
+    }
 
     <div class="page-actions">
       <button class="btn-secondary" type="button" (click)="goBack()">

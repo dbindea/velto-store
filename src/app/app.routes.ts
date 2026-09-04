@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { publicGuard } from './core/guards/public.guard';
+import { permissionGuard } from './core/guards/permission.guard';
+import { ROUTE_PERMISSIONS } from '@shared/utils/permissions.util';
 
 export const routes: Routes = [
   {
@@ -161,7 +163,25 @@ export const routes: Routes = [
       },
       {
         path: 'expenses',
-        loadComponent: () => import('./features/expenses/expenses.component').then(m => m.ExpensesComponent)
+        // Gastos e Informes son la cuenta de resultados del negocio: información
+        // de dueño, no de operación diaria. El permiso lo decide
+        // `permissions.util.ts`, que es la única autoridad.
+        canActivate: [permissionGuard(ROUTE_PERMISSIONS['expenses'])],
+        loadComponent: () => import('./features/expenses/expenses.component').then(m => m.ExpensesComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/expenses/pages/expense-list/expense-list.component').then(m => m.ExpenseListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/expenses/pages/expense-form/expense-form.component').then(m => m.ExpenseFormComponent)
+          },
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/expenses/pages/expense-form/expense-form.component').then(m => m.ExpenseFormComponent)
+          }
+        ]
       },
       {
         path: 'contracts',
@@ -201,10 +221,12 @@ export const routes: Routes = [
       },
       {
         path: 'reports',
+        canActivate: [permissionGuard(ROUTE_PERMISSIONS['reports'])],
         loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent)
       },
       {
         path: 'settings',
+        canActivate: [permissionGuard(ROUTE_PERMISSIONS['settings'])],
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
       }
     ]

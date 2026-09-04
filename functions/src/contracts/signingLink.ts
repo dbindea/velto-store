@@ -19,8 +19,20 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 import { firestore } from '../admin-guard';
+import { operationSettings } from '../settings';
 
-const DEFAULT_EXPIRY_DAYS = Number(process.env.CONTRACT_LINK_EXPIRY_DAYS || 7);
+/**
+ * Días que dura el enlace de firma.
+ *
+ * Sale de **Ajustes**; el `.env` sigue valiendo como respaldo para fijarlo en un
+ * entorno concreto sin tocar la base de datos.
+ *
+ * ⚠️ La caducidad queda **escrita en el propio token** al crearlo, así que
+ * cambiarla en Ajustes no mueve ni un enlace ya enviado. Es lo correcto: lo que
+ * un cliente tiene en su WhatsApp no puede caducar antes por algo que alguien
+ * tocó después.
+ */
+const EXPIRY_DAYS_FALLBACK = Number(process.env.CONTRACT_LINK_EXPIRY_DAYS || 0);
 const VELTO_PUBLIC_BASE_URL = process.env.VELTO_PUBLIC_BASE_URL || '';
 
 interface CreateRequest {
@@ -76,8 +88,12 @@ export const createContractSigningLink = functions.https.onCall(
     await batch.commit();
 
     const token = generateToken(32);
+    const expiryDays =
+      EXPIRY_DAYS_FALLBACK > 0
+        ? EXPIRY_DAYS_FALLBACK
+        : (await operationSettings()).signingLinkExpiryDays;
     const expiresAt = admin.firestore.Timestamp.fromDate(
-      new Date(Date.now() + DEFAULT_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
+      new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
     );
     const now = admin.firestore.FieldValue.serverTimestamp();
 
