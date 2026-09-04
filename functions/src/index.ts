@@ -21,6 +21,7 @@
  *   - cancelContractSigningLink         (auth) — cancel active link
  *   - getContractForSigning             (public, token) — read-only summary
  *   - signContract                      (public, token) — apply signature
+ *   - getContractVerification           (public, code) — CSV del contrato
  *   - sendSignedContractEmail           (auth) — Resend email
  *   - generateQuotePdf                  (auth) — quote, before any reservation
  *   - generateBookingConfirmationPdf    (auth) — booking proof, before signing
@@ -38,6 +39,9 @@ export { generateContractPdf } from './contracts/generateContractPdf';
 export { createContractSigningLink, cancelContractSigningLink } from './contracts/signingLink';
 export { getContractForSigning } from './contracts/getContractForSigning';
 export { signContract } from './contracts/signContract';
+// Pública: la abre quien escanea el QR de un contrato en papel. Devuelve cinco
+// datos y ningún dato personal.
+export { getContractVerification } from './contracts/getContractVerification';
 export { sendSignedContractEmail } from './contracts/sendSignedContractEmail';
 
 // Customer-facing documents that are NOT the contract. Neither touches the

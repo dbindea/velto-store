@@ -46,6 +46,7 @@ import {
   readAsset,
   type Logo
 } from './brand';
+import { buildQrMatrix, qrRects, type QrMatrix } from './qr';
 
 const BOX_BORDER = rgb(0.8, 0.8, 0.8);
 
@@ -82,6 +83,21 @@ export interface TextBox {
   font?: PDFFont;
   /** Running head / footer, which live outside the body area by design. */
   isChrome?: boolean;
+}
+
+/**
+ * Algo dibujado que no es texto, con su caja en coordenadas de página.
+ *
+ * `y` es el borde **inferior**, como en pdf-lib, y no la línea base: un
+ * rectángulo no tiene línea base.
+ */
+export interface GraphicBox {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
 }
 
 /**
@@ -182,6 +198,32 @@ export interface ContractPdfInput {
   signaturePng?: Uint8Array | null;
   signedAt?: Date;
   signerName?: string;
+  /**
+   * True si el PDF se va a sellar con el certificado de la empresa.
+   *
+   * Gobierna **una sola cosa**: si se imprime «Firmado digitalmente con
+   * certificado digital» en la casilla del arrendador. El documento no puede
+   * prometer una firma que no va a llevar, que es lo que hacía hasta N-8.
+   */
+  willBeDigitallySigned?: boolean;
+  /**
+   * Código Seguro de Verificación y su QR, en la casilla del arrendador (N-9).
+   *
+   * ⚠️ **Va DENTRO del PDF que se sella**, así que se dibuja antes de firmar. Y
+   * lo que resuelve es el papel: una copia impresa no se puede comprobar de
+   * ninguna otra forma. **No valida la firma electrónica** —eso lo hace Adobe o
+   * VALIDe abriendo el fichero— y ningún texto de aquí debe dar a entender que
+   * sí, que es exactamente el error que ya se cometió una vez con la frase de
+   * la firma digital.
+   */
+  verification?: {
+    /** Tal y como se imprime: `VLT-3F7K-9QD2-XR84`. */
+    code: string;
+    /** La URL que codifica el QR. */
+    url: string;
+    /** La misma sin esquema, para que se pueda teclear a mano. */
+    urlLabel: string;
+  };
   /**
    * Diagnostics seam: called with the builder once the document is laid out,
    * so a test can check where every run of text ended up. Never set in
@@ -401,6 +443,16 @@ export class PdfBuilder {
    */
   readonly boxes: TextBox[] = [];
 
+  /**
+   * Lo que se dibuja y no es texto: hoy solo el QR de verificación.
+   *
+   * `assertNoOverlaps()` compara runs de texto entre sí, así que un símbolo
+   * gráfico le era invisible: se le podía imprimir una línea encima sin que
+   * ningún test dijera nada, y un QR con texto atravesado no se lee. Registrarlo
+   * aquí es lo que convierte «no se solapa» en algo comprobable también para él.
+   */
+  readonly graphics: GraphicBox[] = [];
+
   constructor(doc: PDFDocument) {
     this.doc = doc;
   }
@@ -532,6 +584,21 @@ export class PdfBuilder {
 
   /** True while the running head or the footer is being drawn. */
   private drawingChrome = false;
+
+  /**
+   * Pinta un QR, con `x`,`y` en la esquina inferior izquierda y `size`
+   * incluyendo la zona de silencio.
+   *
+   * La geometría vive en `qrRects()` y no aquí: así se puede comprobar que el
+   * símbolo se lee de verdad, que es lo único que importa de un QR y lo que no
+   * se ve mirando el PDF.
+   */
+  private drawQr(qr: QrMatrix, x: number, y: number, size: number): void {
+    for (const r of qrRects(qr, x, y, size)) {
+      this.page.drawRectangle({ ...r, color: INK });
+    }
+    this.graphics.push({ page: this.pageNumber, x, y, width: size, height: size, label: 'QR' });
+  }
 
   newPage(): void {
     this.page = this.doc.addPage([this.pageWidth, this.pageHeight]);
@@ -1472,6 +1539,22 @@ export class PdfBuilder {
     /** Wording for the lessor's digital signature. */
     digitallySignedLabel: string;
     /**
+     * QR y Código Seguro de Verificación, en la casilla del arrendador (N-9).
+     *
+     * Convive con `digitallySignedLabel` en vez de sustituirla: son dos hechos
+     * distintos y cada uno es cierto por su cuenta. La frase dice que el PDF
+     * lleva el sello del certificado de la empresa; el QR sirve para comprobar
+     * **una copia impresa**, que es donde no hay firma electrónica que valer.
+     * Si el sellado falla, desaparece la frase y el QR se queda.
+     */
+    verification?: {
+      code: string;
+      url: string;
+      urlLabel: string;
+      /** «Verifica la autenticidad de este contrato en:», ya traducido. */
+      prompt: string;
+    };
+    /**
      * «Firmado el {fecha} por {nombre}», bajo la columna del ARRENDATARIO.
      *
      * Viaja aquí y no como una línea suelta después del bloque porque el texto
@@ -1507,17 +1590,58 @@ export class PdfBuilder {
      * its side was asking for a handwritten signature that is never coming —
      * and an unsigned-looking box on a contract reads badly.
      *
-     * TODO: apply the actual certificate to the generated PDF. Until then this
-     * states the intent; the note is not a substitute for the signature.
+     * ⚠️ **La línea solo se imprime si el PDF se va a sellar de verdad.**
+     * Antes salía siempre, con un TODO al lado admitiendo que el certificado no
+     * se aplicaba: el contrato afirmaba al cliente una firma digital que no
+     * existía. Ahora quien lo decide es `isSigningConfigured()`, así que sin
+     * certificado la casilla queda solo con la razón social y el NIF — cierto,
+     * aunque diga menos.
      */
-    this.put(
-      opts.digitallySignedLabel,
-      leftX,
-      topY - 46,
-      8,
-      this.fontFor('displayMedium', opts.digitallySignedLabel),
-      BRAND
-    );
+    if (opts.verification) {
+      /**
+       * QR a la izquierda, texto a su derecha, en una sola columna.
+       *
+       * Nada se pinta **debajo** del QR a propósito: ahí el texto quedaría a
+       * la altura de la última línea de la derecha, y una frase larga en
+       * rumano bastaría para que las dos se tocaran. Con una sola columna de
+       * texto el solape es imposible por construcción, no por suerte.
+       */
+      const qrSize = 68;
+      const qrTop = topY - 4;
+      this.drawQr(buildQrMatrix(opts.verification.url), leftX, qrTop - qrSize, qrSize);
+
+      const textX = leftX + qrSize + 10;
+      const textW = colW - qrSize - 10;
+      let ty = qrTop - 14;
+
+      if (opts.digitallySignedLabel) {
+        const labelFont = this.fontFor('displayMedium', opts.digitallySignedLabel);
+        for (const line of this.wrap(opts.digitallySignedLabel, 7, labelFont, textW)) {
+          this.put(line, textX, ty, 7, labelFont, BRAND);
+          ty -= 9;
+        }
+        ty -= 5;
+      }
+
+      for (const line of this.wrap(opts.verification.prompt, 6.8, this.font, textW)) {
+        this.put(line, textX, ty, 6.8, this.font, MUTED);
+        ty -= 8.5;
+      }
+      this.put(this.truncate(opts.verification.urlLabel, this.font, 7, textW), textX, ty, 7, this.font, BODY);
+      ty -= 12;
+      // El código va en negrita y algo mayor: es lo único de este bloque que
+      // alguien va a teclear a mano desde un papel.
+      this.put(this.truncate(opts.verification.code, this.bold, 9, textW), textX, ty, 9, this.bold, INK);
+    } else if (opts.digitallySignedLabel) {
+      this.put(
+        opts.digitallySignedLabel,
+        leftX,
+        topY - 46,
+        8,
+        this.fontFor('displayMedium', opts.digitallySignedLabel),
+        BRAND
+      );
+    }
 
     // Renter block: signature image if provided, else empty line
     if (opts.renterPng) {
@@ -1710,6 +1834,18 @@ export async function buildContractPdf(
         : loc === 'ro'
           ? 'Semnat digital cu certificat calificat'
           : 'Firmado digitalmente con certificado digital',
+    /**
+     * ⚠️ **«Comprueba» y no «valida la firma».** El QR confirma que este
+     * contrato existe y que el fichero es el que emitimos; la firma electrónica
+     * la valida Adobe o VALIDe abriendo el PDF. Prometer lo segundo sería
+     * repetir el error de la frase que afirmaba una firma que no existía.
+     */
+    verifyPrompt:
+      loc === 'en'
+        ? 'Check this contract at:'
+        : loc === 'ro'
+          ? 'Verifică acest contract la:'
+          : 'Comprueba este contrato en:',
     depositVatNote:
       loc === 'en'
         ? 'Security deposit (not subject to VAT)'
@@ -2004,7 +2140,12 @@ export async function buildContractPdf(
     renterName: input.client.fullName,
     renterId,
     renterPng,
-    digitallySignedLabel: L.digitallySigned,
+    // Solo se anuncia la firma digital si el documento va a llevarla. Quien lo
+    // sabe es quien construye el PDF, así que llega como dato de entrada.
+    digitallySignedLabel: input.willBeDigitallySigned ? L.digitallySigned : '',
+    verification: input.verification
+      ? { ...input.verification, prompt: L.verifyPrompt }
+      : undefined,
     renterSignedNote:
       signed && input.signedAt
         ? `${L.signedOn} ${formatDate(input.signedAt, loc)} ${L.by} ${

@@ -15,6 +15,36 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 4 de septiembre de 2026
+
+**El ciclo del alquiler está completo y probado de extremo a extremo**, en
+desarrollo y en producción: presupuesto → reserva → señal → contrato → firma →
+email → entrega → devolución con daños y cargos → fianza → cierre. Y también la
+cancelación, el mantenimiento de vehículos y las excepciones de workflow.
+
+**Cobros**: Redsys funciona en los dos entornos, incluido un cobro real de 10 €
+en producción. El cliente puede pagar **desde su móvil** con un enlace, sin que
+el operador esté delante.
+
+**Contrato**: se sella con el certificado FNMT de la empresa.
+
+**Contrato en papel**: lleva QR y Código Seguro de Verificación desde el 4 de
+septiembre de 2026 (N-9), con página pública propia en `/v/:codigo`.
+
+**Lo que falta**, por tamaño:
+
+| | Qué es |
+|---|---|
+| **Gastos** | Módulo vacío: solo dice «módulo en construcción» |
+| **Ajustes** | Módulo vacío |
+| **N-5** | Pre-reserva desde la web pública — sin decidir |
+| **D-1…D-6** | Seis decisiones de Dorel pendientes |
+| resto | Mejoras menores: M-5, M-6, M-10, M-11, M-13, M-21 |
+
+**Pendiente de Dorel**: borrar la copia del `.p12` de `public/`.
+
+---
+
 ## ⚠️ Revisar tras el cambio de IVA (27 ago 2026)
 
 - [x] **Repasar las tarifas de los vehículos.** *(27 ago 2026 — decidido: no se
@@ -1043,7 +1073,46 @@ Cloud Scheduler, que hay que habilitar en los dos proyectos.
 4. El PDF: ¿un cuarto documento, o el presupuesto con una caja de «válido hasta
    las HH:MM»? Lo segundo reaprovecha plantilla, precios e IVA.
 
-## N-8 · Sellar el contrato con el certificado FNMT de la empresa *(anotado el 2 sep 2026 — acordado hacerlo)*
+## ✅ N-8 · Sellar el contrato con el certificado FNMT *(hecho el 4 sep 2026)*
+
+Funcionando en los dos entornos. El contrato firmado sale con firma PKCS#7 del
+certificado de la empresa: `/ByteRange`, `Adobe.PPKLite`, `adbe.pkcs7.detached`
+y el motivo «Contrato de alquiler C-…».
+
+**El hueco de la firma se quedó corto en el primer intento.** Reservé 8192 bytes
+«porque una firma ronda los 3-4 KB» y el certificado real falló con *Signature
+exceeds placeholder length: **11916 > 8192***: el certificado FNMT de
+representante incrusta la cadena completa de la autoridad. Ahora son 32 KB, con
+margen para cuando se renueve y la cadena crezca.
+
+⚠️ **Y ese fallo destapó un error de diseño mío.** La primera versión decidía si
+imprimir «Firmado digitalmente con certificado digital» **antes** de intentar
+sellar, así que el contrato de prueba salió afirmando una firma que no llevaba:
+justo el problema que N-8 venía a arreglar, pero intermitente y silencioso.
+Corregido: si el sellado falla, **el PDF se reconstruye sin la frase**. La
+promesa y la realidad se deciden juntas.
+
+El sellado **nunca aborta la firma**: si falla se guarda sin sellar, porque
+perder el sello es un problema y perder la firma que el cliente acaba de hacer
+es uno mucho peor.
+
+**Sobre las dependencias.** El paquete habitual `@signpdf/placeholder-plain`
+arrastra `pdfkit` → `crypto-js` con vulnerabilidades **críticas**, y ni siquiera
+se usaría: el contrato se genera con `pdf-lib`. Se usa
+`@signpdf/placeholder-pdf-lib`, que solo depende de `@signpdf/utils`. Auditoría
+de lo añadido: cero vulnerabilidades.
+
+⚠️ **Seguridad, 4 de septiembre de 2026.** Aparecieron el `.p12` y su base64 en
+`public/` del repositorio. No llegaron a commitearse ni a publicarse —hosting
+sirve `dist/`— pero un `git add .` los habría subido. Añadidas reglas a
+`.gitignore` para `*.p12`, `*.pfx`, `*.key` y `cert.b64`. **Quien tenga ese
+fichero y la contraseña puede firmar contratos en nombre de la empresa**: la
+copia local hay que borrarla, el sitio del certificado es Secret Manager.
+
+Sin sellado de tiempo, por decisión: la firma acredita quién y qué, no la fecha
+ante un tercero. Se puede añadir después sin rehacer nada.
+
+## N-8 (planteamiento original) *(anotado el 2 sep 2026)*
 
 Dorel ya tiene el certificado FNMT de representante de la empresa. La idea es
 sellar con él el PDF del contrato, después de que el cliente firme.
@@ -1088,3 +1157,75 @@ simple, válida pero con poco peso probatorio si él la niega—. Sellar con el
 certificado de la empresa no la convierte en cualificada. Para eso haría falta
 un prestador de servicios de confianza, que cobra por firma y es otro
 desarrollo.
+
+## ✅ N-9 · QR de verificación en el contrato *(hecho el 4 sep 2026)*
+
+En la casilla del arrendador van ahora **un QR y un código corto legible**,
+`VLT-8QPB-YNT4-9AXJ`, junto a la línea «Firmado digitalmente con certificado
+digital».
+
+**Qué problema resuelve, y cuál no.** Un QR **no puede validar una firma
+electrónica** — eso lo hace Adobe Reader o VALIDe abriendo el PDF. Lo que
+resuelve es el **papel**: quien tiene una copia impresa no podía comprobar nada.
+Con un CSV, como los de la Administración, confirma que el contrato existe, que
+está firmado y —comparando la huella— que su fichero es el que emitimos. Los
+textos del PDF y de la página dicen exactamente eso y no más.
+
+**Decisiones de Dorel:**
+
+- QR a una **página pública propia**, no al PDF suelto ni a VALIDe.
+- La página **no muestra datos personales**: número de contrato, fecha de firma,
+  matrícula, estado y huella SHA-256. Quien escanee un contrato olvidado en un
+  mostrador no debe ver el nombre ni el DNI de nadie.
+- **El QR no sustituye a la frase, convive con ella.** Son dos hechos distintos
+  y cada uno es cierto por su cuenta: la frase dice que el PDF lleva el sello
+  del certificado de la empresa, el QR sirve para comprobar el papel. Si el
+  sellado falla, desaparece la frase y el QR se queda.
+
+**Lo construido:**
+
+- `verification.ts` — el código (12 caracteres sobre un alfabeto **sin `I`, `L`,
+  `O`, `U`, `0` ni `1`**, porque se dicta por teléfono y se copia de un papel),
+  su formato impreso y la huella. El sorteo va con **muestreo con rechazo**:
+  `byte % 30` habría favorecido a los seis primeros símbolos.
+- `qr.ts` — la matriz y **los rectángulos que se dibujan**, separados del dibujo
+  a propósito (ver abajo). Vectorial, no un PNG: nítido al imprimir y sin un
+  mega de imagen en un PDF que ya pesa.
+- `getContractVerification`, function **pública** que devuelve cinco datos y
+  ninguno personal. Un código mal formado ni siquiera consulta Firestore.
+- Ruta pública `/v/:codigo` —y `/v` para teclearlo a mano— **antes** del bloque
+  con `authGuard`.
+
+**Las dos trampas, y cómo se resolvieron:**
+
+- El QR va **dentro** del PDF que se sella, así que el código se decide antes de
+  construirlo: un PDF firmado no admite cambios y no hay segunda oportunidad.
+- La huella se calcula sobre **los bytes que se guardan**, después de sellar y
+  después de la posible reconstrucción sin la frase. Calcularla antes daría un
+  valor que no coincide con ningún fichero real, y la página le diría al cliente
+  que su contrato está alterado.
+
+**Un QR que no se lee tiene la misma pinta que uno que sí.** Por eso la
+geometría vive fuera del dibujo y hay un test que **rasteriza los rectángulos
+reales y los descifra con un lector** (`jsqr`): un índice de fila invertido o la
+zona de silencio olvidada dan un cuadrado de aspecto normal que ningún móvil
+entiende, y eso no se ve mirando el PDF.
+
+**Verificado de extremo a extremo en desarrollo**, ciclo completo: reserva nueva
+→ contrato → link de firma → firma del cliente → PDF sellado. Y sobre el fichero
+real, no sobre la pantalla:
+
+| Comprobación | Resultado |
+|---|---|
+| QR del PDF firmado, descifrado del render real | `https://store.veltorent.com/v/8QPBYNT49AXJ` |
+| `sha256sum` del PDF descargado | `879a6d7c…8ff00272` |
+| Huella que enseña la página | **la misma** |
+| Sellado | `adbe.pkcs7.detached` presente · la página dice «Sí, con certificado digital» |
+| Function sin cabecera de autenticación | cinco datos, ni nombre ni documento ni importe |
+| Código inexistente y basura (`../../contracts`) | responden lo mismo |
+
+Desplegada en los dos entornos el 4 de septiembre de 2026: **trece functions**.
+
+⚠️ **Los contratos firmados antes de hoy no tienen código**, así que su QR no
+existe y la página responde «no encontrado» si alguien inventa uno. Es lo
+correcto y no se migra nada: los datos siguen siendo desechables.

@@ -74,6 +74,16 @@ const pricing = {
   vatRate: 0.21
 };
 
+/**
+ * El bloque de verificación (N-9), en su caso peor: con QR **y** con la frase
+ * de la firma digital, que es como sale un contrato sellado de verdad.
+ */
+const verification = {
+  code: 'VLT-3F7K-9QD2-XR84',
+  url: 'https://store.veltorent.com/v/3F7K9QD2XR84',
+  urlLabel: 'store.veltorent.com/v'
+};
+
 const LOCALES: ContractLocale[] = ['es', 'en', 'ro'];
 
 /** Renders a document and hands back the builder so its boxes can be read. */
@@ -124,7 +134,9 @@ async function renderContract(locale: ContractLocale) {
       reservation: { ...rental, ...pricing },
       clauses: CONTRACT_CLAUSES,
       preferredLocale: locale,
-      generatedAt: new Date('2026-08-27T09:00:00Z')
+      generatedAt: new Date('2026-08-27T09:00:00Z'),
+      willBeDigitallySigned: true,
+      verification
     },
     false
   );
@@ -189,6 +201,8 @@ describe('the real documents, in every language', () => {
           clauses: CONTRACT_CLAUSES,
           preferredLocale: locale,
           generatedAt: new Date('2026-08-27T09:00:00Z'),
+          willBeDigitallySigned: true,
+          verification,
           onLayout
         },
         false
@@ -216,6 +230,30 @@ describe('the real documents, in every language', () => {
       it(`${kind} / ${locale}: nothing is drawn over the legal footer`, async () => {
         const b = await layoutOf(kind, locale);
         expect(b.assertInsideMargins()).toEqual([]);
+      }, 30_000);
+
+      /**
+       * `assertNoOverlaps()` compara texto contra texto, así que el QR le era
+       * invisible: se le podía imprimir una línea encima sin que ningún test
+       * dijera nada, y un QR con texto atravesado no se escanea. Aquí se
+       * comprueba contra su caja real, la que se registró al dibujarlo.
+       */
+      it(`${kind} / ${locale}: ningún texto cae sobre el QR de verificación`, async () => {
+        const b = await layoutOf(kind, locale);
+        const problems: string[] = [];
+        for (const g of b.graphics) {
+          for (const box of b.boxes) {
+            if (box.page !== g.page) continue;
+            // La caja del texto va de su línea base hacia arriba.
+            const overlapX = Math.min(box.x + box.width, g.x + g.width) - Math.max(box.x, g.x);
+            const overlapY =
+              Math.min(box.y + box.height, g.y + g.height) - Math.max(box.y, g.y);
+            if (overlapX > 0.5 && overlapY > 0.5) {
+              problems.push(`p${g.page}: "${box.text}" invade el ${g.label}`);
+            }
+          }
+        }
+        expect(problems).toEqual([]);
       }, 30_000);
 
       it(`${kind} / ${locale}: no heading is clipped`, async () => {
@@ -359,6 +397,101 @@ describe('no text overlaps', () => {
     });
     expect(problems).toEqual([]);
   });
+
+  it('mantiene el bloque de verificación dentro de la columna del arrendador', async () => {
+    const problems = await overlapsFor((b) => {
+      b.signatureBlocks({
+        lessorRole: 'EL ARRENDADOR (VELTO MOBILITY, S.L.)',
+        lessorName: COMPANY_LEGAL_NAME,
+        lessorId: 'NIF B88866900',
+        renterRole: 'EL ARRENDATARIO',
+        renterName: client.fullName,
+        renterId: formatIdDocument('nie', client.documentNumber),
+        digitallySignedLabel: 'Firmado digitalmente con certificado digital',
+        verification: {
+          ...verification,
+          prompt: 'Comprueba este contrato en:'
+        }
+      });
+    });
+    expect(problems).toEqual([]);
+  });
+});
+
+/**
+ * El QR va en la casilla del ARRENDADOR.
+ *
+ * Es la empresa quien responde de que ese contrato existe, igual que es ella la
+ * que sella con su certificado. En la columna del arrendatario se leería como
+ * algo que aporta el cliente.
+ */
+describe('el QR de verificación (N-9)', () => {
+  it('se dibuja en la columna del arrendador, con su código al lado', async () => {
+    let captured: any = null;
+    await buildContractPdf(
+      {
+        contractNumber: 'C-P2RJP0-2026',
+        company,
+        client,
+        vehicle,
+        reservation: { ...rental, ...pricing },
+        clauses: CONTRACT_CLAUSES,
+        preferredLocale: 'es',
+        generatedAt: new Date('2026-08-27T09:00:00Z'),
+        signedAt: new Date('2026-08-29T11:18:57Z'),
+        signerName: client.fullName,
+        willBeDigitallySigned: true,
+        verification,
+        onLayout: (b: any) => (captured = b)
+      },
+      true
+    );
+    if (!captured) throw new Error('onLayout was never called');
+
+    const qr = captured.graphics.find((g: any) => g.label === 'QR');
+    expect(qr, 'no se dibujó el QR').toBeTruthy();
+    // A4 mide 595,28 pt: la mitad izquierda es la del arrendador.
+    expect(qr.x + qr.width).toBeLessThan(595.28 / 2);
+
+    const code = captured.boxes.find((box: any) => box.text === verification.code);
+    expect(code, 'el código no se imprimió entero').toBeTruthy();
+    expect(code.page).toBe(qr.page);
+    expect(code.x).toBeLessThan(595.28 / 2);
+  }, 30_000);
+
+  /**
+   * Sin certificado el PDF no se sella, así que la frase desaparece — pero el
+   * QR se queda: comprobar que el contrato existe y que el fichero no ha
+   * cambiado no depende del sello. Son dos cosas distintas y se deciden por
+   * separado.
+   */
+  it('sigue estando cuando el contrato no lleva sello', async () => {
+    let captured: any = null;
+    await buildContractPdf(
+      {
+        contractNumber: 'C-P2RJP0-2026',
+        company,
+        client,
+        vehicle,
+        reservation: { ...rental, ...pricing },
+        clauses: CONTRACT_CLAUSES,
+        preferredLocale: 'es',
+        generatedAt: new Date('2026-08-27T09:00:00Z'),
+        willBeDigitallySigned: false,
+        verification,
+        onLayout: (b: any) => (captured = b)
+      },
+      false
+    );
+    if (!captured) throw new Error('onLayout was never called');
+
+    expect(captured.graphics.some((g: any) => g.label === 'QR')).toBe(true);
+    expect(captured.boxes.some((box: any) => box.text === verification.code)).toBe(true);
+    // Y la frase que promete el sello NO puede estar.
+    expect(
+      captured.boxes.some((box: any) => box.text.startsWith('Firmado digitalmente'))
+    ).toBe(false);
+  }, 30_000);
 });
 
 describe('identity documents', () => {

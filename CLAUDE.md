@@ -61,6 +61,7 @@ Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar d
 - `payment-summary.util.spec.ts` — la liquidación de pagos sembrados (M-14)
 - `pricing.util.spec.ts` — que el IVA se **extrae** y no se suma, que `base + vat` cuadra al céntimo, y que el descuento de fidelidad y el precio acordado se acumulan sin fundirse
 - `functions/src/redsys.spec.ts` — la firma `HMAC_SHA256_V1` contra un vector de referencia congelado
+- `functions/src/contracts/qr.spec.ts` — que el QR del contrato **se lee de verdad**: rasteriza los rectángulos que se dibujan y los descifra con `jsqr`. Un símbolo mal montado tiene la misma pinta que uno bueno
 
 El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
 
@@ -216,9 +217,11 @@ functions/src/
 ├── admin-guard.ts                    # init lazy del admin SDK
 ├── company-config.ts                 # datos de empresa, leídos en cada llamada
 ├── redsys.ts                         # createRedsysPaymentLink + webhook
+├── public-url.ts                     # el dominio que ve el cliente, en un solo sitio
 ├── contracts/                        # generateContractPdf, signingLink,
 │                                     # getContractForSigning, signContract,
-│                                     # sendSignedContractEmail, clauses, pdf
+│                                     # sendSignedContractEmail, clauses, pdf,
+│                                     # sign-pdf, verification + qr (el CSV)
 └── documents/                        # presupuesto y justificante de reserva
                                       # (documents-pdf, storage, los 2 callables)
 ```
@@ -349,10 +352,12 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
 
-También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf` y `documentLink` (pública).
+También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf`, `documentLink`
+(pública), `getPaymentCheckout` (**pública**, el cliente paga desde su móvil) y
+`getContractVerification` (**pública**, el QR del contrato en papel).
 
-Son **once functions, y las once están vivas en los dos proyectos** (verificado el 29 de
-agosto de 2026). `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que
+Son **trece functions, y las trece están vivas en los dos proyectos** (verificado el 4 de
+septiembre de 2026). `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que
 desplegarla no basta: el rewrite `/d/**` viaja con el **hosting** y necesita su propio
 `firebase deploy --only hosting`.
 
@@ -392,9 +397,9 @@ Por eso existe además la ruta pública `d/:id` en `app.routes.ts`
 que reenvía directamente a la function. Es el paracaídas, no el plan: convierte un rewrite
 olvidado en un salto extra en vez de una pantalla de login.
 
-**El login es solo para la agencia.** Las dos rutas de cliente —`sign-contract/:token` y
-`d/:id`— van declaradas **antes** del bloque con `authGuard`, así que el router las resuelve
-primero y el guard nunca las ve.
+**El login es solo para la agencia.** Las cuatro rutas de cliente —`sign-contract/:token`,
+`d/:id`, `pay/:paymentId` y `v/:codigo`— van declaradas **antes** del bloque con
+`authGuard`, así que el router las resuelve primero y el guard nunca las ve.
 
 ### Idioma de los documentos
 
@@ -456,6 +461,82 @@ rompería en silencio el enlace que el cliente ya tiene en su WhatsApp.
 ### Firma de contratos
 
 El cliente firma **sin cuenta**: `/sign-contract/:token`, ruta pública fuera del `authGuard`. El token (256 bits URL-safe) es de un solo uso y caduca (7 días por defecto). Los tokens viven en `contractSigningTokens`, colección con reglas de Firestore que **deniegan todo acceso desde cliente** — solo el admin SDK entra.
+
+### El contrato va firmado con el certificado FNMT
+
+`signContract` sella el PDF con el certificado de representante de la empresa
+(`sign-pdf.ts`), **después** de incrustar la firma manuscrita del cliente. Un PDF
+firmado no admite cambios: cualquier cosa que se le haga después rompe la firma.
+
+⚠️ **El hueco de la firma son 32 KB.** Empezó en 8192 y falló con *Signature exceeds
+placeholder length: 11916 > 8192*: el certificado FNMT incrusta la cadena completa de la
+autoridad. Al renovarlo, comprobar que sigue cabiendo.
+
+⚠️ **La frase y la realidad se deciden juntas.** «Firmado digitalmente con certificado
+digital» solo se imprime si el PDF se va a sellar de verdad (`willBeDigitallySigned`), y
+**si el sellado falla el PDF se reconstruye sin ella**. Durante meses el contrato afirmó
+una firma que no tenía; la primera versión de N-8 repitió el error por decidir la frase
+antes de intentar sellar.
+
+El sellado **nunca aborta la firma**: si falla, se guarda sin sellar y se registra. Perder
+el sello es un problema; perder la firma que el cliente acaba de hacer, uno mucho peor.
+
+Se usa `@signpdf/placeholder-pdf-lib` y **no** `placeholder-plain`, que arrastra
+`pdfkit` → `crypto-js` con vulnerabilidades críticas sin llegar a usarse.
+
+Lo que aporta: integridad del documento e identidad del emisor. Lo que **no**: la firma
+del cliente sigue siendo un trazo en un canvas, firma electrónica simple. Sellar con el
+certificado de la empresa no la convierte en cualificada.
+
+### El QR de verificación, y qué NO promete
+
+En la casilla del arrendador van un QR y un código legible —`VLT-8QPB-YNT4-9AXJ`— que
+llevan a la ruta pública `/v/:codigo`. `getContractVerification` devuelve **cinco datos y
+ninguno personal**: número de contrato, fecha de firma, matrícula, estado y huella
+SHA-256. Ni nombre, ni documento, ni importe: quien escanee un contrato olvidado en un
+mostrador no puede quedarse con la ficha de nadie.
+
+⚠️ **Un QR no valida una firma electrónica.** Eso lo hace Adobe o VALIDe abriendo el PDF.
+Lo que resuelve es el **papel**, donde no hay nada que abrir. Ningún texto del PDF ni de
+la página puede sugerir otra cosa — es el mismo error que la frase que afirmaba una firma
+inexistente, y por eso el QR **convive** con «Firmado digitalmente con certificado
+digital» en vez de sustituirla: son dos hechos distintos, y si el sellado falla
+desaparece la frase y el QR se queda.
+
+Dos cosas que solo se pueden hacer en un orden:
+
+1. **El código se decide antes de construir el PDF**, porque el QR va dentro del
+   documento que después se sella y un PDF firmado no admite cambios.
+2. **La huella se calcula sobre los bytes que se guardan**, después de sellar y después
+   de la posible reconstrucción sin la frase. Calculada antes no coincide con ningún
+   fichero real, y la página le diría al cliente que su contrato está alterado.
+
+⚠️ **Un QR ilegible tiene la misma pinta que uno bueno.** La geometría vive en
+`qrRects()`, fuera del dibujo, para que un test pueda rasterizar los rectángulos reales y
+descifrarlos con un lector (`jsqr`). Un índice de fila invertido o la zona de silencio
+—4 módulos— olvidada dan un cuadrado de aspecto normal que ningún móvil entiende.
+
+El alfabeto del código no lleva `I`, `L`, `O`, `U`, `0` ni `1`: se dicta por teléfono y se
+teclea desde un papel. Y el sorteo usa muestreo con rechazo, porque `byte % 30` habría
+favorecido a los seis primeros símbolos.
+
+### El cliente paga desde su móvil
+
+`getPaymentCheckout` es **pública** y la abre el cliente en `/pay/:paymentId`, ruta
+declarada **antes** del bloque con `authGuard`. El id del pago es el secreto, como en los
+enlaces `/d/…`.
+
+⚠️ **Devuelve lo mínimo**: importe, moneda, concepto y marca. Nunca el pagador, el
+cliente, el vehículo ni la reserva — quien abre un enlace reenviado no debe enterarse de
+con quién trabajas. Un pago ya cobrado **no genera formulario**: reenviar el enlace
+después de pagar cobraría dos veces. Un id inexistente y uno cancelado responden lo mismo.
+
+La preparación del formulario (`prepareRedsysCheckout`) la comparten la vía pública y la
+del backoffice, para no duplicar la firma, el formato del pedido ni la URL del webhook.
+
+⚠️ **Redsys solo admite POST.** Abrir `paymentUrl` con un GET lleva a una pantalla de
+error del banco; durante meses fue así y ningún cobro con tarjeta pudo completarse. El
+POST vive en `RedsysPaymentService.openGateway()`, compartido por las dos pantallas.
 
 ### Datos de empresa
 
@@ -595,6 +676,23 @@ Inventario real (verificado el 29 de agosto de 2026):
 | `VELTO_PUBLIC_BASE_URL` | sí | **no** | **no** | enlaces de firma y cortos al dominio por defecto |
 | `CONTRACT_LINK_EXPIRY_DAYS` | sí | **no** | **no** | caducidad por defecto (7 días) |
 | `VELTO_COMPANY_*` | no | no | **no** | valores por defecto del código; `_EMAIL` se movió a `.env.<proyecto>` |
+| `VELTO_SIGNING_CERT` | — | — | sí | el contrato **no se sella**: sale sin firma digital |
+| `VELTO_SIGNING_CERT_PASSWORD` | — | — | sí | igual que el anterior |
+
+⚠️ **El certificado de firma sí es material criptográfico.** `VELTO_SIGNING_CERT`
+es el `.p12` de la FNMT **en base64** —Secret Manager guarda texto, no binario—
+y su contraseña va aparte. Nunca al repositorio ni a un `.env`:
+
+```bash
+base64 -w0 certificado.p12 > cert.b64
+firebase functions:secrets:set VELTO_SIGNING_CERT --project dev --data-file cert.b64
+firebase functions:secrets:set VELTO_SIGNING_CERT_PASSWORD --project dev
+rm cert.b64
+```
+
+Si no están puestos, `signContract` guarda el PDF **sin sellar** y el documento
+**no imprime** la línea «Firmado digitalmente con certificado digital». Es
+deliberado: el contrato no puede prometer una firma que no lleva.
 
 `RESEND_FROM_EMAIL` **ya no existe**: el remitente es `companyConfig().email`, el
 mismo que va impreso en los documentos. Un correo de empresa no es un secreto, y
@@ -690,10 +788,19 @@ y las clases `.email` / `.mono` usan `anywhere`.
 
 ## Deuda técnica conocida
 
-- **Redsys**: la firma, el formato del `Ds_Merchant_Order` y la URL del webhook están corregidos y cubiertos por tests contra un vector de referencia. **Falta la validación end-to-end contra el entorno de test real de Redsys**, que no puede hacerse desde el repo — y las Cloud Functions hay que desplegarlas a mano para que el fix llegue a producción.
-- **Redsys no puede funcionar todavía en ninguno de los dos entornos**: `createRedsysPaymentLink` declara `REDSYS_SECRET_KEY` pero **no** `REDSYS_MERCHANT_CODE`, `_TERMINAL` ni `_ENVIRONMENT`, así que los lee como `undefined` y aborta con «Redsys no está configurado». Arreglarlo es añadirlos al `secrets: [...]`, pero **antes hay que crearlos en producción**, donde no existen: declarar un secret inexistente tumba el despliegue. Mismo fallo que tenía el email, ya corregido.
+- **Redsys funciona de extremo a extremo** desde el 31 de agosto de 2026: probado contra la
+  pasarela de test y **con dinero real en producción** (10 €, código de autorización
+  379521). El webhook recibe, valida la firma y escribe el resultado. Comercio `361040215`,
+  terminal `1`, `test` en dev y **`live`** en producción.
+- **Los cargos extra que la fianza no cubre quedan pendientes**, no cobrados. Antes nacían
+  `paid` sin cobrarse y el exceso desaparecía (M-33). El reparto vive en
+  `distributeRetentionAcrossCharges`, con tests.
 - Sin lint.
 - `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
-- `CREDENTIALS.md` no está en `.gitignore`.
+- `CREDENTIALS.md` no está en `.gitignore`, aunque sí lo están `*.p12`, `*.pfx`, `*.key` y
+  `cert.b64` desde el 4 de septiembre de 2026.
+- ⚠️ **Puede haber una copia del certificado `.p12` en `public/`.** No se publica —hosting
+  sirve `dist/`— ni se commitea, pero **hay que borrarla**: quien tenga ese fichero y su
+  contraseña puede firmar contratos en nombre de la empresa.
 - `client.service.ts` tiene un `TODO`: al borrar cliente no elimina sus documentos de Storage.
 - `reservation.service.ts` tiene un `TODO`: operaciones que deberían ser transacción Firestore o Cloud Function.

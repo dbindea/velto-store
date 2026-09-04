@@ -25,6 +25,7 @@
 
 import * as functions from 'firebase-functions';
 import { storageBucket } from '../admin-guard';
+import { publicBaseUrl } from '../public-url';
 
 /** Ids we mint: URL-safe, no separators, nothing to mistype over the phone. */
 const ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
@@ -61,12 +62,10 @@ export function shortIdFor(kind: DocumentKind, id: string): string {
  * pointing it at the custom domain moves every customer-facing URL at once.
  */
 export function documentLinkUrl(shortId: string): string {
-  const configured = (process.env.VELTO_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-  // Without the secret, fall back to the project's Hosting domain rather than
-  // returning a relative path — a relative link pasted into WhatsApp is dead.
-  const project = process.env.GCLOUD_PROJECT || process.env.GCLOUD_PROJECT_ID || '';
-  const base = configured || (project ? `https://${project}.web.app` : '');
-  return `${base}/d/${shortId}`;
+  // Sin la variable, `publicBaseUrl()` cae al dominio de Hosting del proyecto en
+  // vez de devolver una ruta relativa: un enlace relativo pegado en un chat está
+  // muerto.
+  return `${publicBaseUrl()}/d/${shortId}`;
 }
 
 export const documentLink = functions.https.onRequest(async (req, res) => {

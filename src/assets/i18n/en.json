@@ -205,7 +205,27 @@
       "signed": "Signed"
     },
     "subtitle": "Generate, sign and send rental contracts",
-    "title": "Contracts"
+    "title": "Contracts",
+    "verify": {
+      "cancelledMessage": "This contract existed, but it is no longer in force.",
+      "cancelledTitle": "Contract cancelled",
+      "check": "Check",
+      "codeLabel": "Verification code",
+      "contractNumber": "Contract no.",
+      "disclaimer": "This page confirms that the contract exists and that the file has not changed. It does not validate the electronic signature: for that, open the PDF with Adobe Reader or VALIDe.",
+      "fingerprint": "Document fingerprint (SHA-256)",
+      "fingerprintHelp": "This is the fingerprint of the signed PDF we issued. If your digital copy gives a different one, it is not the same file.",
+      "notSealed": "No",
+      "plate": "Plate",
+      "seal": "Company seal",
+      "sealed": "Yes, with a digital certificate",
+      "signedAt": "Signed on",
+      "subtitle": "Contract verification",
+      "unknownMessage": "There is no contract with that code. Check that you copied it in full.",
+      "unknownTitle": "Not found",
+      "validMessage": "This contract exists and has been signed.",
+      "validTitle": "Contract verified"
+    }
   },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",
