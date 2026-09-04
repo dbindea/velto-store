@@ -4,6 +4,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
+    /* Explícito para que TypeScript no lo deduzca del directorio común de las
+       entradas, que cambia solo si algún día se importa algo de fuera de `src`.
+       Aquí `out-tsc` es desechable —quien compila de verdad es el builder de
+       Angular—, así que es orden, no un riesgo. En `functions/` sí lo es: ver
+       la nota de su tsconfig. */
+    "rootDir": "src",
     "types": []
   },
   "include": [

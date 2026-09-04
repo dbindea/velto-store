@@ -45,7 +45,6 @@ porque no la usaba nadie.
 
 | | Qué es |
 |---|---|
-| **N-11** | Permisos por rol hasta el último botón — la mitad hecha |
 | **N-5** | Pre-reserva desde la web pública — sin decidir |
 | **D-1…D-6** | Seis decisiones de Dorel pendientes |
 | resto | Mejoras menores: M-5, M-6, M-10, M-11, M-13, M-21 |
@@ -862,7 +861,7 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [x] Excepciones de workflow desde la UI — **implementadas y probadas el 1 de
       septiembre de 2026** (N-7): motivo obligatorio, el paso se desbloquea y
       queda registrado con autor y fecha en la ficha de la reserva.
-- [ ] **N-4 end-to-end**: poner un 10 % a un cliente, crear reserva y comprobar
+- [x] **N-4 end-to-end** *(4 sep 2026: descuento del 10 % congelado en el snapshot)*: poner un 10 % a un cliente, crear reserva y comprobar
       que el snapshot congela el porcentaje; luego retirárselo y verificar que
       la reserva anterior no se mueve
 - [ ] **N-4 + bloqueo**: marcar `blocked` a un cliente con descuento y
@@ -870,9 +869,9 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [x] **N-3 en el PDF real**, tras desplegar las functions a mano.
       *(27 ago 2026, 23:30)* Desglose correcto en presupuesto y contrato, en las
       dos direcciones de IVA.
-- [ ] **N-1 end-to-end**: generar un presupuesto, abrir el enlace y comprobar
+- [x] **N-1 end-to-end** *(4 sep 2026: enlace corto abierto sin sesión, 200 application/pdf)*: generar un presupuesto, abrir el enlace y comprobar
       que se ve desde un móvil sin sesión
-- [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
+- [x] **N-2 end-to-end** *(4 sep 2026: regenerado, el enlace del cliente sigue vivo)*: cobrar la señal, emitir el justificante, regenerarlo
       y verificar que **el primer enlace sigue funcionando**
 - [x] **Fianza a 0** — **probado el 31 de agosto de 2026**: no siembra fila de
       fianza, la marca «Exenta» con su motivo, y el motivo es obligatorio en el
@@ -1457,3 +1456,80 @@ inyección. Se resolvió subiendo la especificidad con el elemento
   algo ha fallado, no qué falta por rellenar— y la solución no es la misma. El
   sitio donde están concentrados es `reservation-detail` (9),
   `contract-detail` (5) y las dos inspecciones (6, todos de subida de fotos).
+
+---
+
+## ✅ N-11 · Permisos por rol, hasta el último botón *(hecho el 4 sep 2026)*
+
+La otra mitad de lo que dejó N-12. Un empleado ya no puede tocar precios,
+conceder descuentos, borrar ni cancelar — ni desde la pantalla ni llamando al
+servicio ni escribiendo directo en Firestore.
+
+**Decisiones de Dorel del día:**
+
+- **El coste del mantenimiento lo ve.** Quien lleva el coche al taller sabe lo
+  que costó porque pagó él. No se toca la ficha del vehículo.
+- **Eximir la fianza sí puede.** Exige motivo desde que existe y queda con autor
+  y fecha; la fianza a 0 es **lo normal** con un cliente conocido, no la
+  excepción, y pedir permiso convertiría cada uno de esos alquileres en una
+  llamada. Por eso `waiveDeposit` pasó a la lista del empleado.
+- **Dos roles bastan.** Nada de un tercero «por si acaso».
+
+**Las tres capas, y las tres hacen falta:**
+
+1. **La tabla** en `permissions.util.ts`, única autoridad, con `PermissionsService`
+   encima para que ningún componente escriba su propia consulta.
+2. **La pantalla**: el precio queda en solo lectura, el descuento deshabilitado,
+   y borrar y cancelar desaparecen. ⚠️ **Siempre con el porqué al lado** —«Tu rol
+   no permite cambiar el precio»—: un botón que se esfuma sin explicación hace
+   que el compañero llame preguntando qué le pasa a la aplicación.
+3. **El servicio**, que rechaza igualmente. Cualquier camino que no pase por ese
+   botón —una pantalla nueva, un atajo— se saltaría el permiso.
+
+**Y las reglas de Firestore, que es lo único que impide de verdad.** Todas las
+colecciones tenían `allow write`, que **incluye borrar**: un empleado podía
+vaciar la flota desde cualquier cliente de Firestore por mucho que la pantalla le
+escondiera el botón. Ahora:
+
+| Colección | Cambio |
+|---|---|
+| vehicles, clients, payments, inspections, vehicleMaintenance | `delete` solo administrador |
+| expenses | lectura y escritura solo administrador — si no, ocultar el menú era decoración |
+| contracts | `delete` **denegado a todos**: es el documento que acredita el alquiler |
+| reservations | `update` no puede mover `pricingSnapshot` salvo administrador |
+
+⚠️ **Lo que las reglas NO cubren, y conviene saberlo:** el precio con el que una
+reserva **nace**. Al crear no hay valor anterior con el que comparar, así que
+ahí manda la comprobación del servicio. Un empleado con conocimientos y la
+consola del navegador podría crear una reserva al precio que quisiera; no puede,
+en cambio, cambiar el de una que ya existe.
+
+**Probado en el navegador forzando el rol en memoria** —sin tocar Firestore, para
+no perder el propio acceso de administrador—:
+
+| Comprobación | Resultado |
+|---|---|
+| Menú | Desaparecen Gastos, Informes y Ajustes; el pie dice «Empleado» |
+| Navegar a `/expenses`, `/reports`, `/settings` | Los tres devuelven al **dashboard**, no al login: la sesión es válida, la sección no es suya |
+| `/reservations` | Entra, como debe |
+| Descuento de fidelidad | Deshabilitado, con «Tu rol no permite conceder descuentos» |
+| Precio del asistente | Solo lectura, con «Se aplica el de tarifa» |
+| Fianza | **Editable**, según lo decidido |
+| Rol real tras la prueba | Sigue siendo `admin` |
+
+⚠️ **Lo que no se ha podido probar: las reglas con un empleado de verdad.** Haría
+falta iniciar sesión con una segunda cuenta de Google. Están desplegadas en los
+dos entornos y leídas con cuidado, pero no ejercitadas — que en este proyecto no
+es lo mismo.
+
+- [x] **M-44 · Adjuntar una factura a un gasto fallaba siempre.** *(4 sep 2026)*
+  `storage/unauthorized`: a `storage.rules` le faltaba la regla de `expenses/`,
+  así que la ruta caía en el «default deny». Se construyó el módulo con la
+  subida como lo único sin probar, y estaba rota desde el primer día.
+
+  **Y arrastraba uno peor.** El gasto se crea antes de subir la factura —su ruta
+  de Storage lleva el id dentro—, así que al fallar la subida el gasto quedaba
+  guardado, el operador se quedaba en el formulario viendo un error y **volver a
+  pulsar creaba un segundo gasto idéntico**. Ahora se recuerda el id para que el
+  reintento actualice el mismo, y el aviso distingue «no se ha guardado» de «se
+  ha guardado sin la factura».

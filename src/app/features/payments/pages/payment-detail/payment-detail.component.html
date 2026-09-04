@@ -207,6 +207,7 @@
         </button>
       }
       @if (canCancel()) {
+        @if (permissions.canCancelReservations()) {
         <button class="btn-danger" type="button" [disabled]="cancelling" (click)="cancelPayment()">
           @if (cancelling) {
             <i class="pi pi-spin pi-spinner"></i>
@@ -215,6 +216,12 @@
           }
           {{ 'payments.actions.cancelPayment' | translate }}
         </button>
+        } @else {
+          <span class="permission-note">
+            <i class="pi pi-lock"></i>
+            {{ 'permissions.cancelLocked' | translate }}
+          </span>
+        }
       }
     </div>
   }

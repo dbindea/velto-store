@@ -306,6 +306,7 @@
       "notFound": "That expense no longer exists",
       "reservationRequired": "Choose the reservation it belongs to",
       "saveFailed": "The expense could not be saved",
+      "savedWithoutDocument": "The expense was saved, but the invoice could not be uploaded. Try again from this same expense.",
       "vehicleRequired": "Choose the vehicle it belongs to"
     },
     "fields": {
@@ -691,6 +692,12 @@
       "remainingPayment": "Remaining rental",
       "rentalPayment": "Full payment"
     }
+  },
+  "permissions": {
+    "cancelLocked": "Your role cannot cancel. Ask an administrator.",
+    "discountsLocked": "Your role cannot grant discounts.",
+    "notAllowed": "Your role does not allow this action",
+    "pricingLocked": "Your role cannot change the price. The tariff one applies."
   },
   "reports": {
     "days": "days",

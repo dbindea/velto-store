@@ -33,6 +33,7 @@ import {
   selectSettleablePayment,
   EXTRA_TYPES
 } from '@shared/utils/payment-summary.util';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 export interface CreateManualPaymentData {
   /** Required for reservation-linked payments. Optional for free payments. */
@@ -62,6 +63,7 @@ export interface CreateManualPaymentData {
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private firestore = inject(Firestore);
+  private permissions = inject(PermissionsService);
   private paymentsRef: CollectionReference;
 
   constructor() {
@@ -423,6 +425,12 @@ export class PaymentService {
    * Cancel a payment (mark as cancelled, doesn't delete).
    */
   async cancelPayment(id: string): Promise<void> {
+    // Defensa en profundidad: la UI esconde el botón y esto rechaza la
+    // llamada igualmente. Cualquier camino que no pase por ese botón se
+    // saltaría el permiso.
+    if (!this.permissions.can('cancelReservations')) {
+      throw new Error('permissions.notAllowed');
+    }
     const docRef = doc(this.firestore, `payments/${id}`);
     const snap = await getDoc(docRef);
     if (!snap.exists()) return;

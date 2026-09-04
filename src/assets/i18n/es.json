@@ -306,6 +306,7 @@
       "notFound": "Ese gasto ya no existe",
       "reservationRequired": "Elige la reserva a la que se imputa",
       "saveFailed": "No se ha podido guardar el gasto",
+      "savedWithoutDocument": "El gasto se ha guardado, pero la factura no se ha podido subir. Vuelve a intentarlo desde este mismo gasto.",
       "vehicleRequired": "Elige el vehículo al que se imputa"
     },
     "fields": {
@@ -691,6 +692,12 @@
       "remainingPayment": "Resto alquiler",
       "rentalPayment": "Pago completo"
     }
+  },
+  "permissions": {
+    "cancelLocked": "Tu rol no permite cancelar. Pídeselo a un administrador.",
+    "discountsLocked": "Tu rol no permite conceder descuentos.",
+    "notAllowed": "Tu rol no permite esta acción",
+    "pricingLocked": "Tu rol no permite cambiar el precio. Se aplica el de tarifa."
   },
   "reports": {
     "days": "días",

@@ -51,6 +51,7 @@ import { TranslateService } from '@core/i18n/translate.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
 import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
 import { ReservationNote } from '@shared/models/reservation.model';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -75,6 +76,8 @@ export class ReservationDetailComponent implements OnInit {
   private redsysService = inject(RedsysPaymentService);
   private translateService = inject(TranslateService);
   private destroyRef = inject(DestroyRef);
+  /** Público: las plantillas preguntan qué permite el rol. */
+  permissions = inject(PermissionsService);
 
   /** Id del pago cuya pasarela se está pidiendo, para no permitir dos clics. */
   readonly chargingPaymentId = signal<string | null>(null);

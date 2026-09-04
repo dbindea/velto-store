@@ -7,10 +7,12 @@ import { Client, QuickClientData, ClientDocumentFile, ClientDocumentType_File, L
 import { normalizeLoyaltyDiscountPercent } from '@shared/utils/pricing.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { AuthService } from '@core/auth/auth.service';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 @Injectable({ providedIn: 'root' })
 export class ClientService {
   private firestore = inject(Firestore);
+  private permissions = inject(PermissionsService);
   private storage = inject(Storage);
   private authService = inject(AuthService);
   private clientsRef: CollectionReference;
@@ -215,6 +217,18 @@ export class ClientService {
     const isBeingBlocked = data.trustLevel === 'blocked';
     if (!touchesDiscount && !isBeingBlocked) return;
 
+    /**
+     * ⚠️ Solo quien puede conceder descuentos los mueve.
+     *
+     * La retirada automática al **bloquear** a un cliente sí se deja pasar: no
+     * es conceder nada, es la consecuencia de bloquearlo, y quitársela a un
+     * empleado dejaría a un cliente bloqueado conservando su descuento — justo
+     * al revés de lo que se quiere.
+     */
+    if (touchesDiscount && !isBeingBlocked && !this.permissions.can('grantDiscounts')) {
+      throw new Error('permissions.notAllowed');
+    }
+
     const snap = await getDoc(docRef);
     const current = snap.exists() ? (snap.data() as Client) : undefined;
     const previousPercent = normalizeLoyaltyDiscountPercent(current?.loyaltyDiscountPercent);
@@ -251,6 +265,12 @@ export class ClientService {
    * TODO: Also delete documents from Storage.
    */
   async deleteClient(id: string): Promise<void> {
+    // Defensa en profundidad: la UI esconde el botón y esto rechaza la
+    // llamada igualmente. Cualquier camino que no pase por ese botón se
+    // saltaría el permiso.
+    if (!this.permissions.can('deleteRecords')) {
+      throw new Error('permissions.notAllowed');
+    }
     const docRef = doc(this.firestore, `clients/${id}`);
     await deleteDoc(docRef);
   }

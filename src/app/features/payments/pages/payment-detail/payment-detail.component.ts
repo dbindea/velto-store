@@ -14,6 +14,7 @@ import {
   PAYMENT_METHOD_ICONS
 } from '@shared/models/payment.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 @Component({
   selector: 'app-payment-detail',
@@ -26,6 +27,8 @@ export class PaymentDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private paymentService = inject(PaymentService);
+  /** Público: las plantillas preguntan qué permite el rol. */
+  permissions = inject(PermissionsService);
 
   payment: Payment | null = null;
   loading = true;

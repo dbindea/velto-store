@@ -306,6 +306,7 @@
       "notFound": "Această cheltuială nu mai există",
       "reservationRequired": "Alege rezervarea la care se impută",
       "saveFailed": "Cheltuiala nu a putut fi salvată",
+      "savedWithoutDocument": "Cheltuiala a fost salvată, dar factura nu a putut fi încărcată. Încearcă din nou din aceeași cheltuială.",
       "vehicleRequired": "Alege vehiculul la care se impută"
     },
     "fields": {
@@ -691,6 +692,12 @@
       "remainingPayment": "Rest închiriere",
       "rentalPayment": "Plată integrală"
     }
+  },
+  "permissions": {
+    "cancelLocked": "Rolul tău nu poate anula. Cere-i unui administrator.",
+    "discountsLocked": "Rolul tău nu poate acorda reduceri.",
+    "notAllowed": "Rolul tău nu permite această acțiune",
+    "pricingLocked": "Rolul tău nu poate schimba prețul. Se aplică cel din tarif."
   },
   "reports": {
     "days": "zile",

@@ -63,37 +63,60 @@ service cloud.firestore {
     // vehicles collection - only authorized users
     match /vehicles/{vehicleId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador (N-11).
+      allow delete: if callerIsAdmin();
     }
 
     // reservations collection - only authorized users
     match /reservations/{reservationId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create: if isAuthorized(request.auth.token.email);
+      // ⚠️ Un no-administrador puede actualizar una reserva —cobrar, entregar,
+      // devolver— pero **no mover su precio**: `pricingSnapshot` tiene que
+      // llegar igual que estaba. Es lo que impide cambiar a mano lo que ya se
+      // pactó.
+      //
+      // Lo que esta regla NO cubre: el precio con el que la reserva **nace**.
+      // Al crear no hay valor anterior con el que comparar, así que ahí manda
+      // la comprobación del servicio. Ver N-11 en mejoras-pendientes.
+      allow update: if isAuthorized(request.auth.token.email) && (
+        callerIsAdmin() ||
+        request.resource.data.pricingSnapshot == resource.data.pricingSnapshot
+      );
+      allow delete: if callerIsAdmin();
     }
 
     // clients collection - only authorized users
     match /clients/{clientId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador (N-11).
+      allow delete: if callerIsAdmin();
     }
 
     // payments collection - only authorized users
     match /payments/{paymentId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador (N-11).
+      allow delete: if callerIsAdmin();
     }
 
-    // expenses collection - only authorized users
+    // expenses: la cuenta de gastos es información de dueño. Un empleado no
+    // ve el módulo, así que tampoco la colección — si no, esconder el menú sería
+    // decoración y bastaría con abrir la consola del navegador (N-11).
     match /expenses/{expenseId} {
-      allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow read, write: if callerIsAdmin();
     }
 
     // contracts collection - only authorized users
     match /contracts/{contractId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      // Un contrato firmado no se borra desde la aplicación, ni siendo admin:
+      // es el documento que acredita el alquiler.
+      allow delete: if false;
     }
 
     // contractSigningTokens - NEVER read/write from the client.
@@ -107,14 +130,18 @@ service cloud.firestore {
     // inspections collection - only authorized users
     match /inspections/{inspectionId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador (N-11).
+      allow delete: if callerIsAdmin();
     }
 
     // vehicleMaintenance collection - only authorized users.
     // Free-form maintenance records (oil change, ITV, insurance, etc.).
     match /vehicleMaintenance/{maintenanceId} {
       allow read: if isAuthorized(request.auth.token.email);
-      allow write: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador (N-11).
+      allow delete: if callerIsAdmin();
     }
 
     // Default deny

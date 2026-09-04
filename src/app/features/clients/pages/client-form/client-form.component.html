@@ -200,13 +200,21 @@
                 min="0"
                 [max]="maxLoyaltyDiscount"
                 step="1"
-                [disabled]="isBlocked"
+                [disabled]="isBlocked || !permissions.canGrantDiscounts()"
                 placeholder="0">
               <span class="percent-sign">%</span>
             </div>
             @if (isBlocked) {
               <small class="field-hint warning">
                 {{ 'clients.loyalty.withdrawnOnBlock' | translate }}
+              </small>
+            } @else if (!permissions.canGrantDiscounts()) {
+              <!-- Se dice por qué está apagado. Un campo deshabilitado sin
+                   explicación hace que el compañero llame preguntando qué le
+                   pasa a la aplicación. -->
+              <small class="field-hint warning">
+                <i class="pi pi-lock"></i>
+                {{ 'permissions.discountsLocked' | translate }}
               </small>
             } @else {
               <small class="field-hint">

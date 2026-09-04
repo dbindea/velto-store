@@ -4,6 +4,24 @@
     "noImplicitReturns": true,
     "noUnusedLocals": false,
     "outDir": "lib",
+    /**
+     * ⚠️ **Explícito a propósito, y aquí importa más que en un proyecto normal.**
+     *
+     * Sin `rootDir`, TypeScript lo deduce: coge el directorio común de todos los
+     * ficheros de entrada y lo usa como raíz de la salida. Hoy todo cuelga de
+     * `src/`, así que `src/index.ts` acaba en `lib/index.js`, que es justo lo
+     * que dice el `main` del package.json y lo que Firebase arranca.
+     *
+     * El día que un fichero de entrada quede **fuera de `src/`** —basta con que
+     * alguien importe algo de `../` para compartir código con la app— la raíz
+     * común sube a `functions/`, la salida pasa a ser `lib/src/index.js` y el
+     * `main` apunta a un fichero que ya no existe. Compila igual, despliega
+     * igual, y las functions revientan al arrancar.
+     *
+     * Con `rootDir` puesto, ese mismo día TypeScript da un error de compilación
+     * en vez de mover la salida en silencio.
+     */
+    "rootDir": "src",
     "sourceMap": true,
     "strict": true,
     "target": "es2020"
