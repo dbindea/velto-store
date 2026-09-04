@@ -33,6 +33,7 @@ import { ClientService } from '@features/clients/services/client.service';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { ReservationService, VehicleAvailabilityResult } from '@features/reservations/services/reservation.service';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 
@@ -50,6 +51,8 @@ export class ReservationCreateComponent implements OnInit {
   private vehicleService = inject(VehicleService);
   private documentService = inject(ReservationDocumentService);
   private settingsService = inject(SettingsService);
+  /** Público: la plantilla pregunta si se puede tocar el precio. */
+  permissions = inject(PermissionsService);
 
   // Current step
   currentStep: Step = 'dates';

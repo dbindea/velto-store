@@ -31,7 +31,6 @@ describe('lo que NO puede un empleado', () => {
   it('no toca precios ni descuentos: es donde se regala dinero', () => {
     expect(can('employee', 'editPricing')).toBe(false);
     expect(can('employee', 'grantDiscounts')).toBe(false);
-    expect(can('employee', 'waiveDeposit')).toBe(false);
   });
 
   it('no borra ni cancela: lo irreversible y lo que descuadra la caja', () => {
@@ -56,6 +55,16 @@ describe('lo que NO puede un empleado', () => {
    */
   it('sí puede saltarse un paso del workflow, que queda registrado', () => {
     expect(can('employee', 'skipWorkflowSteps')).toBe(true);
+  });
+
+  /**
+   * Y sí puede eximir la fianza, por el mismo motivo: exige motivo escrito desde
+   * que existe, y la fianza a 0 es **lo normal** con un cliente conocido, no la
+   * excepción. Si necesitara permiso, cada uno de esos alquileres acabaría
+   * siendo una llamada a Dorel.
+   */
+  it('sí puede eximir la fianza, que ya exige motivo', () => {
+    expect(can('employee', 'waiveDeposit')).toBe(true);
   });
 });
 

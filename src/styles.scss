@@ -538,3 +538,32 @@ textarea.is-invalid:focus {
     margin-top: 0;
   }
 }
+
+/**
+ * Por qué falta un botón.
+ *
+ * Un botón que desaparece sin explicación hace que el compañero llame
+ * preguntando qué le pasa a la aplicación. Es la misma idea que el «Falta
+ * contrato firmado» del workflow: si no se puede, se dice.
+ */
+.permission-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+
+  i { font-size: 0.75rem; }
+}
+
+.price-locked {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+
+  i { font-size: 0.7rem; }
+}

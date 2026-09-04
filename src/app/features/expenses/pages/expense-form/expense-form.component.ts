@@ -34,6 +34,7 @@ import {
   problemKeys
 } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 /**
  * Alta y edición de un gasto.
@@ -59,6 +60,8 @@ export class ExpenseFormComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private translate = inject(TranslateService);
   private auth = inject(AuthService);
+  /** Público: las plantillas preguntan qué permite el rol. */
+  permissions = inject(PermissionsService);
 
   readonly vatRates = EXPENSE_VAT_RATES;
   readonly scopeOptions: { value: ExpenseScope; label: string }[] = [

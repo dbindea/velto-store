@@ -30,6 +30,7 @@ import {
 } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 @Component({
   selector: 'app-client-form',
@@ -49,6 +50,8 @@ export class ClientFormComponent implements OnInit {
   private router = inject(Router);
   private clientService = inject(ClientService);
   private translateService = inject(TranslateService);
+  /** Público: las plantillas preguntan qué permite el rol. */
+  permissions = inject(PermissionsService);
 
   isEditMode = false;
   clientId: string | null = null;

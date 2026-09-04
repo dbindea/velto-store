@@ -1756,3 +1756,41 @@ completar la devolución— y tres expresiones de plantilla que quedaron con
 sintaxis rota (`problems[''+"fuelLevel"]`). Las dos cosas las cazó mirar el
 fichero después, no el compilador: la primera era HTML válido en el sitio
 equivocado.
+
+---
+
+## C-34 · Permisos por rol hasta el último botón (N-11) — 4 de septiembre de 2026
+
+Probado **forzando el rol a `employee` solo en memoria**, sin tocar Firestore:
+cambiarlo de verdad habría dejado a la única cuenta administradora fuera de
+Ajustes, sin forma de volver desde la aplicación.
+
+| Comprobación | Resultado |
+|---|---|
+| Menú lateral | Desaparecen Gastos, Informes y Ajustes; el pie pone «Empleado» |
+| `/expenses`, `/reports`, `/settings` | Los tres devuelven al **dashboard** |
+| `/reservations` | Entra |
+| Descuento de fidelidad | Deshabilitado + «Tu rol no permite conceder descuentos» |
+| Precio del asistente | Solo lectura + «Se aplica el de tarifa» |
+| Fianza | **Editable**, según lo decidido |
+| Rol real al terminar | Sigue siendo `admin` |
+
+Se devuelve al **dashboard** y no al login a propósito: la sesión es válida, solo
+que esa sección no es suya. Mandarlo a login diría que ha caducado, que no es
+verdad, y le haría volver a entrar para encontrarse lo mismo.
+
+**El agujero de verdad estaba en las reglas, no en la pantalla.** Todas las
+colecciones tenían `allow write`, que **incluye borrar**: un empleado podía
+vaciar la flota desde cualquier cliente de Firestore con todos los botones
+perfectamente escondidos. Ahora `create, update` y `delete` van separados, y
+`expenses` es de administrador entero — si no, ocultar el menú era decoración.
+
+**Dos tropiezos de los scripts de aplicación, los dos cazados mirando el
+fichero:** un bucle que se re-encontraba a sí mismo y anidó **seis** `@if`
+idénticos donde iba uno, y un regex de limpieza que se comió una llave `}` que
+no era suya y rompió el cierre de un bloque. El compilador cazó el segundo; el
+primero compilaba perfectamente y solo se veía leyendo el diff.
+
+⚠️ **Lo que NO se ha probado: las reglas con un empleado real.** Haría falta
+iniciar sesión con una segunda cuenta de Google. Están desplegadas en los dos
+entornos y revisadas, pero no ejercitadas — que en este proyecto no es lo mismo.

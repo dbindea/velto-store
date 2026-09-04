@@ -416,7 +416,11 @@
                   </div>
                 }
 
-                <!-- Editable: the agreed price wins over the tariff. -->
+                <!-- Editable: the agreed price wins over the tariff.
+                     ⚠️ Solo para quien puede tocar precios: es donde se regala
+                     dinero sin que se note. Un empleado lo VE —tiene que
+                     decírselo al cliente— pero no lo cambia, y se le dice por
+                     qué en vez de dejarle un campo que no responde. -->
                 <div class="price-row total editable-price">
                   <span>{{ 'reservations.pricing.netPrice' | translate }}:</span>
                   <span class="price-input-wrap">
@@ -429,10 +433,17 @@
                       name="netPrice"
                       min="0"
                       step="0.01"
+                      [readonly]="!permissions.canEditPricing()"
                       [attr.aria-label]="'reservations.pricing.netPrice' | translate">
                     <span class="price-currency">€</span>
                   </span>
                 </div>
+                @if (!permissions.canEditPricing()) {
+                  <p class="price-locked">
+                    <i class="pi pi-lock"></i>
+                    {{ 'permissions.pricingLocked' | translate }}
+                  </p>
+                }
 
                 @if (priceOverridden) {
                   <div class="price-row adjustment">

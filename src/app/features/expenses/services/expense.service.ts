@@ -22,6 +22,7 @@ import { VehicleMaintenance } from '@shared/models/vehicle-maintenance.model';
 import { buildExpenseRows, validateExpense } from '@shared/utils/expense.util';
 import { firstProblem } from '@shared/utils/form-problems.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 export interface ExpenseFilters {
   scope?: ExpenseScope;
@@ -44,6 +45,7 @@ export interface ExpenseFilters {
 @Injectable({ providedIn: 'root' })
 export class ExpenseService {
   private firestore = inject(Firestore);
+  private permissions = inject(PermissionsService);
   private storage = inject(Storage);
   private expensesRef: CollectionReference;
   private maintenanceRef: CollectionReference;
@@ -156,6 +158,12 @@ export class ExpenseService {
 
   /** Borra el gasto **y su factura**: un fichero huérfano en Storage no se ve. */
   async deleteExpense(id: string): Promise<void> {
+    // Defensa en profundidad: la UI esconde el botón y esto rechaza la
+    // llamada igualmente. Cualquier camino que no pase por ese botón se
+    // saltaría el permiso.
+    if (!this.permissions.can('deleteRecords')) {
+      throw new Error('permissions.notAllowed');
+    }
     const expense = await this.getExpenseById(id);
     if (expense?.documentPath) {
       try {

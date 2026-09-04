@@ -56,9 +56,15 @@ export type Permission =
  * - **Informes y gastos**, que son la cuenta de resultados del negocio:
  *   información de dueño, no de operación diaria.
  *
- * Y una que **sí** puede, también por decisión suya: **saltarse un paso del
- * workflow**. Es la salida de emergencia de quien está delante del cliente con
- * el coche en la puerta, y ya queda registrada con autor y motivo.
+ * Y dos que **sí** puede, también por decisión suya, las dos por el mismo
+ * motivo: quien está en el mostrador con el cliente delante tiene que poder
+ * seguir, y las dos dejan rastro con autor y motivo.
+ *
+ * - **Saltarse un paso del workflow**, que es la salida de emergencia.
+ * - **Eximir la fianza**, que exige motivo desde que existe. Si necesitara
+ *   permiso, cada cliente conocido al que no se le cobra fianza acabaría siendo
+ *   una llamada a Dorel — y la fianza a 0 es lo normal con clientes conocidos,
+ *   no la excepción.
  */
 const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
   admin: [
@@ -73,7 +79,7 @@ const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
     'cancelReservations',
     'skipWorkflowSteps'
   ],
-  employee: ['skipWorkflowSteps']
+  employee: ['waiveDeposit', 'skipWorkflowSteps']
 };
 
 /**

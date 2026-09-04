@@ -483,9 +483,11 @@
                       <button class="btn-icon" (click)="completeMaintenanceItem(m)" [title]="'maintenance.actions.complete' | translate">
                         <i class="pi pi-check"></i>
                       </button>
+                      @if (permissions.canDelete()) {
                       <button class="btn-icon btn-icon--danger" (click)="deleteMaintenanceItem(m)" [title]="'common.delete' | translate">
                         <i class="pi pi-trash"></i>
                       </button>
+                      }
                     </div>
                   </div>
                 }
@@ -532,9 +534,11 @@
                       <button class="btn-icon" (click)="completeMaintenanceItem(m)" [title]="'maintenance.actions.complete' | translate">
                         <i class="pi pi-check"></i>
                       </button>
+                      @if (permissions.canDelete()) {
                       <button class="btn-icon btn-icon--danger" (click)="deleteMaintenanceItem(m)" [title]="'common.delete' | translate">
                         <i class="pi pi-trash"></i>
                       </button>
+                      }
                     </div>
                   </div>
                 }
@@ -581,9 +585,11 @@
                       <button class="btn-icon" (click)="openEditMaintenance(m)" [title]="'common.edit' | translate">
                         <i class="pi pi-pencil"></i>
                       </button>
+                      @if (permissions.canDelete()) {
                       <button class="btn-icon btn-icon--danger" (click)="deleteMaintenanceItem(m)" [title]="'common.delete' | translate">
                         <i class="pi pi-trash"></i>
                       </button>
+                      }
                     </div>
                   </div>
                 }
@@ -637,9 +643,11 @@
               <button class="btn btn-secondary" (click)="closeDeleteModal()">
                 {{ 'common.cancel' | translate }}
               </button>
+              @if (permissions.canDelete()) {
               <button class="btn btn-danger" (click)="deleteVehicle()">
                 {{ 'common.delete' | translate }}
               </button>
+              }
             </div>
           </div>
         </div>

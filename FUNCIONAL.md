@@ -636,8 +636,9 @@ acaba en «cópiale los permisos a Juan».
 | Saltarse un paso del workflow (queda registrado) | Sí | **Sí** |
 | Informes y gastos | Sí | No |
 | Ajustes y dar acceso a otros | Sí | No |
-| Precios, descuentos y eximir fianza | Sí | No *(pendiente, N-11)* |
-| Borrar y cancelar | Sí | No *(pendiente, N-11)* |
+| Precios y descuentos | Sí | No |
+| **Eximir la fianza** (con motivo) | Sí | **Sí** |
+| Borrar y cancelar | Sí | No |
 
 Los tres límites los eligió Dorel: **precios y descuentos** porque es donde se regala dinero
 sin que se note, **borrar y cancelar** porque es lo irreversible, e **informes y gastos**

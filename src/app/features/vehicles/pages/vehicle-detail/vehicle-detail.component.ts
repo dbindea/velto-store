@@ -36,6 +36,7 @@ import {
   MaintenanceStatus,
   VehicleMaintenance
 } from '@shared/models/vehicle-maintenance.model';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 @Component({
   selector: 'app-vehicle-detail',
@@ -57,6 +58,8 @@ export class VehicleDetailComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private maintenanceService = inject(VehicleMaintenanceService);
   private translateService = inject(TranslateService);
+  /** Público: las plantillas preguntan qué permite el rol. */
+  permissions = inject(PermissionsService);
 
   vehicle: Vehicle | null = null;
   loading = true;

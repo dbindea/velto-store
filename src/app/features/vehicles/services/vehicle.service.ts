@@ -29,10 +29,12 @@ import { getDefaultPricingRules, sortPricingRules } from '@shared/utils/pricing.
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { Observable, from, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
   private firestore = inject(Firestore);
+  private permissions = inject(PermissionsService);
   private storage = inject(Storage);
   private vehiclesRef: CollectionReference;
 
@@ -114,6 +116,12 @@ export class VehicleService {
   }
 
   async deleteVehicle(id: string): Promise<void> {
+    // Defensa en profundidad: la UI esconde el botón y esto rechaza la
+    // llamada igualmente. Cualquier camino que no pase por ese botón se
+    // saltaría el permiso.
+    if (!this.permissions.can('deleteRecords')) {
+      throw new Error('permissions.notAllowed');
+    }
     const docRef = doc(this.firestore, `vehicles/${id}`);
     await deleteDoc(docRef);
   }

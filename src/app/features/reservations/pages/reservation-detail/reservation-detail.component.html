@@ -978,6 +978,7 @@
               <button class="btn btn-secondary" type="button" (click)="closeCancelModal()">
                 Volver
               </button>
+              @if (permissions.canCancelReservations()) {
               <button class="btn btn-danger-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
                 @if (cancelling) {
                   <i class="pi pi-spin pi-spinner"></i>
@@ -986,6 +987,12 @@
                 }
                 {{ 'reservations.actions.cancel' | translate }}
               </button>
+              } @else {
+                <span class="permission-note">
+                  <i class="pi pi-lock"></i>
+                  {{ 'permissions.cancelLocked' | translate }}
+                </span>
+              }
             </div>
           </div>
         </div>

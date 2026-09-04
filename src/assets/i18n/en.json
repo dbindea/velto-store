@@ -692,6 +692,12 @@
       "rentalPayment": "Full payment"
     }
   },
+  "permissions": {
+    "cancelLocked": "Your role cannot cancel. Ask an administrator.",
+    "discountsLocked": "Your role cannot grant discounts.",
+    "notAllowed": "Your role does not allow this action",
+    "pricingLocked": "Your role cannot change the price. The tariff one applies."
+  },
   "reports": {
     "days": "days",
     "monthlyRevenue": "Monthly revenue",

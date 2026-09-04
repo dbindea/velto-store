@@ -191,10 +191,12 @@
 
       <div class="form-actions">
         @if (expenseId) {
+          @if (permissions.canDelete()) {
           <button class="btn btn-danger" type="button" [disabled]="saving" (click)="remove()">
             <i class="pi pi-trash"></i>
             {{ 'common.delete' | translate }}
           </button>
+          }
         }
         <button class="btn btn-secondary" type="button" (click)="cancel()">
           {{ 'common.cancel' | translate }}

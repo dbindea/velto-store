@@ -41,6 +41,7 @@ import {
   buildWorkflowException,
   ExceptionableAction
 } from '@shared/utils/reservation-workflow.util';
+import { PermissionsService } from '@core/auth/permissions.service';
 
 export interface VehicleAvailabilityResult {
   vehicleId: string;
@@ -55,6 +56,7 @@ export interface VehicleAvailabilityResult {
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
   private firestore = inject(Firestore);
+  private permissions = inject(PermissionsService);
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
   private paymentService = inject(PaymentService);
@@ -495,6 +497,21 @@ export class ReservationService {
       client.loyaltyDiscountPercent,
       agreedNetPrice
     );
+
+    /**
+     * ⚠️ **El precio acordado a mano solo lo pone quien puede tocar precios.**
+     *
+     * Se comprueba **después** de resolver, sobre el resultado: es la única
+     * forma de saber si el precio que llega difiere de la tarifa. Comprobar
+     * antes que `agreedNetPrice` viene relleno daría un falso positivo cada vez
+     * que el asistente manda el mismo número que ya calculaba.
+     *
+     * La pantalla ya deja el campo en solo lectura; esto es lo que impide que
+     * un camino distinto —una llamada directa al servicio— se lo salte.
+     */
+    if (pricing.priceOverridden && !this.permissions.can('editPricing')) {
+      throw new Error('permissions.notAllowed');
+    }
     const finalPrice = pricing.finalPrice;
 
     // A signal larger than the whole rental would leave the reservation
@@ -677,6 +694,12 @@ export class ReservationService {
    * Throws if the reservation has already been delivered, returned or closed.
    */
   async cancelReservation(id: string): Promise<void> {
+    // Defensa en profundidad: la UI esconde el botón y esto rechaza la
+    // llamada igualmente. Cualquier camino que no pase por ese botón se
+    // saltaría el permiso.
+    if (!this.permissions.can('cancelReservations')) {
+      throw new Error('permissions.notAllowed');
+    }
     const docRef = doc(this.firestore, `reservations/${id}`);
     const snap = await getDoc(docRef);
     if (!snap.exists()) {

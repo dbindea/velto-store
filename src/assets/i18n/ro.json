@@ -692,6 +692,12 @@
       "rentalPayment": "Plată integrală"
     }
   },
+  "permissions": {
+    "cancelLocked": "Rolul tău nu poate anula. Cere-i unui administrator.",
+    "discountsLocked": "Rolul tău nu poate acorda reduceri.",
+    "notAllowed": "Rolul tău nu permite această acțiune",
+    "pricingLocked": "Rolul tău nu poate schimba prețul. Se aplică cel din tarif."
+  },
   "reports": {
     "days": "zile",
     "monthlyRevenue": "Venituri lunare",

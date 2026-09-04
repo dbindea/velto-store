@@ -67,6 +67,17 @@ El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa 
 
 ⚠️ `functions/tsconfig.json` excluye `**/*.spec.ts` del build. No quites esa exclusión: `firebase deploy` sube todo lo que haya en `lib/`, y el bundle acabaría importando vitest en runtime.
 
+⚠️ **`rootDir` está puesto a mano en los tres tsconfig, y en `functions/` no es cosmético.**
+Sin él TypeScript lo deduce del directorio común de las entradas. Hoy todo cuelga de `src/`,
+así que `src/index.ts` sale en `lib/index.js`, que es lo que dice el `main` del
+package.json. El día que un fichero de entrada quede fuera de `src/` —basta con importar
+algo de `../` para compartir código con la app— la raíz común sube, la salida pasa a
+`lib/src/index.js` y el `main` apunta a un fichero que ya no existe: compila, despliega y
+las functions revientan al arrancar. Con `rootDir` explícito, ese caso da un error de
+compilación (`TS6059`) en vez de mover la salida en silencio. Es además el motivo técnico
+por el que la app y las functions **no pueden compartir módulo**, más allá de tener
+tsconfigs separados.
+
 ## Lo que NO existe en este proyecto
 
 - **No hay lint.** No hay ESLint configurado ni script `lint`.
@@ -296,11 +307,25 @@ corta una navegación; lo que impide de verdad leer o escribir es
 `firestore.rules`. Los dos ficheros se editan por separado y nada los ata: al
 añadir un permiso hay que tocar **los dos**.
 
-⚠️ **Hoy solo están conectados los permisos de módulo entero** —Informes, Gastos
-y Ajustes, cerrados a `employee`—. Los finos (precios, descuentos, borrar,
-cancelar) están **declarados en la tabla y sin consultar por nadie**: es N-11.
-Están escritos ya para que la tabla naciera completa y en un sitio, no para que
-alguien crea que ya limitan algo.
+Los permisos se aplican en **tres capas, y las tres hacen falta**: la pantalla
+(esconde o bloquea), el servicio (rechaza la llamada venga por donde venga) y
+`firestore.rules` (lo único que impide de verdad). `PermissionsService` es el
+atajo para las plantillas; la tabla sigue estando en un solo sitio.
+
+⚠️ **Un permiso denegado se explica.** «Tu rol no permite cambiar el precio», al
+lado del campo. Un botón que desaparece sin más hace que el compañero llame
+preguntando qué le pasa a la aplicación — misma idea que el «Falta contrato
+firmado» del workflow.
+
+⚠️ **Lo que las reglas no pueden cubrir:** el precio con el que una reserva
+**nace**. Al crear no hay valor anterior con el que comparar, así que ahí manda
+la comprobación del servicio. Una reserva **ya creada** sí está protegida:
+`update` no puede mover `pricingSnapshot` salvo siendo administrador.
+
+⚠️ **`allow write` incluye borrar.** Todas las colecciones lo tenían, así que un
+empleado podía vaciar la flota desde cualquier cliente de Firestore con la
+pantalla perfectamente bloqueada. Ahora `create, update` y `delete` van
+separados.
 
 ⚠️ **Nadie puede desactivarse ni degradarse a sí mismo** en Ajustes. Si el único
 administrador se quita el acceso, no hay forma de volver desde la aplicación:

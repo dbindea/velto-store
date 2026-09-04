@@ -692,6 +692,12 @@
       "rentalPayment": "Pago completo"
     }
   },
+  "permissions": {
+    "cancelLocked": "Tu rol no permite cancelar. Pídeselo a un administrador.",
+    "discountsLocked": "Tu rol no permite conceder descuentos.",
+    "notAllowed": "Tu rol no permite esta acción",
+    "pricingLocked": "Tu rol no permite cambiar el precio. Se aplica el de tarifa."
+  },
   "reports": {
     "days": "días",
     "monthlyRevenue": "Ingresos por mes",
