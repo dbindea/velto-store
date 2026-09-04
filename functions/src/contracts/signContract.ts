@@ -29,6 +29,13 @@ import {
   isSigningConfigured,
   signPdfWithCompanyCertificate
 } from './sign-pdf';
+import {
+  formatVerificationCode,
+  generateVerificationCode,
+  sha256Hex,
+  verificationUrl,
+  verificationUrlLabel
+} from './verification';
 
 interface SignRequest {
   token: string;
@@ -157,6 +164,17 @@ export const signContract = functions.https.onCall(
     const companySnapshot = contract.companySnapshot || companyConfig();
 
     /**
+     * Código Seguro de Verificación (N-9).
+     *
+     * Se decide **antes** de construir el PDF porque el QR va dentro del
+     * documento que después se sella: un PDF firmado no admite cambios, así que
+     * no hay una segunda oportunidad de dibujarlo. Si el contrato ya tuviera
+     * código se respeta — el que el cliente tenga impreso tiene que seguir
+     * valiendo.
+     */
+    const verificationCode: string = contract.verificationCode || generateVerificationCode();
+
+    /**
      * Se construye a demanda porque puede haber que rehacerlo.
      *
      * `anunciarFirma` gobierna la línea «Firmado digitalmente con certificado
@@ -212,7 +230,12 @@ export const signContract = functions.https.onCall(
         signaturePng: new Uint8Array(decoded.buffer),
         signedAt: now,
         signerName: contract.clientSnapshot?.fullName,
-        willBeDigitallySigned: anunciarFirma
+        willBeDigitallySigned: anunciarFirma,
+        verification: {
+          code: formatVerificationCode(verificationCode),
+          url: verificationUrl(verificationCode),
+          urlLabel: verificationUrlLabel()
+        }
       },
       true
     );
@@ -241,6 +264,15 @@ export const signContract = functions.https.onCall(
       anuncioPrevisto && !sealed.signed
         ? await construirPdf(false)
         : sealed.bytes;
+
+    /**
+     * ⚠️ **La huella se calcula sobre lo que se guarda, no sobre lo que se
+     * construyó.** El sellado cambia los bytes —es lo que hace—, y si el
+     * anuncio se retira el PDF se rehace entero. Calcularla antes daría un
+     * valor que no coincide con ningún fichero existente, y la página de
+     * verificación diría que el contrato del cliente está alterado.
+     */
+    const fingerprint = sha256Hex(pdfParaGuardar);
 
     const signedPath = `contracts/${reservationId}/contract-signed.pdf`;
     const signedFile = storage.bucket().file(signedPath);
@@ -282,6 +314,14 @@ export const signContract = functions.https.onCall(
         signedPdfPath: signedPath,
         signatureUrl: sigUrl,
         signaturePath: sigPath,
+        // N-9. El código es lo que se busca desde la página pública, y la
+        // huella lo que permite decirle a quien la abre si el fichero que
+        // tiene delante es el que emitimos. `digitallySealed` guarda lo que de
+        // verdad pasó al sellar, no lo que se pretendía: es la misma regla que
+        // la frase impresa, y por el mismo motivo.
+        verificationCode,
+        signedPdfSha256: fingerprint,
+        digitallySealed: sealed.signed,
         updatedAt: nowServer
       });
       tx.set(

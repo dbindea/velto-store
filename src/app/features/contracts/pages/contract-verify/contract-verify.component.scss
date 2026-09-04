@@ -1,0 +1,232 @@
+/**
+ * Pantalla pública de verificación de contrato (N-9).
+ *
+ * Misma estructura que las otras dos que ve el cliente —firma y pago—: cabecera
+ * con la marca, tarjeta centrada y pie. Puede recibir las tres el mismo día y
+ * tienen que parecer de la misma empresa.
+ *
+ * Se diseña para el móvil, que es de donde se escanea un QR.
+ */
+.public-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.public-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+
+  app-brand-logo {
+    display: block;
+    height: 36px;
+    max-width: 200px;
+  }
+}
+
+.brand-tagline {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.public-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1rem;
+}
+
+.status-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+
+  h1 {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  > i {
+    font-size: 2.5rem;
+  }
+
+  &.success > i { color: var(--success-color); }
+  &.warning > i { color: var(--warning-color); }
+  &.error > i { color: var(--error-color); }
+  &.loading > i { color: var(--text-muted); }
+}
+
+/**
+ * Los datos del contrato: etiqueta y valor, en dos columnas que se apilan en
+ * pantallas estrechas. Recolocar, nunca ocultar — aquí no sobra ninguno de los
+ * cuatro.
+ */
+.facts {
+  width: 100%;
+  margin: 0.5rem 0 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.4rem 1rem;
+  text-align: left;
+  font-size: 0.9rem;
+
+  dt {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 380px) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+
+    dd { margin-bottom: 0.4rem; }
+  }
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+
+/**
+ * La huella se lee carácter a carácter para compararla con la del fichero, así
+ * que va monoespaciada, en grupos y con sitio para partir en varias líneas. Un
+ * `text-overflow: ellipsis` aquí la dejaría inservible.
+ */
+.fingerprint {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  text-align: left;
+
+  .fingerprint-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+
+  code {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem;
+    overflow-wrap: anywhere;
+  }
+
+  .hint {
+    margin: 0.4rem 0 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}
+
+.code-form {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+
+  label {
+    width: 100%;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  input {
+    flex: 1 1 12rem;
+    // Sin esto, un campo con texto ancho estira toda la fila.
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.95rem;
+    // El código va en mayúsculas; que el teclado del móvil no proponga otra cosa.
+    text-transform: uppercase;
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+  }
+}
+
+.disclaimer {
+  max-width: 460px;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.public-footer {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+}

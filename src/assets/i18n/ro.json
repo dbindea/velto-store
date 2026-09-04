@@ -205,7 +205,27 @@
       "signed": "Semnat"
     },
     "subtitle": "Generează, semnează și trimite contracte de închiriere",
-    "title": "Contracte"
+    "title": "Contracte",
+    "verify": {
+      "cancelledMessage": "Acest contract a existat, dar nu mai este în vigoare.",
+      "cancelledTitle": "Contract anulat",
+      "check": "Verifică",
+      "codeLabel": "Cod de verificare",
+      "contractNumber": "Nr. contract",
+      "disclaimer": "Această pagină confirmă că acest contract există și că fișierul nu a fost modificat. Nu validează semnătura electronică: pentru asta, deschide PDF-ul cu Adobe Reader sau în VALIDe.",
+      "fingerprint": "Amprenta documentului (SHA-256)",
+      "fingerprintHelp": "Este amprenta PDF-ului semnat pe care l-am emis. Dacă exemplarul tău digital dă alta, nu este același fișier.",
+      "notSealed": "Nu",
+      "plate": "Număr de înmatriculare",
+      "seal": "Sigiliul companiei",
+      "sealed": "Da, cu certificat digital",
+      "signedAt": "Data semnării",
+      "subtitle": "Verificarea contractului",
+      "unknownMessage": "Nu există niciun contract cu acest cod. Verifică dacă l-ai copiat în întregime.",
+      "unknownTitle": "Nu a fost găsit",
+      "validMessage": "Acest contract există și este semnat.",
+      "validTitle": "Contract verificat"
+    }
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",

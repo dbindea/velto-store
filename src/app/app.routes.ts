@@ -37,6 +37,26 @@ export const routes: Routes = [
    * El id del pago es el secreto, como en `/d/…`. La function que hay detrás
    * devuelve solo importe, concepto y marca.
    */
+  /**
+   * Verificación de un contrato desde su QR o su código impreso (N-9). PÚBLICA
+   * y **antes** del bloque con `authGuard`: quien escanea el QR de un contrato
+   * en papel no tiene cuenta ni tiene por qué tenerla.
+   *
+   * La ruta sin código sirve para teclearlo a mano, que es la salida de quien
+   * lo copia mal de un papel.
+   *
+   * ⚠️ La function que hay detrás devuelve cinco datos y **ningún dato
+   * personal**: un contrato olvidado en un mostrador no puede convertirse en la
+   * ficha de nadie.
+   */
+  {
+    path: 'v',
+    loadComponent: () => import('./features/contracts/pages/contract-verify/contract-verify.component').then(m => m.ContractVerifyComponent)
+  },
+  {
+    path: 'v/:code',
+    loadComponent: () => import('./features/contracts/pages/contract-verify/contract-verify.component').then(m => m.ContractVerifyComponent)
+  },
   {
     path: 'pay/:paymentId',
     loadComponent: () => import('./features/payments/pages/payment-checkout/payment-checkout.component').then(m => m.PaymentCheckoutComponent)

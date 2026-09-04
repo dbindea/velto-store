@@ -63,7 +63,7 @@ De ahí se deduce el estado real:
 | Informes | ✅ completo | — | Construido, uso real desconocido |
 | **Inspecciones** | ✅ completo | ❌ **colección vacía** | **Nunca ejercitado** |
 | **Mantenimiento** | ✅ completo | ❌ **colección vacía** | **Nunca ejercitado** |
-| Redsys | ⚠️ recién corregido | ❌ nunca funcionó | Sin validar contra pasarela |
+| Redsys | ✅ completo | ✅ sí | Probado con dinero real (31 ago 2026) |
 | Gastos | ❌ placeholder | — | Solo `moduleInProgress` |
 | Ajustes | ❌ placeholder | — | Solo `moduleInProgress` |
 | Web pública | ❌ no existe | — | Futuro |
@@ -361,10 +361,12 @@ el link, abre la pasarela o lo copia.
 Un pago **no se marca como pagado porque el usuario vuelva por la URL OK**. Solo se marca al
 recibir y validar la notificación firmada del webhook.
 
-⚠️ **Redsys nunca ha funcionado en producción.** La firma `HMAC_SHA256_V1` estaba mal
-implementada (faltaba la derivación 3DES de la clave). Está corregida y verificada contra un
-vector de referencia, pero **falta la validación end-to-end contra el entorno de test real**,
-y las Cloud Functions se despliegan a mano.
+**Redsys funciona de extremo a extremo desde el 31 de agosto de 2026**, probado contra la
+pasarela de test y con un cobro real de 10 € en producción. El cliente puede además pagar
+**desde su móvil** con un enlace (`/pay/:paymentId`), sin el operador delante.
+
+Lo que estuvo roto y conviene recordar: la firma `HMAC_SHA256_V1` sin la derivación 3DES
+de la clave, y el botón que abría la pasarela con un GET cuando Redsys solo admite POST.
 
 ---
 
@@ -400,6 +402,22 @@ El PDF se genera en backend con `pdf-lib`, en es/en/ro, y se envía por email co
 Cloud Functions.
 
 No hay firma avanzada tipo DocuSign, y no se busca en esta fase.
+
+### El contrato en papel se puede comprobar
+
+El PDF firmado lleva, en la casilla del arrendador, un **QR y un Código Seguro de
+Verificación** legible (`VLT-8QPB-YNT4-9AXJ`) que llevan a la ruta pública `/v/:codigo`.
+Ahí se ven cinco datos y ninguno personal: número de contrato, fecha de firma, matrícula,
+estado y huella SHA-256 del PDF.
+
+⚠️ **Un QR no valida una firma electrónica** — eso lo hace Adobe o VALIDe abriendo el
+fichero. Lo que resuelve es el papel, donde no hay nada que abrir: confirma que el
+contrato existe, que está firmado y que el fichero es el que emitimos. Convive con la
+línea «Firmado digitalmente con certificado digital» porque son dos hechos distintos, y
+si el sellado falla desaparece la frase y el QR se queda.
+
+Los contratos firmados antes del 4 de septiembre de 2026 no tienen código: no se ha
+migrado nada.
 
 ### Fianza
 

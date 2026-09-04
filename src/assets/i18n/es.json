@@ -205,7 +205,27 @@
       "signed": "Firmado"
     },
     "subtitle": "Genera, firma y envía contratos de alquiler",
-    "title": "Contratos"
+    "title": "Contratos",
+    "verify": {
+      "cancelledMessage": "Este contrato existió, pero ya no está vigente.",
+      "cancelledTitle": "Contrato anulado",
+      "check": "Comprobar",
+      "codeLabel": "Código de verificación",
+      "contractNumber": "Nº de contrato",
+      "disclaimer": "Esta página confirma que el contrato existe y que el archivo no ha cambiado. No valida la firma electrónica: para eso, abre el PDF con Adobe Reader o en VALIDe.",
+      "fingerprint": "Huella del documento (SHA-256)",
+      "fingerprintHelp": "Es la del PDF firmado que emitimos. Si tu copia digital da otra huella, no es el mismo archivo.",
+      "notSealed": "No",
+      "plate": "Matrícula",
+      "seal": "Sello de la empresa",
+      "sealed": "Sí, con certificado digital",
+      "signedAt": "Fecha de firma",
+      "subtitle": "Verificación de contrato",
+      "unknownMessage": "No hay ningún contrato con ese código. Comprueba que lo has copiado entero.",
+      "unknownTitle": "No encontrado",
+      "validMessage": "Este contrato existe y está firmado.",
+      "validTitle": "Contrato verificado"
+    }
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",

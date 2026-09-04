@@ -1,0 +1,103 @@
+<div class="public-page">
+  <header class="public-header">
+    <div class="brand">
+      <app-brand-logo variant="wordmark" [alt]="'brand.logoAlt' | translate" />
+    </div>
+    <span class="brand-tagline">{{ 'contracts.verify.subtitle' | translate }}</span>
+  </header>
+
+  <main class="public-main">
+    @if (loading()) {
+      <div class="status-card loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>{{ 'common.loading' | translate }}</p>
+      </div>
+    } @else if (view()?.state === 'valid') {
+      <div class="status-card success">
+        <i class="pi pi-verified"></i>
+        <h1>{{ 'contracts.verify.validTitle' | translate }}</h1>
+        <p>{{ 'contracts.verify.validMessage' | translate }}</p>
+
+        <dl class="facts">
+          @if (view()!.contractNumber) {
+            <dt>{{ 'contracts.verify.contractNumber' | translate }}</dt>
+            <dd class="mono">{{ view()!.contractNumber }}</dd>
+          }
+          @if (view()!.signedAt) {
+            <dt>{{ 'contracts.verify.signedAt' | translate }}</dt>
+            <dd>{{ view()!.signedAt | date:'dd/MM/yyyy HH:mm' }}</dd>
+          }
+          @if (view()!.vehiclePlate) {
+            <dt>{{ 'contracts.verify.plate' | translate }}</dt>
+            <dd class="mono">{{ view()!.vehiclePlate }}</dd>
+          }
+          <dt>{{ 'contracts.verify.seal' | translate }}</dt>
+          <dd>
+            {{ (view()!.digitallySealed
+                  ? 'contracts.verify.sealed'
+                  : 'contracts.verify.notSealed') | translate }}
+          </dd>
+        </dl>
+
+        <!-- La huella es lo que permite comparar el fichero que tiene el
+             cliente con el que emitimos. Va aparte porque es lo único de esta
+             pantalla que hay que leer carácter a carácter. -->
+        @if (view()!.fingerprint) {
+          <div class="fingerprint">
+            <span class="fingerprint-label">{{ 'contracts.verify.fingerprint' | translate }}</span>
+            <code>{{ view()!.fingerprint }}</code>
+            <p class="hint">{{ 'contracts.verify.fingerprintHelp' | translate }}</p>
+          </div>
+        }
+      </div>
+    } @else if (view()?.state === 'cancelled') {
+      <div class="status-card warning">
+        <i class="pi pi-ban"></i>
+        <h1>{{ 'contracts.verify.cancelledTitle' | translate }}</h1>
+        <p>{{ 'contracts.verify.cancelledMessage' | translate }}</p>
+        @if (view()!.contractNumber) {
+          <p class="mono">{{ view()!.contractNumber }}</p>
+        }
+      </div>
+    } @else if (view()?.state === 'unknown') {
+      <div class="status-card error">
+        <i class="pi pi-times-circle"></i>
+        <h1>{{ 'contracts.verify.unknownTitle' | translate }}</h1>
+        <p>{{ 'contracts.verify.unknownMessage' | translate }}</p>
+      </div>
+    }
+
+    <!-- Siempre disponible: quien teclea el código desde un papel se equivoca a
+         la primera, y volver a escribir la URL entera desde el móvil no es una
+         salida razonable. -->
+    @if (!loading()) {
+      <form class="code-form" (ngSubmit)="submit()">
+        <label for="code">{{ 'contracts.verify.codeLabel' | translate }}</label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="VLT-0000-0000-0000"
+          [ngModel]="typedCode()"
+          (ngModelChange)="typedCode.set($event)" />
+        <button type="submit" [disabled]="!typedCode().trim()">
+          <i class="pi pi-search"></i>
+          {{ 'contracts.verify.check' | translate }}
+        </button>
+      </form>
+    }
+
+    <!--
+      ⚠️ Este aviso no es relleno legal: un QR NO valida una firma electrónica,
+      y decirlo aquí es lo que impide que esta pantalla se lea como algo que no
+      es. Ya se prometió una vez una firma que el documento no llevaba.
+    -->
+    <p class="disclaimer">{{ 'contracts.verify.disclaimer' | translate }}</p>
+  </main>
+
+  <footer class="public-footer">
+    <span>{{ view()?.brandName || '' }}</span>
+  </footer>
+</div>

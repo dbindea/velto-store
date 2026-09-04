@@ -1617,3 +1617,42 @@ comprobar un enlace copiado, construirlo aparte y navegar a él.
 
 **Antes del despliegue a producción**: `getPaymentCheckout` es nueva y solo está
 en desarrollo.
+
+---
+
+## C-30 · QR y código de verificación en el contrato (N-9) — 4 de septiembre de 2026
+
+Ciclo completo en desarrollo, con una reserva nueva creada para el caso: reserva
+→ contrato → link de firma → firma del cliente → PDF sellado. La comprobación no
+se hizo mirando la pantalla, sino **el fichero**.
+
+| Paso | Resultado |
+|---|---|
+| QR del PDF firmado, descifrado del render real de la página | `https://store.veltorent.com/v/8QPBYNT49AXJ` |
+| `sha256sum` del PDF descargado de Storage | `879a6d7c…8ff00272` |
+| Huella que enseña `/v/8QPBYNT49AXJ` | **la misma, dígito a dígito** |
+| Sellado | `adbe.pkcs7.detached` en el fichero · la página dice «Sí, con certificado digital» |
+| Código impreso `VLT-8QPB-YNT4-9AXJ` tecleado a mano | resuelve al mismo contrato |
+| Function sin cabecera de autenticación | cinco datos; ni nombre, ni documento, ni importe |
+| Código inexistente y `../../contracts` | responden lo mismo, `state: unknown` |
+| Móvil (390 px) | nada oculto; la huella parte en dos líneas en vez de truncarse |
+
+**Lo que más cuesta comprobar de un QR es lo único que importa: que se lea.** Un
+símbolo con un índice de fila invertido, o sin los 4 módulos de zona de silencio,
+tiene exactamente la misma pinta que uno bueno y no lo descifra ningún móvil.
+Aquí se comprobó dos veces:
+
+1. **Sobre el PDF real**, renderizándolo con pdf.js en el navegador y pasándole
+   `jsQR` al canvas — es decir, leyendo el contrato como lo leería un teléfono.
+2. **En un test**, rasterizando los rectángulos que se dibujan de verdad
+   (`qrRects()`) y descifrándolos. Por eso la geometría vive fuera del dibujo.
+
+**El orden de las dos operaciones no es negociable**, y por eso está escrito en
+el código: el código de verificación se decide **antes** de construir el PDF
+—porque el QR va dentro del documento que luego se sella— y la huella se calcula
+**después**, sobre los bytes que se guardan. Al revés, la página le diría a un
+cliente que su contrato está alterado.
+
+Desplegado en los dos entornos el mismo día; producción responde y es pública.
+**Los contratos firmados antes de hoy no tienen código**: su QR no existe y la
+página los da por no encontrados. Correcto, y no se migra nada.
