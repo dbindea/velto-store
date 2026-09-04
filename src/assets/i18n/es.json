@@ -31,7 +31,9 @@
       "passport": "Pasaporte"
     },
     "documents": {
+      "confirmDelete": "¿Eliminar este documento?",
       "delete": "Eliminar documento",
+      "deleteError": "No se ha podido eliminar el documento",
       "documentBack": "Documento trasero",
       "documentFront": "Documento frontal",
       "drivingLicenseBack": "Carnet trasero",
@@ -41,12 +43,13 @@
       "noDocuments": "No hay documentos subidos",
       "open": "Abrir",
       "other": "Otro documento",
-      "uploadError": "No se ha podido subir el documento",
-      "deleteError": "No se ha podido eliminar el documento",
       "saveFirst": "Guarda primero el cliente para poder subir documentos",
-      "confirmDelete": "¿Eliminar este documento?"
+      "uploadError": "No se ha podido subir el documento"
     },
     "edit": "Editar cliente",
+    "errors": {
+      "fullNameRequired": "Escribe el nombre completo del cliente"
+    },
     "fields": {
       "address": "Dirección",
       "birthDate": "Fecha de nacimiento",
@@ -128,17 +131,18 @@
     "edit": "Editar",
     "error": "Algo ha ido mal",
     "loading": "Cargando...",
-    "moduleInProgress": "Módulo en preparación",
+    "missingFields": "Falta por completar:",
     "photos": {
       "camera": "Cámara",
       "gallery": "Galería",
-      "takePhoto": "Hacer foto",
-      "uploadFromGallery": "Subir desde galería",
       "hint": "JPG, PNG o WebP · máx. 5 MB",
       "invalidType": "Solo se admiten imágenes JPG, PNG o WebP",
-      "tooLarge": "La imagen supera el tamaño máximo (5 MB)"
+      "takePhoto": "Hacer foto",
+      "tooLarge": "La imagen supera el tamaño máximo (5 MB)",
+      "uploadFromGallery": "Subir desde galería"
     },
     "refresh": "Actualizar",
+    "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
     "viewAll": "Ver todo"
@@ -269,6 +273,104 @@
     "viewReservation": "Ver reserva",
     "viewVehicle": "Ver vehículo"
   },
+  "expenses": {
+    "category": {
+      "accounting": "Gestoría",
+      "advertising": "Publicidad",
+      "bankFees": "Comisiones bancarias",
+      "cleaning": "Limpieza",
+      "fine": "Multa",
+      "fuel": "Combustible",
+      "insurance": "Seguro",
+      "itv": "ITV",
+      "other": "Otros",
+      "parking": "Aparcamiento",
+      "phone": "Teléfono e internet",
+      "rent": "Alquiler de local",
+      "repair": "Reparación",
+      "roadTax": "Impuesto de circulación",
+      "software": "Software",
+      "supplies": "Suministros",
+      "tires": "Neumáticos",
+      "tolls": "Peajes"
+    },
+    "confirmDelete": "¿Borrar este gasto? También se borra su factura.",
+    "editTitle": "Editar gasto",
+    "errors": {
+      "amountRequired": "El importe tiene que ser mayor que cero",
+      "conceptRequired": "Escribe qué se ha gastado",
+      "dateRequired": "Falta la fecha del gasto",
+      "deleteFailed": "No se ha podido borrar el gasto",
+      "fileTooLarge": "El archivo es demasiado grande",
+      "loadFailed": "No se han podido cargar los datos",
+      "notFound": "Ese gasto ya no existe",
+      "reservationRequired": "Elige la reserva a la que se imputa",
+      "saveFailed": "No se ha podido guardar el gasto",
+      "vehicleRequired": "Elige el vehículo al que se imputa"
+    },
+    "fields": {
+      "amount": "Total de la factura",
+      "amountHint": "Con IVA, tal y como viene en el ticket",
+      "category": "Categoría",
+      "concept": "Concepto",
+      "conceptPlaceholder": "Cambio de aceite, cuota de gestoría…",
+      "date": "Fecha del gasto",
+      "document": "Factura o ticket",
+      "invoiceNumber": "Nº de factura",
+      "method": "Forma de pago",
+      "net": "Base imponible",
+      "notes": "Notas",
+      "reservation": "Reserva",
+      "scope": "Se imputa a",
+      "selectReservation": "Elige una reserva",
+      "selectVehicle": "Elige un vehículo",
+      "supplier": "Proveedor",
+      "total": "Total",
+      "vat": "IVA",
+      "vatRate": "Tipo de IVA",
+      "vatShort": "IVA",
+      "vehicle": "Vehículo",
+      "viewDocument": "Ver el documento"
+    },
+    "filters": {
+      "allScopes": "Todas las imputaciones"
+    },
+    "formSubtitle": "Escribe el total de la factura; la base y el IVA se calculan solos",
+    "fromMaintenance": "Mantenimiento",
+    "list": {
+      "addFirst": "Añadir el primer gasto",
+      "empty": "Todavía no hay gastos",
+      "error": "No se han podido cargar los gastos"
+    },
+    "method": {
+      "bankTransfer": "Transferencia",
+      "card": "Tarjeta",
+      "cash": "Efectivo",
+      "directDebit": "Domiciliado",
+      "other": "Otro"
+    },
+    "new": "Nuevo gasto",
+    "newTitle": "Nuevo gasto",
+    "noVatBreakdown": "IVA sin desglosar",
+    "scope": {
+      "general": "Empresa",
+      "reservation": "Reserva",
+      "vehicle": "Vehículo"
+    },
+    "sections": {
+      "money": "Importe",
+      "proof": "Justificante",
+      "what": "Qué se ha gastado"
+    },
+    "subtitle": "Lo que sale: vehículos, alquileres y empresa",
+    "title": "Gastos",
+    "totals": {
+      "entries": "apuntes",
+      "spent": "Total gastado",
+      "vat": "IVA soportado",
+      "vatOver": "sobre"
+    }
+  },
   "inspections": {
     "actions": {
       "startPickup": "Iniciar entrega",
@@ -312,6 +414,15 @@
       "minor": "Leve",
       "serious": "Grave",
       "severity": "Gravedad"
+    },
+    "errors": {
+      "cleanlinessRequired": "Indica el estado de limpieza",
+      "damageDescriptionRequired": "Escribe en qué consiste el daño",
+      "fuelRequired": "Indica el nivel de combustible",
+      "kmLowerThanPickup": "Los kilómetros de entrada no pueden ser menores que los de salida",
+      "kmRequired": "Escribe los kilómetros del cuadro",
+      "pickupFailed": "No se ha podido completar la entrega",
+      "returnFailed": "No se ha podido completar la devolución"
     },
     "extraCharges": {
       "cleaning": "Cargo de limpieza",
@@ -394,6 +505,9 @@
     "dueSoon": "Próximos a vencer",
     "edit": "Editar mantenimiento",
     "empty": "Sin registros de mantenimiento para este vehículo.",
+    "errors": {
+      "titleRequired": "Escribe qué mantenimiento es"
+    },
     "fields": {
       "cost": "Coste",
       "description": "Descripción",
@@ -466,24 +580,24 @@
       "viewReservation": "Ver reserva"
     },
     "checkout": {
-      "subtitle": "Pago seguro",
-      "payTo": "Vas a pagar a",
-      "payNow": "Pagar con tarjeta",
-      "secureNote": "Pago procesado por Redsys. No guardamos los datos de tu tarjeta.",
-      "refresh": "Ya he pagado, actualizar",
-      "paidTitle": "Pago recibido",
-      "paidMessage": "Gracias. No hace falta que hagas nada más.",
-      "notFoundTitle": "Enlace no válido",
       "notFoundMessage": "Este enlace de pago no existe o ya no está disponible. Pide uno nuevo.",
-      "unavailableTitle": "Pago no disponible",
-      "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros."
+      "notFoundTitle": "Enlace no válido",
+      "paidMessage": "Gracias. No hace falta que hagas nada más.",
+      "paidTitle": "Pago recibido",
+      "payNow": "Pagar con tarjeta",
+      "payTo": "Vas a pagar a",
+      "refresh": "Ya he pagado, actualizar",
+      "secureNote": "Pago procesado por Redsys. No guardamos los datos de tu tarjeta.",
+      "subtitle": "Pago seguro",
+      "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
+      "unavailableTitle": "Pago no disponible"
     },
     "deposit": {
       "refundFull": "Devolver total",
       "retain": "Retener"
     },
     "errors": {
-      "invalidAmount": "Introduce un importe mayor que 0."
+      "invalidAmount": "El importe no es válido"
     },
     "fields": {
       "amount": "Importe",
@@ -555,10 +669,10 @@
     "summary": {
       "depositHeld": "Fianza depositada",
       "extraChargesTotal": "Cargos extra",
+      "incomeTotal": "Cobrado (sin fianza)",
       "rentalTotal": "Total alquiler",
       "title": "Resumen",
-      "totalRental": "Total alquiler",
-      "incomeTotal": "Cobrado (sin fianza)"
+      "totalRental": "Total alquiler"
     },
     "title": "Pagos",
     "types": {
@@ -608,8 +722,8 @@
     },
     "availability": {
       "conflict": "Ya hay una reserva para estas fechas",
-      "notInFleet": "El vehículo no está disponible en la flota",
       "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas",
+      "notInFleet": "El vehículo no está disponible en la flota",
       "search": "Buscar disponibilidad",
       "selectVehicle": "Seleccionar vehículo",
       "unavailable": "No disponible"
@@ -665,11 +779,12 @@
     "detail": "Detalle de reserva",
     "errors": {
       "cancel": "Error al cancelar la reserva",
-      "registerPayment": "Error al registrar el pago",
-      "processDeposit": "Error al procesar la fianza",
-      "generateContract": "Error al generar el contrato",
+      "clientNameRequired": "Escribe el nombre del cliente",
       "createSigningLink": "Error al crear el link de firma",
+      "generateContract": "Error al generar el contrato",
       "pdfNotReady": "El PDF todavía no está disponible",
+      "processDeposit": "Error al procesar la fianza",
+      "registerPayment": "Error al registrar el pago",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible"
     },
     "fields": {
@@ -723,9 +838,10 @@
     "quote": {
       "copied": "Enlace copiado. Ya puedes pegarlo en WhatsApp.",
       "copyLink": "Copiar enlace",
+      "days": "días",
       "error": "No se pudo generar el presupuesto",
       "generate": "Generar presupuesto",
-      "hint": "No crea la reserva ni bloquea el vehículo. Válido 7 días.",
+      "hint": "No crea la reserva ni bloquea el vehículo. Validez:",
       "open": "Abrir PDF"
     },
     "status": {
@@ -774,6 +890,62 @@
     "placeholder": "Buscar cliente, vehículo o reserva…",
     "trigger": "Buscar…"
   },
+  "settings": {
+    "errors": {
+      "deposit": "La fianza no puede ser negativa",
+      "emailInvalid": "Ese correo no parece válido",
+      "emailRequired": "Escribe el correo de la persona",
+      "includedKm": "Los kilómetros incluidos no pueden ser negativos",
+      "loadFailed": "No se han podido cargar los ajustes",
+      "quoteValidity": "La validez del presupuesto tiene que ser de al menos un día",
+      "saveFailed": "No se ha podido guardar",
+      "signingExpiry": "El enlace de firma tiene que durar al menos un día",
+      "vatRate": "El IVA se escribe en porcentaje, entre 0 y 100"
+    },
+    "operation": {
+      "days": "días",
+      "deposit": "Fianza propuesta",
+      "depositHint": "Con la que se abre el asistente. Manda la del vehículo si la tiene, y sigue siendo editable en cada reserva.",
+      "includedKm": "Km incluidos por día",
+      "includedKmHint": "Con los que nace un vehículo nuevo. Después se ajusta en su ficha.",
+      "notice": "Esto rige para lo que se cree a partir de ahora. Ni las reservas ya hechas, ni los contratos firmados, ni los enlaces ya enviados se mueven: cada uno lleva sus valores congelados.",
+      "quoteValidity": "Validez del presupuesto",
+      "quoteValidityHint": "Se imprime en el PDF como «Válido hasta». Es un compromiso comercial: nada respeta ese precio automáticamente.",
+      "signingExpiry": "Caducidad del enlace de firma",
+      "signingExpiryHint": "Los enlaces ya enviados conservan la suya: lo que el cliente tiene en su móvil no caduca antes por cambiar esto.",
+      "vat": "IVA general",
+      "vatHint": "Se aplica a las reservas nuevas y se congela en cada una. Se escribe en porcentaje: 21, no 0,21."
+    },
+    "saved": "Guardado",
+    "subtitle": "Valores por defecto y quién puede entrar",
+    "tabs": {
+      "operation": "Operación",
+      "users": "Usuarios"
+    },
+    "title": "Ajustes",
+    "users": {
+      "activate": "Dar acceso",
+      "add": "Dar acceso",
+      "addTitle": "Dar acceso a alguien",
+      "added": "Acceso concedido",
+      "confirmDelete": "¿Borrar a esta persona? Ya no tiene acceso; esto solo quita el registro.",
+      "deactivate": "Quitar acceso",
+      "email": "Correo de Google",
+      "empty": "No hay nadie con acceso todavía",
+      "inactive": "Sin acceso",
+      "name": "Nombre",
+      "notice": "Hoy el rol decide a qué secciones enteras se entra: informes, gastos y estos ajustes. Los límites finos —tocar precios, borrar o cancelar— llegan en una tarea aparte.",
+      "role": "Rol",
+      "roles": {
+        "admin": "Administrador",
+        "adminHint": "Puede todo, incluido dar acceso a otros, ver informes y gastos y cambiar estos ajustes.",
+        "employee": "Empleado",
+        "employeeHint": "Trabaja el día a día: reservas, clientes, vehículos, cobros, entregas y devoluciones. No ve informes ni gastos, no toca precios ni descuentos y no borra ni cancela."
+      },
+      "selfLocked": "No puedes cambiarte el acceso ni el rol a ti mismo.",
+      "you": "Tú"
+    }
+  },
   "vehicles": {
     "actions": {
       "changeStatus": "Cambiar estado"
@@ -803,6 +975,14 @@
     "deleteConfirm": "¿Estás seguro de que quieres eliminar este vehículo? Esta acción no se puede deshacer.",
     "deleteTitle": "Eliminar vehículo",
     "edit": "Editar vehículo",
+    "errors": {
+      "acrissRequired": "Falta el código ACRISS: revisa categoría, carrocería, transmisión y aire acondicionado",
+      "brandRequired": "Escribe la marca",
+      "luggageRequired": "Indica cuántas maletas caben",
+      "modelRequired": "Escribe el modelo",
+      "plateRequired": "Escribe la matrícula",
+      "seatsRequired": "Indica cuántas plazas tiene"
+    },
     "features": {
       "airConditioning": "Aire acondicionado",
       "cruiseControl": "Control de crucero",
@@ -844,20 +1024,20 @@
     "noPhotos": "No hay fotos disponibles",
     "noVehicles": "No hay vehículos todavía",
     "photos": {
+      "add": "Añadir fotos",
       "closeGallery": "Cerrar galería",
+      "confirmDelete": "¿Eliminar esta foto definitivamente?",
       "count": "{{count}} fotos",
+      "delete": "Eliminar foto",
+      "deleteError": "No se ha podido eliminar la foto",
       "empty": "No hay fotos todavía",
       "imageAlt": "Foto del vehículo",
       "next": "Siguiente",
       "openGallery": "Ver galería",
       "previous": "Anterior",
+      "saveFirst": "Guarda primero el vehículo para poder subir fotos",
       "thumbnail": "Miniatura",
-      "add": "Añadir fotos",
-      "delete": "Eliminar foto",
-      "confirmDelete": "¿Eliminar esta foto definitivamente?",
-      "uploadError": "No se ha podido subir la foto",
-      "deleteError": "No se ha podido eliminar la foto",
-      "saveFirst": "Guarda primero el vehículo para poder subir fotos"
+      "uploadError": "No se ha podido subir la foto"
     },
     "pricing": {
       "addRule": "Añadir rango",

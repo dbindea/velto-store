@@ -1,0 +1,247 @@
+<div class="page">
+  <div class="page-header">
+    <h1>{{ 'settings.title' | translate }}</h1>
+    <p class="subtitle">{{ 'settings.subtitle' | translate }}</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab" type="button"
+            [class.active]="tab() === 'operation'" (click)="select('operation')">
+      <i class="pi pi-sliders-h"></i>
+      {{ 'settings.tabs.operation' | translate }}
+    </button>
+    <button class="tab" type="button"
+            [class.active]="tab() === 'users'" (click)="select('users')">
+      <i class="pi pi-users"></i>
+      {{ 'settings.tabs.users' | translate }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="state-card">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else {
+
+    @if (errorKey()) {
+      <p class="banner error">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ errorKey() | translate }}
+      </p>
+    }
+    @if (savedMessage()) {
+      <p class="banner ok">
+        <i class="pi pi-check-circle"></i>
+        {{ savedMessage() | translate }}
+      </p>
+    }
+
+    <!-- ===================== OPERACIÓN ===================== -->
+    @if (tab() === 'operation') {
+      <!-- La duda razonable de cualquiera que toque un IVA en una aplicación
+           que ya ha firmado contratos. Se responde antes de que la haga. -->
+      <p class="notice">
+        <i class="pi pi-info-circle"></i>
+        {{ 'settings.operation.notice' | translate }}
+      </p>
+
+      <form class="card" (ngSubmit)="saveOperation()">
+        <div class="field">
+          <label class="required" for="deposit">{{ 'settings.operation.deposit' | translate }}</label>
+          <div class="input-suffix">
+            <input id="deposit" name="deposit" type="number" min="0" step="10"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['defaultDepositAmount']"
+                   [(ngModel)]="form.defaultDepositAmount" />
+            <span>€</span>
+          </div>
+          <app-form-error [problems]="operationProblems['defaultDepositAmount']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.depositHint' | translate }}</small>
+        </div>
+
+        <div class="field">
+          <label class="required" for="vat">{{ 'settings.operation.vat' | translate }}</label>
+          <div class="input-suffix">
+            <!-- Se edita en porcentaje y se guarda en fracción. La conversión
+                 vive en un solo sitio, en el componente. -->
+            <input id="vat" name="vat" type="number" min="0" max="100" step="0.5"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['vatRate']"
+                   [(ngModel)]="vatPercent" />
+            <span>%</span>
+          </div>
+          <app-form-error [problems]="operationProblems['vatRate']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.vatHint' | translate }}</small>
+        </div>
+
+        <div class="field">
+          <label class="required" for="quoteDays">{{ 'settings.operation.quoteValidity' | translate }}</label>
+          <div class="input-suffix">
+            <input id="quoteDays" name="quoteDays" type="number" min="1" max="365" step="1"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['quoteValidityDays']"
+                   [(ngModel)]="form.quoteValidityDays" />
+            <span>{{ 'settings.operation.days' | translate }}</span>
+          </div>
+          <app-form-error [problems]="operationProblems['quoteValidityDays']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.quoteValidityHint' | translate }}</small>
+        </div>
+
+        <div class="field">
+          <label class="required" for="signDays">{{ 'settings.operation.signingExpiry' | translate }}</label>
+          <div class="input-suffix">
+            <input id="signDays" name="signDays" type="number" min="1" max="90" step="1"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['signingLinkExpiryDays']"
+                   [(ngModel)]="form.signingLinkExpiryDays" />
+            <span>{{ 'settings.operation.days' | translate }}</span>
+          </div>
+          <app-form-error [problems]="operationProblems['signingLinkExpiryDays']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.signingExpiryHint' | translate }}</small>
+        </div>
+
+        <div class="field">
+          <label class="required" for="km">{{ 'settings.operation.includedKm' | translate }}</label>
+          <div class="input-suffix">
+            <input id="km" name="km" type="number" min="0" step="10"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['defaultIncludedKmPerDay']"
+                   [(ngModel)]="form.defaultIncludedKmPerDay" />
+            <span>km</span>
+          </div>
+          <app-form-error [problems]="operationProblems['defaultIncludedKmPerDay']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.includedKmHint' | translate }}</small>
+        </div>
+
+        <!-- El resumen junto al botón: en un formulario largo el campo en rojo
+             puede quedar fuera de la pantalla, y lo único que se ve es que
+             pulsar no hace nada. -->
+        <app-form-error [problems]="operationProblemList" [show]="submitted()" [summary]="true" />
+
+        <div class="form-actions">
+          <!-- Solo se apaga mientras guarda. Si le falta algo, se pulsa igual y
+               es el propio guardar quien enseña qué falta. -->
+          <button class="btn btn-primary" type="submit" [disabled]="saving()">
+            @if (saving()) { <i class="pi pi-spin pi-spinner"></i> }
+            {{ 'common.save' | translate }}
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- ===================== USUARIOS ===================== -->
+    @if (tab() === 'users') {
+      <!-- ⚠️ Hoy el rol gobierna los módulos enteros. Los botones finos de
+           dentro de cada pantalla llegan con N-11, y la pantalla lo dice en
+           vez de dar a entender que ya limita más de lo que limita. -->
+      <p class="notice">
+        <i class="pi pi-info-circle"></i>
+        {{ 'settings.users.notice' | translate }}
+      </p>
+
+      <form class="card" (ngSubmit)="addUser()">
+        <h2>{{ 'settings.users.addTitle' | translate }}</h2>
+        <div class="field-row">
+          <div class="field">
+            <label class="required" for="email">{{ 'settings.users.email' | translate }}</label>
+            <input id="email" name="email" type="email" class="form-control"
+                   autocomplete="off" [(ngModel)]="newEmail"
+                   [class.is-invalid]="userSubmitted() && userProblems['email']"
+                   placeholder="persona@ejemplo.com" />
+            <app-form-error [problems]="userProblems['email']" [show]="userSubmitted()" />
+          </div>
+          <div class="field">
+            <label for="name">{{ 'settings.users.name' | translate }}</label>
+            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="newName" />
+          </div>
+          <div class="field">
+            <label for="role">{{ 'settings.users.role' | translate }}</label>
+            <select id="role" name="role" class="form-control" [(ngModel)]="newRole">
+              @for (role of roles; track role) {
+                <option [value]="role">{{ USER_ROLE_LABELS[role] | translate }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <small class="hint">{{ USER_ROLE_DESCRIPTIONS[newRole] | translate }}</small>
+
+        <!-- Sin resumen: son tres campos y el botón está a su lado. Repetir aquí
+             el mismo mensaje que ya está bajo el campo sería ruido. El resumen
+             se reserva para los formularios donde el campo en rojo puede quedar
+             fuera de la pantalla. -->
+
+        <div class="form-actions">
+          <!-- ⚠️ Ya NO se deshabilita por falta de correo. Así era como el botón
+               no hacía nada y no había forma de saber por qué. -->
+          <button class="btn btn-primary" type="submit" [disabled]="saving()">
+            <i class="pi pi-user-plus"></i>
+            {{ 'settings.users.add' | translate }}
+          </button>
+        </div>
+      </form>
+
+      <div class="user-list">
+        @for (user of users(); track user.email) {
+          <div class="user-card" [class.inactive]="!user.active">
+            <div class="user-main">
+              <div class="user-avatar">{{ (user.displayName || user.email).charAt(0) }}</div>
+              <div class="user-info">
+                <h3>{{ user.displayName || user.email }}</h3>
+                <p class="email">{{ user.email }}</p>
+                <div class="badges">
+                  <span class="badge" [class.admin]="user.role === 'admin'">
+                    {{ USER_ROLE_LABELS[user.role] | translate }}
+                  </span>
+                  @if (!user.active) {
+                    <span class="badge off">{{ 'settings.users.inactive' | translate }}</span>
+                  }
+                  @if (isSelf(user)) {
+                    <span class="badge self">{{ 'settings.users.you' | translate }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="user-actions">
+              @if (isSelf(user)) {
+                <!-- ⚠️ Quitarse el acceso o degradarse a uno mismo deja fuera al
+                     único administrador sin forma de volver desde la aplicación:
+                     habría que arreglarlo entrando a Firestore por la consola. -->
+                <span class="self-note">{{ 'settings.users.selfLocked' | translate }}</span>
+              } @else {
+                <select class="form-control role-select"
+                        [ngModel]="user.role" [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="changeRole(user, $event)">
+                  @for (role of roles; track role) {
+                    <option [value]="role">{{ USER_ROLE_LABELS[role] | translate }}</option>
+                  }
+                </select>
+
+                <button class="btn btn-secondary" type="button"
+                        [disabled]="saving()" (click)="toggleActive(user)">
+                  <i [class]="user.active ? 'pi pi-ban' : 'pi pi-check'"></i>
+                  {{ (user.active ? 'settings.users.deactivate' : 'settings.users.activate') | translate }}
+                </button>
+
+                <!-- Borrar solo lo ya desactivado: desactivar deja constancia de
+                     que esa persona tuvo acceso, y volver es marcar una casilla. -->
+                @if (!user.active) {
+                  <button class="btn btn-danger" type="button"
+                          [disabled]="saving()" (click)="removeUser(user)">
+                    <i class="pi pi-trash"></i>
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="state-card">
+            <i class="pi pi-users"></i>
+            <p>{{ 'settings.users.empty' | translate }}</p>
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

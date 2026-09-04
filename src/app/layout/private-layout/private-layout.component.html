@@ -18,7 +18,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      @for (item of menuItems; track item.path) {
+      @for (item of visibleMenuItems(); track item.path) {
         <a
           [routerLink]="item.path"
           routerLinkActive="active"
@@ -92,7 +92,7 @@
 
   <!-- Mobile Bottom Navigation -->
   <nav class="mobile-nav">
-    @for (item of mobileMenuItems; track item.path) {
+    @for (item of mobileMenuItems(); track item.path) {
       <a
         [routerLink]="item.path"
         routerLinkActive="active"
@@ -109,7 +109,7 @@
 
       @if (moreMenuOpen()) {
         <div class="more-menu">
-          @for (item of remainingMenuItems; track item.path) {
+          @for (item of remainingMenuItems(); track item.path) {
             <a
               [routerLink]="item.path"
               routerLinkActive="active"

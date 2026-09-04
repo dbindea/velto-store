@@ -21,12 +21,43 @@ service cloud.firestore {
         get(/databases/$(database)/documents/authorizedUsers/$(email)).data.role == 'admin';
     }
 
-    // authorizedUsers collection - users can only read their own document
+    // El email del que pide, tal y como se guarda: en minúsculas.
+    function callerEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    // Un administrador, sea cual sea el documento que esté mirando. `isAdmin`
+    // compara el email del documento con el de quien pide, que sirve para
+    // proteger el documento propio pero NO para listar la colección ni para
+    // administrar a otro.
+    function callerIsAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/authorizedUsers/$(callerEmail())) &&
+        get(/databases/$(database)/documents/authorizedUsers/$(callerEmail())).data.active == true &&
+        get(/databases/$(database)/documents/authorizedUsers/$(callerEmail())).data.role == 'admin';
+    }
+
+    // authorizedUsers: cada uno lee el suyo — que es lo que hace el login — y un
+    // administrador los lee todos, que es lo que necesita la pantalla de
+    // Ajustes.
+    //
+    // ⚠️ Hasta el 4 de septiembre de 2026 solo estaba la primera mitad, así que
+    // listar la colección fallaba con permisos denegados por muy admin que fuera
+    // quien lo pidiera: la regla comparaba el email del documento con el de
+    // quien preguntaba, y en un `list` no hay un documento con el que comparar.
     match /authorizedUsers/{email} {
-      allow read: if isAuthenticated() && request.auth.token.email == email;
-      allow create: if isAdmin(request.resource.data.email);
-      allow update: if isAdmin(email);
-      allow delete: if isAdmin(email);
+      allow get: if isAuthenticated() && request.auth.token.email == email;
+      allow get, list: if callerIsAdmin();
+      allow create, update, delete: if callerIsAdmin();
+    }
+
+    // settings: los lee cualquiera que haya entrado —el asistente de reservas
+    // necesita la fianza y el IVA por defecto— y los escribe solo un
+    // administrador. Las Cloud Functions entran con el admin SDK y se saltan
+    // estas reglas, que es como leen la validez del presupuesto.
+    match /settings/{document} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow write: if callerIsAdmin();
     }
 
     // vehicles collection - only authorized users

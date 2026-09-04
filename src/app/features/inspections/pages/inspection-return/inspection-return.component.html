@@ -76,17 +76,19 @@
         </div>
         <div class="form-grid-inner">
           <div class="form-group">
-            <label>{{ 'inspections.fields.km' | translate }} entrada *</label>
-            <input type="number" class="form-control" [(ngModel)]="formData.km" (ngModelChange)="recalculateTotal()" name="km" min="0">
+            <label class="required">{{ 'inspections.fields.km' | translate }} entrada</label>
+            <input type="number" class="form-control" [(ngModel)]="formData.km" (ngModelChange)="recalculateTotal()" name="km" min="0" [class.is-invalid]="submitted && problems['km']">
+            <app-form-error [problems]="problems['km']" [show]="submitted" />
           </div>
           <div class="form-group">
-            <label>{{ 'inspections.fields.fuelLevel' | translate }} entrada *</label>
-            <select class="form-control" [(ngModel)]="formData.fuelLevel" name="fuel">
+            <label class="required">{{ 'inspections.fields.fuelLevel' | translate }} entrada</label>
+            <select class="form-control" [(ngModel)]="formData.fuelLevel" name="fuel" [class.is-invalid]="submitted && problems['fuelLevel']">
               <option [ngValue]="undefined" disabled>--</option>
               @for (f of fuelLevels; track f) {
                 <option [ngValue]="f">{{ FUEL_LEVEL_LABELS[f] | translate }}</option>
               }
             </select>
+            <app-form-error [problems]="problems['fuelLevel']" [show]="submitted" />
           </div>
           <div class="form-group">
             <label>{{ 'inspections.fields.cleanliness' | translate }}</label>
@@ -147,8 +149,9 @@
                 </select>
               </div>
               <div class="form-group full">
-                <label>{{ 'inspections.damages.description' | translate }} *</label>
-                <input type="text" class="form-control" [(ngModel)]="newDamage.description" name="ddesc">
+                <label class="required">{{ 'inspections.damages.description' | translate }}</label>
+                <input type="text" class="form-control" [(ngModel)]="newDamage.description" name="ddesc" [class.is-invalid]="damageSubmitted && damageProblems['description']">
+                <app-form-error [problems]="damageProblems['description']" [show]="damageSubmitted" />
               </div>
             </div>
             <div class="form-actions">
@@ -326,6 +329,14 @@
         <input type="checkbox" [(ngModel)]="closeReservation" name="close">
         <span>{{ 'inspections.closeReservation' | translate }}</span>
       </label>
+      <!-- El resumen aquí: la devolución es una pantalla muy larga y los km
+           están arriba del todo, así que el campo en rojo queda fuera de la
+           vista cuando se pulsa el botón. -->
+      <app-form-error [problems]="problemList" [show]="submitted" [summary]="true" />
+      @if (saveError) {
+        <app-form-error [problems]="saveError" [show]="true" [summary]="true" />
+      }
+
       <div class="action-buttons">
         <button class="btn-secondary" type="button" (click)="goBack()">
           {{ 'common.cancel' | translate }}

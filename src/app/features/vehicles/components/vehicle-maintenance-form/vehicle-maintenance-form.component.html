@@ -5,16 +5,21 @@
       {{ 'maintenance.fields.title' | translate }}
     </h3>
     <div class="form-grid">
+      <!-- El asterisco va en el `<span>` y no en el `<label>`: aquí la etiqueta
+           envuelve al campo, así que un `::after` sobre ella lo pondría debajo
+           del input en vez de junto al texto. -->
       <label class="field">
-        <span class="label">{{ 'maintenance.fields.title' | translate }} *</span>
+        <span class="label required">{{ 'maintenance.fields.title' | translate }}</span>
         <input
           type="text"
           class="form-control"
           name="title"
           [(ngModel)]="form.title"
+          [class.is-invalid]="submitted && problems['title']"
           required
           [placeholder]="'maintenance.fields.title' | translate"
         />
+        <app-form-error [problems]="problems['title']" [show]="submitted" />
       </label>
 
       <label class="field">

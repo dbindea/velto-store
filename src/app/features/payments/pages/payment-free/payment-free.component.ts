@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { RedsysPaymentService, RedsysLinkResponse } from '@features/payments/services/redsys-payment.service';
 import { PaymentMethod } from '@shared/models/payment.model';
@@ -36,7 +38,7 @@ interface CreatedPayment {
 @Component({
   selector: 'app-payment-free',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, RouterLink],
+  imports: [CommonModule, FormsModule, TranslatePipe, RouterLink, FormErrorComponent],
   templateUrl: './payment-free.component.html',
   styleUrl: './payment-free.component.scss'
 })
@@ -71,22 +73,27 @@ export class PaymentFreeComponent implements OnInit {
     // No data to load — pure form page.
   }
 
-  validate(): string | null {
+  /** Si ya se ha intentado cobrar. Hasta entonces no se marca nada en rojo. */
+  readonly submitted = signal(false);
+
+  /** Lo que impide cobrar: campo → clave de i18n. */
+  get problems(): FieldProblems {
+    const problems: FieldProblems = {};
     if (this.form.amount === null || this.form.amount <= 0) {
-      return 'payments.free.amountRequired';
+      problems['amount'] = 'payments.free.amountRequired';
     }
     if (!this.form.concept.trim()) {
-      return 'payments.free.conceptRequired';
+      problems['concept'] = 'payments.free.conceptRequired';
     }
-    return null;
+    return problems;
   }
 
   async generate(): Promise<void> {
-    const v = this.validate();
-    if (v) {
-      this.error.set(v);
-      return;
-    }
+    // Antes solo se enseñaba el primero de los dos problemas y sin señalar el
+    // campo: con importe y concepto vacíos había que arreglarlos de uno en uno,
+    // descubriendo el segundo al resolver el primero.
+    this.submitted.set(true);
+    if (hasProblems(this.problems)) return;
     this.error.set(null);
     this.saving.set(true);
     try {

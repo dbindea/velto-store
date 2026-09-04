@@ -31,17 +31,90 @@ el operador esté delante.
 **Contrato en papel**: lleva QR y Código Seguro de Verificación desde el 4 de
 septiembre de 2026 (N-9), con página pública propia en `/v/:codigo`.
 
+⚠️ **Las dos bases de datos se vaciaron el 4 de septiembre de 2026**, por
+decisión de Dorel: todo menos `authorizedUsers`, en desarrollo y en producción.
+No hay coches, ni clientes, ni reservas. Se empieza de cero. **Los ficheros de
+Storage siguen ahí** —vaciar Firestore no los borra— y se limpian desde la
+consola de Firebase.
+
+**Ya no queda ningún módulo en construcción**: Gastos y Ajustes se construyeron
+el 4 de septiembre de 2026. La clave `common.moduleInProgress` se ha retirado
+porque no la usaba nadie.
+
 **Lo que falta**, por tamaño:
 
 | | Qué es |
 |---|---|
-| **Gastos** | Módulo vacío: solo dice «módulo en construcción» |
-| **Ajustes** | Módulo vacío |
+| **N-11** | Permisos por rol hasta el último botón — la mitad hecha |
 | **N-5** | Pre-reserva desde la web pública — sin decidir |
 | **D-1…D-6** | Seis decisiones de Dorel pendientes |
 | resto | Mejoras menores: M-5, M-6, M-10, M-11, M-13, M-21 |
 
-**Pendiente de Dorel**: borrar la copia del `.p12` de `public/`.
+**Cerrado**: la copia del `.p12` de `public/` está borrada (4 sep 2026). El
+certificado vive solo en Secret Manager, que es su sitio.
+
+---
+
+## ✅ N-10 · Módulo de Gastos *(hecho el 4 sep 2026)*
+
+Dejaba de ser un placeholder. Es la contraparte de Pagos: **lo que sale**.
+
+**Decisiones de Dorel:**
+
+- Un gasto se imputa **a un vehículo, a una reserva o a la empresa**. Los tres,
+  no uno.
+- **El mantenimiento se lee, no se duplica.** Una reparación se sigue
+  registrando en `vehicleMaintenance` —que es donde además vive el aviso de la
+  próxima ITV y de la próxima revisión por km— y Gastos suma su coste. Se
+  descartó absorberlo, que habría costado esos avisos, y también dejarlos
+  separados, que habría hecho que un cambio de aceite de 180 € estuviera en la
+  aplicación y no en el total de gastos.
+
+⚠️ **El IVA de un gasto se EXTRAE del total; el del alquiler se SUMA al neto.**
+No es una incoherencia: en un alquiler el número que se negocia es el neto, y en
+un gasto lo que tienes en la mano es una factura con su total. Por eso la
+aritmética vive en `expense.util.ts` y no en `pricing.util.ts`, con la nota
+escrita en los dos sitios. Confundirlas no da un error: da una cifra creíble y
+equivocada.
+
+**Lo construido:** modelo con snapshot de vehículo o reserva congelado,
+`expense.util.ts` con **21 tests**, servicio, listado con totales y formulario
+con desglose en vivo. Categorías distintas según a qué se impute —dieciocho en
+un desplegable no las lee nadie— y **la multa propone 0 % de IVA**, porque es una
+sanción repercutida y no un servicio, igual que la fianza del otro lado.
+
+**Los totales no cuadran a propósito, y la pantalla lo dice.** El bruto incluye
+el mantenimiento; la base y el IVA solo las filas que traen desglose, porque el
+coste de una reparación se teclea como un importe suelto y suponerle un 21 %
+sería fabricar una base imponible que la gestoría daría por buena. La tarjeta
+pone «IVA soportado · sobre 1/3» en vez de enseñar tres números que no encajan.
+
+**Probado en el navegador**, no solo compilado: gasto general de 121 € guardado y
+releído desde Firestore con su desglose intacto, la multa poniendo el IVA a 0
+sola, la validación rechazando un gasto de vehículo sin vehículo, y un
+mantenimiento de 180 € apareciendo en la lista con su matrícula, su proveedor y
+la etiqueta «Mantenimiento».
+
+Falta por probar: gasto imputado a una reserva —no había ninguna tras vaciar las
+bases— y la subida de la factura a Storage.
+
+- [x] **M-40 · Un mantenimiento sin próxima revisión desaparecía de la ficha
+  del coche.** *(4 sep 2026)*
+  `getMaintenanceByVehicle` ordenaba por `nextDueDate`, y **Firestore excluye
+  del resultado los documentos que no tienen el campo por el que se ordena**.
+  Una reparación ya hecha y sin próxima revisión programada —el caso más normal
+  de todos: un cambio de aceite que se paga y se olvida— se guardaba
+  correctamente y la pestaña decía «Sin registros de mantenimiento para este
+  vehículo».
+
+  Llevaba ahí desde que existe el módulo. No se vio el 31 de agosto porque
+  aquella prueba rellenó la próxima revisión. **Salió construyendo Gastos**: el
+  mismo registro aparecía en la lista de gastos, leído de la misma colección, y
+  no en la ficha del coche.
+
+  El orden se hace ahora en memoria, por fecha de realización, próxima revisión
+  o creación —la primera que exista— para que ninguna ficha pueda quedar fuera
+  por no tener un campo.
 
 ---
 
@@ -758,9 +831,13 @@ cargos extra, resolución de fianza y cierre. Queda:
       clave real y escribió el resultado. **Quedan 10 € cobrados de verdad a
       GATE2FLY: devolver desde el panel de Redsys.**
 
-      ⚠️ La pasarela se abrió lanzando el POST **a mano desde la consola**,
-      porque el hosting de producción servía aún el bundle anterior. Falta
-      repetirlo con el botón ya desplegado.
+      ⚠️ Aquel día la pasarela se abrió lanzando el POST **a mano desde la
+      consola**, porque el hosting de producción servía aún el bundle anterior.
+      **Dorel lo da por bueno el 4 de septiembre de 2026**: ha probado el botón
+      ya desplegado hasta la pasarela, sin llegar a finalizar el cobro. Queda
+      cerrado; si alguna vez falla, el sitio donde mirar es
+      `RedsysPaymentService.openGateway()`, que es el POST compartido por las
+      dos pantallas.
 - [x] Envío del contrato firmado por email con Resend — **probado de extremo a
       extremo el 29 de agosto de 2026** en `velto-store`, ciclo completo desde
       cero: vehículo → cliente → presupuesto → reserva → señal → contrato →
@@ -1229,3 +1306,154 @@ Desplegada en los dos entornos el 4 de septiembre de 2026: **trece functions**.
 ⚠️ **Los contratos firmados antes de hoy no tienen código**, así que su QR no
 existe y la página responde «no encontrado» si alguien inventa uno. Es lo
 correcto y no se migra nada: los datos siguen siendo desechables.
+
+---
+
+## ✅ N-12 · Ajustes *(hecho el 4 sep 2026)*
+
+El último placeholder. Dos pestañas, según lo que decidió Dorel: **valores por
+defecto de la operación** y **usuarios autorizados**. Se descartaron los datos de
+empresa —hoy los leen las Cloud Functions de `company-config.ts` y los `.env`, y
+moverlos a Firestore es otro trabajo— y los textos del contrato, que son texto
+legal y editarlos sin control se lamenta después.
+
+**Los cinco ajustes, y hasta dónde llega cada uno:**
+
+| Ajuste | A qué afecta |
+|---|---|
+| Fianza propuesta | Con la que abre el asistente y nace un vehículo nuevo. Manda la del coche si la tiene |
+| IVA general | Reservas nuevas. **Se congela en cada una** |
+| Validez del presupuesto | El «Válido hasta» del PDF. Lo lee la Cloud Function |
+| Caducidad del enlace de firma | Los enlaces ya emitidos conservan la suya |
+| Km incluidos por día | Con los que nace un vehículo nuevo |
+
+⚠️ **Todo son valores por defecto para lo que se cree a partir de ahora.** Ni una
+reserva hecha, ni un contrato firmado, ni un enlace enviado se mueven: cada uno
+lleva los suyos congelados. Es lo que hace que sea seguro tener el IVA
+configurable, y la pantalla lo dice antes de que nadie se lo pregunte.
+
+**Las dos que viven en el backend** —validez del presupuesto y caducidad del
+enlace— las lee `functions/src/settings.ts` del mismo documento. Sin eso, la
+pantalla habría ofrecido dos campos que no cambiaban nada del PDF.
+
+**Probado de extremo a extremo**: con la validez puesta a 15 días, un presupuesto
+generado el 4 de septiembre salió con «Válido hasta: 19/09/2026»; con la fianza a
+250, el asistente y el alta de vehículo la propusieron. Después se devolvieron a
+7 y 150.
+
+**Usuarios**: alta por correo de Google, rol, quitar y dar acceso, y borrar solo
+lo ya desactivado. El email **se normaliza a minúsculas** —es el id del
+documento, y `AuthService` lo busca por id exacto: guardado con mayúsculas, la
+persona queda dada de alta y sin poder entrar—. Y **nadie puede desactivarse ni
+degradarse a sí mismo**: el único administrador que se quite el acceso ya no
+puede volver desde la aplicación.
+
+- [x] **M-41 · `authorizedUser().email` salía siempre vacío.** *(4 sep 2026)*
+  `AuthService` guardaba `userDoc.data()`, y **`data()` no incluye el id del
+  documento** — que aquí *es* el email. Cualquier documento que no repitiera el
+  email dentro dejaba la señal sin él.
+
+  Se vio a la primera en la pantalla de Ajustes: la fila del propio usuario salía
+  sin la marca «Tú» y **con el botón de quitarse el acceso a uno mismo**, que es
+  justo la acción de la que no se puede volver. Es el mismo despiste que M-29 con
+  `contract.id`.
+
+---
+
+## N-11 · Permisos por rol, hasta el último botón *(anotado el 4 sep 2026)*
+
+Dorel quiere dar de alta a **compañeros de agencia con permisos reducidos**. La
+mitad está hecha; esta tarea es la otra mitad.
+
+**Ya funciona** (N-12): `permissions.util.ts` es la única autoridad, con la tabla
+de rol → permisos y 12 tests. El menú y los guards de ruta la consultan, así que
+un empleado **no ve ni entra** en Informes, Gastos ni Ajustes. Las reglas de
+Firestore ya distinguen administrador para `authorizedUsers` y `settings`.
+
+**Falta lo fino**, que es lo que gobierna botones dentro de una pantalla. Los
+permisos ya están **declarados** en la tabla —`editPricing`, `grantDiscounts`,
+`waiveDeposit`, `deleteRecords`, `cancelReservations`— y todavía no los consulta
+nadie:
+
+1. **Precios y descuentos.** El precio acordado del asistente, el descuento de
+   fidelidad en la ficha del cliente y la exención de fianza. Es donde se regala
+   dinero sin que se note.
+2. **Borrar y cancelar.** Borrar vehículos, clientes o gastos, y cancelar
+   reservas.
+3. **Las reglas de Firestore que lo respalden.** Sin esto lo anterior es
+   decoración: un guard oculta un botón, no impide una escritura. Hoy cualquier
+   usuario autorizado puede escribir en `reservations`, `clients`, `vehicles` y
+   `expenses`.
+
+**Tres decisiones antes de tocar nada:**
+
+- ¿Un empleado **ve** el precio y no puede cambiarlo, o tampoco lo ve? Lo primero
+  es lo normal —tiene que decírselo al cliente— pero deja el margen a la vista.
+- ¿Y los **gastos de un vehículo** dentro de su ficha? Hoy Gastos entero le queda
+  cerrado, pero la pestaña del coche es otra puerta a lo mismo.
+- ¿Hace falta un **tercer rol**? Con «administrador» y «empleado» no hay sitio
+  para alguien que lleve la caja pero no la configuración.
+
+⚠️ **Un permiso denegado tiene que explicarse.** Un botón que desaparece sin más
+hace que el compañero llame preguntando qué le pasa a la aplicación. Igual que el
+workflow dice «Falta contrato firmado», esto debería decir «Tu rol no permite
+cambiar precios».
+
+⚠️ **Y la tabla y las reglas tienen que decir lo mismo.** Son dos ficheros que
+se editan por separado y nada los ata: cuando se añada un permiso, hay que tocar
+los dos. Es la misma pareja UI/servicio que ya sostiene el workflow.
+
+---
+
+## ✅ M-42 · Un botón que no hace nada, en toda la aplicación *(4 sep 2026)*
+
+Con el formulario de usuarios vacío, «Dar acceso» **no hacía nada**: el botón
+estaba deshabilitado y nada decía por qué. El mismo patrón estaba repartido por
+media aplicación, y en el resto la explicación era un `alert()` del navegador
+—una ventana que hay que cerrar para poder ver el campo que te está señalando— y
+casi siempre **en español duro, sin traducir**.
+
+**Decisiones de Dorel:** el botón se pulsa siempre y es él quien dice qué falta,
+con el campo marcado en rojo suave; y los obligatorios llevan asterisco desde que
+se abre el formulario. Se descartó el toast, «molesto a la larga».
+
+**Lo aplicado**, en una sola pieza para los diez formularios:
+`FieldProblems` —campo → clave de i18n—, `<app-form-error>` y los estilos de
+estado en `styles.scss`.
+
+⚠️ **Una sola función de validación por formulario**, no dos: la que pinta la
+pantalla es la que llama el servicio antes de escribir. Con dos, la pantalla
+acaba dejando guardar algo que el servicio rechaza.
+
+⚠️ **El resumen junto al botón solo donde hace falta.** En el formulario de
+vehículos, con 29 campos, es lo único que sirve: el campo en rojo puede quedar a
+dos pantallas de scroll. En uno de tres campos repite lo que ya está debajo del
+campo y es ruido.
+
+**Formularios cubiertos** (10): ajustes de operación, alta de usuario, gasto,
+cliente, vehículo, mantenimiento, cliente rápido del asistente, cobro libre,
+inspección de entrega, inspección de devolución —y dentro de ella el alta de
+daño— y el registro de cobro de la ficha de reserva.
+
+**Ocho `alert()` de validación retirados**, entre ellos tres seguidos en la
+inspección de entrega: se arreglaba el primero, se volvía a pulsar y aparecía el
+segundo. Ahora salen los tres a la vez. Uno decía `'Title required'` **en
+inglés**, en una aplicación que se usa en tres idiomas y donde ninguno es ese.
+
+**Un fallo de CSS que solo se veía mirando.** El campo se marcaba en la clase
+pero seguía del mismo color: `.form-control` la declara cada componente y con la
+encapsulación de Angular su regla empata en especificidad con
+`.form-control.is-invalid`, así que ganaba la del componente por orden de
+inyección. Se resolvió subiendo la especificidad con el elemento
+(`input.form-control.is-invalid`).
+
+- [ ] **M-43 · Quedan 26 `alert()` de errores de operación.** No son validación
+  de campos —esos ya no existen— sino fallos de una llamada: «Error al generar el
+  contrato», «Error al subir la foto», «Error al crear la reserva». Siguen siendo
+  ventanas del navegador y **la mayoría en español duro**, así que un operador en
+  inglés o rumano ve castellano.
+
+  No se han tocado en M-42 a propósito: son otro problema —cómo se cuenta que
+  algo ha fallado, no qué falta por rellenar— y la solución no es la misma. El
+  sitio donde están concentrados es `reservation-detail` (9),
+  `contract-detail` (5) y las dos inspecciones (6, todos de subida de fotos).

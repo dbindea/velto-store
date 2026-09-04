@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { InspectionService } from '@features/inspections/services/inspection.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import {
@@ -32,7 +34,7 @@ import { ContractService } from '@features/contracts/services/contract.service';
 @Component({
   selector: 'app-inspection-pickup',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, FormErrorComponent],
   templateUrl: './inspection-pickup.component.html',
   styleUrl: './inspection-pickup.component.scss'
 })
@@ -133,22 +135,43 @@ export class InspectionPickupComponent implements OnInit {
     };
   }
 
+  /** Si ya se ha intentado completar. Hasta entonces no se marca nada en rojo. */
+  submitted = false;
+  /** Un fallo del guardado, distinto de un campo sin rellenar. */
+  saveError = '';
+
+  /**
+   * Lo que impide completar la entrega: campo → clave de i18n.
+   *
+   * Antes eran tres `alert()` **en español duro**, uno detrás de otro: se
+   * arreglaba el primero, se volvía a pulsar y aparecía el segundo. Y en una
+   * aplicación que se usa en tres idiomas.
+   */
+  get problems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (this.formData.km === undefined || this.formData.km === null) {
+      problems['km'] = 'inspections.errors.kmRequired';
+    }
+    if (!this.formData.fuelLevel) {
+      problems['fuelLevel'] = 'inspections.errors.fuelRequired';
+    }
+    if (!this.formData.cleanliness) {
+      problems['cleanliness'] = 'inspections.errors.cleanlinessRequired';
+    }
+    return problems;
+  }
+
+  get problemList(): string[] {
+    return problemKeys(this.problems);
+  }
+
   async completePickup(): Promise<void> {
     if (!this.reservationId) return;
 
-    // Validation
-    if (this.formData.km === undefined || this.formData.km === null) {
-      alert('El kilometraje de salida es obligatorio');
-      return;
-    }
-    if (!this.formData.fuelLevel) {
-      alert('El nivel de combustible de salida es obligatorio');
-      return;
-    }
-    if (!this.formData.cleanliness) {
-      alert('El estado de limpieza es obligatorio');
-      return;
-    }
+    this.submitted = true;
+    this.saveError = '';
+    if (hasProblems(this.problems)) return;
+
     const c = this.formData.checklist!;
     if (!c.clientIdentityChecked || !c.drivingLicenseChecked || !c.keysDelivered) {
       const confirmed = confirm('Hay items del checklist sin marcar. ¿Continuar de todos modos?');
@@ -161,7 +184,9 @@ export class InspectionPickupComponent implements OnInit {
       this.router.navigate(['/reservations', this.reservationId]);
     } catch (error) {
       console.error('Error completing pickup:', error);
-      alert('Error al completar la entrega');
+      // En pantalla, no en un `alert()` que hay que cerrar para poder ver lo
+      // que estaba escrito.
+      this.saveError = 'inspections.errors.pickupFailed';
     } finally {
       this.saving = false;
     }

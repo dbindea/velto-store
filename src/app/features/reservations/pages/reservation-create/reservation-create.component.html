@@ -280,14 +280,16 @@
               <h3>{{ 'reservations.client.createQuick' | translate }}</h3>
               
               <div class="form-group">
-                <label for="fullName">{{ 'reservations.client.fullName' | translate }} *</label>
-                <input 
-                  type="text" 
-                  id="fullName" 
+                <label class="required" for="fullName">{{ 'reservations.client.fullName' | translate }}</label>
+                <input
+                  type="text"
+                  id="fullName"
                   [(ngModel)]="quickClient.fullName"
                   (input)="formatFullName($event)"
                   class="form-control"
+                  [class.is-invalid]="quickClientSubmitted && quickClientProblems['fullName']"
                   required>
+                <app-form-error [problems]="quickClientProblems['fullName']" [show]="quickClientSubmitted" />
               </div>
 
               <div class="form-group">
@@ -327,7 +329,7 @@
                 <button 
                   class="btn-primary" 
                   type="button"
-                  [disabled]="!quickClient.fullName || saving"
+                  [disabled]="saving"
                   (click)="createQuickClient()">
                   @if (saving) {
                     <i class="pi pi-spin pi-spinner"></i>
@@ -498,8 +500,8 @@
 
                 @if (depositWaived) {
                   <div class="deposit-waived">
-                    <label for="depositWaivedReason">
-                      {{ 'reservations.deposit.waivedReason' | translate }} *
+                    <label class="required" for="depositWaivedReason">
+                      {{ 'reservations.deposit.waivedReason' | translate }}
                     </label>
                     <input
                       type="text"
@@ -574,7 +576,13 @@
               }
             </div>
 
-            <p class="quote-hint">{{ 'reservations.quote.hint' | translate }}</p>
+            <!-- La validez sale de Ajustes, no de un literal. Decía «Válido 7
+                 días» fijo mientras el PDF ya imprimía los que dijeran los
+                 ajustes: la pantalla y el papel contaban cosas distintas. -->
+            <p class="quote-hint">
+              {{ 'reservations.quote.hint' | translate }}
+              {{ quoteValidityDays }} {{ 'reservations.quote.days' | translate }}.
+            </p>
 
             @if (quoteCopied) {
               <p class="quote-feedback ok">

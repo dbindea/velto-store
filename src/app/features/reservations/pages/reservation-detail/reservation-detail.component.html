@@ -726,8 +726,10 @@
                 </select>
               </div>
               <div class="form-group">
-                <label>{{ 'payments.fields.amount' | translate }}</label>
-                <input type="number" class="form-control" [(ngModel)]="newPayment.amount" name="pamount" min="0" step="0.01">
+                <label class="required">{{ 'payments.fields.amount' | translate }}</label>
+                <input type="number" class="form-control" [(ngModel)]="newPayment.amount" name="pamount" min="0" step="0.01"
+                       [class.is-invalid]="paymentSubmitted && paymentProblems['amount']">
+                <app-form-error [problems]="paymentProblems['amount']" [show]="paymentSubmitted" />
               </div>
               <div class="form-group">
                 <label>{{ 'payments.fields.paidAmount' | translate }}</label>
@@ -928,8 +930,8 @@
             </p>
             <p class="modal-hint">{{ 'workflow.skipStepHint' | translate }}</p>
 
-            <label class="field-label" for="skip-reason">
-              {{ 'workflow.exceptionReason' | translate }} *
+            <label class="field-label required" for="skip-reason">
+              {{ 'workflow.exceptionReason' | translate }}
             </label>
             <textarea
               id="skip-reason"

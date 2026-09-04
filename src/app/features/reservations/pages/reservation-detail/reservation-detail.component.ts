@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
@@ -53,14 +55,12 @@ import { ReservationNote } from '@shared/models/reservation.model';
 @Component({
   selector: 'app-reservation-detail',
   standalone: true,
-  imports: [
-    CommonModule,
+  imports: [CommonModule,
     FormsModule,
     TranslatePipe,
     PaymentConceptPipe,
     ReservationTimelineComponent,
-    ReservationNotesPanelComponent
-  ],
+    ReservationNotesPanelComponent, FormErrorComponent],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
@@ -504,12 +504,32 @@ export class ReservationDetailComponent implements OnInit {
 
   // === Payment methods ===
 
+  /** Si ya se ha intentado registrar el cobro. */
+  paymentSubmitted = false;
+
+  /**
+   * Lo que impide registrar el cobro.
+   *
+   * ⚠️ Un cobro a 0 no es un cobro: liquidaría la fila pendiente sembrada al
+   * crear la reserva **sin haber cobrado nada**, y esa fila no volvería a
+   * aparecer como pendiente. Es la razón por la que esto se comprueba.
+   */
+  get paymentProblems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (this.newPayment.amount <= 0 && this.newPayment.paidAmount <= 0) {
+      problems['amount'] = 'payments.errors.invalidAmount';
+    }
+    return problems;
+  }
+
   async registerPayment(): Promise<void> {
     if (!this.reservation?.id) return;
-    if (this.newPayment.amount <= 0 && this.newPayment.paidAmount <= 0) {
-      alert(this.translateService.translate('payments.errors.invalidAmount'));
-      return;
-    }
+
+    // Antes era un `alert()`: una ventana del navegador que hay que cerrar para
+    // poder ver el campo que te está señalando.
+    this.paymentSubmitted = true;
+    if (hasProblems(this.paymentProblems)) return;
+
     this.savingPayment = true;
     try {
       // `registerReservationPayment` settles the pending row seeded at

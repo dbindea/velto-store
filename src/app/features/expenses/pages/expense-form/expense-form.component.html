@@ -1,0 +1,209 @@
+<div class="page">
+  <div class="page-header">
+    <button class="btn-back" type="button" (click)="cancel()">
+      <i class="pi pi-arrow-left"></i>
+    </button>
+    <div>
+      <h1>{{ (expenseId ? 'expenses.editTitle' : 'expenses.newTitle') | translate }}</h1>
+      <p class="subtitle">{{ 'expenses.formSubtitle' | translate }}</p>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else {
+    <form (ngSubmit)="save()">
+      <section class="card">
+        <h2>{{ 'expenses.sections.what' | translate }}</h2>
+
+        <div class="field">
+          <label for="scope">{{ 'expenses.fields.scope' | translate }}</label>
+          <select id="scope" name="scope" class="form-control"
+                  [(ngModel)]="scope" (ngModelChange)="onScopeChange()">
+            @for (option of scopeOptions; track option.value) {
+              <option [value]="option.value">{{ option.label | translate }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Un gasto imputado a un coche sin coche acaba siendo un gasto
+             general con la etiqueta equivocada, y falsea el coste por vehículo.
+             Por eso el campo es obligatorio y lo valida también el servicio. -->
+        @if (scope === 'vehicle') {
+          <div class="field">
+            <label class="required" for="vehicle">{{ 'expenses.fields.vehicle' | translate }}</label>
+            <select id="vehicle" name="vehicle" class="form-control"
+                    [class.is-invalid]="submitted && problems['vehicleId']"
+                    [(ngModel)]="vehicleId">
+              <option value="">{{ 'expenses.fields.selectVehicle' | translate }}</option>
+              @for (vehicle of vehicles; track vehicle.id) {
+                <option [value]="vehicle.id">
+                  {{ vehicle.brand }} {{ vehicle.model }} · {{ vehicle.plateNumber }}
+                </option>
+              }
+            </select>
+            <app-form-error [problems]="problems['vehicleId']" [show]="submitted" />
+          </div>
+        }
+
+        @if (scope === 'reservation') {
+          <div class="field">
+            <label class="required" for="reservation">{{ 'expenses.fields.reservation' | translate }}</label>
+            <select id="reservation" name="reservation" class="form-control"
+                    [class.is-invalid]="submitted && problems['reservationId']"
+                    [(ngModel)]="reservationId">
+              <option value="">{{ 'expenses.fields.selectReservation' | translate }}</option>
+              @for (reservation of reservations; track reservation.id) {
+                <option [value]="reservation.id">{{ reservationLabel(reservation) }}</option>
+              }
+            </select>
+            <app-form-error [problems]="problems['reservationId']" [show]="submitted" />
+          </div>
+        }
+
+        <div class="field">
+          <label for="category">{{ 'expenses.fields.category' | translate }}</label>
+          <select id="category" name="category" class="form-control"
+                  [(ngModel)]="category" (ngModelChange)="onCategoryChange()">
+            @for (option of categories; track option) {
+              <option [value]="option">{{ categoryLabel(option) }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="required" for="concept">{{ 'expenses.fields.concept' | translate }}</label>
+          <input id="concept" name="concept" type="text" class="form-control"
+                 [class.is-invalid]="submitted && problems['concept']"
+                 [(ngModel)]="concept"
+                 [placeholder]="'expenses.fields.conceptPlaceholder' | translate" />
+          <app-form-error [problems]="problems['concept']" [show]="submitted" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>{{ 'expenses.sections.money' | translate }}</h2>
+
+        <!-- ⚠️ Se escribe el TOTAL de la factura y la base se deduce. Es al
+             revés que en el alquiler, donde lo que se teclea es el neto. Del
+             ticket que tienes en la mano el número que se lee es el total. -->
+        <div class="field-row">
+          <div class="field">
+            <label class="required" for="amount">{{ 'expenses.fields.amount' | translate }}</label>
+            <div class="input-suffix">
+              <input id="amount" name="amount" type="number" step="0.01" min="0"
+                     class="form-control"
+                     [class.is-invalid]="submitted && problems['amount']"
+                     [(ngModel)]="amount" />
+              <span>€</span>
+            </div>
+            <app-form-error [problems]="problems['amount']" [show]="submitted" />
+            <small class="hint">{{ 'expenses.fields.amountHint' | translate }}</small>
+          </div>
+
+          <div class="field">
+            <label for="vatRate">{{ 'expenses.fields.vatRate' | translate }}</label>
+            <select id="vatRate" name="vatRate" class="form-control" [(ngModel)]="vatRate">
+              @for (rate of vatRates; track rate) {
+                <option [ngValue]="rate">{{ rate * 100 }} %</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="breakdown">
+          <div class="breakdown-row">
+            <span>{{ 'expenses.fields.net' | translate }}</span>
+            <strong>{{ split.net | number:'1.2-2' }} €</strong>
+          </div>
+          <div class="breakdown-row">
+            <span>{{ 'expenses.fields.vat' | translate }}</span>
+            <strong>{{ split.vat | number:'1.2-2' }} €</strong>
+          </div>
+          <div class="breakdown-row total">
+            <span>{{ 'expenses.fields.total' | translate }}</span>
+            <strong>{{ split.gross | number:'1.2-2' }} €</strong>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="required" for="date">{{ 'expenses.fields.date' | translate }}</label>
+            <input id="date" name="date" type="date" class="form-control"
+                   [class.is-invalid]="submitted && problems['date']"
+                   [(ngModel)]="date" />
+            <app-form-error [problems]="problems['date']" [show]="submitted" />
+          </div>
+          <div class="field">
+            <label for="method">{{ 'expenses.fields.method' | translate }}</label>
+            <select id="method" name="method" class="form-control" [(ngModel)]="paymentMethod">
+              @for (option of methodOptions; track option.value) {
+                <option [value]="option.value">{{ option.label | translate }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>{{ 'expenses.sections.proof' | translate }}</h2>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="supplier">{{ 'expenses.fields.supplier' | translate }}</label>
+            <input id="supplier" name="supplier" type="text" class="form-control" [(ngModel)]="supplier" />
+          </div>
+          <div class="field">
+            <label for="invoice">{{ 'expenses.fields.invoiceNumber' | translate }}</label>
+            <input id="invoice" name="invoice" type="text" class="form-control" [(ngModel)]="invoiceNumber" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="file">{{ 'expenses.fields.document' | translate }}</label>
+          <input id="file" name="file" type="file" class="form-control"
+                 accept="image/*,application/pdf" (change)="onFileSelected($event)" />
+          @if (documentUrl) {
+            <a class="doc-link" [href]="documentUrl" target="_blank" rel="noopener">
+              <i class="pi pi-file"></i>
+              {{ 'expenses.fields.viewDocument' | translate }}
+            </a>
+          }
+        </div>
+
+        <div class="field">
+          <label for="notes">{{ 'expenses.fields.notes' | translate }}</label>
+          <textarea id="notes" name="notes" rows="3" class="form-control" [(ngModel)]="notes"></textarea>
+        </div>
+      </section>
+
+      @if (errorKey) {
+        <p class="form-error">
+          <i class="pi pi-exclamation-triangle"></i>
+          {{ errorKey | translate }}
+        </p>
+      }
+
+      <app-form-error [problems]="problemList" [show]="submitted" [summary]="true" />
+
+      <div class="form-actions">
+        @if (expenseId) {
+          <button class="btn btn-danger" type="button" [disabled]="saving" (click)="remove()">
+            <i class="pi pi-trash"></i>
+            {{ 'common.delete' | translate }}
+          </button>
+        }
+        <button class="btn btn-secondary" type="button" (click)="cancel()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button class="btn btn-primary" type="submit" [disabled]="saving">
+          @if (saving) { <i class="pi pi-spin pi-spinner"></i> }
+          {{ 'common.save' | translate }}
+        </button>
+      </div>
+    </form>
+  }
+</div>

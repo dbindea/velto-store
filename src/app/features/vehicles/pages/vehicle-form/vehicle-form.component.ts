@@ -25,11 +25,24 @@ import { capitalizeWords, toReference, transformInput } from '@shared/utils/text
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { TranslateService } from '@core/i18n/translate.service';
+import { SettingsService } from '@features/settings/services/settings.service';
+import {
+  FieldProblems,
+  hasProblems,
+  problemKeys
+} from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 
 @Component({
   selector: 'app-vehicle-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, PhotoUploadButtonsComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    PhotoUploadButtonsComponent,
+    FormErrorComponent
+  ],
   templateUrl: './vehicle-form.component.html',
   styleUrl: './vehicle-form.component.scss',
 })
@@ -38,6 +51,7 @@ export class VehicleFormComponent implements OnInit {
   private router = inject(Router);
   private vehicleService = inject(VehicleService);
   private translateService = inject(TranslateService);
+  private settingsService = inject(SettingsService);
 
   isEditMode = false;
   vehicleId: string | null = null;
@@ -78,6 +92,13 @@ export class VehicleFormComponent implements OnInit {
       this.vehicleId = id;
       this.loadVehicle(id);
     } else {
+      // Un coche nuevo nace con la fianza y los km incluidos que digan los
+      // ajustes. Se recargan al abrir el formulario y luego se rehace el
+      // borrador: pedirlos después de haberlo construido no serviría de nada.
+      void this.settingsService.load().then(() => {
+        this.formData = this.getEmptyForm();
+        this.updateAcrissCode();
+      });
       this.updateAcrissCode();
     }
   }
@@ -153,8 +174,13 @@ export class VehicleFormComponent implements OnInit {
         cruiseControl: false,
       },
       pricingRules: getDefaultPricingRules(),
-      defaultDepositAmount: APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
-      includedKmPerDay: APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
+      // De Ajustes; las constantes del código son el respaldo de mientras nadie
+      // haya guardado ajustes todavía.
+      defaultDepositAmount:
+        this.settingsService.settings().defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
+      includedKmPerDay:
+        this.settingsService.settings().defaultIncludedKmPerDay ??
+        APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
       extraKmPrice: APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
       minimumRentalDays: APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
       manualPriceAllowed: true,
@@ -284,11 +310,43 @@ export class VehicleFormComponent implements OnInit {
     return true;
   }
 
-  async onSubmit(): Promise<void> {
-    if (!this.acrissCode) {
-      alert('El codigo ACRISS es requerido');
-      return;
+  /** Si ya se ha intentado guardar. Hasta entonces no se marca nada en rojo. */
+  submitted = false;
+
+  /**
+   * Lo que impide guardar el vehículo: campo → clave de i18n.
+   *
+   * El orden es el de la pantalla, para que el resumen junto al botón se lea de
+   * arriba abajo igual que el formulario. Aquí importa más que en ningún otro:
+   * son 29 campos y el que falta puede quedar a dos pantallas de scroll.
+   */
+  get problems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (!this.formData.brand?.trim()) problems['brand'] = 'vehicles.errors.brandRequired';
+    if (!this.formData.model?.trim()) problems['model'] = 'vehicles.errors.modelRequired';
+    if (!this.formData.plateNumber?.trim()) {
+      problems['plateNumber'] = 'vehicles.errors.plateRequired';
     }
+    if (!this.formData.seats) problems['seats'] = 'vehicles.errors.seatsRequired';
+    if (!this.formData.luggageCapacity) {
+      problems['luggageCapacity'] = 'vehicles.errors.luggageRequired';
+    }
+    // El ACRISS se calcula solo a partir de categoría, carrocería, transmisión y
+    // aire; si falta es que falta alguno de esos, no que haya que teclearlo.
+    if (!this.acrissCode) problems['acriss'] = 'vehicles.errors.acrissRequired';
+    return problems;
+  }
+
+  get problemList(): string[] {
+    return problemKeys(this.problems);
+  }
+
+  async onSubmit(): Promise<void> {
+    // Antes era `alert('El codigo ACRISS es requerido')` —español duro, sin
+    // traducir— y solo comprobaba el ACRISS: con la marca vacía, el navegador
+    // bloqueaba el envío por el `required` del HTML sin decir nada visible.
+    this.submitted = true;
+    if (hasProblems(this.problems)) return;
 
     this.saving = true;
     try {

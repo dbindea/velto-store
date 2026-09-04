@@ -12,7 +12,7 @@
     <div class="form-card">
       <div class="form-section">
         <label class="field">
-          <span class="label">{{ 'payments.free.amount' | translate }} *</span>
+          <span class="label required">{{ 'payments.free.amount' | translate }}</span>
           <div class="amount-input">
             <input
               type="number"
@@ -21,22 +21,26 @@
               class="form-control"
               name="amount"
               [(ngModel)]="form.amount"
+              [class.is-invalid]="submitted() && problems['amount']"
               required
             />
             <span class="currency">€</span>
           </div>
+          <app-form-error [problems]="problems['amount']" [show]="submitted()" />
         </label>
 
         <label class="field">
-          <span class="label">{{ 'payments.free.concept' | translate }} *</span>
+          <span class="label required">{{ 'payments.free.concept' | translate }}</span>
           <input
             type="text"
             class="form-control"
             name="concept"
             [(ngModel)]="form.concept"
+            [class.is-invalid]="submitted() && problems['concept']"
             required
             [placeholder]="'payments.free.conceptPlaceholder' | translate"
           />
+          <app-form-error [problems]="problems['concept']" [show]="submitted()" />
         </label>
 
         <label class="field">

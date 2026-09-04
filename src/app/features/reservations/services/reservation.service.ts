@@ -22,10 +22,10 @@ import {
 import {
   calculateBasePrice,
   findPricingRuleByDays,
-  resolveRentalPrice,
-  DEFAULT_VAT_RATE
+  resolveRentalPrice
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { SettingsService } from '@features/settings/services/settings.service';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
@@ -60,6 +60,19 @@ export class ReservationService {
   private paymentService = inject(PaymentService);
   private inspectionService = inject(InspectionService);
   private authService = inject(AuthService);
+  private settingsService = inject(SettingsService);
+
+  /**
+   * El tipo de IVA con el que nace una reserva.
+   *
+   * Sale de Ajustes y **se congela en el snapshot**: una subida futura del tipo
+   * general no puede mover un contrato ya firmado. El servicio lo lee por su
+   * cuenta y no se fía del que traiga la pantalla, igual que recalcula el precio
+   * en vez de fiarse de la cifra que enseñó la UI.
+   */
+  private currentVatRate(): number {
+    return this.settingsService.settings().vatRate;
+  }
 
   constructor() {
     this.reservationsRef = collection(this.firestore, 'reservations');
@@ -395,7 +408,7 @@ export class ReservationService {
         basePrice: basePriceResult.basePrice,
         netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: DEFAULT_VAT_RATE
+        vatRate: this.currentVatRate()
       },
       initialPayment: {
         requiredAmount: initialPaymentRequired,
@@ -539,7 +552,7 @@ export class ReservationService {
         finalPrice,
         // Frozen so a future change of the general rate never moves a contract
         // already signed.
-        vatRate: DEFAULT_VAT_RATE
+        vatRate: this.currentVatRate()
       },
       initialPayment: {
         requiredAmount: initialPayment,

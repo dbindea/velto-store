@@ -31,7 +31,9 @@
       "passport": "Pașaport"
     },
     "documents": {
+      "confirmDelete": "Ștergi acest document?",
       "delete": "Șterge document",
+      "deleteError": "Documentul nu a putut fi șters",
       "documentBack": "Document spate",
       "documentFront": "Document față",
       "drivingLicenseBack": "Permis spate",
@@ -41,12 +43,13 @@
       "noDocuments": "Nu există documente încărcate",
       "open": "Deschide",
       "other": "Alt document",
-      "uploadError": "Documentul nu a putut fi încărcat",
-      "deleteError": "Documentul nu a putut fi șters",
       "saveFirst": "Salvează întâi clientul pentru a încărca documente",
-      "confirmDelete": "Ștergi acest document?"
+      "uploadError": "Documentul nu a putut fi încărcat"
     },
     "edit": "Editează client",
+    "errors": {
+      "fullNameRequired": "Scrie numele complet al clientului"
+    },
     "fields": {
       "address": "Adresă",
       "birthDate": "Data nașterii",
@@ -128,17 +131,18 @@
     "edit": "Editează",
     "error": "Ceva nu a mers bine",
     "loading": "Se încarcă...",
-    "moduleInProgress": "Modul în pregătire",
+    "missingFields": "Mai lipsește:",
     "photos": {
       "camera": "Cameră",
       "gallery": "Galerie",
-      "takePhoto": "Fă poză",
-      "uploadFromGallery": "Încarcă din galerie",
       "hint": "JPG, PNG sau WebP · max. 5 MB",
       "invalidType": "Se acceptă doar imagini JPG, PNG sau WebP",
-      "tooLarge": "Imaginea depășește dimensiunea maximă (5 MB)"
+      "takePhoto": "Fă poză",
+      "tooLarge": "Imaginea depășește dimensiunea maximă (5 MB)",
+      "uploadFromGallery": "Încarcă din galerie"
     },
     "refresh": "Reîmprospătează",
+    "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
     "viewAll": "Vezi tot"
@@ -269,6 +273,104 @@
     "viewReservation": "Vezi rezervarea",
     "viewVehicle": "Vezi vehiculul"
   },
+  "expenses": {
+    "category": {
+      "accounting": "Contabilitate",
+      "advertising": "Publicitate",
+      "bankFees": "Comisioane bancare",
+      "cleaning": "Curățenie",
+      "fine": "Amendă",
+      "fuel": "Combustibil",
+      "insurance": "Asigurare",
+      "itv": "ITP",
+      "other": "Altele",
+      "parking": "Parcare",
+      "phone": "Telefon și internet",
+      "rent": "Chirie spațiu",
+      "repair": "Reparație",
+      "roadTax": "Impozit auto",
+      "software": "Software",
+      "supplies": "Consumabile",
+      "tires": "Anvelope",
+      "tolls": "Taxe de drum"
+    },
+    "confirmDelete": "Ștergi această cheltuială? Se șterge și factura ei.",
+    "editTitle": "Editează cheltuiala",
+    "errors": {
+      "amountRequired": "Suma trebuie să fie mai mare decât zero",
+      "conceptRequired": "Scrie ce s-a cheltuit",
+      "dateRequired": "Lipsește data cheltuielii",
+      "deleteFailed": "Cheltuiala nu a putut fi ștearsă",
+      "fileTooLarge": "Fișierul este prea mare",
+      "loadFailed": "Datele nu au putut fi încărcate",
+      "notFound": "Această cheltuială nu mai există",
+      "reservationRequired": "Alege rezervarea la care se impută",
+      "saveFailed": "Cheltuiala nu a putut fi salvată",
+      "vehicleRequired": "Alege vehiculul la care se impută"
+    },
+    "fields": {
+      "amount": "Totalul facturii",
+      "amountHint": "Cu TVA, exact cum apare pe bon",
+      "category": "Categorie",
+      "concept": "Descriere",
+      "conceptPlaceholder": "Schimb de ulei, onorariu contabil…",
+      "date": "Data cheltuielii",
+      "document": "Factură sau bon",
+      "invoiceNumber": "Nr. factură",
+      "method": "Modalitate de plată",
+      "net": "Bază impozabilă",
+      "notes": "Note",
+      "reservation": "Rezervare",
+      "scope": "Se impută la",
+      "selectReservation": "Alege o rezervare",
+      "selectVehicle": "Alege un vehicul",
+      "supplier": "Furnizor",
+      "total": "Total",
+      "vat": "TVA",
+      "vatRate": "Cotă TVA",
+      "vatShort": "TVA",
+      "vehicle": "Vehicul",
+      "viewDocument": "Vezi documentul"
+    },
+    "filters": {
+      "allScopes": "Toate imputările"
+    },
+    "formSubtitle": "Scrie totalul facturii; baza și TVA se calculează singure",
+    "fromMaintenance": "Mentenanță",
+    "list": {
+      "addFirst": "Adaugă prima cheltuială",
+      "empty": "Încă nu există cheltuieli",
+      "error": "Cheltuielile nu au putut fi încărcate"
+    },
+    "method": {
+      "bankTransfer": "Transfer bancar",
+      "card": "Card",
+      "cash": "Numerar",
+      "directDebit": "Debit direct",
+      "other": "Altul"
+    },
+    "new": "Cheltuială nouă",
+    "newTitle": "Cheltuială nouă",
+    "noVatBreakdown": "TVA nedetaliat",
+    "scope": {
+      "general": "Firmă",
+      "reservation": "Rezervare",
+      "vehicle": "Vehicul"
+    },
+    "sections": {
+      "money": "Sumă",
+      "proof": "Document justificativ",
+      "what": "Ce s-a cheltuit"
+    },
+    "subtitle": "Banii care ies: vehicule, închirieri și firmă",
+    "title": "Cheltuieli",
+    "totals": {
+      "entries": "înregistrări",
+      "spent": "Total cheltuit",
+      "vat": "TVA deductibil",
+      "vatOver": "din"
+    }
+  },
   "inspections": {
     "actions": {
       "startPickup": "Începe predare",
@@ -312,6 +414,15 @@
       "minor": "Minor",
       "serious": "Grav",
       "severity": "Gravitate"
+    },
+    "errors": {
+      "cleanlinessRequired": "Indică starea de curățenie",
+      "damageDescriptionRequired": "Descrie dauna",
+      "fuelRequired": "Indică nivelul de combustibil",
+      "kmLowerThanPickup": "Kilometrajul la returnare nu poate fi mai mic decât la predare",
+      "kmRequired": "Scrie kilometrajul de la bord",
+      "pickupFailed": "Predarea nu a putut fi finalizată",
+      "returnFailed": "Returnarea nu a putut fi finalizată"
     },
     "extraCharges": {
       "cleaning": "Taxă curățenie",
@@ -394,6 +505,9 @@
     "dueSoon": "Aproape de scadență",
     "edit": "Editează mentenanța",
     "empty": "Fără înregistrări de mentenanță pentru acest vehicul.",
+    "errors": {
+      "titleRequired": "Scrie despre ce mentenanță este vorba"
+    },
     "fields": {
       "cost": "Cost",
       "description": "Descriere",
@@ -466,24 +580,24 @@
       "viewReservation": "Vezi rezervare"
     },
     "checkout": {
-      "subtitle": "Plată securizată",
-      "payTo": "Plătești către",
-      "payNow": "Plătește cu cardul",
-      "secureNote": "Plată procesată de Redsys. Nu păstrăm datele cardului tău.",
-      "refresh": "Am plătit, actualizează",
-      "paidTitle": "Plată primită",
-      "paidMessage": "Mulțumim. Nu mai trebuie să faci nimic.",
-      "notFoundTitle": "Link invalid",
       "notFoundMessage": "Acest link de plată nu există sau nu mai este disponibil. Solicită unul nou.",
-      "unavailableTitle": "Plată indisponibilă",
-      "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi."
+      "notFoundTitle": "Link invalid",
+      "paidMessage": "Mulțumim. Nu mai trebuie să faci nimic.",
+      "paidTitle": "Plată primită",
+      "payNow": "Plătește cu cardul",
+      "payTo": "Plătești către",
+      "refresh": "Am plătit, actualizează",
+      "secureNote": "Plată procesată de Redsys. Nu păstrăm datele cardului tău.",
+      "subtitle": "Plată securizată",
+      "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
+      "unavailableTitle": "Plată indisponibilă"
     },
     "deposit": {
       "refundFull": "Restituie total",
       "retain": "Reține"
     },
     "errors": {
-      "invalidAmount": "Introdu o sumă mai mare decât 0."
+      "invalidAmount": "Suma nu este validă"
     },
     "fields": {
       "amount": "Sumă",
@@ -555,10 +669,10 @@
     "summary": {
       "depositHeld": "Garanție depusă",
       "extraChargesTotal": "Taxe extra",
+      "incomeTotal": "Încasat (fără garanție)",
       "rentalTotal": "Total închiriere",
       "title": "Rezumat",
-      "totalRental": "Total închiriere",
-      "incomeTotal": "Încasat (fără garanție)"
+      "totalRental": "Total închiriere"
     },
     "title": "Plăți",
     "types": {
@@ -608,8 +722,8 @@
     },
     "availability": {
       "conflict": "Există deja o rezervare pentru aceste date",
-      "notInFleet": "Vehiculul nu este disponibil în flotă",
       "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date",
+      "notInFleet": "Vehiculul nu este disponibil în flotă",
       "search": "Caută disponibilitate",
       "selectVehicle": "Selectează vehicul",
       "unavailable": "Indisponibil"
@@ -665,11 +779,12 @@
     "detail": "Detalii rezervare",
     "errors": {
       "cancel": "Nu s-a putut anula rezervarea",
-      "registerPayment": "Nu s-a putut înregistra plata",
-      "processDeposit": "Nu s-a putut procesa garanția",
-      "generateContract": "Nu s-a putut genera contractul",
+      "clientNameRequired": "Scrie numele clientului",
       "createSigningLink": "Nu s-a putut crea linkul de semnare",
+      "generateContract": "Nu s-a putut genera contractul",
       "pdfNotReady": "PDF-ul nu este încă disponibil",
+      "processDeposit": "Nu s-a putut procesa garanția",
+      "registerPayment": "Nu s-a putut înregistra plata",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil"
     },
     "fields": {
@@ -723,9 +838,10 @@
     "quote": {
       "copied": "Link copiat. Îl poți lipi în WhatsApp.",
       "copyLink": "Copiază linkul",
+      "days": "zile",
       "error": "Oferta nu a putut fi generată",
       "generate": "Generează oferta",
-      "hint": "Nu creează rezervarea și nu blochează vehiculul. Valabil 7 zile.",
+      "hint": "Nu creează rezervarea și nu blochează vehiculul. Valabilitate:",
       "open": "Deschide PDF"
     },
     "status": {
@@ -774,6 +890,62 @@
     "placeholder": "Caută client, vehicul sau rezervare…",
     "trigger": "Caută…"
   },
+  "settings": {
+    "errors": {
+      "deposit": "Garanția nu poate fi negativă",
+      "emailInvalid": "Acest email nu pare valid",
+      "emailRequired": "Scrie adresa de email a persoanei",
+      "includedKm": "Kilometrii incluși nu pot fi negativi",
+      "loadFailed": "Setările nu au putut fi încărcate",
+      "quoteValidity": "Oferta trebuie să fie valabilă cel puțin o zi",
+      "saveFailed": "Nu s-a putut salva",
+      "signingExpiry": "Linkul de semnare trebuie să dureze cel puțin o zi",
+      "vatRate": "TVA se scrie ca procent, între 0 și 100"
+    },
+    "operation": {
+      "days": "zile",
+      "deposit": "Garanție propusă",
+      "depositHint": "Cu ea se deschide asistentul. Are prioritate cea a vehiculului, dacă are, și rămâne editabilă la fiecare rezervare.",
+      "includedKm": "Km incluși pe zi",
+      "includedKmHint": "Cu care se creează un vehicul nou. Apoi se ajustează în fișa lui.",
+      "notice": "Se aplică la ce se creează de acum înainte. Rezervările deja făcute, contractele semnate și linkurile deja trimise nu se schimbă: fiecare are valorile lui înghețate.",
+      "quoteValidity": "Valabilitatea ofertei",
+      "quoteValidityHint": "Se tipărește pe PDF ca «Valabil până la». Este un angajament comercial: nimic nu păstrează prețul automat.",
+      "signingExpiry": "Expirarea linkului de semnare",
+      "signingExpiryHint": "Linkurile deja trimise o păstrează pe a lor: ce are clientul pe telefon nu expiră mai devreme din cauza asta.",
+      "vat": "Cotă TVA generală",
+      "vatHint": "Se aplică rezervărilor noi și se îngheață în fiecare. Se scrie ca procent: 21, nu 0,21."
+    },
+    "saved": "Salvat",
+    "subtitle": "Valori implicite și cine poate intra",
+    "tabs": {
+      "operation": "Operare",
+      "users": "Utilizatori"
+    },
+    "title": "Setări",
+    "users": {
+      "activate": "Dă acces",
+      "add": "Dă acces",
+      "addTitle": "Dă acces cuiva",
+      "added": "Acces acordat",
+      "confirmDelete": "Ștergi această persoană? Deja nu mai are acces; asta doar elimină înregistrarea.",
+      "deactivate": "Retrage accesul",
+      "email": "Cont Google",
+      "empty": "Încă nu are nimeni acces",
+      "inactive": "Fără acces",
+      "name": "Nume",
+      "notice": "Astăzi rolul decide în ce secțiuni întregi se intră: rapoarte, cheltuieli și aceste setări. Limitele fine — prețuri, ștergere sau anulare — vin într-o sarcină separată.",
+      "role": "Rol",
+      "roles": {
+        "admin": "Administrator",
+        "adminHint": "Poate tot, inclusiv să dea acces altora, să vadă rapoarte și cheltuieli și să schimbe aceste setări.",
+        "employee": "Angajat",
+        "employeeHint": "Se ocupă de zi cu zi: rezervări, clienți, vehicule, încasări, predări și returnări. Nu vede rapoarte sau cheltuieli, nu umblă la prețuri sau reduceri și nu șterge și nu anulează."
+      },
+      "selfLocked": "Nu îți poți schimba propriul acces sau rol.",
+      "you": "Tu"
+    }
+  },
   "vehicles": {
     "actions": {
       "changeStatus": "Schimbă status"
@@ -803,6 +975,14 @@
     "deleteConfirm": "Ești sigur că vrei să ștergi acest vehicul? Această acțiune nu poate fi anulată.",
     "deleteTitle": "Șterge vehicul",
     "edit": "Editează vehicul",
+    "errors": {
+      "acrissRequired": "Lipsește codul ACRISS: verifică categoria, caroseria, transmisia și aerul condiționat",
+      "brandRequired": "Scrie marca",
+      "luggageRequired": "Indică câte bagaje încap",
+      "modelRequired": "Scrie modelul",
+      "plateRequired": "Scrie numărul de înmatriculare",
+      "seatsRequired": "Indică câte locuri are"
+    },
     "features": {
       "airConditioning": "Aer condiționat",
       "cruiseControl": "Control tracțiune",
@@ -844,20 +1024,20 @@
     "noPhotos": "Nu există fotografii",
     "noVehicles": "Nu există vehicule",
     "photos": {
+      "add": "Adaugă fotografii",
       "closeGallery": "Închide galeria",
+      "confirmDelete": "Ștergi definitiv această fotografie?",
       "count": "{{count}} fotografii",
+      "delete": "Șterge fotografia",
+      "deleteError": "Fotografia nu a putut fi ștearsă",
       "empty": "Încă nu există fotografii",
       "imageAlt": "Fotografie vehicul",
       "next": "Următor",
       "openGallery": "Vezi galeria",
       "previous": "Anterior",
+      "saveFirst": "Salvează întâi vehiculul pentru a încărca fotografii",
       "thumbnail": "Miniatură",
-      "add": "Adaugă fotografii",
-      "delete": "Șterge fotografia",
-      "confirmDelete": "Ștergi definitiv această fotografie?",
-      "uploadError": "Fotografia nu a putut fi încărcată",
-      "deleteError": "Fotografia nu a putut fi ștearsă",
-      "saveFirst": "Salvează întâi vehiculul pentru a încărca fotografii"
+      "uploadError": "Fotografia nu a putut fi încărcată"
     },
     "pricing": {
       "addRule": "Adaugă interval",

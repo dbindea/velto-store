@@ -1,0 +1,219 @@
+/**
+ * Alta y edición de un gasto.
+ *
+ * Se rellena desde el móvil, con el ticket en la otra mano: campos altos, dos
+ * por fila solo cuando caben, y el desglose de IVA visible sin desplazarse
+ * desde el importe.
+ */
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .subtitle {
+    margin: 0.2rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+}
+
+.btn-back {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+
+  h2 {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent-color);
+    margin: 0 0 1rem;
+  }
+}
+
+/**
+ * ⚠️ `.form-control` **no es global** en este proyecto: cada formulario la
+ * declara en su propio SCSS. Sin esto los `input` salen sin caja ni borde —se
+ * ven como texto suelto sobre el fondo— mientras los `select` parecen normales,
+ * porque a esos sí los estiliza `styles.scss`. Es un fallo que compila
+ * perfectamente y solo se ve mirando la pantalla.
+ */
+.form-control {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb, 36, 143, 125), 0.1);
+  }
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.field {
+  margin-bottom: 1rem;
+  min-width: 0;
+
+  label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+  }
+
+  .hint {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.field-row {
+  display: grid;
+  // minmax(0, 1fr): sin ello un select con una opción larga —una reserva con
+  // nombre de cliente— estira la fila entera.
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 0 1rem;
+}
+
+.input-suffix {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  span {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+}
+
+/**
+ * El desglose, en vivo.
+ *
+ * Está aquí para poder contrastarlo con la factura **antes** de guardar: es la
+ * única comprobación de que el tipo elegido es el correcto.
+ */
+.breakdown {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.75rem 0.875rem;
+  margin-bottom: 1rem;
+
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 0.2rem 0;
+
+    strong {
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    &.total {
+      margin-top: 0.35rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border-color);
+      font-weight: 600;
+
+      strong {
+        color: var(--accent-color);
+      }
+    }
+  }
+}
+
+.doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--accent-color);
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 10px;
+  background: var(--error-bg, var(--bg-card));
+  border: 1px solid var(--error-color);
+  color: var(--error-color);
+  font-size: 0.85rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.625rem;
+
+  .btn {
+    min-height: 44px;
+  }
+
+  // En móvil los botones ocupan el ancho: se pulsan con el pulgar.
+  @media (max-width: 520px) {
+    .btn {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+  }
+}

@@ -31,7 +31,9 @@
       "passport": "Passport"
     },
     "documents": {
+      "confirmDelete": "Delete this document?",
       "delete": "Delete document",
+      "deleteError": "The document could not be deleted",
       "documentBack": "Document back",
       "documentFront": "Document front",
       "drivingLicenseBack": "License back",
@@ -41,12 +43,13 @@
       "noDocuments": "No documents uploaded",
       "open": "Open",
       "other": "Other document",
-      "uploadError": "The document could not be uploaded",
-      "deleteError": "The document could not be deleted",
       "saveFirst": "Save the client first to upload documents",
-      "confirmDelete": "Delete this document?"
+      "uploadError": "The document could not be uploaded"
     },
     "edit": "Edit client",
+    "errors": {
+      "fullNameRequired": "Enter the client’s full name"
+    },
     "fields": {
       "address": "Address",
       "birthDate": "Birth date",
@@ -128,17 +131,18 @@
     "edit": "Edit",
     "error": "Something went wrong",
     "loading": "Loading...",
-    "moduleInProgress": "Module in preparation",
+    "missingFields": "Still missing:",
     "photos": {
       "camera": "Camera",
       "gallery": "Gallery",
-      "takePhoto": "Take photo",
-      "uploadFromGallery": "Upload from gallery",
       "hint": "JPG, PNG or WebP · max. 5 MB",
       "invalidType": "Only JPG, PNG or WebP images are allowed",
-      "tooLarge": "The image is over the maximum size (5 MB)"
+      "takePhoto": "Take photo",
+      "tooLarge": "The image is over the maximum size (5 MB)",
+      "uploadFromGallery": "Upload from gallery"
     },
     "refresh": "Refresh",
+    "retry": "Retry",
     "save": "Save",
     "search": "Search",
     "viewAll": "View all"
@@ -269,6 +273,104 @@
     "viewReservation": "View reservation",
     "viewVehicle": "View vehicle"
   },
+  "expenses": {
+    "category": {
+      "accounting": "Accountant",
+      "advertising": "Advertising",
+      "bankFees": "Bank fees",
+      "cleaning": "Cleaning",
+      "fine": "Fine",
+      "fuel": "Fuel",
+      "insurance": "Insurance",
+      "itv": "Roadworthiness test",
+      "other": "Other",
+      "parking": "Parking",
+      "phone": "Phone and internet",
+      "rent": "Premises rent",
+      "repair": "Repair",
+      "roadTax": "Road tax",
+      "software": "Software",
+      "supplies": "Supplies",
+      "tires": "Tyres",
+      "tolls": "Tolls"
+    },
+    "confirmDelete": "Delete this expense? Its invoice is deleted too.",
+    "editTitle": "Edit expense",
+    "errors": {
+      "amountRequired": "The amount must be greater than zero",
+      "conceptRequired": "Describe what was spent",
+      "dateRequired": "The expense date is missing",
+      "deleteFailed": "The expense could not be deleted",
+      "fileTooLarge": "The file is too large",
+      "loadFailed": "The data could not be loaded",
+      "notFound": "That expense no longer exists",
+      "reservationRequired": "Choose the reservation it belongs to",
+      "saveFailed": "The expense could not be saved",
+      "vehicleRequired": "Choose the vehicle it belongs to"
+    },
+    "fields": {
+      "amount": "Invoice total",
+      "amountHint": "VAT included, exactly as on the receipt",
+      "category": "Category",
+      "concept": "Description",
+      "conceptPlaceholder": "Oil change, accountant fee…",
+      "date": "Expense date",
+      "document": "Invoice or receipt",
+      "invoiceNumber": "Invoice no.",
+      "method": "Payment method",
+      "net": "Taxable base",
+      "notes": "Notes",
+      "reservation": "Reservation",
+      "scope": "Allocated to",
+      "selectReservation": "Choose a reservation",
+      "selectVehicle": "Choose a vehicle",
+      "supplier": "Supplier",
+      "total": "Total",
+      "vat": "VAT",
+      "vatRate": "VAT rate",
+      "vatShort": "VAT",
+      "vehicle": "Vehicle",
+      "viewDocument": "View document"
+    },
+    "filters": {
+      "allScopes": "All allocations"
+    },
+    "formSubtitle": "Enter the invoice total; the base and VAT are worked out for you",
+    "fromMaintenance": "Maintenance",
+    "list": {
+      "addFirst": "Add the first expense",
+      "empty": "No expenses yet",
+      "error": "Expenses could not be loaded"
+    },
+    "method": {
+      "bankTransfer": "Bank transfer",
+      "card": "Card",
+      "cash": "Cash",
+      "directDebit": "Direct debit",
+      "other": "Other"
+    },
+    "new": "New expense",
+    "newTitle": "New expense",
+    "noVatBreakdown": "VAT not broken down",
+    "scope": {
+      "general": "Company",
+      "reservation": "Reservation",
+      "vehicle": "Vehicle"
+    },
+    "sections": {
+      "money": "Amount",
+      "proof": "Supporting document",
+      "what": "What was spent"
+    },
+    "subtitle": "Money out: vehicles, rentals and company",
+    "title": "Expenses",
+    "totals": {
+      "entries": "entries",
+      "spent": "Total spent",
+      "vat": "Input VAT",
+      "vatOver": "over"
+    }
+  },
   "inspections": {
     "actions": {
       "startPickup": "Start pickup",
@@ -312,6 +414,15 @@
       "minor": "Minor",
       "serious": "Serious",
       "severity": "Severity"
+    },
+    "errors": {
+      "cleanlinessRequired": "Enter how clean the vehicle is",
+      "damageDescriptionRequired": "Describe the damage",
+      "fuelRequired": "Enter the fuel level",
+      "kmLowerThanPickup": "The return odometer cannot be lower than at pickup",
+      "kmRequired": "Enter the odometer reading",
+      "pickupFailed": "The pickup could not be completed",
+      "returnFailed": "The return could not be completed"
     },
     "extraCharges": {
       "cleaning": "Cleaning charge",
@@ -394,6 +505,9 @@
     "dueSoon": "Due soon",
     "edit": "Edit maintenance",
     "empty": "No maintenance records for this vehicle.",
+    "errors": {
+      "titleRequired": "Enter what the maintenance is"
+    },
     "fields": {
       "cost": "Cost",
       "description": "Description",
@@ -466,24 +580,24 @@
       "viewReservation": "View reservation"
     },
     "checkout": {
-      "subtitle": "Secure payment",
-      "payTo": "You are paying",
-      "payNow": "Pay by card",
-      "secureNote": "Payment processed by Redsys. We never store your card details.",
-      "refresh": "I have paid, refresh",
-      "paidTitle": "Payment received",
-      "paidMessage": "Thank you. There is nothing else to do.",
-      "notFoundTitle": "Invalid link",
       "notFoundMessage": "This payment link does not exist or is no longer available. Please ask for a new one.",
-      "unavailableTitle": "Payment unavailable",
-      "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us."
+      "notFoundTitle": "Invalid link",
+      "paidMessage": "Thank you. There is nothing else to do.",
+      "paidTitle": "Payment received",
+      "payNow": "Pay by card",
+      "payTo": "You are paying",
+      "refresh": "I have paid, refresh",
+      "secureNote": "Payment processed by Redsys. We never store your card details.",
+      "subtitle": "Secure payment",
+      "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us.",
+      "unavailableTitle": "Payment unavailable"
     },
     "deposit": {
       "refundFull": "Refund full",
       "retain": "Retain"
     },
     "errors": {
-      "invalidAmount": "Enter an amount greater than 0."
+      "invalidAmount": "The amount is not valid"
     },
     "fields": {
       "amount": "Amount",
@@ -555,10 +669,10 @@
     "summary": {
       "depositHeld": "Deposit held",
       "extraChargesTotal": "Extra charges",
+      "incomeTotal": "Collected (excl. deposit)",
       "rentalTotal": "Rental total",
       "title": "Summary",
-      "totalRental": "Rental total",
-      "incomeTotal": "Collected (excl. deposit)"
+      "totalRental": "Rental total"
     },
     "title": "Payments",
     "types": {
@@ -608,8 +722,8 @@
     },
     "availability": {
       "conflict": "There is already a booking for these dates",
-      "notInFleet": "The vehicle is not available in the fleet",
       "noVehiclesAvailable": "No vehicles available for these dates",
+      "notInFleet": "The vehicle is not available in the fleet",
       "search": "Search availability",
       "selectVehicle": "Select vehicle",
       "unavailable": "Not available"
@@ -665,11 +779,12 @@
     "detail": "Reservation details",
     "errors": {
       "cancel": "Could not cancel the reservation",
-      "registerPayment": "Could not register the payment",
-      "processDeposit": "Could not process the deposit",
-      "generateContract": "Could not generate the contract",
+      "clientNameRequired": "Enter the client’s name",
       "createSigningLink": "Could not create the signing link",
+      "generateContract": "Could not generate the contract",
       "pdfNotReady": "The PDF is not available yet",
+      "processDeposit": "Could not process the deposit",
+      "registerPayment": "Could not register the payment",
       "signedPdfNotReady": "The signed contract is not available yet"
     },
     "fields": {
@@ -723,9 +838,10 @@
     "quote": {
       "copied": "Link copied. You can paste it into WhatsApp.",
       "copyLink": "Copy link",
+      "days": "days",
       "error": "The quote could not be generated",
       "generate": "Generate quote",
-      "hint": "Does not create the booking or hold the vehicle. Valid for 7 days.",
+      "hint": "It does not create the reservation or block the vehicle. Valid for:",
       "open": "Open PDF"
     },
     "status": {
@@ -774,6 +890,62 @@
     "placeholder": "Search client, vehicle or reservation…",
     "trigger": "Search…"
   },
+  "settings": {
+    "errors": {
+      "deposit": "The deposit cannot be negative",
+      "emailInvalid": "That email does not look valid",
+      "emailRequired": "Enter the person’s email",
+      "includedKm": "Included kilometres cannot be negative",
+      "loadFailed": "The settings could not be loaded",
+      "quoteValidity": "The quote must be valid for at least one day",
+      "saveFailed": "It could not be saved",
+      "signingExpiry": "The signing link must last at least one day",
+      "vatRate": "VAT is written as a percentage, between 0 and 100"
+    },
+    "operation": {
+      "days": "days",
+      "deposit": "Suggested deposit",
+      "depositHint": "What the wizard opens with. The vehicle wins if it has its own, and it stays editable on every reservation.",
+      "includedKm": "Included km per day",
+      "includedKmHint": "What a new vehicle is created with. It is adjusted afterwards on its own form.",
+      "notice": "This applies to whatever is created from now on. Existing reservations, signed contracts and links already sent do not move: each one carries its own frozen values.",
+      "quoteValidity": "Quote validity",
+      "quoteValidityHint": "Printed on the PDF as \"Valid until\". It is a commercial promise: nothing holds that price automatically.",
+      "signingExpiry": "Signing link expiry",
+      "signingExpiryHint": "Links already sent keep their own: what the customer has on their phone does not expire sooner because of this.",
+      "vat": "General VAT rate",
+      "vatHint": "Applied to new reservations and frozen into each one. Written as a percentage: 21, not 0.21."
+    },
+    "saved": "Saved",
+    "subtitle": "Default values and who can get in",
+    "tabs": {
+      "operation": "Operation",
+      "users": "Users"
+    },
+    "title": "Settings",
+    "users": {
+      "activate": "Give access",
+      "add": "Give access",
+      "addTitle": "Give someone access",
+      "added": "Access granted",
+      "confirmDelete": "Delete this person? They already have no access; this only removes the record.",
+      "deactivate": "Remove access",
+      "email": "Google account",
+      "empty": "Nobody has access yet",
+      "inactive": "No access",
+      "name": "Name",
+      "notice": "Today the role decides which whole sections someone gets into: reports, expenses and these settings. The finer limits — touching prices, deleting or cancelling — come in a separate task.",
+      "role": "Role",
+      "roles": {
+        "admin": "Administrator",
+        "adminHint": "Can do everything, including granting access to others, seeing reports and expenses and changing these settings.",
+        "employee": "Employee",
+        "employeeHint": "Runs the day to day: reservations, clients, vehicles, payments, pickups and returns. Does not see reports or expenses, does not touch prices or discounts, and does not delete or cancel."
+      },
+      "selfLocked": "You cannot change your own access or role.",
+      "you": "You"
+    }
+  },
   "vehicles": {
     "actions": {
       "changeStatus": "Change status"
@@ -803,6 +975,14 @@
     "deleteConfirm": "Are you sure you want to delete this vehicle? This action cannot be undone.",
     "deleteTitle": "Delete vehicle",
     "edit": "Edit vehicle",
+    "errors": {
+      "acrissRequired": "The ACRISS code is missing: check category, body type, transmission and air conditioning",
+      "brandRequired": "Enter the make",
+      "luggageRequired": "Enter how many bags fit",
+      "modelRequired": "Enter the model",
+      "plateRequired": "Enter the plate number",
+      "seatsRequired": "Enter how many seats it has"
+    },
     "features": {
       "airConditioning": "Air conditioning",
       "cruiseControl": "Cruise control",
@@ -844,20 +1024,20 @@
     "noPhotos": "No photos available",
     "noVehicles": "No vehicles yet",
     "photos": {
+      "add": "Add photos",
       "closeGallery": "Close gallery",
+      "confirmDelete": "Delete this photo for good?",
       "count": "{{count}} photos",
+      "delete": "Delete photo",
+      "deleteError": "The photo could not be deleted",
       "empty": "No photos yet",
       "imageAlt": "Vehicle photo",
       "next": "Next",
       "openGallery": "View gallery",
       "previous": "Previous",
+      "saveFirst": "Save the vehicle first to upload photos",
       "thumbnail": "Thumbnail",
-      "add": "Add photos",
-      "delete": "Delete photo",
-      "confirmDelete": "Delete this photo for good?",
-      "uploadError": "The photo could not be uploaded",
-      "deleteError": "The photo could not be deleted",
-      "saveFirst": "Save the vehicle first to upload photos"
+      "uploadError": "The photo could not be uploaded"
     },
     "pricing": {
       "addRule": "Add range",

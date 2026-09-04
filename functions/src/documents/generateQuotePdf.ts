@@ -25,10 +25,17 @@ import { buildQuotePdf } from './documents-pdf';
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { companyConfig } from '../company-config';
+import { operationSettings } from '../settings';
 import type { ContractLocale } from '../contracts/contract-types';
 
-/** How long a quote is offered for. Commercial promise, not a technical one. */
-const QUOTE_VALIDITY_DAYS = Number(process.env.VELTO_QUOTE_VALIDITY_DAYS || 7);
+/**
+ * Cuántos días se ofrece el presupuesto. Compromiso comercial, no técnico: nada
+ * respeta ese precio automáticamente, porque el presupuesto no se persiste.
+ *
+ * Sale de **Ajustes**; el `.env` sigue valiendo como respaldo para un entorno
+ * que quiera fijarlo sin tocar la base de datos.
+ */
+const QUOTE_VALIDITY_FALLBACK = Number(process.env.VELTO_QUOTE_VALIDITY_DAYS || 0);
 
 const LOCALES: ContractLocale[] = ['es', 'en', 'ro'];
 
@@ -121,9 +128,12 @@ export const generateQuotePdf = functions.https.onCall(
         : ((process.env.VELTO_DEFAULT_CONTRACT_LOCALE as ContractLocale) || 'es');
 
     const generatedAt = new Date();
-    const validUntil = new Date(
-      generatedAt.getTime() + QUOTE_VALIDITY_DAYS * 24 * 60 * 60 * 1000
-    );
+    // El `.env` gana si está puesto; si no, manda lo que diga Ajustes.
+    const validityDays =
+      QUOTE_VALIDITY_FALLBACK > 0
+        ? QUOTE_VALIDITY_FALLBACK
+        : (await operationSettings()).quoteValidityDays;
+    const validUntil = new Date(generatedAt.getTime() + validityDays * 24 * 60 * 60 * 1000);
 
     functions.logger.info(
       `generateQuotePdf: plate=${data.vehicle.plateNumber} locale=${locale}`

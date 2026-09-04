@@ -226,7 +226,7 @@ functions/src/
                                       # (documents-pdf, storage, los 2 callables)
 ```
 
-`expenses` y `settings` son **placeholders**: componentes con template inline que solo muestran `common.moduleInProgress`.
+**Ya no queda ningún placeholder**: Gastos y Ajustes se construyeron el 4 de septiembre de 2026.
 
 ## Lógica de negocio
 
@@ -285,14 +285,77 @@ Si cambia el tipo, se cambia en los dos sitios.
 enseñaba tal cual y lo sembraba así en la fila de pago. Todo importe calculado pasa por
 `roundMoney()` antes de mostrarse o escribirse.
 
+### `permissions.util.ts` es la única autoridad sobre quién puede qué
+
+Rol → permisos, en una tabla. El menú y los guards de ruta preguntan ahí; un
+`if (role === 'admin')` suelto en una plantilla es una segunda fuente de verdad,
+y la primera vez que discrepen nadie sabrá cuál manda. Misma idea que el workflow.
+
+⚠️ **Es la interfaz, no la seguridad.** Un permiso denegado oculta un botón o
+corta una navegación; lo que impide de verdad leer o escribir es
+`firestore.rules`. Los dos ficheros se editan por separado y nada los ata: al
+añadir un permiso hay que tocar **los dos**.
+
+⚠️ **Hoy solo están conectados los permisos de módulo entero** —Informes, Gastos
+y Ajustes, cerrados a `employee`—. Los finos (precios, descuentos, borrar,
+cancelar) están **declarados en la tabla y sin consultar por nadie**: es N-11.
+Están escritos ya para que la tabla naciera completa y en un sitio, no para que
+alguien crea que ya limitan algo.
+
+⚠️ **Nadie puede desactivarse ni degradarse a sí mismo** en Ajustes. Si el único
+administrador se quita el acceso, no hay forma de volver desde la aplicación:
+habría que entrar a Firestore por la consola.
+
+### `settings/operation`: valores por defecto, nunca retroactivos
+
+Un único documento con la fianza propuesta, el IVA general, la validez del
+presupuesto, la caducidad del enlace de firma y los km incluidos.
+
+⚠️ **Rige para lo que se cree a partir de ahora y nada más.** El IVA se congela
+en `pricingSnapshot.vatRate`, el precio en su snapshot y la caducidad en el
+propio token de firma. Si alguna vez un cambio en Ajustes recalcula algo
+existente, se habrá roto lo que hace que un contrato firmado siga cuadrando
+dentro de dos años.
+
+⚠️ **Sin documento mandan las constantes del código.** No es un parche de
+compatibilidad: es el estado inicial, y por eso los valores por defecto de
+`settings.model.ts` son exactamente los que `APP_DEFAULTS` traía escritos.
+
+Las Cloud Functions leen **el mismo documento** con el admin SDK
+(`functions/src/settings.ts`) para la validez del presupuesto y la caducidad del
+enlace: esas dos se deciden en el backend. Si se añade un ajuste que gobierne un
+PDF, hay que tocar los dos lados.
+
+### El IVA va en dos direcciones, y no es una incoherencia
+
+⚠️ **En un alquiler el IVA se SUMA al neto. En un gasto se EXTRAE del total.**
+
+- Un **alquiler** se negocia por el neto —30 €/día— y el impuesto va encima:
+  `addVat()` en `pricing.util.ts`.
+- Un **gasto** llega como una factura de 60,50 € y hay que sacarle la base:
+  `extractVatFromGross()` en `expense.util.ts`.
+
+Viven en ficheros distintos y con nombres explícitos justo para que nadie las
+confunda. Confundirlas **no da un error**: da una cifra creíble y equivocada, que
+es la peor clase de fallo con dinero. Si algún día alguien unifica los dos
+módulos, esta es la razón por la que no debe.
+
 ### Otros utils
 
 - `payment-summary.util.ts` — resumen financiero, derivado de la colección `payments` (source of truth)
+- `expense.util.ts` — el IVA de los gastos, la mezcla con el mantenimiento y los totales
 - `reservation-date.util.ts`, `acriss-code.util.ts`
 
 ### Reglas de dominio
 
 - Los **cargos extra solo nacen desde la inspección de devolución**. Un solo sistema, sin doble fuente. Todavía **no llevan desglose de IVA**: el contrato se genera antes de que existan.
+- **Un gasto de mantenimiento se registra en `vehicleMaintenance`, no en `expenses`.** El
+  módulo de Gastos **lee** su coste y lo suma; escribirlo en los dos sitios daría dos
+  fuentes de verdad para el mismo euro. Es la misma regla que hace de `payments` la única
+  fuente del dinero que entra.
+  ⚠️ Su coste **no tiene desglose de IVA** —se teclea como un importe suelto, sin tipo— y
+  por eso en Gastos el bruto no es la suma de bases más impuestos. La pantalla lo dice
+  («IVA soportado · sobre 1/3»); igualar los tres números sería inventarse ese IVA.
 - El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
@@ -704,14 +767,31 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 
 ## Colecciones de Firestore
 
-Verificadas contra el proyecto `velto-store` en producción:
-
 ```
-authorizedUsers  clients  contracts  contractSigningTokens
-payments  reservations  vehicles
+authorizedUsers  clients  contracts  contractSigningTokens  expenses
+payments  reservations  settings  vehicles  inspections  vehicleMaintenance
 ```
 
-No hay colección para `expenses` — coherente con que el módulo sea un placeholder.
+⚠️ **En `authorizedUsers` el id del documento ES el email en minúsculas**, y
+`data()` **no lo incluye**. Quien lea uno tiene que añadirlo (`{ ...data, email:
+snap.id }`) o se queda con un `email` vacío: es lo que hizo que la pantalla de
+Ajustes dejara de reconocer al usuario en sesión y le ofreciera quitarse el
+acceso a sí mismo (M-41). Mismo despiste que M-29 con `contract.id`.
+
+⚠️ **Las dos bases de datos se vaciaron el 4 de septiembre de 2026**, por decisión de
+Dorel, para empezar de cero: todas las colecciones **menos `authorizedUsers`**, en
+desarrollo y en producción. Esa se salva siempre y no es un detalle: es donde vive la
+autorización de acceso, y borrarla deja a todo el mundo fuera de la aplicación sin forma
+de entrar a arreglarlo desde la propia app.
+
+Así que hoy están **todas vacías**, y las colecciones de arriba son las que el código
+crea, no las que existen ahora mismo. `expenses` estuvo declarada en `firestore.rules`
+desde el principio sin que nada la usara; desde el 4 de septiembre de 2026 la escribe el
+módulo de Gastos.
+
+⚠️ **Vaciar Firestore no vacía Storage.** Los PDF, las firmas y las fotos siguen ahí,
+huérfanos y con su token de descarga vivo. Se limpian aparte, desde la consola de Firebase
+o con el admin SDK; el CLI no tiene comando para ello.
 
 ## Índices de Firestore
 
@@ -721,7 +801,14 @@ No hay colección para `expenses` — coherente con que el módulo sea un placeh
 - `reservations`: `clientId + pickupDateTime desc` · `vehicleId + pickupDateTime desc`
 - `payments`: `reservationId + createdAt asc` · `clientId + createdAt desc` · `vehicleId + createdAt desc`
 - `inspections`: `reservationId + createdAt asc`
-- `vehicleMaintenance`: `vehicleId + nextDueDate desc` · `status + nextDueDate asc`
+- `vehicleMaintenance`: `status + nextDueDate asc`
+- `expenses`: `scope + date desc` · `vehicleId + date desc` · `reservationId + date desc`
+
+⚠️ **Un `orderBy` deja fuera a quien no tenga ese campo.** Firestore excluye del
+resultado los documentos que no lo llevan, sin avisar. `getMaintenanceByVehicle` ordenaba
+por `nextDueDate` y **una reparación ya hecha sin próxima revisión programada
+desaparecía de la ficha del coche** aunque estuviera guardada (M-40, 4 de septiembre de
+2026). Cuando el campo por el que se ordena es opcional, se ordena en memoria.
 
 Sin ellos la consulta **falla en tiempo de ejecución** la primera vez que se usa. Desplegar
 con `firebase deploy --only firestore:indexes`.
@@ -754,6 +841,45 @@ causa de que los selects parecieran «en bruto».
 Lo que sí es nuestro —el control cerrado— se estiliza **globalmente** en `styles.scss`:
 `appearance: none` + chevron SVG propio, y el icono del calendario invertido en tema oscuro.
 Global a propósito: son 30 `select` y 9 campos de fecha repartidos por 13 componentes.
+
+### Un botón que no hace nada es un fallo
+
+⚠️ **Los botones de guardar NO se deshabilitan por datos que falten.** Solo se apagan
+mientras guardan. Al pulsarlos con algo incompleto se marca el campo, se explica debajo y
+—en los formularios largos— se resume junto al botón. Un botón apagado sin explicación
+deja al operador pulsando sin que pase nada, que es literalmente lo que pasaba.
+
+Las tres piezas, y las tres hacen falta:
+
+1. **`validateX()` devuelve `FieldProblems`** —campo → clave de i18n— en
+   [form-problems.util.ts](src/app/shared/utils/form-problems.util.ts). **Una sola función
+   por formulario**: la misma que pinta la pantalla la llama el servicio antes de escribir.
+   Dos acabarían discrepando, y entonces la pantalla deja guardar algo que el servicio
+   rechaza.
+2. **`<app-form-error>`** pinta el mensaje, bajo el campo o como resumen (`[summary]`).
+   No decide nada: solo enseña lo que le dan.
+3. **`submitted`** en el componente. Nada se marca en rojo hasta el primer intento: señalar
+   un campo que el operador aún no ha tenido ocasión de rellenar es regañarle por no haber
+   terminado de escribir.
+
+El orden de las comprobaciones dentro de `validateX()` es el de los campos en la pantalla,
+para que el resumen se lea de arriba abajo igual que el formulario.
+
+⚠️ **El resumen solo en formularios largos.** En uno de tres campos con el botón al lado
+repite el mensaje que ya está bajo el campo y es ruido. Va donde el campo en rojo puede
+quedar fuera de la pantalla: vehículo (29 campos), cliente, inspecciones.
+
+⚠️ **Los obligatorios llevan `class="required"` en la etiqueta**, nunca un `*` escrito a
+mano. Si la etiqueta **envuelve** al campo, la clase va en el `<span>` del texto: sobre el
+`<label>` el asterisco saldría debajo del input.
+
+### `.form-control` NO es global
+
+⚠️ Cada formulario **declara su propia `.form-control`** en su SCSS. No está en
+`styles.scss`, aunque lo parezca por lo repetida que está. Si un componente nuevo la usa
+sin declararla, sus `input` y `textarea` salen **sin caja ni borde**, como texto suelto
+sobre el fondo — mientras los `select` de al lado se ven perfectos, porque a esos sí los
+estiliza `styles.scss`. Compila, pasa los tests y solo se ve mirando la pantalla.
 
 ### Tema y color
 
@@ -799,8 +925,7 @@ y las clases `.email` / `.mono` usan `anywhere`.
 - `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
 - `CREDENTIALS.md` no está en `.gitignore`, aunque sí lo están `*.p12`, `*.pfx`, `*.key` y
   `cert.b64` desde el 4 de septiembre de 2026.
-- ⚠️ **Puede haber una copia del certificado `.p12` en `public/`.** No se publica —hosting
-  sirve `dist/`— ni se commitea, pero **hay que borrarla**: quien tenga ese fichero y su
-  contraseña puede firmar contratos en nombre de la empresa.
 - `client.service.ts` tiene un `TODO`: al borrar cliente no elimina sus documentos de Storage.
+  ⚠️ Es el mismo agujero que dejó **ficheros huérfanos en Storage** al vaciar las bases de
+  datos el 4 de septiembre de 2026: borrar el documento no se lleva lo que subió.
 - `reservation.service.ts` tiene un `TODO`: operaciones que deberían ser transacción Firestore o Cloud Function.

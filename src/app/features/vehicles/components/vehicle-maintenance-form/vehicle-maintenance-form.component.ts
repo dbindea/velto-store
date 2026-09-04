@@ -11,6 +11,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Timestamp } from '@angular/fire/firestore';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
+import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import {
   MAINTENANCE_PRIORITY_LABELS,
   MAINTENANCE_STATUS_LABELS,
@@ -50,7 +52,7 @@ interface MaintenanceFormData {
 @Component({
   selector: 'app-vehicle-maintenance-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
   templateUrl: './vehicle-maintenance-form.component.html',
   styleUrl: './vehicle-maintenance-form.component.scss'
 })
@@ -141,11 +143,23 @@ export class VehicleMaintenanceFormComponent implements OnChanges {
     }
   }
 
-  onSubmit(): void {
+  /** Si ya se ha intentado guardar. Hasta entonces no se marca nada en rojo. */
+  submitted = false;
+
+  /** Lo que impide guardar el mantenimiento: campo → clave de i18n. */
+  get problems(): FieldProblems {
+    const problems: FieldProblems = {};
     if (!this.form.title.trim()) {
-      this.error.set('Title required');
-      return;
+      problems['title'] = 'maintenance.errors.titleRequired';
     }
+    return problems;
+  }
+
+  onSubmit(): void {
+    // Antes ponía `'Title required'` **en inglés y a pelo**, en una aplicación
+    // que se usa en tres idiomas y donde ninguno es ese.
+    this.submitted = true;
+    if (hasProblems(this.problems)) return;
     this.error.set(null);
     this.submitForm.emit({
       ...this.form,

@@ -426,3 +426,115 @@ h1, h2, h3, h4, h5, h6 {
 .pi {
   font-size: 1rem;
 }
+
+/* =========================================================================
+   Validación de formularios
+   =========================================================================
+
+   ⚠️ **Esto va aquí, global, a propósito.** `.form-control` sí está declarada
+   componente a componente —una copia por formulario, que es la deuda que hay—,
+   pero el estado de error no puede seguir ese camino: son ocho formularios y la
+   octava copia acabaría distinta de las otras siete. Lo de aquí solo pinta el
+   estado; el aspecto base de cada campo sigue siendo suyo.
+
+   El criterio, decidido el 4 de septiembre de 2026: **un botón que no hace nada
+   es un fallo**. Guardar siempre se puede pulsar —solo se apaga mientras
+   guarda— y al pulsarlo con algo incompleto se marca el campo, se explica
+   debajo y se resume junto al botón. Los obligatorios se ven desde el principio
+   con un asterisco, para no llegar nunca a lo anterior.
+   ========================================================================= */
+
+/**
+ * El asterisco de obligatorio. Va en la etiqueta, sin marcado extra.
+ *
+ * Se contempla también el `<span class="label">` porque hay formularios donde la
+ * etiqueta **envuelve** al campo: ahí un `::after` sobre el `<label>` pintaría
+ * el asterisco debajo del input en vez de junto al texto.
+ */
+label.required::after,
+span.label.required::after {
+  content: ' *';
+  color: var(--error-color);
+  font-weight: 600;
+}
+
+/**
+ * Campo con problema.
+ *
+ * Rojo suave, no un bloque de alarma: es un dato que falta, no un error del
+ * sistema. El fondo tintado es lo que se ve de un vistazo al bajar por un
+ * formulario largo; el borde solo, sobre fondo oscuro, se pierde.
+ */
+/**
+ * ⚠️ **El selector lleva el elemento delante a propósito.**
+ *
+ * `.form-control` la declara cada componente, y con la encapsulación de Angular
+ * su regla es `.form-control[_ngcontent-xxx]`: misma especificidad que
+ * `.form-control.is-invalid`, y al empatar gana la que se inyecta después, que
+ * es la del componente. El resultado era un campo con su mensaje de error
+ * debajo y la caja del mismo color de siempre. Con `input.form-control` la
+ * especificidad sube y el estado gana, que es lo que tiene que pasar.
+ */
+input.form-control.is-invalid,
+select.form-control.is-invalid,
+textarea.form-control.is-invalid,
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+  border-color: var(--error-color);
+  background: var(--error-bg);
+}
+
+input.form-control.is-invalid:focus,
+select.form-control.is-invalid:focus,
+textarea.form-control.is-invalid:focus,
+input.is-invalid:focus,
+select.is-invalid:focus,
+textarea.is-invalid:focus {
+  border-color: var(--error-color);
+  box-shadow: 0 0 0 3px var(--error-bg);
+}
+
+/* El mensaje bajo el campo y el resumen junto al botón. */
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  color: var(--error-color);
+  font-size: 0.75rem;
+  line-height: 1.4;
+
+  i {
+    font-size: 0.7rem;
+    margin-top: 0.15rem;
+  }
+}
+
+/**
+ * El resumen, junto al botón de guardar.
+ *
+ * Es la única pieza que sirve para algo en el formulario de vehículos, con sus
+ * 29 campos: sin él, el campo en rojo puede estar a tres pantallas de scroll y
+ * el operador solo ve que pulsar no hace nada.
+ */
+.form-blockers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--error-color);
+  background: var(--error-bg);
+
+  .form-blockers-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--error-color);
+  }
+
+  .field-error {
+    margin-top: 0;
+  }
+}

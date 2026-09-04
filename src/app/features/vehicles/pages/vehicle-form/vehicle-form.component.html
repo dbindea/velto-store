@@ -23,7 +23,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="brand">{{ 'vehicles.fields.brand' | translate }} *</label>
+              <label class="required" for="brand">{{ 'vehicles.fields.brand' | translate }}</label>
               <input
                 type="text"
                 id="brand"
@@ -34,10 +34,12 @@
                 name="brand"
                 required
                 class="form-control"
+                [class.is-invalid]="submitted && problems['brand']"
               />
+              <app-form-error [problems]="problems['brand']" [show]="submitted" />
             </div>
             <div class="form-group">
-              <label for="model">{{ 'vehicles.fields.model' | translate }} *</label>
+              <label class="required" for="model">{{ 'vehicles.fields.model' | translate }}</label>
               <input
                 type="text"
                 id="model"
@@ -48,7 +50,9 @@
                 name="model"
                 required
                 class="form-control"
+                [class.is-invalid]="submitted && problems['model']"
               />
+              <app-form-error [problems]="problems['model']" [show]="submitted" />
             </div>
           </div>
 
@@ -66,7 +70,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="year">{{ 'vehicles.fields.year' | translate }} *</label>
+              <label class="required" for="year">{{ 'vehicles.fields.year' | translate }}</label>
               <select id="year" [(ngModel)]="formData.year" name="year" class="form-control">
                 @for (year of yearOptions; track year) {
                   <option [value]="year">{{ year }}</option>
@@ -77,7 +81,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="plateNumber">{{ 'vehicles.fields.plateNumber' | translate }} *</label>
+              <label class="required" for="plateNumber">{{ 'vehicles.fields.plateNumber' | translate }}</label>
               <input
                 type="text"
                 id="plateNumber"
@@ -86,7 +90,9 @@
                 name="plateNumber"
                 required
                 class="form-control plate-input"
+                [class.is-invalid]="submitted && problems['plateNumber']"
               />
+              <app-form-error [problems]="problems['plateNumber']" [show]="submitted" />
             </div>
             <div class="form-group">
               <label for="color">{{ 'vehicles.fields.color' | translate }}</label>
@@ -151,7 +157,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="category">{{ 'vehicles.fields.category' | translate }} *</label>
+              <label class="required" for="category">{{ 'vehicles.fields.category' | translate }}</label>
               <select
                 id="category"
                 [(ngModel)]="formData.category"
@@ -165,7 +171,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="bodyType">{{ 'vehicles.fields.bodyType' | translate }} *</label>
+              <label class="required" for="bodyType">{{ 'vehicles.fields.bodyType' | translate }}</label>
               <select
                 id="bodyType"
                 [(ngModel)]="formData.bodyType"
@@ -182,7 +188,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="seats">{{ 'vehicles.fields.seats' | translate }} *</label>
+              <label class="required" for="seats">{{ 'vehicles.fields.seats' | translate }}</label>
               <input
                 type="number"
                 id="seats"
@@ -192,13 +198,15 @@
                 min="1"
                 max="9"
                 class="form-control"
+                [class.is-invalid]="submitted && problems['seats']"
               />
+              <app-form-error [problems]="problems['seats']" [show]="submitted" />
             </div>
           </div>
 
           <div class="form-group">
-            <label for="luggageCapacity"
-              >{{ 'vehicles.fields.luggageCapacity' | translate }} *</label
+            <label class="required" for="luggageCapacity"
+              >{{ 'vehicles.fields.luggageCapacity' | translate }}</label
             >
             <input
               type="number"
@@ -209,7 +217,9 @@
               min="0"
               max="10"
               class="form-control"
+                [class.is-invalid]="submitted && problems['luggageCapacity']"
             />
+              <app-form-error [problems]="problems['luggageCapacity']" [show]="submitted" />
           </div>
         </div>
 
@@ -219,7 +229,7 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="fuelType">{{ 'vehicles.fields.fuelType' | translate }} *</label>
+              <label class="required" for="fuelType">{{ 'vehicles.fields.fuelType' | translate }}</label>
               <select
                 id="fuelType"
                 [(ngModel)]="formData.fuelType"
@@ -233,7 +243,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="transmission">{{ 'vehicles.fields.transmission' | translate }} *</label>
+              <label class="required" for="transmission">{{ 'vehicles.fields.transmission' | translate }}</label>
               <select
                 id="transmission"
                 [(ngModel)]="formData.transmission"
@@ -520,6 +530,10 @@
           </div>
         }
       </div>
+
+      <!-- Aquí el resumen no es un lujo: son 29 campos y el que falta puede
+           estar a dos pantallas de scroll del botón. -->
+      <app-form-error [problems]="problemList" [show]="submitted" [summary]="true" />
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" (click)="onCancel()">
