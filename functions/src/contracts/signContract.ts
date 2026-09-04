@@ -24,6 +24,11 @@ import * as admin from 'firebase-admin';
 import { buildContractPdf } from './pdf';
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import {
+  SIGNING_SECRETS,
+  isSigningConfigured,
+  signPdfWithCompanyCertificate
+} from './sign-pdf';
 
 interface SignRequest {
   token: string;
@@ -59,6 +64,13 @@ function downloadToken(): string {
 }
 
 export const signContract = functions.https.onCall(
+  {
+    // ⚠️ Declarar el secret no es opcional: uno que existe en Secret Manager
+    // pero no aparece aquí **no se monta en el runtime**, así que `.value()`
+    // sale vacío y el contrato se guardaría sin sellar sin decir por qué. Es
+    // exactamente lo que le pasó a `RESEND_API_KEY` durante meses (M-22).
+    secrets: SIGNING_SECRETS
+  },
   async (request): Promise<SignResponse> => {
     const data = request.data as SignRequest;
     if (!data?.token || !data?.signatureDataUrl) {
@@ -144,7 +156,14 @@ export const signContract = functions.https.onCall(
     // company details.
     const companySnapshot = contract.companySnapshot || companyConfig();
 
-    const signedPdfBytes = await buildContractPdf(
+    /**
+     * Se construye a demanda porque puede haber que rehacerlo.
+     *
+     * `anunciarFirma` gobierna la línea «Firmado digitalmente con certificado
+     * digital». Si el sellado acaba fallando, se vuelve a construir con `false`
+     * y se guarda ese: el documento no puede afirmar una firma que no lleva.
+     */
+    const construirPdf = (anunciarFirma: boolean) => buildContractPdf(
       {
         contractNumber: contract.contractNumber,
         company: companySnapshot,
@@ -192,15 +211,41 @@ export const signContract = functions.https.onCall(
         generatedAt: toDate(contract.generatedAt) || toDate(contract.createdAt),
         signaturePng: new Uint8Array(decoded.buffer),
         signedAt: now,
-        signerName: contract.clientSnapshot?.fullName
+        signerName: contract.clientSnapshot?.fullName,
+        willBeDigitallySigned: anunciarFirma
       },
       true
     );
 
+    /**
+     * Sellado con el certificado de la empresa (N-8).
+     *
+     * Va el último porque un PDF firmado no admite cambios: cualquier cosa que
+     * se le haga después rompe la firma. Y no lanza — si falla se guarda sin
+     * sellar, porque perder el sello es un problema y perder la firma que el
+     * cliente acaba de hacer es uno mucho peor.
+     *
+     * ⚠️ **Si se anunció la firma y el sellado falla, se rehace el PDF.**
+     * La primera versión decidía la frase antes de intentar sellar, y la
+     * primera prueba con el certificado real dio un documento que decía estar
+     * firmado digitalmente sin estarlo: exactamente el problema que N-8 venía a
+     * arreglar, pero ahora intermitente. La frase y la realidad se deciden
+     * juntas o no valen.
+     */
+    const anuncioPrevisto = isSigningConfigured();
+    const sealed = await signPdfWithCompanyCertificate(
+      await construirPdf(anuncioPrevisto),
+      `Contrato de alquiler ${contract.contractNumber || ''}`.trim()
+    );
+    const pdfParaGuardar =
+      anuncioPrevisto && !sealed.signed
+        ? await construirPdf(false)
+        : sealed.bytes;
+
     const signedPath = `contracts/${reservationId}/contract-signed.pdf`;
     const signedFile = storage.bucket().file(signedPath);
     const pdfToken = downloadToken();
-    await signedFile.save(Buffer.from(signedPdfBytes), {
+    await signedFile.save(Buffer.from(pdfParaGuardar), {
       contentType: 'application/pdf',
       metadata: {
         metadata: {

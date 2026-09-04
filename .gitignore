@@ -54,3 +54,17 @@ CREDENTIALS.md
 .agents/
 skills-lock.json
 .playwright-mcp/
+
+# Material criptográfico. NUNCA en el repositorio.
+#
+# El certificado de firma vive en Secret Manager (`VELTO_SIGNING_CERT`, el .p12
+# en base64). Cualquier copia local es de trabajo y se borra: quien tenga el
+# fichero y su contraseña puede firmar contratos en nombre de la empresa.
+#
+# El 4 de septiembre de 2026 aparecieron un .p12 y su base64 sueltos en
+# `public/`. No llegaron a commitearse ni a publicarse —hosting sirve `dist/`—
+# pero un `git add .` los habría subido.
+*.p12
+*.pfx
+*.key
+cert.b64

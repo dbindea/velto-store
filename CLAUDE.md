@@ -595,6 +595,23 @@ Inventario real (verificado el 29 de agosto de 2026):
 | `VELTO_PUBLIC_BASE_URL` | sí | **no** | **no** | enlaces de firma y cortos al dominio por defecto |
 | `CONTRACT_LINK_EXPIRY_DAYS` | sí | **no** | **no** | caducidad por defecto (7 días) |
 | `VELTO_COMPANY_*` | no | no | **no** | valores por defecto del código; `_EMAIL` se movió a `.env.<proyecto>` |
+| `VELTO_SIGNING_CERT` | — | — | sí | el contrato **no se sella**: sale sin firma digital |
+| `VELTO_SIGNING_CERT_PASSWORD` | — | — | sí | igual que el anterior |
+
+⚠️ **El certificado de firma sí es material criptográfico.** `VELTO_SIGNING_CERT`
+es el `.p12` de la FNMT **en base64** —Secret Manager guarda texto, no binario—
+y su contraseña va aparte. Nunca al repositorio ni a un `.env`:
+
+```bash
+base64 -w0 certificado.p12 > cert.b64
+firebase functions:secrets:set VELTO_SIGNING_CERT --project dev --data-file cert.b64
+firebase functions:secrets:set VELTO_SIGNING_CERT_PASSWORD --project dev
+rm cert.b64
+```
+
+Si no están puestos, `signContract` guarda el PDF **sin sellar** y el documento
+**no imprime** la línea «Firmado digitalmente con certificado digital». Es
+deliberado: el contrato no puede prometer una firma que no lleva.
 
 `RESEND_FROM_EMAIL` **ya no existe**: el remitente es `companyConfig().email`, el
 mismo que va impreso en los documentos. Un correo de empresa no es un secreto, y

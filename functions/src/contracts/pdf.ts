@@ -183,6 +183,14 @@ export interface ContractPdfInput {
   signedAt?: Date;
   signerName?: string;
   /**
+   * True si el PDF se va a sellar con el certificado de la empresa.
+   *
+   * Gobierna **una sola cosa**: si se imprime «Firmado digitalmente con
+   * certificado digital» en la casilla del arrendador. El documento no puede
+   * prometer una firma que no va a llevar, que es lo que hacía hasta N-8.
+   */
+  willBeDigitallySigned?: boolean;
+  /**
    * Diagnostics seam: called with the builder once the document is laid out,
    * so a test can check where every run of text ended up. Never set in
    * production code.
@@ -1507,17 +1515,23 @@ export class PdfBuilder {
      * its side was asking for a handwritten signature that is never coming —
      * and an unsigned-looking box on a contract reads badly.
      *
-     * TODO: apply the actual certificate to the generated PDF. Until then this
-     * states the intent; the note is not a substitute for the signature.
+     * ⚠️ **La línea solo se imprime si el PDF se va a sellar de verdad.**
+     * Antes salía siempre, con un TODO al lado admitiendo que el certificado no
+     * se aplicaba: el contrato afirmaba al cliente una firma digital que no
+     * existía. Ahora quien lo decide es `isSigningConfigured()`, así que sin
+     * certificado la casilla queda solo con la razón social y el NIF — cierto,
+     * aunque diga menos.
      */
-    this.put(
-      opts.digitallySignedLabel,
-      leftX,
-      topY - 46,
-      8,
-      this.fontFor('displayMedium', opts.digitallySignedLabel),
-      BRAND
-    );
+    if (opts.digitallySignedLabel) {
+      this.put(
+        opts.digitallySignedLabel,
+        leftX,
+        topY - 46,
+        8,
+        this.fontFor('displayMedium', opts.digitallySignedLabel),
+        BRAND
+      );
+    }
 
     // Renter block: signature image if provided, else empty line
     if (opts.renterPng) {
@@ -2004,7 +2018,9 @@ export async function buildContractPdf(
     renterName: input.client.fullName,
     renterId,
     renterPng,
-    digitallySignedLabel: L.digitallySigned,
+    // Solo se anuncia la firma digital si el documento va a llevarla. Quien lo
+    // sabe es quien construye el PDF, así que llega como dato de entrada.
+    digitallySignedLabel: input.willBeDigitallySigned ? L.digitallySigned : '',
     renterSignedNote:
       signed && input.signedAt
         ? `${L.signedOn} ${formatDate(input.signedAt, loc)} ${L.by} ${

@@ -1043,7 +1043,46 @@ Cloud Scheduler, que hay que habilitar en los dos proyectos.
 4. El PDF: ¿un cuarto documento, o el presupuesto con una caja de «válido hasta
    las HH:MM»? Lo segundo reaprovecha plantilla, precios e IVA.
 
-## N-8 · Sellar el contrato con el certificado FNMT de la empresa *(anotado el 2 sep 2026 — acordado hacerlo)*
+## ✅ N-8 · Sellar el contrato con el certificado FNMT *(hecho el 4 sep 2026)*
+
+Funcionando en los dos entornos. El contrato firmado sale con firma PKCS#7 del
+certificado de la empresa: `/ByteRange`, `Adobe.PPKLite`, `adbe.pkcs7.detached`
+y el motivo «Contrato de alquiler C-…».
+
+**El hueco de la firma se quedó corto en el primer intento.** Reservé 8192 bytes
+«porque una firma ronda los 3-4 KB» y el certificado real falló con *Signature
+exceeds placeholder length: **11916 > 8192***: el certificado FNMT de
+representante incrusta la cadena completa de la autoridad. Ahora son 32 KB, con
+margen para cuando se renueve y la cadena crezca.
+
+⚠️ **Y ese fallo destapó un error de diseño mío.** La primera versión decidía si
+imprimir «Firmado digitalmente con certificado digital» **antes** de intentar
+sellar, así que el contrato de prueba salió afirmando una firma que no llevaba:
+justo el problema que N-8 venía a arreglar, pero intermitente y silencioso.
+Corregido: si el sellado falla, **el PDF se reconstruye sin la frase**. La
+promesa y la realidad se deciden juntas.
+
+El sellado **nunca aborta la firma**: si falla se guarda sin sellar, porque
+perder el sello es un problema y perder la firma que el cliente acaba de hacer
+es uno mucho peor.
+
+**Sobre las dependencias.** El paquete habitual `@signpdf/placeholder-plain`
+arrastra `pdfkit` → `crypto-js` con vulnerabilidades **críticas**, y ni siquiera
+se usaría: el contrato se genera con `pdf-lib`. Se usa
+`@signpdf/placeholder-pdf-lib`, que solo depende de `@signpdf/utils`. Auditoría
+de lo añadido: cero vulnerabilidades.
+
+⚠️ **Seguridad, 4 de septiembre de 2026.** Aparecieron el `.p12` y su base64 en
+`public/` del repositorio. No llegaron a commitearse ni a publicarse —hosting
+sirve `dist/`— pero un `git add .` los habría subido. Añadidas reglas a
+`.gitignore` para `*.p12`, `*.pfx`, `*.key` y `cert.b64`. **Quien tenga ese
+fichero y la contraseña puede firmar contratos en nombre de la empresa**: la
+copia local hay que borrarla, el sitio del certificado es Secret Manager.
+
+Sin sellado de tiempo, por decisión: la firma acredita quién y qué, no la fecha
+ante un tercero. Se puede añadir después sin rehacer nada.
+
+## N-8 (planteamiento original) *(anotado el 2 sep 2026)*
 
 Dorel ya tiene el certificado FNMT de representante de la empresa. La idea es
 sellar con él el PDF del contrato, después de que el cliente firme.
@@ -1088,3 +1127,32 @@ simple, válida pero con poco peso probatorio si él la niega—. Sellar con el
 certificado de la empresa no la convierte en cualificada. Para eso haría falta
 un prestador de servicios de confianza, que cobra por firma y es otro
 desarrollo.
+
+## N-9 · QR de verificación en el contrato *(decidido el 4 sep 2026 — pendiente de construir)*
+
+Sustituye la línea «Firmado digitalmente con certificado digital» por un **QR
+más un código corto legible** en la casilla del arrendador.
+
+**Qué problema resuelve, y cuál no.** Un QR **no puede validar una firma
+electrónica** — eso lo hace Adobe Reader o VALIDe abriendo el PDF. Lo que sí
+resuelve es el **papel**: hoy, quien tiene una copia impresa no puede comprobar
+nada. Con un CSV (Código Seguro de Verificación), como los de la Administración,
+puede confirmar que ese contrato existe y es auténtico.
+
+**Decisiones de Dorel:**
+
+- QR a una **página pública propia**, no al PDF suelto ni a VALIDe.
+- La página **no muestra datos personales**: número de contrato, fecha de firma,
+  matrícula, estado y la huella SHA-256 del PDF. Quien escanee un contrato
+  olvidado en un mostrador no debe ver el nombre ni el DNI de nadie.
+
+**Piezas:**
+
+- Un código de verificación por contrato, guardado al firmar.
+- Ruta pública `/v/:codigo`, fuera del `authGuard`, como `/pay` y `/d`.
+- Function pública que devuelve solo esos cinco datos.
+- El QR dibujado en el PDF, con el código en texto debajo por si no escanea.
+
+⚠️ **El QR va dentro del PDF que se sella**, así que se dibuja antes de firmar.
+Y la huella que muestre la página tiene que ser la del PDF **ya sellado**: si se
+calcula antes, no coincidirá con el fichero que tiene el cliente.
