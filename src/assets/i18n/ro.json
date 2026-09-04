@@ -306,6 +306,7 @@
       "notFound": "Această cheltuială nu mai există",
       "reservationRequired": "Alege rezervarea la care se impută",
       "saveFailed": "Cheltuiala nu a putut fi salvată",
+      "savedWithoutDocument": "Cheltuiala a fost salvată, dar factura nu a putut fi încărcată. Încearcă din nou din aceeași cheltuială.",
       "vehicleRequired": "Alege vehiculul la care se impută"
     },
     "fields": {

@@ -1794,3 +1794,50 @@ primero compilaba perfectamente y solo se veía leyendo el diff.
 ⚠️ **Lo que NO se ha probado: las reglas con un empleado real.** Haría falta
 iniciar sesión con una segunda cuenta de Google. Están desplegadas en los dos
 entornos y revisadas, pero no ejercitadas — que en este proyecto no es lo mismo.
+
+---
+
+## C-35 · El ciclo completo, de una sentada — 4 de septiembre de 2026
+
+Primera vez que se recorre el camino entero **con todo lo construido junto**:
+Gastos, Ajustes gobernando el IVA y la fianza, los permisos por rol y la
+validación de los diez formularios. Backoffice desde `localhost` —misma base de
+datos y mismas functions— y **las páginas públicas contra
+`store.veltorent.com`**, que es donde las abre el cliente.
+
+| Paso | Resultado |
+|---|---|
+| Vehículo + cliente con 10 % de fidelidad | Creados |
+| Precio, 7 días | 350 − 35 de fidelidad = 315 neto + 66,15 de IVA = **381,15 €** |
+| Presupuesto | `store.veltorent.com/d/q…` → **200 application/pdf sin sesión** (N-1 ✅) |
+| Reserva → señal 50 € | `confirmed` |
+| Justificante, emitido y **regenerado** | PDF distinto, **mismo enlace y sigue vivo** (N-2 ✅) |
+| Contrato → link de firma | `pending_signature` |
+| Firma **en el dominio real**, sin login | `signed`, sellado con el certificado |
+| Huella SHA-256 del fichero vs. Firestore | **Idénticas**: `8b22026e…00e8aa97` |
+| QR del contrato firmado | `https://store.veltorent.com/v/4C34CX9VYJXG` |
+| Verificación pública | Cinco datos, ningún dato personal |
+| Email del contrato | Enviado; `emailedAt` escrito |
+| Resto 331,15 € + fianza 150 € | El formulario proponía cada vez el siguiente concepto |
+| Entrega | Los **tres** campos que faltaban salieron a la vez, no de uno en uno |
+| Devolución con km menores que los de salida | Rechazado con su explicación |
+| Devolución real + daño de 120 € | 120 retenidos, 30 devueltos, `partial_returned` |
+| «Cobrado (sin fianza)» | 501,15 € = 381,15 del alquiler + 120 del daño. La fianza no cuenta como ingreso |
+| Cierre | `closed` |
+
+**El fallo del día, y era el único hueco que quedaba sin probar de Gastos:**
+adjuntar una factura fallaba con `storage/unauthorized`. A `storage.rules` le
+faltaba la regla de `expenses/`, así que la ruta caía en el «default deny» del
+final. El módulo se construyó con la subida como lo único sin ejercitar, y ahí
+estaba.
+
+**Y detrás apareció el segundo, que era peor.** El gasto se crea **antes** de
+subir la factura —su ruta lleva el id dentro—, así que al fallar la subida el
+gasto quedaba guardado, el operador se quedaba en el formulario viendo un error,
+y volver a pulsar creaba **un segundo gasto idéntico**. Ahora se recuerda el id
+para que el reintento actualice el mismo, y se avisa de que lo único que faltó
+fue el adjunto.
+
+Repetido tras el arreglo: factura en
+`expenses/{id}/…-factura-lavadero.pdf`, gasto imputado a `R-AFRCNT · 4488LMN`, y
+el desglose 48,40 → 40,00 + 8,40 correcto.

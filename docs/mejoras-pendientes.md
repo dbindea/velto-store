@@ -861,7 +861,7 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [x] Excepciones de workflow desde la UI — **implementadas y probadas el 1 de
       septiembre de 2026** (N-7): motivo obligatorio, el paso se desbloquea y
       queda registrado con autor y fecha en la ficha de la reserva.
-- [ ] **N-4 end-to-end**: poner un 10 % a un cliente, crear reserva y comprobar
+- [x] **N-4 end-to-end** *(4 sep 2026: descuento del 10 % congelado en el snapshot)*: poner un 10 % a un cliente, crear reserva y comprobar
       que el snapshot congela el porcentaje; luego retirárselo y verificar que
       la reserva anterior no se mueve
 - [ ] **N-4 + bloqueo**: marcar `blocked` a un cliente con descuento y
@@ -869,9 +869,9 @@ cargos extra, resolución de fianza y cierre. Queda:
 - [x] **N-3 en el PDF real**, tras desplegar las functions a mano.
       *(27 ago 2026, 23:30)* Desglose correcto en presupuesto y contrato, en las
       dos direcciones de IVA.
-- [ ] **N-1 end-to-end**: generar un presupuesto, abrir el enlace y comprobar
+- [x] **N-1 end-to-end** *(4 sep 2026: enlace corto abierto sin sesión, 200 application/pdf)*: generar un presupuesto, abrir el enlace y comprobar
       que se ve desde un móvil sin sesión
-- [ ] **N-2 end-to-end**: cobrar la señal, emitir el justificante, regenerarlo
+- [x] **N-2 end-to-end** *(4 sep 2026: regenerado, el enlace del cliente sigue vivo)*: cobrar la señal, emitir el justificante, regenerarlo
       y verificar que **el primer enlace sigue funcionando**
 - [x] **Fianza a 0** — **probado el 31 de agosto de 2026**: no siembra fila de
       fianza, la marca «Exenta» con su motivo, y el motivo es obligatorio en el
@@ -1521,3 +1521,15 @@ no perder el propio acceso de administrador—:
 falta iniciar sesión con una segunda cuenta de Google. Están desplegadas en los
 dos entornos y leídas con cuidado, pero no ejercitadas — que en este proyecto no
 es lo mismo.
+
+- [x] **M-44 · Adjuntar una factura a un gasto fallaba siempre.** *(4 sep 2026)*
+  `storage/unauthorized`: a `storage.rules` le faltaba la regla de `expenses/`,
+  así que la ruta caía en el «default deny». Se construyó el módulo con la
+  subida como lo único sin probar, y estaba rota desde el primer día.
+
+  **Y arrastraba uno peor.** El gasto se crea antes de subir la factura —su ruta
+  de Storage lleva el id dentro—, así que al fallar la subida el gasto quedaba
+  guardado, el operador se quedaba en el formulario viendo un error y **volver a
+  pulsar creaba un segundo gasto idéntico**. Ahora se recuerda el id para que el
+  reintento actualice el mismo, y el aviso distingue «no se ha guardado» de «se
+  ha guardado sin la factura».

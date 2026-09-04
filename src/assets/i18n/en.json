@@ -306,6 +306,7 @@
       "notFound": "That expense no longer exists",
       "reservationRequired": "Choose the reservation it belongs to",
       "saveFailed": "The expense could not be saved",
+      "savedWithoutDocument": "The expense was saved, but the invoice could not be uploaded. Try again from this same expense.",
       "vehicleRequired": "Choose the vehicle it belongs to"
     },
     "fields": {

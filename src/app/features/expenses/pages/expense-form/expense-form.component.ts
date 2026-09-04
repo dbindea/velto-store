@@ -280,15 +280,35 @@ export class ExpenseFormComponent implements OnInit {
         ? (await this.expenseService.updateExpense(this.expenseId, payload), this.expenseId)
         : await this.expenseService.createExpense(payload);
 
-      // La factura se sube DESPUÉS de tener id: la ruta de Storage lo lleva
-      // dentro, y sin él el fichero no tendría dónde colgar.
+      /**
+       * ⚠️ **El gasto ya está guardado a partir de aquí.**
+       *
+       * La factura se sube DESPUÉS porque su ruta de Storage lleva el id dentro.
+       * Si falla —y falló de verdad: `storage/unauthorized`, porque a
+       * `storage.rules` le faltaba la regla de `expenses/`— el gasto **sigue
+       * guardado**. Antes el error dejaba al operador en el formulario, sin
+       * saberlo, y volver a pulsar creaba un segundo gasto idéntico.
+       *
+       * Ahora se recuerda el id, para que un segundo intento actualice ese mismo
+       * gasto en vez de duplicarlo, y se sale igualmente avisando de que lo
+       * único que faltó fue el adjunto.
+       */
+      this.expenseId = id;
+
       if (this.pendingFile) {
         this.uploading = true;
-        const uploaded = await this.expenseService.uploadDocument(id, this.pendingFile);
-        await this.expenseService.updateExpense(id, {
-          documentUrl: uploaded.url,
-          documentPath: uploaded.path
-        });
+        try {
+          const uploaded = await this.expenseService.uploadDocument(id, this.pendingFile);
+          await this.expenseService.updateExpense(id, {
+            documentUrl: uploaded.url,
+            documentPath: uploaded.path
+          });
+        } catch {
+          this.errorKey = 'expenses.errors.savedWithoutDocument';
+          this.saving = false;
+          this.uploading = false;
+          return;
+        }
       }
 
       void this.router.navigate(['/expenses']);

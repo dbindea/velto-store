@@ -46,6 +46,20 @@ service firebase.storage {
       allow write: if isAuthenticated();
     }
 
+    /**
+     * Facturas y tickets de gastos. Ruta: `expenses/{expenseId}/{ts}-{fichero}`.
+     *
+     * ⚠️ **Faltaba desde que se construyó el módulo** (4 de septiembre de 2026).
+     * Sin esta regla la ruta caía en el «default deny» del final y adjuntar una
+     * factura fallaba con `storage/unauthorized`. No se notó al construir Gastos
+     * porque la subida quedó como lo único sin probar; salió al recorrer el
+     * ciclo completo.
+     */
+    match /expenses/{expenseId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;
