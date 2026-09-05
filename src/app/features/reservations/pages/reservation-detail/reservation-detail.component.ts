@@ -17,7 +17,8 @@ import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_PAYMENT_STATUS_LABELS,
   RESERVATION_CONTRACT_STATUS_LABELS,
-  RESERVATION_DEPOSIT_STATUS_LABELS
+  RESERVATION_DEPOSIT_STATUS_LABELS,
+  ReservationPaymentSummary
 } from '@shared/models/reservation.model';
 import {
   Workflow,
@@ -336,7 +337,14 @@ export class ReservationDetailComponent implements OnInit {
       difiere(fresco.initialPaymentPaid, guardado.initialPaymentPaid) ||
       difiere(fresco.remainingPaymentPaid, guardado.remainingPaymentPaid) ||
       difiere(fresco.depositPaid, guardado.depositPaid) ||
-      difiere(fresco.totalPending, guardado.totalPending);
+      difiere(fresco.totalPending, guardado.totalPending) ||
+      // Los cargos extra entran por separado: son campos que se añadieron
+      // después, y una copia escrita antes los trae a cero mientras todo lo
+      // demás cuadra. Sin esta comprobación la copia nunca se pondría al día
+      // —el resto coincide— y cualquier pantalla que la lea seguiría diciendo
+      // que no se debe nada.
+      difiere(fresco.extrasRequired, guardado.extrasRequired) ||
+      difiere(fresco.extrasPending, guardado.extrasPending);
     if (!desincronizada) return;
 
     try {
@@ -784,14 +792,33 @@ export class ReservationDetailComponent implements OnInit {
     return this.reservation?.paymentSummary?.extrasTotal || 0;
   }
 
-  /** Cargos extra devengados: lo que el cliente debe, cobrado o no. */
+  /**
+   * Cargos extra devengados y lo que falta por cobrar de ellos.
+   *
+   * ⚠️ **Se derivan de `payments`, no del `paymentSummary` guardado.** Ese
+   * resumen es una copia desnormalizada que se escribe en ciertos momentos, y
+   * una copia se queda vieja: al añadir estos dos campos, la reserva que ya
+   * existía siguió enseñando «0,00 €» con 145 € pendientes, porque su copia se
+   * había escrito antes de que los campos existieran.
+   *
+   * `payments` es la fuente de verdad declarada del dinero, y
+   * `calculateReservationPaymentSummary` es la misma autoridad que produce la
+   * copia. Derivando aquí, la pantalla no puede contradecir a los pagos por
+   * mucho que la copia vaya con retraso.
+   */
+  private get liveSummary(): ReservationPaymentSummary | null {
+    if (!this.reservation) return null;
+    return calculateReservationPaymentSummary(this.payments, this.reservation);
+  }
+
+  /** Lo que el cliente debe en cargos extra, cobrado o no. */
   get extraChargesRequired(): number {
-    return this.reservation?.paymentSummary?.extrasRequired || 0;
+    return this.liveSummary?.extrasRequired || 0;
   }
 
   /** Lo que falta por cobrar de esos cargos. Cero solo si no se debe nada. */
   get extraChargesPending(): number {
-    return this.reservation?.paymentSummary?.extrasPending || 0;
+    return this.liveSummary?.extrasPending || 0;
   }
 
   getDueDate(payment: Payment): Date | null {
