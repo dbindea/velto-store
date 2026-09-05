@@ -133,6 +133,26 @@ delante**. Tres tests nuevos fijan la distinción.
 semanas y la agencia necesita cerrar la operación mientras tanto. Lo que no
 puede es no enterarse. Si prefieres que bloquee, se cambia en una línea.
 
+**Y el arreglo tuvo una segunda mitad, que solo apareció al verificarlo.** Con
+el código nuevo desplegado, la ficha **seguía** diciendo «0,00 €»: los getters
+leían `paymentSummary`, que es una **copia desnormalizada** guardada en la
+propia reserva, y esa copia se había escrito antes de que los campos
+existieran. El dato estaba —`totalPending: 145`—, pero los dos campos nuevos no.
+
+Es la trampa de fondo de cualquier copia: se queda vieja y nadie se entera,
+porque no falla, responde `0`. Arreglado por los dos lados:
+
+- La pantalla **deriva de `payments`**, que es la fuente de verdad declarada del
+  dinero, usando la misma función que produce la copia. Así no puede
+  contradecir a los pagos por mucho que la copia vaya con retraso.
+- La reconciliación de M-32 **compara también estos dos campos**. Antes no
+  detectaba nada porque todo lo demás cuadraba, así que la copia se habría
+  quedado incompleta para siempre —y con ella cualquier otra pantalla que la
+  lea.
+
+No es un parche para datos viejos: es dejar de depender de una copia para algo
+que la fuente sabe responder.
+
 ### ✅ F-35 · El botón de mantenimiento estaba apagado, con la validación ya escrita
 
 `vehicle-maintenance-form` **ya tenía** las tres piezas de M-42 —`FieldProblems`,

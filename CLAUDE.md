@@ -993,6 +993,14 @@ y las clases `.email` / `.mono` usan `anywhere`.
   deuda están `extrasRequired` (devengado) y `extrasPending`. Y **cerrar la reserva no los
   cobra ni los perdona**: `canCloseReservation()` no los mira, así que la pantalla pregunta
   antes con el importe delante.
+- ⚠️ **`reservation.paymentSummary` es una COPIA, y las copias se quedan viejas.** La fuente
+  de verdad del dinero es la colección `payments`; el resumen guardado en la reserva se
+  escribe en ciertos momentos y **no falla cuando está desfasado: responde `0`**. Al añadir
+  `extrasRequired`/`extrasPending`, una reserva anterior siguió enseñando «0,00 €» con 145 €
+  pendientes. Si una pantalla necesita una cifra fina, que la **derive** con
+  `calculateReservationPaymentSummary(payments, reservation)` en vez de leer la copia. Y al
+  añadir un campo al resumen, mételo también en la comparación de
+  `reconcileAfterExternalPayment()`, o la copia no se pondrá al día nunca: el resto cuadra.
 - Sin lint.
 - `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
 - `CREDENTIALS.md` no está en `.gitignore`, aunque sí lo están `*.p12`, `*.pfx`, `*.key` y
