@@ -13,6 +13,7 @@ import {
 } from '@shared/models/contract.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { TranslateService } from '@core/i18n/translate.service';
+import { NotificationService } from '@core/notifications/notification.service';
 import {
   Workflow,
   WorkflowContext,
@@ -30,6 +31,7 @@ import {
 })
 export class ContractDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
+  private notifications = inject(NotificationService);
   private router = inject(Router);
   private contractService = inject(ContractService);
   private translateService = inject(TranslateService);
@@ -95,7 +97,7 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
       void res;
     } catch (err) {
       console.error('Error generating contract:', err);
-      alert('Error al generar el contrato');
+      this.notifications.error('contracts.errors.generate', { retry: () => void this.generatePdf() });
     } finally {
       this.generating = false;
     }
@@ -109,7 +111,7 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
       this.refresh();
     } catch (err) {
       console.error('Error creating signing link:', err);
-      alert('Error al crear el link de firma');
+      this.notifications.error('contracts.errors.createSigningLink', { retry: () => void this.createLink() });
     } finally {
       this.creatingLink = false;
     }
@@ -117,13 +119,13 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
 
   async cancelLink(): Promise<void> {
     if (!this.contract?.id) return;
-    if (!confirm('¿Cancelar el link de firma activo?')) return;
+    if (!confirm(this.translateService.translate('contracts.confirmCancelSigningLink'))) return;
     try {
       await this.contractService.cancelSigningLink(this.contract.id);
       this.refresh();
     } catch (err) {
       console.error('Error cancelling signing link:', err);
-      alert('Error al cancelar el link');
+      this.notifications.error('contracts.errors.cancelSigningLink', { retry: () => void this.cancelLink() });
     }
   }
 
@@ -154,7 +156,8 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     if (!this.contract) return;
     const url = await this.contractService.getOriginalPdfUrl(this.contract);
     if (!url) {
-      alert('PDF no disponible todavía');
+      // Sin reintentar: no ha fallado nada, el documento aún no existe.
+      this.notifications.error('contracts.errors.pdfNotReady');
       return;
     }
     const filename = `contrato-${this.contract.contractNumber || this.contract.id}.pdf`;
@@ -165,7 +168,7 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     if (!this.contract) return;
     const url = await this.contractService.getSignedPdfUrl(this.contract);
     if (!url) {
-      alert('Contrato firmado no disponible todavía');
+      this.notifications.error('contracts.errors.signedPdfNotReady');
       return;
     }
     const filename = `contrato-firmado-${this.contract.contractNumber || this.contract.id}.pdf`;

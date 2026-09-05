@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { NotificationService } from '@core/notifications/notification.service';
 import { firstValueFrom } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
@@ -39,6 +40,7 @@ import { ContractService } from '@features/contracts/services/contract.service';
   styleUrl: './inspection-pickup.component.scss'
 })
 export class InspectionPickupComponent implements OnInit {
+  private notifications = inject(NotificationService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private inspectionService = inject(InspectionService);
@@ -200,12 +202,12 @@ export class InspectionPickupComponent implements OnInit {
     // Validate
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      alert('Solo se permiten imágenes JPG, PNG o WebP');
+      this.notifications.error('inspections.errors.photoType');
       input.value = '';
       return;
     }
     if (file.size > APP_DEFAULTS.MAX_DOCUMENT_FILE_SIZE) {
-      alert('La imagen supera el tamaño máximo (5MB)');
+      this.notifications.error('inspections.errors.photoTooLarge');
       input.value = '';
       return;
     }
@@ -234,7 +236,7 @@ export class InspectionPickupComponent implements OnInit {
       input.value = '';
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Error al subir la foto');
+      this.notifications.error('inspections.errors.photoUpload');
     } finally {
       this.uploadingPhoto = false;
     }
