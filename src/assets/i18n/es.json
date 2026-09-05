@@ -145,7 +145,8 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo"
+    "viewAll": "Ver todo",
+    "close": "Cerrar"
   },
   "contracts": {
     "actions": {
@@ -229,7 +230,15 @@
       "unknownTitle": "No encontrado",
       "validMessage": "Este contrato existe y está firmado.",
       "validTitle": "Contrato verificado"
-    }
+    },
+    "errors": {
+      "generate": "No se pudo generar el contrato.",
+      "createSigningLink": "No se pudo crear el enlace de firma.",
+      "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
+      "pdfNotReady": "El PDF todavía no está disponible.",
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
+    },
+    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?"
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
@@ -423,7 +432,14 @@
       "kmLowerThanPickup": "Los kilómetros de entrada no pueden ser menores que los de salida",
       "kmRequired": "Escribe los kilómetros del cuadro",
       "pickupFailed": "No se ha podido completar la entrega",
-      "returnFailed": "No se ha podido completar la devolución"
+      "returnFailed": "No se ha podido completar la devolución",
+      "photoType": "Solo se admiten imágenes JPG, PNG o WebP.",
+      "photoTooLarge": "La imagen supera el tamaño máximo de 5 MB.",
+      "photoUpload": "No se pudo subir la foto.",
+      "noAmountToRetain": "No hay importe que retener.",
+      "noAmountToRefund": "No hay importe que devolver.",
+      "retainDeposit": "No se pudo retener la fianza.",
+      "refundDeposit": "No se pudo devolver la fianza."
     },
     "extraCharges": {
       "cleaning": "Cargo de limpieza",
@@ -491,7 +507,13 @@
     "type": {
       "pickup": "Entrega",
       "return": "Devolución"
-    }
+    },
+    "success": {
+      "depositRetained": "Retenidos {amount} € de la fianza.",
+      "depositRefunded": "Devueltos {amount} € de la fianza."
+    },
+    "retentionReasonPrompt": "Motivo de la retención:",
+    "retentionDefaultReason": "Cargos entrega/devolución"
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -575,7 +597,7 @@
     "actions": {
       "cancelPayment": "Cancelar pago",
       "chargeCard": "Cobrar con tarjeta",
-      "chargeCardError": "No se pudo abrir la pasarela de pago",
+      "chargeCardError": "No se pudo abrir la pasarela de pago{detail}",
       "copyPaymentLink": "Copiar enlace de pago",
       "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
@@ -793,7 +815,8 @@
       "pdfNotReady": "El PDF todavía no está disponible",
       "processDeposit": "Error al procesar la fianza",
       "registerPayment": "Error al registrar el pago",
-      "signedPdfNotReady": "El contrato firmado todavía no está disponible"
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible",
+      "create": "No se pudo crear la reserva. Inténtalo de nuevo."
     },
     "fields": {
       "duration": "Duración",

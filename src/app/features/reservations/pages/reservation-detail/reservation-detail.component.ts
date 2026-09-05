@@ -49,6 +49,7 @@ import { ReservationDocumentService } from '@features/reservations/services/rese
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { NotificationService } from '@core/notifications/notification.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
 import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
 import { ReservationNote } from '@shared/models/reservation.model';
@@ -76,6 +77,7 @@ export class ReservationDetailComponent implements OnInit {
   private documentService = inject(ReservationDocumentService);
   private redsysService = inject(RedsysPaymentService);
   private translateService = inject(TranslateService);
+  private notifications = inject(NotificationService);
   private destroyRef = inject(DestroyRef);
   /** Público: las plantillas preguntan qué permite el rol. */
   permissions = inject(PermissionsService);
@@ -386,7 +388,7 @@ export class ReservationDetailComponent implements OnInit {
       this.showCancelModal = false;
     } catch (error) {
       console.error('Error cancelling reservation:', error);
-      alert(this.t('reservations.errors.cancel', ''));
+      this.notifications.error('reservations.errors.cancel', { retry: () => void this.cancelReservation() });
     } finally {
       this.cancelling = false;
     }
@@ -428,8 +430,9 @@ export class ReservationDetailComponent implements OnInit {
       }
     } catch (error: any) {
       console.error('Error closing reservation:', error);
-      const reason = error?.message || 'workflow.cannotClose';
-      alert(reason);
+      // El servicio rechaza con una razón del workflow, que ya es una clave
+      // i18n (`workflow.*`). Va tal cual al aviso, que la traduce.
+      this.notifications.error(error?.message || 'workflow.cannotClose');
     } finally {
       this.closingReservation = false;
     }
@@ -593,7 +596,7 @@ export class ReservationDetailComponent implements OnInit {
       this.resetPaymentForm();
     } catch (error) {
       console.error('Error registering payment:', error);
-      alert(this.t('reservations.errors.registerPayment', ''));
+      this.notifications.error('reservations.errors.registerPayment');
     } finally {
       this.savingPayment = false;
     }
@@ -623,7 +626,7 @@ export class ReservationDetailComponent implements OnInit {
       this.depositForm = { type: 'refund', amount: 0, method: 'cash' };
     } catch (error) {
       console.error('Error processing deposit:', error);
-      alert(this.t('reservations.errors.processDeposit', ''));
+      this.notifications.error('reservations.errors.processDeposit');
     } finally {
       this.savingDeposit = false;
     }
@@ -728,8 +731,10 @@ export class ReservationDetailComponent implements OnInit {
    *
    * `stopPropagation` porque la fila entera navega al detalle del pago.
    */
-  async chargeWithCard(payment: Payment, event: Event): Promise<void> {
-    event.stopPropagation();
+  // El evento es opcional porque el reintento del aviso no viene de un clic
+  // en la fila: solo hay que parar la propagación cuando la hay.
+  async chargeWithCard(payment: Payment, event?: Event): Promise<void> {
+    event?.stopPropagation();
     if (!payment.id || this.chargingPaymentId()) return;
 
     this.chargingPaymentId.set(payment.id);
@@ -737,10 +742,12 @@ export class ReservationDetailComponent implements OnInit {
       const link = await this.redsysService.createRedsysPaymentLink(payment.id);
       this.redsysService.openGateway(link);
     } catch (err: any) {
-      alert(
-        this.translateService.translate('payments.actions.chargeCardError') +
-          (err?.message ? `: ${err.message}` : '')
-      );
+      // El detalle de la pasarela se conserva: «Redsys no está configurado»
+      // dice mucho más que un error genérico, y es lo que se pega al mensaje.
+      this.notifications.error('payments.actions.chargeCardError', {
+        params: { detail: err?.message ? `: ${err.message}` : '' },
+        retry: () => void this.chargeWithCard(payment)
+      });
     } finally {
       this.chargingPaymentId.set(null);
     }
@@ -1097,7 +1104,7 @@ export class ReservationDetailComponent implements OnInit {
       this.loadContract(this.reservation.id);
     } catch (err) {
       console.error('Error generating contract:', err);
-      alert(this.t('reservations.errors.generateContract', ''));
+      this.notifications.error('reservations.errors.generateContract', { retry: () => void this.generateContract() });
     } finally {
       this.generatingContract = false;
     }
@@ -1111,7 +1118,7 @@ export class ReservationDetailComponent implements OnInit {
       if (this.reservation?.id) this.loadContract(this.reservation.id);
     } catch (err) {
       console.error('Error creating signing link:', err);
-      alert(this.t('reservations.errors.createSigningLink', ''));
+      this.notifications.error('reservations.errors.createSigningLink', { retry: () => void this.createContractSigningLink() });
     } finally {
       this.creatingSigningLink = false;
     }
@@ -1148,7 +1155,7 @@ export class ReservationDetailComponent implements OnInit {
     if (!this.contract || !this.reservation) return;
     const url = await this.contractService.getOriginalPdfUrl(this.contract);
     if (!url) {
-      alert(this.t('reservations.errors.pdfNotReady', ''));
+      this.notifications.error('reservations.errors.pdfNotReady');
       return;
     }
     const filename = `contrato-${this.contract.contractNumber || this.contract.id}.pdf`;
@@ -1159,7 +1166,7 @@ export class ReservationDetailComponent implements OnInit {
     if (!this.contract) return;
     const url = await this.contractService.getSignedPdfUrl(this.contract);
     if (!url) {
-      alert(this.t('reservations.errors.signedPdfNotReady', ''));
+      this.notifications.error('reservations.errors.signedPdfNotReady');
       return;
     }
     const filename = `contrato-firmado-${this.contract.contractNumber || this.contract.id}.pdf`;

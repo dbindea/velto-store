@@ -153,6 +153,18 @@ porque no falla, responde `0`. Arreglado por los dos lados:
 No es un parche para datos viejos: es dejar de depender de una copia para algo
 que la fuente sabe responder.
 
+**Verificado en producción el 5 de septiembre de 2026**, las dos mitades: la
+ficha enseña «CARGOS EXTRA · 145,00 € · Pendiente de cobro: 145,00 €», y la copia
+guardada se puso al día sola en la primera visita (`extrasRequired: 145`,
+`extrasPending: 145`). Una segunda visita **no** volvió a escribir —el
+`updateTime` no se movió—, así que la reconciliación converge y para, que es lo
+que su comentario promete y nadie había comprobado.
+
+⚠️ Al verificar F-35 el botón salió **todavía apagado**: era el chunk lazy viejo
+en la caché del navegador, no el despliegue. Con recarga forzada, correcto. Al
+comprobar un cambio de frontend recién subido, fuerza la recarga antes de
+concluir que no ha llegado.
+
 ### ✅ F-35 · El botón de mantenimiento estaba apagado, con la validación ya escrita
 
 `vehicle-maintenance-form` **ya tenía** las tres piezas de M-42 —`FieldProblems`,
@@ -1642,16 +1654,62 @@ encapsulación de Angular su regla empata en especificidad con
 inyección. Se resolvió subiendo la especificidad con el elemento
 (`input.form-control.is-invalid`).
 
-- [ ] **M-43 · Quedan 26 `alert()` de errores de operación.** No son validación
-  de campos —esos ya no existen— sino fallos de una llamada: «Error al generar el
-  contrato», «Error al subir la foto», «Error al crear la reserva». Siguen siendo
-  ventanas del navegador y **la mayoría en español duro**, así que un operador en
-  inglés o rumano ve castellano.
+- [x] **M-43 · Los 27 `alert()` de errores de operación.** *(5 sep 2026)*
 
-  No se han tocado en M-42 a propósito: son otro problema —cómo se cuenta que
-  algo ha fallado, no qué falta por rellenar— y la solución no es la misma. El
-  sitio donde están concentrados es `reservation-detail` (9),
-  `contract-detail` (5) y las dos inspecciones (6, todos de subida de fotos).
+  No eran validación de campos —esos ya no existen tras M-42— sino fallos de una
+  llamada: «Error al generar el contrato», «Error al subir la foto». Tenían dos
+  problemas a la vez, y solo uno era el idioma:
+
+  1. **Eran ventanas del navegador.** Modales: hay que cerrarlas para poder
+     mirar la pantalla de la que hablan, no caben dos a la vez y no ofrecen
+     hacer nada al respecto.
+  2. **La mitad estaban en español duro**, así que un operador con la aplicación
+     en rumano leía castellano justo en el peor momento.
+
+  Ahora hay un `NotificationService` y una pila de avisos abajo a la derecha,
+  montada en el componente raíz —no en el layout privado— para que las pantallas
+  públicas tengan el mismo comportamiento.
+
+  **Las reglas, y el porqué de cada una:**
+
+  - **Un error no se retira solo.** Uno que se desvanece a los cinco segundos es
+    uno que el operador se pierde mientras mira otra cosa, y entonces cree que la
+    acción salió bien. Los de éxito sí se van: nadie necesita cerrar una buena
+    noticia.
+  - **El mismo fallo no se apila.** Quien pulsa tres veces un botón roto tendría
+    tres avisos idénticos tapándose entre sí. Verificado: tres clics, un aviso.
+  - **Reintentar donde se puede reintentar.** Un fallo de red generando un PDF,
+    sí; «no hay importe que retener», no — ahí no ha fallado nada, falta un dato.
+  - **Se cierra antes de reintentar.** Si vuelve a fallar aparece uno nuevo y se
+    ve que ha pasado algo; dejándolo abierto, un segundo fallo idéntico no
+    cambiaría nada en pantalla y parecería que el botón no hace nada.
+
+  **Dos cosas que aparecieron al recorrerlo, y son peores que los `alert()`:**
+
+  - **Retener y devolver fianza tenían el `catch` mudo**: solo `console.error`.
+    Si fallaba, el operador pulsaba, la fianza no se movía y **la pantalla no
+    decía nada**. Un botón mudo con dinero de por medio. Ahora avisa y ofrece
+    reintentar.
+  - Un `confirm()` y un `prompt()` en español duro (cancelar enlace de firma,
+    motivo de la retención). Traducidos. Siguen siendo ventanas del navegador:
+    convertirlos en formularios propios es otra tarea, no esta.
+
+  Verificado en el navegador con la llamada real fallando —no simulando el
+  aviso—, en los tres idiomas: «Error al generar el contrato / Could not generate
+  the contract / Nu s-a putut genera contractul», con su botón de reintentar
+  traducido. 10 tests nuevos sobre el servicio.
+
+  ⚠️ **Firestore no rechaza por falta de red.** Al cortarla para provocar el
+  fallo, la escritura **se encoló** y salió sola al volver la conexión: el `catch`
+  de crear reserva ni llegó a ejecutarse. El SDK es offline-first, y eso
+  significa que ese camino solo se prueba con un error que rechace de verdad
+  —un callable, un permiso denegado—, no desenchufando la red.
+
+- [ ] **M-46 · Un botón deshabilitado que no lo parece.** Salió al mirar la
+  captura de M-43: «Iniciar entrega» se pinta en verde primario, igual que uno
+  activo, aunque esté `disabled` y lleve debajo su «Falta firma del contrato».
+  Se lee como un botón que no responde. Es el primo del problema de M-42: allí
+  el botón no explicaba nada; aquí explica, pero no parece apagado.
 
 ---
 

@@ -935,6 +935,33 @@ quedar fuera de la pantalla: vehículo (29 campos), cliente, inspecciones.
 mano. Si la etiqueta **envuelve** al campo, la clase va en el `<span>` del texto: sobre el
 `<label>` el asterisco saldría debajo del input.
 
+### Cuando algo falla: `NotificationService`, nunca `alert()`
+
+⚠️ **No queda ni un `alert()` en la aplicación, y no debe volver ninguno** (M-43). Los
+fallos de una llamada —no la validación de campos, que es lo de arriba— se cuentan con
+`notifications.error('clave.i18n')`, y salen en la pila de avisos de abajo a la derecha
+que monta `<app-notifications>` en el **componente raíz**, para que las pantallas públicas
+se comporten igual.
+
+Cuatro reglas, todas con su motivo:
+
+- **Un error no se retira solo**; los de éxito sí. Un error que se desvanece a los cinco
+  segundos es uno que el operador se pierde, y entonces cree que la acción salió bien.
+- **El mismo fallo no se apila**: tres clics en un botón roto darían tres avisos idénticos.
+- **`retry` solo donde se pueda reintentar de verdad.** Un fallo de red, sí; «no hay
+  importe que retener», no — ahí no ha fallado nada, falta un dato.
+- **Siempre una clave i18n**, nunca texto literal. La mitad de los `alert()` estaban en
+  español duro y un operador rumano leía castellano justo en el peor momento.
+
+⚠️ **Un `catch` que solo hace `console.error` es peor que un `alert()`.** Retener y
+devolver fianza lo hacían: si fallaba, el operador pulsaba, la fianza no se movía y la
+pantalla no decía nada. Si una acción puede fallar, tiene que contarlo.
+
+⚠️ **Firestore no rechaza por falta de red**: el SDK es offline-first y **encola** la
+escritura, así que el `catch` ni se ejecuta y sale sola al volver la conexión. Para probar
+un camino de error hace falta algo que rechace de verdad —un callable, un permiso
+denegado—; desenchufar la red no vale.
+
 ### `.form-control` NO es global
 
 ⚠️ Cada formulario **declara su propia `.form-control`** en su SCSS. No está en

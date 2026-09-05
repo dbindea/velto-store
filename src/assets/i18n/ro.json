@@ -145,7 +145,8 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot"
+    "viewAll": "Vezi tot",
+    "close": "Închide"
   },
   "contracts": {
     "actions": {
@@ -229,7 +230,15 @@
       "unknownTitle": "Nu a fost găsit",
       "validMessage": "Acest contract există și este semnat.",
       "validTitle": "Contract verificat"
-    }
+    },
+    "errors": {
+      "generate": "Contractul nu a putut fi generat.",
+      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
+      "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
+      "pdfNotReady": "PDF-ul nu este încă disponibil.",
+      "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
+    },
+    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?"
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
@@ -423,7 +432,14 @@
       "kmLowerThanPickup": "Kilometrajul la returnare nu poate fi mai mic decât la predare",
       "kmRequired": "Scrie kilometrajul de la bord",
       "pickupFailed": "Predarea nu a putut fi finalizată",
-      "returnFailed": "Returnarea nu a putut fi finalizată"
+      "returnFailed": "Returnarea nu a putut fi finalizată",
+      "photoType": "Sunt acceptate doar imagini JPG, PNG sau WebP.",
+      "photoTooLarge": "Imaginea depășește limita de 5 MB.",
+      "photoUpload": "Fotografia nu a putut fi încărcată.",
+      "noAmountToRetain": "Nu există sumă de reținut.",
+      "noAmountToRefund": "Nu există sumă de restituit.",
+      "retainDeposit": "Garanția nu a putut fi reținută.",
+      "refundDeposit": "Garanția nu a putut fi restituită."
     },
     "extraCharges": {
       "cleaning": "Taxă curățenie",
@@ -491,7 +507,13 @@
     "type": {
       "pickup": "Predare",
       "return": "Returnare"
-    }
+    },
+    "success": {
+      "depositRetained": "S-au reținut {amount} € din garanție.",
+      "depositRefunded": "S-au restituit {amount} € din garanție."
+    },
+    "retentionReasonPrompt": "Motivul reținerii:",
+    "retentionDefaultReason": "Taxe predare/returnare"
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -575,7 +597,7 @@
     "actions": {
       "cancelPayment": "Anulează plata",
       "chargeCard": "Plată cu cardul",
-      "chargeCardError": "Nu s-a putut deschide pasarela de plată",
+      "chargeCardError": "Nu s-a putut deschide pasarela de plată{detail}",
       "copyPaymentLink": "Copiază linkul de plată",
       "markAsPaid": "Marchează ca plătit",
       "viewReservation": "Vezi rezervare"
@@ -793,7 +815,8 @@
       "pdfNotReady": "PDF-ul nu este încă disponibil",
       "processDeposit": "Nu s-a putut procesa garanția",
       "registerPayment": "Nu s-a putut înregistra plata",
-      "signedPdfNotReady": "Contractul semnat nu este încă disponibil"
+      "signedPdfNotReady": "Contractul semnat nu este încă disponibil",
+      "create": "Rezervarea nu a putut fi creată. Încearcă din nou."
     },
     "fields": {
       "duration": "Durată",

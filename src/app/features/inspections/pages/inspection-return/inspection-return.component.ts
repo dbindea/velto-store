@@ -1,4 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { NotificationService } from '@core/notifications/notification.service';
+import { TranslateService } from '@core/i18n/translate.service';
 import { firstValueFrom } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
@@ -43,6 +45,8 @@ import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workf
   styleUrl: './inspection-return.component.scss'
 })
 export class InspectionReturnComponent implements OnInit {
+  private notifications = inject(NotificationService);
+  private translateService = inject(TranslateService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private inspectionService = inject(InspectionService);
@@ -339,12 +343,12 @@ export class InspectionReturnComponent implements OnInit {
 
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      alert('Solo se permiten imágenes JPG, PNG o WebP');
+      this.notifications.error('inspections.errors.photoType');
       input.value = '';
       return;
     }
     if (file.size > APP_DEFAULTS.MAX_DOCUMENT_FILE_SIZE) {
-      alert('La imagen supera el tamaño máximo (5MB)');
+      this.notifications.error('inspections.errors.photoTooLarge');
       input.value = '';
       return;
     }
@@ -372,7 +376,7 @@ export class InspectionReturnComponent implements OnInit {
       input.value = '';
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Error al subir la foto');
+      this.notifications.error('inspections.errors.photoUpload');
     } finally {
       this.uploadingPhoto = false;
     }
@@ -405,17 +409,21 @@ export class InspectionReturnComponent implements OnInit {
     if (!this.reservationId) return;
     const amount = this.toRetain;
     if (amount <= 0) {
-      alert('No hay importe a retener');
+      this.notifications.error('inspections.errors.noAmountToRetain');
       return;
     }
-    const reason = prompt('Motivo de la retención:', 'Cargos entrega/devolución') || 'Cargos entrega/devolución';
+    const fallback = this.translateService.translate('inspections.retentionDefaultReason');
+    const reason = prompt(this.translateService.translate('inspections.retentionReasonPrompt'), fallback) || fallback;
     try {
       await this.inspectionService['paymentService'].retainDeposit(this.reservationId, amount, reason);
       this.recalculateTotal();
-      alert(`Retenidos ${amount.toFixed(2)} € de la fianza`);
+      this.notifications.success('inspections.success.depositRetained', { amount: amount.toFixed(2) });
       this.router.navigate(['/reservations', this.reservationId]);
     } catch (error) {
       console.error('Error retaining deposit:', error);
+      // Antes solo se registraba en consola: el operador pulsaba «Retener», la
+      // fianza no se movía y la pantalla no decía nada.
+      this.notifications.error('inspections.errors.retainDeposit', { retry: () => void this.retainDeposit() });
     }
   }
 
@@ -423,15 +431,16 @@ export class InspectionReturnComponent implements OnInit {
     if (!this.reservationId) return;
     const amount = this.toRefund;
     if (amount <= 0) {
-      alert('No hay importe a devolver');
+      this.notifications.error('inspections.errors.noAmountToRefund');
       return;
     }
     try {
       await this.inspectionService['paymentService'].refundDeposit(this.reservationId, amount, 'cash', 'Devolución fianza');
-      alert(`Devueltos ${amount.toFixed(2)} € de la fianza`);
+      this.notifications.success('inspections.success.depositRefunded', { amount: amount.toFixed(2) });
       this.router.navigate(['/reservations', this.reservationId]);
     } catch (error) {
       console.error('Error refunding deposit:', error);
+      this.notifications.error('inspections.errors.refundDeposit', { retry: () => void this.refundDeposit() });
     }
   }
 

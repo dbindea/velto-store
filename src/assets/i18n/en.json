@@ -145,7 +145,8 @@
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "close": "Close"
   },
   "contracts": {
     "actions": {
@@ -229,7 +230,15 @@
       "unknownTitle": "Not found",
       "validMessage": "This contract exists and has been signed.",
       "validTitle": "Contract verified"
-    }
+    },
+    "errors": {
+      "generate": "The contract could not be generated.",
+      "createSigningLink": "The signing link could not be created.",
+      "cancelSigningLink": "The signing link could not be cancelled.",
+      "pdfNotReady": "The PDF is not available yet.",
+      "signedPdfNotReady": "The signed contract is not available yet."
+    },
+    "confirmCancelSigningLink": "Cancel the active signing link?"
   },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",
@@ -423,7 +432,14 @@
       "kmLowerThanPickup": "The return odometer cannot be lower than at pickup",
       "kmRequired": "Enter the odometer reading",
       "pickupFailed": "The pickup could not be completed",
-      "returnFailed": "The return could not be completed"
+      "returnFailed": "The return could not be completed",
+      "photoType": "Only JPG, PNG or WebP images are allowed.",
+      "photoTooLarge": "The image exceeds the 5 MB limit.",
+      "photoUpload": "The photo could not be uploaded.",
+      "noAmountToRetain": "There is no amount to retain.",
+      "noAmountToRefund": "There is no amount to refund.",
+      "retainDeposit": "The deposit could not be retained.",
+      "refundDeposit": "The deposit could not be refunded."
     },
     "extraCharges": {
       "cleaning": "Cleaning charge",
@@ -491,7 +507,13 @@
     "type": {
       "pickup": "Pickup",
       "return": "Return"
-    }
+    },
+    "success": {
+      "depositRetained": "{amount} € retained from the deposit.",
+      "depositRefunded": "{amount} € refunded from the deposit."
+    },
+    "retentionReasonPrompt": "Reason for the retention:",
+    "retentionDefaultReason": "Pickup/return charges"
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -575,7 +597,7 @@
     "actions": {
       "cancelPayment": "Cancel payment",
       "chargeCard": "Pay by card",
-      "chargeCardError": "Could not open the payment gateway",
+      "chargeCardError": "Could not open the payment gateway{detail}",
       "copyPaymentLink": "Copy payment link",
       "markAsPaid": "Mark as paid",
       "viewReservation": "View reservation"
@@ -793,7 +815,8 @@
       "pdfNotReady": "The PDF is not available yet",
       "processDeposit": "Could not process the deposit",
       "registerPayment": "Could not register the payment",
-      "signedPdfNotReady": "The signed contract is not available yet"
+      "signedPdfNotReady": "The signed contract is not available yet",
+      "create": "The reservation could not be created. Please try again."
     },
     "fields": {
       "duration": "Duration",

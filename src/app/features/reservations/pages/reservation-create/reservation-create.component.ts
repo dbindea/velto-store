@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
+import { NotificationService } from '@core/notifications/notification.service';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Client, QuickClientData } from '@shared/models/client.model';
@@ -46,6 +47,7 @@ type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 })
 export class ReservationCreateComponent implements OnInit {
   private router = inject(Router);
+  private notifications = inject(NotificationService);
   private reservationService = inject(ReservationService);
   private clientService = inject(ClientService);
   private vehicleService = inject(VehicleService);
@@ -341,7 +343,7 @@ export class ReservationCreateComponent implements OnInit {
       this.router.navigate(['/reservations', reservationId]);
     } catch (error) {
       console.error('Error creating reservation:', error);
-      alert('Error al crear la reserva. Por favor, inténtalo de nuevo.');
+      this.notifications.error('reservations.errors.create', { retry: () => void this.createReservation() });
     } finally {
       this.saving = false;
     }
