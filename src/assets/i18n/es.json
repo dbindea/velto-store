@@ -673,7 +673,8 @@
       "incomeTotal": "Cobrado (sin fianza)",
       "rentalTotal": "Total alquiler",
       "title": "Resumen",
-      "totalRental": "Total alquiler"
+      "totalRental": "Total alquiler",
+      "extraChargesPending": "Pendiente de cobro"
     },
     "title": "Pagos",
     "types": {
@@ -881,7 +882,8 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas"
+    "title": "Reservas",
+    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?"
   },
   "search": {
     "close": "Cerrar",

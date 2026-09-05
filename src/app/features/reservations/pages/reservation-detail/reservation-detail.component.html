@@ -660,9 +660,21 @@
             </div>
           </div>
 
+          <!--
+            El importe grande es lo **devengado**, no lo cobrado. Enseñar lo
+            cobrado aquí ponía «0,00 €» con 145 € en cargos pendientes tres
+            líneas más abajo, que se lee como «no hay cargos».
+          -->
           <div class="summary-tile">
             <div class="tile-label">{{ 'payments.summary.extraChargesTotal' | translate }}</div>
-            <div class="tile-value">{{ extraChargesTotal | number:'1.2-2' }} €</div>
+            <div class="tile-value">{{ extraChargesRequired | number:'1.2-2' }} €</div>
+            @if (extraChargesPending > 0) {
+              <div class="tile-warning">
+                <i class="pi pi-exclamation-triangle"></i>
+                {{ 'payments.summary.extraChargesPending' | translate }}:
+                <strong>{{ extraChargesPending | number:'1.2-2' }} €</strong>
+              </div>
+            }
             <!-- Rental + extras. The deposit and its movements are the tile to
                  the left; adding them here made a refund look like income. -->
             <div class="tile-progress">

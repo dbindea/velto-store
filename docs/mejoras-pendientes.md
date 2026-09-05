@@ -26,6 +26,12 @@ cancelación, el mantenimiento de vehículos y las excepciones de workflow.
 en producción. El cliente puede pagar **desde su móvil** con un enlace, sin que
 el operador esté delante.
 
+⚠️ **La vía del móvil perdió un cobro real el 4 de septiembre** (F-32): el
+pedido se regeneraba en cada consulta y el aviso de Redsys llegaba huérfano.
+Arreglado y desplegado el mismo día, pero **la vía pública sigue sin un cobro
+que haya cerrado el círculo entero por sí solo**. Hasta que eso pase, no está
+probada.
+
 **Contrato**: se sella con el certificado FNMT de la empresa.
 
 **Contrato en papel**: lleva QR y Código Seguro de Verificación desde el 4 de
@@ -51,6 +57,176 @@ porque no la usaba nadie.
 
 **Cerrado**: la copia del `.p12` de `public/` está borrada (4 sep 2026). El
 certificado vive solo en Secret Manager, que es su sitio.
+
+---
+
+## Ciclo completo en producción — 5 de septiembre de 2026
+
+Recorrido entero con datos reales, **dejado montado en producción** para que
+Dorel lo revise: conciliación del euro cobrado → contrato → firma del cliente →
+sellado FNMT → verificación por QR → email → entrega → devolución con daños →
+mantenimiento → cierre.
+
+Lo que quedó verificado de verdad:
+
+| | |
+|---|---|
+| Liquidación del pago sembrado | una sola fila «Pagado», sin duplicar (M-14) |
+| Sellado FNMT en producción | `digitallySealed: true` |
+| Huella del contrato | `be2ed32a…` coincide **al byte** con el PDF de Storage |
+| Página `/v/:codigo` | verifica sin filtrar un solo dato personal |
+| Enlace de firma | sale con el dominio propio, no con `.web.app` |
+| Validación de formularios (M-42) | tres campos en rojo, mensaje y resumen |
+| Mantenimiento sin próxima revisión | **aparece** en la ficha del coche (M-40) |
+| Gastos | lee el coste del mantenimiento sin duplicarlo |
+| Km del vehículo | 25.000 → 25.350 tras la devolución |
+
+Y tres fallos que solo se ven recorriéndolo. Los tres están arreglados; los dos
+de frontend necesitan que subas la rama.
+
+### ✅ F-33 · El cliente veía el correo de desarrollo al firmar
+
+El pie de la pantalla pública de firma decía **`reservas@veltorent.com`** en
+producción, justo debajo del botón de firmar — mientras el contrato adjunto
+traía `reservas@veltomobility.com`. Dos correos distintos en el mismo trámite,
+y el equivocado en el sitio donde el cliente decide fiarse.
+
+La causa es de las que se repiten: el dato estaba **escrito a mano en la
+plantilla**, y su respaldo (`BRAND_CONFIG.email`) tampoco valía, porque
+`brand.config.ts` se compila dentro del bundle y **la app se construye igual
+para los dos entornos**. El correo sí cambia por entorno, y vive en
+`functions/.env.<proyecto>`.
+
+Ahora lo sirve `getContractForSigning` junto al resto de la vista. Verificado
+contra las dos functions desplegadas:
+
+```
+prod -> marca: VELTO MOBILITY | correo: reservas@veltomobility.com
+dev  -> marca: VELTO MOBILITY | correo: reservas@veltorent.com
+```
+
+`brand.config.ts` se queda con un aviso encima: **es la referencia de la marca,
+no una fuente para lo que ve el cliente**.
+
+### ✅ F-34 · Se podía cerrar un alquiler debiendo 145 € sin un solo aviso
+
+La devolución generó tres cargos —combustible 15 €, limpieza 10 €, daños 120 €—
+que nacieron **Pendientes**, como debe ser (M-33). Pero:
+
+1. La tarjeta del resumen decía **«CARGOS EXTRA · 0,00 €»** con las tres filas
+   sumando 145 € tres líneas más abajo. Enseñaba `extrasTotal`, que es lo
+   **cobrado**. Un cero que significa «aún nada cobrado» y otro que significa
+   «no se debe nada» se pintaban igual.
+2. `canCloseReservation()` mira estado, inspección, resto y fianza —**no los
+   cargos extra**—, así que el botón cerró la reserva sin decir nada.
+
+Juntos hacen que el alquiler desaparezca de la lista de trabajo con la deuda
+viva y la pantalla afirmando que no hay cargos. Es exactamente cómo se pierde
+ese dinero.
+
+Arreglado en las dos mitades: el resumen expone `extrasRequired` (devengado) y
+`extrasPending`, la tarjeta enseña lo devengado con un aviso ámbar de lo que
+falta, y cerrar con cargos pendientes **pregunta primero, con el importe
+delante**. Tres tests nuevos fijan la distinción.
+
+⚠️ **No bloquea el cierre, y es deliberado**: reclamar un cargo puede llevar
+semanas y la agencia necesita cerrar la operación mientras tanto. Lo que no
+puede es no enterarse. Si prefieres que bloquee, se cambia en una línea.
+
+### ✅ F-35 · El botón de mantenimiento estaba apagado, con la validación ya escrita
+
+`vehicle-maintenance-form` **ya tenía** las tres piezas de M-42 —`FieldProblems`,
+`<app-form-error>`, `submitted`— y no servían de nada: el botón llevaba
+`[disabled]="saving || !form.title.trim()"`, así que con el formulario vacío no
+se podía pulsar y el mensaje no llegaba a aparecer nunca.
+
+Es el fallo que M-42 vino a quitar, sobreviviendo **dentro** del componente que
+lo arreglaba. Ahora solo se apaga mientras guarda.
+
+Barrido del resto: los demás `[disabled]` con condición son guards de workflow o
+de permisos, y esos sí llevan su razón escrita al lado. Este era el único.
+
+✅ **El email del contrato firmado llegó** (confirmado por Dorel el 5 de
+septiembre de 2026). Con eso queda probado en producción todo lo que rodea a
+Resend: el secret está puesto, `veltomobility.com` **está verificado** como
+dominio remitente y el adjunto sale con el correo bueno.
+
+### Pendiente de que lo mires tú
+
+- **M-45**: la pantalla de contrato **no enseña el código de verificación**. Si
+  un cliente llama leyendo el `VLT-…` de su papel, el operador no puede buscarlo
+  desde la aplicación. Hoy solo está dentro del PDF y en Firestore.
+
+Datos que quedan en producción, para borrar cuando empieces a usar la
+plataforma de verdad: vehículo `BW8A1BR7ZB4ioHD4BkZJ` (Renault Clio 0001PRB),
+cliente `dukWvwIQwJojo5rZEPw9`, reserva `KPPlsVPWUiZShOH06Fdv` con su contrato
+`C-KPPLSV-2026` (código `VLT-7M63-EE55-THDK`), cuatro pagos y un mantenimiento.
+
+---
+
+## ✅ F-32 · Un cobro real que la aplicación no registró *(4 sep 2026)*
+
+**Un pago de 1 € en producción se cobró y la reserva siguió diciendo «pendiente».**
+No fue Redsys: el aviso llegó, con su firma válida, a las 22:06:50. Lo que el
+log dijo fue nuestro:
+
+```
+No payment found for order { order: '93247C7C67BC' }
+```
+
+El pago existía. Lo que ya no existía era ese pedido.
+
+**La causa.** `prepareRedsysCheckout()` generaba un pedido nuevo **en cada
+llamada** y lo sobrescribía en el documento. Hasta ahí, defendible: lo llamaba
+solo el botón del operador. Pero desde que existe la pantalla pública
+`/pay/:id`, la llama también `getPaymentCheckout` — y esa pantalla es la que el
+cliente refresca **para ver si su pago ya consta**. Cada mirada al estado
+cambiaba la referencia del pago que estaba en vuelo.
+
+La secuencia, con las horas del log:
+
+| | |
+|---|---|
+| 21:45 | se crea el pago |
+| ~22:05 | se abre el checkout → pedido `93247C7C67BC`, y con él se paga |
+| 22:06:50 | Redsys avisa de `93247C7C67BC` → no lo encuentra → descartado |
+| 22:13:55 | se reabre la pantalla → pedido `5678997A390A`, machaca al anterior |
+
+Ni siquiera hacía falta refrescar en mitad del pago: basta con volver a la
+pantalla, que es exactamente lo que hace quien acaba de pagar.
+
+**Lo que se ha arreglado**, en tres piezas, porque las tres fallaron:
+
+1. **El pedido se reutiliza** mientras nadie haya intentado pagar con él
+   (`resolveOrder()`). Si ya llegó un aviso —una denegación— se emite uno
+   nuevo: la pasarela rechaza un pedido ya procesado con SIS0051.
+2. **Se guardan todos los pedidos emitidos** en `redsys.issuedOrders`, y el
+   webhook busca ahí cuando el vigente no cuadra. Una carrera entre pantallas
+   deja de costar un cobro.
+3. **Un aviso sin pago al que aplicarse ya no se tira**: se guarda en
+   `redsysOrphanNotifications/{pedido}`. Es lo que faltó anoche — el código de
+   respuesta y el de autorización del cobro se perdieron con el `console.warn`,
+   así que hoy no se puede saber desde aquí si aquel euro llegó a cobrarse.
+
+Una denegación de un pedido superado se anota pero **no** marca el pago como
+fallido: el cliente pudo ser rechazado con una tarjeta y estar pagando con otra.
+Aprobado sí se aplica siempre, venga del pedido que venga: el dinero está cobrado.
+
+Cubierto por tests (`resolveOrder`, `newOrder`) y verificado en producción: tres
+consultas seguidas al checkout devuelven ahora el mismo pedido, y `arrayUnion`
+no lo duplica.
+
+⚠️ **Queda una cosa por cerrar, y es de Dorel**: mirar en el panel de Redsys si
+el cobro de 1 € del 4 de septiembre (pedido `93247C7C67BC`, comercio `361040215`,
+22:06) quedó autorizado. El pago `DTCCE0Phi2w0RaSdXdCm` sigue en `pending`.
+
+**Lo que este fallo dice del resto.** El módulo de pagos estaba «probado de
+extremo a extremo», y lo estaba: el cobro de 10 € del 31 de agosto se hizo desde
+el botón del operador, la única vía que existía entonces. La pantalla pública
+llegó después y reutilizó la misma función sin que nadie recorriera el flujo
+entero desde el móvil de un cliente. Es el patrón de siempre —código escrito y
+nunca ejecutado— pero esta vez con dinero: **una vía de pago nueva no está
+probada hasta que alguien paga por ella y la aplicación se entera sola**.
 
 ---
 

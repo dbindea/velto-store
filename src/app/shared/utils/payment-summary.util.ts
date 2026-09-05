@@ -205,6 +205,18 @@ export function calculateReservationPaymentSummary(
     depositReturned,
     depositRetained,
     extrasTotal: extraChargesTotal,
+    /**
+     * Lo **devengado** en cargos extra, cobrado o no, y lo que falta por cobrar.
+     *
+     * `extrasTotal` es lo cobrado, y enseñarlo solo se lee como «no hay cargos»:
+     * la ficha decía «CARGOS EXTRA 0,00 €» con 145 € en tres filas justo debajo.
+     * Con dinero, un cero que significa «aún nada cobrado» y un cero que
+     * significa «no se debe nada» no se pueden pintar igual.
+     */
+    extrasRequired: extraChargesRequired,
+    extrasPending: roundMoney(
+      extraCharges.reduce((sum, p) => sum + calculatePendingAmount(p.amount, p.paidAmount), 0)
+    ),
     totalPaid,
     totalPending,
     balance,

@@ -388,8 +388,30 @@ export class ReservationDetailComponent implements OnInit {
     return this.reservation ? toDate(this.reservation.pickupDateTime) : new Date();
   }
 
+  /**
+   * Cerrar el alquiler.
+   *
+   * ⚠️ **Cerrar no cobra ni perdona nada.** Los cargos extra que queden
+   * pendientes siguen siendo deuda del cliente después de cerrar, así que si
+   * los hay se pregunta antes, con el importe delante. Cerrar en silencio una
+   * reserva con 145 € sin cobrar es exactamente cómo se pierde ese dinero: el
+   * alquiler desaparece de la lista de trabajo y nadie vuelve a mirarlo.
+   *
+   * No **bloquea** el cierre a propósito. Reclamar un cargo puede llevar
+   * semanas y la agencia necesita cerrar la operación mientras tanto; lo que no
+   * puede es no enterarse.
+   */
   async closeReservation(): Promise<void> {
     if (!this.reservation?.id) return;
+
+    const pending = this.extraChargesPending;
+    if (pending > 0) {
+      const message = this.translateService
+        .translate('reservations.closeWithPendingCharges')
+        .replace('{amount}', pending.toFixed(2));
+      if (!confirm(message)) return;
+    }
+
     this.closingReservation = true;
     try {
       await this.reservationService.closeReservation(this.reservation.id);
@@ -760,6 +782,16 @@ export class ReservationDetailComponent implements OnInit {
     // Always derived from the denormalized summary so we don't double-count
     // when the inspection service also pushes extras to the collection.
     return this.reservation?.paymentSummary?.extrasTotal || 0;
+  }
+
+  /** Cargos extra devengados: lo que el cliente debe, cobrado o no. */
+  get extraChargesRequired(): number {
+    return this.reservation?.paymentSummary?.extrasRequired || 0;
+  }
+
+  /** Lo que falta por cobrar de esos cargos. Cero solo si no se debe nada. */
+  get extraChargesPending(): number {
+    return this.reservation?.paymentSummary?.extrasPending || 0;
   }
 
   getDueDate(payment: Payment): Date | null {

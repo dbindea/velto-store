@@ -127,6 +127,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // redsysOrphanNotifications: avisos de Redsys que llegaron sin un pago al
+    // que aplicarse. Los escribe el webhook con el admin SDK y son material de
+    // diagnóstico —pueden contener un cobro real que la aplicación no registró—,
+    // así que desde cliente no se tocan.
+    match /redsysOrphanNotifications/{order} {
+      allow read, write: if false;
+    }
+
     // inspections collection - only authorized users
     match /inspections/{inspectionId} {
       allow read: if isAuthorized(request.auth.token.email);

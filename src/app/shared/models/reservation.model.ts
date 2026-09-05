@@ -160,7 +160,12 @@ export interface ReservationPaymentSummary {
   depositPaid: number;
   depositReturned: number;
   depositRetained: number;
+  /** Cargos extra **cobrados**. Ojo: no es lo que el cliente debe. */
   extrasTotal: number;
+  /** Cargos extra **devengados**, cobrados o no. */
+  extrasRequired: number;
+  /** Cargos extra que quedan por cobrar. Es deuda viva del cliente. */
+  extrasPending: number;
   totalPaid: number;
   totalPending: number;
   balance: number;

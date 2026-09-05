@@ -210,7 +210,13 @@
     <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="saving">
       {{ 'common.cancel' | translate }}
     </button>
-    <button type="submit" class="btn btn-primary" [disabled]="saving || !form.title.trim()">
+    <!--
+      Solo `saving`. Añadir `|| !form.title.trim()` dejaba el botón apagado con
+      el formulario vacío, y con él toda la validación de abajo: el operador
+      pulsaba y no pasaba nada, que es justo lo que M-42 vino a quitar. El
+      componente ya sabe explicar qué falta; hay que dejarle llegar.
+    -->
+    <button type="submit" class="btn btn-primary" [disabled]="saving">
       @if (saving) {
         <i class="pi pi-spin pi-spinner"></i>
       } @else {

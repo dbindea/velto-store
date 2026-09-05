@@ -905,6 +905,20 @@ app-reservation-timeline {
   color: var(--text-secondary);
 }
 
+/* Deuda viva del cliente: se lee antes que el resto de la tarjeta. */
+.tile-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--warning-color);
+
+  i {
+    font-size: 0.7rem;
+  }
+}
+
 .payment-actions {
   display: flex;
   gap: 0.5rem;

@@ -24,6 +24,16 @@ interface PublicContractView {
   locale: 'es' | 'en' | 'ro';
   status: 'active' | 'expired' | 'used' | 'cancelled' | 'invalid';
   companyName?: string;
+  /**
+   * Correo de contacto, servido por la function.
+   *
+   * ⚠️ **No sale de `BRAND_CONFIG`.** Esa constante se compila en el bundle y es
+   * la misma en los dos entornos: en producción el pie de esta pantalla enseñaba
+   * el correo de desarrollo mientras el contrato adjunto llevaba el bueno. El
+   * dato vive en `functions/.env.<proyecto>`, que sí distingue entorno, y llega
+   * junto al resto de la vista.
+   */
+  companyEmail?: string;
 }
 
 @Component({
