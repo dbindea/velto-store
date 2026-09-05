@@ -626,6 +626,28 @@ del backoffice, para no duplicar la firma, el formato del pedido ni la URL del w
 error del banco; durante meses fue así y ningún cobro con tarjeta pudo completarse. El
 POST vive en `RedsysPaymentService.openGateway()`, compartido por las dos pantallas.
 
+⚠️ **El pedido (`Ds_Merchant_Order`) NO se regenera en cada llamada.** Es la referencia
+con la que el webhook encuentra el pago, y esta misma función la invoca la pantalla que
+el cliente **refresca para ver si su pago ya consta**. Regenerándolo, el aviso de Redsys
+llegaba con un pedido que el documento ya no guardaba, el webhook respondía «No payment
+found» y **el cobro se perdía con el dinero ya cargado en la tarjeta** (F-32, 4 de
+septiembre de 2026, 1 € real).
+
+Tres reglas, y las tres hacen falta:
+
+- `resolveOrder()` **reutiliza** el pedido mientras no haya llegado ningún aviso para él.
+  Si ya llegó —una denegación— hay que emitir uno nuevo: la pasarela rechaza un pedido ya
+  procesado con **SIS0051**.
+- `redsys.issuedOrders` guarda **todos** los emitidos, y el webhook busca ahí cuando el
+  vigente no cuadra. Así una carrera entre pantallas no cuesta un cobro.
+- Un aviso sin pago al que aplicarse **se guarda** en `redsysOrphanNotifications/{pedido}`,
+  no se descarta. Puede ser dinero cobrado de verdad, y sin rastro no hay forma de saberlo
+  después.
+
+Una denegación de un pedido superado se anota pero **no** marca el pago como fallido —el
+cliente pudo ser rechazado con una tarjeta y estar pagando con otra—. Aprobado sí se
+aplica siempre.
+
 ### Datos de empresa
 
 `functions/src/company-config.ts` es la única fuente. La razón social se guarda **en
@@ -666,6 +688,15 @@ revisar los secrets, no solo el código.
 Y al revés, que es el caso de hoy: ningún `VELTO_COMPANY_*` está puesto en ningún entorno
 —**ni declarado en las functions que los leen**, así que no llegarían aunque lo estuvieran—
 y los documentos salen con los valores del código. Ver la tabla en «Secrets».
+
+⚠️ **`brand.config.ts` no sirve para datos que cambien de entorno.** Se compila
+dentro del bundle y la app se construye **igual** para desarrollo y producción,
+así que su `email` y su `website` son los mismos en los dos. El pie de la
+pantalla pública de firma llevaba `reservas@veltorent.com` escrito a mano y el
+cliente de producción veía el correo de desarrollo justo debajo del botón de
+firmar (F-33). Lo que distingue entorno vive en `functions/.env.<proyecto>`, y
+si una pantalla lo necesita, **se lo sirve la function** — como hace ahora
+`getContractForSigning` con `companyEmail`.
 
 ### Configuración por entorno: `functions/.env.<proyecto>`
 
@@ -708,6 +739,10 @@ cambia ambas.
 `veltomobility.com` no está verificado en la cuenta de Resend, el envío del
 contrato en producción falla con un 403 — y el 403 no dice «dominio sin
 verificar», dice «Error al enviar el email (403)».
+
+Los dos dominios **están verificados** y el envío funciona en los dos entornos:
+el contrato firmado llegó a su destinatario desde producción el 5 de septiembre
+de 2026.
 
 ⚠️ **Estos ficheros están en el repositorio: aquí no van credenciales.** Nada que
 no puedas enseñar. Las claves siguen en Secret Manager, declaradas con
@@ -754,11 +789,13 @@ falte se cae. Comprobar existencia sin imprimir el valor:
 firebase functions:secrets:access NOMBRE --project prod >/dev/null 2>&1; echo $?   # 0 = existe
 ```
 
-Inventario real (verificado el 29 de agosto de 2026):
+Inventario real (verificado el 29 de agosto de 2026; `RESEND_API_KEY` en
+producción, el 5 de septiembre — antes no estaba y se puso después, así que
+**comprueba antes de dar por buena una fila de esta tabla**):
 
 | Variable | dev | prod | Declarada | Qué pasa si falta |
 |---|---|---|---|---|
-| `RESEND_API_KEY` | sí | **no** | sí | `sendSignedContractEmail` no envía |
+| `RESEND_API_KEY` | sí | sí | sí | `sendSignedContractEmail` no envía |
 | `REDSYS_SECRET_KEY` | sí | sí | sí | — |
 | `REDSYS_MERCHANT_CODE` / `_TERMINAL` / `_ENVIRONMENT` | sí | **no** | **no** | `createRedsysPaymentLink` dice «Redsys no está configurado» |
 | `VELTO_PUBLIC_BASE_URL` | sí | **no** | **no** | enlaces de firma y cortos al dominio por defecto |
@@ -943,9 +980,19 @@ y las clases `.email` / `.mono` usan `anywhere`.
   pasarela de test y **con dinero real en producción** (10 €, código de autorización
   379521). El webhook recibe, valida la firma y escribe el resultado. Comercio `361040215`,
   terminal `1`, `test` en dev y **`live`** en producción.
+  ⚠️ Ese cobro se hizo desde **el botón del operador**. La pantalla pública del móvil
+  llegó después y perdió un cobro real el 4 de septiembre (F-32): arreglado el mismo día,
+  pero **todavía no hay un pago por esa vía que se haya registrado solo**. Una vía de
+  cobro no está probada hasta que alguien paga por ella y la aplicación se entera sin
+  ayuda.
 - **Los cargos extra que la fianza no cubre quedan pendientes**, no cobrados. Antes nacían
   `paid` sin cobrarse y el exceso desaparecía (M-33). El reparto vive en
   `distributeRetentionAcrossCharges`, con tests.
+  ⚠️ **`extrasTotal` es lo COBRADO, no lo que el cliente debe.** Pintarlo bajo la etiqueta
+  «Cargos extra» ponía «0,00 €» con 145 € pendientes tres líneas más abajo (F-34). Para la
+  deuda están `extrasRequired` (devengado) y `extrasPending`. Y **cerrar la reserva no los
+  cobra ni los perdona**: `canCloseReservation()` no los mira, así que la pantalla pregunta
+  antes con el importe delante.
 - Sin lint.
 - `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
 - `CREDENTIALS.md` no está en `.gitignore`, aunque sí lo están `*.p12`, `*.pfx`, `*.key` y

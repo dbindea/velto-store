@@ -75,6 +75,29 @@ interface CreateRedsysLinkResponse {
  * y duplicarla sería duplicar la firma, el formato del pedido y la URL del
  * webhook. Tres cosas que ya han estado mal alguna vez.
  */
+/**
+ * Un pedido nuevo para Redsys.
+ *
+ * La pasarela exige entre 4 y 12 caracteres con **los cuatro primeros
+ * numéricos** y el resto alfanuméricos; un prefijo tipo `VEL…` lo rechaza.
+ * Salen exactamente 12: 4 dígitos de la cola del epoch y 32 bits de azar en
+ * hexadecimal.
+ */
+export function newOrder(): string {
+  return `${Date.now().toString().slice(-4)}${randomBytes(4).toString('hex').toUpperCase()}`;
+}
+
+/**
+ * Qué pedido usar para cobrar este pago: el que ya tenía o uno nuevo.
+ *
+ * Aparte para poder probarla, porque es la decisión que costó un cobro.
+ */
+export function resolveOrder(redsys: { order?: string; responseCode?: string } | undefined): string {
+  const previous = redsys?.order;
+  const alreadyUsed = !!redsys?.responseCode;
+  return previous && !alreadyUsed ? previous : newOrder();
+}
+
 async function prepareRedsysCheckout(
   paymentSnap: FirebaseFirestore.DocumentSnapshot,
   secret: string
@@ -94,15 +117,23 @@ async function prepareRedsysCheckout(
     );
   }
 
-  // Redsys requires Ds_Merchant_Order to be 4-12 characters with the
-  // FIRST FOUR NUMERIC and the rest alphanumeric. A `VEL...` prefix
-  // is rejected by the gateway.
-  //
-  // We build exactly 12 chars: 4 digits from the tail of the epoch
-  // millis, then 32 bits of randomness as 8 hex chars.
-  const orderPrefix = Date.now().toString().slice(-4);
-  const orderSuffix = randomBytes(4).toString('hex').toUpperCase();
-  const order = `${orderPrefix}${orderSuffix}`;
+  /**
+   * El pedido con el que se va a pagar.
+   *
+   * ⚠️ **No se genera uno nuevo en cada llamada.** Esta función la invoca
+   * también `getPaymentCheckout`, y esa pantalla es la que el cliente refresca
+   * para ver si su pago ya consta. Regenerando el pedido cada vez, el aviso de
+   * Redsys llegaba con el pedido con el que se pagó y el documento ya guardaba
+   * otro: el webhook no encontraba el pago y **el cobro se perdía**. Pasó con
+   * dinero real el 4 de septiembre de 2026 (pedido `93247C7C67BC` cobrado,
+   * documento con `5678997A390A`, «No payment found for order» en el log).
+   *
+   * Se reutiliza mientras **nadie haya intentado pagar con él**. Si ya llegó un
+   * aviso —típicamente una denegación, porque un pago aprobado deja el pago en
+   * `paid` y aquí no se llega—, hay que emitir uno nuevo: la pasarela rechaza
+   * un pedido ya procesado con SIS0051.
+   */
+  const order = resolveOrder(payment.redsys);
   const amount = Math.round((payment.amount || 0) * 100).toString();
 
   const paymentUrl =
@@ -152,6 +183,12 @@ async function prepareRedsysCheckout(
 
   await paymentSnap.ref.update({
     'redsys.order': order,
+    // Todos los pedidos que se han llegado a emitir para este pago. El webhook
+    // busca aquí cuando el pedido del aviso ya no es el vigente, que es lo que
+    // convierte una carrera entre pantallas en un cobro registrado y no en un
+    // cobro perdido. `arrayUnion` es idempotente: reutilizar el pedido no lo
+    // duplica.
+    'redsys.issuedOrders': admin.firestore.FieldValue.arrayUnion(order),
     'redsys.merchantCode': MERCHANT_CODE,
     'redsys.terminal': TERMINAL,
     'redsys.transactionType': TRANSACTION_TYPE,
@@ -341,14 +378,54 @@ export const redsysNotificationWebhook = functions.https.onRequest(
       return;
     }
 
-    // Locate the payment by the Redsys order.  Idempotent — if the
-    // payment is already `paid`, we just ack and exit.
+    // Localizar el pago por el pedido. Idempotente: si ya está `paid`, se
+    // confirma y se sale.
+    //
+    // ⚠️ **Se busca por dos sitios, y el segundo no es un adorno.** El pedido
+    // vigente puede haber cambiado entre que el cliente se fue a pagar y que
+    // llegó el aviso —basta con que alguien abra otra vez la pantalla de
+    // pago—, así que si el vigente no cuadra se busca entre todos los que se
+    // han emitido. Sin esto el aviso caía en «No payment found» y el cobro,
+    // hecho y cargado en la tarjeta, no llegaba nunca a la aplicación.
     const db = firestore();
     const paymentsRef = db.collection('payments');
-    const snap = await paymentsRef.where('redsys.order', '==', order).limit(1).get();
+    let snap = await paymentsRef.where('redsys.order', '==', order).limit(1).get();
     if (snap.empty) {
+      snap = await paymentsRef
+        .where('redsys.issuedOrders', 'array-contains', order)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        console.warn('Payment found by a superseded order', { order, paymentId: snap.docs[0].id });
+      }
+    }
+    if (snap.empty) {
+      /**
+       * Un aviso sin pago al que aplicarlo.
+       *
+       * Se guarda en vez de descartarse: puede ser dinero cobrado de verdad y,
+       * si no queda rastro, no hay forma de saberlo después. Es exactamente lo
+       * que faltó el 4 de septiembre de 2026 — el log dijo «No payment found»
+       * y ni el código de respuesta ni el de autorización se conservaron.
+       *
+       * El id es el pedido, así que un reenvío de Redsys sobrescribe en vez de
+       * acumular.
+       */
       console.warn('No payment found for order', { order });
-      // Still ack to prevent Redsys from retrying indefinitely.
+      try {
+        await db.collection('redsysOrphanNotifications').doc(order).set({
+          order,
+          responseCode: parsed.Ds_Response || '',
+          authorizationCode: parsed.Ds_AuthorisationCode || '',
+          amount: parsed.Ds_Amount || '',
+          currency: parsed.Ds_Currency || '',
+          raw: parsed,
+          receivedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (err) {
+        console.error('Failed to record orphan notification', err);
+      }
+      // Se confirma igualmente para que Redsys no reintente indefinidamente.
       res.status(200).send('OK');
       return;
     }
@@ -381,9 +458,13 @@ export const redsysNotificationWebhook = functions.https.onRequest(
       update.paidAmount = payment.amount;
       update.pendingAmount = 0;
       update.paidAt = now;
-    } else {
+    } else if (order === payment.redsys?.order) {
       update.status = 'failed';
     }
+    // Una denegación de un pedido **superado** se anota pero no toca el estado:
+    // el cliente pudo ser rechazado con una tarjeta, reintentar con otra y
+    // estar pagando ahora mismo. Marcar `failed` ahí sería dar por fallido un
+    // pago en curso. Aprobado sí se aplica siempre: el dinero está cobrado.
     await paymentDoc.ref.update(update);
 
     // If the payment is linked to a reservation, refresh its

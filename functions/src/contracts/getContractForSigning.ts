@@ -49,6 +49,8 @@ export interface PublicContractView {
   locale: ContractLocale;
   status: 'active' | 'used' | 'expired' | 'cancelled' | 'invalid';
   companyName: string;
+  /** Correo de contacto, por entorno. Ver `companyEmail`. */
+  companyEmail: string;
 }
 
 /**
@@ -59,6 +61,15 @@ export interface PublicContractView {
  * cabecera de la pantalla donde firma.
  */
 const brandName = () => companyConfig().brandName;
+/**
+ * El correo que el cliente ve al pie de la pantalla de firma.
+ *
+ * Viaja desde aquí y no desde el frontend a propósito: en la app es una
+ * constante compilada, la misma para los dos entornos, y en producción salía
+ * el correo de desarrollo debajo del botón de firmar mientras el contrato
+ * adjunto llevaba el bueno. Aquí sale de `.env.<proyecto>`, que sí distingue.
+ */
+const companyEmail = () => companyConfig().email;
 
 function toDate(value: any): Date | undefined {
   if (!value) return undefined;
@@ -146,7 +157,8 @@ export const getContractForSigning = functions.https.onCall(
       highlights: buildHighlights(contract),
       locale: resolveLocale(contract),
       status: effectiveStatus,
-      companyName: brandName()
+      companyName: brandName(),
+      companyEmail: companyEmail()
     };
   }
 );
@@ -159,7 +171,8 @@ function invalidView(): PublicContractView {
     highlights: [],
     locale: 'es',
     status: 'invalid',
-    companyName: brandName()
+    companyName: brandName(),
+    companyEmail: companyEmail()
   };
 }
 

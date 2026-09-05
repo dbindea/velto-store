@@ -145,7 +145,15 @@
     }
   </main>
 
+  <!--
+    Marca y correo vienen de la function, no de una constante del bundle: la
+    app se compila igual para los dos entornos y aquí salía el correo de
+    desarrollo en producción. Ver `companyEmail` en el componente.
+  -->
   <footer class="public-footer">
-    <span>VELTO MOBILITY · reservas@veltorent.com</span>
+    <span>{{ view?.companyName || 'VELTO MOBILITY' }}</span>
+    @if (view?.companyEmail) {
+      <span> · {{ view?.companyEmail }}</span>
+    }
   </footer>
 </div>

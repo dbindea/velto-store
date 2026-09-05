@@ -24,7 +24,22 @@ export const BRAND_CONFIG = {
   legalName: 'VELTO MOBILITY, S.L.',
   /** Public tax id shown in contracts and footer. */
   taxId: 'B88866900',
-  /** Public contact email for support and reservations. */
+  /**
+   * ⚠️ **Datos de contacto: NO los uses para nada que vea el cliente.**
+   *
+   * Este fichero se compila dentro del bundle, y la app se construye igual para
+   * los dos entornos: lo que pongas aquí sale idéntico en desarrollo y en
+   * producción. El correo y el dominio **sí** cambian entre entornos, y viven en
+   * `functions/.env.<proyecto>` (`VELTO_COMPANY_EMAIL`, `VELTO_PUBLIC_BASE_URL`).
+   *
+   * Pasó de verdad: el pie de la pantalla pública de firma llevaba
+   * `reservas@veltorent.com` escrito a mano, así que en producción el cliente
+   * veía el correo de desarrollo justo debajo del botón de firmar —mientras el
+   * contrato adjunto traía el bueno—. Ahora ese dato lo sirve
+   * `getContractForSigning`.
+   *
+   * Se quedan aquí porque son la referencia de la marca, no porque se pinten.
+   */
   email: 'reservas@veltorent.com',
   /** Public phone shown on contracts and sign-contract page. */
   phone: '+34 623 766 181',

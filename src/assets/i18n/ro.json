@@ -673,7 +673,8 @@
       "incomeTotal": "Încasat (fără garanție)",
       "rentalTotal": "Total închiriere",
       "title": "Rezumat",
-      "totalRental": "Total închiriere"
+      "totalRental": "Total închiriere",
+      "extraChargesPending": "De încasat"
     },
     "title": "Plăți",
     "types": {
@@ -881,7 +882,8 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări"
+    "title": "Rezervări",
+    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?"
   },
   "search": {
     "close": "Închide",

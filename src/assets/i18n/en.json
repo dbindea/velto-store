@@ -673,7 +673,8 @@
       "incomeTotal": "Collected (excl. deposit)",
       "rentalTotal": "Rental total",
       "title": "Summary",
-      "totalRental": "Rental total"
+      "totalRental": "Rental total",
+      "extraChargesPending": "Pending collection"
     },
     "title": "Payments",
     "types": {
@@ -881,7 +882,8 @@
       "skippedByException": "Skipped by exception",
       "title": "Reservation progress"
     },
-    "title": "Reservations"
+    "title": "Reservations",
+    "closeWithPendingCharges": "This reservation has {amount} € in uncollected extra charges.\n\nClosing it neither charges nor cancels them: they remain owed by the client, but the rental will stop showing up as pending work.\n\nClose anyway?"
   },
   "search": {
     "close": "Close",

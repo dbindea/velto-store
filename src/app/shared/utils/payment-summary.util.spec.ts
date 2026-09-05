@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Payment, PaymentStatus, PaymentType } from '@shared/models/payment.model';
+import type { Reservation } from '@shared/models/reservation.model';
 import {
   applySettlement,
+  calculateReservationPaymentSummary,
   collectedTotalsOf,
   distributeRetentionAcrossCharges,
   selectSettleablePayment
@@ -231,5 +233,65 @@ describe('distributeRetentionAcrossCharges', () => {
 
   it('ignora cargos a cero', () => {
     expect(distributeRetentionAcrossCharges([{ id: 'x', amount: 0 }], 100)).toEqual([]);
+  });
+});
+
+/**
+ * Devengado contra cobrado en los cargos extra.
+ *
+ * Existe porque la ficha enseñaba `extrasTotal` —lo **cobrado**— bajo la
+ * etiqueta «Cargos extra», así que una devolución con 145 € en daños, limpieza
+ * y combustible sin cobrar mostraba «0,00 €» con las tres filas justo debajo.
+ * Un cero que significa «aún nada cobrado» y otro que significa «no se debe
+ * nada» no se pueden pintar igual cuando hay dinero de por medio.
+ */
+describe('calculateReservationPaymentSummary · cargos extra', () => {
+  const reserva = {
+    pricingSnapshot: { finalPrice: 1 },
+    initialPayment: { requiredAmount: 1 },
+    deposit: { requiredAmount: 0, waivedReason: 'Cliente conocido' }
+  } as unknown as Reservation;
+
+  it('separa lo devengado de lo cobrado y deja ver la deuda', () => {
+    const resumen = calculateReservationPaymentSummary(
+      [
+        makePayment('initial_payment', 'paid', 1, 1),
+        makePayment('extra_fuel', 'pending', 15, 0, 'f'),
+        makePayment('extra_cleaning', 'pending', 10, 0, 'c'),
+        makePayment('extra_damage', 'pending', 120, 0, 'd')
+      ],
+      reserva
+    );
+
+    expect(resumen.extrasTotal).toBe(0);
+    expect(resumen.extrasRequired).toBe(145);
+    expect(resumen.extrasPending).toBe(145);
+    // Y el alquiler no puede anunciarse como pagado debiendo los cargos.
+    expect(resumen.paymentStatus).not.toBe('paid');
+  });
+
+  it('baja lo pendiente según se cobra, sin tocar lo devengado', () => {
+    const resumen = calculateReservationPaymentSummary(
+      [
+        makePayment('initial_payment', 'paid', 1, 1),
+        makePayment('extra_damage', 'partial', 120, 45, 'd')
+      ],
+      reserva
+    );
+
+    expect(resumen.extrasRequired).toBe(120);
+    expect(resumen.extrasTotal).toBe(45);
+    expect(resumen.extrasPending).toBe(75);
+  });
+
+  it('deja los tres a cero cuando no hubo cargos', () => {
+    const resumen = calculateReservationPaymentSummary(
+      [makePayment('initial_payment', 'paid', 1, 1)],
+      reserva
+    );
+
+    expect(resumen.extrasRequired).toBe(0);
+    expect(resumen.extrasPending).toBe(0);
+    expect(resumen.paymentStatus).toBe('paid');
   });
 });

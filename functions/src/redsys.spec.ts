@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { signRedsysParameters, signaturesMatch } from './redsys';
+import { newOrder, resolveOrder, signRedsysParameters, signaturesMatch } from './redsys';
 
 /**
  * Frozen test vector.
@@ -58,5 +58,45 @@ describe('signaturesMatch', () => {
 
   it('rejects signatures of different lengths without throwing', () => {
     expect(signaturesMatch(EXPECTED_SIGNATURE, 'short')).toBe(false);
+  });
+});
+
+/**
+ * El pedido con el que se cobra.
+ *
+ * Estos tests existen porque el 4 de septiembre de 2026 se perdió un cobro
+ * real: cada consulta de la pantalla pública regeneraba el pedido, y el aviso
+ * de Redsys llegó con uno que el documento ya no guardaba.
+ */
+describe('resolveOrder', () => {
+  it('reutiliza el pedido mientras nadie haya intentado pagar con él', () => {
+    expect(resolveOrder({ order: '93247C7C67BC' })).toBe('93247C7C67BC');
+  });
+
+  it('emite uno nuevo si ya llegó un aviso para el anterior', () => {
+    // Redsys rechaza un pedido ya procesado con SIS0051.
+    const order = resolveOrder({ order: '93247C7C67BC', responseCode: '0190' });
+    expect(order).not.toBe('93247C7C67BC');
+    expect(order).toMatch(/^\d{4}[0-9A-F]{8}$/);
+  });
+
+  it('emite uno nuevo cuando el pago no tiene ninguno', () => {
+    expect(resolveOrder(undefined)).toMatch(/^\d{4}[0-9A-F]{8}$/);
+    expect(resolveOrder({})).toMatch(/^\d{4}[0-9A-F]{8}$/);
+  });
+});
+
+describe('newOrder', () => {
+  it('cumple el formato de la pasarela: 12 caracteres, los 4 primeros numéricos', () => {
+    for (let i = 0; i < 50; i++) {
+      const order = newOrder();
+      expect(order).toHaveLength(12);
+      expect(order).toMatch(/^\d{4}[0-9A-Z]{8}$/);
+    }
+  });
+
+  it('no repite', () => {
+    const orders = new Set(Array.from({ length: 200 }, () => newOrder()));
+    expect(orders.size).toBe(200);
   });
 });
