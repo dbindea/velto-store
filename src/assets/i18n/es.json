@@ -200,7 +200,9 @@
       "subtitle": "Firma digital de contrato de alquiler",
       "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
       "successTitle": "Contrato firmado",
-      "title": "Firma del contrato"
+      "title": "Firma del contrato",
+      "additionalDrivers": "Conductores autorizados",
+      "additionalDriversHint": "Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas."
     },
     "signingLink": {
       "title": "Link de firma activo"
@@ -917,7 +919,28 @@
     "title": "Reservas",
     "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
     "pendingAmount": "pendiente",
-    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer."
+    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer.",
+    "drivers": {
+      "title": "Conductores autorizados",
+      "hint": "Además del arrendatario. Quedan impresos en el contrato y se le muestran al cliente antes de firmar.",
+      "add": "Añadir conductor",
+      "name": "Nombre completo",
+      "document": "DNI/NIE",
+      "license": "Carnet de conducir",
+      "empty": "Sin conductores adicionales.",
+      "signedLocked": "El contrato ya está firmado: los conductores no se pueden cambiar. Haz un anexo en papel.",
+      "regenerate": "Has cambiado los conductores: vuelve a generar el contrato para que salgan impresos.",
+      "search": "Buscar cliente por nombre o documento",
+      "errors": {
+        "nameRequired": "Escribe el nombre del conductor",
+        "documentRequired": "Escribe su DNI o NIE",
+        "licenseRequired": "Escribe su carnet de conducir",
+        "duplicate": "Ese conductor ya está en la lista",
+        "tooMany": "No caben más conductores",
+        "contractSigned": "El contrato ya está firmado y no se puede cambiar quién conduce.",
+        "save": "No se pudieron guardar los conductores."
+      }
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -1051,7 +1074,11 @@
       "transmission": "Transmisión",
       "version": "Versión",
       "vin": "Número de bastidor",
-      "year": "Año"
+      "year": "Año",
+      "hasGpsTracker": "Lleva localizador GPS",
+      "insurerName": "Compañía aseguradora",
+      "insurancePolicy": "Número de póliza",
+      "roadsideAssistancePhone": "Teléfono de asistencia en carretera"
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
@@ -1116,7 +1143,8 @@
       "features": "Características",
       "pricing": "Tarifas y condiciones",
       "rentalClassification": "Clasificación de alquiler",
-      "reservations": "Reservas"
+      "reservations": "Reservas",
+      "insurance": "Seguro y asistencia"
     },
     "status": {
       "available": "Disponible",
@@ -1136,7 +1164,15 @@
       "automatic": "Automático",
       "manual": "Manual"
     },
-    "viewDetail": "Ver detalle"
+    "viewDetail": "Ver detalle",
+    "insurance": {
+      "hint": "Estos datos se imprimen en el contrato, en «Datos del vehículo». La cláusula de accidentes dice que constan ahí.",
+      "insurerPlaceholder": "Ej.: Mapfre",
+      "policyPlaceholder": "Ej.: 0912-4471822",
+      "roadsidePlaceholder": "Ej.: +34 902 123 456",
+      "roadsideHint": "Es el número al que llama el cliente si se queda tirado.",
+      "missing": "Sin datos de seguro. El contrato los promete en la cláusula de accidentes: rellénalos antes de alquilar este coche."
+    }
   },
   "workflow": {
     "blockedAction": "Acción bloqueada",

@@ -10,7 +10,8 @@ import {
   BLOCKING_STATUSES,
   ReservationPricingSnapshot,
   ReservationNote,
-  WorkflowException
+  WorkflowException,
+  AdditionalDriver
 } from '@shared/models/reservation.model';
 import { Client } from '@shared/models/client.model';
 import { 
@@ -393,7 +394,8 @@ export class ReservationService {
         seats: vehicle.seats,
         luggageCapacity: vehicle.luggageCapacity,
         currentKm: vehicle.currentKm,
-        color: vehicle.color
+        color: vehicle.color,
+        hasGpsTracker: vehicle.hasGpsTracker
       },
       clientId,
       clientSnapshot: {
@@ -419,7 +421,12 @@ export class ReservationService {
         basePrice: basePriceResult.basePrice,
         netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: this.currentVatRate()
+        vatRate: this.currentVatRate(),
+        // Se congelan con el precio: el cargo por kilómetros de la devolución
+        // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
+        // que se pactó en un alquiler ya cerrado.
+        includedKmPerDay: vehicle.includedKmPerDay,
+        extraKmPrice: vehicle.extraKmPrice
       },
       initialPayment: {
         requiredAmount: initialPaymentRequired,
@@ -548,7 +555,8 @@ export class ReservationService {
         seats: vehicle.seats,
         luggageCapacity: vehicle.luggageCapacity,
         currentKm: vehicle.currentKm,
-        color: vehicle.color
+        color: vehicle.color,
+        hasGpsTracker: vehicle.hasGpsTracker
       },
       clientId: client.id!,
       clientSnapshot: {
@@ -581,7 +589,12 @@ export class ReservationService {
         finalPrice,
         // Frozen so a future change of the general rate never moves a contract
         // already signed.
-        vatRate: this.currentVatRate()
+        vatRate: this.currentVatRate(),
+        // Se congelan con el precio: el cargo por kilómetros de la devolución
+        // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
+        // que se pactó en un alquiler ya cerrado.
+        includedKmPerDay: vehicle.includedKmPerDay,
+        extraKmPrice: vehicle.extraKmPrice
       },
       initialPayment: {
         requiredAmount: initialPayment,
@@ -724,6 +737,37 @@ export class ReservationService {
     });
     // A cancelled reservation must not keep advertising money to collect.
     await this.paymentService.cancelUncollectedPayments(id);
+  }
+
+  /**
+   * Guarda los conductores autorizados además del arrendatario (cláusula 2).
+   *
+   * ⚠️ **Con el contrato firmado, no.** Los conductores van impresos en el PDF
+   * y se le enseñan al arrendatario antes de firmar: su firma es el acuerdo
+   * sobre quién puede conducir. Cambiarlos después dejaría el documento
+   * firmado diciendo una cosa y la aplicación otra — y un PDF sellado no se
+   * puede regenerar. Ahí la salida es un anexo en papel.
+   *
+   * Si el contrato está **generado pero sin firmar**, hay que volver a
+   * generarlo para que salgan: esto no lo hace solo, y la pantalla lo avisa.
+   */
+  async updateAdditionalDrivers(
+    reservationId: string,
+    drivers: AdditionalDriver[]
+  ): Promise<void> {
+    const docRef = doc(this.firestore, `reservations/${reservationId}`);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error('reservations.errors.notFound');
+    }
+    if ((snap.data() as Reservation).contractStatus === 'signed') {
+      throw new Error('reservations.drivers.errors.contractSigned');
+    }
+
+    await updateDoc(docRef, this.cleanData({
+      additionalDrivers: drivers,
+      updatedAt: { seconds: Date.now() / 1000 }
+    }));
   }
 
   /**

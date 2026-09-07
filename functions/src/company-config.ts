@@ -32,7 +32,6 @@ export interface CompanyConfig {
   phone: string;
   email: string;
   website: string;
-  insurancePolicy: string;
   representativeName: string;
   representativeNie: string;
 }
@@ -52,7 +51,6 @@ export function companyConfig(): CompanyConfig {
     phone: process.env.VELTO_COMPANY_PHONE || '+34 623 766 181',
     email: process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com',
     website: process.env.VELTO_COMPANY_WEBSITE || 'www.veltorent.com',
-    insurancePolicy: process.env.VELTO_COMPANY_INSURANCE || '',
     representativeName: process.env.VELTO_COMPANY_REP_NAME || '',
     representativeNie: process.env.VELTO_COMPANY_REP_NIE || ''
   };

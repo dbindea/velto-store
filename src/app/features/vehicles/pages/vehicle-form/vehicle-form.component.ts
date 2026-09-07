@@ -131,6 +131,10 @@ export class VehicleFormComponent implements OnInit {
             : getDefaultPricingRules(),
           defaultDepositAmount: vehicle.defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
           includedKmPerDay: vehicle.includedKmPerDay ?? APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
+          hasGpsTracker: vehicle.hasGpsTracker ?? false,
+          insurerName: vehicle.insurerName || '',
+          insurancePolicy: vehicle.insurancePolicy || '',
+          roadsideAssistancePhone: vehicle.roadsideAssistancePhone || '',
           extraKmPrice: vehicle.extraKmPrice ?? APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
           minimumRentalDays: vehicle.minimumRentalDays ?? APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
           manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
@@ -191,6 +195,15 @@ export class VehicleFormComponent implements OnInit {
         this.settingsService.settings().defaultIncludedKmPerDay ??
         APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
       extraKmPrice: APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
+      // Sin marcar: afirmar que un coche lleva GPS sin llevarlo es peor que no
+      // decirlo, porque el contrato lo imprime como un hecho.
+      hasGpsTracker: false,
+      // Vacíos y no heredados de otro coche: cada póliza es la suya, y un valor
+      // arrastrado por comodidad acabaría impreso en un contrato como si fuera
+      // el seguro de este vehículo.
+      insurerName: '',
+      insurancePolicy: '',
+      roadsideAssistancePhone: '',
       minimumRentalDays: APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
       manualPriceAllowed: true,
     };

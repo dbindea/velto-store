@@ -87,6 +87,20 @@ export interface ReservationPricingSnapshot {
    * Absent on reservations created before VAT was introduced.
    */
   vatRate?: number;
+  /**
+   * Kilómetros incluidos por día y precio del kilómetro que se pase de ahí,
+   * **congelados como el precio**.
+   *
+   * ⚠️ Estaban solo en la ficha del vehículo, y el cargo por km extra de la
+   * devolución los leía de allí: cambiar los kilómetros de un coche
+   * **recalculaba el cargo de alquileres ya cerrados**. Es el mismo motivo por
+   * el que el precio vive en este snapshot y no se lee de la tarifa vigente.
+   *
+   * Y son lo que el contrato imprime: un cargo por kilómetros que no está
+   * pactado por escrito es un cargo que el cliente puede discutir con razón.
+   */
+  includedKmPerDay?: number;
+  extraKmPrice?: number;
 }
 
 export interface ReservationDeposit {
@@ -113,6 +127,32 @@ export interface WorkflowException {
   reason: string;
   createdAt: any;
   createdBy?: string;
+}
+
+/**
+ * Una persona autorizada a conducir el vehículo además del arrendatario.
+ *
+ * ⚠️ **Esto no es un adorno del backoffice: la cláusula 2 del contrato lo
+ * exige.** «Únicamente podrán conducir el vehículo las personas expresamente
+ * declaradas por el ARRENDADOR al inicio del alquiler, que deberán ser
+ * identificadas nominalmente». Hasta ahora no había dónde declararlas, así que
+ * un alquiler con dos conductores incumplía su propio contrato.
+ *
+ * El caso real no es el segundo conductor puntual: son **cuadrillas** que
+ * alquilan un coche entre varios y se turnan al volante. Por eso es una lista y
+ * no un campo.
+ *
+ * `clientId` está cuando se eligió de la ficha de un cliente ya dado de alta
+ * —lo normal con una cuadrilla que repite— y ausente cuando se tecleó a mano.
+ * Los datos se copian igualmente: son un **snapshot**, como el del arrendatario,
+ * y no deben moverse si mañana esa ficha cambia.
+ */
+export interface AdditionalDriver {
+  /** Ficha de origen, si se eligió de la lista de clientes. */
+  clientId?: string;
+  fullName: string;
+  documentNumber?: string;
+  drivingLicenseNumber?: string;
 }
 
 /**
@@ -197,6 +237,8 @@ export interface Reservation {
     luggageCapacity?: number;
     currentKm?: number;
     color?: string;
+    /** Decide si el contrato imprime el aviso de geolocalización. */
+    hasGpsTracker?: boolean;
   };
 
   clientId: string;
@@ -206,6 +248,16 @@ export interface Reservation {
     email?: string;
     documentNumber?: string;
   };
+
+  /**
+   * Conductores autorizados además del arrendatario (cláusula 2).
+   *
+   * Se imprimen en el contrato y se le enseñan al arrendatario en la pantalla
+   * de firma: **su firma es el acuerdo** sobre quién puede conducir. Por eso
+   * solo se pueden tocar mientras el contrato no esté firmado — después, el
+   * documento ya no puede cambiar.
+   */
+  additionalDrivers?: AdditionalDriver[];
 
   pickupDateTime: any;
   returnDateTime: any;

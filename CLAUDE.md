@@ -84,6 +84,25 @@ tsconfigs separados.
 - **El CI no despliega Cloud Functions.** Solo hosting. Van a mano y con destino explícito: `npm run deploy:dev:functions` o `deploy:prod:functions`. Es el punto más frágil de los dos entornos — es fácil arreglar algo en uno y olvidarlo en el otro.
 - **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
+⚠️ **Desplegar las trece de golpe agota la cuota de CPU de Cloud Run**, y el
+mensaje no lo dice a la primera. Lo que se lee es `Container Healthcheck
+failed. Revision … is not ready and cannot serve traffic`, que parece un fallo
+de arranque del código; la causa real —`Quota exceeded for total allowable CPU
+per project per region`— sale una línea antes y solo en algunos intentos. Fallan
+cuatro o seis functions al azar, distintas cada vez.
+
+Antes de tocar nada, **descarta el código** cargando el bundle igual que lo carga
+el contenedor:
+
+```bash
+cd functions && node -e "require('./lib/index.js')"
+```
+
+Si eso imprime sin error, el código está bien y lo que falta es cuota: reintenta
+**por tandas de dos o tres** con `firebase deploy --only functions:a,functions:b`.
+Pasó el 7 de septiembre de 2026, y se perdió un rato buscando un error de
+compilación que no existía.
+
 ## Dos entornos, dos proyectos de Firebase
 
 Una sola base de código. Lo único que cambia entre entornos es **qué fichero de
@@ -385,6 +404,34 @@ módulos, esta es la razón por la que no debe.
 
 ### Reglas de dominio
 
+- ⚠️ **La aseguradora, la póliza y el teléfono de asistencia son del COCHE.** Están en
+  `Vehicle`, se rellenan en la ficha de cada vehículo y **no se congelan en el snapshot**:
+  el contrato los lee al generarse, porque lo que hay que imprimir es la póliza vigente el
+  día de la firma, no la que hubiera al crear la reserva. Nacieron como datos de empresa en
+  `company-config.ts` y duraron un día: con un valor único, el segundo coche de la flota
+  habría salido con la póliza del primero.
+- ⚠️ **El contrato no puede remitir a un dato que no imprime.** Pasó tres veces: la póliza
+  y el teléfono de asistencia («constan en Datos del vehículo» — no constaban), el nivel de
+  combustible de entrega («sección Estado del vehículo», que solo existe si hay inspección
+  y el contrato se firma **antes**) y la dotación, enumerada sin acreditar. Si vas a cobrar
+  apoyándote en una sección, esa sección tiene que estar el día de la firma.
+- **El kilometraje se pacta o no se cobra.** `includedKmPerDay` y `extraKmPrice` se congelan
+  en `pricingSnapshot` —como el precio— y se imprimen en «Precio y fianza» con su cláusula
+  propia. El cargo de la devolución los lee **del snapshot, sin respaldo al vehículo**: una
+  reserva sin ellos es una reserva en la que no se pactó kilometraje.
+- ⚠️ **Las referencias entre cláusulas van por nombre, no por número.** `clause()` numera
+  **por posición** y descarta el prefijo del título, así que insertar una cláusula renumera
+  todo lo siguiente y una referencia a «la cláusula 6» se rompe en silencio.
+- **Los conductores adicionales los exige el contrato, no la UI.** La cláusula 2 dice que
+  solo conducen las personas «expresamente declaradas… identificadas nominalmente», así que
+  `Reservation.additionalDrivers` guarda nombre, documento y carné de cada una. Se congelan
+  en el contrato como snapshot, se imprimen bajo el arrendatario y **se le enseñan al
+  cliente en la pantalla de firma**: su firma es el acuerdo sobre quién conduce.
+  ⚠️ **Con el contrato firmado no se tocan** —el PDF sellado no se puede regenerar— y
+  cambiarlos **no regenera el contrato solo**: la pantalla avisa, porque entregar un
+  contrato que no nombra a quien conduce es justo lo que la cláusula prohíbe.
+  ⚠️ Lo normal es elegirlos de la lista de clientes: el caso real son **cuadrillas** que
+  comparten coche y ya están dadas de alta.
 - Los **cargos extra solo nacen desde la inspección de devolución**. Un solo sistema, sin doble fuente. Todavía **no llevan desglose de IVA**: el contrato se genera antes de que existan.
 - **Un gasto de mantenimiento se registra en `vehicleMaintenance`, no en `expenses`.** El
   módulo de Gastos **lee** su coste y lo suma; escribirlo en los dos sitios daría dos
@@ -961,9 +1008,20 @@ Corregido el 28 de agosto de 2026, junto con el índice que faltaba de `inspecti
 
 ### Controles nativos (`select`, fechas)
 
-⚠️ **La lista desplegable de un `<select>` y el calendario de un `input[type=date]` los pinta
-el sistema operativo, no el CSS.** Ninguna regla los alcanza. El único mecanismo es
-**`color-scheme`**, declarado en `:root` (claro) y `.dark` (oscuro) en `styles.scss`.
+⚠️ **El calendario de un `input[type=date]` lo pinta el sistema operativo, no el CSS.**
+Ninguna regla lo alcanza; el único mecanismo es **`color-scheme`**, declarado en `:root`
+(claro) y `.dark` (oscuro) en `styles.scss`.
+
+Con los `<select>` **eso dejó de ser cierto el 7 de septiembre de 2026**. Chrome 135+ trae
+el *customizable select*: con `appearance: base-select` la lista sale del sistema y entra
+en la página como `::picker(select)`, así que las `option` se estilizan como cualquier otro
+elemento. Vive dentro de un `@supports` — donde no exista, el desplegable sigue siendo el
+del sistema y legible gracias a `color-scheme`.
+
+⚠️ **En móvil el desplegable del sistema es lo que se quiere.** El selector nativo de iOS
+y Android —hoja a pantalla completa— es mejor que cualquier lista propia, y esta es una app
+de móvil: se mejora el escritorio sin tocar el caso principal. Y el control **cerrado** no
+cambia — el `::picker-icon` del navegador se esconde y se mantiene el chevron de siempre.
 
 Tiene que ir en la clase del tema, **no** en el `<meta name="color-scheme">` de `index.html`:
 el meta solo declara qué esquemas soportamos y luego sigue al sistema operativo, así que un
@@ -1060,7 +1118,22 @@ estiliza `styles.scss`. Compila, pasa los tests y solo se ve mirando la pantalla
 declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
 de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
 
-El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#1e293b).
+El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#14181A).
+
+**Los valores salen del Velto Design System**, el kit de la web pública, guardado en
+[docs/design/](docs/design/) — el CSS extraído son 7,8 KB y es lo único que hay que leer.
+Los neutrales son **grises fríos con tinte teal** (`--gray-950` … `--gray-50`), no la rampa
+`slate` de Tailwind que había antes: sobre un azul marino el verde de marca flotaba.
+
+⚠️ **Las rampas (`--gray-*`, `--teal-*`) no se usan directamente.** Están para que los
+bloques de tema las mapeen a los nombres semánticos. Un componente que pinte con
+`--gray-700` se salta el tema y no cambiará al alternar claro y oscuro.
+
+⚠️ **'Inter' no existe en este proyecto.** Se pedía como fuente de cuerpo en tres sitios
+sin cargarla en ninguno —ni `@font-face` ni Google Fonts—, así que el cuerpo llevaba años
+componiéndose en la fuente del sistema mientras el CSS decía otra cosa. El cuerpo es la
+fuente del sistema **a propósito**: Gotham es de titular, y aquí el cuerpo son listados a
+13-14 px. La marca la ponen los titulares y el color.
 
 ### Mobile-first en la práctica
 
@@ -1108,9 +1181,10 @@ y las clases `.email` / `.mono` usan `anywhere`.
   añadir un campo al resumen, mételo también en la comparación de
   `reconcileAfterExternalPayment()`, o la copia no se pondrá al día nunca: el resto cuadra.
 - Sin lint.
-- `deploy.log` y `test-contract-{en,es,ro}.pdf` están en `.gitignore` desde el 7 de
-  septiembre de 2026, pero **seguirán versionados hasta que alguien los saque del índice**
-  con `git rm --cached`: ignorar un fichero no deja de seguir uno ya seguido.
+- `deploy.log` y `test-contract-{en,es,ro}.pdf` están en `.gitignore` y **ya no están en el
+  índice** (comprobado con `git ls-files` el 7 de septiembre de 2026). La trampa que los
+  puso aquí sigue siendo cierta para el siguiente: ignorar un fichero no deja de seguir uno
+  ya seguido, hace falta `git rm --cached`.
 - `CREDENTIALS.md` **sí está** en `.gitignore`, junto a `*.p12`, `*.pfx`, `*.key` y
   `cert.b64`.
 - ⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se

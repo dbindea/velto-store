@@ -59,10 +59,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--error-bg);
+  border: 1px solid var(--error-color);
   border-radius: 10px;
-  color: #dc2626;
+  color: var(--error-color);
   font-size: 0.875rem;
   margin-bottom: 1.5rem;
 

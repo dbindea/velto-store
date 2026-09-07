@@ -36,7 +36,6 @@ import {
   BODY,
   MUTED,
   RULE,
-  TINT,
   PAGE_WIDTH,
   PAGE_HEIGHT,
   MARGIN,
@@ -135,6 +134,8 @@ export interface ContractPdfInput {
     email: string;
     website?: string;
     insurancePolicy?: string;
+    insurerName?: string;
+    roadsideAssistancePhone?: string;
     representativeName?: string;
     representativeNie?: string;
   };
@@ -147,6 +148,17 @@ export interface ContractPdfInput {
     address?: string;
     drivingLicenseNumber?: string;
   };
+  /**
+   * Conductores autorizados además del arrendatario.
+   *
+   * La cláusula 2 exige que estén «identificados nominalmente», así que sin
+   * este bloque un alquiler con dos conductores incumplía su propio contrato.
+   */
+  additionalDrivers?: Array<{
+    fullName: string;
+    documentNumber?: string;
+    drivingLicenseNumber?: string;
+  }>;
   vehicle: {
     brand: string;
     model: string;
@@ -155,6 +167,25 @@ export interface ContractPdfInput {
     year?: number;
     fuelType?: string;
     transmission?: string;
+    /**
+     * Si el coche lleva localizador GPS.
+     *
+     * Decide si el contrato imprime el aviso de geolocalización: informar de
+     * que el vehículo se localiza es una obligación cuando es cierto, y una
+     * afirmación falsa cuando no lo es.
+     */
+    hasGpsTracker?: boolean;
+    /**
+     * Seguro y asistencia, **del coche**.
+     *
+     * Estuvieron un día en el bloque de empresa, y era un error de modelo: cada
+     * vehículo tiene su póliza, a veces con compañías distintas, y se renuevan
+     * por separado. Con un solo valor de empresa, el segundo coche de la flota
+     * ya habría salido con la póliza del primero.
+     */
+    insurerName?: string;
+    insurancePolicy?: string;
+    roadsideAssistancePhone?: string;
   };
   reservation: {
     pickupDateTime?: Date;
@@ -177,6 +208,15 @@ export interface ContractPdfInput {
     netPrice?: number;
     /** VAT rate frozen on the reservation, as a FRACTION (0.21 = 21 %). */
     vatRate?: number;
+    /**
+     * Kilometraje pactado, congelado en la reserva.
+     *
+     * ⚠️ Sin esto el contrato no decía nada de kilómetros y la aplicación sí
+     * sabía cobrarlos: un cargo que el documento firmado no menciona es un
+     * cargo que el cliente discute con razón.
+     */
+    includedKmPerDay?: number;
+    extraKmPrice?: number;
   };
   inspection?: {
     pickupKm?: number;
@@ -407,6 +447,25 @@ export function formatMoney(n?: number, locale: ContractLocale = 'es'): string {
     }).format(n) + ' €';
   } catch {
     return `${n.toFixed(2)} €`;
+  }
+}
+
+/**
+ * Un entero con separador de miles según el idioma del documento: `1.500` en
+ * español y rumano, `1,500` en inglés.
+ *
+ * Aparte de `formatMoney` porque los kilómetros no llevan decimales ni símbolo:
+ * «1.500,00 € km» no es una cifra que nadie escriba.
+ */
+export function formatNumber(n?: number, locale: ContractLocale = 'es'): string {
+  if (n === undefined || n === null) return '—';
+  try {
+    return new Intl.NumberFormat(
+      locale === 'en' ? 'en-GB' : locale === 'ro' ? 'ro-RO' : 'es-ES',
+      { maximumFractionDigits: 0 }
+    ).format(n);
+  } catch {
+    return String(Math.round(n));
   }
 }
 
@@ -881,6 +940,21 @@ export class PdfBuilder {
     if (opts.gap) this.y -= opts.gap;
   }
 
+  /**
+   * Alto que ocupará un texto si se compone ahora, con el mismo salto de línea
+   * que usa `text()`.
+   *
+   * Existe para poder reservar sitio a un grupo **medido** en vez de estimado.
+   * Un párrafo de aceptación cabe en cinco líneas en español y puede pedir seis
+   * en rumano, así que un número escrito a mano acierta en un idioma y sobra o
+   * falta en los otros.
+   */
+  heightOfText(s: string, opts: { size?: number; role?: FontRole; gap?: number } = {}): number {
+    const size = opts.size ?? 9;
+    const font = this.fontFor(opts.role ?? 'body', s);
+    return this.wrap(s, size, font).length * size * 1.4 + (opts.gap ?? 0);
+  }
+
   private trackedWidth(text: string, font: PDFFont, size: number, tracking: number): number {
     return font.widthOfTextAtSize(text, size) + Math.max(0, [...text].length - 1) * tracking;
   }
@@ -1293,13 +1367,18 @@ export class PdfBuilder {
     // rest. Only truncate when the label genuinely does not fit, which now
     // only happens once the 120pt floor above has claimed the room.
     const labelMax = this.pageWidth - this.margin * 2 - width - gap;
+    // Misma regla de color que `twoColumn`: una etiqueta de ficha —la que
+    // termina en dos puntos— va en tinta de cuerpo, y solo el texto suelto de
+    // la columna izquierda va apagado. Sin ella «Domicilio:» era la única
+    // etiqueta gris de una lista de etiquetas negras, porque es la única que
+    // envuelve y por tanto la única que pasa por aquí.
     this.put(
       labelWidth <= labelMax + 0.25 ? left : this.truncate(left, lf, size, labelMax),
       this.margin,
       this.y - size,
       size,
       lf,
-      leftBold ? BODY : MUTED
+      left.endsWith(':') || leftBold ? BODY : MUTED
     );
     let cy = this.y - size;
     for (const ln of lines) {
@@ -1380,15 +1459,38 @@ export class PdfBuilder {
   clause(clauseNumber: number, title: string, paragraphs: string[]): void {
     const size = 9.2;
     const titleSize = 10;
-    const lineHeight = size * 1.38;
-    const paragraphGap = size * 0.75;
+    /**
+     * Interlineado 1,5, no 1,38.
+     *
+     * A 9,2 pt y con la línea ocupando el ancho completo de la caja, 1,38 deja
+     * los renglones tan juntos que el ojo pierde el sitio al saltar de uno a
+     * otro. Un pliego de condiciones compuesto por alguien va entre 1,45 y
+     * 1,55; por debajo se lee como un volcado de texto.
+     */
+    const lineHeight = size * 1.5;
+    /**
+     * Y el párrafo respira **más** que la línea, no menos.
+     *
+     * Con 0,75× el cuerpo, la separación entre párrafos era inferior a un
+     * renglón: la cláusula se leía como un bloque continuo y había que buscar
+     * dónde empieza cada idea.
+     */
+    const paragraphGap = size * 0.95;
     const width = this.pageWidth - this.margin * 2;
 
     // Title — strip any existing "N. " prefix from the schema-stored title
     // (we render the number ourselves), and uppercase for the legal style.
     const cleaned = title.replace(/^\d+\.\s*/, '').toUpperCase();
     const titleStr = `${clauseNumber}. ${cleaned}`;
-    this.ensureSpace(titleSize * 1.6);
+    /**
+     * El título nunca se queda solo al pie de la página.
+     *
+     * Reservando sitio únicamente para él, un salto podía dejar «9. DAÑOS AL
+     * VEHÍCULO» como última línea y su primer párrafo al principio de la hoja
+     * siguiente. Se reservan además **dos renglones** de cuerpo: si no caben,
+     * la cláusula entera empieza en la página nueva.
+     */
+    this.ensureSpace(titleSize * 1.6 + lineHeight * 2);
     this.text(titleStr, { size: titleSize, role: 'display', color: INK, gap: 4 });
 
     // Body — each line goes through ensureSpace so a paragraph that reaches
@@ -1396,7 +1498,21 @@ export class PdfBuilder {
     for (const para of paragraphs) {
       const lines = this.wrap(para, size, this.font, width);
       lines.forEach((ln, i) => {
-        this.ensureSpace(lineHeight);
+        /**
+         * Viudas y huérfanas.
+         *
+         * Con `ensureSpace(lineHeight)` a secas, un párrafo podía dejar su
+         * primera línea sola al pie —huérfana— o arrastrar la última sola a la
+         * página siguiente —viuda—. Las dos se leen como un fallo de
+         * impresión.
+         *
+         * Se pide sitio para dos renglones cuando quedan dos o más por
+         * componer: así el salto cae siempre con al menos dos líneas a cada
+         * lado. Con una sola línea pendiente no hay nada que hacer, y pedir el
+         * doble abriría un hueco sin motivo.
+         */
+        const quedanDos = i < lines.length - 1;
+        this.ensureSpace(quedanDos ? lineHeight * 2 : lineHeight);
         // The last line of a paragraph keeps its natural width; justifying it
         // would stretch two words across the page.
         const isLast = i === lines.length - 1;
@@ -1441,6 +1557,26 @@ export class PdfBuilder {
     // A wrapped line should never need to shrink; if the maths says otherwise,
     // fall back rather than overlapping words.
     if (gap <= 0) {
+      this.put(line, x, baselineY, size, font, color);
+      return;
+    }
+
+    /**
+     * ⚠️ **Una línea no se estira sin límite.**
+     *
+     * Justificar a ciegas es lo que más delata a un documento hecho por una
+     * máquina: cuando la última palabra que cabía es larga, la línea queda
+     * corta y el hueco se reparte entre pocas palabras, abriendo esos «ríos» de
+     * blanco que atraviesan el párrafo. Una caja de composición de verdad
+     * renuncia a justificar antes que hacer eso.
+     *
+     * El tope es el ancho natural del espacio: si hay que meter más de ese
+     * ancho **extra** en cada hueco —es decir, doblar el espaciado— la línea se
+     * deja en bandera. Se nota mucho menos un renglón que acaba antes que un
+     * párrafo agujereado.
+     */
+    const spaceWidth = font.widthOfTextAtSize(' ', size);
+    if (gap > spaceWidth * 2) {
       this.put(line, x, baselineY, size, font, color);
       return;
     }
@@ -1800,6 +1936,14 @@ export async function buildContractPdf(
     legalName: loc === 'en' ? 'Legal name' : loc === 'ro' ? 'Denumire socială' : 'Razón social',
     document: loc === 'en' ? 'ID document' : loc === 'ro' ? 'Document de identitate' : 'Documento de identidad',
     drivingLic: loc === 'en' ? 'Driving licence' : loc === 'ro' ? 'Permis de conducere' : 'Carnet de conducir',
+    authorisedDrivers:
+      loc === 'en'
+        ? 'Additional authorised drivers'
+        : loc === 'ro'
+          ? 'Conducători autorizați suplimentari'
+          : 'Conductores autorizados adicionales',
+    driverDoc: loc === 'en' ? 'ID' : loc === 'ro' ? 'Act de identitate' : 'DNI/NIE',
+    driverLic: loc === 'en' ? 'Licence' : loc === 'ro' ? 'Permis' : 'Permiso',
     vehData: loc === 'en' ? 'Vehicle data' : loc === 'ro' ? 'Datele vehiculului' : 'Datos del vehículo',
     vehicle: loc === 'en' ? 'Vehicle' : loc === 'ro' ? 'Vehicul' : 'Vehículo',
     plate: loc === 'en' ? 'Plate' : loc === 'ro' ? 'Număr de înmatriculare' : 'Matrícula',
@@ -1827,6 +1971,40 @@ export async function buildContractPdf(
     rentalTotal:
       loc === 'en' ? 'Total rental' : loc === 'ro' ? 'Total închiriere' : 'Total alquiler',
     deposit: loc === 'en' ? 'Security deposit' : loc === 'ro' ? 'Garanție (fianță)' : 'Fianza',
+    includedKm:
+      loc === 'en'
+        ? 'Included mileage'
+        : loc === 'ro'
+          ? 'Kilometraj inclus'
+          : 'Kilometraje incluido',
+    extraKmPrice:
+      loc === 'en'
+        ? 'Additional kilometre'
+        : loc === 'ro'
+          ? 'Kilometru suplimentar'
+          : 'Kilómetro adicional',
+    unlimitedKm:
+      loc === 'en' ? 'Unlimited' : loc === 'ro' ? 'Nelimitat' : 'Ilimitado',
+    noFranchise:
+      loc === 'en'
+        ? 'No excess: the renter does not bear a deductible for covered damage'
+        : loc === 'ro'
+          ? 'Fără franșiză: locatarul nu suportă o franșiză pentru daunele acoperite'
+          : 'Sin franquicia: el arrendatario no soporta franquicia por los daños cubiertos',
+    franchise: loc === 'en' ? 'Excess' : loc === 'ro' ? 'Franșiză' : 'Franquicia',
+    insurer: loc === 'en' ? 'Insurer' : loc === 'ro' ? 'Asigurător' : 'Aseguradora',
+    roadside:
+      loc === 'en'
+        ? 'Roadside assistance'
+        : loc === 'ro'
+          ? 'Asistență rutieră'
+          : 'Asistencia en carretera',
+    gpsFitted:
+      loc === 'en'
+        ? 'Fitted with a GPS tracking device'
+        : loc === 'ro'
+          ? 'Dotat cu dispozitiv de localizare GPS'
+          : 'Equipado con localizador GPS',
     noDeposit: loc === 'en' ? 'Not required' : loc === 'ro' ? 'Nu se solicită' : 'No se solicita',
     digitallySigned:
       loc === 'en'
@@ -1870,13 +2048,7 @@ export async function buildContractPdf(
     docType: loc === 'en' ? 'Passport / ID' : loc === 'ro' ? 'Pașaport / CI' : 'DNI / NIE / Pasaporte',
     year: loc === 'en' ? 'Year' : loc === 'ro' ? 'An fabricație' : 'Año',
     fuel: loc === 'en' ? 'Fuel' : loc === 'ro' ? 'Combustibil' : 'Combustible',
-    transmission: loc === 'en' ? 'Transmission' : loc === 'ro' ? 'Transmisie' : 'Transmisión',
-    lessorDetails:
-      loc === 'en'
-        ? 'Company details (lessor):'
-        : loc === 'ro'
-        ? 'Datele locatorului:'
-        : 'Datos del arrendador (Sociedad):'
+    transmission: loc === 'en' ? 'Transmission' : loc === 'ro' ? 'Transmisie' : 'Transmisión'
   };
 
   const doc = await PDFDocument.create();
@@ -1937,18 +2109,14 @@ export async function buildContractPdf(
     b.highlightBox(i + 1, line);
   });
 
-  b.y -= 4;
-  b.separator();
-  b.text(L.lessorDetails, { size: 9, bold: true });
-  b.twoColumn(L.company + ':', input.company.legalName, false, true);
-  b.twoColumn(L.taxId + ':', input.company.taxId);
-  b.twoColumnWrap(L.address + ':', input.company.address);
-  if (input.company.phone) b.twoColumn(L.phone + ':', input.company.phone);
-  b.twoColumn(L.email + ':', input.company.email);
-  if (input.company.website) b.twoColumn(L.website + ':', input.company.website);
-  if (input.company.insurancePolicy) {
-    b.twoColumnWrap(L.insurance + ':', input.company.insurancePolicy);
-  }
+  // La portada NO repite la ficha del arrendador. La llevaba entera —razón
+  // social, NIF, domicilio, teléfono, email— y las mismas seis líneas vuelven a
+  // salir una página después en REUNIDOS, además de estar ya en la cabecera de
+  // esta misma página y en el pie legal de todas. Tres copias del mismo dato a
+  // la vista es lo que delata un documento montado por una máquina: quien
+  // maqueta a mano no repite la ficha del emisor dos veces seguidas. La póliza
+  // que colgaba de aquí tampoco se pierde: se imprime en «Datos del vehículo»,
+  // que es donde la cláusula del seguro dice que está.
 
   // -------------------------------------------------------------------------
   // PAGE 2 — DATOS DE LA OPERACIÓN
@@ -1989,6 +2157,30 @@ export async function buildContractPdf(
   if (input.client.email) b.twoColumn(L.email + ':', input.client.email);
   if (input.client.address) b.twoColumnWrap(L.address + ':', input.client.address);
 
+  /**
+   * Conductores autorizados, si los hay.
+   *
+   * Va pegado al arrendatario y no en una sección propia a propósito: son una
+   * extensión de quién puede conducir, no un apartado del contrato. Se imprime
+   * una línea por persona, con su documento y su permiso, que es lo que la
+   * cláusula 2 pide para identificarlas nominalmente.
+   */
+  if (input.additionalDrivers?.length) {
+    b.y -= 2;
+    b.subsection(L.authorisedDrivers);
+    for (const driver of input.additionalDrivers) {
+      const detalle = [
+        driver.documentNumber ? `${L.driverDoc} ${driver.documentNumber}` : '',
+        driver.drivingLicenseNumber ? `${L.driverLic} ${driver.drivingLicenseNumber}` : ''
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      // El nombre en la etiqueta y los identificadores en el valor: así una
+      // cuadrilla de cuatro se lee como una lista y no como un párrafo.
+      b.twoColumnWrap(driver.fullName + (detalle ? ':' : ''), detalle);
+    }
+  }
+
   // Vehicle
   b.section(L.vehData);
   b.twoColumn(
@@ -2001,6 +2193,28 @@ export async function buildContractPdf(
   if (input.vehicle.year) b.twoColumn(L.year + ':', String(input.vehicle.year));
   if (input.vehicle.fuelType) b.twoColumn(L.fuel + ':', fuelTypeLabel(input.vehicle.fuelType, loc));
   if (input.vehicle.transmission) b.twoColumn(L.transmission + ':', transmissionLabel(input.vehicle.transmission, loc));
+
+  /**
+   * Seguro y asistencia, **aquí y no en el bloque del arrendador**.
+   *
+   * La cláusula de accidentes dice literalmente que la aseguradora, el número
+   * de póliza y el teléfono de asistencia «constan en la sección Datos del
+   * vehículo». No constaban: se pintaban con los datos de la empresa, o no se
+   * pintaban en absoluto. Un contrato que remite a un dato que no está es un
+   * contrato que no se puede ejecutar cuando hace falta — y hace falta
+   * justamente el día del accidente.
+   */
+  if (input.vehicle.insurerName) b.twoColumn(L.insurer + ':', input.vehicle.insurerName);
+  if (input.vehicle.insurancePolicy) {
+    b.twoColumn(L.insurance + ':', input.vehicle.insurancePolicy);
+  }
+  if (input.vehicle.roadsideAssistancePhone) {
+    b.twoColumn(L.roadside + ':', input.vehicle.roadsideAssistancePhone, true, true);
+  }
+  // El aviso de geolocalización va donde el cliente mira el coche, no escondido
+  // entre las cláusulas: informar de que el vehículo se localiza es una
+  // obligación, no una letra pequeña.
+  if (input.vehicle.hasGpsTracker) b.twoColumn(L.gpsFitted, '');
 
   // Reservation
   b.section(L.resData);
@@ -2059,7 +2273,37 @@ export async function buildContractPdf(
       value: input.reservation.depositAmount
         ? formatMoney(input.reservation.depositAmount, loc)
         : L.noDeposit
-    }
+    },
+    /**
+     * El kilometraje va aquí, junto al dinero, porque es un pacto económico:
+     * de él sale el cargo por kilómetros de la devolución.
+     *
+     * Se imprime el total del alquiler —incluidos/día × días— y no la cifra
+     * diaria: es la que el cliente tiene que vigilar, y la que se compara con
+     * la lectura del cuadro al devolver.
+     */
+    ...(input.reservation.includedKmPerDay && input.reservation.totalDays
+      ? [
+          {
+            label: L.includedKm,
+            value: `${formatNumber(
+              input.reservation.includedKmPerDay * input.reservation.totalDays,
+              loc
+            )} km`
+          }
+        ]
+      : [{ label: L.includedKm, value: L.unlimitedKm }]),
+    ...(input.reservation.includedKmPerDay && input.reservation.extraKmPrice
+      ? [
+          {
+            label: L.extraKmPrice,
+            value: `${formatMoney(input.reservation.extraKmPrice, loc)}/km`
+          }
+        ]
+      : []),
+    // Sin franquicia es un dato, no una ausencia: las cláusulas de seguro la
+    // mencionan y el cliente tiene que saber que no responde de nada.
+    { label: L.franchise, value: L.noFranchise }
   ]);
 
   // Vehicle condition
@@ -2094,20 +2338,49 @@ export async function buildContractPdf(
     b.clause(i + 1, c.title, c.body);
   });
 
-  // Footer notes (still on clauses page if space; otherwise new page)
-  if (b.y < 200) b.newPage();
+  /**
+   * Notas finales. El sitio se **mide**, no se adivina: el `b.y < 200` que
+   * había aquí era un número a ojo que no sabía cuántas notas venían ni en qué
+   * idioma, así que unas veces sobraba media página y otras partía el bloque.
+   */
+  const notasSize = 8.5;
+  const alturaNotas =
+    17 + bundle.footerNotes.reduce((h, n) => h + b.heightOfText(n, { size: notasSize, gap: 7 }), 0);
+  b.keepTogether(alturaNotas);
   b.y -= 4;
   b.subsection(
     loc === 'en' ? 'Final notes' : loc === 'ro' ? 'Note finale' : 'Notas finales'
   );
   for (const note of bundle.footerNotes) {
-    b.text(note, { size: 8.5, color: [0.3, 0.3, 0.3], gap: 2 });
+    // El mismo criterio que en las cláusulas: entre dos notas hay más aire que
+    // entre dos renglones de la misma nota. Con `gap: 2` —un sexto de línea—
+    // las tres se leían como un párrafo corrido y había que buscar dónde
+    // empieza cada una.
+    b.text(note, { size: notasSize, color: [0.3, 0.3, 0.3], gap: 7 });
   }
 
   // -------------------------------------------------------------------------
-  // PAGE 4 — FIRMAS
+  // FIRMAS
   // -------------------------------------------------------------------------
-  b.newPage();
+  /**
+   * Las firmas van **a continuación**, no en una hoja aparte por decreto.
+   *
+   * Con un `newPage()` incondicional aquí, las notas finales terminaban a un
+   * tercio de la página y el contrato gastaba la hoja entera para no poner
+   * nada, con las firmas solas en la siguiente. Dos páginas medio vacías
+   * seguidas es de las cosas que más delatan un documento montado por una
+   * máquina: nadie que maquete a mano deja ese hueco.
+   *
+   * Lo que sí importa es que el grupo no se parta —el epígrafe en una página y
+   * la casilla de firma en la otra sería peor que el hueco—, así que se reserva
+   * su altura completa: epígrafe, párrafo de aceptación medido en el idioma que
+   * toque, y el bloque de casillas. Si no cabe, salta entero.
+   */
+  const alturaFirmas =
+    24 +
+    b.heightOfText(L.acknowledgement, { size: 9.5, role: 'bodyItalic', gap: 8 }) +
+    156;
+  b.keepTogether(alturaFirmas);
   b.section(L.sigHeader);
   b.text(L.acknowledgement, { size: 9.5, italic: true, color: [0.2, 0.2, 0.2], gap: 8 });
 

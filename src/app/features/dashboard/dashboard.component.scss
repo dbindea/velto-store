@@ -48,7 +48,7 @@
 // Load failure. Deliberately NOT the green check of the "all clear" state —
 // the two must never be mistaken for one another.
 .error-state {
-  i { color: var(--danger-color, #ef4444); }
+  i { color: var(--danger-color); }
 }
 
 // Shown above the cards when part of the data failed to load.
@@ -60,11 +60,11 @@
   padding: 0.625rem 0.875rem;
   border-radius: 8px;
   background: var(--bg-card);
-  border: 1px solid var(--danger-color, #ef4444);
+  border: 1px solid var(--danger-color);
   color: var(--text-primary);
   font-size: 0.85rem;
 
-  i { color: var(--danger-color, #ef4444); }
+  i { color: var(--danger-color); }
 }
 
 .cards-grid {
@@ -216,10 +216,10 @@
 
 // Maintenance alert cards
 .card-overdue {
-  border-left: 4px solid #b91c1c;
+  border-left: 4px solid var(--error-color);
 }
 .card-due-soon {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid var(--warning-color);
 }
 
 .card-list {

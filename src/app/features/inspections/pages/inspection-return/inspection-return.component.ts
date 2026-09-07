@@ -219,12 +219,26 @@ export class InspectionReturnComponent implements OnInit {
    * `null` cuando no hay exceso o falta algún dato, y entonces no se pinta nada.
    */
   get extraKmSuggestion(): { extraKm: number; amount: number; includedKm: number } | null {
+    /**
+     * ⚠️ **Del snapshot de la reserva, no de la ficha del vehículo.**
+     *
+     * Leyéndolo del coche, cambiarle los kilómetros incluidos o el precio del
+     * extra movía el cargo de alquileres ya cerrados — y ese cargo es el que va
+     * impreso en el contrato que el cliente firmó. Es la misma regla que hace
+     * que el precio viva en el snapshot y no en la tarifa vigente.
+     *
+     * **Sin respaldo a la ficha del vehículo**: una reserva sin estos valores
+     * congelados es una reserva en la que no se pactó kilometraje, y ahí no hay
+     * nada que cobrar. Leerlos del coche sería cobrar por algo que el contrato
+     * de ese alquiler no dice.
+     */
+    const snapshot = this.reservation?.pricingSnapshot;
     return suggestExtraKmCharge({
       pickupKm: this.pickupKm,
       returnKm: this.formData.km,
       totalDays: this.totalDays,
-      includedKmPerDay: this.vehicle?.includedKmPerDay,
-      extraKmPrice: this.vehicle?.extraKmPrice
+      includedKmPerDay: snapshot?.includedKmPerDay,
+      extraKmPrice: snapshot?.extraKmPrice
     });
   }
 

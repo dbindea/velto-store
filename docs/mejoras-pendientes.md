@@ -907,6 +907,305 @@ bases— y la subida de la factura a Storage.
   quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
   seguir quedando registrado, porque es lo que permite cerrar la reserva.
 
+## ✅ N-14 · Endurecer el contrato — 7 de septiembre de 2026
+
+Salió de comparar el contrato de Velto con uno real de Record Go (Palma, julio
+2026). Lo que apareció no fue tanto lo que le faltaba frente a ellos como que
+**el contrato se contradecía a sí mismo**.
+
+⚠️ **Los textos legales los debe validar la gestoría antes de emitirlos a
+clientes reales.** Los huecos son verificables en el código; la redacción no es
+asesoramiento jurídico.
+
+### Cláusulas que remitían a datos inexistentes
+
+- **La póliza no constaba.** La cláusula de accidentes dice que la aseguradora,
+  el número de póliza y el teléfono de asistencia «constan en la sección Datos
+  del vehículo». No constaban: `insurancePolicy` era un dato de empresa, se
+  pintaba en el bloque del arrendador y estaba vacío. Ahora se imprimen **en esa
+  sección**.
+  ⚠️ **Y son del coche, no de la empresa** — corregido el 7 de septiembre de
+  2026, ver N-16 más abajo. La primera versión los puso en `company-config.ts`
+  y en los dos `.env`, y era un error de modelo que se habría visto con el
+  segundo vehículo de la flota.
+- **«Estado del vehículo» no existía al firmar.** Esa sección solo se dibuja si
+  hay inspección, y el contrato se firma **antes** de la entrega. Si luego se
+  cobraba combustible, el documento firmado no decía con qué nivel salió el
+  coche. Ahora remite al **parte de entrega**, que es donde el dato existe.
+- **La dotación se enumeraba sin acreditarse.** Ahora la cláusula dice que el
+  detalle y el estado se recogen en el parte de entrega firmado.
+- **Baliza V16** añadida a la dotación: obligatoria en España desde el 1 de enero
+  de 2026 y no se mencionaba. **Confirmar el alcance con la gestoría.**
+
+### El kilometraje: se podía cobrar sin haberlo pactado
+
+El hueco más caro, y era doble. `Vehicle` tenía `includedKmPerDay` y
+`extraKmPrice`, la devolución los usaba para sugerir el cargo… y el contrato
+**no mencionaba el kilometraje ni una vez**. Además **no viajaban al snapshot**:
+cambiar los kilómetros de un coche recalculaba el cargo de alquileres cerrados
+— el mismo fallo que `pricingSnapshot` resolvió para el precio.
+
+Ahora se congelan con el precio, se imprimen en «Precio y fianza» (kilometraje
+del alquiler completo y €/km) y hay **cláusula 5 propia**. El cargo de la
+devolución lee del snapshot, **sin respaldo a la ficha del vehículo**: una
+reserva sin kilometraje congelado es una reserva donde no se pactó, y ahí no hay
+nada que cobrar.
+
+### Los dos puntos de RGPD
+
+- **«Irrevocable» fuera.** El párrafo declaraba la autorización «previa, amplia e
+  irrevocable» invocando los arts. 6.1.c) y 6.1.f) — que **no son
+  consentimiento**, así que se contradecía solo. Reescrito como información: la
+  comunicación no se basa en el consentimiento sino en obligación legal e
+  interés legítimo, y por eso se hace con independencia de la voluntad del
+  cliente, sin tocar sus derechos.
+- **Consentimiento en bloque, separado por base jurídica**: ejecución del
+  contrato (6.1.b), obligación legal (6.1.c) e interés legítimo (6.1.f). No hay
+  marketing, así que no hace falta casilla; el día que lo haya, separada.
+
+### Coherencia y añadidos
+
+- **Cesión a terceros** armonizada con los conductores adicionales: «salvo los
+  conductores expresamente declarados en este contrato». Se contradecían.
+- **Referencia cruzada por nombre**, no por número. El PDF numera por posición
+  (`clause()` descarta el prefijo del título), así que insertar la cláusula de
+  kilometraje habría roto «la cláusula 6» en silencio.
+- **Geolocalización informada**: los coches llevan GPS. Párrafo propio en la
+  cláusula de datos y línea en «Datos del vehículo». El campo `hasGpsTracker`
+  es del vehículo y viaja al snapshot: afirmarlo sin ser cierto sería peor que
+  callarlo.
+- **Sin franquicia**, dicho en «Precio y fianza». Las cláusulas la mencionaban
+  tres veces sin que hubiera cifra ni aclaración.
+- **Autorización expresa de cargo** en el medio de pago, con el compromiso de
+  comunicar y justificar todo cargo posterior a la devolución — que es lo que
+  hace defendible un importe no tarifado de antemano (decisión de Dorel: sin
+  tarifar).
+- **Desistimiento** (art. 103.l TRLGDCU) y **hojas de reclamaciones**. **Ambos a
+  validar con la gestoría.**
+
+`CLAUSES_VERSION` sube a 2. **Los contratos ya firmados no se mueven**: cada uno
+guarda su copia del bundle y el sellado FNMT los hace inmutables.
+
+### Verificación
+
+Los tres invariantes de maquetación pasan en **es/en/ro** con el fixture
+ampliado a propósito: aseguradora de nombre largo, GPS, kilometraje pactado y
+una **cuadrilla de cuatro conductores** con diacríticos rumanos
+(`Gheorghe Ștefănescu`). Sin eso, «96 tests en verde» no habría dicho nada del
+texto nuevo.
+
+Contrato real generado en desarrollo y **leído**: kilometraje incluido 1.500 km
+(500 × 3 días), kilómetro adicional 0,25 €/km, «sin franquicia», baliza V16 en
+la dotación, cláusula 5 de kilometraje, bases jurídicas separadas, párrafo de
+geolocalización, desistimiento y reclamaciones. 9 páginas en vez de 8.
+
+### Lo que sigue fuera
+
+- **Tarifar las penalizaciones** — decisión de Dorel: caso por caso.
+- **Anexo de daños con croquis** al estilo de Record Go.
+- **Firma de los conductores en el parte de entrega**, que la cláusula 2 exige:
+  hoy ninguna inspección lleva firma, ni la del arrendatario.
+- **Rellenar aseguradora, póliza y teléfono de asistencia de cada coche**, en su
+  ficha. Ya no van en los `.env`: ver N-16.
+
+---
+
+## ✅ N-15 · Que el contrato no parezca hecho por una máquina — 7 de septiembre de 2026
+
+Dorel lo pidió así: *«que no parezca típico PDF creado por una IA sino que tenga
+más tacto humano, letras de dimensiones más adecuadas, párrafos, saltos de
+línea»*. Mirando el PDF con esa pregunta delante, lo que delataba la máquina no
+era el tipo de letra: eran **tres hábitos que un maquetador no tiene**.
+
+### La justificación no tenía tope
+
+El texto legal iba justificado, que está bien, pero **sin límite**: una línea con
+pocas palabras estiraba los espacios hasta donde hiciera falta y abría ríos de
+blanco verticales. Es el defecto más visible de la composición automática.
+
+Ahora, si el hueco que habría que repartir pasa de **dos espacios**, la línea se
+queda en bandera. Se ve dentro de un párrafo justificado y **es lo correcto**:
+una línea suelta más corta se lee como composición cuidada, un río no.
+
+- Interlineado **1,38 → 1,5**. A 9,2 pt y a línea completa, 1,38 junta tanto los
+  renglones que el ojo pierde el sitio al saltar.
+- Separación entre párrafos **0,75× → 0,95×** el cuerpo. Estaba por debajo de un
+  renglón, así que un párrafo nuevo no se distinguía de una línea nueva.
+- **Viudas y huérfanas.** Ni un título de cláusula solo al pie, ni una línea
+  suelta arrastrada a la página siguiente: se reserva sitio para el título más
+  dos renglones, y cada línea pide sitio para dos mientras queden dos.
+
+### Repetía datos y desperdiciaba páginas
+
+Dos cosas que ningún contrato compuesto a mano hace:
+
+- **La ficha del arrendador salía tres veces**: en la cabecera de la portada, en
+  un bloque propio debajo, y otra vez en REUNIDOS una página después — razón
+  social, NIF, domicilio, teléfono y correo, idénticos. Se quitó el bloque de la
+  portada. La póliza que colgaba de ahí no se pierde: está en «Datos del
+  vehículo», que es donde la cláusula del seguro dice que está.
+- **Las firmas iban en hoja nueva por decreto** (`newPage()` incondicional), así
+  que las notas finales acababan a un tercio de página, se gastaba la hoja
+  entera para no poner nada y las firmas quedaban solas en la siguiente. Ahora
+  fluyen a continuación, y lo que se protege es que **el grupo no se parta**:
+  epígrafe, párrafo de aceptación y casillas van juntos o saltan juntos.
+
+**El contrato pasó de 10 páginas a 9**, sin quitar una sola línea de texto legal.
+
+### Dos detalles que solo se ven mirando
+
+- **«Domicilio:» era la única etiqueta gris** de una lista de etiquetas negras.
+  No era un criterio: `twoColumn` pinta en tinta de cuerpo las etiquetas que
+  acaban en dos puntos y `twoColumnWrap` no aplicaba esa regla — y el domicilio
+  es el único dato que envuelve, así que era el único que pasaba por ahí.
+- **Las tres notas finales iban pegadas** (`gap: 2`, un sexto de línea): se leían
+  como un párrafo corrido.
+
+### Lo que se midió en vez de adivinar
+
+Había dos números escritos a ojo que decidían saltos de página (`if (b.y < 200)`
+y la altura del bloque de firmas). Un número fijo acierta en español y falla en
+rumano, que compone más largo. Ahora `heightOfText()` mide el texto con el mismo
+salto de línea que usa `text()`, y el sitio se reserva con esa cifra.
+
+### Verificación
+
+- 96 tests de functions, incluidos los tres invariantes de maquetación en es/en/ro.
+- Contrato regenerado en desarrollo y **mirado página a página**: sin ríos, sin
+  títulos huérfanos, sin la hoja en blanco, y con kilometraje, «sin franquicia» y
+  la baliza V16 en su sitio.
+
+⚠️ **Lo que sigue sin verse porque no hay datos**: aseguradora, póliza y teléfono
+de asistencia sólo se imprimen si están puestos, y hay que ponerlos **coche a
+coche** en su ficha (N-16).
+
+---
+
+## ✅ N-16 · El seguro es del coche, no de la empresa — 7 de septiembre de 2026
+
+N-14 metió la aseguradora, la póliza y el teléfono de asistencia en
+`company-config.ts` y en los dos `.env`, como datos de empresa. Dorel lo corrigió
+en cuanto lo vio: **cada vehículo tiene su póliza**, no siempre con la misma
+compañía, y se renuevan en fechas distintas.
+
+Era un error de modelo, no un valor pendiente de rellenar. Con un único valor de
+empresa, **el segundo coche de la flota ya habría salido con la póliza del
+primero** — en un contrato que promete esos datos en su cláusula de accidentes.
+
+### Dónde viven ahora
+
+Tres campos opcionales en `Vehicle`: `insurerName`, `insurancePolicy` y
+`roadsideAssistancePhone`. Sección propia en el formulario del vehículo, con una
+nota que dice para qué son —quien rellena la ficha tiene que saber que eso acaba
+en un documento legal y no en el inventario— y visibles en la ficha sin entrar a
+editar. Fuera de `company-config.ts` y fuera de los dos `.env`.
+
+### La decisión que no es obvia: **no se congelan**
+
+Todo lo demás del vehículo llega al contrato por `reservation.vehicleSnapshot`,
+congelado al crear la reserva, porque describe lo que se alquiló: la marca y la
+matrícula de ese día.
+
+**El seguro no es eso.** Es la póliza que cubre el coche, y se renueva. Lo que el
+contrato tiene que imprimir es la vigente **el día que se firma**: si el cliente
+llama al teléfono de asistencia en mitad del alquiler, tiene que responder la
+compañía que le cubre hoy, no la que hubiera cuando se creó la reserva.
+
+Así que `generateContractPdf` los lee de la **ficha del coche**, con una lectura
+extra de `vehicles/{id}`. Una reserva creada en enero y firmada en marzo, con una
+renovación por medio, sale con la póliza de marzo. Los contratos **ya firmados no
+se mueven**: el PDF sellado es inmutable.
+
+Si el coche ya no existe —lo borraron—, no se imprime nada. Mismo comportamiento
+que con los campos vacíos, y mejor que inventarse un dato.
+
+### Un coche sin seguro se ve
+
+La ficha del vehículo avisa cuando los tres están vacíos, en tinta de
+advertencia: «Sin datos de seguro. El contrato los promete en la cláusula de
+accidentes». No bloquea —el coche existe y se puede alquilar— pero quien mire la
+ficha se entera **ahí**, y no cuando el cliente esté en el arcén buscando un
+teléfono que el contrato dijo que estaba impreso.
+
+### Verificación
+
+Recorrido entero en desarrollo: se rellenó la ficha del Kia Ceed (Mapfre,
+`0912-4471822`, `+34 902 123 456`), se regeneró el contrato y los tres salen en
+«Datos del vehículo», con el teléfono de asistencia en negrita. 96 tests de
+functions y 244 de la app en verde; el fixture de maquetación se movió al bloque
+del vehículo conservando el nombre largo de aseguradora, que es lo que empuja la
+columna de valores contra el margen.
+
+---
+
+
+## ✅ N-13 · Conductores adicionales en el contrato — 7 de septiembre de 2026
+
+Un cliente pidió añadir un segundo conductor. Al mirarlo apareció lo importante:
+**el contrato ya lo exigía y la aplicación no sabía cumplirlo.** La cláusula 2,
+`authorized_drivers`, dice desde siempre:
+
+> «El ARRENDATARIO es el único conductor autorizado por defecto. Únicamente
+> podrán conducir el vehículo las personas expresamente declaradas por el
+> ARRENDADOR al inicio del alquiler, **que deberán ser identificadas
+> nominalmente** y firmar el parte de entrega del vehículo.»
+
+No había dónde declararlas. Es decir: cualquier alquiler con dos conductores
+incumplía su propio contrato.
+
+**El caso real no es el segundo conductor puntual.** Dorel alquila a cuadrillas
+de obreros que comparten un coche y se turnan al volante. Por eso es una lista
+con tope de cuatro, y por eso lo normal es **elegirlos de la lista de clientes**:
+una cuadrilla que repite ya está dada de alta, así que en el caso habitual no se
+teclea nada. Si alguno no está, se escribe a mano.
+
+**Lo que se pide de cada uno** sale de la propia cláusula: nombre —«identificadas
+nominalmente»—, documento y carné, porque el arrendatario garantiza en esa misma
+cláusula que quien conduce está habilitado.
+
+**Tres decisiones, y las tres son limitaciones a propósito:**
+
+- ⚠️ **Con el contrato firmado, no se tocan.** Los conductores van impresos y se
+  le enseñan al arrendatario antes de firmar: su firma **es** el acuerdo sobre
+  quién conduce. Cambiarlos después dejaría el documento diciendo una cosa y la
+  aplicación otra, y un PDF sellado no se puede regenerar. La pantalla lo dice y
+  ofrece la salida real: un anexo en papel.
+- ⚠️ **Cambiarlos no regenera el contrato solo**, y la pantalla avisa. Entregar
+  un contrato que no nombra a quien va a conducir es exactamente lo que la
+  cláusula prohíbe, y no se nota hasta que alguien lee el PDF.
+- **Se guardan como snapshot**, no como referencia: si mañana esa ficha de
+  cliente cambia, el contrato firmado no se mueve. Misma regla que el
+  `clientSnapshot` del arrendatario.
+
+**Verificado de extremo a extremo en desarrollo**, no solo compilado:
+
+| | |
+|---|---|
+| Validación en vacío | los tres campos en rojo con su mensaje |
+| Buscar entre clientes | rellena nombre, documento y carné ya normalizados |
+| El arrendatario no se ofrece | ya es conductor por defecto; declararlo dos veces sería un error |
+| Contrato generado | «Conductores autorizados adicionales · Miguel Ángel Ruiz: DNI/NIE 87654321X · Permiso B7654321» |
+| Pantalla de firma | «Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas.» |
+
+11 tests sobre el util. Las etiquetas del PDF y de la pantalla de firma se
+componen **en el idioma del contrato**, no en el de quien mira: un contrato
+emitido en rumano se firma en rumano aunque el navegador esté en español.
+
+### Lo que queda fuera, y conviene saberlo
+
+- [ ] **La cláusula pide algo más que no hacemos: que los conductores «firmen el
+  parte de entrega».** Hoy la inspección de entrega no lleva firma de nadie, ni
+  del arrendatario. Cumplirlo al pie de la letra es otra tarea.
+- [ ] **Contrato ya firmado: sigue siendo papel.** Un anexo firmable desde la
+  aplicación reutilizaría el enlace de firma, el sellado y el QR que ya existen.
+  Decidido dejarlo fuera hasta ver si pasa a menudo.
+- [ ] **No se cobra por conductor adicional.** La cláusula de seguros lo
+  menciona como cobertura contratable que «se reflejará en la sección Precio y
+  fianza». Si algún día se cobra, entra por `pricing.util.ts`, que es la única
+  autoridad sobre el precio: sumarlo por fuera descuadraría el IVA.
+
+---
+
 ## ✅ Permisos de empleado, probados de verdad — 7 de septiembre de 2026
 
 N-11 llevaba desde el 4 de septiembre construido y **sin que hubiera entrado

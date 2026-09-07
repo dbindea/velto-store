@@ -200,7 +200,9 @@
       "subtitle": "Semnătură digitală pentru contractul de închiriere",
       "successMessage": "Mulțumim. Contractul tău a fost înregistrat.",
       "successTitle": "Contract semnat",
-      "title": "Semnarea contractului"
+      "title": "Semnarea contractului",
+      "additionalDrivers": "Conducători autorizați",
+      "additionalDriversHint": "Pe lângă tine, aceste persoane pot conduce vehiculul. Prin semnare, autorizezi acest lucru."
     },
     "signingLink": {
       "title": "Link de semnare activ"
@@ -917,7 +919,28 @@
     "title": "Rezervări",
     "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
     "pendingAmount": "de încasat",
-    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula."
+    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula.",
+    "drivers": {
+      "title": "Conducători autorizați",
+      "hint": "Pe lângă chiriaș. Apar tipăriți în contract și îi sunt arătați clientului înainte de semnare.",
+      "add": "Adaugă conducător",
+      "name": "Nume complet",
+      "document": "Act de identitate",
+      "license": "Permis de conducere",
+      "empty": "Fără conducători suplimentari.",
+      "signedLocked": "Contractul este deja semnat: conducătorii nu pot fi modificați. Fă o anexă pe hârtie.",
+      "regenerate": "Ai schimbat conducătorii: generează din nou contractul ca să apară tipăriți.",
+      "search": "Caută client după nume sau act",
+      "errors": {
+        "nameRequired": "Scrie numele conducătorului",
+        "documentRequired": "Scrie actul lui de identitate",
+        "licenseRequired": "Scrie permisul lui de conducere",
+        "duplicate": "Acel conducător este deja pe listă",
+        "tooMany": "Nu mai încap conducători",
+        "contractSigned": "Contractul este deja semnat și nu se poate schimba cine conduce.",
+        "save": "Conducătorii nu au putut fi salvați."
+      }
+    }
   },
   "search": {
     "close": "Închide",
@@ -1051,7 +1074,11 @@
       "transmission": "Transmisie",
       "version": "Versiune",
       "vin": "NUMĂR ȘASIU",
-      "year": "An"
+      "year": "An",
+      "hasGpsTracker": "Are dispozitiv de localizare GPS",
+      "insurerName": "Compania de asigurări",
+      "insurancePolicy": "Număr de poliță",
+      "roadsideAssistancePhone": "Telefon asistență rutieră"
     },
     "filterAllCategories": "Toate categoriile",
     "filterAllStatus": "Toate statusurile",
@@ -1116,7 +1143,8 @@
       "features": "Caracteristici",
       "pricing": "Tarife și condiții",
       "rentalClassification": "Clasificare de închiriere",
-      "reservations": "Rezervări"
+      "reservations": "Rezervări",
+      "insurance": "Asigurare și asistență rutieră"
     },
     "status": {
       "available": "Disponibil",
@@ -1136,7 +1164,15 @@
       "automatic": "Automată",
       "manual": "Manuală"
     },
-    "viewDetail": "Vezi detalii"
+    "viewDetail": "Vezi detalii",
+    "insurance": {
+      "hint": "Aceste date se tipăresc în contract, la «Datele vehiculului». Clauza privind accidentele spune că se regăsesc acolo.",
+      "insurerPlaceholder": "Ex.: Mapfre",
+      "policyPlaceholder": "Ex.: 0912-4471822",
+      "roadsidePlaceholder": "Ex.: +34 902 123 456",
+      "roadsideHint": "Este numărul pe care îl sună clientul dacă rămâne în pană.",
+      "missing": "Fără date de asigurare. Contractul le promite în clauza privind accidentele: completează-le înainte de a închiria acest vehicul."
+    }
   },
   "workflow": {
     "blockedAction": "Acțiune blocată",

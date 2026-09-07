@@ -18,7 +18,8 @@ import {
   RESERVATION_PAYMENT_STATUS_LABELS,
   RESERVATION_CONTRACT_STATUS_LABELS,
   RESERVATION_DEPOSIT_STATUS_LABELS,
-  ReservationPaymentSummary
+  ReservationPaymentSummary,
+  AdditionalDriver
 } from '@shared/models/reservation.model';
 import {
   Workflow,
@@ -54,6 +55,13 @@ import { ReservationTimelineComponent } from '@shared/components/reservation-tim
 import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
 import { ReservationNote } from '@shared/models/reservation.model';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { ClientService } from '@features/clients/services/client.service';
+import { Client } from '@shared/models/client.model';
+import {
+  buildAdditionalDriver,
+  driverFromClient,
+  validateAdditionalDriver
+} from '@shared/utils/additional-driver.util';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -81,6 +89,7 @@ export class ReservationDetailComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   /** Público: las plantillas preguntan qué permite el rol. */
   permissions = inject(PermissionsService);
+  private clientService = inject(ClientService);
 
   /** Id del pago cuya pasarela se está pidiendo, para no permitir dos clics. */
   readonly chargingPaymentId = signal<string | null>(null);
@@ -358,6 +367,136 @@ export class ReservationDetailComponent implements OnInit {
       await this.paymentService.syncReservationPaymentStatus(reservationId);
     } catch (error) {
       console.error('Error reconciling reservation after external payment:', error);
+    }
+  }
+
+  // === Conductores autorizados (cláusula 2 del contrato) ===
+
+  /**
+   * El caso real no es el segundo conductor puntual: son cuadrillas que
+   * alquilan un coche entre varios y se turnan. Por eso se añaden de uno en uno
+   * y lo normal es elegirlos de la lista de clientes, donde ya están.
+   */
+  showDriverForm = false;
+  savingDrivers = false;
+  driverSubmitted = false;
+  driverProblems: FieldProblems = {};
+  driverSearch = '';
+  driverCandidates: Client[] = [];
+  driverForm: { fullName: string; documentNumber: string; drivingLicenseNumber: string } = {
+    fullName: '',
+    documentNumber: '',
+    drivingLicenseNumber: ''
+  };
+
+  get additionalDrivers(): AdditionalDriver[] {
+    return this.reservation?.additionalDrivers || [];
+  }
+
+  /**
+   * Solo se pueden tocar mientras el contrato no esté firmado.
+   *
+   * Los conductores van impresos en el PDF y se le enseñan al arrendatario
+   * antes de firmar: su firma es el acuerdo sobre quién conduce. Cambiarlos
+   * después dejaría el documento firmado diciendo una cosa y la aplicación
+   * otra, y un PDF sellado no se puede regenerar.
+   */
+  canEditDrivers(): boolean {
+    return this.reservation?.contractStatus !== 'signed';
+  }
+
+  /**
+   * Avisa de que el contrato ya generado no menciona a estos conductores.
+   *
+   * Entregar un contrato que no nombra a quien va a conducir es justo lo que la
+   * cláusula 2 prohíbe, y no se nota hasta que alguien lee el PDF.
+   */
+  driversNeedContractRegen(): boolean {
+    const status = this.reservation?.contractStatus;
+    return this.additionalDrivers.length > 0 &&
+      (status === 'generated' || status === 'pending_signature');
+  }
+
+  openDriverForm(): void {
+    this.showDriverForm = true;
+    this.driverSubmitted = false;
+    this.driverProblems = {};
+    this.driverSearch = '';
+    this.driverCandidates = [];
+    this.driverForm = { fullName: '', documentNumber: '', drivingLicenseNumber: '' };
+  }
+
+  closeDriverForm(): void {
+    this.showDriverForm = false;
+  }
+
+  /** Busca entre los clientes ya dados de alta: una cuadrilla que repite ya está. */
+  searchDriverClients(): void {
+    const term = this.driverSearch.trim();
+    if (term.length < 2) {
+      this.driverCandidates = [];
+      return;
+    }
+    this.clientService.searchClients(term).subscribe(clients => {
+      // Fuera el propio arrendatario: ya es conductor por defecto, y ofrecerlo
+      // como «adicional» invita a declararlo dos veces.
+      this.driverCandidates = clients
+        .filter(c => c.id !== this.reservation?.clientId)
+        .slice(0, 5);
+    });
+  }
+
+  /** Rellena el formulario desde una ficha; el operador confirma con «Añadir». */
+  addDriverFromClient(client: Client): void {
+    const driver = driverFromClient(client);
+    this.driverForm = {
+      fullName: driver.fullName,
+      documentNumber: driver.documentNumber || '',
+      drivingLicenseNumber: driver.drivingLicenseNumber || ''
+    };
+    this.pendingDriverClientId = client.id;
+    this.driverCandidates = [];
+    this.driverSearch = '';
+  }
+
+  /** De qué ficha salió el conductor que se está añadiendo, si salió de una. */
+  private pendingDriverClientId?: string;
+
+  async addDriver(): Promise<void> {
+    if (!this.reservation?.id) return;
+    this.driverSubmitted = true;
+    this.driverProblems = validateAdditionalDriver(this.driverForm, this.additionalDrivers);
+    if (hasProblems(this.driverProblems)) return;
+
+    const driver = buildAdditionalDriver({
+      clientId: this.pendingDriverClientId,
+      ...this.driverForm
+    });
+    await this.saveDrivers([...this.additionalDrivers, driver]);
+    if (!hasProblems(this.driverProblems)) {
+      this.pendingDriverClientId = undefined;
+      this.closeDriverForm();
+    }
+  }
+
+  async removeDriver(index: number): Promise<void> {
+    if (!this.reservation?.id) return;
+    await this.saveDrivers(this.additionalDrivers.filter((_, i) => i !== index));
+  }
+
+  private async saveDrivers(drivers: AdditionalDriver[]): Promise<void> {
+    if (!this.reservation?.id) return;
+    this.savingDrivers = true;
+    try {
+      await this.reservationService.updateAdditionalDrivers(this.reservation.id, drivers);
+      // La reserva llega por una suscripción viva, pero se refleja ya para que
+      // la lista no parpadee entre la escritura y el eco de Firestore.
+      this.reservation.additionalDrivers = drivers;
+    } catch (error: any) {
+      console.error('Error saving additional drivers:', error);
+      this.notifications.error(error?.message || 'reservations.drivers.errors.save');
+    } finally {
+      this.savingDrivers = false;
     }
   }
 

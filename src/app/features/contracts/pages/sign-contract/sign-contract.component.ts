@@ -34,6 +34,14 @@ interface PublicContractView {
    * junto al resto de la vista.
    */
   companyEmail?: string;
+  /**
+   * Conductores autorizados además del arrendatario, ya compuestos por la
+   * function en el idioma del contrato.
+   *
+   * Se enseñan **antes** del botón de firmar: la cláusula 2 dice que solo
+   * conducen las personas declaradas, y quien las declara es quien firma.
+   */
+  additionalDrivers?: string[];
 }
 
 @Component({

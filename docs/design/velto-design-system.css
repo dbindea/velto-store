@@ -1,0 +1,121 @@
+/* Gotham — archivos reales entregados en Logo/Gotham (licencia del cliente) */
+@font-face{font-family:"Gotham";font-weight:300;font-style:normal;font-display:swap;src:url("b5f9dd14-aa4a-4278-9873-9a0d7ce66870") format("opentype")}
+@font-face{font-family:"Gotham";font-weight:400;font-style:normal;font-display:swap;src:url("1a9dcef8-845d-4ad7-bdec-ad39f0e3f43d") format("truetype")}
+@font-face{font-family:"Gotham";font-weight:400;font-style:italic;font-display:swap;src:url("5c6966f2-dfbf-4299-a92e-c3d40c5ad778") format("truetype")}
+@font-face{font-family:"Gotham";font-weight:500;font-style:normal;font-display:swap;src:url("f6f67460-aa7d-4a2b-8878-a8ce67c1b0eb") format("truetype")}
+@font-face{font-family:"Gotham";font-weight:500;font-style:italic;font-display:swap;src:url("d49e85d0-0330-4536-a29f-438abbf43f2f") format("truetype")}
+@font-face{font-family:"Gotham";font-weight:700;font-style:normal;font-display:swap;src:url("aace3d67-8ad5-4d94-9525-307df54e73f7") format("opentype")}
+@font-face{font-family:"Gotham";font-weight:700;font-style:italic;font-display:swap;src:url("c764fb7b-c4a5-42cb-9d52-83f05d3cf130") format("truetype")}
+@font-face{font-family:"Gotham";font-weight:900;font-style:normal;font-display:swap;src:url("ec9c6500-327a-45de-a184-df58a335b6b1") format("opentype")}
+
+:root{
+  /* Marca — de la BrandCard */
+  --velto-teal:#20A48F;
+  --velto-black:#000000;
+  --velto-white:#FFFFFF;
+  /* Rampa teal (500 = color de marca) */
+  --teal-50:#E6F6F3;--teal-100:#C2EBE3;--teal-200:#8FD9CB;--teal-300:#5CC6B3;--teal-400:#33B39E;
+  --teal-500:#20A48F;--teal-600:#1B8B79;--teal-700:#167163;--teal-800:#11584D;--teal-900:#0B3B34;
+  /* Neutrales fríos (ligero tinte teal) */
+  --gray-950:#0B0F0E;--gray-900:#14181A;--gray-800:#2A3033;--gray-700:#454D50;--gray-600:#5F686B;
+  --gray-500:#7C868A;--gray-400:#A2ABAE;--gray-300:#C9D0D2;--gray-200:#E1E6E7;--gray-100:#EEF1F2;--gray-50:#F6F8F8;
+  /* Estado (fuera de la identidad, uso funcional) */
+  --green-600:#1E7F4F;--green-100:#E1F4EA;
+  --amber-600:#9A6700;--amber-100:#FFF3D6;
+  --red-600:#C8322B;--red-100:#FCE8E6;
+  --blue-600:#2457A8;--blue-100:#E4ECFA;
+}
+
+:root{
+  --font-sans:"Gotham","Montserrat","Helvetica Neue",Arial,sans-serif;
+  --fw-light:300;--fw-book:400;--fw-medium:500;--fw-bold:700;--fw-black:900;
+  /* Escala fluida */
+  --fs-display:clamp(2.75rem,2rem + 3vw,4.5rem);   /* 44 → 72 */
+  --fs-h1:clamp(2.125rem,1.6rem + 2vw,3.25rem);    /* 34 → 52 */
+  --fs-h2:clamp(1.625rem,1.35rem + 1.1vw,2.25rem);  /* 26 → 36 */
+  --fs-h3:clamp(1.25rem,1.15rem + .4vw,1.5rem);     /* 20 → 24 */
+  --fs-h4:1.125rem;                                 /* 18 */
+  --fs-lead:1.125rem;                               /* 18 */
+  --fs-body:1rem;                                   /* 16 */
+  --fs-small:.875rem;                               /* 14 */
+  --fs-caption:.75rem;                              /* 12 */
+  --fs-overline:.6875rem;                           /* 11 */
+  --fs-price:clamp(1.75rem,1.5rem + .8vw,2.25rem);  /* 28 → 36 */
+  --lh-tight:1.05;--lh-snug:1.2;--lh-normal:1.5;--lh-relaxed:1.65;
+  --ls-tight:-.02em;--ls-normal:0;--ls-wide:.08em;--ls-brand:.28em; /* .28em = "CAR RENTAL" del logo */
+}
+
+:root{
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--sp-10:40px;
+  --sp-12:48px;--sp-16:64px;--sp-20:80px;--sp-24:96px;--sp-32:128px;
+  --container-prose:680px;--container-content:1200px;--container-wide:1366px;
+  --page-x:clamp(20px,4vw,64px);
+  --section-y:clamp(64px,8vw,96px);
+  --touch:44px;
+  --control-h:48px;--control-h-sm:40px;--control-h-lg:56px;
+}
+
+:root{
+  /* El radio crece con el tamaño. 12 = curva de la "O" del logotipo */
+  --r-xs:4px;--r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:24px;--r-2xl:32px;--r-pill:999px;
+  --bw:1px;--bw-focus:2px;
+  /* Inclinación de la "E" y la "V" del isotipo */
+  --skew:-22deg;
+  --ease:cubic-bezier(.4,0,.2,1);--t-fast:.15s;--t-base:.2s;--t-slow:.4s;
+}
+
+:root,[data-theme="light"]{
+  color-scheme:light;
+  --bg:#FFFFFF;--bg-alt:var(--gray-50);--bg-input:var(--gray-100);--bg-inverse:#000000;
+  --surface-card:#FFFFFF;--surface-raised:#FFFFFF;--surface-overlay:rgba(0,0,0,.56);
+  --text:#000000;--text-2:var(--gray-700);--text-3:var(--gray-500);--text-inverse:#FFFFFF;--text-on-brand:#000000;
+  --brand:var(--teal-500);--brand-hover:var(--teal-600);--brand-active:var(--teal-700);--brand-text:var(--teal-700);--brand-soft:var(--teal-50);--brand-soft-2:var(--teal-100);
+  --ink:#000000;--ink-hover:var(--gray-800);--text-on-ink:#FFFFFF;
+  --border:var(--gray-200);--border-strong:var(--gray-300);--divider:var(--gray-100);
+  --focus:var(--teal-600);--focus-ring:0 0 0 3px rgba(32,164,143,.28);
+  --success:var(--green-600);--success-bg:var(--green-100);
+  --warning:var(--amber-600);--warning-bg:var(--amber-100);
+  --danger:var(--red-600);--danger-bg:var(--red-100);
+  --info:var(--blue-600);--info-bg:var(--blue-100);
+  --sh-1:0 1px 2px rgba(0,0,0,.06);
+  --sh-2:0 4px 16px rgba(0,0,0,.08);
+  --sh-3:0 12px 32px rgba(0,0,0,.12);
+  --sh-4:0 24px 64px rgba(0,0,0,.18);
+  --skeleton:linear-gradient(90deg,var(--gray-100) 25%,var(--gray-50) 50%,var(--gray-100) 75%);
+}
+[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#000000;--bg-alt:var(--gray-950);--bg-input:var(--gray-900);--bg-inverse:#FFFFFF;
+  --surface-card:var(--gray-900);--surface-raised:var(--gray-800);--surface-overlay:rgba(0,0,0,.72);
+  --text:#FFFFFF;--text-2:var(--gray-300);--text-3:var(--gray-400);--text-inverse:#000000;--text-on-brand:#000000;
+  --brand:var(--teal-500);--brand-hover:var(--teal-400);--brand-active:var(--teal-300);--brand-text:var(--teal-300);--brand-soft:rgba(32,164,143,.14);--brand-soft-2:rgba(32,164,143,.26);
+  --ink:#FFFFFF;--ink-hover:var(--gray-200);--text-on-ink:#000000;
+  --border:var(--gray-800);--border-strong:var(--gray-700);--divider:var(--gray-900);
+  --focus:var(--teal-300);--focus-ring:0 0 0 3px rgba(92,198,179,.32);
+  --success:#4CC38A;--success-bg:rgba(76,195,138,.14);
+  --warning:#F0B429;--warning-bg:rgba(240,180,41,.14);
+  --danger:#F26B62;--danger-bg:rgba(242,107,98,.14);
+  --info:#7BA4EA;--info-bg:rgba(123,164,234,.14);
+  --sh-1:0 1px 2px rgba(0,0,0,.5);--sh-2:0 4px 16px rgba(0,0,0,.55);--sh-3:0 12px 32px rgba(0,0,0,.6);--sh-4:0 24px 64px rgba(0,0,0,.7);
+  --skeleton:linear-gradient(90deg,var(--gray-900) 25%,var(--gray-800) 50%,var(--gray-900) 75%);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--font-sans);font-weight:var(--fw-book);font-size:var(--fs-body);line-height:var(--lh-normal);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,p{margin:0}
+h1,h2{font-weight:var(--fw-medium);letter-spacing:var(--ls-tight);line-height:var(--lh-tight)}
+h1{font-size:var(--fs-h1)}h2{font-size:var(--fs-h2)}
+h3{font-size:var(--fs-h3);font-weight:var(--fw-medium);line-height:var(--lh-snug)}
+h4{font-size:var(--fs-h4);font-weight:var(--fw-medium);line-height:var(--lh-snug)}
+a{color:var(--brand-text);text-decoration:none}a:hover{text-decoration:underline}
+button,input,select,textarea{font:inherit;color:inherit}
+img,svg{display:block;max-width:100%}
+:focus-visible{outline:var(--bw-focus) solid var(--focus);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.overline{font-size:var(--fs-overline);font-weight:var(--fw-medium);letter-spacing:var(--ls-brand);text-transform:uppercase;color:var(--brand-text)}
+.v-skeleton{background:var(--skeleton);background-size:200% 100%;animation:v-shimmer 1.4s linear infinite;border-radius:var(--r-sm)}
+@keyframes v-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes v-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
