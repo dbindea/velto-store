@@ -101,6 +101,26 @@
           }
         </section>
 
+        <!--
+          Conductores autorizados, antes del botón de firmar.
+          La cláusula 2 dice que solo conducen las personas declaradas, y quien
+          las declara es quien firma: si no las ve, su firma no acuerda nada.
+        -->
+        @if (view.additionalDrivers?.length) {
+          <section class="drivers-section">
+            <h2 class="drivers-title">
+              <i class="pi pi-users"></i>
+              {{ 'contracts.sign.additionalDrivers' | translate }}
+            </h2>
+            <p class="drivers-hint">{{ 'contracts.sign.additionalDriversHint' | translate }}</p>
+            <ul class="drivers-list">
+              @for (d of view.additionalDrivers; track $index) {
+                <li>{{ d }}</li>
+              }
+            </ul>
+          </section>
+        }
+
         @if (view.pdfUrl) {
           <div class="pdf-link">
             <button type="button" class="btn-secondary" (click)="viewOriginalPdf()">

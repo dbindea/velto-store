@@ -51,7 +51,7 @@ porque no la usaba nadie.
 
 | | Qué es |
 |---|---|
-| **N-5** | Pre-reserva desde la web pública — sin decidir |
+| ~~N-5~~ | Pre-reserva: **se hace en la web pública**, otro proyecto (7 sep 2026) |
 | **D-1…D-6** | Seis decisiones de Dorel pendientes |
 | resto | Mejoras menores: M-5, M-6, M-10, M-11, M-13, M-21 |
 
@@ -907,55 +907,706 @@ bases— y la subida de la factura a Storage.
   quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
   seguir quedando registrado, porque es lo que permite cerrar la reserva.
 
-## Decisiones tuyas pendientes *(28 ago 2026)*
+## ✅ N-14 · Endurecer el contrato — 7 de septiembre de 2026
 
-Salidas de crear los dos coches y los dos clientes desde cero. Ninguna es un
-fallo: son convenciones que hay que elegir.
+Salió de comparar el contrato de Velto con uno real de Record Go (Palma, julio
+2026). Lo que apareció no fue tanto lo que le faltaba frente a ellos como que
+**el contrato se contradecía a sí mismo**.
 
-- [ ] **D-1 · ¿Cómo se capitalizan direcciones y lugares?** Hoy conviven dos
-  reglas: el asistente title-casea el lugar de recogida y sale
-  «Arganda **Del** Rey» en el presupuesto y en el contrato; la dirección del
-  cliente no se toca y se guarda tal cual se teclee («avenida de la
-  constitución 45»). Las tres opciones son: dejar las preposiciones en
-  minúscula (Arganda del Rey), capitalizar solo la primera letra, o no tocar
-  nada y que el operador escriba. Afecta a documentos que ve el cliente.
+⚠️ **Los textos legales los debe validar la gestoría antes de emitirlos a
+clientes reales.** Los huecos son verificables en el código; la redacción no es
+asesoramiento jurídico.
 
-- [ ] **D-2 · La versión del coche no llega al contrato.** El presupuesto dice
-  «Dacia Duster Journey TCe 130» y el contrato y el justificante dicen «Dacia
-  Duster»: `vehicleSnapshot` no guarda `version`. Si quieres que el contrato
-  identifique el coche igual que la oferta, hay que añadir el campo al snapshot
-  (solo afecta a reservas nuevas).
+### Cláusulas que remitían a datos inexistentes
 
-- [ ] **D-3 · ¿El aire acondicionado debería venir marcado por defecto?** Un
-  coche nuevo nace sin A/A y el ACRISS sale con «N» (sin aire) hasta que lo
-  marcas. En una flota de 2026 lo raro es el que no lo lleva.
+- **La póliza no constaba.** La cláusula de accidentes dice que la aseguradora,
+  el número de póliza y el teléfono de asistencia «constan en la sección Datos
+  del vehículo». No constaban: `insurancePolicy` era un dato de empresa, se
+  pintaba en el bloque del arrendador y estaba vacío. Ahora se imprimen **en esa
+  sección**.
+  ⚠️ **Y son del coche, no de la empresa** — corregido el 7 de septiembre de
+  2026, ver N-16 más abajo. La primera versión los puso en `company-config.ts`
+  y en los dos `.env`, y era un error de modelo que se habría visto con el
+  segundo vehículo de la flota.
+- **«Estado del vehículo» no existía al firmar.** Esa sección solo se dibuja si
+  hay inspección, y el contrato se firma **antes** de la entrega. Si luego se
+  cobraba combustible, el documento firmado no decía con qué nivel salió el
+  coche. Ahora remite al **parte de entrega**, que es donde el dato existe.
+- **La dotación se enumeraba sin acreditarse.** Ahora la cláusula dice que el
+  detalle y el estado se recogen en el parte de entrega firmado.
+- **Baliza V16** añadida a la dotación: obligatoria en España desde el 1 de enero
+  de 2026 y no se mencionaba. **Confirmar el alcance con la gestoría.**
 
-- [ ] **D-4 · Números en inglés fuera del español.** Se ha fijado el formato
-  español (9.200 km · 423,50 €) porque el `LOCALE_ID` se decide al arrancar y no
+### El kilometraje: se podía cobrar sin haberlo pactado
+
+El hueco más caro, y era doble. `Vehicle` tenía `includedKmPerDay` y
+`extraKmPrice`, la devolución los usaba para sugerir el cargo… y el contrato
+**no mencionaba el kilometraje ni una vez**. Además **no viajaban al snapshot**:
+cambiar los kilómetros de un coche recalculaba el cargo de alquileres cerrados
+— el mismo fallo que `pricingSnapshot` resolvió para el precio.
+
+Ahora se congelan con el precio, se imprimen en «Precio y fianza» (kilometraje
+del alquiler completo y €/km) y hay **cláusula 5 propia**. El cargo de la
+devolución lee del snapshot, **sin respaldo a la ficha del vehículo**: una
+reserva sin kilometraje congelado es una reserva donde no se pactó, y ahí no hay
+nada que cobrar.
+
+### Los dos puntos de RGPD
+
+- **«Irrevocable» fuera.** El párrafo declaraba la autorización «previa, amplia e
+  irrevocable» invocando los arts. 6.1.c) y 6.1.f) — que **no son
+  consentimiento**, así que se contradecía solo. Reescrito como información: la
+  comunicación no se basa en el consentimiento sino en obligación legal e
+  interés legítimo, y por eso se hace con independencia de la voluntad del
+  cliente, sin tocar sus derechos.
+- **Consentimiento en bloque, separado por base jurídica**: ejecución del
+  contrato (6.1.b), obligación legal (6.1.c) e interés legítimo (6.1.f). No hay
+  marketing, así que no hace falta casilla; el día que lo haya, separada.
+
+### Coherencia y añadidos
+
+- **Cesión a terceros** armonizada con los conductores adicionales: «salvo los
+  conductores expresamente declarados en este contrato». Se contradecían.
+- **Referencia cruzada por nombre**, no por número. El PDF numera por posición
+  (`clause()` descarta el prefijo del título), así que insertar la cláusula de
+  kilometraje habría roto «la cláusula 6» en silencio.
+- **Geolocalización informada**: los coches llevan GPS. Párrafo propio en la
+  cláusula de datos y línea en «Datos del vehículo». El campo `hasGpsTracker`
+  es del vehículo y viaja al snapshot: afirmarlo sin ser cierto sería peor que
+  callarlo.
+- **Sin franquicia**, dicho en «Precio y fianza». Las cláusulas la mencionaban
+  tres veces sin que hubiera cifra ni aclaración.
+- **Autorización expresa de cargo** en el medio de pago, con el compromiso de
+  comunicar y justificar todo cargo posterior a la devolución — que es lo que
+  hace defendible un importe no tarifado de antemano (decisión de Dorel: sin
+  tarifar).
+- **Desistimiento** (art. 103.l TRLGDCU) y **hojas de reclamaciones**. **Ambos a
+  validar con la gestoría.**
+
+`CLAUSES_VERSION` sube a 2. **Los contratos ya firmados no se mueven**: cada uno
+guarda su copia del bundle y el sellado FNMT los hace inmutables.
+
+### Verificación
+
+Los tres invariantes de maquetación pasan en **es/en/ro** con el fixture
+ampliado a propósito: aseguradora de nombre largo, GPS, kilometraje pactado y
+una **cuadrilla de cuatro conductores** con diacríticos rumanos
+(`Gheorghe Ștefănescu`). Sin eso, «96 tests en verde» no habría dicho nada del
+texto nuevo.
+
+Contrato real generado en desarrollo y **leído**: kilometraje incluido 1.500 km
+(500 × 3 días), kilómetro adicional 0,25 €/km, «sin franquicia», baliza V16 en
+la dotación, cláusula 5 de kilometraje, bases jurídicas separadas, párrafo de
+geolocalización, desistimiento y reclamaciones. 9 páginas en vez de 8.
+
+### Lo que sigue fuera
+
+- **Tarifar las penalizaciones** — decisión de Dorel: caso por caso.
+- **Anexo de daños con croquis** al estilo de Record Go.
+- **Firma de los conductores en el parte de entrega**, que la cláusula 2 exige:
+  hoy ninguna inspección lleva firma, ni la del arrendatario.
+- **Rellenar aseguradora, póliza y teléfono de asistencia de cada coche**, en su
+  ficha. Ya no van en los `.env`: ver N-16.
+
+---
+
+## ✅ N-15 · Que el contrato no parezca hecho por una máquina — 7 de septiembre de 2026
+
+Dorel lo pidió así: *«que no parezca típico PDF creado por una IA sino que tenga
+más tacto humano, letras de dimensiones más adecuadas, párrafos, saltos de
+línea»*. Mirando el PDF con esa pregunta delante, lo que delataba la máquina no
+era el tipo de letra: eran **tres hábitos que un maquetador no tiene**.
+
+### La justificación no tenía tope
+
+El texto legal iba justificado, que está bien, pero **sin límite**: una línea con
+pocas palabras estiraba los espacios hasta donde hiciera falta y abría ríos de
+blanco verticales. Es el defecto más visible de la composición automática.
+
+Ahora, si el hueco que habría que repartir pasa de **dos espacios**, la línea se
+queda en bandera. Se ve dentro de un párrafo justificado y **es lo correcto**:
+una línea suelta más corta se lee como composición cuidada, un río no.
+
+- Interlineado **1,38 → 1,5**. A 9,2 pt y a línea completa, 1,38 junta tanto los
+  renglones que el ojo pierde el sitio al saltar.
+- Separación entre párrafos **0,75× → 0,95×** el cuerpo. Estaba por debajo de un
+  renglón, así que un párrafo nuevo no se distinguía de una línea nueva.
+- **Viudas y huérfanas.** Ni un título de cláusula solo al pie, ni una línea
+  suelta arrastrada a la página siguiente: se reserva sitio para el título más
+  dos renglones, y cada línea pide sitio para dos mientras queden dos.
+
+### Repetía datos y desperdiciaba páginas
+
+Dos cosas que ningún contrato compuesto a mano hace:
+
+- **La ficha del arrendador salía tres veces**: en la cabecera de la portada, en
+  un bloque propio debajo, y otra vez en REUNIDOS una página después — razón
+  social, NIF, domicilio, teléfono y correo, idénticos. Se quitó el bloque de la
+  portada. La póliza que colgaba de ahí no se pierde: está en «Datos del
+  vehículo», que es donde la cláusula del seguro dice que está.
+- **Las firmas iban en hoja nueva por decreto** (`newPage()` incondicional), así
+  que las notas finales acababan a un tercio de página, se gastaba la hoja
+  entera para no poner nada y las firmas quedaban solas en la siguiente. Ahora
+  fluyen a continuación, y lo que se protege es que **el grupo no se parta**:
+  epígrafe, párrafo de aceptación y casillas van juntos o saltan juntos.
+
+**El contrato pasó de 10 páginas a 9**, sin quitar una sola línea de texto legal.
+
+### Dos detalles que solo se ven mirando
+
+- **«Domicilio:» era la única etiqueta gris** de una lista de etiquetas negras.
+  No era un criterio: `twoColumn` pinta en tinta de cuerpo las etiquetas que
+  acaban en dos puntos y `twoColumnWrap` no aplicaba esa regla — y el domicilio
+  es el único dato que envuelve, así que era el único que pasaba por ahí.
+- **Las tres notas finales iban pegadas** (`gap: 2`, un sexto de línea): se leían
+  como un párrafo corrido.
+
+### Lo que se midió en vez de adivinar
+
+Había dos números escritos a ojo que decidían saltos de página (`if (b.y < 200)`
+y la altura del bloque de firmas). Un número fijo acierta en español y falla en
+rumano, que compone más largo. Ahora `heightOfText()` mide el texto con el mismo
+salto de línea que usa `text()`, y el sitio se reserva con esa cifra.
+
+### Verificación
+
+- 96 tests de functions, incluidos los tres invariantes de maquetación en es/en/ro.
+- Contrato regenerado en desarrollo y **mirado página a página**: sin ríos, sin
+  títulos huérfanos, sin la hoja en blanco, y con kilometraje, «sin franquicia» y
+  la baliza V16 en su sitio.
+
+⚠️ **Lo que sigue sin verse porque no hay datos**: aseguradora, póliza y teléfono
+de asistencia sólo se imprimen si están puestos, y hay que ponerlos **coche a
+coche** en su ficha (N-16).
+
+---
+
+## ✅ N-16 · El seguro es del coche, no de la empresa — 7 de septiembre de 2026
+
+N-14 metió la aseguradora, la póliza y el teléfono de asistencia en
+`company-config.ts` y en los dos `.env`, como datos de empresa. Dorel lo corrigió
+en cuanto lo vio: **cada vehículo tiene su póliza**, no siempre con la misma
+compañía, y se renuevan en fechas distintas.
+
+Era un error de modelo, no un valor pendiente de rellenar. Con un único valor de
+empresa, **el segundo coche de la flota ya habría salido con la póliza del
+primero** — en un contrato que promete esos datos en su cláusula de accidentes.
+
+### Dónde viven ahora
+
+Tres campos opcionales en `Vehicle`: `insurerName`, `insurancePolicy` y
+`roadsideAssistancePhone`. Sección propia en el formulario del vehículo, con una
+nota que dice para qué son —quien rellena la ficha tiene que saber que eso acaba
+en un documento legal y no en el inventario— y visibles en la ficha sin entrar a
+editar. Fuera de `company-config.ts` y fuera de los dos `.env`.
+
+### La decisión que no es obvia: **no se congelan**
+
+Todo lo demás del vehículo llega al contrato por `reservation.vehicleSnapshot`,
+congelado al crear la reserva, porque describe lo que se alquiló: la marca y la
+matrícula de ese día.
+
+**El seguro no es eso.** Es la póliza que cubre el coche, y se renueva. Lo que el
+contrato tiene que imprimir es la vigente **el día que se firma**: si el cliente
+llama al teléfono de asistencia en mitad del alquiler, tiene que responder la
+compañía que le cubre hoy, no la que hubiera cuando se creó la reserva.
+
+Así que `generateContractPdf` los lee de la **ficha del coche**, con una lectura
+extra de `vehicles/{id}`. Una reserva creada en enero y firmada en marzo, con una
+renovación por medio, sale con la póliza de marzo. Los contratos **ya firmados no
+se mueven**: el PDF sellado es inmutable.
+
+Si el coche ya no existe —lo borraron—, no se imprime nada. Mismo comportamiento
+que con los campos vacíos, y mejor que inventarse un dato.
+
+### Un coche sin seguro se ve
+
+La ficha del vehículo avisa cuando los tres están vacíos, en tinta de
+advertencia: «Sin datos de seguro. El contrato los promete en la cláusula de
+accidentes». No bloquea —el coche existe y se puede alquilar— pero quien mire la
+ficha se entera **ahí**, y no cuando el cliente esté en el arcén buscando un
+teléfono que el contrato dijo que estaba impreso.
+
+### Verificación
+
+Recorrido entero en desarrollo: se rellenó la ficha del Kia Ceed (Mapfre,
+`0912-4471822`, `+34 902 123 456`), se regeneró el contrato y los tres salen en
+«Datos del vehículo», con el teléfono de asistencia en negrita. 96 tests de
+functions y 244 de la app en verde; el fixture de maquetación se movió al bloque
+del vehículo conservando el nombre largo de aseguradora, que es lo que empuja la
+columna de valores contra el margen.
+
+---
+
+
+## ✅ N-13 · Conductores adicionales en el contrato — 7 de septiembre de 2026
+
+Un cliente pidió añadir un segundo conductor. Al mirarlo apareció lo importante:
+**el contrato ya lo exigía y la aplicación no sabía cumplirlo.** La cláusula 2,
+`authorized_drivers`, dice desde siempre:
+
+> «El ARRENDATARIO es el único conductor autorizado por defecto. Únicamente
+> podrán conducir el vehículo las personas expresamente declaradas por el
+> ARRENDADOR al inicio del alquiler, **que deberán ser identificadas
+> nominalmente** y firmar el parte de entrega del vehículo.»
+
+No había dónde declararlas. Es decir: cualquier alquiler con dos conductores
+incumplía su propio contrato.
+
+**El caso real no es el segundo conductor puntual.** Dorel alquila a cuadrillas
+de obreros que comparten un coche y se turnan al volante. Por eso es una lista
+con tope de cuatro, y por eso lo normal es **elegirlos de la lista de clientes**:
+una cuadrilla que repite ya está dada de alta, así que en el caso habitual no se
+teclea nada. Si alguno no está, se escribe a mano.
+
+**Lo que se pide de cada uno** sale de la propia cláusula: nombre —«identificadas
+nominalmente»—, documento y carné, porque el arrendatario garantiza en esa misma
+cláusula que quien conduce está habilitado.
+
+**Tres decisiones, y las tres son limitaciones a propósito:**
+
+- ⚠️ **Con el contrato firmado, no se tocan.** Los conductores van impresos y se
+  le enseñan al arrendatario antes de firmar: su firma **es** el acuerdo sobre
+  quién conduce. Cambiarlos después dejaría el documento diciendo una cosa y la
+  aplicación otra, y un PDF sellado no se puede regenerar. La pantalla lo dice y
+  ofrece la salida real: un anexo en papel.
+- ⚠️ **Cambiarlos no regenera el contrato solo**, y la pantalla avisa. Entregar
+  un contrato que no nombra a quien va a conducir es exactamente lo que la
+  cláusula prohíbe, y no se nota hasta que alguien lee el PDF.
+- **Se guardan como snapshot**, no como referencia: si mañana esa ficha de
+  cliente cambia, el contrato firmado no se mueve. Misma regla que el
+  `clientSnapshot` del arrendatario.
+
+**Verificado de extremo a extremo en desarrollo**, no solo compilado:
+
+| | |
+|---|---|
+| Validación en vacío | los tres campos en rojo con su mensaje |
+| Buscar entre clientes | rellena nombre, documento y carné ya normalizados |
+| El arrendatario no se ofrece | ya es conductor por defecto; declararlo dos veces sería un error |
+| Contrato generado | «Conductores autorizados adicionales · Miguel Ángel Ruiz: DNI/NIE 87654321X · Permiso B7654321» |
+| Pantalla de firma | «Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas.» |
+
+11 tests sobre el util. Las etiquetas del PDF y de la pantalla de firma se
+componen **en el idioma del contrato**, no en el de quien mira: un contrato
+emitido en rumano se firma en rumano aunque el navegador esté en español.
+
+### Lo que queda fuera, y conviene saberlo
+
+- [ ] **La cláusula pide algo más que no hacemos: que los conductores «firmen el
+  parte de entrega».** Hoy la inspección de entrega no lleva firma de nadie, ni
+  del arrendatario. Cumplirlo al pie de la letra es otra tarea.
+- [ ] **Contrato ya firmado: sigue siendo papel.** Un anexo firmable desde la
+  aplicación reutilizaría el enlace de firma, el sellado y el QR que ya existen.
+  Decidido dejarlo fuera hasta ver si pasa a menudo.
+- [ ] **No se cobra por conductor adicional.** La cláusula de seguros lo
+  menciona como cobertura contratable que «se reflejará en la sección Precio y
+  fianza». Si algún día se cobra, entra por `pricing.util.ts`, que es la única
+  autoridad sobre el precio: sumarlo por fuera descuadraría el IVA.
+
+---
+
+## ✅ Permisos de empleado, probados de verdad — 7 de septiembre de 2026
+
+N-11 llevaba desde el 4 de septiembre construido y **sin que hubiera entrado
+nunca un empleado**. Se probó bajando el rol de la propia cuenta a `employee` en
+el `authorizedUsers` de **desarrollo** y recorriendo la aplicación, sin
+necesidad de una segunda cuenta de Google.
+
+**La pantalla**, con rol de empleado: el menú pierde Gastos, Informes y Ajustes.
+Entrando por URL directa, las tres rutas devuelven al panel.
+
+**Las reglas de Firestore**, que es lo único que impide de verdad. Se atacaron
+**saltándose la aplicación entera**: se sacó el token de la sesión de IndexedDB
+y se llamó a la API REST de Firestore a pelo, que es exactamente lo que haría
+alguien con la consola del navegador abierta.
+
+| Intento | |
+|---|---|
+| Leer gastos | **403** |
+| Leer la lista de usuarios | **403** |
+| **Ascenderse a administrador** | **403** |
+| Borrar un vehículo | **403** |
+| Borrar una reserva | **403** |
+| **Mover el `pricingSnapshot` de una reserva** | **403** |
+| Leer reservas | 200 — debe poder |
+| Escribir una nota en una reserva | 200 — debe poder |
+
+Las dos filas en negrita son las que importaban: un empleado no puede darse
+permisos a sí mismo ni tocar el precio pactado. Y las dos últimas confirman que
+la restricción no le impide trabajar, que era el otro riesgo.
+
+### Dos cosas que salieron al probarlo
+
+- [x] **La ruta prohibida devolvía al panel en silencio.** Quien tecleaba
+  `/reports` acababa en otra pantalla sin saber si se había equivocado, si la
+  aplicación fallaba o si no tenía acceso. Contradecía la regla que el propio
+  proyecto declara —«un permiso denegado se explica»— y que ya se cumplía en los
+  botones. Ahora el guard levanta un aviso: «Tu rol no tiene acceso a esa
+  sección».
+
+- [x] **El texto de Ajustes prometía algo ya hecho.** Decía que «los límites
+  finos —tocar precios, borrar o cancelar— llegan en una tarea aparte», y esa
+  tarea era N-11, terminada tres días antes. Un texto que miente sobre lo que la
+  aplicación hace es peor que no tenerlo: alguien podría dar de alta a un
+  empleado creyendo que puede cambiar precios.
+
+---
+
+## ✅ M-47 · Limpiar desde la aplicación — 7 de septiembre de 2026
+
+Ni las reservas ni los clientes se podían borrar: `deleteReservation` **no
+existía siquiera como método** y `deleteClient` no tenía botón, aunque las
+reglas de Firestore sí permiten las dos cosas a un administrador. Quitar una
+reserva de prueba exigía entrar a la consola de Firebase y borrar a mano el
+documento, cada uno de sus pagos y cada inspección.
+
+**Borrar una reserva** se lleva sus pagos, sus inspecciones y las fotos que esas
+inspecciones subieron a Storage. El borrado de Firestore va en un `writeBatch`,
+por el mismo motivo que la creación: que no quede una reserva sin sus pagos ni
+unos pagos sin su reserva. Las fotos se borran antes — si Storage falla, los
+documentos siguen ahí y se puede reintentar.
+
+**Dos decisiones de Dorel, y las dos limitan a propósito:**
+
+- ⚠️ **Una reserva con contrato firmado no se borra.** Es la única postura
+  coherente con la regla que impide borrar un contrato incluso siendo
+  administrador: ese documento acredita un alquiler que ocurrió, y borrar la
+  reserva lo dejaría apuntando al vacío. Para esas está cancelar. El botón ni
+  aparece.
+- ⚠️ **Un cliente con reservas no se borra.** Su nombre y su documento siguen
+  dentro del `clientSnapshot` de cada reserva y de cada contrato, así que quitar
+  la ficha no borraría sus datos: solo dejaría un cliente al que el histórico
+  apunta y que ya no se puede abrir. Sin historial sí es un borrado de verdad, y
+  cubre lo que hacía falta — limpiar pruebas y altas duplicadas.
+
+  Si algún día hace falta un borrado real de datos personales, la vía es
+  **anonimizar**: reescribir los snapshots de reservas y contratos. Es bastante
+  más trabajo y se decidió no hacerlo ahora.
+
+**Verificado en el navegador, los tres casos:**
+
+| | |
+|---|---|
+| Cliente con reservas | rechazado, con el motivo en pantalla |
+| Reserva sin firmar | borrada, y **los pagos bajaron de 12 a 9** — sus tres exactos |
+| Reserva con contrato firmado | el botón no aparece |
+
+De paso: `deleteVehicle()` en el componente **no capturaba errores** —el mismo
+`catch` mudo que M-43 vino a quitar— y en el modal de cancelar había un
+«Volver» en español duro.
+
+---
+
+## Crear una reserva es todo o nada — 7 de septiembre de 2026
+
+El `TODO` más antiguo del proyecto («usar transacción o Cloud Function para las
+operaciones atómicas») era **dos problemas distintos**, y solo uno se puede
+cerrar desde el cliente.
+
+### ✅ La reserva y sus pagos entran juntos
+
+Eran **hasta cuatro escrituras sueltas**: la reserva y una fila por concepto
+(señal, resto, fianza). Si fallaba cualquiera menos la primera quedaba una
+reserva creada **sin nada que cobrar**, mientras la pantalla decía que no se
+había podido crear. El operador la creaba otra vez y acababa con dos — la
+segunda, además, bloqueando el coche. Y desde M-43 el aviso ofrece
+«Reintentar», que hacía ese duplicado aún más fácil.
+
+Ahora van en un `writeBatch`, que es atómico por contrato: entra todo o no entra
+nada. El id se pide antes con `doc(collection)` porque las filas de pago lo
+llevan dentro; `addDoc` no sirve, ya que solo devuelve el id **después** de
+escribir.
+
+La construcción de las filas se ha extraído a `buildInitialPaymentRows()` en el
+util, donde se puede probar sin Firestore. **Un concepto a 0 no genera fila**:
+una fianza exenta no es una fianza pendiente de 0 €, es que no hay fianza —
+sembrarla dejaría una fila incobrable que impediría dar la reserva por pagada.
+6 tests nuevos.
+
+### ⚠️ Dos operadores reservando el mismo coche: reducido, no cerrado
+
+Esto **no se puede resolver desde el cliente**, y conviene que quede escrito
+para no volver a intentarlo: el SDK web **no permite consultas dentro de una
+transacción**, solo lecturas por id. No hay forma de preguntar «¿hay alguna
+reserva que solape?» y escribir de forma atómica. Cerrarlo de verdad pide una
+Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.
+
+Lo que sí se ha hecho es **volver a comprobar la disponibilidad a ras del
+commit**. Entre la comprobación del asistente y la escritura había una lectura
+del vehículo y el cálculo del precio: cerca de un segundo de ventana. Ahora son
+milisegundos.
+
+**Verificado con una carrera real**, no razonando sobre ella: dos pestañas
+preparadas hasta el último paso con el mismo coche y las mismas fechas, y luego
+creando una detrás de otra. La primera crea; la segunda no escribe nada.
+
+### El aviso también estaba mal, y era la mitad del problema
+
+En la primera prueba de la carrera, la segunda pestaña dijo **«No se pudo crear
+la reserva. Inténtalo de nuevo»** con un botón de **Reintentar** — que iba a
+fallar exactamente igual, porque hay que cambiar de coche o de fechas, no
+repetir.
+
+La causa: las comprobaciones de disponibilidad lanzaban
+`'Vehicle no longer available for these dates'`, **inglés duro**, así que la
+capa de avisos no podía distinguirlo de un fallo cualquiera. Ahora lanzan la
+clave i18n que ya existía, y la pantalla enseña el motivo real —«Ya hay una
+reserva para estas fechas»— **sin ofrecer reintentar**. Verificado repitiendo la
+carrera.
+
+Es el mismo patrón que M-43: un fallo que no se explica es la mitad del fallo.
+
+---
+
+## Limpieza antes de los datos reales — 7 de septiembre de 2026
+
+- [x] **Borrar un registro se lleva sus ficheros de Storage.**
+
+  Firestore y Storage son dos servicios distintos: borrar el documento no
+  toca los ficheros. Con datos de prueba eso era desorden —así quedaron
+  huérfanos al vaciar las bases el 4 de septiembre—, pero con clientes reales
+  cambia de naturaleza: lo que se queda en `clients/{id}/documents/` es **el
+  DNI y el carné de una persona**, con su token de descarga vivo, después de
+  que se haya pedido borrar su ficha.
+
+  `StorageService.deleteFolder()` lo resuelve en un sitio. Storage **no tiene
+  borrado recursivo**, así que lista y borra uno a uno, bajando también por
+  los prefijos: los documentos de un cliente cuelgan de
+  `clients/{id}/documents/`, un nivel por debajo del que se pide borrar.
+
+  Conectado en vehículos, clientes y mantenimiento; los gastos ya borraban su
+  factura. Dos decisiones que conviene no deshacer:
+
+  - **Los ficheros van antes que el documento.** Si Storage falla, la ficha
+    sigue ahí y se puede reintentar; al revés se pierde el rastro de qué había
+    que borrar.
+  - **No lanza si un fichero se resiste.** Dejar la ficha a medio borrar es
+    peor que quedarse con un huérfano, y el fallo se registra.
+
+  La ruta del mantenimiento lleva el vehículo dentro
+  (`vehicle-maintenance/{vehicleId}/{maintenanceId}/…`), así que hay que leer
+  el documento **antes** de borrarlo: después no se sabe de qué coche era.
+
+  **Verificado con control**, que es lo que hace la prueba honesta: se subió una
+  foto a un vehículo, se borró el vehículo desde la aplicación y su foto pasó a
+  responder **403**; el documento de un cliente que **no** se borró seguía
+  respondiendo **200** en la misma comprobación. Sin ese segundo dato, el 403
+  podría haber sido cualquier otra cosa.
+
+  ⚠️ **`deleteClient()` no lo llama nadie.** Salió al ir a probarlo: el método
+  existe, ahora borra bien, y **no hay ningún botón en la aplicación que borre
+  un cliente**. Es el patrón de siempre —código escrito y nunca ejecutado—, y
+  aquí tiene una consecuencia concreta: si un cliente ejerce su derecho de
+  supresión, hoy hay que entrar a la consola de Firebase. Queda como decisión
+  tuya si quieres ese botón (ver M-47).
+
+- [x] **M-47 · ¿Debe poder borrarse un cliente desde la aplicación?** *(resuelto el 7 sep 2026 — ver arriba)* Hoy no se
+  puede, y el borrado ya está resuelto por debajo. A favor: el RGPD reconoce el
+  derecho de supresión y hacerlo por consola es incómodo y sin registro. En
+  contra: un cliente borrado deja reservas y contratos apuntando a un nombre que
+  ya no existe, y **el contrato firmado no se puede borrar** —es el documento
+  que acredita el alquiler—, así que la supresión nunca sería completa. Puede
+  que lo correcto sea **anonimizar** en vez de borrar. Decisión tuya.
+
+- [x] **`deploy.log` y los `test-contract-*.pdf` fuera del repositorio.** 563 KB
+  y ~3,4 MB de salidas de trabajo que se regeneran solas y cuya historia no le
+  sirve a nadie; en el repositorio solo engordan cada clon. Añadidos al
+  `.gitignore`.
+
+  ⚠️ **Falta sacarlos del índice**, y eso es tuyo porque toca git:
+
+  ```bash
+  git rm --cached deploy.log test-contract-en.pdf test-contract-es.pdf test-contract-ro.pdf
+  ```
+
+  El `.gitignore` solo evita que se añadan ficheros nuevos: uno que ya está
+  seguido se sigue siguiendo. Los ficheros se quedan en tu disco.
+
+- [x] **`CREDENTIALS.md` ya estaba en `.gitignore`.** El apunte de `CLAUDE.md`
+  decía que no; estaba desactualizado y se ha corregido.
+
+---
+
+## Lote de pulido — 7 de septiembre de 2026
+
+Seis cosas pequeñas que se notan a diario, hechas de una vez. Cinco están
+**verificadas en el navegador**; la sexta no se ha podido reproducir y se dice
+por qué.
+
+- [x] **M-5 · Varias fotos de una vez en las inspecciones.** El apunte decía que
+  faltaba en los dos formularios; el de vehículo ya lo tenía desde hace tiempo.
+  Faltaba donde de verdad duele: la inspección pide **ocho fotos** y son dos
+  inspecciones por alquiler, así que eran dieciséis viajes al selector con el
+  cliente delante.
+
+  El botón de **galería** acepta varias; el de **cámara sigue de una en una**,
+  porque así funciona hacer una foto. Suben en serie y no en paralelo: son fotos
+  de móvil que se redimensionan en el propio navegador, y ocho a la vez con mala
+  cobertura compiten por el ancho de banda y bloquean el hilo del canvas.
+
+  Una foto que no vale —formato raro, demasiado grande— **no cancela el lote**:
+  se avisa de ella y suben las demás. Rechazarlo entero obligaría a repetir la
+  selección.
+
+  Verificado: tres fotos de una sola selección, y el input de cámara sin
+  `multiple`.
+
+- [x] **M-6 · El recorte ya no se come el coche.** También aquí el apunte estaba
+  a medias: la mitad del peso —«se descarga la imagen completa para pintarla a
+  347 px»— ya estaba resuelta, porque se generan miniaturas al subir y la
+  galería pinta `thumbnailUrl`.
+
+  Lo que seguía mal era el encuadre. Las fotos salen del móvil en vertical
+  (1086×1448) y la caja es apaisada: con `object-fit: cover` se escalaban hasta
+  llenarla y **se recortaba el coche**. La imagen principal pasa a `contain`
+  sobre fondo neutro, que es lo que ya hacía la galería grande. Las miniaturas
+  se quedan con `cover` a propósito: ahí la foto es un botón para abrir la
+  grande, no el sitio donde se mira el coche.
+
+  Verificado con una imagen de prueba con franjas arriba y abajo: antes se
+  perdían, ahora se ven.
+
+- [x] **M-45 · El código de verificación, visible y buscable.** El caso es un
+  cliente que llama con el papel delante y dicta el `VLT-…`. El código lo
+  escribía la function y **el modelo del frontend ni siquiera tenía el campo**,
+  así que no se podía ni ver ni buscar.
+
+  Ahora sale en la cabecera del contrato, con botón de copiar, y **el buscador
+  global lo encuentra**. `parseVerificationCode()` acepta las cuatro formas en
+  que llega: impreso con guiones, tecleado de corrido, en minúscula y copiado a
+  trozos con espacios. Traduce `0`→`O` y `1`→`I`, que no existen en el alfabeto:
+  se dicta por teléfono, así que un cero tecleado es casi seguro una O mal oída,
+  y rechazarlo dejaría al operador convencido de que el código es falso.
+
+  ⚠️ **Solo consulta si lo tecleado puede ser un código.** Es una igualdad
+  exacta sobre 12 caracteres; sin ese filtro se pagaría una lectura de Firestore
+  por cada tecla.
+
+  Un test destapó un fallo real: con un espacio delante —lo que deja copiar y
+  pegar— el prefijo `VLT` no se quitaba y el código salía de 15 caracteres.
+  Primero se limpia, después se quita el prefijo.
+
+  Verificado contra un contrato firmado de verdad en desarrollo, en las cuatro
+  formas, y comprobando que un término normal («Dorel») no dispara la consulta.
+
+- [x] **M-46 · Un botón apagado ya lo parece.** «Iniciar entrega» salía en verde
+  primario, idéntico a uno activo, estando `disabled`. Ahora baja a 0,45 de
+  opacidad, se dessatura y pierde el `:hover`.
+
+  ⚠️ **La lista de clases del selector no es por gusto.** Con la encapsulación
+  de Angular la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0),
+  así que un `button:disabled` (0,1,1) pierde y el botón se queda verde.
+  Anteponer el elemento sube a 0,2,1 y gana — el mismo motivo por el que
+  `.is-invalid` va precedido de `input`. **Una clase de botón nueva que no esté
+  en la lista volverá a verse encendida.**
+
+- [x] **M-11 · Una reserva cancelada ya no anuncia un cobro pendiente.** El
+  saldo dejaba de ser exigible al anular y seguía pintado en rojo, invitando a
+  perseguirlo. En una **cerrada sí se sigue enseñando**: ahí el pendiente son
+  cargos extra reales, y cerrar no los perdona.
+
+  De paso salieron dos cosas del mismo sitio: la tarjeta tenía **«días» y
+  «pendiente» en español duro**, y `getPendingAmount()` sumaba solo señal y
+  resto, así que una devolución con 145 € en daños aparecía en la lista como si
+  no se debiera nada — el mismo agujero que F-34 tenía en la ficha. Ahora sale
+  de `paymentSummary.totalPending`, que los incluye.
+
+- [x] **M-10 · El dashboard ofrece reintentar**, en el estado de error y en el
+  aviso de carga parcial, sin recargar la página entera.
+
+  ⚠️ **No he conseguido reproducir el estado de error para verlo en pantalla**, y
+  conviene saber por qué: cortar la red no basta, **Firestore sirve de su caché
+  local y no rechaza** — el dashboard cargó igual con todo el tráfico abortado.
+  Y cortarlo del todo tumba la sesión, porque el guard lee `authorizedUsers`.
+  Es la misma lección que dejó M-43. El botón está dentro del bloque
+  `@if (loadFailed)` y llama al mismo método que `ngOnInit`, pero **el estado de
+  error sigue sin haberse visto nunca con ojos**.
+
+---
+
+## Decisiones tuyas *(resueltas el 5 de septiembre de 2026)*
+
+Salieron de crear los dos coches y los dos clientes desde cero. Ninguna era un
+fallo… salvo D-5, que resultó serlo.
+
+- [x] **D-1 · Las preposiciones van en minúscula.** «Arganda del Rey», no
+  «Arganda **Del** Rey», que es lo que salía impreso en el presupuesto y en el
+  contrato. En un documento que firma un cliente se lee como una falta.
+
+  La regla vive en `LOWERCASE_WITHIN_NAME`, dentro de `capitalizeWords()`, y se
+  aplica **también a la dirección del cliente**, que antes se guardaba tal cual
+  se tecleara: había dos reglas conviviendo y las dos salen impresas.
+
+  ⚠️ **`el` se ha dejado fuera de la lista a propósito.** Forma parte de
+  topónimos donde sí lleva mayúscula —«San Lorenzo de El Escorial»— y sin un
+  diccionario no hay forma de distinguirlo. Equivocarse por dejarlo fuera pasa
+  en menos casos que al revés.
+
+  Dos tests que congelaban el comportamiento viejo («Vereda **Del** Melero»)
+  se han actualizado: eran exactamente lo que esta decisión cambia.
+
+- [x] **D-2 · La versión del coche llega al contrato.** «Dacia Duster Journey
+  TCe 130», igual que la oferta que el cliente aceptó.
+
+  Curioso: **el backend ya estaba entero**. `generateContractPdf`, el
+  justificante y el presupuesto leían y pintaban `version`; el único eslabón que
+  faltaba era que `Reservation.vehicleSnapshot` la guardase. No hace falta
+  desplegar functions. Solo afecta a reservas nuevas.
+
+- [x] **D-3 · Un coche nuevo nace con aire acondicionado.** En una flota de 2026
+  lo raro es el que no lo lleva, y no es un extra cualquiera: alimenta la letra
+  del código ACRISS, que viaja a los documentos. Naciendo a `false`, un despiste
+  al dar de alta imprimía «N» —sin aire— en algo que ve el cliente. Es el único
+  del equipamiento marcado de salida.
+
+- [ ] **D-4 · Números en inglés fuera del español.** Sin cambios: el formato es
+  el español (9.200 km · 423,50 €) porque `LOCALE_ID` se decide al arrancar y no
   puede seguir al selector de idioma. El rumano comparte convención; **en inglés
-  se verán números españoles**. Si algún día hay un operador que trabaje en
-  inglés, hay que hacerlo dinámico y eso es bastante más trabajo.
+  se seguirán viendo números españoles**. Se revisará el día que haya un
+  operador que trabaje en inglés — hacerlo dinámico es bastante más trabajo.
 
-- [ ] **D-5 · ¿Sirve de algo «Pago completo del alquiler»?** El desplegable de
-  cobro ofrece `rental_payment`, pero ese tipo no cuenta ni como señal ni como
-  resto: cobrando por ahí, la reserva **no pasa a confirmada** ni se marca como
-  pagada, aunque el dinero esté. O se quita del desplegable, o tiene que liquidar
-  las dos filas sembradas.
+- [x] **D-5 · «Pago completo del alquiler» no era una convención: era una
+  trampa.** El concepto existía en el desplegable de cobro y `rental_payment`
+  **no tiene fila sembrada propia**, así que el cobro creaba un documento aparte
+  y las de señal y resto se quedaban pendientes para siempre.
 
-- [ ] **D-6 · Confirmar la subida de fotos en tu móvil.** Al unificar el control
-  se quitó `capture="environment"`, que forzaba la cámara e impedía subir un
-  documento de la galería. Ahora abre el selector del sistema, que ofrece las dos
-  cosas. Merece una comprobación en tu teléfono.
+  Lo peor no era el desorden. El dinero **sí** contaba como ingreso —está en
+  `RENTAL_TYPES`, sale en informes y en «Cobrado»— pero **no** para el estado de
+  pago ni para `remainingPaid`, que es justo lo que `canCloseReservation()`
+  exige. Es decir: cobrabas el alquiler entero por ese concepto, el dinero
+  constaba, y **la reserva no se podía cerrar nunca** sin saltarse un paso del
+  workflow con una excepción.
+
+  Ahora `distributeRentalPayment()` lo reparte entre las dos filas sembradas, en
+  el orden del alquiler: señal primero, resto después. Lo que sobre **no se
+  descarta** —es dinero que el cliente ha entregado— y abre fila propia. 9 tests
+  nuevos, incluido el que comprueba que tras el reparto la reserva queda pagada
+  y se puede cerrar, que es la razón de ser del arreglo.
+
+- [ ] **D-6 · Confirmar la subida de fotos en tu móvil.** Sigue pendiente y solo
+  la puedes hacer tú: al unificar el control se quitó `capture="environment"`,
+  que forzaba la cámara e impedía subir un documento de la galería. Ahora abre
+  el selector del sistema, que ofrece las dos cosas.
+
+Las cuatro resueltas están **verificadas en el navegador**, no solo compiladas:
+«Avenida de la Constitución 45» y «José María de la Cruz» según se teclean,
+«Arganda del Rey» en el lugar de recogida, y el aire marcado de salida con el
+resto del equipamiento sin marcar.
+
+⚠️ Salió otra vez lo de siempre: `npx tsc --noEmit` dio el visto bueno a un
+`(input)="onAddressInput()"` sin argumento. **Las plantillas de Angular solo las
+valida el build.**
 
 ## Prioridad media
 
-- [ ] **M-5 · Subida de fotos de una en una.**
+- [x] **M-5 · Subida de fotos de una en una.** *(7 sep 2026 — ver «Lote de pulido»)*
   Los dos `input[type=file]` tienen `multiple: false`. El documento funcional
   pide 8 fotos por inspección (frontal, trasera, laterales, interior, cuadro,
   combustible, daños): son 8 ciclos de abrir el selector. Permitir selección
   múltiple desde galería, manteniendo la cámara de una en una.
 
-- [ ] **M-6 · Las fotos de vehículo se recortan mal.**
+- [x] **M-6 · Las fotos de vehículo se recortan mal.** *(7 sep 2026 — ver «Lote de pulido»)*
   Una foto vertical de 1086×1448 se muestra en una caja de 347×180: el recorte
   se come el coche. Además se descarga la imagen completa para pintarla a 347 px.
   Generar miniaturas al subir, o al menos servir tamaños responsivos.
@@ -985,11 +1636,11 @@ fallo: son convenciones que hay que elegir.
 
 ## Prioridad baja
 
-- [ ] **M-10 · El dashboard no ofrece reintentar.**
+- [x] **M-10 · El dashboard no ofrece reintentar.** *(7 sep 2026 — ver «Lote de pulido»)*
   Cuando la carga falla ya se avisa correctamente, pero la única salida es
   recargar la página. Un botón de reintento es barato.
 
-- [ ] **M-11 · Reservas canceladas con «pago pendiente».**
+- [x] **M-11 · Reservas canceladas con «pago pendiente».** *(7 sep 2026 — ver «Lote de pulido»)*
   El listado muestra reservas canceladas con su saldo pendiente en rojo, lo que
   invita a perseguir un cobro que ya no toca. Decidir si se ocultan esos
   importes o se marcan como no exigibles.
@@ -1314,7 +1965,19 @@ Un porcentaje en la ficha del cliente que se aplica a sus reservas nuevas.
 **Queda fuera:** el descuento no se aplica a reservas ya creadas, por diseño —
 el snapshot es histórico congelado.
 
-## N-5 · Pre-reserva desde la web pública *(anotado el 29 ago 2026 — sin decidir)*
+## ⛔ N-5 · Pre-reserva desde la web pública — **fuera de este proyecto**
+
+⚠️ **Decisión de Dorel del 7 de septiembre de 2026: esto NO se construye aquí.**
+La pre-reserva vivirá en la **web pública de coches**, que es un proyecto
+aparte, y se enlazará con este backoffice desde allí.
+
+Lo que sigue se conserva porque describe el flujo que ese otro proyecto tendrá
+que implementar, y porque marca **qué tendrá que ofrecer este lado**: crear la
+reserva, cobrar la señal y autocancelar lo que no se pague. Ahí es donde
+aparecerá la frontera entre los dos sistemas —seguramente una Cloud Function
+con su propia autenticación—, y conviene tenerlo pensado antes de abrirla.
+
+*(Planteamiento original, anotado el 29 ago 2026:)*
 
 El cliente elige coche en una web pública, recibe por WhatsApp un enlace de
 pre-reserva con **validez de 3 horas**, y en ese plazo paga la señal por TPV o
@@ -1705,7 +2368,7 @@ inyección. Se resolvió subiendo la especificidad con el elemento
   significa que ese camino solo se prueba con un error que rechace de verdad
   —un callable, un permiso denegado—, no desenchufando la red.
 
-- [ ] **M-46 · Un botón deshabilitado que no lo parece.** Salió al mirar la
+- [x] **M-46 · Un botón deshabilitado que no lo parece.** *(7 sep 2026 — ver «Lote de pulido»)* Salió al mirar la
   captura de M-43: «Iniciar entrega» se pinta en verde primario, igual que uno
   activo, aunque esté `disabled` y lleve debajo su «Falta firma del contrato».
   Se lee como un botón que no responde. Es el primo del problema de M-42: allí

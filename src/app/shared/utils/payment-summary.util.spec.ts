@@ -3,6 +3,8 @@ import type { Payment, PaymentStatus, PaymentType } from '@shared/models/payment
 import type { Reservation } from '@shared/models/reservation.model';
 import {
   applySettlement,
+  distributeRentalPayment,
+  buildInitialPaymentRows,
   calculateReservationPaymentSummary,
   collectedTotalsOf,
   distributeRetentionAcrossCharges,
@@ -293,5 +295,181 @@ describe('calculateReservationPaymentSummary · cargos extra', () => {
     expect(resumen.extrasRequired).toBe(0);
     expect(resumen.extrasPending).toBe(0);
     expect(resumen.paymentStatus).toBe('paid');
+  });
+});
+
+/**
+ * «Pago completo del alquiler» (D-5).
+ *
+ * El concepto existía en el desplegable y era una trampa: creaba una fila
+ * propia y dejaba señal y resto pendientes para siempre. El dinero contaba como
+ * ingreso pero no para el estado de pago ni para `remainingPaid`, así que la
+ * reserva se cobraba entera y **no se podía cerrar nunca**.
+ */
+describe('distributeRentalPayment', () => {
+  const sembradas = () => [
+    makePayment('initial_payment', 'pending', 100, 0, 'senal'),
+    makePayment('remaining_payment', 'pending', 250, 0, 'resto')
+  ];
+
+  it('salda la señal y el resto con un solo cobro', () => {
+    const { steps, leftover } = distributeRentalPayment(sembradas(), 350);
+    expect(steps).toEqual([
+      { paymentId: 'senal', apply: 100 },
+      { paymentId: 'resto', apply: 250 }
+    ]);
+    expect(leftover).toBe(0);
+  });
+
+  it('paga primero la señal cuando no llega para las dos', () => {
+    // El orden es el del alquiler: lo que entra salda antes lo que se debía
+    // antes.
+    const { steps, leftover } = distributeRentalPayment(sembradas(), 120);
+    expect(steps).toEqual([
+      { paymentId: 'senal', apply: 100 },
+      { paymentId: 'resto', apply: 20 }
+    ]);
+    expect(leftover).toBe(0);
+  });
+
+  it('no toca lo ya cobrado y completa lo que falta', () => {
+    const payments = [
+      makePayment('initial_payment', 'paid', 100, 100, 'senal'),
+      makePayment('remaining_payment', 'partial', 250, 50, 'resto')
+    ];
+    const { steps, leftover } = distributeRentalPayment(payments, 200);
+    expect(steps).toEqual([{ paymentId: 'resto', apply: 200 }]);
+    expect(leftover).toBe(0);
+  });
+
+  it('devuelve el sobrante en vez de tragárselo', () => {
+    // Es dinero que el cliente ha entregado: el llamante le abre fila propia.
+    const { steps, leftover } = distributeRentalPayment(sembradas(), 400);
+    expect(steps).toHaveLength(2);
+    expect(leftover).toBe(50);
+  });
+
+  it('devuelve todo como sobrante si no hay nada que saldar', () => {
+    const payments = [
+      makePayment('initial_payment', 'paid', 100, 100, 'senal'),
+      makePayment('remaining_payment', 'paid', 250, 250, 'resto')
+    ];
+    const { steps, leftover } = distributeRentalPayment(payments, 80);
+    expect(steps).toEqual([]);
+    expect(leftover).toBe(80);
+  });
+
+  it('ignora las filas canceladas', () => {
+    const payments = [
+      { ...makePayment('initial_payment', 'cancelled', 100, 0, 'senal') },
+      makePayment('remaining_payment', 'pending', 250, 0, 'resto')
+    ];
+    const { steps } = distributeRentalPayment(payments, 250);
+    expect(steps).toEqual([{ paymentId: 'resto', apply: 250 }]);
+  });
+
+  it('redondea a céntimos en vez de arrastrar coma flotante', () => {
+    const payments = [makePayment('initial_payment', 'pending', 108.9, 50, 'senal')];
+    const { steps, leftover } = distributeRentalPayment(payments, 108.9);
+    // 108.9 - 50 es 58.900000000000006 sin redondear.
+    expect(steps).toEqual([{ paymentId: 'senal', apply: 58.9 }]);
+    expect(leftover).toBe(50);
+  });
+
+  it('tras repartirlo, la reserva queda pagada y se puede cerrar', () => {
+    // La razón de ser del arreglo: el estado depende de las filas sembradas.
+    const reserva = {
+      pricingSnapshot: { finalPrice: 350 },
+      initialPayment: { requiredAmount: 100 },
+      remainingPayment: { requiredAmount: 250 },
+      deposit: { requiredAmount: 0, waivedReason: 'Conocido' }
+    } as unknown as Reservation;
+
+    const resumen = calculateReservationPaymentSummary(
+      [
+        makePayment('initial_payment', 'paid', 100, 100, 'senal'),
+        makePayment('remaining_payment', 'paid', 250, 250, 'resto')
+      ],
+      reserva
+    );
+
+    expect(resumen.paymentStatus).toBe('paid');
+    expect(resumen.remainingPaymentPaid).toBe(250);
+  });
+});
+
+/**
+ * Las filas que se siembran al crear una reserva.
+ *
+ * Van dentro del mismo `writeBatch` que la reserva, así que su forma decide qué
+ * queda escrito: antes eran hasta cuatro escrituras sueltas y una reserva podía
+ * quedarse sin nada que cobrar.
+ */
+describe('buildInitialPaymentRows', () => {
+  const reserva = (over: any = {}) => ({
+    clientId: 'c1',
+    vehicleId: 'v1',
+    totalDays: 3,
+    pickupDateTime: { seconds: 1 },
+    returnDateTime: { seconds: 2 },
+    pricingSnapshot: { finalPrice: 300 },
+    initialPayment: { requiredAmount: 100 },
+    remainingPayment: { requiredAmount: 200, dueDate: { seconds: 3 } },
+    deposit: { requiredAmount: 150 },
+    ...over
+  }) as unknown as Reservation;
+
+  it('siembra una fila por concepto, todas pendientes y a cero cobrado', () => {
+    const rows = buildInitialPaymentRows('r1', reserva());
+    expect(rows.map(r => r['type'])).toEqual([
+      'initial_payment', 'remaining_payment', 'deposit'
+    ]);
+    expect(rows.every(r => r['status'] === 'pending')).toBe(true);
+    expect(rows.every(r => r['paidAmount'] === 0)).toBe(true);
+    expect(rows.every(r => r['reservationId'] === 'r1')).toBe(true);
+  });
+
+  it('no siembra fila para una fianza exenta', () => {
+    // Una fianza a 0 no es una fianza pendiente de 0 €: es que no hay fianza.
+    // Sembrarla dejaría una fila que nadie puede cobrar y que impediría dar la
+    // reserva por pagada.
+    const rows = buildInitialPaymentRows('r1', reserva({ deposit: { requiredAmount: 0 } }));
+    expect(rows.map(r => r['type'])).toEqual(['initial_payment', 'remaining_payment']);
+  });
+
+  it('no siembra resto cuando la señal cubre el alquiler entero', () => {
+    const rows = buildInitialPaymentRows('r1', reserva({
+      initialPayment: { requiredAmount: 300 },
+      remainingPayment: { requiredAmount: 0 },
+      deposit: { requiredAmount: 0 }
+    }));
+    expect(rows.map(r => r['type'])).toEqual(['initial_payment']);
+    expect(rows[0]['amount']).toBe(300);
+  });
+
+  it('devuelve lista vacía si no hay nada que cobrar', () => {
+    const rows = buildInitialPaymentRows('r1', reserva({
+      initialPayment: { requiredAmount: 0 },
+      remainingPayment: { requiredAmount: 0 },
+      deposit: { requiredAmount: 0 }
+    }));
+    expect(rows).toEqual([]);
+  });
+
+  it('redondea a céntimos', () => {
+    const rows = buildInitialPaymentRows('r1', reserva({
+      initialPayment: { requiredAmount: 108.900000000000006 },
+      remainingPayment: { requiredAmount: 0 },
+      deposit: { requiredAmount: 0 }
+    }));
+    expect(rows[0]['amount']).toBe(108.9);
+    expect(rows[0]['pendingAmount']).toBe(108.9);
+  });
+
+  it('cada fila lleva su referencia interna, y no se repiten', () => {
+    const rows = buildInitialPaymentRows('r1', reserva());
+    const refs = rows.map(r => r['internalReference']);
+    expect(refs.every(Boolean)).toBe(true);
+    expect(new Set(refs).size).toBe(refs.length);
   });
 });

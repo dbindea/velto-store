@@ -23,11 +23,13 @@ describe('capitalizeWords', () => {
   });
 
   it('tames shouted input without losing the separators', () => {
-    expect(capitalizeWords('VEREDA DEL MELERO, 3')).toBe('Vereda Del Melero, 3');
+    // La preposición baja a minúscula desde D-1: antes este mismo test
+    // congelaba «Vereda Del Melero», que es lo que salía impreso.
+    expect(capitalizeWords('VEREDA DEL MELERO, 3')).toBe('Vereda del Melero, 3');
   });
 
   it('preserves the spacing it was given', () => {
-    expect(capitalizeWords('arganda  del rey')).toBe('Arganda  Del Rey');
+    expect(capitalizeWords('arganda  del rey')).toBe('Arganda  del Rey');
     expect(capitalizeWords(' arganda')).toBe(' Arganda');
   });
 
@@ -107,5 +109,51 @@ describe('transformInput', () => {
     const input = fakeInput('renault clio', 12);
     expect(transformInput(input, capitalizeWords)).toBe('Renault Clio');
     expect(input.value).toBe('Renault Clio');
+  });
+});
+
+/**
+ * Preposiciones dentro de un nombre (D-1).
+ *
+ * «Arganda Del Rey» salía impreso en el presupuesto y en el contrato. En un
+ * documento que firma un cliente se lee como una falta de ortografía.
+ */
+describe('capitalizeWords · preposiciones', () => {
+  it('deja las preposiciones internas en minúscula', () => {
+    expect(capitalizeWords('arganda del rey')).toBe('Arganda del Rey');
+    expect(capitalizeWords('ALCALÁ DE HENARES')).toBe('Alcalá de Henares');
+    expect(capitalizeWords('san sebastián de los reyes')).toBe('San Sebastián de los Reyes');
+    expect(capitalizeWords('las palmas de gran canaria')).toBe('Las Palmas de Gran Canaria');
+  });
+
+  it('capitaliza la preposición cuando abre la cadena', () => {
+    // «Las Rozas de Madrid» empieza por artículo y ahí sí lleva mayúscula.
+    expect(capitalizeWords('las rozas de madrid')).toBe('Las Rozas de Madrid');
+    expect(capitalizeWords('el escorial')).toBe('El Escorial');
+    expect(capitalizeWords('de la cruz')).toBe('De la Cruz');
+  });
+
+  it('vale igual para una dirección', () => {
+    expect(capitalizeWords('avenida de la constitución 45'))
+      .toBe('Avenida de la Constitución 45');
+    expect(capitalizeWords('CALLE DEL PEZ, 3')).toBe('Calle del Pez, 3');
+  });
+
+  it('no confunde una preposición con el principio de una palabra', () => {
+    // «Delicias» empieza por «del» pero no es la preposición.
+    expect(capitalizeWords('paseo de las delicias')).toBe('Paseo de las Delicias');
+    expect(capitalizeWords('alameda')).toBe('Alameda');
+  });
+
+  it('sigue respetando separadores y mayúsculas deliberadas', () => {
+    expect(capitalizeWords('madrid-barajas')).toBe('Madrid-Barajas');
+    expect(capitalizeWords("o'brien")).toBe("O'Brien");
+    expect(capitalizeWords('duster journey TCe 130')).toBe('Duster Journey TCe 130');
+  });
+
+  it('⚠️ «El» tras preposición se queda en mayúscula, y es a propósito', () => {
+    // Está fuera de la lista porque forma parte de topónimos donde sí la lleva.
+    // Equivocarse aquí es más raro que equivocarse al revés.
+    expect(capitalizeWords('san lorenzo de el escorial')).toBe('San Lorenzo de El Escorial');
   });
 });

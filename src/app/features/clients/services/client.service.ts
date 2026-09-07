@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, DocumentReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, DocumentReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, where, limit } from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -8,12 +8,14 @@ import { normalizeLoyaltyDiscountPercent } from '@shared/utils/pricing.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { AuthService } from '@core/auth/auth.service';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { StorageService } from '@core/firebase/storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class ClientService {
   private firestore = inject(Firestore);
   private permissions = inject(PermissionsService);
   private storage = inject(Storage);
+  private storageService = inject(StorageService);
   private authService = inject(AuthService);
   private clientsRef: CollectionReference;
 
@@ -261,8 +263,17 @@ export class ClientService {
   }
 
   /**
-   * Delete a client.
-   * TODO: Also delete documents from Storage.
+   * Borra un cliente **y los documentos que subió**.
+   *
+   * ⚠️ **Borrar el documento de Firestore no se lleva sus ficheros.** Aquí eso
+   * no es desorden: lo que queda en `clients/{id}/documents/` es el **DNI y el
+   * carné de conducir** de una persona, con su token de descarga vivo, después
+   * de que se haya pedido borrar su ficha. Cualquiera con el enlace guardado
+   * seguiría viéndolos.
+   *
+   * Los ficheros van **antes** que el documento: si Storage falla, la ficha
+   * sigue ahí y se puede reintentar. Al revés se perdería el rastro de qué
+   * ficheros había que borrar.
    */
   async deleteClient(id: string): Promise<void> {
     // Defensa en profundidad: la UI esconde el botón y esto rechaza la
@@ -271,6 +282,24 @@ export class ClientService {
     if (!this.permissions.can('deleteRecords')) {
       throw new Error('permissions.notAllowed');
     }
+
+    /**
+     * ⚠️ **Un cliente con reservas no se borra.** Decisión de Dorel, y la
+     * honesta: su nombre y su documento siguen dentro del `clientSnapshot` de
+     * cada reserva y de cada contrato, así que quitar la ficha no borra sus
+     * datos — solo deja un cliente «fantasma» al que el histórico apunta y que
+     * ya no se puede abrir desde ninguna parte. Borrar sin historial sí es un
+     * borrado de verdad, y cubre lo que hace falta: limpiar pruebas y altas
+     * duplicadas.
+     */
+    const reservations = await getDocs(
+      query(collection(this.firestore, 'reservations'), where('clientId', '==', id), limit(1))
+    );
+    if (!reservations.empty) {
+      throw new Error('clients.errors.deleteHasReservations');
+    }
+
+    await this.storageService.deleteFolder(`clients/${id}`);
     const docRef = doc(this.firestore, `clients/${id}`);
     await deleteDoc(docRef);
   }

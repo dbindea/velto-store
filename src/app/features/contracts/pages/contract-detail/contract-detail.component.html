@@ -21,6 +21,21 @@
           <span class="vehicle-name">{{ contract.vehicleSnapshot.brand }} {{ contract.vehicleSnapshot.model }}</span> ·
           <span class="plate">{{ contract.vehicleSnapshot.plateNumber }}</span>
         </p>
+        <!--
+          El Código Seguro de Verificación, el mismo que va impreso junto al QR
+          (M-45). Es lo que un cliente dicta por teléfono teniendo el papel
+          delante, y hasta ahora no se veía en ninguna pantalla.
+        -->
+        @if (verificationCode) {
+          <p class="verification-code">
+            <i class="pi pi-qrcode"></i>
+            <span class="label">{{ 'contracts.verificationCode' | translate }}:</span>
+            <code class="mono">{{ verificationCode }}</code>
+            <button type="button" class="btn-ghost" (click)="copyVerificationCode()">
+              <i class="pi" [ngClass]="codeCopied ? 'pi-check' : 'pi-copy'"></i>
+            </button>
+          </p>
+        }
       </div>
     </div>
 

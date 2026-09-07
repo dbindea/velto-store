@@ -18,6 +18,7 @@ import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
 import { CONTRACT_CLAUSES } from '../contracts/clauses';
 import {
   COMPANY_ADDRESS,
+  COMPANY_OFFICE_ADDRESS,
   COMPANY_BRAND_NAME,
   COMPANY_LEGAL_NAME,
   COMPANY_REGISTRY
@@ -29,7 +30,11 @@ const company = {
   legalName: COMPANY_LEGAL_NAME,
   taxId: 'B88866900',
   registry: COMPANY_REGISTRY,
+  // Las dos, y distintas: es lo que comprueba que cada una sale donde le toca
+  // —la comercial en la cabecera, la social en el pie legal— y que ninguna de
+  // las dos se sale del margen.
   address: COMPANY_ADDRESS,
+  officeAddress: COMPANY_OFFICE_ADDRESS,
   phone: '+34 623 766 181',
   email: 'reservas@veltorent.com',
   website: 'www.veltorent.com'
@@ -53,7 +58,13 @@ const vehicle = {
   plateNumber: '4466LKK',
   year: 2024,
   fuelType: 'Diésel',
-  transmission: 'Automático'
+  transmission: 'Automático',
+  hasGpsTracker: true,
+  // El seguro es del coche, no de la empresa. Con nombres largos a propósito:
+  // es lo que empuja la columna de valores contra el margen derecho.
+  insurerName: 'Mapfre España, Compañía de Seguros y Reaseguros',
+  insurancePolicy: 'P-7043026396-ES-2026',
+  roadsideAssistancePhone: '+34 900 123 456'
 };
 
 const rental = {
@@ -71,7 +82,10 @@ const pricing = {
   loyaltyDiscountPercent: 5,
   loyaltyDiscount: -200,
   manualAdjustment: -170,
-  vatRate: 0.21
+  vatRate: 0.21,
+  // Kilometraje pactado: dos filas más en el bloque de totales.
+  includedKmPerDay: 500,
+  extraKmPrice: 0.25
 };
 
 /**
@@ -198,6 +212,13 @@ describe('the real documents, in every language', () => {
           client,
           vehicle,
           reservation: { ...rental, ...pricing },
+          // El caso real de Velto: una cuadrilla que comparte el coche.
+          additionalDrivers: [
+            { fullName: 'María del Carmen Fernández-Sánchez', documentNumber: 'X4273299Z', drivingLicenseNumber: 'B1234567' },
+            { fullName: 'Gheorghe Ștefănescu', documentNumber: 'Y8765432M', drivingLicenseNumber: 'B7654321' },
+            { fullName: 'Ana Ruiz', documentNumber: 'Z1111111X' },
+            { fullName: 'Luis Prieto', documentNumber: 'W2222222K', drivingLicenseNumber: 'B0000009' }
+          ],
           clauses: CONTRACT_CLAUSES,
           preferredLocale: locale,
           generatedAt: new Date('2026-08-27T09:00:00Z'),

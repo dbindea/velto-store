@@ -131,6 +131,10 @@ export class VehicleFormComponent implements OnInit {
             : getDefaultPricingRules(),
           defaultDepositAmount: vehicle.defaultDepositAmount ?? APP_DEFAULTS.DEFAULT_DEPOSIT_AMOUNT,
           includedKmPerDay: vehicle.includedKmPerDay ?? APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
+          hasGpsTracker: vehicle.hasGpsTracker ?? false,
+          insurerName: vehicle.insurerName || '',
+          insurancePolicy: vehicle.insurancePolicy || '',
+          roadsideAssistancePhone: vehicle.roadsideAssistancePhone || '',
           extraKmPrice: vehicle.extraKmPrice ?? APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
           minimumRentalDays: vehicle.minimumRentalDays ?? APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
           manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
@@ -167,7 +171,16 @@ export class VehicleFormComponent implements OnInit {
       description: '',
       publicEnabled: false,
       features: {
-        airConditioning: false,
+        /**
+         * Marcado de salida, al contrario que el resto del equipamiento (D-3).
+         *
+         * En una flota de 2026 lo raro es el coche que no lleva aire, y este no
+         * es un extra cualquiera: alimenta la letra del código ACRISS, que
+         * viaja a los documentos. Naciendo a `false`, un despiste al dar de
+         * alta imprimía «N» —sin aire— en algo que ve el cliente. Se desmarca
+         * en el coche que no lo tenga, que es el caso excepcional.
+         */
+        airConditioning: true,
         navigation: false,
         parkingSensors: false,
         rearCamera: false,
@@ -182,6 +195,15 @@ export class VehicleFormComponent implements OnInit {
         this.settingsService.settings().defaultIncludedKmPerDay ??
         APP_DEFAULTS.DEFAULT_INCLUDED_KM_PER_DAY,
       extraKmPrice: APP_DEFAULTS.DEFAULT_EXTRA_KM_PRICE,
+      // Sin marcar: afirmar que un coche lleva GPS sin llevarlo es peor que no
+      // decirlo, porque el contrato lo imprime como un hecho.
+      hasGpsTracker: false,
+      // Vacíos y no heredados de otro coche: cada póliza es la suya, y un valor
+      // arrastrado por comodidad acabaría impreso en un contrato como si fuera
+      // el seguro de este vehículo.
+      insurerName: '',
+      insurancePolicy: '',
+      roadsideAssistancePhone: '',
       minimumRentalDays: APP_DEFAULTS.DEFAULT_MINIMUM_RENTAL_DAYS,
       manualPriceAllowed: true,
     };

@@ -1,5 +1,5 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, writeBatch } from '@angular/fire/firestore';
 import { Observable, from, forkJoin, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
@@ -10,7 +10,8 @@ import {
   BLOCKING_STATUSES,
   ReservationPricingSnapshot,
   ReservationNote,
-  WorkflowException
+  WorkflowException,
+  AdditionalDriver
 } from '@shared/models/reservation.model';
 import { Client } from '@shared/models/client.model';
 import { 
@@ -42,6 +43,7 @@ import {
   ExceptionableAction
 } from '@shared/utils/reservation-workflow.util';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { StorageService } from '@core/firebase/storage.service';
 
 export interface VehicleAvailabilityResult {
   vehicleId: string;
@@ -63,6 +65,7 @@ export class ReservationService {
   private inspectionService = inject(InspectionService);
   private authService = inject(AuthService);
   private settingsService = inject(SettingsService);
+  private storageService = inject(StorageService);
 
   /**
    * El tipo de IVA con el que nace una reserva.
@@ -345,7 +348,11 @@ export class ReservationService {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicleId, pickupDateTime, returnDateTime);
     if (!availability.available) {
-      throw new Error('Vehicle no longer available for these dates');
+      // Clave i18n, no una frase en inglés: este mensaje llega a la pantalla y
+      // se le enseña al operador. En inglés duro, la capa de avisos no podía
+      // distinguirlo de un fallo cualquiera y ofrecía «Reintentar», que aquí no
+      // sirve de nada: hay que cambiar de coche o de fechas.
+      throw new Error(availability.conflictMessage || 'reservations.availability.conflict');
     }
 
     // Get vehicle data
@@ -376,6 +383,9 @@ export class ReservationService {
       vehicleSnapshot: {
         brand: vehicle.brand,
         model: vehicle.model,
+        // La versión viaja al contrato para que identifique el coche igual que
+        // la oferta que el cliente aceptó (D-2).
+        version: vehicle.version,
         plateNumber: vehicle.plateNumber,
         year: vehicle.year,
         acrissCode: vehicle.acrissCode,
@@ -384,7 +394,8 @@ export class ReservationService {
         seats: vehicle.seats,
         luggageCapacity: vehicle.luggageCapacity,
         currentKm: vehicle.currentKm,
-        color: vehicle.color
+        color: vehicle.color,
+        hasGpsTracker: vehicle.hasGpsTracker
       },
       clientId,
       clientSnapshot: {
@@ -410,7 +421,12 @@ export class ReservationService {
         basePrice: basePriceResult.basePrice,
         netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: this.currentVatRate()
+        vatRate: this.currentVatRate(),
+        // Se congelan con el precio: el cargo por kilómetros de la devolución
+        // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
+        // que se pactó en un alquiler ya cerrado.
+        includedKmPerDay: vehicle.includedKmPerDay,
+        extraKmPrice: vehicle.extraKmPrice
       },
       initialPayment: {
         requiredAmount: initialPaymentRequired,
@@ -436,11 +452,7 @@ export class ReservationService {
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    const docRef = await addDoc(this.reservationsRef, this.cleanData(reservation));
-    // Generate initial payment records
-    const savedReservation: Reservation = { id: docRef.id, ...reservation };
-    await this.paymentService.createInitialPaymentsForReservation(docRef.id, savedReservation);
-    return docRef.id;
+    return this.commitReservationWithPayments(reservation);
   }
 
   /**
@@ -481,7 +493,11 @@ export class ReservationService {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicle.id!, pickupDateTime, returnDateTime);
     if (!availability.available) {
-      throw new Error('Vehicle no longer available for these dates');
+      // Clave i18n, no una frase en inglés: este mensaje llega a la pantalla y
+      // se le enseña al operador. En inglés duro, la capa de avisos no podía
+      // distinguirlo de un fallo cualquiera y ofrecía «Reintentar», que aquí no
+      // sirve de nada: hay que cambiar de coche o de fechas.
+      throw new Error(availability.conflictMessage || 'reservations.availability.conflict');
     }
 
     // Calculate pricing
@@ -528,6 +544,9 @@ export class ReservationService {
       vehicleSnapshot: {
         brand: vehicle.brand,
         model: vehicle.model,
+        // La versión viaja al contrato para que identifique el coche igual que
+        // la oferta que el cliente aceptó (D-2).
+        version: vehicle.version,
         plateNumber: vehicle.plateNumber,
         year: vehicle.year,
         acrissCode: vehicle.acrissCode,
@@ -536,7 +555,8 @@ export class ReservationService {
         seats: vehicle.seats,
         luggageCapacity: vehicle.luggageCapacity,
         currentKm: vehicle.currentKm,
-        color: vehicle.color
+        color: vehicle.color,
+        hasGpsTracker: vehicle.hasGpsTracker
       },
       clientId: client.id!,
       clientSnapshot: {
@@ -569,7 +589,12 @@ export class ReservationService {
         finalPrice,
         // Frozen so a future change of the general rate never moves a contract
         // already signed.
-        vatRate: this.currentVatRate()
+        vatRate: this.currentVatRate(),
+        // Se congelan con el precio: el cargo por kilómetros de la devolución
+        // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
+        // que se pactó en un alquiler ya cerrado.
+        includedKmPerDay: vehicle.includedKmPerDay,
+        extraKmPrice: vehicle.extraKmPrice
       },
       initialPayment: {
         requiredAmount: initialPayment,
@@ -595,11 +620,7 @@ export class ReservationService {
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    const docRef = await addDoc(this.reservationsRef, this.cleanData(reservation));
-    // Generate initial payment records
-    const savedReservation: Reservation = { id: docRef.id, ...reservation };
-    await this.paymentService.createInitialPaymentsForReservation(docRef.id, savedReservation);
-    return docRef.id;
+    return this.commitReservationWithPayments(reservation);
   }
 
   /**
@@ -719,6 +740,91 @@ export class ReservationService {
   }
 
   /**
+   * Guarda los conductores autorizados además del arrendatario (cláusula 2).
+   *
+   * ⚠️ **Con el contrato firmado, no.** Los conductores van impresos en el PDF
+   * y se le enseñan al arrendatario antes de firmar: su firma es el acuerdo
+   * sobre quién puede conducir. Cambiarlos después dejaría el documento
+   * firmado diciendo una cosa y la aplicación otra — y un PDF sellado no se
+   * puede regenerar. Ahí la salida es un anexo en papel.
+   *
+   * Si el contrato está **generado pero sin firmar**, hay que volver a
+   * generarlo para que salgan: esto no lo hace solo, y la pantalla lo avisa.
+   */
+  async updateAdditionalDrivers(
+    reservationId: string,
+    drivers: AdditionalDriver[]
+  ): Promise<void> {
+    const docRef = doc(this.firestore, `reservations/${reservationId}`);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error('reservations.errors.notFound');
+    }
+    if ((snap.data() as Reservation).contractStatus === 'signed') {
+      throw new Error('reservations.drivers.errors.contractSigned');
+    }
+
+    await updateDoc(docRef, this.cleanData({
+      additionalDrivers: drivers,
+      updatedAt: { seconds: Date.now() / 1000 }
+    }));
+  }
+
+  /**
+   * Borra una reserva **con todo lo que arrastra**: sus pagos, sus inspecciones
+   * y las fotos que esas inspecciones subieron a Storage.
+   *
+   * Existe porque hasta ahora no había forma de limpiar desde la aplicación: ni
+   * este método ni un botón. Una reserva creada por error o de prueba se
+   * quedaba para siempre, y quitarla exigía entrar a la consola de Firebase a
+   * borrar la reserva, cada uno de sus pagos y cada inspección a mano.
+   *
+   * ⚠️ **Una reserva con contrato firmado NO se borra.** Decisión de Dorel, y
+   * la única coherente con la regla de Firestore que impide borrar un contrato
+   * incluso siendo administrador: ese documento acredita un alquiler que
+   * ocurrió de verdad, así que borrar la reserva lo dejaría apuntando al vacío.
+   * Para esas está cancelar.
+   *
+   * Todo el borrado de Firestore va en un `writeBatch`: si algo falla no queda
+   * una reserva sin sus pagos ni unos pagos sin su reserva. Las fotos se borran
+   * antes, por el mismo motivo que en los clientes — si Storage falla, los
+   * documentos siguen ahí y se puede reintentar.
+   */
+  async deleteReservation(id: string): Promise<void> {
+    if (!this.permissions.can('deleteRecords')) {
+      throw new Error('permissions.notAllowed');
+    }
+
+    const docRef = doc(this.firestore, `reservations/${id}`);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      throw new Error('reservations.errors.notFound');
+    }
+    const reservation = snap.data() as Reservation;
+    if (reservation.contractStatus === 'signed') {
+      throw new Error('reservations.errors.deleteSignedContract');
+    }
+
+    // Las fotos de las dos inspecciones cuelgan de la misma carpeta.
+    await this.storageService.deleteFolder(`inspections/${id}`);
+
+    const batch = writeBatch(this.firestore);
+
+    const payments = await getDocs(
+      query(collection(this.firestore, 'payments'), where('reservationId', '==', id))
+    );
+    payments.forEach(p => batch.delete(p.ref));
+
+    const inspections = await getDocs(
+      query(collection(this.firestore, 'inspections'), where('reservationId', '==', id))
+    );
+    inspections.forEach(i => batch.delete(i.ref));
+
+    batch.delete(docRef);
+    await batch.commit();
+  }
+
+  /**
    * Close reservation. Only allowed from `returned` with the return
    * inspection completed and the deposit fully settled (refunded or
    * retained). Throws with a workflow i18n key otherwise.
@@ -751,4 +857,58 @@ export class ReservationService {
     // closed rental — otherwise the payment list contradicts the status.
     await this.paymentService.cancelUncollectedPayments(id);
   }
+
+  /**
+   * Escribe la reserva **y sus filas de pago en una sola operación**.
+   *
+   * ⚠️ **Eran hasta cuatro escrituras sueltas**: la reserva y una fila por
+   * concepto (señal, resto, fianza). Si fallaba cualquiera menos la primera
+   * quedaba una reserva a medias —creada, pero sin nada que cobrar— mientras la
+   * pantalla decía que no se había podido crear. El operador la creaba otra vez
+   * y acababa con dos, la segunda encima bloqueando el coche.
+   *
+   * `writeBatch` es atómico: entra todo o no entra nada. El id se pide antes
+   * con `doc(collection)` porque las filas de pago lo llevan dentro;
+   * `addDoc` no sirve aquí, ya que solo devuelve el id después de escribir.
+   *
+   * ⚠️ **Esto NO impide que dos operadores reserven el mismo coche.** La
+   * disponibilidad se comprueba con una consulta y se escribe después, y entre
+   * las dos cosas cabe otra reserva. No es un descuido: el SDK web **no permite
+   * consultas dentro de una transacción** —solo lecturas por id—, así que no
+   * hay forma de leer «¿hay alguna reserva que solape?» y escribir de forma
+   * atómica desde el cliente. Cerrarlo de verdad pide una Cloud Function, donde
+   * el admin SDK sí admite `transaction.get(query)`.
+   *
+   * Lo que sí se hace es **volver a comprobarlo aquí**, a ras del commit: entre
+   * la comprobación del asistente y este punto hay una lectura del vehículo y
+   * el cálculo del precio, y esa ventana era de cerca de un segundo. Ahora son
+   * milisegundos. Reduce el riesgo; no lo elimina.
+   */
+  private async commitReservationWithPayments(
+    reservation: Omit<Reservation, 'id'>
+  ): Promise<string> {
+    const availability = await this.checkVehicleAvailability(
+      reservation.vehicleId,
+      toDate(reservation.pickupDateTime),
+      toDate(reservation.returnDateTime)
+    );
+    if (!availability.available) {
+      throw new Error(availability.conflictMessage || 'reservations.availability.conflict');
+    }
+
+    const batch = writeBatch(this.firestore);
+
+    const reservationRef = doc(this.reservationsRef);
+    batch.set(reservationRef, this.cleanData(reservation));
+
+    const saved: Reservation = { id: reservationRef.id, ...reservation };
+    const paymentsRef = collection(this.firestore, 'payments');
+    for (const row of this.paymentService.buildInitialPayments(reservationRef.id, saved)) {
+      batch.set(doc(paymentsRef), row);
+    }
+
+    await batch.commit();
+    return reservationRef.id;
+  }
+
 }

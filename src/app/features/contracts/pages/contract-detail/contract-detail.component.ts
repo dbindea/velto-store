@@ -87,6 +87,34 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
   // Actions
   // ============================================================
 
+  /** Marca que se copió, para cambiar el icono un momento. */
+  codeCopied = false;
+
+  /**
+   * El CSV tal y como está impreso en el contrato: `VLT-7M63-EE55-THDK`.
+   *
+   * ⚠️ **El formato está duplicado a propósito**, igual que la aritmética del
+   * IVA: la app y las functions compilan con tsconfigs separados y no pueden
+   * compartir módulo. Si cambia el prefijo o el tamaño del grupo, se cambia en
+   * `functions/src/contracts/verification.ts` y aquí.
+   */
+  get verificationCode(): string {
+    const raw = this.contract?.verificationCode;
+    if (!raw) return '';
+    return 'VLT-' + (raw.match(/.{1,4}/g) || []).join('-');
+  }
+
+  async copyVerificationCode(): Promise<void> {
+    if (!this.verificationCode) return;
+    try {
+      await navigator.clipboard.writeText(this.verificationCode);
+      this.codeCopied = true;
+      setTimeout(() => (this.codeCopied = false), 2000);
+    } catch (err) {
+      console.error('Error copying verification code:', err);
+    }
+  }
+
   async generatePdf(): Promise<void> {
     if (!this.contract?.reservationId) return;
     this.generating = true;

@@ -30,20 +30,48 @@ function isDeliberatelyMixedCase(word: string): boolean {
 }
 
 /**
+ * Preposiciones y artículos que van en minúscula **dentro** de un nombre.
+ *
+ * Es la regla de escritura del español y la que usa cualquier documento
+ * oficial: «Arganda del Rey», no «Arganda Del Rey» — que es lo que salía
+ * impreso en el presupuesto y en el contrato (D-1).
+ *
+ * ⚠️ **`el` no está en la lista, a propósito.** Forma parte de topónimos donde
+ * sí lleva mayúscula —«San Lorenzo de El Escorial»— y no hay forma de
+ * distinguirlo sin un diccionario. Dejarlo fuera se equivoca en menos casos que
+ * meterlo.
+ */
+const LOWERCASE_WITHIN_NAME = new Set([
+  'de', 'del', 'la', 'las', 'los', 'y', 'e', 'en', 'a', 'al'
+]);
+
+/**
  * Title-case a free-text value, respecting hyphens, slashes and apostrophes.
  *
  * The rest of each word is lower-cased on purpose: it is what turns SHOUTED or
  * sloppy input into something printable. The exception is a word that already
  * mixes cases — the version of a car is full of them, and «Sport Tourer
  * Business **Dci** 115» is not how Renault writes it.
+ *
+ * Las preposiciones internas se quedan en minúscula (ver
+ * `LOWERCASE_WITHIN_NAME`), salvo cuando abren la cadena: «Las Rozas de
+ * Madrid» empieza por artículo y ahí sí es mayúscula.
  */
 export function capitalizeWords(value: string): string {
   if (!value) return value;
+  let firstWordSeen = false;
   return value
     .split(WORD_BOUNDARY)
     .map(part => {
-      if (WORD_BOUNDARY.test(part)) return part;
+      if (WORD_BOUNDARY.test(part) || !part) return part;
+
+      const isFirstWord = !firstWordSeen;
+      firstWordSeen = true;
+
       if (isDeliberatelyMixedCase(part)) return part;
+      if (!isFirstWord && LOWERCASE_WITHIN_NAME.has(part.toLowerCase())) {
+        return part.toLowerCase();
+      }
       return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
     })
     .join('');

@@ -5,19 +5,53 @@ import { catchError, map } from 'rxjs/operators';
 import { Client } from '@shared/models/client.model';
 import { Vehicle } from '@shared/models/vehicle.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { Contract } from '@shared/models/contract.model';
 
 export interface GlobalSearchResults {
   query: string;
   clients: Client[];
   vehicles: Vehicle[];
   reservations: Reservation[];
+  /** Contratos localizados por su Código Seguro de Verificación. */
+  contracts: Contract[];
   totalCount: number;
+}
+
+/**
+ * El código canónico si lo tecleado puede serlo, o `null`.
+ *
+ * Acepta las dos formas que un humano tiene delante: la impresa con guiones
+ * (`VLT-7M63-EE55-THDK`) y la que sale de teclearla de corrido. El alfabeto no
+ * lleva I, L, O, U, 0 ni 1 porque el código se dicta por teléfono, así que un
+ * cero o una ele tecleados son casi seguro un O o un I mal oídos — se traducen
+ * en vez de rechazarse.
+ *
+ * ⚠️ Duplicado a propósito de `functions/src/contracts/verification.ts`: la app
+ * y las functions no comparten módulo. Si cambia el alfabeto, se cambia en los
+ * dos sitios.
+ */
+export function parseVerificationCode(input: string): string | null {
+  // ⚠️ **Primero se limpia y después se quita el prefijo**, no al revés: con
+  // un espacio delante —copiar y pegar deja uno— el `^VLT` no llegaba a
+  // coincidir, el prefijo se quedaba dentro y el código salía de 15
+  // caracteres. Un código canónico nunca empieza por `VLT`, porque la L no
+  // está en el alfabeto.
+  const raw = (input || '')
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, '')
+    .replace(/^VLT/, '')
+    .replace(/0/g, 'O')
+    .replace(/1/g, 'I');
+  // 12 caracteres exactos, y ninguno fuera del alfabeto del código.
+  if (raw.length !== 12) return null;
+  return /^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{12}$/.test(raw) ? raw : null;
 }
 
 export type GlobalSearchHit =
   | { kind: 'client'; id: string; title: string; subtitle?: string; route: string }
   | { kind: 'vehicle'; id: string; title: string; subtitle?: string; route: string }
-  | { kind: 'reservation'; id: string; title: string; subtitle?: string; route: string };
+  | { kind: 'reservation'; id: string; title: string; subtitle?: string; route: string }
+  | { kind: 'contract'; id: string; title: string; subtitle?: string; route: string };
 
 /**
  * Cross-collection search.  Runs three independent queries in
@@ -49,6 +83,7 @@ export class GlobalSearchService {
         clients: [],
         vehicles: [],
         reservations: [],
+        contracts: [],
         totalCount: 0
       });
     }
@@ -58,14 +93,16 @@ export class GlobalSearchService {
     return forkJoin({
       clients: this.searchClients(cleaned, upper),
       vehicles: this.searchVehicles(cleaned, upper),
-      reservations: this.searchReservations(cleaned, upper)
+      reservations: this.searchReservations(cleaned, upper),
+      contracts: this.searchContracts(cleaned)
     }).pipe(
-      map(({ clients, vehicles, reservations }) => ({
+      map(({ clients, vehicles, reservations, contracts }) => ({
         query: cleaned,
         clients,
         vehicles,
         reservations,
-        totalCount: clients.length + vehicles.length + reservations.length
+        contracts,
+        totalCount: clients.length + vehicles.length + reservations.length + contracts.length
       }))
     );
   }
@@ -90,6 +127,17 @@ export class GlobalSearchService {
         title,
         subtitle: v.plateNumber,
         route: `/vehicles/${v.id}`
+      });
+    }
+    for (const c of results.contracts) {
+      hits.push({
+        kind: 'contract',
+        id: c.id!,
+        title: c.contractNumber || c.id!.slice(0, 6).toUpperCase(),
+        subtitle: [c.clientSnapshot?.fullName, c.vehicleSnapshot?.plateNumber]
+          .filter(Boolean)
+          .join(' · '),
+        route: `/contracts/${c.id}`
       });
     }
     for (const r of results.reservations) {
@@ -153,6 +201,28 @@ export class GlobalSearchService {
         )
       ),
       catchError(() => of([] as Vehicle[]))
+    );
+  }
+
+  /**
+   * Contratos por su Código Seguro de Verificación (M-45).
+   *
+   * Es el caso de un cliente que llama con el papel delante y dicta el
+   * `VLT-…`; hasta ahora ese código no se podía buscar desde ninguna pantalla.
+   *
+   * ⚠️ **Solo consulta si lo tecleado puede ser un código.** Es una igualdad
+   * exacta sobre un campo de 12 caracteres, así que un término cualquiera no
+   * encontraría nada y estaríamos pagando una lectura por cada tecla.
+   */
+  private searchContracts(term: string): Observable<Contract[]> {
+    const code = parseVerificationCode(term);
+    if (!code) return of([] as Contract[]);
+
+    const contractsRef = collection(this.firestore, 'contracts');
+    const q = query(contractsRef, where('verificationCode', '==', code), limit(1));
+    return from(getDocs(q)).pipe(
+      map((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Contract)),
+      catchError(() => of([] as Contract[]))
     );
   }
 

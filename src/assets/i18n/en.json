@@ -48,7 +48,9 @@
     },
     "edit": "Edit client",
     "errors": {
-      "fullNameRequired": "Enter the client’s full name"
+      "fullNameRequired": "Enter the client’s full name",
+      "deleteHasReservations": "This client has reservations and cannot be deleted. Their name would still be stored on every reservation and contract.",
+      "delete": "The client could not be deleted."
     },
     "fields": {
       "address": "Address",
@@ -120,7 +122,8 @@
       "new": "New",
       "regular": "Regular",
       "risk": "Risk"
-    }
+    },
+    "confirmDelete": "Delete this client and the documents they uploaded? This cannot be undone."
   },
   "common": {
     "all": "All",
@@ -146,7 +149,8 @@
     "save": "Save",
     "search": "Search",
     "viewAll": "View all",
-    "close": "Close"
+    "close": "Close",
+    "days": "days"
   },
   "contracts": {
     "actions": {
@@ -196,7 +200,9 @@
       "subtitle": "Digital signature of the rental contract",
       "successMessage": "Thank you. Your contract has been registered.",
       "successTitle": "Contract signed",
-      "title": "Contract signature"
+      "title": "Contract signature",
+      "additionalDrivers": "Authorised drivers",
+      "additionalDriversHint": "Besides you, these people may drive the vehicle. By signing, you authorise it."
     },
     "signingLink": {
       "title": "Active signing link"
@@ -238,7 +244,8 @@
       "pdfNotReady": "The PDF is not available yet.",
       "signedPdfNotReady": "The signed contract is not available yet."
     },
-    "confirmCancelSigningLink": "Cancel the active signing link?"
+    "confirmCancelSigningLink": "Cancel the active signing link?",
+    "verificationCode": "Verification code"
   },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",
@@ -720,7 +727,8 @@
     "cancelLocked": "Your role cannot cancel. Ask an administrator.",
     "discountsLocked": "Your role cannot grant discounts.",
     "notAllowed": "Your role does not allow this action",
-    "pricingLocked": "Your role cannot change the price. The tariff one applies."
+    "pricingLocked": "Your role cannot change the price. The tariff one applies.",
+    "notAllowedRoute": "Your role does not have access to that section."
   },
   "reports": {
     "days": "days",
@@ -816,7 +824,10 @@
       "processDeposit": "Could not process the deposit",
       "registerPayment": "Could not register the payment",
       "signedPdfNotReady": "The signed contract is not available yet",
-      "create": "The reservation could not be created. Please try again."
+      "create": "The reservation could not be created. Please try again.",
+      "notFound": "Reservation not found.",
+      "deleteSignedContract": "A reservation with a signed contract cannot be deleted. Cancel it instead: the signed contract evidences the rental and is never deleted.",
+      "delete": "The reservation could not be deleted."
     },
     "fields": {
       "duration": "Duration",
@@ -906,7 +917,30 @@
       "title": "Reservation progress"
     },
     "title": "Reservations",
-    "closeWithPendingCharges": "This reservation has {amount} € in uncollected extra charges.\n\nClosing it neither charges nor cancels them: they remain owed by the client, but the rental will stop showing up as pending work.\n\nClose anyway?"
+    "closeWithPendingCharges": "This reservation has {amount} € in uncollected extra charges.\n\nClosing it neither charges nor cancels them: they remain owed by the client, but the rental will stop showing up as pending work.\n\nClose anyway?",
+    "pendingAmount": "outstanding",
+    "confirmDelete": "Delete this reservation with its payments, inspections and photos? This cannot be undone.",
+    "drivers": {
+      "title": "Authorised drivers",
+      "hint": "In addition to the renter. They are printed on the contract and shown to the client before signing.",
+      "add": "Add driver",
+      "name": "Full name",
+      "document": "ID number",
+      "license": "Driving licence",
+      "empty": "No additional drivers.",
+      "signedLocked": "The contract is already signed: drivers cannot be changed. Use a paper annex.",
+      "regenerate": "You changed the drivers: generate the contract again so they are printed.",
+      "search": "Search client by name or ID",
+      "errors": {
+        "nameRequired": "Enter the driver name",
+        "documentRequired": "Enter their ID number",
+        "licenseRequired": "Enter their driving licence",
+        "duplicate": "That driver is already on the list",
+        "tooMany": "No room for more drivers",
+        "contractSigned": "The contract is already signed and who drives cannot be changed.",
+        "save": "The drivers could not be saved."
+      }
+    }
   },
   "search": {
     "close": "Close",
@@ -914,7 +948,8 @@
     "groups": {
       "clients": "Clients",
       "reservations": "Reservations",
-      "vehicles": "Vehicles"
+      "vehicles": "Vehicles",
+      "contracts": "Contracts"
     },
     "minChars": "Type at least 2 characters.",
     "navigate": "Navigate",
@@ -966,7 +1001,7 @@
       "empty": "Nobody has access yet",
       "inactive": "No access",
       "name": "Name",
-      "notice": "Today the role decides which whole sections someone gets into: reports, expenses and these settings. The finer limits — touching prices, deleting or cancelling — come in a separate task.",
+      "notice": "The role decides which sections can be opened —reports, expenses and these settings— and also what can be done inside: changing prices, granting discounts, deleting and cancelling are admin-only.",
       "role": "Role",
       "roles": {
         "admin": "Administrator",
@@ -1039,7 +1074,11 @@
       "transmission": "Transmission",
       "version": "Version",
       "vin": "VIN",
-      "year": "Year"
+      "year": "Year",
+      "hasGpsTracker": "Fitted with GPS tracker",
+      "insurerName": "Insurance company",
+      "insurancePolicy": "Policy number",
+      "roadsideAssistancePhone": "Roadside assistance phone"
     },
     "filterAllCategories": "All categories",
     "filterAllStatus": "All statuses",
@@ -1104,7 +1143,8 @@
       "features": "Features",
       "pricing": "Pricing and conditions",
       "rentalClassification": "Rental classification",
-      "reservations": "Reservations"
+      "reservations": "Reservations",
+      "insurance": "Insurance and roadside assistance"
     },
     "status": {
       "available": "Available",
@@ -1124,7 +1164,15 @@
       "automatic": "Automatic",
       "manual": "Manual"
     },
-    "viewDetail": "View details"
+    "viewDetail": "View details",
+    "insurance": {
+      "hint": "These details are printed on the contract, under \"Vehicle details\". The accident clause states that they appear there.",
+      "insurerPlaceholder": "e.g. Mapfre",
+      "policyPlaceholder": "e.g. 0912-4471822",
+      "roadsidePlaceholder": "e.g. +34 902 123 456",
+      "roadsideHint": "This is the number the customer calls if they break down.",
+      "missing": "No insurance details. The contract promises them in the accident clause — fill them in before renting this vehicle."
+    }
   },
   "workflow": {
     "blockedAction": "Blocked action",

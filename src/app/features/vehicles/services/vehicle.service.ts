@@ -30,12 +30,14 @@ import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { Observable, from, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { StorageService } from '@core/firebase/storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class VehicleService {
   private firestore = inject(Firestore);
   private permissions = inject(PermissionsService);
   private storage = inject(Storage);
+  private storageService = inject(StorageService);
   private vehiclesRef: CollectionReference;
 
   constructor() {
@@ -115,6 +117,14 @@ export class VehicleService {
     );
   }
 
+  /**
+   * Borra un vehículo **y sus fotos**.
+   *
+   * Borrar el documento de Firestore no se lleva lo que hay en Storage: sin
+   * esto, cada coche dado de baja dejaba su galería completa —originales y
+   * miniaturas— ocupando espacio para siempre, sin nada en la aplicación que
+   * apuntara a ella.
+   */
   async deleteVehicle(id: string): Promise<void> {
     // Defensa en profundidad: la UI esconde el botón y esto rechaza la
     // llamada igualmente. Cualquier camino que no pase por ese botón se
@@ -122,6 +132,7 @@ export class VehicleService {
     if (!this.permissions.can('deleteRecords')) {
       throw new Error('permissions.notAllowed');
     }
+    await this.storageService.deleteFolder(`vehicles/${id}`);
     const docRef = doc(this.firestore, `vehicles/${id}`);
     await deleteDoc(docRef);
   }

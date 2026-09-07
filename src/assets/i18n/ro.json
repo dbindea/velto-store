@@ -48,7 +48,9 @@
     },
     "edit": "Editează client",
     "errors": {
-      "fullNameRequired": "Scrie numele complet al clientului"
+      "fullNameRequired": "Scrie numele complet al clientului",
+      "deleteHasReservations": "Acest client are rezervări și nu poate fi șters. Numele lui ar rămâne salvat în fiecare rezervare și în fiecare contract.",
+      "delete": "Clientul nu a putut fi șters."
     },
     "fields": {
       "address": "Adresă",
@@ -120,7 +122,8 @@
       "new": "Nou",
       "regular": "Regulat",
       "risk": "Risc"
-    }
+    },
+    "confirmDelete": "Ștergi acest client și documentele pe care le-a încărcat? Nu se poate anula."
   },
   "common": {
     "all": "Toate",
@@ -146,7 +149,8 @@
     "save": "Salvează",
     "search": "Caută",
     "viewAll": "Vezi tot",
-    "close": "Închide"
+    "close": "Închide",
+    "days": "zile"
   },
   "contracts": {
     "actions": {
@@ -196,7 +200,9 @@
       "subtitle": "Semnătură digitală pentru contractul de închiriere",
       "successMessage": "Mulțumim. Contractul tău a fost înregistrat.",
       "successTitle": "Contract semnat",
-      "title": "Semnarea contractului"
+      "title": "Semnarea contractului",
+      "additionalDrivers": "Conducători autorizați",
+      "additionalDriversHint": "Pe lângă tine, aceste persoane pot conduce vehiculul. Prin semnare, autorizezi acest lucru."
     },
     "signingLink": {
       "title": "Link de semnare activ"
@@ -238,7 +244,8 @@
       "pdfNotReady": "PDF-ul nu este încă disponibil.",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
     },
-    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?"
+    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?",
+    "verificationCode": "Cod de verificare"
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
@@ -720,7 +727,8 @@
     "cancelLocked": "Rolul tău nu poate anula. Cere-i unui administrator.",
     "discountsLocked": "Rolul tău nu poate acorda reduceri.",
     "notAllowed": "Rolul tău nu permite această acțiune",
-    "pricingLocked": "Rolul tău nu poate schimba prețul. Se aplică cel din tarif."
+    "pricingLocked": "Rolul tău nu poate schimba prețul. Se aplică cel din tarif.",
+    "notAllowedRoute": "Rolul tău nu are acces la acea secțiune."
   },
   "reports": {
     "days": "zile",
@@ -816,7 +824,10 @@
       "processDeposit": "Nu s-a putut procesa garanția",
       "registerPayment": "Nu s-a putut înregistra plata",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil",
-      "create": "Rezervarea nu a putut fi creată. Încearcă din nou."
+      "create": "Rezervarea nu a putut fi creată. Încearcă din nou.",
+      "notFound": "Rezervarea nu a fost găsită.",
+      "deleteSignedContract": "O rezervare cu contractul semnat nu poate fi ștearsă. Anuleaz-o în schimb: contractul semnat atestă închirierea și nu se șterge niciodată.",
+      "delete": "Rezervarea nu a putut fi ștearsă."
     },
     "fields": {
       "duration": "Durată",
@@ -906,7 +917,30 @@
       "title": "Progresul rezervării"
     },
     "title": "Rezervări",
-    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?"
+    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
+    "pendingAmount": "de încasat",
+    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula.",
+    "drivers": {
+      "title": "Conducători autorizați",
+      "hint": "Pe lângă chiriaș. Apar tipăriți în contract și îi sunt arătați clientului înainte de semnare.",
+      "add": "Adaugă conducător",
+      "name": "Nume complet",
+      "document": "Act de identitate",
+      "license": "Permis de conducere",
+      "empty": "Fără conducători suplimentari.",
+      "signedLocked": "Contractul este deja semnat: conducătorii nu pot fi modificați. Fă o anexă pe hârtie.",
+      "regenerate": "Ai schimbat conducătorii: generează din nou contractul ca să apară tipăriți.",
+      "search": "Caută client după nume sau act",
+      "errors": {
+        "nameRequired": "Scrie numele conducătorului",
+        "documentRequired": "Scrie actul lui de identitate",
+        "licenseRequired": "Scrie permisul lui de conducere",
+        "duplicate": "Acel conducător este deja pe listă",
+        "tooMany": "Nu mai încap conducători",
+        "contractSigned": "Contractul este deja semnat și nu se poate schimba cine conduce.",
+        "save": "Conducătorii nu au putut fi salvați."
+      }
+    }
   },
   "search": {
     "close": "Închide",
@@ -914,7 +948,8 @@
     "groups": {
       "clients": "Clienți",
       "reservations": "Rezervări",
-      "vehicles": "Vehicule"
+      "vehicles": "Vehicule",
+      "contracts": "Contracte"
     },
     "minChars": "Scrie cel puțin 2 caractere.",
     "navigate": "Navighează",
@@ -966,7 +1001,7 @@
       "empty": "Încă nu are nimeni acces",
       "inactive": "Fără acces",
       "name": "Nume",
-      "notice": "Astăzi rolul decide în ce secțiuni întregi se intră: rapoarte, cheltuieli și aceste setări. Limitele fine — prețuri, ștergere sau anulare — vin într-o sarcină separată.",
+      "notice": "Rolul decide în ce secțiuni se intră —rapoarte, cheltuieli și aceste setări— și, de asemenea, ce se poate face înăuntru: modificarea prețurilor, acordarea de reduceri, ștergerea și anularea sunt doar pentru administrator.",
       "role": "Rol",
       "roles": {
         "admin": "Administrator",
@@ -1039,7 +1074,11 @@
       "transmission": "Transmisie",
       "version": "Versiune",
       "vin": "NUMĂR ȘASIU",
-      "year": "An"
+      "year": "An",
+      "hasGpsTracker": "Are dispozitiv de localizare GPS",
+      "insurerName": "Compania de asigurări",
+      "insurancePolicy": "Număr de poliță",
+      "roadsideAssistancePhone": "Telefon asistență rutieră"
     },
     "filterAllCategories": "Toate categoriile",
     "filterAllStatus": "Toate statusurile",
@@ -1104,7 +1143,8 @@
       "features": "Caracteristici",
       "pricing": "Tarife și condiții",
       "rentalClassification": "Clasificare de închiriere",
-      "reservations": "Rezervări"
+      "reservations": "Rezervări",
+      "insurance": "Asigurare și asistență rutieră"
     },
     "status": {
       "available": "Disponibil",
@@ -1124,7 +1164,15 @@
       "automatic": "Automată",
       "manual": "Manuală"
     },
-    "viewDetail": "Vezi detalii"
+    "viewDetail": "Vezi detalii",
+    "insurance": {
+      "hint": "Aceste date se tipăresc în contract, la «Datele vehiculului». Clauza privind accidentele spune că se regăsesc acolo.",
+      "insurerPlaceholder": "Ex.: Mapfre",
+      "policyPlaceholder": "Ex.: 0912-4471822",
+      "roadsidePlaceholder": "Ex.: +34 902 123 456",
+      "roadsideHint": "Este numărul pe care îl sună clientul dacă rămâne în pană.",
+      "missing": "Fără date de asigurare. Contractul le promite în clauza privind accidentele: completează-le înainte de a închiria acest vehicul."
+    }
   },
   "workflow": {
     "blockedAction": "Acțiune blocată",

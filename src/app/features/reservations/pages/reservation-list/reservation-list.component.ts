@@ -142,9 +142,36 @@ export class ReservationListComponent implements OnInit {
     return toDate(reservation.returnDateTime);
   }
 
+  /**
+   * Lo que el cliente todavía debe de esta reserva.
+   *
+   * Sale de `paymentSummary.totalPending`, que **incluye los cargos extra**. La
+   * cuenta a mano de aquí solo miraba señal y resto, así que una devolución con
+   * 145 € en daños y limpieza sin cobrar aparecía en la lista como si no
+   * debiera nada — el mismo agujero que F-34 en la ficha.
+   *
+   * Se conserva como respaldo para una reserva cuyo resumen aún no se haya
+   * escrito; es una cuenta incompleta, pero mejor que ninguna.
+   */
   getPendingAmount(reservation: Reservation): number {
+    const summary = reservation.paymentSummary?.totalPending;
+    if (typeof summary === 'number') return summary;
     return reservation.initialPayment.requiredAmount - reservation.initialPayment.paidAmount +
            reservation.remainingPayment.requiredAmount - reservation.remainingPayment.paidAmount;
+  }
+
+  /**
+   * Si se enseña o no el saldo pendiente en la tarjeta.
+   *
+   * ⚠️ **En una cancelada, no** (M-11). El importe deja de ser exigible en
+   * cuanto la reserva se anula, y pintarlo en rojo junto a las demás invita a
+   * perseguir un cobro que ya no toca. En una **cerrada sí** se enseña: ahí el
+   * pendiente son cargos extra reales que el cliente debe, y cerrarla no los
+   * perdona.
+   */
+  showsPendingAmount(reservation: Reservation): boolean {
+    if (reservation.reservationStatus === 'cancelled') return false;
+    return this.getPendingAmount(reservation) > 0;
   }
 
   getStatusClass(status: ReservationStatus): string {

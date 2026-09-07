@@ -68,3 +68,20 @@ skills-lock.json
 *.pfx
 *.key
 cert.b64
+
+# Salidas de trabajo que no son código y estaban versionadas sin motivo:
+# el log de un despliegue concreto (563 KB) y tres PDF de prueba del contrato
+# (~3,4 MB entre los tres). Se regeneran solos y su historia no le sirve a
+# nadie; en el repositorio solo engordan cada clon.
+deploy.log
+test-contract-*.pdf
+
+# El kit del Velto Design System tal cual lo entrega Claude Design: 1,2 MB de
+# los que casi todo son las Gotham y los SVG del logo en base64 dentro de un
+# bundle autoextraíble. Dorel lo guarda aparte, así que aquí no hace falta.
+#
+# Lo que SÍ se versiona es lo que se lee: `velto-design-system.css` —la hoja
+# extraída, 7,8 KB— y el README que dice qué se llevó a la aplicación y qué no.
+# Sin ellos, la sección «Tema y color» de CLAUDE.md apuntaría a una carpeta
+# vacía.
+docs/design/*.html

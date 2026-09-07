@@ -147,7 +147,7 @@
   }
 
   &.active {
-    border-color: var(--accent-color, #248f7d);
+    border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(36, 143, 125, 0.3);
   }
 }

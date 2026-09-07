@@ -313,3 +313,132 @@ export function generateInternalReference(prefix = 'PMT'): string {
   const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${prefix}-${ts}-${rand}`;
 }
+/** Un tramo del reparto de un cobro completo: cuánto va a qué fila. */
+export interface RentalSettlementStep {
+  paymentId: string;
+  apply: number;
+}
+
+/**
+ * Reparte un «Pago completo del alquiler» entre la señal y el resto.
+ *
+ * ⚠️ **Sin esto, ese concepto era una trampa** (D-5). `rental_payment` no tiene
+ * fila sembrada propia, así que el cobro creaba un documento nuevo y las de
+ * señal y resto se quedaban pendientes para siempre. El dinero contaba como
+ * ingreso —está en `RENTAL_TYPES`— pero **no** para el estado de pago ni para
+ * `remainingPaid`, que es lo que `canCloseReservation()` exige: la reserva se
+ * cobraba entera y no se podía cerrar nunca sin saltarse un paso.
+ *
+ * El orden es señal → resto, el mismo del alquiler: si el cobro no llega para
+ * las dos, lo que entra salda primero lo que se debía antes.
+ *
+ * Lo que sobre sale en `leftover` y **no se descarta**: es dinero que el
+ * cliente ha entregado, así que el llamante lo registra en su propia fila. Un
+ * cobro de más es un problema de contabilidad; perderlo, uno peor.
+ */
+export function distributeRentalPayment(
+  payments: Payment[],
+  amount: number
+): { steps: RentalSettlementStep[]; leftover: number } {
+  const steps: RentalSettlementStep[] = [];
+  let left = roundMoney(amount);
+
+  for (const type of ['initial_payment', 'remaining_payment'] as PaymentType[]) {
+    if (left <= 0) break;
+    const row = selectSettleablePayment(payments, type);
+    if (!row?.id) continue;
+
+    const owed = calculatePendingAmount(row.amount, row.paidAmount);
+    if (owed <= 0) continue;
+
+    const apply = roundMoney(Math.min(owed, left));
+    steps.push({ paymentId: row.id, apply });
+    left = roundMoney(left - apply);
+  }
+
+  return { steps, leftover: left };
+}
+
+/**
+ * Las filas de pago que le corresponden a una reserva recién creada.
+ *
+ * Una por concepto esperado —señal, resto, fianza— y **ninguna para un concepto
+ * a 0**: una fianza exenta no es una fianza pendiente de 0 €, es que no hay
+ * fianza. Sembrarla dejaría una fila que nadie puede cobrar y que impediría dar
+ * la reserva por pagada.
+ *
+ * Devuelve datos, no escribe: es lo que permite que la reserva y sus pagos
+ * entren en Firestore en **una sola escritura atómica**. Antes eran hasta
+ * cuatro sueltas, y si fallaba la segunda quedaba una reserva sin nada que
+ * cobrar mientras la pantalla decía que no se había podido crear.
+ */
+export function buildInitialPaymentRows(
+  reservationId: string,
+  reservation: Reservation
+): Record<string, any>[] {
+  const finalPrice = reservation.pricingSnapshot?.finalPrice || 0;
+  const now = { seconds: Date.now() / 1000 };
+
+  const common = {
+    reservationId,
+    clientId: reservation.clientId,
+    vehicleId: reservation.vehicleId,
+    reservationSnapshot: {
+      pickupDateTime: reservation.pickupDateTime,
+      returnDateTime: reservation.returnDateTime,
+      totalDays: reservation.totalDays,
+      finalPrice
+    },
+    clientSnapshot: reservation.clientSnapshot,
+    vehicleSnapshot: reservation.vehicleSnapshot,
+    direction: 'income',
+    method: 'other',
+    source: 'system',
+    status: 'pending',
+    paidAmount: 0,
+    currency: 'EUR',
+    createdAt: now
+  };
+
+  const seeds: Array<{
+    type: PaymentType;
+    amount: number;
+    concept: string;
+    prefix: string;
+    dueDate: any;
+  }> = [
+    {
+      type: 'initial_payment',
+      amount: reservation.initialPayment?.requiredAmount || 0,
+      concept: 'Señal reserva',
+      prefix: 'INIT',
+      dueDate: now
+    },
+    {
+      type: 'remaining_payment',
+      amount: reservation.remainingPayment?.requiredAmount || 0,
+      concept: 'Resto alquiler',
+      prefix: 'REMAIN',
+      dueDate: reservation.remainingPayment?.dueDate
+    },
+    {
+      type: 'deposit',
+      amount: reservation.deposit?.requiredAmount || 0,
+      concept: 'Fianza',
+      prefix: 'DEP',
+      dueDate: reservation.pickupDateTime
+    }
+  ];
+
+  return seeds
+    .filter(seed => seed.amount > 0)
+    .map(seed => ({
+      ...common,
+      type: seed.type,
+      amount: roundMoney(seed.amount),
+      pendingAmount: roundMoney(seed.amount),
+      dueDate: seed.dueDate,
+      concept: seed.concept,
+      internalReference: generateInternalReference(seed.prefix)
+    }));
+}

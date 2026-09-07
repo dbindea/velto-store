@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: center;
   padding: 0.625rem 1rem;
-  background: #ef4444;
+  background: var(--red-600);
   color: white;
   border: none;
   border-radius: 8px;
@@ -90,7 +90,7 @@
   transition: background 0.2s;
 
   &:hover {
-    background: #dc2626;
+    background: var(--red-700);
   }
 }
 
@@ -110,7 +110,20 @@
   .main-image {
     width: 100%;
     height: 300px;
-    object-fit: cover;
+    /**
+     * `contain`, no `cover` (M-6).
+     *
+     * Las fotos de coche salen del móvil en vertical —1086×1448— y esta caja es
+     * apaisada: `cover` las escalaba hasta llenarla y **recortaba el coche**,
+     * que es justo lo único que hay que ver aquí. Sobran franjas a los lados;
+     * es un precio menor que enseñar media carrocería.
+     *
+     * Es además lo que ya hace la imagen grande de `image-gallery`. Las
+     * miniaturas de abajo se quedan con `cover` a propósito: ahí la foto es un
+     * botón para abrir la grande, no el sitio donde se mira el coche.
+     */
+    object-fit: contain;
+    background: var(--bg-main);
     transition: transform 0.3s ease;
 
     @media (min-width: 640px) {
@@ -750,12 +763,12 @@
   margin-bottom: 0.625rem;
 
   &.overdue {
-    border-left-color: #ef4444;
+    border-left-color: var(--error-color);
     background: rgba(239, 68, 68, 0.05);
   }
 
   &.completed {
-    border-left-color: #94a3b8;
+    border-left-color: var(--gray-400);
     opacity: 0.85;
   }
 }
@@ -801,23 +814,23 @@
 
   &.status-pending {
     background: rgba(245, 158, 11, 0.15);
-    color: #b45309;
+    color: var(--warning-color);
   }
   &.status-scheduled {
     background: rgba(32, 164, 143, 0.12);
-    color: #1a8775;
+    color: var(--color-brand-green-dark);
   }
   &.status-completed {
     background: rgba(34, 197, 94, 0.12);
-    color: #166534;
+    color: var(--success-color);
   }
   &.status-overdue {
     background: rgba(239, 68, 68, 0.15);
-    color: #b91c1c;
+    color: var(--error-color);
   }
   &.status-cancelled {
     background: rgba(100, 116, 139, 0.15);
-    color: #475569;
+    color: var(--gray-600);
   }
 }
 
@@ -845,19 +858,19 @@
     font-weight: 600;
 
     &.priority-low {
-      background: rgba(34, 197, 94, 0.1);
-      color: #166534;
+      background: var(--success-bg);
+      color: var(--success-color);
     }
     &.priority-medium {
-      background: rgba(245, 158, 11, 0.1);
-      color: #b45309;
+      background: var(--warning-bg);
+      color: var(--warning-color);
     }
     &.priority-high {
-      background: rgba(239, 68, 68, 0.1);
-      color: #b91c1c;
+      background: var(--error-bg);
+      color: var(--error-color);
     }
     &.priority-critical {
-      background: #b91c1c;
+      background: var(--red-600);
       color: white;
     }
   }
@@ -888,21 +901,21 @@
   }
 
   &--danger:hover {
-    color: #b91c1c;
-    border-color: #b91c1c;
+    color: var(--error-color);
+    border-color: var(--error-color);
   }
 }
 
 .section-title--overdue {
-  color: #b91c1c;
+  color: var(--error-color);
 
   i {
-    color: #b91c1c;
+    color: var(--error-color);
   }
 }
 
 .tab-count--overdue {
-  background: #b91c1c;
+  background: var(--red-600);
 }
 
 // Wide modal for the maintenance form
@@ -911,4 +924,19 @@
   width: 95%;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+// Aviso de coche sin datos de seguro. Va en tinta de advertencia y no de
+// error: el coche existe y se puede alquilar, pero el contrato quedará
+// remitiendo a un dato que no imprime.
+.missing-insurance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--warning-color);
+  font-size: 0.875rem;
+
+  i {
+    font-size: 0.9rem;
+  }
 }

@@ -197,20 +197,31 @@ export class InspectionPickupComponent implements OnInit {
   async onPhotoSelected(event: Event, category: PhotoCategory): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files?.length || !this.reservationId) return;
-    const file = input.files[0];
 
-    // Validate
+    // Desde la galería se pueden elegir varias de una vez (M-5): la inspección
+    // pide ocho fotos y abrir el selector ocho veces, con el cliente delante,
+    // es la diferencia entre hacerlas y no hacerlas. La cámara sigue de una en
+    // una porque así funciona hacer una foto.
+    const picked = Array.from(input.files);
+    // Se vacía ya: si algo falla a mitad, el input no se queda con una
+    // selección que el operador cree subida.
+    input.value = '';
+
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      this.notifications.error('inspections.errors.photoType');
-      input.value = '';
-      return;
-    }
-    if (file.size > APP_DEFAULTS.MAX_DOCUMENT_FILE_SIZE) {
-      this.notifications.error('inspections.errors.photoTooLarge');
-      input.value = '';
-      return;
-    }
+    const files = picked.filter(f => {
+      if (!validTypes.includes(f.type)) {
+        this.notifications.error('inspections.errors.photoType');
+        return false;
+      }
+      if (f.size > APP_DEFAULTS.MAX_DOCUMENT_FILE_SIZE) {
+        this.notifications.error('inspections.errors.photoTooLarge');
+        return false;
+      }
+      return true;
+    });
+    // Una foto que no vale no cancela las demás: se avisa de ella y suben las
+    // buenas. Rechazar el lote entero obligaría a repetir la selección.
+    if (!files.length) return;
 
     this.uploadingPhoto = true;
     try {
@@ -228,12 +239,16 @@ export class InspectionPickupComponent implements OnInit {
         inspectionId = created;
         (this.formData as Inspection).id = created;
       }
-      const photo = await this.inspectionService.uploadInspectionPhoto(
-        this.reservationId, 'pickup', file, category
-      );
-      this.formData.photos = [...(this.formData.photos || []), photo];
+      // En serie y no en paralelo: son fotos de móvil redimensionadas en el
+      // propio navegador, y lanzar ocho a la vez con mala cobertura las hace
+      // competir por el ancho de banda y bloquea el hilo del canvas.
+      for (const file of files) {
+        const photo = await this.inspectionService.uploadInspectionPhoto(
+          this.reservationId, 'pickup', file, category
+        );
+        this.formData.photos = [...(this.formData.photos || []), photo];
+      }
       await this.inspectionService.updatePhotos(inspectionId, this.formData.photos!);
-      input.value = '';
     } catch (error) {
       console.error('Error uploading photo:', error);
       this.notifications.error('inspections.errors.photoUpload');

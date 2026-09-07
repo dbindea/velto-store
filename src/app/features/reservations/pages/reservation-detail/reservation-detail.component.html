@@ -889,6 +889,126 @@
       </div>
     }
 
+    <!--
+      Conductores autorizados además del arrendatario (cláusula 2 del contrato).
+      Va antes de las notas porque esto **sí** sale impreso y el cliente lo
+      firma; las notas de abajo son privadas y no llegan al PDF.
+    -->
+    <div class="detail-card drivers-card" style="margin-top: 1rem;">
+      <div class="card-header">
+        <i class="pi pi-users"></i>
+        <span>{{ 'reservations.drivers.title' | translate }}</span>
+      </div>
+      <div class="card-content">
+        <p class="drivers-hint">{{ 'reservations.drivers.hint' | translate }}</p>
+
+        @if (additionalDrivers.length) {
+          <ul class="drivers-list">
+            @for (d of additionalDrivers; track $index) {
+              <li>
+                <div class="driver-info">
+                  <strong>{{ d.fullName }}</strong>
+                  <span class="driver-ids">
+                    @if (d.documentNumber) { <span class="mono">{{ d.documentNumber }}</span> }
+                    @if (d.drivingLicenseNumber) { <span class="mono">{{ d.drivingLicenseNumber }}</span> }
+                  </span>
+                </div>
+                @if (canEditDrivers()) {
+                  <button type="button" class="btn-icon btn-icon--danger"
+                          [attr.aria-label]="'common.delete' | translate"
+                          (click)="removeDriver($index)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="drivers-empty">{{ 'reservations.drivers.empty' | translate }}</p>
+        }
+
+        @if (!canEditDrivers()) {
+          <p class="drivers-locked">
+            <i class="pi pi-lock"></i>
+            {{ 'reservations.drivers.signedLocked' | translate }}
+          </p>
+        } @else {
+          <!--
+            Con el contrato ya generado pero sin firmar, cambiar los conductores
+            no toca el PDF: hay que regenerarlo. Decirlo aquí evita entregar un
+            contrato que no menciona a quien va a conducir.
+          -->
+          @if (driversNeedContractRegen()) {
+            <p class="drivers-regen">
+              <i class="pi pi-exclamation-triangle"></i>
+              {{ 'reservations.drivers.regenerate' | translate }}
+            </p>
+          }
+
+          @if (showDriverForm) {
+            <div class="driver-form">
+              <input type="text" class="form-control" name="dsearch"
+                     [(ngModel)]="driverSearch" (input)="searchDriverClients()"
+                     [placeholder]="'reservations.drivers.search' | translate" />
+
+              @if (driverCandidates.length) {
+                <ul class="driver-candidates">
+                  @for (c of driverCandidates; track c.id) {
+                    <li>
+                      <button type="button" (click)="addDriverFromClient(c)">
+                        <strong>{{ c.fullName }}</strong>
+                        @if (c.documentNumber) { <span class="mono">{{ c.documentNumber }}</span> }
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+
+              <div class="driver-form-grid">
+                <div class="form-group">
+                  <label class="required" for="dname">{{ 'reservations.drivers.name' | translate }}</label>
+                  <input id="dname" type="text" class="form-control" name="dname"
+                         [class.is-invalid]="driverSubmitted && driverProblems['fullName']"
+                         [(ngModel)]="driverForm.fullName" />
+                  <app-form-error [problems]="driverProblems['fullName']" [show]="driverSubmitted" />
+                </div>
+                <div class="form-group">
+                  <label class="required" for="ddoc">{{ 'reservations.drivers.document' | translate }}</label>
+                  <input id="ddoc" type="text" class="form-control" name="ddoc"
+                         [class.is-invalid]="driverSubmitted && driverProblems['documentNumber']"
+                         [(ngModel)]="driverForm.documentNumber" />
+                  <app-form-error [problems]="driverProblems['documentNumber']" [show]="driverSubmitted" />
+                </div>
+                <div class="form-group">
+                  <label class="required" for="dlic">{{ 'reservations.drivers.license' | translate }}</label>
+                  <input id="dlic" type="text" class="form-control" name="dlic"
+                         [class.is-invalid]="driverSubmitted && driverProblems['drivingLicenseNumber']"
+                         [(ngModel)]="driverForm.drivingLicenseNumber" />
+                  <app-form-error [problems]="driverProblems['drivingLicenseNumber']" [show]="driverSubmitted" />
+                </div>
+              </div>
+
+              <div class="driver-form-actions">
+                <button type="button" class="btn btn-secondary" (click)="closeDriverForm()">
+                  {{ 'common.cancel' | translate }}
+                </button>
+                <button type="button" class="btn btn-primary" [disabled]="savingDrivers" (click)="addDriver()">
+                  @if (savingDrivers) { <i class="pi pi-spin pi-spinner"></i> }
+                  @else { <i class="pi pi-check"></i> }
+                  {{ 'reservations.drivers.add' | translate }}
+                </button>
+              </div>
+            </div>
+          } @else {
+            <button type="button" class="btn-skip-step" (click)="openDriverForm()">
+              <i class="pi pi-plus"></i>
+              {{ 'reservations.drivers.add' | translate }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+
     <!-- Internal notes: the last block on the page, because it is the only one
          that is neither the rental nor the money — it is the operator talking
          to themselves. -->
@@ -918,6 +1038,19 @@
         >
           <i class="pi pi-times"></i>
           {{ 'reservations.actions.cancel' | translate }}
+        </button>
+      }
+
+      <!--
+        Borrar es distinto de cancelar: una reserva cancelada sigue contando su
+        historia, una borrada desaparece con sus pagos y sus inspecciones. Es
+        para lo que nació por error o de prueba, y por eso el botón no compite
+        con el de cancelar: va aparte y solo lo ve un administrador.
+      -->
+      @if (permissions.canDelete() && reservation.contractStatus !== 'signed') {
+        <button class="btn-danger" type="button" (click)="openDeleteModal()">
+          <i class="pi pi-trash"></i>
+          {{ 'common.delete' | translate }}
         </button>
       }
     </div>
@@ -988,7 +1121,7 @@
             <p class="modal-hint">{{ 'reservations.cancel.hint' | translate }}</p>
             <div class="modal-actions">
               <button class="btn btn-secondary" type="button" (click)="closeCancelModal()">
-                Volver
+                {{ 'common.back' | translate }}
               </button>
               @if (permissions.canCancelReservations()) {
               <button class="btn btn-danger-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
@@ -1019,3 +1152,31 @@
     {{ 'contracts.messages.linkCopied' | translate }}
   </div>
 }
+
+    <!-- Borrar la reserva. Irreversible y con todo lo que arrastra. -->
+    @if (showDeleteModal) {
+      <div class="modal-overlay" (click)="closeDeleteModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header danger">
+            <i class="pi pi-trash"></i>
+            <h3>{{ 'common.delete' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeDeleteModal()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>{{ 'reservations.confirmDelete' | translate }}</p>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeDeleteModal()">
+                {{ 'common.back' | translate }}
+              </button>
+              <button class="btn btn-danger-solid" type="button" [disabled]="deleting" (click)="deleteReservation()">
+                @if (deleting) { <i class="pi pi-spin pi-spinner"></i> }
+                @else { <i class="pi pi-trash"></i> }
+                {{ 'common.delete' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }

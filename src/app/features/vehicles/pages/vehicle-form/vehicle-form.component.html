@@ -294,6 +294,79 @@
               />
               <span>{{ 'vehicles.features.cruiseControl' | translate }}</span>
             </label>
+
+            <!--
+              El GPS no es equipamiento de confort: decide si el contrato
+              imprime el aviso de geolocalización, que es una obligación cuando
+              el coche lo lleva. Va aquí porque es donde se marca lo que tiene
+              el vehículo, pero lo que hace es legal, no comercial.
+            -->
+            <label class=checkbox-label>
+              <input
+                type=checkbox
+                [(ngModel)]=formData.hasGpsTracker
+                name=hasGpsTracker
+              />
+              <span>{{ 'vehicles.fields.hasGpsTracker' | translate }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!--
+          Sección: seguro y asistencia.
+
+          Sección propia y no una fila más en "Datos básicos" porque los tres
+          datos van juntos, se renuevan juntos y el contrato los imprime juntos
+          en «Datos del vehículo» — que es donde la cláusula de accidentes dice
+          que constan. La nota bajo el título lo explica en la pantalla: quien
+          rellena la ficha tiene que saber que esto acaba en un documento legal
+          y no en el inventario.
+        -->
+        <div class="form-section">
+          <h2 class="section-title">{{ 'vehicles.sections.insurance' | translate }}</h2>
+          <p class="section-hint">{{ 'vehicles.insurance.hint' | translate }}</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="insurerName">{{ 'vehicles.fields.insurerName' | translate }}</label>
+              <input
+                type="text"
+                id="insurerName"
+                [(ngModel)]="formData.insurerName"
+                name="insurerName"
+                class="form-control"
+                [placeholder]="'vehicles.insurance.insurerPlaceholder' | translate"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="insurancePolicy">{{ 'vehicles.fields.insurancePolicy' | translate }}</label>
+              <input
+                type="text"
+                id="insurancePolicy"
+                [(ngModel)]="formData.insurancePolicy"
+                name="insurancePolicy"
+                class="form-control"
+                [placeholder]="'vehicles.insurance.policyPlaceholder' | translate"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="roadsideAssistancePhone">
+                {{ 'vehicles.fields.roadsideAssistancePhone' | translate }}
+              </label>
+              <input
+                type="tel"
+                id="roadsideAssistancePhone"
+                [(ngModel)]="formData.roadsideAssistancePhone"
+                name="roadsideAssistancePhone"
+                class="form-control"
+                [placeholder]="'vehicles.insurance.roadsidePlaceholder' | translate"
+              />
+              <small class="field-hint">{{ 'vehicles.insurance.roadsideHint' | translate }}</small>
+            </div>
           </div>
         </div>
 

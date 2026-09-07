@@ -216,10 +216,10 @@
   }
 
   // Light inks: they always sit on the dark plate above.
-  .status-available { color: #4ade80; }
-  .status-rented { color: #fbbf24; }
-  .status-maintenance { color: #60a5fa; }
-  .status-out { color: #f87171; }
+  .status-available { color: var(--success-color); }
+  .status-rented { color: var(--warning-color); }
+  .status-maintenance { color: var(--info-color); }
+  .status-out { color: var(--error-color); }
 }
 
 .vehicle-info {

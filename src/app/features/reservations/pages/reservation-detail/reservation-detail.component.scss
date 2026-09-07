@@ -1283,3 +1283,143 @@ app-reservation-timeline {
   font-weight: 500;
   color: var(--text-secondary);
 }
+
+/* === Conductores autorizados ===
+   Sale impreso en el contrato, así que se lee como parte del alquiler y no
+   como una nota del operador: mismo peso que el resto de tarjetas. */
+.drivers-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.drivers-empty {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.drivers-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    background: var(--bg-main);
+    border: 1px solid var(--border-light);
+    border-radius: 0.4rem;
+  }
+}
+
+.driver-info {
+  /* `min-width: 0` para que un nombre largo parta en vez de estirar la fila. */
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.driver-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.drivers-locked,
+.drivers-regen {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+}
+
+.drivers-locked { color: var(--text-muted); }
+.drivers-regen { color: var(--warning-color); }
+
+.driver-form {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+/* `.form-control` NO es global: cada formulario declara la suya. */
+.driver-form .form-control {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 0.4rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.driver-candidates {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 0.35rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-align: left;
+
+    &:hover { border-color: var(--accent-color); }
+  }
+}
+
+.driver-form-grid {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 640px) {
+    /* `minmax(0, 1fr)`, no `1fr`: si no, un documento largo estira la rejilla. */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+}
+
+.driver-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}

@@ -48,7 +48,9 @@
     },
     "edit": "Editar cliente",
     "errors": {
-      "fullNameRequired": "Escribe el nombre completo del cliente"
+      "fullNameRequired": "Escribe el nombre completo del cliente",
+      "deleteHasReservations": "Este cliente tiene reservas y no se puede borrar. Su nombre seguiría guardado en cada reserva y en cada contrato.",
+      "delete": "No se pudo borrar el cliente."
     },
     "fields": {
       "address": "Dirección",
@@ -120,7 +122,8 @@
       "new": "Nuevo",
       "regular": "Habitual",
       "risk": "Riesgo"
-    }
+    },
+    "confirmDelete": "¿Borrar este cliente y los documentos que subió? No se puede deshacer."
   },
   "common": {
     "all": "Todos",
@@ -146,7 +149,8 @@
     "save": "Guardar",
     "search": "Buscar",
     "viewAll": "Ver todo",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "days": "días"
   },
   "contracts": {
     "actions": {
@@ -196,7 +200,9 @@
       "subtitle": "Firma digital de contrato de alquiler",
       "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
       "successTitle": "Contrato firmado",
-      "title": "Firma del contrato"
+      "title": "Firma del contrato",
+      "additionalDrivers": "Conductores autorizados",
+      "additionalDriversHint": "Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas."
     },
     "signingLink": {
       "title": "Link de firma activo"
@@ -238,7 +244,8 @@
       "pdfNotReady": "El PDF todavía no está disponible.",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible."
     },
-    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?"
+    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?",
+    "verificationCode": "Código de verificación"
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
@@ -720,7 +727,8 @@
     "cancelLocked": "Tu rol no permite cancelar. Pídeselo a un administrador.",
     "discountsLocked": "Tu rol no permite conceder descuentos.",
     "notAllowed": "Tu rol no permite esta acción",
-    "pricingLocked": "Tu rol no permite cambiar el precio. Se aplica el de tarifa."
+    "pricingLocked": "Tu rol no permite cambiar el precio. Se aplica el de tarifa.",
+    "notAllowedRoute": "Tu rol no tiene acceso a esa sección."
   },
   "reports": {
     "days": "días",
@@ -816,7 +824,10 @@
       "processDeposit": "Error al procesar la fianza",
       "registerPayment": "Error al registrar el pago",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible",
-      "create": "No se pudo crear la reserva. Inténtalo de nuevo."
+      "create": "No se pudo crear la reserva. Inténtalo de nuevo.",
+      "notFound": "Reserva no encontrada.",
+      "deleteSignedContract": "No se puede borrar una reserva con el contrato ya firmado. Cancélala en su lugar: el contrato firmado acredita el alquiler y no se borra.",
+      "delete": "No se pudo borrar la reserva."
     },
     "fields": {
       "duration": "Duración",
@@ -906,7 +917,30 @@
       "title": "Progreso de la reserva"
     },
     "title": "Reservas",
-    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?"
+    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
+    "pendingAmount": "pendiente",
+    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer.",
+    "drivers": {
+      "title": "Conductores autorizados",
+      "hint": "Además del arrendatario. Quedan impresos en el contrato y se le muestran al cliente antes de firmar.",
+      "add": "Añadir conductor",
+      "name": "Nombre completo",
+      "document": "DNI/NIE",
+      "license": "Carnet de conducir",
+      "empty": "Sin conductores adicionales.",
+      "signedLocked": "El contrato ya está firmado: los conductores no se pueden cambiar. Haz un anexo en papel.",
+      "regenerate": "Has cambiado los conductores: vuelve a generar el contrato para que salgan impresos.",
+      "search": "Buscar cliente por nombre o documento",
+      "errors": {
+        "nameRequired": "Escribe el nombre del conductor",
+        "documentRequired": "Escribe su DNI o NIE",
+        "licenseRequired": "Escribe su carnet de conducir",
+        "duplicate": "Ese conductor ya está en la lista",
+        "tooMany": "No caben más conductores",
+        "contractSigned": "El contrato ya está firmado y no se puede cambiar quién conduce.",
+        "save": "No se pudieron guardar los conductores."
+      }
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -914,7 +948,8 @@
     "groups": {
       "clients": "Cliente",
       "reservations": "Reservas",
-      "vehicles": "Vehículos"
+      "vehicles": "Vehículos",
+      "contracts": "Contratos"
     },
     "minChars": "Escribe al menos 2 caracteres.",
     "navigate": "Navegar",
@@ -966,7 +1001,7 @@
       "empty": "No hay nadie con acceso todavía",
       "inactive": "Sin acceso",
       "name": "Nombre",
-      "notice": "Hoy el rol decide a qué secciones enteras se entra: informes, gastos y estos ajustes. Los límites finos —tocar precios, borrar o cancelar— llegan en una tarea aparte.",
+      "notice": "El rol decide a qué secciones se entra —informes, gastos y estos ajustes— y también qué se puede hacer dentro: tocar precios, conceder descuentos, borrar y cancelar son solo de administrador.",
       "role": "Rol",
       "roles": {
         "admin": "Administrador",
@@ -1039,7 +1074,11 @@
       "transmission": "Transmisión",
       "version": "Versión",
       "vin": "Número de bastidor",
-      "year": "Año"
+      "year": "Año",
+      "hasGpsTracker": "Lleva localizador GPS",
+      "insurerName": "Compañía aseguradora",
+      "insurancePolicy": "Número de póliza",
+      "roadsideAssistancePhone": "Teléfono de asistencia en carretera"
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
@@ -1104,7 +1143,8 @@
       "features": "Características",
       "pricing": "Tarifas y condiciones",
       "rentalClassification": "Clasificación de alquiler",
-      "reservations": "Reservas"
+      "reservations": "Reservas",
+      "insurance": "Seguro y asistencia"
     },
     "status": {
       "available": "Disponible",
@@ -1124,7 +1164,15 @@
       "automatic": "Automático",
       "manual": "Manual"
     },
-    "viewDetail": "Ver detalle"
+    "viewDetail": "Ver detalle",
+    "insurance": {
+      "hint": "Estos datos se imprimen en el contrato, en «Datos del vehículo». La cláusula de accidentes dice que constan ahí.",
+      "insurerPlaceholder": "Ej.: Mapfre",
+      "policyPlaceholder": "Ej.: 0912-4471822",
+      "roadsidePlaceholder": "Ej.: +34 902 123 456",
+      "roadsideHint": "Es el número al que llama el cliente si se queda tirado.",
+      "missing": "Sin datos de seguro. El contrato los promete en la cláusula de accidentes: rellénalos antes de alquilar este coche."
+    }
   },
   "workflow": {
     "blockedAction": "Acción bloqueada",

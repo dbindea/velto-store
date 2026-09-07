@@ -341,9 +341,28 @@ export class ReservationCreateComponent implements OnInit {
       );
 
       this.router.navigate(['/reservations', reservationId]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating reservation:', error);
-      this.notifications.error('reservations.errors.create', { retry: () => void this.createReservation() });
+      /**
+       * El motivo real cuando lo hay, y sin reintentar si no sirve de nada.
+       *
+       * El servicio vuelve a comprobar la disponibilidad justo antes de
+       * escribir, así que dos operadores que preparan la misma reserva a la vez
+       * hacen que la segunda falle. Con el mensaje genérico, esa persona leía
+       * «No se pudo crear la reserva. Inténtalo de nuevo» y un botón de
+       * reintentar que **iba a fallar igual**: hay que cambiar de coche o de
+       * fechas, no repetir.
+       *
+       * Los errores del servicio ya son claves i18n (`reservations.…`,
+       * `workflow.…`); cualquier otra cosa —un fallo de red— sí se puede
+       * reintentar.
+       */
+      const reason: string = error?.message || '';
+      const isKnownReason = /^(reservations|workflow)\./.test(reason);
+      this.notifications.error(
+        isKnownReason ? reason : 'reservations.errors.create',
+        isKnownReason ? undefined : { retry: () => void this.createReservation() }
+      );
     } finally {
       this.saving = false;
     }

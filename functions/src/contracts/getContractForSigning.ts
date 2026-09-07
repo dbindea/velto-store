@@ -51,6 +51,17 @@ export interface PublicContractView {
   companyName: string;
   /** Correo de contacto, por entorno. Ver `companyEmail`. */
   companyEmail: string;
+  /**
+   * Conductores autorizados además del arrendatario, ya compuestos en una
+   * línea por persona.
+   *
+   * ⚠️ **Se le enseñan al cliente antes de firmar a propósito.** La cláusula 2
+   * dice que solo conducen las personas expresamente declaradas, y quien las
+   * declara es el arrendatario: si firma sin verlas, su firma no es un acuerdo
+   * sobre nada. Van en su propio bloque y no mezclados con los puntos clave,
+   * que son cláusulas generales iguales para todos los contratos.
+   */
+  additionalDrivers: string[];
 }
 
 /**
@@ -158,7 +169,8 @@ export const getContractForSigning = functions.https.onCall(
       locale: resolveLocale(contract),
       status: effectiveStatus,
       companyName: brandName(),
-      companyEmail: companyEmail()
+      companyEmail: companyEmail(),
+      additionalDrivers: formatDrivers(contract.additionalDrivers, resolveLocale(contract))
     };
   }
 );
@@ -172,8 +184,33 @@ function invalidView(): PublicContractView {
     locale: 'es',
     status: 'invalid',
     companyName: brandName(),
-    companyEmail: companyEmail()
+    companyEmail: companyEmail(),
+    additionalDrivers: []
   };
+}
+
+/**
+ * Una línea por conductor: `Juan Pérez · DNI/NIE 12345678Z · Permiso B1234567`.
+ *
+ * Se compone aquí y no en el frontend porque el idioma que manda es el del
+ * **contrato**, no el de quien mira la pantalla: un contrato emitido en rumano
+ * se firma en rumano aunque el navegador esté en español.
+ */
+function formatDrivers(drivers: any, locale: ContractLocale): string[] {
+  if (!Array.isArray(drivers)) return [];
+  const doc = locale === 'en' ? 'ID' : locale === 'ro' ? 'Act de identitate' : 'DNI/NIE';
+  const lic = locale === 'en' ? 'Licence' : locale === 'ro' ? 'Permis' : 'Permiso';
+  return drivers
+    .filter(d => d && typeof d.fullName === 'string' && d.fullName.trim())
+    .map(d =>
+      [
+        d.fullName,
+        d.documentNumber ? `${doc} ${d.documentNumber}` : '',
+        d.drivingLicenseNumber ? `${lic} ${d.drivingLicenseNumber}` : ''
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    );
 }
 
 /**

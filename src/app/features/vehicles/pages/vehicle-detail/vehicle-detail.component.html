@@ -153,6 +153,40 @@
               <span class="vin">{{ vehicle.vin }}</span>
             </div>
           }
+          @if (vehicle.insurerName) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.insurerName' | translate }}</label>
+              <span>{{ vehicle.insurerName }}</span>
+            </div>
+          }
+          @if (vehicle.insurancePolicy) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.insurancePolicy' | translate }}</label>
+              <span class="mono">{{ vehicle.insurancePolicy }}</span>
+            </div>
+          }
+          @if (vehicle.roadsideAssistancePhone) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.roadsideAssistancePhone' | translate }}</label>
+              <span>{{ vehicle.roadsideAssistancePhone }}</span>
+            </div>
+          }
+          <!--
+            Sin seguro, un aviso y no un hueco.
+            El contrato promete estos datos en su cláusula de accidentes; si el
+            coche no los tiene, quien mira la ficha tiene que enterarse aquí y
+            no cuando el cliente esté en el arcén buscando un teléfono que el
+            contrato dijo que estaba impreso.
+          -->
+          @if (!vehicle.insurerName && !vehicle.insurancePolicy && !vehicle.roadsideAssistancePhone) {
+            <div class="info-item full-width">
+              <label>{{ 'vehicles.sections.insurance' | translate }}</label>
+              <span class="missing-insurance">
+                <i class="pi pi-exclamation-triangle"></i>
+                {{ 'vehicles.insurance.missing' | translate }}
+              </span>
+            </div>
+          }
           @if (vehicle.description) {
             <div class="info-item full-width">
               <label>{{ 'vehicles.fields.description' | translate }}</label>

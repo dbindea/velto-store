@@ -113,7 +113,20 @@ export const generateContractPdf = functions.https.onCall(
     }
 
     // 3. Load vehicle snapshot
-    const vehicleSnapshot = {
+    const vehicleSnapshot: {
+      brand: string;
+      model: string;
+      version?: string;
+      plateNumber: string;
+      acrissCode?: string;
+      year?: number;
+      fuelType?: string;
+      transmission?: string;
+      hasGpsTracker?: boolean;
+      insurerName?: string;
+      insurancePolicy?: string;
+      roadsideAssistancePhone?: string;
+    } = {
       brand: asString(reservation.vehicleSnapshot?.brand, ''),
       model: asString(reservation.vehicleSnapshot?.model, ''),
       version: reservation.vehicleSnapshot?.version,
@@ -121,8 +134,40 @@ export const generateContractPdf = functions.https.onCall(
       acrissCode: reservation.vehicleSnapshot?.acrissCode,
       year: reservation.vehicleSnapshot?.year,
       fuelType: reservation.vehicleSnapshot?.fuelType,
-      transmission: reservation.vehicleSnapshot?.transmission
+      transmission: reservation.vehicleSnapshot?.transmission,
+      hasGpsTracker: reservation.vehicleSnapshot?.hasGpsTracker
     };
+
+    /**
+     * El seguro se lee de la **ficha del coche**, no del snapshot de la reserva.
+     *
+     * Todo lo de arriba viene congelado porque describe lo que se alquiló: la
+     * marca y la matrícula de ese día. El seguro no es eso — es la póliza que
+     * cubre el vehículo, y se renueva. Lo que el contrato tiene que imprimir es
+     * la vigente el día que se firma, no la que hubiera cuando se creó la
+     * reserva: si el cliente llama al teléfono de asistencia en mitad del
+     * alquiler, tiene que responder la compañía que le cubre hoy.
+     *
+     * Una reserva creada en enero y firmada en marzo, con renovación por medio,
+     * sale con la póliza de marzo. Los contratos **ya firmados** no se mueven:
+     * el PDF sellado es inmutable.
+     *
+     * Si el coche ya no existe —lo borraron—, no se imprime nada. Es el mismo
+     * comportamiento que con los campos vacíos, y mejor que inventar un dato.
+     */
+    if (reservation.vehicleId) {
+      try {
+        const vehicleDoc = await db.collection('vehicles').doc(reservation.vehicleId).get();
+        const v = vehicleDoc.data();
+        if (v) {
+          vehicleSnapshot.insurerName = v.insurerName;
+          vehicleSnapshot.insurancePolicy = v.insurancePolicy;
+          vehicleSnapshot.roadsideAssistancePhone = v.roadsideAssistancePhone;
+        }
+      } catch (err) {
+        functions.logger.warn('Failed to load vehicle insurance details', err);
+      }
+    }
 
     // 4. Find pickup inspection (if any)
     let pickupInspection: any = null;
@@ -172,6 +217,11 @@ export const generateContractPdf = functions.https.onCall(
         contractNumber,
         company,
         client: clientSnapshot,
+        // Conductores autorizados además del arrendatario (cláusula 2). Se
+        // copian de la reserva tal cual: son un snapshot, como el cliente.
+        additionalDrivers: Array.isArray(reservation.additionalDrivers)
+          ? reservation.additionalDrivers
+          : undefined,
         vehicle: vehicleSnapshot,
         reservation: {
           pickupDateTime: toDate(reservation.pickupDateTime),
@@ -186,7 +236,10 @@ export const generateContractPdf = functions.https.onCall(
           loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
           manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
           netPrice: reservation.pricingSnapshot?.netPrice,
-          vatRate: reservation.pricingSnapshot?.vatRate
+          vatRate: reservation.pricingSnapshot?.vatRate,
+          // Lo que se pactó, no lo que hoy diga la ficha del coche.
+          includedKmPerDay: reservation.pricingSnapshot?.includedKmPerDay,
+          extraKmPrice: reservation.pricingSnapshot?.extraKmPrice
         },
         inspection: pickupInspection
           ? {
@@ -246,6 +299,12 @@ export const generateContractPdf = functions.https.onCall(
         vatRate: reservation.pricingSnapshot?.vatRate
       },
       clientSnapshot,
+      // Se congelan en el contrato igual que el arrendatario: el documento
+      // tiene que seguir diciendo quién estaba autorizado el día que se firmó,
+      // aunque después se toque la reserva.
+      additionalDrivers: Array.isArray(reservation.additionalDrivers)
+        ? reservation.additionalDrivers
+        : [],
       vehicleSnapshot,
       companySnapshot: company,
       // Persist a copy of the clauses bundle so the contract is reproducible

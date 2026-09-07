@@ -56,6 +56,37 @@ export interface Vehicle {
   defaultDepositAmount?: number;
   includedKmPerDay?: number;
   extraKmPrice?: number;
+  /**
+   * Si el coche lleva localizador GPS.
+   *
+   * No es un dato de inventario: decide si el contrato imprime el aviso de
+   * geolocalización. Informar de que el vehículo se localiza es obligatorio
+   * cuando es cierto, y afirmarlo sin serlo es peor que callarlo.
+   */
+  hasGpsTracker?: boolean;
+  /**
+   * Seguro y asistencia en carretera, **por coche y no por empresa**.
+   *
+   * Empezaron siendo tres datos de `functions/src/company-config.ts`, y estaba
+   * mal: cada vehículo tiene su póliza, no siempre con la misma compañía, y se
+   * renuevan en fechas distintas. Un valor único de empresa habría impreso la
+   * póliza equivocada en cuanto hubiera dos coches.
+   *
+   * ⚠️ Los tres los **promete la cláusula de accidentes**, que dice que constan
+   * en la sección «Datos del vehículo» del contrato. Vacíos, el contrato remite
+   * a un dato que no imprime; y el teléfono de asistencia es justo el que el
+   * cliente necesita marcar cuando se queda tirado.
+   *
+   * ⚠️ **No se congelan en el snapshot de la reserva.** No son algo que se
+   * pacte —como el precio o los kilómetros—, son el seguro que cubre el coche:
+   * lo que hay que imprimir es lo vigente el día que se firma. El contrato los
+   * lee de la ficha al generarse, así que una renovación entra sola en el
+   * siguiente; los ya firmados no se mueven, porque el PDF sellado es
+   * inmutable.
+   */
+  insurerName?: string;
+  insurancePolicy?: string;
+  roadsideAssistancePhone?: string;
   minimumRentalDays?: number;
   manualPriceAllowed?: boolean;
   publicEnabled: boolean;
@@ -94,6 +125,18 @@ export interface VehicleFormData {
   defaultDepositAmount?: number;
   includedKmPerDay?: number;
   extraKmPrice?: number;
+  /**
+   * Si el coche lleva localizador GPS.
+   *
+   * No es un dato de inventario: decide si el contrato imprime el aviso de
+   * geolocalización. Informar de que el vehículo se localiza es obligatorio
+   * cuando es cierto, y afirmarlo sin serlo es peor que callarlo.
+   */
+  hasGpsTracker?: boolean;
+  /** Ver la nota en `Vehicle`: el seguro es del coche, no de la empresa. */
+  insurerName?: string;
+  insurancePolicy?: string;
+  roadsideAssistancePhone?: string;
   minimumRentalDays?: number;
   manualPriceAllowed?: boolean;
 }

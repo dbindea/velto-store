@@ -125,6 +125,8 @@ export class GlobalSearchComponent {
         return 'pi pi-car';
       case 'reservation':
         return 'pi pi-book';
+      case 'contract':
+        return 'pi pi-qrcode';
     }
   }
 
@@ -136,6 +138,8 @@ export class GlobalSearchComponent {
         return 'search.groups.vehicles';
       case 'reservation':
         return 'search.groups.reservations';
+      case 'contract':
+        return 'search.groups.contracts';
     }
   }
 

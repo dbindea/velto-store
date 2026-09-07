@@ -84,6 +84,25 @@ tsconfigs separados.
 - **El CI no despliega Cloud Functions.** Solo hosting. Van a mano y con destino explícito: `npm run deploy:dev:functions` o `deploy:prod:functions`. Es el punto más frágil de los dos entornos — es fácil arreglar algo en uno y olvidarlo en el otro.
 - **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
+⚠️ **Desplegar las trece de golpe agota la cuota de CPU de Cloud Run**, y el
+mensaje no lo dice a la primera. Lo que se lee es `Container Healthcheck
+failed. Revision … is not ready and cannot serve traffic`, que parece un fallo
+de arranque del código; la causa real —`Quota exceeded for total allowable CPU
+per project per region`— sale una línea antes y solo en algunos intentos. Fallan
+cuatro o seis functions al azar, distintas cada vez.
+
+Antes de tocar nada, **descarta el código** cargando el bundle igual que lo carga
+el contenedor:
+
+```bash
+cd functions && node -e "require('./lib/index.js')"
+```
+
+Si eso imprime sin error, el código está bien y lo que falta es cuota: reintenta
+**por tandas de dos o tres** con `firebase deploy --only functions:a,functions:b`.
+Pasó el 7 de septiembre de 2026, y se perdió un rato buscando un error de
+compilación que no existía.
+
 ## Dos entornos, dos proyectos de Firebase
 
 Una sola base de código. Lo único que cambia entre entornos es **qué fichero de
@@ -315,7 +334,19 @@ atajo para las plantillas; la tabla sigue estando en un solo sitio.
 ⚠️ **Un permiso denegado se explica.** «Tu rol no permite cambiar el precio», al
 lado del campo. Un botón que desaparece sin más hace que el compañero llame
 preguntando qué le pasa a la aplicación — misma idea que el «Falta contrato
-firmado» del workflow.
+firmado» del workflow. **También vale para las rutas**: `permissionGuard` levanta
+un aviso antes de devolver al panel, porque una redirección muda es la versión
+de pantalla completa del mismo problema.
+
+**Los permisos están probados con un empleado real** (7 de septiembre de 2026),
+bajando el rol de la propia cuenta en el `authorizedUsers` de desarrollo. La
+prueba que vale es la de las reglas, atacadas **saltándose la aplicación**: con
+el token de la sesión sacado de IndexedDB y llamadas directas a la API REST de
+Firestore. Un empleado recibe **403** al leer gastos, leer la lista de usuarios,
+**ascenderse a administrador**, borrar un vehículo, borrar una reserva y **mover
+el `pricingSnapshot`**; y **200** al leer reservas y escribir una nota, que es
+lo que necesita para trabajar. Repetir esa prueba es la forma de validar un
+cambio en `firestore.rules`.
 
 ⚠️ **Lo que las reglas no pueden cubrir:** el precio con el que una reserva
 **nace**. Al crear no hay valor anterior con el que comparar, así que ahí manda
@@ -373,6 +404,34 @@ módulos, esta es la razón por la que no debe.
 
 ### Reglas de dominio
 
+- ⚠️ **La aseguradora, la póliza y el teléfono de asistencia son del COCHE.** Están en
+  `Vehicle`, se rellenan en la ficha de cada vehículo y **no se congelan en el snapshot**:
+  el contrato los lee al generarse, porque lo que hay que imprimir es la póliza vigente el
+  día de la firma, no la que hubiera al crear la reserva. Nacieron como datos de empresa en
+  `company-config.ts` y duraron un día: con un valor único, el segundo coche de la flota
+  habría salido con la póliza del primero.
+- ⚠️ **El contrato no puede remitir a un dato que no imprime.** Pasó tres veces: la póliza
+  y el teléfono de asistencia («constan en Datos del vehículo» — no constaban), el nivel de
+  combustible de entrega («sección Estado del vehículo», que solo existe si hay inspección
+  y el contrato se firma **antes**) y la dotación, enumerada sin acreditar. Si vas a cobrar
+  apoyándote en una sección, esa sección tiene que estar el día de la firma.
+- **El kilometraje se pacta o no se cobra.** `includedKmPerDay` y `extraKmPrice` se congelan
+  en `pricingSnapshot` —como el precio— y se imprimen en «Precio y fianza» con su cláusula
+  propia. El cargo de la devolución los lee **del snapshot, sin respaldo al vehículo**: una
+  reserva sin ellos es una reserva en la que no se pactó kilometraje.
+- ⚠️ **Las referencias entre cláusulas van por nombre, no por número.** `clause()` numera
+  **por posición** y descarta el prefijo del título, así que insertar una cláusula renumera
+  todo lo siguiente y una referencia a «la cláusula 6» se rompe en silencio.
+- **Los conductores adicionales los exige el contrato, no la UI.** La cláusula 2 dice que
+  solo conducen las personas «expresamente declaradas… identificadas nominalmente», así que
+  `Reservation.additionalDrivers` guarda nombre, documento y carné de cada una. Se congelan
+  en el contrato como snapshot, se imprimen bajo el arrendatario y **se le enseñan al
+  cliente en la pantalla de firma**: su firma es el acuerdo sobre quién conduce.
+  ⚠️ **Con el contrato firmado no se tocan** —el PDF sellado no se puede regenerar— y
+  cambiarlos **no regenera el contrato solo**: la pantalla avisa, porque entregar un
+  contrato que no nombra a quien conduce es justo lo que la cláusula prohíbe.
+  ⚠️ Lo normal es elegirlos de la lista de clientes: el caso real son **cuadrillas** que
+  comparten coche y ya están dadas de alta.
 - Los **cargos extra solo nacen desde la inspección de devolución**. Un solo sistema, sin doble fuente. Todavía **no llevan desglose de IVA**: el contrato se genera antes de que existan.
 - **Un gasto de mantenimiento se registra en `vehicleMaintenance`, no en `expenses`.** El
   módulo de Gastos **lee** su coste y lo suma; escribirlo en los dos sitios daría dos
@@ -383,8 +442,66 @@ módulos, esta es la razón por la que no debe.
   («IVA soportado · sobre 1/3»); igualar los tres números sería inventarse ese IVA.
 - El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
+  ⚠️ **`rental_payment` no es un concepto, es «cobrarlo todo de una vez».** No tiene fila
+  sembrada propia: `distributeRentalPayment()` lo reparte entre señal y resto, en ese
+  orden, y el sobrante abre fila aparte. Creando fila propia —como hacía— el dinero
+  contaba como ingreso pero no para `remainingPaid`, así que **la reserva se cobraba
+  entera y no se podía cerrar nunca** (D-5).
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
+
+### Crear una reserva es una sola escritura
+
+`commitReservationWithPayments()` mete la reserva **y sus filas de pago** en un
+`writeBatch`: entra todo o no entra nada. Eran cuatro escrituras sueltas, y si fallaba
+cualquiera menos la primera quedaba una reserva creada sin nada que cobrar mientras la
+pantalla decía que no se había podido crear — y el operador la creaba otra vez.
+
+El id se pide antes con `doc(collection)`, porque las filas de pago lo llevan dentro;
+`addDoc` no vale, solo devuelve el id después de escribir.
+
+⚠️ **Un concepto a 0 no genera fila** (`buildInitialPaymentRows` en el util). Una fianza
+exenta no es una fianza pendiente de 0 €: es que no hay fianza, y sembrarla dejaría una
+fila incobrable que impide dar la reserva por pagada.
+
+⚠️ **Lo que el servicio rechaza viaja como clave i18n, no como frase.** Las
+comprobaciones de disponibilidad lanzaban `'Vehicle no longer available…'` en inglés duro,
+así que la capa de avisos no lo distinguía de un fallo cualquiera y ofrecía «Reintentar» —
+que iba a fallar igual, porque hay que cambiar de coche o de fechas.
+
+### Borrar un documento no borra sus ficheros
+
+⚠️ **Firestore y Storage son dos servicios distintos.** Borrar el documento deja los
+ficheros donde estaban, con su token de descarga vivo. En un cliente eso no es desorden:
+lo que se queda en `clients/{id}/documents/` es **el DNI y el carné de una persona** cuya
+ficha ya se pidió borrar.
+
+Lo resuelve `StorageService.deleteFolder()`, conectado en vehículos, clientes y
+mantenimiento; los gastos ya borraban su factura. **Storage no tiene borrado recursivo**:
+lista y borra uno a uno, bajando también por los prefijos.
+
+Dos reglas, y las dos importan:
+
+- **Los ficheros van antes que el documento.** Si Storage falla, la ficha sigue ahí y se
+  puede reintentar; al revés se pierde el rastro de qué había que borrar.
+- **Un fichero que se resista no aborta el borrado**, solo se registra. Dejar la ficha a
+  medio borrar es peor que quedarse con un huérfano.
+
+⚠️ La ruta del mantenimiento lleva el vehículo dentro
+(`vehicle-maintenance/{vehicleId}/{maintenanceId}/…`), así que hay que **leer el documento
+antes de borrarlo**: después ya no se sabe de qué coche era.
+
+**Qué se puede borrar, y qué no** (M-47). Las dos limitaciones son deliberadas:
+
+- **Una reserva con contrato firmado, no.** Ese documento acredita un alquiler que
+  ocurrió y `firestore.rules` prohíbe borrarlo incluso a un administrador, así que borrar
+  la reserva lo dejaría apuntando al vacío. Para esas está cancelar. Borrar una reserva sí
+  se lleva sus pagos, sus inspecciones y las fotos de Storage, todo en un `writeBatch`.
+- **Un cliente con reservas, no.** Su nombre y su documento siguen dentro del
+  `clientSnapshot` de cada reserva y de cada contrato: quitar la ficha no borraría nada,
+  solo dejaría un cliente al que el histórico apunta y que ya no se puede abrir. Un
+  borrado real de datos personales pasaría por **anonimizar** esos snapshots, que es otra
+  tarea.
 
 ## Firestore: `undefined` está prohibido
 
@@ -669,6 +786,23 @@ sitios —bloque «Datos del arrendador», casilla de firma del arrendador y pie
 página— y en los tres el NIF va al lado. Todo lo demás —asunto del email, cuerpo, cabecera
 de cualquier documento, metadatos del PDF, pantalla pública de firma— lleva la marca.
 
+#### Y **dos direcciones**, por la misma razón
+
+| | Valor | Dónde |
+|---|---|---|
+| `officeAddress` | `C/ María Zambrano, 4` | La **cabecera** de todos los documentos |
+| `address` | `C/ Vereda del Melero, 3` | **Solo junto al NIF**, los mismos tres sitios que `legalName` |
+
+`address` es el **domicilio social**, el del Registro Mercantil: junto al NIF y a la hoja
+registral es un dato obligatorio de la S.L., y ahí no se puede sustituir. `officeAddress`
+es **la oficina**, donde el cliente encuentra a alguien — y por eso va arriba, al lado del
+teléfono y el correo, que siguen esa misma lógica. La cabecera llevaba la fiscal y mandaba
+al cliente a una dirección donde no está la oficina (7 de septiembre de 2026).
+
+⚠️ **`officeAddress` cae a `address` si no está configurada.** No es un parche de
+compatibilidad: es que para una empresa cuya oficina es su domicilio social las dos son la
+misma, y declarar dos veces lo mismo solo sirve para que un día diverjan.
+
 El criterio es de Dorel y es de negocio, no de estilo: un cliente no sabe qué es una S.L.
 ni tiene por qué saberlo, y meterlo en un «Gracias por confiar en…» suena a notaría.
 
@@ -891,9 +1025,20 @@ Corregido el 28 de agosto de 2026, junto con el índice que faltaba de `inspecti
 
 ### Controles nativos (`select`, fechas)
 
-⚠️ **La lista desplegable de un `<select>` y el calendario de un `input[type=date]` los pinta
-el sistema operativo, no el CSS.** Ninguna regla los alcanza. El único mecanismo es
-**`color-scheme`**, declarado en `:root` (claro) y `.dark` (oscuro) en `styles.scss`.
+⚠️ **El calendario de un `input[type=date]` lo pinta el sistema operativo, no el CSS.**
+Ninguna regla lo alcanza; el único mecanismo es **`color-scheme`**, declarado en `:root`
+(claro) y `.dark` (oscuro) en `styles.scss`.
+
+Con los `<select>` **eso dejó de ser cierto el 7 de septiembre de 2026**. Chrome 135+ trae
+el *customizable select*: con `appearance: base-select` la lista sale del sistema y entra
+en la página como `::picker(select)`, así que las `option` se estilizan como cualquier otro
+elemento. Vive dentro de un `@supports` — donde no exista, el desplegable sigue siendo el
+del sistema y legible gracias a `color-scheme`.
+
+⚠️ **En móvil el desplegable del sistema es lo que se quiere.** El selector nativo de iOS
+y Android —hoja a pantalla completa— es mejor que cualquier lista propia, y esta es una app
+de móvil: se mejora el escritorio sin tocar el caso principal. Y el control **cerrado** no
+cambia — el `::picker-icon` del navegador se esconde y se mantiene el chevron de siempre.
 
 Tiene que ir en la clase del tema, **no** en el `<meta name="color-scheme">` de `index.html`:
 el meta solo declara qué esquemas soportamos y luego sigue al sistema operativo, así que un
@@ -935,6 +1080,13 @@ quedar fuera de la pantalla: vehículo (29 campos), cliente, inspecciones.
 mano. Si la etiqueta **envuelve** al campo, la clase va en el `<span>` del texto: sobre el
 `<label>` el asterisco saldría debajo del input.
 
+⚠️ **Y un botón apagado tiene que parecerlo** (M-46). El estilo global vive en
+`styles.scss` y **lista las clases de botón una a una**: con la encapsulación de Angular
+la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0) y un `button:disabled`
+(0,1,1) pierde, así que el botón se queda encendido. Anteponer el elemento a la clase sube
+a 0,2,1 y gana — igual que `.is-invalid`. Si creas una clase de botón nueva, añádela ahí o
+volverá a verse pulsable estando deshabilitada.
+
 ### Cuando algo falla: `NotificationService`, nunca `alert()`
 
 ⚠️ **No queda ni un `alert()` en la aplicación, y no debe volver ninguno** (M-43). Los
@@ -958,9 +1110,11 @@ devolver fianza lo hacían: si fallaba, el operador pulsaba, la fianza no se mov
 pantalla no decía nada. Si una acción puede fallar, tiene que contarlo.
 
 ⚠️ **Firestore no rechaza por falta de red**: el SDK es offline-first y **encola** la
-escritura, así que el `catch` ni se ejecuta y sale sola al volver la conexión. Para probar
-un camino de error hace falta algo que rechace de verdad —un callable, un permiso
-denegado—; desenchufar la red no vale.
+escritura, así que el `catch` ni se ejecuta y sale sola al volver la conexión. En lectura
+pasa lo mismo por otro motivo: **sirve de su caché local**, así que una pantalla entera
+puede cargar con todo el tráfico cortado. Para probar un camino de error hace falta algo
+que rechace de verdad —un callable, un permiso denegado—; desenchufar la red no vale. Y
+cortarla del todo tumba la sesión, porque el guard lee `authorizedUsers` de Firestore.
 
 ### `.form-control` NO es global
 
@@ -981,7 +1135,22 @@ estiliza `styles.scss`. Compila, pasa los tests y solo se ve mirando la pantalla
 declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
 de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
 
-El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#1e293b).
+El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#14181A).
+
+**Los valores salen del Velto Design System**, el kit de la web pública, guardado en
+[docs/design/](docs/design/) — el CSS extraído son 7,8 KB y es lo único que hay que leer.
+Los neutrales son **grises fríos con tinte teal** (`--gray-950` … `--gray-50`), no la rampa
+`slate` de Tailwind que había antes: sobre un azul marino el verde de marca flotaba.
+
+⚠️ **Las rampas (`--gray-*`, `--teal-*`) no se usan directamente.** Están para que los
+bloques de tema las mapeen a los nombres semánticos. Un componente que pinte con
+`--gray-700` se salta el tema y no cambiará al alternar claro y oscuro.
+
+⚠️ **'Inter' no existe en este proyecto.** Se pedía como fuente de cuerpo en tres sitios
+sin cargarla en ninguno —ni `@font-face` ni Google Fonts—, así que el cuerpo llevaba años
+componiéndose en la fuente del sistema mientras el CSS decía otra cosa. El cuerpo es la
+fuente del sistema **a propósito**: Gotham es de titular, y aquí el cuerpo son listados a
+13-14 px. La marca la ponen los titulares y el color.
 
 ### Mobile-first en la práctica
 
@@ -1029,10 +1198,14 @@ y las clases `.email` / `.mono` usan `anywhere`.
   añadir un campo al resumen, mételo también en la comparación de
   `reconcileAfterExternalPayment()`, o la copia no se pondrá al día nunca: el resto cuadra.
 - Sin lint.
-- `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
-- `CREDENTIALS.md` no está en `.gitignore`, aunque sí lo están `*.p12`, `*.pfx`, `*.key` y
-  `cert.b64` desde el 4 de septiembre de 2026.
-- `client.service.ts` tiene un `TODO`: al borrar cliente no elimina sus documentos de Storage.
-  ⚠️ Es el mismo agujero que dejó **ficheros huérfanos en Storage** al vaciar las bases de
-  datos el 4 de septiembre de 2026: borrar el documento no se lleva lo que subió.
-- `reservation.service.ts` tiene un `TODO`: operaciones que deberían ser transacción Firestore o Cloud Function.
+- `deploy.log` y `test-contract-{en,es,ro}.pdf` están en `.gitignore` y **ya no están en el
+  índice** (comprobado con `git ls-files` el 7 de septiembre de 2026). La trampa que los
+  puso aquí sigue siendo cierta para el siguiente: ignorar un fichero no deja de seguir uno
+  ya seguido, hace falta `git rm --cached`.
+- `CREDENTIALS.md` **sí está** en `.gitignore`, junto a `*.p12`, `*.pfx`, `*.key` y
+  `cert.b64`.
+- ⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
+  escribe después, y entre medias cabe otra reserva. **No se puede cerrar desde el
+  cliente**: el SDK web no permite consultas dentro de una transacción, solo lecturas por
+  id. Haría falta una Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.
+  Mitigado comprobando otra vez a ras del `commit` — la ventana pasa de ~1 s a milisegundos.

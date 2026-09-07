@@ -39,14 +39,73 @@
   font-display: swap;
 }
 
+// ---------------------------------------------------------------------------
+// Rampas del Velto Design System
+// ---------------------------------------------------------------------------
+// Copiadas del kit de la web pública, para que el backoffice y la web que ve
+// el cliente sean la misma casa. Antes los neutrales eran la rampa `slate` de
+// Tailwind —azulada— y el verde de marca quedaba encima de un fondo que tiraba
+// a azul marino; estos grises llevan un tinte teal y el mismo verde se asienta
+// sobre ellos en vez de flotar.
+//
+// ⚠️ Son **rampas**, no colores de uso. Nada las referencia directamente: los
+// bloques de tema de abajo las mapean a los nombres semánticos que usa la
+// aplicación (`--bg-card`, `--text-primary`, …), y esos son los que se usan.
+// Un componente que pinte con `--gray-700` se salta el tema y no cambiará al
+// alternar claro y oscuro.
+// ---------------------------------------------------------------------------
+:root {
+  // Rampa teal — 500 es el color de marca
+  --teal-50: #E6F6F3;
+  --teal-100: #C2EBE3;
+  --teal-200: #8FD9CB;
+  --teal-300: #5CC6B3;
+  --teal-400: #33B39E;
+  --teal-500: #20A48F;
+  --teal-600: #1B8B79;
+  --teal-700: #167163;
+  --teal-800: #11584D;
+  --teal-900: #0B3B34;
+
+  // Neutrales fríos, con el mismo tinte teal
+  --gray-950: #0B0F0E;
+  --gray-900: #14181A;
+  --gray-800: #2A3033;
+  --gray-700: #454D50;
+  --gray-600: #5F686B;
+  --gray-500: #7C868A;
+  --gray-400: #A2ABAE;
+  --gray-300: #C9D0D2;
+  --gray-200: #E1E6E7;
+  --gray-100: #EEF1F2;
+  --gray-50: #F6F8F8;
+
+  // Estado, en su versión sólida. Fuera de la identidad, uso funcional.
+  //
+  // ⚠️ Estos NO son `--success-color` y compañía, y la diferencia importa: los
+  // semánticos son **tinta** y en tema oscuro son claros, para leerse sobre una
+  // superficie negra. Puestos de fondo con texto blanco encima, el texto
+  // desaparece. Para un relleno sólido —un botón de borrar, un contador de
+  // vencidos— hace falta un color que no cambie con el tema, y son estos.
+  --green-600: #1E7F4F;
+  --amber-600: #9A6700;
+  --red-600: #C8322B;
+  --red-700: #A62822;
+  --blue-600: #2457A8;
+
+  // El tracking de "CAR RENTAL" bajo el logotipo. Es la firma tipográfica de
+  // la marca, y por eso vive aquí en vez de repetirse a ojo en cada etiqueta.
+  --ls-brand: 0.28em;
+}
+
 // CSS Variables - Clean, modern palette
 :root {
   /** Native widgets follow the app theme, not the OS. See the note in `.dark`. */
   color-scheme: light;
 
   // Brand colours (canonical — see src/app/core/config/brand.config.ts)
-  --color-brand-green: #20A48F;
-  --color-brand-green-dark: #1a8775;
+  --color-brand-green: var(--teal-500);
+  --color-brand-green-dark: var(--teal-600);
   --color-brand-green-light: rgba(32, 164, 143, 0.12);
   --color-brand-black: #000000;
   --color-brand-white: #FFFFFF;
@@ -58,26 +117,31 @@
   --accent-light: rgba(32, 164, 143, 0.1);
   --accent-bg: rgba(32, 164, 143, 0.08);
 
-  // Sidebar (dark slate)
-  --sidebar-bg: #1e293b;
-  --sidebar-text: #f1f5f9;
-  --sidebar-text-muted: #94a3b8;
+  // Sidebar
+  --sidebar-bg: var(--gray-900);
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: var(--gray-400);
   --sidebar-hover: rgba(255, 255, 255, 0.06);
   --sidebar-active: var(--accent-color);
 
   // Borders
-  --border-color: #e2e8f0;
-  --border-light: #f1f5f9;
+  --border-color: var(--gray-200);
+  --border-light: var(--gray-100);
+  --border-strong: var(--gray-300);
 
-  // Backgrounds (light gray)
-  --bg-main: #f8fafc;
+  // Backgrounds
+  --bg-main: var(--gray-50);
   --bg-card: #ffffff;
   --bg-hover: rgba(0, 0, 0, 0.02);
 
   // Text
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
+  --text-primary: #000000;
+  --text-secondary: var(--gray-700);
+  // `--gray-500` es el apagado del kit, pero sobre blanco se queda en 3,7:1 y
+  // aquí se usa en texto pequeño de verdad —fechas, referencias, notas al pie
+  // de una tarjeta—. Un escalón más oscuro llega a 5,6:1 y sigue leyéndose
+  // como secundario.
+  --text-muted: var(--gray-600);
 
   // Form surfaces
   --bg-input: #ffffff;
@@ -91,15 +155,15 @@
   // rendered with no background and warnings inherited body text colour.
   // Declaring them here fixes every one of those call sites at once.
   // ---------------------------------------------------------------------
-  --success-color: #15803d;
-  --success-bg: #dcfce7;
-  --warning-color: #b45309;
-  --warning-bg: #fef3c7;
-  --error-color: #b91c1c;
-  --error-bg: #fee2e2;
+  --success-color: #1E7F4F;
+  --success-bg: #E1F4EA;
+  --warning-color: #9A6700;
+  --warning-bg: #FFF3D6;
+  --error-color: #C8322B;
+  --error-bg: #FCE8E6;
   --danger-color: var(--error-color);
-  --info-color: #1d4ed8;
-  --info-bg: #dbeafe;
+  --info-color: #2457A8;
+  --info-bg: #E4ECFA;
 
   // Accent as raw channels, for rgba() composition.
   --accent-color-rgb: 32, 164, 143;
@@ -111,8 +175,9 @@
 }
 
 // Dark mode — the theme this app is actually used in, so contrast is tuned
-// here first. Secondary and muted text were one step too dark to read
-// comfortably against the slate surfaces; both moved up a shade.
+// here first. Todos los pares mejoraron al pasar a la rampa del kit: el verde
+// de marca sobre la tarjeta va de 4,7:1 a 5,8:1 y el texto apagado de 5,7:1 a
+// 7,6:1, sin tocar un solo componente.
 .dark {
   /**
    * Makes the browser render its OWN widgets dark: the `<select>` dropdown
@@ -129,34 +194,35 @@
    */
   color-scheme: dark;
 
-  --sidebar-bg: #0f172a;
-  --border-color: #334155;
-  --border-light: #1e293b;
-  --bg-main: #0f172a;
-  --bg-card: #1e293b;
+  --sidebar-bg: var(--gray-950);
+  --border-color: var(--gray-800);
+  --border-light: var(--gray-900);
+  --border-strong: var(--gray-700);
+  --bg-main: var(--gray-950);
+  --bg-card: var(--gray-900);
   --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-input: #0f172a;
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --bg-input: var(--gray-950);
+  --text-primary: #ffffff;
+  --text-secondary: var(--gray-300);
+  --text-muted: var(--gray-400);
   --accent-bg: rgba(32, 164, 143, 0.18);
 
   // Lighter inks on translucent fills: on dark surfaces the light-theme
   // pairings would be unreadable.
-  --success-color: #4ade80;
-  --success-bg: rgba(34, 197, 94, 0.16);
-  --warning-color: #fbbf24;
-  --warning-bg: rgba(245, 158, 11, 0.16);
-  --error-color: #f87171;
-  --error-bg: rgba(239, 68, 68, 0.16);
-  --info-color: #60a5fa;
-  --info-bg: rgba(59, 130, 246, 0.16);
+  --success-color: #4CC38A;
+  --success-bg: rgba(76, 195, 138, 0.14);
+  --warning-color: #F0B429;
+  --warning-bg: rgba(240, 180, 41, 0.14);
+  --error-color: #F26B62;
+  --error-bg: rgba(242, 107, 98, 0.14);
+  --info-color: #7BA4EA;
+  --info-bg: rgba(123, 164, 234, 0.14);
 }
 
 // System preference (light default)
 @media (prefers-color-scheme: light) {
   :root:not(.dark) {
-    --sidebar-bg: #1e293b;
+    --sidebar-bg: var(--gray-900);
   }
 }
 
@@ -180,7 +246,18 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  // ⚠️ Aquí ponía `'Inter'` la primera, y **Inter no se carga en ninguna
+  // parte**: no hay `@font-face` ni enlace a Google Fonts. El navegador se
+  // saltaba el nombre y el cuerpo caía a la fuente del sistema, así que la
+  // decisión que declaraba el comentario de más abajo —Gotham para titulares,
+  // Inter para el cuerpo— nunca llegó a cumplirse.
+  //
+  // Se queda la fuente del sistema, que es lo que se estaba viendo y lo que
+  // conviene: el cuerpo de un backoffice son tablas densas a 13-14 px, y
+  // Gotham es una geométrica pensada para titulares. La marca la ponen los
+  // titulares y el color. El orden sigue al del kit a partir de Helvetica.
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   color: var(--text-primary);
   background: var(--bg-main);
   line-height: 1.5;
@@ -273,6 +350,97 @@ select {
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * La lista desplegable, por fin nuestra
+ *
+ * Durante todo el proyecto la nota fue «el desplegable lo pinta el sistema
+ * operativo y solo `color-scheme` lo alcanza». Era verdad, y ha dejado de
+ * serlo: Chrome 135+ trae el *customizable select*, que saca la lista del
+ * sistema y la mete en la página como un elemento más — `::picker(select)`.
+ *
+ * Va dentro de un `@supports` a propósito. Donde no exista, no se activa nada
+ * y el select se comporta exactamente como hasta ahora: lista del sistema,
+ * legible gracias a `color-scheme`. Es una mejora progresiva, no un requisito.
+ *
+ * ⚠️ **En un móvil eso es lo que se quiere.** El selector nativo de iOS y
+ * Android —hoja a pantalla completa, con su rueda— es mejor que cualquier lista
+ * que dibujemos nosotros: más grande, familiar y accesible. Aquí se mejora el
+ * escritorio sin tocarlo.
+ * ------------------------------------------------------------------------- */
+@supports (appearance: base-select) {
+  select {
+    appearance: base-select;
+    display: flex;
+    align-items: center;
+
+    /**
+     * El control cerrado no cambia.
+     *
+     * `base-select` trae su propio `::picker-icon`, un triángulo gris del
+     * navegador que no se parece a nada de la aplicación. Se esconde y se
+     * mantiene el chevron SVG de siempre: lo que se ha venido a mejorar es la
+     * lista, y el campo cerrado ya estaba bien.
+     */
+    &::picker-icon {
+      display: none;
+    }
+  }
+
+  /* La lista. Mismo lenguaje que el resto de superficies flotantes de la
+     aplicación: tarjeta, borde fino y la sombra de los avisos. */
+  ::picker(select) {
+    appearance: base-select;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+    padding: 0.25rem;
+    margin-top: 0.25rem;
+    /* Una lista larga —los 30 y pico modelos de coche— no puede tapar la
+       pantalla entera. */
+    max-height: 18rem;
+    overflow-y: auto;
+  }
+
+  option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.35rem;
+    color: var(--text-primary);
+    background: transparent;
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    /* El check de la opción elegida lo dibuja el navegador y ocupa sitio
+       aunque no se vea; sin esto las etiquetas bailan al abrir. */
+    &::checkmark {
+      color: var(--accent-color);
+      order: 1;
+      margin-left: auto;
+    }
+
+    &:hover,
+    &:focus {
+      background: var(--bg-main);
+      color: var(--text-primary);
+    }
+
+    &:checked {
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
+    &:disabled {
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+  }
+
+}
+
+
 // The calendar/clock button inside date and time inputs is drawn by the
 // browser in a fixed near-black; on a dark field it disappears.
 .dark {
@@ -314,7 +482,7 @@ textarea:focus-visible {
 // add the .brand-font utility (defined in components as needed) or
 // rely on this default for h1-h6.
 h1, h2, h3 {
-  font-family: 'Gotham', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Gotham', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
@@ -323,7 +491,7 @@ h1, h2, h3 {
 // render the wordmark in Gotham.  Used by sidebar, sign-contract
 // header and PDF cover.
 .brand-font {
-  font-family: 'Gotham', 'Inter', sans-serif;
+  font-family: 'Gotham', 'Helvetica Neue', Arial, sans-serif;
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -344,7 +512,7 @@ body, .card, .btn, input, select, textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-strong, var(--gray-300));
   border-radius: 3px;
 }
 
@@ -475,6 +643,57 @@ span.label.required::after {
  * debajo y la caja del mismo color de siempre. Con `input.form-control` la
  * especificidad sube y el estado gana, que es lo que tiene que pasar.
  */
+/**
+ * Un botón apagado tiene que parecerlo (M-46).
+ *
+ * «Iniciar entrega» salía en verde primario —idéntico a uno activo— estando
+ * `disabled`, con su «Falta firma del contrato» debajo. Se lee como un botón
+ * que no responde, que es el problema que M-42 vino a quitar: allí el botón no
+ * explicaba nada, aquí explica pero no lo parece.
+ *
+ * ⚠️ **La lista de clases no es por gusto.** Con la encapsulación de Angular la
+ * regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0), así que un
+ * `button:disabled` (0,1,1) pierde y el botón se queda verde. Anteponer el
+ * elemento a la clase sube a 0,2,1 y gana — el mismo motivo por el que
+ * `.is-invalid` va precedido de `input`.
+ *
+ * Se listan las clases que existen; una nueva que no aparezca aquí volverá a
+ * verse encendida, así que al crear un estilo de botón conviene añadirlo.
+ */
+button:disabled,
+button[disabled],
+button.btn:disabled,
+button.btn-primary:disabled,
+button.btn-secondary:disabled,
+button.btn-danger:disabled,
+button.btn-ghost:disabled,
+button.btn-icon:disabled,
+button.btn-skip-step:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  /* Sin sombra ni relieve: lo que distingue a un botón pulsable de una
+     etiqueta es que parece que se hunde. */
+  box-shadow: none;
+  filter: grayscale(0.35);
+}
+
+/* Un botón apagado no reacciona al ratón: sin esto conserva el `:hover` del
+   componente y parece que sí responde justo cuando no lo hace. */
+button:disabled:hover,
+button[disabled]:hover,
+button.btn:disabled:hover,
+button.btn-primary:disabled:hover,
+button.btn-secondary:disabled:hover,
+button.btn-danger:disabled:hover,
+button.btn-ghost:disabled:hover,
+button.btn-icon:disabled:hover,
+button.btn-skip-step:disabled:hover {
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(0.35);
+}
+
+
 input.form-control.is-invalid,
 select.form-control.is-invalid,
 textarea.form-control.is-invalid,

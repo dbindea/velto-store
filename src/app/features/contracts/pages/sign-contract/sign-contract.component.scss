@@ -247,3 +247,45 @@
   border-top: 1px solid var(--border-color);
   background: var(--bg-card);
 }
+
+/* Conductores autorizados. Mismo peso visual que los puntos clave: es
+   información que hay que leer antes de firmar, no un detalle del resumen. */
+.drivers-section {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.6rem;
+  background: var(--bg-main);
+}
+
+.drivers-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+
+  i { color: var(--accent-color); }
+}
+
+.drivers-hint {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.drivers-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+
+  li {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    /* Nombre y documento en una línea larga: parte antes que desbordar. */
+    overflow-wrap: break-word;
+  }
+}
