@@ -907,45 +907,78 @@ bases— y la subida de la factura a Storage.
   quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
   seguir quedando registrado, porque es lo que permite cerrar la reserva.
 
-## Decisiones tuyas pendientes *(28 ago 2026)*
+## Decisiones tuyas *(resueltas el 5 de septiembre de 2026)*
 
-Salidas de crear los dos coches y los dos clientes desde cero. Ninguna es un
-fallo: son convenciones que hay que elegir.
+Salieron de crear los dos coches y los dos clientes desde cero. Ninguna era un
+fallo… salvo D-5, que resultó serlo.
 
-- [ ] **D-1 · ¿Cómo se capitalizan direcciones y lugares?** Hoy conviven dos
-  reglas: el asistente title-casea el lugar de recogida y sale
-  «Arganda **Del** Rey» en el presupuesto y en el contrato; la dirección del
-  cliente no se toca y se guarda tal cual se teclee («avenida de la
-  constitución 45»). Las tres opciones son: dejar las preposiciones en
-  minúscula (Arganda del Rey), capitalizar solo la primera letra, o no tocar
-  nada y que el operador escriba. Afecta a documentos que ve el cliente.
+- [x] **D-1 · Las preposiciones van en minúscula.** «Arganda del Rey», no
+  «Arganda **Del** Rey», que es lo que salía impreso en el presupuesto y en el
+  contrato. En un documento que firma un cliente se lee como una falta.
 
-- [ ] **D-2 · La versión del coche no llega al contrato.** El presupuesto dice
-  «Dacia Duster Journey TCe 130» y el contrato y el justificante dicen «Dacia
-  Duster»: `vehicleSnapshot` no guarda `version`. Si quieres que el contrato
-  identifique el coche igual que la oferta, hay que añadir el campo al snapshot
-  (solo afecta a reservas nuevas).
+  La regla vive en `LOWERCASE_WITHIN_NAME`, dentro de `capitalizeWords()`, y se
+  aplica **también a la dirección del cliente**, que antes se guardaba tal cual
+  se tecleara: había dos reglas conviviendo y las dos salen impresas.
 
-- [ ] **D-3 · ¿El aire acondicionado debería venir marcado por defecto?** Un
-  coche nuevo nace sin A/A y el ACRISS sale con «N» (sin aire) hasta que lo
-  marcas. En una flota de 2026 lo raro es el que no lo lleva.
+  ⚠️ **`el` se ha dejado fuera de la lista a propósito.** Forma parte de
+  topónimos donde sí lleva mayúscula —«San Lorenzo de El Escorial»— y sin un
+  diccionario no hay forma de distinguirlo. Equivocarse por dejarlo fuera pasa
+  en menos casos que al revés.
 
-- [ ] **D-4 · Números en inglés fuera del español.** Se ha fijado el formato
-  español (9.200 km · 423,50 €) porque el `LOCALE_ID` se decide al arrancar y no
+  Dos tests que congelaban el comportamiento viejo («Vereda **Del** Melero»)
+  se han actualizado: eran exactamente lo que esta decisión cambia.
+
+- [x] **D-2 · La versión del coche llega al contrato.** «Dacia Duster Journey
+  TCe 130», igual que la oferta que el cliente aceptó.
+
+  Curioso: **el backend ya estaba entero**. `generateContractPdf`, el
+  justificante y el presupuesto leían y pintaban `version`; el único eslabón que
+  faltaba era que `Reservation.vehicleSnapshot` la guardase. No hace falta
+  desplegar functions. Solo afecta a reservas nuevas.
+
+- [x] **D-3 · Un coche nuevo nace con aire acondicionado.** En una flota de 2026
+  lo raro es el que no lo lleva, y no es un extra cualquiera: alimenta la letra
+  del código ACRISS, que viaja a los documentos. Naciendo a `false`, un despiste
+  al dar de alta imprimía «N» —sin aire— en algo que ve el cliente. Es el único
+  del equipamiento marcado de salida.
+
+- [ ] **D-4 · Números en inglés fuera del español.** Sin cambios: el formato es
+  el español (9.200 km · 423,50 €) porque `LOCALE_ID` se decide al arrancar y no
   puede seguir al selector de idioma. El rumano comparte convención; **en inglés
-  se verán números españoles**. Si algún día hay un operador que trabaje en
-  inglés, hay que hacerlo dinámico y eso es bastante más trabajo.
+  se seguirán viendo números españoles**. Se revisará el día que haya un
+  operador que trabaje en inglés — hacerlo dinámico es bastante más trabajo.
 
-- [ ] **D-5 · ¿Sirve de algo «Pago completo del alquiler»?** El desplegable de
-  cobro ofrece `rental_payment`, pero ese tipo no cuenta ni como señal ni como
-  resto: cobrando por ahí, la reserva **no pasa a confirmada** ni se marca como
-  pagada, aunque el dinero esté. O se quita del desplegable, o tiene que liquidar
-  las dos filas sembradas.
+- [x] **D-5 · «Pago completo del alquiler» no era una convención: era una
+  trampa.** El concepto existía en el desplegable de cobro y `rental_payment`
+  **no tiene fila sembrada propia**, así que el cobro creaba un documento aparte
+  y las de señal y resto se quedaban pendientes para siempre.
 
-- [ ] **D-6 · Confirmar la subida de fotos en tu móvil.** Al unificar el control
-  se quitó `capture="environment"`, que forzaba la cámara e impedía subir un
-  documento de la galería. Ahora abre el selector del sistema, que ofrece las dos
-  cosas. Merece una comprobación en tu teléfono.
+  Lo peor no era el desorden. El dinero **sí** contaba como ingreso —está en
+  `RENTAL_TYPES`, sale en informes y en «Cobrado»— pero **no** para el estado de
+  pago ni para `remainingPaid`, que es justo lo que `canCloseReservation()`
+  exige. Es decir: cobrabas el alquiler entero por ese concepto, el dinero
+  constaba, y **la reserva no se podía cerrar nunca** sin saltarse un paso del
+  workflow con una excepción.
+
+  Ahora `distributeRentalPayment()` lo reparte entre las dos filas sembradas, en
+  el orden del alquiler: señal primero, resto después. Lo que sobre **no se
+  descarta** —es dinero que el cliente ha entregado— y abre fila propia. 9 tests
+  nuevos, incluido el que comprueba que tras el reparto la reserva queda pagada
+  y se puede cerrar, que es la razón de ser del arreglo.
+
+- [ ] **D-6 · Confirmar la subida de fotos en tu móvil.** Sigue pendiente y solo
+  la puedes hacer tú: al unificar el control se quitó `capture="environment"`,
+  que forzaba la cámara e impedía subir un documento de la galería. Ahora abre
+  el selector del sistema, que ofrece las dos cosas.
+
+Las cuatro resueltas están **verificadas en el navegador**, no solo compiladas:
+«Avenida de la Constitución 45» y «José María de la Cruz» según se teclean,
+«Arganda del Rey» en el lugar de recogida, y el aire marcado de salida con el
+resto del equipamiento sin marcar.
+
+⚠️ Salió otra vez lo de siempre: `npx tsc --noEmit` dio el visto bueno a un
+`(input)="onAddressInput()"` sin argumento. **Las plantillas de Angular solo las
+valida el build.**
 
 ## Prioridad media
 

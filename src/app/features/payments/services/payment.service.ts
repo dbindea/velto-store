@@ -31,6 +31,7 @@ import {
   generateInternalReference,
   roundMoney,
   selectSettleablePayment,
+  distributeRentalPayment,
   EXTRA_TYPES
 } from '@shared/utils/payment-summary.util';
 import { PermissionsService } from '@core/auth/permissions.service';
@@ -196,14 +197,49 @@ export class PaymentService {
    * that document**, not create a second one alongside it — otherwise a
    * closed reservation ends up showing six rows, three of them "Pendiente"
    * forever. So: look for an open payment of the same type and settle it;
-   * only create a new document when there is nothing to settle (extras,
-   * `rental_payment`, or a second collection over an already-paid concept).
+   * only create a new document when there is nothing to settle (extras, or a
+   * second collection over an already-paid concept).
+   *
+   * `rental_payment` es el caso aparte: no tiene fila sembrada porque no es un
+   * concepto, es **cobrarlo todo de una vez**, así que se reparte entre las dos
+   * que sí existen. Ver abajo.
    *
    * Returns the id of the payment that ended up holding the money.
    */
   async registerReservationPayment(data: CreateManualPaymentData): Promise<string> {
     if (!data.reservationId) {
       throw new Error('reservationId is required to register a reservation payment');
+    }
+
+    /**
+     * «Pago completo del alquiler» no tiene fila propia: **salda la señal y el
+     * resto** (D-5).
+     *
+     * Antes creaba un documento aparte y dejaba las dos sembradas pendientes
+     * para siempre. El dinero contaba como ingreso pero no para el estado de
+     * pago ni para `remainingPaid`, así que la reserva se cobraba entera y no
+     * se podía cerrar nunca sin saltarse un paso del workflow.
+     */
+    if (data.type === 'rental_payment' && data.paidAmount > 0) {
+      const payments = await this.fetchReservationPayments(data.reservationId);
+      const { steps, leftover } = distributeRentalPayment(payments, data.paidAmount);
+
+      for (const step of steps) {
+        await this.settlePendingPayment(step.paymentId, {
+          paidAmount: step.apply,
+          method: data.method,
+          paidAt: data.paidAt,
+          notes: data.notes,
+          concept: data.concept
+        });
+      }
+
+      // Lo que sobra sí abre fila propia: es dinero entregado de más y perderlo
+      // sería peor que tener que cuadrarlo.
+      if (leftover > 0) {
+        return this.createManualPayment({ ...data, amount: leftover, paidAmount: leftover });
+      }
+      if (steps.length > 0) return steps[0].paymentId;
     }
 
     if (data.paidAmount > 0) {

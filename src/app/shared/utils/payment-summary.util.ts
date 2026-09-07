@@ -313,3 +313,48 @@ export function generateInternalReference(prefix = 'PMT'): string {
   const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${prefix}-${ts}-${rand}`;
 }
+/** Un tramo del reparto de un cobro completo: cuánto va a qué fila. */
+export interface RentalSettlementStep {
+  paymentId: string;
+  apply: number;
+}
+
+/**
+ * Reparte un «Pago completo del alquiler» entre la señal y el resto.
+ *
+ * ⚠️ **Sin esto, ese concepto era una trampa** (D-5). `rental_payment` no tiene
+ * fila sembrada propia, así que el cobro creaba un documento nuevo y las de
+ * señal y resto se quedaban pendientes para siempre. El dinero contaba como
+ * ingreso —está en `RENTAL_TYPES`— pero **no** para el estado de pago ni para
+ * `remainingPaid`, que es lo que `canCloseReservation()` exige: la reserva se
+ * cobraba entera y no se podía cerrar nunca sin saltarse un paso.
+ *
+ * El orden es señal → resto, el mismo del alquiler: si el cobro no llega para
+ * las dos, lo que entra salda primero lo que se debía antes.
+ *
+ * Lo que sobre sale en `leftover` y **no se descarta**: es dinero que el
+ * cliente ha entregado, así que el llamante lo registra en su propia fila. Un
+ * cobro de más es un problema de contabilidad; perderlo, uno peor.
+ */
+export function distributeRentalPayment(
+  payments: Payment[],
+  amount: number
+): { steps: RentalSettlementStep[]; leftover: number } {
+  const steps: RentalSettlementStep[] = [];
+  let left = roundMoney(amount);
+
+  for (const type of ['initial_payment', 'remaining_payment'] as PaymentType[]) {
+    if (left <= 0) break;
+    const row = selectSettleablePayment(payments, type);
+    if (!row?.id) continue;
+
+    const owed = calculatePendingAmount(row.amount, row.paidAmount);
+    if (owed <= 0) continue;
+
+    const apply = roundMoney(Math.min(owed, left));
+    steps.push({ paymentId: row.id, apply });
+    left = roundMoney(left - apply);
+  }
+
+  return { steps, leftover: left };
+}

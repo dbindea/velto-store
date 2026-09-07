@@ -179,6 +179,15 @@ export interface Reservation {
   vehicleSnapshot: {
     brand: string;
     model: string;
+    /**
+     * La versión comercial: «Journey TCe 130».
+     *
+     * Va en el snapshot para que el contrato identifique el coche igual que la
+     * oferta que el cliente aceptó (D-2). El presupuesto ya la decía y el
+     * contrato no, porque solo el snapshot del contrato la tenía y lo copiaba
+     * de aquí, donde no existía.
+     */
+    version?: string;
     plateNumber: string;
     year?: number;
     acrissCode?: string;

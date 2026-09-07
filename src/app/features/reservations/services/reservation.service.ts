@@ -376,6 +376,9 @@ export class ReservationService {
       vehicleSnapshot: {
         brand: vehicle.brand,
         model: vehicle.model,
+        // La versión viaja al contrato para que identifique el coche igual que
+        // la oferta que el cliente aceptó (D-2).
+        version: vehicle.version,
         plateNumber: vehicle.plateNumber,
         year: vehicle.year,
         acrissCode: vehicle.acrissCode,
@@ -528,6 +531,9 @@ export class ReservationService {
       vehicleSnapshot: {
         brand: vehicle.brand,
         model: vehicle.model,
+        // La versión viaja al contrato para que identifique el coche igual que
+        // la oferta que el cliente aceptó (D-2).
+        version: vehicle.version,
         plateNumber: vehicle.plateNumber,
         year: vehicle.year,
         acrissCode: vehicle.acrissCode,

@@ -383,6 +383,11 @@ módulos, esta es la razón por la que no debe.
   («IVA soportado · sobre 1/3»); igualar los tres números sería inventarse ese IVA.
 - El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
+  ⚠️ **`rental_payment` no es un concepto, es «cobrarlo todo de una vez».** No tiene fila
+  sembrada propia: `distributeRentalPayment()` lo reparte entre señal y resto, en ese
+  orden, y el sobrante abre fila aparte. Creando fila propia —como hacía— el dinero
+  contaba como ingreso pero no para `remainingPaid`, así que **la reserva se cobraba
+  entera y no se podía cerrar nunca** (D-5).
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 

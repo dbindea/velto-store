@@ -155,6 +155,18 @@ export class ClientFormComponent implements OnInit {
     this.formData.fullName = transformInput(input, capitalizeWords);
   }
 
+  /**
+   * La dirección se capitaliza igual que todo lo demás (D-1).
+   *
+   * Antes se guardaba tal cual se tecleara, así que convivían dos reglas:
+   * «Arganda Del Rey» en el lugar de recogida y «avenida de la constitución 45»
+   * en la ficha del cliente. Las dos salen impresas en el contrato.
+   */
+  onAddressInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.formData.address = transformInput(input, capitalizeWords);
+  }
+
   onDocumentNumberInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.formData.documentNumber = transformInput(input, toReference);

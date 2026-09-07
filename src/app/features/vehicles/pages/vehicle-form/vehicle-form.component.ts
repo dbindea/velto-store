@@ -167,7 +167,16 @@ export class VehicleFormComponent implements OnInit {
       description: '',
       publicEnabled: false,
       features: {
-        airConditioning: false,
+        /**
+         * Marcado de salida, al contrario que el resto del equipamiento (D-3).
+         *
+         * En una flota de 2026 lo raro es el coche que no lleva aire, y este no
+         * es un extra cualquiera: alimenta la letra del código ACRISS, que
+         * viaja a los documentos. Naciendo a `false`, un despiste al dar de
+         * alta imprimía «N» —sin aire— en algo que ve el cliente. Se desmarca
+         * en el coche que no lo tenga, que es el caso excepcional.
+         */
+        airConditioning: true,
         navigation: false,
         parkingSensors: false,
         rearCamera: false,
