@@ -162,6 +162,21 @@ export interface Contract {
   signingTokenId?: string;
   signingLinkPath?: string;
 
+  /**
+   * Código Seguro de Verificación, en su forma canónica y sin guiones
+   * (`7M63EE55THDK`). Lo genera `signContract` **antes** de construir el PDF,
+   * porque el QR va dentro del documento que después se sella.
+   *
+   * Lo escribía la function y el frontend no lo leía, así que un cliente que
+   * llamaba dictando el `VLT-…` de su papel no se podía buscar desde la
+   * aplicación (M-45).
+   */
+  verificationCode?: string;
+  /** Huella del PDF firmado tal y como se guardó. La enseña `/v/:codigo`. */
+  signedPdfSha256?: string;
+  /** Si el PDF llegó a sellarse con el certificado de la empresa. */
+  digitallySealed?: boolean;
+
   signedAt?: any;
   generatedAt?: any;
   emailedAt?: any;

@@ -146,7 +146,8 @@
     "save": "Save",
     "search": "Search",
     "viewAll": "View all",
-    "close": "Close"
+    "close": "Close",
+    "days": "days"
   },
   "contracts": {
     "actions": {
@@ -238,7 +239,8 @@
       "pdfNotReady": "The PDF is not available yet.",
       "signedPdfNotReady": "The signed contract is not available yet."
     },
-    "confirmCancelSigningLink": "Cancel the active signing link?"
+    "confirmCancelSigningLink": "Cancel the active signing link?",
+    "verificationCode": "Verification code"
   },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",
@@ -906,7 +908,8 @@
       "title": "Reservation progress"
     },
     "title": "Reservations",
-    "closeWithPendingCharges": "This reservation has {amount} € in uncollected extra charges.\n\nClosing it neither charges nor cancels them: they remain owed by the client, but the rental will stop showing up as pending work.\n\nClose anyway?"
+    "closeWithPendingCharges": "This reservation has {amount} € in uncollected extra charges.\n\nClosing it neither charges nor cancels them: they remain owed by the client, but the rental will stop showing up as pending work.\n\nClose anyway?",
+    "pendingAmount": "outstanding"
   },
   "search": {
     "close": "Close",
@@ -914,7 +917,8 @@
     "groups": {
       "clients": "Clients",
       "reservations": "Reservations",
-      "vehicles": "Vehicles"
+      "vehicles": "Vehicles",
+      "contracts": "Contracts"
     },
     "minChars": "Type at least 2 characters.",
     "navigate": "Navigate",

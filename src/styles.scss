@@ -475,6 +475,57 @@ span.label.required::after {
  * debajo y la caja del mismo color de siempre. Con `input.form-control` la
  * especificidad sube y el estado gana, que es lo que tiene que pasar.
  */
+/**
+ * Un botón apagado tiene que parecerlo (M-46).
+ *
+ * «Iniciar entrega» salía en verde primario —idéntico a uno activo— estando
+ * `disabled`, con su «Falta firma del contrato» debajo. Se lee como un botón
+ * que no responde, que es el problema que M-42 vino a quitar: allí el botón no
+ * explicaba nada, aquí explica pero no lo parece.
+ *
+ * ⚠️ **La lista de clases no es por gusto.** Con la encapsulación de Angular la
+ * regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0), así que un
+ * `button:disabled` (0,1,1) pierde y el botón se queda verde. Anteponer el
+ * elemento a la clase sube a 0,2,1 y gana — el mismo motivo por el que
+ * `.is-invalid` va precedido de `input`.
+ *
+ * Se listan las clases que existen; una nueva que no aparezca aquí volverá a
+ * verse encendida, así que al crear un estilo de botón conviene añadirlo.
+ */
+button:disabled,
+button[disabled],
+button.btn:disabled,
+button.btn-primary:disabled,
+button.btn-secondary:disabled,
+button.btn-danger:disabled,
+button.btn-ghost:disabled,
+button.btn-icon:disabled,
+button.btn-skip-step:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  /* Sin sombra ni relieve: lo que distingue a un botón pulsable de una
+     etiqueta es que parece que se hunde. */
+  box-shadow: none;
+  filter: grayscale(0.35);
+}
+
+/* Un botón apagado no reacciona al ratón: sin esto conserva el `:hover` del
+   componente y parece que sí responde justo cuando no lo hace. */
+button:disabled:hover,
+button[disabled]:hover,
+button.btn:disabled:hover,
+button.btn-primary:disabled:hover,
+button.btn-secondary:disabled:hover,
+button.btn-danger:disabled:hover,
+button.btn-ghost:disabled:hover,
+button.btn-icon:disabled:hover,
+button.btn-skip-step:disabled:hover {
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(0.35);
+}
+
+
 input.form-control.is-invalid,
 select.form-control.is-invalid,
 textarea.form-control.is-invalid,

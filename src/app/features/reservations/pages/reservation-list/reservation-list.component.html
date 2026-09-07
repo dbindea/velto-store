@@ -97,14 +97,18 @@
               <i class="pi pi-sign-in"></i>
               <span>{{ getReturnDate(reservation) | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
-            <span class="total-days">{{ reservation.totalDays }} días</span>
+            <span class="total-days">{{ reservation.totalDays }} {{ 'common.days' | translate }}</span>
           </div>
 
           <!-- Pricing -->
           <div class="card-pricing">
             <span class="total-price">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
-            @if (getPendingAmount(reservation) > 0) {
-              <span class="pending-amount">{{ getPendingAmount(reservation) | number:'1.2-2' }} € pendiente</span>
+            <!--
+              En una reserva cancelada el saldo no es exigible: enseñarlo en
+              rojo invita a perseguir un cobro que ya no toca (M-11).
+            -->
+            @if (showsPendingAmount(reservation)) {
+              <span class="pending-amount">{{ getPendingAmount(reservation) | number:'1.2-2' }} € {{ 'reservations.pendingAmount' | translate }}</span>
             }
           </div>
 

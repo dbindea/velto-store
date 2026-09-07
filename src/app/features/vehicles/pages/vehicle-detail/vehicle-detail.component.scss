@@ -110,7 +110,20 @@
   .main-image {
     width: 100%;
     height: 300px;
-    object-fit: cover;
+    /**
+     * `contain`, no `cover` (M-6).
+     *
+     * Las fotos de coche salen del móvil en vertical —1086×1448— y esta caja es
+     * apaisada: `cover` las escalaba hasta llenarla y **recortaba el coche**,
+     * que es justo lo único que hay que ver aquí. Sobran franjas a los lados;
+     * es un precio menor que enseñar media carrocería.
+     *
+     * Es además lo que ya hace la imagen grande de `image-gallery`. Las
+     * miniaturas de abajo se quedan con `cover` a propósito: ahí la foto es un
+     * botón para abrir la grande, no el sitio donde se mira el coche.
+     */
+    object-fit: contain;
+    background: var(--bg-main);
     transition: transform 0.3s ease;
 
     @media (min-width: 640px) {

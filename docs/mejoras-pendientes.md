@@ -907,6 +907,103 @@ bases— y la subida de la factura a Storage.
   quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
   seguir quedando registrado, porque es lo que permite cerrar la reserva.
 
+## Lote de pulido — 7 de septiembre de 2026
+
+Seis cosas pequeñas que se notan a diario, hechas de una vez. Cinco están
+**verificadas en el navegador**; la sexta no se ha podido reproducir y se dice
+por qué.
+
+- [x] **M-5 · Varias fotos de una vez en las inspecciones.** El apunte decía que
+  faltaba en los dos formularios; el de vehículo ya lo tenía desde hace tiempo.
+  Faltaba donde de verdad duele: la inspección pide **ocho fotos** y son dos
+  inspecciones por alquiler, así que eran dieciséis viajes al selector con el
+  cliente delante.
+
+  El botón de **galería** acepta varias; el de **cámara sigue de una en una**,
+  porque así funciona hacer una foto. Suben en serie y no en paralelo: son fotos
+  de móvil que se redimensionan en el propio navegador, y ocho a la vez con mala
+  cobertura compiten por el ancho de banda y bloquean el hilo del canvas.
+
+  Una foto que no vale —formato raro, demasiado grande— **no cancela el lote**:
+  se avisa de ella y suben las demás. Rechazarlo entero obligaría a repetir la
+  selección.
+
+  Verificado: tres fotos de una sola selección, y el input de cámara sin
+  `multiple`.
+
+- [x] **M-6 · El recorte ya no se come el coche.** También aquí el apunte estaba
+  a medias: la mitad del peso —«se descarga la imagen completa para pintarla a
+  347 px»— ya estaba resuelta, porque se generan miniaturas al subir y la
+  galería pinta `thumbnailUrl`.
+
+  Lo que seguía mal era el encuadre. Las fotos salen del móvil en vertical
+  (1086×1448) y la caja es apaisada: con `object-fit: cover` se escalaban hasta
+  llenarla y **se recortaba el coche**. La imagen principal pasa a `contain`
+  sobre fondo neutro, que es lo que ya hacía la galería grande. Las miniaturas
+  se quedan con `cover` a propósito: ahí la foto es un botón para abrir la
+  grande, no el sitio donde se mira el coche.
+
+  Verificado con una imagen de prueba con franjas arriba y abajo: antes se
+  perdían, ahora se ven.
+
+- [x] **M-45 · El código de verificación, visible y buscable.** El caso es un
+  cliente que llama con el papel delante y dicta el `VLT-…`. El código lo
+  escribía la function y **el modelo del frontend ni siquiera tenía el campo**,
+  así que no se podía ni ver ni buscar.
+
+  Ahora sale en la cabecera del contrato, con botón de copiar, y **el buscador
+  global lo encuentra**. `parseVerificationCode()` acepta las cuatro formas en
+  que llega: impreso con guiones, tecleado de corrido, en minúscula y copiado a
+  trozos con espacios. Traduce `0`→`O` y `1`→`I`, que no existen en el alfabeto:
+  se dicta por teléfono, así que un cero tecleado es casi seguro una O mal oída,
+  y rechazarlo dejaría al operador convencido de que el código es falso.
+
+  ⚠️ **Solo consulta si lo tecleado puede ser un código.** Es una igualdad
+  exacta sobre 12 caracteres; sin ese filtro se pagaría una lectura de Firestore
+  por cada tecla.
+
+  Un test destapó un fallo real: con un espacio delante —lo que deja copiar y
+  pegar— el prefijo `VLT` no se quitaba y el código salía de 15 caracteres.
+  Primero se limpia, después se quita el prefijo.
+
+  Verificado contra un contrato firmado de verdad en desarrollo, en las cuatro
+  formas, y comprobando que un término normal («Dorel») no dispara la consulta.
+
+- [x] **M-46 · Un botón apagado ya lo parece.** «Iniciar entrega» salía en verde
+  primario, idéntico a uno activo, estando `disabled`. Ahora baja a 0,45 de
+  opacidad, se dessatura y pierde el `:hover`.
+
+  ⚠️ **La lista de clases del selector no es por gusto.** Con la encapsulación
+  de Angular la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0),
+  así que un `button:disabled` (0,1,1) pierde y el botón se queda verde.
+  Anteponer el elemento sube a 0,2,1 y gana — el mismo motivo por el que
+  `.is-invalid` va precedido de `input`. **Una clase de botón nueva que no esté
+  en la lista volverá a verse encendida.**
+
+- [x] **M-11 · Una reserva cancelada ya no anuncia un cobro pendiente.** El
+  saldo dejaba de ser exigible al anular y seguía pintado en rojo, invitando a
+  perseguirlo. En una **cerrada sí se sigue enseñando**: ahí el pendiente son
+  cargos extra reales, y cerrar no los perdona.
+
+  De paso salieron dos cosas del mismo sitio: la tarjeta tenía **«días» y
+  «pendiente» en español duro**, y `getPendingAmount()` sumaba solo señal y
+  resto, así que una devolución con 145 € en daños aparecía en la lista como si
+  no se debiera nada — el mismo agujero que F-34 tenía en la ficha. Ahora sale
+  de `paymentSummary.totalPending`, que los incluye.
+
+- [x] **M-10 · El dashboard ofrece reintentar**, en el estado de error y en el
+  aviso de carga parcial, sin recargar la página entera.
+
+  ⚠️ **No he conseguido reproducir el estado de error para verlo en pantalla**, y
+  conviene saber por qué: cortar la red no basta, **Firestore sirve de su caché
+  local y no rechaza** — el dashboard cargó igual con todo el tráfico abortado.
+  Y cortarlo del todo tumba la sesión, porque el guard lee `authorizedUsers`.
+  Es la misma lección que dejó M-43. El botón está dentro del bloque
+  `@if (loadFailed)` y llama al mismo método que `ngOnInit`, pero **el estado de
+  error sigue sin haberse visto nunca con ojos**.
+
+---
+
 ## Decisiones tuyas *(resueltas el 5 de septiembre de 2026)*
 
 Salieron de crear los dos coches y los dos clientes desde cero. Ninguna era un

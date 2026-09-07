@@ -111,6 +111,17 @@ export class DashboardComponent implements OnInit {
     this.loadDashboard();
   }
 
+  /**
+   * Volver a intentar la carga sin recargar la página (M-10).
+   *
+   * El fallo típico aquí es de red y dura segundos; obligar a recargar hace
+   * que el navegador se vuelva a bajar la aplicación entera para repetir unas
+   * consultas.
+   */
+  retryLoad(): void {
+    this.loadDashboard();
+  }
+
   private async loadDashboard(): Promise<void> {
     this.loading = true;
     const todayStart = new Date();

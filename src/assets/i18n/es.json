@@ -146,7 +146,8 @@
     "save": "Guardar",
     "search": "Buscar",
     "viewAll": "Ver todo",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "days": "días"
   },
   "contracts": {
     "actions": {
@@ -238,7 +239,8 @@
       "pdfNotReady": "El PDF todavía no está disponible.",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible."
     },
-    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?"
+    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?",
+    "verificationCode": "Código de verificación"
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
@@ -906,7 +908,8 @@
       "title": "Progreso de la reserva"
     },
     "title": "Reservas",
-    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?"
+    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
+    "pendingAmount": "pendiente"
   },
   "search": {
     "close": "Cerrar",
@@ -914,7 +917,8 @@
     "groups": {
       "clients": "Cliente",
       "reservations": "Reservas",
-      "vehicles": "Vehículos"
+      "vehicles": "Vehículos",
+      "contracts": "Contratos"
     },
     "minChars": "Escribe al menos 2 caracteres.",
     "navigate": "Navegar",

@@ -146,7 +146,8 @@
     "save": "Salvează",
     "search": "Caută",
     "viewAll": "Vezi tot",
-    "close": "Închide"
+    "close": "Închide",
+    "days": "zile"
   },
   "contracts": {
     "actions": {
@@ -238,7 +239,8 @@
       "pdfNotReady": "PDF-ul nu este încă disponibil.",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
     },
-    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?"
+    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?",
+    "verificationCode": "Cod de verificare"
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
@@ -906,7 +908,8 @@
       "title": "Progresul rezervării"
     },
     "title": "Rezervări",
-    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?"
+    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
+    "pendingAmount": "de încasat"
   },
   "search": {
     "close": "Închide",
@@ -914,7 +917,8 @@
     "groups": {
       "clients": "Clienți",
       "reservations": "Rezervări",
-      "vehicles": "Vehicule"
+      "vehicles": "Vehicule",
+      "contracts": "Contracte"
     },
     "minChars": "Scrie cel puțin 2 caractere.",
     "navigate": "Navighează",

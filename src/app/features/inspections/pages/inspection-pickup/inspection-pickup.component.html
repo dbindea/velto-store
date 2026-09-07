@@ -166,6 +166,7 @@
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
+                    multiple
                     (change)="onPhotoSelected($event, cat)"
                     [disabled]="uploadingPhoto">
                 </label>

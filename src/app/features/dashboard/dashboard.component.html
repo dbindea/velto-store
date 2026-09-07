@@ -18,6 +18,15 @@
       <i class="pi pi-exclamation-triangle"></i>
       <h2>{{ 'dashboard.loadFailedTitle' | translate }}</h2>
       <p>{{ 'dashboard.loadFailedHint' | translate }}</p>
+      <!--
+        Antes la única salida era recargar la página entera (M-10). El fallo
+        suele ser de red y dura segundos: pedir al operador que recargue para
+        volver a intentarlo es hacerle trabajo que la pantalla puede hacer.
+      -->
+      <button type="button" class="btn btn-primary" [disabled]="loading" (click)="retryLoad()">
+        <i class="pi pi-refresh"></i>
+        {{ 'common.retry' | translate }}
+      </button>
     </div>
   } @else if (cards.length === 0) {
     <div class="empty-state">
@@ -30,6 +39,9 @@
       <div class="partial-warning">
         <i class="pi pi-exclamation-triangle"></i>
         <span>{{ 'dashboard.partialFailure' | translate }}</span>
+        <button type="button" class="btn-ghost" [disabled]="loading" (click)="retryLoad()">
+          {{ 'common.retry' | translate }}
+        </button>
       </div>
     }
     <div class="cards-grid">

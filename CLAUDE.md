@@ -940,6 +940,13 @@ quedar fuera de la pantalla: vehículo (29 campos), cliente, inspecciones.
 mano. Si la etiqueta **envuelve** al campo, la clase va en el `<span>` del texto: sobre el
 `<label>` el asterisco saldría debajo del input.
 
+⚠️ **Y un botón apagado tiene que parecerlo** (M-46). El estilo global vive en
+`styles.scss` y **lista las clases de botón una a una**: con la encapsulación de Angular
+la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0) y un `button:disabled`
+(0,1,1) pierde, así que el botón se queda encendido. Anteponer el elemento a la clase sube
+a 0,2,1 y gana — igual que `.is-invalid`. Si creas una clase de botón nueva, añádela ahí o
+volverá a verse pulsable estando deshabilitada.
+
 ### Cuando algo falla: `NotificationService`, nunca `alert()`
 
 ⚠️ **No queda ni un `alert()` en la aplicación, y no debe volver ninguno** (M-43). Los
@@ -963,9 +970,11 @@ devolver fianza lo hacían: si fallaba, el operador pulsaba, la fianza no se mov
 pantalla no decía nada. Si una acción puede fallar, tiene que contarlo.
 
 ⚠️ **Firestore no rechaza por falta de red**: el SDK es offline-first y **encola** la
-escritura, así que el `catch` ni se ejecuta y sale sola al volver la conexión. Para probar
-un camino de error hace falta algo que rechace de verdad —un callable, un permiso
-denegado—; desenchufar la red no vale.
+escritura, así que el `catch` ni se ejecuta y sale sola al volver la conexión. En lectura
+pasa lo mismo por otro motivo: **sirve de su caché local**, así que una pantalla entera
+puede cargar con todo el tráfico cortado. Para probar un camino de error hace falta algo
+que rechace de verdad —un callable, un permiso denegado—; desenchufar la red no vale. Y
+cortarla del todo tumba la sesión, porque el guard lee `authorizedUsers` de Firestore.
 
 ### `.form-control` NO es global
 
