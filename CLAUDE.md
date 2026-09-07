@@ -315,7 +315,19 @@ atajo para las plantillas; la tabla sigue estando en un solo sitio.
 ⚠️ **Un permiso denegado se explica.** «Tu rol no permite cambiar el precio», al
 lado del campo. Un botón que desaparece sin más hace que el compañero llame
 preguntando qué le pasa a la aplicación — misma idea que el «Falta contrato
-firmado» del workflow.
+firmado» del workflow. **También vale para las rutas**: `permissionGuard` levanta
+un aviso antes de devolver al panel, porque una redirección muda es la versión
+de pantalla completa del mismo problema.
+
+**Los permisos están probados con un empleado real** (7 de septiembre de 2026),
+bajando el rol de la propia cuenta en el `authorizedUsers` de desarrollo. La
+prueba que vale es la de las reglas, atacadas **saltándose la aplicación**: con
+el token de la sesión sacado de IndexedDB y llamadas directas a la API REST de
+Firestore. Un empleado recibe **403** al leer gastos, leer la lista de usuarios,
+**ascenderse a administrador**, borrar un vehículo, borrar una reserva y **mover
+el `pricingSnapshot`**; y **200** al leer reservas y escribir una nota, que es
+lo que necesita para trabajar. Repetir esa prueba es la forma de validar un
+cambio en `firestore.rules`.
 
 ⚠️ **Lo que las reglas no pueden cubrir:** el precio con el que una reserva
 **nace**. Al crear no hay valor anterior con el que comparar, así que ahí manda
@@ -391,6 +403,25 @@ módulos, esta es la razón por la que no debe.
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
+### Crear una reserva es una sola escritura
+
+`commitReservationWithPayments()` mete la reserva **y sus filas de pago** en un
+`writeBatch`: entra todo o no entra nada. Eran cuatro escrituras sueltas, y si fallaba
+cualquiera menos la primera quedaba una reserva creada sin nada que cobrar mientras la
+pantalla decía que no se había podido crear — y el operador la creaba otra vez.
+
+El id se pide antes con `doc(collection)`, porque las filas de pago lo llevan dentro;
+`addDoc` no vale, solo devuelve el id después de escribir.
+
+⚠️ **Un concepto a 0 no genera fila** (`buildInitialPaymentRows` en el util). Una fianza
+exenta no es una fianza pendiente de 0 €: es que no hay fianza, y sembrarla dejaría una
+fila incobrable que impide dar la reserva por pagada.
+
+⚠️ **Lo que el servicio rechaza viaja como clave i18n, no como frase.** Las
+comprobaciones de disponibilidad lanzaban `'Vehicle no longer available…'` en inglés duro,
+así que la capa de avisos no lo distinguía de un fallo cualquiera y ofrecía «Reintentar» —
+que iba a fallar igual, porque hay que cambiar de coche o de fechas.
+
 ### Borrar un documento no borra sus ficheros
 
 ⚠️ **Firestore y Storage son dos servicios distintos.** Borrar el documento deja los
@@ -413,9 +444,17 @@ Dos reglas, y las dos importan:
 (`vehicle-maintenance/{vehicleId}/{maintenanceId}/…`), así que hay que **leer el documento
 antes de borrarlo**: después ya no se sabe de qué coche era.
 
-⚠️ **`deleteClient()` funciona pero no lo llama nadie**: no hay botón de borrar cliente en
-la aplicación. Ver M-47 — puede que lo correcto sea anonimizar, porque el contrato firmado
-no se puede borrar nunca.
+**Qué se puede borrar, y qué no** (M-47). Las dos limitaciones son deliberadas:
+
+- **Una reserva con contrato firmado, no.** Ese documento acredita un alquiler que
+  ocurrió y `firestore.rules` prohíbe borrarlo incluso a un administrador, así que borrar
+  la reserva lo dejaría apuntando al vacío. Para esas está cancelar. Borrar una reserva sí
+  se lleva sus pagos, sus inspecciones y las fotos de Storage, todo en un `writeBatch`.
+- **Un cliente con reservas, no.** Su nombre y su documento siguen dentro del
+  `clientSnapshot` de cada reserva y de cada contrato: quitar la ficha no borraría nada,
+  solo dejaría un cliente al que el histórico apunta y que ya no se puede abrir. Un
+  borrado real de datos personales pasaría por **anonimizar** esos snapshots, que es otra
+  tarea.
 
 ## Firestore: `undefined` está prohibido
 
@@ -1074,4 +1113,8 @@ y las clases `.email` / `.mono` usan `anywhere`.
   con `git rm --cached`: ignorar un fichero no deja de seguir uno ya seguido.
 - `CREDENTIALS.md` **sí está** en `.gitignore`, junto a `*.p12`, `*.pfx`, `*.key` y
   `cert.b64`.
-- `reservation.service.ts` tiene un `TODO`: operaciones que deberían ser transacción Firestore o Cloud Function.
+- ⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
+  escribe después, y entre medias cabe otra reserva. **No se puede cerrar desde el
+  cliente**: el SDK web no permite consultas dentro de una transacción, solo lecturas por
+  id. Haría falta una Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.
+  Mitigado comprobando otra vez a ras del `commit` — la ventana pasa de ~1 s a milisegundos.

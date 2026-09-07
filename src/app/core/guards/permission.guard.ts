@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { map, take } from 'rxjs/operators';
 import { AuthService } from '@core/auth/auth.service';
+import { NotificationService } from '@core/notifications/notification.service';
 import { Permission, can } from '@shared/utils/permissions.util';
 
 /**
@@ -27,14 +28,23 @@ export function permissionGuard(permission: Permission): CanActivateFn {
   return () => {
     const authService = inject(AuthService);
     const router = inject(Router);
+    const notifications = inject(NotificationService);
 
     return authService.authorizedState$.pipe(
       take(1),
-      map(() =>
-        can(authService.authorizedUser()?.role, permission)
-          ? true
-          : router.createUrlTree(['/dashboard'])
-      )
+      map(() => {
+        if (can(authService.authorizedUser()?.role, permission)) return true;
+        /**
+         * ⚠️ **Un permiso denegado se explica.** Antes la ruta prohibida
+         * devolvía al panel en silencio: quien tecleaba `/reports` acababa en
+         * otra pantalla sin saber si se había equivocado, si la aplicación
+         * fallaba o si no tenía acceso. Es la misma regla que ya rige para los
+         * botones — un compañero llamando para preguntar qué le pasa a la
+         * aplicación es el síntoma.
+         */
+        notifications.error('permissions.notAllowedRoute');
+        return router.createUrlTree(['/dashboard']);
+      })
     );
   };
 }

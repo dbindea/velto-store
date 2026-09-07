@@ -920,6 +920,19 @@
           {{ 'reservations.actions.cancel' | translate }}
         </button>
       }
+
+      <!--
+        Borrar es distinto de cancelar: una reserva cancelada sigue contando su
+        historia, una borrada desaparece con sus pagos y sus inspecciones. Es
+        para lo que nació por error o de prueba, y por eso el botón no compite
+        con el de cancelar: va aparte y solo lo ve un administrador.
+      -->
+      @if (permissions.canDelete() && reservation.contractStatus !== 'signed') {
+        <button class="btn-danger" type="button" (click)="openDeleteModal()">
+          <i class="pi pi-trash"></i>
+          {{ 'common.delete' | translate }}
+        </button>
+      }
     </div>
 
     <!-- Saltarse un paso del workflow (N-7).
@@ -988,7 +1001,7 @@
             <p class="modal-hint">{{ 'reservations.cancel.hint' | translate }}</p>
             <div class="modal-actions">
               <button class="btn btn-secondary" type="button" (click)="closeCancelModal()">
-                Volver
+                {{ 'common.back' | translate }}
               </button>
               @if (permissions.canCancelReservations()) {
               <button class="btn btn-danger-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
@@ -1019,3 +1032,31 @@
     {{ 'contracts.messages.linkCopied' | translate }}
   </div>
 }
+
+    <!-- Borrar la reserva. Irreversible y con todo lo que arrastra. -->
+    @if (showDeleteModal) {
+      <div class="modal-overlay" (click)="closeDeleteModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header danger">
+            <i class="pi pi-trash"></i>
+            <h3>{{ 'common.delete' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeDeleteModal()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>{{ 'reservations.confirmDelete' | translate }}</p>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeDeleteModal()">
+                {{ 'common.back' | translate }}
+              </button>
+              <button class="btn btn-danger-solid" type="button" [disabled]="deleting" (click)="deleteReservation()">
+                @if (deleting) { <i class="pi pi-spin pi-spinner"></i> }
+                @else { <i class="pi pi-trash"></i> }
+                {{ 'common.delete' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }

@@ -115,6 +115,8 @@ export class ReservationDetailComponent implements OnInit {
   bookingConfirmationStorageUrl = '';
   bookingConfirmationError = '';
   cancelling = false;
+  showDeleteModal = false;
+  deleting = false;
   closingReservation = false;
   savingPayment = false;
   savingDeposit = false;
@@ -318,8 +320,9 @@ export class ReservationDetailComponent implements OnInit {
    *
    * ⚠️ Esto cuadra la reserva **cuando alguien la abre**. Es suficiente
    * mientras el operador esté delante del cobro, que es el caso de hoy. El día
-   * que un cliente pague solo desde la web (N-5), el cálculo tendrá que vivir
-   * en la Cloud Function: nadie garantiza que alguien abra la pantalla.
+   * que un cliente reserve y pague por su cuenta —desde la web pública, que se
+   * construye en otro proyecto y enlazará con este— el cálculo tendrá que vivir
+   * en la Cloud Function: nadie garantiza que alguien abra esta pantalla.
    */
   private async reconcileAfterExternalPayment(reservationId: string): Promise<void> {
     if (!this.reservation) return;
@@ -411,6 +414,39 @@ export class ReservationDetailComponent implements OnInit {
    * semanas y la agencia necesita cerrar la operación mientras tanto; lo que no
    * puede es no enterarse.
    */
+
+  openDeleteModal(): void {
+    this.showDeleteModal = true;
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+  }
+
+  /**
+   * Borra la reserva con sus pagos, sus inspecciones y sus fotos.
+   *
+   * Solo aparece sin contrato firmado: uno firmado acredita un alquiler que
+   * ocurrió, no se borra nunca, y dejarlo apuntando a una reserva que ya no
+   * existe sería peor que no poder limpiar. Para esas está cancelar.
+   */
+  async deleteReservation(): Promise<void> {
+    if (!this.reservation?.id) return;
+    this.deleting = true;
+    try {
+      await this.reservationService.deleteReservation(this.reservation.id);
+      this.router.navigate(['/reservations']);
+    } catch (error: any) {
+      console.error('Error deleting reservation:', error);
+      // El servicio rechaza con clave i18n; sin esto el operador pulsaba
+      // «Borrar» y no pasaba nada visible.
+      this.notifications.error(error?.message || 'reservations.errors.delete');
+    } finally {
+      this.deleting = false;
+      this.showDeleteModal = false;
+    }
+  }
+
   async closeReservation(): Promise<void> {
     if (!this.reservation?.id) return;
 

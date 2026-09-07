@@ -22,6 +22,8 @@ import {
 } from '@shared/models/reservation.model';
 import { Payment, PAYMENT_TYPE_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/payment.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { NotificationService } from '@core/notifications/notification.service';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { toDate } from '@shared/utils/reservation-date.util';
 
 type Tab = 'summary' | 'license' | 'documents' | 'reservations' | 'payments';
@@ -40,6 +42,12 @@ export class ClientDetailComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private paymentService = inject(PaymentService);
   private translateService = inject(TranslateService);
+  private notifications = inject(NotificationService);
+  /** Público: la plantilla pregunta si el rol puede borrar. */
+  permissions = inject(PermissionsService);
+
+  showDeleteModal = false;
+  deleting = false;
 
   client: Client | null = null;
   reservations: Reservation[] = [];
@@ -222,6 +230,37 @@ export class ClientDetailComponent implements OnInit {
 
   setTab(tab: Tab): void {
     this.activeTab = tab;
+  }
+
+
+  openDeleteModal(): void {
+    this.showDeleteModal = true;
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+  }
+
+  /**
+   * Borra el cliente y los documentos que subió.
+   *
+   * El servicio rechaza si tiene reservas: su nombre seguiría dentro del
+   * snapshot de cada una, así que el borrado sería una ilusión. El motivo se
+   * enseña tal cual llega, que es una clave i18n.
+   */
+  async deleteClient(): Promise<void> {
+    if (!this.client?.id) return;
+    this.deleting = true;
+    try {
+      await this.clientService.deleteClient(this.client.id);
+      this.router.navigate(['/clients']);
+    } catch (error: any) {
+      console.error('Error deleting client:', error);
+      this.notifications.error(error?.message || 'clients.errors.delete');
+    } finally {
+      this.deleting = false;
+      this.showDeleteModal = false;
+    }
   }
 
   goBack(): void {

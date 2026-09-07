@@ -48,7 +48,9 @@
     },
     "edit": "Edit client",
     "errors": {
-      "fullNameRequired": "Enter the client’s full name"
+      "fullNameRequired": "Enter the client’s full name",
+      "deleteHasReservations": "This client has reservations and cannot be deleted. Their name would still be stored on every reservation and contract.",
+      "delete": "The client could not be deleted."
     },
     "fields": {
       "address": "Address",
@@ -120,7 +122,8 @@
       "new": "New",
       "regular": "Regular",
       "risk": "Risk"
-    }
+    },
+    "confirmDelete": "Delete this client and the documents they uploaded? This cannot be undone."
   },
   "common": {
     "all": "All",
@@ -722,7 +725,8 @@
     "cancelLocked": "Your role cannot cancel. Ask an administrator.",
     "discountsLocked": "Your role cannot grant discounts.",
     "notAllowed": "Your role does not allow this action",
-    "pricingLocked": "Your role cannot change the price. The tariff one applies."
+    "pricingLocked": "Your role cannot change the price. The tariff one applies.",
+    "notAllowedRoute": "Your role does not have access to that section."
   },
   "reports": {
     "days": "days",
@@ -818,7 +822,10 @@
       "processDeposit": "Could not process the deposit",
       "registerPayment": "Could not register the payment",
       "signedPdfNotReady": "The signed contract is not available yet",
-      "create": "The reservation could not be created. Please try again."
+      "create": "The reservation could not be created. Please try again.",
+      "notFound": "Reservation not found.",
+      "deleteSignedContract": "A reservation with a signed contract cannot be deleted. Cancel it instead: the signed contract evidences the rental and is never deleted.",
+      "delete": "The reservation could not be deleted."
     },
     "fields": {
       "duration": "Duration",
@@ -909,7 +916,8 @@
     },
     "title": "Reservations",
     "closeWithPendingCharges": "This reservation has {amount} € in uncollected extra charges.\n\nClosing it neither charges nor cancels them: they remain owed by the client, but the rental will stop showing up as pending work.\n\nClose anyway?",
-    "pendingAmount": "outstanding"
+    "pendingAmount": "outstanding",
+    "confirmDelete": "Delete this reservation with its payments, inspections and photos? This cannot be undone."
   },
   "search": {
     "close": "Close",
@@ -970,7 +978,7 @@
       "empty": "Nobody has access yet",
       "inactive": "No access",
       "name": "Name",
-      "notice": "Today the role decides which whole sections someone gets into: reports, expenses and these settings. The finer limits — touching prices, deleting or cancelling — come in a separate task.",
+      "notice": "The role decides which sections can be opened —reports, expenses and these settings— and also what can be done inside: changing prices, granting discounts, deleting and cancelling are admin-only.",
       "role": "Role",
       "roles": {
         "admin": "Administrator",

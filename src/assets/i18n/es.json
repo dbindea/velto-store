@@ -48,7 +48,9 @@
     },
     "edit": "Editar cliente",
     "errors": {
-      "fullNameRequired": "Escribe el nombre completo del cliente"
+      "fullNameRequired": "Escribe el nombre completo del cliente",
+      "deleteHasReservations": "Este cliente tiene reservas y no se puede borrar. Su nombre seguiría guardado en cada reserva y en cada contrato.",
+      "delete": "No se pudo borrar el cliente."
     },
     "fields": {
       "address": "Dirección",
@@ -120,7 +122,8 @@
       "new": "Nuevo",
       "regular": "Habitual",
       "risk": "Riesgo"
-    }
+    },
+    "confirmDelete": "¿Borrar este cliente y los documentos que subió? No se puede deshacer."
   },
   "common": {
     "all": "Todos",
@@ -722,7 +725,8 @@
     "cancelLocked": "Tu rol no permite cancelar. Pídeselo a un administrador.",
     "discountsLocked": "Tu rol no permite conceder descuentos.",
     "notAllowed": "Tu rol no permite esta acción",
-    "pricingLocked": "Tu rol no permite cambiar el precio. Se aplica el de tarifa."
+    "pricingLocked": "Tu rol no permite cambiar el precio. Se aplica el de tarifa.",
+    "notAllowedRoute": "Tu rol no tiene acceso a esa sección."
   },
   "reports": {
     "days": "días",
@@ -818,7 +822,10 @@
       "processDeposit": "Error al procesar la fianza",
       "registerPayment": "Error al registrar el pago",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible",
-      "create": "No se pudo crear la reserva. Inténtalo de nuevo."
+      "create": "No se pudo crear la reserva. Inténtalo de nuevo.",
+      "notFound": "Reserva no encontrada.",
+      "deleteSignedContract": "No se puede borrar una reserva con el contrato ya firmado. Cancélala en su lugar: el contrato firmado acredita el alquiler y no se borra.",
+      "delete": "No se pudo borrar la reserva."
     },
     "fields": {
       "duration": "Duración",
@@ -909,7 +916,8 @@
     },
     "title": "Reservas",
     "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
-    "pendingAmount": "pendiente"
+    "pendingAmount": "pendiente",
+    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer."
   },
   "search": {
     "close": "Cerrar",
@@ -970,7 +978,7 @@
       "empty": "No hay nadie con acceso todavía",
       "inactive": "Sin acceso",
       "name": "Nombre",
-      "notice": "Hoy el rol decide a qué secciones enteras se entra: informes, gastos y estos ajustes. Los límites finos —tocar precios, borrar o cancelar— llegan en una tarea aparte.",
+      "notice": "El rol decide a qué secciones se entra —informes, gastos y estos ajustes— y también qué se puede hacer dentro: tocar precios, conceder descuentos, borrar y cancelar son solo de administrador.",
       "role": "Rol",
       "roles": {
         "admin": "Administrador",

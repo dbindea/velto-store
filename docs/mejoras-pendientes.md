@@ -51,7 +51,7 @@ porque no la usaba nadie.
 
 | | Qué es |
 |---|---|
-| **N-5** | Pre-reserva desde la web pública — sin decidir |
+| ~~N-5~~ | Pre-reserva: **se hace en la web pública**, otro proyecto (7 sep 2026) |
 | **D-1…D-6** | Seis decisiones de Dorel pendientes |
 | resto | Mejoras menores: M-5, M-6, M-10, M-11, M-13, M-21 |
 
@@ -907,6 +907,159 @@ bases— y la subida de la factura a Storage.
   quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
   seguir quedando registrado, porque es lo que permite cerrar la reserva.
 
+## ✅ Permisos de empleado, probados de verdad — 7 de septiembre de 2026
+
+N-11 llevaba desde el 4 de septiembre construido y **sin que hubiera entrado
+nunca un empleado**. Se probó bajando el rol de la propia cuenta a `employee` en
+el `authorizedUsers` de **desarrollo** y recorriendo la aplicación, sin
+necesidad de una segunda cuenta de Google.
+
+**La pantalla**, con rol de empleado: el menú pierde Gastos, Informes y Ajustes.
+Entrando por URL directa, las tres rutas devuelven al panel.
+
+**Las reglas de Firestore**, que es lo único que impide de verdad. Se atacaron
+**saltándose la aplicación entera**: se sacó el token de la sesión de IndexedDB
+y se llamó a la API REST de Firestore a pelo, que es exactamente lo que haría
+alguien con la consola del navegador abierta.
+
+| Intento | |
+|---|---|
+| Leer gastos | **403** |
+| Leer la lista de usuarios | **403** |
+| **Ascenderse a administrador** | **403** |
+| Borrar un vehículo | **403** |
+| Borrar una reserva | **403** |
+| **Mover el `pricingSnapshot` de una reserva** | **403** |
+| Leer reservas | 200 — debe poder |
+| Escribir una nota en una reserva | 200 — debe poder |
+
+Las dos filas en negrita son las que importaban: un empleado no puede darse
+permisos a sí mismo ni tocar el precio pactado. Y las dos últimas confirman que
+la restricción no le impide trabajar, que era el otro riesgo.
+
+### Dos cosas que salieron al probarlo
+
+- [x] **La ruta prohibida devolvía al panel en silencio.** Quien tecleaba
+  `/reports` acababa en otra pantalla sin saber si se había equivocado, si la
+  aplicación fallaba o si no tenía acceso. Contradecía la regla que el propio
+  proyecto declara —«un permiso denegado se explica»— y que ya se cumplía en los
+  botones. Ahora el guard levanta un aviso: «Tu rol no tiene acceso a esa
+  sección».
+
+- [x] **El texto de Ajustes prometía algo ya hecho.** Decía que «los límites
+  finos —tocar precios, borrar o cancelar— llegan en una tarea aparte», y esa
+  tarea era N-11, terminada tres días antes. Un texto que miente sobre lo que la
+  aplicación hace es peor que no tenerlo: alguien podría dar de alta a un
+  empleado creyendo que puede cambiar precios.
+
+---
+
+## ✅ M-47 · Limpiar desde la aplicación — 7 de septiembre de 2026
+
+Ni las reservas ni los clientes se podían borrar: `deleteReservation` **no
+existía siquiera como método** y `deleteClient` no tenía botón, aunque las
+reglas de Firestore sí permiten las dos cosas a un administrador. Quitar una
+reserva de prueba exigía entrar a la consola de Firebase y borrar a mano el
+documento, cada uno de sus pagos y cada inspección.
+
+**Borrar una reserva** se lleva sus pagos, sus inspecciones y las fotos que esas
+inspecciones subieron a Storage. El borrado de Firestore va en un `writeBatch`,
+por el mismo motivo que la creación: que no quede una reserva sin sus pagos ni
+unos pagos sin su reserva. Las fotos se borran antes — si Storage falla, los
+documentos siguen ahí y se puede reintentar.
+
+**Dos decisiones de Dorel, y las dos limitan a propósito:**
+
+- ⚠️ **Una reserva con contrato firmado no se borra.** Es la única postura
+  coherente con la regla que impide borrar un contrato incluso siendo
+  administrador: ese documento acredita un alquiler que ocurrió, y borrar la
+  reserva lo dejaría apuntando al vacío. Para esas está cancelar. El botón ni
+  aparece.
+- ⚠️ **Un cliente con reservas no se borra.** Su nombre y su documento siguen
+  dentro del `clientSnapshot` de cada reserva y de cada contrato, así que quitar
+  la ficha no borraría sus datos: solo dejaría un cliente al que el histórico
+  apunta y que ya no se puede abrir. Sin historial sí es un borrado de verdad, y
+  cubre lo que hacía falta — limpiar pruebas y altas duplicadas.
+
+  Si algún día hace falta un borrado real de datos personales, la vía es
+  **anonimizar**: reescribir los snapshots de reservas y contratos. Es bastante
+  más trabajo y se decidió no hacerlo ahora.
+
+**Verificado en el navegador, los tres casos:**
+
+| | |
+|---|---|
+| Cliente con reservas | rechazado, con el motivo en pantalla |
+| Reserva sin firmar | borrada, y **los pagos bajaron de 12 a 9** — sus tres exactos |
+| Reserva con contrato firmado | el botón no aparece |
+
+De paso: `deleteVehicle()` en el componente **no capturaba errores** —el mismo
+`catch` mudo que M-43 vino a quitar— y en el modal de cancelar había un
+«Volver» en español duro.
+
+---
+
+## Crear una reserva es todo o nada — 7 de septiembre de 2026
+
+El `TODO` más antiguo del proyecto («usar transacción o Cloud Function para las
+operaciones atómicas») era **dos problemas distintos**, y solo uno se puede
+cerrar desde el cliente.
+
+### ✅ La reserva y sus pagos entran juntos
+
+Eran **hasta cuatro escrituras sueltas**: la reserva y una fila por concepto
+(señal, resto, fianza). Si fallaba cualquiera menos la primera quedaba una
+reserva creada **sin nada que cobrar**, mientras la pantalla decía que no se
+había podido crear. El operador la creaba otra vez y acababa con dos — la
+segunda, además, bloqueando el coche. Y desde M-43 el aviso ofrece
+«Reintentar», que hacía ese duplicado aún más fácil.
+
+Ahora van en un `writeBatch`, que es atómico por contrato: entra todo o no entra
+nada. El id se pide antes con `doc(collection)` porque las filas de pago lo
+llevan dentro; `addDoc` no sirve, ya que solo devuelve el id **después** de
+escribir.
+
+La construcción de las filas se ha extraído a `buildInitialPaymentRows()` en el
+util, donde se puede probar sin Firestore. **Un concepto a 0 no genera fila**:
+una fianza exenta no es una fianza pendiente de 0 €, es que no hay fianza —
+sembrarla dejaría una fila incobrable que impediría dar la reserva por pagada.
+6 tests nuevos.
+
+### ⚠️ Dos operadores reservando el mismo coche: reducido, no cerrado
+
+Esto **no se puede resolver desde el cliente**, y conviene que quede escrito
+para no volver a intentarlo: el SDK web **no permite consultas dentro de una
+transacción**, solo lecturas por id. No hay forma de preguntar «¿hay alguna
+reserva que solape?» y escribir de forma atómica. Cerrarlo de verdad pide una
+Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.
+
+Lo que sí se ha hecho es **volver a comprobar la disponibilidad a ras del
+commit**. Entre la comprobación del asistente y la escritura había una lectura
+del vehículo y el cálculo del precio: cerca de un segundo de ventana. Ahora son
+milisegundos.
+
+**Verificado con una carrera real**, no razonando sobre ella: dos pestañas
+preparadas hasta el último paso con el mismo coche y las mismas fechas, y luego
+creando una detrás de otra. La primera crea; la segunda no escribe nada.
+
+### El aviso también estaba mal, y era la mitad del problema
+
+En la primera prueba de la carrera, la segunda pestaña dijo **«No se pudo crear
+la reserva. Inténtalo de nuevo»** con un botón de **Reintentar** — que iba a
+fallar exactamente igual, porque hay que cambiar de coche o de fechas, no
+repetir.
+
+La causa: las comprobaciones de disponibilidad lanzaban
+`'Vehicle no longer available for these dates'`, **inglés duro**, así que la
+capa de avisos no podía distinguirlo de un fallo cualquiera. Ahora lanzan la
+clave i18n que ya existía, y la pantalla enseña el motivo real —«Ya hay una
+reserva para estas fechas»— **sin ofrecer reintentar**. Verificado repitiendo la
+carrera.
+
+Es el mismo patrón que M-43: un fallo que no se explica es la mitad del fallo.
+
+---
+
 ## Limpieza antes de los datos reales — 7 de septiembre de 2026
 
 - [x] **Borrar un registro se lleva sus ficheros de Storage.**
@@ -949,7 +1102,7 @@ bases— y la subida de la factura a Storage.
   supresión, hoy hay que entrar a la consola de Firebase. Queda como decisión
   tuya si quieres ese botón (ver M-47).
 
-- [ ] **M-47 · ¿Debe poder borrarse un cliente desde la aplicación?** Hoy no se
+- [x] **M-47 · ¿Debe poder borrarse un cliente desde la aplicación?** *(resuelto el 7 sep 2026 — ver arriba)* Hoy no se
   puede, y el borrado ya está resuelto por debajo. A favor: el RGPD reconoce el
   derecho de supresión y hacerlo por consola es incómodo y sin registro. En
   contra: un cliente borrado deja reservas y contratos apuntando a un nombre que
@@ -1513,7 +1666,19 @@ Un porcentaje en la ficha del cliente que se aplica a sus reservas nuevas.
 **Queda fuera:** el descuento no se aplica a reservas ya creadas, por diseño —
 el snapshot es histórico congelado.
 
-## N-5 · Pre-reserva desde la web pública *(anotado el 29 ago 2026 — sin decidir)*
+## ⛔ N-5 · Pre-reserva desde la web pública — **fuera de este proyecto**
+
+⚠️ **Decisión de Dorel del 7 de septiembre de 2026: esto NO se construye aquí.**
+La pre-reserva vivirá en la **web pública de coches**, que es un proyecto
+aparte, y se enlazará con este backoffice desde allí.
+
+Lo que sigue se conserva porque describe el flujo que ese otro proyecto tendrá
+que implementar, y porque marca **qué tendrá que ofrecer este lado**: crear la
+reserva, cobrar la señal y autocancelar lo que no se pague. Ahí es donde
+aparecerá la frontera entre los dos sistemas —seguramente una Cloud Function
+con su propia autenticación—, y conviene tenerlo pensado antes de abrirla.
+
+*(Planteamiento original, anotado el 29 ago 2026:)*
 
 El cliente elige coche en una web pública, recibe por WhatsApp un enlace de
 pre-reserva con **validez de 3 horas**, y en ese plazo paga la señal por TPV o

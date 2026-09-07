@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, DocumentReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, where } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, DocumentReference, collection, doc, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, where, limit } from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -282,6 +282,23 @@ export class ClientService {
     if (!this.permissions.can('deleteRecords')) {
       throw new Error('permissions.notAllowed');
     }
+
+    /**
+     * ⚠️ **Un cliente con reservas no se borra.** Decisión de Dorel, y la
+     * honesta: su nombre y su documento siguen dentro del `clientSnapshot` de
+     * cada reserva y de cada contrato, así que quitar la ficha no borra sus
+     * datos — solo deja un cliente «fantasma» al que el histórico apunta y que
+     * ya no se puede abrir desde ninguna parte. Borrar sin historial sí es un
+     * borrado de verdad, y cubre lo que hace falta: limpiar pruebas y altas
+     * duplicadas.
+     */
+    const reservations = await getDocs(
+      query(collection(this.firestore, 'reservations'), where('clientId', '==', id), limit(1))
+    );
+    if (!reservations.empty) {
+      throw new Error('clients.errors.deleteHasReservations');
+    }
+
     await this.storageService.deleteFolder(`clients/${id}`);
     const docRef = doc(this.firestore, `clients/${id}`);
     await deleteDoc(docRef);

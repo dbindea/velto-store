@@ -36,6 +36,17 @@
         <i class="pi pi-pencil"></i>
         {{ 'common.edit' | translate }}
       </button>
+      <!--
+        Solo para un administrador y solo sin reservas: con historial, el
+        nombre y el documento siguen dentro del snapshot de cada reserva y de
+        cada contrato, así que borrar la ficha no borraría nada — solo dejaría
+        un cliente al que el histórico apunta y que ya no se puede abrir.
+      -->
+      @if (permissions.canDelete()) {
+        <button class="btn-danger" type="button" (click)="openDeleteModal()">
+          <i class="pi pi-trash"></i>
+        </button>
+      }
     </div>
 
     <!-- Tabs -->
@@ -483,3 +494,30 @@
     </div>
   }
 </div>
+
+    @if (showDeleteModal) {
+      <div class="modal-overlay" (click)="closeDeleteModal()">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header danger">
+            <i class="pi pi-trash"></i>
+            <h3>{{ 'common.delete' | translate }}</h3>
+            <button class="modal-close" type="button" (click)="closeDeleteModal()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>{{ 'clients.confirmDelete' | translate }}</p>
+            <div class="modal-actions">
+              <button class="btn btn-secondary" type="button" (click)="closeDeleteModal()">
+                {{ 'common.back' | translate }}
+              </button>
+              <button class="btn btn-danger-solid" type="button" [disabled]="deleting" (click)="deleteClient()">
+                @if (deleting) { <i class="pi pi-spin pi-spinner"></i> }
+                @else { <i class="pi pi-trash"></i> }
+                {{ 'common.delete' | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }

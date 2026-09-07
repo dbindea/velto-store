@@ -31,6 +31,7 @@ import {
   generateInternalReference,
   roundMoney,
   selectSettleablePayment,
+  buildInitialPaymentRows,
   distributeRentalPayment,
   EXTRA_TYPES
 } from '@shared/utils/payment-summary.util';
@@ -551,106 +552,36 @@ export class PaymentService {
   }
 
   /**
-   * Create default initial payments for a new reservation.
-   * Called from ReservationService after creating a reservation.
+   * Las filas de pago que le corresponden a una reserva recién creada, **como
+   * datos**: una por concepto esperado (señal, resto, fianza).
+   *
+   * Devuelve en vez de escribir para que quien llama decida cómo persistirlas.
+   * Es lo que permite que la reserva y sus pagos entren en Firestore **en una
+   * sola escritura atómica**: antes eran hasta cuatro sueltas, y si fallaba la
+   * segunda quedaba una reserva sin filas de cobro mientras la pantalla decía
+   * que no se había podido crear. El operador la creaba otra vez y tenía dos.
+   *
+   * Un concepto a 0 no genera fila: una fianza exenta no es una fianza
+   * pendiente de 0 €, es que no hay fianza.
+   */
+  buildInitialPayments(reservationId: string, reservation: Reservation): any[] {
+    // La construcción vive en el util, donde se puede probar sin Firestore;
+    // aquí solo se limpia antes de escribir.
+    return buildInitialPaymentRows(reservationId, reservation).map(row => this.cleanData(row));
+  }
+
+  /**
+   * Siembra las filas de pago de una reserva ya creada.
+   *
+   * Se conserva para quien cree una reserva fuera del camino atómico; el
+   * asistente usa `buildInitialPayments` dentro de su propio `writeBatch`.
    */
   async createInitialPaymentsForReservation(
     reservationId: string,
     reservation: Reservation
   ): Promise<void> {
-    const finalPrice = reservation.pricingSnapshot?.finalPrice || 0;
-    const initialPaymentRequired = reservation.initialPayment?.requiredAmount || 0;
-    const remainingPaymentRequired = reservation.remainingPayment?.requiredAmount || 0;
-    const depositRequired = reservation.deposit?.requiredAmount || 0;
-
-    // Initial payment
-    if (initialPaymentRequired > 0) {
-      await addDoc(this.paymentsRef, this.cleanData({
-        reservationId,
-        clientId: reservation.clientId,
-        vehicleId: reservation.vehicleId,
-        reservationSnapshot: {
-          pickupDateTime: reservation.pickupDateTime,
-          returnDateTime: reservation.returnDateTime,
-          totalDays: reservation.totalDays,
-          finalPrice
-        },
-        clientSnapshot: reservation.clientSnapshot,
-        vehicleSnapshot: reservation.vehicleSnapshot,
-        type: 'initial_payment',
-        direction: 'income',
-        method: 'other',
-        source: 'system',
-        status: 'pending',
-        amount: roundMoney(initialPaymentRequired),
-        paidAmount: 0,
-        pendingAmount: roundMoney(initialPaymentRequired),
-        currency: 'EUR',
-        dueDate: { seconds: Date.now() / 1000 },
-        concept: 'Señal reserva',
-        internalReference: generateInternalReference('INIT'),
-        createdAt: { seconds: Date.now() / 1000 }
-      }));
-    }
-
-    // Remaining payment
-    if (remainingPaymentRequired > 0) {
-      await addDoc(this.paymentsRef, this.cleanData({
-        reservationId,
-        clientId: reservation.clientId,
-        vehicleId: reservation.vehicleId,
-        reservationSnapshot: {
-          pickupDateTime: reservation.pickupDateTime,
-          returnDateTime: reservation.returnDateTime,
-          totalDays: reservation.totalDays,
-          finalPrice
-        },
-        clientSnapshot: reservation.clientSnapshot,
-        vehicleSnapshot: reservation.vehicleSnapshot,
-        type: 'remaining_payment',
-        direction: 'income',
-        method: 'other',
-        source: 'system',
-        status: 'pending',
-        amount: roundMoney(remainingPaymentRequired),
-        paidAmount: 0,
-        pendingAmount: roundMoney(remainingPaymentRequired),
-        currency: 'EUR',
-        dueDate: reservation.remainingPayment?.dueDate,
-        concept: 'Resto alquiler',
-        internalReference: generateInternalReference('REMAIN'),
-        createdAt: { seconds: Date.now() / 1000 }
-      }));
-    }
-
-    // Deposit
-    if (depositRequired > 0) {
-      await addDoc(this.paymentsRef, this.cleanData({
-        reservationId,
-        clientId: reservation.clientId,
-        vehicleId: reservation.vehicleId,
-        reservationSnapshot: {
-          pickupDateTime: reservation.pickupDateTime,
-          returnDateTime: reservation.returnDateTime,
-          totalDays: reservation.totalDays,
-          finalPrice
-        },
-        clientSnapshot: reservation.clientSnapshot,
-        vehicleSnapshot: reservation.vehicleSnapshot,
-        type: 'deposit',
-        direction: 'income',
-        method: 'other',
-        source: 'system',
-        status: 'pending',
-        amount: roundMoney(depositRequired),
-        paidAmount: 0,
-        pendingAmount: roundMoney(depositRequired),
-        currency: 'EUR',
-        dueDate: reservation.pickupDateTime,
-        concept: 'Fianza',
-        internalReference: generateInternalReference('DEP'),
-        createdAt: { seconds: Date.now() / 1000 }
-      }));
+    for (const row of this.buildInitialPayments(reservationId, reservation)) {
+      await addDoc(this.paymentsRef, row);
     }
   }
 

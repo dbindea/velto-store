@@ -48,7 +48,9 @@
     },
     "edit": "Editează client",
     "errors": {
-      "fullNameRequired": "Scrie numele complet al clientului"
+      "fullNameRequired": "Scrie numele complet al clientului",
+      "deleteHasReservations": "Acest client are rezervări și nu poate fi șters. Numele lui ar rămâne salvat în fiecare rezervare și în fiecare contract.",
+      "delete": "Clientul nu a putut fi șters."
     },
     "fields": {
       "address": "Adresă",
@@ -120,7 +122,8 @@
       "new": "Nou",
       "regular": "Regulat",
       "risk": "Risc"
-    }
+    },
+    "confirmDelete": "Ștergi acest client și documentele pe care le-a încărcat? Nu se poate anula."
   },
   "common": {
     "all": "Toate",
@@ -722,7 +725,8 @@
     "cancelLocked": "Rolul tău nu poate anula. Cere-i unui administrator.",
     "discountsLocked": "Rolul tău nu poate acorda reduceri.",
     "notAllowed": "Rolul tău nu permite această acțiune",
-    "pricingLocked": "Rolul tău nu poate schimba prețul. Se aplică cel din tarif."
+    "pricingLocked": "Rolul tău nu poate schimba prețul. Se aplică cel din tarif.",
+    "notAllowedRoute": "Rolul tău nu are acces la acea secțiune."
   },
   "reports": {
     "days": "zile",
@@ -818,7 +822,10 @@
       "processDeposit": "Nu s-a putut procesa garanția",
       "registerPayment": "Nu s-a putut înregistra plata",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil",
-      "create": "Rezervarea nu a putut fi creată. Încearcă din nou."
+      "create": "Rezervarea nu a putut fi creată. Încearcă din nou.",
+      "notFound": "Rezervarea nu a fost găsită.",
+      "deleteSignedContract": "O rezervare cu contractul semnat nu poate fi ștearsă. Anuleaz-o în schimb: contractul semnat atestă închirierea și nu se șterge niciodată.",
+      "delete": "Rezervarea nu a putut fi ștearsă."
     },
     "fields": {
       "duration": "Durată",
@@ -909,7 +916,8 @@
     },
     "title": "Rezervări",
     "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
-    "pendingAmount": "de încasat"
+    "pendingAmount": "de încasat",
+    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula."
   },
   "search": {
     "close": "Închide",
@@ -970,7 +978,7 @@
       "empty": "Încă nu are nimeni acces",
       "inactive": "Fără acces",
       "name": "Nume",
-      "notice": "Astăzi rolul decide în ce secțiuni întregi se intră: rapoarte, cheltuieli și aceste setări. Limitele fine — prețuri, ștergere sau anulare — vin într-o sarcină separată.",
+      "notice": "Rolul decide în ce secțiuni se intră —rapoarte, cheltuieli și aceste setări— și, de asemenea, ce se poate face înăuntru: modificarea prețurilor, acordarea de reduceri, ștergerea și anularea sunt doar pentru administrator.",
       "role": "Rol",
       "roles": {
         "admin": "Administrator",
