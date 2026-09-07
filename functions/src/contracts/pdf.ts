@@ -129,13 +129,14 @@ export interface ContractPdfInput {
     legalName: string;
     taxId: string;
     registry?: string;
+    /** Domicilio social: solo junto al NIF —arrendador, firma y pie legal—. */
     address: string;
+    /** Domicilio comercial: la oficina. Va en la cabecera, que es la que le
+     * habla al cliente. Cae a `address` si no está. */
+    officeAddress?: string;
     phone?: string;
     email: string;
     website?: string;
-    insurancePolicy?: string;
-    insurerName?: string;
-    roadsideAssistancePhone?: string;
     representativeName?: string;
     representativeNie?: string;
   };
@@ -1853,12 +1854,25 @@ export class PdfBuilder {
 export function companyHeaderLines(company: {
   taxId?: string;
   address?: string;
+  officeAddress?: string;
   phone?: string;
   email?: string;
 }): string[] {
   return [
     company.taxId ? `NIF ${company.taxId.toUpperCase()}` : '',
-    company.address || '',
+    /**
+     * La **oficina**, no el domicilio social.
+     *
+     * Esta cabecera es la marca hablándole al cliente: el teléfono y el correo
+     * de al lado son los que va a usar, y la dirección tiene que ser la misma
+     * lógica — dónde encuentra a alguien. El domicilio social sigue en el pie
+     * legal de cada página y en el bloque del arrendador, que es donde es un
+     * dato registral y no una indicación de cómo llegar.
+     *
+     * Cae al social si no hay comercial: para una empresa cuya oficina es su
+     * domicilio social, las dos son la misma y no hay nada que distinguir.
+     */
+    company.officeAddress || company.address || '',
     [company.phone, company.email].filter(Boolean).join(' · ')
   ].filter(Boolean);
 }

@@ -18,6 +18,7 @@ import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
 import { CONTRACT_CLAUSES } from '../contracts/clauses';
 import {
   COMPANY_ADDRESS,
+  COMPANY_OFFICE_ADDRESS,
   COMPANY_BRAND_NAME,
   COMPANY_LEGAL_NAME,
   COMPANY_REGISTRY
@@ -29,7 +30,11 @@ const company = {
   legalName: COMPANY_LEGAL_NAME,
   taxId: 'B88866900',
   registry: COMPANY_REGISTRY,
+  // Las dos, y distintas: es lo que comprueba que cada una sale donde le toca
+  // —la comercial en la cabecera, la social en el pie legal— y que ninguna de
+  // las dos se sale del margen.
   address: COMPANY_ADDRESS,
+  officeAddress: COMPANY_OFFICE_ADDRESS,
   phone: '+34 623 766 181',
   email: 'reservas@veltorent.com',
   website: 'www.veltorent.com'

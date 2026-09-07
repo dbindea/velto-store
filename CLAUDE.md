@@ -786,6 +786,23 @@ sitios —bloque «Datos del arrendador», casilla de firma del arrendador y pie
 página— y en los tres el NIF va al lado. Todo lo demás —asunto del email, cuerpo, cabecera
 de cualquier documento, metadatos del PDF, pantalla pública de firma— lleva la marca.
 
+#### Y **dos direcciones**, por la misma razón
+
+| | Valor | Dónde |
+|---|---|---|
+| `officeAddress` | `C/ María Zambrano, 4` | La **cabecera** de todos los documentos |
+| `address` | `C/ Vereda del Melero, 3` | **Solo junto al NIF**, los mismos tres sitios que `legalName` |
+
+`address` es el **domicilio social**, el del Registro Mercantil: junto al NIF y a la hoja
+registral es un dato obligatorio de la S.L., y ahí no se puede sustituir. `officeAddress`
+es **la oficina**, donde el cliente encuentra a alguien — y por eso va arriba, al lado del
+teléfono y el correo, que siguen esa misma lógica. La cabecera llevaba la fiscal y mandaba
+al cliente a una dirección donde no está la oficina (7 de septiembre de 2026).
+
+⚠️ **`officeAddress` cae a `address` si no está configurada.** No es un parche de
+compatibilidad: es que para una empresa cuya oficina es su domicilio social las dos son la
+misma, y declarar dos veces lo mismo solo sirve para que un día diverjan.
+
 El criterio es de Dorel y es de negocio, no de estilo: un cliente no sabe qué es una S.L.
 ni tiene por qué saberlo, y meterlo en un «Gracias por confiar en…» suena a notaría.
 

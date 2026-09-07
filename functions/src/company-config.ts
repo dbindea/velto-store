@@ -28,7 +28,27 @@ export interface CompanyConfig {
   legalName: string;
   taxId: string;
   registry: string;
+  /**
+   * El **domicilio social**: el que consta en el Registro Mercantil.
+   *
+   * Va donde la empresa comparece como persona jurídica, es decir donde
+   * acompaña al NIF: el bloque del arrendador, la casilla de su firma y el pie
+   * legal de cada página. Ahí no se puede sustituir por la dirección de la
+   * oficina — es un dato registral, igual que el NIF o la hoja del registro.
+   */
   address: string;
+  /**
+   * El **domicilio comercial**: dónde está la oficina y dónde te atiende
+   * alguien.
+   *
+   * Es el que le sirve al cliente, así que va en la cabecera de los documentos,
+   * que es la marca hablándole a él. Misma idea que `brandName` frente a
+   * `legalName`: el dato útil arriba, el registral junto al NIF.
+   *
+   * Si no se configura, cae al domicilio social. Una empresa cuya oficina es su
+   * domicilio social no tiene que declarar dos veces lo mismo.
+   */
+  officeAddress: string;
   phone: string;
   email: string;
   website: string;
@@ -48,6 +68,11 @@ export function companyConfig(): CompanyConfig {
     taxId: process.env.VELTO_COMPANY_TAX_ID || 'B88866900',
     registry: process.env.VELTO_COMPANY_REGISTRY || COMPANY_REGISTRY,
     address: process.env.VELTO_COMPANY_ADDRESS || COMPANY_ADDRESS,
+    officeAddress:
+      process.env.VELTO_COMPANY_OFFICE_ADDRESS ||
+      COMPANY_OFFICE_ADDRESS ||
+      process.env.VELTO_COMPANY_ADDRESS ||
+      COMPANY_ADDRESS,
     phone: process.env.VELTO_COMPANY_PHONE || '+34 623 766 181',
     email: process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com',
     website: process.env.VELTO_COMPANY_WEBSITE || 'www.veltorent.com',
@@ -73,7 +98,21 @@ export const COMPANY_BRAND_NAME = 'VELTO MOBILITY';
  */
 export const COMPANY_LEGAL_NAME = 'VELTO MOBILITY, S.L.';
 
+/**
+ * Domicilio **social**, el del Registro Mercantil. Solo junto al NIF: bloque
+ * del arrendador, casilla de firma y pie legal de cada página.
+ */
 export const COMPANY_ADDRESS = 'C/ Vereda del Melero, 3 · 28500 Arganda del Rey (Madrid)';
+
+/**
+ * Domicilio **comercial**: la oficina, que es donde el cliente encuentra a
+ * alguien. Es el que va en la cabecera de los documentos.
+ *
+ * ⚠️ No sustituye al social. Los dos son ciertos y cada uno tiene su sitio; la
+ * cabecera decía la fiscal y mandaba al cliente a una dirección donde no está
+ * la oficina.
+ */
+export const COMPANY_OFFICE_ADDRESS = 'C/ María Zambrano, 4 · 28500 Arganda del Rey (Madrid)';
 
 /**
  * Registry line, copied from the invoice footer.

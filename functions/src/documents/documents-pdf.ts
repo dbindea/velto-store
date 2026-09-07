@@ -68,7 +68,10 @@ export interface DocumentCompany {
   /** Razón social: aquí solo la usa el pie legal, junto al NIF. */
   legalName: string;
   taxId: string;
+  /** Domicilio social: aquí solo el pie legal, junto al NIF. */
   address: string;
+  /** Domicilio comercial —la oficina—, para la cabecera. Cae a `address`. */
+  officeAddress?: string;
   phone?: string;
   email: string;
   website?: string;
