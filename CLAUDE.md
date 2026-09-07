@@ -311,6 +311,14 @@ La constante y la aritmética están **duplicadas en `functions/src/contracts/pd
 propósito: app y functions compilan con tsconfigs separados y no pueden compartir módulo.
 Si cambia el tipo, se cambia en los dos sitios.
 
+⚠️ **Y el TEXTO que describe la aritmética también cuenta.** El presupuesto decía «los
+precios incluyen IVA» tres líneas debajo de un desglose que sumaba el 21 % a la base
+(F-36, 7 de septiembre de 2026): otro resto de `tariffIncludesVat`, porque al corregir el
+cálculo nadie tocó la frase que lo explicaba. No falla ningún test —los de maquetación
+comprueban que el texto quepa, nunca que sea cierto— y solo se ve leyendo el PDF como lo
+lee el cliente. Al cambiar una convención de dinero, **busca las frases, no solo las
+fórmulas**.
+
 ⚠️ **Redondea el dinero derivado.** `108.9 - 50` es `58.900000000000006`: el asistente lo
 enseñaba tal cual y lo sembraba así en la fila de pago. Todo importe calculado pasa por
 `roundMoney()` antes de mostrarse o escribirse.

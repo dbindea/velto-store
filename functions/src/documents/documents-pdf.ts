@@ -263,11 +263,26 @@ function labels(loc: ContractLocale) {
         ? 'Aduceți actul de identitate și permisul de conducere la preluare.'
         : 'Traer el documento de identidad y el carnet de conducir a la entrega.',
 
+    /**
+     * ⚠️ Decía «los precios **incluyen** IVA», y era falso: la tarifa es NETA y
+     * el impuesto se suma encima. El propio documento lo desmentía tres líneas
+     * más arriba —165,00 € de base, 34,65 € de IVA, 199,65 € de total— así que
+     * un presupuesto afirmaba que 55 €/día ya llevaba impuesto y a la vez
+     * cobraba 21 % sobre esa cifra.
+     *
+     * Es un resto de cuando la app trabajaba con IVA incluido, retirado el 28
+     * de agosto de 2026 junto con `tariffIncludesVat`. La frase se quedó, que
+     * es la peor forma de sobrevivir de una convención vieja: la aritmética se
+     * corrigió y el texto que la describe siguió diciendo lo contrario.
+     *
+     * Ahora dice las dos cosas que hacen falta y no se contradicen: **el precio
+     * por día es neto** y **el total ya es el importe final**.
+     */
     quoteDisclaimer: en
-      ? 'This quote is non-binding and does NOT reserve the vehicle: availability is confirmed only once the booking is made and the deposit is paid. Prices include VAT at the rate in force on the issue date.'
+      ? 'This quote is non-binding and does NOT reserve the vehicle: availability is confirmed only once the booking is made and the deposit is paid. The daily rate is shown net of VAT; VAT is added and itemised above, so the total shown is the final amount payable.'
       : ro
-        ? 'Această ofertă nu este obligatorie și NU rezervă vehiculul: disponibilitatea se confirmă doar după efectuarea rezervării și plata avansului. Prețurile includ TVA la cota în vigoare la data emiterii.'
-        : 'Este presupuesto no es vinculante y NO reserva el vehículo: la disponibilidad se confirma solo al formalizar la reserva y abonar la señal. Los precios incluyen IVA al tipo vigente en la fecha de emisión.',
+        ? 'Această ofertă nu este obligatorie și NU rezervă vehiculul: disponibilitatea se confirmă doar după efectuarea rezervării și plata avansului. Tariful zilnic este afișat fără TVA; TVA-ul se adaugă și este detaliat mai sus, astfel încât totalul afișat este suma finală de plată.'
+        : 'Este presupuesto no es vinculante y NO reserva el vehículo: la disponibilidad se confirma solo al formalizar la reserva y abonar la señal. El precio por día se indica sin IVA; el impuesto se suma y va desglosado arriba, de modo que el total indicado es el importe final a pagar.',
     bookingDisclaimer: en
       ? 'This document confirms your booking. It is NOT the rental agreement: the vehicle can only be handed over once the rental agreement has been signed and the outstanding amounts have been paid.'
       : ro

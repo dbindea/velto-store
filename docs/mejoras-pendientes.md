@@ -60,6 +60,41 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ F-36 · El presupuesto decía que los precios incluían IVA — 7 de septiembre de 2026
+
+Encontrado **mirando un presupuesto real recién generado en producción**, no
+leyendo código: el pie decía «Los precios incluyen IVA al tipo vigente en la
+fecha de emisión» tres líneas debajo de un desglose que decía lo contrario.
+
+```
+BASE IMPONIBLE      165,00 €
+IVA (21 %)           34,65 €
+TOTAL ALQUILER      199,65 €
+
+Los precios incluyen IVA al tipo vigente…     ← falso
+```
+
+El mismo documento afirmaba que 55 €/día ya llevaba impuesto **y** le sumaba un
+21 % encima. Un cliente que discuta el importe tiene el argumento impreso y
+firmado por la empresa.
+
+Es un resto de cuando la tarifa era con IVA incluido, convención retirada el 28
+de agosto de 2026 junto con `tariffIncludesVat`. **La aritmética se corrigió y la
+frase que la describe se quedó** — que es la forma más silenciosa en que
+sobrevive una convención vieja: no falla ningún test, no rompe ninguna cifra, y
+solo se ve leyendo el documento como lo lee un cliente.
+
+Ahora dice las dos cosas que hacen falta y no se contradicen: **el precio por día
+se indica sin IVA** y **el total indicado es el importe final a pagar**.
+Corregido en los tres idiomas y desplegado en los dos entornos.
+
+⚠️ **La lección, que ya es la tercera vez**: el contrato no puede remitir a un
+dato que no imprime, y un documento no puede describir una aritmética que no
+hace. Los tests de maquetación comprueban que el texto **quepa**, nunca que sea
+**cierto**. Eso solo lo ve alguien leyendo el PDF.
+
+---
+
 ## Ciclo completo en producción — 5 de septiembre de 2026
 
 Recorrido entero con datos reales, **dejado montado en producción** para que
