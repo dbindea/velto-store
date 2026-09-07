@@ -68,3 +68,10 @@ skills-lock.json
 *.pfx
 *.key
 cert.b64
+
+# Salidas de trabajo que no son código y estaban versionadas sin motivo:
+# el log de un despliegue concreto (563 KB) y tres PDF de prueba del contrato
+# (~3,4 MB entre los tres). Se regeneran solos y su historia no le sirve a
+# nadie; en el repositorio solo engordan cada clon.
+deploy.log
+test-contract-*.pdf

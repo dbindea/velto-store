@@ -391,6 +391,32 @@ módulos, esta es la razón por la que no debe.
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
+### Borrar un documento no borra sus ficheros
+
+⚠️ **Firestore y Storage son dos servicios distintos.** Borrar el documento deja los
+ficheros donde estaban, con su token de descarga vivo. En un cliente eso no es desorden:
+lo que se queda en `clients/{id}/documents/` es **el DNI y el carné de una persona** cuya
+ficha ya se pidió borrar.
+
+Lo resuelve `StorageService.deleteFolder()`, conectado en vehículos, clientes y
+mantenimiento; los gastos ya borraban su factura. **Storage no tiene borrado recursivo**:
+lista y borra uno a uno, bajando también por los prefijos.
+
+Dos reglas, y las dos importan:
+
+- **Los ficheros van antes que el documento.** Si Storage falla, la ficha sigue ahí y se
+  puede reintentar; al revés se pierde el rastro de qué había que borrar.
+- **Un fichero que se resista no aborta el borrado**, solo se registra. Dejar la ficha a
+  medio borrar es peor que quedarse con un huérfano.
+
+⚠️ La ruta del mantenimiento lleva el vehículo dentro
+(`vehicle-maintenance/{vehicleId}/{maintenanceId}/…`), así que hay que **leer el documento
+antes de borrarlo**: después ya no se sabe de qué coche era.
+
+⚠️ **`deleteClient()` funciona pero no lo llama nadie**: no hay botón de borrar cliente en
+la aplicación. Ver M-47 — puede que lo correcto sea anonimizar, porque el contrato firmado
+no se puede borrar nunca.
+
 ## Firestore: `undefined` está prohibido
 
 Firestore lanza `Cannot use 'undefined' as a Firestore value`. Hay dos defensas y conviene conocer ambas:
@@ -1043,10 +1069,9 @@ y las clases `.email` / `.mono` usan `anywhere`.
   añadir un campo al resumen, mételo también en la comparación de
   `reconcileAfterExternalPayment()`, o la copia no se pondrá al día nunca: el resto cuadra.
 - Sin lint.
-- `deploy.log` (576 KB) y `test-contract-{en,es,ro}.pdf` (~3,5 MB) están trackeados en git sin necesidad.
-- `CREDENTIALS.md` no está en `.gitignore`, aunque sí lo están `*.p12`, `*.pfx`, `*.key` y
-  `cert.b64` desde el 4 de septiembre de 2026.
-- `client.service.ts` tiene un `TODO`: al borrar cliente no elimina sus documentos de Storage.
-  ⚠️ Es el mismo agujero que dejó **ficheros huérfanos en Storage** al vaciar las bases de
-  datos el 4 de septiembre de 2026: borrar el documento no se lleva lo que subió.
+- `deploy.log` y `test-contract-{en,es,ro}.pdf` están en `.gitignore` desde el 7 de
+  septiembre de 2026, pero **seguirán versionados hasta que alguien los saque del índice**
+  con `git rm --cached`: ignorar un fichero no deja de seguir uno ya seguido.
+- `CREDENTIALS.md` **sí está** en `.gitignore`, junto a `*.p12`, `*.pfx`, `*.key` y
+  `cert.b64`.
 - `reservation.service.ts` tiene un `TODO`: operaciones que deberían ser transacción Firestore o Cloud Function.

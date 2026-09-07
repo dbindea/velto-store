@@ -907,6 +907,75 @@ bases— y la subida de la factura a Storage.
   quién no— y esa decisión es tuya, no del código. Si se hace, el motivo debe
   seguir quedando registrado, porque es lo que permite cerrar la reserva.
 
+## Limpieza antes de los datos reales — 7 de septiembre de 2026
+
+- [x] **Borrar un registro se lleva sus ficheros de Storage.**
+
+  Firestore y Storage son dos servicios distintos: borrar el documento no
+  toca los ficheros. Con datos de prueba eso era desorden —así quedaron
+  huérfanos al vaciar las bases el 4 de septiembre—, pero con clientes reales
+  cambia de naturaleza: lo que se queda en `clients/{id}/documents/` es **el
+  DNI y el carné de una persona**, con su token de descarga vivo, después de
+  que se haya pedido borrar su ficha.
+
+  `StorageService.deleteFolder()` lo resuelve en un sitio. Storage **no tiene
+  borrado recursivo**, así que lista y borra uno a uno, bajando también por
+  los prefijos: los documentos de un cliente cuelgan de
+  `clients/{id}/documents/`, un nivel por debajo del que se pide borrar.
+
+  Conectado en vehículos, clientes y mantenimiento; los gastos ya borraban su
+  factura. Dos decisiones que conviene no deshacer:
+
+  - **Los ficheros van antes que el documento.** Si Storage falla, la ficha
+    sigue ahí y se puede reintentar; al revés se pierde el rastro de qué había
+    que borrar.
+  - **No lanza si un fichero se resiste.** Dejar la ficha a medio borrar es
+    peor que quedarse con un huérfano, y el fallo se registra.
+
+  La ruta del mantenimiento lleva el vehículo dentro
+  (`vehicle-maintenance/{vehicleId}/{maintenanceId}/…`), así que hay que leer
+  el documento **antes** de borrarlo: después no se sabe de qué coche era.
+
+  **Verificado con control**, que es lo que hace la prueba honesta: se subió una
+  foto a un vehículo, se borró el vehículo desde la aplicación y su foto pasó a
+  responder **403**; el documento de un cliente que **no** se borró seguía
+  respondiendo **200** en la misma comprobación. Sin ese segundo dato, el 403
+  podría haber sido cualquier otra cosa.
+
+  ⚠️ **`deleteClient()` no lo llama nadie.** Salió al ir a probarlo: el método
+  existe, ahora borra bien, y **no hay ningún botón en la aplicación que borre
+  un cliente**. Es el patrón de siempre —código escrito y nunca ejecutado—, y
+  aquí tiene una consecuencia concreta: si un cliente ejerce su derecho de
+  supresión, hoy hay que entrar a la consola de Firebase. Queda como decisión
+  tuya si quieres ese botón (ver M-47).
+
+- [ ] **M-47 · ¿Debe poder borrarse un cliente desde la aplicación?** Hoy no se
+  puede, y el borrado ya está resuelto por debajo. A favor: el RGPD reconoce el
+  derecho de supresión y hacerlo por consola es incómodo y sin registro. En
+  contra: un cliente borrado deja reservas y contratos apuntando a un nombre que
+  ya no existe, y **el contrato firmado no se puede borrar** —es el documento
+  que acredita el alquiler—, así que la supresión nunca sería completa. Puede
+  que lo correcto sea **anonimizar** en vez de borrar. Decisión tuya.
+
+- [x] **`deploy.log` y los `test-contract-*.pdf` fuera del repositorio.** 563 KB
+  y ~3,4 MB de salidas de trabajo que se regeneran solas y cuya historia no le
+  sirve a nadie; en el repositorio solo engordan cada clon. Añadidos al
+  `.gitignore`.
+
+  ⚠️ **Falta sacarlos del índice**, y eso es tuyo porque toca git:
+
+  ```bash
+  git rm --cached deploy.log test-contract-en.pdf test-contract-es.pdf test-contract-ro.pdf
+  ```
+
+  El `.gitignore` solo evita que se añadan ficheros nuevos: uno que ya está
+  seguido se sigue siguiendo. Los ficheros se quedan en tu disco.
+
+- [x] **`CREDENTIALS.md` ya estaba en `.gitignore`.** El apunte de `CLAUDE.md`
+  decía que no; estaba desactualizado y se ha corregido.
+
+---
+
 ## Lote de pulido — 7 de septiembre de 2026
 
 Seis cosas pequeñas que se notan a diario, hechas de una vez. Cinco están
@@ -1079,13 +1148,13 @@ valida el build.**
 
 ## Prioridad media
 
-- [ ] **M-5 · Subida de fotos de una en una.**
+- [x] **M-5 · Subida de fotos de una en una.** *(7 sep 2026 — ver «Lote de pulido»)*
   Los dos `input[type=file]` tienen `multiple: false`. El documento funcional
   pide 8 fotos por inspección (frontal, trasera, laterales, interior, cuadro,
   combustible, daños): son 8 ciclos de abrir el selector. Permitir selección
   múltiple desde galería, manteniendo la cámara de una en una.
 
-- [ ] **M-6 · Las fotos de vehículo se recortan mal.**
+- [x] **M-6 · Las fotos de vehículo se recortan mal.** *(7 sep 2026 — ver «Lote de pulido»)*
   Una foto vertical de 1086×1448 se muestra en una caja de 347×180: el recorte
   se come el coche. Además se descarga la imagen completa para pintarla a 347 px.
   Generar miniaturas al subir, o al menos servir tamaños responsivos.
@@ -1115,11 +1184,11 @@ valida el build.**
 
 ## Prioridad baja
 
-- [ ] **M-10 · El dashboard no ofrece reintentar.**
+- [x] **M-10 · El dashboard no ofrece reintentar.** *(7 sep 2026 — ver «Lote de pulido»)*
   Cuando la carga falla ya se avisa correctamente, pero la única salida es
   recargar la página. Un botón de reintento es barato.
 
-- [ ] **M-11 · Reservas canceladas con «pago pendiente».**
+- [x] **M-11 · Reservas canceladas con «pago pendiente».** *(7 sep 2026 — ver «Lote de pulido»)*
   El listado muestra reservas canceladas con su saldo pendiente en rojo, lo que
   invita a perseguir un cobro que ya no toca. Decidir si se ocultan esos
   importes o se marcan como no exigibles.
@@ -1835,7 +1904,7 @@ inyección. Se resolvió subiendo la especificidad con el elemento
   significa que ese camino solo se prueba con un error que rechace de verdad
   —un callable, un permiso denegado—, no desenchufando la red.
 
-- [ ] **M-46 · Un botón deshabilitado que no lo parece.** Salió al mirar la
+- [x] **M-46 · Un botón deshabilitado que no lo parece.** *(7 sep 2026 — ver «Lote de pulido»)* Salió al mirar la
   captura de M-43: «Iniciar entrega» se pinta en verde primario, igual que uno
   activo, aunque esté `disabled` y lleve debajo su «Falta firma del contrato».
   Se lee como un botón que no responde. Es el primo del problema de M-42: allí

@@ -26,6 +26,7 @@ import {
   VehicleMaintenance,
 } from '@shared/models/vehicle-maintenance.model';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import { StorageService } from '@core/firebase/storage.service';
 
 /**
  * CRUD + alert helpers for the `vehicleMaintenance` top-level
@@ -38,6 +39,7 @@ import { APP_DEFAULTS } from '@shared/constants/app.constants';
 export class VehicleMaintenanceService {
   private firestore = inject(Firestore);
   private storage = inject(Storage);
+  private storageService = inject(StorageService);
   private maintenanceRef: CollectionReference;
 
   constructor() {
@@ -235,8 +237,21 @@ export class VehicleMaintenanceService {
     await updateDoc(docRef, { status: 'cancelled', updatedAt: serverTimestamp() });
   }
 
+  /**
+   * Borra un mantenimiento **y su factura**.
+   *
+   * La ruta en Storage lleva el vehículo dentro
+   * (`vehicle-maintenance/{vehicleId}/{maintenanceId}/…`), así que hay que leer
+   * el documento **antes** de borrarlo: después ya no se sabe de qué coche era
+   * y el fichero se queda sin nadie que lo reclame.
+   */
   async deleteMaintenance(id: string): Promise<void> {
     const docRef = doc(this.firestore, `vehicleMaintenance/${id}`);
+    const snap = await getDoc(docRef);
+    const vehicleId = snap.exists() ? (snap.data() as VehicleMaintenance).vehicleId : null;
+    if (vehicleId) {
+      await this.storageService.deleteFolder(`vehicle-maintenance/${vehicleId}/${id}`);
+    }
     await deleteDoc(docRef);
   }
 

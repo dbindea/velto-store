@@ -8,12 +8,14 @@ import { normalizeLoyaltyDiscountPercent } from '@shared/utils/pricing.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { AuthService } from '@core/auth/auth.service';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { StorageService } from '@core/firebase/storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class ClientService {
   private firestore = inject(Firestore);
   private permissions = inject(PermissionsService);
   private storage = inject(Storage);
+  private storageService = inject(StorageService);
   private authService = inject(AuthService);
   private clientsRef: CollectionReference;
 
@@ -261,8 +263,17 @@ export class ClientService {
   }
 
   /**
-   * Delete a client.
-   * TODO: Also delete documents from Storage.
+   * Borra un cliente **y los documentos que subió**.
+   *
+   * ⚠️ **Borrar el documento de Firestore no se lleva sus ficheros.** Aquí eso
+   * no es desorden: lo que queda en `clients/{id}/documents/` es el **DNI y el
+   * carné de conducir** de una persona, con su token de descarga vivo, después
+   * de que se haya pedido borrar su ficha. Cualquiera con el enlace guardado
+   * seguiría viéndolos.
+   *
+   * Los ficheros van **antes** que el documento: si Storage falla, la ficha
+   * sigue ahí y se puede reintentar. Al revés se perdería el rastro de qué
+   * ficheros había que borrar.
    */
   async deleteClient(id: string): Promise<void> {
     // Defensa en profundidad: la UI esconde el botón y esto rechaza la
@@ -271,6 +282,7 @@ export class ClientService {
     if (!this.permissions.can('deleteRecords')) {
       throw new Error('permissions.notAllowed');
     }
+    await this.storageService.deleteFolder(`clients/${id}`);
     const docRef = doc(this.firestore, `clients/${id}`);
     await deleteDoc(docRef);
   }
