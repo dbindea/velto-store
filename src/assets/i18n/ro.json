@@ -1293,7 +1293,10 @@
       "linePriceInvalid": "Suma nu poate fi negativă",
       "lineVatInvalid": "Indică o cotă de TVA validă",
       "paymentMethodRequired": "Alege modalitatea de plată",
-      "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus"
+      "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus",
+      "rebuPurchasePriceRequired": "La regimul pe marjă e nevoie de prețul de achiziție: baza este marja",
+      "exemptionNoteRequired": "Indică temeiul legal al scutirii",
+      "euVatIdRequired": "O livrare intracomunitară necesită codul de TVA al cumpărătorului (ex.: PT501234567)"
     },
     "errors": {
       "unauthenticated": "Trebuie să te autentifici",
@@ -1301,6 +1304,19 @@
       "cannotDeleteIssued": "O factură emisă nu se poate șterge. Pentru corectare, emite o factură storno.",
       "issueFailed": "Factura nu a putut fi emisă",
       "loadFailed": "Facturile nu au putut fi încărcate"
+    },
+    "taxRegime": "Regim de TVA",
+    "purchasePrice": "Preț de achiziție (TVA inclus)",
+    "rebuMargin": "Marjă",
+    "exemptionNote": "Temeiul legal al scutirii",
+    "rebuWarning": "Regimul pentru bunuri second-hand se aplică doar dacă ai cumpărat bunul FĂRĂ TVA deductibil (de la o persoană fizică) și pentru revânzare. O mașină care a fost în flotă a fost cumpărată deducând TVA-ul, deci vânzarea ei intră în regimul general.",
+    "regimes": {
+      "standard": "General (TVA peste preț)",
+      "rebu": "Bunuri second-hand (TVA pe marjă)",
+      "exemptEu": "Scutită · livrare intracomunitară (art. 25)",
+      "exemptExport": "Scutită · export (art. 21)",
+      "reverseCharge": "Taxare inversă",
+      "exemptOther": "Scutită · altele"
     }
   }
 }

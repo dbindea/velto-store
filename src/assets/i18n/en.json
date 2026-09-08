@@ -1293,7 +1293,10 @@
       "linePriceInvalid": "The amount cannot be negative",
       "lineVatInvalid": "Enter a valid VAT rate",
       "paymentMethodRequired": "Choose a payment method",
-      "cashLimitExceeded": "Cash is not allowed from €1,000 upwards"
+      "cashLimitExceeded": "Cash is not allowed from €1,000 upwards",
+      "rebuPurchasePriceRequired": "The margin scheme needs the purchase price: the base is the margin",
+      "exemptionNoteRequired": "State the legal basis for the exemption",
+      "euVatIdRequired": "An intra-Community supply requires the buyer's EU VAT number (e.g. PT501234567)"
     },
     "errors": {
       "unauthenticated": "You must sign in",
@@ -1301,6 +1304,19 @@
       "cannotDeleteIssued": "An issued invoice cannot be deleted. To correct it, issue a credit note.",
       "issueFailed": "The invoice could not be issued",
       "loadFailed": "Invoices could not be loaded"
+    },
+    "taxRegime": "VAT scheme",
+    "purchasePrice": "Purchase price (VAT incl.)",
+    "rebuMargin": "Margin",
+    "exemptionNote": "Legal basis for the exemption",
+    "rebuWarning": "The margin scheme only applies if you bought the item WITHOUT deductible VAT (from a private individual) and for resale. A car that was in the fleet was bought deducting its VAT, so its sale falls under the standard scheme.",
+    "regimes": {
+      "standard": "Standard (VAT on the price)",
+      "rebu": "Second-hand goods (VAT on the margin)",
+      "exemptEu": "Exempt · intra-Community supply (Art. 25)",
+      "exemptExport": "Exempt · export (Art. 21)",
+      "reverseCharge": "Reverse charge",
+      "exemptOther": "Exempt · other"
     }
   }
 }

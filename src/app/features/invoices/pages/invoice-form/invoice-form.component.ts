@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -13,8 +13,11 @@ import {
   InvoiceLine,
   InvoicePaymentMethod,
   InvoiceRecipient,
+  InvoiceTotals,
   RECIPIENT_TYPE_LABELS,
-  RecipientType
+  RecipientType,
+  TAX_REGIME_LABELS,
+  TaxRegime
 } from '@shared/models/invoice.model';
 import {
   calculateInvoiceTotals,
@@ -22,6 +25,7 @@ import {
   differsFromReservation,
   isInvoiceOverdue,
   lineBase,
+  rebuMargin,
   suggestPaymentMethod,
   validateInvoice
 } from '@shared/utils/invoice.util';
@@ -73,9 +77,25 @@ export class InvoiceFormComponent implements OnInit {
   profiles = signal<BillingProfile[]>([]);
   recipientTypeOptions = Object.keys(RECIPIENT_TYPE_LABELS) as RecipientType[];
   recipientTypeLabels = RECIPIENT_TYPE_LABELS;
+  regimeOptions = Object.keys(TAX_REGIME_LABELS) as TaxRegime[];
+  regimeLabels = TAX_REGIME_LABELS;
 
-  /** Los totales se recalculan en vivo con la misma función que usa el backend. */
-  totals = computed(() => calculateInvoiceTotals(this.lines));
+  /**
+   * Los totales, con la misma función que ejecuta el backend antes de emitir.
+   *
+   * ⚠️ **Es un método y no un `computed()`**, y la diferencia no es de estilo.
+   * `lines` es un array normal que `ngModel` muta en sitio: un `computed` solo
+   * se reevalúa cuando cambia una **señal**, así que se calculaba una vez y se
+   * quedaba clavado. En una factura libre eso significaba teclear 7.000 € y ver
+   * «Total 0,00 €»; en una que venía de una reserva no se notaba, porque los
+   * datos llegaban antes del primer pintado.
+   *
+   * Como método, la detección de cambios lo reevalúa en cada tecla. El cálculo
+   * es trivial y son cuatro líneas: no hay nada que memorizar.
+   */
+  totals(): InvoiceTotals {
+    return calculateInvoiceTotals(this.lines);
+  }
 
   problems: FieldProblems = {};
 
@@ -87,7 +107,9 @@ export class InvoiceFormComponent implements OnInit {
   }
 
   emptyLine(): InvoiceLine {
-    return { description: '', quantity: 1, unitPrice: 0, vatRate: DEFAULT_VAT_RATE };
+    // Nace en régimen general, que es el 99 % de lo que factura una empresa de
+    // alquiler. Los demás se eligen a mano y a conciencia.
+    return { description: '', quantity: 1, unitPrice: 0, vatRate: DEFAULT_VAT_RATE, taxRegime: 'standard' };
   }
 
   /**
@@ -177,6 +199,12 @@ export class InvoiceFormComponent implements OnInit {
 
   baseOf(line: InvoiceLine): number {
     return lineBase(line);
+  }
+
+  /** El margen del REBU, en vivo: es la única forma de que se vea de dónde
+   * sale el impuesto, que no es del precio de venta. */
+  marginOf(line: InvoiceLine): number {
+    return rebuMargin(line);
   }
 
   /** `0.21` ↔ `21`, para que el operador teclee un porcentaje y no una fracción. */

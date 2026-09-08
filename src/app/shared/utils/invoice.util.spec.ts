@@ -21,6 +21,7 @@ import {
   lineBase,
   linesFromReservation,
   needsOperationDate,
+  rebuMargin,
   suggestPaymentMethod,
   validateInvoice
 } from './invoice.util';
@@ -114,7 +115,146 @@ describe('calculateInvoiceTotals', () => {
 
   it('una factura sin líneas vale cero, no NaN', () => {
     const t = calculateInvoiceTotals([]);
-    expect(t).toEqual({ base: 0, vat: 0, total: 0, byVatRate: [] });
+    expect(t).toMatchObject({ base: 0, vat: 0, total: 0, byVatRate: [] });
+  });
+});
+
+describe('regímenes de IVA — venta de vehículos', () => {
+  it('régimen general: el 21 % se suma al precio', () => {
+    const t = calculateInvoiceTotals([
+      linea({ description: 'Renault Clio 0001PRB', unitPrice: 8000, taxRegime: 'standard' })
+    ]);
+    expect(t.base).toBe(8000);
+    expect(t.vat).toBe(1680);
+    expect(t.total).toBe(9680);
+  });
+
+  it('REBU: la base es el MARGEN, no el precio de venta', () => {
+    // Comprado a un particular por 5.500 €, vendido por 7.000 €.
+    // Margen 1.500 → base 1.239,67 y cuota 260,33.
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 7000, purchasePrice: 5500, taxRegime: 'rebu' })
+    ]);
+    expect(t.base).toBe(1239.67);
+    expect(t.vat).toBe(260.33);
+    expect(t.base + t.vat).toBeCloseTo(1500, 2);
+  });
+
+  it('REBU: el total es el precio de venta, SIN sumarle la cuota otra vez', () => {
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 7000, purchasePrice: 5500, taxRegime: 'rebu' })
+    ]);
+    // 7.000 y no 7.260: en REBU el impuesto va dentro del precio.
+    expect(t.total).toBe(7000);
+    expect(t.rebuTotal).toBe(7000);
+  });
+
+  it('REBU vendido con pérdida: base cero, nunca una cuota negativa', () => {
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 4000, purchasePrice: 5500, taxRegime: 'rebu' })
+    ]);
+    expect(t.base).toBe(0);
+    expect(t.vat).toBe(0);
+    expect(t.total).toBe(4000);
+  });
+
+  it('exenta intracomunitaria: importe al total y cuota cero', () => {
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 8000, taxRegime: 'exempt_eu' })
+    ]);
+    expect(t.vat).toBe(0);
+    expect(t.total).toBe(8000);
+    expect(t.exemptTotal).toBe(8000);
+  });
+
+  it('una exenta NO aparece como un tipo del 0 %', () => {
+    // Meterla en el desglose imprimiría «IVA 0 %», que es justo lo que la norma
+    // no quiere: pide la referencia a la exención, no un tipo inventado.
+    const t = calculateInvoiceTotals([linea({ unitPrice: 8000, taxRegime: 'exempt_export' })]);
+    expect(t.byVatRate).toHaveLength(0);
+  });
+
+  it('inversión del sujeto pasivo: sin cuota, como una exenta', () => {
+    const t = calculateInvoiceTotals([linea({ unitPrice: 5000, taxRegime: 'reverse_charge' })]);
+    expect(t.vat).toBe(0);
+    expect(t.total).toBe(5000);
+  });
+
+  it('mezcla los tres mundos en una sola factura y cuadra', () => {
+    const t = calculateInvoiceTotals([
+      linea({ description: 'Alquiler', unitPrice: 100, taxRegime: 'standard' }),
+      linea({ description: 'Coche REBU', unitPrice: 7000, purchasePrice: 5500, taxRegime: 'rebu' }),
+      linea({ description: 'Venta UE', unitPrice: 3000, taxRegime: 'exempt_eu' })
+    ]);
+    // 100 + 21 de IVA general, + 7.000 con su IVA dentro, + 3.000 exentos.
+    expect(t.total).toBe(10121);
+    expect(t.exemptTotal).toBe(3000);
+    expect(t.rebuTotal).toBe(7000);
+  });
+
+  it('sin régimen se comporta como general: es lo que era todo antes', () => {
+    const conRegimen = calculateInvoiceTotals([linea({ taxRegime: 'standard' })]);
+    const sinRegimen = calculateInvoiceTotals([linea()]);
+    expect(sinRegimen).toEqual(conRegimen);
+  });
+});
+
+describe('validación por régimen', () => {
+  it('REBU exige el precio de compra: sin él, el margen sería el precio entero', () => {
+    const p = validateInvoice({
+      recipient: destinatario,
+      lines: [linea({ unitPrice: 7000, taxRegime: 'rebu' })],
+      paymentMethod: 'transfer'
+    });
+    expect(p['lines[0].purchasePrice']).toBe('invoices.problems.rebuPurchasePriceRequired');
+  });
+
+  it('«otra exención» exige decir cuál: lo pide el art. 6.1.j)', () => {
+    const p = validateInvoice({
+      recipient: destinatario,
+      lines: [linea({ taxRegime: 'exempt_other' })],
+      paymentMethod: 'transfer'
+    });
+    expect(p['lines[0].exemptionNote']).toBe('invoices.problems.exemptionNoteRequired');
+  });
+
+  it('la entrega intracomunitaria exige NIF-IVA de otro Estado miembro', () => {
+    const p = validateInvoice({
+      recipient: destinatario, // NIF español B12345678
+      lines: [linea({ taxRegime: 'exempt_eu' })],
+      paymentMethod: 'transfer'
+    });
+    expect(p['recipientTaxId']).toBe('invoices.problems.euVatIdRequired');
+  });
+
+  it('un NIF español con ES delante tampoco vale para una entrega a otro Estado', () => {
+    const p = validateInvoice({
+      recipient: { ...destinatario, taxId: 'ESB12345678' },
+      lines: [linea({ taxRegime: 'exempt_eu' })],
+      paymentMethod: 'transfer'
+    });
+    expect(p['recipientTaxId']).toBe('invoices.problems.euVatIdRequired');
+  });
+
+  it('acepta un NIF-IVA portugués', () => {
+    const p = validateInvoice({
+      recipient: { ...destinatario, taxId: 'PT501234567' },
+      lines: [linea({ taxRegime: 'exempt_eu' })],
+      paymentMethod: 'transfer'
+    });
+    expect(p['recipientTaxId']).toBeUndefined();
+  });
+});
+
+describe('rebuMargin', () => {
+  it('resta compra de venta', () => {
+    expect(rebuMargin(linea({ unitPrice: 7000, purchasePrice: 5500, taxRegime: 'rebu' }))).toBe(
+      1500
+    );
+  });
+
+  it('nunca es negativo', () => {
+    expect(rebuMargin(linea({ unitPrice: 4000, purchasePrice: 5500, taxRegime: 'rebu' }))).toBe(0);
   });
 });
 

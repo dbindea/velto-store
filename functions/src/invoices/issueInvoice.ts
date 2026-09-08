@@ -33,6 +33,7 @@ import {
   formatInvoiceNumber,
   invoiceSeriesFor,
   InvoiceLineInput,
+  requiredMentionKeys,
   validateInvoiceInput
 } from './invoice-core';
 
@@ -88,6 +89,64 @@ function toDate(value: unknown): Date | undefined {
   if (!value) return undefined;
   const d = new Date(value as string);
   return isNaN(d.getTime()) ? undefined : d;
+}
+
+/**
+ * El texto de cada mención del art. 6.1, en los tres idiomas.
+ *
+ * ⚠️ **No son descripciones que se puedan reformular.** «Inversión del sujeto
+ * pasivo» y «régimen especial de los bienes usados» son los literales que fija
+ * la norma; una paráfrasis deja la factura incompleta aunque se entienda igual.
+ * Por eso viven aquí y no en los JSON de i18n de la app: los emite el backend,
+ * que es quien construye el documento.
+ */
+const MENTION_TEXTS: Record<string, Record<ContractLocale, string>> = {
+  'invoices.mentions.rebu': {
+    es: 'Régimen especial de los bienes usados.',
+    en: 'Margin scheme — second-hand goods.',
+    ro: 'Regim special pentru bunuri second-hand.'
+  },
+  'invoices.mentions.exemptEu': {
+    es: 'Operación exenta conforme al artículo 25 de la Ley 37/1992 (entrega intracomunitaria de bienes).',
+    en: 'Exempt intra-Community supply under Article 25 of Spanish VAT Act 37/1992.',
+    ro: 'Operațiune scutită conform articolului 25 din Legea 37/1992 (livrare intracomunitară).'
+  },
+  'invoices.mentions.exemptExport': {
+    es: 'Operación exenta conforme al artículo 21 de la Ley 37/1992 (exportación).',
+    en: 'Exempt export under Article 21 of Spanish VAT Act 37/1992.',
+    ro: 'Operațiune scutită conform articolului 21 din Legea 37/1992 (export).'
+  },
+  'invoices.mentions.reverseCharge': {
+    es: 'Inversión del sujeto pasivo.',
+    en: 'Reverse charge.',
+    ro: 'Taxare inversă.'
+  },
+  'invoices.mentions.exemptOther': {
+    es: 'Operación exenta de IVA.',
+    en: 'VAT-exempt transaction.',
+    ro: 'Operațiune scutită de TVA.'
+  }
+};
+
+function mentionTexts(keys: string[], loc: ContractLocale): string[] {
+  return keys.map((k) => MENTION_TEXTS[k]?.[loc] || MENTION_TEXTS[k]?.es || '').filter(Boolean);
+}
+
+/**
+ * ¿Toda la factura va en REBU?
+ *
+ * Solo entonces se oculta el desglose de la cuota, que es lo que exige el art.
+ * 138 LIVA. Con una factura mixta el desglose sigue haciendo falta para las
+ * líneas que sí están en régimen general.
+ *
+ * ⚠️ **Se mira en las LÍNEAS, no en los totales.** La primera versión preguntaba
+ * si la base era cero, y en REBU la base del margen **no** es cero: son 1.239,67
+ * de un coche de 7.000. Con esa condición la factura imprimía base y cuota, que
+ * es exactamente lo que el art. 138 prohíbe — y solo se vio mirando el PDF.
+ */
+function soloRebu(lines: InvoiceLineInput[] | undefined): boolean {
+  const conContenido = (lines || []).filter((l) => Number(l?.quantity) && Number(l?.unitPrice));
+  return conContenido.length > 0 && conContenido.every((l) => l.taxRegime === 'rebu');
 }
 
 export const issueInvoice = functions.https.onCall(
@@ -281,7 +340,9 @@ export const issueInvoice = functions.https.onCall(
         amountAlreadyPaid: data.amountAlreadyPaid,
         contractNumber: data.contractNumber,
         vehicleLabel: data.vehicleLabel,
-        notes: data.notes
+        notes: data.notes,
+        mentions: mentionTexts(requiredMentionKeys(data.lines), resolveLocale(data.locale)),
+        hideVatBreakdown: soloRebu(data.lines)
       });
       const subido = await uploadPdf(`invoices/${invoiceRef.id}/invoice.pdf`, pdf);
       pdfUrl = subido.pdfUrl;

@@ -438,6 +438,62 @@ son fiscales:
 
 Esa tabla es el diseño. Lo que sigue explica las decisiones que no son obvias.
 
+### 0) El régimen de IVA de cada línea *(añadido el 8 de septiembre de 2026)*
+
+Vender un coche no siempre lleva el 21 % encima, así que **cada línea tiene su
+régimen**. Va por línea y no por factura porque el art. 6 obliga a **separar la
+base por operación** cuando conviven exentas con no exentas.
+
+| Régimen | Cómo calcula | Qué imprime |
+|---|---|---|
+| **General** | IVA sobre el precio | Base, cuota y tipo |
+| **REBU** (bienes usados) | IVA sobre el **margen** | Importe y la mención. **Nunca la cuota** |
+| **Exenta intracomunitaria** (art. 25) | Sin cuota | Mención con la referencia legal |
+| **Exenta exportación** (art. 21) | Sin cuota | Mención con la referencia legal |
+| **Inversión del sujeto pasivo** | Sin cuota | «Inversión del sujeto pasivo» |
+| **Exenta, otra** | Sin cuota | La norma que se escriba a mano |
+
+⚠️ **Un coche de la flota NO puede venderse en REBU**, y la pantalla lo avisa. El
+REBU es para **revendedores** que compraron sin IVA deducible —a un particular—
+y con destino a la reventa. Un vehículo afecto a la actividad de alquiler se
+compró deduciendo su IVA, así que su venta va en **régimen general al 21 % sobre
+el precio total**. Equivocarse aquí no da un error: da una factura creíble con
+el impuesto mal repercutido, y una vez emitida solo se corrige con una
+rectificativa.
+
+La opción existe porque Velto tiene varios CNAE y podría comprar un coche a un
+particular para revenderlo.
+
+#### Tres cosas que la norma exige y no son evidentes
+
+1. **En REBU la base es el margen**: `(venta − compra) × 100 / (100 + tipo)`, con
+   los dos precios IVA incluido. Vendido con pérdida, la base es cero: no existe
+   una cuota negativa.
+2. ⚠️ **En REBU la factura NO puede consignar la cuota** (art. 138 LIVA),
+   precisamente para que el comprador no se la deduzca. Se imprime el importe y
+   la mención, y nada más. *Consejo comercial que viene de ahí: no interesa
+   aplicar REBU si vendes a una empresa que quiera deducirse el IVA.*
+3. **Una entrega intracomunitaria exige el NIF-IVA del comprador.** Es lo que
+   sostiene la exención: sin un NIF de otro Estado miembro la operación no está
+   exenta, y la factura estaría dejando de repercutir un IVA que sí se debe. La
+   validación lo pide y rechaza un NIF español.
+
+#### Cuatro fallos que solo se vieron mirando el PDF
+
+Los tests pasaban y el cálculo era correcto. Aparecieron al emitir una venta
+REBU de verdad y leer el documento:
+
+- **La cuota se imprimía.** `soloRebu` preguntaba si la base era cero, y en REBU
+  la base del margen **no** es cero: son 1.239,67 € de un coche de 7.000. Ahora
+  se mira en las líneas, que es donde está la respuesta.
+- **El total sumaba la cuota del margen**: 7.260,33 € por un coche vendido en
+  7.000. Este sí lo cazó un test escrito antes de mirar.
+- **Los importes salían sin separador de miles** («7000,00 €»). El CLDR español
+  no agrupa cuatro dígitos; la factura de la empresa sí. `useGrouping: true`.
+- **El domicilio fiscal del destinatario salía truncado** con puntos
+  suspensivos. Es contenido obligatorio (art. 6.1.c): ahora parte en dos líneas,
+  igual que ya hacía el nombre legal.
+
 ### a) La factura no cuelga de la reserva
 
 Velto tiene varios CNAE: puede vender un coche de su flota, lavar un coche ajeno

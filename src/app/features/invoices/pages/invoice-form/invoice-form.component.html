@@ -191,6 +191,86 @@
             >
               <i class="pi pi-trash"></i>
             </button>
+
+            <!--
+              El régimen de IVA de la línea. Va en su propia fila porque solo
+              hace falta mirarlo cuando NO es el general, que es el caso normal:
+              una venta de coche, una exportación, una entrega a otro país.
+            -->
+            <div class="line-regime">
+              <div class="form-group">
+                <label [for]="'regime' + $index">{{ 'invoices.taxRegime' | translate }}</label>
+                <select
+                  [id]="'regime' + $index"
+                  class="form-control"
+                  [(ngModel)]="line.taxRegime"
+                  [name]="'regime' + $index"
+                >
+                  @for (r of regimeOptions; track r) {
+                    <option [value]="r">{{ regimeLabels[r] | translate }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- REBU: la base es el margen, así que hace falta la compra. -->
+              @if (line.taxRegime === 'rebu') {
+                <div class="form-group">
+                  <label class="required" [for]="'purchase' + $index">
+                    {{ 'invoices.purchasePrice' | translate }}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [id]="'purchase' + $index"
+                    class="form-control"
+                    [(ngModel)]="line.purchasePrice"
+                    [name]="'purchase' + $index"
+                    [class.is-invalid]="submitted() && problems['lines[' + $index + '].purchasePrice']"
+                  />
+                  <app-form-error
+                    [problems]="problems['lines[' + $index + '].purchasePrice']"
+                    [show]="submitted()"
+                  />
+                  <small class="field-hint">
+                    {{ 'invoices.rebuMargin' | translate }}: {{ marginOf(line) | number: '1.2-2' }} €
+                  </small>
+                </div>
+              }
+
+              <!-- El art. 6.1.j) exige decir QUÉ exención se aplica. -->
+              @if (line.taxRegime === 'exempt_other') {
+                <div class="form-group">
+                  <label class="required" [for]="'note' + $index">
+                    {{ 'invoices.exemptionNote' | translate }}
+                  </label>
+                  <input
+                    type="text"
+                    [id]="'note' + $index"
+                    class="form-control"
+                    [(ngModel)]="line.exemptionNote"
+                    [name]="'note' + $index"
+                    [class.is-invalid]="submitted() && problems['lines[' + $index + '].exemptionNote']"
+                  />
+                  <app-form-error
+                    [problems]="problems['lines[' + $index + '].exemptionNote']"
+                    [show]="submitted()"
+                  />
+                </div>
+              }
+            </div>
+
+            <!--
+              ⚠️ El aviso del REBU. Equivocarse aquí no da un error: da una
+              factura creíble con el IVA mal repercutido, y una vez emitida no
+              se puede corregir salvo con una rectificativa.
+            -->
+            @if (line.taxRegime === 'rebu') {
+              <div class="notice notice-warning line-notice">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ 'invoices.rebuWarning' | translate }}</span>
+              </div>
+            }
           </div>
         }
 

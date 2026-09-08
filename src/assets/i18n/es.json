@@ -1293,7 +1293,10 @@
       "linePriceInvalid": "El importe no puede ser negativo",
       "lineVatInvalid": "Indica un tipo de IVA válido",
       "paymentMethodRequired": "Elige la forma de pago",
-      "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €"
+      "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €",
+      "rebuPurchasePriceRequired": "En REBU hace falta el precio de compra: la base es el margen",
+      "exemptionNoteRequired": "Indica qué norma ampara la exención",
+      "euVatIdRequired": "Una entrega intracomunitaria exige el NIF-IVA del comprador (ej.: PT501234567)"
     },
     "errors": {
       "unauthenticated": "Debes iniciar sesión",
@@ -1301,6 +1304,19 @@
       "cannotDeleteIssued": "Una factura emitida no se puede borrar. Para corregirla, emite una rectificativa.",
       "issueFailed": "No se pudo emitir la factura",
       "loadFailed": "No se pudieron cargar las facturas"
+    },
+    "taxRegime": "Régimen de IVA",
+    "purchasePrice": "Precio de compra (IVA incl.)",
+    "rebuMargin": "Margen",
+    "exemptionNote": "Norma que ampara la exención",
+    "rebuWarning": "El REBU solo vale si compraste el bien SIN IVA deducible (a un particular) y para revenderlo. Un coche que estuvo en la flota se compró deduciendo su IVA, así que su venta va en régimen general.",
+    "regimes": {
+      "standard": "General (IVA sobre el precio)",
+      "rebu": "Bienes usados (REBU, IVA sobre el margen)",
+      "exemptEu": "Exenta · entrega intracomunitaria (art. 25)",
+      "exemptExport": "Exenta · exportación (art. 21)",
+      "reverseCharge": "Inversión del sujeto pasivo",
+      "exemptOther": "Exenta · otra"
     }
   }
 }

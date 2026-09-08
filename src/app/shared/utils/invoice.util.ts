@@ -18,6 +18,7 @@ import {
   InvoiceRecipient,
   InvoiceTotals,
   MAX_CASH_PAYMENT,
+  TaxRegime,
   VatSubtotal
 } from '@shared/models/invoice.model';
 import { FieldProblems } from '@shared/utils/form-problems.util';
@@ -61,37 +62,126 @@ export function formatInvoiceNumber(series: string, number: number): string {
  */
 export function calculateInvoiceTotals(lines: InvoiceLine[]): InvoiceTotals {
   const porTipo = new Map<number, VatSubtotal>();
+  let exento = 0;
+  let rebuTotal = 0;
+  // Los dos acumuladores del régimen general van aparte del desglose por tipo,
+  // que mezcla el general con el margen del REBU.
+  let totalGeneral = 0;
+  let vatGeneral = 0;
 
   for (const line of lines || []) {
     const cantidad = Number(line.quantity) || 0;
     const precio = Number(line.unitPrice) || 0;
     const tipo = Number(line.vatRate) || 0;
+    const regimen = line.taxRegime || 'standard';
     if (!cantidad || !precio) continue;
 
-    const base = roundMoney(cantidad * precio);
-    const cuota = roundMoney(base * tipo);
+    const importe = roundMoney(cantidad * precio);
 
+    /**
+     * Exentas y con inversión del sujeto pasivo: **el importe entra en el
+     * total, pero no genera cuota ni subtotal por tipo**.
+     *
+     * No es lo mismo que un 0 %: una exenta se declara aparte y la factura
+     * tiene que decir por qué lo está. Meterlas en `byVatRate` como si fueran
+     * un tipo cero imprimiría «IVA 0 %», que es exactamente lo que la norma no
+     * quiere ver — el art. 6.1.j) pide la referencia a la exención, no un tipo
+     * inventado.
+     */
+    if (regimen !== 'standard' && regimen !== 'rebu') {
+      exento = roundMoney(exento + importe);
+      continue;
+    }
+
+    /**
+     * REBU: la base imponible es **el margen**, no el precio de venta.
+     *
+     * `base = (venta − compra) × 100 / (100 + tipo)`, con los dos precios IVA
+     * incluido, que es como lo define la norma. Y si el margen es negativo
+     * —se vendió con pérdida— la base es cero: no existe una cuota negativa.
+     *
+     * ⚠️ Lo que se cobra al cliente sigue siendo el **precio de venta
+     * completo**, y por eso el importe entra entero en el total. La cuota no se
+     * suma encima: va dentro.
+     */
+    if (regimen === 'rebu') {
+      rebuTotal = roundMoney(rebuTotal + importe);
+      const compra = roundMoney((Number(line.purchasePrice) || 0) * cantidad);
+      const margen = Math.max(0, roundMoney(importe - compra));
+      const baseMargen = roundMoney((margen * 100) / (100 + tipo * 100));
+      const cuotaMargen = roundMoney(margen - baseMargen);
+      const acumuladoRebu = porTipo.get(tipo);
+      if (acumuladoRebu) {
+        acumuladoRebu.base = roundMoney(acumuladoRebu.base + baseMargen);
+        acumuladoRebu.vat = roundMoney(acumuladoRebu.vat + cuotaMargen);
+      } else {
+        porTipo.set(tipo, { vatRate: tipo, base: baseMargen, vat: cuotaMargen });
+      }
+      continue;
+    }
+
+    // Régimen general: el IVA se suma al neto.
+    const cuota = roundMoney(importe * tipo);
+    totalGeneral = roundMoney(totalGeneral + importe);
+    vatGeneral = roundMoney(vatGeneral + cuota);
     const acumulado = porTipo.get(tipo);
     if (acumulado) {
-      acumulado.base = roundMoney(acumulado.base + base);
+      acumulado.base = roundMoney(acumulado.base + importe);
       acumulado.vat = roundMoney(acumulado.vat + cuota);
     } else {
-      porTipo.set(tipo, { vatRate: tipo, base, vat: cuota });
+      porTipo.set(tipo, { vatRate: tipo, base: importe, vat: cuota });
     }
   }
 
   // De mayor a menor tipo: el 21 % primero, que es el caso normal y el que el
   // ojo busca.
   const byVatRate = [...porTipo.values()].sort((a, b) => b.vatRate - a.vatRate);
-  const base = roundMoney(byVatRate.reduce((s, x) => s + x.base, 0));
+  const baseGravada = roundMoney(byVatRate.reduce((s, x) => s + x.base, 0));
   const vat = roundMoney(byVatRate.reduce((s, x) => s + x.vat, 0));
 
-  return { base, vat, total: roundMoney(base + vat), byVatRate };
+  /**
+   * ⚠️ **La cuota del margen REBU NO se suma al total.**
+   *
+   * Es el error que cazó su test: el importe REBU ya lleva el impuesto dentro,
+   * así que sumar además su cuota cobraba el IVA dos veces — 7.260,33 € por un
+   * coche vendido en 7.000 €.
+   *
+   * La base y la cuota del margen se calculan igual porque hacen falta para el
+   * modelo 303, pero al total solo entra la cuota de las líneas en **régimen
+   * general**. Y en la factura ni siquiera se imprimen: el art. 138 LIVA
+   * prohíbe consignar la cuota por separado, para que el comprador no pueda
+   * deducírsela.
+   */
+  return {
+    base: baseGravada,
+    vat,
+    total: roundMoney(totalGeneral + vatGeneral + exento + rebuTotal),
+    byVatRate,
+    exemptTotal: exento,
+    rebuTotal
+  };
 }
 
 /** El importe de una línea, sin IVA. Lo que se pinta en la columna «BASE». */
 export function lineBase(line: InvoiceLine): number {
   return roundMoney((Number(line.quantity) || 0) * (Number(line.unitPrice) || 0));
+}
+
+/** ¿Hay alguna línea en este régimen? Para que la pantalla pida lo que falte. */
+export function hasRegime(lines: InvoiceLine[], regime: TaxRegime): boolean {
+  return (lines || []).some((l) => (l.taxRegime || 'standard') === regime);
+}
+
+/**
+ * El margen de una línea REBU, ya redondeado. Cero si se vendió con pérdida.
+ *
+ * Se expone porque la pantalla lo enseña mientras se teclea: es la única forma
+ * de que el operador vea que el impuesto sale del margen y no del precio.
+ */
+export function rebuMargin(line: InvoiceLine): number {
+  const venta = lineBase(line);
+  const compra = roundMoney((Number(line.purchasePrice) || 0) * (Number(line.quantity) || 0));
+  return Math.max(0, roundMoney(venta - compra));
 }
 
 /**
@@ -169,7 +259,36 @@ export function validateInvoice(input: {
     if (!(Number(line.vatRate) >= 0)) {
       problems[`lines[${i}].vatRate`] = 'invoices.problems.lineVatInvalid';
     }
+
+    // Cada régimen pide lo suyo, y sin ello la factura sale incompleta o con el
+    // impuesto mal calculado.
+    const regimen = line.taxRegime || 'standard';
+    if (regimen === 'rebu' && !(Number(line.purchasePrice) > 0)) {
+      // Sin precio de compra el margen sería el precio entero, así que el REBU
+      // dejaría de serlo sin que nada avisara.
+      problems[`lines[${i}].purchasePrice`] = 'invoices.problems.rebuPurchasePriceRequired';
+    }
+    if (regimen === 'exempt_other' && !line.exemptionNote?.trim()) {
+      // El art. 6.1.j) exige la referencia a la norma que ampara la exención.
+      problems[`lines[${i}].exemptionNote`] = 'invoices.problems.exemptionNoteRequired';
+    }
   });
+
+  /**
+   * Una entrega intracomunitaria exenta **necesita el NIF-IVA del comprador**.
+   *
+   * Es lo que sostiene la exención del art. 25: sin un NIF-IVA válido de otro
+   * Estado miembro la operación no está exenta, y la factura estaría dejando de
+   * repercutir un IVA que sí se debe.
+   */
+  if ((lines || []).some((l) => l.taxRegime === 'exempt_eu')) {
+    const nif = (recipient.taxId || '').trim().toUpperCase();
+    // Un NIF-IVA intracomunitario empieza por el código de país; el español
+    // «ES» incluido, que en una entrega a otro Estado no valdría.
+    if (!/^[A-Z]{2}/.test(nif) || nif.startsWith('ES')) {
+      problems['recipientTaxId'] = 'invoices.problems.euVatIdRequired';
+    }
+  }
 
   // --- Forma de pago ---
   if (!input.paymentMethod) {

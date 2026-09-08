@@ -285,3 +285,24 @@ textarea.form-control {
     align-self: center;
   }
 }
+
+/**
+ * El régimen de IVA de la línea, en su propia fila.
+ *
+ * Va debajo y no en la rejilla de arriba porque solo hay que mirarlo cuando NO
+ * es el general: una venta de coche, una exportación, una entrega a otro país.
+ * Metido entre el precio y el IVA robaría atención en el 99 % de las facturas,
+ * que son alquileres corrientes.
+ */
+.line-regime {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.line-notice {
+  grid-column: 1 / -1;
+  margin-bottom: 0.5rem;
+}

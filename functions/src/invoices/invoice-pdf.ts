@@ -42,6 +42,8 @@ export interface InvoicePdfLine {
   quantity: number;
   unitPrice: number;
   vatRate: number;
+  /** El régimen decide qué se puede imprimir en la columna del IVA. */
+  taxRegime?: string;
 }
 
 export interface InvoicePdfInput {
@@ -64,6 +66,19 @@ export interface InvoicePdfInput {
   contractNumber?: string;
   vehicleLabel?: string;
   notes?: string;
+  /**
+   * Las menciones del art. 6.1 **ya traducidas**: «inversión del sujeto
+   * pasivo», «régimen especial de los bienes usados»… El texto es el que fija
+   * la norma, así que llega resuelto en vez de componerse aquí.
+   */
+  mentions?: string[];
+  /**
+   * Oculta el desglose de la cuota.
+   *
+   * Lo pide el art. 138 LIVA cuando toda la factura va en REBU: la cuota va
+   * incluida en el precio y no puede consignarse por separado.
+   */
+  hideVatBreakdown?: boolean;
 }
 
 function labels(loc: ContractLocale) {
@@ -84,6 +99,18 @@ function labels(loc: ContractLocale) {
     vat: en ? 'VAT' : ro ? 'TVA' : 'IVA',
     amount: en ? 'AMOUNT' : ro ? 'VALOARE' : 'IMPORTE',
     taxBase: en ? 'Taxable base' : ro ? 'Bază impozabilă' : 'Base imponible',
+    exemptBase: en
+      ? 'Exempt operations'
+      : ro
+        ? 'Operațiuni scutite'
+        : 'Operaciones exentas',
+    // El importe REBU lleva el impuesto dentro, y la etiqueta tiene que decirlo
+    // para que nadie lo confunda con una base imponible.
+    rebuBase: en
+      ? 'Second-hand goods (VAT included)'
+      : ro
+        ? 'Bunuri second-hand (TVA inclus)'
+        : 'Bienes usados (IVA incluido)',
     total: en ? 'Total invoice' : ro ? 'Total factură' : 'Total factura',
     paymentMethod: en ? 'Payment method' : ro ? 'Modalitate de plată' : 'Forma de pago',
     transfer: en ? 'Bank transfer' : ro ? 'Transfer bancar' : 'Transferencia bancaria',
@@ -173,12 +200,14 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
   if (input.contractNumber) izquierda.push({ label: L.contract, value: input.contractNumber });
   if (input.vehicleLabel) izquierda.push({ label: L.vehicle, value: input.vehicleLabel });
 
-  const derecha: { label?: string; value: string; strong?: boolean }[] = [
+  const derecha: { label?: string; value: string; strong?: boolean; wrap?: boolean }[] = [
     { value: input.recipient.name, strong: true },
     { value: input.recipient.taxId },
-    { value: input.recipient.address }
+    // ⚠️ Envuelve, no trunca: el domicilio fiscal del destinatario es contenido
+    // obligatorio (art. 6.1.c), y truncado deja la factura incompleta.
+    { value: input.recipient.address, wrap: true }
   ];
-  if (input.recipient.email) derecha.push({ value: input.recipient.email });
+  if (input.recipient.email) derecha.push({ value: input.recipient.email, wrap: true });
 
   b.section(L.invoiceData, { lead: 6 });
   b.y += 4;
@@ -199,7 +228,11 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
         units: String(l.quantity),
         description: l.description,
         base: formatMoney(base, loc),
-        vat: vatPercent(l.vatRate),
+        // ⚠️ En REBU y en las exentas la columna del IVA va vacía.
+        // En REBU porque el art. 138 LIVA prohíbe consignar la cuota, y un
+        // «21 %» junto a 7.000 € invita a calcularla; en una exenta porque no
+        // hay tipo que aplicar y la mención de abajo explica por qué.
+        vat: !l.taxRegime || l.taxRegime === 'standard' ? vatPercent(l.vatRate) : '—',
         amount: formatMoney(base, loc)
       };
     })
@@ -207,20 +240,53 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
 
   b.y -= 6;
 
-  // Los totales, con un subtotal por tipo impositivo: el art. 6.1.g) exige la
-  // cuota consignada por separado, y con varios tipos hace falta una línea por
-  // cada uno.
-  const filas: { label: string; value: string; total?: boolean }[] = [
-    { label: L.taxBase, value: formatMoney(input.totals.base, loc) }
-  ];
-  for (const t of input.totals.byVatRate) {
-    filas.push({
-      label: `${L.vat} ${vatPercent(t.vatRate)}`,
-      value: formatMoney(t.vat, loc)
-    });
+  /**
+   * Los totales.
+   *
+   * El art. 6.1.g) exige la cuota **consignada por separado**, y con varios
+   * tipos hace falta una línea por cada uno.
+   *
+   * ⚠️ **Salvo en REBU**, donde el art. 138 LIVA lo prohíbe expresamente: la
+   * cuota va incluida en el precio y no puede consignarse, precisamente para
+   * que el comprador no se la deduzca. Una factura REBU enseña el importe y la
+   * mención del régimen, nada más.
+   */
+  // Quien sabe si toda la factura va en REBU es quien tiene las líneas, así que
+  // llega decidido. Calcularlo aquí desde los totales fue el error que hizo que
+  // la primera factura REBU imprimiera la cuota que el art. 138 prohíbe.
+  const soloRebu = !!input.hideVatBreakdown;
+  const filas: { label: string; value: string; total?: boolean }[] = [];
+
+  if (!soloRebu && input.totals.base > 0) {
+    filas.push({ label: L.taxBase, value: formatMoney(input.totals.base, loc) });
+    for (const t of input.totals.byVatRate) {
+      filas.push({
+        label: `${L.vat} ${vatPercent(t.vatRate)}`,
+        value: formatMoney(t.vat, loc)
+      });
+    }
+  }
+  if (input.totals.exemptTotal) {
+    filas.push({ label: L.exemptBase, value: formatMoney(input.totals.exemptTotal, loc) });
+  }
+  if (input.totals.rebuTotal) {
+    filas.push({ label: L.rebuBase, value: formatMoney(input.totals.rebuTotal, loc) });
   }
   filas.push({ label: L.total, value: formatMoney(input.totals.total, loc), total: true });
   b.totalsBlock(filas);
+
+  /**
+   * Las menciones del art. 6.1. **No son descripciones que se puedan
+   * reformular**: la norma fija el texto —«inversión del sujeto pasivo»,
+   * «régimen especial de los bienes usados»— y una factura sin él está
+   * incompleta aunque las cifras estén bien.
+   */
+  if (input.mentions?.length) {
+    b.y -= 8;
+    for (const m of input.mentions) {
+      b.text(m, { size: 8.2, bold: true, gap: 2 });
+    }
+  }
 
   // Forma de pago. Si ya está cobrada no se piden datos bancarios: no hay nada
   // que pedirle al cliente.
@@ -256,13 +322,24 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
     b.text(input.notes, { size: 8, color: [0.35, 0.35, 0.35], gap: 2 });
   }
 
-  // El pie fiscal del original.
-  b.y -= 10;
-  const tipos = input.totals.byVatRate.map((t) => vatPercent(t.vatRate)).join(', ');
-  b.text(`${L.vatNote} ${L.vatRateNote}: ${tipos || '—'}.`, {
-    size: 7.6,
-    color: [0.4, 0.4, 0.4]
-  });
+  /**
+   * El pie fiscal del original.
+   *
+   * ⚠️ **Solo se imprime si de verdad hay operación sujeta y no exenta.** Decía
+   * «Operación sujeta y no exenta de IVA» en toda factura, y en una venta
+   * intracomunitaria exenta eso sería **falso** — la misma clase de error que
+   * el presupuesto que afirmaba llevar el IVA incluido, o el contrato que
+   * anunciaba una firma digital que no tenía.
+   */
+  const hayGravadas = input.totals.base > 0 && !soloRebu;
+  if (hayGravadas) {
+    b.y -= 10;
+    const tipos = input.totals.byVatRate.map((t) => vatPercent(t.vatRate)).join(', ');
+    b.text(`${L.vatNote} ${L.vatRateNote}: ${tipos || '—'}.`, {
+      size: 7.6,
+      color: [0.4, 0.4, 0.4]
+    });
+  }
 
   b.finalizeFooters();
   return await doc.save();

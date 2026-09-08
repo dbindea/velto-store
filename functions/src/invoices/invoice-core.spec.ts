@@ -16,6 +16,7 @@ import {
   formatInvoiceNumber,
   invoiceSeriesFor,
   InvoiceLineInput,
+  requiredMentionKeys,
   validateInvoiceInput
 } from './invoice-core';
 
@@ -77,11 +78,78 @@ describe('calculateInvoiceTotals — mismos números que el frontend', () => {
   });
 
   it('sin líneas vale cero, no NaN', () => {
-    expect(calculateInvoiceTotals([])).toEqual({ base: 0, vat: 0, total: 0, byVatRate: [] });
+    expect(calculateInvoiceTotals([])).toMatchObject({ base: 0, vat: 0, total: 0, byVatRate: [] });
   });
 
   it('aguanta un null sin reventar: viene de una petición externa', () => {
     expect(calculateInvoiceTotals(null).total).toBe(0);
+  });
+});
+
+describe('regímenes de IVA — mismos números que el frontend', () => {
+  it('REBU: base sobre el margen y total SIN sumar la cuota otra vez', () => {
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 7000, purchasePrice: 5500, taxRegime: 'rebu' })
+    ]);
+    expect(t.base).toBe(1239.67);
+    expect(t.vat).toBe(260.33);
+    // 7.000 y no 7.260,33: en REBU el impuesto va dentro del precio.
+    expect(t.total).toBe(7000);
+  });
+
+  it('REBU con pérdida: base cero, nunca cuota negativa', () => {
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 4000, purchasePrice: 5500, taxRegime: 'rebu' })
+    ]);
+    expect(t.base).toBe(0);
+    expect(t.total).toBe(4000);
+  });
+
+  it('exenta: importe al total, sin cuota y fuera del desglose por tipo', () => {
+    const t = calculateInvoiceTotals([linea({ unitPrice: 8000, taxRegime: 'exempt_eu' })]);
+    expect(t.vat).toBe(0);
+    expect(t.total).toBe(8000);
+    expect(t.byVatRate).toHaveLength(0);
+    expect(t.exemptTotal).toBe(8000);
+  });
+
+  it('mezcla general, REBU y exenta y cuadra', () => {
+    const t = calculateInvoiceTotals([
+      linea({ unitPrice: 100, taxRegime: 'standard' }),
+      linea({ unitPrice: 7000, purchasePrice: 5500, taxRegime: 'rebu' }),
+      linea({ unitPrice: 3000, taxRegime: 'exempt_eu' })
+    ]);
+    expect(t.total).toBe(10121);
+  });
+
+  it('REBU sin precio de compra se rechaza antes de emitir', () => {
+    expect(
+      validateInvoiceInput({
+        recipient: destinatario,
+        lines: [linea({ unitPrice: 7000, taxRegime: 'rebu' })],
+        paymentMethod: 'transfer'
+      })['lines[0].purchasePrice']
+    ).toBe('invoices.problems.rebuPurchasePriceRequired');
+  });
+
+  it('la entrega intracomunitaria exige NIF-IVA de otro Estado', () => {
+    expect(
+      validateInvoiceInput({
+        recipient: destinatario,
+        lines: [linea({ taxRegime: 'exempt_eu' })],
+        paymentMethod: 'transfer'
+      })['recipientTaxId']
+    ).toBe('invoices.problems.euVatIdRequired');
+  });
+
+  it('las menciones obligatorias salen sin repetirse', () => {
+    const m = requiredMentionKeys([
+      linea({ taxRegime: 'rebu', purchasePrice: 1 }),
+      linea({ taxRegime: 'rebu', purchasePrice: 1 }),
+      linea({ taxRegime: 'reverse_charge' })
+    ]);
+    expect(m).toHaveLength(2);
+    expect(m).toContain('invoices.mentions.rebu');
   });
 });
 

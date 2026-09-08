@@ -109,6 +109,69 @@ export interface InvoiceRecipient {
 }
 
 /**
+ * El régimen de IVA de una línea.
+ *
+ * Existe porque Velto tiene varios CNAE y **vende coches**, y una venta no
+ * siempre lleva el 21 % encima. La mención que la factura debe imprimir sale de
+ * aquí: el art. 6.1 del RD 1619/2012 la exige, con el texto exacto, en casi
+ * todos los casos que no son el general.
+ *
+ * ⚠️ **Va por línea y no por factura** porque el mismo art. 6 obliga a
+ * **separar la base imponible por operación** cuando conviven exentas con no
+ * exentas, o inversión del sujeto pasivo con lo demás.
+ */
+export type TaxRegime =
+  /** Régimen general: el IVA se suma al neto. Es el caso normal. */
+  | 'standard'
+  /** Bienes usados: la base es el **margen**, no el precio. Mención obligatoria. */
+  | 'rebu'
+  /** Entrega intracomunitaria exenta (art. 25 LIVA). Exige NIF-IVA del comprador. */
+  | 'exempt_eu'
+  /** Exportación fuera de la UE (art. 21 LIVA). */
+  | 'exempt_export'
+  /** El sujeto pasivo es el destinatario (art. 84.Uno.2º). Mención obligatoria. */
+  | 'reverse_charge'
+  /** Otra exención, con la referencia a la norma escrita a mano. */
+  | 'exempt_other';
+
+/**
+ * ⚠️ **Un coche de la flota NO puede venderse por REBU.**
+ *
+ * El REBU es para **revendedores** que compraron el bien sin IVA deducible —a
+ * un particular, típicamente— y con destino a la reventa. Un vehículo que
+ * estuvo afecto a la actividad de alquiler se compró deduciendo su IVA, así que
+ * su venta va en **régimen general, con el 21 % sobre el precio total**.
+ *
+ * La opción existe porque Velto tiene varios CNAE y podría comprar un coche a
+ * un particular para revenderlo; pero la pantalla lo avisa, porque equivocarse
+ * aquí no da un error: da una factura creíble con el IVA mal repercutido.
+ */
+export const REBU_REQUIRES_PURCHASE_PRICE = true;
+
+/**
+ * ⚠️ **El texto de las menciones del art. 6.1 NO vive aquí, vive en el backend**
+ * (`functions/src/invoices/issueInvoice.ts` → `MENTION_TEXTS`).
+ *
+ * «Inversión del sujeto pasivo» o «régimen especial de los bienes usados» son
+ * literales que fija la norma, no etiquetas de interfaz. Tenerlos también en
+ * los JSON de i18n daría **dos copias del mismo texto legal**, y la primera vez
+ * que discrepen la factura llevará impresa la equivocada sin que nada avise.
+ *
+ * Quien las imprime es quien construye el PDF, así que las resuelve él. Lo que
+ * la pantalla sí enseña —qué régimen tiene cada línea— sale de
+ * `TAX_REGIME_LABELS`, que sí son etiquetas de interfaz y se pueden traducir
+ * libremente.
+ */
+export const TAX_REGIME_LABELS: Record<TaxRegime, string> = {
+  standard: 'invoices.regimes.standard',
+  rebu: 'invoices.regimes.rebu',
+  exempt_eu: 'invoices.regimes.exemptEu',
+  exempt_export: 'invoices.regimes.exemptExport',
+  reverse_charge: 'invoices.regimes.reverseCharge',
+  exempt_other: 'invoices.regimes.exemptOther'
+};
+
+/**
  * Una línea de la factura.
  *
  * ⚠️ **Las líneas son propias, no un espejo de la reserva.** La reserva las
@@ -134,6 +197,28 @@ export interface InvoiceLine {
    * al 21 % y un concepto exento conviven en el mismo documento.
    */
   vatRate: number;
+  /**
+   * Régimen de IVA. Si falta, `standard` — que es lo que era todo antes de que
+   * existieran las ventas de vehículos.
+   */
+  taxRegime?: TaxRegime;
+  /**
+   * Lo que costó el bien, **solo en REBU**: la base imponible es el margen, no
+   * el precio de venta.
+   *
+   * ⚠️ Va **IVA incluido**, igual que el precio de venta, porque así lo calcula
+   * la norma: `base = (venta − compra) × 100 / (100 + tipo)`.
+   */
+  purchasePrice?: number;
+  /**
+   * La norma que ampara la exención, cuando es `exempt_other`.
+   *
+   * El art. 6.1.j) exige «referencia a las disposiciones correspondientes» o
+   * cualquier indicación de que la operación está exenta. En los casos con
+   * mención propia el texto sale de `TAX_REGIME_MENTIONS`; aquí lo escribe
+   * quien factura, porque solo él sabe qué exención está aplicando.
+   */
+  exemptionNote?: string;
 }
 
 /** Base, cuota y total de un tipo impositivo. El desglose que exige el art. 6. */
@@ -157,6 +242,20 @@ export interface InvoiceTotals {
    * separado**; con varios tipos en la misma factura hace falta uno por tipo.
    */
   byVatRate: VatSubtotal[];
+  /**
+   * Importe de las líneas **exentas o con inversión del sujeto pasivo**.
+   *
+   * Aparte de `base` a propósito: no es base imponible gravada, y el art. 6
+   * obliga a separarlas cuando conviven con operaciones sujetas.
+   */
+  exemptTotal?: number;
+  /**
+   * Importe de venta de las líneas en REBU, **con el impuesto ya dentro**.
+   *
+   * Se guarda separado porque al total se suma entero y sin añadirle su cuota,
+   * que va incluida. Sumar las dos cosas cobraría el IVA dos veces.
+   */
+  rebuTotal?: number;
 }
 
 /**

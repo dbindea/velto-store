@@ -68,6 +68,15 @@ export interface InfoEntry {
   value: string;
   /** Render as a feature line (larger, brand colour) instead of label + value. */
   strong?: boolean;
+  /**
+   * Parte en varias líneas en vez de truncar con puntos suspensivos.
+   *
+   * Para los datos que **no se pueden abreviar**: un domicilio fiscal es
+   * contenido obligatorio de la factura (art. 6.1.c), y «Pol. Ind. Las Monjas,
+   * nave 7, 28850 Torrejón de Ard…» es un domicilio incompleto. Misma razón por
+   * la que el nombre legal ya encoge y envuelve en vez de truncarse.
+   */
+  wrap?: boolean;
 }
 
 /** A drawn text run, kept so the overlap check can inspect the layout. */
@@ -444,7 +453,20 @@ export function formatMoney(n?: number, locale: ContractLocale = 'es'): string {
   try {
     return new Intl.NumberFormat(locale === 'en' ? 'en-GB' : locale === 'ro' ? 'ro-RO' : 'es-ES', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
+      /**
+       * ⚠️ **`always`, porque el CLDR español NO agrupa cuatro dígitos.**
+       *
+       * `Intl` en español da «7000,00» y solo pone el punto a partir de cinco
+       * cifras: es correcto para prosa, pero no es como se escribe una cantidad
+       * en una factura. La que emite la empresa pone «3.000,00 €», y un importe
+       * de cuatro dígitos sin separador se lee peor justo donde más importa.
+       *
+       * `true` y no `'always'`: son equivalentes por spec —`true` se normaliza
+       * a `always`— y `'always'` es ES2023, que los tipos de este target
+       * todavía no conocen.
+       */
+      useGrouping: true
     }).format(n) + ' €';
   } catch {
     return `${n.toFixed(2)} €`;
@@ -1261,7 +1283,14 @@ export class PdfBuilder {
         if (label) {
           this.put(this.truncate(label, this.bold, size, colWidth), x, cy, size, this.bold, BODY);
         }
-        if (entry.value) {
+        if (entry.value && entry.wrap) {
+          // Parte en varias líneas: hay datos que no se pueden abreviar.
+          const lineas = this.wrap(entry.value, size, this.font, colWidth - labelWidth);
+          lineas.forEach((ln, i) => {
+            this.put(ln, x + (i === 0 ? labelWidth : 0), cy, size, this.font, BODY);
+            if (i < lineas.length - 1) cy -= lineHeight;
+          });
+        } else if (entry.value) {
           this.put(
             this.truncate(entry.value, this.font, size, colWidth - labelWidth),
             x + labelWidth,
