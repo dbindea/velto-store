@@ -368,6 +368,21 @@ el `pricingSnapshot`**; y **200** al leer reservas y escribir una nota, que es
 lo que necesita para trabajar. Repetir esa prueba es la forma de validar un
 cambio en `firestore.rules`.
 
+**Y hay un guion para repetirla**: [docs/comprobar-reglas-facturas.js](docs/comprobar-reglas-facturas.js),
+que se pega en la consola del navegador con la sesión abierta. Comprueba que una
+factura emitida devuelve **403** al modificarla y al borrarla, y de paso que la
+cadena de huellas está bien formada. No es código de la aplicación y no se
+compila; vive en `docs/` para que no lo parezca.
+
+⚠️ **Ese guion encontró un agujero el 8 de septiembre de 2026, y es el patrón a
+vigilar**: `viewInvoices` es permiso de administrador, pero las reglas dejaban
+leer `invoices` a cualquier usuario autorizado. Un empleado no veía el menú de
+Facturas y tenía por debajo el NIF, el domicilio fiscal y el importe de todos
+los clientes facturados. **Ningún test lo habría cogido**, porque la aplicación
+respetaba el permiso; solo se ve atacando las reglas por fuera. Al añadir un
+módulo con permiso propio, comprueba que la regla es **igual de estricta** que
+la tabla, no solo que existe.
+
 ⚠️ **Lo que las reglas no pueden cubrir:** el precio con el que una reserva
 **nace**. Al crear no hay valor anterior con el que comparar, así que ahí manda
 la comprobación del servicio. Una reserva **ya creada** sí está protegida:

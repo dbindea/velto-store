@@ -602,17 +602,39 @@ Lo que quedó dentro:
 | Efectivo | Se apaga y se explica por encima de 1.000 €, mirando el **total** |
 | Plazo | Avisa cuando el destinatario es empresa y pasó el día 16 |
 
-⚠️ **Dos verificaciones pendientes**, las dos anotadas para no darlas por
-hechas:
+#### Verificado atacando las reglas desde fuera — 8 de septiembre de 2026
 
-1. **Las reglas atacadas desde fuera de la aplicación.** Es la prueba que vale
-   —la misma que se hizo con los permisos de empleado— y necesita el token de
-   sesión, que el entorno no deja extraer. La regla es `if false`
-   incondicional, así que no depende de datos, pero **no está probada en vivo**.
-2. **El encadenamiento visto sobre los datos reales.** Está cubierto por tests
-   —incluido uno que altera una factura del medio y comprueba que rompe todas
-   las siguientes— pero no se ha leído `hash`/`previousHash` de las dos
-   facturas emitidas.
+La prueba que vale: **saltándose la aplicación**, con el token de la sesión y
+llamadas directas a la API REST de Firestore, igual que se validaron los
+permisos de empleado. El guion está en
+[comprobar-reglas-facturas.js](comprobar-reglas-facturas.js) y se vuelve a
+pasar cada vez que se toque `firestore.rules`.
+
+Sobre las cuatro facturas emitidas en desarrollo:
+
+```
+✅ 2026/0001 … 2026/0004: cada previousHash coincide con la anterior
+✅ Cadena íntegra
+✅ PATCH  → 403 (denegado)
+✅ DELETE → 403 (denegado)
+✅ La factura sigue intacta después del intento
+```
+
+O sea: **una factura emitida no se puede modificar ni borrar ni siendo
+administrador**, y la cadena de huellas está bien formada sobre datos reales,
+no solo en los tests.
+
+⚠️ La comprobación destapó además que **las reglas eran más laxas que el
+permiso de la aplicación**: `viewInvoices` es de administrador, pero
+`firestore.rules` dejaba leer `invoices` a cualquier usuario autorizado, y leer
+y escribir `billingProfiles`. Un empleado no habría visto el menú, pero tenía
+por debajo el nombre, el NIF, el domicilio fiscal y el importe de todos los
+clientes facturados. Corregido: las dos colecciones siguen ahora el criterio de
+`expenses`.
+
+Es el caso exacto que CLAUDE.md advierte desde hace meses —los dos ficheros se
+editan por separado y nada los ata— y **no lo habría encontrado ningún test**:
+la aplicación funcionaba bien, porque la aplicación sí respeta el permiso.
 
 Y una nota práctica: **las dos facturas de prueba de desarrollo no se pueden
 borrar desde la aplicación**, que es exactamente lo que se pretendía. Para

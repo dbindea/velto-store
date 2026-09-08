@@ -8,11 +8,22 @@
  * llamadas directas a la API REST de Firestore. Es la misma prueba con la que
  * se validaron los permisos de empleado el 7 de septiembre de 2026.
  *
+ * ⚠️ **En DESARROLLO.** Intenta modificar y borrar una factura de verdad: si
+ * alguna vez las reglas fallasen, en producción habría tocado un documento
+ * fiscal que no se puede reponer.
+ *
  * CÓMO SE USA
  *   1. Abre la aplicación (desarrollo) y entra con tu cuenta.
  *   2. Abre la consola del navegador (F12 → Console).
  *   3. Pega todo esto y pulsa Enter.
- *   4. Pega la salida en el chat.
+ *
+ * RESULTADO DEL 8 DE SEPTIEMBRE DE 2026 — todo verde sobre cuatro facturas:
+ *   ✅ Cadena íntegra (cada previousHash coincide con la anterior)
+ *   ✅ PATCH  → 403      ✅ DELETE → 403      ✅ La factura sigue intacta
+ *
+ * Esa misma pasada destapó que las reglas eran más laxas que el permiso de la
+ * aplicación: `viewInvoices` es de administrador y `invoices` se dejaba leer a
+ * cualquier autorizado. Ver la nota en CLAUDE.md.
  *
  * QUÉ COMPRUEBA
  *   A. Que una factura emitida NO se puede modificar ni borrar, ni siendo
