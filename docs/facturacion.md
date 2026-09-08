@@ -584,6 +584,26 @@ Las tres fases son entregables completos: cada una se puede usar sin la
 siguiente. El orden **no** es negociable en un punto —el encadenamiento va en la
 fase 1— por lo que dice la sección 4.
 
+### Dónde está esto hoy — 8 de septiembre de 2026
+
+| | Estado |
+|---|---|
+| **Fase 1** · Emitir factura | ✅ Construida y verificada |
+| **Fase 1** · Recibo de cobro | ⛔ **No hecha.** Se planificó aquí y se quedó fuera |
+| **Fase 2** · Rectificativas | ✅ Construida y probada (`R2026/0001`) |
+| **Fase 2** · Proforma | ✅ Construida y probada (`P-…`) |
+| **Fase 3** · VeriFactu | ⛔ No empezada. Tope: **1 de enero de 2027** |
+
+Todo desplegado **solo en desarrollo**. En producción no hay ni una factura, y
+la primera que se emita allí marca el punto de no retorno de la colección.
+
+⚠️ **Lo único pendiente de la fase 2** es volver a pasar
+[comprobar-reglas-facturas.js](comprobar-reglas-facturas.js) con la versión
+corregida. La primera pasada dio un falso «CADENA ROTA» porque el guion
+ordenaba por `number` —que es el correlativo de cada serie, así que la
+rectificativa valía 1 y se colaba entre la primera y la segunda factura—. Las
+reglas sí salieron verdes: PATCH 403, DELETE 403 y factura intacta.
+
 ### ✅ Fase 1 — construida el 8 de septiembre de 2026
 
 Probada de extremo a extremo en desarrollo: **`2026/0001` y `2026/0002`

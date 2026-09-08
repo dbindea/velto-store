@@ -60,6 +60,33 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-19 · Cuatro temas — 8 de septiembre de 2026
+
+El oscuro se volvió **casi negro** (`#0B0F0E`) al adoptar la rampa del design
+system, y Dorel lo dijo claro: cansa la vista. En vez de retocarlo —y dejar a
+medias a quien sí lo prefiera— se abrió la elección a cuatro paletas: `light`,
+`dark`, `forest` (intermedio verdoso) y `ocean` (intermedio azulado, que es la
+rampa slate que la aplicación tenía antes).
+
+Selector en **Ajustes › Apariencia**, con cada muestra pintada con **sus propios
+colores en duro**: con `var(--bg-card)` las cuatro saldrían idénticas, que es lo
+que hace inútil un selector de paletas.
+
+Dos cosas que no son evidentes:
+
+- ⚠️ **`isDark()` significa «fondo oscuro», no «tema dark».** Con tres temas
+  oscuros, preguntar `theme() === 'dark'` habría dejado el logo negro sobre
+  fondo negro en `forest` y en `ocean`.
+- ⚠️ **La clase `dark` se mantiene en los tres oscuros** y las nuevas solo
+  redefinen superficies encima. Es la clase que ya usan decenas de reglas de
+  componente y la que lleva el `color-scheme: dark` del que dependen los
+  desplegables y los calendarios nativos.
+
+Los cuatro superan 4,5:1 en todos los pares; el más justo es el verde de marca
+sobre `ocean` (4,71), que es el que la aplicación ya tenía.
+
+---
+
 ## 📋 N-18 · Facturación desde la reserva — aprobado el 8 de septiembre de 2026
 
 Dorel hace hoy las facturas a mano en Word y quiere emitirlas desde la reserva.
