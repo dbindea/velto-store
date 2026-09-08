@@ -136,8 +136,16 @@ service cloud.firestore {
     // transacción con su contador.
     //
     // Lo único que queda del lado del cliente es leerlas.
+    // ⚠️ **Solo administrador para leer**, igual que `expenses`, y por el mismo
+    // motivo: `permissions.util.ts` da `viewInvoices` únicamente al admin, y una
+    // regla más laxa que el permiso de la aplicación no es una regla laxa — es
+    // que el permiso no existe. Un empleado no vería el menú de Facturas, pero
+    // desde cualquier cliente de Firestore tendría el nombre, el NIF, el
+    // domicilio fiscal y el importe de todos los clientes que se hayan
+    // facturado. Es exactamente el caso que documenta CLAUDE.md: los dos
+    // ficheros se editan por separado y nada los ata.
     match /invoices/{invoiceId} {
-      allow read: if isAuthorized(request.auth.token.email);
+      allow read: if callerIsAdmin();
       allow create, update, delete: if false;
     }
 
@@ -152,10 +160,12 @@ service cloud.firestore {
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.
+    // Mismo criterio: un destinatario de factura lleva nombre, NIF y domicilio
+    // fiscal —datos personales— y solo sirve para facturar, que es cosa de
+    // administrador. Dejarlo abierto a cualquier autorizado daba acceso a la
+    // agenda fiscal completa por la puerta de atrás.
     match /billingProfiles/{profileId} {
-      allow read: if isAuthorized(request.auth.token.email);
-      allow create, update: if isAuthorized(request.auth.token.email);
-      allow delete: if callerIsAdmin();
+      allow read, write: if callerIsAdmin();
     }
 
     // contractSigningTokens - NEVER read/write from the client.
