@@ -79,6 +79,13 @@ export interface InvoicePdfInput {
    * incluida en el precio y no puede consignarse por separado.
    */
   hideVatBreakdown?: boolean;
+  /**
+   * Gancho para los tests de maquetación: devuelve el builder con la geometría
+   * real que llegó a la página, que es contra lo que se comprueban los
+   * invariantes. Los otros tres documentos ya lo tenían; la factura no, y por
+   * eso era el único que no estaba cubierto.
+   */
+  onLayout?: (b: PdfBuilder) => void;
 }
 
 function labels(loc: ContractLocale) {
@@ -342,5 +349,6 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
   }
 
   b.finalizeFooters();
+  input.onLayout?.(b);
   return await doc.save();
 }

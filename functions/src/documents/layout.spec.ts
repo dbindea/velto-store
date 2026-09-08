@@ -15,6 +15,8 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { buildContractPdf, PdfBuilder, formatIdDocument, companyFooterLines } from '../contracts/pdf';
 import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
+import { buildInvoicePdf } from '../invoices/invoice-pdf';
+import { calculateInvoiceTotals } from '../invoices/invoice-core';
 import { CONTRACT_CLAUSES } from '../contracts/clauses';
 import {
   COMPANY_ADDRESS,
@@ -162,7 +164,7 @@ describe('the real documents, in every language', () => {
    * assertions run against the same geometry that reached the page.
    */
   async function layoutOf(
-    kind: 'quote' | 'booking' | 'contract',
+    kind: 'quote' | 'booking' | 'contract' | 'invoice',
     locale: ContractLocale
   ): Promise<PdfBuilder> {
     let captured: PdfBuilder | null = null;
@@ -204,6 +206,69 @@ describe('the real documents, in every language', () => {
         generatedAt: new Date('2026-08-27T09:00:00Z'),
         onLayout
       });
+    } else if (kind === 'invoice') {
+      /**
+       * El peor caso a propósito: **una factura mixta**, con los tres
+       * comportamientos del IVA en el mismo documento.
+       *
+       * Es donde se cruzan las etiquetas largas del bloque de totales
+       * —«BIENES USADOS (IVA INCLUIDO)» en español, «Bunuri second-hand (TVA
+       * inclus)» en rumano— con las menciones legales, que son las frases más
+       * largas que imprime la aplicación. Y el destinatario lleva razón social
+       * y domicilio largos, que es lo que empuja la columna contra el margen.
+       */
+      const lines = [
+        {
+          description:
+            'Alquiler de vehículo sin conductor Renault Megane Sport Tourer, matrícula 4466LKK, según contrato C-P2RJP0-2026.',
+          quantity: 7,
+          unitPrice: 55,
+          vatRate: 0.21,
+          taxRegime: 'standard'
+        },
+        {
+          description: 'Venta de vehículo usado Seat Ibiza 1.6 TDI, matrícula 1234ABC',
+          quantity: 1,
+          unitPrice: 7000,
+          vatRate: 0.21,
+          taxRegime: 'rebu'
+        },
+        {
+          description: 'Venta intracomunitaria de vehículo Dacia Duster, matrícula 4928LKL',
+          quantity: 1,
+          unitPrice: 12000,
+          vatRate: 0,
+          taxRegime: 'exempt_eu'
+        }
+      ];
+      await buildInvoicePdf({
+        locale,
+        company,
+        recipient: {
+          name: client.fullName,
+          taxId: 'PT501234567',
+          address: client.address,
+          email: client.email
+        },
+        fullNumber: '2026/0137',
+        issueDate: new Date('2026-09-08T09:00:00Z'),
+        operationDate: new Date('2026-08-01T09:00:00Z'),
+        operationPeriodStart: new Date('2026-06-01T09:00:00Z'),
+        operationPeriodEnd: new Date('2026-08-01T09:00:00Z'),
+        lines,
+        totals: calculateInvoiceTotals(lines),
+        paymentMethod: 'transfer',
+        bankName: 'BBVA',
+        iban: 'ES48 0182 4888 1102 0195 5536',
+        amountAlreadyPaid: 500,
+        contractNumber: 'C-P2RJP0-2026',
+        vehicleLabel: 'Renault Megane · 4466LKK',
+        mentions: [
+          'Régimen especial de los bienes usados.',
+          'Operación exenta conforme al artículo 25 de la Ley 37/1992 (entrega intracomunitaria de bienes).'
+        ],
+        onLayout
+      });
     } else {
       await buildContractPdf(
         {
@@ -234,7 +299,7 @@ describe('the real documents, in every language', () => {
     return captured;
   }
 
-  const KINDS = ['quote', 'booking', 'contract'] as const;
+  const KINDS = ['quote', 'booking', 'contract', 'invoice'] as const;
 
   for (const kind of KINDS) {
     for (const locale of LOCALES) {
