@@ -874,12 +874,18 @@ este proyecto.
 
 Antes de ese bloque hay que resolver, y **no es trabajo de programación**:
 
-1. El **alta en VERI\*FACTU** y el acceso al entorno de pruebas.
+1. El acceso al **entorno de preproducción** y la URL del servicio.
 2. La **declaración responsable** del software: la norma la exige al productor,
-   que aquí es la propia empresa.
+   que aquí es la propia empresa porque la aplicación es desarrollo propio.
 3. Contrastar los nombres de campo y la URL de cotejo contra la **versión
    vigente** de las especificaciones. Aquí están escritos para que el registro
    nazca completo, no para dar por cerrada la integración.
+
+⚠️ **No existe un «alta en VERI\*FACTU»** al que inscribirse, y buscarlo es la
+primera media hora que pierde todo el mundo: la obligación recae sobre el
+sistema de facturación, no sobre un trámite previo. El procedimiento real, los
+medios que hacen falta y la lista de lo que se necesita para programar el envío
+están en **[verifactu-alta.md](verifactu-alta.md)**.
 
 ## 10. Lo que tiene que confirmar la gestoría
 
