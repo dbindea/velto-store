@@ -119,6 +119,45 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // -----------------------------------------------------------------------
+    // FACTURACIÓN
+    // -----------------------------------------------------------------------
+    // ⚠️ Una factura emitida NO se edita ni se borra. Nunca, ni siendo
+    // administrador. Un error se corrige emitiendo una rectificativa, que es un
+    // documento nuevo; y el número consumido queda consumido aunque la
+    // operación se anule (art. 15 RD 1619/2012). Desde 2027 va además encadenada
+    // por huella, así que borrar una rompería la cadena de todas las siguientes.
+    //
+    // ⚠️ `create` tampoco se permite desde el cliente, y esto es lo que las
+    // reglas NO podrían proteger de otra forma: una regla puede impedir que se
+    // toque una factura, pero no sabe cuál era el siguiente número correlativo,
+    // así que no puede impedir que alguien escriba el que le dé la gana. El
+    // número lo asigna `issueInvoice` con el admin SDK, dentro de una
+    // transacción con su contador.
+    //
+    // Lo único que queda del lado del cliente es leerlas.
+    match /invoices/{invoiceId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow create, update, delete: if false;
+    }
+
+    // Los contadores de cada serie: `lastNumber` y `lastHash`. Solo el backend.
+    // Tocarlos desde fuera abriría un hueco en la numeración o rompería el
+    // encadenamiento, que son las dos cosas que no se pueden deshacer.
+    match /invoiceCounters/{series} {
+      allow read: if callerIsAdmin();
+      allow write: if false;
+    }
+
+    // Destinatarios de factura: quién paga, que no siempre es quien conduce.
+    // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
+    // congelado en la factura es el snapshot, no este documento.
+    match /billingProfiles/{profileId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow create, update: if isAuthorized(request.auth.token.email);
+      allow delete: if callerIsAdmin();
+    }
+
     // contractSigningTokens - NEVER read/write from the client.
     // Only Cloud Functions (admin SDK) can read or write tokens.
     // Public access is via the getContractForSigning / signContract

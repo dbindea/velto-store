@@ -203,6 +203,18 @@ Cuando Dorel avise de que los datos ya son reales, esta sección se sustituye po
 la regla contraria: campos solo aditivos, migración en despliegues separados y
 nunca renombrar en sitio.
 
+⚠️ **La facturación va a ser la primera excepción, y ya está aprobada** (N-18, 8
+de septiembre de 2026). Una factura emitida **no se borra ni se edita nunca**:
+un error se corrige con una factura rectificativa, y el número consumido queda
+consumido aunque la operación se anule. A partir de 2027 va además encadenada
+por huella SHA-256, así que borrar una rompe la cadena de todas las siguientes.
+
+Es decir: `invoices` nacerá con `create` permitido y **`update` y `delete`
+denegados a todo el mundo, administrador incluido** —como ya ocurre con los
+contratos firmados—, y con la forma del registro fijada desde la primera factura
+porque después no se puede reconstruir. El análisis, con las fuentes del BOE y
+de la AEAT, está en [docs/facturacion.md](docs/facturacion.md).
+
 ## Estructura
 
 Alias de path definidos en `tsconfig.json` — **úsalos siempre** en vez de rutas relativas largas:

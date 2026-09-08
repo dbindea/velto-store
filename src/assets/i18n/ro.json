@@ -598,7 +598,8 @@
     "reports": "Rapoarte",
     "reservations": "Rezervări",
     "settings": "Setări",
-    "vehicles": "Vehicule"
+    "vehicles": "Vehicule",
+    "invoices": "Facturi"
   },
   "payments": {
     "actions": {
@@ -1220,5 +1221,86 @@
     "startPickup": "Începe predarea",
     "startReturn": "Începe returnarea",
     "unsettledDeposit": "Garanție nerezolvată"
+  },
+  "invoices": {
+    "title": "Facturi",
+    "subtitle": "Emite și consultă facturile",
+    "new": "Factură nouă",
+    "issue": "Emite factura",
+    "empty": "Încă nu există facturi",
+    "emptyHint": "Se emit dintr-o rezervare sau separat, pentru o vânzare ori un serviciu punctual.",
+    "recipient": "Facturat către",
+    "fromReservation": "Din rezervare",
+    "free": "Factură separată",
+    "recipientSection": "Facturat către",
+    "linesSection": "Articole",
+    "paymentSection": "Modalitate de plată",
+    "datesSection": "Date",
+    "recipientType": "Tip",
+    "recipientName": "Nume sau denumire",
+    "recipientTaxId": "CIF / NIF / NIE",
+    "recipientAddress": "Domiciliu fiscal",
+    "recipientEmail": "Email",
+    "lineDescription": "Descriere",
+    "lineQuantity": "Buc.",
+    "lineUnitPrice": "Preț fără TVA",
+    "lineVat": "TVA",
+    "addLine": "Adaugă articol",
+    "removeLine": "Elimină",
+    "operationDate": "Data prestării",
+    "periodStart": "De la",
+    "periodEnd": "Până la",
+    "base": "Bază impozabilă",
+    "vat": "TVA",
+    "totalLabel": "Total factură",
+    "alreadyPaid": "Deja încasat",
+    "issuing": "Se emite…",
+    "issued": "Factura a fost emisă",
+    "notes": "Note",
+    "issueDateFixed": "Data emiterii este cea de azi și nu se poate schimba. Pentru un serviciu anterior, folosește data prestării.",
+    "immutableWarning": "Odată emisă, factura nu se mai poate modifica sau șterge. Verific-o înainte de a continua.",
+    "cashDisabled": "Peste 1.000 € legea nu permite încasarea în numerar.",
+    "differsFromReservation": "Suma diferă de cea a rezervării. Va fi consemnată în factură.",
+    "overdueCompany": "Este un client persoană juridică, iar termenul de facturare a expirat.",
+    "kinds": {
+      "invoice": "Factură",
+      "rectifying": "Factură storno",
+      "proforma": "Proformă"
+    },
+    "status": {
+      "draft": "Ciornă",
+      "issued": "Emisă",
+      "rectified": "Stornată",
+      "cancelled": "Anulată"
+    },
+    "paymentMethods": {
+      "paid": "Achitată",
+      "transfer": "Transfer bancar",
+      "card": "Card / POS",
+      "cash": "Numerar"
+    },
+    "recipientTypes": {
+      "individual": "Persoană fizică",
+      "company": "Firmă"
+    },
+    "problems": {
+      "recipientNameRequired": "Indică numele sau denumirea",
+      "recipientTaxIdRequired": "CIF-ul este obligatoriu pe orice factură",
+      "recipientAddressRequired": "Domiciliul fiscal este obligatoriu pe orice factură",
+      "linesRequired": "Adaugă cel puțin un articol",
+      "lineDescriptionRequired": "Descrie articolul",
+      "lineQuantityRequired": "Cantitatea trebuie să fie mai mare decât zero",
+      "linePriceInvalid": "Suma nu poate fi negativă",
+      "lineVatInvalid": "Indică o cotă de TVA validă",
+      "paymentMethodRequired": "Alege modalitatea de plată",
+      "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus"
+    },
+    "errors": {
+      "unauthenticated": "Trebuie să te autentifici",
+      "alreadyIssued": "Această factură a fost deja emisă",
+      "cannotDeleteIssued": "O factură emisă nu se poate șterge. Pentru corectare, emite o factură storno.",
+      "issueFailed": "Factura nu a putut fi emisă",
+      "loadFailed": "Facturile nu au putut fi încărcate"
+    }
   }
 }

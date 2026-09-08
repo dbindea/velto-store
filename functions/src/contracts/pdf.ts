@@ -1337,6 +1337,110 @@ export class PdfBuilder {
   }
 
   /**
+   * El detalle de una factura: UDS · DESCRIPCIÓN · BASE · IVA · IMPORTE.
+   *
+   * Está calcado de la factura que la empresa ya emite —cabecera en versalitas
+   * grises, filete fino encima y debajo del bloque, importes alineados a la
+   * derecha— porque ese documento es la referencia visual de todo lo demás.
+   *
+   * La descripción es la única columna que envuelve: es donde va «Alquiler de
+   * vehículo sin conductor Dacia Duster, matrícula 4928 LKL, según contrato
+   * C-KX7TH9-2026», que son tres líneas. Las otras cuatro son cifras cortas y
+   * anchura fija.
+   *
+   * ⚠️ **La cabecera se repite si la tabla salta de página.** Una segunda hoja
+   * con cifras y sin columnas no se puede leer, y una factura de veinte líneas
+   * es perfectamente posible.
+   */
+  lineItemsTable(
+    headers: { units: string; description: string; base: string; vat: string; amount: string },
+    rows: { units: string; description: string; base: string; vat: string; amount: string }[],
+    opts: { size?: number } = {}
+  ): void {
+    const size = opts.size ?? 8;
+    const lineHeight = size * 1.45;
+    const left = this.margin;
+    const right = this.pageWidth - this.margin;
+    const width = right - left;
+
+    // Anchos fijos para las cifras; la descripción se queda con el resto.
+    const wUnits = 26;
+    const wBase = 68;
+    const wVat = 42;
+    const wAmount = 74;
+    const wDesc = width - wUnits - wBase - wVat - wAmount - 16;
+    const xUnits = left;
+    const xDesc = left + wUnits + 4;
+    const xBase = xDesc + wDesc + 6;
+    const xVat = xBase + wBase;
+    const xAmount = xVat + wVat;
+
+    const derecha = (text: string, x: number, w: number, baseline: number, bold = false) => {
+      const font = bold ? this.bold : this.font;
+      const tw = font.widthOfTextAtSize(text, size);
+      this.put(text, x + w - tw, baseline, size, font, BODY);
+    };
+
+    const drawHeader = () => {
+      this.ensureSpace(lineHeight * 2);
+      const baseline = this.y - size;
+      this.put(headers.units, xUnits, baseline, size - 0.6, this.font, MUTED);
+      this.put(headers.description, xDesc, baseline, size - 0.6, this.font, MUTED);
+      const cab = (t: string, x: number, w: number) => {
+        const tw = this.font.widthOfTextAtSize(t, size - 0.6);
+        this.put(t, x + w - tw, baseline, size - 0.6, this.font, MUTED);
+      };
+      cab(headers.base, xBase, wBase);
+      cab(headers.vat, xVat, wVat);
+      cab(headers.amount, xAmount, wAmount);
+      this.y -= lineHeight * 0.9;
+      this.page.drawLine({
+        start: { x: left, y: this.y },
+        end: { x: right, y: this.y },
+        thickness: 0.6,
+        color: RULE
+      });
+      this.y -= 6;
+    };
+
+    drawHeader();
+
+    for (const row of rows) {
+      const lines = this.wrap(row.description, size, this.font, wDesc);
+      const alto = lineHeight * Math.max(1, lines.length) + 6;
+
+      // Si la fila no cabe entera, salta con su cabecera: partir una
+      // descripción entre dos páginas deja huérfano el importe.
+      if (this.y - alto < this.floor) {
+        this.newPage();
+        drawHeader();
+      }
+
+      const primera = this.y - size;
+      // La cantidad se alinea con la PRIMERA línea de la descripción, no con
+      // el centro del bloque: si no, una descripción de tres líneas deja el «1»
+      // flotando en mitad de la nada.
+      this.put(row.units, xUnits, primera, size, this.font, BODY);
+      lines.forEach((ln, i) => {
+        this.put(ln, xDesc, this.y - size - i * lineHeight, size, this.font, BODY);
+      });
+      derecha(row.base, xBase, wBase, primera);
+      derecha(row.vat, xVat, wVat, primera);
+      derecha(row.amount, xAmount, wAmount, primera, true);
+
+      this.y -= alto;
+    }
+
+    this.page.drawLine({
+      start: { x: left, y: this.y + 2 },
+      end: { x: right, y: this.y + 2 },
+      thickness: 0.6,
+      color: RULE
+    });
+    this.y -= 6;
+  }
+
+  /**
    * Two-column row where the right value wraps over several lines.
    *
    * The wrap width is now derived from the label rather than fixed at 320pt:

@@ -2,7 +2,7 @@ import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
@@ -71,7 +71,7 @@ import {
     TranslatePipe,
     PaymentConceptPipe,
     ReservationTimelineComponent,
-    ReservationNotesPanelComponent, FormErrorComponent],
+    ReservationNotesPanelComponent, FormErrorComponent, RouterLink],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
@@ -183,6 +183,19 @@ export class ReservationDetailComponent implements OnInit {
   get canIssueBookingConfirmation(): boolean {
     const status = this.reservation?.reservationStatus;
     return status === 'confirmed' || status === 'delivered' || status === 'returned' || status === 'closed';
+  }
+
+  /**
+   * Facturar **no depende del estado de la reserva**, al contrario que todo lo
+   * demás de esta pantalla.
+   *
+   * Una factura se emite cuando el cliente la pide: puede ser antes de cobrar
+   * —hay empresas que la necesitan para poder pagar— o meses después, cuando
+   * alguien se acuerda. Así que lo único que se comprueba es el permiso; el
+   * workflow no tiene nada que decir aquí.
+   */
+  get canIssueInvoice(): boolean {
+    return !!this.reservation?.id && this.permissions.can('viewInvoices');
   }
 
   /**

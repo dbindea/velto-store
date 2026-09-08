@@ -184,6 +184,24 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'invoices',
+        // Facturación toca dinero y es irreversible —una factura emitida no se
+        // borra—, así que sigue el mismo criterio que Gastos e Informes. El
+        // permiso lo decide `permissions.util.ts`.
+        canActivate: [permissionGuard(ROUTE_PERMISSIONS['invoices'])],
+        loadComponent: () => import('./features/invoices/invoices.component').then(m => m.InvoicesComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/invoices/pages/invoice-list/invoice-list.component').then(m => m.InvoiceListComponent)
+          },
+          {
+            path: 'new',
+            loadComponent: () => import('./features/invoices/pages/invoice-form/invoice-form.component').then(m => m.InvoiceFormComponent)
+          }
+        ]
+      },
+      {
         path: 'contracts',
         loadComponent: () => import('./features/contracts/contracts.component').then(m => m.ContractsComponent),
         children: [

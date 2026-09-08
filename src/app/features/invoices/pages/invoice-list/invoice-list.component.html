@@ -1,0 +1,37 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>{{ 'invoices.title' | translate }}</h1>
+      <p class="subtitle">{{ 'invoices.subtitle' | translate }}</p>
+    </div>
+    <a class="btn-primary" routerLink="/invoices/new">
+      <i class="pi pi-plus"></i>
+      {{ 'invoices.new' | translate }}
+    </a>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">{{ 'common.loading' | translate }}</div>
+  } @else if (!invoices().length) {
+    <div class="empty">
+      <i class="pi pi-file"></i>
+      <p class="empty-title">{{ 'invoices.empty' | translate }}</p>
+      <p class="empty-hint">{{ 'invoices.emptyHint' | translate }}</p>
+    </div>
+  } @else {
+    <div class="invoice-list">
+      @for (invoice of invoices(); track invoice.id) {
+        <button type="button" class="invoice-row" (click)="open(invoice)">
+          <span class="col-number mono">{{ numberOf(invoice) }}</span>
+          <span class="col-date">{{ asDate(invoice.issueDate) | date: 'dd/MM/yyyy' }}</span>
+          <span class="col-recipient">{{ invoice.recipient?.name }}</span>
+          <span class="col-total">{{ invoice.totals?.total | number: '1.2-2' }} €</span>
+          <span class="col-payment badge" [class.paid]="invoice.paymentMethod === 'paid'">
+            {{ paymentLabel(invoice) }}
+          </span>
+          <i class="pi pi-chevron-right"></i>
+        </button>
+      }
+    </div>
+  }
+</div>

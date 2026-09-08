@@ -598,7 +598,8 @@
     "reports": "Reports",
     "reservations": "Reservations",
     "settings": "Settings",
-    "vehicles": "Vehicles"
+    "vehicles": "Vehicles",
+    "invoices": "Invoices"
   },
   "payments": {
     "actions": {
@@ -1220,5 +1221,86 @@
     "startPickup": "Start pickup",
     "startReturn": "Start return",
     "unsettledDeposit": "Deposit still pending settlement"
+  },
+  "invoices": {
+    "title": "Invoices",
+    "subtitle": "Issue and review invoices",
+    "new": "New invoice",
+    "issue": "Issue invoice",
+    "empty": "No invoices yet",
+    "emptyHint": "Issue them from a reservation, or standalone for a sale or a one-off service.",
+    "recipient": "Bill to",
+    "fromReservation": "From reservation",
+    "free": "Standalone invoice",
+    "recipientSection": "Bill to",
+    "linesSection": "Items",
+    "paymentSection": "Payment method",
+    "datesSection": "Dates",
+    "recipientType": "Type",
+    "recipientName": "Name or company name",
+    "recipientTaxId": "Tax ID",
+    "recipientAddress": "Registered address",
+    "recipientEmail": "Email",
+    "lineDescription": "Description",
+    "lineQuantity": "Qty",
+    "lineUnitPrice": "Price excl. VAT",
+    "lineVat": "VAT",
+    "addLine": "Add item",
+    "removeLine": "Remove",
+    "operationDate": "Date of supply",
+    "periodStart": "From",
+    "periodEnd": "To",
+    "base": "Taxable base",
+    "vat": "VAT",
+    "totalLabel": "Invoice total",
+    "alreadyPaid": "Already paid",
+    "issuing": "Issuing…",
+    "issued": "Invoice issued",
+    "notes": "Notes",
+    "issueDateFixed": "The issue date is today and cannot be changed. To invoice an earlier service, use the date of supply.",
+    "immutableWarning": "Once issued, an invoice cannot be edited or deleted. Check it before continuing.",
+    "cashDisabled": "Above €1,000 the law does not allow payment in cash.",
+    "differsFromReservation": "The amount differs from the reservation. It will be recorded on the invoice.",
+    "overdueCompany": "This is a business customer and the deadline to invoice has passed.",
+    "kinds": {
+      "invoice": "Invoice",
+      "rectifying": "Credit note",
+      "proforma": "Proforma"
+    },
+    "status": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "rectified": "Rectified",
+      "cancelled": "Cancelled"
+    },
+    "paymentMethods": {
+      "paid": "Paid",
+      "transfer": "Bank transfer",
+      "card": "Card / POS",
+      "cash": "Cash"
+    },
+    "recipientTypes": {
+      "individual": "Individual",
+      "company": "Company"
+    },
+    "problems": {
+      "recipientNameRequired": "Enter the name or company name",
+      "recipientTaxIdRequired": "The tax ID is required on every invoice",
+      "recipientAddressRequired": "The registered address is required on every invoice",
+      "linesRequired": "Add at least one item",
+      "lineDescriptionRequired": "Describe the item",
+      "lineQuantityRequired": "Quantity must be greater than zero",
+      "linePriceInvalid": "The amount cannot be negative",
+      "lineVatInvalid": "Enter a valid VAT rate",
+      "paymentMethodRequired": "Choose a payment method",
+      "cashLimitExceeded": "Cash is not allowed from €1,000 upwards"
+    },
+    "errors": {
+      "unauthenticated": "You must sign in",
+      "alreadyIssued": "This invoice has already been issued",
+      "cannotDeleteIssued": "An issued invoice cannot be deleted. To correct it, issue a credit note.",
+      "issueFailed": "The invoice could not be issued",
+      "loadFailed": "Invoices could not be loaded"
+    }
   }
 }

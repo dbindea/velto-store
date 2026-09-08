@@ -33,6 +33,7 @@ export type Permission =
   // Módulos enteros
   | 'viewReports'
   | 'viewExpenses'
+  | 'viewInvoices'
   | 'manageSettings'
   | 'manageUsers'
   // Dinero
@@ -70,6 +71,7 @@ const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
   admin: [
     'viewReports',
     'viewExpenses',
+    'viewInvoices',
     'manageSettings',
     'manageUsers',
     'editPricing',
@@ -125,5 +127,6 @@ export const USER_ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   reports: 'viewReports',
   expenses: 'viewExpenses',
+  invoices: 'viewInvoices',
   settings: 'manageSettings'
 };

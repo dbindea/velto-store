@@ -598,7 +598,8 @@
     "reports": "Informes",
     "reservations": "Reservas",
     "settings": "Ajustes",
-    "vehicles": "Vehículos"
+    "vehicles": "Vehículos",
+    "invoices": "Facturas"
   },
   "payments": {
     "actions": {
@@ -1220,5 +1221,86 @@
     "startPickup": "Iniciar entrega",
     "startReturn": "Iniciar devolución",
     "unsettledDeposit": "Fianza pendiente de resolver"
+  },
+  "invoices": {
+    "title": "Facturas",
+    "subtitle": "Emite y consulta las facturas",
+    "new": "Nueva factura",
+    "issue": "Emitir factura",
+    "empty": "Todavía no hay facturas",
+    "emptyHint": "Se emiten desde una reserva o por libre, para una venta o un servicio suelto.",
+    "recipient": "Destinatario",
+    "fromReservation": "Desde la reserva",
+    "free": "Factura libre",
+    "recipientSection": "Destinatario",
+    "linesSection": "Conceptos",
+    "paymentSection": "Forma de pago",
+    "datesSection": "Fechas",
+    "recipientType": "Tipo",
+    "recipientName": "Nombre o razón social",
+    "recipientTaxId": "NIF / CIF / NIE",
+    "recipientAddress": "Domicilio fiscal",
+    "recipientEmail": "Email",
+    "lineDescription": "Descripción",
+    "lineQuantity": "Uds.",
+    "lineUnitPrice": "Precio sin IVA",
+    "lineVat": "IVA",
+    "addLine": "Añadir concepto",
+    "removeLine": "Quitar",
+    "operationDate": "Fecha de la operación",
+    "periodStart": "Desde",
+    "periodEnd": "Hasta",
+    "base": "Base imponible",
+    "vat": "IVA",
+    "totalLabel": "Total factura",
+    "alreadyPaid": "Ya cobrado",
+    "issuing": "Emitiendo…",
+    "issued": "Factura emitida",
+    "notes": "Notas",
+    "issueDateFixed": "La fecha de expedición es la de hoy y no se puede cambiar. Para facturar un servicio anterior, usa la fecha de la operación.",
+    "immutableWarning": "Una vez emitida, la factura no se puede editar ni borrar. Revísala antes de continuar.",
+    "cashDisabled": "Por encima de 1.000 € la ley no permite el cobro en efectivo.",
+    "differsFromReservation": "El importe no coincide con el de la reserva. Quedará anotado en la factura.",
+    "overdueCompany": "Es una empresa: el plazo para facturar esta operación ya ha vencido.",
+    "kinds": {
+      "invoice": "Factura",
+      "rectifying": "Rectificativa",
+      "proforma": "Proforma"
+    },
+    "status": {
+      "draft": "Borrador",
+      "issued": "Emitida",
+      "rectified": "Rectificada",
+      "cancelled": "Anulada"
+    },
+    "paymentMethods": {
+      "paid": "Pagada",
+      "transfer": "Transferencia",
+      "card": "Tarjeta / TPV",
+      "cash": "Efectivo"
+    },
+    "recipientTypes": {
+      "individual": "Particular",
+      "company": "Empresa"
+    },
+    "problems": {
+      "recipientNameRequired": "Indica el nombre o la razón social",
+      "recipientTaxIdRequired": "El NIF es obligatorio en toda factura",
+      "recipientAddressRequired": "El domicilio fiscal es obligatorio en toda factura",
+      "linesRequired": "Añade al menos un concepto",
+      "lineDescriptionRequired": "Describe el concepto",
+      "lineQuantityRequired": "La cantidad debe ser mayor que cero",
+      "linePriceInvalid": "El importe no puede ser negativo",
+      "lineVatInvalid": "Indica un tipo de IVA válido",
+      "paymentMethodRequired": "Elige la forma de pago",
+      "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €"
+    },
+    "errors": {
+      "unauthenticated": "Debes iniciar sesión",
+      "alreadyIssued": "Esta factura ya se emitió",
+      "cannotDeleteIssued": "Una factura emitida no se puede borrar. Para corregirla, emite una rectificativa.",
+      "issueFailed": "No se pudo emitir la factura",
+      "loadFailed": "No se pudieron cargar las facturas"
+    }
   }
 }

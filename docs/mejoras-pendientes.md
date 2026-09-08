@@ -60,6 +60,84 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## 📋 N-18 · Facturación desde la reserva — aprobado el 8 de septiembre de 2026
+
+Dorel hace hoy las facturas a mano en Word y quiere emitirlas desde la reserva.
+**Es la siguiente tarea grande**, y trae dos condicionantes que él mismo señaló:
+una numeración válida que no dé problemas al modificar, y dejar el sistema
+preparado para **VeriFactu**.
+
+El análisis completo está en **[facturacion.md](facturacion.md)**: marco legal
+contrastado con el BOE y la sede de la AEAT, las cinco decisiones —**ya tomadas
+el mismo día**— y el plan en tres fases.
+
+Decidido: numeración **`2026/0001`**, emisión **en cualquier momento y solo a
+petición**, forma de pago según lo que quede pendiente, y modalidad
+**VERI\*FACTU** con envío a la AEAT.
+
+⚠️ **El alcance creció el mismo día** y ya no es «una factura de la reserva»:
+son **cinco documentos**, y solo dos son fiscales —factura y rectificativa—.
+Los otros tres (proforma, recibo de cobro y el presupuesto que ya existe) **no
+llevan numeración fiscal ni entran en VeriFactu**, y esa separación es lo que
+los hace baratos. Además la factura **no cuelga de la reserva**: Velto tiene
+varios CNAE y factura también ventas de coches, limpiezas y cambios de aceite.
+
+Los tres titulares del análisis:
+
+- ⚠️ **Le aplica el 1 de enero de 2027**, no el 1 de julio: VELTO MOBILITY es una
+  S.L. y tributa por Sociedades. Menos de cuatro meses.
+- ⚠️ **La huella SHA-256 encadenada es obligatoria en las dos modalidades** de
+  VeriFactu, no solo en la que envía a la AEAT. Hay que encadenar desde la
+  primera factura o la cadena arrancará en 2027 sobre un histórico que nadie
+  puede acreditar.
+- ⚠️ **Con las facturas se acaba la regla de «los datos son desechables»**. Una
+  factura emitida no se borra ni se edita: se rectifica. La colección `invoices`
+  será el primer dato de la aplicación que no se puede tirar.
+
+Su pregunta sobre emitir con fecha pasada tiene respuesta y es cómoda: **no se
+retrodata la expedición, se consigna la fecha de la operación**, que puede ser
+anterior. Su factura de ejemplo ya lo hace bien —expedida el 10/08 para un
+periodo 01/06–01/08— sin saber que estaba usando la figura correcta.
+
+---
+
+## 📋 N-17 · Parte de entrega firmado — aprobado el 8 de septiembre de 2026
+
+Aprobado por Dorel el mismo día, **con un requisito que cambia el diseño**:
+
+⚠️ **La firma es opcional y la decide el agente.** No todos los clientes son
+iguales: a un familiar o a un socio no se le penaliza por un rasguño ni por
+traer el depósito vacío. La firma existe **para cuando el cliente no es de
+fiar**, y quien lo determina es quien entrega el coche.
+
+Eso descarta hacerla obligatoria en el workflow. El parte se puede completar sin
+firma —y entonces vale como registro interno con fotos— o con firma, y entonces
+es el documento al que el contrato remite cuatro veces.
+
+⚠️ **Y ese es el motivo por el que esto es urgente**: N-14 arregló tres cláusulas
+que remitían a datos inexistentes **haciéndolas remitir al parte de entrega**, un
+documento que no existe. El contrato dice hoy «el parte de entrega, que ambas
+partes firman y que forma parte inseparable de este contrato» y ese parte no se
+genera, no se entrega y no se firma. Se cambió «remite a una sección vacía» por
+«remite a un parte que nadie firma», que es más sutil y no mejor.
+
+Lo que cuelga de él son los tres cargos que se cobran de la fianza: combustible
+no repuesto, kilómetros extra y dotación faltante.
+
+Piezas que ya existen: `signature-pad`, el `PdfBuilder` y las fotos de la
+inspección. Falta la firma en el modelo `Inspection` y el PDF del parte.
+
+---
+
+## ⛔ Descartado o aplazado por Dorel — 8 de septiembre de 2026
+
+- **Dos operadores reservando el mismo coche**: no se aborda. «No será el caso de
+  duplicar reservas a milisegundos.» Queda la mitigación actual.
+- **Croquis de daños**: no hace falta, se usan fotos.
+- **Cobro desde el móvil**: lo prueba él con el primer caso real en producción.
+
+---
+
 ## ✅ F-36 · El presupuesto decía que los precios incluían IVA — 7 de septiembre de 2026
 
 Encontrado **mirando un presupuesto real recién generado en producción**, no
@@ -1037,9 +1115,11 @@ geolocalización, desistimiento y reclamaciones. 9 páginas en vez de 8.
 ### Lo que sigue fuera
 
 - **Tarifar las penalizaciones** — decisión de Dorel: caso por caso.
-- **Anexo de daños con croquis** al estilo de Record Go.
-- **Firma de los conductores en el parte de entrega**, que la cláusula 2 exige:
-  hoy ninguna inspección lleva firma, ni la del arrendatario.
+- ⛔ **Anexo de daños con croquis** al estilo de Record Go — **descartado** por
+  Dorel el 8 de septiembre de 2026: se documenta con fotos, que es lo que la
+  inspección ya hace.
+- **Firma en el parte de entrega**, que la cláusula 2 exige: hoy ninguna
+  inspección lleva firma, ni la del arrendatario. Ver N-17.
 - **Rellenar aseguradora, póliza y teléfono de asistencia de cada coche**, en su
   ficha. Ya no van en los `.env`: ver N-16.
 

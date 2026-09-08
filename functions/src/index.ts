@@ -50,3 +50,9 @@ export { generateQuotePdf } from './documents/generateQuotePdf';
 export { generateBookingConfirmationPdf } from './documents/generateBookingConfirmationPdf';
 // Public, reached through the /d/** Hosting rewrite: short links for WhatsApp.
 export { documentLink } from './documents/documentLink';
+
+// Facturación. `issueInvoice` es el único camino por el que una factura puede
+// nacer: asigna el número correlativo y calcula la huella encadenada dentro de
+// una transacción, y `firestore.rules` cierra la puerta a crear facturas desde
+// el cliente precisamente porque una regla no sabe cuál es el siguiente número.
+export { issueInvoice } from './invoices/issueInvoice';
