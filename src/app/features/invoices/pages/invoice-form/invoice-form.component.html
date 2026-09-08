@@ -1,7 +1,7 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1>{{ 'invoices.new' | translate }}</h1>
+      <h1>{{ (isRectifying ? 'invoices.rectify' : 'invoices.new') | translate }}</h1>
       <p class="subtitle">
         {{ (reservationId ? 'invoices.fromReservation' : 'invoices.free') | translate }}
       </p>
@@ -22,6 +22,115 @@
     <div class="loading">{{ 'common.loading' | translate }}</div>
   } @else {
     <div class="form-sections">
+      <!--
+        Rectificación. Solo aparece al llegar con ?rectify=…, y va la primera
+        porque cambia el significado de todo lo que viene debajo: los mismos
+        importes quieren decir otra cosa según la modalidad.
+      -->
+      @if (isRectifying) {
+        <div class="form-section">
+          <h2 class="section-title">{{ 'invoices.rectifyingSection' | translate }}</h2>
+          <p class="section-hint">{{ 'invoices.rectifyingHint' | translate }}</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'invoices.rectifiedInvoice' | translate }}</label>
+              <input class="form-control mono" [value]="rectifies?.fullNumber || ''" disabled />
+            </div>
+
+            <div class="form-group">
+              <label class="required" for="rectifyingType">
+                {{ 'invoices.rectifyingType' | translate }}
+              </label>
+              <select
+                id="rectifyingType"
+                class="form-control"
+                [(ngModel)]="rectifyingType"
+                name="rectifyingType"
+              >
+                @for (t of rectifyingTypeOptions; track t) {
+                  <option [value]="t">{{ rectifyingTypeLabels[t] | translate }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="required" for="rectifyingReason">
+              {{ 'invoices.rectifyingReason' | translate }}
+            </label>
+            <select
+              id="rectifyingReason"
+              class="form-control"
+              [(ngModel)]="rectifyingReason"
+              name="rectifyingReason"
+            >
+              @for (r of rectifyingReasonOptions; track r) {
+                <option [value]="r">{{ rectifyingReasonLabels[r] | translate }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="required" for="rectifyingNote">
+              {{ 'invoices.rectifyingNote' | translate }}
+            </label>
+            <input
+              type="text"
+              id="rectifyingNote"
+              class="form-control"
+              [(ngModel)]="rectifyingNote"
+              name="rectifyingNote"
+              [class.is-invalid]="submitted() && problems['rectifyingNote']"
+            />
+            <app-form-error [problems]="problems['rectifyingNote']" [show]="submitted()" />
+          </div>
+
+          <!-- Solo por sustitución: en `I` estos campos no se rellenan. -->
+          @if (rectifyingType === 'S') {
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required" for="rectifiedBase">
+                  {{ 'invoices.rectifiedBase' | translate }}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="rectifiedBase"
+                  class="form-control"
+                  [(ngModel)]="rectifiedBase"
+                  name="rectifiedBase"
+                  [class.is-invalid]="submitted() && problems['rectifiedBase']"
+                />
+                <app-form-error [problems]="problems['rectifiedBase']" [show]="submitted()" />
+              </div>
+              <div class="form-group">
+                <label class="required" for="rectifiedVat">
+                  {{ 'invoices.rectifiedVat' | translate }}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="rectifiedVat"
+                  class="form-control"
+                  [(ngModel)]="rectifiedVat"
+                  name="rectifiedVat"
+                  [class.is-invalid]="submitted() && problems['rectifiedVat']"
+                />
+                <app-form-error [problems]="problems['rectifiedVat']" [show]="submitted()" />
+              </div>
+            </div>
+          }
+
+          @if (allowsNegative) {
+            <div class="notice notice-info">
+              <i class="pi pi-info-circle"></i>
+              <span>{{ 'invoices.negativeHint' | translate }}</span>
+            </div>
+          }
+        </div>
+      }
+
       <!-- Destinatario -->
       <div class="form-section">
         <h2 class="section-title">{{ 'invoices.recipientSection' | translate }}</h2>
@@ -411,16 +520,36 @@
     </div>
 
     <div class="form-actions">
-      <button type="button" class="btn-secondary" (click)="cancel()">
-        {{ 'common.cancel' | translate }}
-      </button>
+      <div class="left-actions">
+        <button type="button" class="btn-secondary" (click)="cancel()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <!--
+          La proforma se puede pedir con la factura a medias, que es cuando se
+          usa: no emite nada, no consume número y no deja rastro salvo el PDF.
+        -->
+        @if (!isRectifying) {
+          <div class="proforma-action">
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="proforma()"
+              [disabled]="generatingProforma()"
+            >
+              <i class="pi pi-file"></i>
+              {{ 'invoices.proforma' | translate }}
+            </button>
+            <small class="field-hint">{{ 'invoices.proformaHint' | translate }}</small>
+          </div>
+        }
+      </div>
       <div class="submit-area">
         <!--
           El botón NO se deshabilita por datos que falten: solo mientras emite.
           Al pulsarlo con algo incompleto se marcan los campos y se resume aquí.
         -->
         <button type="button" class="btn-primary" (click)="issue()" [disabled]="issuing()">
-          {{ (issuing() ? 'invoices.issuing' : 'invoices.issue') | translate }}
+          {{ issuing() ? ('invoices.issuing' | translate) : ((isRectifying ? 'invoices.rectify' : 'invoices.issue') | translate) }}
         </button>
         <app-form-error [problems]="problemList" [show]="submitted()" [summary]="true" />
       </div>

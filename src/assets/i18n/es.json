@@ -1296,14 +1296,21 @@
       "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €",
       "rebuPurchasePriceRequired": "En REBU hace falta el precio de compra: la base es el margen",
       "exemptionNoteRequired": "Indica qué norma ampara la exención",
-      "euVatIdRequired": "Una entrega intracomunitaria exige el NIF-IVA del comprador (ej.: PT501234567)"
+      "euVatIdRequired": "Una entrega intracomunitaria exige el NIF-IVA del comprador (ej.: PT501234567)",
+      "rectifiedInvoiceRequired": "Indica qué factura se rectifica",
+      "rectifyingTypeRequired": "Elige la modalidad: por sustitución o por diferencias",
+      "rectifyingReasonRequired": "Elige la causa de la rectificación",
+      "rectifyingNoteRequired": "Explica por qué se rectifica: es lo que consta en el documento",
+      "rectifiedBaseRequired": "Por sustitución hay que indicar la base rectificada",
+      "rectifiedVatRequired": "Por sustitución hay que indicar la cuota rectificada"
     },
     "errors": {
       "unauthenticated": "Debes iniciar sesión",
       "alreadyIssued": "Esta factura ya se emitió",
       "cannotDeleteIssued": "Una factura emitida no se puede borrar. Para corregirla, emite una rectificativa.",
       "issueFailed": "No se pudo emitir la factura",
-      "loadFailed": "No se pudieron cargar las facturas"
+      "loadFailed": "No se pudieron cargar las facturas",
+      "proformaFailed": "No se pudo generar la proforma"
     },
     "taxRegime": "Régimen de IVA",
     "purchasePrice": "Precio de compra (IVA incl.)",
@@ -1317,6 +1324,30 @@
       "exemptExport": "Exenta · exportación (art. 21)",
       "reverseCharge": "Inversión del sujeto pasivo",
       "exemptOther": "Exenta · otra"
-    }
+    },
+    "rectify": "Emitir rectificativa",
+    "proforma": "Generar proforma",
+    "proformaGenerated": "Proforma generada",
+    "rectifyingSection": "Rectificación",
+    "rectifiedInvoice": "Factura que se rectifica",
+    "rectifyingType": "Modalidad",
+    "rectifyingReason": "Causa",
+    "rectifyingNote": "Motivo de la rectificación",
+    "rectifyingHint": "Una factura emitida no se corrige: se rectifica con un documento nuevo que la referencia. La original queda marcada como rectificada.",
+    "negativeHint": "Por diferencias los importes van con signo. Para anular la factura entera, pon el importe en negativo.",
+    "proformaHint": "La proforma no es una factura: no lleva número fiscal ni devenga IVA.",
+    "rectifyingTypes": {
+      "substitution": "Por sustitución (se emiten los datos correctos completos)",
+      "difference": "Por diferencias (solo el ajuste, con su signo)"
+    },
+    "rectifyingReasons": {
+      "R1": "R1 · Error fundado en derecho (art. 80.Uno, Dos y Seis)",
+      "R2": "R2 · Concurso de acreedores (art. 80.Tres)",
+      "R3": "R3 · Crédito incobrable (art. 80.Cuatro)",
+      "R4": "R4 · Resto de causas del art. 80",
+      "R5": "R5 · Rectificación de factura simplificada"
+    },
+    "rectifiedBase": "Base rectificada",
+    "rectifiedVat": "Cuota rectificada"
   }
 }

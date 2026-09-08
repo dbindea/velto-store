@@ -18,6 +18,8 @@ import {
   InvoiceRecipient,
   InvoiceTotals,
   MAX_CASH_PAYMENT,
+  RectifyingReason,
+  RectifyingType,
   TaxRegime,
   VatSubtotal
 } from '@shared/models/invoice.model';
@@ -220,6 +222,12 @@ export function validateInvoice(input: {
   recipient?: Partial<InvoiceRecipient> | null;
   lines?: InvoiceLine[] | null;
   paymentMethod?: InvoicePaymentMethod | null;
+  /**
+   * ⚠️ Una rectificativa **por diferencias** declara el ajuste con su signo, y
+   * ese signo puede ser negativo: es como se anula una factura entera. En una
+   * factura ordinaria un negativo sigue estando mal.
+   */
+  allowNegative?: boolean;
 }): FieldProblems {
   const problems: FieldProblems = {};
   const recipient = input.recipient || {};
@@ -248,12 +256,12 @@ export function validateInvoice(input: {
     if (!line.description?.trim()) {
       problems[`lines[${i}].description`] = 'invoices.problems.lineDescriptionRequired';
     }
-    if (!(Number(line.quantity) > 0)) {
+    if (!(Math.abs(Number(line.quantity)) > 0)) {
       problems[`lines[${i}].quantity`] = 'invoices.problems.lineQuantityRequired';
     }
     // Cero está permitido —un concepto a coste cero es una línea legítima— pero
     // un negativo en una factura ordinaria no: eso es una rectificativa.
-    if (!(Number(line.unitPrice) >= 0)) {
+    if (!input.allowNegative && !(Number(line.unitPrice) >= 0)) {
       problems[`lines[${i}].unitPrice`] = 'invoices.problems.linePriceInvalid';
     }
     if (!(Number(line.vatRate) >= 0)) {
@@ -301,6 +309,76 @@ export function validateInvoice(input: {
   }
 
   return problems;
+}
+
+/**
+ * Lo que impide emitir una **rectificativa**, además de lo de una factura
+ * normal.
+ *
+ * Las dos modalidades piden cosas distintas, y esa es la razón de que esto no
+ * sea un `if` dentro de `validateInvoice()`: en `S` hay que informar de la base
+ * y la cuota rectificadas, y en `I` **no** — son campos distintos del registro
+ * que se enviará a la AEAT, no una preferencia de formato.
+ */
+export function validateRectifying(input: {
+  rectifies?: { invoiceId?: string; fullNumber?: string } | null;
+  rectifyingType?: RectifyingType | null;
+  rectifyingReason?: RectifyingReason | null;
+  rectifyingNote?: string | null;
+  rectifiedBase?: number | null;
+  rectifiedVat?: number | null;
+}): FieldProblems {
+  const problems: FieldProblems = {};
+
+  if (!input.rectifies?.invoiceId) {
+    problems['rectifies'] = 'invoices.problems.rectifiedInvoiceRequired';
+  }
+  if (!input.rectifyingType) {
+    problems['rectifyingType'] = 'invoices.problems.rectifyingTypeRequired';
+  }
+  if (!input.rectifyingReason) {
+    problems['rectifyingReason'] = 'invoices.problems.rectifyingReasonRequired';
+  }
+  // El motivo en palabras no lo pide la norma con ese nombre, pero el art. 15
+  // exige que consten los elementos que se modifican. Una rectificativa sin
+  // explicación es la que nadie sabe justificar dos años después.
+  if (!input.rectifyingNote?.trim()) {
+    problems['rectifyingNote'] = 'invoices.problems.rectifyingNoteRequired';
+  }
+
+  if (input.rectifyingType === 'S') {
+    if (!(Number(input.rectifiedBase) >= 0)) {
+      problems['rectifiedBase'] = 'invoices.problems.rectifiedBaseRequired';
+    }
+    if (!(Number(input.rectifiedVat) >= 0)) {
+      problems['rectifiedVat'] = 'invoices.problems.rectifiedVatRequired';
+    }
+  }
+
+  return problems;
+}
+
+/**
+ * ¿Puede rectificarse esta factura?
+ *
+ * Solo una **emitida**. Un borrador se edita, y una ya rectificada no se
+ * vuelve a rectificar desde aquí: para eso se rectifica la rectificativa, que
+ * es una cadena distinta y hay que verla entera para no perderse.
+ */
+export function canRectify(invoice: Pick<Invoice, 'status' | 'kind'>): boolean {
+  return invoice.status === 'issued' && invoice.kind === 'invoice';
+}
+
+/**
+ * En una rectificativa **por diferencias los importes pueden ser negativos**:
+ * es como se declara un ajuste a la baja, y como se anula una factura entera.
+ *
+ * Por eso `validateInvoice()` no vale tal cual para una rectificativa `I` — su
+ * regla de «un negativo es una rectificativa, no una factura» es justamente lo
+ * contrario aquí.
+ */
+export function allowsNegativeAmounts(kind: Invoice['kind'], type?: RectifyingType): boolean {
+  return kind === 'rectifying' && type === 'I';
 }
 
 /**

@@ -56,3 +56,7 @@ export { documentLink } from './documents/documentLink';
 // una transacción, y `firestore.rules` cierra la puerta a crear facturas desde
 // el cliente precisamente porque una regla no sabe cuál es el siguiente número.
 export { issueInvoice } from './invoices/issueInvoice';
+// La proforma NO pasa por `issueInvoice`: no consume número de la serie fiscal,
+// no se encadena y no escribe en Firestore. Es un PDF y nada más, como el
+// presupuesto.
+export { generateProforma } from './invoices/generateProforma';

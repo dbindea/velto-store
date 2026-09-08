@@ -1296,14 +1296,21 @@
       "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus",
       "rebuPurchasePriceRequired": "La regimul pe marjă e nevoie de prețul de achiziție: baza este marja",
       "exemptionNoteRequired": "Indică temeiul legal al scutirii",
-      "euVatIdRequired": "O livrare intracomunitară necesită codul de TVA al cumpărătorului (ex.: PT501234567)"
+      "euVatIdRequired": "O livrare intracomunitară necesită codul de TVA al cumpărătorului (ex.: PT501234567)",
+      "rectifiedInvoiceRequired": "Indică ce factură se stornează",
+      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență",
+      "rectifyingReasonRequired": "Alege temeiul stornării",
+      "rectifyingNoteRequired": "Explică de ce se stornează: este ceea ce apare în document",
+      "rectifiedBaseRequired": "Prin substituire trebuie indicată baza stornată",
+      "rectifiedVatRequired": "Prin substituire trebuie indicat TVA-ul stornat"
     },
     "errors": {
       "unauthenticated": "Trebuie să te autentifici",
       "alreadyIssued": "Această factură a fost deja emisă",
       "cannotDeleteIssued": "O factură emisă nu se poate șterge. Pentru corectare, emite o factură storno.",
       "issueFailed": "Factura nu a putut fi emisă",
-      "loadFailed": "Facturile nu au putut fi încărcate"
+      "loadFailed": "Facturile nu au putut fi încărcate",
+      "proformaFailed": "Proforma nu a putut fi generată"
     },
     "taxRegime": "Regim de TVA",
     "purchasePrice": "Preț de achiziție (TVA inclus)",
@@ -1317,6 +1324,30 @@
       "exemptExport": "Scutită · export (art. 21)",
       "reverseCharge": "Taxare inversă",
       "exemptOther": "Scutită · altele"
-    }
+    },
+    "rectify": "Emite factură storno",
+    "proforma": "Generează proformă",
+    "proformaGenerated": "Proformă generată",
+    "rectifyingSection": "Stornare",
+    "rectifiedInvoice": "Factura care se stornează",
+    "rectifyingType": "Modalitate",
+    "rectifyingReason": "Temei",
+    "rectifyingNote": "Motivul stornării",
+    "rectifyingHint": "O factură emisă nu se modifică: se stornează cu un document nou care o referențiază. Originalul rămâne marcat ca stornat.",
+    "negativeHint": "Prin diferență, sumele au semn. Pentru a anula întreaga factură, introdu suma cu minus.",
+    "proformaHint": "Proforma nu este o factură: nu are număr fiscal și nu generează TVA.",
+    "rectifyingTypes": {
+      "substitution": "Prin substituire (se reemit datele corecte complete)",
+      "difference": "Prin diferență (doar ajustarea, cu semnul ei)"
+    },
+    "rectifyingReasons": {
+      "R1": "R1 · Eroare de drept (art. 80.Unu, Doi și Șase)",
+      "R2": "R2 · Procedură de insolvență (art. 80.Trei)",
+      "R3": "R3 · Creanță nerecuperabilă (art. 80.Patru)",
+      "R4": "R4 · Alte cauze prevăzute la art. 80",
+      "R5": "R5 · Stornarea unei facturi simplificate"
+    },
+    "rectifiedBase": "Bază stornată",
+    "rectifiedVat": "TVA stornat"
   }
 }

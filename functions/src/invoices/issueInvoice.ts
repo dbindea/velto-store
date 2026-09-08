@@ -63,6 +63,25 @@ interface IssueInvoiceRequest {
   locale?: string;
   /** Total de la reserva de origen, para dejar constancia si no coincide. */
   reservationTotal?: number;
+
+  /**
+   * `rectifying` para una rectificativa. Ausente o `invoice` para una normal.
+   *
+   * La rectificativa entra por aquí y no por una function propia porque
+   * comparte **todo** lo que importa: el contador transaccional, la cadena de
+   * huellas y el PDF. Lo único que cambia es la serie, el tipo que va al hash y
+   * un puñado de campos.
+   */
+  kind?: 'invoice' | 'rectifying';
+  rectifies?: { invoiceId: string; fullNumber: string; issueDate?: string };
+  /** `S` por sustitución, `I` por diferencias. */
+  rectifyingType?: 'S' | 'I';
+  /** `R1`…`R5`: el supuesto del art. 80 LIVA que la justifica. */
+  rectifyingReason?: TipoFacturaAeat;
+  rectifyingNote?: string;
+  /** Solo en `S`: base y cuota de la factura que se sustituye. */
+  rectifiedBase?: number;
+  rectifiedVat?: number;
 }
 
 interface IssueInvoiceResponse {
@@ -76,6 +95,15 @@ interface IssueInvoiceResponse {
 
 /** Documento que guarda el último número usado de cada serie. */
 const COUNTERS = 'invoiceCounters';
+
+/**
+ * El eslabón vivo de la cadena de huellas, **uno solo para todo el emisor**.
+ *
+ * Vive en la misma colección que los contadores por comodidad de reglas, con un
+ * id que no puede colisionar con ninguna serie: una serie es `2026` o `R2026`,
+ * nunca `_chain`.
+ */
+const CHAIN_DOC = '_chain';
 const INVOICES = 'invoices';
 
 const LOCALES: ContractLocale[] = ['es', 'en', 'ro'];
@@ -133,6 +161,60 @@ function mentionTexts(keys: string[], loc: ContractLocale): string[] {
 }
 
 /**
+ * Los textos de la rectificación, en el idioma del documento.
+ *
+ * Viven aquí por lo mismo que las menciones: los emite quien construye el PDF,
+ * y tener una segunda copia en los JSON de la app sería otra pareja de textos
+ * legales condenada a divergir.
+ */
+const RECTIFYING_TEXTS: Record<string, Record<ContractLocale, string>> = {
+  title: {
+    es: 'FACTURA RECTIFICATIVA',
+    en: 'CREDIT NOTE',
+    ro: 'FACTURĂ DE STORNARE'
+  },
+  S: {
+    es: 'Por sustitución',
+    en: 'By substitution',
+    ro: 'Prin substituire'
+  },
+  I: {
+    es: 'Por diferencias',
+    en: 'By difference',
+    ro: 'Prin diferență'
+  },
+  R1: {
+    es: 'R1 · Error fundado en derecho (art. 80.Uno, Dos y Seis LIVA)',
+    en: 'R1 · Error in law (Art. 80.One, Two and Six of the Spanish VAT Act)',
+    ro: 'R1 · Eroare de drept (art. 80.Unu, Doi și Șase LIVA)'
+  },
+  R2: {
+    es: 'R2 · Concurso de acreedores (art. 80.Tres LIVA)',
+    en: 'R2 · Insolvency proceedings (Art. 80.Three)',
+    ro: 'R2 · Procedură de insolvență (art. 80.Trei)'
+  },
+  R3: {
+    es: 'R3 · Crédito incobrable (art. 80.Cuatro LIVA)',
+    en: 'R3 · Bad debt (Art. 80.Four)',
+    ro: 'R3 · Creanță nerecuperabilă (art. 80.Patru)'
+  },
+  R4: {
+    es: 'R4 · Resto de causas del art. 80 LIVA',
+    en: 'R4 · Other grounds under Art. 80',
+    ro: 'R4 · Alte cauze prevăzute la art. 80'
+  },
+  R5: {
+    es: 'R5 · Rectificación de factura simplificada',
+    en: 'R5 · Correction of a simplified invoice',
+    ro: 'R5 · Rectificarea unei facturi simplificate'
+  }
+};
+
+function rectifyingText(key: string, loc: ContractLocale): string {
+  return RECTIFYING_TEXTS[key]?.[loc] || RECTIFYING_TEXTS[key]?.es || key;
+}
+
+/**
  * ¿Toda la factura va en REBU?
  *
  * Solo entonces se oculta el desglose de la cuota, que es lo que exige el art.
@@ -164,16 +246,53 @@ export const issueInvoice = functions.https.onCall(
      * fiscal no puede depender de que el formulario estuviera bien. Misma
      * defensa en profundidad que aplican los guards del workflow.
      */
+    const esRectificativa = data?.kind === 'rectifying';
+
     const problems = validateInvoiceInput({
       recipient: data?.recipient,
       lines: data?.lines,
-      paymentMethod: data?.paymentMethod
+      paymentMethod: data?.paymentMethod,
+      // ⚠️ En una rectificativa **por diferencias los importes van con signo**:
+      // así se declara un ajuste a la baja y así se anula una factura entera.
+      // La regla de «un negativo es una rectificativa, no una factura» es
+      // justamente lo contrario aquí.
+      allowNegative: esRectificativa && data?.rectifyingType === 'I'
     });
     const primerProblema = Object.values(problems)[0];
     if (primerProblema) {
       // Viaja como clave i18n, nunca como frase: la capa de avisos del
       // frontend la traduce y decide si ofrece reintentar.
       throw new functions.https.HttpsError('invalid-argument', primerProblema);
+    }
+
+    if (esRectificativa) {
+      // Lo que la norma exige de una rectificativa y no de una factura: a cuál
+      // rectifica, cómo y por qué. Sin esto, el registro que iría a la AEAT
+      // estaría incompleto.
+      if (!data.rectifies?.invoiceId) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'invoices.problems.rectifiedInvoiceRequired'
+        );
+      }
+      if (!data.rectifyingType) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'invoices.problems.rectifyingTypeRequired'
+        );
+      }
+      if (!data.rectifyingReason) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'invoices.problems.rectifyingReasonRequired'
+        );
+      }
+      if (!data.rectifyingNote?.trim()) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'invoices.problems.rectifyingNoteRequired'
+        );
+      }
     }
 
     const db = firestore();
@@ -187,10 +306,13 @@ export const issueInvoice = functions.https.onCall(
      * es la fecha de operación, que es campo aparte y para eso está.
      */
     const issueDate = new Date();
-    const series = invoiceSeriesFor(issueDate);
+    // ⚠️ Serie propia para las rectificativas: lo exige el art. 6.2, no es una
+    // preferencia de organización.
+    const series = invoiceSeriesFor(issueDate, esRectificativa);
     const totals = calculateInvoiceTotals(data.lines);
 
     const counterRef = db.collection(COUNTERS).doc(series);
+    const chainRef = db.collection(COUNTERS).doc(CHAIN_DOC);
     const invoiceRef = data.invoiceId
       ? db.collection(INVOICES).doc(data.invoiceId)
       : db.collection(INVOICES).doc();
@@ -202,6 +324,7 @@ export const issueInvoice = functions.https.onCall(
        * executed before all writes») no dice qué lectura sobra.
        */
       const counterSnap = await tx.get(counterRef);
+      const chainSnap = await tx.get(chainRef);
 
       // Un borrador que ya se emitió no se vuelve a emitir: eso consumiría dos
       // números para la misma factura.
@@ -220,25 +343,34 @@ export const issueInvoice = functions.https.onCall(
       const fullNumber = formatInvoiceNumber(series, number);
 
       /**
-       * La huella de la última factura emitida, sea de la serie que sea.
+       * La huella de la última factura emitida, **sea de la serie que sea**.
        *
-       * ⚠️ **La cadena es única para todo el emisor, no por serie.** Un
-       * ejercicio nuevo no reinicia el encadenamiento: la primera factura de
-       * 2027 encadena con la última de 2026. Reiniciarlo rompería la
-       * continuidad que justifica todo el mecanismo.
+       * ⚠️ **La cadena es única para todo el emisor, no por serie**, y por eso
+       * vive en su propio documento y no en el contador. Estuvo en el contador
+       * de cada serie y era un fallo latente que solo se veía al añadir la
+       * segunda serie: la primera rectificativa `R2026/0001` habría encadenado
+       * con la cadena vacía de `R2026` en vez de con la última factura emitida,
+       * partiendo el encadenamiento en dos hilos independientes. Lo mismo
+       * habría pasado el 1 de enero al abrir la serie del ejercicio siguiente.
        *
-       * Se guarda en el propio contador para poder leerlo dentro de la
-       * transacción: una consulta `orderBy(...).limit(1)` no está permitida
-       * aquí, y ese es exactamente el motivo por el que el dato vive donde se
-       * puede leer por id.
+       * Se lee por id dentro de la transacción porque una consulta
+       * `orderBy(...).limit(1)` no está permitida aquí — ese es exactamente el
+       * motivo por el que el dato vive donde se puede leer por id.
        */
-      const huellaAnterior = (counterSnap.data()?.lastHash as string) || '';
+      const huellaAnterior = (chainSnap.data()?.lastHash as string) || '';
 
       const hash = computeRegistroAltaHash({
         idEmisorFactura: company.taxId,
         numSerieFactura: fullNumber,
         fechaExpedicion: issueDate,
-        tipoFactura: 'F1' as TipoFacturaAeat,
+        /**
+         * ⚠️ El tipo entra en la huella, así que una rectificativa sella su
+         * `R1`…`R5` y no `F1`. Poner el tipo equivocado da una huella válida
+         * en apariencia que no coincidirá con la que calcule la AEAT.
+         */
+        tipoFactura: esRectificativa
+          ? (data.rectifyingReason as TipoFacturaAeat)
+          : ('F1' as TipoFacturaAeat),
         cuotaTotal: totals.vat,
         importeTotal: totals.total,
         huellaAnterior,
@@ -246,8 +378,26 @@ export const issueInvoice = functions.https.onCall(
       });
 
       const invoice = {
-        kind: 'invoice',
+        kind: esRectificativa ? 'rectifying' : 'invoice',
         status: 'issued',
+        // Lo que solo tiene una rectificativa: a cuál rectifica, cómo y por
+        // qué. En una factura ordinaria van todos a `null`.
+        rectifies: esRectificativa
+          ? {
+              invoiceId: data.rectifies!.invoiceId,
+              fullNumber: data.rectifies!.fullNumber,
+              issueDate: toDate(data.rectifies!.issueDate) || null
+            }
+          : null,
+        rectifyingType: esRectificativa ? data.rectifyingType : null,
+        rectifyingReason: esRectificativa ? data.rectifyingReason : null,
+        rectifyingNote: esRectificativa ? data.rectifyingNote : null,
+        // Solo en `S`. En `I` no se rellenan: el registro que va a la AEAT es
+        // otro y estos campos no le corresponden.
+        rectifiedBase:
+          esRectificativa && data.rectifyingType === 'S' ? (data.rectifiedBase ?? null) : null,
+        rectifiedVat:
+          esRectificativa && data.rectifyingType === 'S' ? (data.rectifiedVat ?? null) : null,
         series,
         number,
         fullNumber,
@@ -280,11 +430,48 @@ export const issueInvoice = functions.https.onCall(
       };
 
       tx.set(invoiceRef, invoice, { merge: !!data.invoiceId });
+      // El contador guarda el número; la cadena, la huella. Separados porque el
+      // número es por serie y la cadena es una sola para todo el emisor.
       tx.set(
         counterRef,
-        { series, lastNumber: number, lastHash: hash, updatedAt: FieldValue.serverTimestamp() },
+        { series, lastNumber: number, updatedAt: FieldValue.serverTimestamp() },
         { merge: true }
       );
+      tx.set(
+        chainRef,
+        {
+          lastHash: hash,
+          lastFullNumber: fullNumber,
+          lastIssueDate: issueDate,
+          updatedAt: FieldValue.serverTimestamp()
+        },
+        { merge: true }
+      );
+
+      /**
+       * La original queda marcada como rectificada, **en la misma transacción**.
+       *
+       * Si se hiciera después y fallara, quedaría una rectificativa apuntando a
+       * una factura que no sabe que lo está: abriéndola no habría forma de ver
+       * que ya no vale, que es justo lo que hay que evitar.
+       *
+       * ⚠️ Es una escritura sobre una factura emitida, y eso solo lo puede
+       * hacer el backend: `firestore.rules` deniega el `update` a todo el
+       * mundo. Es legítima porque **no toca contenido fiscal** —ni importes, ni
+       * número, ni fechas— y no entra en la huella: es el estado del documento
+       * y una referencia al que lo corrige.
+       */
+      if (esRectificativa && data.rectifies?.invoiceId) {
+        tx.set(
+          db.collection(INVOICES).doc(data.rectifies.invoiceId),
+          {
+            status: 'rectified',
+            rectifiedBy: { invoiceId: invoiceRef.id, fullNumber },
+            updatedAt: FieldValue.serverTimestamp()
+          },
+          { merge: true }
+        );
+      }
 
       return { number, fullNumber, hash };
     });
@@ -342,7 +529,18 @@ export const issueInvoice = functions.https.onCall(
         vehicleLabel: data.vehicleLabel,
         notes: data.notes,
         mentions: mentionTexts(requiredMentionKeys(data.lines), resolveLocale(data.locale)),
-        hideVatBreakdown: soloRebu(data.lines)
+        hideVatBreakdown: soloRebu(data.lines),
+        rectifying:
+          esRectificativa && data.rectifies
+            ? {
+                title: rectifyingText('title', resolveLocale(data.locale)),
+                rectifiedNumber: data.rectifies.fullNumber,
+                rectifiedDate: toDate(data.rectifies.issueDate) || null,
+                typeLabel: rectifyingText(data.rectifyingType!, resolveLocale(data.locale)),
+                reasonLabel: rectifyingText(data.rectifyingReason!, resolveLocale(data.locale)),
+                note: data.rectifyingNote!
+              }
+            : undefined
       });
       const subido = await uploadPdf(`invoices/${invoiceRef.id}/invoice.pdf`, pdf);
       pdfUrl = subido.pdfUrl;

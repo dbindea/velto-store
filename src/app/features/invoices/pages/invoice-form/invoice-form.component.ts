@@ -15,7 +15,11 @@ import {
   InvoiceRecipient,
   InvoiceTotals,
   RECIPIENT_TYPE_LABELS,
+  RECTIFYING_REASON_LABELS,
+  RECTIFYING_TYPE_LABELS,
   RecipientType,
+  RectifyingReason,
+  RectifyingType,
   TAX_REGIME_LABELS,
   TaxRegime
 } from '@shared/models/invoice.model';
@@ -25,6 +29,7 @@ import {
   differsFromReservation,
   isInvoiceOverdue,
   lineBase,
+  validateRectifying,
   rebuMargin,
   suggestPaymentMethod,
   validateInvoice
@@ -66,6 +71,21 @@ export class InvoiceFormComponent implements OnInit {
   periodStart: string | null = null;
   periodEnd: string | null = null;
 
+  // --- Rectificación. Vacío en una factura normal. -----------------------
+  kind: 'invoice' | 'rectifying' = 'invoice';
+  rectifies: { invoiceId: string; fullNumber: string; issueDate?: Date | null } | null = null;
+  rectifyingType: RectifyingType = 'I';
+  rectifyingReason: RectifyingReason = 'R1';
+  rectifyingNote = '';
+  rectifiedBase?: number;
+  rectifiedVat?: number;
+  rectifyingTypeOptions = Object.keys(RECTIFYING_TYPE_LABELS) as RectifyingType[];
+  rectifyingTypeLabels = RECTIFYING_TYPE_LABELS;
+  rectifyingReasonOptions = Object.keys(RECTIFYING_REASON_LABELS) as RectifyingReason[];
+  rectifyingReasonLabels = RECTIFYING_REASON_LABELS;
+
+  generatingProforma = signal(false);
+
   // Origen, cuando la factura sale de una reserva. Vacío en una factura libre.
   reservationId?: string;
   vehicleId?: string;
@@ -104,6 +124,59 @@ export class InvoiceFormComponent implements OnInit {
 
     const reservationId = this.route.snapshot.queryParamMap.get('reservation');
     if (reservationId) await this.loadFromReservation(reservationId);
+
+    const rectifyId = this.route.snapshot.queryParamMap.get('rectify');
+    if (rectifyId) await this.loadToRectify(rectifyId);
+  }
+
+  /**
+   * Carga la factura que se va a rectificar y **copia sus datos**.
+   *
+   * Se copian el destinatario y las líneas porque el caso normal es corregir un
+   * detalle, no reescribir todo. Lo que el operador haga a partir de ahí depende
+   * de la modalidad: por sustitución cambia lo que estaba mal y deja el resto;
+   * por diferencias pone solo el ajuste, y para anular la factura entera le
+   * cambia el signo al importe.
+   */
+  private async loadToRectify(id: string): Promise<void> {
+    this.loading.set(true);
+    try {
+      const original = await this.service.getById(id);
+      if (!original?.fullNumber) return;
+
+      this.kind = 'rectifying';
+      this.rectifies = {
+        invoiceId: id,
+        fullNumber: original.fullNumber,
+        issueDate: original.issueDate ? toDate(original.issueDate) : null
+      };
+      this.recipient = { ...original.recipient };
+      this.recipientType = original.recipient?.type || 'individual';
+      this.lines = (original.lines || []).map((l) => ({ ...l }));
+      this.paymentMethod = original.paymentMethod;
+      this.operationDate = this.toInputDate(original.operationDate);
+      this.periodStart = this.toInputDate(original.operationPeriodStart);
+      this.periodEnd = this.toInputDate(original.operationPeriodEnd);
+      this.contractNumber = original.contractNumber;
+      this.vehicleLabel = undefined;
+      this.reservationId = original.reservationId;
+
+      // La base y la cuota de la original, que es lo que hay que declarar como
+      // rectificado si se elige la modalidad por sustitución.
+      this.rectifiedBase = original.totals?.base;
+      this.rectifiedVat = original.totals?.vat;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  get isRectifying(): boolean {
+    return this.kind === 'rectifying';
+  }
+
+  /** Por diferencias los importes van con signo: así se anula una factura. */
+  get allowsNegative(): boolean {
+    return this.isRectifying && this.rectifyingType === 'I';
   }
 
   emptyLine(): InvoiceLine {
@@ -271,8 +344,22 @@ export class InvoiceFormComponent implements OnInit {
     this.problems = validateInvoice({
       recipient: this.recipient,
       lines: this.lines,
-      paymentMethod: this.paymentMethod
+      paymentMethod: this.paymentMethod,
+      allowNegative: this.allowsNegative
     });
+    if (this.isRectifying) {
+      Object.assign(
+        this.problems,
+        validateRectifying({
+          rectifies: this.rectifies,
+          rectifyingType: this.rectifyingType,
+          rectifyingReason: this.rectifyingReason,
+          rectifyingNote: this.rectifyingNote,
+          rectifiedBase: this.rectifiedBase,
+          rectifiedVat: this.rectifiedVat
+        })
+      );
+    }
     if (hasProblems(this.problems)) return;
 
     this.issuing.set(true);
@@ -290,7 +377,17 @@ export class InvoiceFormComponent implements OnInit {
         vehicleLabel: this.vehicleLabel,
         contractNumber: this.contractNumber,
         notes: this.notes || undefined,
-        reservationTotal: this.reservationTotal
+        reservationTotal: this.reservationTotal,
+        kind: this.kind,
+        rectifies: this.rectifies || undefined,
+        rectifyingType: this.isRectifying ? this.rectifyingType : undefined,
+        rectifyingReason: this.isRectifying ? this.rectifyingReason : undefined,
+        rectifyingNote: this.isRectifying ? this.rectifyingNote : undefined,
+        // Solo en `S`: por diferencias no se rellenan.
+        rectifiedBase:
+          this.isRectifying && this.rectifyingType === 'S' ? this.rectifiedBase : undefined,
+        rectifiedVat:
+          this.isRectifying && this.rectifyingType === 'S' ? this.rectifiedVat : undefined
       });
       this.notifications.success('invoices.issued', { n: res.fullNumber });
       if (res.pdfUrl) window.open(res.pdfUrl, '_blank');
@@ -323,6 +420,40 @@ export class InvoiceFormComponent implements OnInit {
     // Las de validación también viajan como clave y sí están traducidas.
     if (msg.startsWith('invoices.problems.')) return msg;
     return 'invoices.errors.issueFailed';
+  }
+
+  /**
+   * Genera una proforma con lo que hay en pantalla.
+   *
+   * ⚠️ **No emite nada**: no consume número, no encadena y no deja rastro más
+   * allá del PDF. Por eso puede pulsarse con la factura a medias, que es
+   * justamente cuando se usa — para que el cliente vea lo que va a pagar.
+   */
+  async proforma(): Promise<void> {
+    this.generatingProforma.set(true);
+    try {
+      const res = await this.service.generateProforma({
+        recipient: this.recipient,
+        lines: this.lines,
+        paymentMethod: this.paymentMethod,
+        operationDate: this.operationDate ? new Date(this.operationDate) : null,
+        operationPeriodStart: this.periodStart ? new Date(this.periodStart) : null,
+        operationPeriodEnd: this.periodEnd ? new Date(this.periodEnd) : null,
+        contractNumber: this.contractNumber,
+        vehicleLabel: this.vehicleLabel,
+        notes: this.notes || undefined
+      });
+      this.notifications.success('invoices.proformaGenerated');
+      window.open(res.pdfUrl, '_blank');
+    } catch (err: any) {
+      this.notifications.error(
+        this.errorKeyOf(err) === 'invoices.errors.issueFailed'
+          ? 'invoices.errors.proformaFailed'
+          : this.errorKeyOf(err)
+      );
+    } finally {
+      this.generatingProforma.set(false);
+    }
   }
 
   cancel(): void {

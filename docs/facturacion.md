@@ -673,7 +673,66 @@ formulario.
 - **Recibo de cobro** desde un pago. Entra aquí y no más tarde porque es lo que
   Dorel hace hoy a mano y no depende de nada de lo demás.
 
-### Fase 2 · Rectificativas y proforma
+### ✅ Fase 2 — construida el 8 de septiembre de 2026
+
+Probada de extremo a extremo en desarrollo: **`R2026/0001`** anulando la
+`2026/0001` con importes negativos, y dos proformas `P-…`.
+
+⚠️ **Y afloró un fallo latente de la fase 1**: la cadena de huellas se guardaba
+en el contador de **cada serie**. Solo se ve al abrir la segunda serie — la
+primera `R2026/0001` habría encadenado con la cadena vacía de `R2026` en vez de
+con la última factura emitida, partiendo el encadenamiento en dos hilos
+independientes. Lo mismo habría pasado el 1 de enero al abrir el ejercicio
+siguiente. La cadena vive ahora en `invoiceCounters/_chain`, **una sola para
+todo el emisor**; el contador guarda solo el número.
+
+#### Rectificativas
+
+| | |
+|---|---|
+| Serie | `R2026/0001`, propia, como exige el art. 6.2 |
+| Modalidad | `S` por sustitución · `I` por diferencias |
+| Causa | `R1`…`R5`, las claves `TipoFactura` de VeriFactu |
+| Motivo | Obligatorio en palabras: es lo que consta en el documento |
+| Original | Queda `rectified` y con referencia a la que la corrige |
+
+Tres cosas que no son evidentes y están resueltas:
+
+- ⚠️ **En `S` hay que informar de la base y la cuota rectificadas; en `I` no.**
+  No es formato: son campos distintos del registro que irá a la AEAT.
+- ⚠️ **Por diferencias los importes van con signo**, y en negativo es como se
+  anula una factura entera. La regla de la fase 1 —«un negativo es una
+  rectificativa, no una factura»— es justamente lo contrario aquí, así que la
+  validación lo permite solo en ese caso.
+- ⚠️ **El tipo entra en la huella**: una rectificativa sella su `R1`…`R5`, no
+  `F1`. Con el tipo equivocado la huella parece válida y no coincidiría con la
+  que calcule la AEAT.
+- **La original se marca en la MISMA transacción.** Si se hiciera después y
+  fallara, quedaría una rectificativa apuntando a una factura que no sabe que lo
+  está — y abriéndola no habría forma de ver que ya no vale.
+
+#### Proforma
+
+No devenga IVA, no se declara, no entra en VeriFactu y **no escribe nada en
+Firestore**: como el presupuesto, lo único que queda es el PDF. Referencia
+`P-B0589DE5`, aleatoria y **sin contador**, porque un contador invita a pensar
+que hay una serie y una serie invita a preguntarse por sus huecos.
+
+⚠️ **Y no consume número de la serie fiscal**, que es la regla que la mantiene
+inofensiva: si cogiera el `2026/0007` y luego no se convirtiera en factura,
+dejaría un hueco.
+
+#### Dos fallos que solo se vieron mirando el PDF
+
+- **La rectificativa no imprimía base ni cuota.** La condición era
+  `base > 0` y una rectificativa por diferencias la tiene **negativa** — que es
+  justo la que hay que llevar al 303. Ahora es `!== 0`.
+- **La proforma decía «DATOS DE LA FACTURA» y «TOTAL FACTURA».** La regla que se
+  escribió al diseñarla es que **no puede llamarse factura en ninguna parte**, y
+  las dos etiquetas heredadas la incumplían. Ahora la única mención a la palabra
+  es la que dice que no lo es.
+
+### Fase 2 · Alcance
 
 Rectificativa en serie propia (`R2026/0001`), con referencia a la factura
 rectificada y las claves `S` (sustitución) o `I` (diferencias) que exige la

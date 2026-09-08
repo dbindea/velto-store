@@ -9,6 +9,7 @@ import {
 } from '@shared/models/invoice.model';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { TranslateService } from '@core/i18n/translate.service';
+import { canRectify } from '@shared/utils/invoice.util';
 import { NotificationService } from '@core/notifications/notification.service';
 
 @Component({
@@ -65,6 +66,11 @@ export class InvoiceListComponent implements OnInit {
     // Sin PDF solo puede ser un borrador o una emisión cuyo documento falló;
     // en los dos casos el sitio al que ir es el formulario.
     void this.router.navigate(['/invoices', invoice.id]);
+  }
+
+  /** Solo una factura emitida se rectifica; una rectificativa, no. */
+  canRectifyInvoice(invoice: Invoice): boolean {
+    return canRectify(invoice);
   }
 
   asDate(value: any): Date | null {

@@ -178,6 +178,12 @@ export function validateInvoiceInput(input: {
   recipient?: { name?: string; taxId?: string; address?: string } | null;
   lines?: InvoiceLineInput[] | null;
   paymentMethod?: string | null;
+  /**
+   * ⚠️ Una rectificativa **por diferencias** declara el ajuste con su signo, y
+   * ese signo puede ser negativo: es como se anula una factura entera. En una
+   * factura ordinaria un negativo sigue estando mal.
+   */
+  allowNegative?: boolean;
 }): FieldProblems {
   const problems: FieldProblems = {};
   const recipient = input?.recipient || {};
@@ -204,10 +210,10 @@ export function validateInvoiceInput(input: {
     if (!line.description?.trim()) {
       problems[`lines[${i}].description`] = 'invoices.problems.lineDescriptionRequired';
     }
-    if (!(Number(line.quantity) > 0)) {
+    if (!(Math.abs(Number(line.quantity)) > 0)) {
       problems[`lines[${i}].quantity`] = 'invoices.problems.lineQuantityRequired';
     }
-    if (!(Number(line.unitPrice) >= 0)) {
+    if (!input.allowNegative && !(Number(line.unitPrice) >= 0)) {
       problems[`lines[${i}].unitPrice`] = 'invoices.problems.linePriceInvalid';
     }
     if (!(Number(line.vatRate) >= 0)) {

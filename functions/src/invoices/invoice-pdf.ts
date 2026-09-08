@@ -80,6 +80,27 @@ export interface InvoicePdfInput {
    */
   hideVatBreakdown?: boolean;
   /**
+   * Datos de la rectificación, ya en el idioma del documento.
+   *
+   * El art. 15 exige identificar la factura rectificada y hacer constar los
+   * elementos que se modifican: sin esto el documento no dice a qué corrige, y
+   * entonces no es una rectificativa, es una factura suelta con importes raros.
+   */
+  rectifying?: {
+    title: string;
+    rectifiedNumber: string;
+    rectifiedDate?: Date | null;
+    typeLabel: string;
+    reasonLabel: string;
+    note: string;
+  };
+  /**
+   * Título alternativo para la proforma, que **no puede llamarse «factura»** en
+   * ninguna parte del documento. Manda sobre el de la rectificativa y sobre el
+   * corriente.
+   */
+  proformaTitle?: string;
+  /**
    * Gancho para los tests de maquetación: devuelve el builder con la geometría
    * real que llegó a la página, que es contra lo que se comprueban los
    * invariantes. Los otros tres documentos ya lo tenían; la factura no, y por
@@ -118,7 +139,20 @@ function labels(loc: ContractLocale) {
       : ro
         ? 'Bunuri second-hand (TVA inclus)'
         : 'Bienes usados (IVA incluido)',
+    rectifiedInvoice: en
+      ? 'Invoice being corrected'
+      : ro
+        ? 'Factura rectificată'
+        : 'Factura rectificada',
+    rectifyingType: en ? 'Method' : ro ? 'Modalitate' : 'Modalidad',
+    rectifyingReason: en ? 'Grounds' : ro ? 'Temei' : 'Causa',
+    rectifyingNote: en ? 'Reason' : ro ? 'Motiv' : 'Motivo',
     total: en ? 'Total invoice' : ro ? 'Total factură' : 'Total factura',
+    // Las dos variantes sin la palabra «factura», para la proforma: la regla
+    // que se escribió al diseñarla es que NO puede llamarse factura en ninguna
+    // parte, y estas dos etiquetas la incumplían.
+    documentData: en ? 'Document details' : ro ? 'Datele documentului' : 'Datos del documento',
+    totalNeutral: en ? 'Total' : ro ? 'Total' : 'Total',
     paymentMethod: en ? 'Payment method' : ro ? 'Modalitate de plată' : 'Forma de pago',
     transfer: en ? 'Bank transfer' : ro ? 'Transfer bancar' : 'Transferencia bancaria',
     card: en ? 'Card / POS' : ro ? 'Card / POS' : 'Tarjeta / TPV',
@@ -162,14 +196,18 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
   const company = input.company;
 
   const doc = await PDFDocument.create();
-  doc.setTitle(`${company.brandName} — ${L.title} ${input.fullNumber}`);
+  doc.setTitle(`${company.brandName} — ${input.proformaTitle || input.rectifying?.title || L.title} ${input.fullNumber}`);
   doc.setAuthor(company.brandName);
   doc.setSubject(`${L.title} ${input.fullNumber}`);
   doc.setCreator(company.brandName);
   doc.setProducer(`${company.brandName} · pdf-lib`);
 
+  // El título dice qué documento es. Una rectificativa que se titule «FACTURA»
+  // se confunde con la que corrige, y las dos llevan importes del mismo cliente.
+  const titulo = input.proformaTitle || input.rectifying?.title || L.title;
+
   const b = new PdfBuilder(doc);
-  await b.init(L.title, input.fullNumber, companyFooterLines(company));
+  await b.init(titulo, input.fullNumber, companyFooterLines(company));
 
   b.documentHeader({
     companyName: company.brandName,
@@ -179,7 +217,7 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
       company.address,
       [company.phone, company.email].filter(Boolean).join(' · ')
     ].filter(Boolean),
-    title: L.title,
+    title: titulo,
     reference: input.fullNumber
   });
 
@@ -216,9 +254,28 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
   ];
   if (input.recipient.email) derecha.push({ value: input.recipient.email, wrap: true });
 
-  b.section(L.invoiceData, { lead: 6 });
+  b.section(input.proformaTitle ? L.documentData : L.invoiceData, { lead: 6 });
   b.y += 4;
   b.infoColumns(izquierda, derecha, { size: 8.2 });
+  /**
+   * A qué factura rectifica y por qué. Va **antes de las líneas**, no al pie:
+   * es lo primero que hay que saber al abrir el documento, porque cambia el
+   * significado de todos los importes que vienen debajo.
+   */
+  if (input.rectifying) {
+    const r = input.rectifying;
+    b.y -= 4;
+    b.section(r.title, { lead: 6 });
+    const rectificada = r.rectifiedDate
+      ? `${r.rectifiedNumber} · ${formatDayOnly(r.rectifiedDate, loc)}`
+      : r.rectifiedNumber;
+    b.twoColumnWrap(L.rectifiedInvoice + ':', rectificada, true);
+    b.twoColumnWrap(L.rectifyingType + ':', r.typeLabel, true);
+    b.twoColumnWrap(L.rectifyingReason + ':', r.reasonLabel, true);
+    b.twoColumnWrap(L.rectifyingNote + ':', r.note, true);
+    b.y -= 6;
+  }
+
   b.y -= 10;
 
   b.lineItemsTable(
@@ -264,7 +321,10 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
   const soloRebu = !!input.hideVatBreakdown;
   const filas: { label: string; value: string; total?: boolean }[] = [];
 
-  if (!soloRebu && input.totals.base > 0) {
+  // ⚠️ `!== 0` y no `> 0`: una rectificativa por diferencias declara base y
+  // cuota **negativas**, y son justo las que hay que llevar al modelo 303.
+  // Con `> 0` el desglose desaparecía y quedaba solo el total.
+  if (!soloRebu && input.totals.base !== 0) {
     filas.push({ label: L.taxBase, value: formatMoney(input.totals.base, loc) });
     for (const t of input.totals.byVatRate) {
       filas.push({
@@ -279,7 +339,11 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
   if (input.totals.rebuTotal) {
     filas.push({ label: L.rebuBase, value: formatMoney(input.totals.rebuTotal, loc) });
   }
-  filas.push({ label: L.total, value: formatMoney(input.totals.total, loc), total: true });
+  filas.push({
+    label: input.proformaTitle ? L.totalNeutral : L.total,
+    value: formatMoney(input.totals.total, loc),
+    total: true
+  });
   b.totalsBlock(filas);
 
   /**
@@ -338,7 +402,7 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
    * el presupuesto que afirmaba llevar el IVA incluido, o el contrato que
    * anunciaba una firma digital que no tenía.
    */
-  const hayGravadas = input.totals.base > 0 && !soloRebu;
+  const hayGravadas = input.totals.base !== 0 && !soloRebu;
   if (hayGravadas) {
     b.y -= 10;
     const tipos = input.totals.byVatRate.map((t) => vatPercent(t.vatRate)).join(', ');

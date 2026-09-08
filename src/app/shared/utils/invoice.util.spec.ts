@@ -11,7 +11,9 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  allowsNegativeAmounts,
   calculateInvoiceTotals,
+  canRectify,
   cashAllowedFor,
   differsFromReservation,
   formatInvoiceNumber,
@@ -23,7 +25,8 @@ import {
   needsOperationDate,
   rebuMargin,
   suggestPaymentMethod,
-  validateInvoice
+  validateInvoice,
+  validateRectifying
 } from './invoice.util';
 import { InvoiceLine } from '@shared/models/invoice.model';
 
@@ -243,6 +246,84 @@ describe('validación por régimen', () => {
       paymentMethod: 'transfer'
     });
     expect(p['recipientTaxId']).toBeUndefined();
+  });
+});
+
+describe('rectificativas', () => {
+  const base = {
+    rectifies: { invoiceId: 'abc123', fullNumber: '2026/0001' },
+    rectifyingType: 'I' as const,
+    rectifyingReason: 'R1' as const,
+    rectifyingNote: 'Operación anulada por devolución del vehículo'
+  };
+
+  it('acepta una rectificativa por diferencias completa', () => {
+    expect(validateRectifying(base)).toEqual({});
+  });
+
+  it('exige saber a qué factura rectifica', () => {
+    expect(validateRectifying({ ...base, rectifies: null })['rectifies']).toBe(
+      'invoices.problems.rectifiedInvoiceRequired'
+    );
+  });
+
+  it('exige la modalidad y el motivo, que son claves de la norma', () => {
+    const p = validateRectifying({ ...base, rectifyingType: null, rectifyingReason: null });
+    expect(p['rectifyingType']).toBeTruthy();
+    expect(p['rectifyingReason']).toBeTruthy();
+  });
+
+  it('exige explicar la rectificación en palabras', () => {
+    expect(validateRectifying({ ...base, rectifyingNote: '   ' })['rectifyingNote']).toBe(
+      'invoices.problems.rectifyingNoteRequired'
+    );
+  });
+
+  it('por SUSTITUCIÓN pide base y cuota rectificadas', () => {
+    const p = validateRectifying({ ...base, rectifyingType: 'S' });
+    expect(p['rectifiedBase']).toBe('invoices.problems.rectifiedBaseRequired');
+    expect(p['rectifiedVat']).toBe('invoices.problems.rectifiedVatRequired');
+  });
+
+  it('por SUSTITUCIÓN con base y cuota, pasa', () => {
+    expect(
+      validateRectifying({ ...base, rectifyingType: 'S', rectifiedBase: 165, rectifiedVat: 34.65 })
+    ).toEqual({});
+  });
+
+  it('por DIFERENCIAS no pide base ni cuota rectificadas', () => {
+    // En `I` esos campos NO se rellenan: el registro que va a la AEAT es otro.
+    const p = validateRectifying(base);
+    expect(p['rectifiedBase']).toBeUndefined();
+    expect(p['rectifiedVat']).toBeUndefined();
+  });
+});
+
+describe('canRectify', () => {
+  it('solo una factura emitida', () => {
+    expect(canRectify({ status: 'issued', kind: 'invoice' })).toBe(true);
+  });
+
+  it('un borrador se edita, no se rectifica', () => {
+    expect(canRectify({ status: 'draft', kind: 'invoice' })).toBe(false);
+  });
+
+  it('una rectificativa no se rectifica desde aquí', () => {
+    expect(canRectify({ status: 'issued', kind: 'rectifying' })).toBe(false);
+  });
+});
+
+describe('allowsNegativeAmounts', () => {
+  it('una rectificativa por diferencias SÍ admite negativos: así se anula', () => {
+    expect(allowsNegativeAmounts('rectifying', 'I')).toBe(true);
+  });
+
+  it('por sustitución no: se emiten los datos correctos completos', () => {
+    expect(allowsNegativeAmounts('rectifying', 'S')).toBe(false);
+  });
+
+  it('una factura ordinaria nunca', () => {
+    expect(allowsNegativeAmounts('invoice')).toBe(false);
   });
 });
 

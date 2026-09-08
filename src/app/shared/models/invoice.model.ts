@@ -30,12 +30,59 @@ export type InvoiceKind =
   | 'proforma';    // Proforma. NO fiscal (fase 2)
 
 /**
- * Cómo se rectifica, cuando toca (fase 2).
+ * **Cómo** se rectifica. Las claves son las de la norma y no se inventan.
  *
- * Las claves son las de la norma y no se inventan: `S` sustituye el contenido
- * de la factura rectificada, `I` declara solo la diferencia.
+ * - `S` — **por sustitución**: se reemplaza la factura entera y se emiten los
+ *   datos correctos completos. Es lo que encaja cuando el fallo está en el NIF,
+ *   el nombre o cualquier dato de fondo.
+ * - `I` — **por diferencias**: solo se recoge el ajuste, con su signo. Es lo
+ *   que encaja cuando el error está en el importe, y lo que permite anular una
+ *   factura entera poniendo el importe en negativo.
+ *
+ * ⚠️ En `S` hay que informar además de **la base y la cuota rectificadas**; en
+ * `I` esos campos **no** se rellenan. No es un matiz de estilo: son campos
+ * distintos del registro que se enviará a la AEAT.
  */
-export type RectifyingType = 'substitution' | 'difference';
+export type RectifyingType = 'S' | 'I';
+
+/**
+ * **Por qué** se rectifica, según el supuesto de la Ley del IVA. Son las claves
+ * `TipoFactura` que espera VeriFactu.
+ *
+ * - `R1` — errores fundados en derecho (art. 80.Uno, Dos y Seis LIVA). **Es la
+ *   habitual con diferencia**: errores de datos, de importe o de IVA,
+ *   descuentos y devoluciones.
+ * - `R2` — concurso de acreedores (art. 80.Tres).
+ * - `R3` — créditos incobrables (art. 80.Cuatro).
+ * - `R4` — resto de casos del art. 80 y correcciones que no tocan la cuota.
+ * - `R5` — rectificativa **de una factura simplificada**.
+ *
+ * ⚠️ `R5` lo decide **el documento rectificado, no el motivo**: si la original
+ * era simplificada, la rectificativa es R5 aunque el fallo fuera de importe.
+ * Y corregir el nombre o el NIF del destinatario es **R1**, no R3: es un error
+ * de contenido y no tiene nada que ver con un crédito incobrable.
+ */
+export type RectifyingReason = 'R1' | 'R2' | 'R3' | 'R4' | 'R5';
+
+/** La factura que se rectifica, congelada dentro de la rectificativa. */
+export interface RectifiedInvoiceRef {
+  invoiceId: string;
+  fullNumber: string;
+  issueDate: any;
+}
+
+export const RECTIFYING_TYPE_LABELS: Record<RectifyingType, string> = {
+  S: 'invoices.rectifyingTypes.substitution',
+  I: 'invoices.rectifyingTypes.difference'
+};
+
+export const RECTIFYING_REASON_LABELS: Record<RectifyingReason, string> = {
+  R1: 'invoices.rectifyingReasons.R1',
+  R2: 'invoices.rectifyingReasons.R2',
+  R3: 'invoices.rectifyingReasons.R3',
+  R4: 'invoices.rectifyingReasons.R4',
+  R5: 'invoices.rectifyingReasons.R5'
+};
 
 /**
  * Cómo se paga lo que queda pendiente.
@@ -330,6 +377,32 @@ export interface Invoice {
   hash?: string;
   /** Huella de la factura inmediatamente anterior. Vacía en la primera. */
   previousHash?: string;
+
+  // ---------------------------------------------------------------------
+  // Rectificación. Vacío en una factura ordinaria.
+  // ---------------------------------------------------------------------
+  /** A qué factura rectifica esta. Solo en `kind: 'rectifying'`. */
+  rectifies?: RectifiedInvoiceRef;
+  rectifyingType?: RectifyingType;
+  rectifyingReason?: RectifyingReason;
+  /** El motivo en palabras, que es lo que el cliente lee en el documento. */
+  rectifyingNote?: string;
+  /**
+   * Base y cuota **rectificadas**, solo en la modalidad `S`.
+   *
+   * En `I` no se rellenan, porque la rectificativa por diferencias ya declara
+   * el ajuste y no hay nada que sustituir.
+   */
+  rectifiedBase?: number;
+  rectifiedVat?: number;
+  /**
+   * La rectificativa que anuló o corrigió a ESTA factura, si la hay.
+   *
+   * Referencia inversa, para que abriendo una factura vieja se vea que fue
+   * rectificada sin tener que buscarla. La escribe el backend con el admin SDK:
+   * es metadato de estado, no contenido fiscal, y no entra en la huella.
+   */
+  rectifiedBy?: { invoiceId: string; fullNumber: string };
 
   /** Documento en Storage, para el enlace corto y el reenvío. */
   pdfUrl?: string;

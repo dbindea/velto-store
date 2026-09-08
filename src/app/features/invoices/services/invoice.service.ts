@@ -15,8 +15,17 @@ import {
   where
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
-import { BillingProfile, Invoice } from '@shared/models/invoice.model';
-import { calculateInvoiceTotals, validateInvoice } from '@shared/utils/invoice.util';
+import {
+  BillingProfile,
+  Invoice,
+  RectifyingReason,
+  RectifyingType
+} from '@shared/models/invoice.model';
+import {
+  calculateInvoiceTotals,
+  validateInvoice,
+  validateRectifying
+} from '@shared/utils/invoice.util';
 import { firstProblem } from '@shared/utils/form-problems.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -36,6 +45,14 @@ export interface IssueInvoicePayload {
   contractNumber?: string;
   notes?: string;
   reservationTotal?: number;
+  /** `rectifying` para una rectificativa; ausente para una factura normal. */
+  kind?: 'invoice' | 'rectifying';
+  rectifies?: { invoiceId: string; fullNumber: string; issueDate?: Date | null };
+  rectifyingType?: RectifyingType;
+  rectifyingReason?: RectifyingReason;
+  rectifyingNote?: string;
+  rectifiedBase?: number;
+  rectifiedVat?: number;
 }
 
 export interface IssuedInvoice {
@@ -117,11 +134,17 @@ export class InvoiceService {
    * estuviera bien.
    */
   async issue(payload: IssueInvoicePayload): Promise<IssuedInvoice> {
+    const esRectificativa = payload.kind === 'rectifying';
     const problems = validateInvoice({
       recipient: payload.recipient,
       lines: payload.lines,
-      paymentMethod: payload.paymentMethod
+      paymentMethod: payload.paymentMethod,
+      // Por diferencias los importes van con signo: así se anula una factura.
+      allowNegative: esRectificativa && payload.rectifyingType === 'I'
     });
+    if (esRectificativa) {
+      Object.assign(problems, validateRectifying(payload));
+    }
     const problema = firstProblem(problems);
     if (problema) throw new Error(problema);
 
@@ -138,6 +161,38 @@ export class InvoiceService {
       operationPeriodEnd: payload.operationPeriodEnd?.toISOString(),
       // El documento sale en el idioma que tiene puesto la plataforma: es el
       // idioma en el que se está hablando con este cliente.
+      locale: this.translate.getCurrentLanguage()
+    });
+    return res.data;
+  }
+
+  /**
+   * Genera una proforma. **No consume número fiscal ni escribe en Firestore.**
+   *
+   * Devuelve solo la referencia `P-…` y la URL del PDF, igual que el
+   * presupuesto: lo único que queda es el documento. Convertirla en factura es
+   * emitir una factura nueva; la proforma se queda como estaba.
+   */
+  async generateProforma(payload: {
+    recipient: Invoice['recipient'];
+    lines: Invoice['lines'];
+    paymentMethod?: Invoice['paymentMethod'];
+    operationDate?: Date | null;
+    operationPeriodStart?: Date | null;
+    operationPeriodEnd?: Date | null;
+    contractNumber?: string;
+    vehicleLabel?: string;
+    notes?: string;
+  }): Promise<{ reference: string; pdfUrl: string }> {
+    const fn = httpsCallable<Record<string, unknown>, { reference: string; pdfUrl: string }>(
+      this.functions,
+      'generateProforma'
+    );
+    const res = await fn({
+      ...payload,
+      operationDate: payload.operationDate?.toISOString(),
+      operationPeriodStart: payload.operationPeriodStart?.toISOString(),
+      operationPeriodEnd: payload.operationPeriodEnd?.toISOString(),
       locale: this.translate.getCurrentLanguage()
     });
     return res.data;

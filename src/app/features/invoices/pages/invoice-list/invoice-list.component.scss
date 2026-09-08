@@ -154,3 +154,61 @@
     }
   }
 }
+
+/**
+ * La fila pasa a ser un contenedor: el botón que abre el PDF ocupa casi todo,
+ * y a la derecha queda sitio para la acción de rectificar o para el aviso de
+ * que ya se rectificó.
+ */
+.invoice-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+
+  &.rectified {
+    // Una factura rectificada sigue existiendo y no se oculta, pero se ve que
+    // ya no es la vigente.
+    opacity: 0.75;
+  }
+}
+
+.row-main {
+  display: grid;
+  grid-template-columns: 7.5rem 6rem minmax(0, 1fr) 7rem auto;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  padding: 1rem 0 1rem 1.25rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.btn-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-right: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+  }
+}
+
+.rectified-badge {
+  margin-right: 1rem;
+  background: var(--warning-bg);
+  color: var(--warning-color);
+}
