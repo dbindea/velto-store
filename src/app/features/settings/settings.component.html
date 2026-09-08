@@ -20,6 +20,11 @@
       <i class="pi pi-palette"></i>
       {{ 'settings.tabs.appearance' | translate }}
     </button>
+    <button class="tab" type="button"
+            [class.active]="tab() === 'compliance'" (click)="select('compliance')">
+      <i class="pi pi-verified"></i>
+      {{ 'settings.tabs.compliance' | translate }}
+    </button>
   </div>
 
   @if (loading()) {
@@ -287,6 +292,89 @@
             </button>
           }
         </div>
+      </div>
+    }
+
+    <!--
+      Declaración responsable (art. 15 de la Orden HAC/1177/2024).
+
+      ⚠️ Le toca a Velto porque la aplicación es desarrollo propio: no hay
+      fabricante externo que pueda declarar por ella. Y hace falta UNA POR CADA
+      versión del sistema, así que la pantalla avisa cuando la vigente no
+      corresponde a la versión que está corriendo.
+    -->
+    @if (tab() === 'compliance') {
+      <div class="card">
+        <h2>{{ 'settings.compliance.title' | translate }}</h2>
+        <p class="hint">{{ 'settings.compliance.hint' | translate }}</p>
+
+        <div class="compliance-facts">
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.system' | translate }}</span>
+            <span class="fact-value">{{ complianceSystemName }}</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.version' | translate }}</span>
+            <span class="fact-value">{{ complianceVersion }}</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.producer' | translate }}</span>
+            <span class="fact-value">{{ complianceProducer }}</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.mode' | translate }}</span>
+            <span class="fact-value">{{ 'settings.compliance.modeVerifactu' | translate }}</span>
+          </div>
+        </div>
+
+        @if (declaration(); as d) {
+          <p class="compliance-state ok">
+            <i class="pi pi-check-circle"></i>
+            {{ 'settings.compliance.issued' | translate }}
+            <strong>{{ d.declaredAt | date: 'dd/MM/yyyy' }}</strong>
+          </p>
+          <a class="btn-secondary" [href]="d.pdfUrl" target="_blank" rel="noopener">
+            <i class="pi pi-file-pdf"></i>
+            {{ 'settings.compliance.open' | translate }}
+          </a>
+        } @else {
+          <!-- Sin declaración para esta versión: es lo que hay que resolver, y
+               por eso se dice en ámbar y no en gris. -->
+          <p class="compliance-state pending">
+            <i class="pi pi-exclamation-triangle"></i>
+            {{ 'settings.compliance.missing' | translate }}
+          </p>
+          <button
+            class="btn-primary"
+            type="button"
+            [disabled]="issuingDeclaration()"
+            (click)="issueDeclaration()"
+          >
+            @if (issuingDeclaration()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-verified"></i>
+            }
+            {{ 'settings.compliance.issue' | translate }}
+          </button>
+        }
+
+        @if (previousDeclarations().length) {
+          <h3 class="compliance-history">{{ 'settings.compliance.history' | translate }}</h3>
+          <!-- Las de versiones anteriores NO se borran: cada una acredita lo
+               que se declaró mientras esa versión emitía facturas. -->
+          <ul class="compliance-list">
+            @for (d of previousDeclarations(); track d.systemVersion) {
+              <li>
+                <span class="version">v{{ d.systemVersion }}</span>
+                <span class="date">{{ d.declaredAt | date: 'dd/MM/yyyy' }}</span>
+                <a [href]="d.pdfUrl" target="_blank" rel="noopener">
+                  {{ 'settings.compliance.open' | translate }}
+                </a>
+              </li>
+            }
+          </ul>
+        }
       </div>
     }
   }

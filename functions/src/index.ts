@@ -69,3 +69,10 @@ export { generateProforma } from './invoices/generateProforma';
 // aceptarlo en la petición, que es lo que impide que el papel diga que la
 // empresa recibió algo que no recibió.
 export { generateReceipt } from './invoices/generateReceipt';
+// La declaración responsable del art. 15 de la Orden HAC/1177/2024. Le toca a
+// Velto porque la aplicación es desarrollo propio: no hay fabricante externo
+// que pueda declarar por ella. Una por cada versión del sistema.
+export {
+  issueComplianceDeclaration,
+  getComplianceStatus
+} from './invoices/issueComplianceDeclaration';

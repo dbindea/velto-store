@@ -157,6 +157,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // La declaración responsable del art. 15 de la Orden HAC/1177/2024, una por
+    // cada versión del sistema.
+    //
+    // ⚠️ **Mismo trato que una factura: `create` desde la function y nada más.**
+    // La declaración de una versión pasada sigue acreditando lo que se declaró
+    // mientras esa versión estuvo emitiendo facturas, así que borrarla dejaría
+    // sin amparo a todas las facturas de ese periodo. Y editarla convertiría un
+    // documento de cumplimiento en algo que se puede ajustar después de los
+    // hechos, que es justo lo contrario de lo que acredita.
+    //
+    // La lee un administrador: es quien responde de ella.
+    match /verifactuDeclarations/{version} {
+      allow read: if callerIsAdmin();
+      allow create, update, delete: if false;
+    }
+
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.

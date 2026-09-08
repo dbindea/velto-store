@@ -64,26 +64,48 @@ export interface SistemaInformatico {
 /**
  * El sistema, tal y como se declara.
  *
- * ⚠️ **`SoloVerifactu: 'N'`** porque la aplicación **guarda el registro aunque
- * no lo remita**: hoy no envía nada. Declarar `'S'` sería afirmar que solo
- * funciona en modo remisión, que no es cierto todavía.
+ * ⚠️ **`SoloVerifactu: 'S'`, decisión de Dorel del 9 de septiembre de 2026:**
+ * la modalidad es **exclusivamente VERI\*FACTU**. El campo describe **cómo es el
+ * sistema**, no en qué punto de su despliegue está: esta aplicación no va a
+ * operar nunca en la modalidad no verificable —la que obliga a firmar cada
+ * registro y a sostener durante años la prueba de que nada se ha tocado—, así
+ * que declarar `'N'` sería reservarse una posibilidad que no existe.
  *
  * ⚠️ **`MultiOT: 'N'`** porque emite para un único obligado tributario, VELTO
- * MOBILITY. El día que la aplicación facture para otra empresa, esto cambia y
- * el registro cambia con ello.
+ * MOBILITY, que es además quien produce el software. El día que la aplicación
+ * facture para otra empresa, esto cambia y el registro cambia con ello.
+ *
+ * Estos tres valores son los mismos que declara la **declaración responsable**
+ * del art. 15, y no pueden discrepar: son el mismo hecho contado en dos sitios.
+ * Por eso salen de aquí y la declaración los lee, en vez de escribirlos aparte.
  */
 export function sistemaInformatico(taxId: string, legalName: string): SistemaInformatico {
   return {
-    nombreSistemaInformatico: 'Velto Store',
+    nombreSistemaInformatico: VERIFACTU_SYSTEM_NAME,
     nombreRazonProductor: legalName,
     nifProductor: taxId,
     idSistemaInformatico: process.env.VELTO_VERIFACTU_SYSTEM_ID || 'VS',
-    version: process.env.VELTO_VERIFACTU_SYSTEM_VERSION || '1.0',
+    version: verifactuSystemVersion(),
     numeroInstalacion: process.env.VELTO_VERIFACTU_INSTALLATION || '001',
-    tipoUsoPosibleSoloVerifactu: 'N',
+    tipoUsoPosibleSoloVerifactu: 'S',
     tipoUsoPosibleMultiOT: 'N',
     indicadorMultiplesOT: 'N'
   };
+}
+
+/** El nombre comercial del sistema. Un solo sitio: lo citan el registro y la declaración. */
+export const VERIFACTU_SYSTEM_NAME = 'Velto Store';
+
+/**
+ * La versión del sistema informático.
+ *
+ * ⚠️ **Hay que generar una declaración responsable por CADA versión** (art. 15),
+ * así que este número no es decorativo: cambiarlo obliga a emitir una
+ * declaración nueva, y la pantalla de Ajustes avisa cuando la vigente no
+ * corresponde a la versión que está corriendo.
+ */
+export function verifactuSystemVersion(): string {
+  return process.env.VELTO_VERIFACTU_SYSTEM_VERSION || '1.0';
 }
 
 /** Una línea del desglose, por tipo impositivo y régimen. */

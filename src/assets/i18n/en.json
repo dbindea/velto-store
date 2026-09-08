@@ -1033,9 +1033,10 @@
     "saved": "Saved",
     "subtitle": "Default values and who can get in",
     "tabs": {
+      "appearance": "Appearance",
+      "compliance": "Compliance statement",
       "operation": "Operation",
-      "users": "Users",
-      "appearance": "Appearance"
+      "users": "Users"
     },
     "title": "Settings",
     "users": {
@@ -1068,6 +1069,22 @@
       "dark": "Dark",
       "forest": "Forest (green)",
       "ocean": "Ocean (blue)"
+    },
+    "compliance": {
+      "hint": "Article 15 of Order HAC/1177/2024. The application is developed in-house, so the company itself declares that the system complies with RD 1007/2023. One statement is required per system version.",
+      "history": "Previous versions",
+      "issue": "Issue statement",
+      "issueError": "The statement could not be issued",
+      "issued": "Statement issued on",
+      "loadError": "The statements could not be loaded",
+      "missing": "There is no statement for the version in use. Issue it before invoicing further.",
+      "mode": "Mode",
+      "modeVerifactu": "VERI*FACTU only",
+      "open": "Open PDF",
+      "producer": "Producer",
+      "system": "System",
+      "title": "Responsible statement for the invoicing system",
+      "version": "Version"
     }
   },
   "vehicles": {

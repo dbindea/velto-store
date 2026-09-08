@@ -775,9 +775,43 @@ anunciaba una firma digital inexistente: **la frase y el hecho se deciden
 juntos**. Lo gobierna `VELTO_VERIFACTU_ENABLED` en `functions/.env.<proyecto>`,
 hoy `false` en los dos.
 
+### La declaración responsable, y por qué la firma Velto
+
+⚠️ **El art. 15 de la Orden HAC/1177/2024 obliga al PRODUCTOR del software, y
+aquí el productor es la propia empresa.** Al ser desarrollo propio no hay
+fabricante externo que declare que el sistema cumple el RD 1007/2023: VELTO
+MOBILITY es a la vez obligado tributario y productor.
+
+Está en **Ajustes › Declaración responsable**, y hace falta **una por cada
+versión del sistema**. Ninguna se borra: la de una versión pasada sigue
+acreditando lo que se declaró mientras esa versión estuvo emitiendo facturas, y
+`firestore.rules` deniega `update` y `delete` a todos, igual que con las
+facturas. El id del documento **es la versión**, así que no puede haber dos de
+la misma.
+
+⚠️ **Lo que declara sale del mismo sitio que el registro de facturación**
+(`sistemaInformatico()`). Si la declaración dijera una modalidad y los registros
+llevaran otra, la declaración sería falsa sin que nadie tocara nada: son el
+mismo hecho contado en dos sitios. Por eso la pantalla tampoco tiene constantes
+propias — la versión y el productor los sirve `getComplianceStatus`, o serían un
+cuarto sitio donde escribir la versión y el primero en quedarse viejo.
+
+**Modalidad: exclusivamente VERI\*FACTU** (`SoloVerifactu: 'S'`), decisión de
+Dorel del 9 de septiembre de 2026. El campo describe **cómo es el sistema**, no
+en qué punto de su despliegue está.
+
 Falta el **envío** —XML SOAP firmado, estados, reintentos—, que no se puede dar
-por bueno sin el entorno de preproducción de la AEAT y su alta previa. El
-detalle está en [docs/facturacion.md](docs/facturacion.md).
+por bueno sin el entorno de preproducción de la AEAT.
+
+⚠️ **No hay «alta» en VERI\*FACTU ni se comunica por el modelo 036**, y tampoco
+sustituye a la contabilidad ni a las declaraciones: es una obligación adicional
+sobre cómo funciona la aplicación. El procedimiento y lo que falta para el envío
+están en [docs/verifactu-alta.md](docs/verifactu-alta.md).
+
+⚠️ **Guardar el registro no es que la AEAT lo haya aceptado.** La integración no
+está terminada hasta validar contra preproducción el XML, el encadenamiento, el
+QR, las respuestas, los errores y los reenvíos. Y **producción no se toca sin
+autorización expresa de Dorel**.
 
 ### El parte de entrega y el de devolución
 

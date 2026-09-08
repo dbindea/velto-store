@@ -1033,9 +1033,10 @@
     "saved": "Salvat",
     "subtitle": "Valori implicite și cine poate intra",
     "tabs": {
+      "appearance": "Aspect",
+      "compliance": "Declarație pe proprie răspundere",
       "operation": "Operare",
-      "users": "Utilizatori",
-      "appearance": "Aspect"
+      "users": "Utilizatori"
     },
     "title": "Setări",
     "users": {
@@ -1068,6 +1069,22 @@
       "dark": "Întunecat",
       "forest": "Pădure (verzui)",
       "ocean": "Ocean (albăstrui)"
+    },
+    "compliance": {
+      "hint": "Articolul 15 din Ordinul HAC/1177/2024. Aplicația este dezvoltată intern, așa că firma însăși declară că sistemul respectă RD 1007/2023. Este necesară o declarație pentru fiecare versiune a sistemului.",
+      "history": "Versiuni anterioare",
+      "issue": "Emite declarația",
+      "issueError": "Declarația nu a putut fi emisă",
+      "issued": "Declarație emisă la",
+      "loadError": "Declarațiile nu au putut fi încărcate",
+      "missing": "Nu există declarație pentru versiunea în uz. Emite-o înainte de a continua să facturezi.",
+      "mode": "Modalitate",
+      "modeVerifactu": "Exclusiv VERI*FACTU",
+      "open": "Deschide PDF",
+      "producer": "Producător",
+      "system": "Sistem",
+      "title": "Declarație pe proprie răspundere a sistemului de facturare",
+      "version": "Versiune"
     }
   },
   "vehicles": {

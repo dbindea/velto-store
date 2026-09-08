@@ -27,8 +27,13 @@ import {
   permissionsOf
 } from '@shared/utils/permissions.util';
 import { ConfirmService } from '@core/notifications/confirm.service';
+import {
+  ComplianceDeclaration,
+  ComplianceService,
+  ComplianceStatus
+} from '@features/settings/services/compliance.service';
 
-type Tab = 'operation' | 'users' | 'appearance';
+type Tab = 'operation' | 'users' | 'appearance' | 'compliance';
 
 /**
  * Ajustes: valores por defecto de la operación y quién puede entrar.
@@ -122,6 +127,76 @@ export class SettingsComponent implements OnInit {
     this.tab.set(tab);
     this.errorKey.set('');
     this.savedMessage.set('');
+    // Las declaraciones se leen al abrir su pestaña: son un documento legal que
+    // se consulta de vez en cuando, no algo que haga falta en cada carga.
+    if (tab === 'compliance' && !this.declarationsLoaded) void this.loadDeclarations();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Declaración responsable (art. 15 de la Orden HAC/1177/2024)
+  //
+  // ⚠️ Le toca a Velto porque la aplicación es desarrollo propio: no hay
+  // fabricante externo que pueda declarar por ella. Y hace falta una por CADA
+  // versión del sistema, así que la pantalla distingue la vigente de las
+  // anteriores en vez de enseñar solo la última.
+  // ---------------------------------------------------------------------------
+
+  private compliance = inject(ComplianceService);
+  private declarationsLoaded = false;
+
+  readonly declarations = signal<ComplianceDeclaration[]>([]);
+  readonly issuingDeclaration = signal(false);
+  /** Lo que declara el sistema. Lo sirve la function; aquí no se duplica nada. */
+  readonly complianceStatus = signal<ComplianceStatus | null>(null);
+
+  get complianceSystemName(): string {
+    return this.complianceStatus()?.systemName ?? '—';
+  }
+  get complianceVersion(): string {
+    return this.complianceStatus()?.version ?? '—';
+  }
+  get complianceProducer(): string {
+    return this.complianceStatus()?.producerName ?? '—';
+  }
+
+  /** La de la versión que está corriendo, si existe. */
+  readonly declaration = computed(() => {
+    const version = this.complianceStatus()?.version;
+    return version ? this.declarations().find((d) => d.systemVersion === version) : undefined;
+  });
+
+  /** Las de versiones anteriores. No se borran: cada una acreditó su periodo. */
+  readonly previousDeclarations = computed(() => {
+    const version = this.complianceStatus()?.version;
+    return this.declarations().filter((d) => d.systemVersion !== version);
+  });
+
+  private async loadDeclarations(): Promise<void> {
+    try {
+      // El estado primero: sin saber qué versión corre no se puede decir si
+      // falta su declaración, que es lo único que esta pantalla tiene que
+      // responder.
+      this.complianceStatus.set(await this.compliance.status());
+      this.declarations.set(await this.compliance.list());
+      this.declarationsLoaded = true;
+    } catch {
+      this.errorKey.set('settings.compliance.loadError');
+    }
+  }
+
+  async issueDeclaration(): Promise<void> {
+    if (this.issuingDeclaration()) return;
+    this.issuingDeclaration.set(true);
+    this.errorKey.set('');
+    try {
+      await this.compliance.issue();
+      await this.loadDeclarations();
+      this.savedMessage.set('settings.compliance.issued');
+    } catch {
+      this.errorKey.set('settings.compliance.issueError');
+    } finally {
+      this.issuingDeclaration.set(false);
+    }
   }
 
   permissionsFor(role: UserRole | undefined): number {

@@ -1033,9 +1033,10 @@
     "saved": "Guardado",
     "subtitle": "Valores por defecto y quién puede entrar",
     "tabs": {
+      "appearance": "Apariencia",
+      "compliance": "Declaración responsable",
       "operation": "Operación",
-      "users": "Usuarios",
-      "appearance": "Apariencia"
+      "users": "Usuarios"
     },
     "title": "Ajustes",
     "users": {
@@ -1068,6 +1069,22 @@
       "dark": "Oscuro",
       "forest": "Bosque (verdoso)",
       "ocean": "Océano (azulado)"
+    },
+    "compliance": {
+      "hint": "Artículo 15 de la Orden HAC/1177/2024. La aplicación es un desarrollo propio de la empresa, así que es ella misma quien declara que el sistema cumple el RD 1007/2023. Hace falta una declaración por cada versión del sistema.",
+      "history": "Versiones anteriores",
+      "issue": "Emitir declaración",
+      "issueError": "No se pudo emitir la declaración",
+      "issued": "Declaración emitida el",
+      "loadError": "No se pudieron cargar las declaraciones",
+      "missing": "No hay declaración para la versión que está en uso. Emítela antes de seguir facturando.",
+      "mode": "Modalidad",
+      "modeVerifactu": "Exclusivamente VERI*FACTU",
+      "open": "Abrir PDF",
+      "producer": "Productor",
+      "system": "Sistema",
+      "title": "Declaración responsable del sistema de facturación",
+      "version": "Versión"
     }
   },
   "vehicles": {

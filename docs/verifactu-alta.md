@@ -1,11 +1,12 @@
 # VERI\*FACTU: qué hay que hacer antes de poder enviar
 
-Escrito el 8 de septiembre de 2026, a petición de Dorel.
+Escrito el 8 de septiembre de 2026 y corregido el 9 con las aclaraciones de
+Dorel: no hay comunicación censal, no se usa el modelo 036, y la declaración
+responsable ya está construida dentro de la aplicación.
 
 ⚠️ **No soy asesor fiscal.** Lo que sigue es el procedimiento tal y como está
 planteado en la normativa y en la sede de la AEAT, para que sepas por dónde
-empezar y con qué. **Los puntos marcados como «confirmar» los cierra la
-gestoría**, no este documento.
+empezar y con qué.
 
 ---
 
@@ -14,6 +15,15 @@ gestoría**, no este documento.
 ⚠️ **No hay un «alta en VERI\*FACTU».** No existe un registro al que
 inscribirse, ni un formulario de adhesión, ni un número de sistema que te den.
 Buscarlo es la primera media hora que pierde todo el mundo.
+
+⚠️ **Y no se comunica por el modelo 036.** Confirmado por Dorel el 9 de
+septiembre de 2026: la AEAT lo dice expresamente. No hay alta censal, ni nada
+que declarar a la gestoría por este motivo.
+
+⚠️ **VERI\*FACTU tampoco sustituye nada de lo que ya se hace.** Las facturas se
+siguen entregando y contabilizando igual, y los modelos fiscales se siguen
+presentando igual: es una obligación **adicional sobre el funcionamiento de la
+aplicación**, no un régimen que reemplace la contabilidad ni las declaraciones.
 
 Lo que sí existen son **tres cosas distintas**, y conviene no mezclarlas:
 
@@ -35,6 +45,7 @@ ningún sitio. Lo que la AEAT comprueba es que le lleguen los registros.
 | **Certificado electrónico de representante** de la S.L. | ✅ Ya lo tienes: es el mismo de la FNMT con el que se sellan los contratos |
 | Acceso a la **sede electrónica** de la AEAT con ese certificado | ✅ Si entras hoy a presentar impuestos, ya lo tienes |
 | El certificado **instalado en el navegador** para los trámites de la sede | Comprobar |
+| Que el certificado **autentique desde la Cloud Function** contra preproducción | ⛔ Por probar, y es la prueba que vale |
 | El `.p12` disponible para el envío automático | ✅ Está en Secret Manager (`VELTO_SIGNING_CERT`) |
 
 ⚠️ **El certificado del envío y el de la sede son el mismo, pero se usan de dos
@@ -62,36 +73,42 @@ aquí: se llega buscando «VERI\*FACTU» en el buscador de la propia sede. Lo qu
 no cambia es que el material técnico vive en el área de Desarrolladores y es
 **público** — no hace falta ningún permiso para descargarlo.
 
-### Paso 2 — La declaración responsable *(esto sí es tuyo)*
+### Paso 2 — La declaración responsable *(ya está en la aplicación)*
 
-⚠️ **Es el único trámite propiamente dicho, y te toca a ti porque el software es
-de la casa.** Al no comprar un programa a un tercero, no hay fabricante que
-declare por ti: VELTO MOBILITY es a la vez el obligado tributario **y** el
-productor del sistema.
+⚠️ **Te toca a ti porque el software es de la casa.** Al no comprar un programa
+a un tercero, no hay fabricante que declare por ti: VELTO MOBILITY es a la vez
+el obligado tributario **y** el productor del sistema.
 
-Ya está reflejado en el registro que emite la aplicación:
+**Hecho el 9 de septiembre de 2026.** Está en **Ajustes › Declaración
+responsable**: genera el documento del art. 15 con los datos obligatorios
+—productor, sistema, identificador, versión, componentes, fecha y lugar—, lo
+conserva y da su PDF.
 
 ```
 nombreSistemaInformatico: Velto Store
 nombreRazonProductor:     VELTO MOBILITY, S.L.
 nifProductor:             B88866900        ← el mismo que el emisor
+modalidad:                exclusivamente VERI*FACTU
+obligados tributarios:    uno solo
 ```
 
-**Confirmar con la gestoría**: en qué forma y ante quién se deja constancia de
-esa declaración, y si en tu caso hay que comunicar algo por censo (036/037).
-Es la pregunta que mejor responde alguien que presente tus modelos.
+⚠️ **Una declaración por CADA versión del sistema**, y ninguna se borra: la de
+una versión pasada sigue acreditando lo que se declaró mientras esa versión
+estuvo emitiendo facturas. La pantalla avisa en ámbar cuando la versión que
+está corriendo no tiene la suya, y `firestore.rules` deniega `update` y
+`delete` a todo el mundo, igual que con las facturas.
+
+⚠️ **Lo que declara sale del mismo sitio que el registro de facturación.** Si la
+declaración dijera una modalidad y los registros llevaran otra, la declaración
+sería falsa sin que nadie tocara nada: son el mismo hecho contado en dos sitios,
+así que se leen de una sola fuente.
 
 ### Paso 3 — Preproducción, antes que nada real
 
-**No se envía una factura de verdad hasta que el circuito pase en pruebas.** El
-entorno de preproducción de la AEAT existe justo para eso y no hay que pedir
-permiso para usarlo.
+**No se envía una factura de verdad hasta que el circuito pase en pruebas.**
 
-Lo que hay que sacar de ahí, y es lo que yo necesito:
-
-1. La **URL del servicio** de preproducción y la de producción.
-2. El **WSDL** vigente.
-3. Confirmar que el certificado de la empresa **autentica** contra ese entorno.
+Lo que hace falta de ahí está en el punto 3: los esquemas, el WSDL o los
+endpoints, y la lista de códigos de error.
 
 ### Paso 4 — El envío, ya con código
 
@@ -114,30 +131,69 @@ reales.
 
 ## 3. Lo que necesito de ti para programar el envío
 
-Nada más que esto, y sin ello no se puede empezar:
+⚠️ **Los archivos técnicos oficiales de la AEAT todavía no me han llegado.** No
+están adjuntos ni en el repositorio; sin ellos no puedo escribir el XML, porque
+me lo estaría inventando. Lo que hace falta:
 
-- [ ] **URL del servicio** de preproducción y de producción.
-- [ ] Confirmación de que el **certificado de la empresa autentica** contra
-      preproducción (basta con que entres una vez).
-- [ ] **Desde cuándo se envía**: el 1 de enero de 2027, o antes de forma
+- [ ] **Los esquemas `.xsd`** del registro de facturación (alta y anulación).
+- [ ] **El `.wsdl`** del servicio, o las URL de los *endpoints* de
+      preproducción y producción.
+- [ ] Las **validaciones** publicadas: la lista de códigos de error y de
+      rechazo, que es lo que decide qué se reintenta y qué no.
+
+Déjalos en `docs/aeat/` del repositorio y sigo desde ahí.
+
+Y una decisión que sí es tuya:
+
+- [ ] **Desde cuándo se remite**: el 1 de enero de 2027, o antes de forma
       voluntaria para llegar rodado.
 
 ---
 
-## 4. Lo que sigue pendiente de la gestoría
+## 4. Cómo se va a probar la autenticación
 
-Lo de siempre, más lo de aquí:
+⚠️ **Desde la propia Cloud Function, no entrando tú en la sede.** Que un
+certificado funcione en un navegador no prueba que funcione en una llamada
+máquina a máquina: cambian el formato, la cadena de confianza y el modo de
+presentarlo. La prueba que vale es una petición real desde la function contra
+preproducción.
 
-1. La forma de la **declaración responsable** y si hay comunicación censal.
-2. Si conviene **empezar a remitir antes** del 1 de enero para no estrenar el
-   sistema el mismo día que empieza la obligación.
-3. Y lo que ya estaba en [facturacion.md](facturacion.md): el IVA de la venta de
-   vehículos, las dos series del trimestre, los anticipos y el tipo de los
-   cargos extra.
+El certificado sigue **en Secret Manager** (`VELTO_SIGNING_CERT`, el `.p12` en
+base64, y su contraseña aparte). Nunca al repositorio ni a un `.env`.
+
+⚠️ **Y no se toca producción sin autorización expresa.** Todo contra
+preproducción hasta que tú digas lo contrario.
 
 ---
 
-## 5. Mientras tanto, lo que ya está resuelto
+## 5. Cuándo estará «terminado»
+
+⚠️ **Guardar un registro internamente no significa que la AEAT lo haya
+aceptado.** La integración no está hecha hasta que, contra preproducción, se
+haya validado:
+
+- [ ] El **XML** contra los esquemas oficiales.
+- [ ] El **encadenamiento** entre registros sucesivos.
+- [ ] El **QR** y su leyenda.
+- [ ] Las **respuestas** de aceptación.
+- [ ] Los **errores** y los rechazos, cada uno con su tratamiento.
+- [ ] Los **reenvíos**: qué se reintenta, cuántas veces y qué se hace con lo que
+      no entra.
+
+Hasta entonces esto sigue siendo «registro guardado», que es otra cosa.
+
+---
+
+## 6. Lo que sigue pendiente de la gestoría
+
+Nada de VERI\*FACTU: no hay comunicación censal ni trámite que presentar. Queda
+lo que ya estaba en [facturacion.md](facturacion.md), que es de IVA y no de
+sistemas: el IVA de la venta de vehículos, las dos series del trimestre, los
+anticipos y el tipo de los cargos extra.
+
+---
+
+## 7. Mientras tanto, lo que ya está resuelto
 
 ⚠️ **Lo irreversible ya está hecho, y es lo que importaba de este plazo.** Desde
 el 8 de septiembre de 2026 cada factura guarda su **registro de facturación
