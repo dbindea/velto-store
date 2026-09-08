@@ -988,7 +988,8 @@
     "subtitle": "Valori implicite și cine poate intra",
     "tabs": {
       "operation": "Operare",
-      "users": "Utilizatori"
+      "users": "Utilizatori",
+      "appearance": "Aspect"
     },
     "title": "Setări",
     "users": {
@@ -1012,6 +1013,14 @@
       },
       "selfLocked": "Nu îți poți schimba propriul acces sau rol.",
       "you": "Tu"
+    },
+    "theme": "Temă",
+    "themeHint": "Este preferința ta: se salvează în acest browser și nu afectează pe nimeni altcineva. Butonul din bara de sus rotește între cele patru.",
+    "themes": {
+      "light": "Deschis",
+      "dark": "Întunecat",
+      "forest": "Pădure (verzui)",
+      "ocean": "Ocean (albăstrui)"
     }
   },
   "vehicles": {

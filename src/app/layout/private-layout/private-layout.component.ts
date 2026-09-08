@@ -169,6 +169,18 @@ export class PrivateLayoutComponent {
     this.themeService.toggleTheme();
   }
 
+  /** Un icono por tema: el botón rota entre los cuatro y tiene que decir cuál. */
+  themeIcon(): string {
+    return (
+      {
+        light: 'pi-sun',
+        dark: 'pi-moon',
+        forest: 'pi-cloud',
+        ocean: 'pi-star'
+      }[this.themeService.theme()] || 'pi-sun'
+    );
+  }
+
   async logout() {
     await this.authService.logout();
   }

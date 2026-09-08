@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { TranslateService } from '@core/i18n/translate.service';
 import { AuthService } from '@core/auth/auth.service';
+import { ThemeService, Theme } from '@core/theme/theme.service';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { AuthorizedUserService } from '@features/settings/services/authorized-user.service';
 import { AuthorizedUser } from '@shared/models/authorized-user.model';
@@ -26,7 +27,7 @@ import {
   permissionsOf
 } from '@shared/utils/permissions.util';
 
-type Tab = 'operation' | 'users';
+type Tab = 'operation' | 'users' | 'appearance';
 
 /**
  * Ajustes: valores por defecto de la operación y quién puede entrar.
@@ -57,6 +58,13 @@ export class SettingsComponent implements OnInit {
   readonly USER_ROLE_DESCRIPTIONS = USER_ROLE_DESCRIPTIONS;
 
   readonly tab = signal<Tab>('operation');
+  /**
+   * El tema es preferencia personal, no un ajuste del negocio: no se guarda en
+   * Firestore ni afecta a nadie más. Vive aquí porque es donde se buscan las
+   * preferencias, pero el conmutador de la barra superior sigue estando para
+   * todos los roles — esta pantalla es de administrador.
+   */
+  readonly themeService = inject(ThemeService);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly errorKey = signal('');
@@ -101,6 +109,11 @@ export class SettingsComponent implements OnInit {
 
   private async loadUsers(): Promise<void> {
     this.users.set(await this.usersService.getUsers());
+  }
+
+  /** El tema se aplica al instante: no hay nada que guardar ni confirmar. */
+  setTheme(theme: Theme): void {
+    this.themeService.setTheme(theme);
   }
 
   select(tab: Tab): void {

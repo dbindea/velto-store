@@ -988,7 +988,8 @@
     "subtitle": "Valores por defecto y quién puede entrar",
     "tabs": {
       "operation": "Operación",
-      "users": "Usuarios"
+      "users": "Usuarios",
+      "appearance": "Apariencia"
     },
     "title": "Ajustes",
     "users": {
@@ -1012,6 +1013,14 @@
       },
       "selfLocked": "No puedes cambiarte el acceso ni el rol a ti mismo.",
       "you": "Tú"
+    },
+    "theme": "Tema",
+    "themeHint": "Es una preferencia tuya: se guarda en este navegador y no afecta a nadie más. El botón de la barra superior rota entre los cuatro.",
+    "themes": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "forest": "Bosque (verdoso)",
+      "ocean": "Océano (azulado)"
     }
   },
   "vehicles": {

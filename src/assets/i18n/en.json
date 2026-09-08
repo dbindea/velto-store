@@ -988,7 +988,8 @@
     "subtitle": "Default values and who can get in",
     "tabs": {
       "operation": "Operation",
-      "users": "Users"
+      "users": "Users",
+      "appearance": "Appearance"
     },
     "title": "Settings",
     "users": {
@@ -1012,6 +1013,14 @@
       },
       "selfLocked": "You cannot change your own access or role.",
       "you": "You"
+    },
+    "theme": "Theme",
+    "themeHint": "This is your own preference: it is stored in this browser and affects nobody else. The button in the top bar cycles through all four.",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "forest": "Forest (green)",
+      "ocean": "Ocean (blue)"
     }
   },
   "vehicles": {

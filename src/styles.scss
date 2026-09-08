@@ -219,6 +219,57 @@
   --info-bg: rgba(123, 164, 234, 0.14);
 }
 
+/**
+ * `forest` — el intermedio VERDOSO.
+ *
+ * El `.dark` de arriba es carbón profundo (#0B0F0E de fondo), y en una jornada
+ * entera cansa. Este sube tres escalones la rampa: sigue siendo oscuro y sigue
+ * siendo de la casa —los mismos grises con tinte teal—, pero el fondo ya no es
+ * casi negro.
+ *
+ * ⚠️ Va **después** de `.dark` y solo redefine superficies y textos. Las clases
+ * se aplican juntas (`dark theme-forest`), así que todo lo demás —los
+ * semánticos, el `color-scheme`, las reglas de componente que miran `.dark`—
+ * lo hereda sin duplicarse.
+ */
+.dark.theme-forest {
+  --sidebar-bg: #101614;
+  --bg-main: #151D1B;
+  --bg-card: #1D2725;
+  --border-color: #2E3B38;
+  --border-light: #253330;
+  --border-strong: #3D4C48;
+  --bg-input: #151D1B;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --text-primary: #F2F6F5;
+  --text-secondary: #C2CFCB;
+  --text-muted: #93A29E;
+}
+
+/**
+ * `ocean` — el intermedio AZULADO.
+ *
+ * Es la rampa `slate` que tenía la aplicación antes del design system, y está
+ * aquí a propósito: es la que Dorel venía usando y con la que estaba cómodo.
+ * Un azul apagado es además lo que usan casi todas las herramientas donde se
+ * pasan ocho horas seguidas.
+ *
+ * El verde de marca sigue siendo el mismo; lo que cambia es la superficie.
+ */
+.dark.theme-ocean {
+  --sidebar-bg: #0B1220;
+  --bg-main: #0F172A;
+  --bg-card: #1E293B;
+  --border-color: #334155;
+  --border-light: #1E293B;
+  --border-strong: #475569;
+  --bg-input: #0F172A;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+}
+
 // System preference (light default)
 @media (prefers-color-scheme: light) {
   :root:not(.dark) {

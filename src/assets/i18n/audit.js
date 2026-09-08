@@ -113,6 +113,11 @@ for (const file of walk(APP_DIR)) {
  * be introduced without declaring its leaves.
  */
 const DYNAMIC_KEY_SETS = {
+  // theme.service.ts › Theme. Cuatro paletas: la clara, la oscura y dos
+  // intermedias. El oscuro se volvió casi negro al adoptar la rampa del design
+  // system y cansaba la vista en jornada completa, así que se abrió la
+  // elección en vez de retocarlo y dejar a medias a quien lo prefiera.
+  'settings.themes.': ['light', 'dark', 'forest', 'ocean'],
   // reservation.model.ts › ReservationStatus
   'reservations.status.': ['reserved', 'confirmed', 'delivered', 'returned', 'closed', 'cancelled'],
   // reservation-create.component.ts › Step
