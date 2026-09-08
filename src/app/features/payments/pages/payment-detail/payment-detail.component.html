@@ -206,6 +206,14 @@
           {{ 'payments.actions.markAsPaid' | translate }}
         </button>
       }
+      <!-- El justificante de lo ya cobrado. Aquí es donde se pide el de un
+           cobro libre: sin reserva no hay otra pantalla desde la que llegar. -->
+      @if (canIssueReceipt()) {
+        <button class="btn-secondary" type="button" (click)="showReceiptDialog = true">
+          <i class="pi pi-receipt"></i>
+          {{ 'payments.receipt.action' | translate }}
+        </button>
+      }
       @if (canCancel()) {
         @if (permissions.canCancelReservations()) {
         <button class="btn-danger" type="button" [disabled]="cancelling" (click)="cancelPayment()">
@@ -224,5 +232,9 @@
         }
       }
     </div>
+
+    @if (showReceiptDialog) {
+      <app-receipt-dialog [payment]="payment" (closed)="showReceiptDialog = false" />
+    }
   }
 </div>

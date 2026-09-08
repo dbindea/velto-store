@@ -60,6 +60,41 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-20 · Recibo de cobro — 8 de septiembre de 2026
+
+Lo que Dorel hacía a mano en Word cuando alguien le daba la señal. Estaba
+planificado en la fase 1 de facturación y se había quedado fuera; el detalle
+completo —decisiones, diseño y fallos— está en
+[facturacion.md](facturacion.md#-fase-1--recibo-de-cobro--construido-el-8-de-septiembre-de-2026).
+
+Botón **Recibo** en cada fila de pago con dinero cobrado, en la ficha de la
+reserva y en la del pago —que es la única puerta de un **cobro libre**, porque
+sin reserva no hay otra pantalla desde la que llegar—.
+
+Tres cosas que conviene no repetir:
+
+1. ⚠️ **Un identificador que ya es secreto en un sitio no se reutiliza como
+   dirección en otro.** El enlace corto del recibo lleva un id aleatorio y no el
+   del pago: ese id es el secreto de `/pay/:paymentId`, y quien tuviera el
+   enlace de pago reenviado se habría bajado un PDF con el nombre del cliente.
+2. ⚠️ **Las condiciones sobre dinero necesitan mirar la dirección, no solo el
+   importe.** Una devolución de fianza tiene `paidAmount` mayor que cero, así
+   que «solo si se ha cobrado algo» la dejaba pasar — y el recibo habría dicho
+   «recibido de» sobre dinero que salió.
+3. ⚠️ **Los tests de maquetación siguen sin comprobar que el texto sea cierto.**
+   Los tres fallos del PDF —la etiqueta que no se pintaba, el concepto repetido
+   y el pendiente colocado como un sumando— pasaron los cuatro invariantes.
+   Ahora hay dos tests de **contenido** sobre el recibo: que el aviso de «no es
+   una factura» esté impreso y que no haya ni un desglose de impuesto.
+
+Probado en desarrollo con cobros reales: señal de 50 € en efectivo, fianza
+cobrada a medias por transferencia y el mismo recibo en rumano.
+
+⚠️ **Desplegado solo en desarrollo**, como el resto de facturación. Producción
+sigue con trece functions.
+
+---
+
 ## ✅ N-19 · Cuatro temas — 8 de septiembre de 2026
 
 El oscuro se volvió **casi negro** (`#0B0F0E`) al adoptar la rampa del design

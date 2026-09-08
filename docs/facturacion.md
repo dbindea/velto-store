@@ -589,7 +589,7 @@ fase 1— por lo que dice la sección 4.
 | | Estado |
 |---|---|
 | **Fase 1** · Emitir factura | ✅ Construida y verificada |
-| **Fase 1** · Recibo de cobro | ⛔ **No hecha.** Se planificó aquí y se quedó fuera |
+| **Fase 1** · Recibo de cobro | ✅ Construido y probado (`REC-…`) |
 | **Fase 2** · Rectificativas | ✅ Construida y probada (`R2026/0001`) |
 | **Fase 2** · Proforma | ✅ Construida y probada (`P-…`) |
 | **Fase 3** · VeriFactu | ⛔ No empezada. Tope: **1 de enero de 2027** |
@@ -691,7 +691,65 @@ formulario.
 - Aviso cuando el destinatario es empresa y se acerca el día 16 del mes
   siguiente.
 - **Recibo de cobro** desde un pago. Entra aquí y no más tarde porque es lo que
-  Dorel hace hoy a mano y no depende de nada de lo demás.
+  Dorel hace hoy a mano y no depende de nada de lo demás. *(Se quedó fuera de la
+  primera tanda y se construyó al final del mismo día; el detalle, arriba.)*
+
+### ✅ Fase 1 · Recibo de cobro — construido el 8 de septiembre de 2026
+
+Probado en desarrollo sobre cobros reales: una señal de 50 € en efectivo, una fianza
+cobrada **a medias** (100 de 150 €) por transferencia, y el mismo recibo en rumano.
+
+Las cuatro decisiones de Dorel, tomadas antes de programar:
+
+| | Decisión |
+|---|---|
+| **Qué documenta** | **Un cobro**, una fila de `payments`. No un acumulado de la reserva |
+| **Fianza** | **Sí**, con texto propio: es un depósito en garantía y no se factura nunca |
+| **«Se emitirá factura»** | **Solo si va a haberla.** Se factura a petición: prometerla siempre sería falso la mayoría de las veces |
+| **Quién lo emite** | **Quien puede registrar cobros**, también un empleado. Quien coge la señal con el cliente delante es quien tiene que dar el papel |
+
+De la última no salió ningún cambio en `permissions.util.ts` ni en `firestore.rules`: los
+pagos ya los ve cualquier usuario autorizado, y el recibo no es fiscal ni enseña nada que ese
+usuario no tenga ya delante. Se comprobó antes de darlo por hecho.
+
+Lo construido:
+
+| | |
+|---|---|
+| `generateReceipt` | Cloud Function. **Lee el importe del pago**, no lo acepta en la petición |
+| `receipt-core.ts` | Qué cobro admite recibo. Duplicado en `@shared/utils/receipt.util.ts` con la misma tabla de tests, porque app y functions no comparten módulo |
+| PDF propio | **No reutiliza `buildInvoicePdf`**: sin número de serie, sin desglose de IVA, con el aviso arriba y en negrita |
+| Enlace corto | `/d/c{id}`, con id **aleatorio** — ver abajo |
+| Idiomas | es · en · ro, con los códigos de método y de tipo traducidos |
+
+#### Lo que se decidió y no es evidente
+
+- ⚠️ **El id del enlace corto NO es el del pago.** Ese id es el secreto de `/pay/:paymentId`,
+  el enlace que el cliente recibe para pagar desde el móvil. Derivando de él la ruta del
+  recibo, cualquiera con ese enlace reenviado se bajaría un PDF con el **nombre del cliente**
+  — justo lo que `getPaymentCheckout` evita devolviendo solo el importe.
+- ⚠️ **Una devolución de fianza no admite recibo.** Va en dirección contraria y **lleva
+  importe**, así que la comprobación del importe no la caza: hace falta mirar la dirección.
+  Un «recibido de …» sobre dinero que salió sería exactamente lo contrario de lo que pasó.
+- **Un cobro parcial sí lo admite**, y el recibo dice lo que falta. Sin esa línea, un recibo
+  por 100 € de una fianza de 150 parece dejar el concepto saldado.
+
+#### Tres fallos que solo se vieron mirando el PDF
+
+Los tests pasaban y las cifras eran correctas. Es la tercera vez que pasa lo mismo, y por eso
+se anota otra vez:
+
+- **El nombre del pagador salía sin etiqueta.** Un recibo tiene que decir de quién viene el
+  dinero, y «Cliente Pruebas» suelto en una columna no lo dice. La traducción de «Recibido
+  de» estaba escrita en los tres idiomas y **no la pintaba nadie** — código escrito y nunca
+  ejecutado, dentro del documento que lo necesitaba.
+- **El concepto se repetía**: «Señal de la reserva» y debajo «Señal reserva», que es lo que la
+  propia aplicación siembra en la fila. Ahora el texto del operador se imprime solo si añade
+  algo, comparado contra los titulares **en los tres idiomas**: comparando solo contra el del
+  documento, un recibo rumano sacaba «Avans rezervare» con el concepto español debajo.
+- **El pendiente se leía como un sumatorio.** Puesto dentro del bloque de totales —donde la
+  factura suma base + cuota = total— «pendiente 50» encima de «recibido 100» parecía cuadrar
+  y no cuadraba. Fuera del bloque es lo que es: una advertencia.
 
 ### ✅ Fase 2 — construida el 8 de septiembre de 2026
 

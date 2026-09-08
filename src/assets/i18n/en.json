@@ -680,6 +680,27 @@
       "physicalPos": "Physical POS",
       "redsys": "Redsys (online)"
     },
+    "receipt": {
+      "action": "Receipt",
+      "confirm": "A receipt will be issued for what has already been collected:",
+      "copyLink": "Copy link",
+      "error": "The receipt could not be generated",
+      "generate": "Generate receipt",
+      "generated": "Receipt generated:",
+      "invoiceExpected": "The customer has asked for an invoice",
+      "invoiceExpectedHint": "Only then does the receipt say an invoice will follow. Invoices are issued on request, so promising one every time would state something that is often untrue.",
+      "linkCopied": "Receipt link copied",
+      "notAnInvoice": "A receipt is not an invoice: it breaks down no VAT and carries no tax series number, and the document says so.",
+      "open": "Open PDF",
+      "problems": {
+        "cancelled": "This payment is cancelled: there is nothing to acknowledge",
+        "notFound": "The payment could not be found",
+        "notIncoming": "A receipt acknowledges money received, and this movement goes the other way",
+        "nothingCollected": "Nothing has been collected for this item yet",
+        "paymentRequired": "No payment to issue the receipt for"
+      },
+      "title": "Payment receipt"
+    },
     "redsys": {
       "authorizationCode": "Authorization code",
       "notificationReceived": "Notification received",

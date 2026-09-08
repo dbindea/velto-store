@@ -680,6 +680,27 @@
       "physicalPos": "TPV físico",
       "redsys": "Redsys (online)"
     },
+    "receipt": {
+      "action": "Recibo",
+      "confirm": "Se emitirá un recibo por lo ya cobrado:",
+      "copyLink": "Copiar enlace",
+      "error": "No se pudo generar el recibo",
+      "generate": "Generar recibo",
+      "generated": "Recibo generado:",
+      "invoiceExpected": "El cliente ha pedido factura",
+      "invoiceExpectedHint": "Solo entonces el recibo dice que se emitirá factura. Se factura a petición, así que prometerla siempre sería afirmar algo que muchas veces no es cierto.",
+      "linkCopied": "Enlace del recibo copiado",
+      "notAnInvoice": "Un recibo no es una factura: no desglosa IVA ni lleva número de serie fiscal, y el documento lo lleva impreso.",
+      "open": "Abrir PDF",
+      "problems": {
+        "cancelled": "Este cobro está cancelado: no hay nada que justificar",
+        "notFound": "No se encuentra el pago",
+        "notIncoming": "Un recibo justifica dinero recibido, y este movimiento va en sentido contrario",
+        "nothingCollected": "Todavía no se ha cobrado nada de este concepto",
+        "paymentRequired": "Falta el pago del que emitir el recibo"
+      },
+      "title": "Recibo de cobro"
+    },
     "redsys": {
       "authorizationCode": "Código autorización",
       "notificationReceived": "Notificación recibida",

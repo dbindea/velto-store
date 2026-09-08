@@ -680,6 +680,27 @@
       "physicalPos": "POS fizic",
       "redsys": "Redsys (online)"
     },
+    "receipt": {
+      "action": "Chitanță",
+      "confirm": "Se va emite o chitanță pentru suma deja încasată:",
+      "copyLink": "Copiază linkul",
+      "error": "Chitanța nu a putut fi generată",
+      "generate": "Generează chitanța",
+      "generated": "Chitanță generată:",
+      "invoiceExpected": "Clientul a cerut factură",
+      "invoiceExpectedHint": "Doar atunci chitanța spune că se va emite factură. Factura se emite la cerere, așa că a promite una de fiecare dată ar însemna să afirmi ceva de multe ori neadevărat.",
+      "linkCopied": "Link-ul chitanței a fost copiat",
+      "notAnInvoice": "O chitanță nu este o factură: nu detaliază TVA și nu are număr de serie fiscală, iar documentul o spune.",
+      "open": "Deschide PDF",
+      "problems": {
+        "cancelled": "Această încasare este anulată: nu există nimic de justificat",
+        "notFound": "Plata nu a fost găsită",
+        "notIncoming": "O chitanță justifică bani primiți, iar această mișcare merge în sens invers",
+        "nothingCollected": "Nu s-a încasat încă nimic pentru acest concept",
+        "paymentRequired": "Lipsește plata pentru care se emite chitanța"
+      },
+      "title": "Chitanță de încasare"
+    },
     "redsys": {
       "authorizationCode": "Cod autorizare",
       "notificationReceived": "Notificare primită",

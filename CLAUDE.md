@@ -264,8 +264,13 @@ functions/src/
 │                                     # getContractForSigning, signContract,
 │                                     # sendSignedContractEmail, clauses, pdf,
 │                                     # sign-pdf, verification + qr (el CSV)
-└── documents/                        # presupuesto y justificante de reserva
-                                      # (documents-pdf, storage, los 2 callables)
+├── documents/                        # presupuesto y justificante de reserva
+│                                     # (documents-pdf, storage, locator,
+│                                     # documentLink, los 2 callables)
+└── invoices/                         # factura, rectificativa (issueInvoice),
+                                      # proforma y recibo de cobro. hash.ts es
+                                      # la cadena de huellas; receipt-core.ts,
+                                      # qué cobro admite recibo
 ```
 
 **Ya no queda ningún placeholder**: Gastos y Ajustes se construyeron el 4 de septiembre de 2026.
@@ -596,9 +601,23 @@ También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf`, `doc
 (pública), `getPaymentCheckout` (**pública**, el cliente paga desde su móvil) y
 `getContractVerification` (**pública**, el QR del contrato en papel).
 
-Son **trece functions, y las trece están vivas en los dos proyectos** (verificado el 4 de
-septiembre de 2026). `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que
-desplegarla no basta: el rewrite `/d/**` viaja con el **hosting** y necesita su propio
+Y las tres de **facturación**: `issueInvoice`, `generateProforma` y `generateReceipt`.
+
+⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado con
+`firebase functions:list` el 8 de septiembre de 2026):
+
+| | Cuántas | Cuáles faltan |
+|---|---|---|
+| desarrollo | 16 | — |
+| producción | **13** | las tres de facturación |
+
+Es deliberado mientras se prueba: la primera factura emitida en producción marca el punto
+de no retorno de `invoices`. Pero es justo el desajuste que CLAUDE.md avisa que es fácil
+olvidar, así que **la lista de arriba no vale como inventario**: se comprueba con
+`firebase functions:list --project prod`.
+
+`documentLink` estuvo un tiempo escrita sin desplegar; ojo con que desplegarla no basta: el
+rewrite `/d/**` viaja con el **hosting** y necesita su propio
 `firebase deploy --only hosting`.
 
 ### Enlaces cortos para WhatsApp
@@ -615,11 +634,19 @@ https://velto-store.web.app/d/qA1b2C3d4E5f6G7h      (~46 caracteres)
 ```
 /d/q{id}  →  quotes/{id}/quote.pdf
 /d/r{id}  →  reservations/{id}/booking-confirmation.pdf
+/d/c{id}  →  receipts/{id}/receipt.pdf
 ```
 
 Así el presupuesto sigue siendo tan efímero como era. El id es el secreto, igual que lo era
 el token de descarga de Storage. El del presupuesto es aleatorio; el de la reserva es estable
 a propósito, para que regenerar el justificante no mate el enlace que el cliente ya tiene.
+
+⚠️ **El del recibo es aleatorio y NO el id del pago**, aunque sea un pago lo que documenta.
+El id del pago es el secreto de `/pay/:paymentId`, el enlace que el cliente recibe para pagar
+desde el móvil: derivando de él la ruta del recibo, cualquiera con ese enlace reenviado se
+bajaría un PDF **con el nombre del cliente** — justo lo que `getPaymentCheckout` se cuida de
+no revelar devolviendo solo el importe. Un identificador que ya es secreto en un sitio no se
+reutiliza como dirección en otro.
 
 Como el id aterriza directo en una ruta de Storage, `resolveDocumentPath()` **rechaza todo lo
 que no sea el alfabeto URL-safe** — sin barras ni puntos, así que no se puede salir de su
@@ -697,6 +724,40 @@ bloquea. Lo único que queda es el PDF en Storage, que es lo que el enlace neces
 
 `uploadPdf()` **reutiliza el token de descarga** si el archivo ya existe. Un token nuevo
 rompería en silencio el enlace que el cliente ya tiene en su WhatsApp.
+
+### El recibo de cobro: todo su diseño es no parecer una factura
+
+`generateReceipt` justifica **dinero recibido**, y esa es la única frase que hay dentro. Un
+cliente que se dedujera el IVA con un recibo tendría un problema, y quien se lo dio también,
+así que el documento **no reutiliza `buildInvoicePdf`**: comparte el `PdfBuilder` —la marca
+es la misma— y nada más. No lleva número de serie fiscal, no desglosa IVA, no tiene bloque de
+forma de pago con IBAN, y lleva impreso arriba y en negrita que no es una factura.
+
+Tres reglas, y las tres tienen su motivo:
+
+- ⚠️ **El importe NO viaja en la petición: se lee del pago.** `payments` es la única fuente
+  de verdad del dinero que entra; aceptando la cifra que mande la pantalla, el recibo sería
+  un papel firmado por la empresa diciendo que recibió algo que quizá no recibió.
+- **Solo dinero que entró.** `receipt-core.ts` rechaza lo cancelado, lo no cobrado y —el caso
+  que hay que acertar— **las devoluciones y retenciones de fianza**: van en la dirección
+  contraria y llevan importe, así que la comprobación del importe no las caza. La misma regla
+  está duplicada en `@shared/utils/receipt.util.ts` para decidir si el botón aparece, con la
+  misma tabla de casos en los dos tests.
+- **No escribe nada en Firestore**, como el presupuesto y la proforma.
+
+⚠️ **Y el texto tiene que ser cierto**, que es donde fallan estos documentos. «La factura se
+emitirá al finalizar el alquiler» solo se imprime si el operador marca que el cliente la ha
+pedido —se factura **a petición**, así que prometerla siempre sería falso la mayoría de las
+veces— y si la factura ya existe se imprime su número en vez de anunciar una futura. La
+fianza lleva además su propia nota: es un depósito en garantía, no un importe del alquiler, y
+no se factura nunca.
+
+Dos cosas más que solo se vieron **mirando el PDF**, no leyendo el código: el nombre del
+pagador salía sin la etiqueta «Recibido de» —que estaba escrita y traducida en los tres
+idiomas sin que nadie la pintara—, y el concepto se repetía («Señal de la reserva» sobre
+«Señal reserva», que es lo que la propia aplicación siembra en la fila). El detalle del
+operador ahora se imprime solo si añade algo, comparado contra los titulares **en los tres
+idiomas**: si no, un recibo rumano sacaba el concepto en español.
 
 ### Firma de contratos
 

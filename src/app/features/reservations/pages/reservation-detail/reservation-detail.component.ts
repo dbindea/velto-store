@@ -9,6 +9,8 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
+import { canIssueReceipt } from '@shared/utils/receipt.util';
+import { ReceiptDialogComponent } from '@shared/components/receipt-dialog/receipt-dialog.component';
 import { InspectionService } from '@features/inspections/services/inspection.service';
 import { ContractService } from '@features/contracts/services/contract.service';
 import { Contract, CONTRACT_STATUS_LABELS as CONTRACT_DOC_STATUS_LABELS, CONTRACT_STATUS_COLORS as CONTRACT_DOC_STATUS_COLORS } from '@shared/models/contract.model';
@@ -71,7 +73,8 @@ import {
     TranslatePipe,
     PaymentConceptPipe,
     ReservationTimelineComponent,
-    ReservationNotesPanelComponent, FormErrorComponent, RouterLink],
+    ReservationNotesPanelComponent, FormErrorComponent, RouterLink,
+    ReceiptDialogComponent],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
@@ -1115,6 +1118,33 @@ export class ReservationDetailComponent implements OnInit {
     const link = `${window.location.origin}/pay/${payment.id}`;
     const copied = await this.documentService.copyToClipboard(link);
     if (copied) this.showCopyToast();
+  }
+
+  // === Recibo de cobro ===
+
+  /**
+   * El justificante de un cobro: lo que Dorel hacía a mano en Word cuando
+   * alguien le daba la señal.
+   *
+   * ⚠️ **No es una factura, y el documento lo lleva impreso.** Aquí solo se
+   * decide una cosa que la aplicación no puede saber: si va a haber factura.
+   * Se factura **a petición**, así que prometerla en todo recibo sería
+   * imprimir algo que muchas veces es falso.
+   */
+  receiptPayment = signal<Payment | null>(null);
+
+  /** ¿Este cobro admite recibo? La regla vive en el util, no aquí. */
+  canIssueReceipt(payment: Payment): boolean {
+    return canIssueReceipt(payment);
+  }
+
+  openReceiptDialog(payment: Payment, event?: Event): void {
+    event?.stopPropagation();
+    this.receiptPayment.set(payment);
+  }
+
+  closeReceiptDialog(): void {
+    this.receiptPayment.set(null);
   }
 
   /** Excepciones ya registradas, para poder mostrarlas en la ficha. */

@@ -60,3 +60,8 @@ export { issueInvoice } from './invoices/issueInvoice';
 // no se encadena y no escribe en Firestore. Es un PDF y nada más, como el
 // presupuesto.
 export { generateProforma } from './invoices/generateProforma';
+// El recibo tampoco: justifica un cobro que ya consta en `payments`, no
+// devenga IVA y no lleva número de serie. Lee el importe del pago en vez de
+// aceptarlo en la petición, que es lo que impide que el papel diga que la
+// empresa recibió algo que no recibió.
+export { generateReceipt } from './invoices/generateReceipt';

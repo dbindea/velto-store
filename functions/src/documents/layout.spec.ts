@@ -16,6 +16,7 @@ import { PDFDocument } from 'pdf-lib';
 import { buildContractPdf, PdfBuilder, formatIdDocument, companyFooterLines } from '../contracts/pdf';
 import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
 import { buildInvoicePdf } from '../invoices/invoice-pdf';
+import { buildReceiptPdf } from '../invoices/receipt-pdf';
 import { calculateInvoiceTotals } from '../invoices/invoice-core';
 import { CONTRACT_CLAUSES } from '../contracts/clauses';
 import {
@@ -164,7 +165,7 @@ describe('the real documents, in every language', () => {
    * assertions run against the same geometry that reached the page.
    */
   async function layoutOf(
-    kind: 'quote' | 'booking' | 'contract' | 'invoice',
+    kind: 'quote' | 'booking' | 'contract' | 'invoice' | 'receipt',
     locale: ContractLocale
   ): Promise<PdfBuilder> {
     let captured: PdfBuilder | null = null;
@@ -269,6 +270,33 @@ describe('the real documents, in every language', () => {
         ],
         onLayout
       });
+    } else if (kind === 'receipt') {
+      /**
+       * El caso peor del recibo: **una fianza cobrada a medias**.
+       *
+       * Junta las tres cosas que pueden empujarse entre sí —la nota larga de la
+       * fianza, la fila «pendiente de este concepto» sobre el importe recibido,
+       * y un concepto escrito por el operador debajo del titular traducido— con
+       * el nombre largo del cliente, que es lo que parte la columna derecha.
+       * En rumano, además, es donde caen los diacríticos que Gotham no tiene.
+       */
+      await buildReceiptPdf({
+        locale,
+        company,
+        reference: 'REC-8QPB4E2A',
+        payerName: client.fullName,
+        amount: 150,
+        paidAt: new Date('2026-09-04T10:00:00Z'),
+        issuedAt: new Date('2026-09-08T09:00:00Z'),
+        method: 'bank_transfer',
+        paymentType: 'deposit',
+        concept: 'Fianza del alquiler, entregada a cuenta en la oficina de Arganda del Rey',
+        reservationLocator: 'R-P2RJP0',
+        vehicleLabel: 'Renault Megane Sport Tourer · 4466LKK',
+        pendingAmount: 150,
+        invoiceExpected: true,
+        onLayout
+      });
     } else {
       await buildContractPdf(
         {
@@ -299,7 +327,7 @@ describe('the real documents, in every language', () => {
     return captured;
   }
 
-  const KINDS = ['quote', 'booking', 'contract', 'invoice'] as const;
+  const KINDS = ['quote', 'booking', 'contract', 'invoice', 'receipt'] as const;
 
   for (const kind of KINDS) {
     for (const locale of LOCALES) {
@@ -353,6 +381,75 @@ describe('the real documents, in every language', () => {
       }, 30_000);
     }
   }
+
+  /**
+   * ⚠️ **Un recibo no puede parecer una factura**, y eso no lo comprueba
+   * ninguno de los invariantes de arriba: los cuatro miran dónde cae el texto,
+   * nunca qué dice. Es exactamente el hueco por el que el presupuesto afirmó
+   * durante meses que los precios llevaban el IVA incluido.
+   *
+   * Aquí se comprueban las dos mitades de esa regla sobre el documento real:
+   * que el aviso está impreso, y que **no hay ni un desglose de impuesto**. Un
+   * cliente que se dedujera el IVA con un recibo tendría un problema, y quien
+   * se lo dio también.
+   */
+  describe('el recibo no puede pasar por una factura', () => {
+    const AVISOS: Record<ContractLocale, string[]> = {
+      es: ['sin validez fiscal', 'NO es una factura'],
+      en: ['no tax validity', 'This is NOT an invoice'],
+      ro: ['fără valabilitate fiscală', 'NU este o factură']
+    };
+
+    /** Las etiquetas con las que la factura consigna base y cuota. */
+    const BASES = ['BASE IMPONIBLE', 'TAXABLE BASE', 'BAZĂ IMPOZABILĂ'];
+
+    for (const locale of LOCALES) {
+      it(`${locale}: lleva impreso que no es una factura`, async () => {
+        const b = await layoutOf('receipt', locale);
+        // Las líneas se juntan con un espacio porque el builder parte por
+        // palabras: así la frase se reconstruye tal y como se lee.
+        const texto = b.boxes
+          .map((box) => box.text)
+          .join(' ')
+          .replace(/\s+/g, ' ');
+        for (const aviso of AVISOS[locale]) {
+          expect(texto, `falta el aviso «${aviso}»`).toContain(aviso);
+        }
+      }, 30_000);
+
+      /**
+       * ⚠️ Un recibo dice **de quién** se recibió el dinero. El nombre salía
+       * suelto en su columna, sin etiqueta, mientras la traducción existía en
+       * los tres idiomas sin que nadie la pintara.
+       */
+      it(`${locale}: dice de quién se recibió el dinero`, async () => {
+        const b = await layoutOf('receipt', locale);
+        const etiqueta = { es: 'Recibido de', en: 'Received from', ro: 'Primit de la' }[locale];
+        const texto = b.boxes
+          .map((box) => box.text)
+          .join(' ')
+          .replace(/\s+/g, ' ');
+        expect(texto).toContain(etiqueta);
+        // Y el nombre del pagador va al lado, no en otra parte del documento.
+        expect(texto).toContain('EUROCONSTRUCCIONES');
+      }, 30_000);
+
+      it(`${locale}: no desglosa ningún impuesto`, async () => {
+        const b = await layoutOf('receipt', locale);
+        const impuesto = b.boxes
+          .map((box) => box.text.trim())
+          .filter(
+            (t) =>
+              BASES.includes(t.toUpperCase()) ||
+              // «IVA», «VAT» y «TVA» sueltos son la columna de la tabla de
+              // líneas; con una cifra detrás, la fila de la cuota.
+              /^(IVA|VAT|TVA)$/i.test(t) ||
+              /^(IVA|VAT|TVA)\s+[\d(]/i.test(t)
+          );
+        expect(impuesto).toEqual([]);
+      }, 30_000);
+    }
+  });
 
   /**
    * La constancia de firma pertenece a quien firmó.

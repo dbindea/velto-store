@@ -16,11 +16,19 @@
  *
  *     /d/q{id}   →  quotes/{id}/quote.pdf
  *     /d/r{id}   →  reservations/{id}/booking-confirmation.pdf
+ *     /d/c{id}   →  receipts/{id}/receipt.pdf
  *
  * The id is the secret, exactly as the Storage download token was. Quote ids
  * are freshly random; the reservation form is stable on purpose, so
  * regenerating a booking confirmation does not kill the link the customer
  * already has in their chat.
+ *
+ * ⚠️ El del recibo es **aleatorio y NO el id del pago**, aunque el pago sea lo
+ * que documenta. El id del pago es el secreto de `/pay/:paymentId`, el enlace
+ * que se le manda al cliente para que pague desde el móvil: derivar de él la
+ * ruta del recibo dejaría que cualquiera con ese enlace reenviado se
+ * descargase un PDF con el nombre del cliente, justo lo que
+ * `getPaymentCheckout` se cuida de no revelar.
  */
 
 import * as functions from 'firebase-functions';
@@ -30,7 +38,14 @@ import { publicBaseUrl } from '../public-url';
 /** Ids we mint: URL-safe, no separators, nothing to mistype over the phone. */
 const ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
 
-export type DocumentKind = 'quote' | 'booking';
+export type DocumentKind = 'quote' | 'booking' | 'receipt';
+
+/** Prefijo de cada tipo. Un sitio, para que el que sirve y el que crea no puedan discrepar. */
+const PREFIXES: Record<DocumentKind, string> = {
+  quote: 'q',
+  booking: 'r',
+  receipt: 'c'
+};
 
 /**
  * Storage path for a short id, or null when the id is malformed.
@@ -45,14 +60,15 @@ export function resolveDocumentPath(shortId: string): string | null {
   const id = shortId.slice(1);
   if (!ID_PATTERN.test(id)) return null;
 
-  if (kind === 'q') return `quotes/${id}/quote.pdf`;
-  if (kind === 'r') return `reservations/${id}/booking-confirmation.pdf`;
+  if (kind === PREFIXES.quote) return `quotes/${id}/quote.pdf`;
+  if (kind === PREFIXES.booking) return `reservations/${id}/booking-confirmation.pdf`;
+  if (kind === PREFIXES.receipt) return `receipts/${id}/receipt.pdf`;
   return null;
 }
 
 /** The short id for a document, given the id of the thing it describes. */
 export function shortIdFor(kind: DocumentKind, id: string): string {
-  return (kind === 'quote' ? 'q' : 'r') + id;
+  return PREFIXES[kind] + id;
 }
 
 /**
@@ -93,7 +109,11 @@ export const documentLink = functions.https.onRequest(async (req, res) => {
       return;
     }
 
-    const filename = path.endsWith('quote.pdf') ? 'presupuesto.pdf' : 'reserva.pdf';
+    const filename = path.endsWith('quote.pdf')
+      ? 'presupuesto.pdf'
+      : path.endsWith('receipt.pdf')
+        ? 'recibo.pdf'
+        : 'reserva.pdf';
     res.setHeader('Content-Type', 'application/pdf');
     // `inline` so WhatsApp's in-app browser shows it instead of downloading a
     // file the customer then has to hunt for.

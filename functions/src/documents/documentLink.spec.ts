@@ -11,9 +11,10 @@ import { describe, expect, it } from 'vitest';
 import { resolveDocumentPath, shortIdFor } from './documentLink';
 
 describe('shortIdFor', () => {
-  it('prefixes quotes with q and reservations with r', () => {
+  it('prefixes quotes with q, reservations with r and receipts with c', () => {
     expect(shortIdFor('quote', 'A1b2C3d4')).toBe('qA1b2C3d4');
     expect(shortIdFor('booking', 'p2RjP0LG1zp7KHqyNtB0')).toBe('rp2RjP0LG1zp7KHqyNtB0');
+    expect(shortIdFor('receipt', '9f3a1c77b2e40d58')).toBe('c9f3a1c77b2e40d58');
   });
 
   it('round-trips: what we mint is what resolves', () => {
@@ -24,7 +25,13 @@ describe('shortIdFor', () => {
     expect(resolveDocumentPath(shortIdFor('booking', reservationId))).toBe(
       `reservations/${reservationId}/booking-confirmation.pdf`
     );
+
+    const receiptId = '9f3a1c77b2e40d58';
+    expect(resolveDocumentPath(shortIdFor('receipt', receiptId))).toBe(
+      `receipts/${receiptId}/receipt.pdf`
+    );
   });
+
 });
 
 describe('resolveDocumentPath', () => {
@@ -37,7 +44,15 @@ describe('resolveDocumentPath', () => {
     expect(resolveDocumentPath('')).toBeNull();
     expect(resolveDocumentPath('q')).toBeNull();
     expect(resolveDocumentPath('r')).toBeNull();
+    expect(resolveDocumentPath('c')).toBeNull();
     expect(resolveDocumentPath('qab')).toBeNull(); // shorter than the minimum
+    expect(resolveDocumentPath('cab')).toBeNull();
+  });
+
+  it('el recibo no escapa de su carpeta más que los otros dos', () => {
+    expect(resolveDocumentPath('c../../contracts/secret')).toBeNull();
+    expect(resolveDocumentPath('cfoo/bar')).toBeNull();
+    expect(resolveDocumentPath('cfoo.bar')).toBeNull();
   });
 
   it('refuses ids that could climb out of their folder', () => {
