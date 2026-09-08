@@ -75,8 +75,70 @@ export interface InfoEntry {
    * contenido obligatorio de la factura (art. 6.1.c), y «Pol. Ind. Las Monjas,
    * nave 7, 28850 Torrejón de Ard…» es un domicilio incompleto. Misma razón por
    * la que el nombre legal ya encoge y envuelve en vez de truncarse.
+   *
+   * ⚠️ **Parte por las comas, no por donde se acabe el ancho.** Estos valores
+   * son datos de ficha —un domicilio, una razón social—, y una dirección
+   * escrita se lee por sus comas: cortarla por ancho da «Pol. Ind. Las Monjas,
+   * nave 7, 28850 Torrejón / de Ardoz (Madrid)», que parte un topónimo en dos.
+   * Solo se recurre al corte por palabras cuando un tramo entre comas no cabe
+   * ni él solo.
    */
   wrap?: boolean;
+}
+
+/**
+ * Reparte un texto en líneas **cortando por las comas**.
+ *
+ * Vive fuera de `PdfBuilder`, y suelta, por el mismo motivo que `qrRects()`:
+ * así se puede probar sin montar un PDF ni cargar una fuente. Quien llama pone
+ * el `cabe` —que es lo único que sabe de tipografía— y el `porPalabras` para
+ * los tramos que no quepan ni solos.
+ *
+ * El criterio, en dos reglas:
+ *
+ * 1. **Si cabe entera, una línea.** No se trocea una dirección corta solo
+ *    porque tenga comas: «C/ María Zambrano, 4» son tres líneas absurdas.
+ * 2. **Cuando no cabe, el salto va después de una coma**, juntando tramos
+ *    mientras quepan. La coma se queda al final de la línea: es parte del dato
+ *    que tecleó el operador, y en una factura el domicilio es contenido
+ *    obligatorio — no se le quitan caracteres para maquetar.
+ */
+export function wrapPreferringCommas(
+  s: string,
+  cabe: (candidate: string) => boolean,
+  porPalabras: (chunk: string) => string[]
+): string[] {
+  const texto = (s || '').trim();
+  if (!texto) return [];
+  if (cabe(texto)) return [texto];
+
+  // La coma se queda pegada al tramo que la precede.
+  const tramos = texto
+    .split(/(?<=,)\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (tramos.length < 2) return porPalabras(texto);
+
+  const lineas: string[] = [];
+  let linea = '';
+  for (const tramo of tramos) {
+    const candidata = linea ? `${linea} ${tramo}` : tramo;
+    if (cabe(candidata)) {
+      linea = candidata;
+      continue;
+    }
+    if (linea) lineas.push(linea);
+    if (cabe(tramo)) {
+      linea = tramo;
+    } else {
+      // Un tramo que no cabe ni él solo se parte por palabras, como siempre.
+      const partes = porPalabras(tramo);
+      lineas.push(...partes.slice(0, -1));
+      linea = partes[partes.length - 1] ?? '';
+    }
+  }
+  if (linea) lineas.push(linea);
+  return lineas;
 }
 
 /** A drawn text run, kept so the overlap check can inspect the layout. */
@@ -1270,7 +1332,17 @@ export class PdfBuilder {
           // on a contract — "EUROCONSTRUCCIONES 2020, SOC…" is nobody.
           const font = this.fontFor('display', entry.value);
           const featureSize = this.fitSize(entry.value, 'display', size + 3, size - 0.5, colWidth);
-          for (const line of this.wrap(entry.value, featureSize, font, colWidth)) {
+          // Por las comas también: una razón social larga se parte mejor en
+          // «EUROCONSTRUCCIONES … 2020,» / «SOCIEDAD LIMITADA UNIPERSONAL» que
+          // por donde se acabe la columna. Va en el mismo bloque que el
+          // domicilio, y las dos mitades del mismo dato no pueden partirse con
+          // criterios distintos.
+          const lineasNombre = wrapPreferringCommas(
+            entry.value,
+            (t) => font.widthOfTextAtSize(t, featureSize) <= colWidth,
+            (t) => this.wrap(t, featureSize, font, colWidth)
+          );
+          for (const line of lineasNombre) {
             this.put(line, x, cy, featureSize, font, BRAND);
             cy -= featureSize * 1.25;
           }
@@ -1284,8 +1356,15 @@ export class PdfBuilder {
           this.put(this.truncate(label, this.bold, size, colWidth), x, cy, size, this.bold, BODY);
         }
         if (entry.value && entry.wrap) {
-          // Parte en varias líneas: hay datos que no se pueden abreviar.
-          const lineas = this.wrap(entry.value, size, this.font, colWidth - labelWidth);
+          // Parte en varias líneas: hay datos que no se pueden abreviar. Y el
+          // corte va por las comas, porque una dirección se lee por sus comas
+          // y no por donde se acabe la columna.
+          const ancho = colWidth - labelWidth;
+          const lineas = wrapPreferringCommas(
+            entry.value,
+            (t) => this.font.widthOfTextAtSize(t, size) <= ancho,
+            (t) => this.wrap(t, size, this.font, ancho)
+          );
           lineas.forEach((ln, i) => {
             this.put(ln, x + (i === 0 ? labelWidth : 0), cy, size, this.font, BODY);
             if (i < lineas.length - 1) cy -= lineHeight;

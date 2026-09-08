@@ -709,6 +709,19 @@ Son tests porque los cuatro han fallado de verdad: el título salía como
 «CONTRATO DE ALQUILER …» y una razón social larga como «EUROCONSTRUCCIONES 2020, SOC…».
 Los titulares **encogen y parten**, nunca se truncan.
 
+⚠️ **Y una dirección se parte por sus comas, no por donde se acabe la columna.** Los valores
+de `infoColumns` con `wrap` —el domicilio fiscal, la razón social del destinatario— pasan por
+`wrapPreferringCommas()`: si caben, una línea; si no, el salto va **después de una coma**.
+Partido por ancho salía «… 28850 Torrejón / de Ardoz (Madrid)», que corta un topónimo en dos
+en un dato que es contenido obligatorio de la factura (art. 6.1.c). La coma se queda al final
+de la línea: es parte del dato que tecleó el operador y no se le quitan caracteres para
+maquetar.
+
+La función vive **fuera del builder** —como `qrRects()`— para poder probarla sin cargar una
+fuente: quien llama pone la medida. Y **no la usa `text()`**, a propósito: la prosa —las
+cláusulas, las menciones legales, el aviso del recibo— se parte por ancho, o «Documento
+informativo, / sin validez fiscal…» quedaría en líneas cortísimas.
+
 ### Los documentos que no son el contrato
 
 `functions/src/documents/` genera el **presupuesto** (antes de que exista la reserva) y el
