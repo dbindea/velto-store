@@ -532,6 +532,14 @@
       "checklistTitle": "Checks missing",
       "keysMessage": "You have not ticked the key return. If you continue, the return will be recorded as it stands.",
       "keysTitle": "Keys not returned"
+    },
+    "report": {
+      "action": "Report PDF",
+      "error": "The report could not be generated",
+      "problems": {
+        "inspectionRequired": "No inspection to issue the report for",
+        "notFound": "The inspection could not be found"
+      }
     }
   },
   "layout": {

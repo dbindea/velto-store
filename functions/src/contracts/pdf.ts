@@ -18,7 +18,7 @@
  * all look like the same company wrote them.
  */
 
-import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont, RGB } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont, PDFImage, RGB } from 'pdf-lib';
 // @ts-ignore — the @types/fontkit default export is a namespace, not a
 // callable object, but pdf-lib accepts the runtime value as a fontkit.
 import fontkit from 'fontkit';
@@ -1227,6 +1227,78 @@ export class PdfBuilder {
       color: INK
     });
     this.y -= 16;
+  }
+
+  /**
+   * La rejilla de fotografías del parte de entrega y devolución.
+   *
+   * ⚠️ **Estas fotos son la prueba.** Desde que el contrato dejó de exigir la
+   * firma del parte, lo que sostiene un cargo por combustible, kilómetros o
+   * dotación es esto: el estado del coche fotografiado con su fecha. Así que
+   * las fotos no son decoración del documento, son su contenido.
+   *
+   * Cada imagen se ajusta **dentro** de su celda conservando la proporción: un
+   * coche estirado para llenar un hueco es una foto que no acredita nada. La
+   * celda de la etiqueta se reserva antes de dibujar, de modo que el pie nunca
+   * cae sobre la imagen siguiente.
+   */
+  photoGrid(
+    items: { img: PDFImage; width: number; height: number; label?: string }[],
+    opts: { columns?: number; gap?: number; cellHeight?: number } = {}
+  ): void {
+    if (!items.length) return;
+
+    const columns = opts.columns ?? 3;
+    const gap = opts.gap ?? 8;
+    const labelSize = 7;
+    const labelRoom = labelSize * 1.6;
+    const usable = this.pageWidth - this.margin * 2;
+    const cellW = (usable - gap * (columns - 1)) / columns;
+    const cellH = opts.cellHeight ?? cellW * 0.72;
+    const rowH = cellH + labelRoom + gap;
+
+    for (let i = 0; i < items.length; i += columns) {
+      const row = items.slice(i, i + columns);
+      // La fila entera cabe o salta: media rejilla al pie de una página se lee
+      // como si faltaran fotos.
+      this.ensureSpace(rowH);
+      const top = this.y;
+
+      row.forEach((item, col) => {
+        const x = this.margin + col * (cellW + gap);
+        const ratio = Math.min(cellW / item.width, cellH / item.height);
+        const w = item.width * ratio;
+        const h = item.height * ratio;
+        // Centrada en su celda: con fotos verticales y horizontales mezcladas,
+        // pegarlas a un borde deja la rejilla en diagonal.
+        const ix = x + (cellW - w) / 2;
+        const iy = top - cellH + (cellH - h) / 2;
+
+        this.page.drawImage(item.img, { x: ix, y: iy, width: w, height: h });
+        this.graphics.push({
+          page: this.pageNumber,
+          x: ix,
+          y: iy,
+          width: w,
+          height: h,
+          label: 'foto'
+        });
+
+        if (item.label) {
+          const font = this.fontFor('body', item.label);
+          this.put(
+            this.truncate(item.label, font, labelSize, cellW),
+            x,
+            top - cellH - labelSize - 2,
+            labelSize,
+            font,
+            MUTED
+          );
+        }
+      });
+
+      this.y = top - rowH;
+    }
   }
 
   /**

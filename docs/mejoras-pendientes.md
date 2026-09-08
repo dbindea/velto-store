@@ -206,7 +206,54 @@ periodo 01/06–01/08— sin saber que estaba usando la figura correcta.
 
 ---
 
-## 📋 N-17 · Parte de entrega firmado — aprobado el 8 de septiembre de 2026
+## ✅ N-17 · Parte de entrega y de devolución — 8 de septiembre de 2026
+
+⚠️ **Cambió de forma antes de construirse, y el cambio es de Dorel:** en vez de
+hacer que el cliente firme el parte, **se quitan del contrato las frases que
+obligan a firmarlo**. Su razón, literal: *«es molesto para el cliente ponerle
+que firmar tanto»*. Con una cuadrilla de cuatro conductores —que es el caso real
+del negocio— la cláusula 2 pedía seis firmas seguidas en un móvil, de pie en la
+calle.
+
+Lo que **no** se podía quitar es la remisión al parte: el kilometraje y el
+combustible de salida no caben en el contrato, que se firma **antes** de la
+entrega. Así que se hicieron las dos mitades a la vez:
+
+1. **Cuatro remisiones reescritas**, en tres idiomas: fuera «que ambas partes
+   firman», «firmado por las partes» y «firmar el parte de entrega»; dentro, que
+   el parte se **documenta con fotografías**, lo conserva el arrendador y se
+   pone a disposición del cliente **a su solicitud**.
+2. **El parte existe**: `generateInspectionReport`, con enlace corto
+   `/d/i{id}`. Entrega y devolución, en los tres idiomas.
+
+⚠️ **Se cambia prueba por comodidad, y conviene saberlo.** La firma del cliente
+es lo que hace difícil discutir un cargo. Sin ella, lo que sostiene el cobro de
+combustible, kilómetros y dotación son **las fotos con su fecha** y el propio
+parte. Es coherente con lo que Dorel ya había decidido —no penalizar a
+familiares y socios— y es una decisión de negocio, no técnica.
+
+**No se manda solo**: el operador copia el enlace cuando el cliente lo pide.
+
+### Tres fallos que solo se vieron mirando el PDF
+
+- **En la devolución salía «Sin marcar: identidad del cliente verificada, fianza
+  depositada, contrato firmado…»**, que son comprobaciones de la entrega. El
+  parte venía a decir que no se había identificado al cliente. El checklist se
+  filtra ahora por fase.
+- **«Arrendatario: —» y el vehículo en blanco**: no toda inspección guardó sus
+  snapshots. Se respaldan con los de la reserva.
+- **La primera redacción remitía a la sección «Conductores adicionales»** y el
+  PDF la titula «Conductores **autorizados** adicionales», y solo la imprime si
+  hay alguno. Es el mismo fallo que N-17 venía a arreglar, cometido al
+  arreglarlo. Ahora remite al contrato entero.
+
+⚠️ Los contratos ya firmados **conservan su texto**: el PDF está sellado y cada
+contrato vale con las cláusulas que tenía el día de la firma. El texto nuevo
+rige para los que se generen a partir de ahora.
+
+---
+
+## 📋 N-17 (planteamiento original) · Parte de entrega firmado — aprobado el 8 de septiembre de 2026
 
 Aprobado por Dorel el mismo día, **con un requisito que cambia el diseño**:
 

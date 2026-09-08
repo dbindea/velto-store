@@ -455,6 +455,15 @@ módulos, esta es la razón por la que no debe.
   combustible de entrega («sección Estado del vehículo», que solo existe si hay inspección
   y el contrato se firma **antes**) y la dotación, enumerada sin acreditar. Si vas a cobrar
   apoyándote en una sección, esa sección tiene que estar el día de la firma.
+  **Y una cuarta**: las cláusulas remitían al «parte de entrega, que ambas partes firman»,
+  un documento que no se generaba, no se entregaba y no firmaba nadie. Se resolvió el 8 de
+  septiembre de 2026 por los dos lados a la vez —quitando la exigencia de firma del texto
+  **y** construyendo el parte—, porque arreglar solo el texto habría dejado una remisión a
+  un documento inexistente, y arreglar solo el documento, una firma que nadie iba a hacer.
+  ⚠️ Al reescribir esas cláusulas, la primera redacción remitía a la sección «Conductores
+  adicionales» y el PDF la titula «Conductores **autorizados** adicionales» —y solo la
+  imprime si hay alguno—. **Comprueba el rótulo literal antes de citarlo**, o mejor, remite
+  al contrato entero, que es cierto siempre.
 - **El kilometraje se pacta o no se cobra.** `includedKmPerDay` y `extraKmPrice` se congelan
   en `pricingSnapshot` —como el precio— y se imprimen en «Precio y fianza» con su cláusula
   propia. El cargo de la devolución los lee **del snapshot, sin respaldo al vehículo**: una
@@ -737,6 +746,54 @@ bloquea. Lo único que queda es el PDF en Storage, que es lo que el enlace neces
 
 `uploadPdf()` **reutiliza el token de descarga** si el archivo ya existe. Un token nuevo
 rompería en silencio el enlace que el cliente ya tiene en su WhatsApp.
+
+### El parte de entrega y el de devolución
+
+`generateInspectionReport` produce los dos documentos a los que **el contrato
+remite cuatro veces** —cláusulas 1, 2, 5 y 6— y que hasta el 8 de septiembre de
+2026 no existían: la inspección se guardaba en Firestore y no había nada que
+enseñar ni que entregar.
+
+⚠️ **Las cláusulas decían «que ambas partes firman». Ahora no.** Decisión de
+Dorel: hacer firmar dos veces al cliente —y a cada conductor de una cuadrilla,
+que era lo que pedía la cláusula 2— es molesto en la calle, y el negocio es de
+clientes conocidos. Se quitó **la firma, no el documento**: el contrato sigue
+remitiendo al parte porque el kilometraje y el combustible de salida **no caben
+en él**, que se firma antes de la entrega.
+
+De ahí sale lo que gobierna este PDF:
+
+⚠️ **Las fotografías son la prueba.** Sin firma, lo que sostiene un cargo por
+combustible, kilómetros o dotación faltante es el estado del coche fotografiado
+con su fecha. Por eso las fotos van dentro del documento y no son decoración, y
+por eso las cláusulas dicen ahora «consemnado **y fotografiado** en el parte».
+
+Cuatro cosas que solo se vieron mirando el PDF generado:
+
+- **El checklist se filtra por fase.** `InspectionChecklist` es un único objeto
+  para las dos inspecciones, así que un parte de **devolución** sacaba «Sin
+  marcar: identidad del cliente verificada, fianza depositada, contrato
+  firmado…» — comprobaciones de la entrega que en la devolución no se hacen
+  porque ya se hicieron. El documento venía a decir que no se había
+  identificado al cliente.
+- **Los snapshots se respaldan con la reserva.** No toda inspección guardó
+  `clientSnapshot` y `vehicleSnapshot`, y sin ellos el parte salía con
+  «Arrendatario: —» y el vehículo en blanco: un papel que dice acreditar el
+  estado de un coche entregado a una persona, sin decir de qué coche ni a quién.
+- **Lo no marcado se imprime**, en gris y bajo su propio rótulo. Un parte que
+  solo enseñe lo que salió bien no sirve para discutir lo que salió mal.
+- ⚠️ **El enlace `/d/…` se cachea 5 minutos.** Regenerar el parte y abrirlo al
+  momento devuelve el anterior; no es un fallo del PDF. Con `?v=2` o esperando
+  se ve el nuevo.
+
+El enlace es **estable** (`/d/i{inspectionId}`), como el del justificante:
+regenerar el parte porque se añadió una foto no puede matar el enlace que el
+cliente ya tiene. El id de la inspección no es secreto de ninguna otra ruta, así
+que aquí sí se puede usar; el del recibo no podía.
+
+**No se manda solo.** El operador genera y copia el enlace cuando el cliente lo
+pide, que es lo que el contrato promete: que el parte se conserva y se pone a su
+disposición.
 
 ### El recibo de cobro: todo su diseño es no parecer una factura
 

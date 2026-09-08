@@ -532,6 +532,14 @@
       "checklistTitle": "Lipsesc verificări",
       "keysMessage": "Nu ai bifat returnarea cheilor. Dacă continui, returul va fi înregistrat așa.",
       "keysTitle": "Cheile nu au fost returnate"
+    },
+    "report": {
+      "action": "Proces-verbal PDF",
+      "error": "Procesul-verbal nu a putut fi generat",
+      "problems": {
+        "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
+        "notFound": "Inspecția nu a fost găsită"
+      }
     }
   },
   "layout": {

@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { buildContractPdf, PdfBuilder, formatIdDocument, companyFooterLines } from '../contracts/pdf';
 import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
+import { buildInspectionPdf } from './inspection-pdf';
 import { buildInvoicePdf } from '../invoices/invoice-pdf';
 import { buildReceiptPdf } from '../invoices/receipt-pdf';
 import { calculateInvoiceTotals } from '../invoices/invoice-core';
@@ -164,8 +165,25 @@ describe('the real documents, in every language', () => {
    * Renders one document and returns the builder that laid it out, so the
    * assertions run against the same geometry that reached the page.
    */
+  /**
+   * Un JPEG mínimo pero **real**: 8×8 píxeles codificados de verdad.
+   *
+   * Los invariantes del parte no significan nada con fotos falsas — lo que hay
+   * que comprobar es que una imagen incrustada no se sale del margen ni pisa su
+   * pie, y para eso pdf-lib tiene que poder leerla.
+   */
+  const JPEG_8X8 = Buffer.from(
+    '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a' +
+      'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAAIAAgBAREA/8QAHwAAAQUBAQEB' +
+      'AQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1Fh' +
+      'ByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZ' +
+      'WmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXG' +
+      'x8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APn+iiiigD//2Q==',
+    'base64'
+  );
+
   async function layoutOf(
-    kind: 'quote' | 'booking' | 'contract' | 'invoice' | 'receipt',
+    kind: 'quote' | 'booking' | 'contract' | 'invoice' | 'receipt' | 'inspection',
     locale: ContractLocale
   ): Promise<PdfBuilder> {
     let captured: PdfBuilder | null = null;
@@ -297,6 +315,62 @@ describe('the real documents, in every language', () => {
         invoiceExpected: true,
         onLayout
       });
+    } else if (kind === 'inspection') {
+      /**
+       * El caso peor del parte: **una devolución con de todo**.
+       *
+       * Daños con descripción larga, comprobaciones sin marcar —que es lo que
+       * hay que poder discutir—, cargos con su bloque de totales, observaciones
+       * y ocho fotos, que es lo que la inspección recomienda. Las fotos son
+       * imágenes de verdad: con una falsa, el invariante de que nada se sale
+       * del margen no comprobaría nada.
+       */
+      await buildInspectionPdf({
+        locale,
+        kind: 'return',
+        company,
+        locator: 'R-P2RJP0',
+        contractNumber: 'C-P2RJP0-2026',
+        clientName: client.fullName,
+        clientDocument: 'NIE X9876543M',
+        vehicleLabel: 'Renault Megane Sport Tourer Business dCi 115 · 4466LKK',
+        inspectedAt: new Date('2026-09-11T10:00:00Z'),
+        issuedAt: new Date('2026-09-11T10:30:00Z'),
+        km: 25350,
+        fuelLabel: locale === 'en' ? 'Half' : locale === 'ro' ? 'Jumătate' : '1/2',
+        cleanlinessLabel: locale === 'en' ? 'Dirty' : locale === 'ro' ? 'Murdar' : 'Sucio',
+        checkedItems: [
+          'Identidad del cliente verificada',
+          'Carnet de conducir verificado',
+          'Contrato firmado y revisado',
+          'Llaves devueltas'
+        ],
+        uncheckedItems: ['Accesorios revisados', 'Documentación entregada'],
+        damages: [
+          {
+            area: 'Lateral izquierdo',
+            severity: 'Media',
+            isNewDamage: true,
+            description:
+              'Arañazo profundo de unos veinte centímetros en la puerta delantera, con pérdida de pintura hasta la chapa.'
+          },
+          { area: 'Ruedas', severity: 'Leve', description: 'Roce en la llanta trasera derecha.' }
+        ],
+        charges: [
+          { label: 'Kilómetros extra', amount: 150 },
+          { label: 'Combustible', amount: 45.5 },
+          { label: 'Limpieza', amount: 30 }
+        ],
+        chargesTotal: 225.5,
+        notes:
+          'El cliente devuelve el vehículo fuera de horario, con las llaves en el buzón de la oficina.',
+        photos: Array.from({ length: 8 }, (_, i) => ({
+          bytes: new Uint8Array(JPEG_8X8),
+          contentType: 'image/jpeg',
+          label: ['Frontal', 'Trasera', 'Lateral izquierdo', 'Lateral derecho', 'Interior', 'Cuadro de mandos', 'Combustible', 'Daño'][i]
+        })),
+        onLayout
+      });
     } else {
       await buildContractPdf(
         {
@@ -327,7 +401,7 @@ describe('the real documents, in every language', () => {
     return captured;
   }
 
-  const KINDS = ['quote', 'booking', 'contract', 'invoice', 'receipt'] as const;
+  const KINDS = ['quote', 'booking', 'contract', 'invoice', 'receipt', 'inspection'] as const;
 
   for (const kind of KINDS) {
     for (const locale of LOCALES) {

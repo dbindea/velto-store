@@ -60,21 +60,21 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       title: '1. REUNIDOS Y OBJETO DEL CONTRATO',
       body: [
         'De una parte, el ARRENDADOR (la Sociedad) identificado en la cabecera de este documento, dedicado al alquiler de vehículos sin conductor, y de otra parte el ARRENDATARIO, persona física identificada en la cabecera, con capacidad legal suficiente para obligarse, formalizan el presente contrato de arrendamiento de vehículo sin conductor.',
-        'El ARRENDADOR cede temporalmente al ARRENDATARIO el uso del vehículo descrito en la sección "Datos del vehículo" y el ARRENDATARIO acepta las condiciones del presente contrato, declarando recibir el vehículo en correcto estado de funcionamiento, limpieza, conservación y dotación (incluyendo rueda de repuesto o kit antipinchazos, triángulos de preseñalización o baliza de preseñalización V16 conectada, chaleco reflectante, documentación del vehículo y un juego de llaves). El detalle de la dotación entregada y el estado del vehículo se recogen en el parte de entrega, que ambas partes firman y que forma parte inseparable de este contrato.'
+        'El ARRENDADOR cede temporalmente al ARRENDATARIO el uso del vehículo descrito en la sección "Datos del vehículo" y el ARRENDATARIO acepta las condiciones del presente contrato, declarando recibir el vehículo en correcto estado de funcionamiento, limpieza, conservación y dotación (incluyendo rueda de repuesto o kit antipinchazos, triángulos de preseñalización o baliza de preseñalización V16 conectada, chaleco reflectante, documentación del vehículo y un juego de llaves). El detalle de la dotación entregada y el estado del vehículo se recogen en el parte de entrega, documentado con fotografías en el momento de la entrega, que el ARRENDADOR conserva y pone a disposición del ARRENDATARIO a su solicitud, y que forma parte inseparable de este contrato.'
       ]
     },
     en: {
       title: '1. PARTIES AND PURPOSE OF THE CONTRACT',
       body: [
         'On one side, the LESSOR (the Company) identified in the header of this document, engaged in the activity of renting vehicles without a driver, and on the other side the RENTER, a natural person identified in the header, with sufficient legal capacity to be bound, execute this vehicle-rental contract without driver.',
-        'The LESSOR temporarily transfers to the RENTER the use of the vehicle described in the "Vehicle data" section, and the RENTER accepts the conditions of this contract, declaring that they receive the vehicle in correct working order, clean, well preserved and equipped (including spare wheel or anti-puncture kit, warning triangles or a connected V16 emergency beacon, high-visibility vest, vehicle documents and a set of keys). The detail of the equipment handed over and the condition of the vehicle are recorded in the pick-up report, signed by both parties, which forms an inseparable part of this contract.'
+        'The LESSOR temporarily transfers to the RENTER the use of the vehicle described in the "Vehicle data" section, and the RENTER accepts the conditions of this contract, declaring that they receive the vehicle in correct working order, clean, well preserved and equipped (including spare wheel or anti-puncture kit, warning triangles or a connected V16 emergency beacon, high-visibility vest, vehicle documents and a set of keys). The detail of the equipment handed over and the condition of the vehicle are recorded in the pick-up report, documented with photographs taken at handover, which the LESSOR keeps and makes available to the RENTER on request, and which forms an inseparable part of this contract.'
       ]
     },
     ro: {
       title: '1. PĂRȚI ȘI OBIECTUL CONTRACTULUI',
       body: [
         'De o parte, LOCATORUL (Societatea) identificat în antetul acestui document, care desfășoară activitatea de închiriere de vehicule fără șofer, iar de cealaltă parte LOCATARUL, persoană fizică identificată în antet, cu capacitate legală suficientă pentru a se obliga, încheie prezentul contract de închiriere a unui vehicul fără șofer.',
-        'LOCATORUL cedează temporar LOCATARULUI folosința vehiculului descris în secțiunea "Datele vehiculului", iar LOCATARUL acceptă condițiile prezentului contract, declarând că primește vehiculul în stare corectă de funcționare, curățenie, conservare și dotare (inclusiv roata de rezervă sau kitul antipană, triunghiurile de presemnalizare sau baliza de semnalizare V16 conectată, vesta reflectorizantă, documentele vehiculului și un set de chei). Detaliul dotării predate și starea vehiculului se consemnează în procesul-verbal de predare, semnat de ambele părți, care face parte integrantă din prezentul contract.'
+        'LOCATORUL cedează temporar LOCATARULUI folosința vehiculului descris în secțiunea "Datele vehiculului", iar LOCATARUL acceptă condițiile prezentului contract, declarând că primește vehiculul în stare corectă de funcționare, curățenie, conservare și dotare (inclusiv roata de rezervă sau kitul antipană, triunghiurile de presemnalizare sau baliza de semnalizare V16 conectată, vesta reflectorizantă, documentele vehiculului și un set de chei). Detaliul dotării predate și starea vehiculului se consemnează în procesul-verbal de predare, documentat cu fotografii în momentul predării, pe care LOCATORUL îl păstrează și îl pune la dispoziția LOCATARULUI la cererea acestuia, și care face parte integrantă din prezentul contract.'
       ]
     }
   },
@@ -82,7 +82,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     es: {
       title: '2. CONDUCTORES AUTORIZADOS Y EDAD MÍNIMA',
       body: [
-        'El ARRENDATARIO es el único conductor autorizado por defecto. Únicamente podrán conducir el vehículo las personas expresamente declaradas por el ARRENDADOR al inicio del alquiler, que deberán ser identificadas nominalmente y firmar el parte de entrega del vehículo.',
+        'El ARRENDATARIO es el único conductor autorizado por defecto. Únicamente podrán conducir el vehículo las personas expresamente declaradas por el ARRENDADOR al inicio del alquiler e identificadas nominalmente en el presente contrato.',
         'La edad mínima para alquilar cualquier categoría de vehículo es de 21 años cumplidos, y la edad máxima es de 75 años. En categorías especiales la edad mínima podrá ser superior. El conductor deberá estar en posesión de un permiso de conducir válido en España (o válido en la UE con traducción jurada cuando proceda) con una antigüedad mínima de un (1) año en la categoría correspondiente al vehículo alquilado.',
         'El ARRENDATARIO garantiza que todas las personas que conduzcan el vehículo cumplen los requisitos anteriores. La conducción por persona no autorizada constituye incumplimiento grave del contrato, facultando al ARRENDADOR para resolver el contrato, retirar el vehículo e iniciar las acciones legales que correspondan, sin perjuicio de la responsabilidad penal, civil y administrativa del conductor no autorizado.'
       ]
@@ -90,7 +90,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     en: {
       title: '2. AUTHORISED DRIVERS AND MINIMUM AGE',
       body: [
-        'The RENTER is the only authorised driver by default. Only persons expressly declared by the LESSOR at the start of the rental may drive the vehicle; they must be identified by name and sign the vehicle delivery form.',
+        'The RENTER is the only authorised driver by default. Only persons expressly declared by the LESSOR at the start of the rental may drive the vehicle, identified by name in this contract.',
         'The minimum age to rent any vehicle category is 21 (completed), and the maximum is 75. Special categories may require a higher minimum age. The driver must hold a valid driving licence in Spain (or valid in the EU with a sworn translation if applicable) with at least one (1) year of seniority in the category corresponding to the rented vehicle.',
         'The RENTER guarantees that every person driving the vehicle meets the above requirements. Driving by an unauthorised person is a serious breach, empowering the LESSOR to terminate the contract, withdraw the vehicle and bring any applicable legal action, without prejudice to the criminal, civil and administrative liability of the unauthorised driver.'
       ]
@@ -98,7 +98,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     ro: {
       title: '2. CONDUCĂTORI AUTORIZAȚI ȘI VÂRSTA MINIMĂ',
       body: [
-        'LOCATARUL este singurul conducător autorizat în mod implicit. Pot conduce vehiculul doar persoanele declarate în mod expres de LOCATOR la începutul închirierii, care trebuie identificate nominal și să semneze fișa de predare a vehiculului.',
+        'LOCATARUL este singurul conducător autorizat în mod implicit. Pot conduce vehiculul doar persoanele declarate în mod expres de LOCATOR la începutul închirierii, identificate nominal în prezentul contract.',
         'Vârsta minimă pentru a închiria orice categorie de vehicul este de 21 de ani împliniți, iar vârsta maximă este de 75 de ani. La categoriile speciale vârsta minimă poate fi mai mare. Conducătorul trebuie să dețină un permis de conducere valabil în Spania (sau valabil în UE cu traducere legalizată, dacă este cazul) cu o vechime de cel puțin un (1) an în categoria corespunzătoare vehiculului închiriat.',
         'LOCATARUL garantează că toate persoanele care conduc vehiculul îndeplinesc cerințele de mai sus. Conducerea de către o persoană neautorizată constituie încălcare gravă a contractului, îndreptățind LOCATORUL să rezilieze contractul, să retragă vehiculul și să inițieze acțiunile legale corespunzătoare, fără a aduce atingere răspunderii penale, civile și administrative a conducătorului neautorizat.'
       ]
@@ -173,7 +173,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       title: '5. KILOMETRAJE INCLUIDO Y KILÓMETROS ADICIONALES',
       body: [
         'El alquiler incluye el número de kilómetros indicado en la sección "Precio y fianza", resultado de multiplicar los kilómetros diarios allí expresados por los días de duración del alquiler. Los kilómetros incluidos y no recorridos no son reembolsables ni acumulables a otro alquiler.',
-        'Los kilómetros que excedan de los incluidos se facturarán al precio por kilómetro indicado en esa misma sección. El cómputo se obtiene por diferencia entre la lectura del cuentakilómetros en la entrega y en la devolución, ambas reflejadas en los partes de entrega y devolución firmados por las partes, que forman parte inseparable de este contrato.',
+        'Los kilómetros que excedan de los incluidos se facturarán al precio por kilómetro indicado en esa misma sección. El cómputo se obtiene por diferencia entre la lectura del cuentakilómetros en la entrega y en la devolución, ambas reflejadas y fotografiadas en los partes de entrega y devolución, que el ARRENDADOR conserva, pone a disposición del ARRENDATARIO a su solicitud, y que forman parte inseparable de este contrato.',
         'La manipulación, desconexión, sustitución o alteración del cuentakilómetros constituye incumplimiento grave del contrato y facultará al ARRENDADOR para facturar el kilometraje conforme a estimación pericial, además de ejercer las acciones civiles y penales que correspondan.'
       ]
     },
@@ -181,7 +181,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       title: '5. INCLUDED MILEAGE AND ADDITIONAL KILOMETRES',
       body: [
         'The rental includes the number of kilometres shown in the "Price and deposit" section, being the daily allowance stated there multiplied by the number of rental days. Included kilometres that are not driven are neither refundable nor transferable to another rental.',
-        'Kilometres driven in excess of those included will be charged at the per-kilometre price shown in that same section. The count is the difference between the odometer reading at handover and at return, both recorded in the pick-up and return reports signed by the parties, which form an inseparable part of this contract.',
+        'Kilometres driven in excess of those included will be charged at the per-kilometre price shown in that same section. The count is the difference between the odometer reading at handover and at return, both recorded and photographed in the pick-up and return reports, which the LESSOR keeps, makes available to the RENTER on request, and which form an inseparable part of this contract.',
         'Tampering with, disconnecting, replacing or altering the odometer constitutes a serious breach of this contract and entitles the LESSOR to invoice mileage on the basis of an expert estimate, in addition to pursuing any applicable civil and criminal action.'
       ]
     },
@@ -189,7 +189,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       title: '5. KILOMETRAJ INCLUS ȘI KILOMETRI SUPLIMENTARI',
       body: [
         'Închirierea include numărul de kilometri indicat în secțiunea "Preț și garanție", rezultat din înmulțirea kilometrilor zilnici menționați acolo cu numărul de zile de închiriere. Kilometrii incluși și neparcurși nu se rambursează și nu se pot reporta la o altă închiriere.',
-        'Kilometrii care depășesc numărul inclus se facturează la prețul pe kilometru indicat în aceeași secțiune. Calculul se face prin diferența dintre indicația kilometrajului la predare și la returnare, ambele consemnate în procesele-verbale de predare și de returnare semnate de părți, care fac parte integrantă din acest contract.',
+        'Kilometrii care depășesc numărul inclus se facturează la prețul pe kilometru indicat în aceeași secțiune. Calculul se face prin diferența dintre indicația kilometrajului la predare și la returnare, ambele consemnate și fotografiate în procesele-verbale de predare și de returnare, pe care LOCATORUL le păstrează, le pune la dispoziția LOCATARULUI la cererea acestuia, și care fac parte integrantă din acest contract.',
         'Manipularea, deconectarea, înlocuirea sau alterarea kilometrajului constituie o încălcare gravă a contractului și dă dreptul LOCATORULUI să factureze kilometrajul pe baza unei estimări de specialitate, pe lângă exercitarea acțiunilor civile și penale corespunzătoare.'
       ]
     }
@@ -198,7 +198,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     es: {
       title: '6. COMBUSTIBLE, LIMPIEZA Y MANTENIMIENTO',
       body: [
-        'El vehículo se entrega con el nivel de combustible que se haga constar en el parte de entrega firmado por las partes, y debe devolverse con ese mismo nivel, que se comprueba y se refleja en el parte de devolución. Si el nivel de devolución fuera inferior, se cobrará el repostaje al precio vigente en el momento de la devolución más un suplemento de gestión. Si el vehículo se devolviese con un nivel de combustible superior al de entrega, no se abonará cantidad alguna por la diferencia.',
+        'El vehículo se entrega con el nivel de combustible que se haga constar y se fotografíe en el parte de entrega, y debe devolverse con ese mismo nivel, que se comprueba y se refleja en el parte de devolución. Si el nivel de devolución fuera inferior, se cobrará el repostaje al precio vigente en el momento de la devolución más un suplemento de gestión. Si el vehículo se devolviese con un nivel de combustible superior al de entrega, no se abonará cantidad alguna por la diferencia.',
         'El vehículo se devuelve en el mismo estado de limpieza en que se entregó. Cuando el vehículo se devuelva con condiciones de suciedad extraordinarias (vómito, barro, arena, pelos de animal, restos orgánicos, mal olor persistente, manchas no habituales, residuos en tapicería) el ARRENDADOR podrá cobrar al ARRENDATARIO los gastos de limpieza extraordinaria, con un mínimo equivalente a una hora de servicio profesional de detailing.',
         'El ARRENDATARIO se obliga a comprobar periódicamente los niveles de aceite, refrigerante, líquido de frenos y presión de los neumáticos, y a atender a las indicaciones del cuadro de instrumentos, asumiendo los gastos derivados del uso negligente del vehículo (incluido el repostaje de combustible inadecuado).'
       ]
@@ -206,7 +206,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     en: {
       title: '6. FUEL, CLEANLINESS AND MAINTENANCE',
       body: [
-        'The vehicle is delivered with the fuel level recorded in the pick-up report signed by the parties, and must be returned with that same level, which is checked and recorded in the return report. If the return level is lower, refuelling will be charged at the price in force at the time of return plus a handling surcharge. If the vehicle is returned with a fuel level higher than at delivery, no amount will be paid for the difference.',
+        'The vehicle is delivered with the fuel level recorded and photographed in the pick-up report, and must be returned with that same level, which is checked and recorded in the return report. If the return level is lower, refuelling will be charged at the price in force at the time of return plus a handling surcharge. If the vehicle is returned with a fuel level higher than at delivery, no amount will be paid for the difference.',
         'The vehicle is returned in the same state of cleanliness in which it was delivered. When the vehicle is returned in extraordinary dirty conditions (vomit, mud, sand, animal hair, organic remains, persistent bad smell, unusual stains, residues in upholstery) the LESSOR may charge the RENTER the extraordinary cleaning costs, with a minimum equivalent to one hour of professional detailing service.',
         'The RENTER undertakes to periodically check oil, coolant and brake-fluid levels and tyre pressure, and to heed the instrument panel warnings, assuming the costs derived from negligent use of the vehicle (including refuelling with the wrong fuel).'
       ]
@@ -214,7 +214,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     ro: {
       title: '6. COMBUSTIBIL, CURĂȚENIE ȘI ÎNTREȚINERE',
       body: [
-        'Vehiculul se predă cu nivelul de combustibil consemnat în procesul-verbal de predare semnat de părți și trebuie returnat cu același nivel, care se verifică și se consemnează în procesul-verbal de returnare. Dacă nivelul la returnare este mai mic, se va percepe realimentarea la prețul în vigoare la momentul returnării plus un supliment de gestionare. Dacă vehiculul se returnează cu un nivel de combustibil mai mare decât la predare, nu se va plăti nicio sumă pentru diferență.',
+        'Vehiculul se predă cu nivelul de combustibil consemnat și fotografiat în procesul-verbal de predare și trebuie returnat cu același nivel, care se verifică și se consemnează în procesul-verbal de returnare. Dacă nivelul la returnare este mai mic, se va percepe realimentarea la prețul în vigoare la momentul returnării plus un supliment de gestionare. Dacă vehiculul se returnează cu un nivel de combustibil mai mare decât la predare, nu se va plăti nicio sumă pentru diferență.',
         'Vehiculul se returnează în aceeași stare de curățenie în care a fost predat. Când vehiculul se returnează în condiții de murdărie extraordinară (vărsături, noroi, nisip, păr de animale, resturi organice, miros persistent neplăcut, pete neobișnuite, reziduuri în tapițerie) LOCATORUL poate percepe LOCATARULUI costurile de curățenie extraordinară, cu un minim echivalent cu o oră de serviciu profesional de detailing.',
         'LOCATARUL se obligă să verifice periodic nivelurile de ulei, lichid de răcire, lichid de frână și presiunea pneurilor, și să respecte indicațiile tabloului de bord, asumându-și cheltuielile derivate din folosința neglijentă a vehiculului (inclusiv realimentarea cu combustibil necorespunzător).'
       ]

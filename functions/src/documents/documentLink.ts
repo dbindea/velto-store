@@ -17,6 +17,7 @@
  *     /d/q{id}   →  quotes/{id}/quote.pdf
  *     /d/r{id}   →  reservations/{id}/booking-confirmation.pdf
  *     /d/c{id}   →  receipts/{id}/receipt.pdf
+ *     /d/i{id}   →  inspections/{id}/report.pdf
  *
  * The id is the secret, exactly as the Storage download token was. Quote ids
  * are freshly random; the reservation form is stable on purpose, so
@@ -38,13 +39,14 @@ import { publicBaseUrl } from '../public-url';
 /** Ids we mint: URL-safe, no separators, nothing to mistype over the phone. */
 const ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
 
-export type DocumentKind = 'quote' | 'booking' | 'receipt';
+export type DocumentKind = 'quote' | 'booking' | 'receipt' | 'inspection';
 
 /** Prefijo de cada tipo. Un sitio, para que el que sirve y el que crea no puedan discrepar. */
 const PREFIXES: Record<DocumentKind, string> = {
   quote: 'q',
   booking: 'r',
-  receipt: 'c'
+  receipt: 'c',
+  inspection: 'i'
 };
 
 /**
@@ -63,6 +65,7 @@ export function resolveDocumentPath(shortId: string): string | null {
   if (kind === PREFIXES.quote) return `quotes/${id}/quote.pdf`;
   if (kind === PREFIXES.booking) return `reservations/${id}/booking-confirmation.pdf`;
   if (kind === PREFIXES.receipt) return `receipts/${id}/receipt.pdf`;
+  if (kind === PREFIXES.inspection) return `inspections/${id}/report.pdf`;
   return null;
 }
 
@@ -113,7 +116,9 @@ export const documentLink = functions.https.onRequest(async (req, res) => {
       ? 'presupuesto.pdf'
       : path.endsWith('receipt.pdf')
         ? 'recibo.pdf'
-        : 'reserva.pdf';
+        : path.endsWith('report.pdf')
+          ? 'parte.pdf'
+          : 'reserva.pdf';
     res.setHeader('Content-Type', 'application/pdf');
     // `inline` so WhatsApp's in-app browser shows it instead of downloading a
     // file the customer then has to hunt for.

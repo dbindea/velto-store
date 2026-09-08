@@ -532,6 +532,14 @@
       "checklistTitle": "Faltan comprobaciones",
       "keysMessage": "No has marcado la devolución de llaves. Si continúas, la devolución quedará registrada así.",
       "keysTitle": "Llaves sin devolver"
+    },
+    "report": {
+      "action": "Parte PDF",
+      "error": "No se pudo generar el parte",
+      "problems": {
+        "inspectionRequired": "Falta la inspección de la que emitir el parte",
+        "notFound": "No se encuentra la inspección"
+      }
     }
   },
   "layout": {

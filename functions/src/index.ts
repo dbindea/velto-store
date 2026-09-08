@@ -48,6 +48,10 @@ export { sendSignedContractEmail } from './contracts/sendSignedContractEmail';
 // reservation, so neither can advance the workflow.
 export { generateQuotePdf } from './documents/generateQuotePdf';
 export { generateBookingConfirmationPdf } from './documents/generateBookingConfirmationPdf';
+// El parte de entrega y el de devolución, a los que el contrato remite cuatro
+// veces. No se firman —decisión de Dorel, 8 de septiembre de 2026— y lo que
+// sostiene un cargo son las fotos con su fecha.
+export { generateInspectionReport } from './documents/generateInspectionReport';
 // Public, reached through the /d/** Hosting rewrite: short links for WhatsApp.
 export { documentLink } from './documents/documentLink';
 

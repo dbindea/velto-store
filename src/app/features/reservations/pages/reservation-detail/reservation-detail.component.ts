@@ -1127,6 +1127,53 @@ export class ReservationDetailComponent implements OnInit {
     if (copied) this.showCopyToast();
   }
 
+  // === Parte de entrega y de devolución ===
+
+  /** Id de la inspección cuyo parte se está generando, para no permitir dos clics. */
+  readonly generatingReport = signal<string | null>(null);
+
+  /**
+   * Genera el parte y **copia su enlace**, listo para pegar en WhatsApp.
+   *
+   * ⚠️ No se manda solo, y es decisión de Dorel: el cliente lo recibe cuando lo
+   * pide. Lo que el contrato promete es que el parte se conserva y se pone a su
+   * disposición, no que llegue sin pedirlo.
+   */
+  async shareInspectionReport(inspection: Inspection): Promise<void> {
+    if (!inspection?.id || this.generatingReport()) return;
+
+    this.generatingReport.set(inspection.id);
+    try {
+      const res = await this.inspectionService.generateReport(inspection.id);
+      const copiado = await this.documentService.copyToClipboard(res.shortUrl);
+      if (copiado) this.showCopyToast();
+      else window.open(res.pdfUrl, '_blank', 'noopener');
+    } catch (err: any) {
+      this.notifications.error(this.reportErrorKeyOf(err), {
+        retry: () => void this.shareInspectionReport(inspection)
+      });
+    } finally {
+      this.generatingReport.set(null);
+    }
+  }
+
+  /**
+   * Lo que rechaza la function viaja como clave i18n, y la lista es explícita.
+   *
+   * Igual que en la factura y en el recibo: si el backend devolviera una clave
+   * sin traducir, el operador vería el identificador en crudo —
+   * `TranslateService` devuelve la propia clave cuando no la encuentra—.
+   */
+  private reportErrorKeyOf(err: any): string {
+    const conocidas = [
+      'inspections.report.problems.inspectionRequired',
+      'inspections.report.problems.notFound',
+      'invoices.errors.unauthenticated'
+    ];
+    const msg = typeof err?.message === 'string' ? err.message : '';
+    return conocidas.includes(msg) ? msg : 'inspections.report.error';
+  }
+
   // === Recibo de cobro ===
 
   /**

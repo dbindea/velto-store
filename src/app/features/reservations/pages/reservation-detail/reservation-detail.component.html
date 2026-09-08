@@ -438,6 +438,21 @@
                 <i class="pi pi-eye"></i>
                 {{ 'inspections.actions.view' | translate }}
               </button>
+              <!-- El parte al que el contrato remite. No se manda solo: se
+                   genera y se copia el enlace cuando el cliente lo pide. -->
+              <button
+                class="btn-secondary"
+                type="button"
+                [disabled]="generatingReport() === pickupInspection.id"
+                (click)="shareInspectionReport(pickupInspection)"
+              >
+                @if (generatingReport() === pickupInspection.id) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-file-pdf"></i>
+                }
+                {{ 'inspections.report.action' | translate }}
+              </button>
             } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
               <button
@@ -499,6 +514,19 @@
               <button class="btn-secondary" type="button" (click)="viewReturn()">
                 <i class="pi pi-eye"></i>
                 {{ 'inspections.actions.view' | translate }}
+              </button>
+              <button
+                class="btn-secondary"
+                type="button"
+                [disabled]="generatingReport() === returnInspection.id"
+                (click)="shareInspectionReport(returnInspection)"
+              >
+                @if (generatingReport() === returnInspection.id) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-file-pdf"></i>
+                }
+                {{ 'inspections.report.action' | translate }}
               </button>
             } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
