@@ -3,6 +3,11 @@
 Pega el bloque de abajo en el chat nuevo. Todo lo demás de este fichero es
 contexto para ti, no para pegar.
 
+> ⚠️ **El punto 1 —el recibo de cobro— ya está hecho** (8 de septiembre de 2026,
+> commit `51cca7c`). Si vuelves a usar este prompt, empieza por el **2**. El
+> detalle está en [facturacion.md](facturacion.md) y en
+> [mejoras-pendientes.md](mejoras-pendientes.md) § N-20.
+
 ---
 
 ## PROMPT PARA EL CHAT NUEVO
