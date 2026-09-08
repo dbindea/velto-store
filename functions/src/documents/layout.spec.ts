@@ -286,6 +286,16 @@ describe('the real documents, in every language', () => {
           'Régimen especial de los bienes usados.',
           'Operación exenta conforme al artículo 25 de la Ley 37/1992 (entrega intracomunitaria de bienes).'
         ],
+        /**
+         * ⚠️ Con el QR de VeriFactu **encendido**, que es el caso peor: va al
+         * final de una factura que ya trae tres líneas, el bloque de totales,
+         * dos menciones legales y los datos bancarios. Un QR con texto encima
+         * no se escanea, y el invariante que lo comprueba solo sirve si el QR
+         * está en el documento que se mide.
+         */
+        verifactu: {
+          url: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=B88866900&numserie=2026%2F0137&fecha=08-09-2026&importe=19260.33'
+        },
         onLayout
       });
     } else if (kind === 'receipt') {

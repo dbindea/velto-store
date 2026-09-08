@@ -378,6 +378,34 @@ export interface Invoice {
   /** Huella de la factura inmediatamente anterior. Vacía en la primera. */
   previousHash?: string;
 
+  /**
+   * El tipo de factura de la AEAT con el que se **selló la huella**: `F1` en
+   * una ordinaria, `R1`…`R5` en una rectificativa.
+   *
+   * ⚠️ Se guarda porque **entra en la huella**. Sin él habría que deducirlo
+   * para verificar el registro, y deducirlo mal produce una huella que parece
+   * válida y no coincide con la que calcule la AEAT.
+   */
+  tipoFacturaAeat?: string;
+
+  /**
+   * El registro de facturación de VeriFactu, tal y como se construyó al emitir.
+   *
+   * ⚠️ **Se guarda desde la primera factura aunque no se envíe nada hasta
+   * 2027**, por el mismo motivo que la huella: una factura emitida no se puede
+   * editar, así que lo que no se guarde aquí no se podrá añadir después. En
+   * enero habría que reconstruir el registro de cada factura de 2026 a partir
+   * de lo que quedara.
+   *
+   * Lo construye `functions/src/invoices/verifactu.ts` dentro de la misma
+   * transacción que sella la huella, con los mismos datos: reconstruirlo luego
+   * daría un registro parecido y no necesariamente el mismo.
+   *
+   * El frontend **no lo usa**: está aquí para que el tipo describa el documento
+   * completo y para que nadie lo pise sin darse cuenta.
+   */
+  verifactu?: Record<string, unknown>;
+
   // ---------------------------------------------------------------------
   // Rectificación. Vacío en una factura ordinaria.
   // ---------------------------------------------------------------------

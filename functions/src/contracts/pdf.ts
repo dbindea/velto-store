@@ -1230,6 +1230,35 @@ export class PdfBuilder {
   }
 
   /**
+   * Un QR con su leyenda al lado, en el flujo del documento.
+   *
+   * Lo usa la factura para el código de cotejo de VeriFactu. El texto va **a la
+   * derecha y nunca debajo**, por el mismo motivo que en el contrato: bajo el
+   * QR, una frase larga en rumano acaba tocándolo, y un QR con texto encima no
+   * se escanea.
+   */
+  qrWithCaption(url: string, caption: string[], opts: { size?: number } = {}): void {
+    const size = opts.size ?? 62;
+    this.ensureSpace(size + 8);
+    const top = this.y;
+    this.drawQr(buildQrMatrix(url), this.margin, top - size, size);
+
+    const textX = this.margin + size + 10;
+    const textW = this.pageWidth - this.margin * 2 - size - 10;
+    let ty = top - 10;
+    for (const line of caption) {
+      const font = this.fontFor('body', line);
+      for (const parte of this.wrap(line, 7.4, font, textW)) {
+        this.put(parte, textX, ty, 7.4, font, MUTED);
+        ty -= 9.5;
+      }
+      ty -= 2;
+    }
+
+    this.y = Math.min(top - size, ty) - 6;
+  }
+
+  /**
    * La rejilla de fotografías del parte de entrega y devolución.
    *
    * ⚠️ **Estas fotos son la prueba.** Desde que el contrato dejó de exigir la

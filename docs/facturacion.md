@@ -592,7 +592,8 @@ fase 1— por lo que dice la sección 4.
 | **Fase 1** · Recibo de cobro | ✅ Construido y probado (`REC-…`) |
 | **Fase 2** · Rectificativas | ✅ Construida y probada (`R2026/0001`) |
 | **Fase 2** · Proforma | ✅ Construida y probada (`P-…`) |
-| **Fase 3** · VeriFactu | ⛔ No empezada. Tope: **1 de enero de 2027** |
+| **Fase 3** · Registro y QR | ✅ Construidos y verificados sobre `2026/0005` |
+| **Fase 3** · Envío a la AEAT | ⛔ **No hecho.** Tope: **1 de enero de 2027** |
 
 Todo desplegado **solo en desarrollo**. En producción no hay ni una factura, y
 la primera que se emita allí marca el punto de no retorno de la colección.
@@ -819,15 +820,66 @@ norma. Es lo que convierte «no se puede modificar» en algo operable.
 La proforma va aquí porque, hecha la factura, es casi gratis: mismo PDF, título
 distinto, numeración no fiscal y ningún registro.
 
-### Fase 3 · VeriFactu
+### ✅ Fase 3 · Registro y QR — construidos el 8 de septiembre de 2026
 
-Registro XML según la Orden HAC/1177/2024, envío a la AEAT, QR en la factura y
-la leyenda «Factura verificable en la sede electrónica de la AEAT». Tope: **1 de
-enero de 2027**.
+VeriFactu son **tres bloques** y solo el tercero necesita hablar con la AEAT.
+Los dos primeros se han hecho ahora, y no por adelantarse: **una factura emitida
+no se puede editar**, así que lo que no se guarde al emitirla no se podrá añadir
+en enero. Habría que reconstruir el registro de cada factura de 2026 a partir de
+lo que quedara — que es justo lo que esta sección lleva advirtiendo desde el
+principio que la fase 3 no puede rescatar.
 
-⚠️ La fase 3 **no puede rescatar** lo que la fase 1 no haya guardado: si las
-facturas de 2026 no están encadenadas, la cadena arranca en 2027 sobre un
-histórico sin acreditar.
+Lo construido:
+
+| | |
+|---|---|
+| Registro de alta | `verifactu.ts`, con la forma del anexo de la Orden HAC/1177/2024 |
+| Encadenamiento | Los **cuatro** datos del anterior, no solo su huella |
+| Desglose | Clave de régimen, calificación y clave de exención por línea |
+| Sistema informático | Bloque obligatorio; el productor es la propia empresa |
+| QR de cotejo | URL oficial, con los cuatro parámetros y la barra escapada |
+| Tipo sellado | `tipoFacturaAeat` guardado: entra en la huella |
+
+Se construye **dentro de la misma transacción que sella la huella** y con los
+mismos datos: reconstruirlo después daría un registro parecido y no
+necesariamente el mismo.
+
+#### Dos decisiones que no son evidentes
+
+⚠️ **El QR está apagado, y seguirá apagado hasta que el envío funcione.** La
+leyenda «Factura verificable en la sede electrónica de la AEAT» impresa sobre
+una factura que nunca se remitió es una promesa falsa: el cliente escanea, la
+sede no encuentra nada y **lo que parece roto es la factura**. Es exactamente el
+error de la frase que anunciaba una firma digital que el contrato no llevaba, y
+se resuelve igual — la frase y el hecho se deciden juntos. Lo gobierna
+`VELTO_VERIFACTU_ENABLED`, hoy `false` en los dos entornos.
+
+⚠️ **El bloque «Sistema Informático» declara `SoloVerifactu: N`.** Es obligatorio
+y no es cosmético: identifica al programa que emite y la norma responsabiliza a
+su productor. Como la aplicación es desarrollo propio, el productor es **la
+propia empresa** y su NIF coincide con el del emisor; eso es lo normal en
+autodesarrollo. Y `N` porque hoy el sistema guarda el registro **sin remitirlo**:
+declarar `S` sería afirmar que solo funciona en modo remisión, que todavía no es
+cierto. El día que se encienda el envío, esto cambia.
+
+#### Lo que falta, y lo que hace falta para hacerlo
+
+El **envío**: XML SOAP firmado con el certificado, contra el servicio de la
+AEAT, con estados, reintentos y tratamiento de duplicados y de errores.
+
+⚠️ **No se puede dar por bueno sin probarlo contra el entorno de
+preproducción**, y eso necesita alta previa. Escribirlo sin poder ejecutarlo
+sería código escrito y nunca ejecutado, que es el patrón de fallo más caro de
+este proyecto.
+
+Antes de ese bloque hay que resolver, y **no es trabajo de programación**:
+
+1. El **alta en VERI\*FACTU** y el acceso al entorno de pruebas.
+2. La **declaración responsable** del software: la norma la exige al productor,
+   que aquí es la propia empresa.
+3. Contrastar los nombres de campo y la URL de cotejo contra la **versión
+   vigente** de las especificaciones. Aquí están escritos para que el registro
+   nazca completo, no para dar por cerrada la integración.
 
 ## 10. Lo que tiene que confirmar la gestoría
 

@@ -24,7 +24,18 @@ import * as functions from 'firebase-functions';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
-import { computeRegistroAltaHash, TipoFacturaAeat } from './hash';
+import {
+  computeRegistroAltaHash,
+  formatFechaExpedicion,
+  formatFechaHoraHuso,
+  TipoFacturaAeat
+} from './hash';
+import {
+  buildQrUrl,
+  buildRegistroAlta,
+  sistemaInformatico,
+  verifactuEnabled
+} from './verifactu';
 import { buildInvoicePdf } from './invoice-pdf';
 import { uploadPdf } from '../documents/storage';
 import type { ContractLocale } from '../contracts/contract-types';
@@ -358,6 +369,16 @@ export const issueInvoice = functions.https.onCall(
        * motivo por el que el dato vive donde se puede leer por id.
        */
       const huellaAnterior = (chainSnap.data()?.lastHash as string) || '';
+      /**
+       * ⚠️ **El encadenamiento necesita los CUATRO datos del anterior**, no
+       * solo su huella: el registro que irá a la AEAT lleva también su número y
+       * su fecha de expedición. La cadena ya los guardaba —`lastFullNumber` y
+       * `lastIssueDate`— y nadie los leía; sin ellos, el registro de una
+       * factura ya emitida habría que reconstruirlo buscando por huella sobre
+       * una colección que no se puede editar.
+       */
+      const numeroAnterior = (chainSnap.data()?.lastFullNumber as string) || '';
+      const fechaAnterior = chainSnap.data()?.lastIssueDate;
 
       const hash = computeRegistroAltaHash({
         idEmisorFactura: company.taxId,
@@ -377,9 +398,81 @@ export const issueInvoice = functions.https.onCall(
         fechaHoraGenRegistro: issueDate
       });
 
+      /**
+       * El registro de facturación de VeriFactu, **guardado desde hoy**.
+       *
+       * ⚠️ Una factura emitida no se puede editar, así que lo que no se guarde
+       * aquí no se podrá añadir en enero de 2027: habría que reconstruir el
+       * registro de cada factura de 2026 a partir de lo que quedara. Se
+       * construye con los mismos datos que acaban de sellar la huella, dentro
+       * de la misma transacción, para que registro y huella no puedan
+       * describir cosas distintas.
+       */
+      const tipoFacturaAeat = esRectificativa
+        ? (data.rectifyingReason as TipoFacturaAeat)
+        : ('F1' as TipoFacturaAeat);
+
+      const registroVerifactu = buildRegistroAlta({
+        emisorNif: company.taxId,
+        emisorNombre: company.legalName,
+        fullNumber,
+        fechaExpedicion: formatFechaExpedicion(issueDate),
+        tipoFactura: tipoFacturaAeat,
+        tipoRectificativa: esRectificativa ? data.rectifyingType : undefined,
+        rectificada:
+          esRectificativa && data.rectifies
+            ? {
+                numSerieFactura: data.rectifies.fullNumber,
+                fechaExpedicionFactura: formatFechaExpedicion(
+                  toDate(data.rectifies.issueDate) || issueDate
+                )
+              }
+            : undefined,
+        importeRectificacion:
+          esRectificativa &&
+          typeof data.rectifiedBase === 'number' &&
+          typeof data.rectifiedVat === 'number'
+            ? { baseRectificada: data.rectifiedBase, cuotaRectificada: data.rectifiedVat }
+            : undefined,
+        // La descripción de la operación sale de los conceptos facturados: es
+        // lo que la factura dice que se ha vendido.
+        descripcionOperacion: (data.lines || [])
+          .map((l) => l.description)
+          .filter(Boolean)
+          .join('; '),
+        destinatario: data.recipient?.name
+          ? { nombreRazon: data.recipient.name, nif: data.recipient.taxId }
+          : undefined,
+        lines: data.lines || [],
+        desglose: totals.byVatRate,
+        exemptTotal: totals.exemptTotal,
+        cuotaTotal: totals.vat,
+        importeTotal: totals.total,
+        anterior: huellaAnterior
+          ? {
+              numSerieFactura: numeroAnterior,
+              fechaExpedicionFactura: formatFechaExpedicion(
+                toDate(fechaAnterior) || issueDate
+              ),
+              huella: huellaAnterior
+            }
+          : undefined,
+        sistema: sistemaInformatico(company.taxId, company.legalName),
+        fechaHoraHusoGenRegistro: formatFechaHoraHuso(issueDate),
+        huella: hash
+      });
+
       const invoice = {
         kind: esRectificativa ? 'rectifying' : 'invoice',
         status: 'issued',
+        /**
+         * ⚠️ **El tipo sellado, guardado.** Entra en la huella, así que sin él
+         * no se puede verificar el registro después: habría que deducirlo, y
+         * deducir mal produce una huella que parece válida y no coincide con la
+         * que calcule la AEAT.
+         */
+        tipoFacturaAeat,
+        verifactu: registroVerifactu,
         // Lo que solo tiene una rectificativa: a cuál rectifica, cómo y por
         // qué. En una factura ordinaria van todos a `null`.
         rectifies: esRectificativa
@@ -528,6 +621,25 @@ export const issueInvoice = functions.https.onCall(
         contractNumber: data.contractNumber,
         vehicleLabel: data.vehicleLabel,
         notes: data.notes,
+        /**
+         * El QR de cotejo, **solo si el registro se remite de verdad**.
+         *
+         * ⚠️ Hoy `verifactuEnabled()` es `false` en los dos entornos: el
+         * registro se guarda pero no se envía a la AEAT, así que la factura
+         * calla. Imprimir la leyenda antes de que el envío funcione sería
+         * mandar al cliente a una sede donde su factura no está — el mismo
+         * error que la frase que anunciaba una firma digital inexistente.
+         */
+        verifactu: verifactuEnabled()
+          ? {
+              url: buildQrUrl({
+                nif: company.taxId,
+                numSerieFactura: resultado.fullNumber,
+                fechaExpedicion: formatFechaExpedicion(issueDate),
+                importeTotal: totals.total.toFixed(2)
+              })
+            }
+          : undefined,
         mentions: mentionTexts(requiredMentionKeys(data.lines), resolveLocale(data.locale)),
         hideVatBreakdown: soloRebu(data.lines),
         rectifying:

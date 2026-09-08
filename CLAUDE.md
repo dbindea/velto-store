@@ -747,6 +747,38 @@ bloquea. Lo único que queda es el PDF en Storage, que es lo que el enlace neces
 `uploadPdf()` **reutiliza el token de descarga** si el archivo ya existe. Un token nuevo
 rompería en silencio el enlace que el cliente ya tiene en su WhatsApp.
 
+### VeriFactu: el registro se guarda, el QR calla
+
+⚠️ **El registro de facturación se guarda desde la primera factura, aunque no se
+envíe nada a la AEAT hasta 2027.** No es adelantarse: **una factura emitida no
+se puede editar**, así que lo que no se guarde al emitirla no se podrá añadir
+después. Lo construye `invoices/verifactu.ts` **dentro de la misma transacción
+que sella la huella** y con los mismos datos; reconstruirlo luego daría un
+registro parecido y no necesariamente el mismo.
+
+Tres cosas que van dentro y que es fácil dejarse:
+
+- **El encadenamiento necesita los CUATRO datos del anterior** —emisor, número,
+  fecha y huella—, no solo la huella. La factura guardaba únicamente
+  `previousHash`, y el resto habría que buscarlo por huella sobre una colección
+  que no se puede editar.
+- **El tipo sellado** (`tipoFacturaAeat`): entra en la huella, así que sin él no
+  se puede verificar el registro. Deducirlo mal da una huella que parece válida.
+- **El bloque «Sistema Informático»** es obligatorio. El productor del software
+  es **la propia empresa** —autodesarrollo—, así que su NIF es el del emisor.
+
+⚠️ **El QR y la leyenda están apagados, y siguen apagados hasta que el envío
+funcione.** «Factura verificable en la sede electrónica de la AEAT» sobre una
+factura que nunca se remitió manda al cliente a una sede donde su factura no
+está, y lo que parece roto es la factura. Es el mismo error que la frase que
+anunciaba una firma digital inexistente: **la frase y el hecho se deciden
+juntos**. Lo gobierna `VELTO_VERIFACTU_ENABLED` en `functions/.env.<proyecto>`,
+hoy `false` en los dos.
+
+Falta el **envío** —XML SOAP firmado, estados, reintentos—, que no se puede dar
+por bueno sin el entorno de preproducción de la AEAT y su alta previa. El
+detalle está en [docs/facturacion.md](docs/facturacion.md).
+
 ### El parte de entrega y el de devolución
 
 `generateInspectionReport` produce los dos documentos a los que **el contrato

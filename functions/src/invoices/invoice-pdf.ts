@@ -101,6 +101,17 @@ export interface InvoicePdfInput {
    */
   proformaTitle?: string;
   /**
+   * El QR de cotejo de VeriFactu y su leyenda.
+   *
+   * ⚠️ **Solo llega relleno cuando el registro se remite de verdad.** Imprimir
+   * «Factura verificable en la sede electrónica de la AEAT» sobre una factura
+   * que nunca se envió es una promesa falsa: el cliente escanea, la sede no
+   * encuentra nada y lo que parece roto es la factura. Es el mismo error que la
+   * frase que anunciaba una firma digital que el contrato no llevaba, y se
+   * resuelve igual — **la frase y el hecho se deciden juntos**.
+   */
+  verifactu?: { url: string };
+  /**
    * Gancho para los tests de maquetación: devuelve el builder con la geometría
    * real que llegó a la página, que es contra lo que se comprueban los
    * invariantes. Los otros tres documentos ya lo tenían; la factura no, y por
@@ -169,7 +180,18 @@ function labels(loc: ContractLocale) {
       ? 'VAT rate applied'
       : ro
         ? 'Cota de TVA aplicată'
-        : 'Tipo impositivo aplicado'
+        : 'Tipo impositivo aplicado',
+    /**
+     * ⚠️ **La leyenda es la que fija el RD 1007/2023 y no se reformula.** No es
+     * una descripción que se pueda mejorar: es el texto que la norma exige
+     * junto al QR, y solo puede imprimirse si el registro se ha remitido.
+     */
+    verifactuLegend: en
+      ? 'Invoice verifiable at the electronic office of the AEAT'
+      : ro
+        ? 'Factură verificabilă la sediul electronic al AEAT'
+        : 'Factura verificable en la sede electrónica de la AEAT',
+    verifactuBadge: 'VERI*FACTU'
   };
 }
 
@@ -410,6 +432,18 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
       size: 7.6,
       color: [0.4, 0.4, 0.4]
     });
+  }
+
+  /**
+   * El QR de cotejo de VeriFactu.
+   *
+   * Llega —o no— ya decidido: quien construye el PDF sabe si el registro se va
+   * a remitir, y esta función no puede adivinarlo. Con la leyenda impresa sin
+   * envío, el cliente escanearía y la sede no encontraría su factura.
+   */
+  if (input.verifactu?.url) {
+    b.y -= 12;
+    b.qrWithCaption(input.verifactu.url, [L.verifactuBadge, L.verifactuLegend]);
   }
 
   b.finalizeFooters();
