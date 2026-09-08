@@ -185,25 +185,9 @@
   color: var(--text-primary);
 }
 
-.accept-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: var(--bg-main);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-
-  input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    margin-top: 0.1rem;
-    accent-color: var(--accent-color);
-  }
-}
+// La fila de aceptación es `.checkbox-item multiline`, en `styles.scss`. Esta
+// pantalla la ve el cliente, así que era la peor en la que tener una casilla
+// con estilo propio que se desviara del resto.
 
 .btn-primary {
   display: inline-flex;

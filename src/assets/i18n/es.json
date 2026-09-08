@@ -129,7 +129,10 @@
     "all": "Todos",
     "back": "Volver",
     "cancel": "Cancelar",
+    "close": "Cerrar",
+    "continue": "Continuar",
     "create": "Crear",
+    "days": "días",
     "delete": "Eliminar",
     "edit": "Editar",
     "error": "Algo ha ido mal",
@@ -137,6 +140,8 @@
     "missingFields": "Falta por completar:",
     "photos": {
       "camera": "Cámara",
+      "deleteMessage": "La foto se borrará y no se puede recuperar.",
+      "deleteTitle": "Eliminar foto",
       "gallery": "Galería",
       "hint": "JPG, PNG o WebP · máx. 5 MB",
       "invalidType": "Solo se admiten imágenes JPG, PNG o WebP",
@@ -148,9 +153,7 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo",
-    "close": "Cerrar",
-    "days": "días"
+    "viewAll": "Ver todo"
   },
   "contracts": {
     "actions": {
@@ -165,10 +168,20 @@
       "viewContract": "Ver contrato",
       "viewOriginalPdf": "Ver contrato original"
     },
+    "cancelSigningLink": "Anular enlace",
+    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?",
+    "confirmCancelSigningLinkTitle": "Anular el enlace de firma",
     "email": {
       "recipient": "Email del destinatario",
       "send": "Enviar",
       "title": "Enviar contrato por email"
+    },
+    "errors": {
+      "generate": "No se pudo generar el contrato.",
+      "createSigningLink": "No se pudo crear el enlace de firma.",
+      "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
+      "pdfNotReady": "El PDF todavía no está disponible.",
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
     },
     "fields": {
       "allStatuses": "Todos los estados",
@@ -217,6 +230,7 @@
     },
     "subtitle": "Genera, firma y envía contratos de alquiler",
     "title": "Contratos",
+    "verificationCode": "Código de verificación",
     "verify": {
       "cancelledMessage": "Este contrato existió, pero ya no está vigente.",
       "cancelledTitle": "Contrato anulado",
@@ -236,16 +250,7 @@
       "unknownTitle": "No encontrado",
       "validMessage": "Este contrato existe y está firmado.",
       "validTitle": "Contrato verificado"
-    },
-    "errors": {
-      "generate": "No se pudo generar el contrato.",
-      "createSigningLink": "No se pudo crear el enlace de firma.",
-      "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
-      "pdfNotReady": "El PDF todavía no está disponible.",
-      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
-    },
-    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?",
-    "verificationCode": "Código de verificación"
+    }
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
@@ -311,6 +316,7 @@
       "tolls": "Peajes"
     },
     "confirmDelete": "¿Borrar este gasto? También se borra su factura.",
+    "confirmDeleteTitle": "Eliminar gasto",
     "editTitle": "Editar gasto",
     "errors": {
       "amountRequired": "El importe tiene que ser mayor que cero",
@@ -520,7 +526,13 @@
       "depositRefunded": "Devueltos {amount} € de la fianza."
     },
     "retentionReasonPrompt": "Motivo de la retención:",
-    "retentionDefaultReason": "Cargos entrega/devolución"
+    "retentionDefaultReason": "Cargos entrega/devolución",
+    "confirm": {
+      "checklistMessage": "Hay puntos del checklist sin marcar. Si continúas, la entrega quedará registrada así.",
+      "checklistTitle": "Faltan comprobaciones",
+      "keysMessage": "No has marcado la devolución de llaves. Si continúas, la devolución quedará registrada así.",
+      "keysTitle": "Llaves sin devolver"
+    }
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -743,6 +755,10 @@
       "refuelPenalty": "Penalización repostaje",
       "remainingPayment": "Resto alquiler",
       "rentalPayment": "Pago completo"
+    },
+    "confirm": {
+      "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
+      "cancelTitle": "Cancelar el cobro"
     }
   },
   "permissions": {
@@ -813,6 +829,9 @@
       "searchResults": "Resultados",
       "select": "Seleccionar cliente"
     },
+    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
+    "closeWithPendingChargesTitle": "Cargos sin cobrar",
+    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer.",
     "contractStatus": {
       "cancelled": "Cancelado",
       "expired": "Caducado",
@@ -837,6 +856,27 @@
       "waived": "Exenta"
     },
     "detail": "Detalle de reserva",
+    "drivers": {
+      "title": "Conductores autorizados",
+      "hint": "Además del arrendatario. Quedan impresos en el contrato y se le muestran al cliente antes de firmar.",
+      "add": "Añadir conductor",
+      "name": "Nombre completo",
+      "document": "DNI/NIE",
+      "license": "Carnet de conducir",
+      "empty": "Sin conductores adicionales.",
+      "signedLocked": "El contrato ya está firmado: los conductores no se pueden cambiar. Haz un anexo en papel.",
+      "regenerate": "Has cambiado los conductores: vuelve a generar el contrato para que salgan impresos.",
+      "search": "Buscar cliente por nombre o documento",
+      "errors": {
+        "nameRequired": "Escribe el nombre del conductor",
+        "documentRequired": "Escribe su DNI o NIE",
+        "licenseRequired": "Escribe su carnet de conducir",
+        "duplicate": "Ese conductor ya está en la lista",
+        "tooMany": "No caben más conductores",
+        "contractSigned": "El contrato ya está firmado y no se puede cambiar quién conduce.",
+        "save": "No se pudieron guardar los conductores."
+      }
+    },
     "errors": {
       "cancel": "Error al cancelar la reserva",
       "clientNameRequired": "Escribe el nombre del cliente",
@@ -885,6 +925,7 @@
       "refunded": "Reembolsado",
       "settled": "Liquidado"
     },
+    "pendingAmount": "pendiente",
     "pricing": {
       "basePrice": "Precio base",
       "deposit": "Fianza",
@@ -938,31 +979,7 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas",
-    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
-    "pendingAmount": "pendiente",
-    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer.",
-    "drivers": {
-      "title": "Conductores autorizados",
-      "hint": "Además del arrendatario. Quedan impresos en el contrato y se le muestran al cliente antes de firmar.",
-      "add": "Añadir conductor",
-      "name": "Nombre completo",
-      "document": "DNI/NIE",
-      "license": "Carnet de conducir",
-      "empty": "Sin conductores adicionales.",
-      "signedLocked": "El contrato ya está firmado: los conductores no se pueden cambiar. Haz un anexo en papel.",
-      "regenerate": "Has cambiado los conductores: vuelve a generar el contrato para que salgan impresos.",
-      "search": "Buscar cliente por nombre o documento",
-      "errors": {
-        "nameRequired": "Escribe el nombre del conductor",
-        "documentRequired": "Escribe su DNI o NIE",
-        "licenseRequired": "Escribe su carnet de conducir",
-        "duplicate": "Ese conductor ya está en la lista",
-        "tooMany": "No caben más conductores",
-        "contractSigned": "El contrato ya está firmado y no se puede cambiar quién conduce.",
-        "save": "No se pudieron guardar los conductores."
-      }
-    }
+    "title": "Reservas"
   },
   "search": {
     "close": "Cerrar",
@@ -1019,6 +1036,7 @@
       "addTitle": "Dar acceso a alguien",
       "added": "Acceso concedido",
       "confirmDelete": "¿Borrar a esta persona? Ya no tiene acceso; esto solo quita el registro.",
+      "confirmDeleteTitle": "Quitar el acceso",
       "deactivate": "Quitar acceso",
       "email": "Correo de Google",
       "empty": "No hay nadie con acceso todavía",

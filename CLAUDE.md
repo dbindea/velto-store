@@ -1196,13 +1196,77 @@ la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0) y un `button:d
 a 0,2,1 y gana — igual que `.is-invalid`. Si creas una clase de botón nueva, añádela ahí o
 volverá a verse pulsable estando deshabilitada.
 
+### Las casillas de verificación son globales
+
+⚠️ **`.checkbox-item` vive en `styles.scss`, y el control se estiliza por
+elemento.** Son veinte casillas en cinco pantallas, y estilarlas una a una es
+cómo acabaron con **cuatro nombres de clase** —`.checkbox-item`, `.check-item`,
+`.check-inline`, `.checkbox-group`—, tres tamaños y dos radios distintos.
+
+Y con una quinta que **no existía**: el «Lleva localizador GPS» de la ficha de
+vehículo llevaba `class=checkbox-label`, que ningún SCSS declaraba, así que
+salía como una casilla del sistema operativo al lado de otras con caja. Es el
+mismo fallo que `.form-control` —compila, pasa los tests y solo se ve mirando
+la pantalla—, y la razón por la que esta sí es global.
+
+Dos variantes, y solo dos: `.multiline` alinea con la primera línea cuando el
+texto es un párrafo, y `.plain` quita la caja para las casillas sueltas dentro
+de una barra de acciones.
+
+### Cada pantalla empieza por arriba
+
+⚠️ **Angular conserva el scroll al navegar si no se le dice lo contrario.** En
+un móvil eso significa abrir la entrega del coche a media página. Lo arregla
+`withInMemoryScrolling({ scrollPositionRestoration: 'top' })` en
+`app.config.ts`: una línea para toda la aplicación, y por eso no se había visto
+— no hay ningún componente al que culpar.
+
+Funciona porque **el scroll vive en el documento**. El día que el contenido se
+meta en un contenedor con `overflow-y: auto`, el router deja de alcanzarlo y
+hay que subir ese contenedor a mano.
+
+### No perder el formulario al abrir la cámara
+
+⚠️ **Android puede matar la pestaña mientras la cámara está abierta**, que es
+lo más caro que abre un móvil. Al volver, el navegador recarga: Angular arranca
+de cero y lo que el operador llevaba escrito ya no existe. No se puede impedir,
+así que `FormDraftService` lo **sobrevive**: guarda el formulario cuando la
+página pasa a segundo plano (`visibilitychange` + `pagehide`) y lo restaura al
+volver.
+
+Tres reglas:
+
+- **`sessionStorage`, no `localStorage`.** El borrador muere con la pestaña: son
+  datos de un cliente y no tienen por qué quedarse en el disco del móvil.
+- **La clave lleva el sujeto dentro** (`pickup:<reservaId>`). Sin él, entrar en
+  otra reserva restauraría datos ajenos.
+- **Se limpia al guardar.** Un borrador que sobrevive a su guardado resucita un
+  formulario ya archivado.
+
+⚠️ El `DestroyRef` **se le pasa como parámetro**: `attach()` se llama desde
+métodos `async`, que ya están fuera del contexto de inyección, y un `inject()`
+ahí revienta en tiempo de ejecución.
+
+Conectado en entrega, devolución y mantenimiento — los tres que abren la cámara.
+
 ### Cuando algo falla: `NotificationService`, nunca `alert()`
 
-⚠️ **No queda ni un `alert()` en la aplicación, y no debe volver ninguno** (M-43). Los
-fallos de una llamada —no la validación de campos, que es lo de arriba— se cuentan con
+⚠️ **No queda ni un `alert()` ni un `confirm()` en la aplicación, y no debe volver
+ninguno** (M-43, y los `confirm()` el 8 de septiembre de 2026). Los fallos de una llamada
+—no la validación de campos, que es lo de arriba— se cuentan con
 `notifications.error('clave.i18n')`, y salen en la pila de avisos de abajo a la derecha
 que monta `<app-notifications>` en el **componente raíz**, para que las pantallas públicas
 se comporten igual.
+
+Y las preguntas de sí o no van por `ConfirmService.ask()`, que pinta
+`<app-confirm-dialog>` en ese mismo componente raíz. **Los `confirm()` sobrevivieron a la
+retirada de los `alert()`** —eran once— y tenían los tres defectos de siempre: los pinta el
+navegador con «store.veltorent.com dice» encima, sus botones salen en el idioma del sistema
+operativo aunque la pregunta esté en español, y **cuatro estaban escritos en español duro**
+(«¿Eliminar esta foto?», «¿Cancelar este pago?»). El diálogo propio bloquea igual —fondo
+que no deja pasar el clic, `Escape` cancela, foco en el botón que confirma— y además
+distingue lo irreversible con `danger: true`, que borrar una foto y avisar de un dato que
+falta no son la misma pregunta.
 
 Cuatro reglas, todas con su motivo:
 

@@ -179,10 +179,29 @@ export class InvoiceFormComponent implements OnInit {
     return this.isRectifying && this.rectifyingType === 'I';
   }
 
-  emptyLine(): InvoiceLine {
-    // Nace en régimen general, que es el 99 % de lo que factura una empresa de
-    // alquiler. Los demás se eligen a mano y a conciencia.
-    return { description: '', quantity: 1, unitPrice: 0, vatRate: DEFAULT_VAT_RATE, taxRegime: 'standard' };
+  /**
+   * **El único sitio donde nace una línea de factura.**
+   *
+   * Nace en régimen general, que es el 99 % de lo que factura una empresa de
+   * alquiler; los demás —REBU, exenta, inversión del sujeto pasivo— se eligen a
+   * mano y a conciencia.
+   *
+   * ⚠️ Acepta lo que la reserva propone en vez de dejar que el llamante monte
+   * su propio objeto. La línea que salía de una reserva se construía aparte y
+   * **se olvidaba el `taxRegime`**: el selector aparecía vacío en el caso más
+   * frecuente de todos —facturar un alquiler— y había que elegir a mano el
+   * régimen que ya era el correcto. Con un solo constructor no hay una segunda
+   * forma de crear una línea a la que se le pueda olvidar un campo.
+   */
+  emptyLine(partial: Partial<InvoiceLine> = {}): InvoiceLine {
+    return {
+      description: '',
+      quantity: 1,
+      unitPrice: 0,
+      vatRate: DEFAULT_VAT_RATE,
+      taxRegime: 'standard',
+      ...partial
+    };
   }
 
   /**
@@ -218,14 +237,15 @@ export class InvoiceFormComponent implements OnInit {
 
       const dias = r.totalDays || 1;
       this.lines = [
-        {
+        this.emptyLine({
           description: `Alquiler de vehículo sin conductor ${this.vehicleLabel}${
             this.contractNumber ? `, según contrato ${this.contractNumber}` : ''
           }.`,
-          quantity: 1,
           unitPrice: r.pricingSnapshot?.netPrice ?? 0,
+          // El tipo se congeló en la reserva: una subida futura del general no
+          // puede mover lo que se pactó.
           vatRate: r.pricingSnapshot?.vatRate ?? DEFAULT_VAT_RATE
-        }
+        })
       ];
 
       // El periodo del servicio sale de las fechas de la reserva. Es lo que

@@ -492,6 +492,91 @@ select {
 }
 
 
+/* ---------------------------------------------------------------------------
+ * Casillas de verificación
+ *
+ * Global por el mismo motivo que los `select`: son **veinte casillas repartidas
+ * por cinco pantallas**, y estilarlas una a una es exactamente cómo acabaron
+ * teniendo cuatro nombres de clase distintos —`.checkbox-item`, `.check-item`,
+ * `.check-inline`, `.checkbox-group`— con tres tamaños y dos radios de esquina.
+ *
+ * ⚠️ **Y una quinta que no existía.** El «Lleva localizador GPS» de la ficha de
+ * vehículo llevaba `class=checkbox-label`, una clase que ningún SCSS declaraba:
+ * salía como una casilla del sistema operativo, en crudo, al lado de otras que
+ * sí tenían caja. Compila, pasa los tests y solo se ve mirando la pantalla —el
+ * mismo fallo que CLAUDE.md ya documenta para `.form-control`.
+ *
+ * Por eso hay dos piezas y las dos son globales:
+ *
+ *   1. **El control**, que se estiliza por elemento. Una casilla nueva sale
+ *      bien aunque su componente no declare nada.
+ *   2. **`.checkbox-item`**, la fila con caja. Un solo nombre para todas.
+ * ------------------------------------------------------------------------- */
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  // Sin esto, en una fila estrecha el control se comprime antes que el texto y
+  // acaba siendo un rectángulo.
+  flex-shrink: 0;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+
+  &:hover {
+    border-color: var(--accent-color);
+  }
+
+  // La etiqueta ocupa el resto de la fila: así se puede pulsar el texto y no
+  // solo el cuadradito, que en un móvil es la diferencia entre marcar y fallar.
+  span {
+    flex: 1;
+  }
+
+  /* Cuando el texto ocupa varias líneas —la aceptación de condiciones de la
+     pantalla de firma—, la casilla se alinea con la PRIMERA línea. Centrada
+     acaba a media altura de un párrafo, que se lee como si no fuera con él. */
+  &.multiline {
+    align-items: flex-start;
+
+    input[type='checkbox'] {
+      margin-top: 0.1rem;
+    }
+  }
+
+  /* Sin caja, para las casillas que van sueltas dentro de una barra de acciones
+     —«Cerrar reserva al completar»— donde un recuadro más competiría con los
+     botones que tiene al lado. El control y el hueco no cambian. */
+  &.plain {
+    padding: 0;
+    background: none;
+    border: none;
+
+    &:hover {
+      border-color: transparent;
+    }
+  }
+}
+
 // The calendar/clock button inside date and time inputs is drawn by the
 // browser in a fixed near-black; on a dark field it disappears.
 .dark {

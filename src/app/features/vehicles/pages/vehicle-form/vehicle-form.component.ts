@@ -32,6 +32,7 @@ import {
   problemKeys
 } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   selector: 'app-vehicle-form',
@@ -47,6 +48,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
   styleUrl: './vehicle-form.component.scss',
 })
 export class VehicleFormComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private vehicleService = inject(VehicleService);
@@ -292,7 +294,12 @@ export class VehicleFormComponent implements OnInit {
   async deleteImage(image: VehicleImage): Promise<void> {
     if (!this.vehicleId) return;
 
-    const confirmed = confirm(this.translateService.translate('vehicles.photos.confirmDelete'));
+    const confirmed = await this.confirm.ask({
+      title: 'common.photos.deleteTitle',
+      message: 'vehicles.photos.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
     if (!confirmed) return;
 
     this.deletingImagePath = image.path;

@@ -26,6 +26,7 @@ import {
   UserRole,
   permissionsOf
 } from '@shared/utils/permissions.util';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 type Tab = 'operation' | 'users' | 'appearance';
 
@@ -48,6 +49,7 @@ type Tab = 'operation' | 'users' | 'appearance';
   styleUrl: './settings.component.scss'
 })
 export class SettingsComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private settingsService = inject(SettingsService);
   private usersService = inject(AuthorizedUserService);
   private translate = inject(TranslateService);
@@ -277,7 +279,13 @@ export class SettingsComponent implements OnInit {
 
   async removeUser(user: AuthorizedUser): Promise<void> {
     if (this.isSelf(user) || this.saving()) return;
-    if (!confirm(this.translate.translate('settings.users.confirmDelete'))) return;
+    const seguir = await this.confirm.ask({
+      title: 'settings.users.confirmDeleteTitle',
+      message: 'settings.users.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!seguir) return;
     this.saving.set(true);
     try {
       await this.usersService.deleteUser(user.email);

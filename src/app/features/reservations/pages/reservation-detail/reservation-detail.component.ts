@@ -64,6 +64,7 @@ import {
   driverFromClient,
   validateAdditionalDriver
 } from '@shared/utils/additional-driver.util';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -79,6 +80,7 @@ import {
   styleUrl: './reservation-detail.component.scss'
 })
 export class ReservationDetailComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private reservationService = inject(ReservationService);
@@ -607,10 +609,15 @@ export class ReservationDetailComponent implements OnInit {
 
     const pending = this.extraChargesPending;
     if (pending > 0) {
-      const message = this.translateService
-        .translate('reservations.closeWithPendingCharges')
-        .replace('{amount}', pending.toFixed(2));
-      if (!confirm(message)) return;
+      // El importe va delante: cerrar con cargos pendientes no los cobra ni
+      // los perdona, así que la pregunta tiene que decir cuánto se queda vivo.
+      const seguir = await this.confirm.ask({
+        title: 'reservations.closeWithPendingChargesTitle',
+        message: 'reservations.closeWithPendingCharges',
+        params: { amount: pending.toFixed(2) },
+        confirmLabel: 'reservations.actions.close'
+      });
+      if (!seguir) return;
     }
 
     this.closingReservation = true;

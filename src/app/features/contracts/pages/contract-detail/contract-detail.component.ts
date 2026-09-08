@@ -21,6 +21,7 @@ import {
   canGenerateSigningLink,
   reasonOf
 } from '@shared/utils/reservation-workflow.util';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   selector: 'app-contract-detail',
@@ -30,6 +31,7 @@ import {
   styleUrl: './contract-detail.component.scss'
 })
 export class ContractDetailComponent implements OnInit, OnDestroy {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private notifications = inject(NotificationService);
   private router = inject(Router);
@@ -147,7 +149,13 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
 
   async cancelLink(): Promise<void> {
     if (!this.contract?.id) return;
-    if (!confirm(this.translateService.translate('contracts.confirmCancelSigningLink'))) return;
+    const seguir = await this.confirm.ask({
+      title: 'contracts.confirmCancelSigningLinkTitle',
+      message: 'contracts.confirmCancelSigningLink',
+      confirmLabel: 'contracts.cancelSigningLink',
+      danger: true
+    });
+    if (!seguir) return;
     try {
       await this.contractService.cancelSigningLink(this.contract.id);
       this.refresh();

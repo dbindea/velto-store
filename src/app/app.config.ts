@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
@@ -36,7 +36,30 @@ export const appConfig: ApplicationConfig = {
     { provide: LOCALE_ID, useValue: 'es' },
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    /**
+     * ⚠️ **Cada pantalla empieza por arriba.**
+     *
+     * Angular **conserva** la posición del scroll al navegar si no se le dice
+     * lo contrario, y en un móvil eso significa abrir la entrega del coche a
+     * media página: el operador tiene que subir a mano para empezar por el
+     * principio de un formulario que no ha visto todavía. Pasaba en la
+     * inspección, en las tarifas de un vehículo y en cualquier pantalla larga
+     * a la que se llegara desde otra pantalla larga.
+     *
+     * Es una línea y arregla toda la aplicación de golpe, que es justamente el
+     * motivo por el que no se había visto: no hay ningún componente al que
+     * culpar.
+     *
+     * `anchorScrolling` va con ella para que un enlace con `#fragmento` siga
+     * llevando a su sitio en vez de al principio.
+     */
+    provideRouter(
+      routes,
+      withInMemoryScrolling({
+        scrollPositionRestoration: 'top',
+        anchorScrolling: 'enabled'
+      })
+    ),
     provideHttpClient(),
     provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideFirestore(() => getFirestore()),

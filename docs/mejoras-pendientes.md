@@ -60,6 +60,49 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## 📋 N-21 · Avisos con antelación — pendiente, propuesto el 8 de septiembre de 2026
+
+⚠️ **Sin esto, el mantenimiento a futuro está muerto.** Es de Dorel y es
+exacto: se puede programar «ITV en 7 días» o «cambio de aceite en 5», y hoy
+**no hay ningún sitio donde eso aparezca** hasta que alguien entra a la ficha
+del coche a mirar. Un recordatorio que no recuerda nada es un campo de
+formulario, no una función.
+
+Y no es solo el mantenimiento. La misma pieza sirve para lo que ya existe y
+tampoco avisa:
+
+| Qué vence | Cuándo hay que saberlo | De dónde sale |
+|---|---|---|
+| Mantenimiento programado | `nextDueDate` a N días | `vehicleMaintenance` |
+| Próxima revisión por km | `nextDueKm` cerca del `currentKm` | `vehicleMaintenance` + `vehicles` |
+| **Factura fuera de plazo** | destinatario empresa y pasa del día 16 del mes siguiente | `invoices` + `reservations` |
+| Contrato sin firmar | entrega mañana y `contractStatus` no es `signed` | `reservations` |
+| Fianza sin resolver | reserva devuelta hace días con fianza retenida | `payments` |
+| Cargos extra sin cobrar | reserva cerrada con `extrasPending` | `payments` |
+
+### Lo que hay que decidir antes de programar
+
+1. **Dónde se ve.** Tres opciones y no son excluyentes: una tarjeta en el
+   panel, una campana con contador en la cabecera, y un email diario. La
+   tarjeta es la barata y la que resuelve el 80 %; la campana obliga a decidir
+   qué es «leído»; el email necesita una function programada.
+2. **Con cuánta antelación**, y si es configurable en Ajustes. Siete días para
+   una ITV y dos para un contrato sin firmar no son el mismo aviso.
+3. ⚠️ **Quién lo calcula.** Si lo hace el frontend al abrir el panel, un aviso
+   solo existe si alguien entra — que es justo el problema que se quiere
+   resolver. Un aviso de verdad necesita una **Cloud Function programada**, y
+   entonces hay que decidir dónde se guarda lo ya avisado para no repetirlo.
+4. **Qué NO es un aviso.** Todo lo que ya se ve en la pantalla donde se
+   trabaja. Duplicarlo en una lista de avisos hace que la lista se ignore, y
+   una lista de avisos ignorada es peor que no tenerla.
+
+⚠️ **Lo que no se puede hacer es la mitad**: una tarjeta en el panel que solo
+mire mantenimientos deja fuera las facturas fuera de plazo, que son las que
+tienen sanción —el 2 % del importe—. Por eso va como tarea propia y no colgada
+de otra.
+
+---
+
 ## ✅ N-20 · Recibo de cobro — 8 de septiembre de 2026
 
 Lo que Dorel hacía a mano en Word cuando alguien le daba la señal. Estaba

@@ -142,26 +142,9 @@
   gap: 0.5rem;
 }
 
-.check-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  background: var(--bg-main);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  cursor: pointer;
-
-  &:hover { border-color: var(--accent-color); }
-
-  input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent-color);
-  }
-}
+// La fila del checklist es `.checkbox-item`, en `styles.scss`. Aquí tenía su
+// propio nombre, su propio radio y su propio tamaño, al lado de otras tres
+// versiones de lo mismo repartidas por la aplicación.
 
 // Form fields
 .form-grid-inner {

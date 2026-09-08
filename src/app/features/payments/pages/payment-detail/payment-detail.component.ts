@@ -17,6 +17,7 @@ import { toDate } from '@shared/utils/reservation-date.util';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { canIssueReceipt } from '@shared/utils/receipt.util';
 import { ReceiptDialogComponent } from '@shared/components/receipt-dialog/receipt-dialog.component';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   selector: 'app-payment-detail',
@@ -26,6 +27,7 @@ import { ReceiptDialogComponent } from '@shared/components/receipt-dialog/receip
   styleUrl: './payment-detail.component.scss'
 })
 export class PaymentDetailComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private paymentService = inject(PaymentService);
@@ -96,7 +98,12 @@ export class PaymentDetailComponent implements OnInit {
 
   async cancelPayment(): Promise<void> {
     if (!this.payment?.id) return;
-    const confirmed = confirm('¿Cancelar este pago?');
+    const confirmed = await this.confirm.ask({
+      title: 'payments.confirm.cancelTitle',
+      message: 'payments.confirm.cancelMessage',
+      confirmLabel: 'payments.actions.cancelPayment',
+      danger: true
+    });
     if (!confirmed) return;
 
     this.cancelling = true;

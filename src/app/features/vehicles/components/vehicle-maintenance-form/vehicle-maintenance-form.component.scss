@@ -10,6 +10,19 @@
   border-radius: 12px;
   padding: 1rem;
 
+  /**
+   * Flex con `gap`, como la tarjeta de cobro libre y el resto de formularios.
+   *
+   * Era un bloque a secas, así que **cualquier hijo suelto quedaba pegado al
+   * anterior**: el campo Descripción salía sin un pixel de aire bajo el
+   * desplegable de Prioridad. El `gap` lo ponía la rejilla interior, y lo que
+   * caía fuera de ella no lo recibía. Con esto, meter un campo suelto en una
+   * sección vuelve a ser seguro.
+   */
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+
   @media (min-width: 768px) {
     padding: 1.25rem 1.5rem;
   }
@@ -21,7 +34,9 @@
   gap: 0.5rem;
   font-size: 0.95rem;
   font-weight: 600;
-  margin: 0 0 1rem;
+  // El aire de debajo lo pone ahora el `gap` de la sección; con el margen
+  // además, el título quedaba al doble de distancia que el resto.
+  margin: 0;
   color: var(--text-primary);
 
   i {

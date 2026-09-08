@@ -57,18 +57,21 @@
           }
         </select>
       </label>
-    </div>
 
-    <label class="field full-width">
-      <span class="label">{{ 'maintenance.fields.description' | translate }}</span>
-      <textarea
-        class="form-control"
-        name="description"
-        rows="2"
-        [(ngModel)]="form.description"
-        [placeholder]="'maintenance.fields.description' | translate"
-      ></textarea>
-    </label>
+      <!-- Dentro de la rejilla, que es lo que `full-width` da por hecho:
+           `grid-column: 1 / -1` no significa nada fuera de ella, y sin el
+           `gap` de la rejilla la descripción quedaba pegada a Prioridad. -->
+      <label class="field full-width">
+        <span class="label">{{ 'maintenance.fields.description' | translate }}</span>
+        <textarea
+          class="form-control"
+          name="description"
+          rows="2"
+          [(ngModel)]="form.description"
+          [placeholder]="'maintenance.fields.description' | translate"
+        ></textarea>
+      </label>
+    </div>
   </div>
 
   <div class="form-section">

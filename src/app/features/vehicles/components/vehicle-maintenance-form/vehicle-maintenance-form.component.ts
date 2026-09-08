@@ -1,12 +1,16 @@
 import {
   Component,
+  DestroyRef,
   EventEmitter,
   Input,
   OnChanges,
+  OnInit,
   Output,
   SimpleChanges,
+  inject,
   signal
 } from '@angular/core';
+import { FormDraftService } from '@core/forms/form-draft.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Timestamp } from '@angular/fire/firestore';
@@ -56,7 +60,7 @@ interface MaintenanceFormData {
   templateUrl: './vehicle-maintenance-form.component.html',
   styleUrl: './vehicle-maintenance-form.component.scss'
 })
-export class VehicleMaintenanceFormComponent implements OnChanges {
+export class VehicleMaintenanceFormComponent implements OnChanges, OnInit {
   @Input() vehicleId!: string;
   @Input() vehicleSnapshot: VehicleMaintenance['vehicleSnapshot'];
   @Input() initial: VehicleMaintenance | null = null;
@@ -84,6 +88,29 @@ export class VehicleMaintenanceFormComponent implements OnChanges {
 
   form: MaintenanceFormData = this.empty();
   error = signal<string | null>(null);
+
+  private drafts = inject(FormDraftService);
+  private destroyRef = inject(DestroyRef);
+  /** Borrador vivo; se limpia al guardar. */
+  private draft: { clear: () => void } | null = null;
+
+  /**
+   * ⚠️ En `ngOnInit`, que corre **después** del primer `ngOnChanges`.
+   *
+   * Así el borrador manda sobre lo que traen los `@Input`: si el móvil se llevó
+   * la pestaña al abrir la cámara para fotografiar la factura del taller, lo
+   * que el operador llevaba tecleado es más reciente que lo guardado.
+   */
+  ngOnInit(): void {
+    this.draft = this.drafts.attach<MaintenanceFormData>(
+      `maintenance:${this.vehicleId}:${this.initial?.id ?? 'new'}`,
+      () => this.form,
+      (guardado) => {
+        this.form = { ...this.form, ...guardado };
+      },
+      this.destroyRef
+    );
+  }
 
   ngOnChanges(_: SimpleChanges): void {
     if (this.initial) {
@@ -171,6 +198,9 @@ export class VehicleMaintenanceFormComponent implements OnChanges {
       nextDueKm: this.toNumber(this.form.nextDueKm),
       cost: this.toNumber(this.form.cost)
     });
+    // Entregado al padre, que lo guarda: el borrador ya no protege nada, y
+    // restaurarlo la próxima vez sería resucitar un formulario ya archivado.
+    this.draft?.clear();
   }
 
   /** `null` en vez de `NaN` o `''`: un km vacío es ausencia, no cero. */

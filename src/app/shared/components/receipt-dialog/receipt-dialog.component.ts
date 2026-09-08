@@ -67,9 +67,10 @@ import { copyToClipboard } from '@shared/utils/clipboard.util';
             </p>
             <p class="modal-hint">{{ 'payments.receipt.notAnInvoice' | translate }}</p>
 
-            <!-- La etiqueta envuelve al control: en móvil, acertarle a un
-                 checkbox de 16 px es pedir demasiado. -->
-            <label class="checkbox-line">
+            <!-- checkbox-item es global: la misma casilla que en el resto de
+                 la aplicación, y la etiqueta envuelve al control para que se
+                 pueda pulsar el texto. -->
+            <label class="checkbox-item">
               <input type="checkbox" [(ngModel)]="invoiceExpected" />
               <span>{{ 'payments.receipt.invoiceExpected' | translate }}</span>
             </label>
@@ -167,22 +168,9 @@ import { copyToClipboard } from '@shared/utils/clipboard.util';
         color: var(--text-muted);
       }
 
-      .checkbox-line {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.625rem;
+      /* La casilla es .checkbox-item, global en styles.scss. Aquí solo su hueco. */
+      .checkbox-item {
         margin: 0.875rem 0 0.25rem;
-        cursor: pointer;
-        color: var(--text-primary);
-        font-size: 0.9rem;
-
-        input[type='checkbox'] {
-          margin-top: 0.15rem;
-          width: 1.1rem;
-          height: 1.1rem;
-          accent-color: var(--accent-color);
-          flex-shrink: 0;
-        }
       }
 
       .receipt-done {

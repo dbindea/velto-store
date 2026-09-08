@@ -102,26 +102,6 @@
     color: var(--text-secondary);
   }
 
-  &.checkbox-group {
-    flex-direction: row;
-    align-items: center;
-    margin-top: 1rem;
-
-    label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: var(--text-primary);
-    }
-
-    input[type='checkbox'] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--accent-color);
-    }
-  }
 }
 
 .form-control {
@@ -166,34 +146,8 @@ textarea.form-control {
   margin-top: 0.5rem;
 }
 
-.checkbox-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  background: var(--bg-main);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-
-  &:hover {
-    border-color: var(--accent-color);
-  }
-
-  input[type='checkbox'] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent-color);
-    flex-shrink: 0;
-  }
-
-  span {
-    flex: 1;
-  }
-}
+// `.checkbox-item` vive en `styles.scss`: es la misma fila en cinco pantallas y
+// tenerla aquí es como acabó habiendo cuatro nombres para lo mismo.
 
 .acriss-section {
   background: linear-gradient(135deg, var(--accent-light), var(--bg-card));
@@ -413,19 +367,53 @@ textarea.form-control {
   }
 }
 
+/**
+ * Campo con unidad: «55  €/día».
+ *
+ * El sufijo va **dentro** de la caja, no al lado. Como hermano flex se comía el
+ * ancho del campo —en la rejilla de tres columnas de las reglas de precio el
+ * importe quedaba aplastado contra el borde derecho de su celda, con «€/día»
+ * pisándole el sitio— y encima cada regla lo repetía tres veces. Dentro, el
+ * campo ocupa la fila entera y la unidad se lee como parte del dato, que es
+ * como se escriben los importes en cualquier formulario de dinero.
+ */
 .input-with-suffix {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  position: relative;
+  display: block;
 
   .form-control {
-    flex: 1;
+    width: 100%;
+    // Sitio para la unidad. Si algún día el sufijo es más largo que «€/día»,
+    // este número sube con él.
+    padding-right: 3.6rem;
   }
 
   .suffix {
+    position: absolute;
+    top: 50%;
+    right: 0.875rem;
+    transform: translateY(-50%);
     color: var(--text-muted);
     font-size: 0.85rem;
     white-space: nowrap;
+    // El sufijo es decorativo: el clic tiene que llegar al campo que hay
+    // debajo, o pulsar sobre «€/día» no hace nada.
+    pointer-events: none;
+  }
+
+  /* Las flechas del `number` viven justo donde ahora va la unidad, y en Chrome
+     aparecen al enfocar: se solapaban con el texto. Aquí no hacen falta —un
+     precio se teclea, no se sube de uno en uno—. */
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      appearance: none;
+      -webkit-appearance: none;
+      margin: 0;
+    }
   }
 }
 

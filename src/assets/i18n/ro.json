@@ -129,7 +129,10 @@
     "all": "Toate",
     "back": "Înapoi",
     "cancel": "Anulează",
+    "close": "Închide",
+    "continue": "Continuă",
     "create": "Creează",
+    "days": "zile",
     "delete": "Șterge",
     "edit": "Editează",
     "error": "Ceva nu a mers bine",
@@ -137,6 +140,8 @@
     "missingFields": "Mai lipsește:",
     "photos": {
       "camera": "Cameră",
+      "deleteMessage": "Fotografia va fi ștearsă și nu poate fi recuperată.",
+      "deleteTitle": "Șterge fotografia",
       "gallery": "Galerie",
       "hint": "JPG, PNG sau WebP · max. 5 MB",
       "invalidType": "Se acceptă doar imagini JPG, PNG sau WebP",
@@ -148,9 +153,7 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot",
-    "close": "Închide",
-    "days": "zile"
+    "viewAll": "Vezi tot"
   },
   "contracts": {
     "actions": {
@@ -165,10 +168,20 @@
       "viewContract": "Vezi contract",
       "viewOriginalPdf": "Vezi contract original"
     },
+    "cancelSigningLink": "Anulează linkul",
+    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?",
+    "confirmCancelSigningLinkTitle": "Anulează linkul de semnare",
     "email": {
       "recipient": "Email destinatar",
       "send": "Trimite",
       "title": "Trimite contract prin email"
+    },
+    "errors": {
+      "generate": "Contractul nu a putut fi generat.",
+      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
+      "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
+      "pdfNotReady": "PDF-ul nu este încă disponibil.",
+      "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
     },
     "fields": {
       "allStatuses": "Toate stările",
@@ -217,6 +230,7 @@
     },
     "subtitle": "Generează, semnează și trimite contracte de închiriere",
     "title": "Contracte",
+    "verificationCode": "Cod de verificare",
     "verify": {
       "cancelledMessage": "Acest contract a existat, dar nu mai este în vigoare.",
       "cancelledTitle": "Contract anulat",
@@ -236,16 +250,7 @@
       "unknownTitle": "Nu a fost găsit",
       "validMessage": "Acest contract există și este semnat.",
       "validTitle": "Contract verificat"
-    },
-    "errors": {
-      "generate": "Contractul nu a putut fi generat.",
-      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
-      "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
-      "pdfNotReady": "PDF-ul nu este încă disponibil.",
-      "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
-    },
-    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?",
-    "verificationCode": "Cod de verificare"
+    }
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
@@ -311,6 +316,7 @@
       "tolls": "Taxe de drum"
     },
     "confirmDelete": "Ștergi această cheltuială? Se șterge și factura ei.",
+    "confirmDeleteTitle": "Șterge cheltuiala",
     "editTitle": "Editează cheltuiala",
     "errors": {
       "amountRequired": "Suma trebuie să fie mai mare decât zero",
@@ -520,7 +526,13 @@
       "depositRefunded": "S-au restituit {amount} € din garanție."
     },
     "retentionReasonPrompt": "Motivul reținerii:",
-    "retentionDefaultReason": "Taxe predare/returnare"
+    "retentionDefaultReason": "Taxe predare/returnare",
+    "confirm": {
+      "checklistMessage": "Există puncte nebifate în listă. Dacă continui, predarea va fi înregistrată așa.",
+      "checklistTitle": "Lipsesc verificări",
+      "keysMessage": "Nu ai bifat returnarea cheilor. Dacă continui, returul va fi înregistrat așa.",
+      "keysTitle": "Cheile nu au fost returnate"
+    }
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -743,6 +755,10 @@
       "refuelPenalty": "Penalizare realimentare",
       "remainingPayment": "Rest închiriere",
       "rentalPayment": "Plată integrală"
+    },
+    "confirm": {
+      "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
+      "cancelTitle": "Anulează încasarea"
     }
   },
   "permissions": {
@@ -813,6 +829,9 @@
       "searchResults": "Rezultate",
       "select": "Selectează client"
     },
+    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
+    "closeWithPendingChargesTitle": "Costuri neîncasate",
+    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula.",
     "contractStatus": {
       "cancelled": "Anulat",
       "expired": "Expirat",
@@ -837,6 +856,27 @@
       "waived": "Scutită"
     },
     "detail": "Detalii rezervare",
+    "drivers": {
+      "title": "Conducători autorizați",
+      "hint": "Pe lângă chiriaș. Apar tipăriți în contract și îi sunt arătați clientului înainte de semnare.",
+      "add": "Adaugă conducător",
+      "name": "Nume complet",
+      "document": "Act de identitate",
+      "license": "Permis de conducere",
+      "empty": "Fără conducători suplimentari.",
+      "signedLocked": "Contractul este deja semnat: conducătorii nu pot fi modificați. Fă o anexă pe hârtie.",
+      "regenerate": "Ai schimbat conducătorii: generează din nou contractul ca să apară tipăriți.",
+      "search": "Caută client după nume sau act",
+      "errors": {
+        "nameRequired": "Scrie numele conducătorului",
+        "documentRequired": "Scrie actul lui de identitate",
+        "licenseRequired": "Scrie permisul lui de conducere",
+        "duplicate": "Acel conducător este deja pe listă",
+        "tooMany": "Nu mai încap conducători",
+        "contractSigned": "Contractul este deja semnat și nu se poate schimba cine conduce.",
+        "save": "Conducătorii nu au putut fi salvați."
+      }
+    },
     "errors": {
       "cancel": "Nu s-a putut anula rezervarea",
       "clientNameRequired": "Scrie numele clientului",
@@ -885,6 +925,7 @@
       "refunded": "Rambursat",
       "settled": "Achitat"
     },
+    "pendingAmount": "de încasat",
     "pricing": {
       "basePrice": "Preț de bază",
       "deposit": "Garanție",
@@ -938,31 +979,7 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări",
-    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
-    "pendingAmount": "de încasat",
-    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula.",
-    "drivers": {
-      "title": "Conducători autorizați",
-      "hint": "Pe lângă chiriaș. Apar tipăriți în contract și îi sunt arătați clientului înainte de semnare.",
-      "add": "Adaugă conducător",
-      "name": "Nume complet",
-      "document": "Act de identitate",
-      "license": "Permis de conducere",
-      "empty": "Fără conducători suplimentari.",
-      "signedLocked": "Contractul este deja semnat: conducătorii nu pot fi modificați. Fă o anexă pe hârtie.",
-      "regenerate": "Ai schimbat conducătorii: generează din nou contractul ca să apară tipăriți.",
-      "search": "Caută client după nume sau act",
-      "errors": {
-        "nameRequired": "Scrie numele conducătorului",
-        "documentRequired": "Scrie actul lui de identitate",
-        "licenseRequired": "Scrie permisul lui de conducere",
-        "duplicate": "Acel conducător este deja pe listă",
-        "tooMany": "Nu mai încap conducători",
-        "contractSigned": "Contractul este deja semnat și nu se poate schimba cine conduce.",
-        "save": "Conducătorii nu au putut fi salvați."
-      }
-    }
+    "title": "Rezervări"
   },
   "search": {
     "close": "Închide",
@@ -1019,6 +1036,7 @@
       "addTitle": "Dă acces cuiva",
       "added": "Acces acordat",
       "confirmDelete": "Ștergi această persoană? Deja nu mai are acces; asta doar elimină înregistrarea.",
+      "confirmDeleteTitle": "Retrage accesul",
       "deactivate": "Retrage accesul",
       "email": "Cont Google",
       "empty": "Încă nu are nimeni acces",
