@@ -131,6 +131,53 @@ Cada serie mantiene su propia correlatividad, que es lo único que la ley pide. 
 ⚠️ **Díselo a la gestoría igualmente**, no para pedir permiso sino porque le
 aparecerán dos series en el mismo trimestre y conviene que sepa por qué.
 
+### Y con VeriFactu encima, la pregunta cambia — 9 de septiembre de 2026
+
+Dorel preguntó si podrá usar la numeración de la aplicación teniendo las tres de
+Word ya emitidas. **Sí, y eso no era lo difícil**: la respuesta está arriba y no
+cambia.
+
+Lo que sí cambia es que **la decisión importante ya no es la numeración, sino
+cuándo se emite la primera factura real con la aplicación**. Y la manda
+VeriFactu, no el art. 6.
+
+El motivo, en una frase: ⚠️ **un tramo de facturas emitidas por el sistema y no
+remitidas es una zona gris que se puede evitar del todo.**
+
+Si la aplicación empieza a facturar en producción en, digamos, noviembre, y no
+se remite nada hasta el 1 de enero, el primer registro que llegue a la AEAT
+tiene dos salidas y ninguna buena:
+
+- declararse `PrimerRegistro`, contradiciendo su propia cadena, que arrancó en
+  noviembre; o
+- mandar un `RegistroAnterior` que apunta a una factura que la AEAT nunca vio.
+
+El error `2007` de la AEAT —«no debe informarse como primer registro, existen
+facturas emitidas con el obligado emisión y el sistema informático actual»—
+enseña que la Agencia lleva su propia cuenta de lo remitido, así que esto es
+justo el tipo de cosa que hay que probar antes y no descubrir en enero.
+
+**Y hay una salida limpia en el propio esquema: `RemisionVoluntaria`.** La
+cabecera admite remitir **antes** de estar obligado (el error `4127` confirma que
+es solo para sistemas VERI\*FACTU, que es el nuestro). Es decir: se puede empezar
+a facturar y a remitir el mismo día, sin tramo intermedio.
+
+De ahí salen tres caminos:
+
+| | Qué implica |
+|---|---|
+| **A · Empezar el 1 de enero de 2027**, serie `2027/0001` | Lo más simple: el primer registro del sistema es también el primero remitido. Pero obliga a seguir con Word cuatro meses más |
+| **B · Empezar cuando el envío esté probado**, serie `2026/…`, **remitiendo desde la primera** *(recomendado)* | Se deja Word antes, y se llega al 1 de enero con el circuito rodado y facturas reales ya aceptadas. Sin tramo gris |
+| **C · Empezar ya sin remitir, y remitir desde enero** | ⚠️ Es la que crea el tramo gris. No la recomiendo |
+
+En **A** y en **B** las tres facturas de Word no estorban: quedan cerradas en su
+serie, como ya estaba decidido.
+
+⚠️ **Las dos primeras dependen de lo mismo: que el envío esté probado en
+preproducción.** Mientras no lo esté, ninguna factura real debería salir de la
+aplicación — no porque la numeración falle, sino porque una factura emitida no
+se puede rehacer si luego hay que cambiar algo del registro.
+
 ---
 
 ### Cómo se garantiza «sin huecos» en Firestore

@@ -142,8 +142,61 @@ el detalle de qué salió bien y qué hubo que corregir está en
 
 Lo que queda por decidir, y es tuyo:
 
-- [ ] **Desde cuándo se remite**: el 1 de enero de 2027, o antes de forma
-      voluntaria para llegar rodado.
+- [ ] **Cuándo sale la primera factura real de la aplicación.** No es una
+      pregunta de numeración —las tres de Word no estorban— sino de VeriFactu:
+      ver «Y con VeriFactu encima, la pregunta cambia» en
+      [facturacion.md](facturacion.md). Recomendado: empezar a facturar y a
+      remitir **el mismo día**, usando `RemisionVoluntaria` para no esperar a
+      enero y llegar rodado.
+
+---
+
+## 3 bis. El plan de pruebas en preproducción
+
+Objetivo: llegar al 1 de enero de 2027 **sin estrenar nada**. Todo esto contra
+`prewww1.aeat.es`, nunca contra producción.
+
+**Circuito básico**
+
+- [ ] El certificado **autentica desde la Cloud Function** (no desde el
+      navegador).
+- [ ] Un `RegistroAlta` valida contra los `.xsd` **antes** de enviarlo.
+- [ ] Envío de una factura → respuesta `Correcto` con su CSV.
+- [ ] La huella que calcula la AEAT coincide con la nuestra (error `2000` si no).
+
+**El encadenamiento, que es lo que no se puede rehacer**
+
+- [ ] La primera se declara `PrimerRegistro`.
+- [ ] La segunda encadena con la primera y la AEAT lo acepta.
+- [ ] Reenviar la primera declarándola otra vez `PrimerRegistro` → tiene que dar
+      el error `2007`. **Si no lo da, es que no estamos donde creemos.**
+
+**Los caminos que no son el feliz**
+
+- [ ] Un registro **duplicado**: la respuesta trae `RegistroDuplicado` con lo que
+      la AEAT ya tenía.
+- [ ] Un envío **parcialmente correcto**: dos facturas, una mal. Comprobar que se
+      distingue `EstadoEnvio` de `EstadoRegistro` — que el envío "funcione" no
+      significa que las dos hayan entrado.
+- [ ] Un **rechazo de cabecera** (4102, 4107…): que no se marque como enviada
+      ninguna factura.
+- [ ] **Corte de red a mitad**: que el reintento no cree un segundo registro ni
+      dé la factura por remitida.
+
+**Los tipos de factura**
+
+- [ ] Factura ordinaria `F1` con IVA general.
+- [ ] Rectificativa `R1` por diferencias (`I`) con importes negativos.
+- [ ] Rectificativa por sustitución (`S`), con base y cuota rectificadas.
+- [ ] Una exenta (`E5`) y una con inversión del sujeto pasivo (`S2`).
+- [ ] Una con `FechaOperacion` distinta de la expedición.
+
+**Y lo último**
+
+- [ ] El **QR encendido** apuntando a preproducción, escaneado con un móvil de
+      verdad, que devuelva la factura.
+- [ ] Solo entonces, `VELTO_VERIFACTU_ENABLED=true` en producción **con tu
+      autorización expresa**.
 
 ---
 
