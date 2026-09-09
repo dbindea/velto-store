@@ -173,6 +173,23 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // El estado del envío de cada factura a la AEAT: pendiente, aceptado con su
+    // CSV, o rechazado con el motivo.
+    //
+    // Se lee para poder enseñarlo —y para que un rechazo se vea, porque bloquea
+    // la cadena entera—, pero **no se escribe desde el cliente por nada del
+    // mundo**: marcar una factura como aceptada a mano diría que está presentada
+    // ante la Agencia cuando no lo está, y eso es peor que no saberlo. Lo
+    // escribe el backend con el acuse de la AEAT en la mano.
+    //
+    // Solo administrador, igual que `invoices`: cruzando el número de factura
+    // con el CSV se reconstruye quién ha facturado qué, que es el mismo dato que
+    // el permiso `viewInvoices` protege.
+    match /verifactuSubmissions/{invoiceId} {
+      allow read: if callerIsAdmin();
+      allow create, update, delete: if false;
+    }
+
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.

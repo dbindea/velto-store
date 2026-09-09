@@ -76,3 +76,11 @@ export {
   issueComplianceDeclaration,
   getComplianceStatus
 } from './invoices/issueComplianceDeclaration';
+// La remisión a la AEAT. Va SEPARADA de la emisión a propósito: una factura se
+// emite aunque el servicio esté caído, y el envío reintenta hasta conseguirlo.
+// `sweepVerifactuRecords` es la que hace que esto cumpla — un envío que solo
+// ocurre al pulsar un botón depende de que alguien se acuerde.
+export {
+  sendVerifactuRecords,
+  sweepVerifactuRecords
+} from './invoices/sendVerifactuRecords';

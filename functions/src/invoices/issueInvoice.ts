@@ -117,6 +117,15 @@ const COUNTERS = 'invoiceCounters';
 const CHAIN_DOC = '_chain';
 const INVOICES = 'invoices';
 
+/**
+ * El estado del envío a la AEAT, **fuera de la factura**.
+ *
+ * Una factura emitida es inmutable; el envío cambia muchas veces —pendiente,
+ * intentado, rechazado, aceptado—, así que guardarlo dentro sería reescribir un
+ * documento fiscal cada vez que la Agencia contesta. Mismo id que la factura.
+ */
+const SUBMISSIONS = 'verifactuSubmissions';
+
 const LOCALES: ContractLocale[] = ['es', 'en', 'ro'];
 
 /** El idioma en el que se habla con este cliente; español si no consta. */
@@ -380,6 +389,21 @@ export const issueInvoice = functions.https.onCall(
       const numeroAnterior = (chainSnap.data()?.lastFullNumber as string) || '';
       const fechaAnterior = chainSnap.data()?.lastIssueDate;
 
+      /**
+       * La posición en la cadena.
+       *
+       * ⚠️ **Hace falta para poder enviar en el orden correcto**, y no vale
+       * ordenar por fecha de emisión: la fecha se toma al entrar en la function
+       * y la cadena se construye al confirmar la transacción, así que dos
+       * facturas emitidas a la vez pueden llevar fechas que no respeten el
+       * orden en que realmente se encadenaron. Enviar la segunda antes que la
+       * primera hace que referencie una huella que la AEAT no tiene todavía, y
+       * se rechaza con un error de encadenamiento que parece un fallo del
+       * cálculo. Este índice lo escribe **la misma transacción que la huella**,
+       * sobre el mismo documento, así que no pueden discrepar.
+       */
+      const chainIndex = ((chainSnap.data()?.lastIndex as number) || 0) + 1;
+
       const hash = computeRegistroAltaHash({
         idEmisorFactura: company.taxId,
         numSerieFactura: fullNumber,
@@ -478,6 +502,7 @@ export const issueInvoice = functions.https.onCall(
          */
         tipoFacturaAeat,
         verifactu: registroVerifactu,
+        chainIndex,
         // Lo que solo tiene una rectificativa: a cuál rectifica, cómo y por
         // qué. En una factura ordinaria van todos a `null`.
         rectifies: esRectificativa
@@ -541,10 +566,48 @@ export const issueInvoice = functions.https.onCall(
           lastHash: hash,
           lastFullNumber: fullNumber,
           lastIssueDate: issueDate,
+          lastIndex: chainIndex,
           updatedAt: FieldValue.serverTimestamp()
         },
         { merge: true }
       );
+
+      /**
+       * La fila de remisión, **en la misma transacción que la factura**.
+       *
+       * ⚠️ **Creada siempre, se envíe hoy o no.** Es el registro de que esta
+       * factura tiene que llegar a la AEAT, y nace pendiente. Escribirla después
+       * y fallar dejaría una factura emitida que nadie va a enviar nunca: no
+       * saldría en ninguna lista de pendientes, porque las listas se construyen
+       * con estas filas. Es el mismo razonamiento que hace que el número y la
+       * huella se escriban juntos.
+       *
+       * `create` y no `set`: si ya existe, esta factura ya se emitió y volver a
+       * sembrarla borraría el acuse de un envío que sí ocurrió.
+       */
+      tx.create(db.collection(SUBMISSIONS).doc(invoiceRef.id), {
+        invoiceId: invoiceRef.id,
+        fullNumber,
+        chainIndex,
+        issueDate,
+        estado: 'pendiente',
+        /**
+         * ⚠️ **Una bandera, y no `estado != 'aceptado'`.** Firestore exige que
+         * el primer `orderBy` sea el campo de la desigualdad, así que con `!=`
+         * no se puede ordenar por índice de cadena — que es justo el orden en
+         * el que hay que enviar. Un booleano se indexa con `chainIndex` y sale
+         * la cola ya ordenada.
+         */
+        pendienteEnvio: true,
+        intentos: 0,
+        /**
+         * A qué entorno corresponde este envío. Un registro aceptado en
+         * preproducción **no está presentado**: sin esto, una pantalla que mire
+         * el estado diría que sí.
+         */
+        entorno: process.env.VELTO_VERIFACTU_ENV === 'live' ? 'live' : 'test',
+        createdAt: FieldValue.serverTimestamp()
+      });
 
       /**
        * La original queda marcada como rectificada, **en la misma transacción**.
