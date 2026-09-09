@@ -1080,6 +1080,7 @@
       "missing": "There is no statement for the version in use. Issue it before invoicing further.",
       "mode": "Mode",
       "modeVerifactu": "VERI*FACTU only",
+      "notInvoicing": "This environment does not issue invoices yet, so there is nothing to declare. The declaration will be issued when invoicing starts here.",
       "open": "Open PDF",
       "producer": "Producer",
       "system": "System",
@@ -1406,6 +1407,7 @@
     "errors": {
       "alreadyIssued": "This invoice has already been issued",
       "cannotDeleteIssued": "An issued invoice cannot be deleted. To correct it, issue a credit note.",
+      "invoicingDisabled": "This environment does not issue invoices yet.",
       "issueFailed": "The invoice could not be issued",
       "loadFailed": "Invoices could not be loaded",
       "proformaFailed": "The pro forma could not be generated",

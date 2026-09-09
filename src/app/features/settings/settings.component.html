@@ -337,6 +337,16 @@
             <i class="pi pi-file-pdf"></i>
             {{ 'settings.compliance.open' | translate }}
           </a>
+        } @else if (!invoicingEnabled) {
+          <!-- ⚠️ En un entorno que todavía no emite facturas NO se ofrece
+               emitir la declaración. No falta nada: la declaración del art. 15
+               declara lo que hace un sistema que factura, y aquí no factura
+               ninguno. Ofrecer el botón sería ofrecer algo que no se puede
+               hacer — y la declaración, una vez emitida, no se puede borrar. -->
+          <p class="compliance-state">
+            <i class="pi pi-info-circle"></i>
+            {{ 'settings.compliance.notInvoicing' | translate }}
+          </p>
         } @else {
           <!-- Sin declaración para esta versión: es lo que hay que resolver, y
                por eso se dice en ámbar y no en gris. -->

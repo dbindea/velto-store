@@ -38,6 +38,37 @@ ningún sitio. Lo que la AEAT comprueba es que le lleguen los registros.
 
 ---
 
+## 0 bis. La fecha se ha aplazado antes, y puede volver a aplazarse
+
+⚠️ **El 1 de enero de 2027 no es una fecha firme: es la fecha vigente hoy.** La
+entrada en vigor de VERI\*FACTU ya se retrasó una vez, y no hay motivo para dar
+por hecho que la próxima no se retrasa también. Anotado por Dorel el 9 de
+septiembre de 2026, y **es un aviso, no un permiso para no estar listo**: si se
+aplaza no pasa nada por llegar antes; si no se aplaza y no estamos, sí pasa.
+
+**Qué hay que vigilar, y cuándo**
+
+- **Antes de encender producción** (`VELTO_INVOICING_ENABLED=true` y después
+  `VELTO_VERIFACTU_ENABLED=true`): confirmar que la fecha sigue en pie y que las
+  especificaciones de [docs/aeat/](aeat/README.md) siguen siendo las vigentes.
+  Se publican sin dejar rastro de qué versión se usó, que es justo por lo que
+  están copiadas en el repositorio.
+- **Si se aplaza**: lo único que cambia es *cuándo* se enciende. El código no se
+  toca, porque lo que está construido es la modalidad que la empresa va a usar
+  de todos modos, y la remisión antes de estar obligado es **voluntaria y
+  válida** — la cabecera ya la declara como tal hasta el 31 de diciembre del año
+  en curso.
+- **Si se adelanta o cambia el alcance**: revisar si sigue siendo el 1 de enero
+  para sociedades. La fecha de VELTO sale de tributar por Sociedades, no del
+  tamaño de la empresa.
+
+⚠️ **Lo que NO se debe hacer si hay aplazamiento: apagar lo que ya funciona.**
+Un registro remitido y aceptado no molesta, y la cadena de huellas se guarda
+igual desde la primera factura porque una factura emitida no se puede editar
+después. Ver la sección de datos desechables en CLAUDE.md.
+
+---
+
 ## 1. Los medios que hacen falta
 
 | | Estado |

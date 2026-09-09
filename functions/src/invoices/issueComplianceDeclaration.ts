@@ -53,14 +53,52 @@ export const getComplianceStatus = functions.https.onCall(async (request) => {
     producerName: sistema.nombreRazonProductor,
     producerTaxId: sistema.nifProductor,
     onlyVerifactu: sistema.tipoUsoPosibleSoloVerifactu,
-    multipleTaxpayers: sistema.tipoUsoPosibleMultiOT
+    multipleTaxpayers: sistema.tipoUsoPosibleMultiOT,
+    invoicingEnabled: invoicingEnabled()
   };
 });
+
+/**
+ * ¿Este entorno factura ya?
+ *
+ * ⚠️ **No es lo mismo que `VELTO_VERIFACTU_ENABLED`.** Aquella dice si los
+ * registros se **remiten** a la AEAT; esta, si la aplicación **emite facturas**
+ * en este entorno. Hoy producción no emite ninguna, y eso era un hecho que no
+ * estaba escrito en ningún sitio: la pantalla ofrecía «Emitir declaración» y el
+ * módulo de Facturas entero, con las functions que los sirven sin desplegar.
+ *
+ * Un botón que no hace nada es un fallo, y la declaración responsable del art.
+ * 15 declara lo que hace **un sistema que emite facturas**: en un entorno que no
+ * emite ninguna no hay nada que declarar todavía.
+ *
+ * ⚠️ **Y no se deduce de que falte la function.** Un callable ausente devuelve
+ * un error, y un error significa «algo va mal», no «esto aún no toca». Son dos
+ * cosas distintas y la pantalla tiene que poder distinguirlas, así que el dato
+ * viaja explícito.
+ */
+export function invoicingEnabled(): boolean {
+  return process.env.VELTO_INVOICING_ENABLED === 'true';
+}
 
 export const issueComplianceDeclaration = functions.https.onCall(
   async (request): Promise<DeclarationResponse> => {
     if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+    }
+
+    /**
+     * ⚠️ **Se comprueba aquí también, no solo en la pantalla.** Una declaración
+     * emitida **no se puede borrar** —`firestore.rules` deniega `delete` a todo
+     * el mundo—, así que una emitida por error en un entorno que todavía no
+     * factura se queda ahí para siempre, declarando lo que hacía un sistema que
+     * no emitía nada. Misma defensa en profundidad que aplica `issueInvoice`
+     * revalidando lo que la pantalla ya validó.
+     */
+    if (!invoicingEnabled()) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'invoices.errors.invoicingDisabled'
+      );
     }
 
     const db = firestore();

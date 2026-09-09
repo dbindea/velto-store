@@ -134,10 +134,9 @@ export class SettingsComponent implements OnInit {
     this.savedMessage.set('');
     // Las declaraciones se leen al abrir su pestaña: son un documento legal que
     // se consulta de vez en cuando, no algo que haga falta en cada carga.
-    if (tab === 'compliance' && !this.declarationsLoaded) {
-      void this.loadDeclarations();
-      void this.loadVerifactu();
-    }
+    // `loadDeclarations()` encadena la consulta de la remisión si procede: hace
+    // falta saber antes si este entorno factura siquiera.
+    if (tab === 'compliance' && !this.declarationsLoaded) void this.loadDeclarations();
   }
 
   // ---------------------------------------------------------------------------
@@ -179,6 +178,18 @@ export class SettingsComponent implements OnInit {
     return this.declarations().filter((d) => d.systemVersion !== version);
   });
 
+  /**
+   * ¿Se factura en este entorno?
+   *
+   * ⚠️ Lo dice la function, no el bundle: la aplicación se compila **igual**
+   * para desarrollo y producción, así que una constante aquí diría lo que traía
+   * escrito y no lo que pasa. Mismo motivo que el correo de la pantalla de
+   * firma (F-33).
+   */
+  get invoicingEnabled(): boolean {
+    return this.complianceStatus()?.invoicingEnabled === true;
+  }
+
   private async loadDeclarations(): Promise<void> {
     try {
       // El estado primero: sin saber qué versión corre no se puede decir si
@@ -187,6 +198,15 @@ export class SettingsComponent implements OnInit {
       this.complianceStatus.set(await this.compliance.status());
       this.declarations.set(await this.compliance.list());
       this.declarationsLoaded = true;
+
+      /**
+       * ⚠️ **La remisión solo se consulta si aquí se factura.** En un entorno
+       * que no emite facturas no hay nada que remitir, y preguntarlo daría un
+       * error —«no se pudo consultar el estado»— que hace pensar que algo está
+       * roto cuando lo que pasa es que aún no toca. Son dos cosas distintas y
+       * la pantalla tiene que distinguirlas.
+       */
+      if (this.invoicingEnabled) await this.loadVerifactu();
     } catch {
       this.errorKey.set('settings.compliance.loadError');
     }
@@ -200,8 +220,20 @@ export class SettingsComponent implements OnInit {
       await this.compliance.issue();
       await this.loadDeclarations();
       this.savedMessage.set('settings.compliance.issued');
-    } catch {
-      this.errorKey.set('settings.compliance.issueError');
+    } catch (err) {
+      /**
+       * ⚠️ **«Aquí todavía no se factura» no es un fallo de emisión.** El botón
+       * no debería llegar a verse en ese caso, pero la function lo comprueba
+       * igual —una declaración emitida no se puede borrar—, y si contesta eso
+       * hay que decirlo tal cual en vez de traducirlo a «no se pudo emitir»,
+       * que manda a buscar una avería que no existe.
+       */
+      const msg = typeof (err as { message?: unknown })?.message === 'string'
+        ? (err as { message: string }).message
+        : '';
+      this.errorKey.set(
+        msg === 'invoices.errors.invoicingDisabled' ? msg : 'settings.compliance.issueError'
+      );
     } finally {
       this.issuingDeclaration.set(false);
     }

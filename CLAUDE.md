@@ -1193,6 +1193,22 @@ La ventaja sobre Secret Manager es la que costó descubrir: **estas variables no
 hay que declararlas en ninguna function**. Llegan a `process.env` sin más, que es
 justo lo que los `VELTO_COMPANY_*` nunca hicieron estando puestos como secrets.
 
+⚠️ **`VELTO_INVOICING_ENABLED` dice si el entorno EMITE facturas**, y no es lo
+mismo que `VELTO_VERIFACTU_ENABLED`, que dice si los registros se **remiten** a
+la AEAT. Hoy: desarrollo `true`, **producción `false`**.
+
+Existe porque «producción todavía no factura» era un hecho real que no estaba
+escrito en ninguna parte: la pantalla ofrecía «Emitir declaración» y el módulo de
+Facturas entero con las functions que los sirven **sin desplegar**, o sea botones
+que no hacen nada. Y no se puede deducir de que falte la function: un callable
+ausente devuelve un error, y un error significa «algo va mal», no «esto aún no
+toca» — son dos cosas distintas y la pantalla tiene que distinguirlas.
+
+Con `false`, Ajustes no ofrece emitir la declaración responsable ni consulta el
+estado de la remisión, y lo explica en vez de dar un error. `issueComplianceDeclaration`
+lo comprueba **también en el backend**, porque una declaración emitida no se
+puede borrar y una emitida por error se queda para siempre.
+
 Llevan `VELTO_COMPANY_EMAIL` y `VELTO_PUBLIC_BASE_URL`, **distintos a propósito**:
 
 | | Correo | Dominio público |
