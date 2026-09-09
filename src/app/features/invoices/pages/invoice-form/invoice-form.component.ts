@@ -32,8 +32,11 @@ import {
   validateRectifying,
   rebuMargin,
   suggestPaymentMethod,
+  taxIdCarriesCountry,
   validateInvoice
 } from '@shared/utils/invoice.util';
+import { CountryOption, countryOptions } from '@shared/utils/country.util';
+import { TranslateService } from '@core/i18n/translate.service';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { DEFAULT_VAT_RATE } from '@shared/utils/pricing.util';
 import { toDate, toDateString } from '@shared/utils/reservation-date.util';
@@ -51,6 +54,7 @@ export class InvoiceFormComponent implements OnInit {
   private service = inject(InvoiceService);
   private reservations = inject(ReservationService);
   private notifications = inject(NotificationService);
+  private translate = inject(TranslateService);
 
   loading = signal(false);
   issuing = signal(false);
@@ -97,6 +101,24 @@ export class InvoiceFormComponent implements OnInit {
   profiles = signal<BillingProfile[]>([]);
   recipientTypeOptions = Object.keys(RECIPIENT_TYPE_LABELS) as RecipientType[];
   recipientTypeLabels = RECIPIENT_TYPE_LABELS;
+
+  /**
+   * El país solo se pregunta **cuando el identificador no lo dice ya**.
+   *
+   * ⚠️ Un NIF español y un NIF-IVA europeo lo llevan dentro, así que pedirlo
+   * ahí sería un campo más que rellenar en el caso que es el 95 % de las
+   * facturas. Donde hace falta es con un pasaporte —un turista—, y ahí no es
+   * opcional: sin país, la AEAT rechaza el registro y la factura, ya emitida, no
+   * se puede arreglar.
+   */
+  get needsCountry(): boolean {
+    return !!this.recipient.taxId?.trim() && !taxIdCarriesCountry(this.recipient.taxId);
+  }
+
+  /** Los nombres los traduce el navegador; aquí solo viven los códigos. */
+  get countries(): CountryOption[] {
+    return countryOptions(this.translate.language());
+  }
   regimeOptions = Object.keys(TAX_REGIME_LABELS) as TaxRegime[];
   regimeLabels = TAX_REGIME_LABELS;
 

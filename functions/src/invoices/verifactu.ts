@@ -174,7 +174,28 @@ export interface RegistroAlta {
   /** Solo si difiere de la de expedición. */
   FechaOperacion?: string;
   DescripcionOperacion: string;
-  Destinatarios?: { IDDestinatario: { NombreRazon: string; NIF?: string }[] };
+  /**
+   * A quién se factura.
+   *
+   * ⚠️ **`NIF` e `IDOtro` son alternativas, y elegir mal se rechaza.** El
+   * esquema declara un `choice`: `NIF` es **solo para identificadores
+   * españoles**, y el propio fichero lo dice —«No se permite CodigoPais=ES e
+   * IDType=01 […] debe utilizarse NIF en lugar de IDOtro»—. Un NIF-IVA
+   * extranjero metido en `NIF` **valida contra el XSD** y la AEAT lo rechaza con
+   * el error `1100`, «Valor o tipo incorrecto del campo.: NIF».
+   *
+   * Pasó de verdad contra preproducción el 9 de septiembre de 2026, con la
+   * primera factura exenta intracomunitaria. No lo cazó ningún test porque el
+   * XML era válido: el patrón de `NIF` admite la cadena, y lo que está mal es
+   * qué significa. Es exactamente lo que preproducción sirve para encontrar.
+   */
+  Destinatarios?: {
+    IDDestinatario: {
+      NombreRazon: string;
+      NIF?: string;
+      IDOtro?: { CodigoPais?: string; IDType: string; ID: string };
+    }[];
+  };
   Desglose: { DetalleDesglose: DetalleDesglose[] };
   CuotaTotal: string;
   ImporteTotal: string;
@@ -250,7 +271,11 @@ export interface RegistroAltaBuildInput {
   rectificada?: { numSerieFactura: string; fechaExpedicionFactura: string };
   importeRectificacion?: { baseRectificada: number; cuotaRectificada: number };
   descripcionOperacion: string;
-  destinatario?: { nombreRazon: string; nif?: string };
+  /**
+   * ⚠️ `codigoPais` es **obligatorio** para un identificador que no sea español
+   * ni un NIF-IVA europeo. Ver `identificacionDestinatario()`.
+   */
+  destinatario?: { nombreRazon: string; nif?: string; codigoPais?: string };
   lines: { taxRegime?: string; vatRate?: number; exemptionNote?: string }[];
   desglose: { vatRate: number; base: number; vat: number }[];
   exemptTotal?: number;
@@ -266,6 +291,119 @@ export interface RegistroAltaBuildInput {
 function importe(value: number): string {
   return (Math.round((Number(value) || 0) * 100) / 100).toFixed(2);
 }
+
+/** `02` = NIF-IVA, en el catálogo `PersonaFisicaJuridicaIDTypeType`. */
+export const ID_TYPE_NIF_IVA = '02';
+/** `06` = otro documento probatorio. El cajón de sastre del catálogo. */
+export const ID_TYPE_OTRO = '06';
+
+/**
+ * ¿Es un identificador fiscal español?
+ *
+ * Los tres formatos de la AEAT: NIF de persona física (8 dígitos + letra), NIE
+ * (X/Y/Z + 7 dígitos + letra) y CIF de entidad (letra + 7 dígitos + control).
+ *
+ * ⚠️ **Se admite el prefijo `ES`** porque un NIF-IVA español se escribe
+ * `ESB88866900` y **sigue siendo un NIF**: el esquema prohíbe expresamente
+ * mandarlo como `IDOtro` con `CodigoPais=ES`.
+ */
+export function esIdentificadorEspanol(taxId: string): boolean {
+  const limpio = (taxId || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  const sinPrefijo = limpio.startsWith('ES') ? limpio.slice(2) : limpio;
+  return (
+    /^\d{8}[A-Z]$/.test(sinPrefijo) ||
+    /^[XYZ]\d{7}[A-Z]$/.test(sinPrefijo) ||
+    /^[A-HJ-NP-SUVW]\d{7}[0-9A-J]$/.test(sinPrefijo)
+  );
+}
+
+/**
+ * ¿El identificador dice ya de qué país es su titular?
+ *
+ * Un NIF español y un NIF-IVA europeo lo llevan dentro; un pasaporte, no. Es
+ * justo la línea que separa a quien necesita declarar el país aparte, y la usa
+ * la validación del formulario para pedirlo **antes** de consumir número.
+ */
+export function identificadorLlevaPais(taxId: string): boolean {
+  const limpio = (taxId || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  if (!limpio) return true; // Sin identificador no hay nada que declarar.
+  if (esIdentificadorEspanol(limpio)) return true;
+  return /^[0-9A-Z]+$/.test(limpio.slice(2)) && ESTADOS_MIEMBRO.has(limpio.slice(0, 2));
+}
+
+/**
+ * Cómo se identifica al destinatario en el registro.
+ *
+ * ⚠️ **Español al `NIF`, extranjero al `IDOtro`, y no es intercambiable.** Un
+ * NIF-IVA extranjero en `NIF` pasa la validación del esquema y lo rechaza la
+ * AEAT con el error `1100`: el patrón admite la cadena y lo que está mal es qué
+ * significa. Con el `IDOtro` van el **código de país** —los dos primeros
+ * caracteres del NIF-IVA, que es de donde salen— y el tipo.
+ */
+export function identificacionDestinatario(
+  nombreRazon: string,
+  taxId: string | undefined,
+  codigoPais?: string
+): { NombreRazon: string; NIF?: string; IDOtro?: { CodigoPais?: string; IDType: string; ID: string } } {
+  const limpio = (taxId || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  if (!limpio) return { NombreRazon: nombreRazon };
+
+  if (esIdentificadorEspanol(limpio)) {
+    // Sin el `ES`: el campo `NIF` es el NIF a secas.
+    return { NombreRazon: nombreRazon, NIF: limpio.startsWith('ES') ? limpio.slice(2) : limpio };
+  }
+
+  /**
+   * Un NIF-IVA europeo empieza por el código de su Estado miembro
+   * (`RO12345678`), así que el país se lee de ahí en vez de pedirlo aparte:
+   * preguntarlo dos veces —una dentro del identificador y otra en un campo— es
+   * garantizar que algún día discrepen.
+   *
+   * ⚠️ **Y el prefijo solo cuenta si ES un Estado miembro.** Dos letras al
+   * principio no hacen un NIF-IVA: un pasaporte como `AB1234567` daba el país
+   * «AB», que no existe. Además `IDType=02` significa **NIF-IVA**, que es una
+   * figura de la Unión: un número suizo o británico no lo es aunque empiece por
+   * dos letras, y declararlo así sería decir algo falso del destinatario.
+   */
+  const prefijo = limpio.slice(0, 2);
+  if (/^[0-9A-Z]+$/.test(limpio.slice(2)) && ESTADOS_MIEMBRO.has(prefijo)) {
+    return {
+      NombreRazon: nombreRazon,
+      IDOtro: { CodigoPais: prefijo, IDType: ID_TYPE_NIF_IVA, ID: limpio }
+    };
+  }
+  /**
+   * Sin NIF-IVA es otro documento probatorio —un pasaporte, casi siempre—, y
+   * entonces **el país es obligatorio**.
+   *
+   * ⚠️ **El esquema lo declara opcional y la AEAT lo exige igual**: `1111`, «El
+   * campo CodigoPais es obligatorio cuando IDType es distinto de NIF-IVA (02)».
+   * Es decir, un XML perfectamente válido contra el `.xsd` que el servicio
+   * rechaza. Lo descubrió preproducción el 9 de septiembre de 2026 facturando a
+   * un turista con pasaporte, que en un alquiler de coches no es un caso raro
+   * sino el habitual. Por eso `validateInvoiceInput()` lo pide **antes** de
+   * consumir número de factura: una factura que no se puede remitir no debe
+   * llegar a emitirse.
+   */
+  const pais = (codigoPais || '').trim().toUpperCase();
+  return {
+    NombreRazon: nombreRazon,
+    IDOtro: { CodigoPais: pais || undefined, IDType: ID_TYPE_OTRO, ID: limpio }
+  };
+}
+
+/**
+ * Los prefijos de NIF-IVA de la Unión.
+ *
+ * ⚠️ **No son exactamente los códigos ISO.** Grecia usa `EL` y no `GR`, e
+ * Irlanda del Norte tiene el suyo, `XI`, desde el Brexit. Escribir la lista
+ * desde ISO 3166 dejaría fuera a los clientes griegos.
+ */
+const ESTADOS_MIEMBRO = new Set([
+  'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'HR',
+  'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI',
+  'SK', 'XI'
+]);
 
 /**
  * El registro de alta, listo para guardar con la factura.
@@ -368,7 +506,11 @@ export function buildRegistroAlta(input: RegistroAltaBuildInput): RegistroAlta {
   if (input.destinatario?.nombreRazon) {
     registro.Destinatarios = {
       IDDestinatario: [
-        { NombreRazon: input.destinatario.nombreRazon, NIF: input.destinatario.nif }
+        identificacionDestinatario(
+          input.destinatario.nombreRazon,
+          input.destinatario.nif,
+          input.destinatario.codigoPais
+        )
       ]
     };
   }

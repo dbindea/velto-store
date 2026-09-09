@@ -83,5 +83,14 @@ export {
 export {
   sendVerifactuRecords,
   sweepVerifactuRecords,
-  getVerifactuStatus
+  getVerifactuStatus,
+  // La autenticación se prueba desde la function, no entrando en la sede con el
+  // navegador: allí el certificado lo presenta el navegador y aquí lo presenta
+  // Node. Sirve además para ver cuándo caduca el certificado de la FNMT, que es
+  // lo que va a pasar seguro y hoy solo se notaría con una factura sin remitir.
+  checkVerifactuConnection,
+  // Un rechazo para la cadena a propósito, porque casi siempre hay algo que
+  // arreglar. Esto es lo que permite reanudarla una vez arreglado — sin ello,
+  // «bloqueado» sería un callejón sin salida.
+  retryVerifactuRecord
 } from './invoices/sendVerifactuRecords';

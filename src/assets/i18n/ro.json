@@ -1382,33 +1382,37 @@
       "company": "Firmă"
     },
     "problems": {
+      "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus",
+      "euVatIdRequired": "O livrare intracomunitară necesită codul de TVA al cumpărătorului (ex.: PT501234567)",
+      "exemptionNoteRequired": "Indică temeiul legal al scutirii",
+      "lineDescriptionRequired": "Descrie articolul",
+      "linePriceInvalid": "Suma nu poate fi negativă",
+      "lineQuantityRequired": "Cantitatea trebuie să fie mai mare decât zero",
+      "lineVatInvalid": "Indică o cotă de TVA validă",
+      "linesRequired": "Adaugă cel puțin un articol",
+      "paymentMethodRequired": "Alege modalitatea de plată",
+      "rebuPurchasePriceRequired": "La regimul pe marjă e nevoie de prețul de achiziție: baza este marja",
+      "recipientAddressRequired": "Domiciliul fiscal este obligatoriu pe orice factură",
+      "recipientCountryRequired": "Indică țara: cu un document care nu este nici NIF spaniol, nici cod TVA european, factura nu se poate transmite fără ea",
       "recipientNameRequired": "Indică numele sau denumirea",
       "recipientTaxIdRequired": "CIF-ul este obligatoriu pe orice factură",
-      "recipientAddressRequired": "Domiciliul fiscal este obligatoriu pe orice factură",
-      "linesRequired": "Adaugă cel puțin un articol",
-      "lineDescriptionRequired": "Descrie articolul",
-      "lineQuantityRequired": "Cantitatea trebuie să fie mai mare decât zero",
-      "linePriceInvalid": "Suma nu poate fi negativă",
-      "lineVatInvalid": "Indică o cotă de TVA validă",
-      "paymentMethodRequired": "Alege modalitatea de plată",
-      "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus",
-      "rebuPurchasePriceRequired": "La regimul pe marjă e nevoie de prețul de achiziție: baza este marja",
-      "exemptionNoteRequired": "Indică temeiul legal al scutirii",
-      "euVatIdRequired": "O livrare intracomunitară necesită codul de TVA al cumpărătorului (ex.: PT501234567)",
-      "rectifiedInvoiceRequired": "Indică ce factură se stornează",
-      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență",
-      "rectifyingReasonRequired": "Alege temeiul stornării",
-      "rectifyingNoteRequired": "Explică de ce se stornează: este ceea ce apare în document",
       "rectifiedBaseRequired": "Prin substituire trebuie indicată baza stornată",
-      "rectifiedVatRequired": "Prin substituire trebuie indicat TVA-ul stornat"
+      "rectifiedInvoiceRequired": "Indică ce factură se stornează",
+      "rectifiedVatRequired": "Prin substituire trebuie indicat TVA-ul stornat",
+      "rectifyingNoteRequired": "Explică de ce se stornează: este ceea ce apare în document",
+      "rectifyingReasonRequired": "Alege temeiul stornării",
+      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență"
     },
     "errors": {
-      "unauthenticated": "Trebuie să te autentifici",
       "alreadyIssued": "Această factură a fost deja emisă",
       "cannotDeleteIssued": "O factură emisă nu se poate șterge. Pentru corectare, emite o factură storno.",
       "issueFailed": "Factura nu a putut fi emisă",
       "loadFailed": "Facturile nu au putut fi încărcate",
-      "proformaFailed": "Proforma nu a putut fi generată"
+      "proformaFailed": "Proforma nu a putut fi generată",
+      "unauthenticated": "Trebuie să te autentifici",
+      "verifactuHashMismatch": "Amprenta unei facturi nu corespunde cu ceea ce este salvat. Nu s-a trimis nimic: trebuie verificat înainte de a continua.",
+      "verifactuRecordMissing": "Acea factură nu are înregistrare de facturare, deci nu poate fi transmisă. Este un incident: semnalează-l înainte de a emite altele.",
+      "verifactuUnreachable": "Trimiterea către Agenția Fiscală nu s-a putut finaliza. Este posibil să fi ajuns totuși: se va reîncerca automat."
     },
     "taxRegime": "Regim de TVA",
     "purchasePrice": "Preț de achiziție (TVA inclus)",
@@ -1446,6 +1450,8 @@
       "R5": "R5 · Stornarea unei facturi simplificate"
     },
     "rectifiedBase": "Bază stornată",
-    "rectifiedVat": "TVA stornat"
+    "rectifiedVat": "TVA stornat",
+    "recipientCountry": "Țara destinatarului",
+    "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta."
   }
 }

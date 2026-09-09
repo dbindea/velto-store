@@ -195,6 +195,32 @@
             <app-form-error [problems]="problems['recipientTaxId']" [show]="submitted()" />
           </div>
 
+          <!-- El país solo cuando el identificador no lo dice ya.
+               ⚠️ Con un NIF español o un NIF-IVA europeo sobra —lo llevan
+               dentro—, y donde hace falta no es opcional: sin él la AEAT rechaza
+               el registro y la factura, ya emitida, no se puede arreglar. -->
+          @if (needsCountry) {
+            <div class="form-group">
+              <label class="required" for="recipientCountry">
+                {{ 'invoices.recipientCountry' | translate }}
+              </label>
+              <select
+                id="recipientCountry"
+                class="form-control"
+                [(ngModel)]="recipient.countryCode"
+                name="recipientCountry"
+                [class.is-invalid]="submitted() && problems['recipientCountry']"
+              >
+                <option [ngValue]="undefined">—</option>
+                @for (c of countries; track c.code) {
+                  <option [ngValue]="c.code">{{ c.name }}</option>
+                }
+              </select>
+              <app-form-error [problems]="problems['recipientCountry']" [show]="submitted()" />
+              <p class="field-hint">{{ 'invoices.recipientCountryHint' | translate }}</p>
+            </div>
+          }
+
           <div class="form-group">
             <label for="recipientEmail">{{ 'invoices.recipientEmail' | translate }}</label>
             <input

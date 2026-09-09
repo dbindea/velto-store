@@ -28,7 +28,13 @@ import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
 import { verifactuEnabled, verifactuEndpoint, type RegistroAlta } from './verifactu';
 import { buildEnvioSoap } from './verifactu-xml';
-import { certificadoDesdeSecreto, enviarRegistros } from './verifactu-client';
+import { registroParaEnvio, RegistroInconsistenteError } from './verifactu-rebuild';
+import {
+  certificadoDesdeSecreto,
+  enviarRegistros,
+  probarConexion,
+  type PruebaConexion
+} from './verifactu-client';
 import { SoapFaultError } from './verifactu-respuesta';
 import {
   cabeceraPara,
@@ -143,29 +149,79 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
     return VACIO('empty');
   }
 
-  // Los registros salen de la factura tal y como se sellaron al emitirla. No se
-  // reconstruyen: un registro recalculado se parecería al original sin ser el
-  // mismo, y la huella no coincidiría.
+  const company = companyConfig();
+
+  /**
+   * El registro se **reconstruye** desde la factura con el código de hoy, y su
+   * huella se comprueba contra la que se selló al emitir. Ver
+   * `verifactu-rebuild.ts`: un registro rechazado por la AEAT no queda
+   * registrado y hay que corregirlo, pero congelado dentro de una factura
+   * inmutable no se puede corregir nunca — y como todo lo que viene detrás
+   * encadena con su huella, la facturación se queda parada sin remedio.
+   */
   const registros: RegistroAlta[] = [];
   for (const r of lote) {
     const doc = await db.collection(INVOICES).doc(r.invoiceId).get();
-    const registro = doc.data()?.verifactu as RegistroAlta | undefined;
-    if (!registro?.IDVersion || !registro?.Huella) {
+    const factura = doc.data();
+    if (!factura?.verifactu?.IDVersion || !factura?.verifactu?.Huella) {
       /**
        * ⚠️ **Antes parar que mandar algo incompleto.** Una factura sin registro
-       * guardado no se puede reconstruir —es inmutable— y enviarla a medias
-       * gastaría un rechazo y dejaría la cadena parada igual. Es un incidente,
-       * no un caso a sortear.
+       * sellado no tiene ni encadenamiento ni huella, y esos dos no se pueden
+       * reconstruir. Es un incidente, no un caso a sortear.
        */
       throw new functions.https.HttpsError(
         'failed-precondition',
         'invoices.errors.verifactuRecordMissing'
       );
     }
-    registros.push(registro);
+    const entrada = {
+      fullNumber: factura.fullNumber,
+      issueDate: factura.issueDate?.toDate?.() ?? new Date(factura.issueDate),
+      operationDate: factura.operationDate?.toDate?.() ?? null,
+      tipoFacturaAeat: factura.tipoFacturaAeat,
+      recipient: factura.recipient,
+      lines: factura.lines,
+      totals: factura.totals,
+      rectifyingType: factura.rectifyingType,
+      rectifies: factura.rectifies
+        ? {
+            fullNumber: factura.rectifies.fullNumber,
+            issueDate: factura.rectifies.issueDate?.toDate?.() ?? null
+          }
+        : null,
+      rectifiedBase: factura.rectifiedBase,
+      rectifiedVat: factura.rectifiedVat,
+      verifactu: factura.verifactu
+    };
+
+    try {
+      registros.push(
+        registroParaEnvio(entrada, { nif: company.taxId, nombre: company.legalName })
+      );
+    } catch (err) {
+      /**
+       * ⚠️ **Que la huella no se reproduzca es lo más grave que puede pasar
+       * aquí, y no se manda igual.** Significa que la factura guardada y el
+       * registro que la selló ya no describen lo mismo: o alguien movió un
+       * importe, o un cambio en el código movió la aritmética. Enviarlo sería
+       * declarar ante la Agencia un registro que no se corresponde con el
+       * documento que tiene el cliente.
+       */
+      if (err instanceof RegistroInconsistenteError) {
+        functions.logger.error('VeriFactu: la huella no se reproduce', {
+          fullNumber: err.fullNumber,
+          huellaGuardada: err.huellaGuardada,
+          huellaRecalculada: err.huellaRecalculada
+        });
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'invoices.errors.verifactuHashMismatch'
+        );
+      }
+      throw err;
+    }
   }
 
-  const company = companyConfig();
   const soap = buildEnvioSoap(
     cabeceraPara(company.legalName, company.taxId, ahora),
     registros
@@ -347,6 +403,104 @@ export const getVerifactuStatus = functions.https.onCall(
       bloqueadaPor: remisionBloqueada(remisiones)?.fullNumber,
       siguienteEnvio: noAntesDe && noAntesDe > new Date() ? noAntesDe.toISOString() : undefined
     };
+  }
+);
+
+/**
+ * ¿Se puede abrir una conexión autenticada con la AEAT?
+ *
+ * ⚠️ **La autenticación se prueba desde aquí, no entrando en la sede con el
+ * navegador.** Allí el certificado lo presenta el navegador; en el envío lo
+ * presenta Node, y cambian el formato del `.p12`, la cadena que se manda y la
+ * biblioteca que lo abre. Las tres han fallado ya por separado.
+ *
+ * ⚠️ **Y no prueba que la Agencia acepte al titular**: el saludo TLS puede salir
+ * bien y el servicio rechazar después en la capa de aplicación. Lo que responde
+ * es lo anterior — que el certificado se abre, no ha caducado y llega al otro
+ * lado—, que es lo que falla primero.
+ */
+export const checkVerifactuConnection = functions.https.onCall(
+  { secrets: [VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },
+  async (request): Promise<PruebaConexion> => {
+    if (!request.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+    }
+    const certificado = certificadoDesdeSecreto(
+      VELTO_SIGNING_CERT.value(),
+      VELTO_SIGNING_CERT_PASSWORD.value()
+    );
+    const resultado = await probarConexion(verifactuEndpoint(), certificado);
+    functions.logger.info('VeriFactu: prueba de conexión', resultado);
+    return resultado;
+  }
+);
+
+/**
+ * Volver a poner en cola una factura rechazada.
+ *
+ * ⚠️ **Sin esto, «bloqueado» sería un callejón sin salida.** Un rechazo para la
+ * cadena a propósito, porque casi siempre significa que hay algo que arreglar en
+ * cómo se construye el registro. Pero una vez arreglado hace falta decir
+ * «vuelve a intentarlo», y no puede hacerlo el propio sistema: si reintentara
+ * solo, un rechazo permanente se convertiría en un bucle que gasta el límite de
+ * envíos de la Agencia y no arregla nada.
+ *
+ * ⚠️ **El registro se reconstruye al enviar** (`verifactu-rebuild.ts`), así que
+ * un reintento después de corregir el código manda el registro corregido — con
+ * la misma huella, porque lo que se corrige nunca entra en ella. Sin eso, esto
+ * reenviaría el mismo error una y otra vez.
+ *
+ * Queda anotado quién lo desbloqueó: un rechazo de la AEAT y su reanudación son
+ * exactamente lo que habría que poder explicar después.
+ */
+export const retryVerifactuRecord = functions.https.onCall(
+  async (request): Promise<{ fullNumber: string }> => {
+    if (!request.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+    }
+    const invoiceId = String((request.data as { invoiceId?: string })?.invoiceId || '');
+    if (!invoiceId) {
+      throw new functions.https.HttpsError('invalid-argument', 'invoices.errors.invoiceRequired');
+    }
+
+    const ref = firestore().collection(SUBMISSIONS).doc(invoiceId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      throw new functions.https.HttpsError('not-found', 'invoices.errors.verifactuRecordMissing');
+    }
+    // Una aceptada no se reintenta: volvería como duplicado y sembraría la duda
+    // de si de verdad estaba registrada.
+    if (snap.data()?.estado === 'aceptado') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'invoices.errors.verifactuAlreadyAccepted'
+      );
+    }
+
+    await ref.set(
+      {
+        estado: 'pendiente',
+        pendienteEnvio: true,
+        codigoError: null,
+        descripcionError: null,
+        historial: FieldValue.arrayUnion({
+          at: new Date(),
+          estado: 'pendiente',
+          desbloqueadoPor: request.auth.token?.email || request.auth.uid,
+          csv: null,
+          codigoError: null,
+          descripcionError: null
+        })
+      },
+      { merge: true }
+    );
+
+    functions.logger.info('VeriFactu: factura devuelta a la cola', {
+      invoiceId,
+      fullNumber: snap.data()?.fullNumber,
+      por: request.auth.token?.email
+    });
+    return { fullNumber: String(snap.data()?.fullNumber || '') };
   }
 );
 

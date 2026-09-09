@@ -218,6 +218,50 @@ export function suggestPaymentMethod(total: number, alreadyPaid: number): Invoic
  * campos en el formulario, para que el resumen se lea de arriba abajo igual que
  * la pantalla.
  */
+/**
+ * Los prefijos de NIF-IVA de la Unión.
+ *
+ * ⚠️ **No son los códigos ISO.** Grecia usa `EL` y no `GR`, e Irlanda del Norte
+ * tiene el suyo, `XI`, desde el Brexit. Sacando la lista de ISO 3166 se quedaría
+ * fuera todo cliente griego.
+ *
+ * ⚠️ **Duplicado a propósito** en `functions/src/invoices/verifactu.ts`: la app
+ * y las functions compilan con tsconfigs separados y no pueden compartir módulo.
+ * Si cambia una, cambia la otra.
+ */
+const EU_VAT_PREFIXES = new Set([
+  'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'HR',
+  'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI',
+  'SK', 'XI'
+]);
+
+/**
+ * ¿El identificador dice ya de qué país es su titular?
+ *
+ * Un NIF, un NIE o un CIF españoles y un NIF-IVA europeo lo llevan dentro; un
+ * pasaporte, no. Es la línea que separa a quien tiene que declarar el país
+ * aparte para que su factura se pueda remitir.
+ */
+export function taxIdCarriesCountry(taxId: string): boolean {
+  const clean = (taxId || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  if (!clean) return true;
+  const sinPrefijo = clean.startsWith('ES') ? clean.slice(2) : clean;
+  const esEspanol =
+    /^\d{8}[A-Z]$/.test(sinPrefijo) ||
+    /^[XYZ]\d{7}[A-Z]$/.test(sinPrefijo) ||
+    /^[A-HJ-NP-SUVW]\d{7}[0-9A-J]$/.test(sinPrefijo);
+  if (esEspanol) return true;
+  return /^[0-9A-Z]+$/.test(clean.slice(2)) && EU_VAT_PREFIXES.has(clean.slice(0, 2));
+}
+
+/**
+ * Todo lo que impide emitir, campo a campo.
+ *
+ * **Una sola función**, la misma que consulta la pantalla y la que ejecuta la
+ * Cloud Function antes de escribir. El orden de las comprobaciones es el de los
+ * campos en el formulario, para que el resumen se lea de arriba abajo igual que
+ * la pantalla.
+ */
 export function validateInvoice(input: {
   recipient?: Partial<InvoiceRecipient> | null;
   lines?: InvoiceLine[] | null;
@@ -242,6 +286,26 @@ export function validateInvoice(input: {
   }
   if (!recipient.address?.trim()) {
     problems['recipientAddress'] = 'invoices.problems.recipientAddressRequired';
+  }
+
+  /**
+   * El país, **cuando el identificador no dice de dónde es su titular**.
+   *
+   * ⚠️ **Se pide aquí, antes de emitir, porque después no tiene arreglo.** La
+   * AEAT rechaza el registro con el `1111` —«El campo CodigoPais es obligatorio
+   * cuando IDType es distinto de NIF-IVA (02)»— y una factura emitida no se
+   * puede editar: quedaría una factura buena que no se puede remitir nunca.
+   *
+   * Un NIF español y un NIF-IVA europeo llevan el país dentro; un pasaporte, no.
+   * Y el pasaporte es el caso normal aquí: un turista alquilando un coche.
+   * Descubierto contra preproducción el 9 de septiembre de 2026.
+   */
+  if (
+    recipient.taxId?.trim() &&
+    !taxIdCarriesCountry(recipient.taxId) &&
+    !/^[A-Z]{2}$/.test((recipient.countryCode || '').trim().toUpperCase())
+  ) {
+    problems['recipientCountry'] = 'invoices.problems.recipientCountryRequired';
   }
 
   // --- Líneas ---

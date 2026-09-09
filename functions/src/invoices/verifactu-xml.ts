@@ -116,10 +116,22 @@ export function registroAltaXml(r: RegistroAlta): string {
   partes.push(el('DescripcionOperacion', r.DescripcionOperacion));
 
   if (r.Destinatarios?.IDDestinatario?.length) {
-    const destinatarios = r.Destinatarios.IDDestinatario.map(
-      (d) =>
-        '<sf:IDDestinatario>' + el('NombreRazon', d.NombreRazon) + el('NIF', d.NIF) + '</sf:IDDestinatario>'
-    ).join('');
+    const destinatarios = r.Destinatarios.IDDestinatario.map((d) => {
+      /**
+       * ⚠️ **`NIF` e `IDOtro` son un `choice`, no dos campos.** `NIF` es solo
+       * para identificadores españoles; un NIF-IVA extranjero ahí valida contra
+       * el esquema y la AEAT lo rechaza con el `1100`. Quién va dónde lo decide
+       * `identificacionDestinatario()`; aquí solo se serializa lo que venga.
+       */
+      const identificacion = d.IDOtro
+        ? '<sf:IDOtro>' +
+          el('CodigoPais', d.IDOtro.CodigoPais) +
+          el('IDType', d.IDOtro.IDType) +
+          el('ID', d.IDOtro.ID) +
+          '</sf:IDOtro>'
+        : el('NIF', d.NIF);
+      return '<sf:IDDestinatario>' + el('NombreRazon', d.NombreRazon) + identificacion + '</sf:IDDestinatario>';
+    }).join('');
     partes.push(`<sf:Destinatarios>${destinatarios}</sf:Destinatarios>`);
   }
 

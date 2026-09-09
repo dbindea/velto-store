@@ -124,16 +124,31 @@ describe('el XML del envío valida contra los esquemas de la AEAT', () => {
     expect(resultado.errors).toEqual([]);
   }, 30_000);
 
-  it('una entrega intracomunitaria exenta', async () => {
+  /**
+   * ⚠️ **El destinatario es EXTRANJERO, y ese es el punto.** Esta prueba
+   * existía con un NIF español y por eso pasaba mientras la realidad fallaba:
+   * una entrega intracomunitaria exenta la cobra, por definición, alguien de
+   * otro Estado miembro, y su NIF-IVA **no puede ir en `NIF`**. La AEAT lo
+   * rechazó con el `1100` el 9 de septiembre de 2026, contra preproducción, con
+   * este mismo XML dándose por válido aquí.
+   */
+  it('una entrega intracomunitaria exenta, con destinatario extranjero', async () => {
     const registro = buildRegistroAlta({
       ...registroBase,
+      destinatario: { nombreRazon: 'Client Intracomunitar SRL', nif: 'RO12345678' },
       lines: [{ taxRegime: 'exempt_eu' }],
       desglose: [],
       exemptTotal: 12000,
       cuotaTotal: 0,
       importeTotal: 12000
     });
-    const resultado = await validar(buildEnvioDocumento(cabecera, [registro]));
+    const xml = buildEnvioDocumento(cabecera, [registro]);
+    // Lo que la validación de esquema NO comprueba, porque el patrón de `NIF`
+    // admite la cadena: que el identificador esté en el campo que le toca.
+    expect(xml).toContain('<sf:IDOtro>');
+    expect(xml).toContain('<sf:CodigoPais>RO</sf:CodigoPais>');
+    expect(xml).not.toContain('<sf:NIF>RO12345678</sf:NIF>');
+    const resultado = await validar(xml);
     expect(resultado.errors).toEqual([]);
   }, 30_000);
 

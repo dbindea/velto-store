@@ -1382,33 +1382,37 @@
       "company": "Empresa"
     },
     "problems": {
+      "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €",
+      "euVatIdRequired": "Una entrega intracomunitaria exige el NIF-IVA del comprador (ej.: PT501234567)",
+      "exemptionNoteRequired": "Indica qué norma ampara la exención",
+      "lineDescriptionRequired": "Describe el concepto",
+      "linePriceInvalid": "El importe no puede ser negativo",
+      "lineQuantityRequired": "La cantidad debe ser mayor que cero",
+      "lineVatInvalid": "Indica un tipo de IVA válido",
+      "linesRequired": "Añade al menos un concepto",
+      "paymentMethodRequired": "Elige la forma de pago",
+      "rebuPurchasePriceRequired": "En REBU hace falta el precio de compra: la base es el margen",
+      "recipientAddressRequired": "El domicilio fiscal es obligatorio en toda factura",
+      "recipientCountryRequired": "Indica el país: con un documento que no es un NIF español ni un NIF-IVA europeo, la factura no se puede remitir sin él",
       "recipientNameRequired": "Indica el nombre o la razón social",
       "recipientTaxIdRequired": "El NIF es obligatorio en toda factura",
-      "recipientAddressRequired": "El domicilio fiscal es obligatorio en toda factura",
-      "linesRequired": "Añade al menos un concepto",
-      "lineDescriptionRequired": "Describe el concepto",
-      "lineQuantityRequired": "La cantidad debe ser mayor que cero",
-      "linePriceInvalid": "El importe no puede ser negativo",
-      "lineVatInvalid": "Indica un tipo de IVA válido",
-      "paymentMethodRequired": "Elige la forma de pago",
-      "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €",
-      "rebuPurchasePriceRequired": "En REBU hace falta el precio de compra: la base es el margen",
-      "exemptionNoteRequired": "Indica qué norma ampara la exención",
-      "euVatIdRequired": "Una entrega intracomunitaria exige el NIF-IVA del comprador (ej.: PT501234567)",
-      "rectifiedInvoiceRequired": "Indica qué factura se rectifica",
-      "rectifyingTypeRequired": "Elige la modalidad: por sustitución o por diferencias",
-      "rectifyingReasonRequired": "Elige la causa de la rectificación",
-      "rectifyingNoteRequired": "Explica por qué se rectifica: es lo que consta en el documento",
       "rectifiedBaseRequired": "Por sustitución hay que indicar la base rectificada",
-      "rectifiedVatRequired": "Por sustitución hay que indicar la cuota rectificada"
+      "rectifiedInvoiceRequired": "Indica qué factura se rectifica",
+      "rectifiedVatRequired": "Por sustitución hay que indicar la cuota rectificada",
+      "rectifyingNoteRequired": "Explica por qué se rectifica: es lo que consta en el documento",
+      "rectifyingReasonRequired": "Elige la causa de la rectificación",
+      "rectifyingTypeRequired": "Elige la modalidad: por sustitución o por diferencias"
     },
     "errors": {
-      "unauthenticated": "Debes iniciar sesión",
       "alreadyIssued": "Esta factura ya se emitió",
       "cannotDeleteIssued": "Una factura emitida no se puede borrar. Para corregirla, emite una rectificativa.",
       "issueFailed": "No se pudo emitir la factura",
       "loadFailed": "No se pudieron cargar las facturas",
-      "proformaFailed": "No se pudo generar la proforma"
+      "proformaFailed": "No se pudo generar la proforma",
+      "unauthenticated": "Debes iniciar sesión",
+      "verifactuHashMismatch": "La huella de una factura no cuadra con lo que hay guardado. No se ha enviado nada: hay que revisarlo antes de seguir.",
+      "verifactuRecordMissing": "Esa factura no tiene registro de facturación, así que no se puede remitir. Es un incidente: avisa antes de emitir más.",
+      "verifactuUnreachable": "No se pudo completar el envío a la Agencia. Puede que sí lo haya recibido: se reintentará solo."
     },
     "taxRegime": "Régimen de IVA",
     "purchasePrice": "Precio de compra (IVA incl.)",
@@ -1446,6 +1450,8 @@
       "R5": "R5 · Rectificación de factura simplificada"
     },
     "rectifiedBase": "Base rectificada",
-    "rectifiedVat": "Cuota rectificada"
+    "rectifiedVat": "Cuota rectificada",
+    "recipientCountry": "País del destinatario",
+    "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir."
   }
 }

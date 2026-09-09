@@ -56,6 +56,12 @@ interface IssueInvoiceRequest {
     name: string;
     taxId: string;
     address: string;
+    /**
+     * ISO 3166-1 alfa-2. Obligatorio cuando el identificador no lleva el país
+     * dentro —un pasaporte—: sin él la AEAT rechaza el registro con el `1111` y
+     * la factura, ya emitida, no se puede arreglar.
+     */
+    countryCode?: string;
     email?: string;
     billingProfileId?: string;
   };
@@ -470,7 +476,15 @@ export const issueInvoice = functions.https.onCall(
           .filter(Boolean)
           .join('; '),
         destinatario: data.recipient?.name
-          ? { nombreRazon: data.recipient.name, nif: data.recipient.taxId }
+          ? {
+              nombreRazon: data.recipient.name,
+              nif: data.recipient.taxId,
+              // Obligatorio si el identificador no lleva el país dentro —un
+              // pasaporte—, y lo exige `validateInvoiceInput` antes de llegar
+              // aquí: sin él la AEAT rechaza el registro con el `1111` y la
+              // factura ya no se puede arreglar.
+              codigoPais: data.recipient.countryCode
+            }
           : undefined,
         lines: data.lines || [],
         desglose: totals.byVatRate,

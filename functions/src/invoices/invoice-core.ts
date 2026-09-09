@@ -13,6 +13,11 @@
  * profundidad que aplican los guards del workflow.
  */
 
+// Sin ciclo: `verifactu.ts` solo importa de `hash.ts`. La regla de qué
+// identificadores llevan el país dentro vive allí porque es la misma que decide
+// dónde va cada uno en el registro; tenerla dos veces sería tener dos opiniones.
+import { identificadorLlevaPais } from './verifactu';
+
 /** ⚠️ 1.000 €, y la ley dice «igual o superior», así que el máximo es 999,99. */
 export const MAX_CASH_PAYMENT = 1000;
 
@@ -175,7 +180,7 @@ export type FieldProblems = Record<string, string>;
  * algo que la function rechaza, que es la peor de las dos formas de fallar.
  */
 export function validateInvoiceInput(input: {
-  recipient?: { name?: string; taxId?: string; address?: string } | null;
+  recipient?: { name?: string; taxId?: string; address?: string; countryCode?: string } | null;
   lines?: InvoiceLineInput[] | null;
   paymentMethod?: string | null;
   /**
@@ -197,6 +202,22 @@ export function validateInvoiceInput(input: {
   }
   if (!recipient.address?.trim()) {
     problems['recipientAddress'] = 'invoices.problems.recipientAddressRequired';
+  }
+
+  /**
+   * El país del destinatario, **cuando su identificador no dice de dónde es**.
+   *
+   * ⚠️ **Esto se comprueba aquí, antes de consumir número de factura, porque
+   * después no tiene arreglo.** La AEAT rechaza el registro con el `1111` —«El
+   * campo CodigoPais es obligatorio cuando IDType es distinto de NIF-IVA
+   * (02)»— y una factura emitida no se puede editar: quedaría una factura
+   * válida que no se puede remitir nunca. Un NIF español y un NIF-IVA europeo
+   * llevan el país dentro; un pasaporte, no. Y el pasaporte es el caso normal
+   * aquí: un turista alquilando un coche.
+   */
+  const nif = (recipient.taxId || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  if (nif && !identificadorLlevaPais(nif) && !/^[A-Z]{2}$/.test(recipient.countryCode || '')) {
+    problems['recipientCountry'] = 'invoices.problems.recipientCountryRequired';
   }
 
   const conContenido = lines.filter(

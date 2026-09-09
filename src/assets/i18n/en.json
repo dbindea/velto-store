@@ -1382,33 +1382,37 @@
       "company": "Company"
     },
     "problems": {
+      "cashLimitExceeded": "Cash is not allowed from €1,000 upwards",
+      "euVatIdRequired": "An intra-Community supply requires the buyer's EU VAT number (e.g. PT501234567)",
+      "exemptionNoteRequired": "State the legal basis for the exemption",
+      "lineDescriptionRequired": "Describe the item",
+      "linePriceInvalid": "The amount cannot be negative",
+      "lineQuantityRequired": "Quantity must be greater than zero",
+      "lineVatInvalid": "Enter a valid VAT rate",
+      "linesRequired": "Add at least one item",
+      "paymentMethodRequired": "Choose a payment method",
+      "rebuPurchasePriceRequired": "The margin scheme needs the purchase price: the base is the margin",
+      "recipientAddressRequired": "The registered address is required on every invoice",
+      "recipientCountryRequired": "Select the country: with a document that is neither a Spanish tax ID nor an EU VAT number, the invoice cannot be filed without it",
       "recipientNameRequired": "Enter the name or company name",
       "recipientTaxIdRequired": "The tax ID is required on every invoice",
-      "recipientAddressRequired": "The registered address is required on every invoice",
-      "linesRequired": "Add at least one item",
-      "lineDescriptionRequired": "Describe the item",
-      "lineQuantityRequired": "Quantity must be greater than zero",
-      "linePriceInvalid": "The amount cannot be negative",
-      "lineVatInvalid": "Enter a valid VAT rate",
-      "paymentMethodRequired": "Choose a payment method",
-      "cashLimitExceeded": "Cash is not allowed from €1,000 upwards",
-      "rebuPurchasePriceRequired": "The margin scheme needs the purchase price: the base is the margin",
-      "exemptionNoteRequired": "State the legal basis for the exemption",
-      "euVatIdRequired": "An intra-Community supply requires the buyer's EU VAT number (e.g. PT501234567)",
-      "rectifiedInvoiceRequired": "State which invoice is being corrected",
-      "rectifyingTypeRequired": "Choose the method: by substitution or by difference",
-      "rectifyingReasonRequired": "Choose the grounds for the correction",
-      "rectifyingNoteRequired": "Explain why it is corrected: it is what the document states",
       "rectifiedBaseRequired": "By substitution the corrected base is required",
-      "rectifiedVatRequired": "By substitution the corrected VAT is required"
+      "rectifiedInvoiceRequired": "State which invoice is being corrected",
+      "rectifiedVatRequired": "By substitution the corrected VAT is required",
+      "rectifyingNoteRequired": "Explain why it is corrected: it is what the document states",
+      "rectifyingReasonRequired": "Choose the grounds for the correction",
+      "rectifyingTypeRequired": "Choose the method: by substitution or by difference"
     },
     "errors": {
-      "unauthenticated": "You must sign in",
       "alreadyIssued": "This invoice has already been issued",
       "cannotDeleteIssued": "An issued invoice cannot be deleted. To correct it, issue a credit note.",
       "issueFailed": "The invoice could not be issued",
       "loadFailed": "Invoices could not be loaded",
-      "proformaFailed": "The pro forma could not be generated"
+      "proformaFailed": "The pro forma could not be generated",
+      "unauthenticated": "You must sign in",
+      "verifactuHashMismatch": "An invoice fingerprint does not match what is stored. Nothing was sent: this needs looking at before carrying on.",
+      "verifactuRecordMissing": "That invoice has no filing record, so it cannot be submitted. This is an incident: raise it before issuing more.",
+      "verifactuUnreachable": "The submission to the tax agency could not be completed. It may still have arrived: it will be retried automatically."
     },
     "taxRegime": "VAT scheme",
     "purchasePrice": "Purchase price (VAT incl.)",
@@ -1446,6 +1450,8 @@
       "R5": "R5 · Correction of a simplified invoice"
     },
     "rectifiedBase": "Corrected base",
-    "rectifiedVat": "Corrected VAT"
+    "rectifiedVat": "Corrected VAT",
+    "recipientCountry": "Recipient country",
+    "recipientCountryHint": "Their document does not say which country they are from, so it must be declared. The tax agency rejects the record without it, and an issued invoice cannot be corrected."
   }
 }

@@ -14,6 +14,7 @@
  */
 
 import * as https from 'https';
+import * as tls from 'tls';
 import { URL } from 'url';
 import * as forge from 'node-forge';
 import { parseRespuesta, RespuestaEnvio } from './verifactu-respuesta';
@@ -49,6 +50,19 @@ export interface CertificadoCliente {
    * CA y no necesita intermedio ninguno.
    */
   cert: string;
+  /**
+   * Quién es y hasta cuándo vale, leído del propio certificado.
+   *
+   * ⚠️ **El certificado de la FNMT caduca**, y cuando lo haga las facturas
+   * dejarán de remitirse. Sin este dato el primer aviso sería una factura sin
+   * llegar a la Agencia; con él, la pantalla puede avisar antes.
+   */
+  titular?: {
+    subject: string;
+    emisor: string;
+    validoHasta: string;
+    intermedios: number;
+  };
 }
 
 export interface EnvioOptions {
@@ -216,6 +230,97 @@ export function abrirP12(p12: Buffer, passphrase: string): CertificadoCliente {
 
   return {
     key: forge.pki.privateKeyToPem(clave),
-    cert: cadena.map((c) => forge.pki.certificateToPem(c)).join('')
+    cert: cadena.map((c) => forge.pki.certificateToPem(c)).join(''),
+    titular: {
+      subject: nombreDistinguido(propio.subject.attributes),
+      emisor: nombreDistinguido(propio.issuer.attributes),
+      validoHasta: propio.validity.notAfter.toISOString(),
+      intermedios: cadena.length - 1
+    }
   };
+}
+
+/**
+ * El nombre distinguido de un certificado, legible.
+ *
+ * ⚠️ **node-forge devuelve las cadenas byte a byte, no decodificadas.** Un
+ * certificado de la FNMT trae «AC Representación» en UTF-8, y sin decodificarlo
+ * sale «AC Representaciã³n». No es cosmético: este texto está para que una
+ * persona lo lea y reconozca su propio certificado, y un nombre roto invita a
+ * pensar que el fichero está mal.
+ */
+function nombreDistinguido(attrs: forge.pki.CertificateField[]): string {
+  return attrs
+    .map((a) => {
+      const nombre = a.shortName || a.name || a.type;
+      const valor = typeof a.value === 'string' ? Buffer.from(a.value, 'binary').toString('utf8') : String(a.value);
+      return `${nombre}=${valor}`;
+    })
+    .join(', ');
+}
+
+export interface PruebaConexion {
+  endpoint: string;
+  /** ¿Completó el saludo TLS presentando nuestro certificado? */
+  handshake: boolean;
+  /** Lo que sabemos de nuestro propio certificado. */
+  titular?: CertificadoCliente['titular'];
+  /** Días que le quedan al certificado. Negativo si ya caducó. */
+  diasParaCaducar?: number;
+  error?: string;
+}
+
+/**
+ * ¿Se puede abrir una conexión autenticada con la AEAT?
+ *
+ * ⚠️ **Esto NO prueba que la Agencia acepte nuestra identidad**, y decirlo
+ * importa: el saludo TLS puede completarse y el servicio rechazar después al
+ * titular en la capa de aplicación (`4112`, «el titular del certificado debe ser
+ * obligado a emisión, colaborador social, apoderado o sucesor»). Lo que esto
+ * responde es lo anterior a eso — que el `.p12` se abre, que no ha caducado y
+ * que llega hasta el otro lado— que es justo lo que falla primero y lo que un
+ * navegador entrando en la sede no demuestra: allí el certificado lo presenta el
+ * navegador, aquí lo presenta Node.
+ *
+ * Sirve además para lo que va a pasar seguro: **el certificado de la FNMT
+ * caduca**. Sin esto, el primer aviso sería una factura sin remitir.
+ */
+export async function probarConexion(
+  endpoint: string,
+  certificado: CertificadoCliente,
+  timeoutMs = 15_000
+): Promise<PruebaConexion> {
+  const url = new URL(endpoint);
+  const caducidad = certificado.titular?.validoHasta
+    ? new Date(certificado.titular.validoHasta)
+    : undefined;
+  const base: PruebaConexion = {
+    endpoint,
+    handshake: false,
+    titular: certificado.titular,
+    diasParaCaducar: caducidad
+      ? Math.floor((caducidad.getTime() - Date.now()) / 86_400_000)
+      : undefined
+  };
+
+  return new Promise<PruebaConexion>((resolve) => {
+    const socket = tls.connect(
+      {
+        host: url.hostname,
+        port: Number(url.port) || 443,
+        servername: url.hostname,
+        key: certificado.key,
+        cert: certificado.cert
+      },
+      () => {
+        resolve({ ...base, handshake: socket.authorized });
+        socket.end();
+      }
+    );
+    socket.setTimeout(timeoutMs, () => {
+      socket.destroy();
+      resolve({ ...base, error: 'la conexión no se completó a tiempo' });
+    });
+    socket.on('error', (e) => resolve({ ...base, error: e.message }));
+  });
 }

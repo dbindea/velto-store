@@ -248,14 +248,41 @@ export class SettingsComponent implements OnInit {
     try {
       this.lastSend.set(await this.verifactu.send());
       await this.loadVerifactu();
-    } catch {
-      // ⚠️ Un fallo aquí NO significa que las facturas no hayan entrado: si se
-      // cortó la conexión, la AEAT pudo registrarlas y perderse la respuesta.
-      // Por eso el mensaje dice que no se pudo completar, no que no se enviaron.
-      this.errorKey.set('settings.verifactu.sendError');
+    } catch (err) {
+      this.errorKey.set(this.sendErrorKeyOf(err));
+      // El estado puede haber cambiado aunque el envío fallara: un rechazo
+      // marca facturas y hay que verlo sin recargar la pantalla.
+      await this.loadVerifactu();
     } finally {
       this.sendingVerifactu.set(false);
     }
+  }
+
+  /**
+   * ⚠️ **Los tres motivos por los que esto falla NO son el mismo aviso.**
+   *
+   * - Que no se pudiera llegar a la Agencia no significa que las facturas no
+   *   hayan entrado: pudo registrarlas y perderse la respuesta, así que el
+   *   mensaje dice «no se pudo completar» y no «no se enviaron».
+   * - Que una huella no cuadre es lo más grave y no se reintenta solo.
+   * - Y una factura sin registro es un incidente que hay que resolver antes de
+   *   emitir más.
+   *
+   * Un único «no se pudo enviar» los taparía los tres. La lista es explícita
+   * porque `TranslateService.translate()` devuelve **la propia clave** cuando no
+   * la encuentra: una clave desconocida saldría en crudo en pantalla.
+   */
+  private sendErrorKeyOf(err: unknown): string {
+    const conocidas = [
+      'invoices.errors.verifactuUnreachable',
+      'invoices.errors.verifactuHashMismatch',
+      'invoices.errors.verifactuRecordMissing',
+      'invoices.errors.unauthenticated'
+    ];
+    const msg = typeof (err as { message?: unknown })?.message === 'string'
+      ? (err as { message: string }).message
+      : '';
+    return conocidas.includes(msg) ? msg : 'settings.verifactu.sendError';
   }
 
   permissionsFor(role: UserRole | undefined): number {

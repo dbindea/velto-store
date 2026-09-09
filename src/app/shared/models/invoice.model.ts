@@ -129,6 +129,20 @@ export interface BillingProfile {
   taxId: string;
   /** Domicilio fiscal completo, también obligatorio (art. 6.1.c). */
   address: string;
+  /**
+   * ISO 3166-1 alfa-2, y **obligatorio cuando el identificador no dice de qué
+   * país es su titular**: un pasaporte, típicamente.
+   *
+   * ⚠️ Sin él la AEAT rechaza el registro de facturación con el `1111` —«El
+   * campo CodigoPais es obligatorio cuando IDType es distinto de NIF-IVA
+   * (02)»—, y una factura emitida no se puede editar: quedaría una factura
+   * buena que no se puede remitir nunca. Por eso lo pide `validateInvoice()`
+   * antes de consumir número, y no después.
+   *
+   * Un NIF español y un NIF-IVA europeo llevan el país dentro, así que ahí
+   * sobra. El caso en que hace falta es el habitual en un alquiler: un turista.
+   */
+  countryCode?: string;
   email?: string;
   phone?: string;
   /** Cliente al que se asocia por defecto, si lo hay. */
@@ -150,6 +164,20 @@ export interface InvoiceRecipient {
   name: string;
   taxId: string;
   address: string;
+  /**
+   * ISO 3166-1 alfa-2, y **obligatorio cuando el identificador no dice de qué
+   * país es su titular**: un pasaporte, típicamente.
+   *
+   * ⚠️ Sin él la AEAT rechaza el registro de facturación con el `1111` —«El
+   * campo CodigoPais es obligatorio cuando IDType es distinto de NIF-IVA
+   * (02)»—, y una factura emitida no se puede editar: quedaría una factura
+   * buena que no se puede remitir nunca. Por eso lo pide `validateInvoice()`
+   * antes de consumir número, y no después.
+   *
+   * Un NIF español y un NIF-IVA europeo llevan el país dentro, así que ahí
+   * sobra. El caso en que hace falta es el habitual en un alquiler: un turista.
+   */
+  countryCode?: string;
   email?: string;
   /** De qué perfil se copió, solo para poder volver a él desde la pantalla. */
   billingProfileId?: string;

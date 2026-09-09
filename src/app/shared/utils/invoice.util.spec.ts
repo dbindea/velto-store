@@ -17,6 +17,7 @@ import {
   cashAllowedFor,
   differsFromReservation,
   formatInvoiceNumber,
+  taxIdCarriesCountry,
   invoiceDeadlineFor,
   invoiceSeriesFor,
   isInvoiceOverdue,
@@ -548,5 +549,75 @@ describe('differsFromReservation', () => {
   it('no salta cuando no hay reserva de origen', () => {
     expect(differsFromReservation(250, null)).toBe(false);
     expect(differsFromReservation(250, undefined)).toBe(false);
+  });
+});
+
+/**
+ * El país del destinatario.
+ *
+ * ⚠️ **Esto lo encontró preproducción, no un test.** Facturando a un turista con
+ * pasaporte, la AEAT devolvió el `1111`: «El campo CodigoPais es obligatorio
+ * cuando IDType es distinto de NIF-IVA (02)». El esquema lo declara opcional y
+ * el servicio lo exige igual, así que el XML era válido y la factura ya estaba
+ * emitida — es decir, sin arreglo posible. Por eso se comprueba **antes** de
+ * consumir número, y no al remitir.
+ */
+describe('el país del destinatario', () => {
+  const conNif = (taxId: string, countryCode?: string) =>
+    validateInvoice({
+      recipient: { ...destinatario, taxId, countryCode },
+      lines: [linea({})],
+      paymentMethod: 'transfer'
+    })['recipientCountry'];
+
+  it('un NIF español no lo pide: lo lleva dentro', () => {
+    expect(conNif('B12345678')).toBeUndefined();
+    expect(conNif('12345678Z')).toBeUndefined();
+    expect(conNif('X4273299Z')).toBeUndefined();
+  });
+
+  it('un NIF-IVA europeo tampoco: el prefijo ES el país', () => {
+    expect(conNif('RO12345674')).toBeUndefined();
+    expect(conNif('DE811569869')).toBeUndefined();
+  });
+
+  /** El caso que la AEAT rechazó: un turista con pasaporte. */
+  it('un pasaporte SÍ lo pide', () => {
+    expect(conNif('AB1234567')).toBe('invoices.problems.recipientCountryRequired');
+  });
+
+  it('y deja de pedirlo en cuanto se indica', () => {
+    expect(conNif('AB1234567', 'GB')).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ Dos letras cualesquiera no valen: `CodigoPais` es ISO 3166-1 alfa-2 y
+   * un valor inventado se rechaza igual que la ausencia.
+   */
+  it('un país mal escrito no cuenta como indicado', () => {
+    expect(conNif('AB1234567', 'Reino Unido')).toBe(
+      'invoices.problems.recipientCountryRequired'
+    );
+  });
+});
+
+describe('qué identificadores llevan el país dentro', () => {
+  it('los españoles y los NIF-IVA europeos, sí', () => {
+    expect(taxIdCarriesCountry('B12345678')).toBe(true);
+    expect(taxIdCarriesCountry('ESB12345678')).toBe(true);
+    expect(taxIdCarriesCountry('RO12345674')).toBe(true);
+  });
+
+  /**
+   * ⚠️ Grecia usa `EL` en el NIF-IVA y no su código ISO `GR`: sacando la lista
+   * de ISO 3166 se le pediría el país a todo cliente griego.
+   */
+  it('Grecia va con EL, que es su prefijo de NIF-IVA', () => {
+    expect(taxIdCarriesCountry('EL123456789')).toBe(true);
+  });
+
+  it('un pasaporte y un identificador de fuera de la Unión, no', () => {
+    expect(taxIdCarriesCountry('AB1234567')).toBe(false);
+    expect(taxIdCarriesCountry('CHE123456789')).toBe(false);
   });
 });

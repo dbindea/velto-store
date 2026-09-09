@@ -255,6 +255,92 @@ describe('las rectificativas', () => {
 });
 
 /**
+ * Cómo se identifica al destinatario.
+ *
+ * ⚠️ **Esto lo encontró preproducción, no un test.** La primera factura exenta
+ * intracomunitaria salió con el NIF-IVA rumano dentro de `NIF` y la AEAT la
+ * rechazó con el `1100`, «Valor o tipo incorrecto del campo.: NIF». El XML era
+ * **válido** —el patrón de `NIF` admite la cadena—, así que ni el esquema ni
+ * ningún test podían cazarlo: lo que estaba mal era qué significaba el campo.
+ * Estos tests existen para que no vuelva a pasar.
+ */
+describe('la identificación del destinatario', () => {
+  const idDe = (nif: string) =>
+    buildRegistroAlta({ ...base, destinatario: { nombreRazon: 'X', nif } }).Destinatarios!
+      .IDDestinatario[0];
+
+  it('un NIF español va en NIF', () => {
+    expect(idDe('12345678Z')).toMatchObject({ NIF: '12345678Z' });
+    expect(idDe('12345678Z').IDOtro).toBeUndefined();
+  });
+
+  it('un CIF de empresa también', () => {
+    expect(idDe('B88866900')).toMatchObject({ NIF: 'B88866900' });
+  });
+
+  it('y un NIE', () => {
+    expect(idDe('X4273299Z')).toMatchObject({ NIF: 'X4273299Z' });
+  });
+
+  /**
+   * ⚠️ El esquema lo prohíbe expresamente: «No se permite CodigoPais=ES e
+   * IDType=01 […] debe utilizarse NIF en lugar de IDOtro».
+   */
+  it('un NIF-IVA español sigue siendo un NIF, sin el prefijo ES', () => {
+    expect(idDe('ESB88866900')).toMatchObject({ NIF: 'B88866900' });
+    expect(idDe('ESB88866900').IDOtro).toBeUndefined();
+  });
+
+  /** El caso que la AEAT rechazó. */
+  it('un NIF-IVA extranjero va en IDOtro, con su país', () => {
+    expect(idDe('RO12345678')).toMatchObject({
+      IDOtro: { CodigoPais: 'RO', IDType: '02', ID: 'RO12345678' }
+    });
+    expect(idDe('RO12345678').NIF).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ El país sale del propio identificador y no de un campo aparte:
+   * preguntarlo dos veces es garantizar que algún día discrepen.
+   */
+  it('el país se lee del prefijo, no se pide aparte', () => {
+    expect(idDe('DE811569869').IDOtro?.CodigoPais).toBe('DE');
+    expect(idDe('FR12345678901').IDOtro?.CodigoPais).toBe('FR');
+  });
+
+  /**
+   * ⚠️ **Dos letras al principio no hacen un NIF-IVA.** `AB` no es ningún
+   * Estado miembro, y declararlo como código de país inventaría un dato del
+   * destinatario. Sin país reconocible es otro documento probatorio.
+   */
+  it('un pasaporte sin prefijo de Estado miembro se declara como otro documento', () => {
+    expect(idDe('AB1234567')).toMatchObject({ IDOtro: { IDType: '06', ID: 'AB1234567' } });
+    expect(idDe('AB1234567').IDOtro?.CodigoPais).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ `IDType=02` es **NIF-IVA**, una figura de la Unión. Un número suizo no
+   * lo es aunque empiece por dos letras que sí son un país.
+   */
+  it('un identificador de fuera de la Unión no se declara como NIF-IVA', () => {
+    expect(idDe('CHE123456789').IDOtro?.IDType).toBe('06');
+    expect(idDe('CHE123456789').IDOtro?.CodigoPais).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ Grecia usa `EL` en el NIF-IVA y no su código ISO `GR`. Sacando la lista
+   * de ISO 3166 se quedaría fuera todo cliente griego.
+   */
+  it('Grecia va con EL, que es su prefijo de NIF-IVA', () => {
+    expect(idDe('EL123456789').IDOtro).toMatchObject({ CodigoPais: 'EL', IDType: '02' });
+  });
+
+  it('los espacios y los guiones no cambian el identificador', () => {
+    expect(idDe('B-8886 6900')).toMatchObject({ NIF: 'B88866900' });
+  });
+});
+
+/**
  * El QR de cotejo, contrastado contra
  * `DetalleEspecificacTecnCodigoQRfactura.pdf` (AEAT).
  */
