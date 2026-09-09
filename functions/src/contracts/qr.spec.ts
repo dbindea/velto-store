@@ -91,3 +91,63 @@ describe('el QR de verificación', () => {
     }
   });
 });
+
+/**
+ * El **QR tributario** de la factura, que es otro símbolo y con otras reglas.
+ *
+ * ⚠️ **Su URL es mucho más larga que la del contrato** —lleva NIF, número,
+ * fecha e importe como parámetros—, así que el símbolo sale de una versión
+ * mayor: más módulos en el mismo espacio y por tanto módulos más pequeños. Que
+ * el del contrato se lea no dice nada del de la factura.
+ *
+ * El tamaño no es una decisión de diseño: el art. 21 de la Orden HAC/1177/2024
+ * lo fija **entre 30×30 y 40×40 mm**. Iba a 62 pt —21,9 mm— y se quedaba por
+ * debajo del mínimo.
+ */
+describe('el QR tributario de la factura', () => {
+  /** 32 mm en puntos PDF, que es lo que dibuja `taxQr()`. */
+  const SIZE = (32 / 25.4) * 72;
+
+  const urlDe = (base: string, numero: string, importe: string) =>
+    `${base}?nif=B88866900&numserie=${encodeURIComponent(numero)}&fecha=09-09-2026&importe=${importe}`;
+
+  it('se lee, y dice exactamente la URL de cotejo', () => {
+    const url = urlDe(
+      'https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR',
+      '2026/0005',
+      '127.05'
+    );
+    expect(decode(qrRects(buildQrMatrix(url), 0, 0, SIZE), SIZE)).toBe(url);
+  });
+
+  /**
+   * Los dos validadores tienen dominios de largo distinto, y una rectificativa
+   * lleva un número más largo que una factura ordinaria: los tres cambian la
+   * versión del símbolo.
+   */
+  it('se lee en los dos entornos y con una rectificativa', () => {
+    const casos = [
+      urlDe('https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR', '2026/0005', '127.05'),
+      urlDe('https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR', 'R2026/0001', '-36.30'),
+      urlDe('https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT/ValidarQR', '2026/9999', '12345.67')
+    ];
+    for (const url of casos) {
+      expect(decode(qrRects(buildQrMatrix(url), 0, 0, SIZE), SIZE), url).toBe(url);
+    }
+  });
+
+  /**
+   * ⚠️ **El tamaño no se comprueba descifrando, se comprueba midiendo.**
+   *
+   * Un lector por software descifra el símbolo a 62 pt sin despeinarse —se
+   * probó—, así que una prueba que dijera «al tamaño viejo no se lee» estaría
+   * afirmando algo falso. Lo que el art. 21 fija es el tamaño **impreso**, y de
+   * eso dependen la cámara de un móvil sobre un papel y la propia legalidad de
+   * la factura, no lo que consiga un decodificador con un bitmap perfecto.
+   */
+  it('el tamaño está dentro de lo que fija el art. 21', () => {
+    const mm = (SIZE / 72) * 25.4;
+    expect(mm).toBeGreaterThanOrEqual(30);
+    expect(mm).toBeLessThanOrEqual(40);
+  });
+});

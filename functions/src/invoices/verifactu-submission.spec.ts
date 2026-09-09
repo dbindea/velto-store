@@ -169,6 +169,14 @@ describe('qué le pasó a cada registro del lote', () => {
       )
     );
     expect(r[0].estado).toBe('aceptado');
+    /**
+     * ⚠️ **Y NO trae CSV**, porque la respuesta de un duplicado no lo lleva.
+     * Quien escriba esto tiene que dejar el que ya hubiera: es el acuse de que
+     * la factura está presentada, y reenviar algo ya registrado no puede
+     * destruir la prueba de que lo estaba. Pasó contra preproducción el 9 de
+     * septiembre de 2026: el reenvío se leyó bien y borró el CSV bueno.
+     */
+    expect(r[0].csv).toBeUndefined();
   });
 
   it('un error técnico deja la factura en error, que sí se reintenta', () => {

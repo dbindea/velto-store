@@ -156,47 +156,91 @@ Lo que queda por decidir, y es tuyo:
 Objetivo: llegar al 1 de enero de 2027 **sin estrenar nada**. Todo esto contra
 `prewww1.aeat.es`, nunca contra producción.
 
+⚠️ **Ejecutado el 9 de septiembre de 2026.** Lo marcado con [x] está comprobado
+contra preproducción de verdad, con facturas emitidas en desarrollo. Lo que
+sigue sin marcar es lo que falta, y está dicho abajo por qué.
+
 **Circuito básico**
 
-- [ ] El certificado **autentica desde la Cloud Function** (no desde el
-      navegador).
-- [ ] Un `RegistroAlta` valida contra los `.xsd` **antes** de enviarlo.
-- [ ] Envío de una factura → respuesta `Correcto` con su CSV.
-- [ ] La huella que calcula la AEAT coincide con la nuestra (error `2000` si no).
+- [x] El certificado **autentica desde la Cloud Function** (no desde el
+      navegador). `checkVerifactuConnection` completa el saludo TLS contra
+      `prewww1.aeat.es` presentando el certificado de representante de la FNMT
+      —`CN=X4273299Z DOREL BINDEA (R: B88866900)`, emitido por `AC
+      Representación`, válido hasta el 30 de julio de 2028—. Los dos intermedios
+      de la cadena viajan con él.
+- [x] Un `RegistroAlta` valida contra los `.xsd` **antes** de enviarlo.
+- [x] Envío de una factura → respuesta `Correcto` con su CSV
+      (`A-ABABF2E2E4G5TC`, factura `2026/0001`).
+- [x] La huella que calcula la AEAT coincide con la nuestra: ningún envío ha
+      devuelto el error `2000`.
 
 **El encadenamiento, que es lo que no se puede rehacer**
 
-- [ ] La primera se declara `PrimerRegistro`.
-- [ ] La segunda encadena con la primera y la AEAT lo acepta.
+- [x] La primera se declara `PrimerRegistro` y la AEAT la acepta.
+- [x] La segunda encadena con la primera y la AEAT lo acepta.
 - [ ] Reenviar la primera declarándola otra vez `PrimerRegistro` → tiene que dar
-      el error `2007`. **Si no lo da, es que no estamos donde creemos.**
+      el error `2007`. **No se puede provocar desde la aplicación**: el
+      encadenamiento sale del registro sellado al emitir, así que no hay forma de
+      volver a declarar como primera una factura que ya encadenó. Habría que
+      fabricar el XML a mano, que probaría el servicio y no nuestro código.
+
+⚠️ **Y se descubrió algo que el plan no preveía**: la AEAT **aceptó** una
+factura cuyo registro anterior nunca llegó a registrarse. Es decir, un eslabón
+que falta no tumba a los siguientes. Es una observación en preproducción, no una
+garantía, así que el envío sigue parándose ante un rechazo — pero explica por qué
+un rechazo no se propaga en cascada.
 
 **Los caminos que no son el feliz**
 
-- [ ] Un registro **duplicado**: la respuesta trae `RegistroDuplicado` con lo que
-      la AEAT ya tenía.
-- [ ] Un envío **parcialmente correcto**: dos facturas, una mal. Comprobar que se
-      distingue `EstadoEnvio` de `EstadoRegistro` — que el envío "funcione" no
-      significa que las dos hayan entrado.
-- [ ] Un **rechazo de cabecera** (4102, 4107…): que no se marque como enviada
-      ninguna factura.
-- [ ] **Corte de red a mitad**: que el reintento no cree un segundo registro ni
-      dé la factura por remitida.
+- [x] Un registro **duplicado**: reenviada una factura ya aceptada, la respuesta
+      trae el código `3000` y se lee como **aceptada**, no como fallo. Y ahí
+      apareció un fallo propio: el reenvío **borraba el CSV** de la remisión
+      buena, porque una respuesta de duplicado no trae CSV.
+- [x] Un envío **parcialmente correcto**: dos facturas en un lote, una aceptada y
+      otra rechazada, distinguidas línea a línea.
+- [ ] Un **rechazo de cabecera** (4102, 4107…). No se ha provocado: exigiría
+      mandar un NIF que no es el nuestro. Cubierto por tests con respuestas
+      guardadas.
+- [ ] **Corte de red a mitad.** No se ha provocado contra el servicio real.
+      Cubierto por tests: un fallo de transporte **nunca** marca la factura como
+      rechazada, se reintenta, y si había entrado vuelve como duplicado.
 
 **Los tipos de factura**
 
-- [ ] Factura ordinaria `F1` con IVA general.
-- [ ] Rectificativa `R1` por diferencias (`I`) con importes negativos.
+- [x] Factura ordinaria `F1` con IVA general.
+- [x] Rectificativa `R1` por diferencias (`I`) con importes negativos.
 - [ ] Rectificativa por sustitución (`S`), con base y cuota rectificadas.
-- [ ] Una exenta (`E5`) y una con inversión del sujeto pasivo (`S2`).
-- [ ] Una con `FechaOperacion` distinta de la expedición.
+      Valida contra el esquema; falta mandarla.
+- [x] Una exenta (`E5`) intracomunitaria, con NIF-IVA extranjero.
+- [ ] Una con inversión del sujeto pasivo (`S2`).
+- [x] Una con `FechaOperacion` distinta de la expedición.
 
 **Y lo último**
 
-- [ ] El **QR encendido** apuntando a preproducción, escaneado con un móvil de
-      verdad, que devuelva la factura.
+- [x] El **QR encendido** apuntando a preproducción: la sede responde
+      **«Encontrada»** con el NIF, el número, la fecha y el importe de la factura
+      `2026/0006`. Falta escanearlo con un móvil sobre papel impreso, que es lo
+      único que prueba el tamaño.
 - [ ] Solo entonces, `VELTO_VERIFACTU_ENABLED=true` en producción **con tu
       autorización expresa**.
+
+### Lo que encontró, que es para lo que servía
+
+Cuatro fallos, y **ninguno lo habría cazado un test**: en los cuatro el XML era
+válido contra el esquema oficial y lo que estaba mal era qué significaba.
+
+1. **NIF-IVA extranjero en el campo `NIF`** (error `1100`). `NIF` es solo para
+   identificadores españoles; el resto va en `IDOtro`. El test que lo cubría
+   usaba un NIF español como destinatario de una entrega intracomunitaria, que es
+   una combinación que no existe.
+2. **Falta el país** cuando el identificador no es un NIF-IVA (error `1111`). El
+   esquema lo declara opcional y el servicio lo exige. Afecta al caso más común
+   de un alquiler: un turista con pasaporte.
+3. **El registro estaba congelado en una factura inmutable**, así que un registro
+   rechazado no se podía corregir nunca. Arreglar el código no servía de nada.
+4. **El QR medía 21,9 mm** y el art. 21 lo fija entre 30×30 y 40×40, con la
+   leyenda a tamaño igual o superior al resto de datos y el rótulo «QR
+   tributario:» encima. Faltaban las tres cosas.
 
 ---
 

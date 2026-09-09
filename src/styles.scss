@@ -717,6 +717,44 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.2s ease;
 }
 
+/**
+ * ⚠️ **La FORMA del botón también es global, y no solo el color.**
+ *
+ * Es la misma trampa que `.form-control`, con el mismo final: `.btn` traía el
+ * relleno y el radio, y `.btn-primary` solo el color, así que un botón escrito
+ * `class="btn-primary"` en un componente que no declarara la clase salía
+ * **como un trozo de texto sobre fondo turquesa** —sin caja, sin relleno y sin
+ * esquinas—. Compila, pasa los tests y solo se ve mirando la pantalla; pasó con
+ * el botón de la tarjeta de la declaración responsable, que además llevaba
+ * meses así porque solo aparece cuando falta la declaración.
+ *
+ * En la aplicación conviven las dos formas de escribirlo —21 con `btn` delante
+ * y 29 sin él—, y no hay forma de acordarse de cuál toca. Poniendo la forma
+ * aquí, las dos funcionan.
+ *
+ * ⚠️ **Y no rompe a quien ya la declara**: con la encapsulación de Angular la
+ * regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0) y esta es
+ * (0,1,0), así que la suya sigue mandando. Es el mismo cálculo de M-46, al
+ * revés: allí había que subir la especificidad para ganar, aquí hay que
+ * quedarse por debajo para no pisar.
+ */
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 .btn-primary {
   background: var(--accent-color);
   color: white;

@@ -137,7 +137,14 @@ export function resultadosDelLote(
       invoiceId: r.invoiceId,
       fullNumber: r.fullNumber,
       estado,
-      csv: estado === 'aceptado' ? respuesta.csv : undefined,
+      /**
+       * ⚠️ **Un duplicado NO se queda con el CSV de este envío.** El acuse
+       * identifica al envío que registró la factura, y el que la registró fue
+       * otro: colgarle este diría que quedó presentada en una remisión en la
+       * que en realidad se rechazó por repetida. El bueno es el que ya está
+       * guardado, y por eso quien escriba esto no debe pisarlo con un vacío.
+       */
+      csv: desenlace === 'aceptado' ? respuesta.csv : undefined,
       codigoError: linea.codigoError,
       descripcionError: linea.descripcionError
     };

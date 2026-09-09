@@ -215,6 +215,16 @@ contratos firmados—, y con la forma del registro fijada desde la primera factu
 porque después no se puede reconstruir. El análisis, con las fuentes del BOE y
 de la AEAT, está en [docs/facturacion.md](docs/facturacion.md).
 
+⚠️ **Y la inmutabilidad tiene un límite que costó descubrir: lo que se congela
+no se puede corregir, ni siquiera cuando la AEAT lo rechaza.** El registro de
+facturación se guardaba entero dentro de la factura, así que un registro
+rechazado —por un fallo del código, no del dato— no había forma de arreglarlo, y
+como todo lo que viene detrás encadena con su huella, la facturación se quedaba
+parada sin salida. Por eso el registro se **reconstruye al enviar**
+(`verifactu-rebuild.ts`) y la huella se **comprueba**, no se copia: la factura
+sigue siendo inmutable, y lo que puede cambiar es solo cómo se declara algo que
+no entra en la huella. Ver «El registro que se manda» más abajo.
+
 ## Estructura
 
 Alias de path definidos en `tsconfig.json` — **úsalos siempre** en vez de rutas relativas largas:
@@ -610,15 +620,23 @@ También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf`, `doc
 (pública), `getPaymentCheckout` (**pública**, el cliente paga desde su móvil) y
 `getContractVerification` (**pública**, el QR del contrato en papel).
 
-Y las tres de **facturación**: `issueInvoice`, `generateProforma` y `generateReceipt`.
+Y las de **facturación**: `issueInvoice`, `generateProforma`, `generateReceipt`,
+`issueComplianceDeclaration`, `getComplianceStatus` y las cinco de la remisión a
+la AEAT — `sendVerifactuRecords`, `sweepVerifactuRecords` (**programada**, cada
+cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
+`checkVerifactuConnection`.
+
+⚠️ **`sweepVerifactuRecords` es la primera function programada del proyecto**, y
+necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
+conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
 ⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado con
-`firebase functions:list` el 8 de septiembre de 2026):
+`firebase functions:list` el 8 de septiembre de 2026, ampliado el 9):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| desarrollo | 16 | — |
-| producción | **13** | las tres de facturación |
+| desarrollo | 24 | — |
+| producción | **13** | todas las de facturación y `generateInspectionReport` |
 
 Es deliberado mientras se prueba: la primera factura emitida en producción marca el punto
 de no retorno de `invoices`. Pero es justo el desajuste que CLAUDE.md avisa que es fácil
@@ -973,6 +991,87 @@ El alfabeto del código no lleva `I`, `L`, `O`, `U`, `0` ni `1`: se dicta por te
 teclea desde un papel. Y el sorteo usa muestreo con rechazo, porque `byte % 30` habría
 favorecido a los seis primeros símbolos.
 
+### La remisión a la AEAT (VERI\*FACTU)
+
+Emitir y remitir son **dos cosas separadas**, y separarlas es lo que sostiene el
+resto. `issueInvoice` no llama a la Agencia: un servicio lento dejaría al
+operador esperando delante de una factura con el número ya consumido, y uno
+caído tumbaría la emisión por un problema de red. La factura se emite siempre; el
+envío reintenta hasta conseguirlo, desde `sweepVerifactuRecords` **cada cinco
+minutos** — un envío que solo ocurre al pulsar un botón depende de que alguien se
+acuerde, y la norma pide remisión inmediata.
+
+El estado vive en `verifactuSubmissions/{invoiceId}`, **fuera de la factura**: la
+factura es inmutable y el envío cambia media docena de veces. La fila nace en la
+misma transacción que la factura, porque escribirla después y fallar dejaría una
+factura que nadie enviaría nunca.
+
+⚠️ **El orden importa y no es el de la fecha.** Los registros van encadenados por
+huella y la fecha de emisión se toma al entrar en la function, mientras la cadena
+se cierra al confirmar la transacción: dos facturas emitidas a la vez pueden
+llevar fechas que no respeten el orden real. Por eso la transacción escribe un
+`chainIndex` sobre el mismo documento que la huella.
+
+#### El registro que se manda se RECONSTRUYE, y la huella se comprueba
+
+⚠️ **No se manda el registro tal y como se guardó al emitir**, y el motivo es
+concreto: un registro rechazado por la AEAT **no queda registrado** y hay que
+corregirlo, pero congelado dentro de una factura inmutable no se puede corregir
+nunca. Pasó de verdad el 9 de septiembre de 2026.
+
+`registroParaEnvio()` lo rehace con el código de hoy desde los campos de la
+factura —que son los que de verdad son inmutables— y toma del registro sellado
+solo lo que **no se puede recalcular**: el encadenamiento, el sistema informático
+y el instante de generación. Recalcular el encadenamiento ataría la factura a la
+última emitida; poner la versión actual del sistema diría que una factura de
+marzo la emitió el software de septiembre, y esa versión es la que ampara su
+declaración responsable.
+
+Y la huella se **recalcula y se compara** con la sellada. Es lo que separa
+corregir cómo se declara un dato de cambiar la factura: si un importe se hubiera
+movido, el envío se para en vez de declarar un registro que no se corresponde con
+el documento que tiene el cliente.
+
+#### Un rechazo para la cola, y solo lo desbloquea una persona
+
+Un rechazo deja la factura visible y **no se reintenta solo**: reintentar un
+rechazo permanente es un bucle que gasta el límite de envíos de la Agencia sin
+arreglar nada. `retryVerifactuRecord` la devuelve a la cola cuando alguien ha
+resuelto la causa, y queda anotado quién.
+
+⚠️ **El ritmo lo marca la AEAT** en cada respuesta (`TiempoEsperaEnvio`).
+Adelantarse se rechaza con el `4102` y tumba el envío entero: ignorarlo no
+adelanta, retrasa.
+
+⚠️ **Un duplicado (`3000`) es una factura que YA está registrada**, no un fallo:
+casi siempre porque un envío llegó y se perdió la respuesta. Se lee como
+aceptada — y **su CSV no se pisa**, porque la respuesta de un duplicado no trae
+CSV y escribir ese vacío borraba el acuse de la remisión buena.
+
+#### Lo que solo se ve contra preproducción
+
+⚠️ **Un XML válido contra el `.xsd` puede ser rechazado por lo que significa.**
+Los cuatro fallos que encontró preproducción el 9 de septiembre de 2026 pasaban
+la validación de esquema y ningún test los habría cogido:
+
+- El **NIF-IVA extranjero** iba en `NIF`, que es solo para identificadores
+  españoles; el resto va en `IDOtro` con su país y tipo (error `1100`).
+- El **país es obligatorio** cuando el identificador no es un NIF-IVA, aunque el
+  esquema lo declare opcional (error `1111`). Es el caso más común de un
+  alquiler: un turista con pasaporte. Lo pide `validateInvoice()` **antes** de
+  consumir número, porque después no tiene arreglo.
+- El registro **congelado** no se podía corregir (arriba).
+- El **QR medía 21,9 mm** y el art. 21 lo fija entre 30×30 y 40×40 mm, con el
+  rótulo «QR tributario:» encima, la frase debajo y ambos a tamaño **igual o
+  superior** al resto de datos de la factura. Faltaba todo eso.
+
+El plan de pruebas, con lo comprobado y lo que falta, está en
+[docs/verifactu-alta.md](docs/verifactu-alta.md) § 3 bis.
+
+⚠️ **Hoy está activo SOLO en desarrollo**, contra preproducción
+(`VELTO_VERIFACTU_ENABLED=true`, `VELTO_VERIFACTU_ENV=test`). En producción sigue
+en `false` y **solo lo cambia Dorel**.
+
 ### El cliente paga desde su móvil
 
 `getPaymentCheckout` es **pública** y la abre el cliente en `/pay/:paymentId`, ruta
@@ -1214,7 +1313,16 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 ```
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
+invoices  invoiceCounters  billingProfiles  verifactuDeclarations
+verifactuSubmissions
 ```
+
+⚠️ **`verifactuSubmissions` es la única de la facturación que se escribe muchas
+veces**, y por eso está separada: la factura es inmutable y el estado de su
+envío a la AEAT cambia con cada intento. Solo la escribe el backend —
+`firestore.rules` deniega `create`, `update` y `delete` a todo el mundo—, porque
+marcar una factura como aceptada a mano diría que está presentada ante la
+Agencia cuando no lo está.
 
 ⚠️ **En `authorizedUsers` el id del documento ES el email en minúsculas**, y
 `data()` **no lo incluye**. Quien lea uno tiene que añadirlo (`{ ...data, email:
@@ -1428,7 +1536,23 @@ puede cargar con todo el tráfico cortado. Para probar un camino de error hace f
 que rechace de verdad —un callable, un permiso denegado—; desenchufar la red no vale. Y
 cortarla del todo tumba la sesión, porque el guard lee `authorizedUsers` de Firestore.
 
-### `.form-control` NO es global
+### `.form-control` NO es global — y `.btn-*` lo es solo a medias
+
+⚠️ **La misma trampa, con los botones.** `.btn` traía el relleno y el radio, y
+`.btn-primary` solo el color: un botón escrito `class="btn-primary"` en un
+componente que no declarase la clase salía **como texto sobre fondo turquesa**,
+sin caja ni esquinas. En la aplicación conviven las dos formas —21 con `btn`
+delante y 29 sin él— y no hay forma de acordarse de cuál toca.
+
+Desde el 9 de septiembre de 2026 la **forma** también es global, en
+`.btn-primary`, `.btn-secondary`, `.btn-danger` y `.btn-ghost`. No pisa a quien
+ya la declara: la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0)
+y la global es (0,1,0). `.btn-icon` y `.btn-skip-step` quedan fuera a propósito,
+porque su geometría no es esa.
+
+Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
+sin que se notara porque solo aparece cuando falta la declaración.
+
 
 ⚠️ Cada formulario **declara su propia `.form-control`** en su SCSS. No está en
 `styles.scss`, aunque lo parezca por lo repetida que está. Si un componente nuevo la usa

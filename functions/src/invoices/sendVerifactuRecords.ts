@@ -279,9 +279,35 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
   const batch = db.batch();
   for (const res of resultados) {
     const aceptado = res.estado === 'aceptado';
+
+    /**
+     * ⚠️ **El CSV no se pisa con nada.** Es el acuse de que la factura está
+     * presentada, y una respuesta de **duplicado no trae CSV**: escribir el
+     * `null` de esa respuesta borraba el acuse de la remisión buena. Pasó de
+     * verdad contra preproducción al reenviar una factura ya registrada — el
+     * reenvío se leyó bien, como aceptado, y de paso destruyó la prueba de que
+     * lo estaba. Solo se escribe cuando hay uno.
+     */
+    const acuse: Record<string, unknown> = res.csv ? { csv: res.csv } : {};
+
+    /**
+     * ⚠️ Y una aceptada no se queda con el error del intento anterior. El
+     * duplicado llega como código `3000`, así que una factura correctamente
+     * registrada acababa mostrando un código de error al lado. El detalle de
+     * cada intento sigue en el historial, que es donde va.
+     */
+    if (aceptado) {
+      acuse['codigoError'] = null;
+      acuse['descripcionError'] = null;
+    } else {
+      acuse['codigoError'] = res.codigoError ?? null;
+      acuse['descripcionError'] = res.descripcionError ?? null;
+    }
+
     batch.set(
       db.collection(SUBMISSIONS).doc(res.invoiceId),
       {
+        ...acuse,
         estado: res.estado,
         /**
          * ⚠️ **Solo la aceptada sale de la cola.** Una rechazada sigue
@@ -293,9 +319,6 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
         intentos: FieldValue.increment(1),
         ultimoIntentoAt: FieldValue.serverTimestamp(),
         aceptadoAt: aceptado ? FieldValue.serverTimestamp() : null,
-        csv: res.csv ?? null,
-        codigoError: res.codigoError ?? null,
-        descripcionError: res.descripcionError ?? null,
         // El historial no se pisa: es el rastro de qué se intentó y cuándo.
         historial: FieldValue.arrayUnion({
           at: new Date(),

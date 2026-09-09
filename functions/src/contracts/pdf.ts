@@ -1237,6 +1237,68 @@ export class PdfBuilder {
    * QR, una frase larga en rumano acaba tocándolo, y un QR con texto encima no
    * se escanea.
    */
+  /**
+   * El **QR tributario** de la factura, con la maquetación que fija el art. 21
+   * de la Orden HAC/1177/2024.
+   *
+   * ⚠️ **Va aparte de `qrWithCaption()` a propósito.** El QR del contrato no es
+   * un QR tributario y estas reglas no le aplican; mezclarlos haría que un
+   * cambio pensado para uno cambiara el otro en silencio. Aquí cada número sale
+   * de la norma, no del diseño:
+   *
+   * - **Entre 30×30 y 40×40 mm.** El nuestro medía 62 pt, o sea 21,9 mm, y se
+   *   quedaba por debajo del mínimo. En papel eso es un símbolo que algunos
+   *   móviles leen y otros no, que es la peor forma de fallar.
+   * - **«QR tributario:» encima**, centrado sobre el código. No es un rótulo
+   *   decorativo: la norma lo exige literalmente para distinguirlo de cualquier
+   *   otro QR que la factura pueda llevar.
+   * - **La frase justo debajo**, centrada.
+   * - **Los dos textos con tamaño igual o superior al resto de datos de la
+   *   factura.** Iban a 7,4 pt sobre un cuerpo de 8,2.
+   * - Y en formato vertical, el código va **centrado** entre los márgenes.
+   *
+   * La corrección de errores es `M`, que ya es la que usa `buildQrMatrix()`.
+   */
+  taxQr(url: string, heading: string, legend: string, bodySize: number): void {
+    // 32 mm: dentro del rango y sin pegarse al mínimo, que a 30 exactos
+    // cualquier redondeo dejaría el símbolo fuera de norma.
+    const size = (32 / 25.4) * 72;
+    const fontSize = Math.max(bodySize, 8);
+    this.ensureSpace(size + fontSize * 2 + 16);
+
+    const centro = this.pageWidth / 2;
+    const headFont = this.fontFor('body', heading);
+    this.put(
+      heading,
+      centro - headFont.widthOfTextAtSize(heading, fontSize) / 2,
+      this.y - fontSize,
+      fontSize,
+      headFont,
+      MUTED
+    );
+    this.y -= fontSize + 5;
+
+    this.drawQr(buildQrMatrix(url), centro - size / 2, this.y - size, size);
+    this.y -= size + 4;
+
+    // La frase parte en varias líneas si no cabe, que es justo lo que la norma
+    // prevé; lo que no admite es recortarla.
+    const legendFont = this.fontFor('body', legend);
+    const maxW = this.pageWidth - this.margin * 2;
+    for (const linea of this.wrap(legend, fontSize, legendFont, maxW)) {
+      this.put(
+        linea,
+        centro - legendFont.widthOfTextAtSize(linea, fontSize) / 2,
+        this.y - fontSize,
+        fontSize,
+        legendFont,
+        MUTED
+      );
+      this.y -= fontSize + 2;
+    }
+    this.y -= 6;
+  }
+
   qrWithCaption(url: string, caption: string[], opts: { size?: number } = {}): void {
     const size = opts.size ?? 62;
     this.ensureSpace(size + 8);

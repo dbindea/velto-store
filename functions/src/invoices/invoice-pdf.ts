@@ -191,7 +191,16 @@ function labels(loc: ContractLocale) {
       : ro
         ? 'Factură verificabilă la sediul electronic al AEAT'
         : 'Factura verificable en la sede electrónica de la AEAT',
-    verifactuBadge: 'VERI*FACTU'
+    /**
+     * ⚠️ **«QR tributario:» va en español siempre, y encima del código.**
+     *
+     * La norma lo fija literalmente y no como una descripción: su función es
+     * distinguir este código de cualquier otro QR que la factura pueda llevar,
+     * y quien lo busca —una inspección— lo busca con ese nombre. Traducirlo
+     * dejaría la factura inglesa sin el rótulo que el art. 21 exige. Debajo va
+     * la frase, que sí se traduce porque a quien habla es al cliente.
+     */
+    verifactuHeading: 'QR tributario:'
   };
 }
 
@@ -443,7 +452,9 @@ export async function buildInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arra
    */
   if (input.verifactu?.url) {
     b.y -= 12;
-    b.qrWithCaption(input.verifactu.url, [L.verifactuBadge, L.verifactuLegend]);
+    // 8.2 es el cuerpo de los datos de la factura, y la norma pide que estos
+    // textos no bajen de ahí.
+    b.taxQr(input.verifactu.url, L.verifactuHeading, L.verifactuLegend, 8.2);
   }
 
   b.finalizeFooters();
