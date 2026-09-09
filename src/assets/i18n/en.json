@@ -1085,6 +1085,31 @@
       "system": "System",
       "title": "Responsible statement for the invoicing system",
       "version": "Version"
+    },
+    "verifactu": {
+      "accepted": "Accepted",
+      "blocked": "The chain is blocked by invoice",
+      "disabled": "Filing is switched off. Records are stored with each invoice but not sent, and the invoice prints no verification QR.",
+      "hint": "Every issued invoice creates a record that must be filed with the tax agency. An invoice that never arrived shows up nowhere else: this is where you see it.",
+      "liveEnv": "Sending to the tax agency.",
+      "loadError": "Could not read the filing status",
+      "pending": "Pending",
+      "result": {
+        "blocked": "The chain is blocked by a rejected invoice",
+        "disabled": "Filing is switched off",
+        "empty": "Nothing was pending",
+        "sent": "Submission completed",
+        "waiting": "Waiting for the interval set by the agency"
+      },
+      "send": "Send now",
+      "sendError": "The submission could not be completed. The agency may still have received it: it will be retried automatically.",
+      "state": {
+        "error": "Failed, will retry",
+        "pendiente": "Awaiting submission",
+        "rechazado": "Rejected by the agency"
+      },
+      "testEnv": "Sending to the TEST environment. Anything accepted here is a rehearsal: it has not been filed.",
+      "title": "Filing with the Spanish tax agency"
     }
   },
   "vehicles": {

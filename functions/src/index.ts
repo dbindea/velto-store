@@ -82,5 +82,6 @@ export {
 // ocurre al pulsar un botón depende de que alguien se acuerde.
 export {
   sendVerifactuRecords,
-  sweepVerifactuRecords
+  sweepVerifactuRecords,
+  getVerifactuStatus
 } from './invoices/sendVerifactuRecords';

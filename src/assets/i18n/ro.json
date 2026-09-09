@@ -1085,6 +1085,31 @@
       "system": "Sistem",
       "title": "Declarație pe proprie răspundere a sistemului de facturare",
       "version": "Versiune"
+    },
+    "verifactu": {
+      "accepted": "Acceptate",
+      "blocked": "Lanțul este blocat de factura",
+      "disabled": "Transmiterea este dezactivată. Înregistrările se salvează cu fiecare factură, dar nu se trimit, iar factura nu tipărește codul QR de verificare.",
+      "hint": "Fiecare factură emisă generează o înregistrare care trebuie transmisă Agenției Fiscale. O factură care nu a ajuns nu se vede nicăieri altundeva: aici se vede.",
+      "liveEnv": "Se trimite către Agenția Fiscală.",
+      "loadError": "Nu s-a putut consulta starea transmiterii",
+      "pending": "În așteptare",
+      "result": {
+        "blocked": "Lanțul este blocat de o factură respinsă",
+        "disabled": "Transmiterea este dezactivată",
+        "empty": "Nu era nimic în așteptare",
+        "sent": "Trimitere finalizată",
+        "waiting": "Se așteaptă intervalul stabilit de Agenție"
+      },
+      "send": "Trimite acum",
+      "sendError": "Trimiterea nu s-a putut finaliza. Este posibil ca Agenția să o fi primit: se va reîncerca automat.",
+      "state": {
+        "error": "A eșuat, se va reîncerca",
+        "pendiente": "În așteptarea trimiterii",
+        "rechazado": "Respinsă de Agenție"
+      },
+      "testEnv": "Se trimite către PREPRODUCȚIE. Ce se acceptă aici este o repetiție: nu este depus la Agenție.",
+      "title": "Transmiterea către fiscul spaniol"
     }
   },
   "vehicles": {

@@ -479,6 +479,30 @@
     color: var(--warning-color);
     i { color: var(--warning-color); }
   }
+
+  /* Una factura rechazada bloquea la cadena entera: todo lo que venga detrás
+     encadena con su huella. Es lo más grave que puede decir esta pantalla, así
+     que no comparte el ámbar de «falta algo por hacer». */
+  &.blocked {
+    color: var(--error-color);
+    i { color: var(--error-color); }
+  }
+
+  /* El texto envuelve: los mensajes de la Agencia son frases largas y truncarlas
+     esconde justo la parte que dice qué falló. */
+  flex-wrap: wrap;
+}
+
+/* La lista de pendientes reutiliza `.compliance-list`, pero cada fila puede
+   llevar debajo el motivo del rechazo — que es una frase, no una etiqueta. */
+.verifactu-pending li {
+  flex-wrap: wrap;
+}
+
+.verifactu-error {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: var(--error-color);
 }
 
 .compliance-history {

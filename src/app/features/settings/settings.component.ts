@@ -32,6 +32,11 @@ import {
   ComplianceService,
   ComplianceStatus
 } from '@features/settings/services/compliance.service';
+import {
+  EstadoVerifactu,
+  ResumenEnvio,
+  VerifactuService
+} from '@features/settings/services/verifactu.service';
 
 type Tab = 'operation' | 'users' | 'appearance' | 'compliance';
 
@@ -129,7 +134,10 @@ export class SettingsComponent implements OnInit {
     this.savedMessage.set('');
     // Las declaraciones se leen al abrir su pestaña: son un documento legal que
     // se consulta de vez en cuando, no algo que haga falta en cada carga.
-    if (tab === 'compliance' && !this.declarationsLoaded) void this.loadDeclarations();
+    if (tab === 'compliance' && !this.declarationsLoaded) {
+      void this.loadDeclarations();
+      void this.loadVerifactu();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -196,6 +204,57 @@ export class SettingsComponent implements OnInit {
       this.errorKey.set('settings.compliance.issueError');
     } finally {
       this.issuingDeclaration.set(false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Remisión a la AEAT
+  //
+  // ⚠️ Esta pantalla existe para responder a UNA pregunta: ¿está todo lo
+  // emitido remitido? Una factura que no llegó no se nota por ningún otro sitio
+  // —el PDF sale igual, el cliente la cobra igual—, así que si no se enseña
+  // aquí no se entera nadie.
+  // ---------------------------------------------------------------------------
+
+  private verifactu = inject(VerifactuService);
+
+  readonly verifactuStatus = signal<EstadoVerifactu | null>(null);
+  readonly sendingVerifactu = signal(false);
+  /** El resultado del último envío manual, para poder contarlo. */
+  readonly lastSend = signal<ResumenEnvio | null>(null);
+
+  /**
+   * ⚠️ **Preproducción se dice, no se calla.** Un registro aceptado contra
+   * `test` no está presentado ante nadie: sin decirlo, la pantalla enseñaría
+   * «12 aceptadas» y daría por cumplida una obligación que sigue pendiente.
+   */
+  get verifactuEsPruebas(): boolean {
+    return this.verifactuStatus()?.entorno !== 'live';
+  }
+
+  private async loadVerifactu(): Promise<void> {
+    try {
+      this.verifactuStatus.set(await this.verifactu.status());
+    } catch {
+      this.errorKey.set('settings.verifactu.loadError');
+    }
+  }
+
+  async sendVerifactu(): Promise<void> {
+    if (this.sendingVerifactu()) return;
+    this.sendingVerifactu.set(true);
+    this.errorKey.set('');
+    this.lastSend.set(null);
+    try {
+      this.lastSend.set(await this.verifactu.send());
+      await this.loadVerifactu();
+    } catch {
+      // ⚠️ Un fallo aquí NO significa que las facturas no hayan entrado: si se
+      // cortó la conexión, la AEAT pudo registrarlas y perderse la respuesta.
+      // Por eso el mensaje dice que no se pudo completar, no que no se enviaron.
+      this.errorKey.set('settings.verifactu.sendError');
+    } finally {
+      this.sendingVerifactu.set(false);
     }
   }
 

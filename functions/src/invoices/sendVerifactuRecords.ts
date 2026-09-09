@@ -279,6 +279,77 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
   return resumen;
 }
 
+export interface EstadoVerifactu {
+  /** ¿Se está remitiendo de verdad? Lo decide el entorno, no la pantalla. */
+  enabled: boolean;
+  /** `test` = preproducción. Un registro aceptado ahí **no está presentado**. */
+  entorno: 'test' | 'live';
+  endpoint: string;
+  pendientes: { invoiceId: string; fullNumber: string; estado: string; intentos: number;
+    codigoError?: number; descripcionError?: string }[];
+  aceptadas: number;
+  /** La primera factura atascada. Bloquea todo lo que venga detrás. */
+  bloqueadaPor?: string;
+  /** Hasta cuándo hay que esperar antes del siguiente envío. */
+  siguienteEnvio?: string;
+}
+
+/**
+ * Qué está remitido y qué no.
+ *
+ * ⚠️ **`entorno` viaja siempre y la pantalla lo enseña.** Un registro aceptado
+ * en preproducción no está presentado ante nadie: enseñar «aceptado» a secas
+ * haría creer que la obligación está cumplida cuando lo que hay es un ensayo.
+ */
+export const getVerifactuStatus = functions.https.onCall(
+  async (request): Promise<EstadoVerifactu> => {
+    if (!request.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+    }
+    const db = firestore();
+
+    const pendientesSnap = await db
+      .collection(SUBMISSIONS)
+      .where('pendienteEnvio', '==', true)
+      .orderBy('chainIndex', 'asc')
+      .get();
+
+    const remisiones: Remision[] = pendientesSnap.docs.map((d) => ({
+      invoiceId: d.id,
+      fullNumber: String(d.data().fullNumber || ''),
+      chainIndex: Number(d.data().chainIndex ?? 0),
+      estado: d.data().estado,
+      intentos: Number(d.data().intentos ?? 0)
+    }));
+
+    const aceptadas = await db
+      .collection(SUBMISSIONS)
+      .where('pendienteEnvio', '==', false)
+      .count()
+      .get();
+
+    const control = await db.collection(SUBMISSIONS).doc(CONTROL_DOC).get();
+    const noAntesDe = control.data()?.noEnviarAntesDe?.toDate?.() as Date | undefined;
+
+    return {
+      enabled: verifactuEnabled(),
+      entorno: process.env.VELTO_VERIFACTU_ENV === 'live' ? 'live' : 'test',
+      endpoint: verifactuEndpoint(),
+      pendientes: pendientesSnap.docs.map((d) => ({
+        invoiceId: d.id,
+        fullNumber: String(d.data().fullNumber || ''),
+        estado: String(d.data().estado || 'pendiente'),
+        intentos: Number(d.data().intentos ?? 0),
+        codigoError: d.data().codigoError ?? undefined,
+        descripcionError: d.data().descripcionError ?? undefined
+      })),
+      aceptadas: aceptadas.data().count,
+      bloqueadaPor: remisionBloqueada(remisiones)?.fullNumber,
+      siguienteEnvio: noAntesDe && noAntesDe > new Date() ? noAntesDe.toISOString() : undefined
+    };
+  }
+);
+
 /** Mandar ahora. La usa el botón de Facturas y el reintento manual. */
 export const sendVerifactuRecords = functions.https.onCall(
   { secrets: [VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },

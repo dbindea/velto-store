@@ -376,6 +376,108 @@
           </ul>
         }
       </div>
+
+      <!-- Remisión a la AEAT.
+           ⚠️ Esta tarjeta responde a UNA pregunta: ¿está todo lo emitido
+           remitido? Una factura que no llegó no se nota por ningún otro sitio
+           —el PDF sale igual y el cliente la paga igual—, así que si no se
+           enseña aquí no se entera nadie hasta que pregunte la Agencia. -->
+      @if (verifactuStatus(); as v) {
+        <div class="card">
+          <h2>{{ 'settings.verifactu.title' | translate }}</h2>
+          <p class="hint">{{ 'settings.verifactu.hint' | translate }}</p>
+
+          @if (!v.enabled) {
+            <!-- Apagado no es un fallo: es el estado deliberado hasta que el
+                 envío esté probado. Y mientras, la factura tampoco imprime el
+                 QR, así que nada promete lo que no hay. -->
+            <p class="compliance-state pending">
+              <i class="pi pi-pause-circle"></i>
+              {{ 'settings.verifactu.disabled' | translate }}
+            </p>
+          } @else if (verifactuEsPruebas) {
+            <!-- ⚠️ Aceptado en preproducción NO es presentado. Callarlo haría
+                 leer «aceptadas» como obligación cumplida. -->
+            <p class="compliance-state pending">
+              <i class="pi pi-exclamation-triangle"></i>
+              {{ 'settings.verifactu.testEnv' | translate }}
+            </p>
+          } @else {
+            <p class="compliance-state ok">
+              <i class="pi pi-check-circle"></i>
+              {{ 'settings.verifactu.liveEnv' | translate }}
+            </p>
+          }
+
+          <div class="compliance-facts">
+            <div class="fact">
+              <span class="fact-label">{{ 'settings.verifactu.accepted' | translate }}</span>
+              <span class="fact-value">{{ v.aceptadas }}</span>
+            </div>
+            <div class="fact">
+              <span class="fact-label">{{ 'settings.verifactu.pending' | translate }}</span>
+              <span class="fact-value">{{ v.pendientes.length }}</span>
+            </div>
+          </div>
+
+          <!-- ⚠️ Una rechazada bloquea TODO lo que venga detrás: los registros
+               van encadenados por huella. Es lo más grave que puede decir esta
+               pantalla, y por eso va en rojo y con el número delante. -->
+          @if (v.bloqueadaPor) {
+            <p class="compliance-state blocked">
+              <i class="pi pi-times-circle"></i>
+              {{ 'settings.verifactu.blocked' | translate }}
+              <strong>{{ v.bloqueadaPor }}</strong>
+            </p>
+          }
+
+          @if (v.pendientes.length) {
+            <ul class="compliance-list verifactu-pending">
+              @for (p of v.pendientes; track p.invoiceId) {
+                <li>
+                  <span class="version">{{ p.fullNumber }}</span>
+                  <span class="date">
+                    {{ 'settings.verifactu.state.' + p.estado | translate }}
+                    @if (p.intentos) {
+                      · {{ p.intentos }}
+                    }
+                  </span>
+                  @if (p.descripcionError) {
+                    <span class="verifactu-error">{{ p.descripcionError }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (v.enabled) {
+            <button
+              class="btn-primary"
+              type="button"
+              [disabled]="sendingVerifactu()"
+              (click)="sendVerifactu()"
+            >
+              @if (sendingVerifactu()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-send"></i>
+              }
+              {{ 'settings.verifactu.send' | translate }}
+            </button>
+          }
+
+          <!-- Se cuenta qué pasó, no si «fue bien»: «no había nada que enviar»
+               y «hay que esperar al plazo de la Agencia» no son fallos. -->
+          @if (lastSend(); as r) {
+            <p class="compliance-state" [class.ok]="r.resultado === 'sent' && !r.rechazados">
+              {{ 'settings.verifactu.result.' + r.resultado | translate }}
+              @if (r.resultado === 'sent') {
+                · {{ r.aceptados }}/{{ r.enviados }}
+              }
+            </p>
+          }
+        </div>
+      }
     }
   }
 </div>

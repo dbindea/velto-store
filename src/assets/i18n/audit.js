@@ -163,7 +163,12 @@ const DYNAMIC_KEY_SETS = {
     'breakdown',
     'cleaning',
     'other'
-  ]
+  ],
+  // verifactu-submission.ts › EstadoRemision, menos `aceptado`: la lista de la
+  // pantalla es la de pendientes, y una aceptada ya no lo está.
+  'settings.verifactu.state.': ['pendiente', 'error', 'rechazado'],
+  // sendVerifactuRecords.ts › ResumenEnvio['resultado']
+  'settings.verifactu.result.': ['disabled', 'waiting', 'blocked', 'empty', 'sent']
 };
 
 // A key under a dynamic prefix counts as referenced: the leaf is only known at

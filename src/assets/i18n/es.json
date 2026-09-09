@@ -1085,6 +1085,31 @@
       "system": "Sistema",
       "title": "Declaración responsable del sistema de facturación",
       "version": "Versión"
+    },
+    "verifactu": {
+      "accepted": "Aceptadas",
+      "blocked": "La cadena está bloqueada por la factura",
+      "disabled": "La remisión está desactivada. Los registros se guardan con cada factura, pero no se envían, y la factura no imprime el QR de cotejo.",
+      "hint": "Cada factura emitida genera un registro que hay que remitir a la Agencia Tributaria. Una factura que no llegó no se nota por ningún otro sitio: aquí es donde se ve.",
+      "liveEnv": "Enviando a la Agencia Tributaria.",
+      "loadError": "No se pudo consultar el estado de la remisión",
+      "pending": "Pendientes",
+      "result": {
+        "blocked": "La cadena está bloqueada por una factura rechazada",
+        "disabled": "La remisión está desactivada",
+        "empty": "No había nada pendiente de enviar",
+        "sent": "Envío completado",
+        "waiting": "Hay que esperar al plazo que marcó la Agencia"
+      },
+      "send": "Enviar ahora",
+      "sendError": "No se pudo completar el envío. Puede que la Agencia sí lo haya recibido: se reintentará solo.",
+      "state": {
+        "error": "Falló, se reintentará",
+        "pendiente": "Pendiente de envío",
+        "rechazado": "Rechazada por la Agencia"
+      },
+      "testEnv": "Enviando a PREPRODUCCIÓN. Lo que se acepta aquí es un ensayo: no está presentado ante la Agencia.",
+      "title": "Remisión a la AEAT"
     }
   },
   "vehicles": {
