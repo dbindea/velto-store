@@ -131,19 +131,16 @@ reales.
 
 ## 3. Lo que necesito de ti para programar el envío
 
-⚠️ **Los archivos técnicos oficiales de la AEAT todavía no me han llegado.** No
-están adjuntos ni en el repositorio; sin ellos no puedo escribir el XML, porque
-me lo estaría inventando. Lo que hace falta:
+✅ **Los archivos técnicos ya están** en [`docs/aeat/`](aeat/README.md), subidos
+el 9 de septiembre de 2026: los esquemas, el WSDL con los endpoints, el diseño
+de registro con las descripciones de las claves, la especificación del QR y los
+247 códigos de error.
 
-- [ ] **Los esquemas `.xsd`** del registro de facturación (alta y anulación).
-- [ ] **El `.wsdl`** del servicio, o las URL de los *endpoints* de
-      preproducción y producción.
-- [ ] Las **validaciones** publicadas: la lista de códigos de error y de
-      rechazo, que es lo que decide qué se reintenta y qué no.
+Todo lo que se había escrito antes de tenerlos **está contrastado contra ellos**;
+el detalle de qué salió bien y qué hubo que corregir está en
+[aeat/README.md](aeat/README.md).
 
-Déjalos en `docs/aeat/` del repositorio y sigo desde ahí.
-
-Y una decisión que sí es tuya:
+Lo que queda por decidir, y es tuyo:
 
 - [ ] **Desde cuándo se remite**: el 1 de enero de 2027, o antes de forma
       voluntaria para llegar rodado.

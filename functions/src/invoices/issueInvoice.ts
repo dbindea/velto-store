@@ -417,6 +417,11 @@ export const issueInvoice = functions.https.onCall(
         emisorNombre: company.legalName,
         fullNumber,
         fechaExpedicion: formatFechaExpedicion(issueDate),
+        // La fecha de la operación, que en este negocio casi siempre difiere:
+        // se factura en agosto un alquiler de junio.
+        fechaOperacion: toDate(data.operationDate)
+          ? formatFechaExpedicion(toDate(data.operationDate)!)
+          : undefined,
         tipoFactura: tipoFacturaAeat,
         tipoRectificativa: esRectificativa ? data.rectifyingType : undefined,
         rectificada:

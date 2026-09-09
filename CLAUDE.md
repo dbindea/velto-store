@@ -800,8 +800,24 @@ cuarto sitio donde escribir la versión y el primero en quedarse viejo.
 Dorel del 9 de septiembre de 2026. El campo describe **cómo es el sistema**, no
 en qué punto de su despliegue está.
 
+⚠️ **Los nombres de campo del registro son los del esquema oficial**, con su
+grafía exacta (`IDFactura`, `CuotaTotal`, `Desglose > DetalleDesglose`). No es
+estilo: así el XML es una **serialización directa** del objeto guardado, sin una
+tabla de traducción en medio que haya que mantener y en la que un nombre mal
+escrito produzca un registro que la AEAT rechaza.
+
+**Las especificaciones están versionadas** en [docs/aeat/](docs/aeat/README.md)
+—esquemas, WSDL, diseño de registro, QR y los 247 códigos de error— porque las
+de la sede cambian sin dejar rastro de qué versión se usó. Ese README lleva
+además qué se contrastó y qué hubo que corregir.
+
 Falta el **envío** —XML SOAP firmado, estados, reintentos—, que no se puede dar
 por bueno sin el entorno de preproducción de la AEAT.
+
+⚠️ **Dos endpoints por entorno según el certificado**, y no son intercambiables:
+`prewww1`/`www1` para certificado de **representante** —el nuestro— y
+`prewww10`/`www10` para certificado de **sello**. Llamar a la que no toca da un
+rechazo de autenticación que parece un problema del certificado.
 
 ⚠️ **No hay «alta» en VERI\*FACTU ni se comunica por el modelo 036**, y tampoco
 sustituye a la contabilidad ni a las declaraciones: es una obligación adicional

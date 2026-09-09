@@ -28,6 +28,9 @@ import type { TipoFacturaAeat } from './hash';
 /** `01` = SHA-256. Es el único valor admitido hoy. */
 export const TIPO_HUELLA_SHA256 = '01';
 
+/** `01` = IVA, en el catálogo `ImpuestoType` del esquema. */
+export const IMPUESTO_IVA = '01';
+
 /** Versión del esquema. La fija la AEAT, no nosotros. */
 export const VERIFACTU_ID_VERSION = '1.0';
 
@@ -108,46 +111,73 @@ export function verifactuSystemVersion(): string {
   return process.env.VELTO_VERIFACTU_SYSTEM_VERSION || '1.0';
 }
 
-/** Una línea del desglose, por tipo impositivo y régimen. */
+/**
+ * Una línea del desglose.
+ *
+ * ⚠️ **`CalificacionOperacion` y `OperacionExenta` son alternativas**, no dos
+ * campos que se rellenen a la vez: en el esquema forman un `choice`. Una exenta
+ * lleva su clave de exención y **no** lleva calificación; una sujeta, al revés.
+ */
 export interface DetalleDesglose {
-  /** Clave de régimen: `01` general, `04` REBU, `02` exportación… */
-  claveRegimen: string;
-  /** `S1` sujeta y no exenta, `S2` inversión del sujeto pasivo, `N1`/`N2` no sujeta. */
-  calificacionOperacion?: string;
-  /** Solo en exentas: el motivo, `E1`…`E6`. */
-  operacionExenta?: string;
-  tipoImpositivo?: string;
-  baseImponibleOimporteNoSujeto: string;
-  cuotaRepercutida?: string;
+  /** `01` = IVA. */
+  Impuesto?: string;
+  /** `01` general, `02` exportación, `03` bienes usados (REBU)… */
+  ClaveRegimen?: string;
+  /** `S1` sujeta y no exenta, `S2` con inversión del sujeto pasivo. */
+  CalificacionOperacion?: string;
+  /** `E1` art. 20 · `E2` art. 21 · `E3` art. 22 · `E4` arts. 23 y 24 · `E5` art. 25 · `E6` otros. */
+  OperacionExenta?: string;
+  TipoImpositivo?: string;
+  BaseImponibleOimporteNoSujeto: string;
+  CuotaRepercutida?: string;
 }
 
 export interface RegistroAnterior {
-  idEmisorFactura: string;
-  numSerieFactura: string;
-  fechaExpedicionFactura: string;
-  huella: string;
+  IDEmisorFactura: string;
+  NumSerieFactura: string;
+  FechaExpedicionFactura: string;
+  Huella: string;
 }
 
+/**
+ * El registro de alta.
+ *
+ * ⚠️ **Los nombres de campo son los del esquema oficial, en mayúsculas y con su
+ * grafía exacta** (`SuministroInformacion.xsd`, `RegistroFacturacionAltaType`).
+ * No es un capricho de estilo: así el XML es una **serialización directa** de
+ * este objeto, sin una tabla de traducción en medio que alguien tenga que
+ * mantener y en la que un nombre mal escrito produzca un registro que la AEAT
+ * rechaza. El orden de las propiedades es también el del esquema, porque en un
+ * `xs:sequence` el orden forma parte de la validación.
+ */
 export interface RegistroAlta {
-  idVersion: string;
-  idFactura: {
-    idEmisorFactura: string;
-    numSerieFactura: string;
-    fechaExpedicionFactura: string;
+  IDVersion: string;
+  IDFactura: {
+    IDEmisorFactura: string;
+    NumSerieFactura: string;
+    FechaExpedicionFactura: string;
   };
-  nombreRazonEmisor: string;
-  tipoFactura: TipoFacturaAeat;
-  /** `S` sustitución o `I` diferencias. Solo en rectificativas. */
-  tipoRectificativa?: 'S' | 'I';
+  NombreRazonEmisor: string;
+  TipoFactura: TipoFacturaAeat;
+  /** `S` sustitutiva o `I` incremental (por diferencias). Solo en rectificativas. */
+  TipoRectificativa?: 'S' | 'I';
   /** A qué factura rectifica. Solo en rectificativas. */
-  facturasRectificadas?: { idEmisorFactura: string; numSerieFactura: string; fechaExpedicionFactura: string }[];
+  FacturasRectificadas?: {
+    IDFacturaRectificada: {
+      IDEmisorFactura: string;
+      NumSerieFactura: string;
+      FechaExpedicionFactura: string;
+    }[];
+  };
   /** Base y cuota rectificadas. Solo en la modalidad `S`. */
-  importeRectificacion?: { baseRectificada: string; cuotaRectificada: string };
-  descripcionOperacion: string;
-  destinatarios?: { nombreRazon: string; nif?: string; idOtro?: { idType: string; id: string } }[];
-  desglose: DetalleDesglose[];
-  cuotaTotal: string;
-  importeTotal: string;
+  ImporteRectificacion?: { BaseRectificada: string; CuotaRectificada: string };
+  /** Solo si difiere de la de expedición. */
+  FechaOperacion?: string;
+  DescripcionOperacion: string;
+  Destinatarios?: { IDDestinatario: { NombreRazon: string; NIF?: string }[] };
+  Desglose: { DetalleDesglose: DetalleDesglose[] };
+  CuotaTotal: string;
+  ImporteTotal: string;
   /**
    * El encadenamiento.
    *
@@ -157,11 +187,24 @@ export interface RegistroAlta {
    * que no se puede editar. Aquí van dentro del registro, que nace con la
    * factura y muere con ella.
    */
-  encadenamiento: { primerRegistro: 'S' } | { registroAnterior: RegistroAnterior };
-  sistemaInformatico: SistemaInformatico;
-  fechaHoraHusoGenRegistro: string;
-  tipoHuella: string;
-  huella: string;
+  Encadenamiento: { PrimerRegistro: 'S' } | { RegistroAnterior: RegistroAnterior };
+  SistemaInformatico: SistemaInformaticoXml;
+  FechaHoraHusoGenRegistro: string;
+  TipoHuella: string;
+  Huella: string;
+}
+
+/** El bloque del sistema, con los nombres del esquema. */
+export interface SistemaInformaticoXml {
+  NombreRazon: string;
+  NIF: string;
+  NombreSistemaInformatico: string;
+  IdSistemaInformatico: string;
+  Version: string;
+  NumeroInstalacion: string;
+  TipoUsoPosibleSoloVerifactu: 'S' | 'N';
+  TipoUsoPosibleMultiOT: 'S' | 'N';
+  IndicadorMultiplesOT: 'S' | 'N';
 }
 
 /**
@@ -196,6 +239,12 @@ export interface RegistroAltaBuildInput {
   fullNumber: string;
   /** Ya en `dd-mm-aaaa`: la compone `formatFechaExpedicion`. */
   fechaExpedicion: string;
+  /**
+   * Cuándo se prestó el servicio, en `dd-mm-aaaa`. Solo va al registro si
+   * difiere de la expedición, que es el caso normal aquí: se factura en agosto
+   * un alquiler de junio.
+   */
+  fechaOperacion?: string;
   tipoFactura: TipoFacturaAeat;
   tipoRectificativa?: 'S' | 'I';
   rectificada?: { numSerieFactura: string; fechaExpedicionFactura: string };
@@ -230,90 +279,120 @@ export function buildRegistroAlta(input: RegistroAltaBuildInput): RegistroAlta {
     (input.lines || []).map((l) => (l.taxRegime || 'standard') as string)
   );
 
-  const desglose: DetalleDesglose[] = input.desglose.map((d) => {
+  const detalle: DetalleDesglose[] = input.desglose.map((d) => {
     // El régimen de la línea manda; con varias mezcladas se declara el general,
     // que es el de la parte que lleva cuota.
-    const clave = regimenes.has('rebu') && regimenes.size === 1 ? REGIMEN['rebu'] : REGIMEN['standard'];
+    const clave =
+      regimenes.has('rebu') && regimenes.size === 1 ? REGIMEN['rebu'] : REGIMEN['standard'];
     return {
-      claveRegimen: clave.claveRegimen,
-      calificacionOperacion: clave.calificacion,
-      tipoImpositivo: (Math.round(d.vatRate * 10000) / 100).toFixed(2),
-      baseImponibleOimporteNoSujeto: importe(d.base),
-      cuotaRepercutida: importe(d.vat)
+      Impuesto: IMPUESTO_IVA,
+      ClaveRegimen: clave.claveRegimen,
+      CalificacionOperacion: clave.calificacion,
+      // ⚠️ El esquema lo quiere como **porcentaje** (`21.00`), no como la
+      // fracción `0.21` con la que trabaja la aplicación.
+      TipoImpositivo: (Math.round(d.vatRate * 10000) / 100).toFixed(2),
+      BaseImponibleOimporteNoSujeto: importe(d.base),
+      CuotaRepercutida: importe(d.vat)
     };
   });
 
   /**
    * Las exentas van **fuera del desglose por tipo**: no son un 0 %, son otra
-   * cosa. Cada una lleva su clave de exención, que es lo que dice por qué no
-   * hay cuota.
+   * cosa. Cada una lleva su clave de exención —y **no** calificación, que en el
+   * esquema son alternativas— y es lo que dice por qué no hay cuota.
    */
   if (input.exemptTotal) {
     for (const key of ['exempt_eu', 'exempt_export', 'exempt_other', 'reverse_charge']) {
       if (!regimenes.has(key)) continue;
       const r = REGIMEN[key];
-      desglose.push({
-        claveRegimen: r.claveRegimen,
-        calificacionOperacion: r.calificacion,
-        operacionExenta: r.exenta,
-        baseImponibleOimporteNoSujeto: importe(input.exemptTotal)
+      detalle.push({
+        Impuesto: IMPUESTO_IVA,
+        ClaveRegimen: r.claveRegimen,
+        CalificacionOperacion: r.calificacion,
+        OperacionExenta: r.exenta,
+        BaseImponibleOimporteNoSujeto: importe(input.exemptTotal)
       });
     }
   }
 
   const registro: RegistroAlta = {
-    idVersion: VERIFACTU_ID_VERSION,
-    idFactura: {
-      idEmisorFactura: input.emisorNif.trim(),
-      numSerieFactura: input.fullNumber.trim(),
-      fechaExpedicionFactura: input.fechaExpedicion
+    IDVersion: VERIFACTU_ID_VERSION,
+    IDFactura: {
+      IDEmisorFactura: input.emisorNif.trim(),
+      NumSerieFactura: input.fullNumber.trim(),
+      FechaExpedicionFactura: input.fechaExpedicion
     },
-    nombreRazonEmisor: input.emisorNombre,
-    tipoFactura: input.tipoFactura,
-    descripcionOperacion: (input.descripcionOperacion || '').slice(0, 500),
-    desglose,
-    cuotaTotal: importe(input.cuotaTotal),
-    importeTotal: importe(input.importeTotal),
-    encadenamiento: input.anterior
+    NombreRazonEmisor: input.emisorNombre,
+    TipoFactura: input.tipoFactura,
+    DescripcionOperacion: (input.descripcionOperacion || '').slice(0, 500),
+    Desglose: { DetalleDesglose: detalle },
+    CuotaTotal: importe(input.cuotaTotal),
+    ImporteTotal: importe(input.importeTotal),
+    Encadenamiento: input.anterior
       ? {
-          registroAnterior: {
-            idEmisorFactura: input.emisorNif.trim(),
-            numSerieFactura: input.anterior.numSerieFactura,
-            fechaExpedicionFactura: input.anterior.fechaExpedicionFactura,
-            huella: input.anterior.huella
+          RegistroAnterior: {
+            IDEmisorFactura: input.emisorNif.trim(),
+            NumSerieFactura: input.anterior.numSerieFactura,
+            FechaExpedicionFactura: input.anterior.fechaExpedicionFactura,
+            Huella: input.anterior.huella
           }
         }
-      : { primerRegistro: 'S' },
-    sistemaInformatico: input.sistema,
-    fechaHoraHusoGenRegistro: input.fechaHoraHusoGenRegistro,
-    tipoHuella: TIPO_HUELLA_SHA256,
-    huella: input.huella
+      : { PrimerRegistro: 'S' },
+    SistemaInformatico: {
+      NombreRazon: input.sistema.nombreRazonProductor,
+      NIF: input.sistema.nifProductor,
+      NombreSistemaInformatico: input.sistema.nombreSistemaInformatico,
+      IdSistemaInformatico: input.sistema.idSistemaInformatico,
+      Version: input.sistema.version,
+      NumeroInstalacion: input.sistema.numeroInstalacion,
+      TipoUsoPosibleSoloVerifactu: input.sistema.tipoUsoPosibleSoloVerifactu,
+      TipoUsoPosibleMultiOT: input.sistema.tipoUsoPosibleMultiOT,
+      IndicadorMultiplesOT: input.sistema.indicadorMultiplesOT
+    },
+    FechaHoraHusoGenRegistro: input.fechaHoraHusoGenRegistro,
+    TipoHuella: TIPO_HUELLA_SHA256,
+    Huella: input.huella
   };
 
+  /**
+   * ⚠️ Solo si difiere de la expedición, que es cuando la norma la pide.
+   *
+   * Es el caso normal aquí: se factura en agosto un alquiler de junio, y sin
+   * este campo el registro diría que el servicio se prestó el día en que se
+   * emitió la factura.
+   */
+  if (input.fechaOperacion && input.fechaOperacion !== input.fechaExpedicion) {
+    registro.FechaOperacion = input.fechaOperacion;
+  }
+
   if (input.destinatario?.nombreRazon) {
-    registro.destinatarios = [
-      { nombreRazon: input.destinatario.nombreRazon, nif: input.destinatario.nif }
-    ];
+    registro.Destinatarios = {
+      IDDestinatario: [
+        { NombreRazon: input.destinatario.nombreRazon, NIF: input.destinatario.nif }
+      ]
+    };
   }
 
   if (input.tipoRectificativa) {
-    registro.tipoRectificativa = input.tipoRectificativa;
+    registro.TipoRectificativa = input.tipoRectificativa;
     if (input.rectificada) {
-      registro.facturasRectificadas = [
-        {
-          idEmisorFactura: input.emisorNif.trim(),
-          numSerieFactura: input.rectificada.numSerieFactura,
-          fechaExpedicionFactura: input.rectificada.fechaExpedicionFactura
-        }
-      ];
+      registro.FacturasRectificadas = {
+        IDFacturaRectificada: [
+          {
+            IDEmisorFactura: input.emisorNif.trim(),
+            NumSerieFactura: input.rectificada.numSerieFactura,
+            FechaExpedicionFactura: input.rectificada.fechaExpedicionFactura
+          }
+        ]
+      };
     }
     // ⚠️ Solo en `S`. En `I` la rectificativa ya declara el ajuste con su signo
     // y no hay nada que sustituir: son campos distintos del registro, no una
     // variante de formato.
     if (input.tipoRectificativa === 'S' && input.importeRectificacion) {
-      registro.importeRectificacion = {
-        baseRectificada: importe(input.importeRectificacion.baseRectificada),
-        cuotaRectificada: importe(input.importeRectificacion.cuotaRectificada)
+      registro.ImporteRectificacion = {
+        BaseRectificada: importe(input.importeRectificacion.baseRectificada),
+        CuotaRectificada: importe(input.importeRectificacion.cuotaRectificada)
       };
     }
   }
@@ -334,6 +413,42 @@ const QR_BASE_PRUEBAS = 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR';
 
 export function qrBaseUrl(): string {
   return process.env.VELTO_VERIFACTU_ENV === 'live' ? QR_BASE_PRODUCCION : QR_BASE_PRUEBAS;
+}
+
+/**
+ * Los endpoints del servicio de remisión, tomados de `SistemaFacturacion.wsdl`.
+ *
+ * Operaciones del servicio `sfVerifactu`: `RegFactuSistemaFacturacion` para
+ * enviar y `ConsultaFactuSistemaFacturacion` para consultar. SOAP
+ * *document/literal*, con `soapAction` vacío.
+ *
+ * ⚠️ **Hay dos direcciones por entorno según el tipo de certificado**, y no son
+ * intercambiables: `www1`/`prewww1` para certificado de **representante** —el
+ * nuestro, el de la FNMT con el que ya se sellan los contratos— y
+ * `www10`/`prewww10` para certificado de **sello**. Llamar a la que no toca es
+ * un rechazo de autenticación que parece un problema del certificado.
+ */
+export const VERIFACTU_ENDPOINT_PRUEBAS =
+  'https://prewww1.aeat.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP';
+export const VERIFACTU_ENDPOINT_PRODUCCION =
+  'https://www1.agenciatributaria.gob.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP';
+/** Las mismas, para certificado de sello. Hoy no se usan. */
+export const VERIFACTU_ENDPOINT_PRUEBAS_SELLO =
+  'https://prewww10.aeat.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP';
+export const VERIFACTU_ENDPOINT_PRODUCCION_SELLO =
+  'https://www10.agenciatributaria.gob.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP';
+
+/**
+ * A dónde se remitiría el registro.
+ *
+ * ⚠️ Lo decide `VELTO_VERIFACTU_ENV`, igual que el QR, para que los dos no
+ * puedan apuntar a entornos distintos: un QR de producción sobre un registro
+ * enviado a pruebas sería una factura que dice ser cotejable y no lo es.
+ */
+export function verifactuEndpoint(): string {
+  return process.env.VELTO_VERIFACTU_ENV === 'live'
+    ? VERIFACTU_ENDPOINT_PRODUCCION
+    : VERIFACTU_ENDPOINT_PRUEBAS;
 }
 
 /**
