@@ -31,7 +31,8 @@
     "@types/fontkit": "^2.0.9",
     "jsqr": "^1.4.0",
     "typescript": "^5.5.0",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "xmllint-wasm": "^5.3.0"
   },
   "private": true
 }

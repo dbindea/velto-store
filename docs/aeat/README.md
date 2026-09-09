@@ -21,6 +21,13 @@ documento con el que se construyó.
 | `DsRegistroVeriFactu.xlsx` | El diseño de registro **con las descripciones de las claves** |
 | `DetalleEspecificacTecnCodigoQRfactura.pdf` | El QR: URL, parámetros y codificación |
 | `errores.properties.txt` | Los 247 códigos de error y rechazo |
+| `xmldsig-core-schema.xsd` | El de firma XML del W3C. **No es de la AEAT**: se guarda aquí porque `SuministroInformacion.xsd` lo importa por URL y sin él el esquema no compila |
+
+⚠️ **El del W3C hace falta para que los demás compilen.** Sin él, `xmllint` no
+resuelve `{http://www.w3.org/2000/09/xmldsig#}Signature` y **ningún** XML se
+puede validar — ni siquiera uno correcto. Está en el repositorio para que la
+validación no dependa de tener red ni de que el W3C siga sirviendo ese fichero
+en esa dirección.
 
 ---
 
@@ -63,6 +70,27 @@ no afecta a nada real. Al construir el XML de una factura antigua habría que
 mapear, cosa que hoy no hace falta porque el envío empieza de cero.
 
 ---
+
+## El XML se valida contra estos esquemas, aquí
+
+⚠️ **`verifactu-xml.spec.ts` corre el mismo validador que aplicará la Agencia**,
+contra los `.xsd` de esta carpeta. No comprueba que el XML «se parezca»: lo
+compila y lo valida.
+
+Es la única forma de saber que el envío está bien **antes de que exista un
+envío**. Sin esto, el primer XML que se comprueba de verdad es el primero que se
+manda, y un rechazo ahí llega con una factura ya emitida detrás — que no se
+puede rehacer.
+
+Hay dos pruebas **negativas** a propósito: que un registro sin `CuotaTotal` y
+que los elementos en orden equivocado se rechacen. Si el validador aceptara
+cualquier cosa, que las nueve pruebas buenas pasen no diría nada.
+
+⚠️ **Y encontró un error que a ojo no se ve**: `Cabecera` pertenece al espacio
+de nombres de `SuministroLR`, no al de `SuministroInformacion`, aunque su tipo
+venga de este último. En XML Schema el elemento pertenece al esquema que lo
+**declara**, no al que define su tipo. El XML parecía correcto y solo cambiaba
+un prefijo.
 
 ## Dos cosas del WSDL que conviene no olvidar
 
