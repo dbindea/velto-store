@@ -11,9 +11,11 @@ import { describe, expect, it } from 'vitest';
 import { resolveDocumentPath, shortIdFor } from './documentLink';
 
 describe('shortIdFor', () => {
-  it('prefixes quotes with q and reservations with r', () => {
+  it('un prefijo por documento: q presupuesto, r reserva, c recibo, i parte', () => {
     expect(shortIdFor('quote', 'A1b2C3d4')).toBe('qA1b2C3d4');
     expect(shortIdFor('booking', 'p2RjP0LG1zp7KHqyNtB0')).toBe('rp2RjP0LG1zp7KHqyNtB0');
+    expect(shortIdFor('receipt', '9f3a1c77b2e40d58')).toBe('c9f3a1c77b2e40d58');
+    expect(shortIdFor('inspection', 'p2RjP0LG1zp7KHqyNtB0')).toBe('ip2RjP0LG1zp7KHqyNtB0');
   });
 
   it('round-trips: what we mint is what resolves', () => {
@@ -24,7 +26,18 @@ describe('shortIdFor', () => {
     expect(resolveDocumentPath(shortIdFor('booking', reservationId))).toBe(
       `reservations/${reservationId}/booking-confirmation.pdf`
     );
+
+    const receiptId = '9f3a1c77b2e40d58';
+    expect(resolveDocumentPath(shortIdFor('receipt', receiptId))).toBe(
+      `receipts/${receiptId}/receipt.pdf`
+    );
+
+    const inspectionId = 'kQ8sV2rL0mNbX4tYuZ1c';
+    expect(resolveDocumentPath(shortIdFor('inspection', inspectionId))).toBe(
+      `inspections/${inspectionId}/report.pdf`
+    );
   });
+
 });
 
 describe('resolveDocumentPath', () => {
@@ -37,7 +50,17 @@ describe('resolveDocumentPath', () => {
     expect(resolveDocumentPath('')).toBeNull();
     expect(resolveDocumentPath('q')).toBeNull();
     expect(resolveDocumentPath('r')).toBeNull();
+    expect(resolveDocumentPath('c')).toBeNull();
     expect(resolveDocumentPath('qab')).toBeNull(); // shorter than the minimum
+    expect(resolveDocumentPath('cab')).toBeNull();
+    expect(resolveDocumentPath('i')).toBeNull();
+    expect(resolveDocumentPath('iab')).toBeNull();
+  });
+
+  it('el recibo no escapa de su carpeta más que los otros dos', () => {
+    expect(resolveDocumentPath('c../../contracts/secret')).toBeNull();
+    expect(resolveDocumentPath('cfoo/bar')).toBeNull();
+    expect(resolveDocumentPath('cfoo.bar')).toBeNull();
   });
 
   it('refuses ids that could climb out of their folder', () => {

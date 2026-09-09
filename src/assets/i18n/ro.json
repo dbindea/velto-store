@@ -129,7 +129,10 @@
     "all": "Toate",
     "back": "Înapoi",
     "cancel": "Anulează",
+    "close": "Închide",
+    "continue": "Continuă",
     "create": "Creează",
+    "days": "zile",
     "delete": "Șterge",
     "edit": "Editează",
     "error": "Ceva nu a mers bine",
@@ -137,6 +140,8 @@
     "missingFields": "Mai lipsește:",
     "photos": {
       "camera": "Cameră",
+      "deleteMessage": "Fotografia va fi ștearsă și nu poate fi recuperată.",
+      "deleteTitle": "Șterge fotografia",
       "gallery": "Galerie",
       "hint": "JPG, PNG sau WebP · max. 5 MB",
       "invalidType": "Se acceptă doar imagini JPG, PNG sau WebP",
@@ -148,9 +153,7 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot",
-    "close": "Închide",
-    "days": "zile"
+    "viewAll": "Vezi tot"
   },
   "contracts": {
     "actions": {
@@ -165,10 +168,20 @@
       "viewContract": "Vezi contract",
       "viewOriginalPdf": "Vezi contract original"
     },
+    "cancelSigningLink": "Anulează linkul",
+    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?",
+    "confirmCancelSigningLinkTitle": "Anulează linkul de semnare",
     "email": {
       "recipient": "Email destinatar",
       "send": "Trimite",
       "title": "Trimite contract prin email"
+    },
+    "errors": {
+      "generate": "Contractul nu a putut fi generat.",
+      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
+      "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
+      "pdfNotReady": "PDF-ul nu este încă disponibil.",
+      "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
     },
     "fields": {
       "allStatuses": "Toate stările",
@@ -217,6 +230,7 @@
     },
     "subtitle": "Generează, semnează și trimite contracte de închiriere",
     "title": "Contracte",
+    "verificationCode": "Cod de verificare",
     "verify": {
       "cancelledMessage": "Acest contract a existat, dar nu mai este în vigoare.",
       "cancelledTitle": "Contract anulat",
@@ -236,16 +250,7 @@
       "unknownTitle": "Nu a fost găsit",
       "validMessage": "Acest contract există și este semnat.",
       "validTitle": "Contract verificat"
-    },
-    "errors": {
-      "generate": "Contractul nu a putut fi generat.",
-      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
-      "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
-      "pdfNotReady": "PDF-ul nu este încă disponibil.",
-      "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
-    },
-    "confirmCancelSigningLink": "Anulezi linkul de semnare activ?",
-    "verificationCode": "Cod de verificare"
+    }
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
@@ -311,6 +316,7 @@
       "tolls": "Taxe de drum"
     },
     "confirmDelete": "Ștergi această cheltuială? Se șterge și factura ei.",
+    "confirmDeleteTitle": "Șterge cheltuiala",
     "editTitle": "Editează cheltuiala",
     "errors": {
       "amountRequired": "Suma trebuie să fie mai mare decât zero",
@@ -520,7 +526,21 @@
       "depositRefunded": "S-au restituit {amount} € din garanție."
     },
     "retentionReasonPrompt": "Motivul reținerii:",
-    "retentionDefaultReason": "Taxe predare/returnare"
+    "retentionDefaultReason": "Taxe predare/returnare",
+    "confirm": {
+      "checklistMessage": "Există puncte nebifate în listă. Dacă continui, predarea va fi înregistrată așa.",
+      "checklistTitle": "Lipsesc verificări",
+      "keysMessage": "Nu ai bifat returnarea cheilor. Dacă continui, returul va fi înregistrat așa.",
+      "keysTitle": "Cheile nu au fost returnate"
+    },
+    "report": {
+      "action": "Proces-verbal PDF",
+      "error": "Procesul-verbal nu a putut fi generat",
+      "problems": {
+        "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
+        "notFound": "Inspecția nu a fost găsită"
+      }
+    }
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -598,7 +618,8 @@
     "reports": "Rapoarte",
     "reservations": "Rezervări",
     "settings": "Setări",
-    "vehicles": "Vehicule"
+    "vehicles": "Vehicule",
+    "invoices": "Facturi"
   },
   "payments": {
     "actions": {
@@ -679,6 +700,27 @@
       "physicalPos": "POS fizic",
       "redsys": "Redsys (online)"
     },
+    "receipt": {
+      "action": "Chitanță",
+      "confirm": "Se va emite o chitanță pentru suma deja încasată:",
+      "copyLink": "Copiază linkul",
+      "error": "Chitanța nu a putut fi generată",
+      "generate": "Generează chitanța",
+      "generated": "Chitanță generată:",
+      "invoiceExpected": "Clientul a cerut factură",
+      "invoiceExpectedHint": "Doar atunci chitanța spune că se va emite factură. Factura se emite la cerere, așa că a promite una de fiecare dată ar însemna să afirmi ceva de multe ori neadevărat.",
+      "linkCopied": "Link-ul chitanței a fost copiat",
+      "notAnInvoice": "O chitanță nu este o factură: nu detaliază TVA și nu are număr de serie fiscală, iar documentul o spune.",
+      "open": "Deschide PDF",
+      "problems": {
+        "cancelled": "Această încasare este anulată: nu există nimic de justificat",
+        "notFound": "Plata nu a fost găsită",
+        "notIncoming": "O chitanță justifică bani primiți, iar această mișcare merge în sens invers",
+        "nothingCollected": "Nu s-a încasat încă nimic pentru acest concept",
+        "paymentRequired": "Lipsește plata pentru care se emite chitanța"
+      },
+      "title": "Chitanță de încasare"
+    },
     "redsys": {
       "authorizationCode": "Cod autorizare",
       "notificationReceived": "Notificare primită",
@@ -721,6 +763,10 @@
       "refuelPenalty": "Penalizare realimentare",
       "remainingPayment": "Rest închiriere",
       "rentalPayment": "Plată integrală"
+    },
+    "confirm": {
+      "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
+      "cancelTitle": "Anulează încasarea"
     }
   },
   "permissions": {
@@ -791,6 +837,9 @@
       "searchResults": "Rezultate",
       "select": "Selectează client"
     },
+    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
+    "closeWithPendingChargesTitle": "Costuri neîncasate",
+    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula.",
     "contractStatus": {
       "cancelled": "Anulat",
       "expired": "Expirat",
@@ -815,6 +864,27 @@
       "waived": "Scutită"
     },
     "detail": "Detalii rezervare",
+    "drivers": {
+      "title": "Conducători autorizați",
+      "hint": "Pe lângă chiriaș. Apar tipăriți în contract și îi sunt arătați clientului înainte de semnare.",
+      "add": "Adaugă conducător",
+      "name": "Nume complet",
+      "document": "Act de identitate",
+      "license": "Permis de conducere",
+      "empty": "Fără conducători suplimentari.",
+      "signedLocked": "Contractul este deja semnat: conducătorii nu pot fi modificați. Fă o anexă pe hârtie.",
+      "regenerate": "Ai schimbat conducătorii: generează din nou contractul ca să apară tipăriți.",
+      "search": "Caută client după nume sau act",
+      "errors": {
+        "nameRequired": "Scrie numele conducătorului",
+        "documentRequired": "Scrie actul lui de identitate",
+        "licenseRequired": "Scrie permisul lui de conducere",
+        "duplicate": "Acel conducător este deja pe listă",
+        "tooMany": "Nu mai încap conducători",
+        "contractSigned": "Contractul este deja semnat și nu se poate schimba cine conduce.",
+        "save": "Conducătorii nu au putut fi salvați."
+      }
+    },
     "errors": {
       "cancel": "Nu s-a putut anula rezervarea",
       "clientNameRequired": "Scrie numele clientului",
@@ -863,6 +933,7 @@
       "refunded": "Rambursat",
       "settled": "Achitat"
     },
+    "pendingAmount": "de încasat",
     "pricing": {
       "basePrice": "Preț de bază",
       "deposit": "Garanție",
@@ -916,31 +987,7 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări",
-    "closeWithPendingCharges": "Această rezervare are {amount} € în taxe suplimentare neîncasate.\n\nÎnchiderea nu le încasează și nu le anulează: rămân datorie a clientului, dar închirierea nu va mai apărea ca lucrare în așteptare.\n\nÎnchizi oricum?",
-    "pendingAmount": "de încasat",
-    "confirmDelete": "Ștergi această rezervare cu plățile, inspecțiile și fotografiile ei? Nu se poate anula.",
-    "drivers": {
-      "title": "Conducători autorizați",
-      "hint": "Pe lângă chiriaș. Apar tipăriți în contract și îi sunt arătați clientului înainte de semnare.",
-      "add": "Adaugă conducător",
-      "name": "Nume complet",
-      "document": "Act de identitate",
-      "license": "Permis de conducere",
-      "empty": "Fără conducători suplimentari.",
-      "signedLocked": "Contractul este deja semnat: conducătorii nu pot fi modificați. Fă o anexă pe hârtie.",
-      "regenerate": "Ai schimbat conducătorii: generează din nou contractul ca să apară tipăriți.",
-      "search": "Caută client după nume sau act",
-      "errors": {
-        "nameRequired": "Scrie numele conducătorului",
-        "documentRequired": "Scrie actul lui de identitate",
-        "licenseRequired": "Scrie permisul lui de conducere",
-        "duplicate": "Acel conducător este deja pe listă",
-        "tooMany": "Nu mai încap conducători",
-        "contractSigned": "Contractul este deja semnat și nu se poate schimba cine conduce.",
-        "save": "Conducătorii nu au putut fi salvați."
-      }
-    }
+    "title": "Rezervări"
   },
   "search": {
     "close": "Închide",
@@ -986,6 +1033,8 @@
     "saved": "Salvat",
     "subtitle": "Valori implicite și cine poate intra",
     "tabs": {
+      "appearance": "Aspect",
+      "compliance": "Declarație pe proprie răspundere",
       "operation": "Operare",
       "users": "Utilizatori"
     },
@@ -996,6 +1045,7 @@
       "addTitle": "Dă acces cuiva",
       "added": "Acces acordat",
       "confirmDelete": "Ștergi această persoană? Deja nu mai are acces; asta doar elimină înregistrarea.",
+      "confirmDeleteTitle": "Retrage accesul",
       "deactivate": "Retrage accesul",
       "email": "Cont Google",
       "empty": "Încă nu are nimeni acces",
@@ -1011,6 +1061,55 @@
       },
       "selfLocked": "Nu îți poți schimba propriul acces sau rol.",
       "you": "Tu"
+    },
+    "theme": "Temă",
+    "themeHint": "Este preferința ta: se salvează în acest browser și nu afectează pe nimeni altcineva. Butonul din bara de sus rotește între cele patru.",
+    "themes": {
+      "light": "Deschis",
+      "dark": "Întunecat",
+      "forest": "Pădure (verzui)",
+      "ocean": "Ocean (albăstrui)"
+    },
+    "compliance": {
+      "hint": "Articolul 15 din Ordinul HAC/1177/2024. Aplicația este dezvoltată intern, așa că firma însăși declară că sistemul respectă RD 1007/2023. Este necesară o declarație pentru fiecare versiune a sistemului.",
+      "history": "Versiuni anterioare",
+      "issue": "Emite declarația",
+      "issueError": "Declarația nu a putut fi emisă",
+      "issued": "Declarație emisă la",
+      "loadError": "Declarațiile nu au putut fi încărcate",
+      "missing": "Nu există declarație pentru versiunea în uz. Emite-o înainte de a continua să facturezi.",
+      "mode": "Modalitate",
+      "modeVerifactu": "Exclusiv VERI*FACTU",
+      "open": "Deschide PDF",
+      "producer": "Producător",
+      "system": "Sistem",
+      "title": "Declarație pe proprie răspundere a sistemului de facturare",
+      "version": "Versiune"
+    },
+    "verifactu": {
+      "accepted": "Acceptate",
+      "blocked": "Lanțul este blocat de factura",
+      "disabled": "Transmiterea este dezactivată. Înregistrările se salvează cu fiecare factură, dar nu se trimit, iar factura nu tipărește codul QR de verificare.",
+      "hint": "Fiecare factură emisă generează o înregistrare care trebuie transmisă Agenției Fiscale. O factură care nu a ajuns nu se vede nicăieri altundeva: aici se vede.",
+      "liveEnv": "Se trimite către Agenția Fiscală.",
+      "loadError": "Nu s-a putut consulta starea transmiterii",
+      "pending": "În așteptare",
+      "result": {
+        "blocked": "Lanțul este blocat de o factură respinsă",
+        "disabled": "Transmiterea este dezactivată",
+        "empty": "Nu era nimic în așteptare",
+        "sent": "Trimitere finalizată",
+        "waiting": "Se așteaptă intervalul stabilit de Agenție"
+      },
+      "send": "Trimite acum",
+      "sendError": "Trimiterea nu s-a putut finaliza. Este posibil ca Agenția să o fi primit: se va reîncerca automat.",
+      "state": {
+        "error": "A eșuat, se va reîncerca",
+        "pendiente": "În așteptarea trimiterii",
+        "rechazado": "Respinsă de Agenție"
+      },
+      "testEnv": "Se trimite către PREPRODUCȚIE. Ce se acceptă aici este o repetiție: nu este depus la Agenție.",
+      "title": "Transmiterea către fiscul spaniol"
     }
   },
   "vehicles": {
@@ -1220,5 +1319,139 @@
     "startPickup": "Începe predarea",
     "startReturn": "Începe returnarea",
     "unsettledDeposit": "Garanție nerezolvată"
+  },
+  "invoices": {
+    "title": "Facturi",
+    "subtitle": "Emite și consultă facturile",
+    "new": "Factură nouă",
+    "issue": "Emite factura",
+    "empty": "Încă nu există facturi",
+    "emptyHint": "Se emit dintr-o rezervare sau separat, pentru o vânzare ori un serviciu punctual.",
+    "recipient": "Facturat către",
+    "fromReservation": "Din rezervare",
+    "free": "Factură separată",
+    "recipientSection": "Facturat către",
+    "linesSection": "Articole",
+    "paymentSection": "Modalitate de plată",
+    "datesSection": "Date",
+    "recipientType": "Tip",
+    "recipientName": "Nume sau denumire",
+    "recipientTaxId": "CIF / NIF / NIE",
+    "recipientAddress": "Domiciliu fiscal",
+    "recipientEmail": "Email",
+    "lineDescription": "Descriere",
+    "lineQuantity": "Buc.",
+    "lineUnitPrice": "Preț fără TVA",
+    "lineVat": "TVA",
+    "addLine": "Adaugă articol",
+    "removeLine": "Elimină",
+    "operationDate": "Data prestării",
+    "periodStart": "De la",
+    "periodEnd": "Până la",
+    "base": "Bază impozabilă",
+    "vat": "TVA",
+    "totalLabel": "Total factură",
+    "alreadyPaid": "Deja încasat",
+    "issuing": "Se emite…",
+    "issued": "Factura a fost emisă",
+    "notes": "Note",
+    "issueDateFixed": "Data emiterii este cea de azi și nu se poate schimba. Pentru un serviciu anterior, folosește data prestării.",
+    "immutableWarning": "Odată emisă, factura nu se mai poate modifica sau șterge. Verific-o înainte de a continua.",
+    "cashDisabled": "Peste 1.000 € legea nu permite încasarea în numerar.",
+    "differsFromReservation": "Suma diferă de cea a rezervării. Va fi consemnată în factură.",
+    "overdueCompany": "Este un client persoană juridică, iar termenul de facturare a expirat.",
+    "kinds": {
+      "invoice": "Factură",
+      "rectifying": "Factură storno",
+      "proforma": "Proformă"
+    },
+    "status": {
+      "draft": "Ciornă",
+      "issued": "Emisă",
+      "rectified": "Stornată",
+      "cancelled": "Anulată"
+    },
+    "paymentMethods": {
+      "paid": "Achitată",
+      "transfer": "Transfer bancar",
+      "card": "Card / POS",
+      "cash": "Numerar"
+    },
+    "recipientTypes": {
+      "individual": "Persoană fizică",
+      "company": "Firmă"
+    },
+    "problems": {
+      "cashLimitExceeded": "Nu se poate încasa în numerar de la 1.000 € în sus",
+      "euVatIdRequired": "O livrare intracomunitară necesită codul de TVA al cumpărătorului (ex.: PT501234567)",
+      "exemptionNoteRequired": "Indică temeiul legal al scutirii",
+      "lineDescriptionRequired": "Descrie articolul",
+      "linePriceInvalid": "Suma nu poate fi negativă",
+      "lineQuantityRequired": "Cantitatea trebuie să fie mai mare decât zero",
+      "lineVatInvalid": "Indică o cotă de TVA validă",
+      "linesRequired": "Adaugă cel puțin un articol",
+      "paymentMethodRequired": "Alege modalitatea de plată",
+      "rebuPurchasePriceRequired": "La regimul pe marjă e nevoie de prețul de achiziție: baza este marja",
+      "recipientAddressRequired": "Domiciliul fiscal este obligatoriu pe orice factură",
+      "recipientCountryRequired": "Indică țara: cu un document care nu este nici NIF spaniol, nici cod TVA european, factura nu se poate transmite fără ea",
+      "recipientNameRequired": "Indică numele sau denumirea",
+      "recipientTaxIdRequired": "CIF-ul este obligatoriu pe orice factură",
+      "rectifiedBaseRequired": "Prin substituire trebuie indicată baza stornată",
+      "rectifiedInvoiceRequired": "Indică ce factură se stornează",
+      "rectifiedVatRequired": "Prin substituire trebuie indicat TVA-ul stornat",
+      "rectifyingNoteRequired": "Explică de ce se stornează: este ceea ce apare în document",
+      "rectifyingReasonRequired": "Alege temeiul stornării",
+      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență"
+    },
+    "errors": {
+      "alreadyIssued": "Această factură a fost deja emisă",
+      "cannotDeleteIssued": "O factură emisă nu se poate șterge. Pentru corectare, emite o factură storno.",
+      "issueFailed": "Factura nu a putut fi emisă",
+      "loadFailed": "Facturile nu au putut fi încărcate",
+      "proformaFailed": "Proforma nu a putut fi generată",
+      "unauthenticated": "Trebuie să te autentifici",
+      "verifactuHashMismatch": "Amprenta unei facturi nu corespunde cu ceea ce este salvat. Nu s-a trimis nimic: trebuie verificat înainte de a continua.",
+      "verifactuRecordMissing": "Acea factură nu are înregistrare de facturare, deci nu poate fi transmisă. Este un incident: semnalează-l înainte de a emite altele.",
+      "verifactuUnreachable": "Trimiterea către Agenția Fiscală nu s-a putut finaliza. Este posibil să fi ajuns totuși: se va reîncerca automat."
+    },
+    "taxRegime": "Regim de TVA",
+    "purchasePrice": "Preț de achiziție (TVA inclus)",
+    "rebuMargin": "Marjă",
+    "exemptionNote": "Temeiul legal al scutirii",
+    "rebuWarning": "Regimul pentru bunuri second-hand se aplică doar dacă ai cumpărat bunul FĂRĂ TVA deductibil (de la o persoană fizică) și pentru revânzare. O mașină care a fost în flotă a fost cumpărată deducând TVA-ul, deci vânzarea ei intră în regimul general.",
+    "regimes": {
+      "standard": "General (TVA peste preț)",
+      "rebu": "Bunuri second-hand (TVA pe marjă)",
+      "exemptEu": "Scutită · livrare intracomunitară (art. 25)",
+      "exemptExport": "Scutită · export (art. 21)",
+      "reverseCharge": "Taxare inversă",
+      "exemptOther": "Scutită · altele"
+    },
+    "rectify": "Emite factură storno",
+    "proforma": "Generează proformă",
+    "proformaGenerated": "Proformă generată",
+    "rectifyingSection": "Stornare",
+    "rectifiedInvoice": "Factura care se stornează",
+    "rectifyingType": "Modalitate",
+    "rectifyingReason": "Temei",
+    "rectifyingNote": "Motivul stornării",
+    "rectifyingHint": "O factură emisă nu se modifică: se stornează cu un document nou care o referențiază. Originalul rămâne marcat ca stornat.",
+    "negativeHint": "Prin diferență, sumele au semn. Pentru a anula întreaga factură, introdu suma cu minus.",
+    "proformaHint": "Proforma nu este o factură: nu are număr fiscal și nu generează TVA.",
+    "rectifyingTypes": {
+      "substitution": "Prin substituire (se reemit datele corecte complete)",
+      "difference": "Prin diferență (doar ajustarea, cu semnul ei)"
+    },
+    "rectifyingReasons": {
+      "R1": "R1 · Eroare de drept (art. 80.Unu, Doi și Șase)",
+      "R2": "R2 · Procedură de insolvență (art. 80.Trei)",
+      "R3": "R3 · Creanță nerecuperabilă (art. 80.Patru)",
+      "R4": "R4 · Alte cauze prevăzute la art. 80",
+      "R5": "R5 · Stornarea unei facturi simplificate"
+    },
+    "rectifiedBase": "Bază stornată",
+    "rectifiedVat": "TVA stornat",
+    "recipientCountry": "Țara destinatarului",
+    "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta."
   }
 }

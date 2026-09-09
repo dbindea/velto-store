@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NotificationService } from '@core/notifications/notification.service';
 import { TranslateService } from '@core/i18n/translate.service';
 import { firstValueFrom } from 'rxjs';
@@ -36,6 +36,8 @@ import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { calculateCalendarDays } from '@shared/utils/reservation-date.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workflow.util';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { FormDraftService } from '@core/forms/form-draft.service';
 
 @Component({
   selector: 'app-inspection-return',
@@ -45,6 +47,11 @@ import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workf
   styleUrl: './inspection-return.component.scss'
 })
 export class InspectionReturnComponent implements OnInit {
+  private confirm = inject(ConfirmService);
+  private drafts = inject(FormDraftService);
+  private destroyRef = inject(DestroyRef);
+  /** Borrador vivo del formulario; se limpia al completar la devolución. */
+  private draft: { clear: () => void } | null = null;
   private notifications = inject(NotificationService);
   private translateService = inject(TranslateService);
   private route = inject(ActivatedRoute);
@@ -144,6 +151,21 @@ export class InspectionReturnComponent implements OnInit {
       if (existing) {
         this.formData = { ...this.formData, ...existing };
       }
+
+      /**
+       * El borrador va **después** de lo cargado y manda sobre ello: si el
+       * móvil se llevó la pestaña por delante mientras se hacía la devolución
+       * —abrir la cámara para una foto de un daño basta—, lo que el operador
+       * llevaba escrito es más reciente que lo que hay en Firestore.
+       */
+      this.draft = this.drafts.attach<Partial<Inspection>>(
+        `return:${reservationId}`,
+        () => this.formData,
+        (guardado) => {
+          this.formData = { ...this.formData, ...guardado };
+        },
+        this.destroyRef
+      );
     } catch (error) {
       console.error('Error loading:', error);
     } finally {
@@ -317,8 +339,12 @@ export class InspectionReturnComponent implements OnInit {
     if (hasProblems(this.problems)) return;
 
     if (!this.formData.checklist?.keysReturned) {
-      const confirmed = confirm('No has marcado la devolución de llaves. ¿Continuar?');
-      if (!confirmed) return;
+      const seguir = await this.confirm.ask({
+        title: 'inspections.confirm.keysTitle',
+        message: 'inspections.confirm.keysMessage',
+        confirmLabel: 'common.continue'
+      });
+      if (!seguir) return;
     }
 
     this.recalculateTotal();
@@ -333,6 +359,9 @@ export class InspectionReturnComponent implements OnInit {
           refundDepositAmount: this.toRefund > 0 ? this.toRefund : undefined
         }
       );
+      // Ya está en Firestore: el borrador dejaría de proteger y empezaría a
+      // estorbar.
+      this.draft?.clear();
       this.router.navigate(['/reservations', this.reservationId]);
     } catch (error) {
       console.error('Error completing return:', error);
@@ -417,7 +446,12 @@ export class InspectionReturnComponent implements OnInit {
       this.formData.photos = (this.formData.photos || []).filter(p => p.path !== photo.path);
       return;
     }
-    const confirmed = confirm('¿Eliminar esta foto?');
+    const confirmed = await this.confirm.ask({
+      title: 'common.photos.deleteTitle',
+      message: 'common.photos.deleteMessage',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
     if (!confirmed) return;
     try {
       await this.inspectionService.deleteInspectionPhoto((this.formData as Inspection).id!, photo);

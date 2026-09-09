@@ -119,6 +119,88 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // -----------------------------------------------------------------------
+    // FACTURACIÓN
+    // -----------------------------------------------------------------------
+    // ⚠️ Una factura emitida NO se edita ni se borra. Nunca, ni siendo
+    // administrador. Un error se corrige emitiendo una rectificativa, que es un
+    // documento nuevo; y el número consumido queda consumido aunque la
+    // operación se anule (art. 15 RD 1619/2012). Desde 2027 va además encadenada
+    // por huella, así que borrar una rompería la cadena de todas las siguientes.
+    //
+    // ⚠️ `create` tampoco se permite desde el cliente, y esto es lo que las
+    // reglas NO podrían proteger de otra forma: una regla puede impedir que se
+    // toque una factura, pero no sabe cuál era el siguiente número correlativo,
+    // así que no puede impedir que alguien escriba el que le dé la gana. El
+    // número lo asigna `issueInvoice` con el admin SDK, dentro de una
+    // transacción con su contador.
+    //
+    // Lo único que queda del lado del cliente es leerlas.
+    // ⚠️ **Solo administrador para leer**, igual que `expenses`, y por el mismo
+    // motivo: `permissions.util.ts` da `viewInvoices` únicamente al admin, y una
+    // regla más laxa que el permiso de la aplicación no es una regla laxa — es
+    // que el permiso no existe. Un empleado no vería el menú de Facturas, pero
+    // desde cualquier cliente de Firestore tendría el nombre, el NIF, el
+    // domicilio fiscal y el importe de todos los clientes que se hayan
+    // facturado. Es exactamente el caso que documenta CLAUDE.md: los dos
+    // ficheros se editan por separado y nada los ata.
+    match /invoices/{invoiceId} {
+      allow read: if callerIsAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // Los contadores de cada serie: `lastNumber` y `lastHash`. Solo el backend.
+    // Tocarlos desde fuera abriría un hueco en la numeración o rompería el
+    // encadenamiento, que son las dos cosas que no se pueden deshacer.
+    match /invoiceCounters/{series} {
+      allow read: if callerIsAdmin();
+      allow write: if false;
+    }
+
+    // La declaración responsable del art. 15 de la Orden HAC/1177/2024, una por
+    // cada versión del sistema.
+    //
+    // ⚠️ **Mismo trato que una factura: `create` desde la function y nada más.**
+    // La declaración de una versión pasada sigue acreditando lo que se declaró
+    // mientras esa versión estuvo emitiendo facturas, así que borrarla dejaría
+    // sin amparo a todas las facturas de ese periodo. Y editarla convertiría un
+    // documento de cumplimiento en algo que se puede ajustar después de los
+    // hechos, que es justo lo contrario de lo que acredita.
+    //
+    // La lee un administrador: es quien responde de ella.
+    match /verifactuDeclarations/{version} {
+      allow read: if callerIsAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // El estado del envío de cada factura a la AEAT: pendiente, aceptado con su
+    // CSV, o rechazado con el motivo.
+    //
+    // Se lee para poder enseñarlo —y para que un rechazo se vea, porque bloquea
+    // la cadena entera—, pero **no se escribe desde el cliente por nada del
+    // mundo**: marcar una factura como aceptada a mano diría que está presentada
+    // ante la Agencia cuando no lo está, y eso es peor que no saberlo. Lo
+    // escribe el backend con el acuse de la AEAT en la mano.
+    //
+    // Solo administrador, igual que `invoices`: cruzando el número de factura
+    // con el CSV se reconstruye quién ha facturado qué, que es el mismo dato que
+    // el permiso `viewInvoices` protege.
+    match /verifactuSubmissions/{invoiceId} {
+      allow read: if callerIsAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // Destinatarios de factura: quién paga, que no siempre es quien conduce.
+    // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
+    // congelado en la factura es el snapshot, no este documento.
+    // Mismo criterio: un destinatario de factura lleva nombre, NIF y domicilio
+    // fiscal —datos personales— y solo sirve para facturar, que es cosa de
+    // administrador. Dejarlo abierto a cualquier autorizado daba acceso a la
+    // agenda fiscal completa por la puerta de atrás.
+    match /billingProfiles/{profileId} {
+      allow read, write: if callerIsAdmin();
+    }
+
     // contractSigningTokens - NEVER read/write from the client.
     // Only Cloud Functions (admin SDK) can read or write tokens.
     // Public access is via the getContractForSigning / signContract

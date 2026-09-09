@@ -15,6 +15,10 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { buildContractPdf, PdfBuilder, formatIdDocument, companyFooterLines } from '../contracts/pdf';
 import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
+import { buildInspectionPdf } from './inspection-pdf';
+import { buildInvoicePdf } from '../invoices/invoice-pdf';
+import { buildReceiptPdf } from '../invoices/receipt-pdf';
+import { calculateInvoiceTotals } from '../invoices/invoice-core';
 import { CONTRACT_CLAUSES } from '../contracts/clauses';
 import {
   COMPANY_ADDRESS,
@@ -161,8 +165,25 @@ describe('the real documents, in every language', () => {
    * Renders one document and returns the builder that laid it out, so the
    * assertions run against the same geometry that reached the page.
    */
+  /**
+   * Un JPEG mínimo pero **real**: 8×8 píxeles codificados de verdad.
+   *
+   * Los invariantes del parte no significan nada con fotos falsas — lo que hay
+   * que comprobar es que una imagen incrustada no se sale del margen ni pisa su
+   * pie, y para eso pdf-lib tiene que poder leerla.
+   */
+  const JPEG_8X8 = Buffer.from(
+    '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a' +
+      'HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAAIAAgBAREA/8QAHwAAAQUBAQEB' +
+      'AQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1Fh' +
+      'ByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZ' +
+      'WmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXG' +
+      'x8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APn+iiiigD//2Q==',
+    'base64'
+  );
+
   async function layoutOf(
-    kind: 'quote' | 'booking' | 'contract',
+    kind: 'quote' | 'booking' | 'contract' | 'invoice' | 'receipt' | 'inspection',
     locale: ContractLocale
   ): Promise<PdfBuilder> {
     let captured: PdfBuilder | null = null;
@@ -204,6 +225,162 @@ describe('the real documents, in every language', () => {
         generatedAt: new Date('2026-08-27T09:00:00Z'),
         onLayout
       });
+    } else if (kind === 'invoice') {
+      /**
+       * El peor caso a propósito: **una factura mixta**, con los tres
+       * comportamientos del IVA en el mismo documento.
+       *
+       * Es donde se cruzan las etiquetas largas del bloque de totales
+       * —«BIENES USADOS (IVA INCLUIDO)» en español, «Bunuri second-hand (TVA
+       * inclus)» en rumano— con las menciones legales, que son las frases más
+       * largas que imprime la aplicación. Y el destinatario lleva razón social
+       * y domicilio largos, que es lo que empuja la columna contra el margen.
+       */
+      const lines = [
+        {
+          description:
+            'Alquiler de vehículo sin conductor Renault Megane Sport Tourer, matrícula 4466LKK, según contrato C-P2RJP0-2026.',
+          quantity: 7,
+          unitPrice: 55,
+          vatRate: 0.21,
+          taxRegime: 'standard'
+        },
+        {
+          description: 'Venta de vehículo usado Seat Ibiza 1.6 TDI, matrícula 1234ABC',
+          quantity: 1,
+          unitPrice: 7000,
+          vatRate: 0.21,
+          taxRegime: 'rebu'
+        },
+        {
+          description: 'Venta intracomunitaria de vehículo Dacia Duster, matrícula 4928LKL',
+          quantity: 1,
+          unitPrice: 12000,
+          vatRate: 0,
+          taxRegime: 'exempt_eu'
+        }
+      ];
+      await buildInvoicePdf({
+        locale,
+        company,
+        recipient: {
+          name: client.fullName,
+          taxId: 'PT501234567',
+          address: client.address,
+          email: client.email
+        },
+        fullNumber: '2026/0137',
+        issueDate: new Date('2026-09-08T09:00:00Z'),
+        operationDate: new Date('2026-08-01T09:00:00Z'),
+        operationPeriodStart: new Date('2026-06-01T09:00:00Z'),
+        operationPeriodEnd: new Date('2026-08-01T09:00:00Z'),
+        lines,
+        totals: calculateInvoiceTotals(lines),
+        paymentMethod: 'transfer',
+        bankName: 'BBVA',
+        iban: 'ES48 0182 4888 1102 0195 5536',
+        amountAlreadyPaid: 500,
+        contractNumber: 'C-P2RJP0-2026',
+        vehicleLabel: 'Renault Megane · 4466LKK',
+        mentions: [
+          'Régimen especial de los bienes usados.',
+          'Operación exenta conforme al artículo 25 de la Ley 37/1992 (entrega intracomunitaria de bienes).'
+        ],
+        /**
+         * ⚠️ Con el QR de VeriFactu **encendido**, que es el caso peor: va al
+         * final de una factura que ya trae tres líneas, el bloque de totales,
+         * dos menciones legales y los datos bancarios. Un QR con texto encima
+         * no se escanea, y el invariante que lo comprueba solo sirve si el QR
+         * está en el documento que se mide.
+         */
+        verifactu: {
+          url: 'https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=B88866900&numserie=2026%2F0137&fecha=08-09-2026&importe=19260.33'
+        },
+        onLayout
+      });
+    } else if (kind === 'receipt') {
+      /**
+       * El caso peor del recibo: **una fianza cobrada a medias**.
+       *
+       * Junta las tres cosas que pueden empujarse entre sí —la nota larga de la
+       * fianza, la fila «pendiente de este concepto» sobre el importe recibido,
+       * y un concepto escrito por el operador debajo del titular traducido— con
+       * el nombre largo del cliente, que es lo que parte la columna derecha.
+       * En rumano, además, es donde caen los diacríticos que Gotham no tiene.
+       */
+      await buildReceiptPdf({
+        locale,
+        company,
+        reference: 'REC-8QPB4E2A',
+        payerName: client.fullName,
+        amount: 150,
+        paidAt: new Date('2026-09-04T10:00:00Z'),
+        issuedAt: new Date('2026-09-08T09:00:00Z'),
+        method: 'bank_transfer',
+        paymentType: 'deposit',
+        concept: 'Fianza del alquiler, entregada a cuenta en la oficina de Arganda del Rey',
+        reservationLocator: 'R-P2RJP0',
+        vehicleLabel: 'Renault Megane Sport Tourer · 4466LKK',
+        pendingAmount: 150,
+        invoiceExpected: true,
+        onLayout
+      });
+    } else if (kind === 'inspection') {
+      /**
+       * El caso peor del parte: **una devolución con de todo**.
+       *
+       * Daños con descripción larga, comprobaciones sin marcar —que es lo que
+       * hay que poder discutir—, cargos con su bloque de totales, observaciones
+       * y ocho fotos, que es lo que la inspección recomienda. Las fotos son
+       * imágenes de verdad: con una falsa, el invariante de que nada se sale
+       * del margen no comprobaría nada.
+       */
+      await buildInspectionPdf({
+        locale,
+        kind: 'return',
+        company,
+        locator: 'R-P2RJP0',
+        contractNumber: 'C-P2RJP0-2026',
+        clientName: client.fullName,
+        clientDocument: 'NIE X9876543M',
+        vehicleLabel: 'Renault Megane Sport Tourer Business dCi 115 · 4466LKK',
+        inspectedAt: new Date('2026-09-11T10:00:00Z'),
+        issuedAt: new Date('2026-09-11T10:30:00Z'),
+        km: 25350,
+        fuelLabel: locale === 'en' ? 'Half' : locale === 'ro' ? 'Jumătate' : '1/2',
+        cleanlinessLabel: locale === 'en' ? 'Dirty' : locale === 'ro' ? 'Murdar' : 'Sucio',
+        checkedItems: [
+          'Identidad del cliente verificada',
+          'Carnet de conducir verificado',
+          'Contrato firmado y revisado',
+          'Llaves devueltas'
+        ],
+        uncheckedItems: ['Accesorios revisados', 'Documentación entregada'],
+        damages: [
+          {
+            area: 'Lateral izquierdo',
+            severity: 'Media',
+            isNewDamage: true,
+            description:
+              'Arañazo profundo de unos veinte centímetros en la puerta delantera, con pérdida de pintura hasta la chapa.'
+          },
+          { area: 'Ruedas', severity: 'Leve', description: 'Roce en la llanta trasera derecha.' }
+        ],
+        charges: [
+          { label: 'Kilómetros extra', amount: 150 },
+          { label: 'Combustible', amount: 45.5 },
+          { label: 'Limpieza', amount: 30 }
+        ],
+        chargesTotal: 225.5,
+        notes:
+          'El cliente devuelve el vehículo fuera de horario, con las llaves en el buzón de la oficina.',
+        photos: Array.from({ length: 8 }, (_, i) => ({
+          bytes: new Uint8Array(JPEG_8X8),
+          contentType: 'image/jpeg',
+          label: ['Frontal', 'Trasera', 'Lateral izquierdo', 'Lateral derecho', 'Interior', 'Cuadro de mandos', 'Combustible', 'Daño'][i]
+        })),
+        onLayout
+      });
     } else {
       await buildContractPdf(
         {
@@ -234,7 +411,7 @@ describe('the real documents, in every language', () => {
     return captured;
   }
 
-  const KINDS = ['quote', 'booking', 'contract'] as const;
+  const KINDS = ['quote', 'booking', 'contract', 'invoice', 'receipt', 'inspection'] as const;
 
   for (const kind of KINDS) {
     for (const locale of LOCALES) {
@@ -288,6 +465,75 @@ describe('the real documents, in every language', () => {
       }, 30_000);
     }
   }
+
+  /**
+   * ⚠️ **Un recibo no puede parecer una factura**, y eso no lo comprueba
+   * ninguno de los invariantes de arriba: los cuatro miran dónde cae el texto,
+   * nunca qué dice. Es exactamente el hueco por el que el presupuesto afirmó
+   * durante meses que los precios llevaban el IVA incluido.
+   *
+   * Aquí se comprueban las dos mitades de esa regla sobre el documento real:
+   * que el aviso está impreso, y que **no hay ni un desglose de impuesto**. Un
+   * cliente que se dedujera el IVA con un recibo tendría un problema, y quien
+   * se lo dio también.
+   */
+  describe('el recibo no puede pasar por una factura', () => {
+    const AVISOS: Record<ContractLocale, string[]> = {
+      es: ['sin validez fiscal', 'NO es una factura'],
+      en: ['no tax validity', 'This is NOT an invoice'],
+      ro: ['fără valabilitate fiscală', 'NU este o factură']
+    };
+
+    /** Las etiquetas con las que la factura consigna base y cuota. */
+    const BASES = ['BASE IMPONIBLE', 'TAXABLE BASE', 'BAZĂ IMPOZABILĂ'];
+
+    for (const locale of LOCALES) {
+      it(`${locale}: lleva impreso que no es una factura`, async () => {
+        const b = await layoutOf('receipt', locale);
+        // Las líneas se juntan con un espacio porque el builder parte por
+        // palabras: así la frase se reconstruye tal y como se lee.
+        const texto = b.boxes
+          .map((box) => box.text)
+          .join(' ')
+          .replace(/\s+/g, ' ');
+        for (const aviso of AVISOS[locale]) {
+          expect(texto, `falta el aviso «${aviso}»`).toContain(aviso);
+        }
+      }, 30_000);
+
+      /**
+       * ⚠️ Un recibo dice **de quién** se recibió el dinero. El nombre salía
+       * suelto en su columna, sin etiqueta, mientras la traducción existía en
+       * los tres idiomas sin que nadie la pintara.
+       */
+      it(`${locale}: dice de quién se recibió el dinero`, async () => {
+        const b = await layoutOf('receipt', locale);
+        const etiqueta = { es: 'Recibido de', en: 'Received from', ro: 'Primit de la' }[locale];
+        const texto = b.boxes
+          .map((box) => box.text)
+          .join(' ')
+          .replace(/\s+/g, ' ');
+        expect(texto).toContain(etiqueta);
+        // Y el nombre del pagador va al lado, no en otra parte del documento.
+        expect(texto).toContain('EUROCONSTRUCCIONES');
+      }, 30_000);
+
+      it(`${locale}: no desglosa ningún impuesto`, async () => {
+        const b = await layoutOf('receipt', locale);
+        const impuesto = b.boxes
+          .map((box) => box.text.trim())
+          .filter(
+            (t) =>
+              BASES.includes(t.toUpperCase()) ||
+              // «IVA», «VAT» y «TVA» sueltos son la columna de la tabla de
+              // líneas; con una cifra detrás, la fila de la cuota.
+              /^(IVA|VAT|TVA)$/i.test(t) ||
+              /^(IVA|VAT|TVA)\s+[\d(]/i.test(t)
+          );
+        expect(impuesto).toEqual([]);
+      }, 30_000);
+    }
+  });
 
   /**
    * La constancia de firma pertenece a quien firmó.

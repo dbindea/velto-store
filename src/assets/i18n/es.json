@@ -129,7 +129,10 @@
     "all": "Todos",
     "back": "Volver",
     "cancel": "Cancelar",
+    "close": "Cerrar",
+    "continue": "Continuar",
     "create": "Crear",
+    "days": "días",
     "delete": "Eliminar",
     "edit": "Editar",
     "error": "Algo ha ido mal",
@@ -137,6 +140,8 @@
     "missingFields": "Falta por completar:",
     "photos": {
       "camera": "Cámara",
+      "deleteMessage": "La foto se borrará y no se puede recuperar.",
+      "deleteTitle": "Eliminar foto",
       "gallery": "Galería",
       "hint": "JPG, PNG o WebP · máx. 5 MB",
       "invalidType": "Solo se admiten imágenes JPG, PNG o WebP",
@@ -148,9 +153,7 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo",
-    "close": "Cerrar",
-    "days": "días"
+    "viewAll": "Ver todo"
   },
   "contracts": {
     "actions": {
@@ -165,10 +168,20 @@
       "viewContract": "Ver contrato",
       "viewOriginalPdf": "Ver contrato original"
     },
+    "cancelSigningLink": "Anular enlace",
+    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?",
+    "confirmCancelSigningLinkTitle": "Anular el enlace de firma",
     "email": {
       "recipient": "Email del destinatario",
       "send": "Enviar",
       "title": "Enviar contrato por email"
+    },
+    "errors": {
+      "generate": "No se pudo generar el contrato.",
+      "createSigningLink": "No se pudo crear el enlace de firma.",
+      "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
+      "pdfNotReady": "El PDF todavía no está disponible.",
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
     },
     "fields": {
       "allStatuses": "Todos los estados",
@@ -217,6 +230,7 @@
     },
     "subtitle": "Genera, firma y envía contratos de alquiler",
     "title": "Contratos",
+    "verificationCode": "Código de verificación",
     "verify": {
       "cancelledMessage": "Este contrato existió, pero ya no está vigente.",
       "cancelledTitle": "Contrato anulado",
@@ -236,16 +250,7 @@
       "unknownTitle": "No encontrado",
       "validMessage": "Este contrato existe y está firmado.",
       "validTitle": "Contrato verificado"
-    },
-    "errors": {
-      "generate": "No se pudo generar el contrato.",
-      "createSigningLink": "No se pudo crear el enlace de firma.",
-      "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
-      "pdfNotReady": "El PDF todavía no está disponible.",
-      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
-    },
-    "confirmCancelSigningLink": "¿Cancelar el enlace de firma activo?",
-    "verificationCode": "Código de verificación"
+    }
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
@@ -311,6 +316,7 @@
       "tolls": "Peajes"
     },
     "confirmDelete": "¿Borrar este gasto? También se borra su factura.",
+    "confirmDeleteTitle": "Eliminar gasto",
     "editTitle": "Editar gasto",
     "errors": {
       "amountRequired": "El importe tiene que ser mayor que cero",
@@ -520,7 +526,21 @@
       "depositRefunded": "Devueltos {amount} € de la fianza."
     },
     "retentionReasonPrompt": "Motivo de la retención:",
-    "retentionDefaultReason": "Cargos entrega/devolución"
+    "retentionDefaultReason": "Cargos entrega/devolución",
+    "confirm": {
+      "checklistMessage": "Hay puntos del checklist sin marcar. Si continúas, la entrega quedará registrada así.",
+      "checklistTitle": "Faltan comprobaciones",
+      "keysMessage": "No has marcado la devolución de llaves. Si continúas, la devolución quedará registrada así.",
+      "keysTitle": "Llaves sin devolver"
+    },
+    "report": {
+      "action": "Parte PDF",
+      "error": "No se pudo generar el parte",
+      "problems": {
+        "inspectionRequired": "Falta la inspección de la que emitir el parte",
+        "notFound": "No se encuentra la inspección"
+      }
+    }
   },
   "layout": {
     "footer": "VELTO v1.0",
@@ -598,7 +618,8 @@
     "reports": "Informes",
     "reservations": "Reservas",
     "settings": "Ajustes",
-    "vehicles": "Vehículos"
+    "vehicles": "Vehículos",
+    "invoices": "Facturas"
   },
   "payments": {
     "actions": {
@@ -679,6 +700,27 @@
       "physicalPos": "TPV físico",
       "redsys": "Redsys (online)"
     },
+    "receipt": {
+      "action": "Recibo",
+      "confirm": "Se emitirá un recibo por lo ya cobrado:",
+      "copyLink": "Copiar enlace",
+      "error": "No se pudo generar el recibo",
+      "generate": "Generar recibo",
+      "generated": "Recibo generado:",
+      "invoiceExpected": "El cliente ha pedido factura",
+      "invoiceExpectedHint": "Solo entonces el recibo dice que se emitirá factura. Se factura a petición, así que prometerla siempre sería afirmar algo que muchas veces no es cierto.",
+      "linkCopied": "Enlace del recibo copiado",
+      "notAnInvoice": "Un recibo no es una factura: no desglosa IVA ni lleva número de serie fiscal, y el documento lo lleva impreso.",
+      "open": "Abrir PDF",
+      "problems": {
+        "cancelled": "Este cobro está cancelado: no hay nada que justificar",
+        "notFound": "No se encuentra el pago",
+        "notIncoming": "Un recibo justifica dinero recibido, y este movimiento va en sentido contrario",
+        "nothingCollected": "Todavía no se ha cobrado nada de este concepto",
+        "paymentRequired": "Falta el pago del que emitir el recibo"
+      },
+      "title": "Recibo de cobro"
+    },
     "redsys": {
       "authorizationCode": "Código autorización",
       "notificationReceived": "Notificación recibida",
@@ -721,6 +763,10 @@
       "refuelPenalty": "Penalización repostaje",
       "remainingPayment": "Resto alquiler",
       "rentalPayment": "Pago completo"
+    },
+    "confirm": {
+      "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
+      "cancelTitle": "Cancelar el cobro"
     }
   },
   "permissions": {
@@ -791,6 +837,9 @@
       "searchResults": "Resultados",
       "select": "Seleccionar cliente"
     },
+    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
+    "closeWithPendingChargesTitle": "Cargos sin cobrar",
+    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer.",
     "contractStatus": {
       "cancelled": "Cancelado",
       "expired": "Caducado",
@@ -815,6 +864,27 @@
       "waived": "Exenta"
     },
     "detail": "Detalle de reserva",
+    "drivers": {
+      "title": "Conductores autorizados",
+      "hint": "Además del arrendatario. Quedan impresos en el contrato y se le muestran al cliente antes de firmar.",
+      "add": "Añadir conductor",
+      "name": "Nombre completo",
+      "document": "DNI/NIE",
+      "license": "Carnet de conducir",
+      "empty": "Sin conductores adicionales.",
+      "signedLocked": "El contrato ya está firmado: los conductores no se pueden cambiar. Haz un anexo en papel.",
+      "regenerate": "Has cambiado los conductores: vuelve a generar el contrato para que salgan impresos.",
+      "search": "Buscar cliente por nombre o documento",
+      "errors": {
+        "nameRequired": "Escribe el nombre del conductor",
+        "documentRequired": "Escribe su DNI o NIE",
+        "licenseRequired": "Escribe su carnet de conducir",
+        "duplicate": "Ese conductor ya está en la lista",
+        "tooMany": "No caben más conductores",
+        "contractSigned": "El contrato ya está firmado y no se puede cambiar quién conduce.",
+        "save": "No se pudieron guardar los conductores."
+      }
+    },
     "errors": {
       "cancel": "Error al cancelar la reserva",
       "clientNameRequired": "Escribe el nombre del cliente",
@@ -863,6 +933,7 @@
       "refunded": "Reembolsado",
       "settled": "Liquidado"
     },
+    "pendingAmount": "pendiente",
     "pricing": {
       "basePrice": "Precio base",
       "deposit": "Fianza",
@@ -916,31 +987,7 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas",
-    "closeWithPendingCharges": "Esta reserva tiene {amount} € de cargos extra sin cobrar.\n\nCerrarla no los cobra ni los anula: seguirán siendo deuda del cliente, pero el alquiler dejará de aparecer como trabajo pendiente.\n\n¿Cerrar de todos modos?",
-    "pendingAmount": "pendiente",
-    "confirmDelete": "¿Borrar esta reserva con sus pagos, sus inspecciones y sus fotos? No se puede deshacer.",
-    "drivers": {
-      "title": "Conductores autorizados",
-      "hint": "Además del arrendatario. Quedan impresos en el contrato y se le muestran al cliente antes de firmar.",
-      "add": "Añadir conductor",
-      "name": "Nombre completo",
-      "document": "DNI/NIE",
-      "license": "Carnet de conducir",
-      "empty": "Sin conductores adicionales.",
-      "signedLocked": "El contrato ya está firmado: los conductores no se pueden cambiar. Haz un anexo en papel.",
-      "regenerate": "Has cambiado los conductores: vuelve a generar el contrato para que salgan impresos.",
-      "search": "Buscar cliente por nombre o documento",
-      "errors": {
-        "nameRequired": "Escribe el nombre del conductor",
-        "documentRequired": "Escribe su DNI o NIE",
-        "licenseRequired": "Escribe su carnet de conducir",
-        "duplicate": "Ese conductor ya está en la lista",
-        "tooMany": "No caben más conductores",
-        "contractSigned": "El contrato ya está firmado y no se puede cambiar quién conduce.",
-        "save": "No se pudieron guardar los conductores."
-      }
-    }
+    "title": "Reservas"
   },
   "search": {
     "close": "Cerrar",
@@ -986,6 +1033,8 @@
     "saved": "Guardado",
     "subtitle": "Valores por defecto y quién puede entrar",
     "tabs": {
+      "appearance": "Apariencia",
+      "compliance": "Declaración responsable",
       "operation": "Operación",
       "users": "Usuarios"
     },
@@ -996,6 +1045,7 @@
       "addTitle": "Dar acceso a alguien",
       "added": "Acceso concedido",
       "confirmDelete": "¿Borrar a esta persona? Ya no tiene acceso; esto solo quita el registro.",
+      "confirmDeleteTitle": "Quitar el acceso",
       "deactivate": "Quitar acceso",
       "email": "Correo de Google",
       "empty": "No hay nadie con acceso todavía",
@@ -1011,6 +1061,55 @@
       },
       "selfLocked": "No puedes cambiarte el acceso ni el rol a ti mismo.",
       "you": "Tú"
+    },
+    "theme": "Tema",
+    "themeHint": "Es una preferencia tuya: se guarda en este navegador y no afecta a nadie más. El botón de la barra superior rota entre los cuatro.",
+    "themes": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "forest": "Bosque (verdoso)",
+      "ocean": "Océano (azulado)"
+    },
+    "compliance": {
+      "hint": "Artículo 15 de la Orden HAC/1177/2024. La aplicación es un desarrollo propio de la empresa, así que es ella misma quien declara que el sistema cumple el RD 1007/2023. Hace falta una declaración por cada versión del sistema.",
+      "history": "Versiones anteriores",
+      "issue": "Emitir declaración",
+      "issueError": "No se pudo emitir la declaración",
+      "issued": "Declaración emitida el",
+      "loadError": "No se pudieron cargar las declaraciones",
+      "missing": "No hay declaración para la versión que está en uso. Emítela antes de seguir facturando.",
+      "mode": "Modalidad",
+      "modeVerifactu": "Exclusivamente VERI*FACTU",
+      "open": "Abrir PDF",
+      "producer": "Productor",
+      "system": "Sistema",
+      "title": "Declaración responsable del sistema de facturación",
+      "version": "Versión"
+    },
+    "verifactu": {
+      "accepted": "Aceptadas",
+      "blocked": "La cadena está bloqueada por la factura",
+      "disabled": "La remisión está desactivada. Los registros se guardan con cada factura, pero no se envían, y la factura no imprime el QR de cotejo.",
+      "hint": "Cada factura emitida genera un registro que hay que remitir a la Agencia Tributaria. Una factura que no llegó no se nota por ningún otro sitio: aquí es donde se ve.",
+      "liveEnv": "Enviando a la Agencia Tributaria.",
+      "loadError": "No se pudo consultar el estado de la remisión",
+      "pending": "Pendientes",
+      "result": {
+        "blocked": "La cadena está bloqueada por una factura rechazada",
+        "disabled": "La remisión está desactivada",
+        "empty": "No había nada pendiente de enviar",
+        "sent": "Envío completado",
+        "waiting": "Hay que esperar al plazo que marcó la Agencia"
+      },
+      "send": "Enviar ahora",
+      "sendError": "No se pudo completar el envío. Puede que la Agencia sí lo haya recibido: se reintentará solo.",
+      "state": {
+        "error": "Falló, se reintentará",
+        "pendiente": "Pendiente de envío",
+        "rechazado": "Rechazada por la Agencia"
+      },
+      "testEnv": "Enviando a PREPRODUCCIÓN. Lo que se acepta aquí es un ensayo: no está presentado ante la Agencia.",
+      "title": "Remisión a la AEAT"
     }
   },
   "vehicles": {
@@ -1220,5 +1319,139 @@
     "startPickup": "Iniciar entrega",
     "startReturn": "Iniciar devolución",
     "unsettledDeposit": "Fianza pendiente de resolver"
+  },
+  "invoices": {
+    "title": "Facturas",
+    "subtitle": "Emite y consulta las facturas",
+    "new": "Nueva factura",
+    "issue": "Emitir factura",
+    "empty": "Todavía no hay facturas",
+    "emptyHint": "Se emiten desde una reserva o por libre, para una venta o un servicio suelto.",
+    "recipient": "Destinatario",
+    "fromReservation": "Desde la reserva",
+    "free": "Factura libre",
+    "recipientSection": "Destinatario",
+    "linesSection": "Conceptos",
+    "paymentSection": "Forma de pago",
+    "datesSection": "Fechas",
+    "recipientType": "Tipo",
+    "recipientName": "Nombre o razón social",
+    "recipientTaxId": "NIF / CIF / NIE",
+    "recipientAddress": "Domicilio fiscal",
+    "recipientEmail": "Email",
+    "lineDescription": "Descripción",
+    "lineQuantity": "Uds.",
+    "lineUnitPrice": "Precio sin IVA",
+    "lineVat": "IVA",
+    "addLine": "Añadir concepto",
+    "removeLine": "Quitar",
+    "operationDate": "Fecha de la operación",
+    "periodStart": "Desde",
+    "periodEnd": "Hasta",
+    "base": "Base imponible",
+    "vat": "IVA",
+    "totalLabel": "Total factura",
+    "alreadyPaid": "Ya cobrado",
+    "issuing": "Emitiendo…",
+    "issued": "Factura emitida",
+    "notes": "Notas",
+    "issueDateFixed": "La fecha de expedición es la de hoy y no se puede cambiar. Para facturar un servicio anterior, usa la fecha de la operación.",
+    "immutableWarning": "Una vez emitida, la factura no se puede editar ni borrar. Revísala antes de continuar.",
+    "cashDisabled": "Por encima de 1.000 € la ley no permite el cobro en efectivo.",
+    "differsFromReservation": "El importe no coincide con el de la reserva. Quedará anotado en la factura.",
+    "overdueCompany": "Es una empresa: el plazo para facturar esta operación ya ha vencido.",
+    "kinds": {
+      "invoice": "Factura",
+      "rectifying": "Rectificativa",
+      "proforma": "Proforma"
+    },
+    "status": {
+      "draft": "Borrador",
+      "issued": "Emitida",
+      "rectified": "Rectificada",
+      "cancelled": "Anulada"
+    },
+    "paymentMethods": {
+      "paid": "Pagada",
+      "transfer": "Transferencia",
+      "card": "Tarjeta / TPV",
+      "cash": "Efectivo"
+    },
+    "recipientTypes": {
+      "individual": "Particular",
+      "company": "Empresa"
+    },
+    "problems": {
+      "cashLimitExceeded": "No se puede cobrar en efectivo a partir de 1.000 €",
+      "euVatIdRequired": "Una entrega intracomunitaria exige el NIF-IVA del comprador (ej.: PT501234567)",
+      "exemptionNoteRequired": "Indica qué norma ampara la exención",
+      "lineDescriptionRequired": "Describe el concepto",
+      "linePriceInvalid": "El importe no puede ser negativo",
+      "lineQuantityRequired": "La cantidad debe ser mayor que cero",
+      "lineVatInvalid": "Indica un tipo de IVA válido",
+      "linesRequired": "Añade al menos un concepto",
+      "paymentMethodRequired": "Elige la forma de pago",
+      "rebuPurchasePriceRequired": "En REBU hace falta el precio de compra: la base es el margen",
+      "recipientAddressRequired": "El domicilio fiscal es obligatorio en toda factura",
+      "recipientCountryRequired": "Indica el país: con un documento que no es un NIF español ni un NIF-IVA europeo, la factura no se puede remitir sin él",
+      "recipientNameRequired": "Indica el nombre o la razón social",
+      "recipientTaxIdRequired": "El NIF es obligatorio en toda factura",
+      "rectifiedBaseRequired": "Por sustitución hay que indicar la base rectificada",
+      "rectifiedInvoiceRequired": "Indica qué factura se rectifica",
+      "rectifiedVatRequired": "Por sustitución hay que indicar la cuota rectificada",
+      "rectifyingNoteRequired": "Explica por qué se rectifica: es lo que consta en el documento",
+      "rectifyingReasonRequired": "Elige la causa de la rectificación",
+      "rectifyingTypeRequired": "Elige la modalidad: por sustitución o por diferencias"
+    },
+    "errors": {
+      "alreadyIssued": "Esta factura ya se emitió",
+      "cannotDeleteIssued": "Una factura emitida no se puede borrar. Para corregirla, emite una rectificativa.",
+      "issueFailed": "No se pudo emitir la factura",
+      "loadFailed": "No se pudieron cargar las facturas",
+      "proformaFailed": "No se pudo generar la proforma",
+      "unauthenticated": "Debes iniciar sesión",
+      "verifactuHashMismatch": "La huella de una factura no cuadra con lo que hay guardado. No se ha enviado nada: hay que revisarlo antes de seguir.",
+      "verifactuRecordMissing": "Esa factura no tiene registro de facturación, así que no se puede remitir. Es un incidente: avisa antes de emitir más.",
+      "verifactuUnreachable": "No se pudo completar el envío a la Agencia. Puede que sí lo haya recibido: se reintentará solo."
+    },
+    "taxRegime": "Régimen de IVA",
+    "purchasePrice": "Precio de compra (IVA incl.)",
+    "rebuMargin": "Margen",
+    "exemptionNote": "Norma que ampara la exención",
+    "rebuWarning": "El REBU solo vale si compraste el bien SIN IVA deducible (a un particular) y para revenderlo. Un coche que estuvo en la flota se compró deduciendo su IVA, así que su venta va en régimen general.",
+    "regimes": {
+      "standard": "General (IVA sobre el precio)",
+      "rebu": "Bienes usados (REBU, IVA sobre el margen)",
+      "exemptEu": "Exenta · entrega intracomunitaria (art. 25)",
+      "exemptExport": "Exenta · exportación (art. 21)",
+      "reverseCharge": "Inversión del sujeto pasivo",
+      "exemptOther": "Exenta · otra"
+    },
+    "rectify": "Emitir rectificativa",
+    "proforma": "Generar proforma",
+    "proformaGenerated": "Proforma generada",
+    "rectifyingSection": "Rectificación",
+    "rectifiedInvoice": "Factura que se rectifica",
+    "rectifyingType": "Modalidad",
+    "rectifyingReason": "Causa",
+    "rectifyingNote": "Motivo de la rectificación",
+    "rectifyingHint": "Una factura emitida no se corrige: se rectifica con un documento nuevo que la referencia. La original queda marcada como rectificada.",
+    "negativeHint": "Por diferencias los importes van con signo. Para anular la factura entera, pon el importe en negativo.",
+    "proformaHint": "La proforma no es una factura: no lleva número fiscal ni devenga IVA.",
+    "rectifyingTypes": {
+      "substitution": "Por sustitución (se emiten los datos correctos completos)",
+      "difference": "Por diferencias (solo el ajuste, con su signo)"
+    },
+    "rectifyingReasons": {
+      "R1": "R1 · Error fundado en derecho (art. 80.Uno, Dos y Seis)",
+      "R2": "R2 · Concurso de acreedores (art. 80.Tres)",
+      "R3": "R3 · Crédito incobrable (art. 80.Cuatro)",
+      "R4": "R4 · Resto de causas del art. 80",
+      "R5": "R5 · Rectificación de factura simplificada"
+    },
+    "rectifiedBase": "Base rectificada",
+    "rectifiedVat": "Cuota rectificada",
+    "recipientCountry": "País del destinatario",
+    "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir."
   }
 }

@@ -31,6 +31,7 @@ import {
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   selector: 'app-client-form',
@@ -46,6 +47,7 @@ import { PermissionsService } from '@core/auth/permissions.service';
   styleUrl: './client-form.component.scss'
 })
 export class ClientFormComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private clientService = inject(ClientService);
@@ -288,7 +290,12 @@ export class ClientFormComponent implements OnInit {
   async deleteDocument(doc: ClientDocumentFile): Promise<void> {
     if (!this.clientId) return;
 
-    const confirmed = confirm(this.translateService.translate('clients.documents.confirmDelete'));
+    const confirmed = await this.confirm.ask({
+      title: 'common.photos.deleteTitle',
+      message: 'clients.documents.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
     if (!confirmed) return;
 
     this.uploadError = '';

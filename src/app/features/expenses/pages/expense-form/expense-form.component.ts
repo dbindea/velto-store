@@ -35,6 +35,7 @@ import {
 } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 /**
  * Alta y edición de un gasto.
@@ -53,6 +54,7 @@ import { PermissionsService } from '@core/auth/permissions.service';
   styleUrl: './expense-form.component.scss'
 })
 export class ExpenseFormComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private expenseService = inject(ExpenseService);
@@ -322,7 +324,13 @@ export class ExpenseFormComponent implements OnInit {
 
   async remove(): Promise<void> {
     if (!this.expenseId) return;
-    if (!confirm(this.translate.translate('expenses.confirmDelete'))) return;
+    const seguir = await this.confirm.ask({
+      title: 'expenses.confirmDeleteTitle',
+      message: 'expenses.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!seguir) return;
     this.saving = true;
     try {
       await this.expenseService.deleteExpense(this.expenseId);

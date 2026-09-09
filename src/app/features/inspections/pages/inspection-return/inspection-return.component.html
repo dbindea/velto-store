@@ -100,13 +100,13 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="check-inline">
+            <label class="checkbox-item">
               <input type="checkbox" [(ngModel)]="formData.checklist!.keysReturned" name="keysR">
               <span>{{ 'inspections.checklist.keysReturned' | translate }}</span>
             </label>
           </div>
           <div class="form-group">
-            <label class="check-inline">
+            <label class="checkbox-item">
               <input type="checkbox" [(ngModel)]="formData.checklist!.accessoriesChecked" name="accR">
               <span>{{ 'inspections.checklist.accessoriesChecked' | translate }}</span>
             </label>
@@ -326,7 +326,7 @@
     </div>
 
     <div class="page-actions">
-      <label class="check-inline big">
+      <label class="checkbox-item plain">
         <input type="checkbox" [(ngModel)]="closeReservation" name="close">
         <span>{{ 'inspections.closeReservation' | translate }}</span>
       </label>

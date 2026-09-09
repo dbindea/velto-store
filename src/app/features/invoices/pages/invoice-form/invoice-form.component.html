@@ -1,0 +1,584 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1>{{ (isRectifying ? 'invoices.rectify' : 'invoices.new') | translate }}</h1>
+      <p class="subtitle">
+        {{ (reservationId ? 'invoices.fromReservation' : 'invoices.free') | translate }}
+      </p>
+    </div>
+  </div>
+
+  <!--
+    Se avisa ANTES, no después: una factura emitida no se puede editar ni
+    borrar, y ese es justo el tipo de cosa que hay que saber mientras aún se
+    puede volver atrás.
+  -->
+  <div class="notice notice-warning">
+    <i class="pi pi-exclamation-triangle"></i>
+    <span>{{ 'invoices.immutableWarning' | translate }}</span>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">{{ 'common.loading' | translate }}</div>
+  } @else {
+    <div class="form-sections">
+      <!--
+        Rectificación. Solo aparece al llegar con ?rectify=…, y va la primera
+        porque cambia el significado de todo lo que viene debajo: los mismos
+        importes quieren decir otra cosa según la modalidad.
+      -->
+      @if (isRectifying) {
+        <div class="form-section">
+          <h2 class="section-title">{{ 'invoices.rectifyingSection' | translate }}</h2>
+          <p class="section-hint">{{ 'invoices.rectifyingHint' | translate }}</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ 'invoices.rectifiedInvoice' | translate }}</label>
+              <input class="form-control mono" [value]="rectifies?.fullNumber || ''" disabled />
+            </div>
+
+            <div class="form-group">
+              <label class="required" for="rectifyingType">
+                {{ 'invoices.rectifyingType' | translate }}
+              </label>
+              <select
+                id="rectifyingType"
+                class="form-control"
+                [(ngModel)]="rectifyingType"
+                name="rectifyingType"
+              >
+                @for (t of rectifyingTypeOptions; track t) {
+                  <option [value]="t">{{ rectifyingTypeLabels[t] | translate }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="required" for="rectifyingReason">
+              {{ 'invoices.rectifyingReason' | translate }}
+            </label>
+            <select
+              id="rectifyingReason"
+              class="form-control"
+              [(ngModel)]="rectifyingReason"
+              name="rectifyingReason"
+            >
+              @for (r of rectifyingReasonOptions; track r) {
+                <option [value]="r">{{ rectifyingReasonLabels[r] | translate }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="required" for="rectifyingNote">
+              {{ 'invoices.rectifyingNote' | translate }}
+            </label>
+            <input
+              type="text"
+              id="rectifyingNote"
+              class="form-control"
+              [(ngModel)]="rectifyingNote"
+              name="rectifyingNote"
+              [class.is-invalid]="submitted() && problems['rectifyingNote']"
+            />
+            <app-form-error [problems]="problems['rectifyingNote']" [show]="submitted()" />
+          </div>
+
+          <!-- Solo por sustitución: en `I` estos campos no se rellenan. -->
+          @if (rectifyingType === 'S') {
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required" for="rectifiedBase">
+                  {{ 'invoices.rectifiedBase' | translate }}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="rectifiedBase"
+                  class="form-control"
+                  [(ngModel)]="rectifiedBase"
+                  name="rectifiedBase"
+                  [class.is-invalid]="submitted() && problems['rectifiedBase']"
+                />
+                <app-form-error [problems]="problems['rectifiedBase']" [show]="submitted()" />
+              </div>
+              <div class="form-group">
+                <label class="required" for="rectifiedVat">
+                  {{ 'invoices.rectifiedVat' | translate }}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="rectifiedVat"
+                  class="form-control"
+                  [(ngModel)]="rectifiedVat"
+                  name="rectifiedVat"
+                  [class.is-invalid]="submitted() && problems['rectifiedVat']"
+                />
+                <app-form-error [problems]="problems['rectifiedVat']" [show]="submitted()" />
+              </div>
+            </div>
+          }
+
+          @if (allowsNegative) {
+            <div class="notice notice-info">
+              <i class="pi pi-info-circle"></i>
+              <span>{{ 'invoices.negativeHint' | translate }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Destinatario -->
+      <div class="form-section">
+        <h2 class="section-title">{{ 'invoices.recipientSection' | translate }}</h2>
+
+        @if (profiles().length) {
+          <div class="form-group">
+            <label for="profile">{{ 'invoices.recipient' | translate }}</label>
+            <select id="profile" class="form-control" (change)="applyProfile($any($event.target).value)">
+              <option value="">—</option>
+              @for (p of profiles(); track p.id) {
+                <option [value]="p.id">{{ p.name }} · {{ p.taxId }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="recipientType">{{ 'invoices.recipientType' | translate }}</label>
+            <select
+              id="recipientType"
+              class="form-control"
+              [(ngModel)]="recipientType"
+              (ngModelChange)="onRecipientTypeChange()"
+              name="recipientType"
+            >
+              @for (t of recipientTypeOptions; track t) {
+                <option [value]="t">{{ recipientTypeLabels[t] | translate }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="required" for="recipientName">
+              {{ 'invoices.recipientName' | translate }}
+            </label>
+            <input
+              type="text"
+              id="recipientName"
+              class="form-control"
+              [(ngModel)]="recipient.name"
+              name="recipientName"
+              [class.is-invalid]="submitted() && problems['recipientName']"
+            />
+            <app-form-error [problems]="problems['recipientName']" [show]="submitted()" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="required" for="recipientTaxId">
+              {{ 'invoices.recipientTaxId' | translate }}
+            </label>
+            <input
+              type="text"
+              id="recipientTaxId"
+              class="form-control mono"
+              [(ngModel)]="recipient.taxId"
+              name="recipientTaxId"
+              [class.is-invalid]="submitted() && problems['recipientTaxId']"
+            />
+            <app-form-error [problems]="problems['recipientTaxId']" [show]="submitted()" />
+          </div>
+
+          <!-- El país solo cuando el identificador no lo dice ya.
+               ⚠️ Con un NIF español o un NIF-IVA europeo sobra —lo llevan
+               dentro—, y donde hace falta no es opcional: sin él la AEAT rechaza
+               el registro y la factura, ya emitida, no se puede arreglar. -->
+          @if (needsCountry) {
+            <div class="form-group">
+              <label class="required" for="recipientCountry">
+                {{ 'invoices.recipientCountry' | translate }}
+              </label>
+              <select
+                id="recipientCountry"
+                class="form-control"
+                [(ngModel)]="recipient.countryCode"
+                name="recipientCountry"
+                [class.is-invalid]="submitted() && problems['recipientCountry']"
+              >
+                <option [ngValue]="undefined">—</option>
+                @for (c of countries; track c.code) {
+                  <option [ngValue]="c.code">{{ c.name }}</option>
+                }
+              </select>
+              <app-form-error [problems]="problems['recipientCountry']" [show]="submitted()" />
+              <p class="field-hint">{{ 'invoices.recipientCountryHint' | translate }}</p>
+            </div>
+          }
+
+          <div class="form-group">
+            <label for="recipientEmail">{{ 'invoices.recipientEmail' | translate }}</label>
+            <input
+              type="email"
+              id="recipientEmail"
+              class="form-control"
+              [(ngModel)]="recipient.email"
+              name="recipientEmail"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="required" for="recipientAddress">
+            {{ 'invoices.recipientAddress' | translate }}
+          </label>
+          <input
+            type="text"
+            id="recipientAddress"
+            class="form-control"
+            [(ngModel)]="recipient.address"
+            name="recipientAddress"
+            [class.is-invalid]="submitted() && problems['recipientAddress']"
+          />
+          <app-form-error [problems]="problems['recipientAddress']" [show]="submitted()" />
+        </div>
+      </div>
+
+      <!-- Conceptos -->
+      <div class="form-section">
+        <h2 class="section-title">{{ 'invoices.linesSection' | translate }}</h2>
+
+        @for (line of lines; track $index) {
+          <div class="line-row">
+            <div class="form-group line-description">
+              <label [for]="'desc' + $index">{{ 'invoices.lineDescription' | translate }}</label>
+              <input
+                type="text"
+                [id]="'desc' + $index"
+                class="form-control"
+                [(ngModel)]="line.description"
+                [name]="'desc' + $index"
+                [class.is-invalid]="submitted() && problems['lines[' + $index + '].description']"
+              />
+              <app-form-error
+                [problems]="problems['lines[' + $index + '].description']"
+                [show]="submitted()"
+              />
+            </div>
+
+            <div class="form-group line-qty">
+              <label [for]="'qty' + $index">{{ 'invoices.lineQuantity' | translate }}</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                [id]="'qty' + $index"
+                class="form-control"
+                [(ngModel)]="line.quantity"
+                [name]="'qty' + $index"
+                [class.is-invalid]="submitted() && problems['lines[' + $index + '].quantity']"
+              />
+            </div>
+
+            <div class="form-group line-price">
+              <label [for]="'price' + $index">{{ 'invoices.lineUnitPrice' | translate }}</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                [id]="'price' + $index"
+                class="form-control"
+                [(ngModel)]="line.unitPrice"
+                [name]="'price' + $index"
+                [class.is-invalid]="submitted() && problems['lines[' + $index + '].unitPrice']"
+              />
+            </div>
+
+            <div class="form-group line-vat">
+              <label [for]="'vat' + $index">{{ 'invoices.lineVat' | translate }} %</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                [id]="'vat' + $index"
+                class="form-control"
+                [ngModel]="vatPercentOf(line)"
+                (ngModelChange)="setVatPercent(line, $event)"
+                [name]="'vat' + $index"
+              />
+            </div>
+
+            <div class="line-base">
+              <span class="line-base-label">{{ 'invoices.base' | translate }}</span>
+              <span class="line-base-value">{{ baseOf(line) | number: '1.2-2' }} €</span>
+            </div>
+
+            <button
+              type="button"
+              class="btn-icon-danger"
+              (click)="removeLine($index)"
+              [attr.aria-label]="'invoices.removeLine' | translate"
+            >
+              <i class="pi pi-trash"></i>
+            </button>
+
+            <!--
+              El régimen de IVA de la línea. Va en su propia fila porque solo
+              hace falta mirarlo cuando NO es el general, que es el caso normal:
+              una venta de coche, una exportación, una entrega a otro país.
+            -->
+            <div class="line-regime">
+              <div class="form-group">
+                <label [for]="'regime' + $index">{{ 'invoices.taxRegime' | translate }}</label>
+                <select
+                  [id]="'regime' + $index"
+                  class="form-control"
+                  [(ngModel)]="line.taxRegime"
+                  [name]="'regime' + $index"
+                >
+                  @for (r of regimeOptions; track r) {
+                    <option [value]="r">{{ regimeLabels[r] | translate }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- REBU: la base es el margen, así que hace falta la compra. -->
+              @if (line.taxRegime === 'rebu') {
+                <div class="form-group">
+                  <label class="required" [for]="'purchase' + $index">
+                    {{ 'invoices.purchasePrice' | translate }}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [id]="'purchase' + $index"
+                    class="form-control"
+                    [(ngModel)]="line.purchasePrice"
+                    [name]="'purchase' + $index"
+                    [class.is-invalid]="submitted() && problems['lines[' + $index + '].purchasePrice']"
+                  />
+                  <app-form-error
+                    [problems]="problems['lines[' + $index + '].purchasePrice']"
+                    [show]="submitted()"
+                  />
+                  <small class="field-hint">
+                    {{ 'invoices.rebuMargin' | translate }}: {{ marginOf(line) | number: '1.2-2' }} €
+                  </small>
+                </div>
+              }
+
+              <!-- El art. 6.1.j) exige decir QUÉ exención se aplica. -->
+              @if (line.taxRegime === 'exempt_other') {
+                <div class="form-group">
+                  <label class="required" [for]="'note' + $index">
+                    {{ 'invoices.exemptionNote' | translate }}
+                  </label>
+                  <input
+                    type="text"
+                    [id]="'note' + $index"
+                    class="form-control"
+                    [(ngModel)]="line.exemptionNote"
+                    [name]="'note' + $index"
+                    [class.is-invalid]="submitted() && problems['lines[' + $index + '].exemptionNote']"
+                  />
+                  <app-form-error
+                    [problems]="problems['lines[' + $index + '].exemptionNote']"
+                    [show]="submitted()"
+                  />
+                </div>
+              }
+            </div>
+
+            <!--
+              ⚠️ El aviso del REBU. Equivocarse aquí no da un error: da una
+              factura creíble con el IVA mal repercutido, y una vez emitida no
+              se puede corregir salvo con una rectificativa.
+            -->
+            @if (line.taxRegime === 'rebu') {
+              <div class="notice notice-warning line-notice">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ 'invoices.rebuWarning' | translate }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        <app-form-error [problems]="problems['lines']" [show]="submitted()" />
+
+        <button type="button" class="btn-secondary" (click)="addLine()">
+          <i class="pi pi-plus"></i>
+          {{ 'invoices.addLine' | translate }}
+        </button>
+
+        <div class="totals">
+          <div class="totals-row">
+            <span>{{ 'invoices.base' | translate }}</span>
+            <span>{{ totals().base | number: '1.2-2' }} €</span>
+          </div>
+          @for (t of totals().byVatRate; track t.vatRate) {
+            <div class="totals-row">
+              <span>{{ 'invoices.vat' | translate }} {{ t.vatRate * 100 | number: '1.0-2' }} %</span>
+              <span>{{ t.vat | number: '1.2-2' }} €</span>
+            </div>
+          }
+          <div class="totals-row totals-total">
+            <span>{{ 'invoices.totalLabel' | translate }}</span>
+            <span>{{ totals().total | number: '1.2-2' }} €</span>
+          </div>
+        </div>
+
+        @if (amountDiffers) {
+          <div class="notice notice-info">
+            <i class="pi pi-info-circle"></i>
+            <span>{{ 'invoices.differsFromReservation' | translate }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Fechas -->
+      <div class="form-section">
+        <h2 class="section-title">{{ 'invoices.datesSection' | translate }}</h2>
+        <p class="section-hint">{{ 'invoices.issueDateFixed' | translate }}</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="operationDate">{{ 'invoices.operationDate' | translate }}</label>
+            <input
+              type="date"
+              id="operationDate"
+              class="form-control"
+              [(ngModel)]="operationDate"
+              name="operationDate"
+            />
+          </div>
+        </div>
+
+        <!--
+          Avisa, no bloquea. Solo aplica a empresas: a un particular se le
+          factura cuando la pide, y ahí no hay plazo que vigilar.
+        -->
+        @if (isOverdue) {
+          <div class="notice notice-warning">
+            <i class="pi pi-clock"></i>
+            <span>{{ 'invoices.overdueCompany' | translate }}</span>
+          </div>
+        }
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="periodStart">{{ 'invoices.periodStart' | translate }}</label>
+            <input
+              type="date"
+              id="periodStart"
+              class="form-control"
+              [(ngModel)]="periodStart"
+              name="periodStart"
+            />
+          </div>
+          <div class="form-group">
+            <label for="periodEnd">{{ 'invoices.periodEnd' | translate }}</label>
+            <input
+              type="date"
+              id="periodEnd"
+              class="form-control"
+              [(ngModel)]="periodEnd"
+              name="periodEnd"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Forma de pago -->
+      <div class="form-section">
+        <h2 class="section-title">{{ 'invoices.paymentSection' | translate }}</h2>
+
+        <div class="payment-options">
+          <label class="radio-label">
+            <input type="radio" [(ngModel)]="paymentMethod" name="pm" value="paid" />
+            <span>{{ 'invoices.paymentMethods.paid' | translate }}</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" [(ngModel)]="paymentMethod" name="pm" value="transfer" />
+            <span>{{ 'invoices.paymentMethods.transfer' | translate }}</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" [(ngModel)]="paymentMethod" name="pm" value="card" />
+            <span>{{ 'invoices.paymentMethods.card' | translate }}</span>
+          </label>
+          <!--
+            El efectivo no se esconde cuando no cabe: se apaga y se explica.
+            Un control que desaparece hace que el compañero llame preguntando
+            qué le pasa a la aplicación.
+          -->
+          <label class="radio-label" [class.disabled]="!cashAllowed">
+            <input
+              type="radio"
+              [(ngModel)]="paymentMethod"
+              name="pm"
+              value="cash"
+              [disabled]="!cashAllowed"
+            />
+            <span>{{ 'invoices.paymentMethods.cash' | translate }}</span>
+          </label>
+        </div>
+        @if (!cashAllowed) {
+          <p class="field-hint">{{ 'invoices.cashDisabled' | translate }}</p>
+        }
+        <app-form-error [problems]="problems['paymentMethod']" [show]="submitted()" />
+
+        @if (amountAlreadyPaid > 0) {
+          <p class="field-hint">
+            {{ 'invoices.alreadyPaid' | translate }}: {{ amountAlreadyPaid | number: '1.2-2' }} €
+          </p>
+        }
+
+        <div class="form-group">
+          <label for="notes">{{ 'invoices.notes' | translate }}</label>
+          <textarea id="notes" class="form-control" rows="2" [(ngModel)]="notes" name="notes"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <div class="left-actions">
+        <button type="button" class="btn-secondary" (click)="cancel()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <!--
+          La proforma se puede pedir con la factura a medias, que es cuando se
+          usa: no emite nada, no consume número y no deja rastro salvo el PDF.
+        -->
+        @if (!isRectifying) {
+          <div class="proforma-action">
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="proforma()"
+              [disabled]="generatingProforma()"
+            >
+              <i class="pi pi-file"></i>
+              {{ 'invoices.proforma' | translate }}
+            </button>
+            <small class="field-hint">{{ 'invoices.proformaHint' | translate }}</small>
+          </div>
+        }
+      </div>
+      <div class="submit-area">
+        <!--
+          El botón NO se deshabilita por datos que falten: solo mientras emite.
+          Al pulsarlo con algo incompleto se marcan los campos y se resume aquí.
+        -->
+        <button type="button" class="btn-primary" (click)="issue()" [disabled]="issuing()">
+          {{ issuing() ? ('invoices.issuing' | translate) : ((isRectifying ? 'invoices.rectify' : 'invoices.issue') | translate) }}
+        </button>
+        <app-form-error [problems]="problemList" [show]="submitted()" [summary]="true" />
+      </div>
+    </div>
+  }
+</div>

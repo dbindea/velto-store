@@ -203,6 +203,28 @@ Cuando Dorel avise de que los datos ya son reales, esta sección se sustituye po
 la regla contraria: campos solo aditivos, migración en despliegues separados y
 nunca renombrar en sitio.
 
+⚠️ **La facturación va a ser la primera excepción, y ya está aprobada** (N-18, 8
+de septiembre de 2026). Una factura emitida **no se borra ni se edita nunca**:
+un error se corrige con una factura rectificativa, y el número consumido queda
+consumido aunque la operación se anule. A partir de 2027 va además encadenada
+por huella SHA-256, así que borrar una rompe la cadena de todas las siguientes.
+
+Es decir: `invoices` nacerá con `create` permitido y **`update` y `delete`
+denegados a todo el mundo, administrador incluido** —como ya ocurre con los
+contratos firmados—, y con la forma del registro fijada desde la primera factura
+porque después no se puede reconstruir. El análisis, con las fuentes del BOE y
+de la AEAT, está en [docs/facturacion.md](docs/facturacion.md).
+
+⚠️ **Y la inmutabilidad tiene un límite que costó descubrir: lo que se congela
+no se puede corregir, ni siquiera cuando la AEAT lo rechaza.** El registro de
+facturación se guardaba entero dentro de la factura, así que un registro
+rechazado —por un fallo del código, no del dato— no había forma de arreglarlo, y
+como todo lo que viene detrás encadena con su huella, la facturación se quedaba
+parada sin salida. Por eso el registro se **reconstruye al enviar**
+(`verifactu-rebuild.ts`) y la huella se **comprueba**, no se copia: la factura
+sigue siendo inmutable, y lo que puede cambiar es solo cómo se declara algo que
+no entra en la huella. Ver «El registro que se manda» más abajo.
+
 ## Estructura
 
 Alias de path definidos en `tsconfig.json` — **úsalos siempre** en vez de rutas relativas largas:
@@ -252,8 +274,13 @@ functions/src/
 │                                     # getContractForSigning, signContract,
 │                                     # sendSignedContractEmail, clauses, pdf,
 │                                     # sign-pdf, verification + qr (el CSV)
-└── documents/                        # presupuesto y justificante de reserva
-                                      # (documents-pdf, storage, los 2 callables)
+├── documents/                        # presupuesto y justificante de reserva
+│                                     # (documents-pdf, storage, locator,
+│                                     # documentLink, los 2 callables)
+└── invoices/                         # factura, rectificativa (issueInvoice),
+                                      # proforma y recibo de cobro. hash.ts es
+                                      # la cadena de huellas; receipt-core.ts,
+                                      # qué cobro admite recibo
 ```
 
 **Ya no queda ningún placeholder**: Gastos y Ajustes se construyeron el 4 de septiembre de 2026.
@@ -311,6 +338,14 @@ La constante y la aritmética están **duplicadas en `functions/src/contracts/pd
 propósito: app y functions compilan con tsconfigs separados y no pueden compartir módulo.
 Si cambia el tipo, se cambia en los dos sitios.
 
+⚠️ **Y el TEXTO que describe la aritmética también cuenta.** El presupuesto decía «los
+precios incluyen IVA» tres líneas debajo de un desglose que sumaba el 21 % a la base
+(F-36, 7 de septiembre de 2026): otro resto de `tariffIncludesVat`, porque al corregir el
+cálculo nadie tocó la frase que lo explicaba. No falla ningún test —los de maquetación
+comprueban que el texto quepa, nunca que sea cierto— y solo se ve leyendo el PDF como lo
+lee el cliente. Al cambiar una convención de dinero, **busca las frases, no solo las
+fórmulas**.
+
 ⚠️ **Redondea el dinero derivado.** `108.9 - 50` es `58.900000000000006`: el asistente lo
 enseñaba tal cual y lo sembraba así en la fila de pago. Todo importe calculado pasa por
 `roundMoney()` antes de mostrarse o escribirse.
@@ -347,6 +382,21 @@ Firestore. Un empleado recibe **403** al leer gastos, leer la lista de usuarios,
 el `pricingSnapshot`**; y **200** al leer reservas y escribir una nota, que es
 lo que necesita para trabajar. Repetir esa prueba es la forma de validar un
 cambio en `firestore.rules`.
+
+**Y hay un guion para repetirla**: [docs/comprobar-reglas-facturas.js](docs/comprobar-reglas-facturas.js),
+que se pega en la consola del navegador con la sesión abierta. Comprueba que una
+factura emitida devuelve **403** al modificarla y al borrarla, y de paso que la
+cadena de huellas está bien formada. No es código de la aplicación y no se
+compila; vive en `docs/` para que no lo parezca.
+
+⚠️ **Ese guion encontró un agujero el 8 de septiembre de 2026, y es el patrón a
+vigilar**: `viewInvoices` es permiso de administrador, pero las reglas dejaban
+leer `invoices` a cualquier usuario autorizado. Un empleado no veía el menú de
+Facturas y tenía por debajo el NIF, el domicilio fiscal y el importe de todos
+los clientes facturados. **Ningún test lo habría cogido**, porque la aplicación
+respetaba el permiso; solo se ve atacando las reglas por fuera. Al añadir un
+módulo con permiso propio, comprueba que la regla es **igual de estricta** que
+la tabla, no solo que existe.
 
 ⚠️ **Lo que las reglas no pueden cubrir:** el precio con el que una reserva
 **nace**. Al crear no hay valor anterior con el que comparar, así que ahí manda
@@ -415,6 +465,15 @@ módulos, esta es la razón por la que no debe.
   combustible de entrega («sección Estado del vehículo», que solo existe si hay inspección
   y el contrato se firma **antes**) y la dotación, enumerada sin acreditar. Si vas a cobrar
   apoyándote en una sección, esa sección tiene que estar el día de la firma.
+  **Y una cuarta**: las cláusulas remitían al «parte de entrega, que ambas partes firman»,
+  un documento que no se generaba, no se entregaba y no firmaba nadie. Se resolvió el 8 de
+  septiembre de 2026 por los dos lados a la vez —quitando la exigencia de firma del texto
+  **y** construyendo el parte—, porque arreglar solo el texto habría dejado una remisión a
+  un documento inexistente, y arreglar solo el documento, una firma que nadie iba a hacer.
+  ⚠️ Al reescribir esas cláusulas, la primera redacción remitía a la sección «Conductores
+  adicionales» y el PDF la titula «Conductores **autorizados** adicionales» —y solo la
+  imprime si hay alguno—. **Comprueba el rótulo literal antes de citarlo**, o mejor, remite
+  al contrato entero, que es cierto siempre.
 - **El kilometraje se pacta o no se cobra.** `includedKmPerDay` y `extraKmPrice` se congelan
   en `pricingSnapshot` —como el precio— y se imprimen en «Precio y fianza» con su cláusula
   propia. El cargo de la devolución los lee **del snapshot, sin respaldo al vehículo**: una
@@ -561,9 +620,31 @@ También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf`, `doc
 (pública), `getPaymentCheckout` (**pública**, el cliente paga desde su móvil) y
 `getContractVerification` (**pública**, el QR del contrato en papel).
 
-Son **trece functions, y las trece están vivas en los dos proyectos** (verificado el 4 de
-septiembre de 2026). `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que
-desplegarla no basta: el rewrite `/d/**` viaja con el **hosting** y necesita su propio
+Y las de **facturación**: `issueInvoice`, `generateProforma`, `generateReceipt`,
+`issueComplianceDeclaration`, `getComplianceStatus` y las cinco de la remisión a
+la AEAT — `sendVerifactuRecords`, `sweepVerifactuRecords` (**programada**, cada
+cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
+`checkVerifactuConnection`.
+
+⚠️ **`sweepVerifactuRecords` es la primera function programada del proyecto**, y
+necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
+conviene saberlo porque es un servicio más que aparece en la factura de Google.
+
+⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado con
+`firebase functions:list` el 8 de septiembre de 2026, ampliado el 9):
+
+| | Cuántas | Cuáles faltan |
+|---|---|---|
+| desarrollo | 24 | — |
+| producción | **13** | todas las de facturación y `generateInspectionReport` |
+
+Es deliberado mientras se prueba: la primera factura emitida en producción marca el punto
+de no retorno de `invoices`. Pero es justo el desajuste que CLAUDE.md avisa que es fácil
+olvidar, así que **la lista de arriba no vale como inventario**: se comprueba con
+`firebase functions:list --project prod`.
+
+`documentLink` estuvo un tiempo escrita sin desplegar; ojo con que desplegarla no basta: el
+rewrite `/d/**` viaja con el **hosting** y necesita su propio
 `firebase deploy --only hosting`.
 
 ### Enlaces cortos para WhatsApp
@@ -580,11 +661,19 @@ https://velto-store.web.app/d/qA1b2C3d4E5f6G7h      (~46 caracteres)
 ```
 /d/q{id}  →  quotes/{id}/quote.pdf
 /d/r{id}  →  reservations/{id}/booking-confirmation.pdf
+/d/c{id}  →  receipts/{id}/receipt.pdf
 ```
 
 Así el presupuesto sigue siendo tan efímero como era. El id es el secreto, igual que lo era
 el token de descarga de Storage. El del presupuesto es aleatorio; el de la reserva es estable
 a propósito, para que regenerar el justificante no mate el enlace que el cliente ya tiene.
+
+⚠️ **El del recibo es aleatorio y NO el id del pago**, aunque sea un pago lo que documenta.
+El id del pago es el secreto de `/pay/:paymentId`, el enlace que el cliente recibe para pagar
+desde el móvil: derivando de él la ruta del recibo, cualquiera con ese enlace reenviado se
+bajaría un PDF **con el nombre del cliente** — justo lo que `getPaymentCheckout` se cuida de
+no revelar devolviendo solo el importe. Un identificador que ya es secreto en un sitio no se
+reutiliza como dirección en otro.
 
 Como el id aterriza directo en una ruta de Storage, `resolveDocumentPath()` **rechaza todo lo
 que no sea el alfabeto URL-safe** — sin barras ni puntos, así que no se puede salir de su
@@ -647,6 +736,19 @@ Son tests porque los cuatro han fallado de verdad: el título salía como
 «CONTRATO DE ALQUILER …» y una razón social larga como «EUROCONSTRUCCIONES 2020, SOC…».
 Los titulares **encogen y parten**, nunca se truncan.
 
+⚠️ **Y una dirección se parte por sus comas, no por donde se acabe la columna.** Los valores
+de `infoColumns` con `wrap` —el domicilio fiscal, la razón social del destinatario— pasan por
+`wrapPreferringCommas()`: si caben, una línea; si no, el salto va **después de una coma**.
+Partido por ancho salía «… 28850 Torrejón / de Ardoz (Madrid)», que corta un topónimo en dos
+en un dato que es contenido obligatorio de la factura (art. 6.1.c). La coma se queda al final
+de la línea: es parte del dato que tecleó el operador y no se le quitan caracteres para
+maquetar.
+
+La función vive **fuera del builder** —como `qrRects()`— para poder probarla sin cargar una
+fuente: quien llama pone la medida. Y **no la usa `text()`**, a propósito: la prosa —las
+cláusulas, las menciones legales, el aviso del recibo— se parte por ancho, o «Documento
+informativo, / sin validez fiscal…» quedaría en líneas cortísimas.
+
 ### Los documentos que no son el contrato
 
 `functions/src/documents/` genera el **presupuesto** (antes de que exista la reserva) y el
@@ -662,6 +764,170 @@ bloquea. Lo único que queda es el PDF en Storage, que es lo que el enlace neces
 
 `uploadPdf()` **reutiliza el token de descarga** si el archivo ya existe. Un token nuevo
 rompería en silencio el enlace que el cliente ya tiene en su WhatsApp.
+
+### VeriFactu: el registro se guarda, el QR calla
+
+⚠️ **El registro de facturación se guarda desde la primera factura, aunque no se
+envíe nada a la AEAT hasta 2027.** No es adelantarse: **una factura emitida no
+se puede editar**, así que lo que no se guarde al emitirla no se podrá añadir
+después. Lo construye `invoices/verifactu.ts` **dentro de la misma transacción
+que sella la huella** y con los mismos datos; reconstruirlo luego daría un
+registro parecido y no necesariamente el mismo.
+
+Tres cosas que van dentro y que es fácil dejarse:
+
+- **El encadenamiento necesita los CUATRO datos del anterior** —emisor, número,
+  fecha y huella—, no solo la huella. La factura guardaba únicamente
+  `previousHash`, y el resto habría que buscarlo por huella sobre una colección
+  que no se puede editar.
+- **El tipo sellado** (`tipoFacturaAeat`): entra en la huella, así que sin él no
+  se puede verificar el registro. Deducirlo mal da una huella que parece válida.
+- **El bloque «Sistema Informático»** es obligatorio. El productor del software
+  es **la propia empresa** —autodesarrollo—, así que su NIF es el del emisor.
+
+⚠️ **El QR y la leyenda están apagados, y siguen apagados hasta que el envío
+funcione.** «Factura verificable en la sede electrónica de la AEAT» sobre una
+factura que nunca se remitió manda al cliente a una sede donde su factura no
+está, y lo que parece roto es la factura. Es el mismo error que la frase que
+anunciaba una firma digital inexistente: **la frase y el hecho se deciden
+juntos**. Lo gobierna `VELTO_VERIFACTU_ENABLED` en `functions/.env.<proyecto>`,
+hoy `false` en los dos.
+
+### La declaración responsable, y por qué la firma Velto
+
+⚠️ **El art. 15 de la Orden HAC/1177/2024 obliga al PRODUCTOR del software, y
+aquí el productor es la propia empresa.** Al ser desarrollo propio no hay
+fabricante externo que declare que el sistema cumple el RD 1007/2023: VELTO
+MOBILITY es a la vez obligado tributario y productor.
+
+Está en **Ajustes › Declaración responsable**, y hace falta **una por cada
+versión del sistema**. Ninguna se borra: la de una versión pasada sigue
+acreditando lo que se declaró mientras esa versión estuvo emitiendo facturas, y
+`firestore.rules` deniega `update` y `delete` a todos, igual que con las
+facturas. El id del documento **es la versión**, así que no puede haber dos de
+la misma.
+
+⚠️ **Lo que declara sale del mismo sitio que el registro de facturación**
+(`sistemaInformatico()`). Si la declaración dijera una modalidad y los registros
+llevaran otra, la declaración sería falsa sin que nadie tocara nada: son el
+mismo hecho contado en dos sitios. Por eso la pantalla tampoco tiene constantes
+propias — la versión y el productor los sirve `getComplianceStatus`, o serían un
+cuarto sitio donde escribir la versión y el primero en quedarse viejo.
+
+**Modalidad: exclusivamente VERI\*FACTU** (`SoloVerifactu: 'S'`), decisión de
+Dorel del 9 de septiembre de 2026. El campo describe **cómo es el sistema**, no
+en qué punto de su despliegue está.
+
+⚠️ **Los nombres de campo del registro son los del esquema oficial**, con su
+grafía exacta (`IDFactura`, `CuotaTotal`, `Desglose > DetalleDesglose`). No es
+estilo: así el XML es una **serialización directa** del objeto guardado, sin una
+tabla de traducción en medio que haya que mantener y en la que un nombre mal
+escrito produzca un registro que la AEAT rechaza.
+
+**Las especificaciones están versionadas** en [docs/aeat/](docs/aeat/README.md)
+—esquemas, WSDL, diseño de registro, QR y los 247 códigos de error— porque las
+de la sede cambian sin dejar rastro de qué versión se usó. Ese README lleva
+además qué se contrastó y qué hubo que corregir.
+
+Falta el **envío** —XML SOAP firmado, estados, reintentos—, que no se puede dar
+por bueno sin el entorno de preproducción de la AEAT.
+
+⚠️ **Dos endpoints por entorno según el certificado**, y no son intercambiables:
+`prewww1`/`www1` para certificado de **representante** —el nuestro— y
+`prewww10`/`www10` para certificado de **sello**. Llamar a la que no toca da un
+rechazo de autenticación que parece un problema del certificado.
+
+⚠️ **No hay «alta» en VERI\*FACTU ni se comunica por el modelo 036**, y tampoco
+sustituye a la contabilidad ni a las declaraciones: es una obligación adicional
+sobre cómo funciona la aplicación. El procedimiento y lo que falta para el envío
+están en [docs/verifactu-alta.md](docs/verifactu-alta.md).
+
+⚠️ **Guardar el registro no es que la AEAT lo haya aceptado.** La integración no
+está terminada hasta validar contra preproducción el XML, el encadenamiento, el
+QR, las respuestas, los errores y los reenvíos. Y **producción no se toca sin
+autorización expresa de Dorel**.
+
+### El parte de entrega y el de devolución
+
+`generateInspectionReport` produce los dos documentos a los que **el contrato
+remite cuatro veces** —cláusulas 1, 2, 5 y 6— y que hasta el 8 de septiembre de
+2026 no existían: la inspección se guardaba en Firestore y no había nada que
+enseñar ni que entregar.
+
+⚠️ **Las cláusulas decían «que ambas partes firman». Ahora no.** Decisión de
+Dorel: hacer firmar dos veces al cliente —y a cada conductor de una cuadrilla,
+que era lo que pedía la cláusula 2— es molesto en la calle, y el negocio es de
+clientes conocidos. Se quitó **la firma, no el documento**: el contrato sigue
+remitiendo al parte porque el kilometraje y el combustible de salida **no caben
+en él**, que se firma antes de la entrega.
+
+De ahí sale lo que gobierna este PDF:
+
+⚠️ **Las fotografías son la prueba.** Sin firma, lo que sostiene un cargo por
+combustible, kilómetros o dotación faltante es el estado del coche fotografiado
+con su fecha. Por eso las fotos van dentro del documento y no son decoración, y
+por eso las cláusulas dicen ahora «consemnado **y fotografiado** en el parte».
+
+Cuatro cosas que solo se vieron mirando el PDF generado:
+
+- **El checklist se filtra por fase.** `InspectionChecklist` es un único objeto
+  para las dos inspecciones, así que un parte de **devolución** sacaba «Sin
+  marcar: identidad del cliente verificada, fianza depositada, contrato
+  firmado…» — comprobaciones de la entrega que en la devolución no se hacen
+  porque ya se hicieron. El documento venía a decir que no se había
+  identificado al cliente.
+- **Los snapshots se respaldan con la reserva.** No toda inspección guardó
+  `clientSnapshot` y `vehicleSnapshot`, y sin ellos el parte salía con
+  «Arrendatario: —» y el vehículo en blanco: un papel que dice acreditar el
+  estado de un coche entregado a una persona, sin decir de qué coche ni a quién.
+- **Lo no marcado se imprime**, en gris y bajo su propio rótulo. Un parte que
+  solo enseñe lo que salió bien no sirve para discutir lo que salió mal.
+- ⚠️ **El enlace `/d/…` se cachea 5 minutos.** Regenerar el parte y abrirlo al
+  momento devuelve el anterior; no es un fallo del PDF. Con `?v=2` o esperando
+  se ve el nuevo.
+
+El enlace es **estable** (`/d/i{inspectionId}`), como el del justificante:
+regenerar el parte porque se añadió una foto no puede matar el enlace que el
+cliente ya tiene. El id de la inspección no es secreto de ninguna otra ruta, así
+que aquí sí se puede usar; el del recibo no podía.
+
+**No se manda solo.** El operador genera y copia el enlace cuando el cliente lo
+pide, que es lo que el contrato promete: que el parte se conserva y se pone a su
+disposición.
+
+### El recibo de cobro: todo su diseño es no parecer una factura
+
+`generateReceipt` justifica **dinero recibido**, y esa es la única frase que hay dentro. Un
+cliente que se dedujera el IVA con un recibo tendría un problema, y quien se lo dio también,
+así que el documento **no reutiliza `buildInvoicePdf`**: comparte el `PdfBuilder` —la marca
+es la misma— y nada más. No lleva número de serie fiscal, no desglosa IVA, no tiene bloque de
+forma de pago con IBAN, y lleva impreso arriba y en negrita que no es una factura.
+
+Tres reglas, y las tres tienen su motivo:
+
+- ⚠️ **El importe NO viaja en la petición: se lee del pago.** `payments` es la única fuente
+  de verdad del dinero que entra; aceptando la cifra que mande la pantalla, el recibo sería
+  un papel firmado por la empresa diciendo que recibió algo que quizá no recibió.
+- **Solo dinero que entró.** `receipt-core.ts` rechaza lo cancelado, lo no cobrado y —el caso
+  que hay que acertar— **las devoluciones y retenciones de fianza**: van en la dirección
+  contraria y llevan importe, así que la comprobación del importe no las caza. La misma regla
+  está duplicada en `@shared/utils/receipt.util.ts` para decidir si el botón aparece, con la
+  misma tabla de casos en los dos tests.
+- **No escribe nada en Firestore**, como el presupuesto y la proforma.
+
+⚠️ **Y el texto tiene que ser cierto**, que es donde fallan estos documentos. «La factura se
+emitirá al finalizar el alquiler» solo se imprime si el operador marca que el cliente la ha
+pedido —se factura **a petición**, así que prometerla siempre sería falso la mayoría de las
+veces— y si la factura ya existe se imprime su número en vez de anunciar una futura. La
+fianza lleva además su propia nota: es un depósito en garantía, no un importe del alquiler, y
+no se factura nunca.
+
+Dos cosas más que solo se vieron **mirando el PDF**, no leyendo el código: el nombre del
+pagador salía sin la etiqueta «Recibido de» —que estaba escrita y traducida en los tres
+idiomas sin que nadie la pintara—, y el concepto se repetía («Señal de la reserva» sobre
+«Señal reserva», que es lo que la propia aplicación siembra en la fila). El detalle del
+operador ahora se imprime solo si añade algo, comparado contra los titulares **en los tres
+idiomas**: si no, un recibo rumano sacaba el concepto en español.
 
 ### Firma de contratos
 
@@ -724,6 +990,87 @@ descifrarlos con un lector (`jsqr`). Un índice de fila invertido o la zona de s
 El alfabeto del código no lleva `I`, `L`, `O`, `U`, `0` ni `1`: se dicta por teléfono y se
 teclea desde un papel. Y el sorteo usa muestreo con rechazo, porque `byte % 30` habría
 favorecido a los seis primeros símbolos.
+
+### La remisión a la AEAT (VERI\*FACTU)
+
+Emitir y remitir son **dos cosas separadas**, y separarlas es lo que sostiene el
+resto. `issueInvoice` no llama a la Agencia: un servicio lento dejaría al
+operador esperando delante de una factura con el número ya consumido, y uno
+caído tumbaría la emisión por un problema de red. La factura se emite siempre; el
+envío reintenta hasta conseguirlo, desde `sweepVerifactuRecords` **cada cinco
+minutos** — un envío que solo ocurre al pulsar un botón depende de que alguien se
+acuerde, y la norma pide remisión inmediata.
+
+El estado vive en `verifactuSubmissions/{invoiceId}`, **fuera de la factura**: la
+factura es inmutable y el envío cambia media docena de veces. La fila nace en la
+misma transacción que la factura, porque escribirla después y fallar dejaría una
+factura que nadie enviaría nunca.
+
+⚠️ **El orden importa y no es el de la fecha.** Los registros van encadenados por
+huella y la fecha de emisión se toma al entrar en la function, mientras la cadena
+se cierra al confirmar la transacción: dos facturas emitidas a la vez pueden
+llevar fechas que no respeten el orden real. Por eso la transacción escribe un
+`chainIndex` sobre el mismo documento que la huella.
+
+#### El registro que se manda se RECONSTRUYE, y la huella se comprueba
+
+⚠️ **No se manda el registro tal y como se guardó al emitir**, y el motivo es
+concreto: un registro rechazado por la AEAT **no queda registrado** y hay que
+corregirlo, pero congelado dentro de una factura inmutable no se puede corregir
+nunca. Pasó de verdad el 9 de septiembre de 2026.
+
+`registroParaEnvio()` lo rehace con el código de hoy desde los campos de la
+factura —que son los que de verdad son inmutables— y toma del registro sellado
+solo lo que **no se puede recalcular**: el encadenamiento, el sistema informático
+y el instante de generación. Recalcular el encadenamiento ataría la factura a la
+última emitida; poner la versión actual del sistema diría que una factura de
+marzo la emitió el software de septiembre, y esa versión es la que ampara su
+declaración responsable.
+
+Y la huella se **recalcula y se compara** con la sellada. Es lo que separa
+corregir cómo se declara un dato de cambiar la factura: si un importe se hubiera
+movido, el envío se para en vez de declarar un registro que no se corresponde con
+el documento que tiene el cliente.
+
+#### Un rechazo para la cola, y solo lo desbloquea una persona
+
+Un rechazo deja la factura visible y **no se reintenta solo**: reintentar un
+rechazo permanente es un bucle que gasta el límite de envíos de la Agencia sin
+arreglar nada. `retryVerifactuRecord` la devuelve a la cola cuando alguien ha
+resuelto la causa, y queda anotado quién.
+
+⚠️ **El ritmo lo marca la AEAT** en cada respuesta (`TiempoEsperaEnvio`).
+Adelantarse se rechaza con el `4102` y tumba el envío entero: ignorarlo no
+adelanta, retrasa.
+
+⚠️ **Un duplicado (`3000`) es una factura que YA está registrada**, no un fallo:
+casi siempre porque un envío llegó y se perdió la respuesta. Se lee como
+aceptada — y **su CSV no se pisa**, porque la respuesta de un duplicado no trae
+CSV y escribir ese vacío borraba el acuse de la remisión buena.
+
+#### Lo que solo se ve contra preproducción
+
+⚠️ **Un XML válido contra el `.xsd` puede ser rechazado por lo que significa.**
+Los cuatro fallos que encontró preproducción el 9 de septiembre de 2026 pasaban
+la validación de esquema y ningún test los habría cogido:
+
+- El **NIF-IVA extranjero** iba en `NIF`, que es solo para identificadores
+  españoles; el resto va en `IDOtro` con su país y tipo (error `1100`).
+- El **país es obligatorio** cuando el identificador no es un NIF-IVA, aunque el
+  esquema lo declare opcional (error `1111`). Es el caso más común de un
+  alquiler: un turista con pasaporte. Lo pide `validateInvoice()` **antes** de
+  consumir número, porque después no tiene arreglo.
+- El registro **congelado** no se podía corregir (arriba).
+- El **QR medía 21,9 mm** y el art. 21 lo fija entre 30×30 y 40×40 mm, con el
+  rótulo «QR tributario:» encima, la frase debajo y ambos a tamaño **igual o
+  superior** al resto de datos de la factura. Faltaba todo eso.
+
+El plan de pruebas, con lo comprobado y lo que falta, está en
+[docs/verifactu-alta.md](docs/verifactu-alta.md) § 3 bis.
+
+⚠️ **Hoy está activo SOLO en desarrollo**, contra preproducción
+(`VELTO_VERIFACTU_ENABLED=true`, `VELTO_VERIFACTU_ENV=test`). En producción sigue
+en `false` y **solo lo cambia Dorel**.
 
 ### El cliente paga desde su móvil
 
@@ -966,7 +1313,16 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 ```
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
+invoices  invoiceCounters  billingProfiles  verifactuDeclarations
+verifactuSubmissions
 ```
+
+⚠️ **`verifactuSubmissions` es la única de la facturación que se escribe muchas
+veces**, y por eso está separada: la factura es inmutable y el estado de su
+envío a la AEAT cambia con cada intento. Solo la escribe el backend —
+`firestore.rules` deniega `create`, `update` y `delete` a todo el mundo—, porque
+marcar una factura como aceptada a mano diría que está presentada ante la
+Agencia cuando no lo está.
 
 ⚠️ **En `authorizedUsers` el id del documento ES el email en minúsculas**, y
 `data()` **no lo incluye**. Quien lea uno tiene que añadirlo (`{ ...data, email:
@@ -1087,13 +1443,77 @@ la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0) y un `button:d
 a 0,2,1 y gana — igual que `.is-invalid`. Si creas una clase de botón nueva, añádela ahí o
 volverá a verse pulsable estando deshabilitada.
 
+### Las casillas de verificación son globales
+
+⚠️ **`.checkbox-item` vive en `styles.scss`, y el control se estiliza por
+elemento.** Son veinte casillas en cinco pantallas, y estilarlas una a una es
+cómo acabaron con **cuatro nombres de clase** —`.checkbox-item`, `.check-item`,
+`.check-inline`, `.checkbox-group`—, tres tamaños y dos radios distintos.
+
+Y con una quinta que **no existía**: el «Lleva localizador GPS» de la ficha de
+vehículo llevaba `class=checkbox-label`, que ningún SCSS declaraba, así que
+salía como una casilla del sistema operativo al lado de otras con caja. Es el
+mismo fallo que `.form-control` —compila, pasa los tests y solo se ve mirando
+la pantalla—, y la razón por la que esta sí es global.
+
+Dos variantes, y solo dos: `.multiline` alinea con la primera línea cuando el
+texto es un párrafo, y `.plain` quita la caja para las casillas sueltas dentro
+de una barra de acciones.
+
+### Cada pantalla empieza por arriba
+
+⚠️ **Angular conserva el scroll al navegar si no se le dice lo contrario.** En
+un móvil eso significa abrir la entrega del coche a media página. Lo arregla
+`withInMemoryScrolling({ scrollPositionRestoration: 'top' })` en
+`app.config.ts`: una línea para toda la aplicación, y por eso no se había visto
+— no hay ningún componente al que culpar.
+
+Funciona porque **el scroll vive en el documento**. El día que el contenido se
+meta en un contenedor con `overflow-y: auto`, el router deja de alcanzarlo y
+hay que subir ese contenedor a mano.
+
+### No perder el formulario al abrir la cámara
+
+⚠️ **Android puede matar la pestaña mientras la cámara está abierta**, que es
+lo más caro que abre un móvil. Al volver, el navegador recarga: Angular arranca
+de cero y lo que el operador llevaba escrito ya no existe. No se puede impedir,
+así que `FormDraftService` lo **sobrevive**: guarda el formulario cuando la
+página pasa a segundo plano (`visibilitychange` + `pagehide`) y lo restaura al
+volver.
+
+Tres reglas:
+
+- **`sessionStorage`, no `localStorage`.** El borrador muere con la pestaña: son
+  datos de un cliente y no tienen por qué quedarse en el disco del móvil.
+- **La clave lleva el sujeto dentro** (`pickup:<reservaId>`). Sin él, entrar en
+  otra reserva restauraría datos ajenos.
+- **Se limpia al guardar.** Un borrador que sobrevive a su guardado resucita un
+  formulario ya archivado.
+
+⚠️ El `DestroyRef` **se le pasa como parámetro**: `attach()` se llama desde
+métodos `async`, que ya están fuera del contexto de inyección, y un `inject()`
+ahí revienta en tiempo de ejecución.
+
+Conectado en entrega, devolución y mantenimiento — los tres que abren la cámara.
+
 ### Cuando algo falla: `NotificationService`, nunca `alert()`
 
-⚠️ **No queda ni un `alert()` en la aplicación, y no debe volver ninguno** (M-43). Los
-fallos de una llamada —no la validación de campos, que es lo de arriba— se cuentan con
+⚠️ **No queda ni un `alert()` ni un `confirm()` en la aplicación, y no debe volver
+ninguno** (M-43, y los `confirm()` el 8 de septiembre de 2026). Los fallos de una llamada
+—no la validación de campos, que es lo de arriba— se cuentan con
 `notifications.error('clave.i18n')`, y salen en la pila de avisos de abajo a la derecha
 que monta `<app-notifications>` en el **componente raíz**, para que las pantallas públicas
 se comporten igual.
+
+Y las preguntas de sí o no van por `ConfirmService.ask()`, que pinta
+`<app-confirm-dialog>` en ese mismo componente raíz. **Los `confirm()` sobrevivieron a la
+retirada de los `alert()`** —eran once— y tenían los tres defectos de siempre: los pinta el
+navegador con «store.veltorent.com dice» encima, sus botones salen en el idioma del sistema
+operativo aunque la pregunta esté en español, y **cuatro estaban escritos en español duro**
+(«¿Eliminar esta foto?», «¿Cancelar este pago?»). El diálogo propio bloquea igual —fondo
+que no deja pasar el clic, `Escape` cancela, foco en el botón que confirma— y además
+distingue lo irreversible con `danger: true`, que borrar una foto y avisar de un dato que
+falta no son la misma pregunta.
 
 Cuatro reglas, todas con su motivo:
 
@@ -1116,7 +1536,23 @@ puede cargar con todo el tráfico cortado. Para probar un camino de error hace f
 que rechace de verdad —un callable, un permiso denegado—; desenchufar la red no vale. Y
 cortarla del todo tumba la sesión, porque el guard lee `authorizedUsers` de Firestore.
 
-### `.form-control` NO es global
+### `.form-control` NO es global — y `.btn-*` lo es solo a medias
+
+⚠️ **La misma trampa, con los botones.** `.btn` traía el relleno y el radio, y
+`.btn-primary` solo el color: un botón escrito `class="btn-primary"` en un
+componente que no declarase la clase salía **como texto sobre fondo turquesa**,
+sin caja ni esquinas. En la aplicación conviven las dos formas —21 con `btn`
+delante y 29 sin él— y no hay forma de acordarse de cuál toca.
+
+Desde el 9 de septiembre de 2026 la **forma** también es global, en
+`.btn-primary`, `.btn-secondary`, `.btn-danger` y `.btn-ghost`. No pisa a quien
+ya la declara: la regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0)
+y la global es (0,1,0). `.btn-icon` y `.btn-skip-step` quedan fuera a propósito,
+porque su geometría no es esa.
+
+Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
+sin que se notara porque solo aparece cuando falta la declaración.
+
 
 ⚠️ Cada formulario **declara su propia `.form-control`** en su SCSS. No está en
 `styles.scss`, aunque lo parezca por lo repetida que está. Si un componente nuevo la usa

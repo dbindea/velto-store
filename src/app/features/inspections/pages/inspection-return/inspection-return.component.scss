@@ -202,22 +202,9 @@
 
 textarea.form-control { resize: vertical; min-height: 50px; }
 
-.check-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  cursor: pointer;
-  margin-top: 1.5rem;
-  input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-color); }
-
-  &.big {
-    margin-top: 0;
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-}
+// Las casillas son `.checkbox-item`, en `styles.scss`. Esta versión medía
+// 16 px mientras las de la ficha de vehículo medían 18: la misma casilla, dos
+// tamaños, según por qué pantalla se llegara.
 
 // Damages
 .damage-form {

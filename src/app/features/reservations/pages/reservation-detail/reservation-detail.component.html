@@ -241,6 +241,31 @@
     }
 
     <!--
+      Facturar. Es un atajo, no un paso del workflow: la factura se emite
+      cuando el cliente la pide, en cualquier momento y también meses después,
+      así que no depende del estado de la reserva ni lo cambia.
+
+      Solo lleva al formulario con los datos ya rellenos; emitir es una decisión
+      que se toma allí, con el aviso de que no se podrá deshacer.
+    -->
+    @if (canIssueInvoice) {
+      <div class="detail-card" style="grid-column: 1 / -1; margin-top: 1rem;">
+        <div class="card-header">
+          <i class="pi pi-receipt"></i>
+          <span>{{ 'invoices.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="contract-actions">
+            <a class="btn-secondary" [routerLink]="['/invoices/new']" [queryParams]="{ reservation: reservation.id }">
+              <i class="pi pi-plus"></i>
+              {{ 'invoices.issue' | translate }}
+            </a>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!--
       Contract — one block, not two. There used to be a second card up in the
       grid whose whole content was this same status, which meant the page said
       "contrato" twice and the operator had to look in two places to learn one
@@ -413,6 +438,21 @@
                 <i class="pi pi-eye"></i>
                 {{ 'inspections.actions.view' | translate }}
               </button>
+              <!-- El parte al que el contrato remite. No se manda solo: se
+                   genera y se copia el enlace cuando el cliente lo pide. -->
+              <button
+                class="btn-secondary"
+                type="button"
+                [disabled]="generatingReport() === pickupInspection.id"
+                (click)="shareInspectionReport(pickupInspection)"
+              >
+                @if (generatingReport() === pickupInspection.id) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-file-pdf"></i>
+                }
+                {{ 'inspections.report.action' | translate }}
+              </button>
             } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
               <button
@@ -474,6 +514,19 @@
               <button class="btn-secondary" type="button" (click)="viewReturn()">
                 <i class="pi pi-eye"></i>
                 {{ 'inspections.actions.view' | translate }}
+              </button>
+              <button
+                class="btn-secondary"
+                type="button"
+                [disabled]="generatingReport() === returnInspection.id"
+                (click)="shareInspectionReport(returnInspection)"
+              >
+                @if (generatingReport() === returnInspection.id) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-file-pdf"></i>
+                }
+                {{ 'inspections.report.action' | translate }}
               </button>
             } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
@@ -829,25 +882,39 @@
                     {{ getPaymentStatusLabel(payment.status) }}
                   </span>
                 </div>
-                @if (payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) {
+                @if ((payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) || canIssueReceipt(payment)) {
                   <div class="payment-actions">
-                    <button
-                      type="button"
-                      class="btn-charge-card"
-                      [disabled]="chargingPaymentId() === payment.id"
-                      (click)="chargeWithCard(payment, $event)">
-                      <i class="pi pi-credit-card"></i>
-                      {{ 'payments.actions.chargeCard' | translate }}
-                    </button>
-                    <!-- Para cobrar SIN el cliente delante: se le manda el
-                         enlace y paga desde su móvil cuando pueda. -->
-                    <button
-                      type="button"
-                      class="btn-charge-card"
-                      (click)="copyPaymentLink(payment, $event)">
-                      <i class="pi pi-link"></i>
-                      {{ 'payments.actions.copyPaymentLink' | translate }}
-                    </button>
+                    @if (payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) {
+                      <button
+                        type="button"
+                        class="btn-charge-card"
+                        [disabled]="chargingPaymentId() === payment.id"
+                        (click)="chargeWithCard(payment, $event)">
+                        <i class="pi pi-credit-card"></i>
+                        {{ 'payments.actions.chargeCard' | translate }}
+                      </button>
+                      <!-- Para cobrar SIN el cliente delante: se le manda el
+                           enlace y paga desde su móvil cuando pueda. -->
+                      <button
+                        type="button"
+                        class="btn-charge-card"
+                        (click)="copyPaymentLink(payment, $event)">
+                        <i class="pi pi-link"></i>
+                        {{ 'payments.actions.copyPaymentLink' | translate }}
+                      </button>
+                    }
+                    <!-- El justificante de lo YA cobrado. Convive con el cobro
+                         del resto en una fila parcial: son dos cosas distintas
+                         —lo que entró y lo que falta— y las dos hacen falta. -->
+                    @if (canIssueReceipt(payment)) {
+                      <button
+                        type="button"
+                        class="btn-charge-card"
+                        (click)="openReceiptDialog(payment, $event)">
+                        <i class="pi pi-receipt"></i>
+                        {{ 'payments.receipt.action' | translate }}
+                      </button>
+                    }
                   </div>
                 }
               </div>
@@ -1103,6 +1170,15 @@
           </div>
         </div>
       </div>
+    }
+
+    <!-- Recibo de cobro.
+         ⚠️ No es una factura, y el PDF lo lleva impreso: no desglosa IVA y no
+         lleva número de serie fiscal. Lo único que se decide aquí es si va a
+         haber factura, porque se factura A PETICIÓN y la aplicación no puede
+         saberlo. -->
+    @if (receiptPayment(); as pago) {
+      <app-receipt-dialog [payment]="pago" (closed)="closeReceiptDialog()" />
     }
 
     <!-- Cancel Modal -->

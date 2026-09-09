@@ -60,6 +60,271 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## 📋 N-21 · Avisos con antelación — pendiente, propuesto el 8 de septiembre de 2026
+
+⚠️ **Sin esto, el mantenimiento a futuro está muerto.** Es de Dorel y es
+exacto: se puede programar «ITV en 7 días» o «cambio de aceite en 5», y hoy
+**no hay ningún sitio donde eso aparezca** hasta que alguien entra a la ficha
+del coche a mirar. Un recordatorio que no recuerda nada es un campo de
+formulario, no una función.
+
+Y no es solo el mantenimiento. La misma pieza sirve para lo que ya existe y
+tampoco avisa:
+
+| Qué vence | Cuándo hay que saberlo | De dónde sale |
+|---|---|---|
+| Mantenimiento programado | `nextDueDate` a N días | `vehicleMaintenance` |
+| Próxima revisión por km | `nextDueKm` cerca del `currentKm` | `vehicleMaintenance` + `vehicles` |
+| **Factura fuera de plazo** | destinatario empresa y pasa del día 16 del mes siguiente | `invoices` + `reservations` |
+| Contrato sin firmar | entrega mañana y `contractStatus` no es `signed` | `reservations` |
+| Fianza sin resolver | reserva devuelta hace días con fianza retenida | `payments` |
+| Cargos extra sin cobrar | reserva cerrada con `extrasPending` | `payments` |
+
+### Lo que hay que decidir antes de programar
+
+1. **Dónde se ve.** Tres opciones y no son excluyentes: una tarjeta en el
+   panel, una campana con contador en la cabecera, y un email diario. La
+   tarjeta es la barata y la que resuelve el 80 %; la campana obliga a decidir
+   qué es «leído»; el email necesita una function programada.
+2. **Con cuánta antelación**, y si es configurable en Ajustes. Siete días para
+   una ITV y dos para un contrato sin firmar no son el mismo aviso.
+3. ⚠️ **Quién lo calcula.** Si lo hace el frontend al abrir el panel, un aviso
+   solo existe si alguien entra — que es justo el problema que se quiere
+   resolver. Un aviso de verdad necesita una **Cloud Function programada**, y
+   entonces hay que decidir dónde se guarda lo ya avisado para no repetirlo.
+4. **Qué NO es un aviso.** Todo lo que ya se ve en la pantalla donde se
+   trabaja. Duplicarlo en una lista de avisos hace que la lista se ignore, y
+   una lista de avisos ignorada es peor que no tenerla.
+
+⚠️ **Lo que no se puede hacer es la mitad**: una tarjeta en el panel que solo
+mire mantenimientos deja fuera las facturas fuera de plazo, que son las que
+tienen sanción —el 2 % del importe—. Por eso va como tarea propia y no colgada
+de otra.
+
+---
+
+## ✅ N-20 · Recibo de cobro — 8 de septiembre de 2026
+
+Lo que Dorel hacía a mano en Word cuando alguien le daba la señal. Estaba
+planificado en la fase 1 de facturación y se había quedado fuera; el detalle
+completo —decisiones, diseño y fallos— está en
+[facturacion.md](facturacion.md#-fase-1--recibo-de-cobro--construido-el-8-de-septiembre-de-2026).
+
+Botón **Recibo** en cada fila de pago con dinero cobrado, en la ficha de la
+reserva y en la del pago —que es la única puerta de un **cobro libre**, porque
+sin reserva no hay otra pantalla desde la que llegar—.
+
+Tres cosas que conviene no repetir:
+
+1. ⚠️ **Un identificador que ya es secreto en un sitio no se reutiliza como
+   dirección en otro.** El enlace corto del recibo lleva un id aleatorio y no el
+   del pago: ese id es el secreto de `/pay/:paymentId`, y quien tuviera el
+   enlace de pago reenviado se habría bajado un PDF con el nombre del cliente.
+2. ⚠️ **Las condiciones sobre dinero necesitan mirar la dirección, no solo el
+   importe.** Una devolución de fianza tiene `paidAmount` mayor que cero, así
+   que «solo si se ha cobrado algo» la dejaba pasar — y el recibo habría dicho
+   «recibido de» sobre dinero que salió.
+3. ⚠️ **Los tests de maquetación siguen sin comprobar que el texto sea cierto.**
+   Los tres fallos del PDF —la etiqueta que no se pintaba, el concepto repetido
+   y el pendiente colocado como un sumando— pasaron los cuatro invariantes.
+   Ahora hay dos tests de **contenido** sobre el recibo: que el aviso de «no es
+   una factura» esté impreso y que no haya ni un desglose de impuesto.
+
+Probado en desarrollo con cobros reales: señal de 50 € en efectivo, fianza
+cobrada a medias por transferencia y el mismo recibo en rumano.
+
+⚠️ **Desplegado solo en desarrollo**, como el resto de facturación. Producción
+sigue con trece functions.
+
+---
+
+## ✅ N-19 · Cuatro temas — 8 de septiembre de 2026
+
+El oscuro se volvió **casi negro** (`#0B0F0E`) al adoptar la rampa del design
+system, y Dorel lo dijo claro: cansa la vista. En vez de retocarlo —y dejar a
+medias a quien sí lo prefiera— se abrió la elección a cuatro paletas: `light`,
+`dark`, `forest` (intermedio verdoso) y `ocean` (intermedio azulado, que es la
+rampa slate que la aplicación tenía antes).
+
+Selector en **Ajustes › Apariencia**, con cada muestra pintada con **sus propios
+colores en duro**: con `var(--bg-card)` las cuatro saldrían idénticas, que es lo
+que hace inútil un selector de paletas.
+
+Dos cosas que no son evidentes:
+
+- ⚠️ **`isDark()` significa «fondo oscuro», no «tema dark».** Con tres temas
+  oscuros, preguntar `theme() === 'dark'` habría dejado el logo negro sobre
+  fondo negro en `forest` y en `ocean`.
+- ⚠️ **La clase `dark` se mantiene en los tres oscuros** y las nuevas solo
+  redefinen superficies encima. Es la clase que ya usan decenas de reglas de
+  componente y la que lleva el `color-scheme: dark` del que dependen los
+  desplegables y los calendarios nativos.
+
+Los cuatro superan 4,5:1 en todos los pares; el más justo es el verde de marca
+sobre `ocean` (4,71), que es el que la aplicación ya tenía.
+
+---
+
+## 📋 N-18 · Facturación desde la reserva — aprobado el 8 de septiembre de 2026
+
+Dorel hace hoy las facturas a mano en Word y quiere emitirlas desde la reserva.
+**Es la siguiente tarea grande**, y trae dos condicionantes que él mismo señaló:
+una numeración válida que no dé problemas al modificar, y dejar el sistema
+preparado para **VeriFactu**.
+
+El análisis completo está en **[facturacion.md](facturacion.md)**: marco legal
+contrastado con el BOE y la sede de la AEAT, las cinco decisiones —**ya tomadas
+el mismo día**— y el plan en tres fases.
+
+Decidido: numeración **`2026/0001`**, emisión **en cualquier momento y solo a
+petición**, forma de pago según lo que quede pendiente, y modalidad
+**VERI\*FACTU** con envío a la AEAT.
+
+⚠️ **El alcance creció el mismo día** y ya no es «una factura de la reserva»:
+son **cinco documentos**, y solo dos son fiscales —factura y rectificativa—.
+Los otros tres (proforma, recibo de cobro y el presupuesto que ya existe) **no
+llevan numeración fiscal ni entran en VeriFactu**, y esa separación es lo que
+los hace baratos. Además la factura **no cuelga de la reserva**: Velto tiene
+varios CNAE y factura también ventas de coches, limpiezas y cambios de aceite.
+
+Los tres titulares del análisis:
+
+- ⚠️ **Le aplica el 1 de enero de 2027**, no el 1 de julio: VELTO MOBILITY es una
+  S.L. y tributa por Sociedades. Menos de cuatro meses.
+- ⚠️ **La huella SHA-256 encadenada es obligatoria en las dos modalidades** de
+  VeriFactu, no solo en la que envía a la AEAT. Hay que encadenar desde la
+  primera factura o la cadena arrancará en 2027 sobre un histórico que nadie
+  puede acreditar.
+- ⚠️ **Con las facturas se acaba la regla de «los datos son desechables»**. Una
+  factura emitida no se borra ni se edita: se rectifica. La colección `invoices`
+  será el primer dato de la aplicación que no se puede tirar.
+
+Su pregunta sobre emitir con fecha pasada tiene respuesta y es cómoda: **no se
+retrodata la expedición, se consigna la fecha de la operación**, que puede ser
+anterior. Su factura de ejemplo ya lo hace bien —expedida el 10/08 para un
+periodo 01/06–01/08— sin saber que estaba usando la figura correcta.
+
+---
+
+## ✅ N-17 · Parte de entrega y de devolución — 8 de septiembre de 2026
+
+⚠️ **Cambió de forma antes de construirse, y el cambio es de Dorel:** en vez de
+hacer que el cliente firme el parte, **se quitan del contrato las frases que
+obligan a firmarlo**. Su razón, literal: *«es molesto para el cliente ponerle
+que firmar tanto»*. Con una cuadrilla de cuatro conductores —que es el caso real
+del negocio— la cláusula 2 pedía seis firmas seguidas en un móvil, de pie en la
+calle.
+
+Lo que **no** se podía quitar es la remisión al parte: el kilometraje y el
+combustible de salida no caben en el contrato, que se firma **antes** de la
+entrega. Así que se hicieron las dos mitades a la vez:
+
+1. **Cuatro remisiones reescritas**, en tres idiomas: fuera «que ambas partes
+   firman», «firmado por las partes» y «firmar el parte de entrega»; dentro, que
+   el parte se **documenta con fotografías**, lo conserva el arrendador y se
+   pone a disposición del cliente **a su solicitud**.
+2. **El parte existe**: `generateInspectionReport`, con enlace corto
+   `/d/i{id}`. Entrega y devolución, en los tres idiomas.
+
+⚠️ **Se cambia prueba por comodidad, y conviene saberlo.** La firma del cliente
+es lo que hace difícil discutir un cargo. Sin ella, lo que sostiene el cobro de
+combustible, kilómetros y dotación son **las fotos con su fecha** y el propio
+parte. Es coherente con lo que Dorel ya había decidido —no penalizar a
+familiares y socios— y es una decisión de negocio, no técnica.
+
+**No se manda solo**: el operador copia el enlace cuando el cliente lo pide.
+
+### Tres fallos que solo se vieron mirando el PDF
+
+- **En la devolución salía «Sin marcar: identidad del cliente verificada, fianza
+  depositada, contrato firmado…»**, que son comprobaciones de la entrega. El
+  parte venía a decir que no se había identificado al cliente. El checklist se
+  filtra ahora por fase.
+- **«Arrendatario: —» y el vehículo en blanco**: no toda inspección guardó sus
+  snapshots. Se respaldan con los de la reserva.
+- **La primera redacción remitía a la sección «Conductores adicionales»** y el
+  PDF la titula «Conductores **autorizados** adicionales», y solo la imprime si
+  hay alguno. Es el mismo fallo que N-17 venía a arreglar, cometido al
+  arreglarlo. Ahora remite al contrato entero.
+
+⚠️ Los contratos ya firmados **conservan su texto**: el PDF está sellado y cada
+contrato vale con las cláusulas que tenía el día de la firma. El texto nuevo
+rige para los que se generen a partir de ahora.
+
+---
+
+## 📋 N-17 (planteamiento original) · Parte de entrega firmado — aprobado el 8 de septiembre de 2026
+
+Aprobado por Dorel el mismo día, **con un requisito que cambia el diseño**:
+
+⚠️ **La firma es opcional y la decide el agente.** No todos los clientes son
+iguales: a un familiar o a un socio no se le penaliza por un rasguño ni por
+traer el depósito vacío. La firma existe **para cuando el cliente no es de
+fiar**, y quien lo determina es quien entrega el coche.
+
+Eso descarta hacerla obligatoria en el workflow. El parte se puede completar sin
+firma —y entonces vale como registro interno con fotos— o con firma, y entonces
+es el documento al que el contrato remite cuatro veces.
+
+⚠️ **Y ese es el motivo por el que esto es urgente**: N-14 arregló tres cláusulas
+que remitían a datos inexistentes **haciéndolas remitir al parte de entrega**, un
+documento que no existe. El contrato dice hoy «el parte de entrega, que ambas
+partes firman y que forma parte inseparable de este contrato» y ese parte no se
+genera, no se entrega y no se firma. Se cambió «remite a una sección vacía» por
+«remite a un parte que nadie firma», que es más sutil y no mejor.
+
+Lo que cuelga de él son los tres cargos que se cobran de la fianza: combustible
+no repuesto, kilómetros extra y dotación faltante.
+
+Piezas que ya existen: `signature-pad`, el `PdfBuilder` y las fotos de la
+inspección. Falta la firma en el modelo `Inspection` y el PDF del parte.
+
+---
+
+## ⛔ Descartado o aplazado por Dorel — 8 de septiembre de 2026
+
+- **Dos operadores reservando el mismo coche**: no se aborda. «No será el caso de
+  duplicar reservas a milisegundos.» Queda la mitigación actual.
+- **Croquis de daños**: no hace falta, se usan fotos.
+- **Cobro desde el móvil**: lo prueba él con el primer caso real en producción.
+
+---
+
+## ✅ F-36 · El presupuesto decía que los precios incluían IVA — 7 de septiembre de 2026
+
+Encontrado **mirando un presupuesto real recién generado en producción**, no
+leyendo código: el pie decía «Los precios incluyen IVA al tipo vigente en la
+fecha de emisión» tres líneas debajo de un desglose que decía lo contrario.
+
+```
+BASE IMPONIBLE      165,00 €
+IVA (21 %)           34,65 €
+TOTAL ALQUILER      199,65 €
+
+Los precios incluyen IVA al tipo vigente…     ← falso
+```
+
+El mismo documento afirmaba que 55 €/día ya llevaba impuesto **y** le sumaba un
+21 % encima. Un cliente que discuta el importe tiene el argumento impreso y
+firmado por la empresa.
+
+Es un resto de cuando la tarifa era con IVA incluido, convención retirada el 28
+de agosto de 2026 junto con `tariffIncludesVat`. **La aritmética se corrigió y la
+frase que la describe se quedó** — que es la forma más silenciosa en que
+sobrevive una convención vieja: no falla ningún test, no rompe ninguna cifra, y
+solo se ve leyendo el documento como lo lee un cliente.
+
+Ahora dice las dos cosas que hacen falta y no se contradicen: **el precio por día
+se indica sin IVA** y **el total indicado es el importe final a pagar**.
+Corregido en los tres idiomas y desplegado en los dos entornos.
+
+⚠️ **La lección, que ya es la tercera vez**: el contrato no puede remitir a un
+dato que no imprime, y un documento no puede describir una aritmética que no
+hace. Los tests de maquetación comprueban que el texto **quepa**, nunca que sea
+**cierto**. Eso solo lo ve alguien leyendo el PDF.
+
+---
+
 ## Ciclo completo en producción — 5 de septiembre de 2026
 
 Recorrido entero con datos reales, **dejado montado en producción** para que
@@ -1002,9 +1267,11 @@ geolocalización, desistimiento y reclamaciones. 9 páginas en vez de 8.
 ### Lo que sigue fuera
 
 - **Tarifar las penalizaciones** — decisión de Dorel: caso por caso.
-- **Anexo de daños con croquis** al estilo de Record Go.
-- **Firma de los conductores en el parte de entrega**, que la cláusula 2 exige:
-  hoy ninguna inspección lleva firma, ni la del arrendatario.
+- ⛔ **Anexo de daños con croquis** al estilo de Record Go — **descartado** por
+  Dorel el 8 de septiembre de 2026: se documenta con fotos, que es lo que la
+  inspección ya hace.
+- **Firma en el parte de entrega**, que la cláusula 2 exige: hoy ninguna
+  inspección lleva firma, ni la del arrendatario. Ver N-17.
 - **Rellenar aseguradora, póliza y teléfono de asistencia de cada coche**, en su
   ficha. Ya no van en los `.env`: ver N-16.
 

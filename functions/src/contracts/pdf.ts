@@ -18,7 +18,7 @@
  * all look like the same company wrote them.
  */
 
-import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont, RGB } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont, PDFImage, RGB } from 'pdf-lib';
 // @ts-ignore — the @types/fontkit default export is a namespace, not a
 // callable object, but pdf-lib accepts the runtime value as a fontkit.
 import fontkit from 'fontkit';
@@ -68,6 +68,77 @@ export interface InfoEntry {
   value: string;
   /** Render as a feature line (larger, brand colour) instead of label + value. */
   strong?: boolean;
+  /**
+   * Parte en varias líneas en vez de truncar con puntos suspensivos.
+   *
+   * Para los datos que **no se pueden abreviar**: un domicilio fiscal es
+   * contenido obligatorio de la factura (art. 6.1.c), y «Pol. Ind. Las Monjas,
+   * nave 7, 28850 Torrejón de Ard…» es un domicilio incompleto. Misma razón por
+   * la que el nombre legal ya encoge y envuelve en vez de truncarse.
+   *
+   * ⚠️ **Parte por las comas, no por donde se acabe el ancho.** Estos valores
+   * son datos de ficha —un domicilio, una razón social—, y una dirección
+   * escrita se lee por sus comas: cortarla por ancho da «Pol. Ind. Las Monjas,
+   * nave 7, 28850 Torrejón / de Ardoz (Madrid)», que parte un topónimo en dos.
+   * Solo se recurre al corte por palabras cuando un tramo entre comas no cabe
+   * ni él solo.
+   */
+  wrap?: boolean;
+}
+
+/**
+ * Reparte un texto en líneas **cortando por las comas**.
+ *
+ * Vive fuera de `PdfBuilder`, y suelta, por el mismo motivo que `qrRects()`:
+ * así se puede probar sin montar un PDF ni cargar una fuente. Quien llama pone
+ * el `cabe` —que es lo único que sabe de tipografía— y el `porPalabras` para
+ * los tramos que no quepan ni solos.
+ *
+ * El criterio, en dos reglas:
+ *
+ * 1. **Si cabe entera, una línea.** No se trocea una dirección corta solo
+ *    porque tenga comas: «C/ María Zambrano, 4» son tres líneas absurdas.
+ * 2. **Cuando no cabe, el salto va después de una coma**, juntando tramos
+ *    mientras quepan. La coma se queda al final de la línea: es parte del dato
+ *    que tecleó el operador, y en una factura el domicilio es contenido
+ *    obligatorio — no se le quitan caracteres para maquetar.
+ */
+export function wrapPreferringCommas(
+  s: string,
+  cabe: (candidate: string) => boolean,
+  porPalabras: (chunk: string) => string[]
+): string[] {
+  const texto = (s || '').trim();
+  if (!texto) return [];
+  if (cabe(texto)) return [texto];
+
+  // La coma se queda pegada al tramo que la precede.
+  const tramos = texto
+    .split(/(?<=,)\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (tramos.length < 2) return porPalabras(texto);
+
+  const lineas: string[] = [];
+  let linea = '';
+  for (const tramo of tramos) {
+    const candidata = linea ? `${linea} ${tramo}` : tramo;
+    if (cabe(candidata)) {
+      linea = candidata;
+      continue;
+    }
+    if (linea) lineas.push(linea);
+    if (cabe(tramo)) {
+      linea = tramo;
+    } else {
+      // Un tramo que no cabe ni él solo se parte por palabras, como siempre.
+      const partes = porPalabras(tramo);
+      lineas.push(...partes.slice(0, -1));
+      linea = partes[partes.length - 1] ?? '';
+    }
+  }
+  if (linea) lineas.push(linea);
+  return lineas;
 }
 
 /** A drawn text run, kept so the overlap check can inspect the layout. */
@@ -444,7 +515,20 @@ export function formatMoney(n?: number, locale: ContractLocale = 'es'): string {
   try {
     return new Intl.NumberFormat(locale === 'en' ? 'en-GB' : locale === 'ro' ? 'ro-RO' : 'es-ES', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
+      /**
+       * ⚠️ **`always`, porque el CLDR español NO agrupa cuatro dígitos.**
+       *
+       * `Intl` en español da «7000,00» y solo pone el punto a partir de cinco
+       * cifras: es correcto para prosa, pero no es como se escribe una cantidad
+       * en una factura. La que emite la empresa pone «3.000,00 €», y un importe
+       * de cuatro dígitos sin separador se lee peor justo donde más importa.
+       *
+       * `true` y no `'always'`: son equivalentes por spec —`true` se normaliza
+       * a `always`— y `'always'` es ES2023, que los tipos de este target
+       * todavía no conocen.
+       */
+      useGrouping: true
     }).format(n) + ' €';
   } catch {
     return `${n.toFixed(2)} €`;
@@ -1146,6 +1230,169 @@ export class PdfBuilder {
   }
 
   /**
+   * Un QR con su leyenda al lado, en el flujo del documento.
+   *
+   * Lo usa la factura para el código de cotejo de VeriFactu. El texto va **a la
+   * derecha y nunca debajo**, por el mismo motivo que en el contrato: bajo el
+   * QR, una frase larga en rumano acaba tocándolo, y un QR con texto encima no
+   * se escanea.
+   */
+  /**
+   * El **QR tributario** de la factura, con la maquetación que fija el art. 21
+   * de la Orden HAC/1177/2024.
+   *
+   * ⚠️ **Va aparte de `qrWithCaption()` a propósito.** El QR del contrato no es
+   * un QR tributario y estas reglas no le aplican; mezclarlos haría que un
+   * cambio pensado para uno cambiara el otro en silencio. Aquí cada número sale
+   * de la norma, no del diseño:
+   *
+   * - **Entre 30×30 y 40×40 mm.** El nuestro medía 62 pt, o sea 21,9 mm, y se
+   *   quedaba por debajo del mínimo. En papel eso es un símbolo que algunos
+   *   móviles leen y otros no, que es la peor forma de fallar.
+   * - **«QR tributario:» encima**, centrado sobre el código. No es un rótulo
+   *   decorativo: la norma lo exige literalmente para distinguirlo de cualquier
+   *   otro QR que la factura pueda llevar.
+   * - **La frase justo debajo**, centrada.
+   * - **Los dos textos con tamaño igual o superior al resto de datos de la
+   *   factura.** Iban a 7,4 pt sobre un cuerpo de 8,2.
+   * - Y en formato vertical, el código va **centrado** entre los márgenes.
+   *
+   * La corrección de errores es `M`, que ya es la que usa `buildQrMatrix()`.
+   */
+  taxQr(url: string, heading: string, legend: string, bodySize: number): void {
+    // 32 mm: dentro del rango y sin pegarse al mínimo, que a 30 exactos
+    // cualquier redondeo dejaría el símbolo fuera de norma.
+    const size = (32 / 25.4) * 72;
+    const fontSize = Math.max(bodySize, 8);
+    this.ensureSpace(size + fontSize * 2 + 16);
+
+    const centro = this.pageWidth / 2;
+    const headFont = this.fontFor('body', heading);
+    this.put(
+      heading,
+      centro - headFont.widthOfTextAtSize(heading, fontSize) / 2,
+      this.y - fontSize,
+      fontSize,
+      headFont,
+      MUTED
+    );
+    this.y -= fontSize + 5;
+
+    this.drawQr(buildQrMatrix(url), centro - size / 2, this.y - size, size);
+    this.y -= size + 4;
+
+    // La frase parte en varias líneas si no cabe, que es justo lo que la norma
+    // prevé; lo que no admite es recortarla.
+    const legendFont = this.fontFor('body', legend);
+    const maxW = this.pageWidth - this.margin * 2;
+    for (const linea of this.wrap(legend, fontSize, legendFont, maxW)) {
+      this.put(
+        linea,
+        centro - legendFont.widthOfTextAtSize(linea, fontSize) / 2,
+        this.y - fontSize,
+        fontSize,
+        legendFont,
+        MUTED
+      );
+      this.y -= fontSize + 2;
+    }
+    this.y -= 6;
+  }
+
+  qrWithCaption(url: string, caption: string[], opts: { size?: number } = {}): void {
+    const size = opts.size ?? 62;
+    this.ensureSpace(size + 8);
+    const top = this.y;
+    this.drawQr(buildQrMatrix(url), this.margin, top - size, size);
+
+    const textX = this.margin + size + 10;
+    const textW = this.pageWidth - this.margin * 2 - size - 10;
+    let ty = top - 10;
+    for (const line of caption) {
+      const font = this.fontFor('body', line);
+      for (const parte of this.wrap(line, 7.4, font, textW)) {
+        this.put(parte, textX, ty, 7.4, font, MUTED);
+        ty -= 9.5;
+      }
+      ty -= 2;
+    }
+
+    this.y = Math.min(top - size, ty) - 6;
+  }
+
+  /**
+   * La rejilla de fotografías del parte de entrega y devolución.
+   *
+   * ⚠️ **Estas fotos son la prueba.** Desde que el contrato dejó de exigir la
+   * firma del parte, lo que sostiene un cargo por combustible, kilómetros o
+   * dotación es esto: el estado del coche fotografiado con su fecha. Así que
+   * las fotos no son decoración del documento, son su contenido.
+   *
+   * Cada imagen se ajusta **dentro** de su celda conservando la proporción: un
+   * coche estirado para llenar un hueco es una foto que no acredita nada. La
+   * celda de la etiqueta se reserva antes de dibujar, de modo que el pie nunca
+   * cae sobre la imagen siguiente.
+   */
+  photoGrid(
+    items: { img: PDFImage; width: number; height: number; label?: string }[],
+    opts: { columns?: number; gap?: number; cellHeight?: number } = {}
+  ): void {
+    if (!items.length) return;
+
+    const columns = opts.columns ?? 3;
+    const gap = opts.gap ?? 8;
+    const labelSize = 7;
+    const labelRoom = labelSize * 1.6;
+    const usable = this.pageWidth - this.margin * 2;
+    const cellW = (usable - gap * (columns - 1)) / columns;
+    const cellH = opts.cellHeight ?? cellW * 0.72;
+    const rowH = cellH + labelRoom + gap;
+
+    for (let i = 0; i < items.length; i += columns) {
+      const row = items.slice(i, i + columns);
+      // La fila entera cabe o salta: media rejilla al pie de una página se lee
+      // como si faltaran fotos.
+      this.ensureSpace(rowH);
+      const top = this.y;
+
+      row.forEach((item, col) => {
+        const x = this.margin + col * (cellW + gap);
+        const ratio = Math.min(cellW / item.width, cellH / item.height);
+        const w = item.width * ratio;
+        const h = item.height * ratio;
+        // Centrada en su celda: con fotos verticales y horizontales mezcladas,
+        // pegarlas a un borde deja la rejilla en diagonal.
+        const ix = x + (cellW - w) / 2;
+        const iy = top - cellH + (cellH - h) / 2;
+
+        this.page.drawImage(item.img, { x: ix, y: iy, width: w, height: h });
+        this.graphics.push({
+          page: this.pageNumber,
+          x: ix,
+          y: iy,
+          width: w,
+          height: h,
+          label: 'foto'
+        });
+
+        if (item.label) {
+          const font = this.fontFor('body', item.label);
+          this.put(
+            this.truncate(item.label, font, labelSize, cellW),
+            x,
+            top - cellH - labelSize - 2,
+            labelSize,
+            font,
+            MUTED
+          );
+        }
+      });
+
+      this.y = top - rowH;
+    }
+  }
+
+  /**
    * Small letter-spaced teal caps, the way the invoice labels each block.
    * Replaces the old 11pt bold heading: same call sites, quieter type.
    */
@@ -1248,7 +1495,17 @@ export class PdfBuilder {
           // on a contract — "EUROCONSTRUCCIONES 2020, SOC…" is nobody.
           const font = this.fontFor('display', entry.value);
           const featureSize = this.fitSize(entry.value, 'display', size + 3, size - 0.5, colWidth);
-          for (const line of this.wrap(entry.value, featureSize, font, colWidth)) {
+          // Por las comas también: una razón social larga se parte mejor en
+          // «EUROCONSTRUCCIONES … 2020,» / «SOCIEDAD LIMITADA UNIPERSONAL» que
+          // por donde se acabe la columna. Va en el mismo bloque que el
+          // domicilio, y las dos mitades del mismo dato no pueden partirse con
+          // criterios distintos.
+          const lineasNombre = wrapPreferringCommas(
+            entry.value,
+            (t) => font.widthOfTextAtSize(t, featureSize) <= colWidth,
+            (t) => this.wrap(t, featureSize, font, colWidth)
+          );
+          for (const line of lineasNombre) {
             this.put(line, x, cy, featureSize, font, BRAND);
             cy -= featureSize * 1.25;
           }
@@ -1261,7 +1518,21 @@ export class PdfBuilder {
         if (label) {
           this.put(this.truncate(label, this.bold, size, colWidth), x, cy, size, this.bold, BODY);
         }
-        if (entry.value) {
+        if (entry.value && entry.wrap) {
+          // Parte en varias líneas: hay datos que no se pueden abreviar. Y el
+          // corte va por las comas, porque una dirección se lee por sus comas
+          // y no por donde se acabe la columna.
+          const ancho = colWidth - labelWidth;
+          const lineas = wrapPreferringCommas(
+            entry.value,
+            (t) => this.font.widthOfTextAtSize(t, size) <= ancho,
+            (t) => this.wrap(t, size, this.font, ancho)
+          );
+          lineas.forEach((ln, i) => {
+            this.put(ln, x + (i === 0 ? labelWidth : 0), cy, size, this.font, BODY);
+            if (i < lineas.length - 1) cy -= lineHeight;
+          });
+        } else if (entry.value) {
           this.put(
             this.truncate(entry.value, this.font, size, colWidth - labelWidth),
             x + labelWidth,
@@ -1334,6 +1605,110 @@ export class PdfBuilder {
       );
       this.y -= height;
     }
+  }
+
+  /**
+   * El detalle de una factura: UDS · DESCRIPCIÓN · BASE · IVA · IMPORTE.
+   *
+   * Está calcado de la factura que la empresa ya emite —cabecera en versalitas
+   * grises, filete fino encima y debajo del bloque, importes alineados a la
+   * derecha— porque ese documento es la referencia visual de todo lo demás.
+   *
+   * La descripción es la única columna que envuelve: es donde va «Alquiler de
+   * vehículo sin conductor Dacia Duster, matrícula 4928 LKL, según contrato
+   * C-KX7TH9-2026», que son tres líneas. Las otras cuatro son cifras cortas y
+   * anchura fija.
+   *
+   * ⚠️ **La cabecera se repite si la tabla salta de página.** Una segunda hoja
+   * con cifras y sin columnas no se puede leer, y una factura de veinte líneas
+   * es perfectamente posible.
+   */
+  lineItemsTable(
+    headers: { units: string; description: string; base: string; vat: string; amount: string },
+    rows: { units: string; description: string; base: string; vat: string; amount: string }[],
+    opts: { size?: number } = {}
+  ): void {
+    const size = opts.size ?? 8;
+    const lineHeight = size * 1.45;
+    const left = this.margin;
+    const right = this.pageWidth - this.margin;
+    const width = right - left;
+
+    // Anchos fijos para las cifras; la descripción se queda con el resto.
+    const wUnits = 26;
+    const wBase = 68;
+    const wVat = 42;
+    const wAmount = 74;
+    const wDesc = width - wUnits - wBase - wVat - wAmount - 16;
+    const xUnits = left;
+    const xDesc = left + wUnits + 4;
+    const xBase = xDesc + wDesc + 6;
+    const xVat = xBase + wBase;
+    const xAmount = xVat + wVat;
+
+    const derecha = (text: string, x: number, w: number, baseline: number, bold = false) => {
+      const font = bold ? this.bold : this.font;
+      const tw = font.widthOfTextAtSize(text, size);
+      this.put(text, x + w - tw, baseline, size, font, BODY);
+    };
+
+    const drawHeader = () => {
+      this.ensureSpace(lineHeight * 2);
+      const baseline = this.y - size;
+      this.put(headers.units, xUnits, baseline, size - 0.6, this.font, MUTED);
+      this.put(headers.description, xDesc, baseline, size - 0.6, this.font, MUTED);
+      const cab = (t: string, x: number, w: number) => {
+        const tw = this.font.widthOfTextAtSize(t, size - 0.6);
+        this.put(t, x + w - tw, baseline, size - 0.6, this.font, MUTED);
+      };
+      cab(headers.base, xBase, wBase);
+      cab(headers.vat, xVat, wVat);
+      cab(headers.amount, xAmount, wAmount);
+      this.y -= lineHeight * 0.9;
+      this.page.drawLine({
+        start: { x: left, y: this.y },
+        end: { x: right, y: this.y },
+        thickness: 0.6,
+        color: RULE
+      });
+      this.y -= 6;
+    };
+
+    drawHeader();
+
+    for (const row of rows) {
+      const lines = this.wrap(row.description, size, this.font, wDesc);
+      const alto = lineHeight * Math.max(1, lines.length) + 6;
+
+      // Si la fila no cabe entera, salta con su cabecera: partir una
+      // descripción entre dos páginas deja huérfano el importe.
+      if (this.y - alto < this.floor) {
+        this.newPage();
+        drawHeader();
+      }
+
+      const primera = this.y - size;
+      // La cantidad se alinea con la PRIMERA línea de la descripción, no con
+      // el centro del bloque: si no, una descripción de tres líneas deja el «1»
+      // flotando en mitad de la nada.
+      this.put(row.units, xUnits, primera, size, this.font, BODY);
+      lines.forEach((ln, i) => {
+        this.put(ln, xDesc, this.y - size - i * lineHeight, size, this.font, BODY);
+      });
+      derecha(row.base, xBase, wBase, primera);
+      derecha(row.vat, xVat, wVat, primera);
+      derecha(row.amount, xAmount, wAmount, primera, true);
+
+      this.y -= alto;
+    }
+
+    this.page.drawLine({
+      start: { x: left, y: this.y + 2 },
+      end: { x: right, y: this.y + 2 },
+      thickness: 0.6,
+      color: RULE
+    });
+    this.y -= 6;
   }
 
   /**

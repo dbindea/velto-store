@@ -62,6 +62,13 @@ export class PrivateLayoutComponent {
       showInMobile: false,
       permission: ROUTE_PERMISSIONS['expenses']
     },
+    {
+      path: '/invoices',
+      iconClass: 'pi pi-receipt',
+      labelKey: 'menu.invoices',
+      showInMobile: false,
+      permission: ROUTE_PERMISSIONS['invoices']
+    },
     { path: '/contracts', iconClass: 'pi pi-file-pdf', labelKey: 'menu.contracts', showInMobile: false },
     { path: '/inspections', iconClass: 'pi pi-check-square', labelKey: 'menu.inspections', showInMobile: false },
     {
@@ -160,6 +167,18 @@ export class PrivateLayoutComponent {
 
   toggleDarkMode() {
     this.themeService.toggleTheme();
+  }
+
+  /** Un icono por tema: el botón rota entre los cuatro y tiene que decir cuál. */
+  themeIcon(): string {
+    return (
+      {
+        light: 'pi-sun',
+        dark: 'pi-moon',
+        forest: 'pi-cloud',
+        ocean: 'pi-star'
+      }[this.themeService.theme()] || 'pi-sun'
+    );
   }
 
   async logout() {

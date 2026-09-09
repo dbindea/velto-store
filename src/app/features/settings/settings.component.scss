@@ -303,3 +303,240 @@
   i { font-size: 2.25rem; color: var(--text-muted); }
   p { margin: 0; color: var(--text-muted); }
 }
+
+/**
+ * El selector de tema.
+ *
+ * ⚠️ Cada muestra se pinta con **sus propios colores en duro**, no con las
+ * variables del tema activo. Es la única forma de ver las cuatro a la vez: con
+ * `var(--bg-card)` las cuatro saldrían idénticas, que es exactamente lo que
+ * hace inútil un selector de paletas.
+ */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  background: transparent;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-primary);
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  &.selected {
+    border-color: var(--accent-color);
+  }
+}
+
+.theme-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  i {
+    color: var(--accent-color);
+  }
+}
+
+.theme-preview {
+  display: flex;
+  height: 84px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.preview-sidebar {
+  width: 26%;
+}
+
+.preview-body {
+  flex: 1;
+  padding: 8px;
+}
+
+.preview-card {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.preview-line {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+
+  &.short {
+    width: 55%;
+  }
+}
+
+.preview-accent {
+  display: block;
+  height: 10px;
+  width: 40%;
+  border-radius: 3px;
+  background: #20a48f;
+}
+
+// Los cuatro juegos, en duro. Copiados de los bloques de :root y .dark.
+.theme-option[data-theme='light'] {
+  .preview-sidebar { background: #14181a; }
+  .preview-body { background: #f6f8f8; }
+  .preview-card { background: #ffffff; }
+  .preview-line { background: #c9d0d2; }
+}
+
+.theme-option[data-theme='dark'] {
+  .preview-sidebar { background: #0b0f0e; }
+  .preview-body { background: #0b0f0e; }
+  .preview-card { background: #14181a; }
+  .preview-line { background: #2a3033; }
+}
+
+.theme-option[data-theme='forest'] {
+  .preview-sidebar { background: #101614; }
+  .preview-body { background: #151d1b; }
+  .preview-card { background: #1d2725; }
+  .preview-line { background: #2e3b38; }
+}
+
+.theme-option[data-theme='ocean'] {
+  .preview-sidebar { background: #0b1220; }
+  .preview-body { background: #0f172a; }
+  .preview-card { background: #1e293b; }
+  .preview-line { background: #334155; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Declaración responsable (art. 15 de la Orden HAC/1177/2024)
+ * ------------------------------------------------------------------------- */
+
+.compliance-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+
+  .fact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.75rem 0.875rem;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+  }
+
+  .fact-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  .fact-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* Una razón social larga parte en dos líneas antes que estirar la tarjeta. */
+    overflow-wrap: anywhere;
+  }
+}
+
+.compliance-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+
+  &.ok {
+    color: var(--text-primary);
+    i { color: var(--success-color); }
+  }
+
+  /* Que falte la declaración de la versión que está corriendo es lo que hay que
+     resolver, así que se dice en ámbar y no en gris. */
+  &.pending {
+    color: var(--warning-color);
+    i { color: var(--warning-color); }
+  }
+
+  /* Una factura rechazada bloquea la cadena entera: todo lo que venga detrás
+     encadena con su huella. Es lo más grave que puede decir esta pantalla, así
+     que no comparte el ámbar de «falta algo por hacer». */
+  &.blocked {
+    color: var(--error-color);
+    i { color: var(--error-color); }
+  }
+
+  /* El texto envuelve: los mensajes de la Agencia son frases largas y truncarlas
+     esconde justo la parte que dice qué falló. */
+  flex-wrap: wrap;
+}
+
+/* La lista de pendientes reutiliza `.compliance-list`, pero cada fila puede
+   llevar debajo el motivo del rechazo — que es una frase, no una etiqueta. */
+.verifactu-pending li {
+  flex-wrap: wrap;
+}
+
+.verifactu-error {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: var(--error-color);
+}
+
+.compliance-history {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.compliance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+
+    &:last-child { border-bottom: none; }
+  }
+
+  .version {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .date {
+    color: var(--text-muted);
+    /* Empuja el enlace al final sin necesitar un contenedor más. */
+    margin-right: auto;
+  }
+
+  a { color: var(--accent-color); }
+}

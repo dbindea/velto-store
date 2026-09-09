@@ -15,6 +15,16 @@
       <i class="pi pi-users"></i>
       {{ 'settings.tabs.users' | translate }}
     </button>
+    <button class="tab" type="button"
+            [class.active]="tab() === 'appearance'" (click)="select('appearance')">
+      <i class="pi pi-palette"></i>
+      {{ 'settings.tabs.appearance' | translate }}
+    </button>
+    <button class="tab" type="button"
+            [class.active]="tab() === 'compliance'" (click)="select('compliance')">
+      <i class="pi pi-verified"></i>
+      {{ 'settings.tabs.compliance' | translate }}
+    </button>
   </div>
 
   @if (loading()) {
@@ -242,6 +252,232 @@
           </div>
         }
       </div>
+    }
+
+    @if (tab() === 'appearance') {
+      <div class="card">
+        <h2>{{ 'settings.theme' | translate }}</h2>
+        <p class="hint">{{ 'settings.themeHint' | translate }}</p>
+
+        <!--
+          Cada opción se pinta con SUS propios colores, no con un cuadrado de
+          muestra: elegir una paleta a ciegas por su nombre es lo que obliga a
+          probarlas una a una para ver cuál cansa menos.
+        -->
+        <div class="theme-grid">
+          @for (t of themeService.themes; track t) {
+            <button
+              type="button"
+              class="theme-option"
+              [class.selected]="themeService.theme() === t"
+              [attr.data-theme]="t"
+              (click)="setTheme(t)"
+            >
+              <span class="theme-preview">
+                <span class="preview-sidebar"></span>
+                <span class="preview-body">
+                  <span class="preview-card">
+                    <span class="preview-line"></span>
+                    <span class="preview-line short"></span>
+                    <span class="preview-accent"></span>
+                  </span>
+                </span>
+              </span>
+              <span class="theme-name">
+                {{ 'settings.themes.' + t | translate }}
+                @if (themeService.theme() === t) {
+                  <i class="pi pi-check"></i>
+                }
+              </span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <!--
+      Declaración responsable (art. 15 de la Orden HAC/1177/2024).
+
+      ⚠️ Le toca a Velto porque la aplicación es desarrollo propio: no hay
+      fabricante externo que pueda declarar por ella. Y hace falta UNA POR CADA
+      versión del sistema, así que la pantalla avisa cuando la vigente no
+      corresponde a la versión que está corriendo.
+    -->
+    @if (tab() === 'compliance') {
+      <div class="card">
+        <h2>{{ 'settings.compliance.title' | translate }}</h2>
+        <p class="hint">{{ 'settings.compliance.hint' | translate }}</p>
+
+        <div class="compliance-facts">
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.system' | translate }}</span>
+            <span class="fact-value">{{ complianceSystemName }}</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.version' | translate }}</span>
+            <span class="fact-value">{{ complianceVersion }}</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.producer' | translate }}</span>
+            <span class="fact-value">{{ complianceProducer }}</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">{{ 'settings.compliance.mode' | translate }}</span>
+            <span class="fact-value">{{ 'settings.compliance.modeVerifactu' | translate }}</span>
+          </div>
+        </div>
+
+        @if (declaration(); as d) {
+          <p class="compliance-state ok">
+            <i class="pi pi-check-circle"></i>
+            {{ 'settings.compliance.issued' | translate }}
+            <strong>{{ d.declaredAt | date: 'dd/MM/yyyy' }}</strong>
+          </p>
+          <a class="btn-secondary" [href]="d.pdfUrl" target="_blank" rel="noopener">
+            <i class="pi pi-file-pdf"></i>
+            {{ 'settings.compliance.open' | translate }}
+          </a>
+        } @else {
+          <!-- Sin declaración para esta versión: es lo que hay que resolver, y
+               por eso se dice en ámbar y no en gris. -->
+          <p class="compliance-state pending">
+            <i class="pi pi-exclamation-triangle"></i>
+            {{ 'settings.compliance.missing' | translate }}
+          </p>
+          <button
+            class="btn-primary"
+            type="button"
+            [disabled]="issuingDeclaration()"
+            (click)="issueDeclaration()"
+          >
+            @if (issuingDeclaration()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-verified"></i>
+            }
+            {{ 'settings.compliance.issue' | translate }}
+          </button>
+        }
+
+        @if (previousDeclarations().length) {
+          <h3 class="compliance-history">{{ 'settings.compliance.history' | translate }}</h3>
+          <!-- Las de versiones anteriores NO se borran: cada una acredita lo
+               que se declaró mientras esa versión emitía facturas. -->
+          <ul class="compliance-list">
+            @for (d of previousDeclarations(); track d.systemVersion) {
+              <li>
+                <span class="version">v{{ d.systemVersion }}</span>
+                <span class="date">{{ d.declaredAt | date: 'dd/MM/yyyy' }}</span>
+                <a [href]="d.pdfUrl" target="_blank" rel="noopener">
+                  {{ 'settings.compliance.open' | translate }}
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- Remisión a la AEAT.
+           ⚠️ Esta tarjeta responde a UNA pregunta: ¿está todo lo emitido
+           remitido? Una factura que no llegó no se nota por ningún otro sitio
+           —el PDF sale igual y el cliente la paga igual—, así que si no se
+           enseña aquí no se entera nadie hasta que pregunte la Agencia. -->
+      @if (verifactuStatus(); as v) {
+        <div class="card">
+          <h2>{{ 'settings.verifactu.title' | translate }}</h2>
+          <p class="hint">{{ 'settings.verifactu.hint' | translate }}</p>
+
+          @if (!v.enabled) {
+            <!-- Apagado no es un fallo: es el estado deliberado hasta que el
+                 envío esté probado. Y mientras, la factura tampoco imprime el
+                 QR, así que nada promete lo que no hay. -->
+            <p class="compliance-state pending">
+              <i class="pi pi-pause-circle"></i>
+              {{ 'settings.verifactu.disabled' | translate }}
+            </p>
+          } @else if (verifactuEsPruebas) {
+            <!-- ⚠️ Aceptado en preproducción NO es presentado. Callarlo haría
+                 leer «aceptadas» como obligación cumplida. -->
+            <p class="compliance-state pending">
+              <i class="pi pi-exclamation-triangle"></i>
+              {{ 'settings.verifactu.testEnv' | translate }}
+            </p>
+          } @else {
+            <p class="compliance-state ok">
+              <i class="pi pi-check-circle"></i>
+              {{ 'settings.verifactu.liveEnv' | translate }}
+            </p>
+          }
+
+          <div class="compliance-facts">
+            <div class="fact">
+              <span class="fact-label">{{ 'settings.verifactu.accepted' | translate }}</span>
+              <span class="fact-value">{{ v.aceptadas }}</span>
+            </div>
+            <div class="fact">
+              <span class="fact-label">{{ 'settings.verifactu.pending' | translate }}</span>
+              <span class="fact-value">{{ v.pendientes.length }}</span>
+            </div>
+          </div>
+
+          <!-- ⚠️ Una rechazada bloquea TODO lo que venga detrás: los registros
+               van encadenados por huella. Es lo más grave que puede decir esta
+               pantalla, y por eso va en rojo y con el número delante. -->
+          @if (v.bloqueadaPor) {
+            <p class="compliance-state blocked">
+              <i class="pi pi-times-circle"></i>
+              {{ 'settings.verifactu.blocked' | translate }}
+              <strong>{{ v.bloqueadaPor }}</strong>
+            </p>
+          }
+
+          @if (v.pendientes.length) {
+            <ul class="compliance-list verifactu-pending">
+              @for (p of v.pendientes; track p.invoiceId) {
+                <li>
+                  <span class="version">{{ p.fullNumber }}</span>
+                  <span class="date">
+                    {{ 'settings.verifactu.state.' + p.estado | translate }}
+                    @if (p.intentos) {
+                      · {{ p.intentos }}
+                    }
+                  </span>
+                  @if (p.descripcionError) {
+                    <span class="verifactu-error">{{ p.descripcionError }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (v.enabled) {
+            <button
+              class="btn-primary"
+              type="button"
+              [disabled]="sendingVerifactu()"
+              (click)="sendVerifactu()"
+            >
+              @if (sendingVerifactu()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-send"></i>
+              }
+              {{ 'settings.verifactu.send' | translate }}
+            </button>
+          }
+
+          <!-- Se cuenta qué pasó, no si «fue bien»: «no había nada que enviar»
+               y «hay que esperar al plazo de la Agencia» no son fallos. -->
+          @if (lastSend(); as r) {
+            <p class="compliance-state" [class.ok]="r.resultado === 'sent' && !r.rechazados">
+              {{ 'settings.verifactu.result.' + r.resultado | translate }}
+              @if (r.resultado === 'sent') {
+                · {{ r.aceptados }}/{{ r.enviados }}
+              }
+            </p>
+          }
+        </div>
+      }
     }
   }
 </div>

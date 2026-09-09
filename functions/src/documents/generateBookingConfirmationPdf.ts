@@ -21,6 +21,7 @@ import * as functions from 'firebase-functions';
 import { buildBookingConfirmationPdf } from './documents-pdf';
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
+import { reservationLocator } from './locator';
 import { companyConfig } from '../company-config';
 import { firestore } from '../admin-guard';
 import type { ContractLocale } from '../contracts/contract-types';
@@ -100,8 +101,9 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
     })();
 
     // Same convention as the contract number, so the two documents for one
-    // rental quote the same reference back to the operator.
-    const locator = `R-${reservationId.slice(0, 6).toUpperCase()}`;
+    // rental quote the same reference back to the operator. The receipt prints
+    // it too, which is why the formula lives in one place.
+    const locator = reservationLocator(reservationId);
 
     functions.logger.info(
       `generateBookingConfirmationPdf: reservation=${reservationId} locator=${locator}`

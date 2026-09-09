@@ -13,6 +13,8 @@ import {
   where
 } from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
+import { Functions, httpsCallable } from '@angular/fire/functions';
+import { TranslateService } from '@core/i18n/translate.service';
 import { Observable, from, of, firstValueFrom } from 'rxjs';
 import { map, switchMap, first } from 'rxjs/operators';
 import {
@@ -50,9 +52,39 @@ export class InspectionService {
   private inspectionsRef: CollectionReference;
   private paymentService = inject(PaymentService);
   private contractService = inject(ContractService);
+  private functions = inject(Functions);
+  private translate = inject(TranslateService);
 
   constructor() {
     this.inspectionsRef = collection(this.firestore, 'inspections');
+  }
+
+  /**
+   * El parte de entrega o de devolución, en PDF.
+   *
+   * ⚠️ **El contrato remite a este documento cuatro veces.** Desde el 8 de
+   * septiembre de 2026 las cláusulas ya no exigen firmarlo —decisión de Dorel:
+   * hacer firmar dos veces en la calle es molesto y el negocio es de clientes
+   * conocidos— pero **siguen remitiendo a él**, porque el kilometraje y el
+   * combustible de salida no caben en un contrato que se firma antes de la
+   * entrega. Lo que sostiene un cargo son las fotos con su fecha.
+   *
+   * No se manda solo: devuelve el enlace y el operador decide.
+   */
+  async generateReport(
+    inspectionId: string
+  ): Promise<{ pdfUrl: string; shortUrl: string }> {
+    const fn = httpsCallable<Record<string, unknown>, { pdfUrl: string; shortUrl: string }>(
+      this.functions,
+      'generateInspectionReport'
+    );
+    const res = await fn({
+      inspectionId,
+      // El idioma de la plataforma es el idioma en el que se habla con este
+      // cliente, igual que en el resto de documentos.
+      locale: this.translate.getCurrentLanguage()
+    });
+    return res.data;
   }
 
   /** Clean undefined values for Firestore */

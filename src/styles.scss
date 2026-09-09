@@ -219,6 +219,57 @@
   --info-bg: rgba(123, 164, 234, 0.14);
 }
 
+/**
+ * `forest` — el intermedio VERDOSO.
+ *
+ * El `.dark` de arriba es carbón profundo (#0B0F0E de fondo), y en una jornada
+ * entera cansa. Este sube tres escalones la rampa: sigue siendo oscuro y sigue
+ * siendo de la casa —los mismos grises con tinte teal—, pero el fondo ya no es
+ * casi negro.
+ *
+ * ⚠️ Va **después** de `.dark` y solo redefine superficies y textos. Las clases
+ * se aplican juntas (`dark theme-forest`), así que todo lo demás —los
+ * semánticos, el `color-scheme`, las reglas de componente que miran `.dark`—
+ * lo hereda sin duplicarse.
+ */
+.dark.theme-forest {
+  --sidebar-bg: #101614;
+  --bg-main: #151D1B;
+  --bg-card: #1D2725;
+  --border-color: #2E3B38;
+  --border-light: #253330;
+  --border-strong: #3D4C48;
+  --bg-input: #151D1B;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --text-primary: #F2F6F5;
+  --text-secondary: #C2CFCB;
+  --text-muted: #93A29E;
+}
+
+/**
+ * `ocean` — el intermedio AZULADO.
+ *
+ * Es la rampa `slate` que tenía la aplicación antes del design system, y está
+ * aquí a propósito: es la que Dorel venía usando y con la que estaba cómodo.
+ * Un azul apagado es además lo que usan casi todas las herramientas donde se
+ * pasan ocho horas seguidas.
+ *
+ * El verde de marca sigue siendo el mismo; lo que cambia es la superficie.
+ */
+.dark.theme-ocean {
+  --sidebar-bg: #0B1220;
+  --bg-main: #0F172A;
+  --bg-card: #1E293B;
+  --border-color: #334155;
+  --border-light: #1E293B;
+  --border-strong: #475569;
+  --bg-input: #0F172A;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+}
+
 // System preference (light default)
 @media (prefers-color-scheme: light) {
   :root:not(.dark) {
@@ -441,6 +492,91 @@ select {
 }
 
 
+/* ---------------------------------------------------------------------------
+ * Casillas de verificación
+ *
+ * Global por el mismo motivo que los `select`: son **veinte casillas repartidas
+ * por cinco pantallas**, y estilarlas una a una es exactamente cómo acabaron
+ * teniendo cuatro nombres de clase distintos —`.checkbox-item`, `.check-item`,
+ * `.check-inline`, `.checkbox-group`— con tres tamaños y dos radios de esquina.
+ *
+ * ⚠️ **Y una quinta que no existía.** El «Lleva localizador GPS» de la ficha de
+ * vehículo llevaba `class=checkbox-label`, una clase que ningún SCSS declaraba:
+ * salía como una casilla del sistema operativo, en crudo, al lado de otras que
+ * sí tenían caja. Compila, pasa los tests y solo se ve mirando la pantalla —el
+ * mismo fallo que CLAUDE.md ya documenta para `.form-control`.
+ *
+ * Por eso hay dos piezas y las dos son globales:
+ *
+ *   1. **El control**, que se estiliza por elemento. Una casilla nueva sale
+ *      bien aunque su componente no declare nada.
+ *   2. **`.checkbox-item`**, la fila con caja. Un solo nombre para todas.
+ * ------------------------------------------------------------------------- */
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: 18px;
+  height: 18px;
+  // Sin esto, en una fila estrecha el control se comprime antes que el texto y
+  // acaba siendo un rectángulo.
+  flex-shrink: 0;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+
+  &:hover {
+    border-color: var(--accent-color);
+  }
+
+  // La etiqueta ocupa el resto de la fila: así se puede pulsar el texto y no
+  // solo el cuadradito, que en un móvil es la diferencia entre marcar y fallar.
+  span {
+    flex: 1;
+  }
+
+  /* Cuando el texto ocupa varias líneas —la aceptación de condiciones de la
+     pantalla de firma—, la casilla se alinea con la PRIMERA línea. Centrada
+     acaba a media altura de un párrafo, que se lee como si no fuera con él. */
+  &.multiline {
+    align-items: flex-start;
+
+    input[type='checkbox'] {
+      margin-top: 0.1rem;
+    }
+  }
+
+  /* Sin caja, para las casillas que van sueltas dentro de una barra de acciones
+     —«Cerrar reserva al completar»— donde un recuadro más competiría con los
+     botones que tiene al lado. El control y el hueco no cambian. */
+  &.plain {
+    padding: 0;
+    background: none;
+    border: none;
+
+    &:hover {
+      border-color: transparent;
+    }
+  }
+}
+
 // The calendar/clock button inside date and time inputs is drawn by the
 // browser in a fixed near-black; on a dark field it disappears.
 .dark {
@@ -568,6 +704,44 @@ h1, h2, h3, h4, h5, h6 {
 
 // Buttons
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/**
+ * ⚠️ **La FORMA del botón también es global, y no solo el color.**
+ *
+ * Es la misma trampa que `.form-control`, con el mismo final: `.btn` traía el
+ * relleno y el radio, y `.btn-primary` solo el color, así que un botón escrito
+ * `class="btn-primary"` en un componente que no declarara la clase salía
+ * **como un trozo de texto sobre fondo turquesa** —sin caja, sin relleno y sin
+ * esquinas—. Compila, pasa los tests y solo se ve mirando la pantalla; pasó con
+ * el botón de la tarjeta de la declaración responsable, que además llevaba
+ * meses así porque solo aparece cuando falta la declaración.
+ *
+ * En la aplicación conviven las dos formas de escribirlo —21 con `btn` delante
+ * y 29 sin él—, y no hay forma de acordarse de cuál toca. Poniendo la forma
+ * aquí, las dos funcionan.
+ *
+ * ⚠️ **Y no rompe a quien ya la declara**: con la encapsulación de Angular la
+ * regla del componente es `.btn-primary[_ngcontent-xxx]` (0,2,0) y esta es
+ * (0,1,0), así que la suya sigue mandando. Es el mismo cálculo de M-46, al
+ * revés: allí había que subir la especificidad para ganar, aquí hay que
+ * quedarse por debajo para no pisar.
+ */
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;

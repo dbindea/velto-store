@@ -113,6 +113,11 @@ for (const file of walk(APP_DIR)) {
  * be introduced without declaring its leaves.
  */
 const DYNAMIC_KEY_SETS = {
+  // theme.service.ts › Theme. Cuatro paletas: la clara, la oscura y dos
+  // intermedias. El oscuro se volvió casi negro al adoptar la rampa del design
+  // system y cansaba la vista en jornada completa, así que se abrió la
+  // elección en vez de retocarlo y dejar a medias a quien lo prefiera.
+  'settings.themes.': ['light', 'dark', 'forest', 'ocean'],
   // reservation.model.ts › ReservationStatus
   'reservations.status.': ['reserved', 'confirmed', 'delivered', 'returned', 'closed', 'cancelled'],
   // reservation-create.component.ts › Step
@@ -158,7 +163,12 @@ const DYNAMIC_KEY_SETS = {
     'breakdown',
     'cleaning',
     'other'
-  ]
+  ],
+  // verifactu-submission.ts › EstadoRemision, menos `aceptado`: la lista de la
+  // pantalla es la de pendientes, y una aceptada ya no lo está.
+  'settings.verifactu.state.': ['pendiente', 'error', 'rechazado'],
+  // sendVerifactuRecords.ts › ResumenEnvio['resultado']
+  'settings.verifactu.result.': ['disabled', 'waiting', 'blocked', 'empty', 'sent']
 };
 
 // A key under a dynamic prefix counts as referenced: the leaf is only known at

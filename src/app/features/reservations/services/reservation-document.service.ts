@@ -15,6 +15,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { TranslateService } from '@core/i18n/translate.service';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 export interface QuoteDocumentRequest {
   client?: {
@@ -105,28 +106,15 @@ export class ReservationDocumentService {
   }
 
   /**
-   * Copy to clipboard with the same fallback the signing link uses: the async
-   * Clipboard API is unavailable over plain HTTP and in some in-app browsers.
+   * Copy to clipboard, with the fallback for plain HTTP and in-app browsers.
+   *
+   * La implementación vive en `@shared/utils/clipboard.util`: copiar un texto
+   * no es asunto de las reservas, y el recibo de cobro lo necesita desde una
+   * pantalla que no tiene ninguna. Este método se queda como atajo para las
+   * llamadas que ya existían.
    */
   async copyToClipboard(text: string): Promise<boolean> {
-    if (!text) return false;
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      let ok = false;
-      try {
-        ok = document.execCommand('copy');
-      } catch {
-        ok = false;
-      }
-      document.body.removeChild(ta);
-      return ok;
-    }
+    return copyToClipboard(text);
   }
 
   private currentLocale(): string {

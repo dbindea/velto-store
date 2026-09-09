@@ -61,12 +61,18 @@
 
       <div class="header-spacer"></div>
 
-      <button class="icon-btn" (click)="toggleDarkMode()">
-        @if (themeService.isDark()) {
-          <i class="pi pi-sun"></i>
-        } @else {
-          <i class="pi pi-moon"></i>
-        }
+      <!--
+        Un icono por tema, no sol/luna: con tres paletas oscuras, alternar dos
+        iconos no dice en cuál estás ni cuál viene. El título lo nombra, y el
+        selector completo vive en Ajustes.
+      -->
+      <button
+        class="icon-btn"
+        (click)="toggleDarkMode()"
+        [title]="'settings.themes.' + themeService.theme() | translate"
+        [attr.aria-label]="'settings.theme' | translate"
+      >
+        <i class="pi" [class]="themeIcon()"></i>
       </button>
 
       <app-language-selector />

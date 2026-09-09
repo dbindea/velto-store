@@ -48,5 +48,49 @@ export { sendSignedContractEmail } from './contracts/sendSignedContractEmail';
 // reservation, so neither can advance the workflow.
 export { generateQuotePdf } from './documents/generateQuotePdf';
 export { generateBookingConfirmationPdf } from './documents/generateBookingConfirmationPdf';
+// El parte de entrega y el de devolución, a los que el contrato remite cuatro
+// veces. No se firman —decisión de Dorel, 8 de septiembre de 2026— y lo que
+// sostiene un cargo son las fotos con su fecha.
+export { generateInspectionReport } from './documents/generateInspectionReport';
 // Public, reached through the /d/** Hosting rewrite: short links for WhatsApp.
 export { documentLink } from './documents/documentLink';
+
+// Facturación. `issueInvoice` es el único camino por el que una factura puede
+// nacer: asigna el número correlativo y calcula la huella encadenada dentro de
+// una transacción, y `firestore.rules` cierra la puerta a crear facturas desde
+// el cliente precisamente porque una regla no sabe cuál es el siguiente número.
+export { issueInvoice } from './invoices/issueInvoice';
+// La proforma NO pasa por `issueInvoice`: no consume número de la serie fiscal,
+// no se encadena y no escribe en Firestore. Es un PDF y nada más, como el
+// presupuesto.
+export { generateProforma } from './invoices/generateProforma';
+// El recibo tampoco: justifica un cobro que ya consta en `payments`, no
+// devenga IVA y no lleva número de serie. Lee el importe del pago en vez de
+// aceptarlo en la petición, que es lo que impide que el papel diga que la
+// empresa recibió algo que no recibió.
+export { generateReceipt } from './invoices/generateReceipt';
+// La declaración responsable del art. 15 de la Orden HAC/1177/2024. Le toca a
+// Velto porque la aplicación es desarrollo propio: no hay fabricante externo
+// que pueda declarar por ella. Una por cada versión del sistema.
+export {
+  issueComplianceDeclaration,
+  getComplianceStatus
+} from './invoices/issueComplianceDeclaration';
+// La remisión a la AEAT. Va SEPARADA de la emisión a propósito: una factura se
+// emite aunque el servicio esté caído, y el envío reintenta hasta conseguirlo.
+// `sweepVerifactuRecords` es la que hace que esto cumpla — un envío que solo
+// ocurre al pulsar un botón depende de que alguien se acuerde.
+export {
+  sendVerifactuRecords,
+  sweepVerifactuRecords,
+  getVerifactuStatus,
+  // La autenticación se prueba desde la function, no entrando en la sede con el
+  // navegador: allí el certificado lo presenta el navegador y aquí lo presenta
+  // Node. Sirve además para ver cuándo caduca el certificado de la FNMT, que es
+  // lo que va a pasar seguro y hoy solo se notaría con una factura sin remitir.
+  checkVerifactuConnection,
+  // Un rechazo para la cadena a propósito, porque casi siempre hay algo que
+  // arreglar. Esto es lo que permite reanudarla una vez arreglado — sin ello,
+  // «bloqueado» sería un callejón sin salida.
+  retryVerifactuRecord
+} from './invoices/sendVerifactuRecords';

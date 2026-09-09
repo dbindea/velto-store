@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { TranslateService } from '@core/i18n/translate.service';
 import { AuthService } from '@core/auth/auth.service';
+import { ThemeService, Theme } from '@core/theme/theme.service';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { AuthorizedUserService } from '@features/settings/services/authorized-user.service';
 import { AuthorizedUser } from '@shared/models/authorized-user.model';
@@ -25,8 +26,19 @@ import {
   UserRole,
   permissionsOf
 } from '@shared/utils/permissions.util';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import {
+  ComplianceDeclaration,
+  ComplianceService,
+  ComplianceStatus
+} from '@features/settings/services/compliance.service';
+import {
+  EstadoVerifactu,
+  ResumenEnvio,
+  VerifactuService
+} from '@features/settings/services/verifactu.service';
 
-type Tab = 'operation' | 'users';
+type Tab = 'operation' | 'users' | 'appearance' | 'compliance';
 
 /**
  * Ajustes: valores por defecto de la operación y quién puede entrar.
@@ -47,6 +59,7 @@ type Tab = 'operation' | 'users';
   styleUrl: './settings.component.scss'
 })
 export class SettingsComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private settingsService = inject(SettingsService);
   private usersService = inject(AuthorizedUserService);
   private translate = inject(TranslateService);
@@ -57,6 +70,13 @@ export class SettingsComponent implements OnInit {
   readonly USER_ROLE_DESCRIPTIONS = USER_ROLE_DESCRIPTIONS;
 
   readonly tab = signal<Tab>('operation');
+  /**
+   * El tema es preferencia personal, no un ajuste del negocio: no se guarda en
+   * Firestore ni afecta a nadie más. Vive aquí porque es donde se buscan las
+   * preferencias, pero el conmutador de la barra superior sigue estando para
+   * todos los roles — esta pantalla es de administrador.
+   */
+  readonly themeService = inject(ThemeService);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly errorKey = signal('');
@@ -103,10 +123,166 @@ export class SettingsComponent implements OnInit {
     this.users.set(await this.usersService.getUsers());
   }
 
+  /** El tema se aplica al instante: no hay nada que guardar ni confirmar. */
+  setTheme(theme: Theme): void {
+    this.themeService.setTheme(theme);
+  }
+
   select(tab: Tab): void {
     this.tab.set(tab);
     this.errorKey.set('');
     this.savedMessage.set('');
+    // Las declaraciones se leen al abrir su pestaña: son un documento legal que
+    // se consulta de vez en cuando, no algo que haga falta en cada carga.
+    if (tab === 'compliance' && !this.declarationsLoaded) {
+      void this.loadDeclarations();
+      void this.loadVerifactu();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Declaración responsable (art. 15 de la Orden HAC/1177/2024)
+  //
+  // ⚠️ Le toca a Velto porque la aplicación es desarrollo propio: no hay
+  // fabricante externo que pueda declarar por ella. Y hace falta una por CADA
+  // versión del sistema, así que la pantalla distingue la vigente de las
+  // anteriores en vez de enseñar solo la última.
+  // ---------------------------------------------------------------------------
+
+  private compliance = inject(ComplianceService);
+  private declarationsLoaded = false;
+
+  readonly declarations = signal<ComplianceDeclaration[]>([]);
+  readonly issuingDeclaration = signal(false);
+  /** Lo que declara el sistema. Lo sirve la function; aquí no se duplica nada. */
+  readonly complianceStatus = signal<ComplianceStatus | null>(null);
+
+  get complianceSystemName(): string {
+    return this.complianceStatus()?.systemName ?? '—';
+  }
+  get complianceVersion(): string {
+    return this.complianceStatus()?.version ?? '—';
+  }
+  get complianceProducer(): string {
+    return this.complianceStatus()?.producerName ?? '—';
+  }
+
+  /** La de la versión que está corriendo, si existe. */
+  readonly declaration = computed(() => {
+    const version = this.complianceStatus()?.version;
+    return version ? this.declarations().find((d) => d.systemVersion === version) : undefined;
+  });
+
+  /** Las de versiones anteriores. No se borran: cada una acreditó su periodo. */
+  readonly previousDeclarations = computed(() => {
+    const version = this.complianceStatus()?.version;
+    return this.declarations().filter((d) => d.systemVersion !== version);
+  });
+
+  private async loadDeclarations(): Promise<void> {
+    try {
+      // El estado primero: sin saber qué versión corre no se puede decir si
+      // falta su declaración, que es lo único que esta pantalla tiene que
+      // responder.
+      this.complianceStatus.set(await this.compliance.status());
+      this.declarations.set(await this.compliance.list());
+      this.declarationsLoaded = true;
+    } catch {
+      this.errorKey.set('settings.compliance.loadError');
+    }
+  }
+
+  async issueDeclaration(): Promise<void> {
+    if (this.issuingDeclaration()) return;
+    this.issuingDeclaration.set(true);
+    this.errorKey.set('');
+    try {
+      await this.compliance.issue();
+      await this.loadDeclarations();
+      this.savedMessage.set('settings.compliance.issued');
+    } catch {
+      this.errorKey.set('settings.compliance.issueError');
+    } finally {
+      this.issuingDeclaration.set(false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Remisión a la AEAT
+  //
+  // ⚠️ Esta pantalla existe para responder a UNA pregunta: ¿está todo lo
+  // emitido remitido? Una factura que no llegó no se nota por ningún otro sitio
+  // —el PDF sale igual, el cliente la cobra igual—, así que si no se enseña
+  // aquí no se entera nadie.
+  // ---------------------------------------------------------------------------
+
+  private verifactu = inject(VerifactuService);
+
+  readonly verifactuStatus = signal<EstadoVerifactu | null>(null);
+  readonly sendingVerifactu = signal(false);
+  /** El resultado del último envío manual, para poder contarlo. */
+  readonly lastSend = signal<ResumenEnvio | null>(null);
+
+  /**
+   * ⚠️ **Preproducción se dice, no se calla.** Un registro aceptado contra
+   * `test` no está presentado ante nadie: sin decirlo, la pantalla enseñaría
+   * «12 aceptadas» y daría por cumplida una obligación que sigue pendiente.
+   */
+  get verifactuEsPruebas(): boolean {
+    return this.verifactuStatus()?.entorno !== 'live';
+  }
+
+  private async loadVerifactu(): Promise<void> {
+    try {
+      this.verifactuStatus.set(await this.verifactu.status());
+    } catch {
+      this.errorKey.set('settings.verifactu.loadError');
+    }
+  }
+
+  async sendVerifactu(): Promise<void> {
+    if (this.sendingVerifactu()) return;
+    this.sendingVerifactu.set(true);
+    this.errorKey.set('');
+    this.lastSend.set(null);
+    try {
+      this.lastSend.set(await this.verifactu.send());
+      await this.loadVerifactu();
+    } catch (err) {
+      this.errorKey.set(this.sendErrorKeyOf(err));
+      // El estado puede haber cambiado aunque el envío fallara: un rechazo
+      // marca facturas y hay que verlo sin recargar la pantalla.
+      await this.loadVerifactu();
+    } finally {
+      this.sendingVerifactu.set(false);
+    }
+  }
+
+  /**
+   * ⚠️ **Los tres motivos por los que esto falla NO son el mismo aviso.**
+   *
+   * - Que no se pudiera llegar a la Agencia no significa que las facturas no
+   *   hayan entrado: pudo registrarlas y perderse la respuesta, así que el
+   *   mensaje dice «no se pudo completar» y no «no se enviaron».
+   * - Que una huella no cuadre es lo más grave y no se reintenta solo.
+   * - Y una factura sin registro es un incidente que hay que resolver antes de
+   *   emitir más.
+   *
+   * Un único «no se pudo enviar» los taparía los tres. La lista es explícita
+   * porque `TranslateService.translate()` devuelve **la propia clave** cuando no
+   * la encuentra: una clave desconocida saldría en crudo en pantalla.
+   */
+  private sendErrorKeyOf(err: unknown): string {
+    const conocidas = [
+      'invoices.errors.verifactuUnreachable',
+      'invoices.errors.verifactuHashMismatch',
+      'invoices.errors.verifactuRecordMissing',
+      'invoices.errors.unauthenticated'
+    ];
+    const msg = typeof (err as { message?: unknown })?.message === 'string'
+      ? (err as { message: string }).message
+      : '';
+    return conocidas.includes(msg) ? msg : 'settings.verifactu.sendError';
   }
 
   permissionsFor(role: UserRole | undefined): number {
@@ -264,7 +440,13 @@ export class SettingsComponent implements OnInit {
 
   async removeUser(user: AuthorizedUser): Promise<void> {
     if (this.isSelf(user) || this.saving()) return;
-    if (!confirm(this.translate.translate('settings.users.confirmDelete'))) return;
+    const seguir = await this.confirm.ask({
+      title: 'settings.users.confirmDeleteTitle',
+      message: 'settings.users.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!seguir) return;
     this.saving.set(true);
     try {
       await this.usersService.deleteUser(user.email);

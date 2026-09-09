@@ -2,13 +2,15 @@ import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { PaymentService } from '@features/payments/services/payment.service';
+import { canIssueReceipt } from '@shared/utils/receipt.util';
+import { ReceiptDialogComponent } from '@shared/components/receipt-dialog/receipt-dialog.component';
 import { InspectionService } from '@features/inspections/services/inspection.service';
 import { ContractService } from '@features/contracts/services/contract.service';
 import { Contract, CONTRACT_STATUS_LABELS as CONTRACT_DOC_STATUS_LABELS, CONTRACT_STATUS_COLORS as CONTRACT_DOC_STATUS_COLORS } from '@shared/models/contract.model';
@@ -62,6 +64,7 @@ import {
   driverFromClient,
   validateAdditionalDriver
 } from '@shared/utils/additional-driver.util';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -71,11 +74,13 @@ import {
     TranslatePipe,
     PaymentConceptPipe,
     ReservationTimelineComponent,
-    ReservationNotesPanelComponent, FormErrorComponent],
+    ReservationNotesPanelComponent, FormErrorComponent, RouterLink,
+    ReceiptDialogComponent],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
 export class ReservationDetailComponent implements OnInit {
+  private confirm = inject(ConfirmService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private reservationService = inject(ReservationService);
@@ -183,6 +188,19 @@ export class ReservationDetailComponent implements OnInit {
   get canIssueBookingConfirmation(): boolean {
     const status = this.reservation?.reservationStatus;
     return status === 'confirmed' || status === 'delivered' || status === 'returned' || status === 'closed';
+  }
+
+  /**
+   * Facturar **no depende del estado de la reserva**, al contrario que todo lo
+   * demás de esta pantalla.
+   *
+   * Una factura se emite cuando el cliente la pide: puede ser antes de cobrar
+   * —hay empresas que la necesitan para poder pagar— o meses después, cuando
+   * alguien se acuerda. Así que lo único que se comprueba es el permiso; el
+   * workflow no tiene nada que decir aquí.
+   */
+  get canIssueInvoice(): boolean {
+    return !!this.reservation?.id && this.permissions.can('viewInvoices');
   }
 
   /**
@@ -591,10 +609,15 @@ export class ReservationDetailComponent implements OnInit {
 
     const pending = this.extraChargesPending;
     if (pending > 0) {
-      const message = this.translateService
-        .translate('reservations.closeWithPendingCharges')
-        .replace('{amount}', pending.toFixed(2));
-      if (!confirm(message)) return;
+      // El importe va delante: cerrar con cargos pendientes no los cobra ni
+      // los perdona, así que la pregunta tiene que decir cuánto se queda vivo.
+      const seguir = await this.confirm.ask({
+        title: 'reservations.closeWithPendingChargesTitle',
+        message: 'reservations.closeWithPendingCharges',
+        params: { amount: pending.toFixed(2) },
+        confirmLabel: 'reservations.actions.close'
+      });
+      if (!seguir) return;
     }
 
     this.closingReservation = true;
@@ -1102,6 +1125,80 @@ export class ReservationDetailComponent implements OnInit {
     const link = `${window.location.origin}/pay/${payment.id}`;
     const copied = await this.documentService.copyToClipboard(link);
     if (copied) this.showCopyToast();
+  }
+
+  // === Parte de entrega y de devolución ===
+
+  /** Id de la inspección cuyo parte se está generando, para no permitir dos clics. */
+  readonly generatingReport = signal<string | null>(null);
+
+  /**
+   * Genera el parte y **copia su enlace**, listo para pegar en WhatsApp.
+   *
+   * ⚠️ No se manda solo, y es decisión de Dorel: el cliente lo recibe cuando lo
+   * pide. Lo que el contrato promete es que el parte se conserva y se pone a su
+   * disposición, no que llegue sin pedirlo.
+   */
+  async shareInspectionReport(inspection: Inspection): Promise<void> {
+    if (!inspection?.id || this.generatingReport()) return;
+
+    this.generatingReport.set(inspection.id);
+    try {
+      const res = await this.inspectionService.generateReport(inspection.id);
+      const copiado = await this.documentService.copyToClipboard(res.shortUrl);
+      if (copiado) this.showCopyToast();
+      else window.open(res.pdfUrl, '_blank', 'noopener');
+    } catch (err: any) {
+      this.notifications.error(this.reportErrorKeyOf(err), {
+        retry: () => void this.shareInspectionReport(inspection)
+      });
+    } finally {
+      this.generatingReport.set(null);
+    }
+  }
+
+  /**
+   * Lo que rechaza la function viaja como clave i18n, y la lista es explícita.
+   *
+   * Igual que en la factura y en el recibo: si el backend devolviera una clave
+   * sin traducir, el operador vería el identificador en crudo —
+   * `TranslateService` devuelve la propia clave cuando no la encuentra—.
+   */
+  private reportErrorKeyOf(err: any): string {
+    const conocidas = [
+      'inspections.report.problems.inspectionRequired',
+      'inspections.report.problems.notFound',
+      'invoices.errors.unauthenticated'
+    ];
+    const msg = typeof err?.message === 'string' ? err.message : '';
+    return conocidas.includes(msg) ? msg : 'inspections.report.error';
+  }
+
+  // === Recibo de cobro ===
+
+  /**
+   * El justificante de un cobro: lo que Dorel hacía a mano en Word cuando
+   * alguien le daba la señal.
+   *
+   * ⚠️ **No es una factura, y el documento lo lleva impreso.** Aquí solo se
+   * decide una cosa que la aplicación no puede saber: si va a haber factura.
+   * Se factura **a petición**, así que prometerla en todo recibo sería
+   * imprimir algo que muchas veces es falso.
+   */
+  receiptPayment = signal<Payment | null>(null);
+
+  /** ¿Este cobro admite recibo? La regla vive en el util, no aquí. */
+  canIssueReceipt(payment: Payment): boolean {
+    return canIssueReceipt(payment);
+  }
+
+  openReceiptDialog(payment: Payment, event?: Event): void {
+    event?.stopPropagation();
+    this.receiptPayment.set(payment);
+  }
+
+  closeReceiptDialog(): void {
+    this.receiptPayment.set(null);
   }
 
   /** Excepciones ya registradas, para poder mostrarlas en la ficha. */

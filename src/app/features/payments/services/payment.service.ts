@@ -12,6 +12,7 @@ import {
   orderBy,
   where
 } from '@angular/fire/firestore';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import {
@@ -36,6 +37,8 @@ import {
   EXTRA_TYPES
 } from '@shared/utils/payment-summary.util';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { receiptProblem } from '@shared/utils/receipt.util';
+import { TranslateService } from '@core/i18n/translate.service';
 
 export interface CreateManualPaymentData {
   /** Required for reservation-linked payments. Optional for free payments. */
@@ -65,7 +68,9 @@ export interface CreateManualPaymentData {
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private firestore = inject(Firestore);
+  private functions = inject(Functions);
   private permissions = inject(PermissionsService);
+  private translate = inject(TranslateService);
   private paymentsRef: CollectionReference;
 
   constructor() {
@@ -84,6 +89,45 @@ export class PaymentService {
       }
     }
     return cleaned;
+  }
+
+  // === Recibo de cobro ===
+
+  /**
+   * El justificante de un cobro, en PDF.
+   *
+   * ⚠️ **No le pasa el importe a la function: solo el id del pago.** El
+   * documento se construye leyendo `payments`, que es la única fuente de verdad
+   * del dinero que entra; mandar la cifra desde aquí convertiría el recibo en
+   * un papel firmado por la empresa que dice lo que diga la pantalla.
+   *
+   * `invoiceExpected` es lo único que la aplicación no puede saber —se factura
+   * **a petición**— y por eso lo marca el operador.
+   *
+   * ⚠️ Se comprueba aquí y también dentro de la function, con la misma regla:
+   * la pantalla no debe dejar intentar algo que el backend va a rechazar, y el
+   * backend no puede fiarse de que la pantalla estuviera bien.
+   */
+  async generateReceipt(
+    payment: Payment,
+    options: { invoiceExpected?: boolean } = {}
+  ): Promise<{ reference: string; pdfUrl: string; shortUrl: string }> {
+    const problema = receiptProblem(payment);
+    if (problema) throw new Error(problema);
+    if (!payment.id) throw new Error('payments.receipt.problems.paymentRequired');
+
+    const fn = httpsCallable<
+      Record<string, unknown>,
+      { reference: string; pdfUrl: string; shortUrl: string }
+    >(this.functions, 'generateReceipt');
+    const res = await fn({
+      paymentId: payment.id,
+      invoiceExpected: !!options.invoiceExpected,
+      // El documento sale en el idioma que tiene puesto la plataforma: es el
+      // idioma en el que se está hablando con este cliente.
+      locale: this.translate.getCurrentLanguage()
+    });
+    return res.data;
   }
 
   // === Queries ===

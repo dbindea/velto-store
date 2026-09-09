@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NotificationService } from '@core/notifications/notification.service';
 import { firstValueFrom } from 'rxjs';
 import { first } from 'rxjs/operators';
@@ -31,6 +31,8 @@ import {
   canStartPickup
 } from '@shared/utils/reservation-workflow.util';
 import { ContractService } from '@features/contracts/services/contract.service';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { FormDraftService } from '@core/forms/form-draft.service';
 
 @Component({
   selector: 'app-inspection-pickup',
@@ -40,6 +42,11 @@ import { ContractService } from '@features/contracts/services/contract.service';
   styleUrl: './inspection-pickup.component.scss'
 })
 export class InspectionPickupComponent implements OnInit {
+  private confirm = inject(ConfirmService);
+  private drafts = inject(FormDraftService);
+  private destroyRef = inject(DestroyRef);
+  /** Borrador vivo del formulario; se limpia al completar o al salir. */
+  private draft: { clear: () => void } | null = null;
   private notifications = inject(NotificationService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -115,6 +122,21 @@ export class InspectionPickupComponent implements OnInit {
         if (!this.formData.photos) this.formData.photos = existing.photos || [];
         if (!this.formData.damages) this.formData.damages = existing.damages || [];
       }
+
+      /**
+       * El borrador se conecta **después** de cargar lo que hay guardado, y por
+       * eso manda sobre ello: si el operador estaba rellenando la entrega
+       * cuando el móvil se llevó la pestaña por delante —abrir la cámara basta—,
+       * lo suyo es más reciente que lo de Firestore.
+       */
+      this.draft = this.drafts.attach<Partial<Inspection>>(
+        `pickup:${reservationId}`,
+        () => this.formData,
+        (guardado) => {
+          this.formData = { ...this.formData, ...guardado };
+        },
+        this.destroyRef
+      );
     } catch (error) {
       console.error('Error loading:', error);
     } finally {
@@ -176,13 +198,20 @@ export class InspectionPickupComponent implements OnInit {
 
     const c = this.formData.checklist!;
     if (!c.clientIdentityChecked || !c.drivingLicenseChecked || !c.keysDelivered) {
-      const confirmed = confirm('Hay items del checklist sin marcar. ¿Continuar de todos modos?');
-      if (!confirmed) return;
+      const seguir = await this.confirm.ask({
+        title: 'inspections.confirm.checklistTitle',
+        message: 'inspections.confirm.checklistMessage',
+        confirmLabel: 'common.continue'
+      });
+      if (!seguir) return;
     }
 
     this.saving = true;
     try {
       await this.inspectionService.completePickupInspection(this.reservationId, this.formData);
+      // Guardado en Firestore: el borrador ya no protege nada y restaurarlo la
+      // próxima vez sería resucitar datos que ya están donde tienen que estar.
+      this.draft?.clear();
       this.router.navigate(['/reservations', this.reservationId]);
     } catch (error) {
       console.error('Error completing pickup:', error);
@@ -263,7 +292,12 @@ export class InspectionPickupComponent implements OnInit {
       this.formData.photos = (this.formData.photos || []).filter(p => p.path !== photo.path);
       return;
     }
-    const confirmed = confirm('¿Eliminar esta foto?');
+    const confirmed = await this.confirm.ask({
+      title: 'common.photos.deleteTitle',
+      message: 'common.photos.deleteMessage',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
     if (!confirmed) return;
     try {
       await this.inspectionService.deleteInspectionPhoto((this.formData as Inspection).id!, photo);
