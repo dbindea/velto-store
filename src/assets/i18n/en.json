@@ -153,7 +153,8 @@
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "reload": "Reload"
   },
   "contracts": {
     "actions": {
@@ -620,7 +621,8 @@
     "settings": "Settings",
     "vehicles": "Vehicles",
     "invoices": "Invoices",
-    "collaborators": "Partners"
+    "collaborators": "Partners",
+    "events": "Events"
   },
   "payments": {
     "actions": {
@@ -1548,5 +1550,62 @@
       "loadFailed": "Could not load partners",
       "saveFailed": "Could not save"
     }
+  },
+  "events": {
+    "alerts": {
+      "contractNotSigned": "The contract is not signed: the car cannot be handed over",
+      "maintenanceOverdue": "Overdue: the car cannot be rented",
+      "invoiceDeadline": "The deadline to issue it is running out"
+    },
+    "categories": {
+      "payment": "Pay",
+      "paperwork": "Record",
+      "purchase": "Buy",
+      "fleet": "Fleet",
+      "other": "Other"
+    },
+    "confirmDelete": {
+      "title": "Delete this reminder?",
+      "message": "It will be removed. This cannot be undone."
+    },
+    "dayLeft": "day",
+    "daysLate": "overdue",
+    "daysLeft": "days",
+    "editReminder": "Edit reminder",
+    "empty": "Nothing due in this window.",
+    "errors": {
+      "loadFailed": "Could not load the events",
+      "saveFailed": "Could not save the reminder"
+    },
+    "fields": {
+      "title": "What needs doing",
+      "titlePlaceholder": "Buy air fresheners for every car",
+      "category": "Type",
+      "dueDate": "Date",
+      "notes": "Notes"
+    },
+    "horizon": "Window",
+    "horizons": {
+      "0": "Today",
+      "7": "7 days",
+      "30": "30 days"
+    },
+    "markDone": "Mark as done",
+    "newReminder": "New reminder",
+    "overdueCount": "still open and overdue",
+    "problems": {
+      "titleAndDateRequired": "The text and the date are both needed"
+    },
+    "showDone": "Show completed too",
+    "sources": {
+      "pickup": "Pick-up",
+      "return": "Return",
+      "maintenance": "Maintenance",
+      "invoiceDeadline": "Invoice deadline",
+      "reminder": "Reminder"
+    },
+    "subtitle": "Everything that needs doing, in one place",
+    "title": "Upcoming events",
+    "today": "Today"
   }
 }

@@ -153,7 +153,8 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo"
+    "viewAll": "Ver todo",
+    "reload": "Recargar"
   },
   "contracts": {
     "actions": {
@@ -620,7 +621,8 @@
     "settings": "Ajustes",
     "vehicles": "Vehículos",
     "invoices": "Facturas",
-    "collaborators": "Colaboradores"
+    "collaborators": "Colaboradores",
+    "events": "Eventos"
   },
   "payments": {
     "actions": {
@@ -1548,5 +1550,62 @@
       "loadFailed": "No se pudieron cargar los colaboradores",
       "saveFailed": "No se pudo guardar"
     }
+  },
+  "events": {
+    "alerts": {
+      "contractNotSigned": "El contrato no está firmado: no se puede entregar el coche",
+      "maintenanceOverdue": "Vencido: el coche no se puede alquilar",
+      "invoiceDeadline": "Se acaba el plazo para emitirla"
+    },
+    "categories": {
+      "payment": "Pagar",
+      "paperwork": "Apuntar",
+      "purchase": "Comprar",
+      "fleet": "Flota",
+      "other": "Otro"
+    },
+    "confirmDelete": {
+      "title": "¿Eliminar este recordatorio?",
+      "message": "Se borra. No se puede deshacer."
+    },
+    "dayLeft": "día",
+    "daysLate": "de retraso",
+    "daysLeft": "días",
+    "editReminder": "Editar recordatorio",
+    "empty": "Nada pendiente en este plazo.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los eventos",
+      "saveFailed": "No se pudo guardar el recordatorio"
+    },
+    "fields": {
+      "title": "Qué hay que hacer",
+      "titlePlaceholder": "Comprar ambientadores para todos los coches",
+      "category": "Tipo",
+      "dueDate": "Fecha",
+      "notes": "Notas"
+    },
+    "horizon": "Plazo",
+    "horizons": {
+      "0": "Hoy",
+      "7": "7 días",
+      "30": "30 días"
+    },
+    "markDone": "Marcar como hecho",
+    "newReminder": "Nuevo recordatorio",
+    "overdueCount": "sin hacer y ya vencidos",
+    "problems": {
+      "titleAndDateRequired": "Hace falta el texto y la fecha"
+    },
+    "showDone": "Ver también lo hecho",
+    "sources": {
+      "pickup": "Entrega",
+      "return": "Devolución",
+      "maintenance": "Mantenimiento",
+      "invoiceDeadline": "Plazo de factura",
+      "reminder": "Recordatorio"
+    },
+    "subtitle": "Todo lo que hay que hacer, en un solo sitio",
+    "title": "Eventos próximos",
+    "today": "Hoy"
   }
 }

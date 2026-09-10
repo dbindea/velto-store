@@ -1,0 +1,309 @@
+.page {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Los tres horizontes, como pestañas: se ve de un vistazo cuál está puesto. */
+.horizons {
+  display: inline-flex;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.horizon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: inherit;
+
+  &.active {
+    background: var(--accent-color);
+    color: #fff;
+  }
+}
+
+.reload {
+  margin-left: auto;
+}
+
+/* Lo vencido se cuenta arriba: mezclado en la lista se pierde entre lo que
+   todavía no urge. */
+.overdue-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.7rem 1rem;
+  background: var(--error-bg, rgba(179, 38, 30, 0.12));
+  border: 1px solid var(--error-color);
+  border-radius: 8px;
+  color: var(--error-color);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+}
+
+/* ⚠️ `.form-control` no es global: cada formulario declara la suya, o los
+   `input` salen sin caja mientras los `select` de al lado se ven perfectos. */
+.form-control {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  margin-bottom: 1rem;
+
+  label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.event {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--accent-color);
+    }
+  }
+
+  /* Vencido: el borde lo dice sin gritar en toda la fila. */
+  &.overdue {
+    border-left: 3px solid var(--error-color);
+  }
+
+  /* Hecho: se queda, apagado. Saber que se compró el mes pasado es lo que
+     permite decidir si toca otra vez. */
+  &.done {
+    opacity: 0.45;
+
+    .title {
+      text-decoration: line-through;
+    }
+  }
+}
+
+/* Los días que faltan: lo primero que se mira, así que va primero y en grande. */
+.when {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  gap: 0.05rem;
+
+  .days {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+
+    &.late {
+      color: var(--error-color);
+    }
+  }
+
+  .today {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--warning-color);
+    text-transform: uppercase;
+  }
+
+  .unit,
+  .date {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+}
+
+.icon {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+}
+
+.what {
+  flex: 1;
+  /* Sin esto un título largo estira la fila entera: el `min-width` por defecto
+     de un flex item es `auto` e impide encoger. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+
+  .kind {
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+  }
+
+  .title {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .detail {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  /* El aviso: lo que no puede leerse como una línea más. */
+  .alert {
+    margin-top: 0.15rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--error-color);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 6px;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-input);
+  }
+}
+
+.empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+
+  i {
+    font-size: 1.8rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Móvil: se recoloca, no se esconde. Los días, el aviso y las acciones siguen
+   todos ahí. */
+@media (max-width: 560px) {
+  .page {
+    padding: 1rem;
+  }
+
+  .reload {
+    margin-left: 0;
+  }
+
+  .event {
+    flex-wrap: wrap;
+  }
+
+  .what {
+    flex-basis: calc(100% - 110px);
+  }
+
+  .actions {
+    margin-left: auto;
+  }
+}

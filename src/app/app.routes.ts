@@ -202,6 +202,14 @@ export const routes: Routes = [
         ]
       },
       {
+        // Eventos proximos: sin permiso, lo ve todo el equipo. «Limpiar coches»
+        // es trabajo que hace la gente de la agencia; esconderlo obligaria a
+        // decirselo por otra via y la pantalla no serviria de nada. Lo que si
+        // es solo del dueno son las comisiones, que viven en otro modulo.
+        path: 'events',
+        loadComponent: () => import('./features/events/pages/event-list/event-list.component').then(m => m.EventListComponent)
+      },
+      {
         path: 'collaborators',
         // Comerciales y sus comisiones: es lo que la empresa PAGA, así que
         // mismo criterio que Gastos e Informes — información de dueño. El

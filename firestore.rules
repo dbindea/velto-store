@@ -201,6 +201,20 @@ service cloud.firestore {
       allow read, write: if callerIsAdmin();
     }
 
+    // Recordatorios manuales de la pantalla de Eventos: «comprar
+    // ambientadores», «limpiar coches», «pagar incentivos».
+    //
+    // ⚠️ **Los ve y los escribe todo el equipo**, a diferencia de los
+    // colaboradores. Decisión de Dorel del 10 de septiembre de 2026: es trabajo
+    // que hace su gente, y esconderlo obligaría a decírselo por otra vía —con lo
+    // que la pantalla no serviría de nada. Aquí no hay datos de dueño: lo que sí
+    // los tiene son las comisiones, y esas están cerradas más abajo.
+    match /reminders/{reminderId} {
+      allow read, create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador, como en el resto.
+      allow delete: if callerIsAdmin();
+    }
+
     // -----------------------------------------------------------------------
     // COLABORADORES
     // -----------------------------------------------------------------------

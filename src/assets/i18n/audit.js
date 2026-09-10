@@ -164,6 +164,13 @@ const DYNAMIC_KEY_SETS = {
     'cleaning',
     'other'
   ],
+  // events.util.ts › EventSource. La plantilla los pinta con
+  // `'events.sources.' + e.source`, así que sus hojas no se pueden encontrar
+  // buscando el literal.
+  'events.sources.': ['pickup', 'return', 'maintenance', 'invoiceDeadline', 'reminder'],
+  // events.util.ts › EVENT_HORIZONS. Los tres plazos que ofrece la pantalla:
+  // hoy, una semana y un mes.
+  'events.horizons.': ['0', '7', '30'],
   // verifactu-submission.ts › EstadoRemision, menos `aceptado`: la lista de la
   // pantalla es la de pendientes, y una aceptada ya no lo está.
   'settings.verifactu.state.': ['pendiente', 'error', 'rechazado'],

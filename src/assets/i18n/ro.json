@@ -153,7 +153,8 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot"
+    "viewAll": "Vezi tot",
+    "reload": "Reîncarcă"
   },
   "contracts": {
     "actions": {
@@ -620,7 +621,8 @@
     "settings": "Setări",
     "vehicles": "Vehicule",
     "invoices": "Facturi",
-    "collaborators": "Colaboratori"
+    "collaborators": "Colaboratori",
+    "events": "Evenimente"
   },
   "payments": {
     "actions": {
@@ -1548,5 +1550,62 @@
       "loadFailed": "Nu s-au putut încărca colaboratorii",
       "saveFailed": "Nu s-a putut salva"
     }
+  },
+  "events": {
+    "alerts": {
+      "contractNotSigned": "Contractul nu este semnat: mașina nu poate fi predată",
+      "maintenanceOverdue": "Expirat: mașina nu poate fi închiriată",
+      "invoiceDeadline": "Se apropie termenul de emitere"
+    },
+    "categories": {
+      "payment": "De plătit",
+      "paperwork": "De înregistrat",
+      "purchase": "De cumpărat",
+      "fleet": "Flotă",
+      "other": "Altele"
+    },
+    "confirmDelete": {
+      "title": "Ștergi acest memento?",
+      "message": "Se șterge. Nu se poate anula."
+    },
+    "dayLeft": "zi",
+    "daysLate": "întârziere",
+    "daysLeft": "zile",
+    "editReminder": "Editează mementoul",
+    "empty": "Nimic de făcut în acest interval.",
+    "errors": {
+      "loadFailed": "Nu s-au putut încărca evenimentele",
+      "saveFailed": "Nu s-a putut salva mementoul"
+    },
+    "fields": {
+      "title": "Ce trebuie făcut",
+      "titlePlaceholder": "Cumpără odorizante pentru toate mașinile",
+      "category": "Tip",
+      "dueDate": "Data",
+      "notes": "Notițe"
+    },
+    "horizon": "Interval",
+    "horizons": {
+      "0": "Azi",
+      "7": "7 zile",
+      "30": "30 de zile"
+    },
+    "markDone": "Marchează ca făcut",
+    "newReminder": "Memento nou",
+    "overdueCount": "nerezolvate și deja scadente",
+    "problems": {
+      "titleAndDateRequired": "Sunt necesare textul și data"
+    },
+    "showDone": "Arată și ce este făcut",
+    "sources": {
+      "pickup": "Predare",
+      "return": "Returnare",
+      "maintenance": "Mentenanță",
+      "invoiceDeadline": "Termen factură",
+      "reminder": "Memento"
+    },
+    "subtitle": "Tot ce trebuie făcut, într-un singur loc",
+    "title": "Evenimente apropiate",
+    "today": "Azi"
   }
 }
