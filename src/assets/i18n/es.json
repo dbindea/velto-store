@@ -650,7 +650,8 @@
       "retain": "Retener"
     },
     "errors": {
-      "invalidAmount": "El importe no es válido"
+      "invalidAmount": "El importe no es válido",
+      "loadFailed": "No se han podido cargar los cobros."
     },
     "fields": {
       "amount": "Importe",
@@ -691,7 +692,8 @@
       "webhookHint": "El estado se actualizará automáticamente cuando Redsys confirme el pago."
     },
     "list": {
-      "empty": "No hay pagos"
+      "empty": "No hay pagos",
+      "openOnly": "Tu rol muestra los cobros pendientes, no el histórico completo. Los cobros de una reserva o de un cliente los tienes en su ficha."
     },
     "methods": {
       "bankTransfer": "Transferencia",
@@ -1093,9 +1095,9 @@
       "role": "Rol",
       "roles": {
         "admin": "Administrador",
-        "adminHint": "Puede todo, incluido dar acceso a otros, ver informes y gastos y cambiar estos ajustes.",
+        "adminHint": "Puede todo: dar acceso a otros, ver informes, gastos, facturas, colaboradores y el histórico de cobros, y cambiar estos ajustes.",
         "employee": "Empleado",
-        "employeeHint": "Trabaja el día a día: reservas, clientes, vehículos, cobros, entregas y devoluciones. No ve informes ni gastos, no toca precios ni descuentos y no borra ni cancela."
+        "employeeHint": "Trabaja el día a día: reservas, clientes, vehículos, entregas, devoluciones y cobrar lo que está pendiente. No ve informes, gastos, facturas, colaboradores ni el histórico de cobros; no toca precios ni descuentos, y no borra ni cancela."
       },
       "selfLocked": "No puedes cambiarte el acceso ni el rol a ti mismo.",
       "you": "Tú"

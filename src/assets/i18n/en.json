@@ -650,7 +650,8 @@
       "retain": "Retain"
     },
     "errors": {
-      "invalidAmount": "The amount is not valid"
+      "invalidAmount": "The amount is not valid",
+      "loadFailed": "The payments could not be loaded."
     },
     "fields": {
       "amount": "Amount",
@@ -691,7 +692,8 @@
       "webhookHint": "Status will update automatically once Redsys confirms the payment."
     },
     "list": {
-      "empty": "No payments"
+      "empty": "No payments",
+      "openOnly": "Your role shows outstanding payments, not the full history. The payments of a reservation or a client are on their own page."
     },
     "methods": {
       "bankTransfer": "Bank transfer",
@@ -1093,9 +1095,9 @@
       "role": "Role",
       "roles": {
         "admin": "Administrator",
-        "adminHint": "Can do everything, including granting access to others, seeing reports and expenses and changing these settings.",
+        "adminHint": "Can do everything: granting access to others, seeing reports, expenses, invoices, collaborators and the payment history, and changing these settings.",
         "employee": "Employee",
-        "employeeHint": "Runs the day to day: reservations, clients, vehicles, payments, pickups and returns. Does not see reports or expenses, does not touch prices or discounts, and does not delete or cancel."
+        "employeeHint": "Runs the day to day: reservations, clients, vehicles, pickups, returns and collecting what is outstanding. Does not see reports, expenses, invoices, collaborators or the payment history; does not touch prices or discounts, and does not delete or cancel."
       },
       "selfLocked": "You cannot change your own access or role.",
       "you": "You"

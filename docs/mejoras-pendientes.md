@@ -60,6 +60,81 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-29 · Un empleado no ve la cuenta de resultados — 11 de septiembre de 2026
+
+Petición de Dorel: **un usuario que no sea administrador no puede ver
+información financiera de la empresa.** Lo primero fue mirar qué veía de verdad,
+no qué se suponía que veía.
+
+### Lo que ya estaba cerrado
+
+Informes, Gastos, Facturas y Colaboradores, en las tres capas: el menú no los
+pinta, `permissionGuard` corta la ruta con un aviso, y `firestore.rules` deniega
+las ocho colecciones del dinero a quien no sea administrador. Verificado con el
+rol de empleado forzado: `/reports` devuelve al panel con «Tu rol no tiene acceso
+a esa sección», y el menú pierde los cinco apartados.
+
+### Lo que faltaba: el libro de cobros
+
+Un empleado podía listar **todos** los cobros del negocio en `/payments`. No hay
+totales en la pantalla, pero no hacen falta: con las filas delante, sumar el año
+es cuestión de un rato — la misma cifra que `viewReports` protege, servida fila a
+fila.
+
+Decisión de Dorel: **que vea el módulo, pero no el histórico.** Sin
+`viewPaymentHistory` la lista enseña solo lo **abierto** —`pending`, `partial` y
+`failed`, que es con lo que se trabaja— y la pestaña «Cobrado» ni se ofrece,
+porque saldría siempre vacía y un botón que no hace nada es un fallo. Los cobros
+de una reserva o de un cliente concretos se siguen viendo en su ficha, que es
+donde hacen falta. La regla vive en `payment-scope.util.ts`, con tests.
+
+⚠️ **El recorte se aplica al cargar, no al filtrar.** Puesto en el filtro de la
+pantalla, cambiar de pestaña volvería a enseñarlo todo.
+
+### Y lo que hay que decir en voz alta
+
+⚠️ **Esta restricción es interfaz, no seguridad, a diferencia de las otras
+cuatro.** `payments` no se puede cerrar en `firestore.rules`: la ficha de la
+reserva y la del cliente necesitan leer los pagos **cobrados** para su resumen, y
+una regla no distingue si quien lee llegó desde una reserva o desde una consulta
+suelta. Un empleado con la consola del navegador abierta puede listar los cobros
+y sumarlos.
+
+Lo que sí lo impide de verdad es que los **gastos** y las **comisiones** sean de
+administrador en las reglas: sin ellos hay ingresos, no beneficio. Está escrito
+en `firestore.rules`, en `permissions.util.ts` y en el guion de comprobación,
+para que nadie vea `payments` abierto y lo tome por un descuido como el de
+`invoices`.
+
+### Lo demás que se miró, y por qué se queda
+
+| Qué ve un empleado | Se queda porque |
+|---|---|
+| El importe pendiente de una reserva, en el panel | es el cobro que tiene que hacer hoy |
+| El resumen de pagos de un cliente | es a quien está atendiendo |
+| El coste de una reparación en la ficha del coche | decisión de Dorel: es quien lleva el coche al taller |
+| Los recordatorios de Eventos | decisión del 10 de septiembre: es trabajo de su gente |
+| La búsqueda global | solo mira clientes, vehículos, contratos y reservas |
+
+Y se corrigió el rótulo del rol, que llevaba dos módulos sin actualizar: decía
+«No ve informes ni gastos» cuando tampoco ve facturas ni colaboradores. **La
+frase y el hecho se deciden juntos**, también aquí.
+
+### Lo que queda por probar
+
+⚠️ **Las reglas con una cuenta de empleado de verdad.** La pasada de hoy se hizo
+con el rol forzado en memoria —que prueba la aplicación, no las reglas— y con
+sesión de administrador, donde todo sale 200 y no prueba nada. Las ocho
+colecciones usan el mismo `callerIsAdmin()` cuyo 403 sí quedó demostrado el 7 y
+el 8 de septiembre para `expenses` e `invoices`, pero **eso es un argumento, no
+una prueba**. Hace falta una segunda cuenta de Google dada de alta como
+`employee` en el `authorizedUsers` de desarrollo y pasarle
+[comprobar-reglas-financieras.js](comprobar-reglas-financieras.js). Bajar el rol
+de la cuenta propia **no vale aquí**: `authorizedUsers` solo lo escribe un
+administrador, así que después no habría forma de volver desde la aplicación.
+
+---
+
 ## ✅ N-28 · La salud del negocio de un vistazo — 10 de septiembre de 2026
 
 Informes deja de ser cuatro cifras de los últimos seis meses. El rango por

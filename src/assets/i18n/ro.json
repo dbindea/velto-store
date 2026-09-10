@@ -650,7 +650,8 @@
       "retain": "Reține"
     },
     "errors": {
-      "invalidAmount": "Suma nu este validă"
+      "invalidAmount": "Suma nu este validă",
+      "loadFailed": "Încasările nu au putut fi încărcate."
     },
     "fields": {
       "amount": "Sumă",
@@ -691,7 +692,8 @@
       "webhookHint": "Starea se va actualiza automat când Redsys confirmă plata."
     },
     "list": {
-      "empty": "Nu există plăți"
+      "empty": "Nu există plăți",
+      "openOnly": "Rolul tău arată încasările în așteptare, nu tot istoricul. Încasările unei rezervări sau ale unui client sunt în fișa lor."
     },
     "methods": {
       "bankTransfer": "Transfer bancar",
@@ -1093,9 +1095,9 @@
       "role": "Rol",
       "roles": {
         "admin": "Administrator",
-        "adminHint": "Poate tot, inclusiv să dea acces altora, să vadă rapoarte și cheltuieli și să schimbe aceste setări.",
+        "adminHint": "Poate tot: să dea acces altora, să vadă rapoarte, cheltuieli, facturi, colaboratori și istoricul încasărilor, și să schimbe aceste setări.",
         "employee": "Angajat",
-        "employeeHint": "Se ocupă de zi cu zi: rezervări, clienți, vehicule, încasări, predări și returnări. Nu vede rapoarte sau cheltuieli, nu umblă la prețuri sau reduceri și nu șterge și nu anulează."
+        "employeeHint": "Se ocupă de zi cu zi: rezervări, clienți, vehicule, predări, returnări și încasarea a ceea ce este în așteptare. Nu vede rapoarte, cheltuieli, facturi, colaboratori sau istoricul încasărilor; nu umblă la prețuri sau reduceri și nu șterge și nu anulează."
       },
       "selfLocked": "Nu îți poți schimba propriul acces sau rol.",
       "you": "Tu"

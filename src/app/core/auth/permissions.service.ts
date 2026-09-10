@@ -54,4 +54,5 @@ export class PermissionsService {
   readonly canGrantDiscounts = computed(() => can(this.role(), 'grantDiscounts'));
   readonly canDelete = computed(() => can(this.role(), 'deleteRecords'));
   readonly canCancelReservations = computed(() => can(this.role(), 'cancelReservations'));
+  readonly canViewPaymentHistory = computed(() => can(this.role(), 'viewPaymentHistory'));
 }

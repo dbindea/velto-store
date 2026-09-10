@@ -13,6 +13,18 @@
     </div>
   </div>
 
+  <!--
+    ⚠️ Un permiso denegado se explica. Sin esta línea, un compañero ve una lista
+    más corta de la que espera —falta un cobro que sabe que hizo— y concluye que
+    la aplicación ha perdido datos. Decirlo cuesta una frase y evita la llamada.
+  -->
+  @if (!permissions.canViewPaymentHistory()) {
+    <p class="scope-note">
+      <i class="pi pi-info-circle"></i>
+      {{ 'payments.list.openOnly' | translate }}
+    </p>
+  }
+
   <!-- Tabs -->
   <div class="tabs">
     @for (option of statusOptions; track option.value) {

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, getDocs, query, where } from '@angular/fire/firestore';
+import { PermissionsService } from '@core/auth/permissions.service';
 import { Payment } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { Expense } from '@shared/models/expense.model';
@@ -34,8 +35,22 @@ export interface AnalyticsData {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
   private firestore = inject(Firestore);
+  private permissions = inject(PermissionsService);
 
   async load(): Promise<AnalyticsData> {
+    /**
+     * ⚠️ **La tercera capa, y hace falta.** La ruta ya está cerrada con
+     * `permissionGuard` y `firestore.rules` deniega `expenses` y
+     * `collaboratorSales` a quien no sea administrador — pero sin esto, un
+     * empleado que llegara aquí por cualquier camino que no sea la ruta
+     * recibiría un `permission-denied` de Firestore a medio camino: un error de
+     * base de datos en vez de «esta sección no es tuya», que son dos cosas
+     * distintas y se cuentan distinto.
+     */
+    if (!this.permissions.can('viewReports')) {
+      throw new Error('permissions.notAllowed');
+    }
+
     const [pagos, reservas, vehiculos, gastos, mantenimiento, comisiones] = await Promise.all([
       getDocs(collection(this.firestore, 'payments')),
       getDocs(collection(this.firestore, 'reservations')),

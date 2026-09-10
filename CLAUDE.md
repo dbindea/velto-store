@@ -433,11 +433,51 @@ el `pricingSnapshot`**; y **200** al leer reservas y escribir una nota, que es
 lo que necesita para trabajar. Repetir esa prueba es la forma de validar un
 cambio en `firestore.rules`.
 
-**Y hay un guion para repetirla**: [docs/comprobar-reglas-facturas.js](docs/comprobar-reglas-facturas.js),
-que se pega en la consola del navegador con la sesión abierta. Comprueba que una
-factura emitida devuelve **403** al modificarla y al borrarla, y de paso que la
-cadena de huellas está bien formada. No es código de la aplicación y no se
-compila; vive en `docs/` para que no lo parezca.
+**Y hay dos guiones para repetirla**, que se pegan en la consola del navegador
+con la sesión abierta. No son código de la aplicación y no se compilan; viven en
+`docs/` para que no lo parezcan.
+
+- [comprobar-reglas-facturas.js](docs/comprobar-reglas-facturas.js) — que una
+  factura emitida devuelve **403** al modificarla y al borrarla, y que la cadena
+  de huellas está bien formada.
+- [comprobar-reglas-financieras.js](docs/comprobar-reglas-financieras.js) — que
+  las ocho colecciones del dinero (`expenses`, `invoices`, `invoiceCounters`,
+  `billingProfiles`, `verifactuDeclarations`, `verifactuSubmissions`,
+  `collaborators`, `collaboratorSales`) dan **403** a quien no es administrador,
+  y que un empleado no puede ascenderse. **Lee el rol de `authorizedUsers` y
+  ajusta lo que espera**, así que la misma pasada sirve con las dos cuentas.
+
+### El dinero de la empresa: qué está cerrado y qué no
+
+Un empleado no ve la cuenta de resultados. Cinco permisos lo gobiernan
+—`viewReports`, `viewExpenses`, `viewInvoices`, `viewCollaborators` y
+`viewPaymentHistory`— y `permissions.util.spec.ts` los comprueba **en bloque y
+por lista completa**: el test afirma que el empleado tiene *exactamente* dos
+permisos, así que cualquier cosa que se le conceda obliga a venir a decirlo
+a propósito. Enumerando solo lo denegado, un permiso nuevo concedido sin querer
+no lo coge nadie — porque nadie escribe el test de un permiso que no sabe que
+existe.
+
+⚠️ **`payments` está abierto a cualquier autorizado, y es deliberado.** No es el
+descuido que fue `invoices`: la ficha de la reserva y la del cliente enseñan el
+resumen de sus cobros, y para eso hay que leer los pagos **cobrados**. Una regla
+no distingue si quien lee llegó desde una reserva o desde una consulta a la
+colección entera, así que cerrarla rompería la operación diaria.
+
+La consecuencia hay que decirla: **un empleado puede listar todos los cobros por
+la API REST y sumarlos.** Lo que la aplicación hace es no ofrecerle el histórico
+—`viewPaymentHistory`, en `payment-scope.util.ts`: sin él la lista de Pagos
+enseña solo lo **abierto** (`pending`, `partial`, `failed`), y la pestaña
+«Cobrado» ni se ofrece, porque saldría siempre vacía—. Eso es interfaz, no
+seguridad, y está dicho así en los tres sitios para que nadie lo dé por lo que
+no es.
+
+Lo que sí impide reconstruir la cuenta de resultados es que los **gastos** y las
+**comisiones** sean de administrador en las reglas: sin ellos no hay beneficio,
+solo ingresos.
+
+⚠️ **El recorte se aplica al cargar, no al filtrar.** Puesto en `applyFilters()`,
+cambiar de pestaña volvería a enseñarlo todo.
 
 ⚠️ **Ese guion encontró un agujero el 8 de septiembre de 2026, y es el patrón a
 vigilar**: `viewInvoices` es permiso de administrador, pero las reglas dejaban
