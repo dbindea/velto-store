@@ -143,7 +143,15 @@ export async function construirResumen(ahora = new Date()): Promise<Resumen> {
     vencimientos.push({
       vehiculo: etiquetaVehiculo(m['vehicleSnapshot'] as Record<string, unknown>),
       concepto: String(m['title'] || m['type'] || '—'),
-      fecha: new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid' }).format(cuando),
+      // ⚠️ Con `2-digit`: el formato por defecto de `es-ES` da «11/9/2026» y la
+      // cabecera del correo dice «11/09/2026». Dos formatos de fecha en el
+      // mismo correo se leen como un error, aunque digan lo mismo.
+      fecha: new Intl.DateTimeFormat('es-ES', {
+        timeZone: 'Europe/Madrid',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(cuando),
       diasRestantes: Math.round((cuando.getTime() - ahora.getTime()) / 86_400_000)
     });
   }
