@@ -695,8 +695,13 @@ conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| desarrollo | 24 | — |
-| producción | **13** | todas las de facturación y `generateInspectionReport` |
+| desarrollo | 26 | — |
+| producción | **19** | `issueInvoice`, `issueComplianceDeclaration` y las cinco de la remisión a la AEAT |
+
+⚠️ **Lo que falta en producción falta a propósito**: son las que **escriben**
+facturas o hablan con la Agencia, y van con el guion del 1 de enero
+([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis). Lo que sí está
+desplegado es todo lo que no cruza ese punto de no retorno.
 
 Es deliberado mientras se prueba: la primera factura emitida en producción marca el punto
 de no retorno de `invoices`. Pero es justo el desajuste que CLAUDE.md avisa que es fácil
