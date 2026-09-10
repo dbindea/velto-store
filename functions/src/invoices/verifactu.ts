@@ -443,12 +443,30 @@ export function buildRegistroAlta(input: RegistroAltaBuildInput): RegistroAlta {
     for (const key of ['exempt_eu', 'exempt_export', 'exempt_other', 'reverse_charge']) {
       if (!regimenes.has(key)) continue;
       const r = REGIMEN[key];
+      /**
+       * ⚠️ **Una exenta OMITE tipo y cuota; una con inversión del sujeto pasivo
+       * los lleva a CERO.** Parece lo mismo y no lo es, y la AEAT lo distingue:
+       * un `S2` sin esos dos campos se rechaza con el `1198` —«Si
+       * CalificacionOperacion tiene valor S2, TipoImpositivo y CuotaRepercutida
+       * deberán tener valor 0»—, mientras que una exenta con ellos sobra.
+       *
+       * La diferencia tiene sentido: en una exenta **no hay impuesto** del que
+       * hablar, y en la inversión del sujeto pasivo la operación **sí está
+       * sujeta** — lo que pasa es que la cuota la declara el destinatario, así
+       * que lo que repercutimos nosotros es cero y hay que decirlo.
+       *
+       * Lo encontró preproducción el 10 de septiembre de 2026. El XML validaba
+       * contra el esquema: los dos campos son opcionales ahí.
+       */
+      const inversion = r.calificacion === 'S2';
       detalle.push({
         Impuesto: IMPUESTO_IVA,
         ClaveRegimen: r.claveRegimen,
         CalificacionOperacion: r.calificacion,
         OperacionExenta: r.exenta,
-        BaseImponibleOimporteNoSujeto: importe(input.exemptTotal)
+        TipoImpositivo: inversion ? importe(0) : undefined,
+        BaseImponibleOimporteNoSujeto: importe(input.exemptTotal),
+        CuotaRepercutida: inversion ? importe(0) : undefined
       });
     }
   }

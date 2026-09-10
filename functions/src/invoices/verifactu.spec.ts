@@ -413,3 +413,51 @@ describe('el QR de cotejo', () => {
     expect(verifactuEnabled()).toBe(true);
   });
 });
+
+/**
+ * El desglose de lo que no lleva IVA repercutido.
+ *
+ * ⚠️ **Exenta e inversión del sujeto pasivo se declaran distinto**, y a ojo
+ * parecen lo mismo: en las dos el cliente no paga IVA. Pero en una exenta **no
+ * hay impuesto** del que hablar, y en la inversión la operación **sí está
+ * sujeta** — la cuota la declara el destinatario—, así que hay que decir
+ * expresamente que lo que repercutimos es cero.
+ *
+ * Lo encontró preproducción el 10 de septiembre de 2026 con el error `1198`. El
+ * XML validaba contra el esquema, porque los dos campos son opcionales ahí.
+ */
+describe('el desglose sin cuota repercutida', () => {
+  const desgloseDe = (taxRegime: string) =>
+    buildRegistroAlta({
+      ...base,
+      lines: [{ taxRegime }],
+      desglose: [],
+      exemptTotal: 1050,
+      cuotaTotal: 0,
+      importeTotal: 1050
+    }).Desglose.DetalleDesglose[0];
+
+  it('la inversión del sujeto pasivo declara tipo y cuota a CERO', () => {
+    const d = desgloseDe('reverse_charge');
+    expect(d.CalificacionOperacion).toBe('S2');
+    expect(d.TipoImpositivo).toBe('0.00');
+    expect(d.CuotaRepercutida).toBe('0.00');
+    // Y no lleva clave de exención: no está exenta, está sujeta.
+    expect(d.OperacionExenta).toBeUndefined();
+  });
+
+  it('una exenta NO los lleva: no hay impuesto del que hablar', () => {
+    const d = desgloseDe('exempt_eu');
+    expect(d.OperacionExenta).toBe('E5');
+    expect(d.TipoImpositivo).toBeUndefined();
+    expect(d.CuotaRepercutida).toBeUndefined();
+    // Y no lleva calificación: en el esquema son alternativas.
+    expect(d.CalificacionOperacion).toBeUndefined();
+  });
+
+  it('la exportación tampoco', () => {
+    const d = desgloseDe('exempt_export');
+    expect(d.OperacionExenta).toBe('E2');
+    expect(d.CuotaRepercutida).toBeUndefined();
+  });
+});
