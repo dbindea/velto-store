@@ -133,13 +133,121 @@
       </div>
     }
 
+    <!-- Acumulado año a año. Responde a «¿cuánto me trajo cada año?» sin tener
+         que ir tocando el filtro. -->
+    @if (byYear().length > 1) {
+      <h2 class="section-title">{{ 'collaborators.byYear' | translate }}</h2>
+      <table class="year-table">
+        <thead>
+          <tr>
+            <th>{{ 'collaborators.fields.year' | translate }}</th>
+            <th class="num">{{ 'collaborators.generated' | translate }}</th>
+            <th class="num">{{ 'collaborators.paidTotal' | translate }}</th>
+            <th class="num">{{ 'collaborators.pending' | translate }}</th>
+            <th class="num">{{ 'collaborators.salesCount' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (y of byYear(); track y.year) {
+            <tr [class.active]="period().year === y.year" (click)="setYear('' + y.year)">
+              <td>{{ y.year }}</td>
+              <td class="num">{{ y.generated | number: '1.2-2' }} €</td>
+              <td class="num">{{ y.paid | number: '1.2-2' }} €</td>
+              <td class="num" [class.owed]="y.pending > 0">
+                {{ y.pending | number: '1.2-2' }} €
+              </td>
+              <td class="num">{{ y.sales }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <!-- Los pagos que se le han hecho. Sale de las propias comisiones agrupadas
+         por día y forma de pago: no hay una colección de liquidaciones, que
+         sería una segunda fuente de verdad para el mismo euro. -->
+    @if (payments().length) {
+      <h2 class="section-title">{{ 'collaborators.paymentHistory' | translate }}</h2>
+      <ul class="payment-list">
+        @for (p of payments(); track p.date.getTime() + (p.method || '')) {
+          <li class="payment">
+            <span class="date">{{ p.date | date: 'dd/MM/yyyy' }}</span>
+            <span class="method">
+              @if (p.method) { {{ methodLabels[p.method] | translate }} }
+            </span>
+            <!-- ⚠️ «1 comisiones» no. El plural no es añadir una `s`, y aquí se
+                 lee en cada línea del histórico. -->
+            <span class="count">
+              {{ p.count }}
+              {{ (p.count === 1 ? 'collaborators.commissionCount' : 'collaborators.commissionsCount') | translate }}
+            </span>
+            <span class="amount">{{ p.amount | number: '1.2-2' }} €</span>
+          </li>
+        }
+      </ul>
+    }
+
     <!-- Las ventas -->
     <h2 class="section-title">{{ 'collaborators.sales' | translate }}</h2>
+
+    @if (sales().length) {
+      <div class="filters">
+        <label class="filter">
+          <span class="filter-label">{{ 'collaborators.fields.year' | translate }}</span>
+          <select class="filter-control" [value]="period().year ?? ''"
+            (change)="setYear($any($event.target).value)">
+            <option value="">{{ 'collaborators.allYears' | translate }}</option>
+            @for (y of years(); track y) {
+              <option [value]="y">{{ y }}</option>
+            }
+          </select>
+        </label>
+        <label class="filter">
+          <span class="filter-label">{{ 'collaborators.fields.from' | translate }}</span>
+          <input type="date" class="filter-control" [value]="dateInput(period().from)"
+            (change)="setFrom($any($event.target).value)" />
+        </label>
+        <label class="filter">
+          <span class="filter-label">{{ 'collaborators.fields.to' | translate }}</span>
+          <input type="date" class="filter-control" [value]="dateInput(period().to)"
+            (change)="setTo($any($event.target).value)" />
+        </label>
+        @if (filtering()) {
+          <button class="btn-ghost" type="button" (click)="clearPeriod()">
+            <i class="pi pi-times"></i>
+            {{ 'collaborators.clearPeriod' | translate }}
+          </button>
+        }
+      </div>
+
+      <!-- ⚠️ Esto es lo del PERIODO, y por eso lo dice la etiqueta. Lo que se le
+           debe en total está arriba y no cambia al filtrar: lo que se debe se
+           debe, mire uno el año que mire. -->
+      @if (filtering()) {
+        <p class="period-summary">
+          {{ 'collaborators.inPeriod' | translate }}:
+          <strong>{{ summary().generated | number: '1.2-2' }} €</strong>
+          {{ 'collaborators.generatedLower' | translate }} ·
+          {{ summary().paid | number: '1.2-2' }} € {{ 'collaborators.paidLower' | translate }} ·
+          <span [class.owed]="summary().pending > 0">
+            {{ summary().pending | number: '1.2-2' }} € {{ 'collaborators.pendingLower' | translate }}
+          </span>
+        </p>
+      }
+    }
+
     @if (!sales().length) {
       <p class="empty">{{ 'collaborators.noSales' | translate }}</p>
+    } @else if (!visibleSales().length) {
+      <div class="empty">
+        <p>{{ 'collaborators.noSalesInPeriod' | translate }}</p>
+        <button class="btn-secondary" type="button" (click)="clearPeriod()">
+          {{ 'collaborators.clearPeriod' | translate }}
+        </button>
+      </div>
     } @else {
       <ul class="sale-list">
-        @for (s of sales(); track s.id) {
+        @for (s of visibleSales(); track s.id) {
           <li class="sale" [class.cancelled]="s.status === 'cancelled'">
             <div class="what" (click)="openReservation(s.reservationId)">
               <span class="client">{{ s.reservationSnapshot.clientName }}</span>

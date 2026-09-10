@@ -213,6 +213,41 @@ for (const locale of LOCALES) {
   }
 }
 
+// 1 bis. Claves usadas por una vía que los patrones de arriba no reconocen.
+//
+// ⚠️ **Este hueco dejó pasar una clave que salía en crudo en pantalla.** El
+// diálogo de confirmación pinta `text(request.confirmLabel || 'common.accept')`,
+// que no es `| translate`, ni `.translate(...)`, ni un mapa `*_LABELS`: los tres
+// patrones que alimentan `referenced`. Como `common.accept` no existía en ningún
+// idioma, el botón de aceptar mostraba **el identificador**, y la auditoría daba
+// el visto bueno. Solo se vio pulsando un botón.
+//
+// La regla es estrecha a propósito para no romper el build con falsos
+// positivos: se comprueba **únicamente** lo que empieza por un espacio de
+// nombres que existe de verdad en `es.json` —`common.`, `invoices.`, `events.`…—.
+// Un literal como `reservation-workflow.util` no empieza por ninguno y no se
+// mira; uno que empieza por `common.` es una clave con casi total seguridad.
+const NAMESPACES = new Set(Object.keys(JSON.parse(
+  fs.readFileSync(path.join(I18N_DIR, 'es.json'), 'utf8')
+)));
+
+const conNamespace = [...anyLiteral].filter((k) => {
+  const raiz = k.split('.')[0];
+  if (!NAMESPACES.has(raiz)) return false;
+  // Los prefijos compuestos tienen su propia comprobación más abajo.
+  return !coveredByPrefix(k);
+});
+
+const inventadas = conNamespace.filter((k) => !(k in flat['es'])).sort();
+if (inventadas.length) {
+  failed = true;
+  console.log(
+    `\n  ✗ Claves usadas en el código que NO existen en es.json (${inventadas.length})`
+  );
+  console.log(list(inventadas));
+  console.log(`      El usuario vería el identificador en crudo: no hay respaldo a español.`);
+}
+
 // 1b. Composed keys: every registered prefix must have every leaf, in every
 //     locale. And every prefix found in the code must be registered.
 console.log('');

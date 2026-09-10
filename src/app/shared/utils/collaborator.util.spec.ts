@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALL_TIME,
   balanceOf,
   commissionAmount,
   estadoSegunReserva,
   MAX_COMMISSION_PERCENT,
+  periodSummary,
+  saleDate,
   saleProblem,
-  validateCollaborator
+  settlements,
+  validateCollaborator,
+  yearlyTotals
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -195,5 +200,140 @@ describe('la ficha del colaborador', () => {
 
   it('una ficha correcta no da problemas', () => {
     expect(validateCollaborator(colaborador())).toEqual({});
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Análisis por periodo
+// ---------------------------------------------------------------------------
+
+const ventaEn = (iso: string, extra: Partial<CollaboratorSale> = {}) =>
+  venta({
+    reservationSnapshot: { clientName: 'X', vehicle: 'Y', pickupDate: new Date(iso) },
+    ...extra
+  });
+
+describe('la fecha por la que se filtra una comisión', () => {
+  /**
+   * ⚠️ **Es la del ALQUILER, no la de cuando se apuntó la venta.** «¿Cuánto me
+   * trajo Juan en 2026?» se responde con cuándo ocurrió el alquiler, que es lo
+   * que los dos recuerdan.
+   */
+  it('es la de recogida de la reserva', () => {
+    expect(saleDate(ventaEn('2026-03-15T10:00:00'))?.getMonth()).toBe(2);
+  });
+
+  it('sin fecha de recogida, no hay fecha que valga', () => {
+    expect(saleDate(venta())).toBeNull();
+  });
+});
+
+describe('el resumen de un periodo', () => {
+  const datos = [
+    ventaEn('2026-03-15T10:00:00', { commissionAmount: 50 }),
+    ventaEn('2026-09-01T10:00:00', { commissionAmount: 30, status: 'paid' }),
+    ventaEn('2025-11-20T10:00:00', { commissionAmount: 25, status: 'paid' }),
+    ventaEn('2026-05-05T10:00:00', { commissionAmount: 99, status: 'cancelled' })
+  ];
+
+  it('sin periodo, cuenta todo', () => {
+    const r = periodSummary(datos, ALL_TIME);
+    expect(r.generated).toBe(105);
+    expect(r.paid).toBe(55);
+    expect(r.pending).toBe(50);
+    expect(r.cancelled).toBe(99);
+  });
+
+  it('por año', () => {
+    const r = periodSummary(datos, { year: 2025, from: null, to: null });
+    expect(r.generated).toBe(25);
+    expect(r.paid).toBe(25);
+    expect(r.sales).toBe(1);
+  });
+
+  /**
+   * ⚠️ Mismo cuidado que en el filtro de facturas: un `<input type="date">` da
+   * la medianoche, y comparar contra eso deja fuera todo lo de ese día.
+   */
+  it('«hasta el 1 de septiembre» incluye el 1 entero', () => {
+    const r = periodSummary(datos, {
+      year: null,
+      from: null,
+      to: new Date('2026-09-01T00:00:00')
+    });
+    expect(r.paid).toBe(55); // la de las 10:00 del día 1 entra
+  });
+
+  /**
+   * ⚠️ **La distinción que sostiene la pantalla.** `pending` aquí es lo
+   * pendiente DE ESE PERIODO. Lo que se le debe en total no depende del año que
+   * se mire, y confundirlos haría leer «pendiente: 0» en 2025 como «no le debo
+   * nada» cuando lo de 2026 sigue sin pagar.
+   */
+  it('lo pendiente del periodo NO es lo que se le debe en total', () => {
+    expect(periodSummary(datos, { year: 2025, from: null, to: null }).pending).toBe(0);
+    expect(balanceOf(datos).pending).toBe(50);
+  });
+
+  it('una venta sin fecha de alquiler queda fuera de cualquier periodo', () => {
+    const conSinFecha = [...datos, venta({ commissionAmount: 10 })];
+    expect(periodSummary(conSinFecha, { year: 2026, from: null, to: null }).generated).toBe(80);
+    // Pero sigue contando en lo que se le debe: lo que se debe se debe.
+    expect(balanceOf(conSinFecha).pending).toBe(60);
+  });
+});
+
+describe('lo acumulado año a año', () => {
+  it('sale un año por cada ejercicio con ventas, del más reciente al más antiguo', () => {
+    const años = yearlyTotals([
+      ventaEn('2026-03-15T10:00:00', { commissionAmount: 50 }),
+      ventaEn('2025-11-20T10:00:00', { commissionAmount: 25, status: 'paid' })
+    ]);
+    expect(años.map((a) => a.year)).toEqual([2026, 2025]);
+    expect(años[0].pending).toBe(50);
+    expect(años[1].paid).toBe(25);
+  });
+
+  it('sin ventas con fecha, no hay años que enseñar', () => {
+    expect(yearlyTotals([venta()])).toEqual([]);
+  });
+});
+
+describe('el histórico de pagos', () => {
+  const pagada = (importe: number, cuando: string, metodo: 'cash' | 'transfer') =>
+    venta({
+      commissionAmount: importe,
+      status: 'paid',
+      paidAt: new Date(cuando),
+      paidMethod: metodo
+    });
+
+  /**
+   * ⚠️ **Se agrupa por día y forma de pago, que es como se paga de verdad**: una
+   * transferencia por varias comisiones a la vez. Y no hay colección de
+   * liquidaciones — sería una segunda fuente de verdad para el mismo euro.
+   */
+  it('junta en un solo pago lo liquidado el mismo día y por la misma vía', () => {
+    const s = settlements([
+      pagada(50, '2026-10-03T12:00:00', 'transfer'),
+      pagada(30, '2026-10-03T12:00:01', 'transfer'),
+      pagada(20, '2026-10-03T18:00:00', 'cash')
+    ]);
+    expect(s).toHaveLength(2);
+    const transferencia = s.find((x) => x.method === 'transfer')!;
+    expect(transferencia.amount).toBe(80);
+    expect(transferencia.count).toBe(2);
+  });
+
+  it('va del pago más reciente al más antiguo', () => {
+    const s = settlements([
+      pagada(10, '2026-01-05T12:00:00', 'cash'),
+      pagada(20, '2026-06-05T12:00:00', 'cash')
+    ]);
+    expect(s[0].amount).toBe(20);
+  });
+
+  it('lo que no está pagado no aparece', () => {
+    expect(settlements([venta({ commissionAmount: 50 })])).toEqual([]);
   });
 });

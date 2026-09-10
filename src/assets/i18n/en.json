@@ -126,6 +126,7 @@
     "confirmDelete": "Delete this client and the documents they uploaded? This cannot be undone."
   },
   "common": {
+    "accept": "OK",
     "all": "All",
     "back": "Back",
     "cancel": "Cancel",
@@ -150,11 +151,11 @@
       "uploadFromGallery": "Upload from gallery"
     },
     "refresh": "Refresh",
+    "reload": "Reload",
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "viewAll": "View all",
-    "reload": "Reload"
+    "viewAll": "View all"
   },
   "contracts": {
     "actions": {
@@ -1471,57 +1472,16 @@
     }
   },
   "collaborators": {
-    "title": "Partners",
-    "subtitle": "Agents who bring in customers, and the commission owed to them",
-    "new": "New partner",
-    "edit": "Edit partner",
-    "empty": "No partners yet. Add the first one to start assigning sales.",
-    "notFound": "Partner not found",
-    "totalPending": "Total outstanding",
-    "pending": "Outstanding",
-    "paidTotal": "Already paid",
-    "cancelledTotal": "Cancelled",
-    "settled": "Commissions settled",
-    "inactive": "Inactive",
-    "salesCount": "sales",
-    "ofNet": "of the net amount",
-    "sales": "Sales and commission",
-    "noSales": "This partner has no sales assigned yet.",
-    "assignSale": "Assign sale",
+    "allYears": "All years",
     "assign": "Assign",
     "assignHint": "Pick the booking they brought in. The commission uses their percentage and is then frozen: raising it tomorrow will not move this sale.",
-    "noAssignable": "No bookings available to assign. Only ones that are not cancelled, have a net amount, and are not already assigned show up here.",
-    "willOwe": "You will owe",
-    "settleAll": "Settle everything outstanding",
-    "settleHint": "Marks every outstanding commission for this partner as paid, in one go.",
-    "confirmSettle": "Mark as paid",
-    "saved": "Partner saved",
-    "deleted": "Partner deleted",
-    "saleAssigned": "Sale assigned",
-    "paid": "Commission marked as paid",
+    "assignSale": "Assign sale",
+    "byYear": "Totals by year",
     "cancelledByReservation": "The booking was cancelled",
-    "fields": {
-      "name": "Name",
-      "commissionPercent": "Commission",
-      "commissionHint": "On the booking net amount, excluding VAT. This is the default: each sale freezes its own.",
-      "phone": "Phone",
-      "email": "Email",
-      "taxId": "Tax ID",
-      "notes": "Notes",
-      "active": "Active (appears when assigning new sales)",
-      "reservation": "Booking",
-      "method": "Payment method",
-      "note": "Note (optional)"
-    },
-    "status": {
-      "pending": "Outstanding",
-      "paid": "Paid",
-      "cancelled": "Cancelled"
-    },
-    "paymentMethods": {
-      "cash": "Cash",
-      "transfer": "Bank transfer"
-    },
+    "cancelledTotal": "Cancelled",
+    "clearPeriod": "Clear filter",
+    "commissionCount": "commission",
+    "commissionsCount": "commissions",
     "confirmDelete": {
       "title": "Delete this partner?",
       "message": "Their record will be removed. This cannot be undone."
@@ -1530,6 +1490,50 @@
       "title": "Mark as paid?",
       "message": "A paid commission cannot be set back to outstanding."
     },
+    "confirmSettle": "Mark as paid",
+    "deleted": "Partner deleted",
+    "edit": "Edit partner",
+    "empty": "No partners yet. Add the first one to start assigning sales.",
+    "errors": {
+      "loadFailed": "Could not load partners",
+      "saveFailed": "Could not save"
+    },
+    "fields": {
+      "active": "Active (appears when assigning new sales)",
+      "commissionHint": "On the booking net amount, excluding VAT. This is the default: each sale freezes its own.",
+      "commissionPercent": "Commission",
+      "email": "Email",
+      "from": "From",
+      "method": "Payment method",
+      "name": "Name",
+      "note": "Note (optional)",
+      "notes": "Notes",
+      "phone": "Phone",
+      "reservation": "Booking",
+      "taxId": "Tax ID",
+      "to": "To",
+      "year": "Year"
+    },
+    "generated": "Generated",
+    "generatedLower": "generated",
+    "inPeriod": "In this period",
+    "inactive": "Inactive",
+    "new": "New partner",
+    "noAssignable": "No bookings available to assign. Only ones that are not cancelled, have a net amount, and are not already assigned show up here.",
+    "noSales": "This partner has no sales assigned yet.",
+    "noSalesInPeriod": "No sales in that period.",
+    "notFound": "Partner not found",
+    "ofNet": "of the net amount",
+    "paid": "Commission marked as paid",
+    "paidLower": "paid",
+    "paidTotal": "Already paid",
+    "paymentHistory": "Payments made",
+    "paymentMethods": {
+      "cash": "Cash",
+      "transfer": "Bank transfer"
+    },
+    "pending": "Outstanding",
+    "pendingLower": "outstanding",
     "problems": {
       "nameRequired": "Enter the partner name",
       "percentRequired": "Enter a commission percentage above zero",
@@ -1546,10 +1550,22 @@
       "saleNotFound": "That commission was not found",
       "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead"
     },
-    "errors": {
-      "loadFailed": "Could not load partners",
-      "saveFailed": "Could not save"
-    }
+    "saleAssigned": "Sale assigned",
+    "sales": "Sales and commission",
+    "salesCount": "sales",
+    "saved": "Partner saved",
+    "settleAll": "Settle everything outstanding",
+    "settleHint": "Marks every outstanding commission for this partner as paid, in one go.",
+    "settled": "Commissions settled",
+    "status": {
+      "pending": "Outstanding",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "subtitle": "Agents who bring in customers, and the commission owed to them",
+    "title": "Partners",
+    "totalPending": "Total outstanding",
+    "willOwe": "You will owe"
   },
   "events": {
     "alerts": {

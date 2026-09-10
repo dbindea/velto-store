@@ -125,6 +125,201 @@ export function balanceOf(sales: CollaboratorSale[]): CollaboratorBalance {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Análisis: cuánto ha generado, cuánto se le ha pagado y cuándo
+// ---------------------------------------------------------------------------
+
+/**
+ * La fecha por la que se ordena y se filtra una comisión.
+ *
+ * ⚠️ **Es la del ALQUILER, no la de cuando se apuntó la venta.** Decisión de
+ * Dorel del 10 de septiembre de 2026: «¿cuánto me trajo Juan en 2026?» se
+ * responde con cuándo ocurrió el alquiler, que es lo que los dos recuerdan. Si
+ * se le asigna en enero una reserva de diciembre, cuenta en diciembre.
+ *
+ * ⚠️ Y se convierte aquí, en un solo sitio: llega como `Timestamp` y compararlo
+ * con un `Date` da siempre falso sin convertir. Es la trampa que hizo invisible
+ * una ITV y que dejó en blanco la fecha de una declaración.
+ */
+export function saleDate(sale: CollaboratorSale): Date | null {
+  const v = sale?.reservationSnapshot?.pickupDate;
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  const d = v as { toDate?: () => Date; seconds?: number };
+  if (typeof d.toDate === 'function') return d.toDate();
+  if (typeof d.seconds === 'number') return new Date(d.seconds * 1000);
+  return null;
+}
+
+/** Cuándo se pagó una comisión. `null` si aún no se ha pagado. */
+export function paidDate(sale: CollaboratorSale): Date | null {
+  const v = sale?.paidAt;
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  const d = v as { toDate?: () => Date; seconds?: number };
+  if (typeof d.toDate === 'function') return d.toDate();
+  if (typeof d.seconds === 'number') return new Date(d.seconds * 1000);
+  return null;
+}
+
+export interface CommissionPeriod {
+  /** `null` = todos los ejercicios. */
+  year: number | null;
+  /** Desde, inclusive. */
+  from: Date | null;
+  /** Hasta, **inclusive el día entero**. */
+  to: Date | null;
+}
+
+export const ALL_TIME: CommissionPeriod = { year: null, from: null, to: null };
+
+export function hasPeriod(p: CommissionPeriod): boolean {
+  return p.year !== null || p.from !== null || p.to !== null;
+}
+
+/**
+ * ¿Cae esta fecha dentro del periodo?
+ *
+ * ⚠️ **«Hasta el 30» incluye el 30 entero.** Un `<input type="date">` da la
+ * medianoche; comparar contra eso deja fuera todo lo de ese día, que es justo el
+ * que se acaba de teclear. Mismo cuidado que en el filtro de facturas.
+ */
+function dentro(fecha: Date | null, p: CommissionPeriod): boolean {
+  if (!fecha) return false;
+  if (p.year !== null && fecha.getFullYear() !== p.year) return false;
+  if (p.from) {
+    const desde = new Date(p.from);
+    desde.setHours(0, 0, 0, 0);
+    if (fecha < desde) return false;
+  }
+  if (p.to) {
+    const hasta = new Date(p.to);
+    hasta.setHours(23, 59, 59, 999);
+    if (fecha > hasta) return false;
+  }
+  return true;
+}
+
+/** Las comisiones cuyo alquiler cae en el periodo. Sin periodo, todas. */
+export function salesInPeriod(
+  sales: CollaboratorSale[],
+  period: CommissionPeriod
+): CollaboratorSale[] {
+  if (!hasPeriod(period)) return [...sales];
+  return sales.filter((s) => dentro(saleDate(s), period));
+}
+
+export interface PeriodSummary {
+  /** Lo devengado por los alquileres del periodo, pagado o no. */
+  generated: number;
+  /** De eso, lo que ya se le ha pagado. */
+  paid: number;
+  /** De eso, lo que queda. */
+  pending: number;
+  /** Lo anulado, aparte y sin sumar a nada. */
+  cancelled: number;
+  /** Cuántas ventas cuentan, sin las anuladas. */
+  sales: number;
+}
+
+/**
+ * El resumen de un periodo.
+ *
+ * ⚠️ **`pending` aquí es lo pendiente DE ESE PERIODO**, no lo que se le debe en
+ * total. Son dos preguntas distintas y la pantalla enseña las dos por separado:
+ * filtrar a 2025 y leer «pendiente: 0» haría creer que no se le debe nada,
+ * cuando lo que se debe es todo lo de 2026 que sigue sin pagar. Lo que se debe
+ * se debe, mire uno el año que mire — para eso está `balanceOf()`.
+ */
+export function periodSummary(
+  sales: CollaboratorSale[],
+  period: CommissionPeriod
+): PeriodSummary {
+  const enPeriodo = salesInPeriod(sales, period);
+  const b = balanceOf(enPeriodo);
+  return {
+    generated: roundMoney(b.pending + b.paid),
+    paid: b.paid,
+    pending: b.pending,
+    cancelled: b.cancelled,
+    sales: b.sales
+  };
+}
+
+export interface YearTotals {
+  year: number;
+  generated: number;
+  paid: number;
+  pending: number;
+  sales: number;
+}
+
+/**
+ * Lo acumulado año a año, del más reciente al más antiguo.
+ *
+ * ⚠️ **Los años salen de los datos.** Un rango inventado llena la tabla de
+ * ejercicios vacíos, y una lista fija se queda corta el 1 de enero.
+ */
+export function yearlyTotals(sales: CollaboratorSale[]): YearTotals[] {
+  const años = new Set<number>();
+  for (const s of sales) {
+    const d = saleDate(s);
+    if (d) años.add(d.getFullYear());
+  }
+  return [...años]
+    .sort((a, b) => b - a)
+    .map((year) => {
+      const r = periodSummary(sales, { year, from: null, to: null });
+      return { year, generated: r.generated, paid: r.paid, pending: r.pending, sales: r.sales };
+    });
+}
+
+export interface Settlement {
+  /** El día en que se pagó, a medianoche: es la clave de agrupación. */
+  date: Date;
+  method: CollaboratorSale['paidMethod'];
+  amount: number;
+  /** Cuántas comisiones entraron en ese pago. */
+  count: number;
+}
+
+/**
+ * El histórico de pagos: qué se le pagó, cuándo y cómo.
+ *
+ * ⚠️ **No hay una colección de «liquidaciones», y es deliberado.** Cada comisión
+ * ya guarda cuándo y cómo se pagó; una colección aparte sería una segunda fuente
+ * de verdad para el mismo euro, y la primera vez que discreparan no habría forma
+ * de saber cuál manda. Aquí se agrupa al pintar por **día y forma de pago**, que
+ * es como se paga de verdad: una transferencia por varias comisiones a la vez.
+ */
+export function settlements(sales: CollaboratorSale[]): Settlement[] {
+  const grupos = new Map<string, Settlement>();
+
+  for (const s of sales) {
+    if (s.status !== 'paid') continue;
+    const cuando = paidDate(s);
+    if (!cuando) continue;
+    const dia = new Date(cuando);
+    dia.setHours(0, 0, 0, 0);
+    const clave = `${dia.getTime()}|${s.paidMethod || ''}`;
+
+    const previo = grupos.get(clave);
+    if (previo) {
+      previo.amount = roundMoney(previo.amount + (Number(s.commissionAmount) || 0));
+      previo.count += 1;
+    } else {
+      grupos.set(clave, {
+        date: dia,
+        method: s.paidMethod,
+        amount: roundMoney(Number(s.commissionAmount) || 0),
+        count: 1
+      });
+    }
+  }
+
+  return [...grupos.values()].sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
 /**
  * Todo lo que impide guardar un colaborador, campo a campo.
  *
