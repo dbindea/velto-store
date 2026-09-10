@@ -7,7 +7,10 @@ import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-maintenance.service';
 import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-gallery/image-gallery.component';
-import { VehicleMaintenanceFormComponent } from '@features/vehicles/components/vehicle-maintenance-form/vehicle-maintenance-form.component';
+import {
+  MaintenanceSubmitData,
+  VehicleMaintenanceFormComponent
+} from '@features/vehicles/components/vehicle-maintenance-form/vehicle-maintenance-form.component';
 import {
   Vehicle,
   VehicleStatus,
@@ -242,22 +245,19 @@ export class VehicleDetailComponent implements OnInit {
     }
   }
 
-  async submitMaintenanceForm(form: {
-    type: VehicleMaintenance['type'];
-    status: VehicleMaintenance['status'];
-    priority: VehicleMaintenance['priority'];
-    title: string;
-    description: string;
-    performedAtKm: number | null;
-    performedAtDate: string;
-    nextDueKm: number | null;
-    nextDueDate: string;
-    cost: number | null;
-    provider: string;
-    notes: string;
-    invoiceUrl: string;
-    invoicePath: string;
-  }): Promise<void> {
+  /**
+   * ⚠️ **El tipo lo pone el formulario, y no se vuelve a escribir aquí.**
+   *
+   * Esta firma era una copia a mano de la forma del formulario, con las fechas
+   * declaradas como `string`. Cuando el formulario empezó a emitir fechas de
+   * verdad, la copia habría seguido diciendo texto — y una copia que se queda
+   * vieja es exactamente lo que hizo que `nextDueDate` llegara a Firestore como
+   * `"2026-09-11"` y la ITV programada no apareciera en ningún sitio.
+   *
+   * Importando el tipo del formulario, el compilador avisa. Y avisó: lo cazó el
+   * **build de Angular**, no `tsc --noEmit`, que no revisa las plantillas.
+   */
+  async submitMaintenanceForm(form: MaintenanceSubmitData): Promise<void> {
     if (!this.vehicle?.id) return;
     this.maintenanceSaving = true;
     try {
@@ -276,9 +276,9 @@ export class VehicleDetailComponent implements OnInit {
         title: form.title,
         description: form.description || undefined,
         performedAtKm: form.performedAtKm ?? undefined,
-        performedAtDate: form.performedAtDate || undefined,
+        performedAtDate: form.performedAtDate ?? undefined,
         nextDueKm: form.nextDueKm ?? undefined,
-        nextDueDate: form.nextDueDate || undefined,
+        nextDueDate: form.nextDueDate ?? undefined,
         cost: form.cost ?? undefined,
         provider: form.provider || undefined,
         invoiceUrl: this.pendingInvoiceUrl || undefined,

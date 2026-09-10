@@ -126,6 +126,7 @@
     "confirmDelete": "Delete this client and the documents they uploaded? This cannot be undone."
   },
   "common": {
+    "accept": "OK",
     "all": "All",
     "back": "Back",
     "cancel": "Cancel",
@@ -150,6 +151,7 @@
       "uploadFromGallery": "Upload from gallery"
     },
     "refresh": "Refresh",
+    "reload": "Reload",
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
@@ -619,7 +621,9 @@
     "reservations": "Reservations",
     "settings": "Settings",
     "vehicles": "Vehicles",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "collaborators": "Partners",
+    "events": "Events"
   },
   "payments": {
     "actions": {
@@ -1454,6 +1458,181 @@
     "rectifiedBase": "Corrected base",
     "rectifiedVat": "Corrected VAT",
     "recipientCountry": "Recipient country",
-    "recipientCountryHint": "Their document does not say which country they are from, so it must be declared. The tax agency rejects the record without it, and an issued invoice cannot be corrected."
+    "recipientCountryHint": "Their document does not say which country they are from, so it must be declared. The tax agency rejects the record without it, and an issued invoice cannot be corrected.",
+    "filters": {
+      "allKinds": "All",
+      "allYears": "All",
+      "clear": "Clear filters",
+      "from": "From",
+      "kind": "Type",
+      "noResults": "No invoice matches the filter",
+      "results": "invoices",
+      "to": "To",
+      "year": "Year"
+    }
+  },
+  "collaborators": {
+    "adjustedTo": "adjusted to",
+    "allYears": "All years",
+    "amountUpdated": "Amount updated",
+    "assign": "Assign",
+    "assignHint": "Pick the booking they brought in. The commission uses their percentage and is then frozen: raising it tomorrow will not move this sale.",
+    "assignSale": "Assign sale",
+    "byYear": "Totals by year",
+    "calculatedIs": "The percentage gives",
+    "cancelledByReservation": "The booking was cancelled",
+    "cancelledTotal": "Cancelled",
+    "clearPeriod": "Clear filter",
+    "commissionCount": "commission",
+    "commissionsCount": "commissions",
+    "confirmDelete": {
+      "title": "Delete this partner?",
+      "message": "Their record will be removed. This cannot be undone."
+    },
+    "confirmPay": {
+      "title": "Mark as paid?",
+      "message": "A paid commission cannot be set back to outstanding."
+    },
+    "confirmSettle": "Mark as paid",
+    "deleted": "Partner deleted",
+    "edit": "Edit partner",
+    "editAmount": "Change the amount",
+    "empty": "No partners yet. Add the first one to start assigning sales.",
+    "errors": {
+      "loadFailed": "Could not load partners",
+      "saveFailed": "Could not save"
+    },
+    "fields": {
+      "active": "Active (appears when assigning new sales)",
+      "adjustmentPlaceholder": "Rounded",
+      "adjustmentReason": "Reason (optional)",
+      "amount": "Amount to pay",
+      "commissionHint": "On the booking net amount, excluding VAT. This is the default: each sale freezes its own.",
+      "commissionPercent": "Commission",
+      "email": "Email",
+      "from": "From",
+      "method": "Payment method",
+      "name": "Name",
+      "note": "Note (optional)",
+      "notes": "Notes",
+      "phone": "Phone",
+      "reservation": "Booking",
+      "taxId": "Tax ID",
+      "to": "To",
+      "year": "Year"
+    },
+    "generated": "Generated",
+    "generatedLower": "generated",
+    "inPeriod": "In this period",
+    "inactive": "Inactive",
+    "new": "New partner",
+    "noAssignable": "No bookings available to assign. Only ones that are not cancelled, have a net amount, and are not already assigned show up here.",
+    "noSales": "This partner has no sales assigned yet.",
+    "noSalesInPeriod": "No sales in that period.",
+    "notFound": "Partner not found",
+    "ofNet": "of the net amount",
+    "paid": "Commission marked as paid",
+    "paidLower": "paid",
+    "paidTotal": "Already paid",
+    "paymentHistory": "Payments made",
+    "paymentMethods": {
+      "cash": "Cash",
+      "transfer": "Bank transfer"
+    },
+    "pending": "Outstanding",
+    "pendingLower": "outstanding",
+    "problems": {
+      "alreadyAssigned": "That booking is already assigned to a partner",
+      "alreadyPaid": "That commission was already paid",
+      "amountInvalid": "That amount is not a number",
+      "amountNegative": "The amount cannot be negative",
+      "amountRequired": "Enter an amount",
+      "collaboratorInactive": "That partner is inactive: new sales cannot be assigned to them",
+      "collaboratorRequired": "Choose a partner",
+      "emailInvalid": "That email does not look valid",
+      "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead",
+      "nameRequired": "Enter the partner name",
+      "percentRequired": "Enter a commission percentage above zero",
+      "percentTooHigh": "More than 50 % is not a commission. Check the figure",
+      "reservationCancelled": "That booking is cancelled and earns no commission",
+      "reservationRequired": "Choose a booking",
+      "reservationWithoutNet": "That booking has no net amount, so there is nothing to calculate on",
+      "saleCancelled": "That commission is cancelled",
+      "saleNotFound": "That commission was not found"
+    },
+    "saleAssigned": "Sale assigned",
+    "sales": "Sales and commission",
+    "salesCount": "sales",
+    "saved": "Partner saved",
+    "settleAll": "Settle everything outstanding",
+    "settleHint": "Marks every outstanding commission for this partner as paid, in one go.",
+    "settled": "Commissions settled",
+    "status": {
+      "pending": "Outstanding",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "subtitle": "Agents who bring in customers, and the commission owed to them",
+    "title": "Partners",
+    "totalPending": "Total outstanding",
+    "vsCalculated": "versus the calculated amount",
+    "willOwe": "You will owe"
+  },
+  "events": {
+    "alerts": {
+      "contractNotSigned": "The contract is not signed: the car cannot be handed over",
+      "maintenanceOverdue": "Overdue: the car cannot be rented",
+      "invoiceDeadline": "The deadline to issue it is running out"
+    },
+    "categories": {
+      "payment": "Pay",
+      "paperwork": "Record",
+      "purchase": "Buy",
+      "fleet": "Fleet",
+      "other": "Other"
+    },
+    "confirmDelete": {
+      "title": "Delete this reminder?",
+      "message": "It will be removed. This cannot be undone."
+    },
+    "dayLeft": "day",
+    "daysLate": "overdue",
+    "daysLeft": "days",
+    "editReminder": "Edit reminder",
+    "empty": "Nothing due in this window.",
+    "errors": {
+      "loadFailed": "Could not load the events",
+      "saveFailed": "Could not save the reminder"
+    },
+    "fields": {
+      "title": "What needs doing",
+      "titlePlaceholder": "Buy air fresheners for every car",
+      "category": "Type",
+      "dueDate": "Date",
+      "notes": "Notes"
+    },
+    "horizon": "Window",
+    "horizons": {
+      "0": "Today",
+      "7": "7 days",
+      "30": "30 days"
+    },
+    "markDone": "Mark as done",
+    "newReminder": "New reminder",
+    "overdueCount": "still open and overdue",
+    "problems": {
+      "titleAndDateRequired": "The text and the date are both needed"
+    },
+    "showDone": "Show completed too",
+    "sources": {
+      "pickup": "Pick-up",
+      "return": "Return",
+      "maintenance": "Maintenance",
+      "invoiceDeadline": "Invoice deadline",
+      "reminder": "Reminder"
+    },
+    "subtitle": "Everything that needs doing, in one place",
+    "title": "Upcoming events",
+    "today": "Today"
   }
 }

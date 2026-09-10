@@ -126,6 +126,7 @@
     "confirmDelete": "Ștergi acest client și documentele pe care le-a încărcat? Nu se poate anula."
   },
   "common": {
+    "accept": "Accept",
     "all": "Toate",
     "back": "Înapoi",
     "cancel": "Anulează",
@@ -150,6 +151,7 @@
       "uploadFromGallery": "Încarcă din galerie"
     },
     "refresh": "Reîmprospătează",
+    "reload": "Reîncarcă",
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
@@ -619,7 +621,9 @@
     "reservations": "Rezervări",
     "settings": "Setări",
     "vehicles": "Vehicule",
-    "invoices": "Facturi"
+    "invoices": "Facturi",
+    "collaborators": "Colaboratori",
+    "events": "Evenimente"
   },
   "payments": {
     "actions": {
@@ -1454,6 +1458,181 @@
     "rectifiedBase": "Bază stornată",
     "rectifiedVat": "TVA stornat",
     "recipientCountry": "Țara destinatarului",
-    "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta."
+    "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta.",
+    "filters": {
+      "allKinds": "Toate",
+      "allYears": "Toate",
+      "clear": "Șterge filtrele",
+      "from": "De la",
+      "kind": "Tip",
+      "noResults": "Nicio factură nu corespunde filtrului",
+      "results": "facturi",
+      "to": "Până la",
+      "year": "An"
+    }
+  },
+  "collaborators": {
+    "adjustedTo": "ajustat la",
+    "allYears": "Toți anii",
+    "amountUpdated": "Sumă actualizată",
+    "assign": "Atribuie",
+    "assignHint": "Alege rezervarea pe care a adus-o. Comisionul se calculează cu procentul lui și rămâne înghețat: dacă îi crești procentul mâine, această vânzare nu se schimbă.",
+    "assignSale": "Atribuie vânzare",
+    "byYear": "Cumulat pe an",
+    "calculatedIs": "Procentul dă",
+    "cancelledByReservation": "Rezervarea a fost anulată",
+    "cancelledTotal": "Anulat",
+    "clearPeriod": "Șterge filtrul",
+    "commissionCount": "comision",
+    "commissionsCount": "comisioane",
+    "confirmDelete": {
+      "title": "Ștergi acest colaborator?",
+      "message": "Fișa lui se șterge. Nu se poate anula."
+    },
+    "confirmPay": {
+      "title": "Marchezi ca plătit?",
+      "message": "Un comision plătit nu poate fi pus înapoi ca restant."
+    },
+    "confirmSettle": "Marchează ca plătit",
+    "deleted": "Colaborator șters",
+    "edit": "Editează colaboratorul",
+    "editAmount": "Schimbă suma",
+    "empty": "Încă nu există colaboratori. Adaugă-l pe primul ca să îi poți atribui vânzări.",
+    "errors": {
+      "loadFailed": "Nu s-au putut încărca colaboratorii",
+      "saveFailed": "Nu s-a putut salva"
+    },
+    "fields": {
+      "active": "Activ (apare la atribuirea de vânzări noi)",
+      "adjustmentPlaceholder": "Rotunjire",
+      "adjustmentReason": "Motiv (opțional)",
+      "amount": "Sumă de plată",
+      "commissionHint": "Din valoarea netă a rezervării, fără TVA. Este valoarea implicită: fiecare vânzare o îngheață pe a sa.",
+      "commissionPercent": "Comision",
+      "email": "E-mail",
+      "from": "De la",
+      "method": "Modalitate de plată",
+      "name": "Nume",
+      "note": "Notă (opțional)",
+      "notes": "Notițe",
+      "phone": "Telefon",
+      "reservation": "Rezervare",
+      "taxId": "CUI / CNP",
+      "to": "Până la",
+      "year": "An"
+    },
+    "generated": "Generat",
+    "generatedLower": "generat",
+    "inPeriod": "În perioadă",
+    "inactive": "Inactiv",
+    "new": "Colaborator nou",
+    "noAssignable": "Nu există rezervări disponibile. Apar doar cele care nu sunt anulate, au valoare netă și nu sunt deja atribuite altui colaborator.",
+    "noSales": "Acest colaborator nu are încă nicio vânzare atribuită.",
+    "noSalesInPeriod": "Nicio vânzare în acea perioadă.",
+    "notFound": "Colaboratorul nu a fost găsit",
+    "ofNet": "din valoarea netă",
+    "paid": "Comision marcat ca plătit",
+    "paidLower": "plătit",
+    "paidTotal": "Deja plătit",
+    "paymentHistory": "Plăți efectuate",
+    "paymentMethods": {
+      "cash": "Numerar",
+      "transfer": "Transfer bancar"
+    },
+    "pending": "De plată",
+    "pendingLower": "de plată",
+    "problems": {
+      "alreadyAssigned": "Acea rezervare este deja atribuită unui colaborator",
+      "alreadyPaid": "Acel comision era deja plătit",
+      "amountInvalid": "Acea sumă nu este un număr",
+      "amountNegative": "Suma nu poate fi negativă",
+      "amountRequired": "Introdu o sumă",
+      "collaboratorInactive": "Acel colaborator este inactiv: nu i se pot atribui vânzări noi",
+      "collaboratorRequired": "Alege un colaborator",
+      "emailInvalid": "Acel e-mail nu pare valid",
+      "hasSales": "Nu se poate șterge: are vânzări atribuite. Marchează-l inactiv în schimb",
+      "nameRequired": "Introdu numele colaboratorului",
+      "percentRequired": "Introdu un procent de comision mai mare decât zero",
+      "percentTooHigh": "Peste 50 % nu este un comision. Verifică cifra",
+      "reservationCancelled": "Acea rezervare este anulată și nu generează comision",
+      "reservationRequired": "Alege o rezervare",
+      "reservationWithoutNet": "Acea rezervare nu are valoare netă, deci nu există bază de calcul",
+      "saleCancelled": "Acel comision este anulat",
+      "saleNotFound": "Acel comision nu a fost găsit"
+    },
+    "saleAssigned": "Vânzare atribuită",
+    "sales": "Vânzări și comisioane",
+    "salesCount": "vânzări",
+    "saved": "Colaborator salvat",
+    "settleAll": "Achită tot ce este de plată",
+    "settleHint": "Marchează ca plătite toate comisioanele restante ale acestui colaborator, dintr-o dată.",
+    "settled": "Comisioane achitate",
+    "status": {
+      "pending": "De plată",
+      "paid": "Plătit",
+      "cancelled": "Anulat"
+    },
+    "subtitle": "Agenți care aduc clienți și comisioanele care li se datorează",
+    "title": "Colaboratori",
+    "totalPending": "Total de plată",
+    "vsCalculated": "față de cât a ieșit calculat",
+    "willOwe": "I se va datora"
+  },
+  "events": {
+    "alerts": {
+      "contractNotSigned": "Contractul nu este semnat: mașina nu poate fi predată",
+      "maintenanceOverdue": "Expirat: mașina nu poate fi închiriată",
+      "invoiceDeadline": "Se apropie termenul de emitere"
+    },
+    "categories": {
+      "payment": "De plătit",
+      "paperwork": "De înregistrat",
+      "purchase": "De cumpărat",
+      "fleet": "Flotă",
+      "other": "Altele"
+    },
+    "confirmDelete": {
+      "title": "Ștergi acest memento?",
+      "message": "Se șterge. Nu se poate anula."
+    },
+    "dayLeft": "zi",
+    "daysLate": "întârziere",
+    "daysLeft": "zile",
+    "editReminder": "Editează mementoul",
+    "empty": "Nimic de făcut în acest interval.",
+    "errors": {
+      "loadFailed": "Nu s-au putut încărca evenimentele",
+      "saveFailed": "Nu s-a putut salva mementoul"
+    },
+    "fields": {
+      "title": "Ce trebuie făcut",
+      "titlePlaceholder": "Cumpără odorizante pentru toate mașinile",
+      "category": "Tip",
+      "dueDate": "Data",
+      "notes": "Notițe"
+    },
+    "horizon": "Interval",
+    "horizons": {
+      "0": "Azi",
+      "7": "7 zile",
+      "30": "30 de zile"
+    },
+    "markDone": "Marchează ca făcut",
+    "newReminder": "Memento nou",
+    "overdueCount": "nerezolvate și deja scadente",
+    "problems": {
+      "titleAndDateRequired": "Sunt necesare textul și data"
+    },
+    "showDone": "Arată și ce este făcut",
+    "sources": {
+      "pickup": "Predare",
+      "return": "Returnare",
+      "maintenance": "Mentenanță",
+      "invoiceDeadline": "Termen factură",
+      "reminder": "Memento"
+    },
+    "subtitle": "Tot ce trebuie făcut, într-un singur loc",
+    "title": "Evenimente apropiate",
+    "today": "Azi"
   }
 }

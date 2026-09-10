@@ -1,0 +1,167 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>{{ 'events.title' | translate }}</h1>
+      <p class="subtitle">{{ 'events.subtitle' | translate }}</p>
+    </div>
+    <button class="btn-primary" type="button" (click)="newReminder()">
+      <i class="pi pi-plus"></i>
+      {{ 'events.newReminder' | translate }}
+    </button>
+  </header>
+
+  <div class="controls">
+    <!-- Los tres horizontes. Por defecto 7 días: es lo que se preparó con
+         Dorel, y «hoy» está a un clic para el día que solo importa hoy. -->
+    <div class="horizons" role="group" [attr.aria-label]="'events.horizon' | translate">
+      @for (h of horizons; track h) {
+        <button type="button" class="horizon" [class.active]="horizon() === h"
+          (click)="setHorizon(h)">
+          {{ 'events.horizons.' + h | translate }}
+        </button>
+      }
+    </div>
+
+    <label class="checkbox-item plain">
+      <input type="checkbox" [ngModel]="showDone()" (ngModelChange)="showDone.set($event)"
+        name="showDone" />
+      <span>{{ 'events.showDone' | translate }}</span>
+    </label>
+
+    <button class="btn-ghost reload" type="button" (click)="load()">
+      <i class="pi pi-refresh"></i>
+      {{ 'common.reload' | translate }}
+    </button>
+  </div>
+
+  <!-- ⚠️ Lo vencido se cuenta arriba y en rojo. Está mezclado en la lista con
+       todo lo demás, y sin este contador se pierde entre lo que aún no urge. -->
+  @if (overdue() > 0) {
+    <p class="overdue-banner">
+      <i class="pi pi-exclamation-triangle"></i>
+      {{ overdue() }} {{ 'events.overdueCount' | translate }}
+    </p>
+  }
+
+  <!-- Alta y edición de un recordatorio -->
+  @if (showForm()) {
+    <div class="card">
+      <h2>{{ (editingId ? 'events.editReminder' : 'events.newReminder') | translate }}</h2>
+
+      <div class="form-group">
+        <label class="required" for="title">{{ 'events.fields.title' | translate }}</label>
+        <input type="text" id="title" class="form-control" [(ngModel)]="form.title" name="title"
+          [placeholder]="'events.fields.titlePlaceholder' | translate" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category">{{ 'events.fields.category' | translate }}</label>
+          <select id="category" class="form-control" [(ngModel)]="form.category" name="category">
+            @for (c of categories; track c) {
+              <option [value]="c">{{ categoryLabels[c] | translate }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="required" for="dueDate">{{ 'events.fields.dueDate' | translate }}</label>
+          <input type="date" id="dueDate" class="form-control" [(ngModel)]="form.dueDate"
+            name="dueDate" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">{{ 'events.fields.notes' | translate }}</label>
+        <textarea id="notes" class="form-control" rows="2" [(ngModel)]="form.notes"
+          name="notes"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-secondary" type="button" (click)="showForm.set(false)">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button class="btn-primary" type="button" [disabled]="saving()" (click)="saveReminder()">
+          @if (saving()) { <i class="pi pi-spin pi-spinner"></i> }
+          {{ 'common.save' | translate }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="empty">{{ 'common.loading' | translate }}</p>
+  } @else if (!events().length) {
+    <div class="empty">
+      <i class="pi pi-check-circle"></i>
+      <p>{{ 'events.empty' | translate }}</p>
+    </div>
+  } @else {
+    <ul class="event-list">
+      @for (e of events(); track e.key) {
+        <li class="event" [class.done]="e.done" [class.overdue]="days(e) < 0"
+          [class.clickable]="!!e.link" (click)="open(e)">
+
+          <!-- Los días que faltan, que es lo primero que se mira. Se cuentan
+               por calendario: «mañana» es 1 aunque falten diez horas. -->
+          <div class="when">
+            @if (days(e) < 0) {
+              <span class="days late">{{ -days(e) }}</span>
+              <span class="unit">{{ 'events.daysLate' | translate }}</span>
+            } @else if (days(e) === 0) {
+              <span class="today">{{ 'events.today' | translate }}</span>
+            } @else {
+              <span class="days">{{ days(e) }}</span>
+              <!-- ⚠️ «1 días» no. El plural no es añadir una `s` y aquí se lee
+                   en cada fila. -->
+              <span class="unit">
+                {{ (days(e) === 1 ? 'events.dayLeft' : 'events.daysLeft') | translate }}
+              </span>
+            }
+            <span class="date">{{ e.date | date: 'dd/MM' }}</span>
+          </div>
+
+          <div class="icon">
+            @if (e.source === 'reminder' && e.category) {
+              <i [class]="categoryIcons[e.category]"></i>
+            } @else {
+              <i class="pi" [class.pi-arrow-circle-up]="e.source === 'pickup'"
+                [class.pi-arrow-circle-down]="e.source === 'return'"
+                [class.pi-wrench]="e.source === 'maintenance'"
+                [class.pi-receipt]="e.source === 'invoiceDeadline'"></i>
+            }
+          </div>
+
+          <div class="what">
+            <span class="kind">{{ 'events.sources.' + e.source | translate }}</span>
+            <span class="title">{{ e.title }}</span>
+            @if (e.detail) {
+              <span class="detail">{{ e.detail }}</span>
+            }
+            @if (e.alert) {
+              <span class="alert">{{ e.alert | translate }}</span>
+            }
+          </div>
+
+          <!-- Solo los recordatorios se marcan y se borran: lo derivado se
+               resuelve donde vive, no desde aquí. -->
+          @if (e.reminderId) {
+            <div class="actions">
+              <button class="btn-icon" type="button" (click)="toggleDone(e, $event)"
+                [attr.aria-label]="'events.markDone' | translate">
+                <i class="pi" [class.pi-check-circle]="!e.done" [class.pi-undo]="e.done"></i>
+              </button>
+              <button class="btn-icon" type="button" (click)="editReminder(e, $event)"
+                [attr.aria-label]="'common.edit' | translate">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button class="btn-icon" type="button" (click)="removeReminder(e, $event)"
+                [attr.aria-label]="'common.delete' | translate">
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -126,6 +126,7 @@
     "confirmDelete": "¿Borrar este cliente y los documentos que subió? No se puede deshacer."
   },
   "common": {
+    "accept": "Aceptar",
     "all": "Todos",
     "back": "Volver",
     "cancel": "Cancelar",
@@ -150,6 +151,7 @@
       "uploadFromGallery": "Subir desde galería"
     },
     "refresh": "Actualizar",
+    "reload": "Recargar",
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
@@ -619,7 +621,9 @@
     "reservations": "Reservas",
     "settings": "Ajustes",
     "vehicles": "Vehículos",
-    "invoices": "Facturas"
+    "invoices": "Facturas",
+    "collaborators": "Colaboradores",
+    "events": "Eventos"
   },
   "payments": {
     "actions": {
@@ -1454,6 +1458,181 @@
     "rectifiedBase": "Base rectificada",
     "rectifiedVat": "Cuota rectificada",
     "recipientCountry": "País del destinatario",
-    "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir."
+    "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir.",
+    "filters": {
+      "allKinds": "Todos",
+      "allYears": "Todos",
+      "clear": "Quitar filtros",
+      "from": "Desde",
+      "kind": "Tipo",
+      "noResults": "Ninguna factura coincide con el filtro",
+      "results": "facturas",
+      "to": "Hasta",
+      "year": "Año"
+    }
+  },
+  "collaborators": {
+    "adjustedTo": "ajustado a",
+    "allYears": "Todos los años",
+    "amountUpdated": "Importe actualizado",
+    "assign": "Asignar",
+    "assignHint": "Elige la reserva que trajo. La comisión se calcula con su porcentaje y queda congelada: subirle el porcentaje mañana no moverá esta venta.",
+    "assignSale": "Asignar venta",
+    "byYear": "Acumulado por año",
+    "calculatedIs": "El porcentaje da",
+    "cancelledByReservation": "La reserva se canceló",
+    "cancelledTotal": "Anulado",
+    "clearPeriod": "Quitar filtro",
+    "commissionCount": "comisión",
+    "commissionsCount": "comisiones",
+    "confirmDelete": {
+      "title": "¿Eliminar este colaborador?",
+      "message": "Se borra su ficha. No se puede deshacer."
+    },
+    "confirmPay": {
+      "title": "¿Marcar como pagada?",
+      "message": "Una comisión pagada no se puede volver a poner como pendiente."
+    },
+    "confirmSettle": "Marcar como pagado",
+    "deleted": "Colaborador eliminado",
+    "edit": "Editar colaborador",
+    "editAmount": "Cambiar el importe",
+    "empty": "Todavía no hay colaboradores. Da de alta al primero para poder asignarle ventas.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los colaboradores",
+      "saveFailed": "No se pudo guardar"
+    },
+    "fields": {
+      "active": "Activo (sale al asignar ventas nuevas)",
+      "adjustmentPlaceholder": "Redondeo",
+      "adjustmentReason": "Motivo (opcional)",
+      "amount": "Importe a pagar",
+      "commissionHint": "Sobre el neto de la reserva, sin IVA. Es el valor por defecto: cada venta congela el suyo.",
+      "commissionPercent": "Comisión",
+      "email": "Correo",
+      "from": "Desde",
+      "method": "Forma de pago",
+      "name": "Nombre",
+      "note": "Nota (opcional)",
+      "notes": "Notas",
+      "phone": "Teléfono",
+      "reservation": "Reserva",
+      "taxId": "NIF",
+      "to": "Hasta",
+      "year": "Año"
+    },
+    "generated": "Generado",
+    "generatedLower": "generado",
+    "inPeriod": "En el periodo",
+    "inactive": "De baja",
+    "new": "Nuevo colaborador",
+    "noAssignable": "No hay reservas disponibles para asignar. Solo salen las que no están canceladas, tienen neto y no están ya asignadas a otro colaborador.",
+    "noSales": "Este colaborador todavía no tiene ninguna venta asignada.",
+    "noSalesInPeriod": "Ninguna venta en ese periodo.",
+    "notFound": "No se encontró el colaborador",
+    "ofNet": "del neto",
+    "paid": "Comisión marcada como pagada",
+    "paidLower": "pagado",
+    "paidTotal": "Ya pagado",
+    "paymentHistory": "Pagos realizados",
+    "paymentMethods": {
+      "cash": "Efectivo",
+      "transfer": "Transferencia"
+    },
+    "pending": "Pendiente",
+    "pendingLower": "pendiente",
+    "problems": {
+      "alreadyAssigned": "Esa reserva ya está asignada a un colaborador",
+      "alreadyPaid": "Esa comisión ya estaba pagada",
+      "amountInvalid": "Ese importe no es un número",
+      "amountNegative": "El importe no puede ser negativo",
+      "amountRequired": "Pon un importe",
+      "collaboratorInactive": "Ese colaborador está de baja: no se le pueden asignar ventas nuevas",
+      "collaboratorRequired": "Elige un colaborador",
+      "emailInvalid": "Ese correo no parece válido",
+      "hasSales": "No se puede borrar: tiene ventas asignadas. Dalo de baja en su lugar",
+      "nameRequired": "Pon el nombre del colaborador",
+      "percentRequired": "Indica un porcentaje de comisión mayor que cero",
+      "percentTooHigh": "Más de un 50 % no es una comisión. Revisa la cifra",
+      "reservationCancelled": "Esa reserva está cancelada y no genera comisión",
+      "reservationRequired": "Elige una reserva",
+      "reservationWithoutNet": "Esa reserva no tiene precio neto, así que no hay base sobre la que calcular",
+      "saleCancelled": "Esa comisión está anulada",
+      "saleNotFound": "No se encontró esa comisión"
+    },
+    "saleAssigned": "Venta asignada",
+    "sales": "Ventas y comisiones",
+    "salesCount": "ventas",
+    "saved": "Colaborador guardado",
+    "settleAll": "Liquidar todo lo pendiente",
+    "settleHint": "Se marcan como pagadas todas las comisiones pendientes de este colaborador, de una vez.",
+    "settled": "Comisiones liquidadas",
+    "status": {
+      "pending": "Pendiente",
+      "paid": "Pagada",
+      "cancelled": "Anulada"
+    },
+    "subtitle": "Comerciales que traen clientes y las comisiones que se les deben",
+    "title": "Colaboradores",
+    "totalPending": "Total pendiente de pagar",
+    "vsCalculated": "sobre lo calculado",
+    "willOwe": "Se le deberá"
+  },
+  "events": {
+    "alerts": {
+      "contractNotSigned": "El contrato no está firmado: no se puede entregar el coche",
+      "maintenanceOverdue": "Vencido: el coche no se puede alquilar",
+      "invoiceDeadline": "Se acaba el plazo para emitirla"
+    },
+    "categories": {
+      "payment": "Pagar",
+      "paperwork": "Apuntar",
+      "purchase": "Comprar",
+      "fleet": "Flota",
+      "other": "Otro"
+    },
+    "confirmDelete": {
+      "title": "¿Eliminar este recordatorio?",
+      "message": "Se borra. No se puede deshacer."
+    },
+    "dayLeft": "día",
+    "daysLate": "de retraso",
+    "daysLeft": "días",
+    "editReminder": "Editar recordatorio",
+    "empty": "Nada pendiente en este plazo.",
+    "errors": {
+      "loadFailed": "No se pudieron cargar los eventos",
+      "saveFailed": "No se pudo guardar el recordatorio"
+    },
+    "fields": {
+      "title": "Qué hay que hacer",
+      "titlePlaceholder": "Comprar ambientadores para todos los coches",
+      "category": "Tipo",
+      "dueDate": "Fecha",
+      "notes": "Notas"
+    },
+    "horizon": "Plazo",
+    "horizons": {
+      "0": "Hoy",
+      "7": "7 días",
+      "30": "30 días"
+    },
+    "markDone": "Marcar como hecho",
+    "newReminder": "Nuevo recordatorio",
+    "overdueCount": "sin hacer y ya vencidos",
+    "problems": {
+      "titleAndDateRequired": "Hace falta el texto y la fecha"
+    },
+    "showDone": "Ver también lo hecho",
+    "sources": {
+      "pickup": "Entrega",
+      "return": "Devolución",
+      "maintenance": "Mantenimiento",
+      "invoiceDeadline": "Plazo de factura",
+      "reminder": "Recordatorio"
+    },
+    "subtitle": "Todo lo que hay que hacer, en un solo sitio",
+    "title": "Eventos próximos",
+    "today": "Hoy"
   }
 }

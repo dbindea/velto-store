@@ -1,0 +1,363 @@
+<div class="page">
+  <button class="btn-ghost back" type="button" (click)="back()">
+    <i class="pi pi-arrow-left"></i>
+    {{ 'collaborators.title' | translate }}
+  </button>
+
+  @if (loading()) {
+    <p class="empty">{{ 'common.loading' | translate }}</p>
+  } @else if (!collaborator()) {
+    <p class="empty">{{ 'collaborators.notFound' | translate }}</p>
+  } @else {
+    @if (collaborator(); as c) {
+      <header class="page-header">
+        <div>
+          <h1>{{ c.name }}</h1>
+          <p class="subtitle">
+            {{ c.commissionPercent }}% {{ 'collaborators.ofNet' | translate }}
+            @if (c.phone) { · {{ c.phone }} }
+            @if (c.email) { · <span class="email">{{ c.email }}</span> }
+            @if (!c.active) { · {{ 'collaborators.inactive' | translate }} }
+          </p>
+        </div>
+        <button class="btn-primary" type="button" [disabled]="!c.active || working()"
+          (click)="startAssign()">
+          <i class="pi pi-plus"></i>
+          {{ 'collaborators.assignSale' | translate }}
+        </button>
+      </header>
+
+      <!-- El balance. Lo pendiente manda; lo cancelado se enseña aparte porque
+           si desapareciera, él preguntaría por una venta que no sale por ningún
+           lado. -->
+      <div class="balance">
+        <div class="figure pending">
+          <span class="label">{{ 'collaborators.pending' | translate }}</span>
+          <span class="value">{{ balance.pending | number: '1.2-2' }} €</span>
+        </div>
+        <div class="figure">
+          <span class="label">{{ 'collaborators.paidTotal' | translate }}</span>
+          <span class="value">{{ balance.paid | number: '1.2-2' }} €</span>
+        </div>
+        @if (balance.cancelled > 0) {
+          <div class="figure muted">
+            <span class="label">{{ 'collaborators.cancelledTotal' | translate }}</span>
+            <span class="value">{{ balance.cancelled | number: '1.2-2' }} €</span>
+          </div>
+        }
+      </div>
+
+      @if (balance.pending > 0) {
+        <button class="btn-secondary settle-btn" type="button" [disabled]="working()"
+          (click)="showSettle.set(true)">
+          <i class="pi pi-wallet"></i>
+          {{ 'collaborators.settleAll' | translate }} ({{ balance.pending | number: '1.2-2' }} €)
+        </button>
+      }
+    }
+
+    <!-- Asignar una venta -->
+    @if (showAssign()) {
+      <div class="card">
+        <h2>{{ 'collaborators.assignSale' | translate }}</h2>
+        <p class="hint">{{ 'collaborators.assignHint' | translate }}</p>
+
+        @if (!assignable().length) {
+          <p class="empty">{{ 'collaborators.noAssignable' | translate }}</p>
+        } @else {
+          <div class="form-group">
+            <label for="reservation">{{ 'collaborators.fields.reservation' | translate }}</label>
+            <select id="reservation" class="form-control" [(ngModel)]="selectedReservationId"
+              name="reservation" (ngModelChange)="onReservationChosen()">
+              <option value="">—</option>
+              @for (r of assignable(); track r.id) {
+                <option [value]="r.id">{{ reservationLabel(r) }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- ⚠️ El importe se propone y se puede cambiar. A veces se paga de
+               más, a veces de menos, y a veces se redondea para que la cuenta
+               sea fácil. Lo calculado se guarda igual, o dentro de seis meses la
+               cifra no cuadraría con nada. -->
+          @if (selectedReservationId) {
+            <div class="form-row">
+              <div class="form-group">
+                <label for="assignAmount">{{ 'collaborators.fields.amount' | translate }}</label>
+                <input type="number" id="assignAmount" class="form-control" min="0" step="0.01"
+                  [(ngModel)]="assignAmount" name="assignAmount" />
+                <p class="field-hint">
+                  {{ 'collaborators.calculatedIs' | translate }}
+                  {{ calculatedCommission | number: '1.2-2' }} €
+                  ({{ collaborator()?.commissionPercent }}%)
+                </p>
+              </div>
+              @if (assignIsAdjusted) {
+                <div class="form-group">
+                  <label for="assignReason">{{ 'collaborators.fields.adjustmentReason' | translate }}</label>
+                  <input type="text" id="assignReason" class="form-control"
+                    [(ngModel)]="assignReason" name="assignReason"
+                    [placeholder]="'collaborators.fields.adjustmentPlaceholder' | translate" />
+                </div>
+              }
+            </div>
+
+            <p class="preview" [class.adjusted]="assignIsAdjusted">
+              {{ 'collaborators.willOwe' | translate }}
+              <strong>{{ assignAmount | number: '1.2-2' }} €</strong>
+              @if (assignIsAdjusted) {
+                <span class="delta">
+                  ({{ assignDelta > 0 ? '+' : '' }}{{ assignDelta | number: '1.2-2' }} €
+                  {{ 'collaborators.vsCalculated' | translate }})
+                </span>
+              }
+            </p>
+          }
+        }
+
+        <div class="form-actions">
+          <button class="btn-secondary" type="button" (click)="showAssign.set(false)">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button class="btn-primary" type="button"
+            [disabled]="!selectedReservationId || working()" (click)="confirmAssign()">
+            @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
+            {{ 'collaborators.assign' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Liquidar todo lo pendiente -->
+    @if (showSettle()) {
+      <div class="card">
+        <h2>{{ 'collaborators.settleAll' | translate }}</h2>
+        <p class="hint">{{ 'collaborators.settleHint' | translate }}</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="settleMethod">{{ 'collaborators.fields.method' | translate }}</label>
+            <select id="settleMethod" class="form-control" [(ngModel)]="settleMethod"
+              name="settleMethod">
+              <option value="transfer">{{ methodLabels['transfer'] | translate }}</option>
+              <option value="cash">{{ methodLabels['cash'] | translate }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="settleNote">{{ 'collaborators.fields.note' | translate }}</label>
+            <input type="text" id="settleNote" class="form-control" [(ngModel)]="settleNote"
+              name="settleNote" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-secondary" type="button" (click)="showSettle.set(false)">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button class="btn-primary" type="button" [disabled]="working()" (click)="settle()">
+            @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
+            {{ 'collaborators.confirmSettle' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Acumulado año a año. Responde a «¿cuánto me trajo cada año?» sin tener
+         que ir tocando el filtro. -->
+    @if (byYear().length > 1) {
+      <h2 class="section-title">{{ 'collaborators.byYear' | translate }}</h2>
+      <table class="year-table">
+        <thead>
+          <tr>
+            <th>{{ 'collaborators.fields.year' | translate }}</th>
+            <th class="num">{{ 'collaborators.generated' | translate }}</th>
+            <th class="num">{{ 'collaborators.paidTotal' | translate }}</th>
+            <th class="num">{{ 'collaborators.pending' | translate }}</th>
+            <th class="num">{{ 'collaborators.salesCount' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (y of byYear(); track y.year) {
+            <tr [class.active]="period().year === y.year" (click)="setYear('' + y.year)">
+              <td>{{ y.year }}</td>
+              <td class="num">{{ y.generated | number: '1.2-2' }} €</td>
+              <td class="num">{{ y.paid | number: '1.2-2' }} €</td>
+              <td class="num" [class.owed]="y.pending > 0">
+                {{ y.pending | number: '1.2-2' }} €
+              </td>
+              <td class="num">{{ y.sales }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <!-- Los pagos que se le han hecho. Sale de las propias comisiones agrupadas
+         por día y forma de pago: no hay una colección de liquidaciones, que
+         sería una segunda fuente de verdad para el mismo euro. -->
+    @if (payments().length) {
+      <h2 class="section-title">{{ 'collaborators.paymentHistory' | translate }}</h2>
+      <ul class="payment-list">
+        @for (p of payments(); track p.date.getTime() + (p.method || '')) {
+          <li class="payment">
+            <span class="date">{{ p.date | date: 'dd/MM/yyyy' }}</span>
+            <span class="method">
+              @if (p.method) { {{ methodLabels[p.method] | translate }} }
+            </span>
+            <!-- ⚠️ «1 comisiones» no. El plural no es añadir una `s`, y aquí se
+                 lee en cada línea del histórico. -->
+            <span class="count">
+              {{ p.count }}
+              {{ (p.count === 1 ? 'collaborators.commissionCount' : 'collaborators.commissionsCount') | translate }}
+            </span>
+            <span class="amount">{{ p.amount | number: '1.2-2' }} €</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- Las ventas -->
+    <h2 class="section-title">{{ 'collaborators.sales' | translate }}</h2>
+
+    @if (sales().length) {
+      <div class="filters">
+        <label class="filter">
+          <span class="filter-label">{{ 'collaborators.fields.year' | translate }}</span>
+          <select class="filter-control" [value]="period().year ?? ''"
+            (change)="setYear($any($event.target).value)">
+            <option value="">{{ 'collaborators.allYears' | translate }}</option>
+            @for (y of years(); track y) {
+              <option [value]="y">{{ y }}</option>
+            }
+          </select>
+        </label>
+        <label class="filter">
+          <span class="filter-label">{{ 'collaborators.fields.from' | translate }}</span>
+          <input type="date" class="filter-control" [value]="dateInput(period().from)"
+            (change)="setFrom($any($event.target).value)" />
+        </label>
+        <label class="filter">
+          <span class="filter-label">{{ 'collaborators.fields.to' | translate }}</span>
+          <input type="date" class="filter-control" [value]="dateInput(period().to)"
+            (change)="setTo($any($event.target).value)" />
+        </label>
+        @if (filtering()) {
+          <button class="btn-ghost" type="button" (click)="clearPeriod()">
+            <i class="pi pi-times"></i>
+            {{ 'collaborators.clearPeriod' | translate }}
+          </button>
+        }
+      </div>
+
+      <!-- ⚠️ Esto es lo del PERIODO, y por eso lo dice la etiqueta. Lo que se le
+           debe en total está arriba y no cambia al filtrar: lo que se debe se
+           debe, mire uno el año que mire. -->
+      @if (filtering()) {
+        <p class="period-summary">
+          {{ 'collaborators.inPeriod' | translate }}:
+          <strong>{{ summary().generated | number: '1.2-2' }} €</strong>
+          {{ 'collaborators.generatedLower' | translate }} ·
+          {{ summary().paid | number: '1.2-2' }} € {{ 'collaborators.paidLower' | translate }} ·
+          <span [class.owed]="summary().pending > 0">
+            {{ summary().pending | number: '1.2-2' }} € {{ 'collaborators.pendingLower' | translate }}
+          </span>
+        </p>
+      }
+    }
+
+    @if (!sales().length) {
+      <p class="empty">{{ 'collaborators.noSales' | translate }}</p>
+    } @else if (!visibleSales().length) {
+      <div class="empty">
+        <p>{{ 'collaborators.noSalesInPeriod' | translate }}</p>
+        <button class="btn-secondary" type="button" (click)="clearPeriod()">
+          {{ 'collaborators.clearPeriod' | translate }}
+        </button>
+      </div>
+    } @else {
+      <ul class="sale-list">
+        @for (s of visibleSales(); track s.id) {
+          <li class="sale" [class.cancelled]="s.status === 'cancelled'">
+            <div class="what" (click)="openReservation(s.reservationId)">
+              <span class="client">{{ s.reservationSnapshot.clientName }}</span>
+              <span class="meta">
+                {{ s.reservationSnapshot.vehicle }}
+                @if (pickupDate(s); as fecha) {
+                  · {{ fecha | date: 'dd/MM/yyyy' }}
+                }
+              </span>
+              <!-- El neto y el porcentaje CONGELADOS: es lo que explica la
+                   cifra si algún día no cuadra con la ficha actual. -->
+              <span class="basis">
+                {{ s.netAmount | number: '1.2-2' }} € × {{ s.commissionPercent }}%
+                <!-- ⚠️ Si el importe se cambió a mano, se dice AQUÍ con el
+                     calculado al lado. Sin eso, la cifra es un número que dentro
+                     de seis meses no cuadra con nada. -->
+                @if (adjusted(s)) {
+                  <span class="adjusted-note">
+                    = {{ s.calculatedAmount | number: '1.2-2' }} €,
+                    {{ 'collaborators.adjustedTo' | translate }}
+                    {{ s.commissionAmount | number: '1.2-2' }} €
+                    ({{ delta(s) > 0 ? '+' : '' }}{{ delta(s) | number: '1.2-2' }} €)
+                    @if (s.adjustmentReason) {
+                      · {{ s.adjustmentReason }}
+                    }
+                  </span>
+                }
+              </span>
+            </div>
+
+            <!-- Cambiar el importe. Solo mientras está pendiente: una vez
+                 pagada, el dinero salió y reescribirlo cuadraría el balance con
+                 una cifra que nunca se entregó. -->
+            @if (editingAmountId === s.id) {
+              <div class="amount-edit" (click)="$event.stopPropagation()">
+                <input type="number" class="form-control" min="0" step="0.01"
+                  [(ngModel)]="editAmount" name="editAmount" />
+                <input type="text" class="form-control" [(ngModel)]="editReason"
+                  name="editReason"
+                  [placeholder]="'collaborators.fields.adjustmentPlaceholder' | translate" />
+                <button class="btn-ghost" type="button" (click)="cancelEditAmount($event)">
+                  {{ 'common.cancel' | translate }}
+                </button>
+                <button class="btn-primary" type="button" [disabled]="working()"
+                  (click)="saveAmount(s, $event)">
+                  {{ 'common.save' | translate }}
+                </button>
+              </div>
+            } @else {
+              <div class="amount">
+                <span class="value" [class.is-adjusted]="adjusted(s)">
+                  {{ s.commissionAmount | number: '1.2-2' }} €
+                </span>
+                <span class="status" [class]="s.status">
+                  {{ statusLabels[s.status] | translate }}
+                  @if (s.status === 'paid' && s.paidMethod) {
+                    · {{ methodLabels[s.paidMethod] | translate }}
+                  }
+                </span>
+              </div>
+
+              @if (s.status === 'pending') {
+                <div class="pay-actions">
+                  <button class="btn-icon" type="button" (click)="startEditAmount(s, $event)"
+                    [attr.aria-label]="'collaborators.editAmount' | translate">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button class="btn-ghost" type="button" [disabled]="working()"
+                    (click)="paySale(s, 'transfer')">
+                    {{ methodLabels['transfer'] | translate }}
+                  </button>
+                  <button class="btn-ghost" type="button" [disabled]="working()"
+                    (click)="paySale(s, 'cash')">
+                    {{ methodLabels['cash'] | translate }}
+                  </button>
+                </div>
+              }
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

@@ -1,0 +1,262 @@
+.page {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* La deuda total. Va antes que la lista porque es la pregunta con la que se
+   entra aquí, no un resumen de lo que hay debajo. */
+.total-due {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  .label {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--warning-color);
+  }
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+}
+
+/* ⚠️ `.form-control` NO es global: cada formulario declara la suya. Sin esto,
+   los `input` salen sin caja ni borde mientras los `select` de al lado se ven
+   perfectos, porque a esos sí los estiliza `styles.scss`. */
+.form-control {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  /* `minmax(0, …)` no basta si el propio elemento no puede encoger. */
+  min-width: 0;
+
+  label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  &.narrow {
+    max-width: 220px;
+  }
+}
+
+/* El «%» dentro del campo: se escribe 25, no «25 %». */
+.with-suffix {
+  position: relative;
+
+  .suffix {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    pointer-events: none;
+  }
+
+  .form-control {
+    padding-right: 2rem;
+  }
+}
+
+.field-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.collaborator-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.collaborator {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: var(--accent-color);
+  }
+
+  /* Dado de baja: sigue estando, pero no compite por la atención. */
+  &.inactive {
+    opacity: 0.6;
+  }
+}
+
+.who {
+  /* Sin esto, un nombre largo estira la fila entera: el valor por defecto de
+     `min-width` en un flex item es `auto`, que impide encoger. */
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  .name {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+}
+
+.money {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  white-space: nowrap;
+
+  .pending {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--warning-color);
+  }
+
+  .pending-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  .settled {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 6px;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-input);
+  }
+}
+
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Móvil: se recoloca, no se esconde. Los importes y el estado siguen todos ahí. */
+@media (max-width: 560px) {
+  .page {
+    padding: 1rem;
+  }
+
+  .collaborator {
+    flex-wrap: wrap;
+  }
+
+  .money {
+    align-items: flex-start;
+  }
+
+  .actions {
+    margin-left: auto;
+  }
+}

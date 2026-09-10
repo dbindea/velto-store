@@ -51,6 +51,7 @@ export class PrivateLayoutComponent {
   private readonly allMenuItems: MenuItem[] = [
     { path: '/dashboard', iconClass: 'pi pi-home', labelKey: 'menu.dashboard', showInMobile: true },
     { path: '/calendar', iconClass: 'pi pi-calendar', labelKey: 'menu.calendar', showInMobile: true },
+    { path: '/events', iconClass: 'pi pi-bell', labelKey: 'menu.events', showInMobile: true },
     { path: '/reservations', iconClass: 'pi pi-book', labelKey: 'menu.reservations', showInMobile: true },
     { path: '/vehicles', iconClass: 'pi pi-car', labelKey: 'menu.vehicles', showInMobile: false },
     { path: '/clients', iconClass: 'pi pi-users', labelKey: 'menu.clients', showInMobile: false },
@@ -68,6 +69,13 @@ export class PrivateLayoutComponent {
       labelKey: 'menu.invoices',
       showInMobile: false,
       permission: ROUTE_PERMISSIONS['invoices']
+    },
+    {
+      path: '/collaborators',
+      iconClass: 'pi pi-briefcase',
+      labelKey: 'menu.collaborators',
+      showInMobile: false,
+      permission: ROUTE_PERMISSIONS['collaborators']
     },
     { path: '/contracts', iconClass: 'pi pi-file-pdf', labelKey: 'menu.contracts', showInMobile: false },
     { path: '/inspections', iconClass: 'pi pi-check-square', labelKey: 'menu.inspections', showInMobile: false },

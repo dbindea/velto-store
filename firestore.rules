@@ -201,6 +201,43 @@ service cloud.firestore {
       allow read, write: if callerIsAdmin();
     }
 
+    // Recordatorios manuales de la pantalla de Eventos: «comprar
+    // ambientadores», «limpiar coches», «pagar incentivos».
+    //
+    // ⚠️ **Los ve y los escribe todo el equipo**, a diferencia de los
+    // colaboradores. Decisión de Dorel del 10 de septiembre de 2026: es trabajo
+    // que hace su gente, y esconderlo obligaría a decírselo por otra vía —con lo
+    // que la pantalla no serviría de nada. Aquí no hay datos de dueño: lo que sí
+    // los tiene son las comisiones, y esas están cerradas más abajo.
+    match /reminders/{reminderId} {
+      allow read, create, update: if isAuthorized(request.auth.token.email);
+      // Borrar es irreversible: solo administrador, como en el resto.
+      allow delete: if callerIsAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // COLABORADORES
+    // -----------------------------------------------------------------------
+    // Comerciales que traen clientes y cobran comisión. **No son usuarios**: no
+    // entran nunca en la aplicación, son fichas como los clientes. Quien accede
+    // vive en `authorizedUsers` y eso no cambia.
+    //
+    // ⚠️ **Solo administrador**, igual que `expenses` e `invoices`, y por el
+    // mismo motivo: es lo que la empresa PAGA. Saber a quién y cuánto es
+    // información de dueño, no de operación diaria. Si solo se escondiera el
+    // menú, un empleado tendría la lista completa abriendo la consola del
+    // navegador — es exactamente el agujero que tuvo `invoices` el 8 de
+    // septiembre de 2026, cuando el permiso era de admin y la regla no.
+    match /collaborators/{collaboratorId} {
+      allow read, write: if callerIsAdmin();
+    }
+
+    // Las comisiones. Se pueden borrar —a diferencia de una factura, esto no
+    // acredita nada ante nadie: es un registro interno— pero solo el admin.
+    match /collaboratorSales/{saleId} {
+      allow read, write: if callerIsAdmin();
+    }
+
     // contractSigningTokens - NEVER read/write from the client.
     // Only Cloud Functions (admin SDK) can read or write tokens.
     // Public access is via the getContractForSigning / signContract

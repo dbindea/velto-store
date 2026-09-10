@@ -350,6 +350,56 @@ fórmulas**.
 enseñaba tal cual y lo sembraba así en la fila de pago. Todo importe calculado pasa por
 `roundMoney()` antes de mostrarse o escribirse.
 
+### Colaboradores: comisiones que NO son contabilidad
+
+Comerciales que traen clientes y cobran un porcentaje. ⚠️ **No son usuarios y no
+entran nunca**: son fichas, como los clientes. Quien accede vive en
+`authorizedUsers`.
+
+⚠️ **La base de la comisión es el NETO, sin IVA**, y no es un detalle: el IVA no
+es dinero de la empresa, es dinero de Hacienda que la empresa cobra y entrega.
+Comisionando sobre el total se le paga al colaborador un porcentaje de un
+impuesto — 5,25 € de más por cada cien euros con un 21 % y un 25 % de comisión.
+Hay test de que 100 y 121 no dan lo mismo.
+
+⚠️ **El neto y el porcentaje se congelan en cada venta**, como el precio en la
+reserva: subirle la comisión mañana no puede mover lo que se pactó hace tres
+meses. La fila lo enseña («200,00 € × 25%») para poder explicar la cifra después.
+
+Tres reglas más, todas porque esto es dinero que se debe a una persona: una
+reserva **no se asigna dos veces**; si la reserva se cancela la comisión se anula
+**salvo que ya esté pagada** —el dinero salió, y marcarla anulada haría cuadrar
+el balance mintiendo—; y lo anulado **sigue a la vista**, o el colaborador
+preguntará por una venta que aquí no sale.
+
+⚠️ **Es un registro interno**: no genera factura, no entra en VeriFactu y no
+escribe en `expenses`. Decisión de Dorel del 10 de septiembre de 2026. Queda
+anotado en el modelo que una comisión suele ser gasto deducible y que si el
+colaborador es autónomo lo normal es que emita factura con retención de IRPF —
+está preparado para convertir un pago en gasto sin rehacer nada.
+
+### Eventos próximos: se derivan, no se guardan
+
+⚠️ **Una entrega ya está en su reserva y una ITV en su mantenimiento.** Copiarlas
+a una colección de «eventos» sería una segunda fuente de verdad que se queda
+vieja en cuanto alguien mueve una fecha de recogida. Se derivan al pintar; por
+eso hay un botón de recargar y no hay nada que sincronizar.
+
+Lo único que se guarda son los **recordatorios manuales** (`reminders`), porque
+no se deducen de ningún dato: «comprar ambientadores» no está en ninguna parte.
+
+⚠️ **Lo ya vencido entra siempre, se mire el plazo que se mire.** Una ITV que
+caducó hace tres días no deja de importar por haber elegido «hoy». Un filtro
+«entre hoy y dentro de N» la escondería justo cuando más falta hace verla.
+
+⚠️ **Y no se duplica lo que ya se ve donde se trabaja.** El contrato sin firmar
+va *dentro* de la entrega, no como fila aparte: la misma reserva en dos filas
+hace que se lean las dos por encima, y una lista de avisos que se lee por encima
+es peor que no tenerla.
+
+La pantalla la ve **todo el equipo**, sin permiso: «limpiar coches» es trabajo de
+la agencia. Las comisiones no — esas van con `viewCollaborators`.
+
 ### `permissions.util.ts` es la única autoridad sobre quién puede qué
 
 Rol → permisos, en una tabla. El menú y los guards de ruta preguntan ahí; un
@@ -1339,6 +1389,7 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 ```
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
+collaborators  collaboratorSales  reminders
 invoices  invoiceCounters  billingProfiles  verifactuDeclarations
 verifactuSubmissions
 ```

@@ -94,3 +94,9 @@ export {
   // «bloqueado» sería un callejón sin salida.
   retryVerifactuRecord
 } from './invoices/sendVerifactuRecords';
+
+// El resumen de la mañana con lo que hay que preparar para MAÑANA. Existe
+// porque el panel solo avisa si alguien entra, y el día que no se entra es
+// justo el día en que hace falta. Sale a las 9:00 para que quede jornada por
+// delante: a las 20:00 ya no se puede llamar a un cliente que no ha firmado.
+export { sendDailyDigest, previewDailyDigest } from './alerts/sendDailyDigest';
