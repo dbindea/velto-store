@@ -45,6 +45,46 @@ export function commissionAmount(netAmount: number, commissionPercent: number): 
 }
 
 /**
+ * ¿Se le ha cambiado el importe a mano?
+ *
+ * ⚠️ **Se compara con lo calculado, no se deduce del porcentaje.** Recalcular
+ * aquí daría «ajustada» a cualquier venta cuyo porcentaje se haya movido después
+ * en la ficha del colaborador — y lo que se congeló en la venta no cambió.
+ *
+ * Una venta sin `calculatedAmount` es anterior a que el importe fuera editable:
+ * ahí el importe **es** el calculado, así que no está ajustada.
+ */
+export function isAdjusted(sale: CollaboratorSale): boolean {
+  if (typeof sale?.calculatedAmount !== 'number') return false;
+  return roundMoney(sale.calculatedAmount) !== roundMoney(sale.commissionAmount);
+}
+
+/** Cuánto se ha subido (positivo) o bajado (negativo) respecto a lo calculado. */
+export function adjustmentDelta(sale: CollaboratorSale): number {
+  if (!isAdjusted(sale)) return 0;
+  return roundMoney((Number(sale.commissionAmount) || 0) - (Number(sale.calculatedAmount) || 0));
+}
+
+/**
+ * ¿Vale este importe escrito a mano?
+ *
+ * ⚠️ **No se pone tope por arriba a propósito.** Dorel dijo que a veces paga
+ * más, y un límite inventado convertiría un incentivo legítimo en un error que
+ * la pantalla rechaza. Lo que sí se impide es lo que no significa nada: un
+ * importe vacío, negativo o que no es un número. Que una cifra sea rara se ve
+ * —la fila enseña lo calculado al lado—, y verlo es mejor que prohibirlo.
+ */
+export function amountProblem(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') {
+    return 'collaborators.problems.amountRequired';
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 'collaborators.problems.amountInvalid';
+  if (n < 0) return 'collaborators.problems.amountNegative';
+  return null;
+}
+
+/**
  * ¿Se puede asignar esta reserva a un colaborador?
  *
  * ⚠️ **Una reserva cancelada no genera comisión, y tampoco se le asigna una.**

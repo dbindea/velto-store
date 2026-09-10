@@ -430,3 +430,55 @@
     flex-wrap: wrap;
   }
 }
+
+/* Importe cambiado a mano ------------------------------------------------- */
+
+/* Lo calculado, al lado de lo que se paga. Sin esto la cifra ajustada es un
+   número que dentro de seis meses no cuadra con nada. */
+.adjusted-note {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--warning-color);
+}
+
+.amount .value.is-adjusted {
+  /* Se subraya con puntos, no con color: el color ya lo lleva el estado, y dos
+     señales compitiendo en la misma celda no dicen nada. */
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.preview.adjusted {
+  border-left: 3px solid var(--warning-color);
+
+  .delta {
+    color: var(--warning-color);
+    font-weight: 600;
+  }
+}
+
+.amount-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  /* Que no estire la fila: el `min-width` por defecto de un flex item es `auto`. */
+  min-width: 0;
+
+  .form-control {
+    width: auto;
+    min-width: 90px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .amount-edit {
+    width: 100%;
+
+    .form-control {
+      flex: 1 1 100px;
+    }
+  }
+}

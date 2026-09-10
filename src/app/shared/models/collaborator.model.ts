@@ -105,8 +105,29 @@ export interface CollaboratorSale {
   netAmount: number;
   /** El porcentaje aplicado, congelado. */
   commissionPercent: number;
-  /** `netAmount × commissionPercent / 100`, ya redondeado. */
+  /**
+   * **Lo que se le paga.** Es la única cifra que suma en los balances.
+   *
+   * ⚠️ Normalmente es `netAmount × commissionPercent / 100`, pero **se puede
+   * cambiar a mano**: a veces se paga de más, a veces de menos, y a veces se
+   * redondea para que la cuenta sea fácil. Decisión de Dorel del 10 de
+   * septiembre de 2026.
+   */
   commissionAmount: number;
+  /**
+   * Lo que dio el porcentaje, guardado aunque el importe se haya cambiado.
+   *
+   * ⚠️ **Sin esto, un importe ajustado es un número que nadie puede explicar.**
+   * Si se pagan 50 € donde el 25 % de 189 daba 47,25, dentro de seis meses la
+   * cifra no cuadra con nada y no hay forma de saber si fue un acuerdo o un
+   * error. Con las dos delante, la fila se explica sola.
+   *
+   * Ausente en las ventas creadas antes de que el importe fuera editable: ahí
+   * el importe **es** el calculado.
+   */
+  calculatedAmount?: number;
+  /** Por qué se cambió. Opcional: redondear no necesita explicación. */
+  adjustmentReason?: string;
 
   status: CommissionStatus;
 

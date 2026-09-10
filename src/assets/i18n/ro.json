@@ -1472,11 +1472,14 @@
     }
   },
   "collaborators": {
+    "adjustedTo": "ajustat la",
     "allYears": "Toți anii",
+    "amountUpdated": "Sumă actualizată",
     "assign": "Atribuie",
     "assignHint": "Alege rezervarea pe care a adus-o. Comisionul se calculează cu procentul lui și rămâne înghețat: dacă îi crești procentul mâine, această vânzare nu se schimbă.",
     "assignSale": "Atribuie vânzare",
     "byYear": "Cumulat pe an",
+    "calculatedIs": "Procentul dă",
     "cancelledByReservation": "Rezervarea a fost anulată",
     "cancelledTotal": "Anulat",
     "clearPeriod": "Șterge filtrul",
@@ -1493,6 +1496,7 @@
     "confirmSettle": "Marchează ca plătit",
     "deleted": "Colaborator șters",
     "edit": "Editează colaboratorul",
+    "editAmount": "Schimbă suma",
     "empty": "Încă nu există colaboratori. Adaugă-l pe primul ca să îi poți atribui vânzări.",
     "errors": {
       "loadFailed": "Nu s-au putut încărca colaboratorii",
@@ -1500,6 +1504,9 @@
     },
     "fields": {
       "active": "Activ (apare la atribuirea de vânzări noi)",
+      "adjustmentPlaceholder": "Rotunjire",
+      "adjustmentReason": "Motiv (opțional)",
+      "amount": "Sumă de plată",
       "commissionHint": "Din valoarea netă a rezervării, fără TVA. Este valoarea implicită: fiecare vânzare o îngheață pe a sa.",
       "commissionPercent": "Comision",
       "email": "E-mail",
@@ -1535,20 +1542,23 @@
     "pending": "De plată",
     "pendingLower": "de plată",
     "problems": {
+      "alreadyAssigned": "Acea rezervare este deja atribuită unui colaborator",
+      "alreadyPaid": "Acel comision era deja plătit",
+      "amountInvalid": "Acea sumă nu este un număr",
+      "amountNegative": "Suma nu poate fi negativă",
+      "amountRequired": "Introdu o sumă",
+      "collaboratorInactive": "Acel colaborator este inactiv: nu i se pot atribui vânzări noi",
+      "collaboratorRequired": "Alege un colaborator",
+      "emailInvalid": "Acel e-mail nu pare valid",
+      "hasSales": "Nu se poate șterge: are vânzări atribuite. Marchează-l inactiv în schimb",
       "nameRequired": "Introdu numele colaboratorului",
       "percentRequired": "Introdu un procent de comision mai mare decât zero",
       "percentTooHigh": "Peste 50 % nu este un comision. Verifică cifra",
-      "emailInvalid": "Acel e-mail nu pare valid",
-      "collaboratorRequired": "Alege un colaborator",
-      "collaboratorInactive": "Acel colaborator este inactiv: nu i se pot atribui vânzări noi",
-      "reservationRequired": "Alege o rezervare",
       "reservationCancelled": "Acea rezervare este anulată și nu generează comision",
+      "reservationRequired": "Alege o rezervare",
       "reservationWithoutNet": "Acea rezervare nu are valoare netă, deci nu există bază de calcul",
-      "alreadyAssigned": "Acea rezervare este deja atribuită unui colaborator",
-      "alreadyPaid": "Acel comision era deja plătit",
       "saleCancelled": "Acel comision este anulat",
-      "saleNotFound": "Acel comision nu a fost găsit",
-      "hasSales": "Nu se poate șterge: are vânzări atribuite. Marchează-l inactiv în schimb"
+      "saleNotFound": "Acel comision nu a fost găsit"
     },
     "saleAssigned": "Vânzare atribuită",
     "sales": "Vânzări și comisioane",
@@ -1565,6 +1575,7 @@
     "subtitle": "Agenți care aduc clienți și comisioanele care li se datorează",
     "title": "Colaboratori",
     "totalPending": "Total de plată",
+    "vsCalculated": "față de cât a ieșit calculat",
     "willOwe": "I se va datora"
   },
   "events": {

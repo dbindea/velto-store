@@ -21,6 +21,7 @@ import {
 } from '@shared/models/collaborator.model';
 import { Reservation } from '@shared/models/reservation.model';
 import {
+  amountProblem,
   commissionAmount,
   estadoSegunReserva,
   saleProblem,
@@ -28,6 +29,7 @@ import {
 } from '@shared/utils/collaborator.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { hasProblems } from '@shared/utils/form-problems.util';
+import { roundMoney } from '@shared/utils/payment-summary.util';
 
 /**
  * Colaboradores y comisiones.
@@ -151,7 +153,18 @@ export class CollaboratorService {
    * alquiler es pagar dos veces por una venta, y no se nota hasta que alguien
    * suma.
    */
-  async assignSale(collaborator: Collaborator, reservation: Reservation): Promise<string> {
+  async assignSale(
+    collaborator: Collaborator,
+    reservation: Reservation,
+    /**
+     * Lo que se le va a pagar de verdad, si no es lo que dio el porcentaje.
+     *
+     * ⚠️ **El calculado se guarda igual**, no se pisa: sin él, un importe
+     * ajustado es un número que dentro de seis meses no cuadra con nada y no
+     * hay forma de saber si fue un acuerdo o un error.
+     */
+    override?: { amount: number; reason?: string }
+  ): Promise<string> {
     const problema = saleProblem(reservation, collaborator);
     if (problema) throw new Error(problema);
 
@@ -162,6 +175,12 @@ export class CollaboratorService {
 
     const netAmount = Number(reservation.pricingSnapshot?.netPrice) || 0;
     const percent = Number(collaborator.commissionPercent) || 0;
+    const calculado = commissionAmount(netAmount, percent);
+
+    if (override) {
+      const problemaImporte = amountProblem(override.amount);
+      if (problemaImporte) throw new Error(problemaImporte);
+    }
 
     const venta: Omit<CollaboratorSale, 'id'> = {
       collaboratorId: collaborator.id!,
@@ -181,7 +200,11 @@ export class CollaboratorService {
       },
       netAmount,
       commissionPercent: percent,
-      commissionAmount: commissionAmount(netAmount, percent),
+      // Lo que se paga manda en todos los balances; lo calculado se conserva
+      // para poder explicar la cifra.
+      commissionAmount: override ? roundMoney(Number(override.amount)) : calculado,
+      calculatedAmount: calculado,
+      adjustmentReason: override?.reason?.trim() || undefined,
       status: 'pending',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -190,6 +213,47 @@ export class CollaboratorService {
 
     const ref = await addDoc(this.salesRef, cleanForFirestore(venta) as Record<string, unknown>);
     return ref.id;
+  }
+
+  /**
+   * Cambiar a mano lo que se le va a pagar por una venta.
+   *
+   * ⚠️ **Solo mientras esté PENDIENTE.** Una vez pagada, el dinero salió:
+   * cambiar el importe después reescribiría lo que se le entregó y el balance
+   * cuadraría con una cifra que nunca se pagó. Es la misma razón por la que una
+   * comisión pagada no se «despaga».
+   *
+   * ⚠️ Y `calculatedAmount` **no se toca**: es lo que dio el porcentaje el día
+   * que se creó la venta, y es lo que permite explicar por qué se paga otra
+   * cosa. Pisarlo dejaría el ajuste invisible.
+   */
+  async updateAmount(saleId: string, amount: number, reason?: string): Promise<void> {
+    const problema = amountProblem(amount);
+    if (problema) throw new Error(problema);
+
+    const snap = await getDoc(doc(this.salesRef, saleId));
+    if (!snap.exists()) throw new Error('collaborators.problems.saleNotFound');
+    const venta = snap.data() as CollaboratorSale;
+    if (venta.status === 'paid') throw new Error('collaborators.problems.alreadyPaid');
+    if (venta.status === 'cancelled') throw new Error('collaborators.problems.saleCancelled');
+
+    await updateDoc(
+      doc(this.salesRef, saleId),
+      cleanForFirestore({
+        commissionAmount: roundMoney(Number(amount)),
+        /**
+         * Si la venta es anterior a que el importe fuera editable no tiene
+         * calculado guardado. Se rescata del porcentaje congelado —que sí está—
+         * para que el ajuste se pueda explicar a partir de ahora.
+         */
+        calculatedAmount:
+          typeof venta.calculatedAmount === 'number'
+            ? venta.calculatedAmount
+            : commissionAmount(venta.netAmount, venta.commissionPercent),
+        adjustmentReason: reason?.trim() || undefined,
+        updatedAt: serverTimestamp()
+      }) as Record<string, unknown>
+    );
   }
 
   /**

@@ -19,9 +19,12 @@ import { Reservation } from '@shared/models/reservation.model';
 import {
   ALL_TIME,
   CommissionPeriod,
+  adjustmentDelta,
+  amountProblem,
   balanceOf,
   commissionAmount,
   hasPeriod,
+  isAdjusted,
   periodSummary,
   saleDate,
   salesInPeriod,
@@ -176,6 +179,8 @@ export class CollaboratorDetailComponent implements OnInit {
   async startAssign(): Promise<void> {
     this.showAssign.set(true);
     this.selectedReservationId = '';
+    this.assignAmount = null;
+    this.assignReason = '';
     try {
       const [todas, ventas] = await Promise.all([
         firstValueFrom(this.reservations.getReservations()),
@@ -195,11 +200,83 @@ export class CollaboratorDetailComponent implements OnInit {
     }
   }
 
-  /** Lo que se le pagaría por la reserva elegida, antes de confirmarla. */
-  get previewCommission(): number {
+  /** Lo que da el porcentaje para la reserva elegida. Es la propuesta. */
+  get calculatedCommission(): number {
     const r = this.assignable().find((x) => x.id === this.selectedReservationId);
     const pct = this.collaborator()?.commissionPercent || 0;
     return r ? commissionAmount(Number(r.pricingSnapshot?.netPrice) || 0, pct) : 0;
+  }
+
+  /**
+   * El importe que se va a pagar, con el que se puede jugar antes de crear la
+   * venta: a veces se paga más, a veces menos, y a veces se redondea.
+   *
+   * ⚠️ **Se rellena solo al elegir la reserva y a partir de ahí es del
+   * operador.** Recalcularlo en cada pintado borraría lo que acaba de teclear.
+   */
+  assignAmount: number | null = null;
+  assignReason = '';
+
+  onReservationChosen(): void {
+    this.assignAmount = this.calculatedCommission;
+    this.assignReason = '';
+  }
+
+  /** ¿El importe escrito difiere de lo que da el porcentaje? */
+  get assignIsAdjusted(): boolean {
+    if (this.assignAmount === null) return false;
+    return Math.abs(Number(this.assignAmount) - this.calculatedCommission) >= 0.005;
+  }
+
+  get assignDelta(): number {
+    return Math.round((Number(this.assignAmount || 0) - this.calculatedCommission) * 100) / 100;
+  }
+
+  // --- Cambiar el importe de una venta ya creada ---------------------------
+
+  editingAmountId: string | null = null;
+  editAmount: number | null = null;
+  editReason = '';
+
+  /** ¿Se le cambió el importe a mano? La fila lo dice y enseña el calculado. */
+  adjusted(sale: CollaboratorSale): boolean {
+    return isAdjusted(sale);
+  }
+
+  delta(sale: CollaboratorSale): number {
+    return adjustmentDelta(sale);
+  }
+
+  startEditAmount(sale: CollaboratorSale, e: Event): void {
+    e.stopPropagation();
+    this.editingAmountId = sale.id!;
+    this.editAmount = sale.commissionAmount;
+    this.editReason = sale.adjustmentReason || '';
+  }
+
+  cancelEditAmount(e: Event): void {
+    e.stopPropagation();
+    this.editingAmountId = null;
+  }
+
+  async saveAmount(sale: CollaboratorSale, e: Event): Promise<void> {
+    e.stopPropagation();
+    const problema = amountProblem(this.editAmount);
+    if (problema) {
+      this.notifications.error(problema);
+      return;
+    }
+    this.working.set(true);
+    try {
+      await this.service.updateAmount(sale.id!, Number(this.editAmount), this.editReason);
+      this.editingAmountId = null;
+      this.notifications.success('collaborators.amountUpdated');
+      await this.load(this.collaborator()!.id!);
+    } catch (err) {
+      this.notifications.error(this.errorKeyOf(err));
+    } finally {
+      this.working.set(false);
+    }
   }
 
   /**
@@ -228,7 +305,15 @@ export class CollaboratorDetailComponent implements OnInit {
 
     this.working.set(true);
     try {
-      await this.service.assignSale(ficha, reserva);
+      await this.service.assignSale(
+        ficha,
+        reserva,
+        // Solo se manda si de verdad difiere: una venta sin ajuste no debe
+        // nacer marcada como ajustada.
+        this.assignIsAdjusted
+          ? { amount: Number(this.assignAmount), reason: this.assignReason }
+          : undefined
+      );
       this.notifications.success('collaborators.saleAssigned');
       this.showAssign.set(false);
       await this.load(ficha.id!);

@@ -1472,11 +1472,14 @@
     }
   },
   "collaborators": {
+    "adjustedTo": "adjusted to",
     "allYears": "All years",
+    "amountUpdated": "Amount updated",
     "assign": "Assign",
     "assignHint": "Pick the booking they brought in. The commission uses their percentage and is then frozen: raising it tomorrow will not move this sale.",
     "assignSale": "Assign sale",
     "byYear": "Totals by year",
+    "calculatedIs": "The percentage gives",
     "cancelledByReservation": "The booking was cancelled",
     "cancelledTotal": "Cancelled",
     "clearPeriod": "Clear filter",
@@ -1493,6 +1496,7 @@
     "confirmSettle": "Mark as paid",
     "deleted": "Partner deleted",
     "edit": "Edit partner",
+    "editAmount": "Change the amount",
     "empty": "No partners yet. Add the first one to start assigning sales.",
     "errors": {
       "loadFailed": "Could not load partners",
@@ -1500,6 +1504,9 @@
     },
     "fields": {
       "active": "Active (appears when assigning new sales)",
+      "adjustmentPlaceholder": "Rounded",
+      "adjustmentReason": "Reason (optional)",
+      "amount": "Amount to pay",
       "commissionHint": "On the booking net amount, excluding VAT. This is the default: each sale freezes its own.",
       "commissionPercent": "Commission",
       "email": "Email",
@@ -1535,20 +1542,23 @@
     "pending": "Outstanding",
     "pendingLower": "outstanding",
     "problems": {
+      "alreadyAssigned": "That booking is already assigned to a partner",
+      "alreadyPaid": "That commission was already paid",
+      "amountInvalid": "That amount is not a number",
+      "amountNegative": "The amount cannot be negative",
+      "amountRequired": "Enter an amount",
+      "collaboratorInactive": "That partner is inactive: new sales cannot be assigned to them",
+      "collaboratorRequired": "Choose a partner",
+      "emailInvalid": "That email does not look valid",
+      "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead",
       "nameRequired": "Enter the partner name",
       "percentRequired": "Enter a commission percentage above zero",
       "percentTooHigh": "More than 50 % is not a commission. Check the figure",
-      "emailInvalid": "That email does not look valid",
-      "collaboratorRequired": "Choose a partner",
-      "collaboratorInactive": "That partner is inactive: new sales cannot be assigned to them",
-      "reservationRequired": "Choose a booking",
       "reservationCancelled": "That booking is cancelled and earns no commission",
+      "reservationRequired": "Choose a booking",
       "reservationWithoutNet": "That booking has no net amount, so there is nothing to calculate on",
-      "alreadyAssigned": "That booking is already assigned to a partner",
-      "alreadyPaid": "That commission was already paid",
       "saleCancelled": "That commission is cancelled",
-      "saleNotFound": "That commission was not found",
-      "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead"
+      "saleNotFound": "That commission was not found"
     },
     "saleAssigned": "Sale assigned",
     "sales": "Sales and commission",
@@ -1565,6 +1575,7 @@
     "subtitle": "Agents who bring in customers, and the commission owed to them",
     "title": "Partners",
     "totalPending": "Total outstanding",
+    "vsCalculated": "versus the calculated amount",
     "willOwe": "You will owe"
   },
   "events": {

@@ -68,7 +68,7 @@
           <div class="form-group">
             <label for="reservation">{{ 'collaborators.fields.reservation' | translate }}</label>
             <select id="reservation" class="form-control" [(ngModel)]="selectedReservationId"
-              name="reservation">
+              name="reservation" (ngModelChange)="onReservationChosen()">
               <option value="">—</option>
               @for (r of assignable(); track r.id) {
                 <option [value]="r.id">{{ reservationLabel(r) }}</option>
@@ -76,12 +76,41 @@
             </select>
           </div>
 
-          <!-- ⚠️ La comisión se enseña ANTES de confirmar. Es dinero que se va a
-               deber: verlo después de crearla es enterarse tarde. -->
+          <!-- ⚠️ El importe se propone y se puede cambiar. A veces se paga de
+               más, a veces de menos, y a veces se redondea para que la cuenta
+               sea fácil. Lo calculado se guarda igual, o dentro de seis meses la
+               cifra no cuadraría con nada. -->
           @if (selectedReservationId) {
-            <p class="preview">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="assignAmount">{{ 'collaborators.fields.amount' | translate }}</label>
+                <input type="number" id="assignAmount" class="form-control" min="0" step="0.01"
+                  [(ngModel)]="assignAmount" name="assignAmount" />
+                <p class="field-hint">
+                  {{ 'collaborators.calculatedIs' | translate }}
+                  {{ calculatedCommission | number: '1.2-2' }} €
+                  ({{ collaborator()?.commissionPercent }}%)
+                </p>
+              </div>
+              @if (assignIsAdjusted) {
+                <div class="form-group">
+                  <label for="assignReason">{{ 'collaborators.fields.adjustmentReason' | translate }}</label>
+                  <input type="text" id="assignReason" class="form-control"
+                    [(ngModel)]="assignReason" name="assignReason"
+                    [placeholder]="'collaborators.fields.adjustmentPlaceholder' | translate" />
+                </div>
+              }
+            </div>
+
+            <p class="preview" [class.adjusted]="assignIsAdjusted">
               {{ 'collaborators.willOwe' | translate }}
-              <strong>{{ previewCommission | number: '1.2-2' }} €</strong>
+              <strong>{{ assignAmount | number: '1.2-2' }} €</strong>
+              @if (assignIsAdjusted) {
+                <span class="delta">
+                  ({{ assignDelta > 0 ? '+' : '' }}{{ assignDelta | number: '1.2-2' }} €
+                  {{ 'collaborators.vsCalculated' | translate }})
+                </span>
+              }
             </p>
           }
         }
@@ -261,30 +290,70 @@
                    cifra si algún día no cuadra con la ficha actual. -->
               <span class="basis">
                 {{ s.netAmount | number: '1.2-2' }} € × {{ s.commissionPercent }}%
-              </span>
-            </div>
-
-            <div class="amount">
-              <span class="value">{{ s.commissionAmount | number: '1.2-2' }} €</span>
-              <span class="status" [class]="s.status">
-                {{ statusLabels[s.status] | translate }}
-                @if (s.status === 'paid' && s.paidMethod) {
-                  · {{ methodLabels[s.paidMethod] | translate }}
+                <!-- ⚠️ Si el importe se cambió a mano, se dice AQUÍ con el
+                     calculado al lado. Sin eso, la cifra es un número que dentro
+                     de seis meses no cuadra con nada. -->
+                @if (adjusted(s)) {
+                  <span class="adjusted-note">
+                    = {{ s.calculatedAmount | number: '1.2-2' }} €,
+                    {{ 'collaborators.adjustedTo' | translate }}
+                    {{ s.commissionAmount | number: '1.2-2' }} €
+                    ({{ delta(s) > 0 ? '+' : '' }}{{ delta(s) | number: '1.2-2' }} €)
+                    @if (s.adjustmentReason) {
+                      · {{ s.adjustmentReason }}
+                    }
+                  </span>
                 }
               </span>
             </div>
 
-            @if (s.status === 'pending') {
-              <div class="pay-actions">
-                <button class="btn-ghost" type="button" [disabled]="working()"
-                  (click)="paySale(s, 'transfer')">
-                  {{ methodLabels['transfer'] | translate }}
+            <!-- Cambiar el importe. Solo mientras está pendiente: una vez
+                 pagada, el dinero salió y reescribirlo cuadraría el balance con
+                 una cifra que nunca se entregó. -->
+            @if (editingAmountId === s.id) {
+              <div class="amount-edit" (click)="$event.stopPropagation()">
+                <input type="number" class="form-control" min="0" step="0.01"
+                  [(ngModel)]="editAmount" name="editAmount" />
+                <input type="text" class="form-control" [(ngModel)]="editReason"
+                  name="editReason"
+                  [placeholder]="'collaborators.fields.adjustmentPlaceholder' | translate" />
+                <button class="btn-ghost" type="button" (click)="cancelEditAmount($event)">
+                  {{ 'common.cancel' | translate }}
                 </button>
-                <button class="btn-ghost" type="button" [disabled]="working()"
-                  (click)="paySale(s, 'cash')">
-                  {{ methodLabels['cash'] | translate }}
+                <button class="btn-primary" type="button" [disabled]="working()"
+                  (click)="saveAmount(s, $event)">
+                  {{ 'common.save' | translate }}
                 </button>
               </div>
+            } @else {
+              <div class="amount">
+                <span class="value" [class.is-adjusted]="adjusted(s)">
+                  {{ s.commissionAmount | number: '1.2-2' }} €
+                </span>
+                <span class="status" [class]="s.status">
+                  {{ statusLabels[s.status] | translate }}
+                  @if (s.status === 'paid' && s.paidMethod) {
+                    · {{ methodLabels[s.paidMethod] | translate }}
+                  }
+                </span>
+              </div>
+
+              @if (s.status === 'pending') {
+                <div class="pay-actions">
+                  <button class="btn-icon" type="button" (click)="startEditAmount(s, $event)"
+                    [attr.aria-label]="'collaborators.editAmount' | translate">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button class="btn-ghost" type="button" [disabled]="working()"
+                    (click)="paySale(s, 'transfer')">
+                    {{ methodLabels['transfer'] | translate }}
+                  </button>
+                  <button class="btn-ghost" type="button" [disabled]="working()"
+                    (click)="paySale(s, 'cash')">
+                    {{ methodLabels['cash'] | translate }}
+                  </button>
+                </div>
+              }
             }
           </li>
         }

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_TIME,
+  adjustmentDelta,
+  amountProblem,
   balanceOf,
   commissionAmount,
   estadoSegunReserva,
+  isAdjusted,
   MAX_COMMISSION_PERCENT,
   periodSummary,
   saleDate,
@@ -335,5 +338,86 @@ describe('el histórico de pagos', () => {
 
   it('lo que no está pagado no aparece', () => {
     expect(settlements([venta({ commissionAmount: 50 })])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Importe cambiado a mano
+// ---------------------------------------------------------------------------
+
+describe('el importe cambiado a mano', () => {
+  /** Lo normal: se paga lo que dio el porcentaje. */
+  it('sin ajuste, no se marca como ajustada', () => {
+    const v = venta({ commissionAmount: 47.25, calculatedAmount: 47.25 });
+    expect(isAdjusted(v)).toBe(false);
+    expect(adjustmentDelta(v)).toBe(0);
+  });
+
+  /** El caso de Dorel: redondear 47,25 a 50 para que la cuenta sea fácil. */
+  it('redondear hacia arriba se marca, con su diferencia', () => {
+    const v = venta({ commissionAmount: 50, calculatedAmount: 47.25 });
+    expect(isAdjusted(v)).toBe(true);
+    expect(adjustmentDelta(v)).toBe(2.75);
+  });
+
+  it('pagar menos da diferencia negativa', () => {
+    const v = venta({ commissionAmount: 40, calculatedAmount: 47.25 });
+    expect(adjustmentDelta(v)).toBe(-7.25);
+  });
+
+  /**
+   * ⚠️ **Una venta anterior a que el importe fuera editable no está ajustada.**
+   * Sin `calculatedAmount`, el importe ES el calculado; marcarla llenaría el
+   * histórico de avisos falsos.
+   */
+  it('una venta sin importe calculado guardado no está ajustada', () => {
+    expect(isAdjusted(venta({ commissionAmount: 47.25 }))).toBe(false);
+  });
+
+  /**
+   * ⚠️ Se compara con lo CALCULADO, no se recalcula del porcentaje. Si mañana
+   * se le sube la comisión al colaborador, esta venta no pasa a estar
+   * «ajustada»: lo que se congeló en ella no se ha movido.
+   */
+  it('no se deduce del porcentaje actual del colaborador', () => {
+    const v = venta({ netAmount: 100, commissionPercent: 25, commissionAmount: 25, calculatedAmount: 25 });
+    expect(isAdjusted(v)).toBe(false);
+  });
+
+  it('los balances suman lo que se PAGA, no lo calculado', () => {
+    const b = balanceOf([
+      venta({ commissionAmount: 50, calculatedAmount: 47.25 }),
+      venta({ commissionAmount: 30, calculatedAmount: 33.1 })
+    ]);
+    expect(b.pending).toBe(80);
+  });
+});
+
+describe('qué importe se admite a mano', () => {
+  it('un importe normal, sí', () => {
+    expect(amountProblem(50)).toBeNull();
+    expect(amountProblem('47.25')).toBeNull();
+  });
+
+  /** Cero es válido: una venta que se decide no comisionar. */
+  it('cero también', () => {
+    expect(amountProblem(0)).toBeNull();
+  });
+
+  it('vacío, negativo o no numérico, no', () => {
+    expect(amountProblem('')).toBe('collaborators.problems.amountRequired');
+    expect(amountProblem(null)).toBe('collaborators.problems.amountRequired');
+    expect(amountProblem(-5)).toBe('collaborators.problems.amountNegative');
+    expect(amountProblem('mucho')).toBe('collaborators.problems.amountInvalid');
+  });
+
+  /**
+   * ⚠️ **No hay tope por arriba, y es deliberado.** Dorel dijo que a veces paga
+   * más; un límite inventado convertiría un incentivo legítimo en un error que
+   * la pantalla rechaza. Que una cifra sea rara se ve —la fila enseña lo
+   * calculado al lado—, y verlo es mejor que prohibirlo.
+   */
+  it('pagar mucho más de lo calculado se permite: se ve, no se prohíbe', () => {
+    expect(amountProblem(5000)).toBeNull();
   });
 });
