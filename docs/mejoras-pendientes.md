@@ -60,6 +60,106 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-22 · La remisión a la AEAT, probada contra preproducción — 9 de septiembre de 2026
+
+Emitir y remitir quedan **separados**: `issueInvoice` no llama a la Agencia, y el
+envío reintenta por su cuenta desde `sweepVerifactuRecords` cada cinco minutos.
+Una factura se emite aunque el servicio esté caído; un envío que solo ocurre al
+pulsar un botón depende de que alguien se acuerde, y la norma pide remisión
+inmediata.
+
+**Probado contra `prewww1.aeat.es`, no simulado.** El certificado de representante
+de la FNMT autentica **desde la Cloud Function** —que es lo que entrar en la sede
+con el navegador no demuestra—, las facturas se aceptan con su CSV y la sede
+responde «Encontrada» al cotejar el QR. El barrido programado remitió una factura
+**él solo**, sin que nadie pulsara nada.
+
+### Los cuatro fallos que encontró, y por qué ningún test podía cogerlos
+
+En los cuatro el XML era **válido contra el esquema oficial** y lo que estaba mal
+era qué significaba el campo. Es el patrón a recordar: validar contra el `.xsd` no
+prueba casi nada.
+
+1. **NIF-IVA extranjero en el campo `NIF`** (error `1100`). `NIF` es solo para
+   identificadores españoles; el resto va en `IDOtro` con su país y tipo. El test
+   que lo cubría usaba un NIF **español** como destinatario de una entrega
+   intracomunitaria — una combinación que no existe en la realidad, y por eso
+   pasaba mientras la realidad fallaba.
+2. **Falta el país** cuando el identificador no es un NIF-IVA (error `1111`). El
+   esquema lo declara opcional y el servicio lo exige. Afecta al caso **más
+   común** de un alquiler: un turista con pasaporte. Ahora lo pide el formulario
+   antes de consumir número, porque después no tiene arreglo.
+3. **El registro estaba congelado dentro de una factura inmutable**, así que un
+   registro rechazado no se podía corregir **nunca**: arreglar el código no servía
+   de nada y la cadena se quedaba muerta. Ahora se **reconstruye al enviar** y la
+   huella se **comprueba**, no se copia.
+4. **El QR medía 21,9 mm** y el art. 21 lo fija entre 30×30 y 40×40, con el rótulo
+   «QR tributario:» encima y la frase debajo, ambos a tamaño igual o superior al
+   resto de datos de la factura. Faltaba todo eso.
+
+Y uno más, que salió al reenviar una factura ya registrada: la respuesta de
+**duplicado no trae CSV**, y escribir ese vacío **borraba el acuse** de la
+remisión buena.
+
+### Lo que queda de la prueba
+
+- [ ] Escanear el QR con un **móvil sobre papel impreso**. Es lo único que prueba
+      el tamaño: un lector por software descifra el símbolo aunque esté fuera de
+      norma, así que el test mide milímetros, no descifra.
+- [ ] Una **rectificativa por sustitución** (`S`) y una con **inversión del sujeto
+      pasivo** (`S2`). Validan contra el esquema; falta mandarlas.
+
+### Y una decisión pendiente de Dorel
+
+⚠️ **Una factura con un NIF-IVA que la AEAT no reconozca no se puede remitir
+nunca.** El identificador se valida por formato, pero no se consulta **VIES**, que
+es lo que sostiene de verdad la exención del art. 25. Si el número no está
+registrado, la factura sale bien, el registro se rechaza y esa factura se queda
+sin remitir para siempre — porque no se puede editar. Pasó en desarrollo con
+`2026/0002`. La opción es consultar VIES **antes** de emitir; está sin decidir.
+
+---
+
+## 📋 N-23 · Producción todavía no factura, y ahora lo dice — 9 de septiembre de 2026
+
+⚠️ **El CI despliega hosting, no functions**, así que producción tenía el frontend
+nuevo llamando a functions que allí no existían: «Emitir declaración» sin
+`issueComplianceDeclaration`, y un error al consultar la remisión. Un botón que no
+hace nada es un fallo, y un error donde no hay avería manda a buscar lo que no
+está roto.
+
+Debajo había un hecho que no estaba escrito en ninguna parte: **producción todavía
+no emite facturas**. Ahora es explícito, `VELTO_INVOICING_ENABLED` en
+`functions/.env.<proyecto>`.
+
+⚠️ **No es lo mismo que `VELTO_VERIFACTU_ENABLED`.** Aquella dice si los registros
+se **remiten**; esta, si la aplicación **emite** facturas en este entorno. Son dos
+interruptores y **dos decisiones separadas**, las dos de Dorel.
+
+Y no se deduce de que falte la function: un callable ausente devuelve un error, y
+un error significa «algo va mal», no «esto aún no toca».
+
+**Desplegado a producción** ese mismo día, lo que no escribe facturas:
+`generateInspectionReport` —al que el contrato de producción **ya remite cuatro
+veces**—, `generateReceipt`, `generateProforma` y `getComplianceStatus`. Y
+`documentLink`, que estaba **obsoleto** allí: no conocía los prefijos del parte ni
+del recibo, así que sus enlaces cortos habrían dado 404 nada más generarlos.
+
+### Lo que falta para facturar en producción, en orden
+
+1. Confirmar que **el 1 de enero de 2027 sigue en pie** — ya se aplazó una vez— y
+   que las especificaciones de `docs/aeat/` siguen siendo las vigentes.
+2. `VELTO_INVOICING_ENABLED=true` y desplegar `issueInvoice` e
+   `issueComplianceDeclaration`.
+3. **Emitir la declaración responsable** antes de la primera factura.
+4. `VELTO_VERIFACTU_ENABLED=true` con `ENV=live` y desplegar las cinco de la
+   remisión.
+
+⚠️ El paso 2 es el **punto de no retorno** de `invoices`: la primera factura
+emitida no se puede borrar ni editar.
+
+---
+
 ## 📋 N-21 · Avisos con antelación — pendiente, propuesto el 8 de septiembre de 2026
 
 ⚠️ **Sin esto, el mantenimiento a futuro está muerto.** Es de Dorel y es
