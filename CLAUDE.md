@@ -496,10 +496,68 @@ confunda. Confundirlas **no da un error**: da una cifra creíble y equivocada, q
 es la peor clase de fallo con dinero. Si algún día alguien unifica los dos
 módulos, esta es la razón por la que no debe.
 
+### `analytics.util.ts` es la única autoridad sobre qué cuenta como ingreso
+
+Y es lo más importante del módulo de Informes, por encima de cualquier gráfico:
+una cifra de ingresos mal definida no da un error, da un número creíble y
+equivocado, y a partir de ahí todo lo demás miente igual.
+
+⚠️ **Una fianza NO es un ingreso, y su devolución tampoco.** Es dinero del
+cliente que la empresa custodia y devuelve. El informe anterior sumaba **todo**
+pago cobrado sin mirar su tipo, así que una fianza de 300 € cobrada y devuelta
+contaba **600 €** de «facturación» — 300 al cobrarla y otros 300 al devolverla,
+porque la devolución también es un pago con importe. La **retención** sí es
+ingreso: esa no vuelve.
+
+⚠️ **Las bases no son la misma en todo, y por eso el número lleva al lado qué
+mide.** Los ingresos y los gastos se cuentan **cuando el dinero se mueve**; las
+comisiones de colaborador, **cuando se devengan** aunque no estén pagadas
+(decisión de Dorel, por prudencia: nunca creerse más rico de lo que uno es).
+Mezclar dos criterios es legítimo mientras se diga.
+
+⚠️ **El beneficio se calcula sobre la base SIN IVA.** Restar gastos de un importe
+con IVA sin quitárselo a los ingresos infla el resultado un 21 %. Y esa base es
+**estimada** —un cobro libre no tiene reserva y los cargos extra no llevan
+desglose—, así que la pantalla lo dice: para lo fiscal están las facturas.
+
+Lo pendiente de cobrar y lo pendiente de pagar van **fuera** del beneficio, en su
+propia franja: es dinero que se espera, no que se tiene.
+
+### Los gráficos son propios, y tienen reglas
+
+Tres componentes en `shared/components/charts/` (línea, donut, barras), sin
+dependencia nueva. Lo que hay que respetar al tocarlos o añadir uno:
+
+- **Un solo eje, siempre.** Dos escalas en un mismo dibujo permiten hacer que dos
+  líneas parezcan lo que uno quiera moviendo un cero.
+- **Leyenda con dos o más series y tabla con los mismos números.** Un valor que
+  solo se lee pasando el ratón no existe para quien imprime o va con el teclado.
+- **La paleta se valida con el guion del skill `dataviz`, no a ojo.** El candidato
+  `#33B39E` falló la banda de luminosidad; `#20A48F` pasa. El conjunto actual pasa
+  contra el fondo oscuro (`#14181A`) y el claro.
+- **El color sigue a la entidad, nunca a su posición en un ranking.**
+
+⚠️ **El `viewBox` del gráfico de líneas sigue al ancho real, y no es cosmético.**
+Con 720 unidades metidas en los 358 px de un móvil todo se reduce a la mitad —
+**el texto también**: las etiquetas salían a 5 px. Igualando unidades a píxeles,
+un `font-size="10"` mide 10 px en los dos sitios, y en pantalla estrecha se
+enseñan **menos meses** en vez de los mismos más pequeños.
+
+⚠️ **El elemento del componente es el que entra en la rejilla, no la figura de
+dentro.** `<app-donut-chart>` es `display: inline` por defecto: la celda se
+estiraba y la tarjeta no. Lo arregla `:host { display: block; height: 100% }` en
+`charts.scss`.
+
+⚠️ **Y `.chart` vive en `charts.scss`, encapsulado en los componentes de
+gráfico.** Una plantilla de pantalla que se ponga `class="chart"` no lo alcanza —
+la misma trampa que `.form-control`. Si una tarjeta de fuera necesita esa chapa,
+la declara su propio SCSS.
+
 ### Otros utils
 
 - `payment-summary.util.ts` — resumen financiero, derivado de la colección `payments` (source of truth)
 - `expense.util.ts` — el IVA de los gastos, la mezcla con el mantenimiento y los totales
+- `analytics.util.ts` — los números de Informes (arriba)
 - `reservation-date.util.ts`, `acriss-code.util.ts`
 
 ### Reglas de dominio
