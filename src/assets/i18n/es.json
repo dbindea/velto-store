@@ -1080,6 +1080,7 @@
       "missing": "No hay declaración para la versión que está en uso. Emítela antes de seguir facturando.",
       "mode": "Modalidad",
       "modeVerifactu": "Exclusivamente VERI*FACTU",
+      "notInvoicing": "Este entorno todavía no emite facturas, así que aún no hay nada que declarar. La declaración se emitirá al empezar a facturar aquí.",
       "open": "Abrir PDF",
       "producer": "Productor",
       "system": "Sistema",
@@ -1406,6 +1407,7 @@
     "errors": {
       "alreadyIssued": "Esta factura ya se emitió",
       "cannotDeleteIssued": "Una factura emitida no se puede borrar. Para corregirla, emite una rectificativa.",
+      "invoicingDisabled": "Este entorno todavía no emite facturas.",
       "issueFailed": "No se pudo emitir la factura",
       "loadFailed": "No se pudieron cargar las facturas",
       "proformaFailed": "No se pudo generar la proforma",

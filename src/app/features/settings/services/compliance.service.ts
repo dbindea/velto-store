@@ -60,6 +60,16 @@ export interface ComplianceStatus {
   producerTaxId: string;
   onlyVerifactu: 'S' | 'N';
   multipleTaxpayers: 'S' | 'N';
+  /**
+   * Si **este entorno emite facturas**.
+   *
+   * ⚠️ No es lo mismo que remitir a la AEAT: aquello es
+   * `VELTO_VERIFACTU_ENABLED`, y esto es si la aplicación factura aquí siquiera.
+   * Hoy producción no emite ninguna, así que no hay nada que declarar ni que
+   * remitir — y la pantalla no puede ofrecer botones para ninguna de las dos
+   * cosas, porque un botón que no hace nada es un fallo.
+   */
+  invoicingEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
