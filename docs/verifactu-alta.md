@@ -187,9 +187,9 @@ Lo que queda por decidir, y es tuyo:
 Objetivo: llegar al 1 de enero de 2027 **sin estrenar nada**. Todo esto contra
 `prewww1.aeat.es`, nunca contra producción.
 
-⚠️ **Ejecutado el 9 de septiembre de 2026.** Lo marcado con [x] está comprobado
-contra preproducción de verdad, con facturas emitidas en desarrollo. Lo que
-sigue sin marcar es lo que falta, y está dicho abajo por qué.
+⚠️ **Ejecutado el 9 y el 10 de septiembre de 2026.** Lo marcado con [x] está
+comprobado contra preproducción de verdad, con facturas emitidas en desarrollo.
+Lo que sigue sin marcar es lo que falta, y está dicho abajo por qué.
 
 **Circuito básico**
 
@@ -240,25 +240,30 @@ un rechazo no se propaga en cascada.
 
 - [x] Factura ordinaria `F1` con IVA general.
 - [x] Rectificativa `R1` por diferencias (`I`) con importes negativos.
-- [ ] Rectificativa por sustitución (`S`), con base y cuota rectificadas.
-      Valida contra el esquema; falta mandarla.
+- [x] Rectificativa por sustitución (`S`), con base y cuota rectificadas.
+      `R2026/0002`, aceptada a la primera (CSV `A-KT5UWGGF73M4T3`).
 - [x] Una exenta (`E5`) intracomunitaria, con NIF-IVA extranjero.
-- [ ] Una con inversión del sujeto pasivo (`S2`).
+- [x] Una con inversión del sujeto pasivo (`S2`). **Rechazada la primera vez**
+      con el error `1198`: un `S2` tiene que declarar `TipoImpositivo` y
+      `CuotaRepercutida` **a cero**, no omitirlos como hace una exenta.
+      Corregido y aceptada (CSV `A-3L26WJ8N86VFRJ`).
 - [x] Una con `FechaOperacion` distinta de la expedición.
 
 **Y lo último**
 
 - [x] El **QR encendido** apuntando a preproducción: la sede responde
       **«Encontrada»** con el NIF, el número, la fecha y el importe de la factura
-      `2026/0006`. Falta escanearlo con un móvil sobre papel impreso, que es lo
-      único que prueba el tamaño.
+      `2026/0006`. Y **escaneado con un móvil sobre papel impreso**: funciona
+      (Dorel, 10 de septiembre de 2026). Era lo único que probaba el tamaño de
+      30-40 mm que fija el art. 21.
 - [ ] Solo entonces, `VELTO_VERIFACTU_ENABLED=true` en producción **con tu
       autorización expresa**.
 
 ### Lo que encontró, que es para lo que servía
 
-Cuatro fallos, y **ninguno lo habría cazado un test**: en los cuatro el XML era
-válido contra el esquema oficial y lo que estaba mal era qué significaba.
+**Cinco fallos, y ninguno lo habría cazado un test**: en los cinco el XML era
+válido contra el esquema oficial y lo que estaba mal era qué significaba. Es el
+patrón que resume esta fase — validar contra el `.xsd` no prueba casi nada.
 
 1. **NIF-IVA extranjero en el campo `NIF`** (error `1100`). `NIF` es solo para
    identificadores españoles; el resto va en `IDOtro`. El test que lo cubría
@@ -272,6 +277,15 @@ válido contra el esquema oficial y lo que estaba mal era qué significaba.
 4. **El QR medía 21,9 mm** y el art. 21 lo fija entre 30×30 y 40×40, con la
    leyenda a tamaño igual o superior al resto de datos y el rótulo «QR
    tributario:» encima. Faltaban las tres cosas.
+5. **La inversión del sujeto pasivo omitía tipo y cuota** (error `1198`), cuando
+   un `S2` los quiere **a cero**. Las exentas sí los omiten, y por eso
+   compartían código: a ojo son lo mismo —el cliente no paga IVA en ninguna—,
+   pero en una exenta no hay impuesto del que hablar y en la inversión la
+   operación **sí está sujeta**, sólo que la cuota la declara el destinatario.
+
+Y uno más que salió al reenviar una factura ya registrada: la respuesta de
+**duplicado no trae CSV**, y escribir ese vacío **borraba el acuse** de la
+remisión buena.
 
 ---
 
@@ -306,6 +320,133 @@ haya validado:
       no entra.
 
 Hasta entonces esto sigue siendo «registro guardado», que es otra cosa.
+
+---
+
+## 5 bis. Puesta en producción — el guion del 1 de enero de 2027
+
+Escrito el 10 de septiembre de 2026 a petición de Dorel: **«el 1 de enero
+subiremos los cambios que me dirás a producción, déjalo anotado porque ya te
+preguntaré para emitir en orden»**. Esto es ese orden.
+
+⚠️ **Nada de esto se ejecuta sin que Dorel lo diga**, y el paso 3 es el punto de
+no retorno: la primera factura emitida en producción no se puede borrar ni
+editar.
+
+### Paso 0 — Antes de tocar nada, confirmar que la fecha sigue en pie
+
+⚠️ **Ya se aplazó una vez.** Comprobar que el 1 de enero de 2027 sigue siendo la
+fecha para sociedades, y de paso que los ficheros de [aeat/](aeat/README.md)
+siguen siendo la versión vigente: la AEAT los publica sin dejar rastro de qué
+versión se usó. Si se aplaza, **no se apaga nada de lo que ya funciona** — sólo
+se retrasa este guion.
+
+### Paso 1 — Desplegar el código
+
+```bash
+# Desde master, ya mezclado y con el CI habiendo desplegado hosting.
+npm --prefix functions run build
+node -e "require('./functions/lib/index.js')"   # que el bundle carga
+
+# ⚠️ Por tandas de dos o tres: las trece de golpe agotan la cuota de CPU de
+# Cloud Run y fallan cuatro o seis al azar, con un error que parece del código.
+firebase deploy --only functions:issueInvoice,functions:issueComplianceDeclaration --project prod
+firebase deploy --only functions:getVerifactuStatus,functions:checkVerifactuConnection --project prod
+firebase deploy --only functions:sendVerifactuRecords,functions:retryVerifactuRecord --project prod
+firebase deploy --only functions:sweepVerifactuRecords --project prod   # activa Cloud Scheduler
+
+npm run deploy:prod:rules    # reglas + índices (hace falta el de verifactuSubmissions)
+```
+
+### Paso 2 — Encender la facturación, y comprobar el certificado
+
+En `functions/.env.rentalcar-veltomobility`:
+
+```
+VELTO_INVOICING_ENABLED=true
+VELTO_VERIFACTU_ENABLED=true
+VELTO_VERIFACTU_ENV=live
+```
+
+⚠️ **Cambiar el `.env` actualiza TODAS las functions de producción**, aunque no
+se toque una línea de código: forma parte del hash de despliegue. Otra vez por
+tandas.
+
+Después, **desde la aplicación en producción**, comprobar la conexión antes de
+emitir nada: `checkVerifactuConnection` tiene que decir `handshake: true` contra
+`www1.agenciatributaria.gob.es` y dar los días que le quedan al certificado.
+
+### Paso 3 — La declaración responsable, ANTES de la primera factura
+
+Ajustes › Declaración responsable › **Emitir declaración**. Hace falta una por
+cada versión del sistema, y tiene que existir la de la versión que está
+emitiendo. Una vez emitida **no se puede borrar**.
+
+### Paso 4 — La primera factura, y a partir de ahí en cadena
+
+La serie sale del año, así que la primera será **`2027/0001`**. En producción no
+hay ni una factura ni contador —`issueInvoice` no se ha desplegado nunca allí—,
+así que esa primera nace limpia y su registro se declara `PrimerRegistro`.
+
+⚠️ **A partir de ahí, todas encadenadas y todas remitidas**, que es lo que hace
+que la serie cuadre en la AEAT. No hay nada que hacer para conseguirlo: la
+transacción de emisión escribe la huella y el `chainIndex`, y
+`sweepVerifactuRecords` las manda cada cinco minutos. Lo que **sí** hay que
+vigilar es Ajustes › Remisión a la AEAT: mientras diga `pendientes: 0` la cadena
+está al día.
+
+⚠️ **Las tres facturas de Word no entran en esta serie ni en VeriFactu.** Son de
+otra numeración y anteriores a la obligación; no hay que remitirlas ni
+renumerarlas.
+
+### Paso 5 — Comprobar que la primera llegó
+
+- Ajustes › Remisión a la AEAT: **1 aceptada, 0 pendientes**.
+- Escanear el QR de esa factura: la sede **real** —no `prewww2`— tiene que
+  responder «Encontrada» con el NIF, número, fecha e importe.
+
+⚠️ **Si sale una rechazada, la cadena se para y hay que mirarla.** Es
+deliberado: reintentar un rechazo permanente gasta el límite de envíos sin
+arreglar nada. Se corrige la causa y se pulsa el reintento, que queda anotado
+con quién lo hizo.
+
+### Lo que NO hay que hacer
+
+- **No** desplegar `issueInvoice` a producción «para probar»: la primera factura
+  que se emita allí ya no se puede borrar.
+- **No** emitir facturas con régimen `exempt_eu` ni `reverse_charge` hasta tener
+  el **ROI** concedido (ver más abajo).
+- **No** apagar `VELTO_VERIFACTU_ENABLED` una vez encendido: dejaría facturas
+  emitidas sin remitir y con el QR impreso prometiendo un cotejo que no existe.
+
+---
+
+## 5 ter. El ROI, y por qué bloquea dos regímenes
+
+⚠️ **VELTO no está todavía en el ROI** (Registro de Operadores
+Intracomunitarios, que es lo que da de alta en VIES). Dorel, 10 de septiembre de
+2026: no está ni pedido, y tarda meses. **Aparcado a propósito.**
+
+Mientras no lo esté, hay dos regímenes de la aplicación que **no se deben usar en
+una factura real**, aunque la pantalla los ofrezca y la AEAT acepte el registro
+en preproducción:
+
+| Régimen | Por qué no |
+|---|---|
+| `exempt_eu` — entrega intracomunitaria exenta (art. 25) | La exención se sostiene en que las dos partes estén en VIES |
+| `reverse_charge` — inversión del sujeto pasivo | Necesita NIF-IVA, que es lo que da el ROI |
+
+Hasta entonces, a un cliente de otro Estado miembro se le factura **con IVA
+español**, en régimen general. No es un caso raro de contemplar: es lo que hay
+que hacer sin ROI.
+
+⚠️ **La aplicación NO lo impide hoy**, y es una decisión pendiente: se puede
+añadir una comprobación que bloquee esos dos regímenes mientras el ROI no esté
+concedido. Está sin construir a propósito, porque atarlo a una fecha o a un
+interruptor más sin saber cuándo llega el ROI sería inventarse el dato.
+
+⚠️ **Y esto no es asesoramiento fiscal.** Confirmarlo con la gestoría antes de
+emitir la primera factura a un cliente de otro Estado miembro.
 
 ---
 

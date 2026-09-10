@@ -499,6 +499,16 @@ módulos, esta es la razón por la que no debe.
   ⚠️ Su coste **no tiene desglose de IVA** —se teclea como un importe suelto, sin tipo— y
   por eso en Gastos el bruto no es la suma de bases más impuestos. La pantalla lo dice
   («IVA soportado · sobre 1/3»); igualar los tres números sería inventarse ese IVA.
+- ⚠️ **Sin ROI no se puede facturar exento a otro Estado miembro.** VELTO no está
+  todavía en el Registro de Operadores Intracomunitarios —no está ni pedido a 10
+  de septiembre de 2026, y tarda meses—, y sin él la exención del art. 25 no se
+  sostiene y no hay NIF-IVA con el que aplicar la inversión del sujeto pasivo.
+  Es decir: `exempt_eu` y `reverse_charge` **existen en la aplicación, pasan la
+  validación y la AEAT acepta su registro**, pero no se deben usar en una factura
+  real todavía — a un cliente de otro Estado miembro se le factura con IVA
+  español, en régimen general. **La aplicación no lo impide**: es una decisión
+  pendiente, anotada en [docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 ter,
+  y atarla hoy a un interruptor sería inventarse cuándo llega el ROI.
 - El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
   ⚠️ **`rental_payment` no es un concepto, es «cobrarlo todo de una vez».** No tiene fila
