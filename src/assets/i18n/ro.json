@@ -619,7 +619,8 @@
     "reservations": "Rezervări",
     "settings": "Setări",
     "vehicles": "Vehicule",
-    "invoices": "Facturi"
+    "invoices": "Facturi",
+    "collaborators": "Colaboratori"
   },
   "payments": {
     "actions": {
@@ -1455,5 +1456,86 @@
     "rectifiedVat": "TVA stornat",
     "recipientCountry": "Țara destinatarului",
     "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta."
+  },
+  "collaborators": {
+    "title": "Colaboratori",
+    "subtitle": "Agenți care aduc clienți și comisioanele care li se datorează",
+    "new": "Colaborator nou",
+    "edit": "Editează colaboratorul",
+    "empty": "Încă nu există colaboratori. Adaugă-l pe primul ca să îi poți atribui vânzări.",
+    "notFound": "Colaboratorul nu a fost găsit",
+    "totalPending": "Total de plată",
+    "pending": "De plată",
+    "paidTotal": "Deja plătit",
+    "cancelledTotal": "Anulat",
+    "settled": "Comisioane achitate",
+    "inactive": "Inactiv",
+    "salesCount": "vânzări",
+    "ofNet": "din valoarea netă",
+    "sales": "Vânzări și comisioane",
+    "noSales": "Acest colaborator nu are încă nicio vânzare atribuită.",
+    "assignSale": "Atribuie vânzare",
+    "assign": "Atribuie",
+    "assignHint": "Alege rezervarea pe care a adus-o. Comisionul se calculează cu procentul lui și rămâne înghețat: dacă îi crești procentul mâine, această vânzare nu se schimbă.",
+    "noAssignable": "Nu există rezervări disponibile. Apar doar cele care nu sunt anulate, au valoare netă și nu sunt deja atribuite altui colaborator.",
+    "willOwe": "I se va datora",
+    "settleAll": "Achită tot ce este de plată",
+    "settleHint": "Marchează ca plătite toate comisioanele restante ale acestui colaborator, dintr-o dată.",
+    "confirmSettle": "Marchează ca plătit",
+    "saved": "Colaborator salvat",
+    "deleted": "Colaborator șters",
+    "saleAssigned": "Vânzare atribuită",
+    "paid": "Comision marcat ca plătit",
+    "cancelledByReservation": "Rezervarea a fost anulată",
+    "fields": {
+      "name": "Nume",
+      "commissionPercent": "Comision",
+      "commissionHint": "Din valoarea netă a rezervării, fără TVA. Este valoarea implicită: fiecare vânzare o îngheață pe a sa.",
+      "phone": "Telefon",
+      "email": "E-mail",
+      "taxId": "CUI / CNP",
+      "notes": "Notițe",
+      "active": "Activ (apare la atribuirea de vânzări noi)",
+      "reservation": "Rezervare",
+      "method": "Modalitate de plată",
+      "note": "Notă (opțional)"
+    },
+    "status": {
+      "pending": "De plată",
+      "paid": "Plătit",
+      "cancelled": "Anulat"
+    },
+    "paymentMethods": {
+      "cash": "Numerar",
+      "transfer": "Transfer bancar"
+    },
+    "confirmDelete": {
+      "title": "Ștergi acest colaborator?",
+      "message": "Fișa lui se șterge. Nu se poate anula."
+    },
+    "confirmPay": {
+      "title": "Marchezi ca plătit?",
+      "message": "Un comision plătit nu poate fi pus înapoi ca restant."
+    },
+    "problems": {
+      "nameRequired": "Introdu numele colaboratorului",
+      "percentRequired": "Introdu un procent de comision mai mare decât zero",
+      "percentTooHigh": "Peste 50 % nu este un comision. Verifică cifra",
+      "emailInvalid": "Acel e-mail nu pare valid",
+      "collaboratorRequired": "Alege un colaborator",
+      "collaboratorInactive": "Acel colaborator este inactiv: nu i se pot atribui vânzări noi",
+      "reservationRequired": "Alege o rezervare",
+      "reservationCancelled": "Acea rezervare este anulată și nu generează comision",
+      "reservationWithoutNet": "Acea rezervare nu are valoare netă, deci nu există bază de calcul",
+      "alreadyAssigned": "Acea rezervare este deja atribuită unui colaborator",
+      "alreadyPaid": "Acel comision era deja plătit",
+      "saleCancelled": "Acel comision este anulat",
+      "saleNotFound": "Acel comision nu a fost găsit",
+      "hasSales": "Nu se poate șterge: are vânzări atribuite. Marchează-l inactiv în schimb"
+    },
+    "errors": {
+      "loadFailed": "Nu s-au putut încărca colaboratorii",
+      "saveFailed": "Nu s-a putut salva"
+    }
   }
 }

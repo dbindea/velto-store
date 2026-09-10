@@ -69,6 +69,13 @@ export class PrivateLayoutComponent {
       showInMobile: false,
       permission: ROUTE_PERMISSIONS['invoices']
     },
+    {
+      path: '/collaborators',
+      iconClass: 'pi pi-briefcase',
+      labelKey: 'menu.collaborators',
+      showInMobile: false,
+      permission: ROUTE_PERMISSIONS['collaborators']
+    },
     { path: '/contracts', iconClass: 'pi pi-file-pdf', labelKey: 'menu.contracts', showInMobile: false },
     { path: '/inspections', iconClass: 'pi pi-check-square', labelKey: 'menu.inspections', showInMobile: false },
     {

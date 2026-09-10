@@ -1,0 +1,264 @@
+.page {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.back {
+  margin-bottom: 0.75rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+  }
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Prosa larga: parte en dos líneas antes que truncar o forzar scroll. */
+.email {
+  overflow-wrap: anywhere;
+}
+
+.balance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  .label {
+    font-size: 0.72rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* Lo pendiente es lo que hay que hacer algo con ello. */
+  &.pending .value {
+    color: var(--warning-color);
+  }
+
+  &.muted .value {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+}
+
+.settle-btn {
+  margin-bottom: 1.25rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+
+  h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+}
+
+.hint {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ⚠️ `.form-control` no es global: cada formulario declara la suya, o los
+   `input` salen sin caja mientras los `select` de al lado se ven bien. */
+.form-control {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+
+  label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+.preview {
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.9rem;
+  background: var(--bg-input);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.section-title {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+}
+
+.sale-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sale {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+
+  /* Anulada: se queda a la vista pero apagada. Si desapareciera, el colaborador
+     preguntaría por una venta que aquí no sale por ningún lado. */
+  &.cancelled {
+    opacity: 0.55;
+  }
+}
+
+.what {
+  flex: 1;
+  /* Sin esto, un nombre largo estira la fila: el `min-width` por defecto de un
+     flex item es `auto` e impide encoger. */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  cursor: pointer;
+
+  .client {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .meta,
+  .basis {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+}
+
+.amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  white-space: nowrap;
+
+  .value {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .status {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+
+    &.pending {
+      color: var(--warning-color);
+    }
+
+    &.paid {
+      color: var(--success-color);
+    }
+  }
+}
+
+.pay-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding: 1rem;
+  }
+
+  /* Se recoloca, no se esconde: el importe y el estado siguen todos ahí. */
+  .sale {
+    flex-wrap: wrap;
+  }
+
+  .amount {
+    align-items: flex-start;
+  }
+
+  .pay-actions {
+    width: 100%;
+  }
+}

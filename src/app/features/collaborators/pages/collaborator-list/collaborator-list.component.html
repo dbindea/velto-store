@@ -1,0 +1,157 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>{{ 'collaborators.title' | translate }}</h1>
+      <p class="subtitle">{{ 'collaborators.subtitle' | translate }}</p>
+    </div>
+    <button class="btn-primary" type="button" (click)="newCollaborator()">
+      <i class="pi pi-plus"></i>
+      {{ 'collaborators.new' | translate }}
+    </button>
+  </header>
+
+  <!-- ⚠️ La deuda total va arriba y en grande: esta pantalla se abre para
+       responder «¿a quién le debo dinero?», no para leer una lista de nombres.
+       Si no se debe nada, no se pinta — un cero grande es ruido. -->
+  @if (totalPending > 0) {
+    <div class="total-due">
+      <span class="label">{{ 'collaborators.totalPending' | translate }}</span>
+      <span class="amount">{{ totalPending | number: '1.2-2' }} €</span>
+    </div>
+  }
+
+  <!-- Alta y edición. Un formulario corto, así que sin resumen de errores
+       junto al botón: repetiría el mensaje que ya está bajo el campo. -->
+  @if (showForm()) {
+    <div class="card form-card">
+      <h2>
+        {{ (editing ? 'collaborators.edit' : 'collaborators.new') | translate }}
+      </h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="required" for="name">{{ 'collaborators.fields.name' | translate }}</label>
+          <input
+            type="text"
+            id="name"
+            class="form-control"
+            [(ngModel)]="form.name"
+            name="name"
+            [class.is-invalid]="submitted() && problems['name']"
+          />
+          <app-form-error [problems]="problems['name']" [show]="submitted()" />
+        </div>
+
+        <div class="form-group narrow">
+          <label class="required" for="commissionPercent">
+            {{ 'collaborators.fields.commissionPercent' | translate }}
+          </label>
+          <div class="with-suffix">
+            <input
+              type="number"
+              id="commissionPercent"
+              class="form-control"
+              [(ngModel)]="form.commissionPercent"
+              name="commissionPercent"
+              min="0"
+              max="50"
+              step="0.5"
+              [class.is-invalid]="submitted() && problems['commissionPercent']"
+            />
+            <span class="suffix">%</span>
+          </div>
+          <app-form-error [problems]="problems['commissionPercent']" [show]="submitted()" />
+          <p class="field-hint">{{ 'collaborators.fields.commissionHint' | translate }}</p>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="phone">{{ 'collaborators.fields.phone' | translate }}</label>
+          <input type="tel" id="phone" class="form-control" [(ngModel)]="form.phone" name="phone" />
+        </div>
+        <div class="form-group">
+          <label for="email">{{ 'collaborators.fields.email' | translate }}</label>
+          <input
+            type="email"
+            id="email"
+            class="form-control"
+            [(ngModel)]="form.email"
+            name="email"
+            [class.is-invalid]="submitted() && problems['email']"
+          />
+          <app-form-error [problems]="problems['email']" [show]="submitted()" />
+        </div>
+        <div class="form-group narrow">
+          <label for="taxId">{{ 'collaborators.fields.taxId' | translate }}</label>
+          <input type="text" id="taxId" class="form-control mono" [(ngModel)]="form.taxId" name="taxId" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="notes">{{ 'collaborators.fields.notes' | translate }}</label>
+        <textarea id="notes" class="form-control" rows="2" [(ngModel)]="form.notes" name="notes"></textarea>
+      </div>
+
+      <label class="checkbox-item plain">
+        <input type="checkbox" [(ngModel)]="form.active" name="active" />
+        <span>{{ 'collaborators.fields.active' | translate }}</span>
+      </label>
+
+      <div class="form-actions">
+        <button class="btn-secondary" type="button" (click)="cancelForm()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button class="btn-primary" type="button" [disabled]="saving()" (click)="save()">
+          @if (saving()) { <i class="pi pi-spin pi-spinner"></i> }
+          {{ 'common.save' | translate }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="empty">{{ 'common.loading' | translate }}</p>
+  } @else if (!collaborators().length) {
+    <p class="empty">{{ 'collaborators.empty' | translate }}</p>
+  } @else {
+    <ul class="collaborator-list">
+      @for (c of collaborators(); track c.id) {
+        <li class="collaborator" [class.inactive]="!c.active" (click)="open(c)">
+          <div class="who">
+            <span class="name">{{ c.name }}</span>
+            <span class="meta">
+              {{ c.commissionPercent }}% ·
+              {{ balance(c.id).sales }} {{ 'collaborators.salesCount' | translate }}
+              @if (!c.active) {
+                · {{ 'collaborators.inactive' | translate }}
+              }
+            </span>
+          </div>
+
+          <div class="money">
+            <!-- ⚠️ Solo se pinta lo que se debe. Un «0,00 €» en cada fila
+                 esconde el único número que se venía a mirar. -->
+            @if (balance(c.id).pending > 0) {
+              <span class="pending">{{ balance(c.id).pending | number: '1.2-2' }} €</span>
+              <span class="pending-label">{{ 'collaborators.pending' | translate }}</span>
+            } @else {
+              <span class="settled">{{ 'collaborators.settled' | translate }}</span>
+            }
+          </div>
+
+          <div class="actions">
+            <button class="btn-icon" type="button" (click)="edit(c, $event)"
+              [attr.aria-label]="'common.edit' | translate">
+              <i class="pi pi-pencil"></i>
+            </button>
+            <button class="btn-icon" type="button" (click)="remove(c, $event)"
+              [attr.aria-label]="'common.delete' | translate">
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

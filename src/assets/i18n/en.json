@@ -619,7 +619,8 @@
     "reservations": "Reservations",
     "settings": "Settings",
     "vehicles": "Vehicles",
-    "invoices": "Invoices"
+    "invoices": "Invoices",
+    "collaborators": "Partners"
   },
   "payments": {
     "actions": {
@@ -1455,5 +1456,86 @@
     "rectifiedVat": "Corrected VAT",
     "recipientCountry": "Recipient country",
     "recipientCountryHint": "Their document does not say which country they are from, so it must be declared. The tax agency rejects the record without it, and an issued invoice cannot be corrected."
+  },
+  "collaborators": {
+    "title": "Partners",
+    "subtitle": "Agents who bring in customers, and the commission owed to them",
+    "new": "New partner",
+    "edit": "Edit partner",
+    "empty": "No partners yet. Add the first one to start assigning sales.",
+    "notFound": "Partner not found",
+    "totalPending": "Total outstanding",
+    "pending": "Outstanding",
+    "paidTotal": "Already paid",
+    "cancelledTotal": "Cancelled",
+    "settled": "Commissions settled",
+    "inactive": "Inactive",
+    "salesCount": "sales",
+    "ofNet": "of the net amount",
+    "sales": "Sales and commission",
+    "noSales": "This partner has no sales assigned yet.",
+    "assignSale": "Assign sale",
+    "assign": "Assign",
+    "assignHint": "Pick the booking they brought in. The commission uses their percentage and is then frozen: raising it tomorrow will not move this sale.",
+    "noAssignable": "No bookings available to assign. Only ones that are not cancelled, have a net amount, and are not already assigned show up here.",
+    "willOwe": "You will owe",
+    "settleAll": "Settle everything outstanding",
+    "settleHint": "Marks every outstanding commission for this partner as paid, in one go.",
+    "confirmSettle": "Mark as paid",
+    "saved": "Partner saved",
+    "deleted": "Partner deleted",
+    "saleAssigned": "Sale assigned",
+    "paid": "Commission marked as paid",
+    "cancelledByReservation": "The booking was cancelled",
+    "fields": {
+      "name": "Name",
+      "commissionPercent": "Commission",
+      "commissionHint": "On the booking net amount, excluding VAT. This is the default: each sale freezes its own.",
+      "phone": "Phone",
+      "email": "Email",
+      "taxId": "Tax ID",
+      "notes": "Notes",
+      "active": "Active (appears when assigning new sales)",
+      "reservation": "Booking",
+      "method": "Payment method",
+      "note": "Note (optional)"
+    },
+    "status": {
+      "pending": "Outstanding",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "paymentMethods": {
+      "cash": "Cash",
+      "transfer": "Bank transfer"
+    },
+    "confirmDelete": {
+      "title": "Delete this partner?",
+      "message": "Their record will be removed. This cannot be undone."
+    },
+    "confirmPay": {
+      "title": "Mark as paid?",
+      "message": "A paid commission cannot be set back to outstanding."
+    },
+    "problems": {
+      "nameRequired": "Enter the partner name",
+      "percentRequired": "Enter a commission percentage above zero",
+      "percentTooHigh": "More than 50 % is not a commission. Check the figure",
+      "emailInvalid": "That email does not look valid",
+      "collaboratorRequired": "Choose a partner",
+      "collaboratorInactive": "That partner is inactive: new sales cannot be assigned to them",
+      "reservationRequired": "Choose a booking",
+      "reservationCancelled": "That booking is cancelled and earns no commission",
+      "reservationWithoutNet": "That booking has no net amount, so there is nothing to calculate on",
+      "alreadyAssigned": "That booking is already assigned to a partner",
+      "alreadyPaid": "That commission was already paid",
+      "saleCancelled": "That commission is cancelled",
+      "saleNotFound": "That commission was not found",
+      "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead"
+    },
+    "errors": {
+      "loadFailed": "Could not load partners",
+      "saveFailed": "Could not save"
+    }
   }
 }

@@ -619,7 +619,8 @@
     "reservations": "Reservas",
     "settings": "Ajustes",
     "vehicles": "Vehículos",
-    "invoices": "Facturas"
+    "invoices": "Facturas",
+    "collaborators": "Colaboradores"
   },
   "payments": {
     "actions": {
@@ -1455,5 +1456,86 @@
     "rectifiedVat": "Cuota rectificada",
     "recipientCountry": "País del destinatario",
     "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir."
+  },
+  "collaborators": {
+    "title": "Colaboradores",
+    "subtitle": "Comerciales que traen clientes y las comisiones que se les deben",
+    "new": "Nuevo colaborador",
+    "edit": "Editar colaborador",
+    "empty": "Todavía no hay colaboradores. Da de alta al primero para poder asignarle ventas.",
+    "notFound": "No se encontró el colaborador",
+    "totalPending": "Total pendiente de pagar",
+    "pending": "Pendiente",
+    "paidTotal": "Ya pagado",
+    "cancelledTotal": "Anulado",
+    "settled": "Comisiones liquidadas",
+    "inactive": "De baja",
+    "salesCount": "ventas",
+    "ofNet": "del neto",
+    "sales": "Ventas y comisiones",
+    "noSales": "Este colaborador todavía no tiene ninguna venta asignada.",
+    "assignSale": "Asignar venta",
+    "assign": "Asignar",
+    "assignHint": "Elige la reserva que trajo. La comisión se calcula con su porcentaje y queda congelada: subirle el porcentaje mañana no moverá esta venta.",
+    "noAssignable": "No hay reservas disponibles para asignar. Solo salen las que no están canceladas, tienen neto y no están ya asignadas a otro colaborador.",
+    "willOwe": "Se le deberá",
+    "settleAll": "Liquidar todo lo pendiente",
+    "settleHint": "Se marcan como pagadas todas las comisiones pendientes de este colaborador, de una vez.",
+    "confirmSettle": "Marcar como pagado",
+    "saved": "Colaborador guardado",
+    "deleted": "Colaborador eliminado",
+    "saleAssigned": "Venta asignada",
+    "paid": "Comisión marcada como pagada",
+    "cancelledByReservation": "La reserva se canceló",
+    "fields": {
+      "name": "Nombre",
+      "commissionPercent": "Comisión",
+      "commissionHint": "Sobre el neto de la reserva, sin IVA. Es el valor por defecto: cada venta congela el suyo.",
+      "phone": "Teléfono",
+      "email": "Correo",
+      "taxId": "NIF",
+      "notes": "Notas",
+      "active": "Activo (sale al asignar ventas nuevas)",
+      "reservation": "Reserva",
+      "method": "Forma de pago",
+      "note": "Nota (opcional)"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "paid": "Pagada",
+      "cancelled": "Anulada"
+    },
+    "paymentMethods": {
+      "cash": "Efectivo",
+      "transfer": "Transferencia"
+    },
+    "confirmDelete": {
+      "title": "¿Eliminar este colaborador?",
+      "message": "Se borra su ficha. No se puede deshacer."
+    },
+    "confirmPay": {
+      "title": "¿Marcar como pagada?",
+      "message": "Una comisión pagada no se puede volver a poner como pendiente."
+    },
+    "problems": {
+      "nameRequired": "Pon el nombre del colaborador",
+      "percentRequired": "Indica un porcentaje de comisión mayor que cero",
+      "percentTooHigh": "Más de un 50 % no es una comisión. Revisa la cifra",
+      "emailInvalid": "Ese correo no parece válido",
+      "collaboratorRequired": "Elige un colaborador",
+      "collaboratorInactive": "Ese colaborador está de baja: no se le pueden asignar ventas nuevas",
+      "reservationRequired": "Elige una reserva",
+      "reservationCancelled": "Esa reserva está cancelada y no genera comisión",
+      "reservationWithoutNet": "Esa reserva no tiene precio neto, así que no hay base sobre la que calcular",
+      "alreadyAssigned": "Esa reserva ya está asignada a un colaborador",
+      "alreadyPaid": "Esa comisión ya estaba pagada",
+      "saleCancelled": "Esa comisión está anulada",
+      "saleNotFound": "No se encontró esa comisión",
+      "hasSales": "No se puede borrar: tiene ventas asignadas. Dalo de baja en su lugar"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los colaboradores",
+      "saveFailed": "No se pudo guardar"
+    }
   }
 }

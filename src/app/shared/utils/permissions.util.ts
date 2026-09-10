@@ -34,6 +34,15 @@ export type Permission =
   | 'viewReports'
   | 'viewExpenses'
   | 'viewInvoices'
+  /**
+   * Colaboradores y sus comisiones.
+   *
+   * ⚠️ Mismo trato que `viewExpenses`: es lo que la empresa **paga**, y saber a
+   * quién y cuánto es información de dueño, no de operación diaria. Un empleado
+   * no ve el módulo y `firestore.rules` tampoco le deja la colección — si solo
+   * se escondiera el menú, bastaría abrir la consola del navegador.
+   */
+  | 'viewCollaborators'
   | 'manageSettings'
   | 'manageUsers'
   // Dinero
@@ -72,6 +81,7 @@ const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
     'viewReports',
     'viewExpenses',
     'viewInvoices',
+    'viewCollaborators',
     'manageSettings',
     'manageUsers',
     'editPricing',
@@ -128,5 +138,6 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   reports: 'viewReports',
   expenses: 'viewExpenses',
   invoices: 'viewInvoices',
+  collaborators: 'viewCollaborators',
   settings: 'manageSettings'
 };

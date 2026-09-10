@@ -202,6 +202,25 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'collaborators',
+        // Comerciales y sus comisiones: es lo que la empresa PAGA, así que
+        // mismo criterio que Gastos e Informes — información de dueño. El
+        // permiso lo decide `permissions.util.ts` y `firestore.rules` lo
+        // impide de verdad; esconder el menú por sí solo sería decoración.
+        canActivate: [permissionGuard(ROUTE_PERMISSIONS['collaborators'])],
+        loadComponent: () => import('./features/collaborators/collaborators.component').then(m => m.CollaboratorsComponent),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/collaborators/pages/collaborator-list/collaborator-list.component').then(m => m.CollaboratorListComponent)
+          },
+          {
+            path: ':id',
+            loadComponent: () => import('./features/collaborators/pages/collaborator-detail/collaborator-detail.component').then(m => m.CollaboratorDetailComponent)
+          }
+        ]
+      },
+      {
         path: 'contracts',
         loadComponent: () => import('./features/contracts/contracts.component').then(m => m.ContractsComponent),
         children: [

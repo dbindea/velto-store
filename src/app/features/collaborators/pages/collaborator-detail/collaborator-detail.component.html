@@ -1,0 +1,186 @@
+<div class="page">
+  <button class="btn-ghost back" type="button" (click)="back()">
+    <i class="pi pi-arrow-left"></i>
+    {{ 'collaborators.title' | translate }}
+  </button>
+
+  @if (loading()) {
+    <p class="empty">{{ 'common.loading' | translate }}</p>
+  } @else if (!collaborator()) {
+    <p class="empty">{{ 'collaborators.notFound' | translate }}</p>
+  } @else {
+    @if (collaborator(); as c) {
+      <header class="page-header">
+        <div>
+          <h1>{{ c.name }}</h1>
+          <p class="subtitle">
+            {{ c.commissionPercent }}% {{ 'collaborators.ofNet' | translate }}
+            @if (c.phone) { · {{ c.phone }} }
+            @if (c.email) { · <span class="email">{{ c.email }}</span> }
+            @if (!c.active) { · {{ 'collaborators.inactive' | translate }} }
+          </p>
+        </div>
+        <button class="btn-primary" type="button" [disabled]="!c.active || working()"
+          (click)="startAssign()">
+          <i class="pi pi-plus"></i>
+          {{ 'collaborators.assignSale' | translate }}
+        </button>
+      </header>
+
+      <!-- El balance. Lo pendiente manda; lo cancelado se enseña aparte porque
+           si desapareciera, él preguntaría por una venta que no sale por ningún
+           lado. -->
+      <div class="balance">
+        <div class="figure pending">
+          <span class="label">{{ 'collaborators.pending' | translate }}</span>
+          <span class="value">{{ balance.pending | number: '1.2-2' }} €</span>
+        </div>
+        <div class="figure">
+          <span class="label">{{ 'collaborators.paidTotal' | translate }}</span>
+          <span class="value">{{ balance.paid | number: '1.2-2' }} €</span>
+        </div>
+        @if (balance.cancelled > 0) {
+          <div class="figure muted">
+            <span class="label">{{ 'collaborators.cancelledTotal' | translate }}</span>
+            <span class="value">{{ balance.cancelled | number: '1.2-2' }} €</span>
+          </div>
+        }
+      </div>
+
+      @if (balance.pending > 0) {
+        <button class="btn-secondary settle-btn" type="button" [disabled]="working()"
+          (click)="showSettle.set(true)">
+          <i class="pi pi-wallet"></i>
+          {{ 'collaborators.settleAll' | translate }} ({{ balance.pending | number: '1.2-2' }} €)
+        </button>
+      }
+    }
+
+    <!-- Asignar una venta -->
+    @if (showAssign()) {
+      <div class="card">
+        <h2>{{ 'collaborators.assignSale' | translate }}</h2>
+        <p class="hint">{{ 'collaborators.assignHint' | translate }}</p>
+
+        @if (!assignable().length) {
+          <p class="empty">{{ 'collaborators.noAssignable' | translate }}</p>
+        } @else {
+          <div class="form-group">
+            <label for="reservation">{{ 'collaborators.fields.reservation' | translate }}</label>
+            <select id="reservation" class="form-control" [(ngModel)]="selectedReservationId"
+              name="reservation">
+              <option value="">—</option>
+              @for (r of assignable(); track r.id) {
+                <option [value]="r.id">{{ reservationLabel(r) }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- ⚠️ La comisión se enseña ANTES de confirmar. Es dinero que se va a
+               deber: verlo después de crearla es enterarse tarde. -->
+          @if (selectedReservationId) {
+            <p class="preview">
+              {{ 'collaborators.willOwe' | translate }}
+              <strong>{{ previewCommission | number: '1.2-2' }} €</strong>
+            </p>
+          }
+        }
+
+        <div class="form-actions">
+          <button class="btn-secondary" type="button" (click)="showAssign.set(false)">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button class="btn-primary" type="button"
+            [disabled]="!selectedReservationId || working()" (click)="confirmAssign()">
+            @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
+            {{ 'collaborators.assign' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Liquidar todo lo pendiente -->
+    @if (showSettle()) {
+      <div class="card">
+        <h2>{{ 'collaborators.settleAll' | translate }}</h2>
+        <p class="hint">{{ 'collaborators.settleHint' | translate }}</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="settleMethod">{{ 'collaborators.fields.method' | translate }}</label>
+            <select id="settleMethod" class="form-control" [(ngModel)]="settleMethod"
+              name="settleMethod">
+              <option value="transfer">{{ methodLabels['transfer'] | translate }}</option>
+              <option value="cash">{{ methodLabels['cash'] | translate }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="settleNote">{{ 'collaborators.fields.note' | translate }}</label>
+            <input type="text" id="settleNote" class="form-control" [(ngModel)]="settleNote"
+              name="settleNote" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-secondary" type="button" (click)="showSettle.set(false)">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button class="btn-primary" type="button" [disabled]="working()" (click)="settle()">
+            @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
+            {{ 'collaborators.confirmSettle' | translate }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Las ventas -->
+    <h2 class="section-title">{{ 'collaborators.sales' | translate }}</h2>
+    @if (!sales().length) {
+      <p class="empty">{{ 'collaborators.noSales' | translate }}</p>
+    } @else {
+      <ul class="sale-list">
+        @for (s of sales(); track s.id) {
+          <li class="sale" [class.cancelled]="s.status === 'cancelled'">
+            <div class="what" (click)="openReservation(s.reservationId)">
+              <span class="client">{{ s.reservationSnapshot.clientName }}</span>
+              <span class="meta">
+                {{ s.reservationSnapshot.vehicle }}
+                @if (pickupDate(s); as fecha) {
+                  · {{ fecha | date: 'dd/MM/yyyy' }}
+                }
+              </span>
+              <!-- El neto y el porcentaje CONGELADOS: es lo que explica la
+                   cifra si algún día no cuadra con la ficha actual. -->
+              <span class="basis">
+                {{ s.netAmount | number: '1.2-2' }} € × {{ s.commissionPercent }}%
+              </span>
+            </div>
+
+            <div class="amount">
+              <span class="value">{{ s.commissionAmount | number: '1.2-2' }} €</span>
+              <span class="status" [class]="s.status">
+                {{ statusLabels[s.status] | translate }}
+                @if (s.status === 'paid' && s.paidMethod) {
+                  · {{ methodLabels[s.paidMethod] | translate }}
+                }
+              </span>
+            </div>
+
+            @if (s.status === 'pending') {
+              <div class="pay-actions">
+                <button class="btn-ghost" type="button" [disabled]="working()"
+                  (click)="paySale(s, 'transfer')">
+                  {{ methodLabels['transfer'] | translate }}
+                </button>
+                <button class="btn-ghost" type="button" [disabled]="working()"
+                  (click)="paySale(s, 'cash')">
+                  {{ methodLabels['cash'] | translate }}
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>
