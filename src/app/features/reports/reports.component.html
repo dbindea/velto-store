@@ -1,161 +1,211 @@
 <div class="page">
-  <div class="page-header">
-    <div class="header-content">
-      <h1>{{ 'menu.reports' | translate }}</h1>
+  <header class="page-header">
+    <div>
+      <h1>{{ 'reports.title' | translate }}</h1>
       <p class="subtitle">{{ 'reports.subtitle' | translate }}</p>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-secondary" type="button" (click)="refresh()" [disabled]="loading()">
-        <i class="pi pi-refresh"></i>
-        {{ 'common.refresh' | translate }}
-      </button>
-    </div>
-  </div>
+    <button class="btn-ghost" type="button" (click)="load()">
+      <i class="pi pi-refresh"></i>
+      {{ 'common.reload' | translate }}
+    </button>
+  </header>
 
-  <div class="range-bar">
-    @for (opt of rangeOptions; track opt.value) {
-      <button
-        type="button"
-        class="range-pill"
-        [class.active]="selectedRange() === opt.value"
-        (click)="setRange(opt.value)"
-      >
-        {{ opt.label | translate }}
-      </button>
-    }
+  <!-- ⚠️ Los filtros van en una fila, ARRIBA y fuera de las tarjetas. Un filtro
+       dentro de un gráfico se lee como si solo afectara a ese gráfico. -->
+  <div class="filters">
+    <label class="filter">
+      <span class="filter-label">{{ 'reports.from' | translate }}</span>
+      <input type="date" class="filter-control" [value]="dateInput(range().from)"
+        (change)="setFrom($any($event.target).value)" />
+    </label>
+    <label class="filter">
+      <span class="filter-label">{{ 'reports.to' | translate }}</span>
+      <input type="date" class="filter-control" [value]="dateInput(range().to)"
+        (change)="setTo($any($event.target).value)" />
+    </label>
+    <button class="btn-ghost" type="button" (click)="resetRange()">
+      {{ 'reports.thisYear' | translate }}
+    </button>
+    <span class="range-note">
+      {{ rangeDays() }}
+      {{ (rangeDays() === 1 ? 'reports.dayInRange' : 'reports.daysInRange') | translate }}
+    </span>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <i class="pi pi-spin pi-spinner"></i>
-      <p>{{ 'common.loading' | translate }}</p>
-    </div>
-  }   @else if (error()) {
-    <div class="error-state">
-      <i class="pi pi-exclamation-triangle"></i>
-      <p>{{ error()! | translate }}</p>
-    </div>
-  } @else if (snapshot()) {
-    <div class="reports-grid">
-      <!-- KPI: total revenue -->
-      <div class="kpi-card kpi-revenue">
-        <div class="kpi-label">
-          <i class="pi pi-euro"></i>
-          {{ 'reports.totalRevenue' | translate }}
-        </div>
-        <div class="kpi-value">{{ formatCurrency(totalRevenue()) }}</div>
-        <div class="kpi-sub">{{ 'reports.windowLabel' | translate }}</div>
+    <p class="empty">{{ 'common.loading' | translate }}</p>
+  } @else {
+    <!-- La cifra que manda. Va sola y en grande: es la respuesta a «¿cómo va
+         el negocio?», y ponerla del mismo tamaño que las demás la esconde. -->
+    <section class="hero">
+      <div class="hero-main">
+        <span class="hero-label">{{ 'reports.profit' | translate }}</span>
+        <span class="hero-value" [class.negative]="profit() < 0">
+          {{ profit() | number: '1.0-0' }} €
+        </span>
+        <span class="hero-note">{{ 'reports.profitHint' | translate }}</span>
+      </div>
+      <div class="hero-side">
+        <span class="side-label">{{ 'reports.margin' | translate }}</span>
+        <span class="side-value">{{ margin() | percent: '1.0-1' }}</span>
+      </div>
+    </section>
+
+    <!-- Entra y sale, con el IVA separado: el IVA cobrado no es de la empresa. -->
+    <section class="tiles">
+      <div class="tile">
+        <span class="tile-label">{{ 'reports.grossRevenue' | translate }}</span>
+        <span class="tile-value">{{ grossRevenue() | number: '1.0-0' }} €</span>
+        <span class="tile-note">{{ 'reports.withVat' | translate }}</span>
+      </div>
+      <div class="tile">
+        <span class="tile-label">{{ 'reports.netRevenue' | translate }}</span>
+        <span class="tile-value">{{ netRevenue() | number: '1.0-0' }} €</span>
+        <span class="tile-note">{{ 'reports.netHint' | translate }}</span>
+      </div>
+      <div class="tile">
+        <span class="tile-label">{{ 'reports.vat' | translate }}</span>
+        <span class="tile-value muted">{{ vatCollected() | number: '1.0-0' }} €</span>
+        <span class="tile-note">{{ 'reports.vatHint' | translate }}</span>
+      </div>
+      <div class="tile">
+        <span class="tile-label">{{ 'reports.outgoings' | translate }}</span>
+        <span class="tile-value negative">{{ totalOut() | number: '1.0-0' }} €</span>
+        <!-- ⚠️ El desglose va con su rótulo. «0 + 0 + 0 €» son tres cifras sin
+             decir de qué, y el mantenimiento no está en Gastos: se lee de
+             `vehicleMaintenance`, así que sin nombrarlo nadie sabe que cuenta. -->
+        <span class="tile-note breakdown">
+          <span>{{ 'reports.outExpenses' | translate }} {{ expenses() | number: '1.0-0' }} €</span>
+          <span>
+            {{ 'reports.outMaintenance' | translate }} {{ maintenanceCost() | number: '1.0-0' }} €
+          </span>
+          <span>
+            {{ 'reports.outCommissions' | translate }} {{ commissions() | number: '1.0-0' }} €
+          </span>
+        </span>
+      </div>
+    </section>
+
+    <!-- Lo que se espera y lo que se debe: dinero que NO está en las cifras de
+         arriba, y por eso va en su propia franja y no mezclado. -->
+    @if (outstanding() > 0 || commissionsPending() > 0) {
+      <section class="pending-strip">
+        @if (outstanding() > 0) {
+          <span class="pending-item">
+            <i class="pi pi-clock"></i>
+            {{ 'reports.outstanding' | translate }}:
+            <strong>{{ outstanding() | number: '1.0-0' }} €</strong>
+          </span>
+        }
+        @if (commissionsPending() > 0) {
+          <span class="pending-item">
+            <i class="pi pi-briefcase"></i>
+            {{ 'reports.commissionsPending' | translate }}:
+            <strong>{{ commissionsPending() | number: '1.0-0' }} €</strong>
+          </span>
+        }
+      </section>
+    }
+
+    <div class="grid">
+      <div class="wide">
+        <app-line-chart
+          [title]="'reports.yearOverYear' | translate"
+          [labels]="monthLabels()"
+          [series]="yearSeries()"
+          [tableLabel]="'reports.viewTable' | translate"
+          [tableHideLabel]="'reports.viewChart' | translate"
+        />
       </div>
 
-      <!-- KPI: utilization -->
-      <div class="kpi-card kpi-util">
-        <div class="kpi-label">
-          <i class="pi pi-chart-pie"></i>
-          {{ 'reports.utilization' | translate }}
-        </div>
-        <div class="kpi-value">{{ snapshot()!.utilization.utilizationPct }}%</div>
-        <div class="kpi-sub">
-          {{ snapshot()!.utilization.totalReservationDays }} /
-          {{ snapshot()!.utilization.totalFleetDays }} {{ 'reports.days' | translate }}
-        </div>
-        <div class="util-bar">
-          <div
-            class="util-bar-fill"
-            [style.width.%]="snapshot()!.utilization.utilizationPct"
-          ></div>
-        </div>
-      </div>
+      <app-donut-chart
+        [title]="'reports.byMethod' | translate"
+        [slices]="methodSlices()"
+        [totalLabel]="'reports.collected' | translate"
+        [emptyLabel]="'reports.noData' | translate"
+      />
 
-      <!-- KPI: outstanding -->
-      <div class="kpi-card kpi-outstanding">
-        <div class="kpi-label">
-          <i class="pi pi-clock"></i>
-          {{ 'reports.outstanding' | translate }}
-        </div>
-        <div class="kpi-value">
-          {{ snapshot()!.outstandingBalances.length }}
-        </div>
-        <div class="kpi-sub">
-          {{ 'reports.outstandingHint' | translate }}
-        </div>
-      </div>
-
-      <!-- Revenue chart (inline SVG-free, just CSS bars) -->
-      <div class="card revenue-chart">
-        <div class="card-header">
-          <i class="pi pi-chart-bar"></i>
-          <span>{{ 'reports.monthlyRevenue' | translate }}</span>
-        </div>
-        <div class="card-content">
-          <div class="bars">
-            @for (p of snapshot()!.monthlyRevenue; track p.date) {
-              <div class="bar-col" [title]="formatCurrency(p.revenue) + ' · ' + p.reservationCount + ' ' + ('reports.reservations' | translate)">
-                <div class="bar-value">{{ formatCurrency(p.revenue) }}</div>
-                <div class="bar-track">
-                  <div class="bar-fill" [style.height.%]="barHeightPct(p.revenue)"></div>
-                </div>
-                <div class="bar-label">{{ monthLabel(p.date) }}</div>
-              </div>
-            }
+      <!-- Ocupación y rendimiento: en un alquiler mandan casi tanto como la
+           facturación, así que van al mismo nivel y no en una nota al pie.
+           ⚠️ La chapa de tarjeta la declara `.fleet` en el SCSS de esta pantalla:
+           `.chart` vive en `charts.scss`, encapsulado en los componentes de
+           gráfico, y desde aquí no se alcanza — la misma trampa que
+           `.form-control`. -->
+      <div class="fleet">
+        <span class="chart-title">{{ 'reports.fleet' | translate }}</span>
+        <div class="fleet-figures">
+          <div class="figure">
+            <span class="figure-value">{{ occupancyRate() | percent: '1.0-0' }}</span>
+            <span class="figure-label">{{ 'reports.occupancy' | translate }}</span>
+            <span class="figure-note">
+              {{ rentalDays() }} / {{ vehicleCount() * rangeDays() }}
+              {{ 'reports.vehicleDays' | translate }}
+            </span>
+          </div>
+          <div class="figure">
+            <span class="figure-value">{{ perRentalDay() | number: '1.0-0' }} €</span>
+            <span class="figure-label">{{ 'reports.perRentalDay' | translate }}</span>
+            <!-- ⚠️ Singular y plural con claves distintas: «1 alquileres» ya ha
+                 salido tres veces en esta aplicación. -->
+            <span class="figure-note">
+              {{ rentals() }}
+              {{ (rentals() === 1 ? 'reports.rentalOne' : 'reports.rentalMany') | translate }}
+            </span>
+          </div>
+          <div class="figure">
+            <span class="figure-value">{{ repeat().repeatClients }}</span>
+            <span class="figure-label">{{ 'reports.repeatClients' | translate }}</span>
+            <span class="figure-note">
+              {{ repeat().revenueShare | percent: '1.0-0' }}
+              {{ 'reports.ofRevenue' | translate }}
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- Top vehicles -->
-      <div class="card top-vehicles">
-        <div class="card-header">
-          <i class="pi pi-star"></i>
-          <span>{{ 'reports.topVehicles' | translate }}</span>
-        </div>
-        <div class="card-content">
-          @if (snapshot()!.topVehicles.length === 0) {
-            <p class="empty">{{ 'reports.noData' | translate }}</p>
-          } @else {
-            <ul class="top-list">
-              @for (v of snapshot()!.topVehicles; track v.vehicleId) {
-                <li class="top-item">
-                  <span class="top-rank">#{{ $index + 1 }}</span>
-                  <span class="top-name">
-                    {{ v.brand }} {{ v.model }}
-                    <small class="top-plate">{{ v.plateNumber }}</small>
-                  </span>
-                  <span class="top-meta">
-                    {{ v.reservationCount }} {{ 'reports.reservations' | translate }}
-                  </span>
-                  <span class="top-revenue">{{ formatCurrency(v.revenue) }}</span>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-      </div>
-
-      <!-- Outstanding balances -->
-      <div class="card outstanding-card">
-        <div class="card-header">
-          <i class="pi pi-wallet"></i>
-          <span>{{ 'reports.outstandingTitle' | translate }}</span>
-        </div>
-        <div class="card-content">
-          @if (snapshot()!.outstandingBalances.length === 0) {
-            <p class="empty success">
-              <i class="pi pi-check-circle"></i>
-              {{ 'reports.noOutstanding' | translate }}
-            </p>
-          } @else {
-            <ul class="outstanding-list">
-              @for (b of snapshot()!.outstandingBalances; track b.reservationId) {
-                <li class="outstanding-item" (click)="goToReservation(b.reservationId)">
-                  <span class="out-client">{{ b.clientName }}</span>
-                  <span class="out-plate">{{ b.vehiclePlate }}</span>
-                  <span class="out-date">{{ b.pickupDate | date: 'dd/MM/yyyy' }}</span>
-                  <span class="out-amount">{{ formatCurrency(b.pendingAmount) }}</span>
-                </li>
-              }
-            </ul>
-          }
-        </div>
+      <div class="wide">
+        <app-bar-chart
+          [title]="'reports.byVehicle' | translate"
+          [rows]="vehicleRows()"
+          [emptyLabel]="'reports.noData' | translate"
+        />
       </div>
     </div>
+
+    <!-- Mejores clientes. Tabla y no gráfico: son cuatro cifras por fila y lo
+         que se hace con ellas es leerlas, no compararlas de un vistazo. -->
+    <section class="fleet clients-card">
+      <span class="chart-title">{{ 'reports.topClients' | translate }}</span>
+      @if (!clients().length) {
+        <p class="empty">{{ 'reports.noData' | translate }}</p>
+      } @else {
+        <table class="client-table">
+          <thead>
+            <tr>
+              <th>{{ 'reports.client' | translate }}</th>
+              <th class="num">{{ 'reports.billed' | translate }}</th>
+              <th class="num">{{ 'reports.days' | translate }}</th>
+              <th class="num">{{ 'reports.rentals' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of clients(); track c.clientId) {
+              <tr>
+                <td>{{ c.name }}</td>
+                <td class="num strong">{{ c.revenue | number: '1.0-0' }} €</td>
+                <td class="num">{{ c.days }}</td>
+                <td class="num">{{ c.rentals }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        @if (hasMoreClients()) {
+          <button class="btn-secondary more" type="button" (click)="showMoreClients()">
+            {{ 'reports.showMore' | translate }}
+          </button>
+        }
+      }
+    </section>
   }
 </div>
