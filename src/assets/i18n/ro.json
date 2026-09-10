@@ -1455,7 +1455,18 @@
     "rectifiedBase": "Bază stornată",
     "rectifiedVat": "TVA stornat",
     "recipientCountry": "Țara destinatarului",
-    "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta."
+    "recipientCountryHint": "Documentul său nu spune din ce țară este, deci trebuie declarată. Agenția Fiscală respinge înregistrarea fără ea, iar o factură emisă nu se poate corecta.",
+    "filters": {
+      "allKinds": "Toate",
+      "allYears": "Toate",
+      "clear": "Șterge filtrele",
+      "from": "De la",
+      "kind": "Tip",
+      "noResults": "Nicio factură nu corespunde filtrului",
+      "results": "facturi",
+      "to": "Până la",
+      "year": "An"
+    }
   },
   "collaborators": {
     "title": "Colaboratori",

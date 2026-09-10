@@ -212,3 +212,73 @@
   background: var(--warning-bg);
   color: var(--warning-color);
 }
+
+/* Filtros -----------------------------------------------------------------
+   Se recolocan en móvil, no se esconden: un filtro que desaparece en pantalla
+   estrecha deja la lista filtrada sin forma de saber por qué. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  /* Sin esto un desplegable con un texto largo estira la fila entera: el
+     `min-width` por defecto de un flex item es `auto` e impide encoger. */
+  min-width: 0;
+}
+
+.filter-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Los `select` los viste `styles.scss`; esto es solo la caja compartida con
+   los `input[type=date]`, que no la tienen. */
+.filter-control {
+  padding: 0.45rem 0.7rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  min-width: 130px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.clear {
+  margin-bottom: 0.1rem;
+}
+
+.filter-summary {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+
+  strong {
+    color: var(--text-primary);
+  }
+}
+
+@media (max-width: 560px) {
+  .filter {
+    flex: 1 1 45%;
+  }
+
+  .filter-control {
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -1455,7 +1455,18 @@
     "rectifiedBase": "Base rectificada",
     "rectifiedVat": "Cuota rectificada",
     "recipientCountry": "País del destinatario",
-    "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir."
+    "recipientCountryHint": "Su documento no dice de qué país es, así que hay que declararlo. La Agencia Tributaria rechaza el registro sin él, y una factura emitida no se puede corregir.",
+    "filters": {
+      "allKinds": "Todos",
+      "allYears": "Todos",
+      "clear": "Quitar filtros",
+      "from": "Desde",
+      "kind": "Tipo",
+      "noResults": "Ninguna factura coincide con el filtro",
+      "results": "facturas",
+      "to": "Hasta",
+      "year": "Año"
+    }
   },
   "collaborators": {
     "title": "Colaboradores",

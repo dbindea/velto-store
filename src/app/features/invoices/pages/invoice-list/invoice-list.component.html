@@ -10,6 +10,62 @@
     </a>
   </div>
 
+  <!-- Filtros. Solo aparecen si hay facturas: sobre una lista vacía son cuatro
+       desplegables que no hacen nada. -->
+  @if (!loading() && invoices().length) {
+    <div class="filters">
+      <label class="filter">
+        <span class="filter-label">{{ 'invoices.filters.year' | translate }}</span>
+        <select class="filter-control" [value]="filter().year ?? ''"
+          (change)="setYear($any($event.target).value)">
+          <option value="">{{ 'invoices.filters.allYears' | translate }}</option>
+          @for (y of years(); track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="filter">
+        <span class="filter-label">{{ 'invoices.filters.kind' | translate }}</span>
+        <select class="filter-control" [value]="filter().kind ?? ''"
+          (change)="setKind($any($event.target).value)">
+          <option value="">{{ 'invoices.filters.allKinds' | translate }}</option>
+          @for (k of kinds(); track k) {
+            <option [value]="k">{{ kindLabels[k] | translate }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="filter">
+        <span class="filter-label">{{ 'invoices.filters.from' | translate }}</span>
+        <input type="date" class="filter-control" [value]="dateInput(filter().from)"
+          (change)="setFrom($any($event.target).value)" />
+      </label>
+
+      <label class="filter">
+        <span class="filter-label">{{ 'invoices.filters.to' | translate }}</span>
+        <input type="date" class="filter-control" [value]="dateInput(filter().to)"
+          (change)="setTo($any($event.target).value)" />
+      </label>
+
+      @if (filtering()) {
+        <button class="btn-ghost clear" type="button" (click)="clearFilter()">
+          <i class="pi pi-times"></i>
+          {{ 'invoices.filters.clear' | translate }}
+        </button>
+      }
+    </div>
+
+    <!-- ⚠️ El recuento y el total solo se pintan al filtrar. Sin filtro son el
+         total de todo, que ya está en Informes y aquí solo sería ruido. -->
+    @if (filtering()) {
+      <p class="filter-summary">
+        {{ visible().length }} {{ 'invoices.filters.results' | translate }} ·
+        <strong>{{ total() | number: '1.2-2' }} €</strong>
+      </p>
+    }
+  }
+
   @if (loading()) {
     <div class="loading">{{ 'common.loading' | translate }}</div>
   } @else if (!invoices().length) {
@@ -18,9 +74,20 @@
       <p class="empty-title">{{ 'invoices.empty' | translate }}</p>
       <p class="empty-hint">{{ 'invoices.emptyHint' | translate }}</p>
     </div>
+  } @else if (!visible().length) {
+    <!-- Hay facturas, pero ninguna pasa el filtro. Decirlo evita pensar que se
+         han perdido, y ofrece la salida en vez de dejar buscar el desplegable
+         que hay que devolver a su sitio. -->
+    <div class="empty">
+      <i class="pi pi-filter-slash"></i>
+      <p class="empty-title">{{ 'invoices.filters.noResults' | translate }}</p>
+      <button class="btn-secondary" type="button" (click)="clearFilter()">
+        {{ 'invoices.filters.clear' | translate }}
+      </button>
+    </div>
   } @else {
     <div class="invoice-list">
-      @for (invoice of invoices(); track invoice.id) {
+      @for (invoice of visible(); track invoice.id) {
         <div class="invoice-row" [class.rectified]="invoice.status === 'rectified'">
           <button type="button" class="row-main" (click)="open(invoice)">
             <span class="col-number mono">{{ numberOf(invoice) }}</span>

@@ -1455,7 +1455,18 @@
     "rectifiedBase": "Corrected base",
     "rectifiedVat": "Corrected VAT",
     "recipientCountry": "Recipient country",
-    "recipientCountryHint": "Their document does not say which country they are from, so it must be declared. The tax agency rejects the record without it, and an issued invoice cannot be corrected."
+    "recipientCountryHint": "Their document does not say which country they are from, so it must be declared. The tax agency rejects the record without it, and an issued invoice cannot be corrected.",
+    "filters": {
+      "allKinds": "All",
+      "allYears": "All",
+      "clear": "Clear filters",
+      "from": "From",
+      "kind": "Type",
+      "noResults": "No invoice matches the filter",
+      "results": "invoices",
+      "to": "To",
+      "year": "Year"
+    }
   },
   "collaborators": {
     "title": "Partners",
