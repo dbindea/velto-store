@@ -10,25 +10,51 @@
 
 ## 0. El resumen, por si hay prisa
 
-| | Estado a 11-sep-2026 |
-|---|---|
-| Copias programadas de Firestore | **no hay** |
-| Point-in-time recovery (PITR) | **sin comprobar** |
-| Copias de Storage | **no hay** |
-| Restauración ensayada | **nunca** |
-| Aviso de caducidad del certificado FNMT | **hecho** (correo de las 9:00) |
-| Aviso de factura emitida y no remitida | **hecho** (correo de las 9:00) |
+Aplicado el **11 de septiembre de 2026** en los dos proyectos:
 
-Las cuatro primeras filas necesitan a Dorel: los comandos van con `gcloud` y hay
-que estar autenticado con la cuenta que manda en los dos proyectos.
+| | Desarrollo | Producción |
+|---|---|---|
+| Copia diaria de Firestore | ✅ 7 días | ✅ 7 días |
+| Copia semanal (domingo) | — | ✅ **14 semanas** |
+| Point-in-time recovery | ✅ 7 días | ✅ 7 días |
+| **Protección contra borrado** de la base | ✅ | ✅ |
+| Versionado de Storage | ✅ | ✅ |
+| Borrado reversible de Storage | ✅ 30 días | ✅ 30 días |
+| Aviso de caducidad del certificado FNMT | ✅ correo de las 9:00 | ✅ correo de las 9:00 |
+| Aviso de factura emitida y no remitida | ✅ correo de las 9:00 | ✅ correo de las 9:00 |
+| **Restauración ensayada** | ❌ **nunca** | ❌ **nunca** |
 
-⚠️ **La CLI de `gcloud` de esta máquina está autenticada con otra cuenta**
-(`reservas@gate2fly.com`, del otro negocio). La de Firebase sí está bien
-(`veltorent@gmail.com`). Antes de nada:
+⚠️ **La última fila es la que importa y es la que falta.** Una copia sin ensayo
+de restauración da tranquilidad y no protege. Ver § 4.
+
+⚠️ **La protección contra borrado estaba desactivada en las dos bases**, o sea
+que producción se podía borrar entera con un comando. No estaba en ninguna lista
+de riesgos; salió al mirar el estado real antes de tocar nada.
+
+### ⚠️ La cuenta activa de `gcloud` manda, y no vive en el repositorio
+
+En esta máquina hay **dos cuentas autenticadas** —`veltorent@gmail.com` y
+`reservas@gate2fly.com`, la del otro negocio— y los comandos van con la
+**activa**, que se cambia sola al autenticarse en otro sitio. A mitad de esta
+sesión volvió a la del otro negocio y los comandos empezaron a dar
+`PERMISSION_DENIED` sobre proyectos que existen.
+
+Es el mismo problema que `firebase use`: el destino real no está en ningún
+fichero que se pueda leer. Por eso **todos los comandos de aquí llevan
+`--account` explícito**, igual que los scripts de `package.json` llevan
+`--project`.
 
 ```bash
-gcloud auth login          # entra con veltorent@gmail.com
-gcloud config get-value account
+gcloud auth list                      # cuál está activa (la del *)
+gcloud config set account veltorent@gmail.com
+```
+
+⚠️ **Y `gcloud` de esta máquina necesita su Python empaquetado**, porque el
+`python3` del PATH es el resolutor de la Microsoft Store y da
+`Permission denied`:
+
+```bash
+export CLOUDSDK_PYTHON="/c/Users/dorel/AppData/Local/Google/Cloud SDK/google-cloud-sdk/platform/bundledpython/python.exe"
 ```
 
 ---
@@ -52,40 +78,53 @@ firmado no admite cambios, así que no existe «volver a generarlo igual».
 
 ---
 
-## 2. Copias programadas de Firestore
+## 2. Copias programadas de Firestore — **hecho**
 
 Dos horarios, por lo mismo que las dos cosas que protegen: la diaria cubre el
 error de ayer, la semanal cubre el error que se descubre tres semanas después.
 
+Lo que se ejecutó (queda por si hay que rehacerlo o crear un proyecto nuevo):
+
 ```bash
+CUENTA="--account=veltorent@gmail.com"
+
 # --- Producción ---
-gcloud firestore backups schedules create \
-  --project=rentalcar-veltomobility \
-  --database='(default)' \
-  --recurrence=daily \
-  --retention=7d
+gcloud firestore backups schedules create $CUENTA \
+  --project=rentalcar-veltomobility --database='(default)' \
+  --recurrence=daily --retention=7d
 
-gcloud firestore backups schedules create \
-  --project=rentalcar-veltomobility \
-  --database='(default)' \
-  --recurrence=weekly \
-  --day-of-week=SUN \
-  --retention=14w
+gcloud firestore backups schedules create $CUENTA \
+  --project=rentalcar-veltomobility --database='(default)' \
+  --recurrence=weekly --day-of-week=SUN --retention=14w
 
-# --- Desarrollo (mismo mandato, sin la semanal: aquí los datos son de prueba) ---
-gcloud firestore backups schedules create \
-  --project=velto-store \
-  --database='(default)' \
-  --recurrence=daily \
-  --retention=7d
+# --- Desarrollo: solo la diaria. Aquí los datos son de prueba. ---
+gcloud firestore backups schedules create $CUENTA \
+  --project=velto-store --database='(default)' \
+  --recurrence=daily --retention=7d
+
+# --- PITR y protección contra borrado, en los dos ---
+gcloud firestore databases update $CUENTA --database='(default)' \
+  --project=rentalcar-veltomobility --enable-pitr --delete-protection
+gcloud firestore databases update $CUENTA --database='(default)' \
+  --project=velto-store --enable-pitr --delete-protection
 ```
 
-Comprobar y listar lo que hay:
+Comprobar lo que hay hoy:
 
 ```bash
-gcloud firestore backups schedules list --database='(default)' --project=rentalcar-veltomobility
-gcloud firestore backups list --location=eur3 --project=rentalcar-veltomobility
+gcloud firestore backups schedules list $CUENTA --database='(default)' --project=rentalcar-veltomobility
+gcloud firestore backups list $CUENTA --location=eur3 --project=rentalcar-veltomobility
+gcloud firestore databases describe $CUENTA --database='(default)' --project=rentalcar-veltomobility \
+  --format='value(pointInTimeRecoveryEnablement,deleteProtectionState)'
 ```
+
+⚠️ **La primera copia no es inmediata.** El horario existe desde el minuto uno,
+pero la copia se hace a una hora indeterminada del día. Si al día siguiente
+`backups list` sale vacío, no es que no funcione: comprueba a las 48 horas antes
+de tocar nada.
+
+⚠️ **La protección contra borrado impide `databases delete`**, así que al borrar
+una base de ensayo (§ 4) hay que quitarla antes — de esa, no de la buena.
 
 Tres cosas que conviene saber antes de ejecutarlas:
 
@@ -103,27 +142,34 @@ Point-in-time recovery permite volver a un instante de los **últimos 7 días**,
 con granularidad de un minuto en la última hora. Cubre el caso «he ejecutado un
 borrado que no debía hace veinte minutos», que las copias diarias no cubren.
 
-```bash
-gcloud firestore databases update --database='(default)' \
-  --project=rentalcar-veltomobility --enable-pitr
-```
-
 ---
 
-## 3. Storage
+## 3. Storage — **hecho**
+
+⚠️ **El borrado reversible ya estaba, pero a 7 días**: es el valor de fábrica de
+Google, no una decisión de nadie. Subido a 30. El **versionado estaba apagado**,
+que es lo que protege de una sobrescritura — y `uploadPdf()` sobrescribe a
+propósito para no matar el enlace que el cliente ya tiene.
 
 ```bash
-# Versionado: una sobrescritura deja la versión anterior recuperable.
-gcloud storage buckets update gs://rentalcar-veltomobility.firebasestorage.app --versioning
+CUENTA="--account=veltorent@gmail.com"
 
-# Borrado reversible: 30 días para deshacer un borrado.
-gcloud storage buckets update gs://rentalcar-veltomobility.firebasestorage.app \
-  --soft-delete-duration=30d
+for b in rentalcar-veltomobility velto-store; do
+  gcloud storage buckets update gs://$b.firebasestorage.app $CUENTA \
+    --versioning --soft-delete-duration=30d
+done
 
-# Comprobar cómo está hoy:
-gcloud storage buckets describe gs://rentalcar-veltomobility.firebasestorage.app \
-  --format='yaml(versioning,softDeletePolicy,lifecycle)'
+# Comprobar:
+gcloud storage buckets describe gs://rentalcar-veltomobility.firebasestorage.app $CUENTA \
+  | grep -iE "versioning|retentionDurationSeconds"
 ```
+
+⚠️ **El versionado crece sin límite.** Cada regeneración de un parte de entrega
+o de un justificante deja la versión anterior guardada y facturándose. A este
+volumen no importa; si algún día importa, la solución es una regla de ciclo de
+vida que borre las versiones **no actuales** a los N días — no quitar el
+versionado. No se ha puesto hoy a propósito: es una regla que **borra**, y
+merece decidirse a la vista de la factura real, no por si acaso.
 
 ⚠️ **El versionado no es una copia de seguridad de verdad**: protege del error
 —sobrescribir, borrar— pero no de perder el bucket. Para eso hace falta copiar a
@@ -162,8 +208,10 @@ gcloud firestore databases restore \
 
 # 3. Cuando termine el cotejo, se borra. No dejes una base de ensayo viva:
 #    nada apunta a ella y el día que alguien la encuentre no sabrá qué es.
+#    ⚠️ La base de ensayo nace SIN protección de borrado; la de verdad la tiene
+#    puesta, así que un `delete` contra ella falla. Es la red que hay que tener.
 gcloud firestore databases delete --database=ensayo-2027-01-15 \
-  --project=rentalcar-veltomobility
+  --project=rentalcar-veltomobility --account=veltorent@gmail.com
 ```
 
 ### Qué hay que cotejar, y por qué
