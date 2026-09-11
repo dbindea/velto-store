@@ -70,3 +70,54 @@ export function buildDeposit(
     status: 'pending'
   };
 }
+
+// ---------------------------------------------------------------------------
+// Devolver y retener
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo que queda de la fianza: lo cobrado menos lo ya devuelto y lo ya retenido.
+ *
+ * ⚠️ **Es el techo de las dos operaciones a la vez**, no de cada una por
+ * separado. Devolver 300 y retener 300 de una fianza de 300 son dos operaciones
+ * que por separado parecen correctas y juntas entregan el doble de lo que el
+ * cliente depositó.
+ */
+export function depositAvailable(summary: {
+  depositPaid?: number;
+  depositReturned?: number;
+  depositRetained?: number;
+}): number {
+  const cobrado = Number(summary.depositPaid) || 0;
+  const devuelto = Number(summary.depositReturned) || 0;
+  const retenido = Number(summary.depositRetained) || 0;
+  return roundMoney(Math.max(0, cobrado - devuelto - retenido));
+}
+
+/**
+ * Lo que impide devolver o retener este importe, si algo lo impide.
+ *
+ * ⚠️ **No había ninguna comprobación**, ni en la pantalla ni en el servicio:
+ * `refundDeposit` y `retainDeposit` escribían el importe que les dieran. Se
+ * podía devolver más fianza de la cobrada —regalar dinero— y retener más de la
+ * depositada —cobrarle al cliente algo que no dejó—. Y como la devolución **no**
+ * cuenta como ingreso en Informes pero el cobro sí, el descuadre no salía por
+ * ninguna parte: solo faltaba dinero.
+ *
+ * Devuelve una clave i18n, nunca una frase: la capa de avisos la traduce.
+ */
+export function depositMovementProblem(
+  amount: number | null | undefined,
+  available: number
+): string | null {
+  const importe = Number(amount);
+  if (!isFinite(importe) || importe <= 0) {
+    return 'payments.problems.depositAmountRequired';
+  }
+  // Un céntimo de margen: los importes vienen de restas y `0.1 + 0.2` no es
+  // exactamente `0.3`. Rechazar por medio céntimo sería un fallo inventado.
+  if (roundMoney(importe) > roundMoney(available) + 0.005) {
+    return 'payments.problems.depositExceedsAvailable';
+  }
+  return null;
+}

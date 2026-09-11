@@ -47,7 +47,7 @@
           </div>
           <div class="info-row">
             <span class="label">{{ 'reservations.fields.duration' | translate }}:</span>
-            <span class="value">{{ totalDays }} {{ 'reservations.fields.totalDays' | translate }}</span>
+            <span class="value">{{ totalDays }} {{ (totalDays === 1 ? 'reservations.fields.totalDay' : 'reservations.fields.totalDays') | translate }}</span>
           </div>
           <div class="info-row">
             <!-- Was `reservations.title`, i.e. the module name "Reservas" used

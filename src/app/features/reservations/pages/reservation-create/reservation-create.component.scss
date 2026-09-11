@@ -977,3 +977,19 @@ textarea.form-control {
     justify-content: center;
   }
 }
+/* El coche se puede elegir igual, así que el aviso no lo tacha: lo marca.
+   Ámbar y no rojo — rojo es «no se puede», y aquí sí se puede. */
+.vehicle-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  /* Que no estire la columna: el nombre del coche manda el ancho. */
+  max-width: 100%;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: var(--warning-bg, rgba(201, 133, 0, 0.12));
+  color: var(--warning-color);
+  font-size: 0.78rem;
+  font-weight: 600;
+}

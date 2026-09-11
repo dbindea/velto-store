@@ -179,14 +179,38 @@
                     
                     @if (result.available) {
                       <div class="pricing">
-                        <div class="days">{{ result.totalDays }} {{ 'reservations.fields.totalDays' | translate }}</div>
+                        <div class="days">{{ result.totalDays }} {{ (result.totalDays === 1 ? 'reservations.fields.totalDay' : 'reservations.fields.totalDays') | translate }}</div>
                         <div class="price">{{ result.pricing?.finalPrice | number:'1.2-2' }} €</div>
-                        <div class="price-per-day">{{ result.pricing?.pricePerDay }} €/día</div>
+                        <div class="price-per-day">
+                          {{ result.pricing?.pricePerDay }}
+                          {{ 'reservations.availability.perDay' | translate }}
+                        </div>
                       </div>
                     } @else {
                       <div class="unavailable-badge">
                         <i class="pi pi-ban"></i>
                         {{ (result.conflictMessage || 'reservations.availability.unavailable') | translate }}
+                      </div>
+                    }
+
+                    <!--
+                      ⚠️ El coche se puede elegir igual: una ITV caducada de un
+                      día con cita dada no es lo mismo que una de hace tres meses,
+                      y quien está en el mostrador tiene que poder decidir. Lo que
+                      no puede es no saberlo — y hasta hoy no lo sabía, mientras
+                      el correo de las 9:00 afirmaba que el coche no se podía
+                      alquilar.
+
+                      ⚠️ **Va DENTRO de `.vehicle-info`, no al lado.** La tarjeta
+                      es un flex en fila: como hermano, el aviso se lleva su
+                      trozo de ancho y `.vehicle-info` —que tiene `min-width: 0`—
+                      se encoge hasta caber una letra por línea. «Mercedes Clase
+                      C» salía en vertical, una letra debajo de otra.
+                    -->
+                    @if (result.warningMessage) {
+                      <div class="vehicle-warning">
+                        <i class="pi pi-exclamation-triangle"></i>
+                        {{ result.warningMessage | translate }}
                       </div>
                     }
                   </div>
@@ -386,7 +410,7 @@
               <div class="summary-content">
                 <p><strong>{{ 'reservations.fields.pickupDate' | translate }}:</strong> {{ pickupDateTime | date:'dd/MM/yyyy HH:mm' }}</p>
                 <p><strong>{{ 'reservations.fields.returnDate' | translate }}:</strong> {{ returnDateTime | date:'dd/MM/yyyy HH:mm' }}</p>
-                <p class="total-days">{{ totalDays }} {{ 'reservations.fields.totalDays' | translate }}</p>
+                <p class="total-days">{{ totalDays }} {{ (totalDays === 1 ? 'reservations.fields.totalDay' : 'reservations.fields.totalDays') | translate }}</p>
               </div>
             </div>
 

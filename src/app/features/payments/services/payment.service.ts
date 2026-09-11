@@ -13,7 +13,7 @@ import {
   where
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
-import { Observable, from } from 'rxjs';
+import { Observable, firstValueFrom, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import {
   Payment,
@@ -34,8 +34,10 @@ import {
   selectSettleablePayment,
   buildInitialPaymentRows,
   distributeRentalPayment,
+  collectedTotalsOf,
   EXTRA_TYPES
 } from '@shared/utils/payment-summary.util';
+import { depositAvailable, depositMovementProblem } from '@shared/utils/deposit.util';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { receiptProblem } from '@shared/utils/receipt.util';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -526,7 +528,27 @@ export class PaymentService {
   }
 
   /**
-   * Refund deposit (full or partial).
+   * Lo que queda de fianza por mover en esta reserva.
+   *
+   * Se deriva de `payments`, que es la única fuente de verdad del dinero: la
+   * copia guardada en la reserva se queda vieja y **responde `0` cuando está
+   * desfasada**, que aquí bloquearía una devolución legítima.
+   */
+  private async depositAvailableFor(reservationId: string): Promise<number> {
+    const pagos = await firstValueFrom(this.getPaymentsByReservation(reservationId));
+    return depositAvailable(collectedTotalsOf(pagos));
+  }
+
+  /**
+   * Devolver la fianza, entera o en parte.
+   *
+   * ⚠️ **No comprobaba nada.** Escribía el importe que le dieran, así que se
+   * podía devolver más fianza de la cobrada —regalar dinero— y, peor, devolver
+   * el total **y** retener el total, que son dos operaciones que por separado
+   * parecen bien y juntas entregan el doble de lo que el cliente depositó.
+   *
+   * El descuadre no salía por ninguna parte: una devolución no cuenta como
+   * ingreso en Informes, así que lo único que pasaba es que faltaba dinero.
    */
   async refundDeposit(
     reservationId: string,
@@ -537,6 +559,9 @@ export class PaymentService {
     // Need reservation data
     const reservation = await this.getReservationData(reservationId);
     if (!reservation) throw new Error('Reservation not found');
+
+    const problema = depositMovementProblem(amount, await this.depositAvailableFor(reservationId));
+    if (problema) throw new Error(problema);
 
     return this.createManualPayment({
       reservationId,

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildDeposit, isDepositWaived, needsWaivedReason } from './deposit.util';
+import { buildDeposit, isDepositWaived, needsWaivedReason,
+  depositAvailable,
+  depositMovementProblem
+} from './deposit.util';
 
 describe('isDepositWaived', () => {
   it('treats zero, absent and negative as waived', () => {
@@ -64,5 +67,61 @@ describe('buildDeposit', () => {
     expect(() => buildDeposit(0)).toThrow(/reason/i);
     expect(() => buildDeposit(0, '  ')).toThrow(/reason/i);
     expect(() => buildDeposit(0, 'no')).toThrow(/reason/i);
+  });
+});
+
+describe('devolver y retener la fianza', () => {
+  const resumen = (paid: number, returned = 0, retained = 0) => ({
+    depositPaid: paid,
+    depositReturned: returned,
+    depositRetained: retained
+  });
+
+  it('lo disponible es lo cobrado menos lo movido', () => {
+    expect(depositAvailable(resumen(300))).toBe(300);
+    expect(depositAvailable(resumen(300, 100))).toBe(200);
+    expect(depositAvailable(resumen(300, 100, 50))).toBe(150);
+  });
+
+  it('nunca es negativo, aunque los datos vengan raros', () => {
+    expect(depositAvailable(resumen(300, 400))).toBe(0);
+    expect(depositAvailable({})).toBe(0);
+  });
+
+  /**
+   * ⚠️ **El caso que no existía y costaba dinero de verdad.** Devolver 300 y
+   * retener 300 de una fianza de 300 son dos operaciones que por separado
+   * parecen bien y juntas entregan el doble de lo que el cliente depositó.
+   */
+  it('devolver y retener comparten el mismo techo', () => {
+    const tras = resumen(300, 300);
+    expect(depositAvailable(tras)).toBe(0);
+    expect(depositMovementProblem(300, depositAvailable(tras))).toBe(
+      'payments.problems.depositExceedsAvailable'
+    );
+  });
+
+  it('no deja devolver más de lo cobrado', () => {
+    expect(depositMovementProblem(400, 300)).toBe('payments.problems.depositExceedsAvailable');
+  });
+
+  it('el importe exacto sí pasa', () => {
+    expect(depositMovementProblem(300, 300)).toBeNull();
+    expect(depositMovementProblem(150, 300)).toBeNull();
+  });
+
+  it('cero y negativo no son un movimiento', () => {
+    expect(depositMovementProblem(0, 300)).toBe('payments.problems.depositAmountRequired');
+    expect(depositMovementProblem(-50, 300)).toBe('payments.problems.depositAmountRequired');
+    expect(depositMovementProblem(null, 300)).toBe('payments.problems.depositAmountRequired');
+  });
+
+  /**
+   * Los importes vienen de restas, y `0.1 + 0.2` no es `0.3`. Rechazar por medio
+   * céntimo sería un fallo inventado que el operador no sabría corregir.
+   */
+  it('medio céntimo de margen, para que la aritmética no invente un error', () => {
+    expect(depositMovementProblem(100, 99.999)).toBeNull();
+    expect(depositMovementProblem(100.02, 100)).toBe('payments.problems.depositExceedsAvailable');
   });
 });

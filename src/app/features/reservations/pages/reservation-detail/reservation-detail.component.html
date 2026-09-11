@@ -19,7 +19,7 @@
           </span>
         </div>
         <p class="subtitle">
-          {{ reservation.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
+          {{ reservation.totalDays }} {{ (reservation.totalDays === 1 ? 'reservations.fields.totalDay' : 'reservations.fields.totalDays') | translate }}
         </p>
         @if (reservation.reservationStatus !== 'closed' && reservation.reservationStatus !== 'cancelled') {
           <p class="next-action">
@@ -190,7 +190,7 @@
             }
             
             <div class="total-days-badge">
-              {{ reservation.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
+              {{ reservation.totalDays }} {{ (reservation.totalDays === 1 ? 'reservations.fields.totalDay' : 'reservations.fields.totalDays') | translate }}
             </div>
           </div>
         </div>
@@ -826,7 +826,18 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>{{ 'payments.fields.amount' | translate }}</label>
-                <input type="number" class="form-control" [(ngModel)]="depositForm.amount" name="damount" min="0" step="0.01">
+                <input type="number" class="form-control" [(ngModel)]="depositForm.amount" name="damount"
+                  min="0" [max]="depositAvailableAmount()" step="0.01">
+                <!--
+                  ⚠️ El límite se dice ANTES de teclear. El servicio lo rechaza
+                  igual —es dinero y ahí manda—, pero descubrirlo después de
+                  rellenar el formulario es hacer trabajar al operador para
+                  decirle que no.
+                -->
+                <span class="field-note">
+                  {{ 'payments.deposit.available' | translate }}:
+                  {{ depositAvailableAmount() | number: '1.2-2' }} €
+                </span>
               </div>
               <div class="form-group">
                 <label>{{ 'payments.fields.method' | translate }}</label>
@@ -1115,7 +1126,7 @@
         con el de cancelar: va aparte y solo lo ve un administrador.
       -->
       @if (permissions.canDelete() && reservation.contractStatus !== 'signed') {
-        <button class="btn-danger" type="button" (click)="openDeleteModal()">
+        <button class="btn-danger" type="button" (click)="deleteReservation()">
           <i class="pi pi-trash"></i>
           {{ 'common.delete' | translate }}
         </button>
@@ -1230,29 +1241,3 @@
 }
 
     <!-- Borrar la reserva. Irreversible y con todo lo que arrastra. -->
-    @if (showDeleteModal) {
-      <div class="modal-overlay" (click)="closeDeleteModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header danger">
-            <i class="pi pi-trash"></i>
-            <h3>{{ 'common.delete' | translate }}</h3>
-            <button class="modal-close" type="button" (click)="closeDeleteModal()">
-              <i class="pi pi-times"></i>
-            </button>
-          </div>
-          <div class="modal-body">
-            <p>{{ 'reservations.confirmDelete' | translate }}</p>
-            <div class="modal-actions">
-              <button class="btn btn-secondary" type="button" (click)="closeDeleteModal()">
-                {{ 'common.back' | translate }}
-              </button>
-              <button class="btn btn-danger-solid" type="button" [disabled]="deleting" (click)="deleteReservation()">
-                @if (deleting) { <i class="pi pi-spin pi-spinner"></i> }
-                @else { <i class="pi pi-trash"></i> }
-                {{ 'common.delete' | translate }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    }

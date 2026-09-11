@@ -258,7 +258,7 @@
     "fleet": {
       "available": "Disponibles",
       "label": "Flota",
-      "rented": "En alquiler",
+      "rented": "Alquilados",
       "total": "Total"
     },
     "loadFailedHint": "Revisa tu conexión y vuelve a intentarlo. No des por hecho que no hay tareas pendientes.",
@@ -647,7 +647,8 @@
     },
     "deposit": {
       "refundFull": "Devolver total",
-      "retain": "Retener"
+      "retain": "Retener",
+      "available": "Disponible"
     },
     "errors": {
       "invalidAmount": "El importe no es válido",
@@ -771,6 +772,10 @@
     "confirm": {
       "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
       "cancelTitle": "Cancelar el cobro"
+    },
+    "problems": {
+      "depositAmountRequired": "Pon un importe mayor que cero.",
+      "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
     }
   },
   "permissions": {
@@ -850,7 +855,10 @@
       "notInFleet": "El vehículo no está disponible en la flota",
       "search": "Buscar disponibilidad",
       "selectVehicle": "Seleccionar vehículo",
-      "unavailable": "No disponible"
+      "unavailable": "No disponible",
+      "perDay": "€/día",
+      "searchFailed": "No se ha podido buscar la disponibilidad.",
+      "maintenanceOverdue": "ITV o mantenimiento vencido"
     },
     "bookingConfirmation": {
       "copyLink": "Copiar enlace",
@@ -948,7 +956,8 @@
       "returnDate": "Fecha de devolución",
       "returnLocation": "Lugar de devolución",
       "returnTime": "Hora de devolución",
-      "totalDays": "días"
+      "totalDays": "días",
+      "totalDay": "día"
     },
     "list": {
       "empty": "No hay reservas todavía",
@@ -1188,7 +1197,10 @@
       "luggageRequired": "Indica cuántas maletas caben",
       "modelRequired": "Escribe el modelo",
       "plateRequired": "Escribe la matrícula",
-      "seatsRequired": "Indica cuántas plazas tiene"
+      "seatsRequired": "Indica cuántas plazas tiene",
+      "delete": "No se ha podido eliminar el vehículo.",
+      "statusChange": "No se ha podido cambiar el estado del vehículo.",
+      "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio»."
     },
     "features": {
       "airConditioning": "Aire acondicionado",
@@ -1290,7 +1302,9 @@
       "available": "Disponible",
       "maintenance": "Mantenimiento",
       "outOfService": "Fuera de servicio",
-      "rented": "En alquiler"
+      "rented": "En alquiler",
+      "retireTitle": "Retirar el coche de la flota",
+      "hasUpcoming": "Este coche tiene {count} reserva(s) sin terminar. Retirarlo no las cancela: si ya no va a estar disponible, hay que avisar al cliente y cambiarle de coche o cancelar. ¿Continúo?"
     },
     "subtitle": "Gestiona tu flota",
     "tabs": {
@@ -1618,7 +1632,7 @@
   "events": {
     "alerts": {
       "contractNotSigned": "El contrato no está firmado: no se puede entregar el coche",
-      "maintenanceOverdue": "Vencido: el coche no se puede alquilar",
+      "maintenanceOverdue": "Vencido: no alquiles este coche hasta pasarla",
       "invoiceDeadline": "Se acaba el plazo para emitirla"
     },
     "categories": {

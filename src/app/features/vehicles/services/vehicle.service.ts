@@ -8,9 +8,11 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   updateDoc,
+  where,
 } from '@angular/fire/firestore';
 import { Storage, deleteObject, getDownloadURL, ref, uploadBytes } from '@angular/fire/storage';
 import {
@@ -132,6 +134,30 @@ export class VehicleService {
     if (!this.permissions.can('deleteRecords')) {
       throw new Error('permissions.notAllowed');
     }
+
+    /**
+     * ⚠️ **Un vehículo con reservas no se borra**, exactamente por lo mismo que
+     * un cliente con reservas (M-47): su marca, su modelo y su **matrícula**
+     * siguen dentro del `vehicleSnapshot` de cada reserva y de cada contrato,
+     * así que quitar la ficha no borra nada — solo deja un coche fantasma al
+     * que el histórico apunta y que ya no se puede abrir.
+     *
+     * Y aquí es peor que en el cliente: un **contrato firmado** acredita que ese
+     * coche se alquiló, y `firestore.rules` prohíbe borrarlo incluso a un
+     * administrador. Borrar el vehículo dejaría ese documento señalando al
+     * vacío.
+     *
+     * ⚠️ **Para un coche vendido o retirado NO es esto, es el estado**
+     * `out_of_service`: deja de ofrecerse para reservas nuevas y el histórico
+     * sigue entero. Borrar está para limpiar un alta de prueba o duplicada.
+     */
+    const reservations = await getDocs(
+      query(collection(this.firestore, 'reservations'), where('vehicleId', '==', id), limit(1))
+    );
+    if (!reservations.empty) {
+      throw new Error('vehicles.errors.deleteHasReservations');
+    }
+
     await this.storageService.deleteFolder(`vehicles/${id}`);
     const docRef = doc(this.firestore, `vehicles/${id}`);
     await deleteDoc(docRef);

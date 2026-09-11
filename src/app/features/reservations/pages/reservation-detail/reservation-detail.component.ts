@@ -65,6 +65,7 @@ import {
   validateAdditionalDriver
 } from '@shared/utils/additional-driver.util';
 import { ConfirmService } from '@core/notifications/confirm.service';
+import { depositAvailable } from '@shared/utils/deposit.util';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -129,7 +130,6 @@ export class ReservationDetailComponent implements OnInit {
   bookingConfirmationStorageUrl = '';
   bookingConfirmationError = '';
   cancelling = false;
-  showDeleteModal = false;
   deleting = false;
   closingReservation = false;
   savingPayment = false;
@@ -572,35 +572,39 @@ export class ReservationDetailComponent implements OnInit {
    * puede es no enterarse.
    */
 
-  openDeleteModal(): void {
-    this.showDeleteModal = true;
-  }
-
-  closeDeleteModal(): void {
-    this.showDeleteModal = false;
-  }
-
   /**
    * Borra la reserva con sus pagos, sus inspecciones y sus fotos.
    *
    * Solo aparece sin contrato firmado: uno firmado acredita un alquiler que
    * ocurrió, no se borra nunca, y dejarlo apuntando a una reserva que ya no
    * existe sería peor que no poder limpiar. Para esas está cancelar.
+   *
+   * ⚠️ Pregunta con `ConfirmService`, como el resto de la aplicación. Había tres
+   * modales escritos a mano para la misma pregunta —aquí, en el vehículo y en el
+   * cliente— y el del cliente **no tenía estilo ninguno**: siete clases que no
+   * declaraba ningún SCSS. Tres copias de algo son tres ocasiones de que una se
+   * rompa sin que nadie lo note.
    */
   async deleteReservation(): Promise<void> {
     if (!this.reservation?.id) return;
+    const ok = await this.confirm.ask({
+      title: 'common.delete',
+      message: 'reservations.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!ok) return;
+
     this.deleting = true;
     try {
       await this.reservationService.deleteReservation(this.reservation.id);
       this.router.navigate(['/reservations']);
     } catch (error: any) {
-      console.error('Error deleting reservation:', error);
       // El servicio rechaza con clave i18n; sin esto el operador pulsaba
       // «Borrar» y no pasaba nada visible.
       this.notifications.error(error?.message || 'reservations.errors.delete');
     } finally {
       this.deleting = false;
-      this.showDeleteModal = false;
     }
   }
 
@@ -902,13 +906,26 @@ export class ReservationDetailComponent implements OnInit {
     if (this.showPaymentForm) this.resetPaymentForm();
   }
 
+  /**
+   * Lo que queda de fianza por mover.
+   *
+   * ⚠️ **Se deriva de `payments`, no del resumen guardado en la reserva.** Esa
+   * copia se queda vieja y responde `0` cuando está desfasada — aquí eso
+   * bloquearía una devolución perfectamente legítima.
+   */
+  depositAvailableAmount(): number {
+    return depositAvailable(collectedTotalsOf(this.payments));
+  }
+
   toggleDepositForm(type: 'refund' | 'retain'): void {
     if (this.showDepositForm && this.depositForm.type === type) {
       this.showDepositForm = false;
     } else {
       this.showDepositForm = true;
       this.showPaymentForm = false;
-      this.depositForm = { type, amount: 0, method: 'cash' };
+      // Se propone lo que queda: es el caso normal —devolver la fianza entera—
+      // y evita teclear una cifra que el operador ya sabe.
+      this.depositForm = { type, amount: this.depositAvailableAmount(), method: 'cash' };
     }
   }
 

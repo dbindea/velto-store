@@ -1423,3 +1423,12 @@ app-reservation-timeline {
   gap: 0.5rem;
   margin-top: 0.85rem;
 }
+
+/* El límite de la fianza, bajo el campo. Texto secundario: es un dato de apoyo,
+   no un error — el error sale en rojo y solo si se pasa. */
+.field-note {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

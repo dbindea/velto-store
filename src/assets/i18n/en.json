@@ -258,7 +258,7 @@
     "fleet": {
       "available": "Available",
       "label": "Fleet",
-      "rented": "On rental",
+      "rented": "Rented out",
       "total": "Total"
     },
     "loadFailedHint": "Check your connection and try again. Do not assume there is nothing pending.",
@@ -647,7 +647,8 @@
     },
     "deposit": {
       "refundFull": "Refund full",
-      "retain": "Retain"
+      "retain": "Retain",
+      "available": "Available"
     },
     "errors": {
       "invalidAmount": "The amount is not valid",
@@ -771,6 +772,10 @@
     "confirm": {
       "cancelMessage": "The payment will be cancelled and will no longer count as outstanding.",
       "cancelTitle": "Cancel the payment"
+    },
+    "problems": {
+      "depositAmountRequired": "Enter an amount greater than zero.",
+      "depositExceedsAvailable": "You cannot move more deposit than is left. Check what was collected, less what has already been refunded and retained."
     }
   },
   "permissions": {
@@ -850,7 +855,10 @@
       "notInFleet": "The vehicle is not available in the fleet",
       "search": "Search availability",
       "selectVehicle": "Select vehicle",
-      "unavailable": "Not available"
+      "unavailable": "Not available",
+      "perDay": "€/day",
+      "searchFailed": "Availability could not be searched.",
+      "maintenanceOverdue": "Roadworthiness test or servicing overdue"
     },
     "bookingConfirmation": {
       "copyLink": "Copy link",
@@ -948,7 +956,8 @@
       "returnDate": "Return date",
       "returnLocation": "Return location",
       "returnTime": "Return time",
-      "totalDays": "days"
+      "totalDays": "days",
+      "totalDay": "day"
     },
     "list": {
       "empty": "No reservations yet",
@@ -1188,7 +1197,10 @@
       "luggageRequired": "Enter how many bags fit",
       "modelRequired": "Enter the model",
       "plateRequired": "Enter the plate number",
-      "seatsRequired": "Enter how many seats it has"
+      "seatsRequired": "Enter how many seats it has",
+      "delete": "The vehicle could not be deleted.",
+      "statusChange": "The vehicle status could not be changed.",
+      "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead."
     },
     "features": {
       "airConditioning": "Air conditioning",
@@ -1290,7 +1302,9 @@
       "available": "Available",
       "maintenance": "Maintenance",
       "outOfService": "Out of service",
-      "rented": "Rented"
+      "rented": "Rented",
+      "retireTitle": "Take the car out of the fleet",
+      "hasUpcoming": "This car has {count} unfinished reservation(s). Taking it out does not cancel them: if it will no longer be available, the client has to be told and moved to another car or cancelled. Continue?"
     },
     "subtitle": "Manage your fleet",
     "tabs": {
@@ -1618,7 +1632,7 @@
   "events": {
     "alerts": {
       "contractNotSigned": "The contract is not signed: the car cannot be handed over",
-      "maintenanceOverdue": "Overdue: the car cannot be rented",
+      "maintenanceOverdue": "Overdue: do not rent this car until it passes",
       "invoiceDeadline": "The deadline to issue it is running out"
     },
     "categories": {

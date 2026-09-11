@@ -647,7 +647,8 @@
     },
     "deposit": {
       "refundFull": "Restituie total",
-      "retain": "Reține"
+      "retain": "Reține",
+      "available": "Disponibil"
     },
     "errors": {
       "invalidAmount": "Suma nu este validă",
@@ -771,6 +772,10 @@
     "confirm": {
       "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
       "cancelTitle": "Anulează încasarea"
+    },
+    "problems": {
+      "depositAmountRequired": "Introdu o sumă mai mare decât zero.",
+      "depositExceedsAvailable": "Nu poți mișca mai multă garanție decât a rămas. Verifică ce s-a încasat, minus ce s-a returnat și reținut deja."
     }
   },
   "permissions": {
@@ -850,7 +855,10 @@
       "notInFleet": "Vehiculul nu este disponibil în flotă",
       "search": "Caută disponibilitate",
       "selectVehicle": "Selectează vehicul",
-      "unavailable": "Indisponibil"
+      "unavailable": "Indisponibil",
+      "perDay": "€/zi",
+      "searchFailed": "Disponibilitatea nu a putut fi căutată.",
+      "maintenanceOverdue": "ITP sau revizie expirată"
     },
     "bookingConfirmation": {
       "copyLink": "Copiază linkul",
@@ -948,7 +956,8 @@
       "returnDate": "Data returnării",
       "returnLocation": "Locație returnare",
       "returnTime": "Ora returnării",
-      "totalDays": "zile"
+      "totalDays": "zile",
+      "totalDay": "zi"
     },
     "list": {
       "empty": "Nu există rezervări",
@@ -1188,7 +1197,10 @@
       "luggageRequired": "Indică câte bagaje încap",
       "modelRequired": "Scrie modelul",
       "plateRequired": "Scrie numărul de înmatriculare",
-      "seatsRequired": "Indică câte locuri are"
+      "seatsRequired": "Indică câte locuri are",
+      "delete": "Vehiculul nu a putut fi șters.",
+      "statusChange": "Statusul vehiculului nu a putut fi schimbat.",
+      "deleteHasReservations": "Această mașină are rezervări și nu poate fi ștearsă: numărul ei de înmatriculare este în fiecare dintre ele. Pentru o mașină vândută sau retrasă, schimbă-i statusul în „Scos din uz\"."
     },
     "features": {
       "airConditioning": "Aer condiționat",
@@ -1290,7 +1302,9 @@
       "available": "Disponibil",
       "maintenance": "Mentenanță",
       "outOfService": "Scos din uz",
-      "rented": "Închiriat"
+      "rented": "Închiriat",
+      "retireTitle": "Scoate mașina din flotă",
+      "hasUpcoming": "Această mașină are {count} rezervare(ări) neterminate. Scoaterea ei nu le anulează: dacă nu va mai fi disponibilă, clientul trebuie anunțat și mutat pe altă mașină sau anulat. Continui?"
     },
     "subtitle": "Gestionează flota ta",
     "tabs": {
@@ -1618,7 +1632,7 @@
   "events": {
     "alerts": {
       "contractNotSigned": "Contractul nu este semnat: mașina nu poate fi predată",
-      "maintenanceOverdue": "Expirat: mașina nu poate fi închiriată",
+      "maintenanceOverdue": "Expirat: nu închiria mașina până nu trece",
       "invoiceDeadline": "Se apropie termenul de emitere"
     },
     "categories": {
