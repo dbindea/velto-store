@@ -60,6 +60,94 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-31 · El sobre de emergencia — 11 de septiembre de 2026
+
+[emergencia.md](emergencia.md). Salió de la pregunta que ninguno de los dos
+documentos se había hecho: **¿qué pasa si Dorel no está mañana?** No como teoría
+dramática, como operación: alguien tiene que poder seguir alquilando coches y no
+romper nada.
+
+### Lo que encontró, que es peor que la falta del documento
+
+Comprobado contra los dos proyectos: **`veltorent@gmail.com` es el único
+propietario de Google Cloud y el único usuario de la aplicación, en desarrollo y
+en producción.** Una sola cuenta para todo.
+
+Si esa cuenta se pierde —no está, se bloquea, se pierde el móvil del segundo
+factor— nadie puede entrar en la aplicación, restaurar una copia, parar la
+facturación, renovar el certificado ni desplegar. El negocio se queda sin sistema
+**y sin forma de recuperarlo**.
+
+⚠️ **Un sobre que dice «entra en Firebase» a alguien que no puede entrar no sirve
+de nada.** Por eso el documento abre con las tres acciones que solo puede hacer
+Dorel y que no son programar: un segundo propietario en los dos proyectos, un
+segundo administrador en la aplicación, y el `.p12` de la FNMT guardado **fuera**
+de Google — está en Secret Manager, que vive dentro del mismo proyecto que se
+puede perder.
+
+### Lo que el documento aporta y no es evidente
+
+- **Seguir alquilando en papel.** Contrato impreso firmado a mano, fotos del
+  coche con el móvil, km y combustible anotados. Vale igual: lo que obliga es la
+  firma y el texto, no que lo genere un ordenador.
+- ⚠️ **No emitir una factura fuera de la aplicación. Nunca.** Consume un número
+  que la aplicación volverá a usar, rompe la cadena de huellas de todas las
+  siguientes, y no se arregla borrando porque una factura emitida no se borra. Si
+  el cliente la pide y la aplicación no va, se le dice que se la envías luego.
+- ⚠️ **Al parar los cobros, se cortan los que GENERAN y se deja vivo el que
+  RECOGE.** Borrar `redsysNotificationWebhook` haría que un cobro ya cargado en
+  la tarjeta no se registrara en ninguna parte — que es exactamente lo que costó
+  un cobro real el 4 de septiembre.
+- **Qué tiene que haber en el sobre de papel**, empezando por los códigos de
+  recuperación del segundo factor, que son los que salvan cuando se pierde el
+  móvil.
+
+Falta producir **el contrato impreso en blanco** para el modo manual: hoy el
+generador solo hace contratos de una reserva concreta.
+
+---
+
+## 📋 N-30 · RD 933/2021 · registro ante Interior — APARCADO por Dorel
+
+⚠️ **Es una obligación que ya está corriendo, no un riesgo futuro.** Decisión de
+Dorel del 11 de septiembre de 2026: se deja para más adelante. Queda escrito
+para que sea una decisión y no un olvido.
+
+El alquiler de vehículos a motor **sin conductor** está nombrado expresamente en
+el RD 933/2021, exigible desde el **2 de diciembre de 2024** tras la entrada en
+vigor formal de abril de 2022 y dos prórrogas.
+
+| | |
+|---|---|
+| **Art. 5** | registro informático con los campos del **Anexo II** |
+| **Art. 6.3** | comunicación **inmediata, y como máximo en 24 h** desde la reserva o el contrato |
+| **Art. 6.4** | por procedimientos telemáticos |
+| **Art. 4.2** | **hoja de servicios**, firmada por el arrendatario |
+| **Art. 5.3** | conservación **tres años** desde que termina el servicio |
+
+Sanción: infracción leve de la LO 4/2015 por carecer del registro o comunicar
+fuera de plazo.
+
+**Los datos ya los tenemos casi todos.** `Client` guarda documento, dirección,
+fecha de nacimiento y carné con país, número y validez; `Vehicle` guarda
+matrícula, color, **bastidor** y GPS; la reserva guarda recogida, devolución y
+los conductores adicionales con su carné. Falta poco: **nacionalidad**, la hoja
+de servicios como documento, y la comunicación en sí.
+
+⚠️ **Y el art. 5.3 rompe el principio 2 de este proyecto.** Hoy la regla es «los
+datos son desechables: se borran y se vuelven a crear», y las dos bases se han
+vaciado enteras dos veces. Con esto encima, **una reserva no se puede borrar en
+tres años**. Deja de ser una decisión de diseño.
+
+De paso resuelve la política de retención que quedaba abierta: para el registro
+de alquiler, el plazo lo da el propio decreto.
+
+**Lo primero cuando se retome**: preguntar a la gestoría el alta en la plataforma
+del Ministerio, y si **el contrato firmado que ya se genera puede valer como hoja
+de servicios**. Si vale, la mitad del trabajo está hecha.
+
+---
+
 ## ✅ N-29 · Un empleado no ve la cuenta de resultados — 11 de septiembre de 2026
 
 Petición de Dorel: **un usuario que no sea administrador no puede ver

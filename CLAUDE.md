@@ -1786,6 +1786,34 @@ Prosa larga (emails, matrículas, referencias): parte en dos líneas antes que t
 puntos suspensivos o forzar scroll horizontal. `body` ya lleva `overflow-wrap: break-word`
 y las clases `.email` / `.mono` usan `anywhere`.
 
+## Continuidad: copias, emergencia y una sola cuenta
+
+Dos documentos que no son de código y que conviene conocer antes de tocar nada
+que afecte a producción:
+
+- [docs/copias-de-seguridad.md](docs/copias-de-seguridad.md) — qué está
+  protegido y cómo se restaura. Copias diarias y semanales, PITR, protección
+  contra borrado y versionado de Storage están **activados en los dos
+  proyectos** desde el 11 de septiembre de 2026.
+- [docs/emergencia.md](docs/emergencia.md) — el sobre: cómo seguir alquilando
+  sin la aplicación, qué parar y a quién llamar.
+
+⚠️ **Restaurar un estado anterior reintroduce números y huellas ya consumidos.**
+Si se restaura la copia del día 15 el día 20, las facturas de esos días
+desaparecen de Firestore pero **existen**: el cliente tiene su PDF y la AEAT su
+registro con su CSV. El contador vuelve atrás y la siguiente factura reutiliza un
+número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero es
+**parar la emisión**, no restaurar.
+
+⚠️ **`veltorent@gmail.com` es el único propietario de los dos proyectos y el
+único usuario de la aplicación.** Si esa cuenta se pierde no hay forma de entrar,
+restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
+mientras siga así, cualquier plan de recuperación depende de una sola persona.
+
+⚠️ **En producción, nunca `--only functions` a secas.** Hay 19 desplegadas y el
+código define 26: las siete que faltan escriben facturas o hablan con la AEAT, y
+no están allí hasta el 1 de enero. Un despliegue completo las subiría.
+
 ## Deuda técnica conocida
 
 - **Redsys funciona de extremo a extremo** desde el 31 de agosto de 2026: probado contra la
