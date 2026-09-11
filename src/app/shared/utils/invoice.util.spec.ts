@@ -226,7 +226,8 @@ describe('validación por régimen', () => {
     const p = validateInvoice({
       recipient: destinatario, // NIF español B12345678
       lines: [linea({ taxRegime: 'exempt_eu' })],
-      paymentMethod: 'transfer'
+      paymentMethod: 'transfer',
+      euRegimesEnabled: true
     });
     expect(p['recipientTaxId']).toBe('invoices.problems.euVatIdRequired');
   });
@@ -235,7 +236,8 @@ describe('validación por régimen', () => {
     const p = validateInvoice({
       recipient: { ...destinatario, taxId: 'ESB12345678' },
       lines: [linea({ taxRegime: 'exempt_eu' })],
-      paymentMethod: 'transfer'
+      paymentMethod: 'transfer',
+      euRegimesEnabled: true
     });
     expect(p['recipientTaxId']).toBe('invoices.problems.euVatIdRequired');
   });
@@ -244,9 +246,64 @@ describe('validación por régimen', () => {
     const p = validateInvoice({
       recipient: { ...destinatario, taxId: 'PT501234567' },
       lines: [linea({ taxRegime: 'exempt_eu' })],
-      paymentMethod: 'transfer'
+      paymentMethod: 'transfer',
+      euRegimesEnabled: true
     });
     expect(p['recipientTaxId']).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ **Dos requisitos distintos, y los dos hacen falta**: el NIF-IVA es del
+   * **comprador** y el ROI es del **emisor**. Los tres tests de arriba dicen
+   * `euRegimesEnabled: true` justamente para probar el primero sin que el
+   * segundo se cuele; estos prueban el segundo.
+   *
+   * Sin ROI, facturar así deja de repercutir un IVA que sí se debe — y la AEAT
+   * acepta el registro igual, porque su validación es de forma. Aquí no hay red
+   * debajo y la factura no se puede editar.
+   */
+  describe('sin ROI no se ofrecen los regímenes intracomunitarios', () => {
+    const portugues = { ...destinatario, taxId: 'PT501234567' };
+
+    it('la entrega intracomunitaria exenta se bloquea aunque el NIF-IVA sea bueno', () => {
+      const p = validateInvoice({
+        recipient: portugues,
+        lines: [linea({ taxRegime: 'exempt_eu' })],
+        paymentMethod: 'transfer',
+        euRegimesEnabled: false
+      });
+      expect(p['lines[0].taxRegime']).toBe('invoices.problems.euRegimeNotAvailable');
+    });
+
+    it('la inversión del sujeto pasivo, igual', () => {
+      const p = validateInvoice({
+        recipient: portugues,
+        lines: [linea({ taxRegime: 'reverse_charge' })],
+        paymentMethod: 'transfer',
+        euRegimesEnabled: false
+      });
+      expect(p['lines[0].taxRegime']).toBe('invoices.problems.euRegimeNotAvailable');
+    });
+
+    /** Falla cerrado: quien se olvide del parámetro bloquea, no abre. */
+    it('sin decir nada, se bloquean igual', () => {
+      const p = validateInvoice({
+        recipient: portugues,
+        lines: [linea({ taxRegime: 'exempt_eu' })],
+        paymentMethod: 'transfer'
+      });
+      expect(p['lines[0].taxRegime']).toBe('invoices.problems.euRegimeNotAvailable');
+    });
+
+    it('el régimen general no se toca: es con el que hay que facturar mientras tanto', () => {
+      const p = validateInvoice({
+        recipient: destinatario,
+        lines: [linea({ taxRegime: 'standard' })],
+        paymentMethod: 'transfer',
+        euRegimesEnabled: false
+      });
+      expect(p['lines[0].taxRegime']).toBeUndefined();
+    });
   });
 });
 

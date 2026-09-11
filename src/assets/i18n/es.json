@@ -1442,7 +1442,8 @@
       "rectifiedVatRequired": "Por sustitución hay que indicar la cuota rectificada",
       "rectifyingNoteRequired": "Explica por qué se rectifica: es lo que consta en el documento",
       "rectifyingReasonRequired": "Elige la causa de la rectificación",
-      "rectifyingTypeRequired": "Elige la modalidad: por sustitución o por diferencias"
+      "rectifyingTypeRequired": "Elige la modalidad: por sustitución o por diferencias",
+      "euRegimeNotAvailable": "Sin alta en el ROI no se puede facturar así. Factura con IVA español, en régimen general."
     },
     "errors": {
       "alreadyIssued": "Esta factura ya se emitió",

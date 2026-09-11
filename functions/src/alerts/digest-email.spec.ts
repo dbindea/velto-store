@@ -9,7 +9,8 @@ const base: Resumen = {
   entregas: [],
   devoluciones: [],
   vencimientos: [],
-  sinFirmar: 0
+  sinFirmar: 0,
+  avisos: []
 };
 
 const entrega = (extra: Partial<Resumen['entregas'][0]> = {}) => ({
@@ -111,5 +112,61 @@ describe('el correo del resumen', () => {
     expect(html).toContain('Entregas');
     expect(html).not.toContain('Devoluciones');
     expect(html).not.toContain('Vence en la flota');
+  });
+});
+
+/**
+ * ⚠️ **Los avisos del sistema se prueban porque el fallo típico de este proyecto
+ * es una etiqueta escrita, traducida y nunca pintada.** Pasó con el «Recibido
+ * de» del recibo. Aquí sería peor: el aviso existiría en el objeto, el correo
+ * saldría, y el certificado caducaría igual.
+ */
+describe('los avisos del sistema', () => {
+  const urgente = { clase: 'remision' as const, texto: 'Cadena PARADA', urgente: true };
+  const tranquilo = { clase: 'certificado' as const, texto: 'Caduca en 30 días', urgente: false };
+
+  it('se pintan en el HTML y en el texto plano', () => {
+    const { html, text } = renderDigestEmail({ ...base, avisos: [tranquilo] }, EMPRESA);
+    expect(html).toContain('Caduca en 30 días');
+    expect(text).toContain('Caduca en 30 días');
+  });
+
+  /**
+   * Lo de abajo se hace hoy; esto no se hace nunca si no se ve. Detrás de tres
+   * entregas, un aviso de caducidad no se lee.
+   */
+  it('van ARRIBA, antes que las entregas', () => {
+    const { html } = renderDigestEmail(
+      { ...base, avisos: [urgente], entregas: [entrega()] },
+      EMPRESA
+    );
+    expect(html.indexOf('Cadena PARADA')).toBeLessThan(html.indexOf('Entregas'));
+  });
+
+  it('lo urgente se distingue de lo que solo hay que ir mirando', () => {
+    const rojo = renderDigestEmail({ ...base, avisos: [urgente] }, EMPRESA).html;
+    const ambar = renderDigestEmail({ ...base, avisos: [tranquilo] }, EMPRESA).html;
+    // El fondo, no el color de la tinta: es lo que se ve de un vistazo y lo que
+    // distingue «esto está parado» de «esto hay que mirarlo en un mes».
+    expect(rojo).toContain('background:#fdeceb');
+    expect(ambar).toContain('background:#fbf3e2');
+    expect(rojo).not.toContain('background:#fbf3e2');
+  });
+
+  /**
+   * En el texto plano no hay color, así que la distinción tiene que estar en las
+   * palabras. Hay clientes de correo que solo enseñan esa versión.
+   */
+  it('y en el texto plano, que no tiene color, lo urgente va marcado', () => {
+    const rojo = renderDigestEmail({ ...base, avisos: [urgente] }, EMPRESA).text;
+    const ambar = renderDigestEmail({ ...base, avisos: [tranquilo] }, EMPRESA).text;
+    expect(rojo).toContain('*** Cadena PARADA ***');
+    expect(ambar).not.toContain('***');
+  });
+
+  it('sin avisos no deja ningún hueco en el correo', () => {
+    const { html, text } = renderDigestEmail({ ...base, entregas: [entrega()] }, EMPRESA);
+    expect(html).not.toContain('border-left:4px solid');
+    expect(text.split('\n')[1]).toBe('');
   });
 });

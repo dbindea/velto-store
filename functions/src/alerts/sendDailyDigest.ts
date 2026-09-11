@@ -30,8 +30,22 @@ import {
   type VencimientoVehiculo
 } from './daily-digest';
 import { renderDigestEmail } from './digest-email';
+import { avisosDelSistema, type AvisoSistema } from './system-alerts';
+import { certificadoDesdeSecreto, probarConexion } from '../invoices/verifactu-client';
+import { verifactuEnabled, verifactuEndpoint } from '../invoices/verifactu';
+import type { Remision } from '../invoices/verifactu-submission';
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
+/**
+ * El certificado de la FNMT, aquí solo para mirarle la fecha de caducidad.
+ *
+ * ⚠️ **Un secret hay que DECLARARLO en la function que lo usa**, no basta con
+ * que exista en Secret Manager: si no aparece aquí, `process.env` sale
+ * `undefined` y el código se va por la rama del «no está configurado», en
+ * silencio y con el despliegue en verde.
+ */
+const VELTO_SIGNING_CERT = defineSecret('VELTO_SIGNING_CERT');
+const VELTO_SIGNING_CERT_PASSWORD = defineSecret('VELTO_SIGNING_CERT_PASSWORD');
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
 /** A cuántos días vista se avisa de una ITV o un mantenimiento. */
@@ -55,12 +69,55 @@ function etiquetaVehiculo(snap: Record<string, unknown> | undefined): string {
 }
 
 /**
+ * Lo que no sale de ninguna reserva: el certificado y la remisión a la AEAT.
+ *
+ * ⚠️ **Solo tiene sentido donde se remite.** En un entorno con
+ * `VELTO_VERIFACTU_ENABLED=false` no hay nada que remitir y el certificado no se
+ * usa para nada, así que avisar de su caducidad sería mandar a resolver un
+ * problema que no existe. Hoy eso es producción, hasta el 1 de enero.
+ *
+ * ⚠️ **Y nunca tumba el correo.** Si la comprobación del certificado falla —la
+ * red, un secret sin poner, un `.p12` que no abre— se registra y se sigue: el
+ * resumen de mañana tiene que salir igual. Perder el aviso del certificado es un
+ * problema; perder las entregas del día siguiente, uno peor.
+ */
+export async function construirAvisos(
+  p12Base64?: string,
+  passphrase?: string
+): Promise<AvisoSistema[]> {
+  if (!verifactuEnabled()) return [];
+
+  const db = firestore();
+  let remisiones: Remision[] = [];
+  try {
+    const snap = await db.collection('verifactuSubmissions').get();
+    remisiones = snap.docs.map((d) => d.data() as Remision);
+  } catch (e) {
+    functions.logger.error('Resumen diario: no se pudo leer verifactuSubmissions', e);
+  }
+
+  let dias: number | undefined;
+  try {
+    const certificado = certificadoDesdeSecreto(p12Base64, passphrase);
+    const prueba = await probarConexion(verifactuEndpoint(), certificado);
+    dias = prueba.diasParaCaducar;
+  } catch (e) {
+    functions.logger.error('Resumen diario: no se pudo leer el certificado', e);
+  }
+
+  return avisosDelSistema(dias, remisiones);
+}
+
+/**
  * Reúne lo de mañana.
  *
  * Exportada para poder dispararla a mano desde el callable de prueba: un correo
  * que solo se puede ver esperando a las ocho de la tarde no se puede depurar.
  */
-export async function construirResumen(ahora = new Date()): Promise<Resumen> {
+export async function construirResumen(
+  ahora = new Date(),
+  avisos: AvisoSistema[] = []
+): Promise<Resumen> {
   const db = firestore();
   const { desde, hasta, etiqueta } = rangoManana(ahora);
 
@@ -165,16 +222,19 @@ export async function construirResumen(ahora = new Date()): Promise<Resumen> {
     entregas,
     devoluciones,
     vencimientos,
-    sinFirmar: entregas.filter((e) => e.contratoSinFirmar).length
+    sinFirmar: entregas.filter((e) => e.contratoSinFirmar).length,
+    avisos
   };
 }
 
 /** Manda el correo si hay algo que contar. Devuelve qué hizo y por qué. */
 export async function enviarResumen(
   apiKey: string | undefined,
-  ahora = new Date()
+  ahora = new Date(),
+  cert?: { p12Base64?: string; passphrase?: string }
 ): Promise<{ enviado: boolean; motivo?: string; asunto?: string; resumen: Resumen }> {
-  const resumen = await construirResumen(ahora);
+  const avisos = await construirAvisos(cert?.p12Base64, cert?.passphrase);
+  const resumen = await construirResumen(ahora, avisos);
 
   if (!mereceEnvio(resumen)) {
     // No es un fallo: es que mañana no hay nada. Ver `mereceEnvio()`.
@@ -230,11 +290,16 @@ export const sendDailyDigest = onSchedule(
   {
     schedule: '0 9 * * *',
     timeZone: 'Europe/Madrid',
-    secrets: [RESEND_API_KEY]
+    secrets: [RESEND_API_KEY, VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD]
   },
   async () => {
     try {
-      await enviarResumen(RESEND_API_KEY.value());
+      await enviarResumen(RESEND_API_KEY.value(), new Date(), {
+        // ⚠️ Se leen DENTRO del handler. En el módulo se evaluarían antes de que
+        // el runtime resuelva los secrets, y saldrían vacíos (F-12).
+        p12Base64: VELTO_SIGNING_CERT.value(),
+        passphrase: VELTO_SIGNING_CERT_PASSWORD.value()
+      });
     } catch (err) {
       // Que falle una tarde no puede tumbar la siguiente.
       functions.logger.error('Resumen diario: falló', { err });
@@ -250,14 +315,22 @@ export const sendDailyDigest = onSchedule(
  * devuelve lo que habría mandado.
  */
 export const previewDailyDigest = functions.https.onCall(
-  { secrets: [RESEND_API_KEY] },
+  { secrets: [RESEND_API_KEY, VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },
   async (request) => {
     if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
+    // ⚠️ La vista previa monta los mismos secrets que el envío de verdad. Si no,
+    // enseñaría un correo sin el aviso del certificado y el primero con aviso
+    // sería el que sale solo a las nueve, que es el que no se puede ensayar.
+    const cert = {
+      p12Base64: VELTO_SIGNING_CERT.value(),
+      passphrase: VELTO_SIGNING_CERT_PASSWORD.value()
+    };
     const enviar = (request.data as { enviar?: boolean })?.enviar === true;
     if (!enviar) {
-      const resumen = await construirResumen();
+      const avisos = await construirAvisos(cert.p12Base64, cert.passphrase);
+      const resumen = await construirResumen(new Date(), avisos);
       const company = companyConfig();
       return {
         enviado: false,
@@ -266,6 +339,6 @@ export const previewDailyDigest = functions.https.onCall(
         resumen
       };
     }
-    return enviarResumen(RESEND_API_KEY.value());
+    return enviarResumen(RESEND_API_KEY.value(), new Date(), cert);
   }
 );

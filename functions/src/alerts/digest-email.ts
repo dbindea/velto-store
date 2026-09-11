@@ -81,6 +81,26 @@ export function renderDigestEmail(
     )
     .join('');
 
+  /**
+   * ⚠️ **Los avisos del sistema van ARRIBA, antes que el trabajo del día.**
+   *
+   * No es jerarquía de importancia abstracta: es que lo de abajo se hace hoy y
+   * esto no se hace nunca si no se ve. Un certificado caducado y una cadena de
+   * facturación parada no dan error en ninguna pantalla — el correo es el único
+   * sitio donde aparecen, y detrás de tres entregas no aparecen.
+   */
+  const avisos = r.avisos
+    .map(
+      (a) =>
+        `<tr><td style="padding:10px 12px;margin:0;border-radius:8px;` +
+        `background:${a.urgente ? '#fdeceb' : '#fbf3e2'};` +
+        `border-left:4px solid ${a.urgente ? ROJO : '#c98500'}">` +
+        `<div style="font:${a.urgente ? '700' : '600'} 13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;` +
+        `color:${a.urgente ? ROJO : TINTA}">${esc(a.texto)}</div></td></tr>` +
+        `<tr><td style="height:6px"></td></tr>`
+    )
+    .join('');
+
   const vencimientos = r.vencimientos
     .map((v) =>
       fila(
@@ -105,6 +125,7 @@ export function renderDigestEmail(
     `Mañana, ${esc(r.fecha)}</td></tr>` +
     `<tr><td style="padding-top:4px;font:400 13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:${GRIS}">` +
     `${esc(company.brandName)} · lo que hay que preparar</td></tr>` +
+    (avisos ? `<tr><td style="height:16px"></td></tr>${avisos}` : '') +
     seccion('Entregas', entregas) +
     seccion('Devoluciones', devoluciones) +
     seccion('Vence en la flota', vencimientos) +
@@ -117,6 +138,14 @@ export function renderDigestEmail(
   // ⚠️ La versión de texto no es un adorno: hay clientes que solo muestran esa,
   // y un correo cuyo texto plano está vacío acaba en spam.
   const lineas: string[] = [`Mañana, ${r.fecha} — ${company.brandName}`, ''];
+  // También arriba en el texto plano, y por el mismo motivo: hay clientes de
+  // correo que solo enseñan esta versión.
+  if (r.avisos.length) {
+    for (const a of r.avisos) {
+      lineas.push(`${a.urgente ? '*** ' : ''}${a.texto}${a.urgente ? ' ***' : ''}`);
+    }
+    lineas.push('');
+  }
   if (r.entregas.length) {
     lineas.push('ENTREGAS');
     for (const e of r.entregas) {

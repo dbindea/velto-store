@@ -1442,7 +1442,8 @@
       "rectifiedVatRequired": "Prin substituire trebuie indicat TVA-ul stornat",
       "rectifyingNoteRequired": "Explică de ce se stornează: este ceea ce apare în document",
       "rectifyingReasonRequired": "Alege temeiul stornării",
-      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență"
+      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență",
+      "euRegimeNotAvailable": "Fără înregistrare în ROI acest regim nu se poate folosi. Facturează cu TVA spaniol, în regim general."
     },
     "errors": {
       "alreadyIssued": "Această factură a fost deja emisă",

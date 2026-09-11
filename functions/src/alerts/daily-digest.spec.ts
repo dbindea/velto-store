@@ -78,7 +78,8 @@ const vacio: Resumen = {
   entregas: [],
   devoluciones: [],
   vencimientos: [],
-  sinFirmar: 0
+  sinFirmar: 0,
+  avisos: []
 };
 
 const entrega = (contratoSinFirmar = false) => ({
@@ -109,6 +110,22 @@ describe('cuándo se manda y cuándo se calla', () => {
         vencimientos: [
           { vehiculo: '0951LTL', concepto: 'ITV', fecha: '17/09/2026', diasRestantes: 7 }
         ]
+      })
+    ).toBe(true);
+  });
+
+  /**
+   * ⚠️ **Lo que este test protege es lo que hace útil el aviso.** El certificado
+   * que caduca y la cadena de facturación parada no se notan en ninguna
+   * pantalla: el correo es el único sitio donde salen. Si se callaran los días
+   * en que no hay entregas, el día que hicieran falta tampoco habría correo — y
+   * un certificado no espera a que mañana haya trabajo.
+   */
+  it('un aviso del sistema manda el correo aunque mañana no haya nada', () => {
+    expect(
+      mereceEnvio({
+        ...vacio,
+        avisos: [{ clase: 'certificado', texto: 'Caduca en 30 días', urgente: false }]
       })
     ).toBe(true);
   });
@@ -154,5 +171,35 @@ describe('el asunto, que es lo único que se lee sin abrir', () => {
       'VELTO'
     );
     expect(vencido).toContain('1 vencido');
+  });
+
+  /**
+   * Un aviso urgente gana incluso al contrato sin firmar: ese se resuelve esa
+   * mañana con una llamada, y una cadena de facturación parada no.
+   */
+  it('lo urgente del sistema va el primero de todo', () => {
+    const s = asuntoDe(
+      {
+        ...vacio,
+        entregas: [entrega(true)],
+        sinFirmar: 1,
+        avisos: [{ clase: 'remision', texto: 'Cadena parada', urgente: true }]
+      },
+      'VELTO'
+    );
+    expect(s).toBe('VELTO · Mañana 11/09/2026: ⚠️ REVISAR · 1 SIN FIRMAR · 1 entrega');
+  });
+
+  /**
+   * ⚠️ Sin esto, un aviso no urgente en un día tranquilo dejaba el asunto
+   * terminado en dos puntos —«Mañana 11/09/2026: »—: el correo llegaba y el
+   * asunto no decía de qué, que es lo único que se lee sin abrirlo.
+   */
+  it('un aviso tranquilo y un día vacío no dejan el asunto cojo', () => {
+    const s = asuntoDe(
+      { ...vacio, avisos: [{ clase: 'certificado', texto: 'Caduca en 30 días', urgente: false }] },
+      'VELTO'
+    );
+    expect(s).toBe('VELTO · Mañana 11/09/2026: 1 aviso');
   });
 });

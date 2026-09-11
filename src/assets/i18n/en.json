@@ -1442,7 +1442,8 @@
       "rectifiedVatRequired": "By substitution the corrected VAT is required",
       "rectifyingNoteRequired": "Explain why it is corrected: it is what the document states",
       "rectifyingReasonRequired": "Choose the grounds for the correction",
-      "rectifyingTypeRequired": "Choose the method: by substitution or by difference"
+      "rectifyingTypeRequired": "Choose the method: by substitution or by difference",
+      "euRegimeNotAvailable": "Without an intra-EU VAT registration (ROI) this regime cannot be used. Invoice with Spanish VAT, standard regime."
     },
     "errors": {
       "alreadyIssued": "This invoice has already been issued",

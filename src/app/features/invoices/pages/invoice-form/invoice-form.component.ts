@@ -37,6 +37,7 @@ import {
 } from '@shared/utils/invoice.util';
 import { CountryOption, countryOptions } from '@shared/utils/country.util';
 import { TranslateService } from '@core/i18n/translate.service';
+import { ComplianceService } from '@features/settings/services/compliance.service';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { DEFAULT_VAT_RATE } from '@shared/utils/pricing.util';
 import { toDate, toDateString } from '@shared/utils/reservation-date.util';
@@ -55,6 +56,7 @@ export class InvoiceFormComponent implements OnInit {
   private reservations = inject(ReservationService);
   private notifications = inject(NotificationService);
   private translate = inject(TranslateService);
+  private compliance = inject(ComplianceService);
 
   loading = signal(false);
   issuing = signal(false);
@@ -119,7 +121,30 @@ export class InvoiceFormComponent implements OnInit {
   get countries(): CountryOption[] {
     return countryOptions(this.translate.language());
   }
-  regimeOptions = Object.keys(TAX_REGIME_LABELS) as TaxRegime[];
+  /**
+   * ¿Ofrece este entorno los regímenes intracomunitarios?
+   *
+   * ⚠️ **Depende del ROI, que no está**, así que lo sirve el backend y no se
+   * escribe aquí: la aplicación se compila igual para los dos entornos, y un
+   * valor en el bundle sería el mismo en desarrollo y en producción — la misma
+   * trampa que `brand.config.ts` con el correo de empresa.
+   *
+   * Nace en `false`: hasta que llegue la respuesta, no se ofrecen. Si el orden
+   * fuera el contrario, la primera pintada enseñaría dos opciones que luego
+   * desaparecen.
+   */
+  readonly euRegimes = signal(false);
+
+  /**
+   * ⚠️ **Lo que no se puede emitir no se ofrece.** Dejarlos en la lista y
+   * rechazarlos al enviar es hacer rellenar una factura entera para decir que no
+   * al final — y aquí «al final» es con el número a punto de consumirse.
+   */
+  get regimeOptions(): TaxRegime[] {
+    const todos = Object.keys(TAX_REGIME_LABELS) as TaxRegime[];
+    if (this.euRegimes()) return todos;
+    return todos.filter((r) => r !== 'exempt_eu' && r !== 'reverse_charge');
+  }
   regimeLabels = TAX_REGIME_LABELS;
 
   /**
@@ -143,6 +168,15 @@ export class InvoiceFormComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     void this.service.listProfiles().then((p) => this.profiles.set(p));
+    /**
+     * ⚠️ No bloquea la pantalla: si la consulta tarda o falla, el formulario se
+     * abre igual y sin los dos regímenes, que es el lado seguro. Lo que impide
+     * emitirlos de verdad es el backend.
+     */
+    void this.compliance
+      .status()
+      .then((s) => this.euRegimes.set(s.euRegimesEnabled === true))
+      .catch(() => this.euRegimes.set(false));
 
     const reservationId = this.route.snapshot.queryParamMap.get('reservation');
     if (reservationId) await this.loadFromReservation(reservationId);
@@ -387,7 +421,8 @@ export class InvoiceFormComponent implements OnInit {
       recipient: this.recipient,
       lines: this.lines,
       paymentMethod: this.paymentMethod,
-      allowNegative: this.allowsNegative
+      allowNegative: this.allowsNegative,
+      euRegimesEnabled: this.euRegimes()
     });
     if (this.isRectifying) {
       Object.assign(
