@@ -38,9 +38,38 @@ describe('lo que NO puede un empleado', () => {
     expect(can('employee', 'cancelReservations')).toBe(false);
   });
 
-  it('no ve la cuenta de resultados', () => {
-    expect(can('employee', 'viewReports')).toBe(false);
-    expect(can('employee', 'viewExpenses')).toBe(false);
+  /**
+   * ⚠️ **Los cinco permisos del dinero de la empresa, en un solo sitio.**
+   *
+   * `viewInvoices` y `viewCollaborators` llegaron después de escribirse este
+   * test y no se añadieron aquí; `viewPaymentHistory`, el 11 de septiembre de
+   * 2026. Una lista que hay que acordarse de ampliar es una lista que se queda
+   * corta, y el día que un permiso nuevo del dinero se le conceda a un empleado
+   * por descuido, este es el único sitio donde iba a saltar.
+   */
+  it('no ve nada de la cuenta de resultados', () => {
+    const dinero: Permission[] = [
+      'viewReports',
+      'viewExpenses',
+      'viewInvoices',
+      'viewCollaborators',
+      'viewPaymentHistory'
+    ];
+    for (const permiso of dinero) {
+      expect(can('employee', permiso), permiso).toBe(false);
+    }
+  });
+
+  /**
+   * Y la red de verdad: la lista **completa**, comparada entera.
+   *
+   * Enumerando solo lo denegado, un permiso nuevo concedido sin querer no lo
+   * coge nadie — porque nadie escribe el test de un permiso que no sabe que
+   * existe. Así, cualquier cosa que se le dé a un empleado obliga a venir aquí y
+   * decirlo a propósito.
+   */
+  it('tiene exactamente dos permisos, y son los dos que se decidieron', () => {
+    expect(permissionsOf('employee').sort()).toEqual(['skipWorkflowSteps', 'waiveDeposit']);
   });
 
   it('no administra ni los ajustes ni a los demás usuarios', () => {

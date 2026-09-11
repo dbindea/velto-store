@@ -272,6 +272,16 @@ export function validateInvoice(input: {
    * factura ordinaria un negativo sigue estando mal.
    */
   allowNegative?: boolean;
+  /**
+   * ¿Puede este entorno emitir con régimen intracomunitario? Lo sirve el
+   * backend (`getComplianceStatus`), porque depende del ROI y del entorno, no
+   * del código de la aplicación.
+   *
+   * ⚠️ **Sin valor, NO.** Falla cerrado: quien se olvide de pasarlo bloquea dos
+   * regímenes que hoy no se deben usar. Al revés sería una factura fiscalmente
+   * incorrecta que ya no se puede editar.
+   */
+  euRegimesEnabled?: boolean;
 }): FieldProblems {
   const problems: FieldProblems = {};
   const recipient = input.recipient || {};
@@ -343,6 +353,19 @@ export function validateInvoice(input: {
     if (regimen === 'exempt_other' && !line.exemptionNote?.trim()) {
       // El art. 6.1.j) exige la referencia a la norma que ampara la exención.
       problems[`lines[${i}].exemptionNote`] = 'invoices.problems.exemptionNoteRequired';
+    }
+    /**
+     * ⚠️ **Sin ROI, estos dos no se pueden usar.** La entrega intracomunitaria
+     * exenta (art. 25) y la inversión del sujeto pasivo exigen que el emisor
+     * esté en el Registro de Operadores Intracomunitarios, y VELTO no lo está.
+     *
+     * La misma comprobación está en `functions/src/invoices/invoice-core.ts`, y
+     * la que manda es esa: aquí es para que el formulario lo diga antes de
+     * mandar, no para impedirlo. Duplicada como todo lo que la app y las
+     * functions no pueden compartir.
+     */
+    if (!input.euRegimesEnabled && (regimen === 'exempt_eu' || regimen === 'reverse_charge')) {
+      problems[`lines[${i}].taxRegime`] = 'invoices.problems.euRegimeNotAvailable';
     }
   });
 

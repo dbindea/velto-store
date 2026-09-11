@@ -136,7 +136,6 @@
     "days": "days",
     "delete": "Delete",
     "edit": "Edit",
-    "error": "Something went wrong",
     "loading": "Loading...",
     "missingFields": "Still missing:",
     "photos": {
@@ -150,7 +149,6 @@
       "tooLarge": "The image is over the maximum size (5 MB)",
       "uploadFromGallery": "Upload from gallery"
     },
-    "refresh": "Refresh",
     "reload": "Reload",
     "retry": "Retry",
     "save": "Save",
@@ -652,7 +650,8 @@
       "retain": "Retain"
     },
     "errors": {
-      "invalidAmount": "The amount is not valid"
+      "invalidAmount": "The amount is not valid",
+      "loadFailed": "The payments could not be loaded."
     },
     "fields": {
       "amount": "Amount",
@@ -693,7 +692,8 @@
       "webhookHint": "Status will update automatically once Redsys confirms the payment."
     },
     "list": {
-      "empty": "No payments"
+      "empty": "No payments",
+      "openOnly": "Your role shows outstanding payments, not the full history. The payments of a reservation or a client are on their own page."
     },
     "methods": {
       "bankTransfer": "Bank transfer",
@@ -781,25 +781,61 @@
     "notAllowedRoute": "Your role does not have access to that section."
   },
   "reports": {
-    "days": "days",
-    "monthlyRevenue": "Monthly revenue",
+    "title": "Reports",
+    "subtitle": "The health of the business, at a glance.",
+    "from": "From",
+    "to": "To",
+    "thisYear": "This year",
+    "dayInRange": "day in range",
+    "daysInRange": "days in range",
+    "profit": "Profit",
+    "profitHint": "Net of VAT, less expenses, maintenance and commissions.",
+    "margin": "Margin",
+    "grossRevenue": "Collected",
+    "withVat": "VAT included",
+    "netRevenue": "Taxable base",
+    "netHint": "Estimated: payments with no reservation use the standard rate.",
+    "vat": "VAT collected",
+    "vatHint": "Not the company's: it is collected and handed over.",
+    "outgoings": "Outgoings",
+    "outstanding": "Outstanding",
+    "commissionsPending": "Commissions to pay",
+    "yearOverYear": "Revenue by month, this year and last",
+    "viewTable": "View table",
+    "viewChart": "View chart",
+    "byMethod": "Payments by method",
+    "collected": "Collected",
     "noData": "No data in this period.",
-    "noOutstanding": "All clear: no outstanding payments.",
-    "outstanding": "Outstanding payments",
-    "outstandingHint": "Active reservations with a balance in the customer's favor.",
-    "outstandingTitle": "Reservations with outstanding balance",
-    "range": {
-      "12m": "Last year",
-      "1m": "Last month",
-      "3m": "Last 3 months",
-      "6m": "Last 6 months"
+    "fleet": "Fleet and performance",
+    "occupancy": "Occupancy",
+    "vehicleDays": "vehicle-days",
+    "perRentalDay": "Per rental day",
+    "rentals": "Rentals",
+    "rentalOne": "rental",
+    "rentalMany": "rentals",
+    "dayRented": "day rented",
+    "daysRented": "days rented",
+    "repeatClients": "Repeat clients",
+    "ofRevenue": "of revenue",
+    "byVehicle": "Revenue by vehicle",
+    "topClients": "Top clients",
+    "client": "Client",
+    "billed": "Collected",
+    "days": "Days",
+    "showMore": "Show more clients",
+    "methods": {
+      "card": "Card / POS",
+      "transfer": "Bank transfer",
+      "bizum": "Bizum",
+      "cash": "Cash",
+      "other": "Other"
     },
-    "reservations": "reservations",
-    "subtitle": "Revenue, fleet utilization and outstanding balances for the last few months.",
-    "topVehicles": "Top-earning vehicles",
-    "totalRevenue": "Collected revenue",
-    "utilization": "Fleet utilization",
-    "windowLabel": "in the selected window"
+    "errors": {
+      "loadFailed": "The data could not be loaded."
+    },
+    "outExpenses": "Expenses",
+    "outMaintenance": "Workshop",
+    "outCommissions": "Commissions"
   },
   "reservations": {
     "actions": {
@@ -1059,9 +1095,9 @@
       "role": "Role",
       "roles": {
         "admin": "Administrator",
-        "adminHint": "Can do everything, including granting access to others, seeing reports and expenses and changing these settings.",
+        "adminHint": "Can do everything: granting access to others, seeing reports, expenses, invoices, collaborators and the payment history, and changing these settings.",
         "employee": "Employee",
-        "employeeHint": "Runs the day to day: reservations, clients, vehicles, payments, pickups and returns. Does not see reports or expenses, does not touch prices or discounts, and does not delete or cancel."
+        "employeeHint": "Runs the day to day: reservations, clients, vehicles, pickups, returns and collecting what is outstanding. Does not see reports, expenses, invoices, collaborators or the payment history; does not touch prices or discounts, and does not delete or cancel."
       },
       "selfLocked": "You cannot change your own access or role.",
       "you": "You"
@@ -1406,7 +1442,8 @@
       "rectifiedVatRequired": "By substitution the corrected VAT is required",
       "rectifyingNoteRequired": "Explain why it is corrected: it is what the document states",
       "rectifyingReasonRequired": "Choose the grounds for the correction",
-      "rectifyingTypeRequired": "Choose the method: by substitution or by difference"
+      "rectifyingTypeRequired": "Choose the method: by substitution or by difference",
+      "euRegimeNotAvailable": "Without an intra-EU VAT registration (ROI) this regime cannot be used. Invoice with Spanish VAT, standard regime."
     },
     "errors": {
       "alreadyIssued": "This invoice has already been issued",

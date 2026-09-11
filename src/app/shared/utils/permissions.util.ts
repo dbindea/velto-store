@@ -43,6 +43,26 @@ export type Permission =
    * se escondiera el menú, bastaría abrir la consola del navegador.
    */
   | 'viewCollaborators'
+  /**
+   * El libro de cobros completo: el histórico de `payments`, cobrados incluidos.
+   *
+   * ⚠️ **No es el módulo de Pagos, es su histórico.** Un empleado tiene que poder
+   * cobrar y ver qué queda por cobrar —es su trabajo en el mostrador—, pero la
+   * lista de **todo** lo cobrado desde siempre es la facturación del negocio
+   * sumada a mano: la misma cifra que `viewReports` protege, servida fila a fila.
+   * Con este permiso se ve el histórico; sin él, solo lo que está abierto.
+   *
+   * ⚠️ **Y este sí es solo interfaz, a diferencia de los otros.** `payments` no
+   * se puede cerrar en `firestore.rules` como se cierran `expenses` o
+   * `invoices`: la ficha de la reserva y la del cliente necesitan leer sus pagos
+   * **cobrados** para enseñar el resumen, y una regla no distingue si quien lee
+   * llegó desde una reserva o desde una consulta suelta. Lo que la aplicación
+   * hace aquí es no ofrecer el histórico; lo que impide de verdad ver la cuenta
+   * de resultados es que `expenses`, `invoices`, `collaboratorSales`,
+   * `billingProfiles` y `verifactuSubmissions` sean de administrador en las
+   * reglas. Está dicho aquí para que nadie lo dé por lo que no es.
+   */
+  | 'viewPaymentHistory'
   | 'manageSettings'
   | 'manageUsers'
   // Dinero
@@ -65,6 +85,11 @@ export type Permission =
  * - **Borrar y cancelar**, que es lo irreversible y lo que descuadra la caja.
  * - **Informes y gastos**, que son la cuenta de resultados del negocio:
  *   información de dueño, no de operación diaria.
+ * - **El histórico de cobros** (11 de septiembre de 2026). Ve lo que hay que
+ *   cobrar, no lo cobrado desde siempre: la segunda lista es la facturación del
+ *   año servida fila a fila, y con la primera se trabaja igual. Los cobros de
+ *   una reserva o de un cliente concretos se siguen viendo en su ficha, que es
+ *   donde hacen falta.
  *
  * Y dos que **sí** puede, también por decisión suya, las dos por el mismo
  * motivo: quien está en el mostrador con el cliente delante tiene que poder
@@ -82,6 +107,7 @@ const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
     'viewExpenses',
     'viewInvoices',
     'viewCollaborators',
+    'viewPaymentHistory',
     'manageSettings',
     'manageUsers',
     'editPricing',

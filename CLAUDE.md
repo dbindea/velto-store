@@ -433,11 +433,51 @@ el `pricingSnapshot`**; y **200** al leer reservas y escribir una nota, que es
 lo que necesita para trabajar. Repetir esa prueba es la forma de validar un
 cambio en `firestore.rules`.
 
-**Y hay un guion para repetirla**: [docs/comprobar-reglas-facturas.js](docs/comprobar-reglas-facturas.js),
-que se pega en la consola del navegador con la sesión abierta. Comprueba que una
-factura emitida devuelve **403** al modificarla y al borrarla, y de paso que la
-cadena de huellas está bien formada. No es código de la aplicación y no se
-compila; vive en `docs/` para que no lo parezca.
+**Y hay dos guiones para repetirla**, que se pegan en la consola del navegador
+con la sesión abierta. No son código de la aplicación y no se compilan; viven en
+`docs/` para que no lo parezcan.
+
+- [comprobar-reglas-facturas.js](docs/comprobar-reglas-facturas.js) — que una
+  factura emitida devuelve **403** al modificarla y al borrarla, y que la cadena
+  de huellas está bien formada.
+- [comprobar-reglas-financieras.js](docs/comprobar-reglas-financieras.js) — que
+  las ocho colecciones del dinero (`expenses`, `invoices`, `invoiceCounters`,
+  `billingProfiles`, `verifactuDeclarations`, `verifactuSubmissions`,
+  `collaborators`, `collaboratorSales`) dan **403** a quien no es administrador,
+  y que un empleado no puede ascenderse. **Lee el rol de `authorizedUsers` y
+  ajusta lo que espera**, así que la misma pasada sirve con las dos cuentas.
+
+### El dinero de la empresa: qué está cerrado y qué no
+
+Un empleado no ve la cuenta de resultados. Cinco permisos lo gobiernan
+—`viewReports`, `viewExpenses`, `viewInvoices`, `viewCollaborators` y
+`viewPaymentHistory`— y `permissions.util.spec.ts` los comprueba **en bloque y
+por lista completa**: el test afirma que el empleado tiene *exactamente* dos
+permisos, así que cualquier cosa que se le conceda obliga a venir a decirlo
+a propósito. Enumerando solo lo denegado, un permiso nuevo concedido sin querer
+no lo coge nadie — porque nadie escribe el test de un permiso que no sabe que
+existe.
+
+⚠️ **`payments` está abierto a cualquier autorizado, y es deliberado.** No es el
+descuido que fue `invoices`: la ficha de la reserva y la del cliente enseñan el
+resumen de sus cobros, y para eso hay que leer los pagos **cobrados**. Una regla
+no distingue si quien lee llegó desde una reserva o desde una consulta a la
+colección entera, así que cerrarla rompería la operación diaria.
+
+La consecuencia hay que decirla: **un empleado puede listar todos los cobros por
+la API REST y sumarlos.** Lo que la aplicación hace es no ofrecerle el histórico
+—`viewPaymentHistory`, en `payment-scope.util.ts`: sin él la lista de Pagos
+enseña solo lo **abierto** (`pending`, `partial`, `failed`), y la pestaña
+«Cobrado» ni se ofrece, porque saldría siempre vacía—. Eso es interfaz, no
+seguridad, y está dicho así en los tres sitios para que nadie lo dé por lo que
+no es.
+
+Lo que sí impide reconstruir la cuenta de resultados es que los **gastos** y las
+**comisiones** sean de administrador en las reglas: sin ellos no hay beneficio,
+solo ingresos.
+
+⚠️ **El recorte se aplica al cargar, no al filtrar.** Puesto en `applyFilters()`,
+cambiar de pestaña volvería a enseñarlo todo.
 
 ⚠️ **Ese guion encontró un agujero el 8 de septiembre de 2026, y es el patrón a
 vigilar**: `viewInvoices` es permiso de administrador, pero las reglas dejaban
@@ -496,10 +536,68 @@ confunda. Confundirlas **no da un error**: da una cifra creíble y equivocada, q
 es la peor clase de fallo con dinero. Si algún día alguien unifica los dos
 módulos, esta es la razón por la que no debe.
 
+### `analytics.util.ts` es la única autoridad sobre qué cuenta como ingreso
+
+Y es lo más importante del módulo de Informes, por encima de cualquier gráfico:
+una cifra de ingresos mal definida no da un error, da un número creíble y
+equivocado, y a partir de ahí todo lo demás miente igual.
+
+⚠️ **Una fianza NO es un ingreso, y su devolución tampoco.** Es dinero del
+cliente que la empresa custodia y devuelve. El informe anterior sumaba **todo**
+pago cobrado sin mirar su tipo, así que una fianza de 300 € cobrada y devuelta
+contaba **600 €** de «facturación» — 300 al cobrarla y otros 300 al devolverla,
+porque la devolución también es un pago con importe. La **retención** sí es
+ingreso: esa no vuelve.
+
+⚠️ **Las bases no son la misma en todo, y por eso el número lleva al lado qué
+mide.** Los ingresos y los gastos se cuentan **cuando el dinero se mueve**; las
+comisiones de colaborador, **cuando se devengan** aunque no estén pagadas
+(decisión de Dorel, por prudencia: nunca creerse más rico de lo que uno es).
+Mezclar dos criterios es legítimo mientras se diga.
+
+⚠️ **El beneficio se calcula sobre la base SIN IVA.** Restar gastos de un importe
+con IVA sin quitárselo a los ingresos infla el resultado un 21 %. Y esa base es
+**estimada** —un cobro libre no tiene reserva y los cargos extra no llevan
+desglose—, así que la pantalla lo dice: para lo fiscal están las facturas.
+
+Lo pendiente de cobrar y lo pendiente de pagar van **fuera** del beneficio, en su
+propia franja: es dinero que se espera, no que se tiene.
+
+### Los gráficos son propios, y tienen reglas
+
+Tres componentes en `shared/components/charts/` (línea, donut, barras), sin
+dependencia nueva. Lo que hay que respetar al tocarlos o añadir uno:
+
+- **Un solo eje, siempre.** Dos escalas en un mismo dibujo permiten hacer que dos
+  líneas parezcan lo que uno quiera moviendo un cero.
+- **Leyenda con dos o más series y tabla con los mismos números.** Un valor que
+  solo se lee pasando el ratón no existe para quien imprime o va con el teclado.
+- **La paleta se valida con el guion del skill `dataviz`, no a ojo.** El candidato
+  `#33B39E` falló la banda de luminosidad; `#20A48F` pasa. El conjunto actual pasa
+  contra el fondo oscuro (`#14181A`) y el claro.
+- **El color sigue a la entidad, nunca a su posición en un ranking.**
+
+⚠️ **El `viewBox` del gráfico de líneas sigue al ancho real, y no es cosmético.**
+Con 720 unidades metidas en los 358 px de un móvil todo se reduce a la mitad —
+**el texto también**: las etiquetas salían a 5 px. Igualando unidades a píxeles,
+un `font-size="10"` mide 10 px en los dos sitios, y en pantalla estrecha se
+enseñan **menos meses** en vez de los mismos más pequeños.
+
+⚠️ **El elemento del componente es el que entra en la rejilla, no la figura de
+dentro.** `<app-donut-chart>` es `display: inline` por defecto: la celda se
+estiraba y la tarjeta no. Lo arregla `:host { display: block; height: 100% }` en
+`charts.scss`.
+
+⚠️ **Y `.chart` vive en `charts.scss`, encapsulado en los componentes de
+gráfico.** Una plantilla de pantalla que se ponga `class="chart"` no lo alcanza —
+la misma trampa que `.form-control`. Si una tarjeta de fuera necesita esa chapa,
+la declara su propio SCSS.
+
 ### Otros utils
 
 - `payment-summary.util.ts` — resumen financiero, derivado de la colección `payments` (source of truth)
 - `expense.util.ts` — el IVA de los gastos, la mezcla con el mantenimiento y los totales
+- `analytics.util.ts` — los números de Informes (arriba)
 - `reservation-date.util.ts`, `acriss-code.util.ts`
 
 ### Reglas de dominio

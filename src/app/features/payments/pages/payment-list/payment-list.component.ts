@@ -7,7 +7,6 @@ import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { PaymentService } from '@features/payments/services/payment.service';
 import {
   Payment,
-  PaymentStatus,
   PaymentMethod,
   PaymentType,
   PAYMENT_STATUS_LABELS,
@@ -17,9 +16,24 @@ import {
   PAYMENT_METHOD_ICONS
 } from '@shared/models/payment.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { visiblePayments } from '@shared/utils/payment-scope.util';
+import { PermissionsService } from '@core/auth/permissions.service';
+import { NotificationService } from '@core/notifications/notification.service';
 
 type TabFilter = 'all' | 'pending' | 'paid' | 'failed';
 
+/**
+ * El libro de cobros.
+ *
+ * ⚠️ **Sin `viewPaymentHistory` solo se ven los cobros ABIERTOS.** La lista de
+ * todo lo cobrado desde siempre es la facturación del negocio servida fila a
+ * fila, y esa es información de dueño — la misma que protegen Informes y Gastos.
+ * Lo que un empleado necesita para trabajar es lo contrario: lo que falta por
+ * cobrar. Ver `payment-scope.util.ts`.
+ *
+ * El recorte se aplica **al cargar**, no en `applyFilters()`: puesto en el
+ * filtro, cambiar de pestaña volvería a enseñarlo todo.
+ */
 @Component({
   selector: 'app-payment-list',
   standalone: true,
@@ -30,6 +44,8 @@ type TabFilter = 'all' | 'pending' | 'paid' | 'failed';
 export class PaymentListComponent implements OnInit {
   private router = inject(Router);
   private paymentService = inject(PaymentService);
+  private notifications = inject(NotificationService);
+  readonly permissions = inject(PermissionsService);
 
   payments: Payment[] = [];
   filteredPayments: Payment[] = [];
@@ -49,12 +65,22 @@ export class PaymentListComponent implements OnInit {
   PAYMENT_STATUS_COLORS = PAYMENT_STATUS_COLORS;
   PAYMENT_METHOD_ICONS = PAYMENT_METHOD_ICONS;
 
-  statusOptions: Array<{ value: TabFilter; label: string }> = [
-    { value: 'all', label: 'common.all' },
-    { value: 'pending', label: 'payments.status.pending' },
-    { value: 'paid', label: 'payments.status.paid' },
-    { value: 'failed', label: 'payments.status.failed' }
-  ];
+  /**
+   * ⚠️ **La pestaña «Cobrados» no se ofrece sin el permiso.** Sin el histórico
+   * saldría siempre vacía, y un botón que no hace nada es un fallo: el compañero
+   * la pulsa, no pasa nada, y acaba llamando para preguntar qué le pasa a la
+   * aplicación. Mejor que no esté, y que al lado se explique por qué.
+   */
+  get statusOptions(): Array<{ value: TabFilter; label: string }> {
+    const todas: Array<{ value: TabFilter; label: string }> = [
+      { value: 'all', label: 'common.all' },
+      { value: 'pending', label: 'payments.status.pending' },
+      { value: 'paid', label: 'payments.status.paid' },
+      { value: 'failed', label: 'payments.status.failed' }
+    ];
+    if (this.permissions.canViewPaymentHistory()) return todas;
+    return todas.filter((o) => o.value !== 'paid');
+  }
 
   methodOptions: Array<{ value: PaymentMethod | 'all'; label: string }> = [
     { value: 'all', label: 'common.all' },
@@ -81,12 +107,21 @@ export class PaymentListComponent implements OnInit {
     this.loading = true;
     this.paymentService.getPayments().subscribe({
       next: (payments) => {
-        this.payments = payments;
+        // El recorte va aquí y no en `applyFilters()`: después, cualquier
+        // pestaña volvería a enseñar lo que este permiso retira.
+        this.payments = visiblePayments(payments, this.permissions.canViewPaymentHistory());
         this.applyFilters();
         this.loading = false;
       },
-      error: (error) => {
-        console.error('Error loading payments:', error);
+      error: () => {
+        /**
+         * ⚠️ Antes esto era un `console.error` y nada más: si fallaba, la lista
+         * salía vacía y la pantalla decía «no hay pagos», que es mentira y se
+         * actúa sobre ella. Si una acción puede fallar, tiene que contarlo.
+         */
+        this.notifications.error('payments.errors.loadFailed', {
+          retry: () => this.loadPayments()
+        });
         this.loading = false;
       }
     });

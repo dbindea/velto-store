@@ -171,6 +171,11 @@ const DYNAMIC_KEY_SETS = {
   // events.util.ts › EVENT_HORIZONS. Los tres plazos que ofrece la pantalla:
   // hoy, una semana y un mes.
   'events.horizons.': ['0', '7', '30'],
+  // analytics.util.ts › MethodFamily. El donut de Informes las pinta con
+  // `reports.methods.${s.family}`. Son familias y no `PaymentMethod` a secas:
+  // tarjeta, TPV físico y cobro manual con tarjeta son el mismo medio para
+  // quien mira el reparto de cobros.
+  'reports.methods.': ['card', 'transfer', 'bizum', 'cash', 'other'],
   // verifactu-submission.ts › EstadoRemision, menos `aceptado`: la lista de la
   // pantalla es la de pendientes, y una aceptada ya no lo está.
   'settings.verifactu.state.': ['pendiente', 'error', 'rechazado'],

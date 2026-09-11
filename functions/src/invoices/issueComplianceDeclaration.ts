@@ -54,7 +54,11 @@ export const getComplianceStatus = functions.https.onCall(async (request) => {
     producerTaxId: sistema.nifProductor,
     onlyVerifactu: sistema.tipoUsoPosibleSoloVerifactu,
     multipleTaxpayers: sistema.tipoUsoPosibleMultiOT,
-    invoicingEnabled: invoicingEnabled()
+    invoicingEnabled: invoicingEnabled(),
+    // Para que la pantalla no ofrezca dos regímenes que el backend va a
+    // rechazar: un botón que no hace nada es un fallo, y aquí además el error
+    // llegaría con el formulario entero relleno.
+    euRegimesEnabled: euRegimesEnabled()
   };
 });
 
@@ -78,6 +82,28 @@ export const getComplianceStatus = functions.https.onCall(async (request) => {
  */
 export function invoicingEnabled(): boolean {
   return process.env.VELTO_INVOICING_ENABLED === 'true';
+}
+
+/**
+ * ¿Puede este entorno facturar con régimen intracomunitario?
+ *
+ * ⚠️ **Depende del ROI, que es del mundo real y no del código.** La entrega
+ * intracomunitaria exenta y la inversión del sujeto pasivo exigen que el emisor
+ * esté en el Registro de Operadores Intracomunitarios. VELTO no lo está y no lo
+ * ha pedido; hasta que lo tenga, a un cliente de otro Estado miembro se le
+ * factura con IVA español, en régimen general.
+ *
+ * ⚠️ **La AEAT no lo comprueba por nosotros**: acepta el registro igual, porque
+ * su validación es de forma. Aquí no hay red debajo, y una factura emitida no se
+ * puede editar — por eso esto es un interruptor y no una nota en la
+ * documentación, que era lo que había hasta el 11 de septiembre de 2026.
+ *
+ * En **desarrollo va a `true`**, para poder probar los dos regímenes contra
+ * preproducción, que es una prueba pendiente. En **producción, `false`**, y solo
+ * lo cambia Dorel el día que llegue el ROI.
+ */
+export function euRegimesEnabled(): boolean {
+  return process.env.VELTO_EU_REGIMES_ENABLED === 'true';
 }
 
 export const issueComplianceDeclaration = functions.https.onCall(

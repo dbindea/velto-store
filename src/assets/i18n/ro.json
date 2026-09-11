@@ -136,7 +136,6 @@
     "days": "zile",
     "delete": "Șterge",
     "edit": "Editează",
-    "error": "Ceva nu a mers bine",
     "loading": "Se încarcă...",
     "missingFields": "Mai lipsește:",
     "photos": {
@@ -150,7 +149,6 @@
       "tooLarge": "Imaginea depășește dimensiunea maximă (5 MB)",
       "uploadFromGallery": "Încarcă din galerie"
     },
-    "refresh": "Reîmprospătează",
     "reload": "Reîncarcă",
     "retry": "Reîncearcă",
     "save": "Salvează",
@@ -652,7 +650,8 @@
       "retain": "Reține"
     },
     "errors": {
-      "invalidAmount": "Suma nu este validă"
+      "invalidAmount": "Suma nu este validă",
+      "loadFailed": "Încasările nu au putut fi încărcate."
     },
     "fields": {
       "amount": "Sumă",
@@ -693,7 +692,8 @@
       "webhookHint": "Starea se va actualiza automat când Redsys confirmă plata."
     },
     "list": {
-      "empty": "Nu există plăți"
+      "empty": "Nu există plăți",
+      "openOnly": "Rolul tău arată încasările în așteptare, nu tot istoricul. Încasările unei rezervări sau ale unui client sunt în fișa lor."
     },
     "methods": {
       "bankTransfer": "Transfer bancar",
@@ -781,25 +781,61 @@
     "notAllowedRoute": "Rolul tău nu are acces la acea secțiune."
   },
   "reports": {
-    "days": "zile",
-    "monthlyRevenue": "Venituri lunare",
+    "title": "Rapoarte",
+    "subtitle": "Sănătatea afacerii dintr-o privire.",
+    "from": "De la",
+    "to": "Până la",
+    "thisYear": "Anul curent",
+    "dayInRange": "zi în perioadă",
+    "daysInRange": "zile în perioadă",
+    "profit": "Profit",
+    "profitHint": "Baza fără TVA, minus cheltuieli, întreținere și comisioane.",
+    "margin": "Marjă",
+    "grossRevenue": "Încasat",
+    "withVat": "TVA inclus",
+    "netRevenue": "Bază impozabilă",
+    "netHint": "Estimată: încasările fără rezervare folosesc cota generală.",
+    "vat": "TVA încasat",
+    "vatHint": "Nu este al firmei: se colectează și se predă.",
+    "outgoings": "Ieșiri",
+    "outstanding": "De încasat",
+    "commissionsPending": "Comisioane de plătit",
+    "yearOverYear": "Venituri pe lună, anul acesta și anul trecut",
+    "viewTable": "Vezi tabelul",
+    "viewChart": "Vezi graficul",
+    "byMethod": "Încasări după metodă",
+    "collected": "Încasat",
     "noData": "Fără date în această perioadă.",
-    "noOutstanding": "Totul în ordine: nu există plăți restante.",
-    "outstanding": "Plăți restante",
-    "outstandingHint": "Rezervări active cu sold în favoarea clientului.",
-    "outstandingTitle": "Rezervări cu sold restant",
-    "range": {
-      "12m": "Ultimul an",
-      "1m": "Ultima lună",
-      "3m": "Ultimele 3 luni",
-      "6m": "Ultimele 6 luni"
+    "fleet": "Flotă și randament",
+    "occupancy": "Grad de ocupare",
+    "vehicleDays": "zile-mașină",
+    "perRentalDay": "Pe zi de închiriere",
+    "rentals": "Închirieri",
+    "rentalOne": "închiriere",
+    "rentalMany": "închirieri",
+    "dayRented": "zi închiriat",
+    "daysRented": "zile închiriat",
+    "repeatClients": "Clienți care revin",
+    "ofRevenue": "din încasări",
+    "byVehicle": "Venituri pe mașină",
+    "topClients": "Cei mai buni clienți",
+    "client": "Client",
+    "billed": "Încasat",
+    "days": "Zile",
+    "showMore": "Vezi mai mulți clienți",
+    "methods": {
+      "card": "Card / POS",
+      "transfer": "Transfer bancar",
+      "bizum": "Bizum",
+      "cash": "Numerar",
+      "other": "Altele"
     },
-    "reservations": "rezervări",
-    "subtitle": "Venituri, utilizare flotă și solduri restante pentru ultimele luni.",
-    "topVehicles": "Vehicule cu cele mai multe venituri",
-    "totalRevenue": "Venituri încasate",
-    "utilization": "Utilizare flotă",
-    "windowLabel": "în perioada selectată"
+    "errors": {
+      "loadFailed": "Datele nu au putut fi încărcate."
+    },
+    "outExpenses": "Cheltuieli",
+    "outMaintenance": "Service",
+    "outCommissions": "Comisioane"
   },
   "reservations": {
     "actions": {
@@ -1059,9 +1095,9 @@
       "role": "Rol",
       "roles": {
         "admin": "Administrator",
-        "adminHint": "Poate tot, inclusiv să dea acces altora, să vadă rapoarte și cheltuieli și să schimbe aceste setări.",
+        "adminHint": "Poate tot: să dea acces altora, să vadă rapoarte, cheltuieli, facturi, colaboratori și istoricul încasărilor, și să schimbe aceste setări.",
         "employee": "Angajat",
-        "employeeHint": "Se ocupă de zi cu zi: rezervări, clienți, vehicule, încasări, predări și returnări. Nu vede rapoarte sau cheltuieli, nu umblă la prețuri sau reduceri și nu șterge și nu anulează."
+        "employeeHint": "Se ocupă de zi cu zi: rezervări, clienți, vehicule, predări, returnări și încasarea a ceea ce este în așteptare. Nu vede rapoarte, cheltuieli, facturi, colaboratori sau istoricul încasărilor; nu umblă la prețuri sau reduceri și nu șterge și nu anulează."
       },
       "selfLocked": "Nu îți poți schimba propriul acces sau rol.",
       "you": "Tu"
@@ -1406,7 +1442,8 @@
       "rectifiedVatRequired": "Prin substituire trebuie indicat TVA-ul stornat",
       "rectifyingNoteRequired": "Explică de ce se stornează: este ceea ce apare în document",
       "rectifyingReasonRequired": "Alege temeiul stornării",
-      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență"
+      "rectifyingTypeRequired": "Alege modalitatea: prin substituire sau prin diferență",
+      "euRegimeNotAvailable": "Fără înregistrare în ROI acest regim nu se poate folosi. Facturează cu TVA spaniol, în regim general."
     },
     "errors": {
       "alreadyIssued": "Această factură a fost deja emisă",

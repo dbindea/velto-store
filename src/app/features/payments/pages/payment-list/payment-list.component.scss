@@ -24,6 +24,26 @@
   }
 }
 
+// Por qué esta lista es más corta de lo que uno espera. Es un aviso de contexto,
+// no un error: color de texto secundario, sin la chapa de una alerta.
+.scope-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+
+  i {
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+  }
+}
+
 // Tabs
 .tabs {
   display: flex;

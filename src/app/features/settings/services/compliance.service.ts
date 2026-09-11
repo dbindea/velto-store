@@ -70,6 +70,16 @@ export interface ComplianceStatus {
    * cosas, porque un botón que no hace nada es un fallo.
    */
   invoicingEnabled: boolean;
+  /**
+   * Si este entorno puede facturar con **régimen intracomunitario**: entrega
+   * exenta del art. 25 e inversión del sujeto pasivo.
+   *
+   * ⚠️ **Depende del ROI y no del código.** VELTO no está en el Registro de
+   * Operadores Intracomunitarios, así que hoy es `false` en producción. Viaja
+   * desde el backend porque la aplicación se compila igual para los dos
+   * entornos: escrito en el bundle valdría lo mismo en los dos.
+   */
+  euRegimesEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

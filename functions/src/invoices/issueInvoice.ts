@@ -37,6 +37,7 @@ import {
   verifactuEnabled
 } from './verifactu';
 import { buildInvoicePdf } from './invoice-pdf';
+import { euRegimesEnabled } from './issueComplianceDeclaration';
 import { uploadPdf } from '../documents/storage';
 import type { ContractLocale } from '../contracts/contract-types';
 import {
@@ -282,7 +283,15 @@ export const issueInvoice = functions.https.onCall(
       // así se declara un ajuste a la baja y así se anula una factura entera.
       // La regla de «un negativo es una rectificativa, no una factura» es
       // justamente lo contrario aquí.
-      allowNegative: esRectificativa && data?.rectifyingType === 'I'
+      allowNegative: esRectificativa && data?.rectifyingType === 'I',
+      /**
+       * ⚠️ **Se comprueba ANTES de consumir número**, igual que el país del
+       * destinatario y por el mismo motivo: después no tiene arreglo. Sin ROI,
+       * una factura con entrega intracomunitaria exenta o inversión del sujeto
+       * pasivo deja de repercutir un IVA que sí se debe, y una factura emitida
+       * no se edita ni se borra.
+       */
+      euRegimesEnabled: euRegimesEnabled()
     });
     const primerProblema = Object.values(problems)[0];
     if (primerProblema) {

@@ -95,7 +95,23 @@ service cloud.firestore {
       allow delete: if callerIsAdmin();
     }
 
-    // payments collection - only authorized users
+    // payments: cualquier usuario autorizado, y **es deliberado**.
+    //
+    // ⚠️ No es el descuido que fue `invoices` el 8 de septiembre de 2026, donde
+    // el permiso era de administrador y la regla no. Aquí no se puede cerrar:
+    // la ficha de la reserva y la del cliente enseñan el resumen de sus cobros,
+    // y para eso hay que leer los pagos **cobrados**. Una regla no distingue si
+    // quien lee llegó desde una reserva o desde una consulta suelta a la
+    // colección entera, así que cerrarla rompería la operación diaria.
+    //
+    // La consecuencia hay que decirla en voz alta: **un empleado puede listar
+    // todos los cobros por la API REST y sumarlos**. Lo que la aplicación hace
+    // es no ofrecerle el histórico (`viewPaymentHistory`, 11 de septiembre de
+    // 2026), y eso es interfaz, no seguridad. Lo que sí impide reconstruir la
+    // cuenta de resultados es que `expenses`, `invoices`, `collaboratorSales`,
+    // `billingProfiles`, `invoiceCounters`, `verifactuDeclarations` y
+    // `verifactuSubmissions` sean de administrador aquí abajo: sin gastos ni
+    // comisiones no hay beneficio, solo ingresos.
     match /payments/{paymentId} {
       allow read: if isAuthorized(request.auth.token.email);
       allow create, update: if isAuthorized(request.auth.token.email);

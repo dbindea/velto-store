@@ -60,6 +60,242 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-29 · Un empleado no ve la cuenta de resultados — 11 de septiembre de 2026
+
+Petición de Dorel: **un usuario que no sea administrador no puede ver
+información financiera de la empresa.** Lo primero fue mirar qué veía de verdad,
+no qué se suponía que veía.
+
+### Lo que ya estaba cerrado
+
+Informes, Gastos, Facturas y Colaboradores, en las tres capas: el menú no los
+pinta, `permissionGuard` corta la ruta con un aviso, y `firestore.rules` deniega
+las ocho colecciones del dinero a quien no sea administrador. Verificado con el
+rol de empleado forzado: `/reports` devuelve al panel con «Tu rol no tiene acceso
+a esa sección», y el menú pierde los cinco apartados.
+
+### Lo que faltaba: el libro de cobros
+
+Un empleado podía listar **todos** los cobros del negocio en `/payments`. No hay
+totales en la pantalla, pero no hacen falta: con las filas delante, sumar el año
+es cuestión de un rato — la misma cifra que `viewReports` protege, servida fila a
+fila.
+
+Decisión de Dorel: **que vea el módulo, pero no el histórico.** Sin
+`viewPaymentHistory` la lista enseña solo lo **abierto** —`pending`, `partial` y
+`failed`, que es con lo que se trabaja— y la pestaña «Cobrado» ni se ofrece,
+porque saldría siempre vacía y un botón que no hace nada es un fallo. Los cobros
+de una reserva o de un cliente concretos se siguen viendo en su ficha, que es
+donde hacen falta. La regla vive en `payment-scope.util.ts`, con tests.
+
+⚠️ **El recorte se aplica al cargar, no al filtrar.** Puesto en el filtro de la
+pantalla, cambiar de pestaña volvería a enseñarlo todo.
+
+### Y lo que hay que decir en voz alta
+
+⚠️ **Esta restricción es interfaz, no seguridad, a diferencia de las otras
+cuatro.** `payments` no se puede cerrar en `firestore.rules`: la ficha de la
+reserva y la del cliente necesitan leer los pagos **cobrados** para su resumen, y
+una regla no distingue si quien lee llegó desde una reserva o desde una consulta
+suelta. Un empleado con la consola del navegador abierta puede listar los cobros
+y sumarlos.
+
+Lo que sí lo impide de verdad es que los **gastos** y las **comisiones** sean de
+administrador en las reglas: sin ellos hay ingresos, no beneficio. Está escrito
+en `firestore.rules`, en `permissions.util.ts` y en el guion de comprobación,
+para que nadie vea `payments` abierto y lo tome por un descuido como el de
+`invoices`.
+
+### Lo demás que se miró, y por qué se queda
+
+| Qué ve un empleado | Se queda porque |
+|---|---|
+| El importe pendiente de una reserva, en el panel | es el cobro que tiene que hacer hoy |
+| El resumen de pagos de un cliente | es a quien está atendiendo |
+| El coste de una reparación en la ficha del coche | decisión de Dorel: es quien lleva el coche al taller |
+| Los recordatorios de Eventos | decisión del 10 de septiembre: es trabajo de su gente |
+| La búsqueda global | solo mira clientes, vehículos, contratos y reservas |
+
+Y se corrigió el rótulo del rol, que llevaba dos módulos sin actualizar: decía
+«No ve informes ni gastos» cuando tampoco ve facturas ni colaboradores. **La
+frase y el hecho se deciden juntos**, también aquí.
+
+### Lo que queda por probar
+
+⚠️ **Las reglas con una cuenta de empleado de verdad.** La pasada de hoy se hizo
+con el rol forzado en memoria —que prueba la aplicación, no las reglas— y con
+sesión de administrador, donde todo sale 200 y no prueba nada. Las ocho
+colecciones usan el mismo `callerIsAdmin()` cuyo 403 sí quedó demostrado el 7 y
+el 8 de septiembre para `expenses` e `invoices`, pero **eso es un argumento, no
+una prueba**. Hace falta una segunda cuenta de Google dada de alta como
+`employee` en el `authorizedUsers` de desarrollo y pasarle
+[comprobar-reglas-financieras.js](comprobar-reglas-financieras.js). Bajar el rol
+de la cuenta propia **no vale aquí**: `authorizedUsers` solo lo escribe un
+administrador, así que después no habría forma de volver desde la aplicación.
+
+---
+
+## ✅ N-28 · La salud del negocio de un vistazo — 10 de septiembre de 2026
+
+Informes deja de ser cuatro cifras de los últimos seis meses. El rango por
+defecto va del 1 de enero a hoy, y encima se pintan el beneficio, la base
+imponible, el IVA cobrado y las salidas; debajo, el año en curso contra el
+pasado, el reparto por medio de cobro, los ingresos por coche, la ocupación de
+la flota y los mejores clientes con sus días acumulados.
+
+### Lo importante no es el panel: es la definición de «ingreso»
+
+⚠️ **El informe anterior sumaba TODO pago cobrado sin mirar su tipo.** Una fianza
+de 300 € cobrada y devuelta contaba **600 €** de «ingresos»: 300 al cobrarla y
+300 al devolverla, porque la devolución también es un pago con importe. No daba
+error, daba una cifra creíble y equivocada — con dinero, la peor clase de fallo,
+y a partir de ahí todo lo demás mentía igual.
+
+`analytics.util.ts` es ahora la única autoridad sobre qué cuenta:
+
+| | ¿Ingreso? | Por qué |
+|---|---|---|
+| Señal, resto, cobro libre, cargo extra | **sí** | es dinero del alquiler |
+| Fianza | **no** | es dinero del cliente en custodia |
+| Devolución de fianza | **no** | y contarla lo inflaba por segunda vez |
+| **Retención** de fianza | **sí** | esa no vuelve al cliente |
+
+### Las bases no son la misma en todo, y se dice
+
+Decisión de Dorel, por prudencia: **los ingresos y los gastos se cuentan cuando
+el dinero se mueve; las comisiones, cuando se devengan** aunque no estén pagadas.
+Mezclar dos criterios es legítimo mientras el número lleve al lado qué está
+midiendo, y por eso la cifra grande tiene su explicación debajo en vez de
+aparecer sola.
+
+⚠️ **El beneficio se calcula sobre la base SIN IVA.** Restar gastos de un importe
+con IVA sin quitárselo a los ingresos infla el resultado un 21 %. Y la base es
+**estimada** —los cobros sin reserva y los cargos extra no tienen tipo propio—,
+así que la pantalla lo dice: para lo fiscal están las facturas.
+
+Lo pendiente de cobrar y lo pendiente de pagar a colaboradores van en su propia
+franja, **fuera** del beneficio: es dinero que se espera, no que se tiene.
+
+### Cuatro cosas que solo se vieron mirando la pantalla
+
+Ninguna la coge un test, y las cuatro estaban en código que compilaba:
+
+1. ⚠️ **El `viewBox` fijo de 720 encogía el texto a la mitad en un móvil.** Las
+   etiquetas del eje salían a 5 px y el gráfico aplastado a la mitad de alto.
+   Ahora el `viewBox` sigue al ancho real, así que un `font-size="10"` mide 10 px
+   en los dos sitios — y en pantalla estrecha se enseñan **menos meses**, no los
+   mismos más pequeños. Es recolocar en vez de esconder, aplicado a un eje.
+2. ⚠️ **`<app-donut-chart>` es `display: inline`.** El elemento del componente es
+   el que entra en la rejilla, no la figura de dentro: la celda se estiraba y la
+   tarjeta no, así que dos gráficos uno al lado del otro acababan con la caja más
+   corta flotando en su hueco.
+3. **El desglose de salidas decía «0 + 0 + 0 €»** — tres cifras sin decir de qué,
+   y el mantenimiento **no está en Gastos**: se lee de `vehicleMaintenance`, así
+   que sin nombrarlo nadie sabe que cuenta.
+4. **Los meses del eje estaban escritos en español dentro del componente.** Los
+   da `Intl`, como el selector de países: son 36 cadenas que no hay que mantener.
+
+Y una quinta de la misma familia: `LineChartComponent` traía `'Ver tabla'` como
+valor por defecto de un `@Input`. Un literal en español dentro de un componente
+compartido atraviesa el pipe sin cambios; ahora nace vacío y el botón no sale si
+no se lo dan.
+
+### Los gráficos son propios
+
+Tres componentes en `shared/components/charts/`, sin dependencia nueva. Las
+reglas que siguen, y que valen para cualquiera que se añada:
+
+- **Un solo eje, siempre.** Dos escalas en un dibujo permiten hacer que dos
+  líneas parezcan lo que uno quiera moviendo un cero.
+- **Leyenda con dos o más series**, y tabla con los mismos números: un valor que
+  solo se lee pasando el ratón no existe para quien imprime o usa el teclado.
+- **La paleta se valida con el guion**, no a ojo. El candidato `#33B39E` falló la
+  banda de luminosidad; `#20A48F` pasa. El conjunto final pasa contra el fondo
+  oscuro (`#14181A`) y el claro.
+- **Hueco de 2 px entre porciones, no una línea de borde.** El borde añade tinta
+  que no es dato.
+
+Se retira `core/reports/reports.service.ts`, que es donde vivía la suma
+equivocada, y sus dos claves i18n huérfanas.
+
+---
+
+## ✅ N-27 · Filtrar las facturas — 10 de septiembre de 2026
+
+Por año, por tipo —ordinaria, rectificativa, simplificada— y por rango de fechas.
+`invoice-filter.util.ts`, con tests.
+
+⚠️ **El «hasta» incluye el día entero.** Comparar contra la medianoche deja fuera
+todo lo del día que se acaba de teclear, que es justo el día que uno busca. La
+misma regla está en el filtro de comisiones y en el de Informes.
+
+---
+
+## ✅ N-26 · Colaboradores y sus comisiones — 10 de septiembre de 2026
+
+Los agentes que traen clientes. **No tienen acceso a la aplicación**: son una
+ficha, no un usuario. Se les asigna una reserva y nace la comisión sobre el
+**neto pactado**, pendiente hasta que se paga en efectivo o por transferencia.
+
+⚠️ **Esto es interno y no queda registrado fiscalmente en ninguna parte.**
+Decisión de Dorel, dicha con esas palabras. No genera facturas, no toca
+`payments` y no entra en la contabilidad: es su control de a quién le debe qué.
+
+Tres cosas que salieron al construirlo:
+
+- ⚠️ **El importe se puede cambiar a mano.** «A veces les pago más, a veces menos
+  o redondeo para calcularlo más fácil». El porcentaje propone; lo que manda es
+  lo que se decida, y queda anotado que se ajustó y en cuánto.
+- ⚠️ **La comisión se anula si la reserva se cancela.** La comprobación miraba
+  `status` en vez de `reservationStatus`, un campo opcional que en la práctica
+  dejaba pasar una reserva cancelada. El campo pasó a ser obligatorio en el tipo:
+  así el compilador lo exige en vez de fallar en silencio.
+- **Las liquidaciones no son una colección.** Se derivan de las comisiones, como
+  los eventos y como el resumen de pagos. Guardarlas sería una segunda fuente de
+  verdad para el mismo euro.
+
+Visibilidad: **los recordatorios los ve todo el equipo; los colaboradores, solo
+Dorel.**
+
+---
+
+## ✅ N-25 · Eventos próximos — 10 de septiembre de 2026
+
+La pantalla que faltaba para N-21. Mezcla en una sola lista las entregas, las
+devoluciones, los mantenimientos que vencen, las facturas que se salen de plazo y
+los **recordatorios a mano** —pagar una deuda, apuntar un cobro en efectivo,
+comprar ambientadores, limpiar coches, pagar incentivos—. Horizonte de 7 días por
+defecto, estrechable a hoy y ampliable a un mes.
+
+⚠️ **No hay colección `events`.** Todo se deriva de lo que ya existe, así que un
+evento no puede quedarse viejo: desaparece cuando desaparece su causa. Lo único
+que se guarda son los recordatorios, porque esos no se derivan de nada.
+
+⚠️ **Lo vencido entra siempre**, sea cual sea el horizonte. Un mantenimiento que
+venció hace tres días no deja de hacer falta porque el filtro diga «hoy».
+
+---
+
+## ✅ N-24 · El correo de las 9:00 — 10 de septiembre de 2026
+
+`sendDailyDigest`, programada a las **9:00 de la mañana del día anterior**, con lo
+que hay que preparar para mañana. Decisión de Dorel: a las 20:00 es muy tarde, y
+si hay que hacer algo antes ya no da tiempo.
+
+- **Si no hay nada, no se manda correo.** Un resumen diario que llega vacío se
+  deja de leer, y entonces tampoco se lee el día que trae algo.
+- **La zona horaria es Madrid, no UTC.** «Mañana» calculado en UTC se equivoca de
+  día durante dos horas cada noche en verano.
+- Los plurales van con clave propia: «2 devoluciónes» y «1 DÍAS» salieron los dos.
+
+⚠️ **Encontró un fallo que llevaba desde el 8 de septiembre**: la ITV programada
+no aparecía porque su fecha se guardaba **como texto** (`"2026-09-11"`) en vez de
+como fecha. Lo cazó `npm run build` —la comprobación de plantillas—, **no**
+`tsc --noEmit`. Los mantenimientos de producción guardados así siguen invisibles
+hasta que se vuelvan a guardar.
+
+---
+
 ## ✅ N-22 · La remisión a la AEAT, probada contra preproducción — 9 de septiembre de 2026
 
 Emitir y remitir quedan **separados**: `issueInvoice` no llama a la Agencia, y el
@@ -160,7 +396,16 @@ emitida no se puede borrar ni editar.
 
 ---
 
-## 📋 N-21 · Avisos con antelación — pendiente, propuesto el 8 de septiembre de 2026
+## ✅ N-21 · Avisos con antelación — propuesto el 8, hecho el 10 de septiembre de 2026
+
+**Resuelto por las dos vías a la vez**, que era la condición: el correo de las
+9:00 (N-24) y la pantalla de Eventos próximos (N-25). Lo que sigue es el
+planteamiento original, y las cuatro decisiones que había que tomar quedaron
+tomadas así: se ve **en los dos sitios**, el horizonte por defecto es de 7 días y
+se estrecha a hoy desde la propia pantalla, lo calcula una **function programada**
+para el correo y la pantalla para lo que se mira en vivo, y no se guarda nada de
+«ya avisado» porque no hay lista que marcar como leída — el aviso desaparece
+cuando desaparece su causa.
 
 ⚠️ **Sin esto, el mantenimiento a futuro está muerto.** Es de Dorel y es
 exacto: se puede programar «ITV en 7 días» o «cambio de aceite en 5», y hoy

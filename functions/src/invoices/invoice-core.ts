@@ -189,6 +189,15 @@ export function validateInvoiceInput(input: {
    * factura ordinaria un negativo sigue estando mal.
    */
   allowNegative?: boolean;
+  /**
+   * ¿Puede este entorno emitir con régimen intracomunitario?
+   *
+   * ⚠️ **Sin valor, NO.** Falla cerrado a propósito: el que se olvide de pasarlo
+   * bloquea dos regímenes que hoy no se deben usar, y eso es un formulario que
+   * se queja. Al revés —abrir por defecto— sería una factura fiscalmente
+   * incorrecta que ya no se puede editar.
+   */
+  euRegimesEnabled?: boolean;
 }): FieldProblems {
   const problems: FieldProblems = {};
   const recipient = input?.recipient || {};
@@ -247,6 +256,29 @@ export function validateInvoiceInput(input: {
     }
     if (regimen === 'exempt_other' && !line.exemptionNote?.trim()) {
       problems[`lines[${i}].exemptionNote`] = 'invoices.problems.exemptionNoteRequired';
+    }
+    /**
+     * ⚠️ **Sin ROI no se puede facturar así, y esto lo impide de verdad.**
+     *
+     * La entrega intracomunitaria exenta (art. 25) y la inversión del sujeto
+     * pasivo necesitan que el emisor esté en el **Registro de Operadores
+     * Intracomunitarios**. VELTO no lo está —a 11 de septiembre de 2026 no está
+     * ni solicitado, y tarda meses—, así que una factura real con estos
+     * regímenes dejaría de repercutir un IVA que sí se debe.
+     *
+     * ⚠️ **La AEAT acepta el registro igualmente**: el XML es válido y el
+     * servicio no sabe si tienes ROI. O sea que aquí no hay red debajo — es
+     * exactamente la familia de fallo que encontró preproducción, un dato válido
+     * que significa otra cosa. Y una factura emitida **no se puede editar**.
+     *
+     * Estaba solo documentado («no se deben usar todavía») y eso no basta:
+     * quien factura a las ocho de la tarde no se acuerda de una nota. Lo gobierna
+     * `VELTO_EU_REGIMES_ENABLED`, que en desarrollo va a `true` para poder
+     * probarlos contra preproducción y en producción a `false` hasta que llegue
+     * el ROI.
+     */
+    if (!input.euRegimesEnabled && (regimen === 'exempt_eu' || regimen === 'reverse_charge')) {
+      problems[`lines[${i}].taxRegime`] = 'invoices.problems.euRegimeNotAvailable';
     }
   });
 

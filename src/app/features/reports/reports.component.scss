@@ -1,390 +1,347 @@
 .page {
-  max-width: 1200px;
+  padding: 1.5rem;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 1rem 2rem;
-
-  @media (min-width: 768px) {
-    padding: 0 1.5rem 2rem;
-  }
 }
 
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 1rem;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 
   h1 {
+    margin: 0;
     font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0 0 0.25rem;
     color: var(--text-primary);
   }
-
-  .subtitle {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    margin: 0;
-  }
 }
 
-.range-bar {
-  display: flex;
-  gap: 0.375rem;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.range-pill {
-  padding: 0.5rem 0.875rem;
-  border-radius: 999px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  min-height: 36px;
-
-  &:hover {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-  }
-
-  &.active {
-    background: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
-  }
-}
-
-.loading-state,
-.error-state {
-  text-align: center;
-  padding: 3rem 1rem;
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* Los filtros, en una fila y arriba: dentro de una tarjeta se leerían como si
+   solo afectaran a ese gráfico. */
+.filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.filter {
   display: flex;
   flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.filter-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.filter-control {
+  padding: 0.42rem 0.65rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+}
+
+.range-note {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* La cifra que manda -------------------------------------------------------
+   ⚠️ Sin `tabular-nums` y sin fuente decorativa: en un número grande las cifras
+   de ancho fijo dejan huecos raros, y una tipografía de titular lo convierte en
+   adorno. */
+.hero {
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-
-  i {
-    font-size: 1.5rem;
-    color: var(--accent-color);
-  }
-}
-
-.error-state i {
-  color: var(--error-color);
-}
-
-.reports-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.kpi-card {
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.35rem 1.5rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--accent-color);
-  }
-
-  &.kpi-util::before {
-    background: var(--blue-600);
-  }
-
-  &.kpi-outstanding::before {
-    background: var(--amber-600);
-  }
+  margin-bottom: 0.75rem;
 }
 
-.kpi-label {
+.hero-main {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.hero-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--text-muted);
-
-  i {
-    color: var(--accent-color);
-    font-size: 0.85rem;
-  }
 }
 
-.kpi-value {
-  font-size: 1.875rem;
+.hero-value {
+  font-size: 2.4rem;
   font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.1;
-}
-
-.kpi-sub {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.util-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--bg-main);
-  margin-top: 0.5rem;
-  overflow: hidden;
-}
-
-.util-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--blue-600), var(--accent-color));
-  transition: width 0.3s ease;
-}
-
-// Revenue chart
-.revenue-chart {
-  grid-column: 1 / -1;
-  // Grid items default to min-width:auto, so the chart's intrinsic width
-  // was pushing the whole page to 400px on a 360px screen.
-  min-width: 0;
-}
-
-.bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-  height: 220px;
-  padding: 0.5rem 0;
-  overflow-x: auto;
-  min-width: 0;
-
-  @media (max-width: 768px) {
-    height: 180px;
-    gap: 0.25rem;
-  }
-}
-
-.bar-col {
-  flex: 1;
-  min-width: 60px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  height: 100%;
-  justify-content: flex-end;
-
-  // Six months at 60px plus gaps needs 400px. Narrower columns let the
-  // year fit on the phone instead of dragging the page sideways.
-  @media (max-width: 768px) {
-    min-width: 40px;
-  }
-}
-
-.bar-value {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
-
-  // Narrow columns: shrink the caption so neighbouring months do not touch.
-  @media (max-width: 768px) {
-    font-size: 0.6rem;
-  }
-}
-
-.bar-track {
-  width: 100%;
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-}
-
-.bar-fill {
-  width: 100%;
-  background: linear-gradient(180deg, var(--accent-color), var(--color-brand-green-dark));
-  border-radius: 4px 4px 0 0;
-  min-height: 4px;
-  transition: height 0.3s ease;
-}
-
-.bar-label {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  text-transform: capitalize;
-}
-
-// Top vehicles
-// The global .card-header only sets padding, so the icon rendered flush
-// against the title. Same treatment the other feature cards use.
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-
-  i {
-    color: var(--accent-color);
-    font-size: 1rem;
-  }
-}
-
-.card-content {
-  padding: 0 1rem 1rem;
-}
-
-.top-vehicles {
-  grid-column: 1 / -1;
-
-  @media (min-width: 768px) {
-    grid-column: span 2;
-  }
-}
-
-.top-list,
-.outstanding-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.top-item,
-.outstanding-item {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
-  background: var(--bg-main);
-  border-radius: 8px;
-  font-size: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.outstanding-item {
-  cursor: pointer;
-  transition: background-color 0.1s ease;
-
-  &:hover {
-    background: var(--accent-light);
-  }
-}
-
-.top-rank {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--accent-color);
-  color: white;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.top-name {
-  flex: 1;
-  min-width: 0;
-  font-weight: 500;
-  color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-
-  .top-plate {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    font-family: monospace;
-  }
-}
-
-.top-meta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.top-revenue {
-  font-weight: 600;
+  line-height: 1.05;
   color: var(--accent-color);
-  min-width: 80px;
-  text-align: right;
+
+  &.negative {
+    color: var(--error-color);
+  }
 }
 
-.out-client {
-  flex: 1;
-  font-weight: 500;
-  color: var(--text-primary);
-  min-width: 0;
-}
-
-.out-plate {
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.out-date {
+.hero-note {
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.out-amount {
-  font-weight: 600;
-  color: var(--warning-color);
-  min-width: 80px;
-  text-align: right;
+.hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+
+  .side-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .side-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
 }
 
-.outstanding-card {
-  grid-column: 1 / -1;
+/* Las cuatro cifras de apoyo ---------------------------------------------- */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
 
-  @media (min-width: 768px) {
-    grid-column: span 1;
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  min-width: 0;
+}
+
+.tile-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tile-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+
+  &.muted {
+    color: var(--text-muted);
   }
+
+  &.negative {
+    color: var(--warning-color);
+  }
+}
+
+.tile-note {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* El desglose parte entre conceptos, nunca dentro de uno: «Taller 0 /  €» sería
+   peor que no desglosar. */
+.breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.45rem;
+
+  span:not(:last-child)::after {
+    content: ' ·';
+  }
+}
+
+/* Lo que se espera y lo que se debe: no está en las cifras de arriba, así que
+   se separa en vez de mezclarse. */
+.pending-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+
+  .pending-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  strong {
+    color: var(--warning-color);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+/* Bloque de flota, con la misma chapa que los gráficos. */
+.fleet {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+}
+
+.chart-title {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+  margin-bottom: 0.9rem;
+}
+
+.fleet-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.9rem;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+
+  .figure-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .figure-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .figure-note {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+}
+
+/* La tabla va en tarjeta como todo lo demás: suelta sobre el fondo parecía la
+   parte a medio hacer de la pantalla. */
+.clients-card {
+  margin-bottom: 1.5rem;
+}
+
+.client-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  td {
+    padding: 0.55rem 0.6rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+  }
+
+  .num {
+    text-align: right;
+    white-space: nowrap;
+    /* En columna, los dígitos tienen que alinearse. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  .strong {
+    font-weight: 700;
+  }
+}
+
+.more {
+  margin-top: 0.75rem;
 }
 
 .empty {
+  padding: 2rem;
   text-align: center;
   color: var(--text-muted);
-  margin: 0;
-  padding: 1rem 0;
-  font-size: 0.875rem;
+}
 
-  &.success {
-    color: var(--accent-color);
+@media (max-width: 560px) {
+  .page {
+    padding: 1rem;
+  }
 
-    i {
-      margin-right: 0.375rem;
-    }
+  .hero-value {
+    font-size: 1.9rem;
+  }
+
+  .hero-side {
+    align-items: flex-start;
+  }
+
+  .range-note {
+    margin-left: 0;
+    flex-basis: 100%;
   }
 }

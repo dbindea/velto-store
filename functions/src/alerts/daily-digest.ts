@@ -11,6 +11,8 @@
  * la aplicación.
  */
 
+import type { AvisoSistema } from './system-alerts';
+
 /** La zona en la que opera el negocio, igual que en las facturas. */
 export const DIGEST_TIME_ZONE = process.env.VELTO_TIME_ZONE || 'Europe/Madrid';
 
@@ -136,6 +138,11 @@ export interface Resumen {
   vencimientos: VencimientoVehiculo[];
   /** Cuántas entregas van sin contrato firmado. Es lo que más urge. */
   sinFirmar: number;
+  /**
+   * Lo que no sale de ninguna reserva: el certificado que caduca y la remisión
+   * a la AEAT atascada. Ver `system-alerts.ts`.
+   */
+  avisos: AvisoSistema[];
 }
 
 /**
@@ -146,9 +153,19 @@ export interface Resumen {
  * el silencio es la señal de que no hay nada, y no cuesta un correo. Es la misma
  * razón por la que un aviso no repite lo que ya se ve en la pantalla donde se
  * trabaja.
+ *
+ * ⚠️ **Un aviso de sistema SÍ obliga a mandarlo**, aunque no haya ni un coche
+ * que entregar. El certificado que caduca y la remisión atascada tienen en común
+ * que no se notan: no rompen nada visible hasta que ya es tarde. Si se callaran
+ * los días tranquilos, el día que hicieran falta tampoco habría correo.
  */
 export function mereceEnvio(r: Resumen): boolean {
-  return r.entregas.length > 0 || r.devoluciones.length > 0 || r.vencimientos.length > 0;
+  return (
+    r.entregas.length > 0 ||
+    r.devoluciones.length > 0 ||
+    r.vencimientos.length > 0 ||
+    r.avisos.length > 0
+  );
 }
 
 /**
@@ -167,6 +184,13 @@ export function asuntoDe(r: Resumen, marca: string): string {
   const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
   const partes: string[] = [];
+  /**
+   * ⚠️ **Lo urgente del sistema va antes que nada**, incluso que un contrato sin
+   * firmar. Un contrato sin firmar se resuelve esa mañana con una llamada; la
+   * cadena de facturación parada o el certificado caducado no se resuelven con
+   * una llamada, y cada día que pasa hay facturas emitidas que no se remiten.
+   */
+  if (r.avisos.some((a) => a.urgente)) partes.push('⚠️ REVISAR');
   if (r.sinFirmar) partes.push(`${r.sinFirmar} SIN FIRMAR`);
   if (r.entregas.length) partes.push(plural(r.entregas.length, 'entrega', 'entregas'));
   if (r.devoluciones.length) {
@@ -175,6 +199,16 @@ export function asuntoDe(r: Resumen, marca: string): string {
   const vencidos = r.vencimientos.filter((v) => v.diasRestantes < 0).length;
   if (vencidos) partes.push(plural(vencidos, 'vencido', 'vencidos'));
   else if (r.vencimientos.length) partes.push(`${r.vencimientos.length} por vencer`);
+
+  /**
+   * ⚠️ Un aviso que no es urgente y un día sin nada más dejaban el asunto
+   * terminado en dos puntos: «Mañana 12/09/2026: ». El correo llegaba —hay algo
+   * que contar— pero el asunto no decía qué, que es justo lo único que se lee
+   * sin abrirlo.
+   */
+  if (!partes.length && r.avisos.length) {
+    partes.push(plural(r.avisos.length, 'aviso', 'avisos'));
+  }
 
   return `${marca} · Mañana ${r.fecha}: ${partes.join(' · ')}`;
 }

@@ -137,9 +137,88 @@ describe('regímenes de IVA — mismos números que el frontend', () => {
       validateInvoiceInput({
         recipient: destinatario,
         lines: [linea({ taxRegime: 'exempt_eu' })],
-        paymentMethod: 'transfer'
+        paymentMethod: 'transfer',
+        // Con el régimen permitido: lo que se prueba aquí es el NIF-IVA del
+        // comprador, no el ROI del emisor. Son dos requisitos distintos y los
+        // dos hacen falta.
+        euRegimesEnabled: true
       })['recipientTaxId']
     ).toBe('invoices.problems.euVatIdRequired');
+  });
+
+  /**
+   * ⚠️ **El bloqueo por ROI, que es lo único que impide una factura fiscalmente
+   * incorrecta e imposible de editar.**
+   *
+   * Sin alta en el Registro de Operadores Intracomunitarios, estos dos regímenes
+   * dejan de repercutir un IVA que sí se debe. Y la AEAT **no nos salva**: acepta
+   * el registro igual, porque su validación es de forma. Hasta el 11 de
+   * septiembre de 2026 esto solo estaba escrito en la documentación.
+   */
+  describe('sin ROI no se puede emitir intracomunitario', () => {
+    const euNif = { ...destinatario, taxId: 'DE123456789' };
+
+    it('bloquea la entrega intracomunitaria exenta', () => {
+      expect(
+        validateInvoiceInput({
+          recipient: euNif,
+          lines: [linea({ taxRegime: 'exempt_eu' })],
+          paymentMethod: 'transfer',
+          euRegimesEnabled: false
+        })['lines[0].taxRegime']
+      ).toBe('invoices.problems.euRegimeNotAvailable');
+    });
+
+    it('bloquea la inversión del sujeto pasivo', () => {
+      expect(
+        validateInvoiceInput({
+          recipient: euNif,
+          lines: [linea({ taxRegime: 'reverse_charge' })],
+          paymentMethod: 'transfer',
+          euRegimesEnabled: false
+        })['lines[0].taxRegime']
+      ).toBe('invoices.problems.euRegimeNotAvailable');
+    });
+
+    /**
+     * ⚠️ **Falla cerrado.** Quien añada una llamada y se olvide del parámetro
+     * bloquea dos regímenes que hoy no se deben usar — un formulario que se
+     * queja. Al revés sería una factura que ya no se puede editar.
+     */
+    it('sin decir nada, se bloquean igual', () => {
+      expect(
+        validateInvoiceInput({
+          recipient: euNif,
+          lines: [linea({ taxRegime: 'exempt_eu' })],
+          paymentMethod: 'transfer'
+        })['lines[0].taxRegime']
+      ).toBe('invoices.problems.euRegimeNotAvailable');
+    });
+
+    it('con el permiso puesto, pasan: es lo que hay que poder probar en preproducción', () => {
+      expect(
+        validateInvoiceInput({
+          recipient: euNif,
+          lines: [linea({ taxRegime: 'exempt_eu' })],
+          paymentMethod: 'transfer',
+          euRegimesEnabled: true
+        })['lines[0].taxRegime']
+      ).toBeUndefined();
+    });
+
+    it('no toca a los demás regímenes, que no dependen del ROI', () => {
+      for (const taxRegime of ['standard', 'exempt_other', 'rebu'] as const) {
+        expect(
+          validateInvoiceInput({
+            recipient: destinatario,
+            lines: [linea({ taxRegime, purchasePrice: 100, exemptionNote: 'art. 20' })],
+            paymentMethod: 'transfer',
+            euRegimesEnabled: false
+          })['lines[0].taxRegime'],
+          taxRegime
+        ).toBeUndefined();
+      }
+    });
   });
 
   it('las menciones obligatorias salen sin repetirse', () => {
