@@ -326,3 +326,27 @@
 
   i { color: var(--success-color); }
 }
+
+/* El Código Seguro de Verificación, junto al QR del papel. Es lo que un cliente
+   dicta por teléfono, así que el código va en monoespaciada y separado del resto
+   de la línea: leer «VLT-8QPB-YNT4-9AXJ» en la misma tipografía que la prosa se
+   presta a confundir un 0 con una O. */
+.verification-code {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+
+  i {
+    color: var(--accent-color);
+  }
+
+  code {
+    letter-spacing: 0.05em;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+}

@@ -31,6 +31,48 @@ const AJENAS = [
   /^fa(-|$)/
 ];
 
+/**
+ * Revisadas a mano y aceptadas: **existen para nombrar, no para pintar**.
+ *
+ * Se comprobaron en pantalla el 12 de septiembre de 2026 y ninguna deja el
+ * elemento desnudo — la tipografía se la da el contenedor. Están aquí para que
+ * la lista que sale sea la de lo que hay que mirar, y no una que se lee por
+ * encima porque siempre trae lo mismo.
+ *
+ * ⚠️ Si alguna se usa algún día en un sitio donde SÍ tenga que pintar algo,
+ * quítala de aquí antes: esta lista silencia el aviso, no lo resuelve.
+ */
+const ACEPTADAS = new Set([
+  // El subtítulo «Cliente · Coche · Matrícula» de cuatro fichas. El color y el
+  // tamaño los pone `.subtitle`; estos dos nombran las partes.
+  'client-name',
+  'vehicle-name',
+  // La cabecera la coloca `.page-header`, que es flex; estos dos son sus huecos.
+  'header-content',
+  'header-actions',
+  // El texto dentro del botón de cámara: el botón ya lo estiliza entero.
+  'btn-label',
+  // Contenedores sin pintura propia, comprobados en la ficha del vehículo.
+  'tab-content',
+  'photos-section',
+  // Un dato más de la ficha del coche, con el estilo de la fila que lo contiene.
+  'luggage',
+  /**
+   * Y estos tres son **el estado por defecto**, que a propósito no pinta nada:
+   * lo que se estiliza es lo que se aparta de él. `.bar-mid` es el tramo de una
+   * reserva que no redondea ningún extremo —los que redondean son `.bar-start` y
+   * `.bar-end`—; `.step-pending` es el paso que aún no ha pasado nada, frente a
+   * `completed`, `current`, `blocked` y `skipped`; y `.available` es lo
+   * contrario de `.unavailable`, que es la que apaga la tarjeta.
+   *
+   * Existen porque una plantilla necesita poder decir «este es el caso normal»,
+   * y quitarlas obligaría a leer la negación de tres condiciones para saberlo.
+   */
+  'bar-mid',
+  'step-pending',
+  'available'
+]);
+
 /** Clases de Tailwind: las genera el motor, no un SCSS nuestro. */
 const TAILWIND =
   /^(flex|grid|hidden|block|inline|w-|h-|m[trblxy]?-|p[trblxy]?-|gap-|text-|bg-|border|rounded|items-|justify-|absolute|relative|fixed|sticky|z-|overflow-|min-|max-|top-|left-|right-|bottom-|space-|col-|row-|order-|opacity-|shadow|cursor-|select-|truncate|sr-only)/;
@@ -115,7 +157,11 @@ for (const html of ficheros(path.join(RAIZ, 'app'), ['.html'])) {
   }
 
   const conocida = (c) =>
-    GLOBALES.has(c) || propias.has(c) || AJENAS.some((r) => r.test(c)) || TAILWIND.test(c);
+    GLOBALES.has(c) ||
+    propias.has(c) ||
+    ACEPTADAS.has(c) ||
+    AJENAS.some((r) => r.test(c)) ||
+    TAILWIND.test(c);
 
   for (const [clase, { linea, companeras }] of usadas(fs.readFileSync(html, 'utf8'))) {
     if (conocida(clase)) continue;
