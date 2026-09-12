@@ -57,15 +57,27 @@
 
           <div class="card-info">
             <h3>{{ INSPECTION_TYPE_LABELS[inspection.type] | translate }}</h3>
+            <!--
+              ⚠️ **El icono no se pinta sin su dato.** No toda inspección guardó
+              `clientSnapshot` y `vehicleSnapshot` —es lo mismo que obligó al PDF
+              del parte a respaldarse con la reserva—, y aquí salía el muñeco y
+              el coche con **nada al lado**: dos iconos huérfanos que no dicen
+              quién ni qué, y que además hacen dudar de si falta el dato o falla
+              la pantalla.
+            -->
             <div class="info-row">
-              <span class="info-item">
-                <i class="pi pi-user"></i>
-                {{ inspection.clientSnapshot?.fullName }}
-              </span>
-              <span class="info-item">
-                <i class="pi pi-car"></i>
-                {{ inspection.vehicleSnapshot?.brand }} {{ inspection.vehicleSnapshot?.model }}
-              </span>
+              @if (inspection.clientSnapshot?.fullName) {
+                <span class="info-item">
+                  <i class="pi pi-user"></i>
+                  {{ inspection.clientSnapshot?.fullName }}
+                </span>
+              }
+              @if (inspection.vehicleSnapshot?.brand || inspection.vehicleSnapshot?.model) {
+                <span class="info-item">
+                  <i class="pi pi-car"></i>
+                  {{ inspection.vehicleSnapshot?.brand }} {{ inspection.vehicleSnapshot?.model }}
+                </span>
+              }
               @if (inspection.vehicleSnapshot?.plateNumber) {
                 <span class="info-item plate">
                   {{ inspection.vehicleSnapshot?.plateNumber }}

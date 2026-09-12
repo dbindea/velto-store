@@ -39,13 +39,15 @@ export class InspectionListComponent implements OnInit {
   INSPECTION_STATUS_COLORS = INSPECTION_STATUS_COLORS;
 
   typeOptions: Array<{ value: InspectionType | 'all'; label: string }> = [
-    { value: 'all', label: 'common.all' },
+    // ⚠️ «Todos» a secas no dice de qué. Con dos desplegables seguidos que ponen
+    // lo mismo, no se sabe cuál es cuál sin abrirlos.
+    { value: 'all', label: 'inspections.filters.allTypes' },
     { value: 'pickup', label: 'inspections.pickup' },
     { value: 'return', label: 'inspections.return' }
   ];
 
   statusOptions: Array<{ value: InspectionStatus | 'all'; label: string }> = [
-    { value: 'all', label: 'common.all' },
+    { value: 'all', label: 'inspections.filters.allStatuses' },
     { value: 'completed', label: 'inspections.status.completed' },
     { value: 'draft', label: 'inspections.status.draft' },
     { value: 'cancelled', label: 'inspections.status.cancelled' }

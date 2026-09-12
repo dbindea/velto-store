@@ -12,6 +12,10 @@ import {
   CONTRACT_STATUS_COLORS
 } from '@shared/models/contract.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import {
+  CLIENT_DOCUMENT_TYPE_LABELS,
+  ClientDocumentType
+} from '@shared/models/client.model';
 import { TranslateService } from '@core/i18n/translate.service';
 import { NotificationService } from '@core/notifications/notification.service';
 import {
@@ -342,5 +346,17 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
   getAbsoluteSigningUrl(): string {
     if (!this.contract?.signingLinkPath) return '';
     return this.contractService.buildAbsoluteSigningUrl(this.contract.signingLinkPath);
+  }
+
+  /**
+   * La etiqueta del tipo de documento, en clave i18n.
+   *
+   * ⚠️ El snapshot guarda el **enum** —`dni`, `passport`…—, no un texto. Se
+   * pintaba tal cual: salía «dni:» en minúscula entre etiquetas capitalizadas, y
+   * con un pasaporte habría salido «passport:» en las tres versiones. Misma
+   * regla que `fuelType` y `transmission` en los PDF.
+   */
+  documentTypeLabel(tipo: string | undefined): string {
+    return CLIENT_DOCUMENT_TYPE_LABELS[tipo as ClientDocumentType] || 'clients.fields.documentNumber';
   }
 }

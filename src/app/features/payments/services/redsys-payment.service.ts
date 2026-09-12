@@ -55,7 +55,10 @@ export class RedsysPaymentService {
     } catch (error: any) {
       // The function may not be deployed yet - this is expected during MVP
       if (error.code === 'functions/not-found') {
-        throw new Error('Redsys no está configurado. Contacta con el administrador.');
+        // ⚠️ Clave i18n, no una frase: el componente PEGA este mensaje al
+        // aviso que ve el operador, así que en español duro un compañero
+        // rumano leía castellano justo cuando algo falla.
+        throw new Error('payments.errors.redsysNotConfigured');
       }
       throw error;
     }
@@ -75,7 +78,7 @@ export class RedsysPaymentService {
    */
   openGateway(link: RedsysLinkResponse): void {
     if (!link.paymentUrl || !link.formData) {
-      throw new Error('Redsys no devolvió los datos del formulario');
+      throw new Error('payments.errors.redsysNoForm');
     }
 
     const form = document.createElement('form');

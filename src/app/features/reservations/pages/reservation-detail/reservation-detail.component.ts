@@ -957,10 +957,19 @@ export class ReservationDetailComponent implements OnInit {
       const link = await this.redsysService.createRedsysPaymentLink(payment.id);
       this.redsysService.openGateway(link);
     } catch (err: any) {
-      // El detalle de la pasarela se conserva: «Redsys no está configurado»
-      // dice mucho más que un error genérico, y es lo que se pega al mensaje.
+      /**
+       * El detalle de la pasarela se conserva: «Redsys no está configurado» dice
+       * mucho más que un error genérico.
+       *
+       * ⚠️ **Y se TRADUCE antes de pegarlo.** Lo que lanza el servicio es una
+       * clave i18n —el mensaje llegaba en español duro y lo leía igual un
+       * operador rumano—, así que pegarlo tal cual sacaría el identificador en
+       * crudo al lado del aviso. `translate()` devuelve la propia clave si no la
+       * encuentra, que es lo que hace seguro pasarle también un error de red.
+       */
+      const detalle = err?.message ? this.translateService.translate(err.message) : '';
       this.notifications.error('payments.actions.chargeCardError', {
-        params: { detail: err?.message ? `: ${err.message}` : '' },
+        params: { detail: detalle ? `: ${detalle}` : '' },
         retry: () => void this.chargeWithCard(payment)
       });
     } finally {

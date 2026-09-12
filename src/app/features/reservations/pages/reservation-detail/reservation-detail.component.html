@@ -1205,6 +1205,22 @@
           </div>
           <div class="modal-body">
             <p>{{ 'reservations.cancel.confirm' | translate }}</p>
+            <!--
+              ⚠️ **El dinero ya cobrado, con el importe delante.** Cancelar
+              anula lo que queda por cobrar, pero **no toca lo que ya entró**: si
+              el cliente pagó la señal, ese dinero sigue en caja y hay que
+              decidir si se le devuelve o se queda como penalización. La
+              aplicación no puede decidirlo —es un acuerdo con el cliente— pero
+              sí tiene que enseñarlo antes, no después. Mismo criterio que cerrar
+              una reserva con cargos pendientes.
+            -->
+            @if (totalPaid > 0) {
+              <p class="modal-warning">
+                <i class="pi pi-exclamation-triangle"></i>
+                {{ 'reservations.cancel.hasCollected' | translate }}
+                <strong>{{ totalPaid | number: '1.2-2' }} €</strong>
+              </p>
+            }
             <p class="modal-hint">{{ 'reservations.cancel.hint' | translate }}</p>
             <div class="modal-actions">
               <button class="btn btn-secondary" type="button" (click)="closeCancelModal()">

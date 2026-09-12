@@ -540,6 +540,10 @@
         "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
         "notFound": "Inspecția nu a fost găsită"
       }
+    },
+    "filters": {
+      "allTypes": "Predări și returnări",
+      "allStatuses": "Orice status"
     }
   },
   "layout": {
@@ -652,7 +656,9 @@
     },
     "errors": {
       "invalidAmount": "Suma nu este validă",
-      "loadFailed": "Încasările nu au putut fi încărcate."
+      "loadFailed": "Încasările nu au putut fi încărcate.",
+      "redsysNotConfigured": "Redsys nu este configurat în acest mediu",
+      "redsysNoForm": "Redsys nu a returnat datele formularului"
     },
     "fields": {
       "amount": "Sumă",
@@ -670,7 +676,9 @@
     },
     "filters": {
       "freePayments": "Plăți libere",
-      "reservationPayments": "Plăți din rezervări"
+      "reservationPayments": "Plăți din rezervări",
+      "allMethods": "Orice metodă de plată",
+      "allScopes": "De rezervare și libere"
     },
     "free": {
       "amount": "Sumă",
@@ -870,7 +878,8 @@
     },
     "cancel": {
       "confirm": "Anulezi această rezervare?",
-      "hint": "Nu se poate anula. Rezervarea rămâne în istoric ca anulată."
+      "hint": "Nu se poate anula. Rezervarea rămâne în istoric ca anulată.",
+      "hasCollected": "S-au încasat deja bani pe această rezervare. Anularea nu îi returnează: trebuie stabilit cu clientul dacă se restituie sau rămân ca penalizare."
     },
     "client": {
       "createQuick": "Creare rapidă client",

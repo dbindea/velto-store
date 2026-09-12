@@ -197,7 +197,14 @@
           }
           @if (contract.clientSnapshot.documentNumber) {
             <div class="info-row">
-              <span class="label">{{ contract.clientSnapshot.documentType || 'Documento' }}:</span>
+              <!--
+                ⚠️ El tipo de documento es un **enum de Firestore**, no texto:
+                se pintaba crudo y salía «dni:» en minúscula entre etiquetas
+                capitalizadas — y con un pasaporte, «passport:» en inglés en las
+                tres versiones. Misma regla que `fuelType` y `transmission` en
+                los PDF. El respaldo estaba además en español duro.
+              -->
+              <span class="label">{{ documentTypeLabel(contract.clientSnapshot.documentType) | translate }}:</span>
               <span class="value">{{ contract.clientSnapshot.documentNumber }}</span>
             </div>
           }

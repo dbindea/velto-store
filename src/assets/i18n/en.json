@@ -540,6 +540,10 @@
         "inspectionRequired": "No inspection to issue the report for",
         "notFound": "The inspection could not be found"
       }
+    },
+    "filters": {
+      "allTypes": "Pickups and returns",
+      "allStatuses": "Any status"
     }
   },
   "layout": {
@@ -652,7 +656,9 @@
     },
     "errors": {
       "invalidAmount": "The amount is not valid",
-      "loadFailed": "The payments could not be loaded."
+      "loadFailed": "The payments could not be loaded.",
+      "redsysNotConfigured": "Redsys is not configured in this environment",
+      "redsysNoForm": "Redsys did not return the form data"
     },
     "fields": {
       "amount": "Amount",
@@ -670,7 +676,9 @@
     },
     "filters": {
       "freePayments": "Free payments",
-      "reservationPayments": "Reservation payments"
+      "reservationPayments": "Reservation payments",
+      "allMethods": "Any payment method",
+      "allScopes": "Reservation and free"
     },
     "free": {
       "amount": "Amount",
@@ -870,7 +878,8 @@
     },
     "cancel": {
       "confirm": "Cancel this reservation?",
-      "hint": "This cannot be undone. The reservation stays in the history as cancelled."
+      "hint": "This cannot be undone. The reservation stays in the history as cancelled.",
+      "hasCollected": "Money has already been collected on this reservation. Cancelling does not refund it: agree with the client whether it goes back or stays as a penalty."
     },
     "client": {
       "createQuick": "Create quick client",

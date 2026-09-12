@@ -540,6 +540,10 @@
         "inspectionRequired": "Falta la inspección de la que emitir el parte",
         "notFound": "No se encuentra la inspección"
       }
+    },
+    "filters": {
+      "allTypes": "Entregas y devoluciones",
+      "allStatuses": "Cualquier estado"
     }
   },
   "layout": {
@@ -652,7 +656,9 @@
     },
     "errors": {
       "invalidAmount": "El importe no es válido",
-      "loadFailed": "No se han podido cargar los cobros."
+      "loadFailed": "No se han podido cargar los cobros.",
+      "redsysNotConfigured": "Redsys no está configurado en este entorno",
+      "redsysNoForm": "Redsys no ha devuelto los datos del formulario"
     },
     "fields": {
       "amount": "Importe",
@@ -670,7 +676,9 @@
     },
     "filters": {
       "freePayments": "Cobros libres",
-      "reservationPayments": "Pagos de reservas"
+      "reservationPayments": "Pagos de reservas",
+      "allMethods": "Cualquier medio de pago",
+      "allScopes": "De reserva y libres"
     },
     "free": {
       "amount": "Importe",
@@ -870,7 +878,8 @@
     },
     "cancel": {
       "confirm": "¿Seguro que quieres cancelar esta reserva?",
-      "hint": "No se puede deshacer. La reserva quedará cancelada, pero se conserva en el historial."
+      "hint": "No se puede deshacer. La reserva quedará cancelada, pero se conserva en el historial.",
+      "hasCollected": "Ya se ha cobrado dinero de esta reserva. Cancelarla no lo devuelve: hay que acordar con el cliente si se le reintegra o se queda como penalización."
     },
     "client": {
       "createQuick": "Crear cliente rápido",
