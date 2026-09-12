@@ -1348,6 +1348,15 @@
       "roadsidePlaceholder": "e.g. +34 902 123 456",
       "roadsideHint": "This is the number the customer calls if they break down.",
       "missing": "No insurance details. The contract promises them in the accident clause — fill them in before renting this vehicle."
+    },
+    "ownership": {
+      "own": "Velto's",
+      "collaborator": "A collaborator's"
+    },
+    "problems": {
+      "ownerRequired": "Say whose car it is.",
+      "ownerShareRequired": "Enter the share of the rental the owner keeps.",
+      "ownerShareRange": "The share runs from 0 to 100 %."
     }
   },
   "workflow": {
@@ -1649,7 +1658,11 @@
     "title": "Partners",
     "totalPending": "Total outstanding",
     "vsCalculated": "versus the calculated amount",
-    "willOwe": "You will owe"
+    "willOwe": "You will owe",
+    "kind": {
+      "referral": "For bringing the client",
+      "vehicleOwner": "For providing the car"
+    }
   },
   "events": {
     "alerts": {

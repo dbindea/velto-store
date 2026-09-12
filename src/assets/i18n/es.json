@@ -1348,6 +1348,15 @@
       "roadsidePlaceholder": "Ej.: +34 902 123 456",
       "roadsideHint": "Es el número al que llama el cliente si se queda tirado.",
       "missing": "Sin datos de seguro. El contrato los promete en la cláusula de accidentes: rellénalos antes de alquilar este coche."
+    },
+    "ownership": {
+      "own": "De Velto",
+      "collaborator": "De un colaborador"
+    },
+    "problems": {
+      "ownerRequired": "Di de quién es el coche.",
+      "ownerShareRequired": "Indica qué parte del alquiler se lleva el propietario.",
+      "ownerShareRange": "El reparto va del 0 al 100 %."
     }
   },
   "workflow": {
@@ -1649,7 +1658,11 @@
     "title": "Colaboradores",
     "totalPending": "Total pendiente de pagar",
     "vsCalculated": "sobre lo calculado",
-    "willOwe": "Se le deberá"
+    "willOwe": "Se le deberá",
+    "kind": {
+      "referral": "Por traer el cliente",
+      "vehicleOwner": "Por ceder el coche"
+    }
   },
   "events": {
     "alerts": {

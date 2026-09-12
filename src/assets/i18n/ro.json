@@ -1348,6 +1348,15 @@
       "roadsidePlaceholder": "Ex.: +34 902 123 456",
       "roadsideHint": "Este numărul pe care îl sună clientul dacă rămâne în pană.",
       "missing": "Fără date de asigurare. Contractul le promite în clauza privind accidentele: completează-le înainte de a închiria acest vehicul."
+    },
+    "ownership": {
+      "own": "Al Velto",
+      "collaborator": "Al unui colaborator"
+    },
+    "problems": {
+      "ownerRequired": "Spune a cui este mașina.",
+      "ownerShareRequired": "Indică ce parte din închiriere revine proprietarului.",
+      "ownerShareRange": "Repartizarea merge de la 0 la 100 %."
     }
   },
   "workflow": {
@@ -1649,7 +1658,11 @@
     "title": "Colaboratori",
     "totalPending": "Total de plată",
     "vsCalculated": "față de cât a ieșit calculat",
-    "willOwe": "I se va datora"
+    "willOwe": "I se va datora",
+    "kind": {
+      "referral": "Pentru că a adus clientul",
+      "vehicleOwner": "Pentru că a pus mașina"
+    }
   },
   "events": {
     "alerts": {
