@@ -1367,7 +1367,7 @@
       "collaborator": "A collaborator's"
     },
     "problems": {
-      "ownerRequired": "Say whose car it is.",
+      "ownerRequired": "Choose the owner of the car.",
       "ownerShareRequired": "Enter the share of the rental the owner keeps.",
       "ownerShareRange": "The share runs from 0 to 100 %."
     },
@@ -1680,7 +1680,7 @@
       "paid": "Paid",
       "cancelled": "Cancelled"
     },
-    "subtitle": "Agents who bring in customers, and the commission owed to them",
+    "subtitle": "Who brings customers or lends cars, and what they are owed",
     "title": "Partners",
     "totalPending": "Total outstanding",
     "vsCalculated": "versus the calculated amount",
@@ -1688,7 +1688,9 @@
     "kind": {
       "referral": "For bringing the client",
       "vehicleOwner": "For providing the car"
-    }
+    },
+    "referralShort": "referral",
+    "ownerShort": "owner share"
   },
   "events": {
     "alerts": {

@@ -1367,7 +1367,7 @@
       "collaborator": "De un colaborador"
     },
     "problems": {
-      "ownerRequired": "Di de quién es el coche.",
+      "ownerRequired": "Elige el propietario del coche.",
       "ownerShareRequired": "Indica qué parte del alquiler se lleva el propietario.",
       "ownerShareRange": "El reparto va del 0 al 100 %."
     },
@@ -1680,7 +1680,7 @@
       "paid": "Pagada",
       "cancelled": "Anulada"
     },
-    "subtitle": "Comerciales que traen clientes y las comisiones que se les deben",
+    "subtitle": "Quien trae clientes o cede coches, y lo que se le debe",
     "title": "Colaboradores",
     "totalPending": "Total pendiente de pagar",
     "vsCalculated": "sobre lo calculado",
@@ -1688,7 +1688,9 @@
     "kind": {
       "referral": "Por traer el cliente",
       "vehicleOwner": "Por ceder el coche"
-    }
+    },
+    "referralShort": "captación",
+    "ownerShort": "reparto"
   },
   "events": {
     "alerts": {

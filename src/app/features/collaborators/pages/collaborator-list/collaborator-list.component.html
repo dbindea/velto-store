@@ -151,8 +151,26 @@
         <li class="collaborator" [class.inactive]="!c.active" (click)="open(c)">
           <div class="who">
             <span class="name">{{ c.name }}</span>
+            <!--
+              ⚠️ **Los dos porcentajes, y solo el que aplique.**
+
+              Desde que un colaborador puede ser solo el dueño de un coche, su
+              comisión de captación puede ser legítimamente **0 %** — y la fila
+              enseñaba «0% · 0 ventas» a secas, que parece una ficha a medio
+              rellenar cuando en realidad tiene pactado un 75 % de reparto que
+              aquí no salía por ninguna parte.
+
+              Cada uno se pinta solo si dice algo: un 0 % de captación en quien
+              no trae clientes es ruido, y un reparto vacío en quien no cede
+              coches, también.
+            -->
             <span class="meta">
-              {{ c.commissionPercent }}% ·
+              @if (c.commissionPercent) {
+                {{ c.commissionPercent }}% {{ 'collaborators.referralShort' | translate }} ·
+              }
+              @if (c.ownerSharePercent) {
+                {{ c.ownerSharePercent }}% {{ 'collaborators.ownerShort' | translate }} ·
+              }
               {{ balance(c.id).sales }} {{ 'collaborators.salesCount' | translate }}
               @if (!c.active) {
                 · {{ 'collaborators.inactive' | translate }}

@@ -1367,7 +1367,7 @@
       "collaborator": "Al unui colaborator"
     },
     "problems": {
-      "ownerRequired": "Spune a cui este mașina.",
+      "ownerRequired": "Alege proprietarul mașinii.",
       "ownerShareRequired": "Indică ce parte din închiriere revine proprietarului.",
       "ownerShareRange": "Repartizarea merge de la 0 la 100 %."
     },
@@ -1680,7 +1680,7 @@
       "paid": "Plătit",
       "cancelled": "Anulat"
     },
-    "subtitle": "Agenți care aduc clienți și comisioanele care li se datorează",
+    "subtitle": "Cine aduce clienți sau cedează mașini, și ce li se datorează",
     "title": "Colaboratori",
     "totalPending": "Total de plată",
     "vsCalculated": "față de cât a ieșit calculat",
@@ -1688,7 +1688,9 @@
     "kind": {
       "referral": "Pentru că a adus clientul",
       "vehicleOwner": "Pentru că a pus mașina"
-    }
+    },
+    "referralShort": "intermediere",
+    "ownerShort": "parte proprietar"
   },
   "events": {
     "alerts": {
