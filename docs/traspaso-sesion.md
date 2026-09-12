@@ -5,7 +5,12 @@
 
 ---
 
-## 0. LO PRIMERO DE TODO, ANTES DE PROGRAMAR NADA
+## 0. ~~LO PRIMERO DE TODO~~ — HECHO el 12 de septiembre de 2026
+
+> ✅ **YA ESTÁ HECHO. NO LO VUELVAS A HACER.** Se vaciaron las 16 colecciones de
+> `velto-store`, `authorizedUsers` quedó intacta con sus dos documentos y
+> producción no se tocó. Lo que sigue es el porqué, que se conserva para
+> entender las decisiones que salieron de ahí — no es una instrucción pendiente.
 
 **Vaciar Firestore de DESARROLLO entero y empezar de cero.** Es una decisión de
 Dorel del 12 de septiembre de 2026 y es la que desbloquea lo demás.
@@ -102,9 +107,17 @@ cesión y el otro no.
 del **0 %**, que aquí es legítimo, así que nada chirriaba: al propietario se le
 habría liquidado cero hasta que se quejara.
 
-### Entrega 2 — SIGUIENTE
+### Entrega 2 — HECHA (commit `87a2839`)
 
-Alta de vehículo con propietario y reparto automático en la reserva.
+Alta de vehículo con propietario y reparto automático en la reserva. El detalle
+de lo que entró, y de lo que **no**, está en `docs/mejoras-pendientes.md` (N-33).
+
+⚠️ **Lo que falta y es lo primero de la entrega 3: el DEVENGO.** Nadie crea
+todavía el `CollaboratorSale` de `kind: 'vehicle_owner'` al cerrar la reserva, así
+que el reparto se congela y se enseña, pero aún no llega al balance del
+colaborador.
+
+Lo que se pedía:
 
 - En `vehicle-form`: elegir «Propio» o «De colaborador». Si es de colaborador,
   **seleccionar uno existente o crearlo desde ahí** —Dorel lo pidió así— y
