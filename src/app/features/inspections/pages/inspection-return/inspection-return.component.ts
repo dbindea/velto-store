@@ -225,6 +225,19 @@ export class InspectionReturnComponent implements OnInit {
     return Math.max(0, this.depositPaid - this.totalExtraCharges);
   }
 
+  /**
+   * Lo que el cliente queda a deber: los cargos que la fianza no llega a cubrir.
+   *
+   * ⚠️ **Sin esto la pantalla decía la verdad y engañaba igual.** Con 50 € de
+   * cargos y una fianza de 0, «A retener» y «A devolver» valen los dos 0,00 € —
+   * es correcto, no hay fianza que mover— y el operador cierra la devolución
+   * viendo ceros, con 50 € sin cobrar. Lo cobrado y lo debido son dos cifras
+   * distintas; es el mismo fallo que F-34.
+   */
+  get pendingFromClient(): number {
+    return Math.max(0, this.totalExtraCharges - this.depositPaid);
+  }
+
   get pickupKm(): number | undefined {
     return this.pickupInspection?.km || this.reservation?.deliveryInfo?.pickupKm;
   }

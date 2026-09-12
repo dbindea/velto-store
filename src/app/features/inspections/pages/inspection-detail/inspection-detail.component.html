@@ -34,13 +34,13 @@
         <div class="card-content">
           @if (getCreatedAt(); as created) {
             <div class="info-row">
-              <span class="label">Fecha:</span>
+              <span class="label">{{ 'common.date' | translate }}:</span>
               <span class="value">{{ created | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }
           @if (getCompletedAt(); as completed) {
             <div class="info-row">
-              <span class="label">Completado:</span>
+              <span class="label">{{ 'inspections.status.completed' | translate }}:</span>
               <span class="value">{{ completed | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }

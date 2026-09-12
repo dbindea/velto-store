@@ -61,7 +61,8 @@
           </div>
           @if (pickupKm !== undefined) {
             <div class="info-row">
-              <span class="label">Km salida:</span>
+              <!-- Estaba en español duro: se leía «Km salida» en los tres idiomas. -->
+              <span class="label">{{ 'inspections.fields.pickupKm' | translate }}:</span>
               <span class="value">{{ pickupKm | number }}</span>
             </div>
           }
@@ -155,7 +156,7 @@
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn-secondary" type="button" (click)="showDamageForm = false">Cancelar</button>
+              <button class="btn-secondary" type="button" (click)="showDamageForm = false">{{ 'common.cancel' | translate }}</button>
               <button class="btn-primary" type="button" (click)="addDamage()">
                 <i class="pi pi-plus"></i> Añadir
               </button>
@@ -288,7 +289,7 @@
             <input type="number" class="form-control" [(ngModel)]="formData.extraCharges!.otherCharge" (ngModelChange)="recalculateTotal()" name="xoth" min="0" step="0.01">
           </div>
           <div class="form-group full">
-            <label>Notas cargos</label>
+            <label>{{ 'inspections.fields.extraChargeNotes' | translate }}</label>
             <textarea class="form-control" rows="2" [(ngModel)]="formData.extraCharges!.notes" name="xnotes"></textarea>
           </div>
         </div>
@@ -306,22 +307,43 @@
         </div>
         <div class="deposit-grid">
           <div class="deposit-item">
-            <span class="d-label">Cobrada</span>
+            <span class="d-label">{{ 'inspections.deposit.collected' | translate }}</span>
             <span class="d-value">{{ depositPaid | number:'1.2-2' }} €</span>
           </div>
           <div class="deposit-item">
-            <span class="d-label">Cargos extra</span>
+            <span class="d-label">{{ 'inspections.sections.extraCharges' | translate }}</span>
             <span class="d-value warning">{{ totalExtraCharges | number:'1.2-2' }} €</span>
           </div>
           <div class="deposit-item danger">
-            <span class="d-label">A retener</span>
+            <!-- Estaban en español duro, y se escaparon del barrido por empezar
+                 con una «A» suelta. -->
+            <span class="d-label">{{ 'inspections.deposit.toRetain' | translate }}</span>
             <span class="d-value">{{ toRetain | number:'1.2-2' }} €</span>
           </div>
           <div class="deposit-item success">
-            <span class="d-label">A devolver</span>
+            <span class="d-label">{{ 'inspections.deposit.toRefund' | translate }}</span>
             <span class="d-value">{{ toRefund | number:'1.2-2' }} €</span>
           </div>
         </div>
+
+        <!--
+          ⚠️ **Lo que la fianza no cubre queda a deber, y hay que decirlo aquí.**
+          Con 50 € de cargos y una fianza de 0, las cuatro cifras de arriba son
+          correctas —no hay nada que retener— y las dos últimas ponen «0,00 €»:
+          el operador ve ceros y cierra la devolución convencido de que no queda
+          nada, con 50 € sin cobrar.
+
+          Es el mismo fallo que F-34, donde «Cargos extra: 0,00 €» convivía con
+          145 € pendientes tres líneas más abajo. Lo cobrado y lo debido son dos
+          cifras distintas y las dos tienen que verse.
+        -->
+        @if (pendingFromClient > 0) {
+          <p class="deposit-pending">
+            <i class="pi pi-exclamation-triangle"></i>
+            {{ 'inspections.deposit.pendingFromClient' | translate }}
+            <strong>{{ pendingFromClient | number: '1.2-2' }} €</strong>
+          </p>
+        }
       </div>
     </div>
 

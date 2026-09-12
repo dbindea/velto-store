@@ -111,7 +111,7 @@
 
     <div class="mobile-nav-item" (click)="toggleMoreMenu()">
       <i class="pi pi-bars"></i>
-      <span>Más</span>
+      <span>{{ 'layout.more' | translate }}</span>
 
       @if (moreMenuOpen()) {
         <div class="more-menu">

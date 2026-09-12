@@ -153,7 +153,8 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot"
+    "viewAll": "Vezi tot",
+    "date": "Dată"
   },
   "contracts": {
     "actions": {
@@ -470,7 +471,9 @@
       "depositCollected": "Garanție încasată",
       "fuelLevel": "Nivel combustibil",
       "km": "Kilometraj",
-      "notes": "Observații"
+      "notes": "Observații",
+      "pickupKm": "Km la predare",
+      "extraChargeNotes": "Note despre taxe"
     },
     "fuel": {
       "empty": "Gol",
@@ -544,12 +547,22 @@
     "filters": {
       "allTypes": "Predări și returnări",
       "allStatuses": "Orice status"
+    },
+    "deposit": {
+      "collected": "Încasată",
+      "toRetain": "De reținut",
+      "toRefund": "De returnat",
+      "pendingFromClient": "Garanția nu acoperă taxele. Rămâne de încasat de la client:"
+    },
+    "list": {
+      "empty": "Încă nu există inspecții"
     }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrator",
-    "userRoleEmployee": "Angajat"
+    "userRoleEmployee": "Angajat",
+    "more": "Mai mult"
   },
   "maintenance": {
     "actions": {

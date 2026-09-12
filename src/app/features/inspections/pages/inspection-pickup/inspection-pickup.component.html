@@ -46,11 +46,17 @@
             <span class="value">{{ getReturnDate() | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
           <div class="info-row">
-            <span class="label">{{ 'reservations.title' | translate }}:</span>
+            <!--
+              ⚠️ Ponía `reservations.title`, o sea «Reservas», como etiqueta de un
+              importe: se leía como un número de reservas y era el precio del
+              alquiler. La devolución ya usa la clave correcta para el mismo dato.
+            -->
+            <span class="label">{{ 'payments.summary.totalRental' | translate }}:</span>
             <span class="value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
           </div>
           <div class="info-row">
-            <span class="label">Fianza:</span>
+            <!-- Estaba en español duro, sin pipe: salía «Fianza» en inglés y en rumano. -->
+            <span class="label">{{ 'contracts.fields.depositAmount' | translate }}:</span>
             <span class="value">{{ reservation.deposit.requiredAmount | number:'1.2-2' }} €</span>
           </div>
         </div>

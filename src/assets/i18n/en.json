@@ -153,7 +153,8 @@
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "date": "Date"
   },
   "contracts": {
     "actions": {
@@ -470,7 +471,9 @@
       "depositCollected": "Deposit collected",
       "fuelLevel": "Fuel level",
       "km": "Mileage",
-      "notes": "Notes"
+      "notes": "Notes",
+      "pickupKm": "Km at pickup",
+      "extraChargeNotes": "Charge notes"
     },
     "fuel": {
       "empty": "Empty",
@@ -544,12 +547,22 @@
     "filters": {
       "allTypes": "Pickups and returns",
       "allStatuses": "Any status"
+    },
+    "deposit": {
+      "collected": "Collected",
+      "toRetain": "To retain",
+      "toRefund": "To refund",
+      "pendingFromClient": "The deposit does not cover the charges. Still to collect from the client:"
+    },
+    "list": {
+      "empty": "No inspections yet"
     }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrator",
-    "userRoleEmployee": "Employee"
+    "userRoleEmployee": "Employee",
+    "more": "More"
   },
   "maintenance": {
     "actions": {

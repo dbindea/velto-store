@@ -532,3 +532,29 @@ textarea.form-control { resize: vertical; min-height: 50px; }
   border: 1px solid var(--border-color);
   &:hover:not(:disabled) { background: var(--bg-hover); }
 }
+
+/* Lo que la fianza no cubre. Ámbar y no rojo: no impide cerrar la devolución
+   —reclamar un cargo puede llevar semanas— pero tiene que verse antes. */
+.deposit-pending {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.85rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: var(--bg-input);
+  border-left: 3px solid var(--warning-color);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+
+  i {
+    margin-top: 0.15rem;
+    color: var(--warning-color);
+    flex-shrink: 0;
+  }
+
+  strong {
+    color: var(--warning-color);
+    white-space: nowrap;
+  }
+}
