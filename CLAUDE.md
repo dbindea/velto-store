@@ -350,6 +350,36 @@ fórmulas**.
 enseñaba tal cual y lo sembraba así en la fila de pago. Todo importe calculado pasa por
 `roundMoney()` antes de mostrarse o escribirse.
 
+### Coches de colaborador: Velto alquila y factura, y reparte después
+
+⚠️ **Un coche cedido no cambia quién alquila ni quién factura.** El cliente
+recibe una factura de VELTO MOBILITY por el importe total, sea el coche propio o
+de un tercero; el propietario no aparece en ninguna parte de cara al cliente. Lo
+que hay detrás es otra relación: Velto le debe su parte por la cesión.
+
+`owner-share.util.ts` es la única autoridad sobre la base del reparto: **el
+alquiler sin IVA, y solo el alquiler**. Tres exclusiones, las tres con motivo:
+
+- **El IVA no es de la empresa**, es de Hacienda. Repartirlo sería pagarle al
+  propietario un porcentaje de un impuesto — hay test de que 100 y 121 no dan lo
+  mismo, el mismo que protege las comisiones de captación.
+- **La fianza es del cliente**, en custodia.
+- **Los cargos extra son de Velto** (decisión de Dorel, 12 de septiembre de
+  2026): cubren un coste o un perjuicio que pone la agencia.
+
+⚠️ **El porcentaje vive en el coche**, con el del colaborador como propuesta —un
+propietario puede ceder un utilitario y una furgoneta con repartos distintos— y
+la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. La parte
+se **devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+
+⚠️ **`CollaboratorSale.kind` separa dos cosas que se pagan a la misma persona.**
+Un colaborador puede traer el cliente **y** poner el coche de la **misma**
+reserva: son **dos apuntes**, no uno mayor. Se pactan, se calculan y se
+justifican distinto, y uno lleva detrás una factura suya por la cesión y el otro
+no. `balanceByKind()` los da separados; el total hay que pedirlo. La ausencia de
+`kind` se lee como `referral` y se resuelve **solo** en `kindOf()`: repartido por
+la aplicación, un `kind === 'referral'` suelto dejaría fuera todo lo anterior.
+
 ### Colaboradores: comisiones que NO son contabilidad
 
 Comerciales que traen clientes y cobran un porcentaje. ⚠️ **No son usuarios y no
@@ -1733,6 +1763,33 @@ porque su geometría no es esa.
 Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
 sin que se notara porque solo aparece cuando falta la declaración.
 
+
+### `npm run css:audit` — la clase que nadie declara
+
+⚠️ **Es el fallo que más se repite aquí**, y siempre igual: compila, los tests
+pasan, el despliegue va bien, y lo único que falla es lo que ve el operador. Ha
+pasado con `.form-control`, con `.btn-primary`, con `.checkbox-label` y con las
+cuatro clases de la tarjeta de mantenimiento del panel.
+
+El guion busca clases usadas en una plantilla que **no declara nadie**, y separa
+lo **roto** —ninguna clase del elemento tiene estilo— del **ruido** —hay otra
+que sí, y esta solo nombra—. Hoy sale en cero. Lo revisado está anotado en
+`ACEPTADAS`, dentro del propio script, con su motivo; si añades una clase que
+solo nombra, va ahí, y si una empieza a tener que pintar algo, se saca.
+
+⚠️ **Y el desbordamiento horizontal se mide, no se mira.** Recorrer las rutas a
+390 px comprobando `scrollWidth > clientWidth` encontró que Facturas desbordaba
+—dos declaraciones de `.invoice-row`, la segunda pisando a la primera y con ella
+el media query de móvil—. Ninguna otra pantalla lo hacía.
+
+⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
+2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,
+`section-hint`, `total-hint`…) en 44 sitios, y `.loading-state` usado 25 veces y
+declarado 20: donde faltaba, la ayuda salía del tamaño del dato y el error **no
+salía en rojo**. Los genéricos —`.hint`, `.field-hint`, `.section-hint`,
+`.loading-state`, `.empty-state`, `.error-msg`— viven en `styles.scss` y **no
+pisan** a quien ya los declara (0,1,0 contra 0,2,0). Los específicos se quedan
+donde están.
 
 ⚠️ Cada formulario **declara su propia `.form-control`** en su SCSS. No está en
 `styles.scss`, aunque lo parezca por lo repetida que está. Si un componente nuevo la usa

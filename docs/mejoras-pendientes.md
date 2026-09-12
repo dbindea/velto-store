@@ -60,6 +60,123 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## 🚧 N-33 · Coches de colaborador y reparto — EMPEZADO el 12 de septiembre de 2026
+
+Velto alquila también vehículos que no son suyos: un colaborador cede su coche y
+cobra una parte del alquiler.
+
+⚠️ **Velto sigue siendo quien alquila y quien factura.** El cliente recibe una
+factura de VELTO MOBILITY por el importe total, sea el coche propio o cedido; el
+propietario no aparece en ninguna parte de cara al cliente. Lo que hay detrás es
+otra relación: Velto le debe su parte por la cesión.
+
+### Las cuatro decisiones de Dorel
+
+| | Decisión |
+|---|---|
+| **Extras** | **No se reparten**: son de Velto. Combustible, limpieza, daños, km de más y multas cubren un coste o un perjuicio que pone la agencia |
+| **Devengo** | **Al cerrar la reserva**, cuando los importes ya son definitivos |
+| **Porcentaje** | **En cada coche**, con el del colaborador como propuesta |
+| **Factura** | **La manda el propietario y Velto la registra.** Nada de autofacturación por ahora |
+
+### Entrega 1, hecha: el modelo y la aritmética
+
+`owner-share.util.ts` es la única autoridad sobre la base del reparto: el
+alquiler **sin IVA y solo el alquiler**. Con el test de que 100 y 121 no dan lo
+mismo — el mismo que protege las comisiones, porque son dos cálculos distintos
+que pueden equivocarse por separado.
+
+⚠️ **Y un fallo que salió al escribir su test:** `Number(null)` es `0`, no `NaN`,
+así que un porcentaje sin rellenar pasaba como reparto del **0 %** — que aquí es
+un valor legítimo, o sea que nada habría chirriado. Al propietario se le habría
+liquidado cero por cada alquiler hasta que se quejara.
+
+- `Vehicle`: `ownership`, `ownerCollaboratorId`, `ownerSharePercent`. Ausente
+  vale «propio».
+- `Reservation`: `ownerShareSnapshot`, **congelado al crear** como el precio.
+- `Collaborator`: `ownerSharePercent`, **distinto** de `commissionPercent`.
+- `CollaboratorSale`: `kind` (`referral` | `vehicle_owner`) y `balanceByKind()`.
+
+⚠️ **`kind` es la petición de «no mezclar ni duplicar».** El mismo colaborador
+puede traer el cliente **y** poner el coche de la **misma** reserva: son dos
+apuntes, no uno mayor. Se pactan, se calculan y se justifican distinto, y uno
+lleva factura de cesión detrás y el otro no.
+
+### Lo que falta
+
+- **Entrega 2**: alta de vehículo con propietario (selector de colaborador, o
+  crearlo desde ahí) y el reparto que se congela solo al crear la reserva.
+- **Entrega 3**: liquidaciones agrupadas —varias reservas en un pago, con fecha,
+  importe y forma incluido efectivo— y el registro de la factura recibida, con
+  estado «pendiente de recibir» que **no** se confunda con «no hay que
+  facturar». ⚠️ Pagarle **no** genera una factura de venta de Velto.
+- **Entrega 4**: informes con el reparto y el resultado real de Velto, y la
+  **fecha de operación** de las facturas.
+
+### La fecha de operación, sin empezar
+
+Pedida el 12 de septiembre. Hoy `Invoice` ya tiene `operationDate` separada de
+`issueDate` y existe `needsOperationDate()`, pero **nadie la propone**. Lo que
+pidió Dorel:
+
+- Regla general: la fecha en que el precio resulta **exigible** según lo pactado.
+- Pago al entregar → fecha de entrega. Pago al finalizar → fecha de fin.
+- **Anticipo cobrado antes** → la fecha de cobro para ese importe, y no volver a
+  contarlo en la factura final.
+- Mensualidades → el vencimiento de cada período.
+- Y **una explicación breve** de la fecha propuesta, para poder revisarla.
+
+⚠️ **No usar la fecha de emisión ni la de devolución para todos los casos**, que
+es justo lo que haría lo fácil.
+
+---
+
+## ✅ N-32 · Cuatro tandas de repaso — 11 y 12 de septiembre de 2026
+
+Repaso pedido por Dorel antes de lanzar producción: estilos en escritorio y en
+móvil, y las casuísticas de flota, colaboradores, pagos y devoluciones. Salieron
+**unos treinta fallos**. Los que enseñan algo:
+
+**Con dinero:**
+
+- ⚠️ Se podía **devolver o retener más fianza de la cobrada**, y las dos cosas a
+  la vez: devolver 300 y retener 300 de una fianza de 300 son dos operaciones que
+  por separado parecen bien y juntas entregan el doble. Y el descuadre no salía
+  por ningún sitio, porque una devolución no cuenta como ingreso.
+- ⚠️ **Un vehículo con reservas se borraba**, aunque hubiera contratos firmados
+  que acreditan haberlo alquilado.
+- ⚠️ En la devolución, con cargos de 50 € y fianza 0, «A retener» y «A devolver»
+  ponían los dos **0,00 €** — correcto y engañoso: el operador cerraba viendo
+  ceros con 50 € sin cobrar. Es F-34 otra vez.
+- **Cancelar una reserva con dinero ya cobrado** no decía nada.
+
+**Estructurales:**
+
+- ⚠️ **Dos declaraciones de `.invoice-row`** en el mismo SCSS: la segunda pisaba
+  a la primera y con ella el media query de móvil dejó de aplicarse a nada.
+  Facturas **desbordaba en horizontal** y el badge se montaba sobre el nombre.
+- ⚠️ **Once nombres para «texto de ayuda»** (44 apariciones) y `.loading-state`
+  usado 25 veces y declarado 20. Los genéricos pasan a `styles.scss`.
+- La tarjeta de mantenimiento del panel usaba cuatro clases que nadie declaraba.
+
+**Texto:** el calendario salía **siempre en español** —leía
+`document.documentElement.lang`, que no lo escribe nadie—, «Septiembre **De**
+2026», «1 días» en seis sitios, y una quincena de literales en castellano dentro
+de plantillas, siete de ellos en las pantallas de entrega y devolución.
+
+### Y dos herramientas, que es lo que queda
+
+- **`npm run css:audit`** — clases que una plantilla usa y nadie declara,
+  separando lo roto del ruido. De 26 hallazgos a 0; los revisados quedan
+  anotados en el script con su motivo.
+- **Medir el desbordamiento**, que se puede medir: las 14 rutas principales a
+  390 px, ninguna desborda.
+
+⚠️ **Lo que el barrido de texto NO encuentra:** «A retener» y «A devolver» se le
+escaparon por empezar con una «A» suelta. Encuentra mucho, no lo encuentra todo.
+
+---
+
 ## ✅ N-31 · El sobre de emergencia — 11 de septiembre de 2026
 
 [emergencia.md](emergencia.md). Salió de la pregunta que ninguno de los dos
