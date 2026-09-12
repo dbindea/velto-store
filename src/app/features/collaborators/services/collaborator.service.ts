@@ -25,6 +25,7 @@ import {
   amountProblem,
   commissionAmount,
   estadoSegunReserva,
+  paidAtProblem,
   saleProblem,
   validateCollaborator
 } from '@shared/utils/collaborator.util';
@@ -262,6 +263,99 @@ export class CollaboratorService {
   }
 
   /**
+   * Reconocer lo devengado por sus coches: convierte los repartos derivados en
+   * apuntes con su importe **congelado**.
+   *
+   * ⚠️ **Liquidar NO es pagar.** Son dos cosas distintas y aquí solo pasa la
+   * primera: se reconoce lo que se le debe, y el apunte nace `pending`. El
+   * dinero se le entrega después, por el mismo camino que las comisiones de
+   * captación — y se le puede pagar sin que haya llegado todavía su factura.
+   *
+   * ⚠️ **Aquí es donde el importe deja de derivarse.** Hasta este momento la
+   * cifra sale de la reserva cada vez que se pinta; a partir de ahora es un
+   * número escrito que ya no se mueve, igual que el precio de la reserva o el
+   * porcentaje de una comisión. Es lo que permite explicar dentro de seis meses
+   * por qué se le pagó eso.
+   *
+   * ⚠️ **En un `writeBatch`: entra todo o no entra nada.** Reconocer cuatro
+   * repartos con cuatro escrituras sueltas y que falle la tercera deja media
+   * liquidación hecha y a nadie sabiendo cuál mitad — el mismo motivo por el que
+   * la reserva y sus pagos se escriben juntos.
+   */
+  async settleOwnerShares(
+    collaborator: Collaborator,
+    accruals: {
+      reservationId: string;
+      collaboratorId: string;
+      collaboratorName: string;
+      sharePercent: number;
+      netAmount: number;
+      amount: number;
+      vehicle: string;
+      clientName: string;
+      pickupDate: unknown;
+    }[]
+  ): Promise<number> {
+    if (!collaborator?.id) throw new Error('collaborators.problems.collaboratorRequired');
+    const propios = (accruals || []).filter((a) => a.collaboratorId === collaborator.id);
+    if (!propios.length) return 0;
+
+    /**
+     * ⚠️ **Se vuelve a mirar qué hay escrito, aunque la pantalla ya lo filtre.**
+     * Lo que llega es una derivación calculada al cargar la ficha: entre eso y
+     * este clic caben otra pestaña y otro operador. Sin esta comprobación, el
+     * mismo reparto se reconocería dos veces y al propietario se le deberia el
+     * doble — y las dos filas serían creíbles.
+     */
+    const existentes = await getDocs(
+      query(
+        this.salesRef,
+        where('collaboratorId', '==', collaborator.id),
+        where('kind', '==', 'vehicle_owner')
+      )
+    );
+    const yaReconocidas = new Set(
+      existentes.docs
+        .map((d) => d.data() as CollaboratorSale)
+        .filter((v) => v.status !== 'cancelled')
+        .map((v) => v.reservationId)
+    );
+
+    const nuevas = propios.filter((a) => !yaReconocidas.has(a.reservationId));
+    if (!nuevas.length) return 0;
+
+    const batch = writeBatch(this.firestore);
+    for (const a of nuevas) {
+      const venta: Omit<CollaboratorSale, 'id'> = {
+        collaboratorId: collaborator.id,
+        // Del devengo y no de la ficha: es el nombre congelado en la reserva, el
+        // que estaba pactado el día del alquiler.
+        collaboratorName: a.collaboratorName || collaborator.name,
+        kind: 'vehicle_owner',
+        reservationId: a.reservationId,
+        reservationSnapshot: {
+          clientName: a.clientName,
+          vehicle: a.vehicle,
+          pickupDate: a.pickupDate ?? null
+        },
+        netAmount: a.netAmount,
+        // El porcentaje que se congeló en la reserva, no el del coche de hoy.
+        commissionPercent: a.sharePercent,
+        commissionAmount: a.amount,
+        calculatedAmount: a.amount,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: this.auth.authorizedUser()?.email || undefined
+      };
+      batch.set(doc(this.salesRef), cleanForFirestore(venta) as Record<string, unknown>);
+    }
+
+    await batch.commit();
+    return nuevas.length;
+  }
+
+  /**
    * Cambiar a mano lo que se le va a pagar por una venta.
    *
    * ⚠️ **Solo mientras esté PENDIENTE.** Una vez pagada, el dinero salió:
@@ -342,18 +436,50 @@ export class CollaboratorService {
   async paySettlement(
     collaboratorId: string,
     method: CommissionPaymentMethod,
-    note?: string
+    note?: string,
+    options?: {
+      /**
+       * Cuáles entran en este pago. Sin lista, **todas las pendientes**, que es
+       * como se comportaba antes de que se pudiera elegir.
+       */
+      saleIds?: string[];
+      /**
+       * Cuándo salió el dinero de verdad.
+       *
+       * ⚠️ **No es lo mismo que cuándo se apunta.** A un colaborador se le paga
+       * en efectivo el martes y se anota el jueves; sellando siempre el momento
+       * de la escritura, el histórico de pagos —que `settlements()` agrupa por
+       * día— contaría ese pago en un día en el que no se pagó nada, y no habría
+       * forma de cuadrarlo con el extracto ni con lo que él recuerda.
+       */
+      paidAt?: Date;
+    }
   ): Promise<number> {
     const pendientes = (await this.salesOf(collaboratorId)).filter((s) => s.status === 'pending');
     if (!pendientes.length) return 0;
 
+    const elegidas = options?.saleIds?.length
+      ? pendientes.filter((s) => options.saleIds!.includes(s.id!))
+      : pendientes;
+    if (!elegidas.length) return 0;
+
+    /**
+     * ⚠️ **La misma función que mira la pantalla**, no una segunda copia: dos
+     * comprobaciones acabarían discrepando y entonces la pantalla dejaría pasar
+     * algo que el servicio rechaza. Ver `paidAtProblem()`.
+     */
+    const problemaFecha = paidAtProblem(options?.paidAt);
+    if (problemaFecha) throw new Error(problemaFecha);
+
     const batch = writeBatch(this.firestore);
-    for (const venta of pendientes) {
+    for (const venta of elegidas) {
       batch.update(
         doc(this.salesRef, venta.id!),
         cleanForFirestore({
           status: 'paid',
-          paidAt: serverTimestamp(),
+          // Firestore guarda un `Date` como Timestamp, así que la fecha elegida
+          // viaja tal cual; sin ella, el sello del servidor de siempre.
+          paidAt: options?.paidAt ?? serverTimestamp(),
           paidMethod: method,
           paidNote: note?.trim() || undefined,
           updatedAt: serverTimestamp()
@@ -361,7 +487,7 @@ export class CollaboratorService {
       );
     }
     await batch.commit();
-    return pendientes.length;
+    return elegidas.length;
   }
 
   /**

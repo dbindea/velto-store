@@ -14,7 +14,8 @@ import {
   settlements,
   validateCollaborator,
   yearlyTotals,
-  balanceByKind
+  balanceByKind,
+  paidAtProblem
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -526,5 +527,56 @@ describe('las dos clases de apunte', () => {
       venta({ kind: 'vehicle_owner', commissionAmount: 150, status: 'cancelled' })
     ]);
     expect(b.total).toEqual({ pending: 0, paid: 0 });
+  });
+});
+
+describe('cuándo salió el dinero', () => {
+  const diasDesdeHoy = (n: number): Date => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+
+  /**
+   * ⚠️ **La fecha se elige a propósito.** A un colaborador se le paga en
+   * efectivo el martes y se anota el jueves; sellando siempre el momento de la
+   * escritura, el histórico contaría ese pago en un día en el que no salió nada
+   * y no habría forma de cuadrarlo con el extracto.
+   */
+  it('una fecha pasada vale: se paga un día y se apunta otro', () => {
+    expect(paidAtProblem(diasDesdeHoy(-1))).toBeNull();
+    expect(paidAtProblem(diasDesdeHoy(-90))).toBeNull();
+  });
+
+  /**
+   * ⚠️ **Hoy entero vale, no solo lo ya transcurrido.** Comparando contra el
+   * instante actual, apuntar por la mañana un pago hecho esta misma tarde
+   * saldría como «futuro» — y el operador teclea un día, no una hora.
+   */
+  it('hoy vale, se apunte a la hora que se apunte', () => {
+    const hoyTarde = new Date();
+    hoyTarde.setHours(23, 30, 0, 0);
+    expect(paidAtProblem(hoyTarde)).toBeNull();
+  });
+
+  /**
+   * ⚠️ **La prueba que importa.** Marcar como pagado algo que aún no ha salido
+   * hace que el balance diga que no se le debe nada a alguien a quien sí se le
+   * debe, y eso se descubre cuando él lo reclama.
+   */
+  it('una fecha futura no: eso no se ha pagado todavía', () => {
+    expect(paidAtProblem(diasDesdeHoy(1))).toBe('collaborators.problems.paidAtFuture');
+    expect(paidAtProblem(diasDesdeHoy(30))).toBe('collaborators.problems.paidAtFuture');
+  });
+
+  it('sin fecha no hay problema: manda el sello del servidor', () => {
+    expect(paidAtProblem(null)).toBeNull();
+    expect(paidAtProblem(undefined)).toBeNull();
+  });
+
+  it('una fecha que no es fecha se rechaza', () => {
+    expect(paidAtProblem(new Date('no-es-una-fecha'))).toBe(
+      'collaborators.problems.paidAtInvalid'
+    );
   });
 });

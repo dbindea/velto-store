@@ -185,7 +185,16 @@
               <span class="pending">{{ balance(c.id).pending | number: '1.2-2' }} €</span>
               <span class="pending-label">{{ 'collaborators.pending' | translate }}</span>
             } @else {
-              <span class="settled">{{ 'collaborators.settled' | translate }}</span>
+              <!--
+                ⚠️ **Sin movimientos no es lo mismo que estar al día.** Decirle
+                «liquidado» a un colaborador que nunca ha tenido nada sugiere que
+                hubo algo y se pagó. Es más frecuente desde que un colaborador
+                puede darse de alta solo para ceder un coche.
+              -->
+              <span class="settled">
+                {{ (balance(c.id).sales ? 'collaborators.settled' : 'collaborators.noMovements')
+                   | translate }}
+              </span>
             }
           </div>
 

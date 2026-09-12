@@ -47,10 +47,35 @@
         <div class="figure pending">
           <span class="label">{{ 'collaborators.pending' | translate }}</span>
           <span class="value">{{ balance.pending | number: '1.2-2' }} €</span>
+          <!--
+            ⚠️ **El desglose solo cuando cobra por los dos conceptos.** Un total
+            que mezcla la comisión por traer clientes con el reparto por ceder un
+            coche no se puede explicar, y uno lleva detrás una factura suya y el
+            otro no. Con una sola clase el desglose repetiría el total y sería
+            ruido, que es por qué no sale siempre.
+          -->
+          @if (mixedKinds()) {
+            <span class="split">
+              {{ byKind().referral.pending | number: '1.2-2' }} €
+              {{ 'collaborators.referralShort' | translate }}
+              ·
+              {{ byKind().vehicleOwner.pending | number: '1.2-2' }} €
+              {{ 'collaborators.ownerShort' | translate }}
+            </span>
+          }
         </div>
         <div class="figure">
           <span class="label">{{ 'collaborators.paidTotal' | translate }}</span>
           <span class="value">{{ balance.paid | number: '1.2-2' }} €</span>
+          @if (mixedKinds()) {
+            <span class="split">
+              {{ byKind().referral.paid | number: '1.2-2' }} €
+              {{ 'collaborators.referralShort' | translate }}
+              ·
+              {{ byKind().vehicleOwner.paid | number: '1.2-2' }} €
+              {{ 'collaborators.ownerShort' | translate }}
+            </span>
+          }
         </div>
         @if (balance.cancelled > 0) {
           <div class="figure muted">
@@ -62,7 +87,7 @@
 
       @if (balance.pending > 0) {
         <button class="btn-secondary settle-btn" type="button" [disabled]="working()"
-          (click)="showSettle.set(true)">
+          (click)="startSettle()">
           <i class="pi pi-wallet"></i>
           {{ 'collaborators.settleAll' | translate }} ({{ balance.pending | number: '1.2-2' }} €)
         </button>
@@ -103,6 +128,20 @@
             }
           </ul>
           <p class="hint">{{ 'collaborators.ownerShare.hint' | translate }}</p>
+
+          <!--
+            ⚠️ **Reconocer no es pagar**, y por eso este botón no dice «pagar».
+            Aquí el reparto derivado se convierte en un apunte con su importe
+            congelado; entregarle el dinero es el paso siguiente, con su fecha y
+            su forma. Lo normal es reconocer al cerrar y pagar a fin de mes.
+          -->
+          <button class="btn-secondary settle-btn" type="button" [disabled]="working()"
+            (click)="settleAccruals()">
+            @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
+            <i class="pi pi-check-square"></i>
+            {{ 'collaborators.ownerShare.settle' | translate }}
+            ({{ accruedPending() | number: '1.2-2' }} €)
+          </button>
         </section>
       }
     }
@@ -185,7 +224,49 @@
         <h2>{{ 'collaborators.settleAll' | translate }}</h2>
         <p class="hint">{{ 'collaborators.settleHint' | translate }}</p>
 
+        <!--
+          Qué entra en este pago.
+
+          ⚠️ **Todo marcado de salida**: lo normal es pagarle todo lo que se le
+          debe, y desmarcar una es más fácil que marcar seis. Un pago que solo
+          cubre parte de lo pendiente existe —se paga a cuenta— y esto es lo que
+          permite decir cuál parte, en vez de dejar el histórico diciendo que se
+          pagó todo.
+
+          ⚠️ Cada fila dice **por qué** se le debe: sin eso, dos importes
+          parecidos en la misma lista no se distinguen, y uno lleva detrás una
+          factura suya por la cesión del coche y el otro no.
+        -->
+        <ul class="settle-list">
+          @for (s of pendingSales(); track s.id) {
+            <li class="settle-row">
+              <label class="checkbox-item multiline">
+                <input type="checkbox" [checked]="isSelected(s.id!)"
+                  (change)="toggleSale(s.id!)" />
+                <span class="what">
+                  <span class="concept">{{ kindLabels[s.kind] | translate }}</span>
+                  <span class="detail">
+                    {{ s.reservationSnapshot.vehicle }} · {{ s.reservationSnapshot.clientName }}
+                  </span>
+                </span>
+              </label>
+              <span class="amount">{{ s.commissionAmount | number: '1.2-2' }} €</span>
+            </li>
+          }
+        </ul>
+
+        <div class="settle-total">
+          <span class="label">{{ 'collaborators.settleTotal' | translate }}</span>
+          <span class="value">{{ settleTotal() | number: '1.2-2' }} €</span>
+        </div>
+
         <div class="form-row">
+          <div class="form-group">
+            <label for="settleDate">{{ 'collaborators.fields.paidAt' | translate }}</label>
+            <input type="date" id="settleDate" class="form-control" [(ngModel)]="settleDate"
+              name="settleDate" />
+            <p class="field-hint">{{ 'collaborators.fields.paidAtHint' | translate }}</p>
+          </div>
           <div class="form-group">
             <label for="settleMethod">{{ 'collaborators.fields.method' | translate }}</label>
             <select id="settleMethod" class="form-control" [(ngModel)]="settleMethod"
@@ -208,6 +289,7 @@
           <button class="btn-primary" type="button" [disabled]="working()" (click)="settle()">
             @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
             {{ 'collaborators.confirmSettle' | translate }}
+            ({{ settleTotal() | number: '1.2-2' }} €)
           </button>
         </div>
       </div>
@@ -331,6 +413,17 @@
           <li class="sale" [class.cancelled]="s.status === 'cancelled'">
             <div class="what" (click)="openReservation(s.reservationId)">
               <span class="client">{{ s.reservationSnapshot.clientName }}</span>
+              <!--
+                ⚠️ **Por qué se le debe, en cada fila.** Desde que un mismo
+                colaborador puede cobrar por traer el cliente **y** por poner el
+                coche, dos importes en esta misma lista no se distinguen de
+                ningún otro modo — y uno lleva detrás una factura suya por la
+                cesión y el otro no. Sin esto, la pantalla los mezcla justo
+                después de que el modelo se hubiera cuidado de separarlos.
+              -->
+              <span class="kind-tag" [class.owner]="s.kind === 'vehicle_owner'">
+                {{ kindLabels[s.kind] | translate }}
+              </span>
               <span class="meta">
                 {{ s.reservationSnapshot.vehicle }}
                 @if (pickupDate(s); as fecha) {

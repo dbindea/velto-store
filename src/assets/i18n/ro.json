@@ -1589,8 +1589,8 @@
     "cancelledByReservation": "Rezervarea a fost anulată",
     "cancelledTotal": "Anulat",
     "clearPeriod": "Șterge filtrul",
-    "commissionCount": "comision",
-    "commissionsCount": "comisioane",
+    "commissionCount": "înregistrare",
+    "commissionsCount": "înregistrări",
     "confirmDelete": {
       "title": "Ștergi acest colaborator?",
       "message": "Fișa lui se șterge. Nu se poate anula."
@@ -1627,7 +1627,9 @@
       "to": "Până la",
       "year": "An",
       "ownerSharePercent": "Partea ca proprietar",
-      "ownerShareHint": "Dacă cedează mașini. Este propunerea: fiecare mașină o păstrează pe a sa, iar fiecare rezervare o îngheață."
+      "ownerShareHint": "Dacă cedează mașini. Este propunerea: fiecare mașină o păstrează pe a sa, iar fiecare rezervare o îngheață.",
+      "paidAt": "Data plății",
+      "paidAtHint": "Ziua în care au ieșit banii, care nu trebuie să fie neapărat azi."
     },
     "generated": "Generat",
     "generatedLower": "generat",
@@ -1666,15 +1668,18 @@
       "reservationRequired": "Alege o rezervare",
       "reservationWithoutNet": "Acea rezervare nu are valoare netă, deci nu există bază de calcul",
       "saleCancelled": "Acel comision este anulat",
-      "saleNotFound": "Acel comision nu a fost găsit"
+      "saleNotFound": "Acel comision nu a fost găsit",
+      "nothingSelected": "Nu ai bifat nimic de plătit",
+      "paidAtFuture": "Acea dată nu a sosit încă: o plată se înregistrează după ce banii au ieșit",
+      "paidAtInvalid": "Acea dată nu este validă"
     },
     "saleAssigned": "Vânzare atribuită",
-    "sales": "Vânzări și comisioane",
+    "sales": "Comisioane și părți",
     "salesCount": "vânzări",
     "saved": "Colaborator salvat",
-    "settleAll": "Achită tot ce este de plată",
-    "settleHint": "Marchează ca plătite toate comisioanele restante ale acestui colaborator, dintr-o dată.",
-    "settled": "Comisioane achitate",
+    "settleAll": "Plătește-i ce i se datorează",
+    "settleHint": "Marchează ca plătite pe cele bifate, cu data la care au ieșit banii. A recunoaște ce i se datorează și a-i plăti sunt două lucruri diferite: acesta este al doilea.",
+    "settled": "La zi",
     "status": {
       "pending": "De plată",
       "paid": "Plătit",
@@ -1694,8 +1699,13 @@
     "ownerShare": {
       "title": "Partea pentru mașinile lui",
       "accrued": "Cuvenit, încă nedecontat",
-      "hint": "Rezultă din rezervările lui deja închise și nu se adună la comisioanele de intermediere: sunt două lucruri diferite și se justifică diferit. Din închiriere, fără TVA; garanția și taxele suplimentare nu se împart."
-    }
+      "hint": "Rezultă din rezervările lui deja închise și nu se adună la comisioanele de intermediere: sunt două lucruri diferite și se justifică diferit. Din închiriere, fără TVA; garanția și taxele suplimentare nu se împart.",
+      "settle": "Recunoaște ce s-a cuvenit",
+      "settled": "Partea a fost recunoscută. Acum i se poate plăti."
+    },
+    "settleTotal": "Totalul acestei plăți",
+    "paymentRecorded": "Plată înregistrată",
+    "noMovements": "Fără mișcări"
   },
   "events": {
     "alerts": {

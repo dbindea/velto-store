@@ -570,3 +570,105 @@
     color: var(--text-primary);
   }
 }
+
+// Qué entra en un pago
+.settle-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.settle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+
+  & + .settle-row {
+    border-top: 1px solid var(--border-color);
+  }
+
+  // La casilla y su texto se llevan el ancho sobrante; el importe no encoge.
+  // Sin `min-width: 0`, un nombre largo estira la fila y con ella la página.
+  .checkbox-item {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .what {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .concept {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+  }
+
+  .detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .amount {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+.settle-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 1rem;
+  border-top: 1px solid var(--border-color);
+
+  .label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--accent-color);
+  }
+}
+
+// Por qué se le debe: la etiqueta de cada fila.
+// Turquesa para el reparto por el coche y neutra para la captación, porque el
+// color sigue al concepto y no a su posición en la lista.
+.kind-tag {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+
+  &.owner {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+}
+
+// El desglose bajo un total, cuando cobra por los dos conceptos.
+.balance .figure .split {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}

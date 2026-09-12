@@ -86,6 +86,32 @@ export function amountProblem(value: unknown): string | null {
 }
 
 /**
+ * ¿Vale esta fecha de pago?
+ *
+ * ⚠️ **El día en que salió el dinero no es el día en que se apunta.** A un
+ * colaborador se le paga en efectivo el martes y se anota el jueves, así que la
+ * fecha se elige. Lo que no se admite es una **futura**: marcar como pagado algo
+ * que todavía no ha salido hace que el balance diga que no se le debe nada a
+ * alguien a quien sí se le debe, y eso se descubre cuando él lo reclama.
+ *
+ * Se compara contra el **final del día de hoy** porque el operador teclea un
+ * día, no un instante: con `new Date()` a secas, apuntar un pago de esta misma
+ * tarde a las nueve de la mañana sería «futuro».
+ */
+export function paidAtProblem(fecha: Date | null | undefined): string | null {
+  if (!fecha) return null;
+  if (!(fecha instanceof Date) || isNaN(fecha.getTime())) {
+    return 'collaborators.problems.paidAtInvalid';
+  }
+  const finDeHoy = new Date();
+  finDeHoy.setHours(23, 59, 59, 999);
+  if (fecha.getTime() > finDeHoy.getTime()) {
+    return 'collaborators.problems.paidAtFuture';
+  }
+  return null;
+}
+
+/**
  * ¿Se puede asignar esta reserva a un colaborador?
  *
  * ⚠️ **Una reserva cancelada no genera comisión, y tampoco se le asigna una.**

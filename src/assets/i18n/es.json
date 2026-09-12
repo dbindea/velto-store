@@ -1589,8 +1589,8 @@
     "cancelledByReservation": "La reserva se canceló",
     "cancelledTotal": "Anulado",
     "clearPeriod": "Quitar filtro",
-    "commissionCount": "comisión",
-    "commissionsCount": "comisiones",
+    "commissionCount": "apunte",
+    "commissionsCount": "apuntes",
     "confirmDelete": {
       "title": "¿Eliminar este colaborador?",
       "message": "Se borra su ficha. No se puede deshacer."
@@ -1627,7 +1627,9 @@
       "to": "Hasta",
       "year": "Año",
       "ownerSharePercent": "Reparto como propietario",
-      "ownerShareHint": "Si cede coches. Es la propuesta: cada coche guarda el suyo y cada reserva lo congela."
+      "ownerShareHint": "Si cede coches. Es la propuesta: cada coche guarda el suyo y cada reserva lo congela.",
+      "paidAt": "Fecha del pago",
+      "paidAtHint": "El día en que salió el dinero, que no tiene por qué ser hoy."
     },
     "generated": "Generado",
     "generatedLower": "generado",
@@ -1666,15 +1668,18 @@
       "reservationRequired": "Elige una reserva",
       "reservationWithoutNet": "Esa reserva no tiene precio neto, así que no hay base sobre la que calcular",
       "saleCancelled": "Esa comisión está anulada",
-      "saleNotFound": "No se encontró esa comisión"
+      "saleNotFound": "No se encontró esa comisión",
+      "nothingSelected": "No has marcado nada que pagar",
+      "paidAtFuture": "Esa fecha aún no ha llegado: un pago se apunta cuando el dinero ha salido",
+      "paidAtInvalid": "Esa fecha no es válida"
     },
     "saleAssigned": "Venta asignada",
-    "sales": "Ventas y comisiones",
+    "sales": "Comisiones y repartos",
     "salesCount": "ventas",
     "saved": "Colaborador guardado",
-    "settleAll": "Liquidar todo lo pendiente",
-    "settleHint": "Se marcan como pagadas todas las comisiones pendientes de este colaborador, de una vez.",
-    "settled": "Comisiones liquidadas",
+    "settleAll": "Pagarle lo pendiente",
+    "settleHint": "Marca como pagadas las que elijas, con la fecha en que salió el dinero. Reconocer lo que se le debe y pagárselo son dos cosas distintas: esto es la segunda.",
+    "settled": "Al día",
     "status": {
       "pending": "Pendiente",
       "paid": "Pagada",
@@ -1694,8 +1699,13 @@
     "ownerShare": {
       "title": "Reparto por sus coches",
       "accrued": "Devengado, pendiente de liquidar",
-      "hint": "Sale de sus reservas ya cerradas y no se suma a las comisiones de captación: son dos cosas distintas y se justifican distinto. Sobre el alquiler sin IVA; la fianza y los cargos extra no se reparten."
-    }
+      "hint": "Sale de sus reservas ya cerradas y no se suma a las comisiones de captación: son dos cosas distintas y se justifican distinto. Sobre el alquiler sin IVA; la fianza y los cargos extra no se reparten.",
+      "settle": "Reconocer lo devengado",
+      "settled": "Reparto reconocido. Ya se le puede pagar."
+    },
+    "settleTotal": "Total de este pago",
+    "paymentRecorded": "Pago registrado",
+    "noMovements": "Sin movimientos"
   },
   "events": {
     "alerts": {

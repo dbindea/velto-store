@@ -1589,8 +1589,8 @@
     "cancelledByReservation": "The booking was cancelled",
     "cancelledTotal": "Cancelled",
     "clearPeriod": "Clear filter",
-    "commissionCount": "commission",
-    "commissionsCount": "commissions",
+    "commissionCount": "entry",
+    "commissionsCount": "entries",
     "confirmDelete": {
       "title": "Delete this partner?",
       "message": "Their record will be removed. This cannot be undone."
@@ -1627,7 +1627,9 @@
       "to": "To",
       "year": "Year",
       "ownerSharePercent": "Share as owner",
-      "ownerShareHint": "If they lend cars. It is the default: each car keeps its own and each booking freezes it."
+      "ownerShareHint": "If they lend cars. It is the default: each car keeps its own and each booking freezes it.",
+      "paidAt": "Payment date",
+      "paidAtHint": "The day the money actually left, which need not be today."
     },
     "generated": "Generated",
     "generatedLower": "generated",
@@ -1666,15 +1668,18 @@
       "reservationRequired": "Choose a booking",
       "reservationWithoutNet": "That booking has no net amount, so there is nothing to calculate on",
       "saleCancelled": "That commission is cancelled",
-      "saleNotFound": "That commission was not found"
+      "saleNotFound": "That commission was not found",
+      "nothingSelected": "You have not ticked anything to pay",
+      "paidAtFuture": "That date has not arrived yet: a payment is recorded once the money has left",
+      "paidAtInvalid": "That date is not valid"
     },
     "saleAssigned": "Sale assigned",
-    "sales": "Sales and commission",
+    "sales": "Commissions and shares",
     "salesCount": "sales",
     "saved": "Partner saved",
-    "settleAll": "Settle everything outstanding",
-    "settleHint": "Marks every outstanding commission for this partner as paid, in one go.",
-    "settled": "Commissions settled",
+    "settleAll": "Pay what is owed",
+    "settleHint": "Marks the ones you tick as paid, with the date the money actually left. Recognising what is owed and paying it are two different things: this is the second.",
+    "settled": "Up to date",
     "status": {
       "pending": "Outstanding",
       "paid": "Paid",
@@ -1694,8 +1699,13 @@
     "ownerShare": {
       "title": "Share for their cars",
       "accrued": "Accrued, not yet settled",
-      "hint": "Derived from their closed bookings and not added to referral commissions: they are two different things and are justified differently. On the rental excluding VAT; the deposit and extra charges are not shared."
-    }
+      "hint": "Derived from their closed bookings and not added to referral commissions: they are two different things and are justified differently. On the rental excluding VAT; the deposit and extra charges are not shared.",
+      "settle": "Recognise what is accrued",
+      "settled": "Share recognised. It can now be paid."
+    },
+    "settleTotal": "Total for this payment",
+    "paymentRecorded": "Payment recorded",
+    "noMovements": "No movements"
   },
   "events": {
     "alerts": {

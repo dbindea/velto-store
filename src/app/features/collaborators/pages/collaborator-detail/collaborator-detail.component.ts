@@ -12,6 +12,7 @@ import {
   Collaborator,
   CollaboratorSale,
   COMMISSION_PAYMENT_METHOD_LABELS,
+  COMMISSION_KIND_LABELS,
   COMMISSION_STATUS_LABELS,
   CommissionPaymentMethod
 } from '@shared/models/collaborator.model';
@@ -21,6 +22,7 @@ import {
   CommissionPeriod,
   adjustmentDelta,
   amountProblem,
+  balanceByKind,
   balanceOf,
   commissionAmount,
   hasPeriod,
@@ -37,6 +39,7 @@ import {
   ownerShareAccruals,
   unsettledAccruals
 } from '@shared/utils/owner-share.util';
+import { roundMoney } from '@shared/utils/payment-summary.util';
 
 /**
  * La ficha de un colaborador: lo que ha traído y lo que se le debe.
@@ -80,6 +83,7 @@ export class CollaboratorDetailComponent implements OnInit {
 
   statusLabels = COMMISSION_STATUS_LABELS;
   methodLabels = COMMISSION_PAYMENT_METHOD_LABELS;
+  kindLabels = COMMISSION_KIND_LABELS;
 
   // --- Asignar una venta ---------------------------------------------------
   readonly showAssign = signal(false);
@@ -90,6 +94,8 @@ export class CollaboratorDetailComponent implements OnInit {
   readonly showSettle = signal(false);
   settleMethod: CommissionPaymentMethod = 'transfer';
   settleNote = '';
+  /** El día en que salió el dinero, en `yyyy-mm-dd`. */
+  settleDate = '';
 
   async ngOnInit(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
@@ -146,6 +152,25 @@ export class CollaboratorDetailComponent implements OnInit {
   get balance() {
     return balanceOf(this.sales());
   }
+
+  /**
+   * Lo mismo, **separado por motivo**.
+   *
+   * ⚠️ **Un total que mezcla dos conceptos no se puede explicar.** «Le debo
+   * 212,50 €» no dice cuánto es por traer clientes y cuánto por ceder su coche,
+   * y son dos cosas que se pactan, se liquidan y se justifican distinto — una
+   * acaba en una factura suya por la cesión y la otra no. El total sigue arriba,
+   * porque «¿cuánto le debo?» es una pregunta legítima; el desglose va debajo
+   * **solo cuando hay de las dos clases**, que es cuando el total solo no basta.
+   */
+  readonly byKind = computed(() => balanceByKind(this.sales()));
+
+  /** ¿Cobra por los dos conceptos? Entonces el total hay que desglosarlo. */
+  readonly mixedKinds = computed(() => {
+    const b = this.byKind();
+    return b.referral.pending + b.referral.paid > 0 &&
+      b.vehicleOwner.pending + b.vehicleOwner.paid > 0;
+  });
 
   // --- Análisis por periodo ------------------------------------------------
 
@@ -398,20 +423,119 @@ export class CollaboratorDetailComponent implements OnInit {
     }
   }
 
+  /**
+   * Reconocer lo devengado por sus coches.
+   *
+   * ⚠️ **Reconocer no es pagar**, y por eso son dos gestos. Aquí el reparto
+   * derivado se convierte en un apunte con su importe congelado y estado
+   * «pendiente»; entregarle el dinero es el paso siguiente, con su fecha y su
+   * forma de pago. Juntarlos obligaría a pagar en el mismo momento en que se
+   * reconoce, y lo normal es reconocer al cerrar y pagar a fin de mes.
+   */
+  async settleAccruals(): Promise<void> {
+    const ficha = this.collaborator();
+    if (!ficha) return;
+
+    this.working.set(true);
+    try {
+      const cuantas = await this.service.settleOwnerShares(ficha, this.ownerAccruals());
+      if (cuantas) this.notifications.success('collaborators.ownerShare.settled');
+      await this.load(ficha.id!);
+    } catch (err) {
+      this.notifications.error(this.errorKeyOf(err));
+    } finally {
+      this.working.set(false);
+    }
+  }
+
+  // --- Pagarle -------------------------------------------------------------
+
+  /**
+   * Abre el pago con **todo lo pendiente marcado y la fecha de hoy**.
+   *
+   * Es el caso normal —se le paga todo lo que se le debe— y así el operador solo
+   * toca lo que se salga de eso. Desmarcar es más fácil que marcar seis.
+   */
+  startSettle(): void {
+    this.selectedSaleIds.set(new Set(this.pendingSales().map((s) => s.id!)));
+    this.settleDate = this.today();
+    this.settleNote = '';
+    this.showSettle.set(true);
+  }
+
+  /** Las que se pueden pagar: pendientes, de las dos clases. */
+  readonly pendingSales = computed(() => this.sales().filter((s) => s.status === 'pending'));
+
+  readonly selectedSaleIds = signal<Set<string>>(new Set());
+
+  isSelected(id: string): boolean {
+    return this.selectedSaleIds().has(id);
+  }
+
+  toggleSale(id: string): void {
+    const copia = new Set(this.selectedSaleIds());
+    if (copia.has(id)) copia.delete(id);
+    else copia.add(id);
+    this.selectedSaleIds.set(copia);
+  }
+
+  /**
+   * Lo que suma este pago.
+   *
+   * ⚠️ **Se calcula, no se teclea.** Un importe escrito a mano que no cuadre con
+   * las filas marcadas dejaría un pago que no se puede explicar: para pagar de
+   * menos por una venta concreta está el ajuste de su importe, que sí queda
+   * anotado con lo calculado al lado.
+   */
+  readonly settleTotal = computed(() =>
+    roundMoney(
+      this.pendingSales()
+        .filter((s) => this.selectedSaleIds().has(s.id!))
+        .reduce((total, s) => total + (Number(s.commissionAmount) || 0), 0)
+    )
+  );
+
+  /** Hoy en `yyyy-mm-dd`, que es lo que entiende un `input[type=date]`. */
+  private today(): string {
+    const d = new Date();
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+  }
+
   async settle(): Promise<void> {
     const ficha = this.collaborator();
     if (!ficha) return;
+
+    const ids = [...this.selectedSaleIds()];
+    if (!ids.length) {
+      this.notifications.error('collaborators.problems.nothingSelected');
+      return;
+    }
 
     this.working.set(true);
     try {
       const cuantas = await this.service.paySettlement(
         ficha.id!,
         this.settleMethod,
-        this.settleNote
+        this.settleNote,
+        {
+          saleIds: ids,
+          /**
+           * ⚠️ **A mediodía, no a medianoche.** Un `input[type=date]` da la
+           * medianoche UTC, y en España eso puede caer en el día anterior: el
+           * pago se agruparía en una fecha que no es la que se tecleó. El
+           * mediodía local aguanta cualquier huso.
+           */
+          paidAt: this.settleDate ? new Date(`${this.settleDate}T12:00:00`) : undefined
+        }
       );
       this.showSettle.set(false);
       this.settleNote = '';
-      if (cuantas) this.notifications.success('collaborators.settled');
+      // Clave propia y no la de la fila de la lista: aquella describe un
+      // estado («no se le debe nada») y esta un hecho que acaba de ocurrir.
+      // Compartirlas hacía que cambiar una cambiara la otra sin querer.
+      if (cuantas) this.notifications.success('collaborators.paymentRecorded');
       await this.load(ficha.id!);
     } catch (err) {
       this.notifications.error(this.errorKeyOf(err));
