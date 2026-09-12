@@ -672,3 +672,113 @@
   color: var(--text-muted);
   margin-top: 0.2rem;
 }
+
+// La factura que manda el propietario
+.awaiting-invoice {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+
+  .awaiting-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--warning-color);
+  }
+
+  .hint {
+    margin: 0.35rem 0 0.75rem;
+  }
+}
+
+.invoice-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.received-invoice {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-card);
+
+  & + .received-invoice {
+    border-top: 1px solid var(--border-color);
+  }
+
+  // Sin `min-width: 0` un número o una nota larga estiran la fila y la página.
+  .what {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .number {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .amount {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+}
+
+// El estado documental de un reparto. Ámbar cuando falta la factura: es un
+// trámite pendiente, no un error — y no puede leerse como que no hace falta.
+.invoice-tag {
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+
+  &.awaiting {
+    color: var(--warning-color);
+    border-color: var(--warning-color);
+  }
+
+  &.has {
+    color: var(--text-muted);
+  }
+}
+
+.hint.mismatch {
+  color: var(--warning-color);
+}

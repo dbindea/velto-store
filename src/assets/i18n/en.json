@@ -1671,7 +1671,11 @@
       "saleNotFound": "That commission was not found",
       "nothingSelected": "You have not ticked anything to pay",
       "paidAtFuture": "That date has not arrived yet: a payment is recorded once the money has left",
-      "paidAtInvalid": "That date is not valid"
+      "paidAtInvalid": "That date is not valid",
+      "invoiceNumberRequired": "Enter their invoice number",
+      "invoiceDateRequired": "Enter the invoice date",
+      "invoiceAmountRequired": "Enter the invoice amount",
+      "invoiceAmountPositive": "The amount must be greater than zero"
     },
     "saleAssigned": "Sale assigned",
     "sales": "Commissions and shares",
@@ -1705,7 +1709,28 @@
     },
     "settleTotal": "Total for this payment",
     "paymentRecorded": "Payment recorded",
-    "noMovements": "No movements"
+    "noMovements": "No movements",
+    "invoice": {
+      "title": "Invoices received from the owner",
+      "awaiting": "Awaiting invoice",
+      "awaitingHint": "Awaiting an invoice is NOT the same as no invoice being due: these are shares already recognised whose paperwork has not arrived yet. They can be paid without it.",
+      "awaitingShort": "Invoice pending",
+      "short": "Invoice",
+      "register": "Record received invoice",
+      "formTitle": "Owner invoice",
+      "formHint": "This is their invoice, not one of ours: it carries no numbering of ours, it does not go to the tax office and it can be corrected. Tick the shares it covers.",
+      "number": "Their invoice number",
+      "date": "Invoice date",
+      "amount": "Amount",
+      "covered": "Shares it covers",
+      "mismatch": "Does not match what it covers:",
+      "file": "PDF or photo",
+      "open": "Open the invoice",
+      "saved": "Invoice recorded",
+      "deleted": "Invoice deleted",
+      "deleteTitle": "Delete the invoice",
+      "deleteMessage": "The shares it covered will go back to awaiting an invoice."
+    }
   },
   "events": {
     "alerts": {

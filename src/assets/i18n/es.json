@@ -1671,7 +1671,11 @@
       "saleNotFound": "No se encontró esa comisión",
       "nothingSelected": "No has marcado nada que pagar",
       "paidAtFuture": "Esa fecha aún no ha llegado: un pago se apunta cuando el dinero ha salido",
-      "paidAtInvalid": "Esa fecha no es válida"
+      "paidAtInvalid": "Esa fecha no es válida",
+      "invoiceNumberRequired": "Pon el número de su factura",
+      "invoiceDateRequired": "Pon la fecha de la factura",
+      "invoiceAmountRequired": "Pon el importe de la factura",
+      "invoiceAmountPositive": "El importe tiene que ser mayor que cero"
     },
     "saleAssigned": "Venta asignada",
     "sales": "Comisiones y repartos",
@@ -1705,7 +1709,28 @@
     },
     "settleTotal": "Total de este pago",
     "paymentRecorded": "Pago registrado",
-    "noMovements": "Sin movimientos"
+    "noMovements": "Sin movimientos",
+    "invoice": {
+      "title": "Facturas recibidas del propietario",
+      "awaiting": "Pendiente de recibir factura",
+      "awaitingHint": "Pendiente de recibir factura NO es que no haya que facturar: son repartos ya reconocidos cuyo justificante todavía no ha llegado. Se le puede pagar sin ella.",
+      "awaitingShort": "Falta su factura",
+      "short": "Factura",
+      "register": "Registrar factura recibida",
+      "formTitle": "Factura del propietario",
+      "formHint": "Es su factura, no una de Velto: no lleva numeración nuestra, no va a la AEAT y se puede corregir. Marca los repartos que cubre.",
+      "number": "Número de su factura",
+      "date": "Fecha de la factura",
+      "amount": "Importe",
+      "covered": "Repartos que cubre",
+      "mismatch": "No cuadra con lo que cubre:",
+      "file": "PDF o foto",
+      "open": "Abrir la factura",
+      "saved": "Factura registrada",
+      "deleted": "Factura eliminada",
+      "deleteTitle": "Eliminar la factura",
+      "deleteMessage": "Los repartos que cubría volverán a quedar pendientes de recibir factura."
+    }
   },
   "events": {
     "alerts": {

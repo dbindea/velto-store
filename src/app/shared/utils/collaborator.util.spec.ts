@@ -15,7 +15,12 @@ import {
   validateCollaborator,
   yearlyTotals,
   balanceByKind,
-  paidAtProblem
+  paidAtProblem,
+  validateCollaboratorInvoice,
+  invoiceMismatch,
+  awaitingInvoice,
+  awaitingInvoiceTotal,
+  coveredByInvoice
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -578,5 +583,109 @@ describe('cuándo salió el dinero', () => {
     expect(paidAtProblem(new Date('no-es-una-fecha'))).toBe(
       'collaborators.problems.paidAtInvalid'
     );
+  });
+});
+
+describe('la factura que manda el propietario', () => {
+  const base = { number: '2026/014', date: new Date('2026-10-01'), amount: 400 };
+
+  it('una factura completa no da problemas', () => {
+    expect(validateCollaboratorInvoice(base)).toEqual({});
+  });
+
+  it('sin número, sin fecha o sin importe no se guarda', () => {
+    expect(validateCollaboratorInvoice({ ...base, number: '' })['number']).toBe(
+      'collaborators.problems.invoiceNumberRequired'
+    );
+    expect(validateCollaboratorInvoice({ ...base, date: undefined })['date']).toBe(
+      'collaborators.problems.invoiceDateRequired'
+    );
+    expect(validateCollaboratorInvoice({ ...base, amount: undefined })['amount']).toBe(
+      'collaborators.problems.invoiceAmountRequired'
+    );
+  });
+
+  /**
+   * ⚠️ `Number(null)` y `Number('')` son **0**, no `NaN`: sin comprobar la
+   * ausencia antes de convertir, un importe vacío pasaría como una factura de
+   * 0 € y nadie se enteraría. El mismo fallo de siempre con el dinero.
+   */
+  it('un importe vacío no es una factura de cero', () => {
+    expect(
+      validateCollaboratorInvoice({ ...base, amount: null as unknown as number })['amount']
+    ).toBe('collaborators.problems.invoiceAmountRequired');
+    expect(
+      validateCollaboratorInvoice({ ...base, amount: '' as unknown as number })['amount']
+    ).toBe('collaborators.problems.invoiceAmountRequired');
+  });
+
+  it('y cero o negativo tampoco son una factura', () => {
+    expect(validateCollaboratorInvoice({ ...base, amount: 0 })['amount']).toBe(
+      'collaborators.problems.invoiceAmountPositive'
+    );
+    expect(validateCollaboratorInvoice({ ...base, amount: -10 })['amount']).toBe(
+      'collaborators.problems.invoiceAmountPositive'
+    );
+  });
+
+  /**
+   * ⚠️ **La diferencia se enseña, no se prohíbe.** Una factura con IRPF
+   * retenido trae menos que la suma de los repartos y es perfectamente
+   * correcta; exigir que cuadre al céntimo rechazaría facturas buenas. Lo que no
+   * puede pasar es que la diferencia quede escondida.
+   */
+  it('la diferencia con lo que cubre se calcula, con signo', () => {
+    expect(invoiceMismatch(400, 400)).toBe(0);
+    expect(invoiceMismatch(380, 400)).toBe(-20);
+    expect(invoiceMismatch(420, 400)).toBe(20);
+  });
+
+  it('y se redondea al céntimo', () => {
+    expect(invoiceMismatch(0.3, 0.1 + 0.2)).toBe(0);
+  });
+
+  describe('qué está pendiente de justificar', () => {
+    const reparto = (p: Partial<CollaboratorSale>): CollaboratorSale =>
+      venta({ kind: 'vehicle_owner', commissionAmount: 100, ...p });
+
+    /**
+     * ⚠️ **Solo los repartos.** Una comisión de captación no lleva factura
+     * detrás en este negocio, así que contarla aquí dejaría a la vista una deuda
+     * documental que no existe y que nadie iba a resolver nunca.
+     */
+    it('una comisión de captación no espera factura', () => {
+      const s = [venta({ kind: 'referral', commissionAmount: 25 }), reparto({})];
+      expect(awaitingInvoice(s).map((x) => x.kind)).toEqual(['vehicle_owner']);
+      expect(awaitingInvoiceTotal(s)).toBe(100);
+    });
+
+    it('lo que ya tiene factura deja de esperarla', () => {
+      const s = [reparto({ receivedInvoiceId: 'f1' }), reparto({ commissionAmount: 50 })];
+      expect(awaitingInvoiceTotal(s)).toBe(50);
+    });
+
+    /** Un reparto anulado no necesita justificante de nada. */
+    it('lo anulado no espera factura', () => {
+      expect(awaitingInvoiceTotal([reparto({ status: 'cancelled' })])).toBe(0);
+    });
+
+    /**
+     * ⚠️ **Pagado no es justificado.** Se le puede pagar sin que su factura haya
+     * llegado —atar el pago al papel dejaría a alguien sin cobrar—, así que un
+     * reparto pagado sigue esperando su factura.
+     */
+    it('un reparto ya pagado sigue esperando su factura', () => {
+      expect(awaitingInvoiceTotal([reparto({ status: 'paid' })])).toBe(100);
+    });
+
+    it('lo que cubre una factura se suma por su id', () => {
+      const s = [
+        reparto({ id: 'a', receivedInvoiceId: 'f1', commissionAmount: 187.5 }),
+        reparto({ id: 'b', receivedInvoiceId: 'f1', commissionAmount: 150 }),
+        reparto({ id: 'c', receivedInvoiceId: 'f2', commissionAmount: 90 })
+      ];
+      expect(coveredByInvoice(s, 'f1')).toBe(337.5);
+      expect(coveredByInvoice(s, 'f2')).toBe(90);
+    });
   });
 });

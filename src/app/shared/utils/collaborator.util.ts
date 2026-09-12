@@ -11,6 +11,7 @@
 import {
   Collaborator,
   CollaboratorBalance,
+  CollaboratorInvoice,
   CollaboratorSale,
   CommissionStatus
 } from '@shared/models/collaborator.model';
@@ -445,6 +446,105 @@ export function validateCollaborator(input: Partial<Collaborator> | null): Field
   }
 
   return problems;
+}
+
+// ---------------------------------------------------------------------------
+// La factura que manda el propietario
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo que impide guardar una factura recibida, campo a campo.
+ *
+ * **Una sola función**, la misma que consulta la pantalla y la que ejecuta el
+ * servicio antes de escribir. El orden es el de los campos en el formulario.
+ *
+ * ⚠️ **El importe NO se compara con lo que cubre, a propósito.** Una factura
+ * puede traer IRPF retenido, redondeos o conceptos que aquí no están, así que
+ * exigir que cuadre al céntimo rechazaría facturas perfectamente correctas. La
+ * diferencia **se enseña** —ver `invoiceMismatch()`— porque verla es útil y
+ * prohibirla es falso.
+ */
+export function validateCollaboratorInvoice(
+  input: Partial<CollaboratorInvoice> | null
+): FieldProblems {
+  const problems: FieldProblems = {};
+  const f = input || {};
+
+  if (!f.number?.trim()) {
+    problems['number'] = 'collaborators.problems.invoiceNumberRequired';
+  }
+
+  if (!f.date) {
+    problems['date'] = 'collaborators.problems.invoiceDateRequired';
+  }
+
+  /**
+   * ⚠️ **La ausencia se comprueba antes de convertir**, como en todos los
+   * importes de esta casa: `Number(null)` y `Number('')` son **0**, no `NaN`, y
+   * una factura de 0 € pasaría por válida sin que nada chirriara.
+   */
+  if (f.amount === null || f.amount === undefined || (f.amount as unknown) === '') {
+    problems['amount'] = 'collaborators.problems.invoiceAmountRequired';
+  } else {
+    const n = Number(f.amount);
+    if (!Number.isFinite(n)) problems['amount'] = 'collaborators.problems.invoiceAmountRequired';
+    else if (n <= 0) problems['amount'] = 'collaborators.problems.invoiceAmountPositive';
+  }
+
+  return problems;
+}
+
+/**
+ * La diferencia entre lo que dice la factura y lo que cubre, o `0` si cuadra.
+ *
+ * ⚠️ **Se enseña, no se impide.** Una factura con IRPF retenido trae menos de lo
+ * que suman los repartos y es correcta; una que cubre algo más, también. Lo que
+ * no puede pasar es que la diferencia quede escondida: con las dos cifras
+ * delante se explica sola, y sin ellas alguien la descubre dentro de un año
+ * cuadrando el ejercicio.
+ */
+export function invoiceMismatch(invoiceAmount: number, coveredAmount: number): number {
+  const diferencia = roundMoney((Number(invoiceAmount) || 0) - (Number(coveredAmount) || 0));
+  /**
+   * ⚠️ **El cero negativo se normaliza aquí.** Restar dos cifras que cuadran en
+   * coma flotante —`0.3 - (0.1 + 0.2)`— da `-0`, y aunque `-0 === 0` sea cierto,
+   * `Intl.NumberFormat` lo escribe **«-0,00 €»**. Un aviso de descuadre que dice
+   * que el descuadre es de menos cero es peor que no avisar.
+   */
+  return diferencia === 0 ? 0 : diferencia;
+}
+
+/** Lo que suman los apuntes que cubre una factura. */
+export function coveredByInvoice(sales: CollaboratorSale[], invoiceId: string): number {
+  return roundMoney(
+    (sales || [])
+      .filter((s) => s.receivedInvoiceId === invoiceId && s.status !== 'cancelled')
+      .reduce((total, s) => total + (Number(s.commissionAmount) || 0), 0)
+  );
+}
+
+/**
+ * Los repartos que **siguen esperando factura del propietario**.
+ *
+ * ⚠️ **Solo los de `vehicle_owner`.** Una comisión de captación no lleva factura
+ * detrás en este negocio —es un registro interno, decisión del 10 de septiembre
+ * de 2026—, así que meterla aquí dejaría a la vista una deuda documental que no
+ * existe y que nadie iba a resolver nunca.
+ *
+ * ⚠️ **Y lo anulado queda fuera.** Un reparto que dejó de devengar no necesita
+ * justificante de nada.
+ */
+export function awaitingInvoice(sales: CollaboratorSale[]): CollaboratorSale[] {
+  return (sales || []).filter(
+    (s) => s.kind === 'vehicle_owner' && s.status !== 'cancelled' && !s.receivedInvoiceId
+  );
+}
+
+/** Cuánto está pendiente de justificar con una factura del propietario. */
+export function awaitingInvoiceTotal(sales: CollaboratorSale[]): number {
+  return roundMoney(
+    awaitingInvoice(sales).reduce((total, s) => total + (Number(s.commissionAmount) || 0), 0)
+  );
 }
 
 // ---------------------------------------------------------------------------

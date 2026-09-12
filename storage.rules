@@ -60,6 +60,27 @@ service firebase.storage {
       allow write: if isAuthenticated();
     }
 
+    /**
+     * Las facturas que manda el propietario de un coche cedido.
+     *
+     * ⚠️ **Sin esta regla el fichero no sube**, y la pantalla no dice por qué:
+     * el `match` de abajo lo deniega todo. Es el mismo descuido que tuvo la
+     * factura de un gasto y que solo salió al recorrer el ciclo completo — la
+     * carpeta nueva hay que declararla, no basta con escribir el código que
+     * sube.
+     *
+     * ⚠️ Storage **no sabe qué rol tiene quien pide**: aquí no se puede repetir
+     * el `callerIsAdmin()` de Firestore, porque eso exige leer `authorizedUsers`
+     * y estas reglas no leen Firestore. Lo que de verdad protege el dato es que
+     * el documento de la factura —con el importe, el número y a quién— sea de
+     * administrador; el enlace al PDF solo lo tiene quien pueda leer ese
+     * documento.
+     */
+    match /collaborator-invoices/{invoiceId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Default deny
     match /{allPaths=**} {
       allow read, write: if false;

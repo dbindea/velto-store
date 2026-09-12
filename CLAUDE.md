@@ -435,6 +435,63 @@ día que se le asigne una venta. Lo que sigue sin valer es el **hueco**:
 comprueba antes de convertir. Es el mismo fallo que salió con
 `ownerSharePercent`.
 
+### Liquidar, pagar y la factura: TRES cosas, no una
+
+⚠️ **Confundirlas es el error que Dorel avisó expresamente**, y la aplicación ya
+lo cometía: decía «liquidar» donde hacía «pagar».
+
+- **Liquidar** es *reconocer* lo que se le debe. En el reparto del propietario es
+  el momento en que el devengo derivado se convierte en un `CollaboratorSale` con
+  su importe **congelado** — ahí la cifra deja de salir de la reserva.
+- **Pagar** es entregarle el dinero: `status: 'paid'`, con su fecha, su forma y
+  su nota.
+- **La factura** es el justificante que manda él, y llega cuando llega.
+
+⚠️ **Se puede pagar sin factura, y tener factura no es estar pagado.** Atar el
+pago al papel dejaría a alguien sin cobrar por un trámite suyo.
+
+⚠️ **La fecha del pago se elige, y no es la de cuando se apunta.** A un
+colaborador se le paga en efectivo el martes y se anota el jueves; sellando
+siempre el momento de la escritura, el histórico —que agrupa por día— contaba el
+pago en un día en el que no salió nada. Una fecha **futura** se rechaza
+(`paidAtProblem()`): marcar como pagado algo que no ha salido hace que el balance
+diga que no se le debe nada a alguien a quien sí.
+
+⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar».** Es la frase
+literal de Dorel. Un «sin factura» a secas se lee como una exención, y entonces
+nadie la reclama nunca. Solo la esperan los apuntes de `vehicle_owner`: una
+comisión de captación no lleva factura detrás en este negocio.
+
+### `collaboratorInvoices`: la factura que manda el propietario
+
+⚠️ **No confundir con `invoices`, que son las de VELTO.** Aquellas las emite la
+empresa, son inmutables, consumen número de serie y van a la AEAT. Esta llega de
+fuera y solo registra un papel: se corrige y se borra, y `firestore.rules` lo
+permite a propósito.
+
+⚠️ **Es una colección propia y no unos campos dentro del apunte** (decisión de
+Dorel, 12 de septiembre de 2026). Una sola factura suele cubrir **varias**
+reservas, así que metida en cada apunte habría que teclearla tantas veces como
+repartos cubra, con el mismo número repetido y sin que su importe total constara
+en ninguna parte. Es la excepción razonada a «no hay colección de liquidaciones»:
+aquello era **derivable** de los pagos, y un número de factura no se deriva de
+nada.
+
+⚠️ **El importe NO tiene que cuadrar con lo que cubre.** Una factura con IRPF
+retenido trae menos que la suma de los repartos y es correcta. La diferencia se
+**enseña** (`invoiceMismatch()`), no se rechaza — y ese cálculo normaliza el cero
+negativo, porque `Intl.NumberFormat` escribe `-0` como «-0,00 €» y un aviso de
+descuadre de menos cero es peor que no avisar.
+
+⚠️ **Registrarla no la convierte en un gasto todavía**, igual que las comisiones
+(decisión del mismo día). No escribe en `expenses`. Con factura delante el
+reparto sí sería deducible, y los cuatro datos que hacen falta ya están
+guardados.
+
+⚠️ **Su carpeta de Storage hay que declararla en `storage.rules`.** El `match`
+final lo deniega todo, así que sin la regla el fichero no sube y la pantalla no
+dice por qué — el mismo descuido que tuvo la factura de un gasto.
+
 ### Colaboradores: comisiones que NO son contabilidad
 
 Comerciales que traen clientes y cobran un porcentaje. ⚠️ **No son usuarios y no
@@ -1577,7 +1634,7 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 ```
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
-collaborators  collaboratorSales  reminders
+collaborators  collaboratorSales  collaboratorInvoices  reminders
 invoices  invoiceCounters  billingProfiles  verifactuDeclarations
 verifactuSubmissions
 ```

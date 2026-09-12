@@ -10,6 +10,7 @@ import { CollaboratorService } from '@features/collaborators/services/collaborat
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import {
   Collaborator,
+  CollaboratorInvoice,
   CollaboratorSale,
   COMMISSION_PAYMENT_METHOD_LABELS,
   COMMISSION_KIND_LABELS,
@@ -22,8 +23,12 @@ import {
   CommissionPeriod,
   adjustmentDelta,
   amountProblem,
+  awaitingInvoice,
+  awaitingInvoiceTotal,
   balanceByKind,
   balanceOf,
+  invoiceMismatch,
+  validateCollaboratorInvoice,
   commissionAmount,
   hasPeriod,
   isAdjusted,
@@ -40,6 +45,8 @@ import {
   unsettledAccruals
 } from '@shared/utils/owner-share.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
+import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 
 /**
  * La ficha de un colaborador: lo que ha traído y lo que se le debe.
@@ -52,7 +59,7 @@ import { roundMoney } from '@shared/utils/payment-summary.util';
 @Component({
   selector: 'app-collaborator-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
   templateUrl: './collaborator-detail.component.html',
   styleUrl: './collaborator-detail.component.scss'
 })
@@ -106,13 +113,15 @@ export class CollaboratorDetailComponent implements OnInit {
   private async load(id: string): Promise<void> {
     this.loading.set(true);
     try {
-      const [ficha, ventas, reservas] = await Promise.all([
+      const [ficha, ventas, reservas, facturas] = await Promise.all([
         this.service.getById(id),
         this.service.salesOf(id),
-        firstValueFrom(this.reservations.getReservations())
+        firstValueFrom(this.reservations.getReservations()),
+        this.service.invoicesOf(id)
       ]);
       this.collaborator.set(ficha);
       this.sales.set(ventas);
+      this.invoices.set(facturas);
 
       /**
        * Lo devengado por sus coches, **derivado de las reservas cerradas**.
@@ -494,6 +503,231 @@ export class CollaboratorDetailComponent implements OnInit {
         .reduce((total, s) => total + (Number(s.commissionAmount) || 0), 0)
     )
   );
+
+  // --- La factura que manda el propietario ---------------------------------
+
+  readonly invoices = signal<CollaboratorInvoice[]>([]);
+  readonly showInvoice = signal(false);
+  readonly savingInvoice = signal(false);
+  invoiceForm: Partial<CollaboratorInvoice> = {};
+  invoiceProblems: FieldProblems = {};
+  readonly invoiceSubmitted = signal(false);
+  readonly invoiceSaleIds = signal<Set<string>>(new Set());
+  invoiceFile: File | null = null;
+  /**
+   * Cuál se está editando.
+   *
+   * ⚠️ **Señal y no una propiedad normal**, porque `invoiceCandidates()` la lee
+   * desde un `computed`: como propiedad, ese computed no se enteraba de que
+   * había cambiado y solo se recalculaba de rebote, cuando se movía alguna de
+   * las otras señales de las que depende. Funcionaba por casualidad.
+   */
+  readonly editingInvoiceId = signal<string | null>(null);
+
+  /**
+   * Los repartos que **siguen esperando su factura**.
+   *
+   * ⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar»** (Dorel, con
+   * esas palabras). Son un trámite que falta y una exención que no existe, y el
+   * texto de la pantalla tiene que decir la primera: un «sin factura» a secas se
+   * lee como la segunda, y entonces nadie la reclama nunca.
+   */
+  readonly awaitingInvoiceSales = computed(() => awaitingInvoice(this.sales()));
+  readonly awaitingInvoiceAmount = computed(() => awaitingInvoiceTotal(this.sales()));
+
+  /** Lo que suman los repartos marcados en el formulario de factura. */
+  readonly invoiceCovered = computed(() =>
+    roundMoney(
+      this.sales()
+        .filter((s) => this.invoiceSaleIds().has(s.id!))
+        .reduce((total, s) => total + (Number(s.commissionAmount) || 0), 0)
+    )
+  );
+
+  /**
+   * La diferencia entre lo que dice la factura y lo que cubre.
+   *
+   * ⚠️ **Se enseña, no se impide.** Una factura con IRPF retenido trae menos que
+   * la suma de los repartos y es correcta. Lo que no puede pasar es que la
+   * diferencia quede escondida.
+   *
+   * ⚠️ **Es un getter y NO un `computed()`, y eso no es estilo.** Depende de
+   * `invoiceForm.amount`, que es una propiedad normal atada con `ngModel` y no
+   * una señal: un `computed` no se entera de que ha cambiado, así que se
+   * quedaba con el valor de la primera evaluación —cuando el importe aún estaba
+   * vacío— y el aviso enseñaba un descuadre igual al total de los repartos,
+   * tecleara uno lo que tecleara. Compila, pasa los tests y solo se ve
+   * escribiendo en el campo.
+   */
+  get invoiceDifference(): number {
+    return invoiceMismatch(Number(this.invoiceForm.amount) || 0, this.invoiceCovered());
+  }
+
+  invoiceOf(sale: CollaboratorSale): CollaboratorInvoice | null {
+    if (!sale.receivedInvoiceId) return null;
+    return this.invoices().find((f) => f.id === sale.receivedInvoiceId) || null;
+  }
+
+  startInvoice(): void {
+    this.editingInvoiceId.set(null);
+    this.invoiceForm = { number: '', date: this.today(), amount: undefined };
+    // Los que esperan factura, marcados: es el caso normal —una factura cubre
+    // lo que está sin justificar— y desmarcar es más fácil que marcar.
+    this.invoiceSaleIds.set(new Set(this.awaitingInvoiceSales().map((s) => s.id!)));
+    this.invoiceFile = null;
+    this.invoiceProblems = {};
+    this.invoiceSubmitted.set(false);
+    this.showInvoice.set(true);
+  }
+
+  editInvoice(factura: CollaboratorInvoice): void {
+    this.editingInvoiceId.set(factura.id!);
+    this.invoiceForm = {
+      number: factura.number,
+      date: this.asDateInput(factura.date),
+      amount: factura.amount,
+      notes: factura.notes,
+      fileUrl: factura.fileUrl,
+      filePath: factura.filePath
+    };
+    this.invoiceSaleIds.set(
+      new Set(this.sales().filter((s) => s.receivedInvoiceId === factura.id).map((s) => s.id!))
+    );
+    this.invoiceFile = null;
+    this.invoiceProblems = {};
+    this.invoiceSubmitted.set(false);
+    this.showInvoice.set(true);
+  }
+
+  isInvoiceSale(id: string): boolean {
+    return this.invoiceSaleIds().has(id);
+  }
+
+  toggleInvoiceSale(id: string): void {
+    const copia = new Set(this.invoiceSaleIds());
+    if (copia.has(id)) copia.delete(id);
+    else copia.add(id);
+    this.invoiceSaleIds.set(copia);
+  }
+
+  onInvoiceFile(files: FileList | null): void {
+    this.invoiceFile = files?.length ? files[0] : null;
+  }
+
+  /**
+   * Los repartos que se pueden vincular a esta factura.
+   *
+   * Los que esperan factura, **más los que ya están en la que se edita**: sin
+   * los segundos, abrir una factura guardada mostraría su lista vacía y el
+   * primer guardado la desvincularía de todo.
+   */
+  readonly invoiceCandidates = computed(() => {
+    const esperando = this.awaitingInvoiceSales();
+    if (!this.editingInvoiceId()) return esperando;
+    const suyos = this.sales().filter((s) => s.receivedInvoiceId === this.editingInvoiceId());
+    return [...suyos, ...esperando];
+  });
+
+  async saveInvoice(): Promise<void> {
+    const ficha = this.collaborator();
+    if (!ficha) return;
+
+    this.invoiceSubmitted.set(true);
+    this.invoiceProblems = validateCollaboratorInvoice({
+      ...this.invoiceForm,
+      // El `input[type=date]` da una cadena; el validador solo mira que haya
+      // algo, y la conversión a fecha se hace justo antes de escribir.
+      date: this.invoiceForm.date
+    });
+    if (hasProblems(this.invoiceProblems)) return;
+
+    this.savingInvoice.set(true);
+    try {
+      const id = await this.service.saveInvoice(
+        ficha,
+        {
+          ...this.invoiceForm,
+          // A mediodía local, por lo mismo que la fecha de pago: la medianoche
+          // UTC de un `input[type=date]` puede caer en el día anterior.
+          date: new Date(`${this.invoiceForm.date}T12:00:00`),
+          amount: Number(this.invoiceForm.amount)
+        },
+        [...this.invoiceSaleIds()],
+        this.editingInvoiceId() || undefined
+      );
+
+      if (this.invoiceFile) {
+        const subido = await this.service.uploadInvoiceFile(id, this.invoiceFile);
+        await this.service.saveInvoice(
+          ficha,
+          { ...this.invoiceForm, date: new Date(`${this.invoiceForm.date}T12:00:00`),
+            amount: Number(this.invoiceForm.amount), ...subido },
+          [...this.invoiceSaleIds()],
+          id
+        );
+      }
+
+      this.showInvoice.set(false);
+      this.notifications.success('collaborators.invoice.saved');
+      await this.load(ficha.id!);
+    } catch (err) {
+      this.notifications.error(this.errorKeyOf(err));
+    } finally {
+      this.savingInvoice.set(false);
+    }
+  }
+
+  async removeInvoice(factura: CollaboratorInvoice): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: 'collaborators.invoice.deleteTitle',
+      message: 'collaborators.invoice.deleteMessage',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!ok) return;
+
+    const ficha = this.collaborator();
+    if (!ficha) return;
+
+    this.working.set(true);
+    try {
+      await this.service.deleteInvoice(factura.id!);
+      this.notifications.success('collaborators.invoice.deleted');
+      await this.load(ficha.id!);
+    } catch (err) {
+      this.notifications.error(this.errorKeyOf(err));
+    } finally {
+      this.working.set(false);
+    }
+  }
+
+  /** Una fecha de Firestore como `Date`, para el pipe de la plantilla. */
+  asDate(value: unknown): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    const v = value as { toDate?: () => Date; seconds?: number };
+    if (typeof v.toDate === 'function') return v.toDate();
+    if (typeof v.seconds === 'number') return new Date(v.seconds * 1000);
+    return null;
+  }
+
+  /** Una fecha de Firestore en `yyyy-mm-dd`, para el `input[type=date]`. */
+  private asDateInput(value: unknown): string {
+    if (!value) return '';
+    const v = value as { toDate?: () => Date; seconds?: number };
+    const d =
+      value instanceof Date
+        ? value
+        : typeof v.toDate === 'function'
+          ? v.toDate()
+          : typeof v.seconds === 'number'
+            ? new Date(v.seconds * 1000)
+            : null;
+    if (!d) return '';
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+  }
 
   /** Hoy en `yyyy-mm-dd`, que es lo que entiende un `input[type=date]`. */
   private today(): string {

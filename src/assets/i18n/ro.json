@@ -1671,7 +1671,11 @@
       "saleNotFound": "Acel comision nu a fost găsit",
       "nothingSelected": "Nu ai bifat nimic de plătit",
       "paidAtFuture": "Acea dată nu a sosit încă: o plată se înregistrează după ce banii au ieșit",
-      "paidAtInvalid": "Acea dată nu este validă"
+      "paidAtInvalid": "Acea dată nu este validă",
+      "invoiceNumberRequired": "Introdu numărul facturii lui",
+      "invoiceDateRequired": "Introdu data facturii",
+      "invoiceAmountRequired": "Introdu suma facturii",
+      "invoiceAmountPositive": "Suma trebuie să fie mai mare decât zero"
     },
     "saleAssigned": "Vânzare atribuită",
     "sales": "Comisioane și părți",
@@ -1705,7 +1709,28 @@
     },
     "settleTotal": "Totalul acestei plăți",
     "paymentRecorded": "Plată înregistrată",
-    "noMovements": "Fără mișcări"
+    "noMovements": "Fără mișcări",
+    "invoice": {
+      "title": "Facturi primite de la proprietar",
+      "awaiting": "Se așteaptă factura",
+      "awaitingHint": "A aștepta factura NU înseamnă că nu trebuie facturat: sunt părți deja recunoscute al căror justificativ încă nu a sosit. I se poate plăti și fără ea.",
+      "awaitingShort": "Lipsește factura",
+      "short": "Factura",
+      "register": "Înregistrează factura primită",
+      "formTitle": "Factura proprietarului",
+      "formHint": "Este factura lui, nu una de-a noastră: nu poartă numerotarea noastră, nu merge la fisc și se poate corecta. Bifează părțile pe care le acoperă.",
+      "number": "Numărul facturii lui",
+      "date": "Data facturii",
+      "amount": "Sumă",
+      "covered": "Părțile acoperite",
+      "mismatch": "Nu se potrivește cu ce acoperă:",
+      "file": "PDF sau fotografie",
+      "open": "Deschide factura",
+      "saved": "Factură înregistrată",
+      "deleted": "Factură ștearsă",
+      "deleteTitle": "Șterge factura",
+      "deleteMessage": "Părțile pe care le acoperea vor reveni la starea de așteptare a facturii."
+    }
   },
   "events": {
     "alerts": {

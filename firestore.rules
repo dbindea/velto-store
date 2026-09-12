@@ -270,6 +270,20 @@ service cloud.firestore {
       allow read, write: if callerIsAdmin();
     }
 
+    // Las facturas que MANDA el propietario por ceder su coche.
+    //
+    // ⚠️ **No confundir con `invoices`.** Aquellas las emite VELTO, son
+    // inmutables y van a la AEAT; estas llegan de fuera y solo registran un
+    // papel que está en un cajón, así que `update` y `delete` sí se permiten —
+    // una factura recibida mal tecleada se corrige. Lo que acredita no lo ha
+    // declarado la empresa ante nadie.
+    //
+    // De administrador, como las comisiones y por lo mismo: es lo que la
+    // empresa paga, y con el NIF y el importe de sus proveedores dentro.
+    match /collaboratorInvoices/{invoiceId} {
+      allow read, write: if callerIsAdmin();
+    }
+
     // contractSigningTokens - NEVER read/write from the client.
     // Only Cloud Functions (admin SDK) can read or write tokens.
     // Public access is via the getContractForSigning / signContract

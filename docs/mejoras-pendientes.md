@@ -169,14 +169,36 @@ se lee entera— y no el de `invoices`, que sí era un descuido. Escribirlo sí 
 cerrado. Si algún día molesta, la salida es sacar el reparto a una colección de
 administrador, no endurecer esta regla.
 
-### Lo que falta
+### Entrega 3, hecha: liquidar, pagar y la factura del propietario
 
-- **Entrega 3**: **liquidar** lo devengado —que es donde se escribe por fin el
-  `CollaboratorSale` de `kind: 'vehicle_owner'`, con su importe congelado— y
-  liquidaciones agrupadas: varias reservas en un pago, con fecha, importe y forma
-  incluido efectivo. Más el registro de la factura recibida, con estado
-  «pendiente de recibir» que **no** se confunda con «no hay que facturar».
-  ⚠️ Pagarle **no** genera una factura de venta de Velto.
+**Tres cosas distintas, y la aplicación confundía dos**: decía «liquidar» donde
+hacía «pagar». Ahora:
+
+- **Reconocer lo devengado** convierte el reparto derivado en un apunte con su
+  importe **congelado**. En un `writeBatch`, y comprobando otra vez lo que hay
+  escrito: entre cargar la ficha y pulsar caben otra pestaña y otro operador.
+- **Pagar** deja de ser todo o nada: se elige qué entra y **cuándo salió el
+  dinero**. Una fecha futura se rechaza (`paidAtProblem()`, con tests).
+- **La factura** vive en `collaboratorInvoices`, colección propia porque una sola
+  suele cubrir varias reservas. Su importe **no tiene que cuadrar** con lo que
+  cubre —el IRPF retenido es el caso normal—: la diferencia se enseña.
+
+⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar»**, y el texto lo
+dice con esas palabras. Solo la esperan los apuntes de `vehicle_owner`.
+
+⚠️ **No escribe en `expenses`**, igual que las comisiones (decisión de Dorel del
+12 de septiembre de 2026). Los cuatro datos para convertirlo en gasto ya están
+guardados el día que se quiera.
+
+⚠️ **Y dos fallos que solo salieron mirando la pantalla**, los dos de
+reactividad: `invoiceDifference` era un `computed()` que leía
+`invoiceForm.amount` —una propiedad de `ngModel`, no una señal—, así que se
+quedaba con el valor de la primera evaluación y el aviso de descuadre enseñaba
+siempre el total de los repartos. Y `invoiceCandidates()` leía `editingInvoiceId`
+igual: funcionaba de rebote, cuando se movía otra señal. **Un `computed` que lee
+algo que no es señal no se entera de nada**, y compila igual.
+
+### Lo que falta
 - **Entrega 4**: informes con el reparto y el resultado real de Velto, y la
   **fecha de operación** de las facturas.
 

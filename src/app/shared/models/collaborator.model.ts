@@ -194,6 +194,71 @@ export interface CollaboratorSale {
   /** Por qué dejó de devengar. Se rellena solo al cancelarse la reserva. */
   cancelledReason?: string;
 
+  /**
+   * La factura del propietario que cubre este apunte, si ya ha llegado.
+   *
+   * ⚠️ **Su ausencia significa «pendiente de recibir factura», y eso NO es «no
+   * hay que facturar»** (Dorel lo dijo con esas palabras). Son dos cosas muy
+   * distintas: la primera es un trámite que falta, la segunda sería una exención
+   * que aquí no existe. Cualquier texto que pinte este estado tiene que decir la
+   * primera, porque un «sin factura» a secas se lee como la segunda y entonces
+   * nadie la reclama.
+   *
+   * ⚠️ **Y se puede pagar sin ella.** Cobrar y justificar van por caminos
+   * separados: al propietario se le paga cuando toca, y su factura llega cuando
+   * llega. Atar el pago a la factura dejaría a alguien sin cobrar por un papel.
+   */
+  receivedInvoiceId?: string;
+
+  createdAt?: any;
+  updatedAt?: any;
+  createdBy?: string;
+}
+
+/**
+ * La factura que **manda el propietario** por ceder su coche.
+ *
+ * ⚠️ **No confundir con `invoices`, que son las de VELTO.** Aquellas las emite
+ * la empresa, son inmutables, consumen número de serie y van a la AEAT por
+ * VERI\*FACTU. Esta es un documento que llega de fuera: si se teclea mal, se
+ * corrige; si se registra por error, se borra. Nada de lo que hace inmutable a
+ * una factura emitida aplica aquí, porque el hecho que acredita no lo ha
+ * declarado Velto.
+ *
+ * ⚠️ **Es una colección propia y no unos campos dentro del apunte** (decisión de
+ * Dorel, 12 de septiembre de 2026). Una sola factura suele cubrir **varias**
+ * reservas —la liquidación del mes—, así que metida en cada apunte habría que
+ * teclearla tantas veces como repartos cubra, con el mismo número repetido y
+ * sin que su importe total constara en ninguna parte. Es la excepción razonada
+ * a «no hay colección de liquidaciones»: aquello era derivable de los pagos, y
+ * un número de factura no se deriva de nada.
+ *
+ * ⚠️ **Y registrarla no la convierte en un gasto todavía.** Decisión del mismo
+ * día, coherente con las comisiones: esto sigue siendo un registro interno y no
+ * escribe en `expenses`. Queda anotado que con factura delante el reparto sí es
+ * un gasto deducible, y que el día que se quiera contabilizar están aquí los
+ * cuatro datos que hacen falta.
+ */
+export interface CollaboratorInvoice {
+  id?: string;
+
+  collaboratorId: string;
+  /** Copiado, para que la factura se pueda leer sin resolver la ficha. */
+  collaboratorName: string;
+
+  /** El número que trae impreso el documento. El suyo, no uno nuestro. */
+  number: string;
+  /** La fecha del documento, que no es la de cuando se registra. */
+  date: any;
+  /** El total de la factura, tal y como viene. */
+  amount: number;
+
+  /** El PDF o la foto, en Storage. */
+  fileUrl?: string;
+  filePath?: string;
+
+  notes?: string;
+
   createdAt?: any;
   updatedAt?: any;
   createdBy?: string;

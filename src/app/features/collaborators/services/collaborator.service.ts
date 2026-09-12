@@ -4,6 +4,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -14,8 +15,10 @@ import {
   writeBatch
 } from '@angular/fire/firestore';
 import { AuthService } from '@core/auth/auth.service';
+import { StorageService } from '@core/firebase/storage.service';
 import {
   Collaborator,
+  CollaboratorInvoice,
   CollaboratorSale,
   CommissionKind,
   CommissionPaymentMethod
@@ -27,7 +30,8 @@ import {
   estadoSegunReserva,
   paidAtProblem,
   saleProblem,
-  validateCollaborator
+  validateCollaborator,
+  validateCollaboratorInvoice
 } from '@shared/utils/collaborator.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { hasProblems } from '@shared/utils/form-problems.util';
@@ -45,9 +49,11 @@ import { roundMoney } from '@shared/utils/payment-summary.util';
 export class CollaboratorService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+  private storage = inject(StorageService);
 
   private collaboratorsRef = collection(this.firestore, 'collaborators');
   private salesRef = collection(this.firestore, 'collaboratorSales');
+  private invoicesRef = collection(this.firestore, 'collaboratorInvoices');
 
   // --- Colaboradores -------------------------------------------------------
 
@@ -510,6 +516,158 @@ export class CollaboratorService {
         updatedAt: serverTimestamp()
       }) as Record<string, unknown>
     );
+  }
+
+  // --- La factura que manda el propietario ---------------------------------
+
+  /**
+   * Las facturas recibidas de un colaborador, de la más reciente a la más
+   * antigua **por la fecha del documento**, no por cuándo se registró: es la
+   * fecha por la que él la busca y por la que se archiva.
+   */
+  async invoicesOf(collaboratorId: string): Promise<CollaboratorInvoice[]> {
+    const snap = await getDocs(
+      query(this.invoicesRef, where('collaboratorId', '==', collaboratorId))
+    );
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as CollaboratorInvoice) }))
+      .sort((a, b) => this.millis(b.date) - this.millis(a.date));
+  }
+
+  /**
+   * Registrar la factura del propietario y **vincularla a lo que cubre**.
+   *
+   * ⚠️ **La factura y sus apuntes se escriben juntos, en un `writeBatch`.** Es
+   * lo mismo que hacen la reserva y sus pagos: guardar la factura y fallar al
+   * vincular dejaría un documento registrado que no justifica nada, y los
+   * repartos seguirían saliendo como pendientes de recibir factura — así que
+   * alguien la volvería a pedir, y el propietario diría con razón que ya la
+   * mandó.
+   *
+   * ⚠️ **El importe no tiene que cuadrar con lo que cubre.** Ver
+   * `invoiceMismatch()`: una factura con IRPF retenido trae menos y es correcta.
+   * La diferencia se enseña, no se rechaza.
+   */
+  async saveInvoice(
+    collaborator: Collaborator,
+    data: Partial<CollaboratorInvoice>,
+    saleIds: string[],
+    id?: string
+  ): Promise<string> {
+    if (!collaborator?.id) throw new Error('collaborators.problems.collaboratorRequired');
+
+    const problems = validateCollaboratorInvoice(data);
+    if (hasProblems(problems)) {
+      throw new Error(Object.values(problems)[0] as string);
+    }
+
+    const ref = id ? doc(this.invoicesRef, id) : doc(this.invoicesRef);
+    const batch = writeBatch(this.firestore);
+
+    const payload = cleanForFirestore({
+      ...data,
+      collaboratorId: collaborator.id,
+      collaboratorName: collaborator.name,
+      number: data.number?.trim(),
+      amount: Number(data.amount),
+      updatedAt: serverTimestamp(),
+      ...(id
+        ? {}
+        : { createdAt: serverTimestamp(), createdBy: this.auth.authorizedUser()?.email || null })
+    }) as Record<string, unknown>;
+
+    if (id) batch.update(ref, payload);
+    else batch.set(ref, payload);
+
+    /**
+     * Al editar, **se sueltan primero los que ya no cubre**. Sin esto, quitar un
+     * reparto de una factura lo dejaría apuntando a ella para siempre y nunca
+     * volvería a salir como pendiente de justificar.
+     */
+    if (id) {
+      const previas = await getDocs(
+        query(this.salesRef, where('receivedInvoiceId', '==', id))
+      );
+      for (const d of previas.docs) {
+        if (!saleIds.includes(d.id)) {
+          batch.update(doc(this.salesRef, d.id), {
+            receivedInvoiceId: deleteField(),
+            updatedAt: serverTimestamp()
+          });
+        }
+      }
+    }
+
+    for (const saleId of saleIds) {
+      batch.update(doc(this.salesRef, saleId), {
+        receivedInvoiceId: ref.id,
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    await batch.commit();
+    return ref.id;
+  }
+
+  /**
+   * Subir el PDF o la foto de la factura del propietario.
+   *
+   * ⚠️ **La ruta lleva el id de la factura dentro**, para que borrarla se lleve
+   * su fichero sin tener que adivinar dónde está — es lo que ya costó descubrir
+   * con el mantenimiento, cuya ruta obliga a leer el documento antes de
+   * borrarlo porque el vehículo viaja en el camino.
+   */
+  async uploadInvoiceFile(
+    invoiceId: string,
+    file: File
+  ): Promise<{ fileUrl: string; filePath: string }> {
+    const limpio = file.name.replace(/[^\w.\-]/g, '_');
+    const filePath = `collaborator-invoices/${invoiceId}/${Date.now()}_${limpio}`;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await this.storage.uploadFile(filePath, bytes);
+    const fileUrl = await this.storage.getDownloadURL(filePath);
+    return { fileUrl, filePath };
+  }
+
+  /**
+   * Borrar una factura recibida.
+   *
+   * ⚠️ **Esto se puede hacer, y no contradice nada.** Una factura emitida por
+   * VELTO es inmutable porque acredita algo que la empresa ha declarado; esta
+   * llega de fuera y solo registra un papel que está en un cajón. Si se teclea
+   * mal se corrige, y si se registró por error se quita.
+   *
+   * ⚠️ **Los apuntes se sueltan**, o quedarían apuntando a una factura que ya no
+   * existe y no volverían a pedir la suya nunca. Y **el fichero va antes que el
+   * documento**: si Storage falla, la factura sigue ahí y se puede reintentar;
+   * al revés se pierde el rastro de qué había que borrar.
+   */
+  async deleteInvoice(id: string): Promise<void> {
+    const snap = await getDoc(doc(this.invoicesRef, id));
+    const factura = snap.exists() ? (snap.data() as CollaboratorInvoice) : null;
+
+    if (factura?.filePath) {
+      try {
+        await this.storage.deleteFile(factura.filePath);
+      } catch (error) {
+        // Un fichero que se resista no aborta el borrado, solo se registra:
+        // dejar la factura a medio borrar es peor que quedarse un huérfano.
+        console.error('Error deleting invoice file:', error);
+      }
+    }
+
+    const vinculadas = await getDocs(
+      query(this.salesRef, where('receivedInvoiceId', '==', id))
+    );
+    const batch = writeBatch(this.firestore);
+    for (const d of vinculadas.docs) {
+      batch.update(doc(this.salesRef, d.id), {
+        receivedInvoiceId: deleteField(),
+        updatedAt: serverTimestamp()
+      });
+    }
+    batch.delete(doc(this.invoicesRef, id));
+    await batch.commit();
   }
 
   /** Milisegundos de una fecha de Firestore, venga como venga. */
