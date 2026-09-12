@@ -31,6 +31,12 @@ import {
   settlements,
   yearlyTotals
 } from '@shared/utils/collaborator.util';
+import {
+  OwnerShareAccrual,
+  accruedTotal,
+  ownerShareAccruals,
+  unsettledAccruals
+} from '@shared/utils/owner-share.util';
 
 /**
  * La ficha de un colaborador: lo que ha traído y lo que se le debe.
@@ -60,6 +66,18 @@ export class CollaboratorDetailComponent implements OnInit {
   readonly sales = signal<CollaboratorSale[]>([]);
   readonly working = signal(false);
 
+  /**
+   * Lo devengado por sus coches y todavía sin liquidar.
+   *
+   * ⚠️ **Es una previsión derivada, no una deuda apuntada.** Se calcula de las
+   * reservas cerradas y desaparece de aquí en cuanto se reconoce como apunte,
+   * que es lo que impide contarlo dos veces.
+   */
+  readonly ownerAccruals = signal<OwnerShareAccrual[]>([]);
+
+  /** La suma de lo devengado sin liquidar, al céntimo. */
+  readonly accruedPending = computed(() => accruedTotal(this.ownerAccruals()));
+
   statusLabels = COMMISSION_STATUS_LABELS;
   methodLabels = COMMISSION_PAYMENT_METHOD_LABELS;
 
@@ -82,12 +100,32 @@ export class CollaboratorDetailComponent implements OnInit {
   private async load(id: string): Promise<void> {
     this.loading.set(true);
     try {
-      const [ficha, ventas] = await Promise.all([
+      const [ficha, ventas, reservas] = await Promise.all([
         this.service.getById(id),
-        this.service.salesOf(id)
+        this.service.salesOf(id),
+        firstValueFrom(this.reservations.getReservations())
       ]);
       this.collaborator.set(ficha);
       this.sales.set(ventas);
+
+      /**
+       * Lo devengado por sus coches, **derivado de las reservas cerradas**.
+       *
+       * ⚠️ **No hay colección de devengos**: cada reserva cerrada ya lleva
+       * dentro su reparto y su precio congelados, y copiarlos aquí sería una
+       * segunda fuente de verdad para el mismo euro. Ver `owner-share.util.ts`.
+       *
+       * ⚠️ **Se quita lo ya liquidado, o se cuenta dos veces.** Al liquidar, el
+       * reparto pasa a ser un apunte con su importe congelado; si la derivación
+       * siguiera incluyendo esa reserva, aquí saldría el doble de lo que se le
+       * debe. Y sería una cifra creíble.
+       */
+      const yaLiquidadas = ventas
+        .filter((v) => v.kind === 'vehicle_owner' && v.status !== 'cancelled')
+        .map((v) => v.reservationId);
+      this.ownerAccruals.set(
+        unsettledAccruals(ownerShareAccruals(reservas || [], id), yaLiquidadas)
+      );
     } catch {
       this.notifications.error('collaborators.errors.loadFailed', {
         retry: () => void this.load(id)
@@ -186,8 +224,18 @@ export class CollaboratorDetailComponent implements OnInit {
         firstValueFrom(this.reservations.getReservations()),
         this.service.allSales()
       ]);
+      /**
+       * ⚠️ **Solo las de captación cuentan como «ya asignada».** Una reserva
+       * puede tener a la vez la comisión por traer al cliente y el reparto por
+       * ceder el coche: mirando las dos clases, el reparto de un coche cedido
+       * escondería esa reserva de esta lista y no habría forma de reconocerle
+       * nunca la comisión a quien trajo al cliente. Es el mismo filtro que hace
+       * `saleForReservation()` en el servicio, y tienen que decir lo mismo.
+       */
       const asignadas = new Set(
-        ventas.filter((s) => s.status !== 'cancelled').map((s) => s.reservationId)
+        ventas
+          .filter((s) => s.kind === 'referral' && s.status !== 'cancelled')
+          .map((s) => s.reservationId)
       );
       this.assignable.set(
         (todas || [])

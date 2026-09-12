@@ -1690,7 +1690,12 @@
       "vehicleOwner": "For providing the car"
     },
     "referralShort": "referral",
-    "ownerShort": "owner share"
+    "ownerShort": "owner share",
+    "ownerShare": {
+      "title": "Share for their cars",
+      "accrued": "Accrued, not yet settled",
+      "hint": "Derived from their closed bookings and not added to referral commissions: they are two different things and are justified differently. On the rental excluding VAT; the deposit and extra charges are not shared."
+    }
   },
   "events": {
     "alerts": {

@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accruedTotal,
   DEFAULT_OWNER_SHARE_PERCENT,
+  ownerShareAccruals,
   ownerShareAmount,
   ownerSharePercentProblem,
   ownerShareSnapshotOf,
+  ReservationForOwnerShare,
+  unsettledAccruals,
   vehicleOwnershipProblem,
   veltoSharePercent,
   veltoShareAmount
@@ -145,5 +149,113 @@ describe('lo que se congela en la reserva', () => {
 
   it('marcado como de colaborador pero sin colaborador, no congela nada', () => {
     expect(ownerShareSnapshotOf({ ownership: 'collaborator' }, 'Juan')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Lo devengado, derivado de las reservas
+// ---------------------------------------------------------------------------
+
+describe('lo devengado se deriva de las reservas cerradas', () => {
+  const reserva = (extra: Partial<ReservationForOwnerShare> = {}): ReservationForOwnerShare => ({
+    id: 'r1',
+    reservationStatus: 'closed',
+    ownerShareSnapshot: { collaboratorId: 'c1', collaboratorName: 'Juan', sharePercent: 75 },
+    pricingSnapshot: { netPrice: 200 },
+    vehicleSnapshot: { brand: 'Dacia', model: 'Duster', plateNumber: '1234JKL' },
+    clientSnapshot: { fullName: 'María' },
+    pickupDateTime: null,
+    ...extra
+  });
+
+  it('una reserva cerrada de un coche cedido devenga su parte', () => {
+    const [a] = ownerShareAccruals([reserva()]);
+    expect(a.amount).toBe(150);
+    expect(a.netAmount).toBe(200);
+    expect(a.collaboratorName).toBe('Juan');
+    expect(a.vehicle).toBe('Dacia Duster · 1234JKL');
+  });
+
+  /**
+   * ⚠️ **El devengo es al CERRAR** (decisión de Dorel), cuando los importes ya
+   * son definitivos. Una reserva en curso todavía se puede mover: contarla sería
+   * prometerle al propietario un dinero que aún puede cambiar.
+   */
+  it('lo que no está cerrado no devenga nada', () => {
+    for (const estado of ['reserved', 'confirmed', 'delivered', 'returned', 'cancelled']) {
+      expect(ownerShareAccruals([reserva({ reservationStatus: estado })])).toEqual([]);
+    }
+  });
+
+  it('un coche de Velto no devenga nada', () => {
+    expect(ownerShareAccruals([reserva({ ownerShareSnapshot: null })])).toEqual([]);
+  });
+
+  /**
+   * ⚠️ **La base es el NETO**, la misma regla que arriba: si se derivara del
+   * precio con IVA se le pagaría al propietario un porcentaje de un impuesto.
+   * 200 y 242 no pueden dar lo mismo.
+   */
+  it('deriva del neto, nunca del total con IVA', () => {
+    const conIva = ownerShareAccruals([reserva({ pricingSnapshot: { netPrice: 242 } })]);
+    expect(conIva[0].amount).not.toBe(150);
+    expect(conIva[0].amount).toBe(181.5);
+  });
+
+  it('se puede pedir solo lo de un propietario', () => {
+    const otras = [
+      reserva({ id: 'r1' }),
+      reserva({
+        id: 'r2',
+        ownerShareSnapshot: { collaboratorId: 'c2', collaboratorName: 'Ana', sharePercent: 50 }
+      })
+    ];
+    expect(ownerShareAccruals(otras, 'c1').map((a) => a.reservationId)).toEqual(['r1']);
+    expect(ownerShareAccruals(otras, 'c2').map((a) => a.reservationId)).toEqual(['r2']);
+  });
+
+  it('el porcentaje que manda es el congelado, no el del coche de hoy', () => {
+    const [a] = ownerShareAccruals([
+      reserva({
+        ownerShareSnapshot: { collaboratorId: 'c1', collaboratorName: 'Juan', sharePercent: 60 }
+      })
+    ]);
+    expect(a.sharePercent).toBe(60);
+    expect(a.amount).toBe(120);
+  });
+
+  /**
+   * ⚠️ **La prueba que evita pagar dos veces.** En cuanto se liquida, el reparto
+   * pasa a ser un apunte con su importe congelado. Si la derivación siguiera
+   * contando esa reserva, el propietario aparecería con el doble de lo que se le
+   * debe — y sería una cifra creíble, que es la peor clase de error con dinero.
+   */
+  it('lo ya liquidado deja de contar como devengado', () => {
+    const devengos = ownerShareAccruals([reserva({ id: 'r1' }), reserva({ id: 'r2' })]);
+    expect(accruedTotal(devengos)).toBe(300);
+
+    const pendiente = unsettledAccruals(devengos, ['r1']);
+    expect(pendiente.map((a) => a.reservationId)).toEqual(['r2']);
+    expect(accruedTotal(pendiente)).toBe(150);
+  });
+
+  it('sin nada liquidado, el pendiente es todo', () => {
+    const devengos = ownerShareAccruals([reserva()]);
+    expect(unsettledAccruals(devengos, [])).toEqual(devengos);
+  });
+
+  /** Redondeo al céntimo: `108.9 * 75 / 100` no da un número limpio. */
+  it('suma al céntimo', () => {
+    const devengos = ownerShareAccruals([
+      reserva({ id: 'r1', pricingSnapshot: { netPrice: 108.9 } }),
+      reserva({ id: 'r2', pricingSnapshot: { netPrice: 108.9 } })
+    ]);
+    expect(devengos[0].amount).toBe(81.68);
+    expect(accruedTotal(devengos)).toBe(163.36);
+  });
+
+  it('sin reservas, cero y no un error', () => {
+    expect(ownerShareAccruals([])).toEqual([]);
+    expect(accruedTotal([])).toBe(0);
   });
 });

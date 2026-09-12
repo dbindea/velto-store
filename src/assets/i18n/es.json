@@ -1690,7 +1690,12 @@
       "vehicleOwner": "Por ceder el coche"
     },
     "referralShort": "captación",
-    "ownerShort": "reparto"
+    "ownerShort": "reparto",
+    "ownerShare": {
+      "title": "Reparto por sus coches",
+      "accrued": "Devengado, pendiente de liquidar",
+      "hint": "Sale de sus reservas ya cerradas y no se suma a las comisiones de captación: son dos cosas distintas y se justifican distinto. Sobre el alquiler sin IVA; la fianza y los cargos extra no se reparten."
+    }
   },
   "events": {
     "alerts": {

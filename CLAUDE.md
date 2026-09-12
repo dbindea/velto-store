@@ -374,6 +374,27 @@ congela `commitReservationWithPayments()`, que recibe el vehículo entero para q
 **ninguno de los dos creadores de reservas pueda olvidarse**. La parte se
 **devenga al cerrar** la reserva, cuando los importes ya son definitivos.
 
+⚠️ **Y lo devengado se DERIVA de las reservas cerradas, no se guarda**
+(`ownerShareAccruals()`, 12 de septiembre de 2026). Hay dos motivos y los dos
+importan: una colección de devengos sería una segunda fuente de verdad para el
+mismo euro —la reserva ya lleva su reparto y su precio congelados—, y sobre todo
+**cerrar una reserva no pide ningún permiso** mientras `collaboratorSales` es de
+administrador. Escribiendo el apunte al cerrar, el empleado que termina la
+devolución en la calle vería fallar el cierre por permisos, o —peor— se tragaría
+el error y el propietario no cobraría sin que nadie se enterase.
+
+⚠️ **`unsettledAccruals()` quita lo ya liquidado, y sin eso se cuenta dos
+veces.** Al liquidar, el reparto pasa a ser un `CollaboratorSale` con su importe
+congelado; si la derivación siguiera contando esa reserva, el propietario
+aparecería con el doble de lo que se le debe. El apunte se escribe **al
+liquidar**, que siempre lo hace un administrador.
+
+⚠️ **`saleForReservation()` exige el `kind`, y no es una firma incómoda por
+gusto.** Una misma reserva puede tener los dos apuntes. Preguntando «¿esta
+reserva ya está asignada?» a secas, el reparto de un coche cedido haría que la
+comisión de captación de esa misma reserva se rechazara con «ya está asignada» —
+justo lo que se separó al crear `kind`. La pantalla de asignar filtra igual.
+
 ⚠️ **El nombre del propietario se copia al COCHE (`ownerCollaboratorName`), y no
 es comodidad.** El snapshot lo lleva dentro para sobrevivir a un borrado de la
 ficha, pero `firestore.rules` solo deja leer `collaborators` a un administrador:

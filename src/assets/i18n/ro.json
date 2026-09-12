@@ -1690,7 +1690,12 @@
       "vehicleOwner": "Pentru că a pus mașina"
     },
     "referralShort": "intermediere",
-    "ownerShort": "parte proprietar"
+    "ownerShort": "parte proprietar",
+    "ownerShare": {
+      "title": "Partea pentru mașinile lui",
+      "accrued": "Cuvenit, încă nedecontat",
+      "hint": "Rezultă din rezervările lui deja închise și nu se adună la comisioanele de intermediere: sunt două lucruri diferite și se justifică diferit. Din închiriere, fără TVA; garanția și taxele suplimentare nu se împart."
+    }
   },
   "events": {
     "alerts": {

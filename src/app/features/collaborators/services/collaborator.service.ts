@@ -17,6 +17,7 @@ import { AuthService } from '@core/auth/auth.service';
 import {
   Collaborator,
   CollaboratorSale,
+  CommissionKind,
   CommissionPaymentMethod
 } from '@shared/models/collaborator.model';
 import { Reservation } from '@shared/models/reservation.model';
@@ -143,10 +144,29 @@ export class CollaboratorService {
     return snap.docs.map((d) => ({ id: d.id, ...(d.data() as CollaboratorSale) }));
   }
 
-  /** ¿Esta reserva ya está asignada a alguien? */
-  async saleForReservation(reservationId: string): Promise<CollaboratorSale | null> {
+  /**
+   * ¿Esta reserva ya tiene un apunte **de esta clase**?
+   *
+   * ⚠️ **El `kind` NO es opcional, y ahí está el fallo que evita.** Una misma
+   * reserva puede tener legítimamente **dos** apuntes: la comisión por traer al
+   * cliente y el reparto por ceder el coche. Preguntando «¿esta reserva ya está
+   * asignada?» a secas, el reparto del propietario haría que la comisión de
+   * captación de esa misma reserva se rechazara con «ya está asignada» — que es
+   * exactamente lo que Dorel pidió que no pasara al separar los dos conceptos.
+   *
+   * Por eso el parámetro es obligatorio: quien pregunte tiene que decir por cuál
+   * de los dos pregunta, y el compilador no le deja olvidarse.
+   */
+  async saleForReservation(
+    reservationId: string,
+    kind: CommissionKind
+  ): Promise<CollaboratorSale | null> {
     const snap = await getDocs(
-      query(this.salesRef, where('reservationId', '==', reservationId))
+      query(
+        this.salesRef,
+        where('reservationId', '==', reservationId),
+        where('kind', '==', kind)
+      )
     );
     const vivo = snap.docs.find((d) => (d.data() as CollaboratorSale).status !== 'cancelled');
     const elegido = vivo || snap.docs[0];
@@ -180,7 +200,13 @@ export class CollaboratorService {
     const problema = saleProblem(reservation, collaborator);
     if (problema) throw new Error(problema);
 
-    const yaAsignada = await this.saleForReservation(reservation.id!);
+    /**
+     * ⚠️ **Solo contra las de captación.** Si el coche de esta reserva es de un
+     * colaborador, al cerrarla habrá también un apunte de reparto; mirándolos
+     * todos, esa reserva quedaría marcada como «ya asignada» y no se podría
+     * reconocer nunca la comisión de quien trajo al cliente.
+     */
+    const yaAsignada = await this.saleForReservation(reservation.id!, 'referral');
     if (yaAsignada && yaAsignada.status !== 'cancelled') {
       throw new Error('collaborators.problems.alreadyAssigned');
     }

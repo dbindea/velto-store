@@ -125,10 +125,40 @@ lleva factura de cesión detrás y el otro no.
   clientes» (decisión de Dorel, 12 de septiembre de 2026). Sin eso, dar de alta
   a alguien que solo cede un coche obligaba a inventarle una comisión.
 
-⚠️ **Lo que NO entra y hace falta para la entrega 3:** el **devengo**. Nadie crea
-todavía el `CollaboratorSale` de `kind: 'vehicle_owner'` al cerrar la reserva, así
-que el reparto se congela y se enseña pero aún no llega al balance del
-colaborador. Es el primer paso de la entrega 3, antes de las liquidaciones.
+### El devengo: se DERIVA, no se guarda
+
+Decisión de Dorel del 12 de septiembre de 2026, tomada ante un choque real:
+**cerrar una reserva no pide ningún permiso** —lo hace el empleado que termina la
+devolución en la calle— pero `collaboratorSales` es de administrador en
+`firestore.rules`. Escribiendo el apunte al cerrar, ese cierre fallaría por
+permisos, o peor, se tragaría el error y el propietario no cobraría sin que nadie
+se enterase.
+
+Así que lo devengado **se deriva de las reservas cerradas**
+(`ownerShareAccruals()`), que ya llevan dentro su reparto y su precio congelados:
+
+- No hay segunda fuente de verdad que se quede vieja. Misma regla que «los
+  eventos próximos se derivan, no se guardan».
+- Da igual quién cierre la reserva.
+- No hay duplicados posibles.
+
+⚠️ **`unsettledAccruals()` quita lo ya liquidado, y sin eso se cuenta dos
+veces.** Al liquidar, el reparto pasará a ser un `CollaboratorSale` con su
+importe congelado; si la derivación siguiera contando esa reserva, el
+propietario aparecería con el doble de lo que se le debe — y sería una cifra
+creíble, que es la peor clase de error con dinero. Hay test.
+
+⚠️ **El apunte se escribirá al LIQUIDAR** (entrega 3), que siempre lo hace un
+administrador. Hasta entonces, la ficha del colaborador enseña lo devengado en su
+propia caja, **sin sumarlo** al balance de comisiones: son dos conceptos que se
+pactan, se liquidan y se justifican distinto.
+
+⚠️ **Y ojo con `saleForReservation()`: su `kind` es obligatorio a propósito.** Una
+misma reserva puede tener legítimamente los dos apuntes. Preguntando «¿esta
+reserva ya está asignada?» a secas, el reparto de un coche cedido haría que la
+comisión de captación de esa misma reserva se rechazara con «ya está asignada» —
+exactamente lo que se separó al crear `kind`. La pantalla de asignar filtra
+igual, y los dos sitios tienen que decir lo mismo.
 
 ⚠️ **Y una consecuencia que hay que decir en voz alta:** `ownerShareSnapshot`
 vive dentro de la reserva, y `reservations` la puede **leer** cualquier usuario
@@ -141,10 +171,12 @@ administrador, no endurecer esta regla.
 
 ### Lo que falta
 
-- **Entrega 3**: el devengo al cerrar, y liquidaciones agrupadas —varias reservas en un pago, con fecha,
-  importe y forma incluido efectivo— y el registro de la factura recibida, con
-  estado «pendiente de recibir» que **no** se confunda con «no hay que
-  facturar». ⚠️ Pagarle **no** genera una factura de venta de Velto.
+- **Entrega 3**: **liquidar** lo devengado —que es donde se escribe por fin el
+  `CollaboratorSale` de `kind: 'vehicle_owner'`, con su importe congelado— y
+  liquidaciones agrupadas: varias reservas en un pago, con fecha, importe y forma
+  incluido efectivo. Más el registro de la factura recibida, con estado
+  «pendiente de recibir» que **no** se confunda con «no hay que facturar».
+  ⚠️ Pagarle **no** genera una factura de venta de Velto.
 - **Entrega 4**: informes con el reparto y el resultado real de Velto, y la
   **fecha de operación** de las facturas.
 

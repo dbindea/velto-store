@@ -482,3 +482,91 @@
     }
   }
 }
+
+// Lo devengado por sus coches
+//
+// Caja propia y separada del balance de arriba a propósito: la comisión por
+// traer clientes y el reparto por ceder un coche no se suman, porque se pactan,
+// se liquidan y se justifican distinto.
+.accruals {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem;
+  }
+}
+
+.accrued-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px 8px 0 0;
+
+  .label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-color);
+  }
+}
+
+.accrual-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+.accrual {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  background: var(--bg-card);
+
+  & + .accrual {
+    border-top: 1px solid var(--border-color);
+  }
+
+  // Sin esto, una matrícula o un nombre largo estiran la fila y con ella la
+  // página entera: el `min-width` por defecto de un flex item es `auto`.
+  .what {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+
+  .vehicle {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+  }
+
+  .detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .amount {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}

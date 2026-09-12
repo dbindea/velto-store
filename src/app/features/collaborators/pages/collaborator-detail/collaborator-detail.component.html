@@ -13,8 +13,21 @@
       <header class="page-header">
         <div>
           <h1>{{ c.name }}</h1>
+          <!--
+            ⚠️ **Los dos porcentajes, y solo el que aplique** — igual que en la
+            lista, y por el mismo motivo: desde que un colaborador puede ser solo
+            el dueño de un coche, su comisión de captación puede ser un 0 %
+            legítimo, y «0% del neto» a secas hacía que Andrei pareciera una
+            ficha rota cuando tiene pactado un 75 % de reparto.
+          -->
           <p class="subtitle">
-            {{ c.commissionPercent }}% {{ 'collaborators.ofNet' | translate }}
+            @if (c.commissionPercent) {
+              {{ c.commissionPercent }}% {{ 'collaborators.ofNet' | translate }}
+            }
+            @if (c.ownerSharePercent) {
+              @if (c.commissionPercent) { · }
+              {{ c.ownerSharePercent }}% {{ 'collaborators.ownerShort' | translate }}
+            }
             @if (c.phone) { · {{ c.phone }} }
             @if (c.email) { · <span class="email">{{ c.email }}</span> }
             @if (!c.active) { · {{ 'collaborators.inactive' | translate }} }
@@ -53,6 +66,44 @@
           <i class="pi pi-wallet"></i>
           {{ 'collaborators.settleAll' | translate }} ({{ balance.pending | number: '1.2-2' }} €)
         </button>
+      }
+
+      <!--
+        Lo devengado por sus coches, **derivado de las reservas cerradas**.
+
+        ⚠️ Va en su propia caja y NO sumado al balance de arriba, que es lo que
+        pidió Dorel al separar los dos conceptos: aquello es la comisión por
+        traer clientes, esto es el reparto por ceder un coche. Uno lleva detrás
+        una factura suya por la cesión y el otro no, así que sumarlos daría una
+        cifra que no se puede justificar ante nadie.
+
+        ⚠️ Y es una **previsión derivada, no una deuda apuntada**: sale de las
+        reservas cerradas y desaparece de aquí en cuanto se reconoce. El texto
+        lo dice, porque un importe en euros se lee como dinero comprometido.
+      -->
+      @if (ownerAccruals().length) {
+        <section class="accruals">
+          <h2>{{ 'collaborators.ownerShare.title' | translate }}</h2>
+          <div class="accrued-total">
+            <span class="label">{{ 'collaborators.ownerShare.accrued' | translate }}</span>
+            <span class="value">{{ accruedPending() | number: '1.2-2' }} €</span>
+          </div>
+          <ul class="accrual-list">
+            @for (a of ownerAccruals(); track a.reservationId) {
+              <li class="accrual">
+                <div class="what">
+                  <span class="vehicle">{{ a.vehicle }}</span>
+                  <span class="detail">
+                    {{ a.clientName }} ·
+                    {{ a.netAmount | number: '1.2-2' }} € × {{ a.sharePercent }}%
+                  </span>
+                </div>
+                <span class="amount">{{ a.amount | number: '1.2-2' }} €</span>
+              </li>
+            }
+          </ul>
+          <p class="hint">{{ 'collaborators.ownerShare.hint' | translate }}</p>
+        </section>
       }
     }
 
