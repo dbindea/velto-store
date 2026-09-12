@@ -52,6 +52,20 @@ export interface Collaborator {
    */
   commissionPercent: number;
 
+  /**
+   * Su reparto habitual **como propietario de un coche**, en porcentaje
+   * (`75` = 75 %). Lo que se lleva él; Velto se queda el resto.
+   *
+   * ⚠️ **Es otra cosa que `commissionPercent`, y por eso es otro campo.** Aquel
+   * es lo que cobra por traer un cliente; este, por ceder un vehículo. Un mismo
+   * colaborador puede cobrar los dos por la misma reserva, y con un solo
+   * porcentaje habría que elegir cuál miente.
+   *
+   * ⚠️ Y como aquel, es **la propuesta, no lo que manda**: cada coche guarda el
+   * suyo y cada reserva lo congela.
+   */
+  ownerSharePercent?: number;
+
   /** Un colaborador inactivo no sale al asignar ventas nuevas. */
   active: boolean;
 
@@ -68,6 +82,27 @@ export interface Collaborator {
  * por qué un colaborador cobró menos de lo que creía es exactamente para lo que
  * sirve esto.
  */
+/**
+ * Por qué se le debe dinero a un colaborador.
+ *
+ * ⚠️ **Dos motivos distintos que NO se suman en el mismo apunte.** Un mismo
+ * colaborador puede traer un cliente **y** poner el coche de la misma reserva:
+ * entonces son dos líneas, no una mayor. Sin este campo, «lo que se le debe a
+ * Juan» mezclaría una comisión de captación con el reparto por ceder un
+ * vehículo — dos conceptos que se pactan distinto, se calculan distinto y se
+ * justifican distinto ante Hacienda.
+ *
+ * - `referral`: trajo al cliente. Porcentaje sobre el neto del alquiler.
+ * - `vehicle_owner`: el coche es suyo. Reparto sobre el neto del alquiler,
+ *   devengado **al cerrar la reserva**, cuando los importes ya son definitivos.
+ */
+export type CommissionKind = 'referral' | 'vehicle_owner';
+
+export const COMMISSION_KIND_LABELS: Record<CommissionKind, string> = {
+  referral: 'collaborators.kind.referral',
+  vehicle_owner: 'collaborators.kind.vehicleOwner'
+};
+
 export type CommissionStatus = 'pending' | 'paid' | 'cancelled';
 
 export const COMMISSION_STATUS_LABELS: Record<CommissionStatus, string> = {
@@ -92,6 +127,17 @@ export interface CollaboratorSale {
   collaboratorId: string;
   /** Para poder listar sin resolver la ficha, y para que sobreviva a un borrado. */
   collaboratorName: string;
+
+  /**
+   * Por qué se le debe: por traer al cliente o por poner el coche.
+   *
+   * ⚠️ **Sin valor se lee como `referral`.** No es un parche de compatibilidad
+   * —de esos no se escriben aquí—: es que hasta el 12 de septiembre de 2026 solo
+   * existía una clase de apunte, y ahora que hay dos, la que ya estaba tiene
+   * nombre. Quien lea este campo usa `kindOf()`, que resuelve la ausencia en un
+   * solo sitio.
+   */
+  kind?: CommissionKind;
 
   reservationId: string;
   /** Lo justo para reconocer la venta en una lista. */

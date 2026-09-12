@@ -13,7 +13,9 @@ import {
   saleProblem,
   settlements,
   validateCollaborator,
-  yearlyTotals
+  yearlyTotals,
+  balanceByKind,
+  kindOf
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -419,5 +421,68 @@ describe('qué importe se admite a mano', () => {
    */
   it('pagar mucho más de lo calculado se permite: se ve, no se prohíbe', () => {
     expect(amountProblem(5000)).toBeNull();
+  });
+});
+
+describe('las dos clases de apunte', () => {
+  const venta = (p: Partial<CollaboratorSale>): CollaboratorSale =>
+    ({
+      collaboratorId: 'c1',
+      collaboratorName: 'Juan',
+      reservationId: 'r1',
+      reservationSnapshot: { clientName: 'X', vehicle: 'Y', pickupDate: null },
+      netAmount: 100,
+      commissionPercent: 25,
+      commissionAmount: 25,
+      status: 'pending',
+      ...p
+    }) as CollaboratorSale;
+
+  /**
+   * ⚠️ La ausencia significa «captación»: era lo único que existía antes de que
+   * hubiera coches de colaborador. Se resuelve en un solo sitio a propósito.
+   */
+  it('sin kind es una comisión de captación', () => {
+    expect(kindOf(venta({}))).toBe('referral');
+    expect(kindOf(venta({ kind: undefined }))).toBe('referral');
+  });
+
+  it('lo demás se lee tal cual', () => {
+    expect(kindOf(venta({ kind: 'vehicle_owner' }))).toBe('vehicle_owner');
+    expect(kindOf(venta({ kind: 'referral' }))).toBe('referral');
+  });
+
+  /**
+   * ⚠️ **La prueba que pidió Dorel con esas palabras: no mezclar ni duplicar.**
+   * El mismo colaborador trae un cliente Y pone el coche de la misma reserva:
+   * son dos apuntes de 25 y 150, y «lo que se le debe» tiene que poder decirse
+   * por separado. Sumados en una sola cifra, no hay forma de saber cuál lleva
+   * factura de cesión detrás y cuál no.
+   */
+  it('el reparto por el coche y la comisión por el cliente NO se suman en un solo concepto', () => {
+    const b = balanceByKind([
+      venta({ kind: 'referral', commissionAmount: 25 }),
+      venta({ kind: 'vehicle_owner', commissionAmount: 150 })
+    ]);
+    expect(b.referral.pending).toBe(25);
+    expect(b.vehicleOwner.pending).toBe(150);
+    expect(b.total.pending).toBe(175);
+  });
+
+  it('separa lo pagado de lo pendiente dentro de cada clase', () => {
+    const b = balanceByKind([
+      venta({ kind: 'vehicle_owner', commissionAmount: 150, status: 'paid' }),
+      venta({ kind: 'vehicle_owner', commissionAmount: 90 }),
+      venta({ kind: 'referral', commissionAmount: 25, status: 'paid' })
+    ]);
+    expect(b.vehicleOwner).toEqual({ pending: 90, paid: 150 });
+    expect(b.referral).toEqual({ pending: 0, paid: 25 });
+  });
+
+  it('lo anulado no cuenta en ninguna de las dos', () => {
+    const b = balanceByKind([
+      venta({ kind: 'vehicle_owner', commissionAmount: 150, status: 'cancelled' })
+    ]);
+    expect(b.total).toEqual({ pending: 0, paid: 0 });
   });
 });
