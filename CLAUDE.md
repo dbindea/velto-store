@@ -697,6 +697,19 @@ comisiones de colaborador, **cuando se devengan** aunque no estén pagadas
 (decisión de Dorel, por prudencia: nunca creerse más rico de lo que uno es).
 Mezclar dos criterios es legítimo mientras se diga.
 
+⚠️ **El reparto a los propietarios es una salida más, y se cuenta ESTÉ O NO
+reconocido** (`collaboratorOutgoings()`, 12 de septiembre de 2026). Desde que el
+devengo se deriva, un reparto vive en su reserva cerrada hasta que un
+administrador lo apunta, y eso puede tardar semanas: mirando solo
+`collaboratorSales`, todo ese dinero no se restaría y Velto aparecería ganando
+una parte del alquiler que no es suya. La función suma las dos fuentes y
+descuenta por `reservationId` lo ya reconocido, para no contarlo dos veces. Hay
+test de las tres cosas.
+
+⚠️ **Y va en su propia línea, no fundido con las comisiones.** Son dos conceptos
+que se pactan y se justifican distinto; juntos no se puede responder a «¿cuánto
+me cuestan los coches que no son míos?».
+
 ⚠️ **El beneficio se calcula sobre la base SIN IVA.** Restar gastos de un importe
 con IVA sin quitárselo a los ingresos infla el resultado un 21 %. Y esa base es
 **estimada** —un cobro libre no tiene reserva y los cargos extra no llevan

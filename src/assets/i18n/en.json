@@ -815,7 +815,7 @@
     "dayInRange": "day in range",
     "daysInRange": "days in range",
     "profit": "Profit",
-    "profitHint": "Net of VAT, less expenses, maintenance and commissions.",
+    "profitHint": "Net of VAT, less expenses, servicing, incentives and the owners share.",
     "margin": "Margin",
     "grossRevenue": "Collected",
     "withVat": "VAT included",
@@ -825,7 +825,7 @@
     "vatHint": "Not the company's: it is collected and handed over.",
     "outgoings": "Outgoings",
     "outstanding": "Outstanding",
-    "commissionsPending": "Commissions to pay",
+    "commissionsPending": "Owed to partners",
     "yearOverYear": "Revenue by month, this year and last",
     "viewTable": "View table",
     "viewChart": "View chart",
@@ -861,7 +861,8 @@
     },
     "outExpenses": "Expenses",
     "outMaintenance": "Workshop",
-    "outCommissions": "Commissions"
+    "outCommissions": "Commissions",
+    "outOwnerShares": "Owners"
   },
   "reservations": {
     "actions": {

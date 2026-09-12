@@ -82,6 +82,18 @@
           <span>
             {{ 'reports.outCommissions' | translate }} {{ commissions() | number: '1.0-0' }} €
           </span>
+          <!--
+            ⚠️ **El reparto a los propietarios va en su propia línea.** Fundido
+            con las comisiones no se podría responder a «¿cuánto me cuestan los
+            coches que no son míos?», que es la pregunta para la que existe esta
+            funcionalidad. Y solo se pinta si hay alguno: una línea a cero en una
+            flota entera de Velto es ruido.
+          -->
+          @if (ownerShares() > 0) {
+            <span>
+              {{ 'reports.outOwnerShares' | translate }} {{ ownerShares() | number: '1.0-0' }} €
+            </span>
+          }
         </span>
       </div>
     </section>

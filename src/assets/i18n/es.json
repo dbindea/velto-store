@@ -815,7 +815,7 @@
     "dayInRange": "día en el período",
     "daysInRange": "días en el período",
     "profit": "Beneficio",
-    "profitHint": "Base sin IVA, menos gastos, mantenimiento e incentivos.",
+    "profitHint": "Base sin IVA, menos gastos, taller, incentivos y la parte de los propietarios.",
     "margin": "Margen",
     "grossRevenue": "Cobrado",
     "withVat": "IVA incluido",
@@ -825,7 +825,7 @@
     "vatHint": "No es de la empresa: se recauda y se entrega.",
     "outgoings": "Salidas",
     "outstanding": "Pendiente de cobro",
-    "commissionsPending": "Incentivos por pagar",
+    "commissionsPending": "Por pagar a colaboradores",
     "yearOverYear": "Ingresos por mes, este año y el pasado",
     "viewTable": "Ver tabla",
     "viewChart": "Ver gráfico",
@@ -861,7 +861,8 @@
     },
     "outExpenses": "Gastos",
     "outMaintenance": "Taller",
-    "outCommissions": "Incentivos"
+    "outCommissions": "Incentivos",
+    "outOwnerShares": "Propietarios"
   },
   "reservations": {
     "actions": {

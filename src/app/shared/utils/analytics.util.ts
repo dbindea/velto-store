@@ -9,6 +9,12 @@
 
 import { Payment, PaymentMethod, PaymentType } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { CollaboratorSale } from '@shared/models/collaborator.model';
+import {
+  ReservationForOwnerShare,
+  ownerShareAccruals,
+  unsettledAccruals
+} from '@shared/utils/owner-share.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 
@@ -376,4 +382,113 @@ export function repeatClientStats(clients: ClientTotals[]): RepeatStats {
     totalClients: total,
     revenueShare: ingresoTotal > 0 ? ingresoRepiten / ingresoTotal : 0
   };
+}
+
+// ---------------------------------------------------------------------------
+// Lo que sale hacia los colaboradores
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo que la empresa debe a sus colaboradores por un periodo, **separado por
+ * motivo**.
+ *
+ * ⚠️ **Las dos clases no se suman en una sola cifra**, por lo mismo que en su
+ * ficha: la comisión por traer un cliente y el reparto por ceder un coche se
+ * pactan, se liquidan y se justifican distinto, y una lleva detrás una factura
+ * del colaborador y la otra no. El total sigue disponible, pero hay que pedirlo.
+ *
+ * ⚠️ **El reparto se cuenta aunque todavía no se haya RECONOCIDO, y esta es la
+ * trampa entera de esta función.** Desde la entrega 3, un reparto devengado vive
+ * derivado de su reserva cerrada hasta que un administrador lo convierte en
+ * apunte, y eso puede tardar semanas. Mirando solo `collaboratorSales`, todo ese
+ * dinero no se restaría del beneficio: Velto aparecería ganando una parte del
+ * alquiler que no es suya, y con una cifra perfectamente creíble. Por eso aquí
+ * se suman las dos fuentes y se descuenta lo que ya está reconocido, para no
+ * contarlo dos veces.
+ *
+ * ⚠️ **Criterio de devengo, no de caja**, igual que las comisiones y por la
+ * misma prudencia de Dorel: cuenta lo devengado aunque no se haya pagado, para
+ * no creerse más rico de lo que uno es. Y se sitúa por la **fecha del
+ * alquiler**, que es la misma vara con la que se miden en la ficha del
+ * colaborador.
+ */
+export interface CollaboratorOutgoings {
+  /** Comisiones por traer clientes. */
+  referral: number;
+  /** Reparto a los dueños de los coches cedidos, reconocido o no. */
+  ownerShare: number;
+  total: number;
+}
+
+/** ¿Cae la fecha del alquiler de este apunte dentro del periodo? */
+function enRango(fecha: unknown, range: DateRange): boolean {
+  if (!fecha) return false;
+  const d = toDate(fecha);
+  if (isNaN(d.getTime())) return false;
+  return d >= range.from && d <= range.to;
+}
+
+export function collaboratorOutgoings(
+  sales: CollaboratorSale[],
+  reservations: ReservationForOwnerShare[],
+  range: DateRange
+): CollaboratorOutgoings {
+  const vivas = (sales || []).filter((s) => s.status !== 'cancelled');
+
+  const suma = (lista: CollaboratorSale[]) =>
+    lista
+      .filter((s) => enRango(s.reservationSnapshot?.pickupDate, range))
+      .reduce((t, s) => t + (Number(s.commissionAmount) || 0), 0);
+
+  const referral = suma(vivas.filter((s) => s.kind === 'referral'));
+  const reconocidos = vivas.filter((s) => s.kind === 'vehicle_owner');
+
+  /**
+   * Lo devengado que todavía no es un apunte. Se descuenta lo reconocido por
+   * `reservationId`, que es la misma llave que usa la ficha del colaborador.
+   */
+  const pendientesDeReconocer = unsettledAccruals(
+    ownerShareAccruals(reservations || []),
+    reconocidos.map((s) => s.reservationId)
+  );
+
+  const ownerShare = roundMoney(
+    suma(reconocidos) +
+      pendientesDeReconocer
+        .filter((a) => enRango(a.pickupDate, range))
+        .reduce((t, a) => t + (Number(a.amount) || 0), 0)
+  );
+
+  return {
+    referral: roundMoney(referral),
+    ownerShare,
+    total: roundMoney(roundMoney(referral) + ownerShare)
+  };
+}
+
+/**
+ * Lo que se les debe y **todavía no ha salido**, sin mirar periodo.
+ *
+ * ⚠️ **Va en la franja de lo pendiente, nunca dentro del beneficio.** Es dinero
+ * comprometido que aún no se ha entregado; restarlo dos veces —una como gasto
+ * devengado y otra como deuda— contaría el mismo euro dos veces.
+ *
+ * ⚠️ **Un reparto sin reconocer está pendiente por definición**: no se le puede
+ * haber pagado algo que ni siquiera se ha apuntado.
+ */
+export function collaboratorPending(
+  sales: CollaboratorSale[],
+  reservations: ReservationForOwnerShare[]
+): number {
+  const vivas = (sales || []).filter((s) => s.status !== 'cancelled');
+  const apuntado = vivas
+    .filter((s) => s.status === 'pending')
+    .reduce((t, s) => t + (Number(s.commissionAmount) || 0), 0);
+
+  const sinReconocer = unsettledAccruals(
+    ownerShareAccruals(reservations || []),
+    vivas.filter((s) => s.kind === 'vehicle_owner').map((s) => s.reservationId)
+  ).reduce((t, a) => t + (Number(a.amount) || 0), 0);
+
+  return roundMoney(apuntado + sinReconocer);
 }

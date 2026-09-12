@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  collaboratorOutgoings,
+  collaboratorPending,
   daysInRange,
   isRevenue,
   monthlyRevenue,
@@ -333,5 +335,131 @@ describe('los clientes que repiten', () => {
 
   it('sin clientes no divide por cero', () => {
     expect(repeatClientStats([]).revenueShare).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Lo que sale hacia los colaboradores
+// ---------------------------------------------------------------------------
+
+describe('lo que se les debe a los colaboradores', () => {
+  const rango = { from: new Date('2026-01-01'), to: new Date('2026-12-31T23:59:59') };
+  const dentro = new Date('2026-06-15');
+  const fuera = new Date('2025-06-15');
+
+  const apunte = (p: Record<string, unknown>) =>
+    ({
+      collaboratorId: 'c1',
+      collaboratorName: 'Juan',
+      reservationId: 'r1',
+      reservationSnapshot: { clientName: 'X', vehicle: 'Y', pickupDate: dentro },
+      netAmount: 200,
+      commissionPercent: 25,
+      commissionAmount: 50,
+      kind: 'referral',
+      status: 'pending',
+      ...p
+    }) as never;
+
+  const reservaCerrada = (p: Record<string, unknown> = {}) =>
+    ({
+      id: 'r9',
+      reservationStatus: 'closed',
+      ownerShareSnapshot: { collaboratorId: 'c1', collaboratorName: 'Juan', sharePercent: 75 },
+      pricingSnapshot: { netPrice: 200 },
+      pickupDateTime: dentro,
+      ...p
+    }) as never;
+
+  it('separa la comisión de captación del reparto por el coche', () => {
+    const r = collaboratorOutgoings(
+      [apunte({ kind: 'referral', commissionAmount: 50 }),
+       apunte({ kind: 'vehicle_owner', commissionAmount: 150, reservationId: 'r2' })],
+      [],
+      rango
+    );
+    expect(r.referral).toBe(50);
+    expect(r.ownerShare).toBe(150);
+    expect(r.total).toBe(200);
+  });
+
+  /**
+   * ⚠️ **La prueba que sostiene el beneficio.** Un reparto devengado vive
+   * derivado de su reserva cerrada hasta que alguien lo reconoce, y eso puede
+   * tardar semanas. Mirando solo `collaboratorSales`, ese dinero no se restaría
+   * y Velto aparecería ganando una parte del alquiler que no es suya.
+   */
+  it('cuenta el reparto devengado aunque NADIE lo haya reconocido todavía', () => {
+    const r = collaboratorOutgoings([], [reservaCerrada()], rango);
+    expect(r.ownerShare).toBe(150);
+  });
+
+  /**
+   * ⚠️ **Y no lo cuenta dos veces.** En cuanto se reconoce, el mismo reparto
+   * existe como apunte y como reserva cerrada: sumar las dos fuentes sin
+   * descontar daría 300 € por un alquiler que debe 150.
+   */
+  it('y no lo cuenta dos veces cuando ya está reconocido', () => {
+    const r = collaboratorOutgoings(
+      [apunte({ kind: 'vehicle_owner', commissionAmount: 150, reservationId: 'r9' })],
+      [reservaCerrada({ id: 'r9' })],
+      rango
+    );
+    expect(r.ownerShare).toBe(150);
+  });
+
+  it('una reserva sin cerrar todavía no devenga nada', () => {
+    const r = collaboratorOutgoings([], [reservaCerrada({ reservationStatus: 'delivered' })], rango);
+    expect(r.ownerShare).toBe(0);
+  });
+
+  it('lo anulado no se resta: ese dinero nunca salió', () => {
+    const r = collaboratorOutgoings(
+      [apunte({ status: 'cancelled', commissionAmount: 50 })],
+      [],
+      rango
+    );
+    expect(r.total).toBe(0);
+  });
+
+  it('se sitúa por la fecha del alquiler, y lo de otro año queda fuera', () => {
+    const r = collaboratorOutgoings(
+      [apunte({ reservationSnapshot: { clientName: 'X', vehicle: 'Y', pickupDate: fuera } })],
+      [reservaCerrada({ pickupDateTime: fuera })],
+      rango
+    );
+    expect(r.total).toBe(0);
+  });
+
+  describe('lo pendiente de pagarles', () => {
+    it('suma lo apuntado sin pagar y lo devengado sin reconocer', () => {
+      const p = collaboratorPending(
+        [apunte({ status: 'pending', commissionAmount: 50 })],
+        [reservaCerrada()]
+      );
+      expect(p).toBe(200);
+    });
+
+    it('lo ya pagado no está pendiente', () => {
+      expect(collaboratorPending([apunte({ status: 'paid', commissionAmount: 50 })], [])).toBe(0);
+    });
+
+    /**
+     * ⚠️ Un reparto reconocido y **pagado** no puede seguir contando como
+     * pendiente por su reserva: es el mismo euro visto por las dos fuentes.
+     */
+    it('un reparto reconocido y pagado deja de estar pendiente', () => {
+      const p = collaboratorPending(
+        [apunte({ kind: 'vehicle_owner', status: 'paid', commissionAmount: 150, reservationId: 'r9' })],
+        [reservaCerrada({ id: 'r9' })]
+      );
+      expect(p).toBe(0);
+    });
+
+    /** No mira periodo: lo que se debe se debe, se mire el año que se mire. */
+    it('no depende del periodo', () => {
+      const p = collaboratorPending([], [reservaCerrada({ pickupDateTime: fuera })]);
+      expect(p).toBe(150);
+    });
   });
 });

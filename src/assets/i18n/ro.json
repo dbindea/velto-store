@@ -815,7 +815,7 @@
     "dayInRange": "zi în perioadă",
     "daysInRange": "zile în perioadă",
     "profit": "Profit",
-    "profitHint": "Baza fără TVA, minus cheltuieli, întreținere și comisioane.",
+    "profitHint": "Bază fără TVA, minus cheltuieli, service, stimulente și partea proprietarilor.",
     "margin": "Marjă",
     "grossRevenue": "Încasat",
     "withVat": "TVA inclus",
@@ -825,7 +825,7 @@
     "vatHint": "Nu este al firmei: se colectează și se predă.",
     "outgoings": "Ieșiri",
     "outstanding": "De încasat",
-    "commissionsPending": "Comisioane de plătit",
+    "commissionsPending": "De plătit colaboratorilor",
     "yearOverYear": "Venituri pe lună, anul acesta și anul trecut",
     "viewTable": "Vezi tabelul",
     "viewChart": "Vezi graficul",
@@ -861,7 +861,8 @@
     },
     "outExpenses": "Cheltuieli",
     "outMaintenance": "Service",
-    "outCommissions": "Comisioane"
+    "outCommissions": "Comisioane",
+    "outOwnerShares": "Proprietari"
   },
   "reservations": {
     "actions": {
