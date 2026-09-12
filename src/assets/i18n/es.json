@@ -1456,7 +1456,13 @@
     "lineVat": "IVA",
     "addLine": "Añadir concepto",
     "removeLine": "Quitar",
-    "operationDate": "Fecha de la operación",
+    "operationDate": {
+      "label": "Fecha de la operación",
+      "reasonEnd": "Propuesta: el alquiler terminó ese día y el precio resultó exigible entonces. Cámbiala si se pactó otra cosa.",
+      "reasonPickup": "Propuesta: la fecha de entrega del vehículo. Cámbiala si se pactó otra cosa.",
+      "reasonAdvance": "Propuesta: el importe se cobró entero antes de entregar el coche, así que la operación se devengó ese día y no al terminar el alquiler.",
+      "advanceWarning": "Hay un anticipo cobrado antes de empezar el alquiler: esa parte se devengó el día que se cobró y no vuelve a devengarse ahora."
+    },
     "periodStart": "Desde",
     "periodEnd": "Hasta",
     "base": "Base imponible",

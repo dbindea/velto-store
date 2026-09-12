@@ -546,3 +546,123 @@ export function isInvoiceOverdue(input: {
 export function isIssued(invoice: Pick<Invoice, 'status'>): boolean {
   return invoice.status !== 'draft';
 }
+
+// ---------------------------------------------------------------------------
+// Qué fecha de operación proponer
+// ---------------------------------------------------------------------------
+
+/**
+ * La fecha de operación **no es la de expedición ni, por defecto, la de
+ * devolución**.
+ *
+ * Son tres cosas distintas: cuándo se expide la factura, cuándo se devengó el
+ * impuesto y entre qué fechas duró el alquiler. Hasta ahora la aplicación ponía
+ * siempre la de devolución, que es lo que haría lo fácil y lo que Dorel avisó
+ * expresamente que no hiciéramos.
+ *
+ * La regla es la exigibilidad: el IVA de un arrendamiento se devenga cuando
+ * resulta exigible la parte del precio de cada percepción (art. 75.Uno.7º LIVA),
+ * y **en un cobro anticipado se devenga al cobrar** (art. 75.Dos).
+ *
+ * ⚠️ **Esto PROPONE, no decide.** Lo pactado con cada cliente no está modelado
+ * en ningún campo —no hay nada que diga «el precio era exigible al entregar»—,
+ * así que la propuesta sale de lo único que consta: cuándo se cobró. Por eso
+ * viaja con una explicación y el campo se puede cambiar. Inventarse una certeza
+ * aquí sería poner una fecha fiscal creíble y equivocada en un documento que no
+ * se puede corregir después.
+ */
+export interface OperationDateInput {
+  /** Cuándo se entregó el coche. */
+  pickupDate?: Date | null;
+  /** Cuándo se devolvió, o cuándo está previsto. */
+  returnDate?: Date | null;
+  /**
+   * Los cobros **del alquiler**, con su fecha.
+   *
+   * ⚠️ **Sin fianzas.** Una fianza no es precio: es dinero en custodia, y no
+   * devenga nada. Contarla haría que una reserva con la fianza cobrada por
+   * adelantado pareciera pagada por anticipado.
+   */
+  rentalPayments?: { paidAt: Date; amount: number }[];
+  /** El total del alquiler que se está facturando, con IVA. */
+  invoiceTotal: number;
+}
+
+export interface OperationDateSuggestion {
+  /** La fecha propuesta. */
+  date: Date;
+  /** Clave i18n que explica de dónde sale, para poder revisarla. */
+  reason: string;
+  /**
+   * Aviso cuando hay cobros anteriores que ya devengaron por su cuenta.
+   *
+   * ⚠️ **El anticipo devenga al cobrarse**, así que esa parte no se devenga otra
+   * vez al terminar el alquiler. Quien factura tiene que saberlo para no
+   * declarar dos veces el mismo importe en fechas distintas.
+   */
+  advanceWarning?: string;
+  /** Lo cobrado por anticipado, para poder enseñarlo en el aviso. */
+  advanceAmount?: number;
+}
+
+export function suggestOperationDate(
+  input: OperationDateInput
+): OperationDateSuggestion | null {
+  const cobros = (input.rentalPayments || [])
+    .filter((p) => p.paidAt instanceof Date && !isNaN(p.paidAt.getTime()))
+    .filter((p) => (Number(p.amount) || 0) > 0)
+    .sort((a, b) => a.paidAt.getTime() - b.paidAt.getTime());
+
+  const total = roundMoney(Number(input.invoiceTotal) || 0);
+  const fin = input.returnDate || input.pickupDate || null;
+
+  /**
+   * El momento en que el precio queda cubierto del todo. Si llega **antes de
+   * entregar el coche**, todo el importe se devengó por anticipado y la fecha
+   * de operación es esa, no la del final del alquiler.
+   */
+  let acumulado = 0;
+  let completaEn: Date | null = null;
+  for (const c of cobros) {
+    acumulado = roundMoney(acumulado + (Number(c.amount) || 0));
+    if (total > 0 && acumulado >= total) {
+      completaEn = c.paidAt;
+      break;
+    }
+  }
+
+  const entrega = input.pickupDate || null;
+  const cobradoEnteroAntesDeEntregar =
+    !!completaEn && !!entrega && completaEn.getTime() <= entrega.getTime();
+
+  if (cobradoEnteroAntesDeEntregar && completaEn) {
+    return {
+      date: completaEn,
+      reason: 'invoices.operationDate.reasonAdvance'
+    };
+  }
+
+  if (!fin) return null;
+
+  /**
+   * Lo cobrado **antes de que empiece el alquiler** y que no llega a cubrir el
+   * precio: son anticipos que ya devengaron en su fecha. No cambian la fecha de
+   * operación de esta factura, pero hay que decirlo.
+   */
+  const anticipado = entrega
+    ? roundMoney(
+        cobros
+          .filter((c) => c.paidAt.getTime() < entrega.getTime())
+          .reduce((t, c) => t + (Number(c.amount) || 0), 0)
+      )
+    : 0;
+
+  return {
+    date: fin,
+    reason: input.returnDate
+      ? 'invoices.operationDate.reasonEnd'
+      : 'invoices.operationDate.reasonPickup',
+    advanceWarning: anticipado > 0 ? 'invoices.operationDate.advanceWarning' : undefined,
+    advanceAmount: anticipado > 0 ? anticipado : undefined
+  };
+}

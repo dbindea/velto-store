@@ -31,10 +31,13 @@ import {
   lineBase,
   validateRectifying,
   rebuMargin,
+  suggestOperationDate,
   suggestPaymentMethod,
   taxIdCarriesCountry,
   validateInvoice
 } from '@shared/utils/invoice.util';
+import { Reservation } from '@shared/models/reservation.model';
+import { PaymentService } from '@features/payments/services/payment.service';
 import { CountryOption, countryOptions } from '@shared/utils/country.util';
 import { TranslateService } from '@core/i18n/translate.service';
 import { ComplianceService } from '@features/settings/services/compliance.service';
@@ -54,6 +57,7 @@ export class InvoiceFormComponent implements OnInit {
   private router = inject(Router);
   private service = inject(InvoiceService);
   private reservations = inject(ReservationService);
+  private payments = inject(PaymentService);
   private notifications = inject(NotificationService);
   private translate = inject(TranslateService);
   private compliance = inject(ComplianceService);
@@ -309,13 +313,85 @@ export class InvoiceFormComponent implements OnInit {
       // expedición, que no se puede.
       this.periodStart = this.toInputDate(r.pickupDateTime);
       this.periodEnd = this.toInputDate(r.returnDateTime);
-      this.operationDate = this.periodEnd;
       void dias;
+
+      /**
+       * ⚠️ **La fecha de operación se PROPONE, no se copia de la devolución.**
+       *
+       * Aquí ponía siempre `periodEnd`, que es lo que haría lo fácil y lo que
+       * Dorel avisó expresamente que no: la fecha de expedición, la de operación
+       * y las del alquiler son tres cosas distintas. Si el cliente pagó todo
+       * antes de recoger el coche, el IVA se devengó ese día (art. 75.Dos LIVA)
+       * y no cinco días después al devolverlo.
+       *
+       * ⚠️ **Los cobros se DERIVAN de `payments`, no de `paymentSummary`.** El
+       * resumen guardado en la reserva es una copia que se queda vieja y que no
+       * falla cuando lo está: responde `0`. Y además no trae las fechas, que es
+       * justo lo que hace falta aquí.
+       *
+       * ⚠️ **Sin fianzas.** Una fianza no es precio: es dinero en custodia y no
+       * devenga nada. Con ella dentro, una reserva con la fianza cobrada por
+       * adelantado parecería pagada por anticipado.
+       */
+      await this.proposeOperationDate(id, r);
 
       this.paymentMethod = suggestPaymentMethod(this.totals().total, this.amountAlreadyPaid);
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** La explicación de la fecha propuesta, para que se pueda revisar. */
+  operationDateReason = '';
+  /** Aviso de anticipos que ya devengaron por su cuenta. */
+  operationAdvanceWarning = '';
+  operationAdvanceAmount = 0;
+
+  /**
+   * Propone la fecha de operación a partir de cuándo se cobró de verdad.
+   *
+   * ⚠️ **Si falla la lectura de los pagos NO se deja el campo vacío**: se cae a
+   * la fecha de finalización, que es el caso general de un alquiler. Un campo
+   * obligatorio en blanco por un fallo de red haría que el operador lo rellenara
+   * a mano sin saber que la aplicación tenía algo que decirle.
+   */
+  private async proposeOperationDate(reservationId: string, r: Reservation): Promise<void> {
+    const pickupDate = toDate(r.pickupDateTime);
+    const returnDate = toDate(r.returnDateTime);
+    const fin = this.periodEnd;
+
+    let rentalPayments: { paidAt: Date; amount: number }[] = [];
+    try {
+      const pagos = await firstValueFrom(
+        this.payments.getPaymentsByReservation(reservationId)
+      );
+      rentalPayments = (pagos || [])
+        .filter((p) => p.status === 'paid')
+        // La fianza y su devolución no son precio: no devengan nada.
+        .filter((p) => p.type !== 'deposit' && p.type !== 'deposit_refund')
+        .map((p) => ({ paidAt: toDate(p.paidAt), amount: Number(p.paidAmount) || 0 }))
+        .filter((p) => !isNaN(p.paidAt.getTime()));
+    } catch (error) {
+      console.error('Error loading payments for the operation date:', error);
+    }
+
+    const propuesta = suggestOperationDate({
+      pickupDate: isNaN(pickupDate.getTime()) ? null : pickupDate,
+      returnDate: isNaN(returnDate.getTime()) ? null : returnDate,
+      rentalPayments,
+      invoiceTotal: this.totals().total
+    });
+
+    if (!propuesta) {
+      this.operationDate = fin;
+      this.operationDateReason = '';
+      return;
+    }
+
+    this.operationDate = this.toInputDate(propuesta.date);
+    this.operationDateReason = propuesta.reason;
+    this.operationAdvanceWarning = propuesta.advanceWarning || '';
+    this.operationAdvanceAmount = propuesta.advanceAmount || 0;
   }
 
   /**

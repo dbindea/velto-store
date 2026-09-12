@@ -1456,7 +1456,13 @@
     "lineVat": "VAT",
     "addLine": "Add item",
     "removeLine": "Remove",
-    "operationDate": "Date of supply",
+    "operationDate": {
+      "label": "Date of supply",
+      "reasonEnd": "Suggested: the rental ended that day and the price became due then. Change it if something else was agreed.",
+      "reasonPickup": "Suggested: the date the vehicle was handed over. Change it if something else was agreed.",
+      "reasonAdvance": "Suggested: the full amount was collected before the car was handed over, so the supply fell due that day and not at the end of the rental.",
+      "advanceWarning": "There is an advance collected before the rental started: that part fell due the day it was collected and does not fall due again now."
+    },
     "periodStart": "From",
     "periodEnd": "To",
     "base": "Taxable base",

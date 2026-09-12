@@ -448,7 +448,7 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="operationDate">{{ 'invoices.operationDate' | translate }}</label>
+            <label for="operationDate">{{ 'invoices.operationDate.label' | translate }}</label>
             <input
               type="date"
               id="operationDate"
@@ -456,8 +456,35 @@
               [(ngModel)]="operationDate"
               name="operationDate"
             />
+            <!--
+              ⚠️ **La explicación de por qué esa fecha, para poder revisarla.**
+              Lo pidió Dorel con esas palabras: la aplicación no sabe qué se
+              pactó con cada cliente —no hay ningún campo que lo diga—, así que
+              propone a partir de lo único que consta, que es cuándo se cobró.
+              Sin decir de dónde sale, una fecha fiscal puesta sola es una cifra
+              creíble que nadie revisa, y la factura no se puede corregir.
+            -->
+            @if (operationDateReason) {
+              <small class="field-hint">{{ operationDateReason | translate }}</small>
+            }
           </div>
         </div>
+
+        <!--
+          ⚠️ **El anticipo devengó el día que se cobró**, así que esa parte no se
+          devenga otra vez al terminar el alquiler. Quien factura tiene que
+          saberlo para no declarar dos veces el mismo importe en fechas
+          distintas. Avisa, no bloquea: puede estar bien facturado igualmente.
+        -->
+        @if (operationAdvanceWarning) {
+          <div class="notice notice-warning">
+            <i class="pi pi-info-circle"></i>
+            <span>
+              {{ operationAdvanceWarning | translate }}
+              ({{ operationAdvanceAmount | number: '1.2-2' }} €)
+            </span>
+          </div>
+        }
 
         <!--
           Avisa, no bloquea. Solo aplica a empresas: a un particular se le

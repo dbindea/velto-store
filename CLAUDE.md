@@ -462,6 +462,28 @@ literal de Dorel. Un «sin factura» a secas se lee como una exención, y entonc
 nadie la reclama nunca. Solo la esperan los apuntes de `vehicle_owner`: una
 comisión de captación no lleva factura detrás en este negocio.
 
+### La fecha de operación se PROPONE, y se explica
+
+⚠️ **No es la de expedición ni, por defecto, la de devolución.** Son tres cosas:
+cuándo se expide la factura, cuándo se devengó el impuesto y entre qué fechas
+duró el alquiler. El formulario ponía siempre la de devolución —lo que haría lo
+fácil— hasta el 12 de septiembre de 2026.
+
+`suggestOperationDate()` en `invoice.util.ts` propone según la **exigibilidad**:
+si el precio se cobró entero **antes de entregar** el coche, el IVA se devengó
+ese día (art. 75.Dos LIVA) y no al terminar; en otro caso, la fecha de
+finalización. Un **anticipo parcial** no mueve la fecha pero **avisa**: esa parte
+ya devengó al cobrarse y no se devenga otra vez.
+
+⚠️ **Propone, no decide, y por eso viaja con una explicación.** No hay ningún
+campo que diga qué se pactó con el cliente, así que la propuesta sale de lo único
+que consta: cuándo se cobró. Una fecha fiscal puesta sola es una cifra creíble
+que nadie revisa, y la factura no se puede corregir después.
+
+⚠️ **Los cobros se derivan de `payments`, nunca de `reservation.paymentSummary`**
+—la copia que se queda vieja y responde `0` en vez de fallar—, y **sin fianzas**:
+una fianza no es precio, es custodia, y no devenga nada.
+
 ### `collaboratorInvoices`: la factura que manda el propietario
 
 ⚠️ **No confundir con `invoices`, que son las de VELTO.** Aquellas las emite la

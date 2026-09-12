@@ -202,11 +202,36 @@ algo que no es señal no se entera de nada**, y compila igual.
 - **Entrega 4**: informes con el reparto y el resultado real de Velto, y la
   **fecha de operación** de las facturas.
 
-### La fecha de operación, sin empezar
+### La fecha de operación — HECHA a medias, y hay que saber cuál mitad
 
-Pedida el 12 de septiembre. Hoy `Invoice` ya tiene `operationDate` separada de
-`issueDate` y existe `needsOperationDate()`, pero **nadie la propone**. Lo que
-pidió Dorel:
+`suggestOperationDate()` la **propone y la explica**, y el campo se sigue
+pudiendo cambiar. Antes el formulario ponía siempre la fecha de devolución, que
+es justo lo que Dorel avisó que no se hiciera.
+
+Lo que cubre hoy:
+
+- **Cobrado entero antes de entregar** → la fecha de ese cobro. El IVA de un
+  anticipo se devenga al cobrar (art. 75.Dos LIVA), no al terminar el alquiler.
+- **En otro caso** → la fecha de finalización, con su explicación.
+- **Anticipo parcial** → no mueve la fecha, pero **avisa**: esa parte ya devengó
+  el día que se cobró y no se devenga otra vez.
+
+⚠️ **Los cobros se derivan de `payments`, no de `paymentSummary`**: el resumen es
+una copia que se queda vieja y que no trae las fechas.
+
+⚠️ **Lo que NO cubre, y no es un olvido:**
+
+- **«Si se exige al entregar → esa fecha».** No hay ningún campo que diga qué se
+  pactó, así que la aplicación no puede distinguir «exigible al entregar» de
+  «exigible al finalizar». Por eso propone desde lo único que consta —cuándo se
+  cobró— y deja que el operador la cambie. Inventarse esa certeza sería poner una
+  fecha fiscal creíble y equivocada en un documento que no se puede corregir.
+  Si algún día hace falta, lo que toca es **pactarlo en la reserva**, no
+  adivinarlo aquí.
+- **Las mensualidades.** No existen alquileres por meses en el modelo; cuando
+  los haya, cada período tendrá su vencimiento y su factura.
+
+Lo que pidió Dorel, para cuando se retome:
 
 - Regla general: la fecha en que el precio resulta **exigible** según lo pactado.
 - Pago al entregar → fecha de entrega. Pago al finalizar → fecha de fin.

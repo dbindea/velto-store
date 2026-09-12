@@ -1456,7 +1456,13 @@
     "lineVat": "TVA",
     "addLine": "Adaugă articol",
     "removeLine": "Elimină",
-    "operationDate": "Data prestării",
+    "operationDate": {
+      "label": "Data prestării",
+      "reasonEnd": "Propunere: închirierea s-a încheiat în acea zi și prețul a devenit exigibil atunci. Schimb-o dacă s-a convenit altceva.",
+      "reasonPickup": "Propunere: data predării vehiculului. Schimb-o dacă s-a convenit altceva.",
+      "reasonAdvance": "Propunere: suma a fost încasată integral înainte de predarea mașinii, așa că operațiunea a devenit exigibilă în acea zi, nu la finalul închirierii.",
+      "advanceWarning": "Există un avans încasat înainte de începerea închirierii: acea parte a devenit exigibilă în ziua încasării și nu devine din nou acum."
+    },
     "periodStart": "De la",
     "periodEnd": "Până la",
     "base": "Bază impozabilă",
