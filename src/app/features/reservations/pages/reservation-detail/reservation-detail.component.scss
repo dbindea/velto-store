@@ -379,7 +379,12 @@ app-reservation-timeline {
 }
 
 // Pricing
-.pricing-card {
+// El reparto con el propietario se pinta con el mismo lenguaje que el desglose
+// del precio —mismas filas, mismo total destacado— porque es lo mismo visto por
+// el otro lado: de dónde sale ese dinero. Compartir el selector en vez de
+// copiar el bloque evita que dentro de un mes uno de los dos se quede viejo.
+.pricing-card,
+.owner-share-card {
   .card-content {
     .pricing-breakdown {
       display: flex;

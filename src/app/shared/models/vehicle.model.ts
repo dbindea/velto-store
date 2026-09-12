@@ -76,6 +76,24 @@ export interface Vehicle {
   /** Obligatorio cuando `ownership` es `'collaborator'`. */
   ownerCollaboratorId?: string;
   /**
+   * El nombre del propietario, **copiado aquí a propósito**.
+   *
+   * ⚠️ **No es comodidad: es lo único que permite crear la reserva.** El
+   * reparto se congela al crearla y el snapshot lleva el nombre dentro —para
+   * que sobreviva a un borrado de la ficha, igual que en `CollaboratorSale`—,
+   * pero `firestore.rules` solo deja leer `collaborators` a un administrador.
+   * Yendo a buscarlo allí, un empleado que crea una reserva de un coche cedido
+   * recibiría un error de permisos en mitad de la operación, o —peor— se
+   * guardaría el reparto sin nombre y nadie sabría a quién hay que pagarle.
+   * Aquí lo escribe el administrador al asignar el coche, y la reserva lo lee
+   * de un documento que sí puede leer.
+   *
+   * ⚠️ Se queda viejo si al colaborador se le cambia el nombre, y es aceptable:
+   * quien manda para identificarlo es `ownerCollaboratorId`. El nombre está
+   * para poder leer una fila sin resolver la ficha.
+   */
+  ownerCollaboratorName?: string;
+  /**
    * Lo que se lleva **el propietario**, en porcentaje (`75` = 75 %). Velto se
    * queda el resto.
    *
@@ -158,6 +176,14 @@ export interface VehicleFormData {
   seats: number;
   luggageCapacity: number;
   status: VehicleStatus;
+  /**
+   * De quién es el coche. Ver las notas en `Vehicle`: los cuatro viajan juntos
+   * y `vehicleOwnershipProblem()` es quien dice si el conjunto se sostiene.
+   */
+  ownership?: VehicleOwnership;
+  ownerCollaboratorId?: string;
+  ownerCollaboratorName?: string;
+  ownerSharePercent?: number;
   currentKm?: number;
   color?: string;
   vin?: string;

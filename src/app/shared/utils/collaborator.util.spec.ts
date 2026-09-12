@@ -14,8 +14,7 @@ import {
   settlements,
   validateCollaborator,
   yearlyTotals,
-  balanceByKind,
-  kindOf
+  balanceByKind
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -36,6 +35,9 @@ const venta = (extra: Partial<CollaboratorSale> = {}): CollaboratorSale =>
     netAmount: 100,
     commissionPercent: 25,
     commissionAmount: 25,
+    // Obligatorio desde el 12 de septiembre de 2026: sin apuntes antiguos, una
+    // venta tiene que decir por qué se debe.
+    kind: 'referral',
     status: 'pending',
     ...extra
   }) as CollaboratorSale;
@@ -171,10 +173,63 @@ describe('la ficha del colaborador', () => {
     );
   });
 
-  it('y un porcentaje que valga algo', () => {
-    expect(validateCollaborator({ name: 'X', commissionPercent: 0 })['commissionPercent']).toBe(
+  /**
+   * ⚠️ **El 0 % vale y significa «no trae clientes»** (decisión de Dorel, 12 de
+   * septiembre de 2026). Un colaborador puede ser solo el dueño de un coche
+   * cedido: exigirle una comisión de captación mayor que cero le obligaba a
+   * inventarse un número para algo que no hace.
+   */
+  it('el 0 % es una respuesta válida: no trae clientes', () => {
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: 0 })['commissionPercent']
+    ).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ **Pero el hueco no vale.** `Number(null)` y `Number('')` son **0**, no
+   * `NaN`: si la ausencia no se comprueba antes de convertir, un campo vacío
+   * pasa como un 0 % legítimo y nadie se entera. Es el mismo fallo que salió
+   * escribiendo `ownerSharePercentProblem`.
+   */
+  it('pero dejarlo vacío no es decir cero', () => {
+    expect(validateCollaborator({ name: 'X' })['commissionPercent']).toBe(
       'collaborators.problems.percentRequired'
     );
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: null as unknown as number })[
+        'commissionPercent'
+      ]
+    ).toBe('collaborators.problems.percentRequired');
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: '' as unknown as number })[
+        'commissionPercent'
+      ]
+    ).toBe('collaborators.problems.percentRequired');
+  });
+
+  it('y un porcentaje negativo tampoco', () => {
+    expect(validateCollaborator({ name: 'X', commissionPercent: -1 })['commissionPercent']).toBe(
+      'collaborators.problems.percentRequired'
+    );
+  });
+
+  /**
+   * El reparto como propietario es **opcional**: quien no cede coches no tiene
+   * por qué contestarlo. Lo que no se admite es uno imposible.
+   */
+  it('el reparto de propietario solo se comprueba si se ha rellenado', () => {
+    expect(validateCollaborator({ name: 'X', commissionPercent: 25 })['ownerSharePercent'])
+      .toBeUndefined();
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: 25, ownerSharePercent: 75 })[
+        'ownerSharePercent'
+      ]
+    ).toBeUndefined();
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: 25, ownerSharePercent: 101 })[
+        'ownerSharePercent'
+      ]
+    ).toBe('vehicles.problems.ownerShareRange');
   });
 
   /**
@@ -434,23 +489,10 @@ describe('las dos clases de apunte', () => {
       netAmount: 100,
       commissionPercent: 25,
       commissionAmount: 25,
+      kind: 'referral',
       status: 'pending',
       ...p
     }) as CollaboratorSale;
-
-  /**
-   * ⚠️ La ausencia significa «captación»: era lo único que existía antes de que
-   * hubiera coches de colaborador. Se resuelve en un solo sitio a propósito.
-   */
-  it('sin kind es una comisión de captación', () => {
-    expect(kindOf(venta({}))).toBe('referral');
-    expect(kindOf(venta({ kind: undefined }))).toBe('referral');
-  });
-
-  it('lo demás se lee tal cual', () => {
-    expect(kindOf(venta({ kind: 'vehicle_owner' }))).toBe('vehicle_owner');
-    expect(kindOf(venta({ kind: 'referral' }))).toBe('referral');
-  });
 
   /**
    * ⚠️ **La prueba que pidió Dorel con esas palabras: no mezclar ni duplicar.**

@@ -49,6 +49,13 @@ export interface Collaborator {
    * ⚠️ **Es el valor POR DEFECTO, no el que manda.** Cada venta congela el suyo,
    * como el precio: subirle la comisión mañana no puede mover lo que ya se
    * pactó por una reserva de la semana pasada.
+   *
+   * ⚠️ **El 0 % es válido y significa «no trae clientes»** (decisión de Dorel,
+   * 12 de septiembre de 2026). Desde que un colaborador puede ser solo el dueño
+   * de un coche, exigir una comisión de captación mayor que cero obligaba a
+   * inventarse un número para alguien que no trae a nadie — y un número
+   * inventado que vive en la ficha acaba aplicándose el día que se le asigne una
+   * venta por error. Cero es la respuesta correcta, y se puede teclear.
    */
   commissionPercent: number;
 
@@ -131,13 +138,15 @@ export interface CollaboratorSale {
   /**
    * Por qué se le debe: por traer al cliente o por poner el coche.
    *
-   * ⚠️ **Sin valor se lee como `referral`.** No es un parche de compatibilidad
-   * —de esos no se escriben aquí—: es que hasta el 12 de septiembre de 2026 solo
-   * existía una clase de apunte, y ahora que hay dos, la que ya estaba tiene
-   * nombre. Quien lea este campo usa `kindOf()`, que resuelve la ausencia en un
-   * solo sitio.
+   * ⚠️ **Obligatorio, sin valor por defecto.** Nació opcional porque había
+   * cuatro comisiones antiguas sin él y la ausencia se leía como `referral`; al
+   * vaciarse la base de desarrollo el 12 de septiembre de 2026 ya no existe
+   * ninguna, así que el campo se exige y **el compilador obliga a contestar**.
+   * Un valor por defecto aquí sería peor que un hueco: apuntaría como comisión
+   * de captación lo que en realidad es el reparto de un coche cedido, y las dos
+   * se pactan, se liquidan y se justifican distinto.
    */
-  kind?: CommissionKind;
+  kind: CommissionKind;
 
   reservationId: string;
   /** Lo justo para reconocer la venta en una lista. */

@@ -26,6 +26,7 @@ import {
   resolveRentalPrice
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
@@ -497,7 +498,7 @@ export class ReservationService {
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    return this.commitReservationWithPayments(reservation);
+    return this.commitReservationWithPayments(reservation, vehicle);
   }
 
   /**
@@ -665,7 +666,7 @@ export class ReservationService {
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    return this.commitReservationWithPayments(reservation);
+    return this.commitReservationWithPayments(reservation, vehicle);
   }
 
   /**
@@ -930,7 +931,15 @@ export class ReservationService {
    * milisegundos. Reduce el riesgo; no lo elimina.
    */
   private async commitReservationWithPayments(
-    reservation: Omit<Reservation, 'id'>
+    reservation: Omit<Reservation, 'id'>,
+    /**
+     * El coche, **para congelar el reparto con su dueño**.
+     *
+     * Viaja hasta aquí en vez de resolverse en cada uno de los dos creadores a
+     * propósito: así ninguno de los dos puede olvidarse: es el mismo motivo por
+     * el que la reserva y sus filas de pago se escriben en un solo sitio.
+     */
+    vehicle: Vehicle
   ): Promise<string> {
     const availability = await this.checkVehicleAvailability(
       reservation.vehicleId,
@@ -941,12 +950,29 @@ export class ReservationService {
       throw new Error(availability.conflictMessage || 'reservations.availability.conflict');
     }
 
+    /**
+     * ⚠️ **El reparto se congela aquí, como el precio.** `ownerShareSnapshotOf()`
+     * devuelve `null` para un coche de Velto, que es la mayoría: entonces la
+     * reserva no lleva el campo y no hay nada que liquidar.
+     *
+     * ⚠️ **El nombre sale del vehículo y NO de `collaborators`.** Esa colección
+     * es de administrador en `firestore.rules`, y un empleado creando la reserva
+     * de un coche cedido recibiría un error de permisos en mitad de la
+     * operación. Lo escribe el administrador al asignar el coche; ver
+     * `Vehicle.ownerCollaboratorName`.
+     */
+    const conReparto: Omit<Reservation, 'id'> = {
+      ...reservation,
+      ownerShareSnapshot:
+        ownerShareSnapshotOf(vehicle, vehicle.ownerCollaboratorName) ?? undefined
+    };
+
     const batch = writeBatch(this.firestore);
 
     const reservationRef = doc(this.reservationsRef);
-    batch.set(reservationRef, this.cleanData(reservation));
+    batch.set(reservationRef, this.cleanData(conReparto));
 
-    const saved: Reservation = { id: reservationRef.id, ...reservation };
+    const saved: Reservation = { id: reservationRef.id, ...conReparto };
     const paymentsRef = collection(this.firestore, 'payments');
     for (const row of this.paymentService.buildInitialPayments(reservationRef.id, saved)) {
       batch.set(doc(paymentsRef), row);

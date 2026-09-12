@@ -369,16 +369,50 @@ alquiler sin IVA, y solo el alquiler**. Tres exclusiones, las tres con motivo:
 
 ⚠️ **El porcentaje vive en el coche**, con el del colaborador como propuesta —un
 propietario puede ceder un utilitario y una furgoneta con repartos distintos— y
-la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. La parte
-se **devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. Lo
+congela `commitReservationWithPayments()`, que recibe el vehículo entero para que
+**ninguno de los dos creadores de reservas pueda olvidarse**. La parte se
+**devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+
+⚠️ **El nombre del propietario se copia al COCHE (`ownerCollaboratorName`), y no
+es comodidad.** El snapshot lo lleva dentro para sobrevivir a un borrado de la
+ficha, pero `firestore.rules` solo deja leer `collaborators` a un administrador:
+yendo a buscarlo allí, un **empleado** que crea la reserva de un coche cedido
+recibiría un error de permisos a media operación, o —peor— se guardaría el
+reparto sin nombre y nadie sabría a quién hay que pagarle. Lo escribe el
+administrador al asignar el coche, y la reserva lo lee de un documento que sí
+puede leer.
+
+⚠️ **`ownerShareSnapshot` está protegido en las reglas igual que
+`pricingSnapshot`**: un no-administrador no puede moverlo en un `update`. Decide
+dinero exactamente igual que el precio, y se había quedado fuera.
+
+⚠️ **Pero se puede LEER**, como toda la reserva: un empleado ve por la API REST
+de quién es el coche y qué porcentaje se lleva. Es el caso de `payments` —no se
+puede cerrar sin romper la operación diaria— y no el de `invoices`, que sí era un
+descuido. Está dicho aquí para que nadie lo dé por lo que no es.
 
 ⚠️ **`CollaboratorSale.kind` separa dos cosas que se pagan a la misma persona.**
 Un colaborador puede traer el cliente **y** poner el coche de la **misma**
 reserva: son **dos apuntes**, no uno mayor. Se pactan, se calculan y se
 justifican distinto, y uno lleva detrás una factura suya por la cesión y el otro
-no. `balanceByKind()` los da separados; el total hay que pedirlo. La ausencia de
-`kind` se lee como `referral` y se resuelve **solo** en `kindOf()`: repartido por
-la aplicación, un `kind === 'referral'` suelto dejaría fuera todo lo anterior.
+no. `balanceByKind()` los da separados; el total hay que pedirlo.
+
+⚠️ **`kind` es OBLIGATORIO desde el 12 de septiembre de 2026**, al vaciarse la
+base de desarrollo. Nació opcional porque había cuatro comisiones antiguas sin
+él y la ausencia se leía como `referral` en `kindOf()`; sin esos apuntes, el
+campo se exige y **el compilador obliga a contestarlo**. `kindOf()` ya no
+existe. Un valor por defecto aquí sería peor que un hueco: apuntaría como
+comisión de captación el reparto de un coche cedido.
+
+⚠️ **Y un `commissionPercent` de 0 es válido: significa «no trae clientes».**
+Desde que un colaborador puede ser solo el dueño de un coche, exigir una comisión
+de captación mayor que cero obligaba a inventarse un número para alguien que no
+trae a nadie — y un número inventado que vive en la ficha acaba aplicándose el
+día que se le asigne una venta. Lo que sigue sin valer es el **hueco**:
+`Number(null)` y `Number('')` son **0**, no `NaN`, así que la ausencia se
+comprueba antes de convertir. Es el mismo fallo que salió con
+`ownerSharePercent`.
 
 ### Colaboradores: comisiones que NO son contabilidad
 
@@ -1545,6 +1579,14 @@ Dorel, para empezar de cero: todas las colecciones **menos `authorizedUsers`**, 
 desarrollo y en producción. Esa se salva siempre y no es un detalle: es donde vive la
 autorización de acceso, y borrarla deja a todo el mundo fuera de la aplicación sin forma
 de entrar a arreglarlo desde la propia app.
+
+⚠️ **Y desarrollo se volvió a vaciar el 12 de septiembre de 2026**, esta vez
+**solo `velto-store`** —producción no se tocó—, para empezar de cero con coches
+de colaborador desde el principio. Otra vez todo menos `authorizedUsers`, que
+conserva sus dos documentos: `veltorent@gmail.com` (admin) y `dbindea@gmail.com`
+(employee, la cuenta con la que se prueban las reglas). Es lo que permitió hacer
+`CollaboratorSale.kind` obligatorio: sin apuntes antiguos, no hay nada a lo que
+dar compatibilidad.
 
 Así que hoy están **todas vacías**, y las colecciones de arriba son las que el código
 crea, no las que existen ahora mismo. `expenses` estuvo declarada en `firestore.rules`

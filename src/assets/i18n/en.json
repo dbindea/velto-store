@@ -1058,7 +1058,15 @@
       "skippedByException": "Skipped by exception",
       "title": "Reservation progress"
     },
-    "title": "Reservations"
+    "title": "Reservations",
+    "ownerShare": {
+      "title": "Split with the owner",
+      "owner": "Owner",
+      "base": "Split base (rental excluding VAT)",
+      "forOwner": "To the owner",
+      "forVelto": "To Velto",
+      "hint": "Frozen when the booking was created: changing the percentage on the car does not move this figure. It falls due when the booking is closed, once the amounts are final. The deposit and extra charges are not shared."
+    }
   },
   "search": {
     "close": "Close",
@@ -1222,7 +1230,8 @@
       "seatsRequired": "Enter how many seats it has",
       "delete": "The vehicle could not be deleted.",
       "statusChange": "The vehicle status could not be changed.",
-      "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead."
+      "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead.",
+      "saveFailed": "Could not save the vehicle."
     },
     "features": {
       "airConditioning": "Air conditioning",
@@ -1252,7 +1261,10 @@
       "hasGpsTracker": "Fitted with GPS tracker",
       "insurerName": "Insurance company",
       "insurancePolicy": "Policy number",
-      "roadsideAssistancePhone": "Roadside assistance phone"
+      "roadsideAssistancePhone": "Roadside assistance phone",
+      "ownership": "Ownership",
+      "owner": "Owner",
+      "ownerSharePercent": "Owner share"
     },
     "filterAllCategories": "All categories",
     "filterAllStatus": "All statuses",
@@ -1318,7 +1330,8 @@
       "pricing": "Pricing and conditions",
       "rentalClassification": "Rental classification",
       "reservations": "Reservations",
-      "insurance": "Insurance and roadside assistance"
+      "insurance": "Insurance and roadside assistance",
+      "ownership": "Who owns the car"
     },
     "status": {
       "available": "Available",
@@ -1357,6 +1370,17 @@
       "ownerRequired": "Say whose car it is.",
       "ownerShareRequired": "Enter the share of the rental the owner keeps.",
       "ownerShareRange": "The share runs from 0 to 100 %."
+    },
+    "owner": {
+      "hint": "A car on loan does not change who rents it out or who invoices: Velto still issues its own invoice for the full amount and the owner never appears to the customer. What is agreed here is what Velto owes them afterwards.",
+      "choose": "— Choose an owner —",
+      "create": "New",
+      "createTitle": "Quick owner setup",
+      "createHint": "Created with no referral commission (0 %): they are lending a car, not bringing customers. If they also bring customers, set their percentage on their record.",
+      "shareHint": "On the rental excluding VAT. Neither the deposit nor extra charges are shared.",
+      "veltoKeeps": "Velto keeps",
+      "loadError": "Could not load the partners. Without the list there is no owner to choose.",
+      "createError": "Could not create the partner."
     }
   },
   "workflow": {
@@ -1601,7 +1625,9 @@
       "reservation": "Booking",
       "taxId": "Tax ID",
       "to": "To",
-      "year": "Year"
+      "year": "Year",
+      "ownerSharePercent": "Share as owner",
+      "ownerShareHint": "If they lend cars. It is the default: each car keeps its own and each booking freezes it."
     },
     "generated": "Generated",
     "generatedLower": "generated",
@@ -1634,7 +1660,7 @@
       "emailInvalid": "That email does not look valid",
       "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead",
       "nameRequired": "Enter the partner name",
-      "percentRequired": "Enter a commission percentage above zero",
+      "percentRequired": "Enter a commission percentage. Use 0 if they bring no customers",
       "percentTooHigh": "More than 50 % is not a commission. Check the figure",
       "reservationCancelled": "That booking is cancelled and earns no commission",
       "reservationRequired": "Choose a booking",

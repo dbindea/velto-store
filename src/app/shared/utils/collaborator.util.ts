@@ -12,10 +12,10 @@ import {
   Collaborator,
   CollaboratorBalance,
   CollaboratorSale,
-  CommissionKind,
   CommissionStatus
 } from '@shared/models/collaborator.model';
 import { FieldProblems } from '@shared/utils/form-problems.util';
+import { ownerSharePercentProblem } from '@shared/utils/owner-share.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 
 /**
@@ -376,11 +376,40 @@ export function validateCollaborator(input: Partial<Collaborator> | null): Field
     problems['name'] = 'collaborators.problems.nameRequired';
   }
 
-  const pct = Number(c.commissionPercent);
-  if (!Number.isFinite(pct) || pct <= 0) {
+  /**
+   * ⚠️ **El 0 % se admite y significa «no trae clientes»** (decisión de Dorel,
+   * 12 de septiembre de 2026). Antes se exigía mayor que cero, y eso era cierto
+   * cuando un colaborador solo podía ser un comercial; desde que uno puede ser
+   * únicamente el dueño de un coche cedido, exigirlo obligaba a inventarse una
+   * comisión de captación para alguien que no trae a nadie.
+   *
+   * ⚠️ **Lo que sigue sin admitirse es el hueco.** `Number(null)` y
+   * `Number('')` son **0**, no `NaN`, así que un campo vacío pasaría como un
+   * 0 % perfectamente legítimo y nadie se enteraría — es exactamente el fallo
+   * que ya salió con `ownerSharePercent`. Por eso la ausencia se comprueba
+   * antes de convertir.
+   */
+  if (c.commissionPercent === null || c.commissionPercent === undefined ||
+      (c.commissionPercent as unknown) === '') {
     problems['commissionPercent'] = 'collaborators.problems.percentRequired';
-  } else if (pct > MAX_COMMISSION_PERCENT) {
-    problems['commissionPercent'] = 'collaborators.problems.percentTooHigh';
+  } else {
+    const pct = Number(c.commissionPercent);
+    if (!Number.isFinite(pct) || pct < 0) {
+      problems['commissionPercent'] = 'collaborators.problems.percentRequired';
+    } else if (pct > MAX_COMMISSION_PERCENT) {
+      problems['commissionPercent'] = 'collaborators.problems.percentTooHigh';
+    }
+  }
+
+  /**
+   * Su reparto habitual como propietario. **Solo si se ha rellenado**: un
+   * colaborador que nunca va a ceder un coche no tiene por qué contestarlo, y
+   * el que manda en un alquiler no es este de todas formas, sino el del coche.
+   */
+  if (c.ownerSharePercent !== null && c.ownerSharePercent !== undefined &&
+      (c.ownerSharePercent as unknown) !== '') {
+    const problema = ownerSharePercentProblem(c.ownerSharePercent);
+    if (problema) problems['ownerSharePercent'] = problema;
   }
 
   // El correo solo si lo hay: no es obligatorio, pero uno mal escrito no sirve
@@ -396,18 +425,14 @@ export function validateCollaborator(input: Partial<Collaborator> | null): Field
 // Las dos clases de apunte
 // ---------------------------------------------------------------------------
 
-/**
- * Por qué se le debe a este colaborador.
- *
- * ⚠️ **Un apunte sin `kind` es una comisión de captación.** Hasta el 12 de
- * septiembre de 2026 era lo único que existía, así que la ausencia tiene un
- * significado y no es un dato que falte. Se resuelve **aquí y en un solo
- * sitio**: repartido por la aplicación, el día que alguien escriba
- * `s.kind === 'referral'` a secas dejará fuera todas las de antes.
+/*
+ * Aquí vivía `kindOf()`, que leía la ausencia de `kind` como una comisión de
+ * captación. Desapareció el 12 de septiembre de 2026 al vaciarse la base de
+ * desarrollo: sin apuntes antiguos, el campo es obligatorio y quien crea una
+ * venta tiene que decir por qué se debe. Se quita la función entera y no solo su
+ * tolerancia, porque una que devuelve su argumento tal cual es indirección que
+ * invita a creer que resuelve algo.
  */
-export function kindOf(venta: Pick<CollaboratorSale, 'kind'>): CommissionKind {
-  return venta.kind === 'vehicle_owner' ? 'vehicle_owner' : 'referral';
-}
 
 /**
  * Lo que se le debe, separado por motivo.
@@ -429,7 +454,7 @@ export function balanceByKind(ventas: CollaboratorSale[]): {
   for (const v of ventas) {
     if (v.status === 'cancelled') continue;
     const importe = Number(v.commissionAmount) || 0;
-    const donde = kindOf(v) === 'vehicle_owner' ? acc.vehicleOwner : acc.referral;
+    const donde = v.kind === 'vehicle_owner' ? acc.vehicleOwner : acc.referral;
     const campo = v.status === 'paid' ? 'paid' : 'pending';
     donde[campo] += importe;
     acc.total[campo] += importe;

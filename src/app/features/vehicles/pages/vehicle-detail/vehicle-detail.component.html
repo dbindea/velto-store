@@ -153,6 +153,22 @@
               <span class="vin">{{ vehicle.vin }}</span>
             </div>
           }
+          <!--
+            De quién es el coche. Solo si es de un colaborador —la flota es de
+            Velto por defecto y decirlo en cada ficha sería ruido— y solo con
+            `viewCollaborators`, como el módulo entero: a quién se le debe una
+            parte del alquiler es información de dueño.
+          -->
+          @if (vehicle.ownership === 'collaborator' && permissions.can('viewCollaborators')) {
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.owner' | translate }}</label>
+              <span>{{ vehicle.ownerCollaboratorName || '—' }}</span>
+            </div>
+            <div class="info-item">
+              <label>{{ 'vehicles.fields.ownerSharePercent' | translate }}</label>
+              <span>{{ vehicle.ownerSharePercent }} %</span>
+            </div>
+          }
           @if (vehicle.insurerName) {
             <div class="info-item">
               <label>{{ 'vehicles.fields.insurerName' | translate }}</label>

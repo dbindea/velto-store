@@ -677,6 +677,54 @@
           </div>
         </div>
       </div>
+
+      <!--
+        El reparto con el dueño del coche.
+
+        Solo si el coche es de un colaborador —la mayoría de la flota es de
+        Velto y entonces no hay nada que repartir— y solo con
+        `viewCollaborators`: a quién se le debe una parte del alquiler es
+        información de dueño, igual que los gastos y las comisiones.
+
+        ⚠️ La cifra es una PREVISIÓN hasta que se cierra la reserva, y el texto
+        lo dice. Un importe en euros sin ese aviso se lee como dinero ya
+        comprometido, y aquí todavía se mueve si se mueve el precio.
+      -->
+      @if (ownerShare && permissions.can('viewCollaborators')) {
+        <div class="detail-card owner-share-card">
+          <div class="card-header">
+            <i class="pi pi-users"></i>
+            <span>{{ 'reservations.ownerShare.title' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <div class="pricing-breakdown">
+              <div class="price-row">
+                <span>{{ 'reservations.ownerShare.owner' | translate }}:</span>
+                <span>{{ ownerShare.collaboratorName }}</span>
+              </div>
+              <div class="price-row">
+                <span>{{ 'reservations.ownerShare.base' | translate }}:</span>
+                <span>{{ reservation.pricingSnapshot.netPrice | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row total">
+                <span>
+                  {{ 'reservations.ownerShare.forOwner' | translate }}
+                  ({{ ownerShare.sharePercent }} %):
+                </span>
+                <span class="total-value">{{ ownerShareAmount | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row">
+                <span>
+                  {{ 'reservations.ownerShare.forVelto' | translate }}
+                  ({{ veltoSharePercent }} %):
+                </span>
+                <span>{{ veltoShareAmount | number:'1.2-2' }} €</span>
+              </div>
+            </div>
+            <p class="hint">{{ 'reservations.ownerShare.hint' | translate }}</p>
+          </div>
+        </div>
+      }
     </div>
 
     <!-- Payments & Deposit Section -->

@@ -82,6 +82,18 @@ export class CollaboratorService {
     const payload = cleanForFirestore({
       ...data,
       commissionPercent: Number(data.commissionPercent),
+      /**
+       * ⚠️ **Solo si viene.** `Number(undefined)` es `NaN`, y un `NaN` escrito
+       * en Firestore es un reparto que después no se puede ni leer ni comparar.
+       * Un colaborador que no cede coches no tiene este dato y no debe tenerlo
+       * inventado.
+       */
+      ownerSharePercent:
+        data.ownerSharePercent === null ||
+        data.ownerSharePercent === undefined ||
+        (data.ownerSharePercent as unknown) === ''
+          ? undefined
+          : Number(data.ownerSharePercent),
       active: data.active !== false,
       updatedAt: serverTimestamp()
     });
@@ -185,6 +197,14 @@ export class CollaboratorService {
     const venta: Omit<CollaboratorSale, 'id'> = {
       collaboratorId: collaborator.id!,
       collaboratorName: collaborator.name,
+      /**
+       * ⚠️ **Esta vía es siempre de captación**, y por eso va escrito y no
+       * deducido. Asignar una reserva a un colaborador desde su ficha es decir
+       * que él trajo al cliente; el reparto por ceder el coche no se asigna a
+       * mano —sale del vehículo y se congela en la reserva— y se devenga al
+       * cerrarla. Son dos apuntes distintos aunque acaben en la misma persona.
+       */
+      kind: 'referral',
       reservationId: reservation.id!,
       reservationSnapshot: {
         clientName: reservation.clientSnapshot?.fullName || '—',

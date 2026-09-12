@@ -91,8 +91,8 @@ así que un porcentaje sin rellenar pasaba como reparto del **0 %** — que aqu�
 un valor legítimo, o sea que nada habría chirriado. Al propietario se le habría
 liquidado cero por cada alquiler hasta que se quejara.
 
-- `Vehicle`: `ownership`, `ownerCollaboratorId`, `ownerSharePercent`. Ausente
-  vale «propio».
+- `Vehicle`: `ownership`, `ownerCollaboratorId`, `ownerSharePercent` —y
+  `ownerCollaboratorName`, añadido en la entrega 2—. Ausente vale «propio».
 - `Reservation`: `ownerShareSnapshot`, **congelado al crear** como el precio.
 - `Collaborator`: `ownerSharePercent`, **distinto** de `commissionPercent`.
 - `CollaboratorSale`: `kind` (`referral` | `vehicle_owner`) y `balanceByKind()`.
@@ -102,11 +102,46 @@ puede traer el cliente **y** poner el coche de la **misma** reserva: son dos
 apuntes, no uno mayor. Se pactan, se calculan y se justifican distinto, y uno
 lleva factura de cesión detrás y el otro no.
 
+### Entrega 2, hecha: el alta del coche y el congelado automático
+
+- **Ficha del vehículo**: sección «De quién es el coche», con el selector de
+  colaborador y el **alta rápida** desde ahí. Solo con `viewCollaborators`.
+- **`Vehicle.ownerCollaboratorName`**, copiado al coche a propósito: la reserva
+  necesita el nombre para el snapshot y `firestore.rules` **no deja leer
+  `collaborators` a un empleado**. Yendo a buscarlo allí, un empleado que crea
+  la reserva de un coche cedido recibiría un error de permisos a media
+  operación, o se guardaría el reparto sin nombre.
+- **`commitReservationWithPayments()`** congela `ownerShareSnapshot`. Recibe el
+  vehículo para que **ninguno de los dos creadores pueda olvidarse**.
+- **Ficha de la reserva**: de quién es el coche, la base, lo del propietario y
+  lo de Velto. Con el aviso de que es una **previsión** hasta el cierre.
+- **`firestore.rules`**: `ownerShareSnapshot` queda protegido igual que
+  `pricingSnapshot` — un empleado no puede moverlo por la API REST. Decide
+  dinero exactamente igual que el precio y se había quedado fuera.
+- **`CollaboratorSale.kind` es obligatorio** y `kindOf()` ya no existe: al
+  vaciarse la base de desarrollo no quedan apuntes antiguos, así que el campo se
+  exige y el compilador obliga a contestarlo.
+- **El 0 % de comisión de captación pasa a ser válido** y significa «no trae
+  clientes» (decisión de Dorel, 12 de septiembre de 2026). Sin eso, dar de alta
+  a alguien que solo cede un coche obligaba a inventarle una comisión.
+
+⚠️ **Lo que NO entra y hace falta para la entrega 3:** el **devengo**. Nadie crea
+todavía el `CollaboratorSale` de `kind: 'vehicle_owner'` al cerrar la reserva, así
+que el reparto se congela y se enseña pero aún no llega al balance del
+colaborador. Es el primer paso de la entrega 3, antes de las liquidaciones.
+
+⚠️ **Y una consecuencia que hay que decir en voz alta:** `ownerShareSnapshot`
+vive dentro de la reserva, y `reservations` la puede **leer** cualquier usuario
+autorizado. Es decir: un empleado puede ver por la API REST de quién es el coche
+y qué porcentaje se lleva, aunque la pantalla se lo esconda. Es el mismo caso que
+`payments` —no se puede cerrar sin romper la operación diaria, porque la reserva
+se lee entera— y no el de `invoices`, que sí era un descuido. Escribirlo sí está
+cerrado. Si algún día molesta, la salida es sacar el reparto a una colección de
+administrador, no endurecer esta regla.
+
 ### Lo que falta
 
-- **Entrega 2**: alta de vehículo con propietario (selector de colaborador, o
-  crearlo desde ahí) y el reparto que se congela solo al crear la reserva.
-- **Entrega 3**: liquidaciones agrupadas —varias reservas en un pago, con fecha,
+- **Entrega 3**: el devengo al cerrar, y liquidaciones agrupadas —varias reservas en un pago, con fecha,
   importe y forma incluido efectivo— y el registro de la factura recibida, con
   estado «pendiente de recibir» que **no** se confunda con «no hay que
   facturar». ⚠️ Pagarle **no** genera una factura de venta de Velto.

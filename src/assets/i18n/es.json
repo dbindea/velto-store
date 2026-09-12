@@ -1058,7 +1058,15 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas"
+    "title": "Reservas",
+    "ownerShare": {
+      "title": "Reparto con el propietario",
+      "owner": "Propietario",
+      "base": "Base del reparto (alquiler sin IVA)",
+      "forOwner": "Para el propietario",
+      "forVelto": "Para Velto",
+      "hint": "Congelado al crear la reserva: cambiar el porcentaje del coche no mueve esta cifra. Se devenga al cerrar la reserva, cuando los importes son definitivos. La fianza y los cargos extra no se reparten."
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -1222,7 +1230,8 @@
       "seatsRequired": "Indica cuántas plazas tiene",
       "delete": "No se ha podido eliminar el vehículo.",
       "statusChange": "No se ha podido cambiar el estado del vehículo.",
-      "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio»."
+      "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio».",
+      "saveFailed": "No se ha podido guardar el vehículo."
     },
     "features": {
       "airConditioning": "Aire acondicionado",
@@ -1252,7 +1261,10 @@
       "hasGpsTracker": "Lleva localizador GPS",
       "insurerName": "Compañía aseguradora",
       "insurancePolicy": "Número de póliza",
-      "roadsideAssistancePhone": "Teléfono de asistencia en carretera"
+      "roadsideAssistancePhone": "Teléfono de asistencia en carretera",
+      "ownership": "Propiedad",
+      "owner": "Propietario",
+      "ownerSharePercent": "Reparto del propietario"
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
@@ -1318,7 +1330,8 @@
       "pricing": "Tarifas y condiciones",
       "rentalClassification": "Clasificación de alquiler",
       "reservations": "Reservas",
-      "insurance": "Seguro y asistencia"
+      "insurance": "Seguro y asistencia",
+      "ownership": "De quién es el coche"
     },
     "status": {
       "available": "Disponible",
@@ -1357,6 +1370,17 @@
       "ownerRequired": "Di de quién es el coche.",
       "ownerShareRequired": "Indica qué parte del alquiler se lleva el propietario.",
       "ownerShareRange": "El reparto va del 0 al 100 %."
+    },
+    "owner": {
+      "hint": "Un coche cedido no cambia quién alquila ni quién factura: Velto sigue emitiendo su factura por el total y el propietario no aparece ante el cliente. Lo que se pacta aquí es lo que Velto le debe después.",
+      "choose": "— Elige un propietario —",
+      "create": "Nuevo",
+      "createTitle": "Alta rápida de propietario",
+      "createHint": "Nace sin comisión de captación (0 %): está cediendo un coche, no trayendo clientes. Si además trae clientes, ponle su porcentaje en su ficha.",
+      "shareHint": "Sobre el alquiler sin IVA. Ni la fianza ni los cargos extra se reparten.",
+      "veltoKeeps": "Velto se queda el",
+      "loadError": "No se han podido cargar los colaboradores. Sin la lista no se puede elegir propietario.",
+      "createError": "No se ha podido crear el colaborador."
     }
   },
   "workflow": {
@@ -1601,7 +1625,9 @@
       "reservation": "Reserva",
       "taxId": "NIF",
       "to": "Hasta",
-      "year": "Año"
+      "year": "Año",
+      "ownerSharePercent": "Reparto como propietario",
+      "ownerShareHint": "Si cede coches. Es la propuesta: cada coche guarda el suyo y cada reserva lo congela."
     },
     "generated": "Generado",
     "generatedLower": "generado",
@@ -1634,7 +1660,7 @@
       "emailInvalid": "Ese correo no parece válido",
       "hasSales": "No se puede borrar: tiene ventas asignadas. Dalo de baja en su lugar",
       "nameRequired": "Pon el nombre del colaborador",
-      "percentRequired": "Indica un porcentaje de comisión mayor que cero",
+      "percentRequired": "Indica un porcentaje de comisión. Pon 0 si no trae clientes",
       "percentTooHigh": "Más de un 50 % no es una comisión. Revisa la cifra",
       "reservationCancelled": "Esa reserva está cancelada y no genera comisión",
       "reservationRequired": "Elige una reserva",
