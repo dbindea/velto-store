@@ -376,19 +376,37 @@ export class ReservationDetailComponent implements OnInit {
     });
   }
 
+  /**
+   * Los pagos de la reserva, **escuchando**.
+   *
+   * ⚠️ **Quien da un cobro por bueno es el webhook de Redsys, no esta
+   * pantalla.** El operador cobra con tarjeta, el cliente paga en la pasarela y
+   * el aviso llega al backend segundos después. Con una lectura única la fila se
+   * quedaba en «Pendiente» hasta que alguien pulsaba F5 — y quien acaba de ver
+   * pagar al cliente delante no entiende por qué la aplicación dice que no.
+   *
+   * ⚠️ **`takeUntilDestroyed` no es opcional aquí.** Un stream vivo no termina
+   * nunca: sin desengancharlo, la suscripción sobrevive a la pantalla y sigue
+   * escribiendo en un componente que ya no existe. Y con
+   * `reconcileAfterExternalPayment()` dentro, seguiría además **escribiendo en
+   * Firestore** desde una reserva que el operador ya cerró.
+   */
   loadPayments(reservationId: string): void {
     this.loadingPayments = true;
-    this.paymentService.getPaymentsByReservation(reservationId).subscribe({
-      next: (payments) => {
-        this.payments = payments;
-        this.loadingPayments = false;
-        void this.reconcileAfterExternalPayment(reservationId);
-      },
-      error: (error) => {
-        console.error('Error loading payments:', error);
-        this.loadingPayments = false;
-      }
-    });
+    this.paymentService
+      .watchPaymentsByReservation(reservationId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (payments) => {
+          this.payments = payments;
+          this.loadingPayments = false;
+          void this.reconcileAfterExternalPayment(reservationId);
+        },
+        error: (error) => {
+          console.error('Error loading payments:', error);
+          this.loadingPayments = false;
+        }
+      });
   }
 
   /**

@@ -2025,11 +2025,21 @@ salía en rojo**. Los genéricos —`.hint`, `.field-hint`, `.section-hint`,
 pisan** a quien ya los declara (0,1,0 contra 0,2,0). Los específicos se quedan
 donde están.
 
-⚠️ Cada formulario **declara su propia `.form-control`** en su SCSS. No está en
-`styles.scss`, aunque lo parezca por lo repetida que está. Si un componente nuevo la usa
-sin declararla, sus `input` y `textarea` salen **sin caja ni borde**, como texto suelto
-sobre el fondo — mientras los `select` de al lado se ven perfectos, porque a esos sí los
-estiliza `styles.scss`. Compila, pasa los tests y solo se ve mirando la pantalla.
+⚠️ **`.form-control` ES global desde el 15 de septiembre de 2026.** Hasta
+entonces la declaraba cada formulario —dieciocho copias— y esta misma sección
+decía que así debía seguir. Eso dejaba «acordarse» como único mecanismo, y falló
+por **cuarta vez** con la tarjeta de devolución: sus `input` salieron **sin caja
+ni borde**, como texto suelto sobre el fondo, en una pantalla que mueve dinero.
+Es la misma corrección que ya se hizo con `.btn-*` y `.checkbox-item`.
+
+⚠️ **Y `css:audit` no lo cazaba, que es lo que lo hacía invisible.** Daba
+`.form-control` por global porque `styles.scss` declara
+`input.form-control.is-invalid`, que solo pinta el **estado de error** y no la
+caja: una clase «declarada» que no dibuja nada es un falso negativo. Ahora la
+caja está ahí de verdad, así que lo que afirma el auditor es cierto. Las
+dieciocho declaraciones siguen mandando sobre lo suyo por especificidad —la del
+componente lleva el atributo de encapsulación—; lo que cambia es que un
+formulario nuevo ya no sale desnudo.
 
 ### Tema y color
 

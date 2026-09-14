@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   getDoc,
+  collectionData,
   getDocs,
   query,
   orderBy,
@@ -157,6 +158,38 @@ export class PaymentService {
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Payment)))
     );
+  }
+
+  /**
+   * Los mismos pagos, pero **escuchando**: se vuelven a emitir solos cuando algo
+   * los cambia desde fuera.
+   *
+   * ⚠️ **Quien los cambia desde fuera es el WEBHOOK de Redsys**, y ese es todo
+   * el motivo de que esto exista. El operador cobra con tarjeta, el cliente paga
+   * en la pasarela y quien da el cobro por bueno es el aviso que Redsys manda al
+   * backend — no esta pantalla. Con una lectura única, la fila se quedaba en
+   * «Pendiente» hasta que alguien pulsaba F5, y quien acaba de ver pagar al
+   * cliente delante no entiende por qué la aplicación dice que no.
+   *
+   * ⚠️ **Es un método APARTE y no el de arriba convertido.** Un stream vivo no
+   * termina nunca, así que un `firstValueFrom()` sobre él **se queda colgado
+   * para siempre**: es lo que ya documenta `inspection.service.ts` sobre el
+   * contrato, que necesita un `.pipe(first())` por lo mismo. Hoy hay un
+   * `firstValueFrom` sobre el de arriba —el que calcula la fecha de operación de
+   * una factura— y convertirlo habría colgado esa pantalla sin decir nada. El
+   * nombre lo avisa: `watch…` escucha, `get…` lee una vez.
+   *
+   * ⚠️ **Quien se suscriba tiene que desengancharse.** Sin
+   * `takeUntilDestroyed()`, la suscripción sobrevive a la pantalla y sigue
+   * escribiendo en un componente que ya no existe.
+   */
+  watchPaymentsByReservation(reservationId: string): Observable<Payment[]> {
+    const q = query(
+      this.paymentsRef,
+      where('reservationId', '==', reservationId),
+      orderBy('createdAt', 'asc')
+    );
+    return collectionData(q, { idField: 'id' }) as Observable<Payment[]>;
   }
 
   getPaymentsByClient(clientId: string): Observable<Payment[]> {
