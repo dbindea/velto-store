@@ -110,7 +110,7 @@ export function renderDigestEmail(
           : v.diasRestantes === 0
             ? `Vence hoy, ${esc(v.fecha)}`
             : `Vence el ${esc(v.fecha)} · en ${v.diasRestantes} día${v.diasRestantes === 1 ? '' : 's'}`,
-        v.diasRestantes < 0 ? 'VENCIDO · el coche no se puede alquilar' : undefined
+        v.diasRestantes < 0 ? 'VENCIDO · no alquiles este coche hasta pasarla' : undefined
       )
     )
     .join('');

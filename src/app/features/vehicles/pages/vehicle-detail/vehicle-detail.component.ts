@@ -4,6 +4,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { NotificationService } from '@core/notifications/notification.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-maintenance.service';
 import { ImageGalleryComponent, GalleryImage } from '@shared/components/image-gallery/image-gallery.component';
@@ -63,12 +65,14 @@ export class VehicleDetailComponent implements OnInit {
   private translateService = inject(TranslateService);
   /** Público: las plantillas preguntan qué permite el rol. */
   permissions = inject(PermissionsService);
+  private confirm = inject(ConfirmService);
+  private notifications = inject(NotificationService);
 
   vehicle: Vehicle | null = null;
   loading = true;
   activeTab: 'info' | 'features' | 'photos' | 'pricing' | 'reservations' | 'maintenance' = 'info';
   showStatusModal = false;
-  showDeleteModal = false;
+  deleting = false;
   showGallery = false;
   galleryIndex = 0;
 
@@ -482,28 +486,91 @@ export class VehicleDetailComponent implements OnInit {
     this.showStatusModal = false;
   }
 
-  changeStatus(status: VehicleStatus): void {
-    if (this.vehicle?.id) {
-      this.vehicleService.changeStatus(this.vehicle.id, status).then(() => {
-        if (this.vehicle) this.vehicle.status = status;
-        this.closeStatusModal();
-      });
+  /**
+   * Reservas de este coche que **todavía no han pasado** y siguen vivas.
+   *
+   * Es lo que hay que mirar antes de retirarlo de la flota: una reserva cerrada
+   * o cancelada no compromete a nadie, una de la semana que viene sí.
+   */
+  upcomingReservations(): Reservation[] {
+    const ahora = Date.now();
+    return this.vehicleReservations.filter((r) => {
+      if (r.reservationStatus === 'cancelled' || r.reservationStatus === 'closed') return false;
+      const recogida = r.pickupDateTime ? toDate(r.pickupDateTime) : null;
+      const devolucion = r.returnDateTime ? toDate(r.returnDateTime) : null;
+      // Entra la que aún no se ha recogido y la que está en la calle ahora.
+      const fin = devolucion && !isNaN(devolucion.getTime()) ? devolucion : recogida;
+      return !!fin && !isNaN(fin.getTime()) && fin.getTime() >= ahora;
+    });
+  }
+
+  /**
+   * Cambia el estado del coche.
+   *
+   * ⚠️ **Retirar un coche con una entrega comprometida avisa, pero no se
+   * bloquea.** Vender o dar de baja un vehículo es una decisión del dueño y
+   * puede ser urgente; lo que no puede es **no enterarse** de que hay un cliente
+   * con fecha. Es el mismo criterio que cerrar una reserva con cargos
+   * pendientes: se pregunta con el dato delante y se decide.
+   *
+   * ⚠️ Y tenía un `.then()` sin `catch`: si el cambio fallaba, la pantalla
+   * enseñaba el estado nuevo sin haberse guardado.
+   */
+  async changeStatus(status: VehicleStatus): Promise<void> {
+    if (!this.vehicle?.id) return;
+
+    if (status === 'out_of_service' || status === 'maintenance') {
+      const futuras = this.upcomingReservations();
+      if (futuras.length) {
+        const ok = await this.confirm.ask({
+          title: 'vehicles.status.retireTitle',
+          message: 'vehicles.status.hasUpcoming',
+          params: { count: String(futuras.length) },
+          danger: true
+        });
+        if (!ok) return;
+      }
+    }
+
+    const anterior = this.vehicle.status;
+    try {
+      await this.vehicleService.changeStatus(this.vehicle.id, status);
+      this.vehicle.status = status;
+      this.closeStatusModal();
+    } catch (error: any) {
+      // El estado de la pantalla vuelve a lo que hay guardado: enseñar el nuevo
+      // sin haberlo guardado es peor que no cambiarlo.
+      this.vehicle.status = anterior;
+      this.notifications.error(error?.message || 'vehicles.errors.statusChange');
     }
   }
 
-  openDeleteModal(): void {
-    this.showDeleteModal = true;
-  }
+  /**
+   * Borra el vehículo, sus fotos y sus mantenimientos.
+   *
+   * ⚠️ **Tenía un `.then()` sin `catch`**: si el borrado fallaba —permiso
+   * denegado, un fichero de Storage que se resiste— el operador pulsaba, no
+   * pasaba nada y la pantalla no decía por qué. Si una acción puede fallar,
+   * tiene que contarlo.
+   */
+  async deleteVehicle(): Promise<void> {
+    if (!this.vehicle?.id) return;
+    const ok = await this.confirm.ask({
+      title: 'vehicles.deleteTitle',
+      message: 'vehicles.deleteConfirm',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!ok) return;
 
-  closeDeleteModal(): void {
-    this.showDeleteModal = false;
-  }
-
-  deleteVehicle(): void {
-    if (this.vehicle?.id) {
-      this.vehicleService.deleteVehicle(this.vehicle.id).then(() => {
-        this.router.navigate(['/vehicles']);
-      });
+    this.deleting = true;
+    try {
+      await this.vehicleService.deleteVehicle(this.vehicle.id);
+      this.router.navigate(['/vehicles']);
+    } catch (error: any) {
+      this.notifications.error(error?.message || 'vehicles.errors.delete');
+    } finally {
+      this.deleting = false;
     }
   }
 

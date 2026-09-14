@@ -1423,3 +1423,38 @@ app-reservation-timeline {
   gap: 0.5rem;
   margin-top: 0.85rem;
 }
+
+/* El límite de la fianza, bajo el campo. Texto secundario: es un dato de apoyo,
+   no un error — el error sale en rojo y solo si se pasa. */
+.field-note {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* El dinero ya cobrado, dentro del modal de cancelar. Ámbar: no impide
+   cancelar, avisa de que hay algo que decidir con el cliente. */
+.modal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: var(--bg-input);
+  border-left: 3px solid var(--warning-color);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+
+  i {
+    margin-top: 0.15rem;
+    color: var(--warning-color);
+    flex-shrink: 0;
+  }
+
+  strong {
+    color: var(--warning-color);
+    white-space: nowrap;
+  }
+}

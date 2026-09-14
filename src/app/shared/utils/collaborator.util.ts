@@ -12,6 +12,7 @@ import {
   Collaborator,
   CollaboratorBalance,
   CollaboratorSale,
+  CommissionKind,
   CommissionStatus
 } from '@shared/models/collaborator.model';
 import { FieldProblems } from '@shared/utils/form-problems.util';
@@ -389,4 +390,54 @@ export function validateCollaborator(input: Partial<Collaborator> | null): Field
   }
 
   return problems;
+}
+
+// ---------------------------------------------------------------------------
+// Las dos clases de apunte
+// ---------------------------------------------------------------------------
+
+/**
+ * Por qué se le debe a este colaborador.
+ *
+ * ⚠️ **Un apunte sin `kind` es una comisión de captación.** Hasta el 12 de
+ * septiembre de 2026 era lo único que existía, así que la ausencia tiene un
+ * significado y no es un dato que falte. Se resuelve **aquí y en un solo
+ * sitio**: repartido por la aplicación, el día que alguien escriba
+ * `s.kind === 'referral'` a secas dejará fuera todas las de antes.
+ */
+export function kindOf(venta: Pick<CollaboratorSale, 'kind'>): CommissionKind {
+  return venta.kind === 'vehicle_owner' ? 'vehicle_owner' : 'referral';
+}
+
+/**
+ * Lo que se le debe, separado por motivo.
+ *
+ * ⚠️ **Separado y no sumado, que es la petición entera.** «Le debo 300 €» no
+ * dice si son por traer clientes o por sus coches, y son dos cosas que se
+ * pactan, se liquidan y se justifican distinto — una acaba en una factura suya
+ * por la cesión del vehículo, la otra no necesariamente. El total sigue estando
+ * disponible para quien lo quiera, pero hay que pedirlo.
+ */
+export function balanceByKind(ventas: CollaboratorSale[]): {
+  referral: { pending: number; paid: number };
+  vehicleOwner: { pending: number; paid: number };
+  total: { pending: number; paid: number };
+} {
+  const cero = () => ({ pending: 0, paid: 0 });
+  const acc = { referral: cero(), vehicleOwner: cero(), total: cero() };
+
+  for (const v of ventas) {
+    if (v.status === 'cancelled') continue;
+    const importe = Number(v.commissionAmount) || 0;
+    const donde = kindOf(v) === 'vehicle_owner' ? acc.vehicleOwner : acc.referral;
+    const campo = v.status === 'paid' ? 'paid' : 'pending';
+    donde[campo] += importe;
+    acc.total[campo] += importe;
+  }
+
+  const r = (x: { pending: number; paid: number }) => ({
+    pending: roundMoney(x.pending),
+    paid: roundMoney(x.paid)
+  });
+  return { referral: r(acc.referral), vehicleOwner: r(acc.vehicleOwner), total: r(acc.total) };
 }

@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { Reservation } from '@shared/models/reservation.model';
+import { TranslateService } from '@core/i18n/translate.service';
 import { MonthGridComponent } from './components/month-grid/month-grid.component';
 
 interface DayReservations {
@@ -21,6 +22,20 @@ interface DayReservations {
 export class CalendarComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private router = inject(Router);
+  private translate = inject(TranslateService);
+
+  /**
+   * El idioma de la aplicación, no el del documento.
+   *
+   * ⚠️ **Esto leía `document.documentElement.lang`, que no lo escribe nadie.**
+   * Valía lo que pusiera `index.html` y no cambiaba nunca, así que el
+   * calendario salía **siempre en español** aunque la plataforma estuviera en
+   * inglés o en rumano — y no daba ningún error, solo un mes en el idioma que
+   * no toca. Mismo caso que los meses del eje de Informes.
+   */
+  private get locale(): string {
+    return this.translate.language();
+  }
 
   currentMonth = signal(new Date());
   reservations = signal<Reservation[]>([]);
@@ -84,9 +99,14 @@ export class CalendarComponent implements OnInit {
   monthLabel(): string {
     const d = this.currentMonth();
     // Locale-aware (es, en, ro).
-    const locale =
-      typeof document !== 'undefined' ? document.documentElement.lang : 'es';
-    return d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+    /**
+     * ⚠️ **La primera letra, no cada palabra.** El SCSS llevaba
+     * `text-transform: capitalize`, que capitaliza **todas**: «Septiembre De
+     * 2026». En español la preposición va en minúscula — es la misma regla que
+     * ya se aplica a «Arganda del Rey» en los topónimos.
+     */
+    const texto = d.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
   onDayClick(date: Date): void {
@@ -117,13 +137,12 @@ export class CalendarComponent implements OnInit {
   dayDetailDate(): string {
     const d = this.dayDetail()?.date;
     if (!d) return '';
-    const locale =
-      typeof document !== 'undefined' ? document.documentElement.lang : 'es';
-    return d.toLocaleDateString(locale, {
+    const texto = d.toLocaleDateString(this.locale, {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 }

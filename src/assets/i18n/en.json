@@ -153,7 +153,8 @@
     "retry": "Retry",
     "save": "Save",
     "search": "Search",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "date": "Date"
   },
   "contracts": {
     "actions": {
@@ -258,7 +259,7 @@
     "fleet": {
       "available": "Available",
       "label": "Fleet",
-      "rented": "On rental",
+      "rented": "Rented out",
       "total": "Total"
     },
     "loadFailedHint": "Check your connection and try again. Do not assume there is nothing pending.",
@@ -470,7 +471,9 @@
       "depositCollected": "Deposit collected",
       "fuelLevel": "Fuel level",
       "km": "Mileage",
-      "notes": "Notes"
+      "notes": "Notes",
+      "pickupKm": "Km at pickup",
+      "extraChargeNotes": "Charge notes"
     },
     "fuel": {
       "empty": "Empty",
@@ -540,12 +543,26 @@
         "inspectionRequired": "No inspection to issue the report for",
         "notFound": "The inspection could not be found"
       }
+    },
+    "filters": {
+      "allTypes": "Pickups and returns",
+      "allStatuses": "Any status"
+    },
+    "deposit": {
+      "collected": "Collected",
+      "toRetain": "To retain",
+      "toRefund": "To refund",
+      "pendingFromClient": "The deposit does not cover the charges. Still to collect from the client:"
+    },
+    "list": {
+      "empty": "No inspections yet"
     }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrator",
-    "userRoleEmployee": "Employee"
+    "userRoleEmployee": "Employee",
+    "more": "More"
   },
   "maintenance": {
     "actions": {
@@ -647,11 +664,14 @@
     },
     "deposit": {
       "refundFull": "Refund full",
-      "retain": "Retain"
+      "retain": "Retain",
+      "available": "Available"
     },
     "errors": {
       "invalidAmount": "The amount is not valid",
-      "loadFailed": "The payments could not be loaded."
+      "loadFailed": "The payments could not be loaded.",
+      "redsysNotConfigured": "Redsys is not configured in this environment",
+      "redsysNoForm": "Redsys did not return the form data"
     },
     "fields": {
       "amount": "Amount",
@@ -669,7 +689,9 @@
     },
     "filters": {
       "freePayments": "Free payments",
-      "reservationPayments": "Reservation payments"
+      "reservationPayments": "Reservation payments",
+      "allMethods": "Any payment method",
+      "allScopes": "Reservation and free"
     },
     "free": {
       "amount": "Amount",
@@ -771,6 +793,10 @@
     "confirm": {
       "cancelMessage": "The payment will be cancelled and will no longer count as outstanding.",
       "cancelTitle": "Cancel the payment"
+    },
+    "problems": {
+      "depositAmountRequired": "Enter an amount greater than zero.",
+      "depositExceedsAvailable": "You cannot move more deposit than is left. Check what was collected, less what has already been refunded and retained."
     }
   },
   "permissions": {
@@ -850,7 +876,10 @@
       "notInFleet": "The vehicle is not available in the fleet",
       "search": "Search availability",
       "selectVehicle": "Select vehicle",
-      "unavailable": "Not available"
+      "unavailable": "Not available",
+      "perDay": "€/day",
+      "searchFailed": "Availability could not be searched.",
+      "maintenanceOverdue": "Roadworthiness test or servicing overdue"
     },
     "bookingConfirmation": {
       "copyLink": "Copy link",
@@ -862,7 +891,8 @@
     },
     "cancel": {
       "confirm": "Cancel this reservation?",
-      "hint": "This cannot be undone. The reservation stays in the history as cancelled."
+      "hint": "This cannot be undone. The reservation stays in the history as cancelled.",
+      "hasCollected": "Money has already been collected on this reservation. Cancelling does not refund it: agree with the client whether it goes back or stays as a penalty."
     },
     "client": {
       "createQuick": "Create quick client",
@@ -948,7 +978,8 @@
       "returnDate": "Return date",
       "returnLocation": "Return location",
       "returnTime": "Return time",
-      "totalDays": "days"
+      "totalDays": "days",
+      "totalDay": "day"
     },
     "list": {
       "empty": "No reservations yet",
@@ -1188,7 +1219,10 @@
       "luggageRequired": "Enter how many bags fit",
       "modelRequired": "Enter the model",
       "plateRequired": "Enter the plate number",
-      "seatsRequired": "Enter how many seats it has"
+      "seatsRequired": "Enter how many seats it has",
+      "delete": "The vehicle could not be deleted.",
+      "statusChange": "The vehicle status could not be changed.",
+      "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead."
     },
     "features": {
       "airConditioning": "Air conditioning",
@@ -1290,7 +1324,9 @@
       "available": "Available",
       "maintenance": "Maintenance",
       "outOfService": "Out of service",
-      "rented": "Rented"
+      "rented": "Rented",
+      "retireTitle": "Take the car out of the fleet",
+      "hasUpcoming": "This car has {count} unfinished reservation(s). Taking it out does not cancel them: if it will no longer be available, the client has to be told and moved to another car or cancelled. Continue?"
     },
     "subtitle": "Manage your fleet",
     "tabs": {
@@ -1312,6 +1348,15 @@
       "roadsidePlaceholder": "e.g. +34 902 123 456",
       "roadsideHint": "This is the number the customer calls if they break down.",
       "missing": "No insurance details. The contract promises them in the accident clause — fill them in before renting this vehicle."
+    },
+    "ownership": {
+      "own": "Velto's",
+      "collaborator": "A collaborator's"
+    },
+    "problems": {
+      "ownerRequired": "Say whose car it is.",
+      "ownerShareRequired": "Enter the share of the rental the owner keeps.",
+      "ownerShareRange": "The share runs from 0 to 100 %."
     }
   },
   "workflow": {
@@ -1613,12 +1658,16 @@
     "title": "Partners",
     "totalPending": "Total outstanding",
     "vsCalculated": "versus the calculated amount",
-    "willOwe": "You will owe"
+    "willOwe": "You will owe",
+    "kind": {
+      "referral": "For bringing the client",
+      "vehicleOwner": "For providing the car"
+    }
   },
   "events": {
     "alerts": {
       "contractNotSigned": "The contract is not signed: the car cannot be handed over",
-      "maintenanceOverdue": "Overdue: the car cannot be rented",
+      "maintenanceOverdue": "Overdue: do not rent this car until it passes",
       "invoiceDeadline": "The deadline to issue it is running out"
     },
     "categories": {

@@ -529,6 +529,63 @@ input[type='radio'] {
   }
 }
 
+/* Los textos de ayuda, globales ----------------------------------------------
+   ⚠️ **Once nombres distintos para lo mismo**: `hint`, `field-hint`,
+   `section-hint`, `total-hint`, `modal-hint`, `drivers-hint`, `upload-hint`,
+   `quote-hint`, `notes-hint`, `empty-hint`, `booking-confirmation-hint`. Son 44
+   apariciones de un texto gris y pequeño bajo un campo, y con la encapsulación
+   de Angular cada componente tiene que redeclararlo — de ahí que en la ficha del
+   colaborador y en el formulario de vehículo **no estuvieran declarados**: la
+   ayuda del bloque de seguros salía del mismo tamaño y color que el dato, o sea
+   indistinguible de él.
+
+   Misma decisión que las casillas y que la forma de los botones: los tres
+   nombres genéricos van aquí. **No pisan a quien ya los declara** —la regla del
+   componente es `.hint[_ngcontent-xxx]` (0,2,0) y esta es (0,1,0)—, así que solo
+   rescatan a quien se los dejó. Los específicos (`modal-hint`, `total-hint`…)
+   se quedan donde están: significan algo concreto en su pantalla. */
+.hint,
+.field-hint,
+.section-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.section-hint {
+  // Bajo un titular de sección, no bajo un campo: respira por arriba y por abajo.
+  margin: 0.25rem 0 1rem;
+}
+
+/* Cargando, vacío y error — el mismo caso que los hints ------------------------
+   `.loading-state` se usa 25 veces y se declara 20; `.empty-state`, 13 y 10;
+   `.error-msg`, 5 y 4. La diferencia son los componentes donde alguien copió la
+   plantilla y no el estilo: el formulario de Gastos enseñaba el spinner pegado a
+   la izquierda, y el error del envío de contrato **no salía en rojo** — un error
+   que no parece un error.
+
+   Aquí va lo mínimo que los hace reconocibles. Lo que cada pantalla quiera
+   encima —su caja, su icono grande— lo sigue declarando ella, y gana. */
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.error-msg {
+  /* Rojo y pequeño: lo importante es que se distinga de un dato. */
+  font-size: 0.85rem;
+  color: var(--error-color);
+}
+
 .checkbox-item {
   display: flex;
   align-items: center;

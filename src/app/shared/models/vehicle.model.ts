@@ -8,6 +8,19 @@ export type FuelType = 'diesel' | 'petrol' | 'hybrid' | 'electric';
 
 export type TransmissionType = 'manual' | 'automatic';
 
+/**
+ * De quién es el coche.
+ *
+ * `own` es la flota de Velto; `collaborator`, un vehículo cedido por un tercero
+ * a cambio de un reparto del alquiler. Ver `owner-share.util.ts`.
+ */
+export type VehicleOwnership = 'own' | 'collaborator';
+
+export const VEHICLE_OWNERSHIP_LABELS: Record<VehicleOwnership, string> = {
+  own: 'vehicles.ownership.own',
+  collaborator: 'vehicles.ownership.collaborator'
+};
+
 export interface VehicleImage {
   url: string;
   path: string;
@@ -46,6 +59,36 @@ export interface Vehicle {
   seats: number;
   luggageCapacity: number;
   status: VehicleStatus;
+
+  /**
+   * De quién es el coche.
+   *
+   * ⚠️ **Esto NO cambia quién alquila ni quién factura.** Velto alquila al
+   * cliente y emite su factura por el importe total, sea el coche suyo o cedido:
+   * el propietario no aparece en ninguna parte de cara al cliente. Lo único que
+   * cambia es que después hay que liquidarle su parte.
+   *
+   * Ausente vale `'own'`: la flota nació entera de Velto y la mayoría lo seguirá
+   * siendo, así que dar de alta un coche propio no puede exigir contestar a una
+   * pregunta más.
+   */
+  ownership?: VehicleOwnership;
+  /** Obligatorio cuando `ownership` es `'collaborator'`. */
+  ownerCollaboratorId?: string;
+  /**
+   * Lo que se lleva **el propietario**, en porcentaje (`75` = 75 %). Velto se
+   * queda el resto.
+   *
+   * ⚠️ **Vive en el coche, no solo en el colaborador** (decisión de Dorel, 12 de
+   * septiembre de 2026): un mismo propietario puede ceder un utilitario y una
+   * furgoneta con repartos distintos. El del colaborador es la propuesta que
+   * rellena el formulario; el que manda a partir de ahí es este.
+   *
+   * ⚠️ Y en una reserva ya creada no manda ninguno de los dos, sino el congelado
+   * en `ownerShareSnapshot`. Ver `owner-share.util.ts`.
+   */
+  ownerSharePercent?: number;
+
   currentKm?: number;
   color?: string;
   vin?: string;

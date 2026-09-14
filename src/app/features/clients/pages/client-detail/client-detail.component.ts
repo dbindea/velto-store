@@ -23,6 +23,7 @@ import {
 import { Payment, PAYMENT_TYPE_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/payment.model';
 import { TranslateService } from '@core/i18n/translate.service';
 import { NotificationService } from '@core/notifications/notification.service';
+import { ConfirmService } from '@core/notifications/confirm.service';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { toDate } from '@shared/utils/reservation-date.util';
 
@@ -43,10 +44,10 @@ export class ClientDetailComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private translateService = inject(TranslateService);
   private notifications = inject(NotificationService);
+  private confirm = inject(ConfirmService);
   /** Público: la plantilla pregunta si el rol puede borrar. */
   permissions = inject(PermissionsService);
 
-  showDeleteModal = false;
   deleting = false;
 
   client: Client | null = null;
@@ -233,33 +234,39 @@ export class ClientDetailComponent implements OnInit {
   }
 
 
-  openDeleteModal(): void {
-    this.showDeleteModal = true;
-  }
-
-  closeDeleteModal(): void {
-    this.showDeleteModal = false;
-  }
-
   /**
    * Borra el cliente y los documentos que subió.
    *
    * El servicio rechaza si tiene reservas: su nombre seguiría dentro del
    * snapshot de cada una, así que el borrado sería una ilusión. El motivo se
    * enseña tal cual llega, que es una clave i18n.
+   *
+   * ⚠️ **Pregunta con `ConfirmService`, no con un modal propio.** Esta pantalla
+   * llevaba uno escrito a mano con siete clases —`modal-overlay`, `modal`,
+   * `modal-header`, `modal-close`, `modal-body`, `modal-actions`,
+   * `btn-danger-solid`— que **no declaraba ningún SCSS**, ni el suyo ni el
+   * global: salía sin caja, sin fondo y sin bloquear lo de detrás. El diálogo
+   * compartido ya bloquea, cierra con `Escape`, pone el foco en el botón que
+   * confirma y distingue lo irreversible con `danger`.
    */
   async deleteClient(): Promise<void> {
     if (!this.client?.id) return;
+    const ok = await this.confirm.ask({
+      title: 'common.delete',
+      message: 'clients.confirmDelete',
+      confirmLabel: 'common.delete',
+      danger: true
+    });
+    if (!ok) return;
+
     this.deleting = true;
     try {
       await this.clientService.deleteClient(this.client.id);
       this.router.navigate(['/clients']);
     } catch (error: any) {
-      console.error('Error deleting client:', error);
       this.notifications.error(error?.message || 'clients.errors.delete');
     } finally {
       this.deleting = false;
-      this.showDeleteModal = false;
     }
   }
 

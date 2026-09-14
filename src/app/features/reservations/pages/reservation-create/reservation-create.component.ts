@@ -221,8 +221,10 @@ export class ReservationCreateComponent implements OnInit {
       );
       this.currentStep = 'vehicle';
     } catch (error) {
-      console.error('Error searching availability:', error);
-      this.dateError = 'Error al buscar disponibilidad';
+      // ⚠️ Estaba en español duro, y la plantilla ya lo pasa por el pipe: un
+      // operador rumano leía castellano justo cuando algo falla, y encima el
+      // texto no se podía traducir aunque se quisiera.
+      this.dateError = 'reservations.availability.searchFailed';
     } finally {
       this.searching = false;
     }

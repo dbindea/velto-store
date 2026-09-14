@@ -153,7 +153,8 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot"
+    "viewAll": "Vezi tot",
+    "date": "Dată"
   },
   "contracts": {
     "actions": {
@@ -470,7 +471,9 @@
       "depositCollected": "Garanție încasată",
       "fuelLevel": "Nivel combustibil",
       "km": "Kilometraj",
-      "notes": "Observații"
+      "notes": "Observații",
+      "pickupKm": "Km la predare",
+      "extraChargeNotes": "Note despre taxe"
     },
     "fuel": {
       "empty": "Gol",
@@ -540,12 +543,26 @@
         "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
         "notFound": "Inspecția nu a fost găsită"
       }
+    },
+    "filters": {
+      "allTypes": "Predări și returnări",
+      "allStatuses": "Orice status"
+    },
+    "deposit": {
+      "collected": "Încasată",
+      "toRetain": "De reținut",
+      "toRefund": "De returnat",
+      "pendingFromClient": "Garanția nu acoperă taxele. Rămâne de încasat de la client:"
+    },
+    "list": {
+      "empty": "Încă nu există inspecții"
     }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrator",
-    "userRoleEmployee": "Angajat"
+    "userRoleEmployee": "Angajat",
+    "more": "Mai mult"
   },
   "maintenance": {
     "actions": {
@@ -647,11 +664,14 @@
     },
     "deposit": {
       "refundFull": "Restituie total",
-      "retain": "Reține"
+      "retain": "Reține",
+      "available": "Disponibil"
     },
     "errors": {
       "invalidAmount": "Suma nu este validă",
-      "loadFailed": "Încasările nu au putut fi încărcate."
+      "loadFailed": "Încasările nu au putut fi încărcate.",
+      "redsysNotConfigured": "Redsys nu este configurat în acest mediu",
+      "redsysNoForm": "Redsys nu a returnat datele formularului"
     },
     "fields": {
       "amount": "Sumă",
@@ -669,7 +689,9 @@
     },
     "filters": {
       "freePayments": "Plăți libere",
-      "reservationPayments": "Plăți din rezervări"
+      "reservationPayments": "Plăți din rezervări",
+      "allMethods": "Orice metodă de plată",
+      "allScopes": "De rezervare și libere"
     },
     "free": {
       "amount": "Sumă",
@@ -771,6 +793,10 @@
     "confirm": {
       "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
       "cancelTitle": "Anulează încasarea"
+    },
+    "problems": {
+      "depositAmountRequired": "Introdu o sumă mai mare decât zero.",
+      "depositExceedsAvailable": "Nu poți mișca mai multă garanție decât a rămas. Verifică ce s-a încasat, minus ce s-a returnat și reținut deja."
     }
   },
   "permissions": {
@@ -850,7 +876,10 @@
       "notInFleet": "Vehiculul nu este disponibil în flotă",
       "search": "Caută disponibilitate",
       "selectVehicle": "Selectează vehicul",
-      "unavailable": "Indisponibil"
+      "unavailable": "Indisponibil",
+      "perDay": "€/zi",
+      "searchFailed": "Disponibilitatea nu a putut fi căutată.",
+      "maintenanceOverdue": "ITP sau revizie expirată"
     },
     "bookingConfirmation": {
       "copyLink": "Copiază linkul",
@@ -862,7 +891,8 @@
     },
     "cancel": {
       "confirm": "Anulezi această rezervare?",
-      "hint": "Nu se poate anula. Rezervarea rămâne în istoric ca anulată."
+      "hint": "Nu se poate anula. Rezervarea rămâne în istoric ca anulată.",
+      "hasCollected": "S-au încasat deja bani pe această rezervare. Anularea nu îi returnează: trebuie stabilit cu clientul dacă se restituie sau rămân ca penalizare."
     },
     "client": {
       "createQuick": "Creare rapidă client",
@@ -948,7 +978,8 @@
       "returnDate": "Data returnării",
       "returnLocation": "Locație returnare",
       "returnTime": "Ora returnării",
-      "totalDays": "zile"
+      "totalDays": "zile",
+      "totalDay": "zi"
     },
     "list": {
       "empty": "Nu există rezervări",
@@ -1188,7 +1219,10 @@
       "luggageRequired": "Indică câte bagaje încap",
       "modelRequired": "Scrie modelul",
       "plateRequired": "Scrie numărul de înmatriculare",
-      "seatsRequired": "Indică câte locuri are"
+      "seatsRequired": "Indică câte locuri are",
+      "delete": "Vehiculul nu a putut fi șters.",
+      "statusChange": "Statusul vehiculului nu a putut fi schimbat.",
+      "deleteHasReservations": "Această mașină are rezervări și nu poate fi ștearsă: numărul ei de înmatriculare este în fiecare dintre ele. Pentru o mașină vândută sau retrasă, schimbă-i statusul în „Scos din uz\"."
     },
     "features": {
       "airConditioning": "Aer condiționat",
@@ -1290,7 +1324,9 @@
       "available": "Disponibil",
       "maintenance": "Mentenanță",
       "outOfService": "Scos din uz",
-      "rented": "Închiriat"
+      "rented": "Închiriat",
+      "retireTitle": "Scoate mașina din flotă",
+      "hasUpcoming": "Această mașină are {count} rezervare(ări) neterminate. Scoaterea ei nu le anulează: dacă nu va mai fi disponibilă, clientul trebuie anunțat și mutat pe altă mașină sau anulat. Continui?"
     },
     "subtitle": "Gestionează flota ta",
     "tabs": {
@@ -1312,6 +1348,15 @@
       "roadsidePlaceholder": "Ex.: +34 902 123 456",
       "roadsideHint": "Este numărul pe care îl sună clientul dacă rămâne în pană.",
       "missing": "Fără date de asigurare. Contractul le promite în clauza privind accidentele: completează-le înainte de a închiria acest vehicul."
+    },
+    "ownership": {
+      "own": "Al Velto",
+      "collaborator": "Al unui colaborator"
+    },
+    "problems": {
+      "ownerRequired": "Spune a cui este mașina.",
+      "ownerShareRequired": "Indică ce parte din închiriere revine proprietarului.",
+      "ownerShareRange": "Repartizarea merge de la 0 la 100 %."
     }
   },
   "workflow": {
@@ -1613,12 +1658,16 @@
     "title": "Colaboratori",
     "totalPending": "Total de plată",
     "vsCalculated": "față de cât a ieșit calculat",
-    "willOwe": "I se va datora"
+    "willOwe": "I se va datora",
+    "kind": {
+      "referral": "Pentru că a adus clientul",
+      "vehicleOwner": "Pentru că a pus mașina"
+    }
   },
   "events": {
     "alerts": {
       "contractNotSigned": "Contractul nu este semnat: mașina nu poate fi predată",
-      "maintenanceOverdue": "Expirat: mașina nu poate fi închiriată",
+      "maintenanceOverdue": "Expirat: nu închiria mașina până nu trece",
       "invoiceDeadline": "Se apropie termenul de emitere"
     },
     "categories": {

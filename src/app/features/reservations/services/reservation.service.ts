@@ -53,6 +53,18 @@ export interface VehicleAvailabilityResult {
   pricing: ReservationPricingSnapshot | null;
   conflictReservationId?: string;
   conflictMessage?: string;
+  /**
+   * Un aviso sobre el coche que **no impide alquilarlo**: hoy, la ITV o un
+   * mantenimiento vencidos.
+   *
+   * ⚠️ **Avisa y no bloquea, a propósito.** Una ITV caducada de un día con cita
+   * dada no es lo mismo que una de hace tres meses, y quien está en el mostrador
+   * con el cliente delante tiene que poder decidir. Lo que no puede es **no
+   * saberlo**: hasta el 11 de septiembre de 2026 el asistente ofrecía el coche
+   * sin decir nada, mientras el correo de las 9:00 afirmaba que «el coche no se
+   * puede alquilar». La frase y el hecho se deciden juntos.
+   */
+  warningMessage?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -227,10 +239,39 @@ export class ReservationService {
     // Get all reservations
     const q = query(this.reservationsRef);
     const reservationSnapshot = await getDocs(q);
-    const reservations = reservationSnapshot.docs.map(doc => ({ 
-      id: doc.id, 
-      ...doc.data() 
+    const reservations = reservationSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
     } as Reservation));
+
+    /**
+     * Los mantenimientos vencidos, para poder avisar.
+     *
+     * ⚠️ **Se filtra por fecha en memoria.** `nextDueDate` es opcional y un
+     * `orderBy` sobre un campo opcional deja fuera, sin avisar, a los que no lo
+     * llevan — es lo que hizo desaparecer una reparación de la ficha de un coche
+     * (M-40). Aquí serían justo los que hay que enseñar.
+     */
+    const ahora = Date.now();
+    const vencidosPorVehiculo = new Set<string>();
+    try {
+      const mantenimientos = await getDocs(
+        query(
+          collection(this.firestore, 'vehicleMaintenance'),
+          where('status', 'in', ['pending', 'scheduled', 'overdue'])
+        )
+      );
+      for (const d of mantenimientos.docs) {
+        const m = d.data() as { vehicleId?: string; nextDueDate?: unknown };
+        if (!m.vehicleId || !m.nextDueDate) continue;
+        const cuando = toDate(m.nextDueDate);
+        if (!isNaN(cuando.getTime()) && cuando.getTime() < ahora) {
+          vencidosPorVehiculo.add(m.vehicleId);
+        }
+      }
+    } catch {
+      // Un aviso que no se puede calcular no puede impedir buscar un coche.
+    }
 
     const pickupTimestamp = toTimestamp(pickupDateTime);
     const returnTimestamp = toTimestamp(returnDateTime);
@@ -314,7 +355,11 @@ export class ReservationService {
         vehicle,
         available: true,
         totalDays,
-        pricing
+        pricing,
+        // Se ofrece igual, pero con el aviso delante. Ver `warningMessage`.
+        warningMessage: vencidosPorVehiculo.has(vehicle.id!)
+          ? 'reservations.availability.maintenanceOverdue'
+          : undefined
       });
     }
 

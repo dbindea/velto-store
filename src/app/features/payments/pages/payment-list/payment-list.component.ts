@@ -83,7 +83,8 @@ export class PaymentListComponent implements OnInit {
   }
 
   methodOptions: Array<{ value: PaymentMethod | 'all'; label: string }> = [
-    { value: 'all', label: 'common.all' },
+    // Ver la nota de inspecciones: dos desplegables con «Todos» no se distinguen.
+    { value: 'all', label: 'payments.filters.allMethods' },
     { value: 'cash', label: 'payments.methods.cash' },
     { value: 'bank_transfer', label: 'payments.methods.bankTransfer' },
     { value: 'bizum', label: 'payments.methods.bizum' },
@@ -94,7 +95,7 @@ export class PaymentListComponent implements OnInit {
   ];
 
   scopeOptions: Array<{ value: 'all' | 'reservation' | 'free'; label: string }> = [
-    { value: 'all', label: 'common.all' },
+    { value: 'all', label: 'payments.filters.allScopes' },
     { value: 'reservation', label: 'payments.filters.reservationPayments' },
     { value: 'free', label: 'payments.filters.freePayments' }
   ];

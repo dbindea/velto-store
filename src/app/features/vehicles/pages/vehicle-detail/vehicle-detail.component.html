@@ -22,7 +22,7 @@
           <i class="pi pi-pencil"></i>
           {{ 'common.edit' | translate }}
         </button>
-        <button class="btn btn-danger" (click)="openDeleteModal()">
+        <button class="btn btn-danger" (click)="deleteVehicle()">
           <i class="pi pi-trash"></i>
         </button>
       </div>
@@ -662,31 +662,6 @@
       </div>
     }
 
-    @if (showDeleteModal) {
-      <div class="modal-overlay" (click)="closeDeleteModal()">
-        <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>{{ 'vehicles.deleteTitle' | translate }}</h3>
-            <button class="modal-close" (click)="closeDeleteModal()">
-              <i class="pi pi-times"></i>
-            </button>
-          </div>
-          <div class="modal-body">
-            <p>{{ 'vehicles.deleteConfirm' | translate }}</p>
-            <div class="modal-actions">
-              <button class="btn btn-secondary" (click)="closeDeleteModal()">
-                {{ 'common.cancel' | translate }}
-              </button>
-              @if (permissions.canDelete()) {
-              <button class="btn btn-danger" (click)="deleteVehicle()">
-                {{ 'common.delete' | translate }}
-              </button>
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-    }
 
     @if (showMaintenanceForm) {
       <div class="modal-overlay" (click)="cancelMaintenanceForm()">

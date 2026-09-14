@@ -153,7 +153,8 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo"
+    "viewAll": "Ver todo",
+    "date": "Fecha"
   },
   "contracts": {
     "actions": {
@@ -258,7 +259,7 @@
     "fleet": {
       "available": "Disponibles",
       "label": "Flota",
-      "rented": "En alquiler",
+      "rented": "Alquilados",
       "total": "Total"
     },
     "loadFailedHint": "Revisa tu conexión y vuelve a intentarlo. No des por hecho que no hay tareas pendientes.",
@@ -470,7 +471,9 @@
       "depositCollected": "Fianza cobrada",
       "fuelLevel": "Nivel de combustible",
       "km": "Kilometraje",
-      "notes": "Observaciones"
+      "notes": "Observaciones",
+      "pickupKm": "Km de salida",
+      "extraChargeNotes": "Notas de los cargos"
     },
     "fuel": {
       "empty": "Vacío",
@@ -540,12 +543,26 @@
         "inspectionRequired": "Falta la inspección de la que emitir el parte",
         "notFound": "No se encuentra la inspección"
       }
+    },
+    "filters": {
+      "allTypes": "Entregas y devoluciones",
+      "allStatuses": "Cualquier estado"
+    },
+    "deposit": {
+      "collected": "Cobrada",
+      "toRetain": "A retener",
+      "toRefund": "A devolver",
+      "pendingFromClient": "La fianza no cubre los cargos. Queda por cobrar al cliente:"
+    },
+    "list": {
+      "empty": "Todavía no hay inspecciones"
     }
   },
   "layout": {
     "footer": "VELTO v1.0",
     "userRoleAdmin": "Administrador",
-    "userRoleEmployee": "Empleado"
+    "userRoleEmployee": "Empleado",
+    "more": "Más"
   },
   "maintenance": {
     "actions": {
@@ -647,11 +664,14 @@
     },
     "deposit": {
       "refundFull": "Devolver total",
-      "retain": "Retener"
+      "retain": "Retener",
+      "available": "Disponible"
     },
     "errors": {
       "invalidAmount": "El importe no es válido",
-      "loadFailed": "No se han podido cargar los cobros."
+      "loadFailed": "No se han podido cargar los cobros.",
+      "redsysNotConfigured": "Redsys no está configurado en este entorno",
+      "redsysNoForm": "Redsys no ha devuelto los datos del formulario"
     },
     "fields": {
       "amount": "Importe",
@@ -669,7 +689,9 @@
     },
     "filters": {
       "freePayments": "Cobros libres",
-      "reservationPayments": "Pagos de reservas"
+      "reservationPayments": "Pagos de reservas",
+      "allMethods": "Cualquier medio de pago",
+      "allScopes": "De reserva y libres"
     },
     "free": {
       "amount": "Importe",
@@ -771,6 +793,10 @@
     "confirm": {
       "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
       "cancelTitle": "Cancelar el cobro"
+    },
+    "problems": {
+      "depositAmountRequired": "Pon un importe mayor que cero.",
+      "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
     }
   },
   "permissions": {
@@ -850,7 +876,10 @@
       "notInFleet": "El vehículo no está disponible en la flota",
       "search": "Buscar disponibilidad",
       "selectVehicle": "Seleccionar vehículo",
-      "unavailable": "No disponible"
+      "unavailable": "No disponible",
+      "perDay": "€/día",
+      "searchFailed": "No se ha podido buscar la disponibilidad.",
+      "maintenanceOverdue": "ITV o mantenimiento vencido"
     },
     "bookingConfirmation": {
       "copyLink": "Copiar enlace",
@@ -862,7 +891,8 @@
     },
     "cancel": {
       "confirm": "¿Seguro que quieres cancelar esta reserva?",
-      "hint": "No se puede deshacer. La reserva quedará cancelada, pero se conserva en el historial."
+      "hint": "No se puede deshacer. La reserva quedará cancelada, pero se conserva en el historial.",
+      "hasCollected": "Ya se ha cobrado dinero de esta reserva. Cancelarla no lo devuelve: hay que acordar con el cliente si se le reintegra o se queda como penalización."
     },
     "client": {
       "createQuick": "Crear cliente rápido",
@@ -948,7 +978,8 @@
       "returnDate": "Fecha de devolución",
       "returnLocation": "Lugar de devolución",
       "returnTime": "Hora de devolución",
-      "totalDays": "días"
+      "totalDays": "días",
+      "totalDay": "día"
     },
     "list": {
       "empty": "No hay reservas todavía",
@@ -1188,7 +1219,10 @@
       "luggageRequired": "Indica cuántas maletas caben",
       "modelRequired": "Escribe el modelo",
       "plateRequired": "Escribe la matrícula",
-      "seatsRequired": "Indica cuántas plazas tiene"
+      "seatsRequired": "Indica cuántas plazas tiene",
+      "delete": "No se ha podido eliminar el vehículo.",
+      "statusChange": "No se ha podido cambiar el estado del vehículo.",
+      "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio»."
     },
     "features": {
       "airConditioning": "Aire acondicionado",
@@ -1290,7 +1324,9 @@
       "available": "Disponible",
       "maintenance": "Mantenimiento",
       "outOfService": "Fuera de servicio",
-      "rented": "En alquiler"
+      "rented": "En alquiler",
+      "retireTitle": "Retirar el coche de la flota",
+      "hasUpcoming": "Este coche tiene {count} reserva(s) sin terminar. Retirarlo no las cancela: si ya no va a estar disponible, hay que avisar al cliente y cambiarle de coche o cancelar. ¿Continúo?"
     },
     "subtitle": "Gestiona tu flota",
     "tabs": {
@@ -1312,6 +1348,15 @@
       "roadsidePlaceholder": "Ej.: +34 902 123 456",
       "roadsideHint": "Es el número al que llama el cliente si se queda tirado.",
       "missing": "Sin datos de seguro. El contrato los promete en la cláusula de accidentes: rellénalos antes de alquilar este coche."
+    },
+    "ownership": {
+      "own": "De Velto",
+      "collaborator": "De un colaborador"
+    },
+    "problems": {
+      "ownerRequired": "Di de quién es el coche.",
+      "ownerShareRequired": "Indica qué parte del alquiler se lleva el propietario.",
+      "ownerShareRange": "El reparto va del 0 al 100 %."
     }
   },
   "workflow": {
@@ -1613,12 +1658,16 @@
     "title": "Colaboradores",
     "totalPending": "Total pendiente de pagar",
     "vsCalculated": "sobre lo calculado",
-    "willOwe": "Se le deberá"
+    "willOwe": "Se le deberá",
+    "kind": {
+      "referral": "Por traer el cliente",
+      "vehicleOwner": "Por ceder el coche"
+    }
   },
   "events": {
     "alerts": {
       "contractNotSigned": "El contrato no está firmado: no se puede entregar el coche",
-      "maintenanceOverdue": "Vencido: el coche no se puede alquilar",
+      "maintenanceOverdue": "Vencido: no alquiles este coche hasta pasarla",
       "invoiceDeadline": "Se acaba el plazo para emitirla"
     },
     "categories": {

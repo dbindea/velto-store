@@ -107,6 +107,15 @@
   &.info-card {
     border-left-color: var(--info-color);
   }
+  // Las dos de mantenimiento, como variantes de `.card` y no como una caja
+  // aparte: un segundo nombre para la misma tarjeta es cómo se acabó con cuatro
+  // nombres de casilla de verificación.
+  &.card-overdue {
+    border-left-color: var(--error-color);
+  }
+  &.card-due-soon {
+    border-left-color: var(--warning-color);
+  }
 }
 
 .card-header {
@@ -215,12 +224,6 @@
 }
 
 // Maintenance alert cards
-.card-overdue {
-  border-left: 4px solid var(--error-color);
-}
-.card-due-soon {
-  border-left: 4px solid var(--warning-color);
-}
 
 .card-list {
   list-style: none;

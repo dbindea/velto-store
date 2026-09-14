@@ -83,7 +83,7 @@
             <div class="summary-row">
               <span class="label">{{ 'reservations.fields.duration' | translate }}:</span>
               <span class="value">
-                {{ view.totalDays }} {{ 'reservations.fields.totalDays' | translate }}
+                {{ view.totalDays }} {{ (view.totalDays === 1 ? 'reservations.fields.totalDay' : 'reservations.fields.totalDays') | translate }}
               </span>
             </div>
           }

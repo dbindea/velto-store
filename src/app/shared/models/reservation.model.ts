@@ -50,6 +50,22 @@ export interface ReservationContractInfo {
   signingUrl?: string;
 }
 
+/**
+ * El reparto con el dueño del coche, tal y como se pactó **el día de la
+ * reserva**.
+ *
+ * La aritmética vive en `owner-share.util.ts`, que es la única autoridad sobre
+ * qué entra en la base: el alquiler sin IVA, sin fianzas y sin cargos extra.
+ */
+export interface ReservationOwnerShare {
+  collaboratorId: string;
+  /** Copiado a propósito: una liquidación de hace meses tiene que explicarse
+   *  sin depender de que la ficha siga existiendo ni de que se llame igual. */
+  collaboratorName: string;
+  /** Lo que se lleva el propietario, en porcentaje (`75` = 75 %). */
+  sharePercent: number;
+}
+
 export interface ReservationPricingSnapshot {
   totalDays: number;
   appliedRule: {
@@ -268,6 +284,24 @@ export interface Reservation {
   totalDays: number;
 
   pricingSnapshot: ReservationPricingSnapshot;
+
+  /**
+   * El reparto con el dueño del coche, **congelado al crear la reserva**.
+   *
+   * Solo lo llevan las reservas de un vehículo cedido por un colaborador; en un
+   * coche de Velto no existe.
+   *
+   * ⚠️ **Congelado, como el precio y como el tipo de IVA.** Cambiarle mañana el
+   * porcentaje al coche —o cederlo a otro propietario— no puede mover lo que se
+   * pactó por un alquiler de la semana pasada. Es literalmente el mismo motivo
+   * por el que `pricingSnapshot` existe.
+   *
+   * ⚠️ **Y no es lo mismo que una comisión de captación.** Aquella se asigna a
+   * mano desde la ficha del colaborador y puede no haberla; esta viene del coche
+   * y se pone sola. Si el mismo colaborador trae el cliente y pone el coche,
+   * cobra las dos cosas, por separado.
+   */
+  ownerShareSnapshot?: ReservationOwnerShare;
 
   initialPayment: ReservationInitialPayment;
   remainingPayment: ReservationRemainingPayment;

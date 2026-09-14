@@ -65,8 +65,15 @@ describe('el correo del resumen', () => {
 
   /**
    * ⚠️ Un vencimiento pasado y uno futuro no son la misma noticia: con la ITV
-   * caducada el coche **no se puede alquilar**, así que no puede leerse como un
+   * caducada el coche no puede circular, así que no puede leerse como un
    * recordatorio más.
+   *
+   * ⚠️ **Y la frase va en imperativo, no en indicativo.** Decía «el coche no se
+   * puede alquilar», que sugiere que la aplicación lo impide — y no lo impedía:
+   * el asistente ofrecía el coche sin decir nada. Desde el 11 de septiembre de
+   * 2026 avisa (`reservations.availability.maintenanceOverdue`) y **sigue sin
+   * bloquear**, así que lo honesto es decirle al operador qué hacer, no lo que
+   * el sistema hace por él.
    */
   it('distingue lo vencido de lo que falta por vencer', () => {
     const vencido = renderDigestEmail(
@@ -79,7 +86,7 @@ describe('el correo del resumen', () => {
       EMPRESA
     );
     expect(vencido.html).toContain('VENCIDO');
-    expect(vencido.html).toContain('no se puede alquilar');
+    expect(vencido.html).toContain('no alquiles este coche');
 
     const porVencer = renderDigestEmail(
       {

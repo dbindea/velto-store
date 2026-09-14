@@ -87,6 +87,18 @@
                 {{ card.reservation.clientSnapshot.fullName }}
                 · {{ card.reservation.vehicleSnapshot.brand }} {{ card.reservation.vehicleSnapshot.model }}
               </div>
+              <!--
+                ⚠️ **La fecha de recogida distingue una tarjeta de otra.** El mismo
+                cliente con el mismo coche y la misma señal sale dos veces cuando
+                tiene dos reservas: dos tarjetas idénticas que llevan a sitios
+                distintos, y el operador no puede saber cuál está cobrando.
+              -->
+              @if (card.reservation.pickupDateTime) {
+                <div class="card-subtext">
+                  <i class="pi pi-calendar"></i>
+                  {{ toDateSafe(card.reservation.pickupDateTime) | date: 'dd/MM/yyyy HH:mm' }}
+                </div>
+              }
               <div class="card-subtext">{{ 'dashboard.pendingPayment.hint' | translate }}</div>
             </div>
             <div class="card-action">
@@ -108,6 +120,17 @@
                 {{ card.contract.clientSnapshot.fullName }}
                 · {{ card.contract.vehicleSnapshot.brand }} {{ card.contract.vehicleSnapshot.model }}
               </div>
+              <!-- Misma razón que en la señal pendiente: sin la fecha, dos
+                   contratos del mismo cliente son dos tarjetas iguales. -->
+              @if (card.contract.reservationSnapshot?.pickupDateTime) {
+                <div class="card-subtext">
+                  <i class="pi pi-calendar"></i>
+                  {{
+                    toDateSafe(card.contract.reservationSnapshot.pickupDateTime)
+                      | date: 'dd/MM/yyyy HH:mm'
+                  }}
+                </div>
+              }
               <div class="card-subtext">{{ 'dashboard.pendingSignature.hint' | translate }}</div>
             </div>
             <div class="card-action">
@@ -212,21 +235,27 @@
           </div>
         }
 
+        <!--
+          ⚠️ La misma estructura que las demás tarjetas, a propósito. Antes
+          llevaba `dashboard-card`, `card-icon`, `card-title` y `card-subtitle`,
+          cuatro clases que **ningún SCSS declaraba**: la tarjeta salía sin caja,
+          sin relleno y con el enlace pegado al borde. Es la trampa de
+          `.form-control` otra vez, y la solución no es declarar cuatro clases
+          más — es usar la que ya existe.
+        -->
         @if (card.type === 'maintenance_overdue') {
-          <div class="dashboard-card card-overdue">
+          <div class="card card-overdue">
             <div class="card-header">
-              <span class="card-icon"><i class="pi pi-exclamation-triangle"></i></span>
-              <div class="card-title">
-                <h3>{{ 'maintenance.overdue' | translate }}</h3>
-                <p class="card-subtitle">
-                  {{ card.items.length }}
-                  {{
-                    card.items.length === 1
-                      ? ('maintenance.itemSingular' | translate)
-                      : ('maintenance.itemPlural' | translate)
-                  }}
-                </p>
-              </div>
+              <i class="pi pi-exclamation-triangle"></i>
+              <span class="card-label">{{ 'maintenance.overdue' | translate }}</span>
+            </div>
+            <div class="card-subtext">
+              {{ card.items.length }}
+              {{
+                card.items.length === 1
+                  ? ('maintenance.itemSingular' | translate)
+                  : ('maintenance.itemPlural' | translate)
+              }}
             </div>
             <ul class="card-list">
               @for (m of card.items.slice(0, 5); track m.id) {
@@ -249,20 +278,18 @@
         }
 
         @if (card.type === 'maintenance_due_soon') {
-          <div class="dashboard-card card-due-soon">
+          <div class="card card-due-soon">
             <div class="card-header">
-              <span class="card-icon"><i class="pi pi-clock"></i></span>
-              <div class="card-title">
-                <h3>{{ 'maintenance.dueSoon' | translate }}</h3>
-                <p class="card-subtitle">
-                  {{ card.items.length }}
-                  {{
-                    card.items.length === 1
-                      ? ('maintenance.itemSingular' | translate)
-                      : ('maintenance.itemPlural' | translate)
-                  }}
-                </p>
-              </div>
+              <i class="pi pi-clock"></i>
+              <span class="card-label">{{ 'maintenance.dueSoon' | translate }}</span>
+            </div>
+            <div class="card-subtext">
+              {{ card.items.length }}
+              {{
+                card.items.length === 1
+                  ? ('maintenance.itemSingular' | translate)
+                  : ('maintenance.itemPlural' | translate)
+              }}
             </div>
             <ul class="card-list">
               @for (m of card.items.slice(0, 5); track m.id) {
