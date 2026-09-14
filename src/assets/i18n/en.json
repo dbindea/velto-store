@@ -797,6 +797,35 @@
     "problems": {
       "depositAmountRequired": "Enter an amount greater than zero.",
       "depositExceedsAvailable": "You cannot move more deposit than is left. Check what was collected, less what has already been refunded and retained."
+    },
+    "refund": {
+      "title": "Refund to the card",
+      "hint": "Refunds the money to the same card it was charged to, through Redsys. No need to go into the bank panel.",
+      "start": "Refund",
+      "amount": "Amount to refund",
+      "max": "At most",
+      "reason": "Reason (optional)",
+      "warning": "This really takes money out of the company account. A refund accepted by the bank cannot be undone from here: it would take a call to the acquirer.",
+      "confirmTitle": "Refund to the card",
+      "confirmMessage": "Are you sure? The money leaves the account and this cannot be undone from the application.",
+      "confirmAction": "Yes, refund",
+      "done": "Refund accepted by the bank",
+      "refunded": "Refunded",
+      "lastError": "Last attempt rejected",
+      "errors": {
+        "notFound": "That payment was not found",
+        "notCard": "That payment was not taken by card through the gateway: refund it the way it was taken",
+        "notCollected": "That payment never came in, so there is nothing to refund",
+        "noOrder": "That payment has no Redsys order, so the bank cannot identify it",
+        "alreadyRefunded": "That payment is already fully refunded",
+        "amountRequired": "Enter the amount to refund",
+        "amountPositive": "The amount must be greater than zero",
+        "overRefund": "You cannot refund more than was charged",
+        "unauthorized": "Your role cannot refund payments",
+        "notConfigured": "Redsys is not configured in this environment",
+        "rejected": "The bank rejected the refund. Check the statement before trying again",
+        "failed": "The refund could not be completed. Check the statement before trying again"
+      }
     }
   },
   "permissions": {

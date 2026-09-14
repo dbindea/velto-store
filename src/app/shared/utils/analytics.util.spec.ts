@@ -463,3 +463,34 @@ describe('lo que se les debe a los colaboradores', () => {
     });
   });
 });
+
+describe('lo devuelto a la tarjeta no cuenta como ingreso', () => {
+  const cobro = (extra: Record<string, unknown> = {}) =>
+    ({ status: 'paid', type: 'initial_payment', paidAmount: 100, ...extra }) as never;
+
+  /**
+   * ⚠️ **La prueba que evita contar un dinero que ya salió.** Un cobro de 100 €
+   * del que se devolvieron 40 metió 60 en la empresa. Sin descontarlo, el
+   * informe diría 100 — y no es que se equivoque un poco: es que afirma que hay
+   * un dinero que no está.
+   */
+  it('una devolución parcial se descuenta', () => {
+    expect(sumPaid([cobro({ refundedAmount: 40 })])).toBe(60);
+  });
+
+  it('una devolución total deja el cobro en cero', () => {
+    expect(sumPaid([cobro({ refundedAmount: 100 })])).toBe(0);
+  });
+
+  it('sin devoluciones, lo de siempre', () => {
+    expect(sumPaid([cobro(), cobro({ paidAmount: 50 })])).toBe(150);
+  });
+
+  /**
+   * ⚠️ Un dato torcido —más devuelto que cobrado— no puede convertir un cobro
+   * en un gasto: bajaría el informe entero sin que nada lo explicara.
+   */
+  it('nunca resta más de lo que ese cobro metió', () => {
+    expect(sumPaid([cobro({ refundedAmount: 500 }), cobro()])).toBe(100);
+  });
+});

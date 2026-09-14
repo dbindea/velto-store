@@ -172,6 +172,123 @@
                 <span class="value">{{ payment.redsys.notifiedAt | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
             }
+
+            <!--
+              ⚠️ **Lo devuelto se enseña SIEMPRE que lo haya.** Un cobro de 100 €
+              del que se devolvieron 40 sigue diciendo «100 €» arriba, que es
+              cierto —eso es lo que entró— pero no es lo que queda. Sin esta
+              línea, la única forma de saberlo sería el extracto del banco.
+            -->
+            @if (refunded > 0) {
+              <div class="info-row">
+                <span class="label">{{ 'payments.refund.refunded' | translate }}:</span>
+                <span class="value refunded-amount">−{{ refunded | number:'1.2-2' }} €</span>
+              </div>
+              @for (r of payment.redsys.refunds || []; track $index) {
+                <div class="info-row refund-line">
+                  <span class="label">
+                    {{ r.at | date:'dd/MM/yyyy HH:mm' }}
+                    @if (r.by) { · {{ r.by }} }
+                  </span>
+                  <span class="value">
+                    {{ r.amount | number:'1.2-2' }} €
+                    @if (r.authorizationCode) { · {{ r.authorizationCode }} }
+                  </span>
+                </div>
+              }
+            }
+
+            <!--
+              ⚠️ **El último rechazo, dicho.** Si el banco no aceptó, el operador
+              tiene que saber por qué antes de volver a intentarlo — o antes de
+              devolver desde el panel del banco y acabar devolviendo dos veces.
+            -->
+            @if (payment.redsys.lastRefundError) {
+              <div class="info-row">
+                <span class="label">{{ 'payments.refund.lastError' | translate }}:</span>
+                <span class="value error-text">{{ payment.redsys.lastRefundError }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!--
+        Devolver a la tarjeta.
+
+        ⚠️ **Es el único camino de la aplicación por el que SALE dinero**, así que
+        no está entre los botones de abajo: va en su propia tarjeta, se abre a
+        propósito y pide confirmación con el importe delante. Solo aparece con
+        `refundPayments` y solo sobre un cobro de Redsys que quede por devolver.
+      -->
+      @if (canRefund) {
+        <div class="detail-card refund-card">
+          <div class="card-header">
+            <i class="pi pi-replay"></i>
+            <span>{{ 'payments.refund.title' | translate }}</span>
+          </div>
+          <div class="card-content">
+            @if (!showRefund) {
+              <p class="hint">{{ 'payments.refund.hint' | translate }}</p>
+              <button class="btn-warning" type="button" (click)="openRefund()">
+                <i class="pi pi-replay"></i>
+                {{ 'payments.refund.start' | translate }}
+                ({{ refundable | number:'1.2-2' }} €)
+              </button>
+            } @else {
+              <div class="form-group">
+                <label class="required" for="refundAmount">
+                  {{ 'payments.refund.amount' | translate }}
+                </label>
+                <input
+                  type="number"
+                  id="refundAmount"
+                  class="form-control"
+                  step="0.01"
+                  min="0"
+                  [max]="refundable"
+                  [(ngModel)]="refundAmount"
+                  name="refundAmount"
+                  [class.is-invalid]="refundSubmitted && refundProblemKey"
+                />
+                <small class="field-hint">
+                  {{ 'payments.refund.max' | translate }} {{ refundable | number:'1.2-2' }} €
+                </small>
+                <app-form-error [problems]="refundProblemKey" [show]="refundSubmitted" />
+              </div>
+
+              <div class="form-group">
+                <label for="refundReason">{{ 'payments.refund.reason' | translate }}</label>
+                <input
+                  type="text"
+                  id="refundReason"
+                  class="form-control"
+                  [(ngModel)]="refundReason"
+                  name="refundReason"
+                />
+              </div>
+
+              <!--
+                ⚠️ El aviso va SIEMPRE, no solo cuando algo falla: lo que hay que
+                saber antes de pulsar no es que te has equivocado, es que esto no
+                se deshace desde aquí.
+              -->
+              <div class="notice notice-warning">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ 'payments.refund.warning' | translate }}</span>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn-secondary" type="button" (click)="showRefund = false">
+                  {{ 'common.cancel' | translate }}
+                </button>
+                <button class="btn-danger" type="button" [disabled]="refunding"
+                  (click)="doRefund()">
+                  @if (refunding) { <i class="pi pi-spin pi-spinner"></i> }
+                  {{ 'payments.refund.confirmAction' | translate }}
+                </button>
+              </div>
+            }
           </div>
         </div>
       }

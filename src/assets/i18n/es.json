@@ -797,6 +797,35 @@
     "problems": {
       "depositAmountRequired": "Pon un importe mayor que cero.",
       "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
+    },
+    "refund": {
+      "title": "Devolver a la tarjeta",
+      "hint": "Devuelve el dinero a la misma tarjeta con la que se cobró, a través de Redsys. No hace falta entrar al panel del banco.",
+      "start": "Devolver",
+      "amount": "Importe a devolver",
+      "max": "Como máximo",
+      "reason": "Motivo (opcional)",
+      "warning": "Esto saca dinero de la cuenta de la empresa de verdad. Una devolución aceptada por el banco no se deshace desde aquí: habría que llamar al comercio.",
+      "confirmTitle": "Devolver a la tarjeta",
+      "confirmMessage": "¿Seguro? El dinero sale de la cuenta y esta operación no se puede deshacer desde la aplicación.",
+      "confirmAction": "Sí, devolver",
+      "done": "Devolución aceptada por el banco",
+      "refunded": "Devuelto",
+      "lastError": "Último intento rechazado",
+      "errors": {
+        "notFound": "No se encontró ese cobro",
+        "notCard": "Ese cobro no se hizo con tarjeta por la pasarela: devuélvelo como se cobró",
+        "notCollected": "Ese cobro no ha entrado, así que no hay nada que devolver",
+        "noOrder": "Ese cobro no tiene el pedido de Redsys, así que el banco no puede identificarlo",
+        "alreadyRefunded": "Ese cobro ya está devuelto entero",
+        "amountRequired": "Pon el importe a devolver",
+        "amountPositive": "El importe tiene que ser mayor que cero",
+        "overRefund": "No se puede devolver más de lo que se cobró",
+        "unauthorized": "Tu rol no permite devolver cobros",
+        "notConfigured": "Redsys no está configurado en este entorno",
+        "rejected": "El banco ha rechazado la devolución. Comprueba el extracto antes de volver a intentarlo",
+        "failed": "No se ha podido completar la devolución. Comprueba el extracto antes de volver a intentarlo"
+      }
     }
   },
   "permissions": {

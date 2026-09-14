@@ -238,3 +238,44 @@
   color: white;
   &:hover:not(:disabled) { filter: brightness(1.1); }
 }
+// Devolver a la tarjeta
+//
+// Tarjeta propia y con el borde en ámbar: no compite con los botones de abajo
+// porque no es una acción más, es la única por la que sale dinero.
+.refund-card {
+  border-color: var(--warning-color);
+
+  .hint {
+    margin: 0 0 1rem;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .notice {
+    margin-top: 1rem;
+  }
+}
+
+// Lo devuelto va en rojo y con su signo: es dinero que salió.
+.refunded-amount {
+  color: var(--error-color);
+  font-weight: 600;
+}
+
+// Cada devolución, más pequeña y en gris: son el detalle del total de arriba.
+.refund-line {
+  .label,
+  .value {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}
+
+.error-text {
+  color: var(--error-color);
+}

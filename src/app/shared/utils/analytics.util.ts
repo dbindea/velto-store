@@ -77,8 +77,26 @@ export function revenuePayments(payments: Payment[], range: DateRange): Payment[
   return payments.filter((p) => isRevenue(p) && dentro(paidOn(p), range));
 }
 
+/**
+ * Lo que de verdad entró y **se quedó**.
+ *
+ * ⚠️ **Se descuenta lo devuelto a la tarjeta.** Un cobro de 100 € del que se
+ * devolvieron 40 metió 60 en la empresa, no 100: contarlo entero diría que hay
+ * un dinero que ya salió. Y no basta con mirar el estado, porque una devolución
+ * **parcial** deja el pago en `paid` a propósito — sigue vivo por el resto.
+ *
+ * ⚠️ **Nunca negativo.** Si un dato viniera torcido —más devuelto que cobrado—,
+ * restarlo convertiría ese cobro en un gasto y el informe entero bajaría sin que
+ * nada lo explicara.
+ */
 export function sumPaid(payments: Payment[]): number {
-  return roundMoney(payments.reduce((t, p) => t + (Number(p.paidAmount) || 0), 0));
+  return roundMoney(
+    payments.reduce((t, p) => {
+      const cobrado = Number(p.paidAmount) || 0;
+      const devuelto = Number(p.refundedAmount) || 0;
+      return t + Math.max(0, cobrado - devuelto);
+    }, 0)
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -70,6 +70,18 @@ export type Permission =
   | 'grantDiscounts'
   | 'waiveDeposit'
   // Irreversible
+  /**
+   * Devolver a la tarjeta un cobro hecho con Redsys.
+   *
+   * ⚠️ **Permiso propio y no `deleteRecords`**, aunque los dos sean de
+   * administrador hoy. Borrar un registro destruye información nuestra;
+   * devolver **saca dinero de la cuenta de la empresa** hacia la tarjeta de
+   * alguien, y una devolución aceptada por el banco no se deshace con un botón.
+   * Metiéndolo en el permiso de borrar, el día que alguien decida que un
+   * encargado puede borrar una reserva de prueba le estaría dando también la
+   * llave de la caja.
+   */
+  | 'refundPayments'
   | 'deleteRecords'
   | 'cancelReservations'
   // Workflow
@@ -113,6 +125,7 @@ const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
     'editPricing',
     'grantDiscounts',
     'waiveDeposit',
+    'refundPayments',
     'deleteRecords',
     'cancelReservations',
     'skipWorkflowSteps'

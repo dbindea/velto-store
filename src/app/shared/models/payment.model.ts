@@ -127,6 +127,20 @@ export interface Payment {
   externalReference?: string;   // Redsys u otros proveedores
   internalReference: string;    // Identificador único interno
 
+  /**
+   * Lo ya devuelto a la tarjeta de este mismo cobro.
+   *
+   * ⚠️ **Vive fuera de `redsys` a propósito**: lo mira `analytics.util.ts` para
+   * descontarlo de los ingresos, y un ingreso que se ha devuelto deja de serlo
+   * venga de donde venga. Enterrado dentro del objeto de la pasarela, el día que
+   * se devuelva por otra vía habría que acordarse de mirar en dos sitios.
+   *
+   * ⚠️ **Una devolución PARCIAL no cambia el estado del pago.** El cobro sigue
+   * vivo por el resto; marcarlo `refunded` entero haría que los informes
+   * dejaran de contar un dinero que sí entró y se quedó.
+   */
+  refundedAmount?: number;
+
   redsys?: {
     order?: string;
     merchantCode?: string;
@@ -137,6 +151,25 @@ export interface Payment {
     authorizationCode?: string;
     rawNotification?: any;
     notifiedAt?: any;
+    /**
+     * Las devoluciones hechas contra este cobro, cada una con su rastro.
+     *
+     * ⚠️ **Quién y cuándo, siempre.** Es dinero saliendo de la empresa: si
+     * dentro de seis meses no se puede decir quién lo devolvió y contra qué
+     * autorización, la cifra no se puede defender ante nadie.
+     */
+    refunds?: {
+      amount: number;
+      at: any;
+      by?: string | null;
+      reason?: string | null;
+      responseCode?: string | null;
+      authorizationCode?: string | null;
+    }[];
+    /** Verdadero mientras se está hablando con el banco. Evita el doble clic. */
+    refundInProgress?: boolean;
+    /** El último rechazo, para poder explicar por qué no salió. */
+    lastRefundError?: string;
   };
 
   createdAt?: any;

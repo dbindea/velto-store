@@ -797,6 +797,35 @@
     "problems": {
       "depositAmountRequired": "Introdu o sumă mai mare decât zero.",
       "depositExceedsAvailable": "Nu poți mișca mai multă garanție decât a rămas. Verifică ce s-a încasat, minus ce s-a returnat și reținut deja."
+    },
+    "refund": {
+      "title": "Restituie pe card",
+      "hint": "Restituie banii pe același card cu care s-a încasat, prin Redsys. Nu trebuie să intri în panoul băncii.",
+      "start": "Restituie",
+      "amount": "Suma de restituit",
+      "max": "Cel mult",
+      "reason": "Motiv (opțional)",
+      "warning": "Aceasta scoate bani din contul firmei cu adevărat. O restituire acceptată de bancă nu se poate anula de aici: ar fi nevoie de un telefon la comerciant.",
+      "confirmTitle": "Restituie pe card",
+      "confirmMessage": "Sigur? Banii ies din cont și această operațiune nu se poate anula din aplicație.",
+      "confirmAction": "Da, restituie",
+      "done": "Restituire acceptată de bancă",
+      "refunded": "Restituit",
+      "lastError": "Ultima încercare respinsă",
+      "errors": {
+        "notFound": "Acea încasare nu a fost găsită",
+        "notCard": "Acea încasare nu s-a făcut cu cardul prin gateway: restituie-o cum s-a încasat",
+        "notCollected": "Acea încasare nu a intrat, deci nu este nimic de restituit",
+        "noOrder": "Acea încasare nu are comanda Redsys, deci banca nu o poate identifica",
+        "alreadyRefunded": "Acea încasare este deja restituită integral",
+        "amountRequired": "Introdu suma de restituit",
+        "amountPositive": "Suma trebuie să fie mai mare decât zero",
+        "overRefund": "Nu se poate restitui mai mult decât s-a încasat",
+        "unauthorized": "Rolul tău nu permite restituiri",
+        "notConfigured": "Redsys nu este configurat în acest mediu",
+        "rejected": "Banca a respins restituirea. Verifică extrasul înainte de a încerca din nou",
+        "failed": "Restituirea nu a putut fi finalizată. Verifică extrasul înainte de a încerca din nou"
+      }
     }
   },
   "permissions": {
