@@ -35,7 +35,9 @@
             type="text"
             id="name"
             class="form-control"
-            [(ngModel)]="form.name"
+            [ngModel]="form.name"
+            (ngModelChange)="form.name = $event"
+            (input)="onNameInput($event)"
             name="name"
             [class.is-invalid]="submitted() && problems['name']"
           />

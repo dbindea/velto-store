@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -85,6 +86,17 @@ export class CollaboratorListComponent implements OnInit {
   }
 
   // --- Alta y edición ------------------------------------------------------
+
+  /**
+   * Capitaliza el nombre según se escribe.
+   *
+   * ⚠️ **`transformInput` y no asignar `input.value`**: asignarlo directamente
+   * manda el cursor al final en cada tecla, así que escribir un apellido a
+   * mitad de palabra es imposible. El util conserva la posición.
+   */
+  onNameInput(event: Event): void {
+    this.form.name = transformInput(event.target as HTMLInputElement, capitalizeWords);
+  }
 
   private emptyForm(): Partial<Collaborator> {
     // 25 % es el ejemplo que usa Dorel y el valor con el que se trabaja: como

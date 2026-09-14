@@ -1,4 +1,5 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -185,6 +186,21 @@ export class ReservationDetailComponent implements OnInit {
   /** The rate as a percentage, for the "IVA (21 %)" label. */
   get vatPercent(): number {
     return Math.round(this.vat.rate * 100);
+  }
+
+  /**
+   * Capitaliza el nombre del conductor adicional según se escribe.
+   *
+   * ⚠️ **Acaba IMPRESO en el contrato**, bajo el arrendatario y como la
+   * persona a la que la cláusula 2 autoriza a conducir. Un «juan garcía» en
+   * minúsculas no es un detalle de pantalla: sale así en el PDF que se sella y
+   * que el cliente firma, y un contrato firmado no se regenera.
+   */
+  onDriverNameInput(event: Event): void {
+    this.driverForm.fullName = transformInput(
+      event.target as HTMLInputElement,
+      capitalizeWords
+    );
   }
 
   // --- El reparto con el dueño del coche -----------------------------------

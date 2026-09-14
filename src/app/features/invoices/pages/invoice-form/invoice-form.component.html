@@ -171,7 +171,9 @@
               type="text"
               id="recipientName"
               class="form-control"
-              [(ngModel)]="recipient.name"
+              [ngModel]="recipient.name"
+              (ngModelChange)="recipient.name = $event"
+              (input)="onRecipientNameInput($event)"
               name="recipientName"
               [class.is-invalid]="submitted() && problems['recipientName']"
             />

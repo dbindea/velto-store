@@ -1095,7 +1095,9 @@
                   <label class="required" for="dname">{{ 'reservations.drivers.name' | translate }}</label>
                   <input id="dname" type="text" class="form-control" name="dname"
                          [class.is-invalid]="driverSubmitted && driverProblems['fullName']"
-                         [(ngModel)]="driverForm.fullName" />
+                         [ngModel]="driverForm.fullName"
+                         (ngModelChange)="driverForm.fullName = $event"
+                         (input)="onDriverNameInput($event)" />
                   <app-form-error [problems]="driverProblems['fullName']" [show]="driverSubmitted" />
                 </div>
                 <div class="form-group">

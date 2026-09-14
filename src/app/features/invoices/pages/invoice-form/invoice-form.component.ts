@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -340,6 +341,21 @@ export class InvoiceFormComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Capitaliza el nombre del destinatario según se escribe.
+   *
+   * ⚠️ **Acaba IMPRESO en un documento**, así que un «juan garcía» en
+   * minúsculas no es un detalle de pantalla: sale así en el PDF que recibe el
+   * cliente. El resto de nombres de la aplicación ya se capitalizaban; estos
+   * dos se habían quedado fuera.
+   *
+   * ⚠️ `transformInput` conserva la posición del cursor: asignar `input.value`
+   * lo manda al final en cada tecla.
+   */
+  onRecipientNameInput(event: Event): void {
+    this.recipient.name = transformInput(event.target as HTMLInputElement, capitalizeWords);
   }
 
   /** La explicación de la fecha propuesta, para que se pueda revisar. */

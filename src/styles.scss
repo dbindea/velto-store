@@ -878,14 +878,32 @@ h1, h2, h3, h4, h5, h6 {
    ⚠️ **El último no separa.** Sin esto, la sección se queda con un hueco muerto
    debajo del último campo y parece que falta algo.
    ========================================================================= */
-.form-section > .form-group,
-.form-section > .form-row {
-  margin-bottom: 1rem;
-}
-
-.form-section > .form-group:last-child,
-.form-section > .form-row:last-child {
-  margin-bottom: 0;
+/**
+ * ⚠️ **Va por HERMANOS, no por contenedor, y esa es la corrección.**
+ *
+ * La primera versión de esta regla decía `.form-section > .form-group`, y solo
+ * arreglaba los formularios que usan esa caja. El de colaborador vive dentro de
+ * un `.card`, así que su casilla «Activo» seguía pegada a las Notas — **0 px
+ * medidos**. Es exactamente el error que esta regla venía a resolver: cubrir el
+ * caso que uno mira en vez del patrón.
+ *
+ * Con el hermano adyacente da igual dónde viva el formulario: lo que separa es
+ * que haya algo antes, que es la condición real.
+ *
+ * ⚠️ **Y por eso es `margin-top` y no `margin-bottom`.** El último elemento no
+ * lleva nada, sin tener que exceptuarlo: no hay hermano siguiente al que
+ * separar. Con `margin-bottom` hacía falta un `:last-child` que se olvida en
+ * cuanto alguien mete un elemento nuevo al final.
+ */
+.form-group + .form-group,
+.form-group + .form-row,
+.form-group + .checkbox-item,
+.form-row + .form-group,
+.form-row + .form-row,
+.form-row + .checkbox-item,
+.checkbox-item + .form-group,
+.checkbox-item + .form-row {
+  margin-top: 1rem;
 }
 
 /* El rótulo y su campo son **una** cosa, así que van más juntos entre sí que
