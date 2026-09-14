@@ -41,7 +41,7 @@
 .sidebar-header {
   // Narrower side padding than the rest of the sidebar: the logo is the only
   // thing in this row, and the reclaimed width is what lets the wordmark grow.
-  padding: 1.2rem 0.6rem;
+  padding: 1.25rem 0.625rem;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -279,7 +279,7 @@ app-brand-logo {
 
     .search-trigger-kbd {
       display: inline-block;
-      padding: 0.05rem 0.375rem;
+      padding: 0rem 0.375rem;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 4px;

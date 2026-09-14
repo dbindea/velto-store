@@ -44,8 +44,8 @@
 .figure {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.85rem 1rem;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 10px;
@@ -86,7 +86,7 @@
   margin-bottom: 1.25rem;
 
   h2 {
-    margin: 0 0 0.35rem;
+    margin: 0 0 0.375rem;
     font-size: 1rem;
     color: var(--text-primary);
   }
@@ -102,7 +102,7 @@
    `input` salen sin caja mientras los `select` de al lado se ven bien. */
 .form-control {
   width: 100%;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -125,7 +125,7 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.375rem;
   min-width: 0;
 
   label {
@@ -136,7 +136,7 @@
 
 .preview {
   margin: 1rem 0 0;
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 0.875rem;
   background: var(--bg-input);
   border-radius: 8px;
   font-size: 0.9rem;
@@ -164,14 +164,14 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.625rem;
 }
 
 .sale {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.875rem 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 10px;
@@ -190,7 +190,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.125rem;
   cursor: pointer;
 
   .client {
@@ -209,7 +209,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.15rem;
+  gap: 0.125rem;
   white-space: nowrap;
 
   .value {
@@ -235,7 +235,7 @@
 
 .pay-actions {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.375rem;
 }
 
 .empty {
@@ -272,7 +272,7 @@
 
   th {
     text-align: left;
-    padding: 0.4rem 0.6rem;
+    padding: 0.375rem 0.625rem;
     font-size: 0.68rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -281,7 +281,7 @@
   }
 
   td {
-    padding: 0.55rem 0.6rem;
+    padding: 0.5rem 0.625rem;
     border-top: 1px solid var(--border-color);
     color: var(--text-primary);
   }
@@ -319,14 +319,14 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.375rem;
 }
 
 .payment {
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
-  padding: 0.55rem 0.9rem;
+  padding: 0.5rem 0.875rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -364,7 +364,7 @@
 .filter {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.25rem;
   min-width: 0;
 }
 
@@ -376,7 +376,7 @@
 }
 
 .filter-control {
-  padding: 0.42rem 0.65rem;
+  padding: 0.375rem 0.625rem;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -392,7 +392,7 @@
 }
 
 .period-summary {
-  margin: 0 0 0.9rem;
+  margin: 0 0 0.875rem;
   font-size: 0.85rem;
   color: var(--text-muted);
 
@@ -413,7 +413,7 @@
 
     th,
     td {
-      padding: 0.45rem 0.35rem;
+      padding: 0.5rem 0.375rem;
     }
   }
 
@@ -437,7 +437,7 @@
    número que dentro de seis meses no cuadra con nada. */
 .adjusted-note {
   display: block;
-  margin-top: 0.1rem;
+  margin-top: 0.125rem;
   color: var(--warning-color);
 }
 
@@ -460,7 +460,7 @@
 .amount-edit {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.375rem;
   flex-wrap: wrap;
   /* Que no estire la fila: el `min-width` por defecto de un flex item es `auto`. */
   min-width: 0;
@@ -468,7 +468,7 @@
   .form-control {
     width: auto;
     min-width: 90px;
-    padding: 0.35rem 0.5rem;
+    padding: 0.375rem 0.5rem;
     font-size: 0.85rem;
   }
 }
@@ -538,7 +538,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0.65rem 1rem;
+  padding: 0.625rem 1rem;
   background: var(--bg-card);
 
   & + .accrual {
@@ -550,7 +550,7 @@
   .what {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.125rem;
     min-width: 0;
   }
 
@@ -603,7 +603,7 @@
   .what {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.125rem;
     min-width: 0;
   }
 
@@ -629,7 +629,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 1rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.625rem 0.75rem;
   margin-bottom: 1rem;
   border-top: 1px solid var(--border-color);
 
@@ -654,7 +654,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.1rem 0.4rem;
+  padding: 0.125rem 0.375rem;
   border-radius: 4px;
   background: var(--bg-input);
   color: var(--text-muted);
@@ -670,7 +670,7 @@
 .balance .figure .split {
   font-size: 0.75rem;
   color: var(--text-muted);
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
 }
 
 // La factura que manda el propietario
@@ -700,7 +700,7 @@
   }
 
   .hint {
-    margin: 0.35rem 0 0.75rem;
+    margin: 0.375rem 0 0.75rem;
   }
 }
 
@@ -717,7 +717,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.6rem 0.9rem;
+  padding: 0.625rem 0.875rem;
   background: var(--bg-card);
 
   & + .received-invoice {
@@ -728,7 +728,7 @@
   .what {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.125rem;
     flex: 1;
     min-width: 0;
   }
@@ -765,7 +765,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.1rem 0.4rem;
+  padding: 0.125rem 0.375rem;
   border-radius: 4px;
   border: 1px solid var(--border-color);
 

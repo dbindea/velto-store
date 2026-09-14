@@ -45,7 +45,25 @@ const PROPIEDADES = [
  */
 const IGNORAR = [
   /^-/,           // compensaciones
-  /^0$/           // el cero no tiene escala
+  /^0$/,          // el cero no tiene escala
+  /^260px$/       // el ancho de la barra lateral (ver ACEPTADAS)
+];
+
+/**
+ * Lo revisado y dejado como estaba, con su motivo.
+ *
+ * - **`margin-left: 260px`** en `private-layout`: no es un espaciado, es el
+ *   **ancho de la barra lateral**. Empareja con su `width`, y llevarlo a la
+ *   escala metería el contenido por debajo del menú.
+ * - **`padding: 2.25rem` / `2.75rem`** en tres listados: son el hueco que deja
+ *   el icono dentro de un campo de búsqueda. Se miden contra el icono, no
+ *   contra la rejilla, y moverlos lo descoloca.
+ */
+const ACEPTADAS = [
+  'src/app/layout/private-layout/private-layout.component.scss',
+  'src/app/features/contracts/pages/contract-list/contract-list.component.scss',
+  'src/app/features/expenses/pages/expense-list/expense-list.component.scss',
+  'src/app/features/vehicles/pages/vehicle-list/vehicle-list.component.scss'
 ];
 
 /**
@@ -115,6 +133,11 @@ function revisar(arreglar) {
 
           const destino = valorMasCercano(rem);
           const lejos = Math.abs(rem - destino) > TOPE_REM;
+          // Lo revisado y aceptado no vuelve a salir: si no, la auditoría avisa
+          // siempre de lo mismo y se deja de mirar.
+          if (lejos && ACEPTADAS.some((a) => f.split(path.sep).join('/').endsWith(a))) {
+            return v;
+          }
           fuera.push({
             fichero: f,
             prop: prop.trim(),

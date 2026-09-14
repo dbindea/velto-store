@@ -33,6 +33,8 @@ npm run firebase:emulators
 
 # i18n (ver sección abajo)
 npm run i18n:audit        # verifica claves faltantes, huérfanas y paridad es/en/ro
+npm run css:audit         # clases usadas en plantillas que no declara nadie
+npm run spacing:audit     # espaciados fuera de la escala (--fix los alinea)
 
 # Cloud Functions
 npm --prefix functions run build      # tsc + copia de fuentes TTF
@@ -1918,6 +1920,30 @@ porque su geometría no es esa.
 Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
 sin que se notara porque solo aparece cuando falta la declaración.
 
+
+### `npm run spacing:audit` — la escala de espaciado
+
+⚠️ **El problema no era un margen mal puesto: eran CUARENTA Y UN valores
+distintos.** El 14 de septiembre de 2026 la aplicación declaraba 1750
+espaciados con 41 valores diferentes —0,35 / 0,4 / 0,45 / 0,55 / 0,6 / 0,65 /
+0,85 / 0,9 rem…—, todos casi iguales entre sí y ninguno alineado con el
+siguiente. Por eso unas descripciones salían pegadas al campo y otras no, sin
+que hubiera un culpable concreto al que ir.
+
+La escala son **múltiplos de 2 px hasta 1 rem y de 4 px por encima**. El guion
+lleva a la escala lo que se salga y **falla con código 1** si queda algo fuera.
+
+⚠️ **`--fix` no mueve nada más de 2 px.** Sin ese tope, unificar deja de ser
+alinear y pasa a ser recomponer: un `margin-left: 260px` que empareja con el
+ancho de la barra lateral tiene su valor de escala más cercano en 96 px, y
+llevarlo ahí mete el contenido debajo del menú. Lo que se pasa del tope se
+**informa** para mirarlo a mano, y lo revisado va a `ACEPTADAS` con su motivo.
+
+⚠️ **Y el ritmo vertical de los formularios es global** (`styles.scss`). Un
+`.form-group` hijo directo de `.form-section` no estaba en ninguna `.form-row`,
+así que se quedaba **sin margen ninguno**: es lo que hacía que la descripción de
+un vehículo y la casilla de debajo se tocaran. Igual que con `.btn-primary`, no
+pisa a quien ya lo declara.
 
 ### `npm run css:audit` — la clase que nadie declara
 
