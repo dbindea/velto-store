@@ -198,9 +198,25 @@ siempre el total de los repartos. Y `invoiceCandidates()` leía `editingInvoiceI
 igual: funcionaba de rebote, cuando se movía otra señal. **Un `computed` que lee
 algo que no es señal no se entera de nada**, y compila igual.
 
+### Entrega 4, hecha: el reparto en el resultado de Velto
+
+`collaboratorOutgoings()` lo cuenta como una salida más, en su propia línea y no
+fundido con las comisiones.
+
+⚠️ **Y lo cuenta ESTÉ O NO reconocido.** Es lo que sostiene el beneficio: un
+reparto devengado vive derivado de su reserva cerrada hasta que se apunta, así
+que mirando solo `collaboratorSales` no se restaba y Velto aparecía ganando una
+parte del alquiler que no es suya.
+
+### N-33 está COMPLETO — las cuatro entregas
+
+⚠️ **Lo único que queda de N-33 no es código: es desplegar las reglas a
+producción.** `collaboratorInvoices` y la protección de `ownerShareSnapshot` se
+desplegaron a `velto-store` el 12 y el 14 de septiembre de 2026; en
+`rentalcar-veltomobility` **no están**. Sin ellas, esa colección y ese campo
+quedan con las reglas viejas el día que producción tenga datos.
+
 ### Lo que falta
-- **Entrega 4**: informes con el reparto y el resultado real de Velto, y la
-  **fecha de operación** de las facturas.
 
 ### La fecha de operación — HECHA a medias, y hay que saber cuál mitad
 

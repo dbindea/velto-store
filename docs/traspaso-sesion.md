@@ -286,7 +286,16 @@ La curva se aplanó: la cuarta no sacó ningún fallo estructural.
 
 **Todavía no se ha dado el visto bueno para producción**, y falta poco:
 
-- Ficha de cliente, detalle de pago y formulario de vehículo en móvil — las tres
-  que no se llegaron a abrir.
-- La prueba de reglas del punto 4.1.
-- El ensayo de restauración del 4.2.
+- ~~La prueba de reglas del punto 4.1.~~ ✅ **Hecha el 14 de septiembre de 2026**:
+  19 comprobaciones, cero fallos.
+- ~~Formulario de vehículo en móvil.~~ ✅ Abierto a 390 px el 12 y el 14 de
+  septiembre; y desde entonces las 16 rutas principales se comprueban a 390 px
+  midiendo el desbordamiento, no mirándolo.
+- **Ficha de cliente y detalle de pago en móvil** — las dos que siguen sin
+  abrirse de verdad. Que no desborden está medido; que se lean bien, no.
+- **El ensayo de restauración del 4.2.** Nunca se ha restaurado una copia.
+- ⚠️ **Las reglas nuevas están solo en desarrollo.** `collaboratorInvoices` y la
+  protección de `ownerShareSnapshot` no se han desplegado a producción.
+- **Un cobro por la vía pública del móvil que se registre solo.** Sigue sin
+  haberlo desde F-32: una vía de cobro no está probada hasta que alguien paga
+  por ella y la aplicación se entera sin ayuda.
