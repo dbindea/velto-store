@@ -49,6 +49,13 @@ export interface Collaborator {
    * ⚠️ **Es el valor POR DEFECTO, no el que manda.** Cada venta congela el suyo,
    * como el precio: subirle la comisión mañana no puede mover lo que ya se
    * pactó por una reserva de la semana pasada.
+   *
+   * ⚠️ **El 0 % es válido y significa «no trae clientes»** (decisión de Dorel,
+   * 12 de septiembre de 2026). Desde que un colaborador puede ser solo el dueño
+   * de un coche, exigir una comisión de captación mayor que cero obligaba a
+   * inventarse un número para alguien que no trae a nadie — y un número
+   * inventado que vive en la ficha acaba aplicándose el día que se le asigne una
+   * venta por error. Cero es la respuesta correcta, y se puede teclear.
    */
   commissionPercent: number;
 
@@ -131,13 +138,15 @@ export interface CollaboratorSale {
   /**
    * Por qué se le debe: por traer al cliente o por poner el coche.
    *
-   * ⚠️ **Sin valor se lee como `referral`.** No es un parche de compatibilidad
-   * —de esos no se escriben aquí—: es que hasta el 12 de septiembre de 2026 solo
-   * existía una clase de apunte, y ahora que hay dos, la que ya estaba tiene
-   * nombre. Quien lea este campo usa `kindOf()`, que resuelve la ausencia en un
-   * solo sitio.
+   * ⚠️ **Obligatorio, sin valor por defecto.** Nació opcional porque había
+   * cuatro comisiones antiguas sin él y la ausencia se leía como `referral`; al
+   * vaciarse la base de desarrollo el 12 de septiembre de 2026 ya no existe
+   * ninguna, así que el campo se exige y **el compilador obliga a contestar**.
+   * Un valor por defecto aquí sería peor que un hueco: apuntaría como comisión
+   * de captación lo que en realidad es el reparto de un coche cedido, y las dos
+   * se pactan, se liquidan y se justifican distinto.
    */
-  kind?: CommissionKind;
+  kind: CommissionKind;
 
   reservationId: string;
   /** Lo justo para reconocer la venta en una lista. */
@@ -184,6 +193,71 @@ export interface CollaboratorSale {
 
   /** Por qué dejó de devengar. Se rellena solo al cancelarse la reserva. */
   cancelledReason?: string;
+
+  /**
+   * La factura del propietario que cubre este apunte, si ya ha llegado.
+   *
+   * ⚠️ **Su ausencia significa «pendiente de recibir factura», y eso NO es «no
+   * hay que facturar»** (Dorel lo dijo con esas palabras). Son dos cosas muy
+   * distintas: la primera es un trámite que falta, la segunda sería una exención
+   * que aquí no existe. Cualquier texto que pinte este estado tiene que decir la
+   * primera, porque un «sin factura» a secas se lee como la segunda y entonces
+   * nadie la reclama.
+   *
+   * ⚠️ **Y se puede pagar sin ella.** Cobrar y justificar van por caminos
+   * separados: al propietario se le paga cuando toca, y su factura llega cuando
+   * llega. Atar el pago a la factura dejaría a alguien sin cobrar por un papel.
+   */
+  receivedInvoiceId?: string;
+
+  createdAt?: any;
+  updatedAt?: any;
+  createdBy?: string;
+}
+
+/**
+ * La factura que **manda el propietario** por ceder su coche.
+ *
+ * ⚠️ **No confundir con `invoices`, que son las de VELTO.** Aquellas las emite
+ * la empresa, son inmutables, consumen número de serie y van a la AEAT por
+ * VERI\*FACTU. Esta es un documento que llega de fuera: si se teclea mal, se
+ * corrige; si se registra por error, se borra. Nada de lo que hace inmutable a
+ * una factura emitida aplica aquí, porque el hecho que acredita no lo ha
+ * declarado Velto.
+ *
+ * ⚠️ **Es una colección propia y no unos campos dentro del apunte** (decisión de
+ * Dorel, 12 de septiembre de 2026). Una sola factura suele cubrir **varias**
+ * reservas —la liquidación del mes—, así que metida en cada apunte habría que
+ * teclearla tantas veces como repartos cubra, con el mismo número repetido y
+ * sin que su importe total constara en ninguna parte. Es la excepción razonada
+ * a «no hay colección de liquidaciones»: aquello era derivable de los pagos, y
+ * un número de factura no se deriva de nada.
+ *
+ * ⚠️ **Y registrarla no la convierte en un gasto todavía.** Decisión del mismo
+ * día, coherente con las comisiones: esto sigue siendo un registro interno y no
+ * escribe en `expenses`. Queda anotado que con factura delante el reparto sí es
+ * un gasto deducible, y que el día que se quiera contabilizar están aquí los
+ * cuatro datos que hacen falta.
+ */
+export interface CollaboratorInvoice {
+  id?: string;
+
+  collaboratorId: string;
+  /** Copiado, para que la factura se pueda leer sin resolver la ficha. */
+  collaboratorName: string;
+
+  /** El número que trae impreso el documento. El suyo, no uno nuestro. */
+  number: string;
+  /** La fecha del documento, que no es la de cuando se registra. */
+  date: any;
+  /** El total de la factura, tal y como viene. */
+  amount: number;
+
+  /** El PDF o la foto, en Storage. */
+  fileUrl?: string;
+  filePath?: string;
+
+  notes?: string;
 
   createdAt?: any;
   updatedAt?: any;

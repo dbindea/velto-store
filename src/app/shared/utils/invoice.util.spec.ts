@@ -26,6 +26,8 @@ import {
   needsOperationDate,
   rebuMargin,
   suggestPaymentMethod,
+  operationDateRisk,
+  suggestOperationDate,
   validateInvoice,
   validateRectifying
 } from './invoice.util';
@@ -676,5 +678,173 @@ describe('qué identificadores llevan el país dentro', () => {
   it('un pasaporte y un identificador de fuera de la Unión, no', () => {
     expect(taxIdCarriesCountry('AB1234567')).toBe(false);
     expect(taxIdCarriesCountry('CHE123456789')).toBe(false);
+  });
+});
+
+describe('qué fecha de operación proponer', () => {
+  const entrega = new Date('2026-06-10');
+  const devolucion = new Date('2026-06-15');
+
+  /**
+   * ⚠️ **El caso general de un alquiler que se cobra al terminar.** La fecha de
+   * operación es la de finalización, no la de expedición: se puede facturar en
+   * julio un alquiler que terminó en junio, y el devengo fue en junio.
+   */
+  it('sin cobros previos, la fecha es la de finalización', () => {
+    const s = suggestOperationDate({
+      pickupDate: entrega,
+      returnDate: devolucion,
+      rentalPayments: [],
+      invoiceTotal: 302.5
+    });
+    expect(s?.date).toEqual(devolucion);
+    expect(s?.reason).toBe('invoices.operationDate.reasonEnd');
+  });
+
+  /**
+   * ⚠️ **La regla que Dorel pidió expresamente.** En un cobro anticipado el IVA
+   * se devenga al cobrar (art. 75.Dos LIVA), así que si el cliente pagó todo
+   * antes de recoger el coche, la operación se devengó ese día — no cuando
+   * devolvió el vehículo cinco días después.
+   */
+  it('cobrado entero antes de entregar, la fecha es la del cobro', () => {
+    const cobro = new Date('2026-06-01');
+    const s = suggestOperationDate({
+      pickupDate: entrega,
+      returnDate: devolucion,
+      rentalPayments: [{ paidAt: cobro, amount: 302.5 }],
+      invoiceTotal: 302.5
+    });
+    expect(s?.date).toEqual(cobro);
+    expect(s?.reason).toBe('invoices.operationDate.reasonAdvance');
+  });
+
+  it('se completa con varios cobros: vale el que lo termina de cubrir', () => {
+    const primero = new Date('2026-05-20');
+    const segundo = new Date('2026-06-02');
+    const s = suggestOperationDate({
+      pickupDate: entrega,
+      returnDate: devolucion,
+      rentalPayments: [
+        { paidAt: primero, amount: 50 },
+        { paidAt: segundo, amount: 252.5 }
+      ],
+      invoiceTotal: 302.5
+    });
+    expect(s?.date).toEqual(segundo);
+    expect(s?.reason).toBe('invoices.operationDate.reasonAdvance');
+  });
+
+  /**
+   * ⚠️ **Un anticipo parcial NO mueve la fecha, pero se avisa.** Esa parte ya
+   * devengó el día que se cobró y no se devenga otra vez al terminar: quien
+   * factura tiene que saberlo para no declarar dos veces el mismo importe.
+   */
+  it('una señal cobrada antes avisa, pero no cambia la fecha', () => {
+    const s = suggestOperationDate({
+      pickupDate: entrega,
+      returnDate: devolucion,
+      rentalPayments: [{ paidAt: new Date('2026-06-01'), amount: 50 }],
+      invoiceTotal: 302.5
+    });
+    expect(s?.date).toEqual(devolucion);
+    expect(s?.advanceWarning).toBe('invoices.operationDate.advanceWarning');
+    expect(s?.advanceAmount).toBe(50);
+  });
+
+  it('sin anticipos no hay aviso', () => {
+    const s = suggestOperationDate({
+      pickupDate: entrega,
+      returnDate: devolucion,
+      rentalPayments: [{ paidAt: new Date('2026-06-20'), amount: 302.5 }],
+      invoiceTotal: 302.5
+    });
+    expect(s?.advanceWarning).toBeUndefined();
+  });
+
+  /** Un cobro posterior a la entrega no es un anticipo, aunque cubra el total. */
+  it('cobrar todo DESPUÉS de entregar no es un anticipo', () => {
+    const s = suggestOperationDate({
+      pickupDate: entrega,
+      returnDate: devolucion,
+      rentalPayments: [{ paidAt: new Date('2026-06-12'), amount: 302.5 }],
+      invoiceTotal: 302.5
+    });
+    expect(s?.date).toEqual(devolucion);
+    expect(s?.reason).toBe('invoices.operationDate.reasonEnd');
+  });
+
+  it('sin fechas de alquiler no se propone nada', () => {
+    expect(suggestOperationDate({ invoiceTotal: 100 })).toBeNull();
+  });
+
+  it('sin devolución, cae en la entrega y lo dice', () => {
+    const s = suggestOperationDate({ pickupDate: entrega, invoiceTotal: 100 });
+    expect(s?.date).toEqual(entrega);
+    expect(s?.reason).toBe('invoices.operationDate.reasonPickup');
+  });
+});
+
+describe('el riesgo de cambiar la fecha de operación', () => {
+  const propuesta = new Date('2026-06-15');
+  const hoy = new Date('2026-09-14T12:00:00');
+
+  it('la misma fecha no arriesga nada', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-06-15'), { now: hoy })).toBeNull();
+  });
+
+  it('otro día del mismo mes tampoco', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-06-20'), { now: hoy })).toBeNull();
+  });
+
+  /**
+   * ⚠️ **Cruzar un mes mueve el plazo del día 16** cuando el destinatario es
+   * empresa, y cruzar un trimestre mueve la declaración de IVA entera. Son
+   * riesgos distintos y se avisan distinto.
+   */
+  it('cruzar de mes avisa', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-05-20'), { now: hoy })).toBe(
+      'invoices.operationDate.riskMonth'
+    );
+  });
+
+  it('cruzar de trimestre avisa más fuerte que de mes', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-03-20'), { now: hoy })).toBe(
+      'invoices.operationDate.riskQuarter'
+    );
+  });
+
+  it('cruzar de ejercicio es lo más grave', () => {
+    expect(operationDateRisk(propuesta, new Date('2025-06-15'), { now: hoy })).toBe(
+      'invoices.operationDate.riskYear'
+    );
+  });
+
+  /**
+   * ⚠️ Solo **un** aviso, el más grave: encadenar tres a la vez es ruido y
+   * entonces no se lee ninguno. Diciembre del año pasado cruza mes, trimestre y
+   * año, y lo que importa es el año.
+   */
+  it('solo se devuelve el riesgo más grave', () => {
+    expect(operationDateRisk(propuesta, new Date('2025-12-31'), { now: hoy })).toBe(
+      'invoices.operationDate.riskYear'
+    );
+  });
+
+  /** Una operación que aún no ha ocurrido no se puede haber devengado. */
+  it('una fecha futura avisa aunque caiga en el mismo mes', () => {
+    expect(operationDateRisk(new Date('2026-09-01'), new Date('2026-09-30'), { now: hoy })).toBe(
+      'invoices.operationDate.riskFuture'
+    );
+  });
+
+  it('y avisa aunque no hubiera propuesta', () => {
+    expect(operationDateRisk(null, new Date('2026-12-01'), { now: hoy })).toBe(
+      'invoices.operationDate.riskFuture'
+    );
+  });
+
+  it('sin fecha elegida no hay nada que avisar', () => {
+    expect(operationDateRisk(propuesta, null, { now: hoy })).toBeNull();
   });
 });

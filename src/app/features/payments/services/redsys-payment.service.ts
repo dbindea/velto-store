@@ -65,6 +65,42 @@ export class RedsysPaymentService {
   }
 
   /**
+   * Devolver a la tarjeta parte o todo de un cobro hecho con Redsys.
+   *
+   * ⚠️ **Aquí no se decide nada, y eso es deliberado.** Quién puede, cuánto
+   * puede y contra qué operación lo decide la Cloud Function leyendo el pago de
+   * Firestore: el importe que mande esta pantalla es una petición, no una orden.
+   * Si la decisión viviera aquí, cualquiera con la consola del navegador abierta
+   * podría pedir la devolución de un importe que nunca se cobró.
+   *
+   * ⚠️ **Y no se reintenta solo.** Un fallo de red después de que el banco haya
+   * aceptado es indistinguible desde aquí de un fallo antes: reintentar sería
+   * arriesgarse a devolver dos veces. Si falla, lo dice y para — quien decide
+   * volver a intentarlo es una persona, mirando antes el extracto.
+   */
+  async refundRedsysPayment(
+    paymentId: string,
+    amount: number,
+    reason?: string
+  ): Promise<{ refunded: number; remaining: number; authorizationCode?: string }> {
+    try {
+      const fn = httpsCallable<
+        { paymentId: string; amount: number; reason?: string },
+        { refunded: number; remaining: number; authorizationCode?: string }
+      >(this.functions, 'refundRedsysPayment');
+      const result = await fn({ paymentId, amount, reason });
+      return result.data;
+    } catch (error: any) {
+      if (error.code === 'functions/not-found') {
+        throw new Error('payments.errors.redsysNotConfigured');
+      }
+      // El backend manda claves i18n en el mensaje; se dejan pasar tal cual para
+      // que el operador lea el motivo real y no un «error» genérico.
+      throw error;
+    }
+  }
+
+  /**
    * Abre la pasarela **enviando un POST**, que es la única forma que Redsys
    * admite.
    *

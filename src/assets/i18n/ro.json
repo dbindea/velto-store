@@ -797,6 +797,35 @@
     "problems": {
       "depositAmountRequired": "Introdu o sumă mai mare decât zero.",
       "depositExceedsAvailable": "Nu poți mișca mai multă garanție decât a rămas. Verifică ce s-a încasat, minus ce s-a returnat și reținut deja."
+    },
+    "refund": {
+      "title": "Restituie pe card",
+      "hint": "Restituie banii pe același card cu care s-a încasat, prin Redsys. Nu trebuie să intri în panoul băncii.",
+      "start": "Restituie",
+      "amount": "Suma de restituit",
+      "max": "Cel mult",
+      "reason": "Motiv (opțional)",
+      "warning": "Aceasta scoate bani din contul firmei cu adevărat. O restituire acceptată de bancă nu se poate anula de aici: ar fi nevoie de un telefon la comerciant.",
+      "confirmTitle": "Restituie pe card",
+      "confirmMessage": "Sigur? Banii ies din cont și această operațiune nu se poate anula din aplicație.",
+      "confirmAction": "Da, restituie",
+      "done": "Restituire acceptată de bancă",
+      "refunded": "Restituit",
+      "lastError": "Ultima încercare respinsă",
+      "errors": {
+        "notFound": "Acea încasare nu a fost găsită",
+        "notCard": "Acea încasare nu s-a făcut cu cardul prin gateway: restituie-o cum s-a încasat",
+        "notCollected": "Acea încasare nu a intrat, deci nu este nimic de restituit",
+        "noOrder": "Acea încasare nu are comanda Redsys, deci banca nu o poate identifica",
+        "alreadyRefunded": "Acea încasare este deja restituită integral",
+        "amountRequired": "Introdu suma de restituit",
+        "amountPositive": "Suma trebuie să fie mai mare decât zero",
+        "overRefund": "Nu se poate restitui mai mult decât s-a încasat",
+        "unauthorized": "Rolul tău nu permite restituiri",
+        "notConfigured": "Redsys nu este configurat în acest mediu",
+        "rejected": "Banca a respins restituirea. Verifică extrasul înainte de a încerca din nou",
+        "failed": "Restituirea nu a putut fi finalizată. Verifică extrasul înainte de a încerca din nou"
+      }
     }
   },
   "permissions": {
@@ -815,7 +844,7 @@
     "dayInRange": "zi în perioadă",
     "daysInRange": "zile în perioadă",
     "profit": "Profit",
-    "profitHint": "Baza fără TVA, minus cheltuieli, întreținere și comisioane.",
+    "profitHint": "Bază fără TVA, minus cheltuieli, service, stimulente și partea proprietarilor.",
     "margin": "Marjă",
     "grossRevenue": "Încasat",
     "withVat": "TVA inclus",
@@ -825,7 +854,7 @@
     "vatHint": "Nu este al firmei: se colectează și se predă.",
     "outgoings": "Ieșiri",
     "outstanding": "De încasat",
-    "commissionsPending": "Comisioane de plătit",
+    "commissionsPending": "De plătit colaboratorilor",
     "yearOverYear": "Venituri pe lună, anul acesta și anul trecut",
     "viewTable": "Vezi tabelul",
     "viewChart": "Vezi graficul",
@@ -861,14 +890,16 @@
     },
     "outExpenses": "Cheltuieli",
     "outMaintenance": "Service",
-    "outCommissions": "Comisioane"
+    "outCommissions": "Comisioane",
+    "outOwnerShares": "Proprietari"
   },
   "reservations": {
     "actions": {
       "cancel": "Anulează rezervarea",
       "close": "Închide rezervarea",
       "createReservation": "Creare rezervare",
-      "viewReservation": "Vezi rezervarea"
+      "viewReservation": "Vezi rezervarea",
+      "cancelVsDelete": "Anularea desface închirierea, dar păstrează rezervarea și istoricul ei. Ștergerea o elimină definitiv, împreună cu plățile, inspecțiile și fotografiile ei."
     },
     "availability": {
       "conflict": "Există deja o rezervare pentru aceste date",
@@ -1058,7 +1089,15 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări"
+    "title": "Rezervări",
+    "ownerShare": {
+      "title": "Împărțirea cu proprietarul",
+      "owner": "Proprietar",
+      "base": "Baza împărțirii (închiriere fără TVA)",
+      "forOwner": "Pentru proprietar",
+      "forVelto": "Pentru Velto",
+      "hint": "Înghețat la crearea rezervării: schimbarea procentului mașinii nu mișcă această cifră. Se cuvine la închiderea rezervării, când sumele sunt definitive. Garanția și taxele suplimentare nu se împart."
+    }
   },
   "search": {
     "close": "Închide",
@@ -1222,7 +1261,8 @@
       "seatsRequired": "Indică câte locuri are",
       "delete": "Vehiculul nu a putut fi șters.",
       "statusChange": "Statusul vehiculului nu a putut fi schimbat.",
-      "deleteHasReservations": "Această mașină are rezervări și nu poate fi ștearsă: numărul ei de înmatriculare este în fiecare dintre ele. Pentru o mașină vândută sau retrasă, schimbă-i statusul în „Scos din uz\"."
+      "deleteHasReservations": "Această mașină are rezervări și nu poate fi ștearsă: numărul ei de înmatriculare este în fiecare dintre ele. Pentru o mașină vândută sau retrasă, schimbă-i statusul în „Scos din uz\".",
+      "saveFailed": "Vehiculul nu a putut fi salvat."
     },
     "features": {
       "airConditioning": "Aer condiționat",
@@ -1252,7 +1292,10 @@
       "hasGpsTracker": "Are dispozitiv de localizare GPS",
       "insurerName": "Compania de asigurări",
       "insurancePolicy": "Număr de poliță",
-      "roadsideAssistancePhone": "Telefon asistență rutieră"
+      "roadsideAssistancePhone": "Telefon asistență rutieră",
+      "ownership": "Proprietate",
+      "owner": "Proprietar",
+      "ownerSharePercent": "Partea proprietarului"
     },
     "filterAllCategories": "Toate categoriile",
     "filterAllStatus": "Toate statusurile",
@@ -1318,7 +1361,8 @@
       "pricing": "Tarife și condiții",
       "rentalClassification": "Clasificare de închiriere",
       "reservations": "Rezervări",
-      "insurance": "Asigurare și asistență rutieră"
+      "insurance": "Asigurare și asistență rutieră",
+      "ownership": "Al cui este vehiculul"
     },
     "status": {
       "available": "Disponibil",
@@ -1354,9 +1398,20 @@
       "collaborator": "Al unui colaborator"
     },
     "problems": {
-      "ownerRequired": "Spune a cui este mașina.",
+      "ownerRequired": "Alege proprietarul mașinii.",
       "ownerShareRequired": "Indică ce parte din închiriere revine proprietarului.",
       "ownerShareRange": "Repartizarea merge de la 0 la 100 %."
+    },
+    "owner": {
+      "hint": "O mașină cedată nu schimbă cine închiriază și cine facturează: Velto emite tot factura sa pentru suma totală, iar proprietarul nu apare în fața clientului. Aici se stabilește ce îi datorează Velto după aceea.",
+      "choose": "— Alege un proprietar —",
+      "create": "Nou",
+      "createTitle": "Adăugare rapidă de proprietar",
+      "createHint": "Se creează fără comision de intermediere (0 %): cedează o mașină, nu aduce clienți. Dacă aduce și clienți, stabilește-i procentul în fișa lui.",
+      "shareHint": "Din închiriere, fără TVA. Nici garanția, nici taxele suplimentare nu se împart.",
+      "veltoKeeps": "Velto păstrează",
+      "loadError": "Colaboratorii nu au putut fi încărcați. Fără listă nu se poate alege un proprietar.",
+      "createError": "Colaboratorul nu a putut fi creat."
     }
   },
   "workflow": {
@@ -1431,7 +1486,17 @@
     "lineVat": "TVA",
     "addLine": "Adaugă articol",
     "removeLine": "Elimină",
-    "operationDate": "Data prestării",
+    "operationDate": {
+      "label": "Data prestării",
+      "reasonEnd": "Propunere: închirierea s-a încheiat în acea zi și prețul a devenit exigibil atunci. Schimb-o dacă s-a convenit altceva.",
+      "reasonPickup": "Propunere: data predării vehiculului. Schimb-o dacă s-a convenit altceva.",
+      "reasonAdvance": "Propunere: suma a fost încasată integral înainte de predarea mașinii, așa că operațiunea a devenit exigibilă în acea zi, nu la finalul închirierii.",
+      "advanceWarning": "Există un avans încasat înainte de începerea închirierii: acea parte a devenit exigibilă în ziua încasării și nu devine din nou acum.",
+      "riskMonth": "Atenție: acea dată cade în altă lună decât cea propusă. Dacă destinatarul este o firmă, termenul de emitere a facturii este 16 ale lunii următoare exigibilității și se mută odată cu ea.",
+      "riskQuarter": "Atenție: acea dată cade în alt trimestru decât cea propusă, așa că TVA-ul acestei facturi va intra în altă declarație.",
+      "riskYear": "Atenție: acea dată este din alt exercițiu decât cea propusă. TVA-ul și rezultatul se declară în alt an, iar o factură emisă nu se poate corecta.",
+      "riskFuture": "Acea dată nu a sosit încă: ai declara o operațiune care încă nu a devenit exigibilă."
+    },
     "periodStart": "De la",
     "periodEnd": "Până la",
     "base": "Bază impozabilă",
@@ -1565,8 +1630,8 @@
     "cancelledByReservation": "Rezervarea a fost anulată",
     "cancelledTotal": "Anulat",
     "clearPeriod": "Șterge filtrul",
-    "commissionCount": "comision",
-    "commissionsCount": "comisioane",
+    "commissionCount": "înregistrare",
+    "commissionsCount": "înregistrări",
     "confirmDelete": {
       "title": "Ștergi acest colaborator?",
       "message": "Fișa lui se șterge. Nu se poate anula."
@@ -1601,7 +1666,11 @@
       "reservation": "Rezervare",
       "taxId": "CUI / CNP",
       "to": "Până la",
-      "year": "An"
+      "year": "An",
+      "ownerSharePercent": "Partea ca proprietar",
+      "ownerShareHint": "Dacă cedează mașini. Este propunerea: fiecare mașină o păstrează pe a sa, iar fiecare rezervare o îngheață.",
+      "paidAt": "Data plății",
+      "paidAtHint": "Ziua în care au ieșit banii, care nu trebuie să fie neapărat azi."
     },
     "generated": "Generat",
     "generatedLower": "generat",
@@ -1634,27 +1703,35 @@
       "emailInvalid": "Acel e-mail nu pare valid",
       "hasSales": "Nu se poate șterge: are vânzări atribuite. Marchează-l inactiv în schimb",
       "nameRequired": "Introdu numele colaboratorului",
-      "percentRequired": "Introdu un procent de comision mai mare decât zero",
+      "percentRequired": "Introdu un procent de comision. Pune 0 dacă nu aduce clienți",
       "percentTooHigh": "Peste 50 % nu este un comision. Verifică cifra",
       "reservationCancelled": "Acea rezervare este anulată și nu generează comision",
       "reservationRequired": "Alege o rezervare",
       "reservationWithoutNet": "Acea rezervare nu are valoare netă, deci nu există bază de calcul",
       "saleCancelled": "Acel comision este anulat",
-      "saleNotFound": "Acel comision nu a fost găsit"
+      "saleNotFound": "Acel comision nu a fost găsit",
+      "nothingSelected": "Nu ai bifat nimic de plătit",
+      "paidAtFuture": "Acea dată nu a sosit încă: o plată se înregistrează după ce banii au ieșit",
+      "paidAtInvalid": "Acea dată nu este validă",
+      "invoiceNumberRequired": "Introdu numărul facturii lui",
+      "invoiceDateRequired": "Introdu data facturii",
+      "invoiceAmountRequired": "Introdu suma facturii",
+      "invoiceAmountPositive": "Suma trebuie să fie mai mare decât zero",
+      "mixedCollaborators": "Acele părți aparțin unor colaboratori diferiți și nu pot fi recunoscute împreună"
     },
     "saleAssigned": "Vânzare atribuită",
-    "sales": "Vânzări și comisioane",
+    "sales": "Comisioane și părți",
     "salesCount": "vânzări",
     "saved": "Colaborator salvat",
-    "settleAll": "Achită tot ce este de plată",
-    "settleHint": "Marchează ca plătite toate comisioanele restante ale acestui colaborator, dintr-o dată.",
-    "settled": "Comisioane achitate",
+    "settleAll": "Plătește-i ce i se datorează",
+    "settleHint": "Marchează ca plătite pe cele bifate, cu data la care au ieșit banii. A recunoaște ce i se datorează și a-i plăti sunt două lucruri diferite: acesta este al doilea.",
+    "settled": "La zi",
     "status": {
       "pending": "De plată",
       "paid": "Plătit",
       "cancelled": "Anulat"
     },
-    "subtitle": "Agenți care aduc clienți și comisioanele care li se datorează",
+    "subtitle": "Cine aduce clienți sau cedează mașini, și ce li se datorează",
     "title": "Colaboratori",
     "totalPending": "Total de plată",
     "vsCalculated": "față de cât a ieșit calculat",
@@ -1662,6 +1739,37 @@
     "kind": {
       "referral": "Pentru că a adus clientul",
       "vehicleOwner": "Pentru că a pus mașina"
+    },
+    "referralShort": "intermediere",
+    "ownerShort": "parte proprietar",
+    "ownerShare": {
+      "title": "Partea pentru mașinile lui",
+      "accrued": "Cuvenit, încă nedecontat",
+      "hint": "Rezultă din rezervările lui deja închise și nu se adună la comisioanele de intermediere: sunt două lucruri diferite și se justifică diferit. Din închiriere, fără TVA; garanția și taxele suplimentare nu se împart."
+    },
+    "settleTotal": "Totalul acestei plăți",
+    "paymentRecorded": "Plată înregistrată",
+    "noMovements": "Fără mișcări",
+    "invoice": {
+      "title": "Facturi primite de la proprietar",
+      "awaiting": "Se așteaptă factura",
+      "awaitingHint": "A aștepta factura NU înseamnă că nu trebuie facturat: sunt părți deja recunoscute al căror justificativ încă nu a sosit. I se poate plăti și fără ea.",
+      "awaitingShort": "Lipsește factura",
+      "short": "Factura",
+      "register": "Înregistrează factura primită",
+      "formTitle": "Factura proprietarului",
+      "formHint": "Este factura lui, nu una de-a noastră: nu poartă numerotarea noastră, nu merge la fisc și se poate corecta. Bifează părțile pe care le acoperă.",
+      "number": "Numărul facturii lui",
+      "date": "Data facturii",
+      "amount": "Sumă",
+      "covered": "Părțile acoperite",
+      "mismatch": "Nu se potrivește cu ce acoperă:",
+      "file": "PDF sau fotografie",
+      "open": "Deschide factura",
+      "saved": "Factură înregistrată",
+      "deleted": "Factură ștearsă",
+      "deleteTitle": "Șterge factura",
+      "deleteMessage": "Părțile pe care le acoperea vor reveni la starea de așteptare a facturii."
     }
   },
   "events": {

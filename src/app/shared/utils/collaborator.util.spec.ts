@@ -15,7 +15,12 @@ import {
   validateCollaborator,
   yearlyTotals,
   balanceByKind,
-  kindOf
+  paidAtProblem,
+  validateCollaboratorInvoice,
+  invoiceMismatch,
+  awaitingInvoice,
+  awaitingInvoiceTotal,
+  coveredByInvoice
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -36,6 +41,9 @@ const venta = (extra: Partial<CollaboratorSale> = {}): CollaboratorSale =>
     netAmount: 100,
     commissionPercent: 25,
     commissionAmount: 25,
+    // Obligatorio desde el 12 de septiembre de 2026: sin apuntes antiguos, una
+    // venta tiene que decir por qué se debe.
+    kind: 'referral',
     status: 'pending',
     ...extra
   }) as CollaboratorSale;
@@ -171,10 +179,63 @@ describe('la ficha del colaborador', () => {
     );
   });
 
-  it('y un porcentaje que valga algo', () => {
-    expect(validateCollaborator({ name: 'X', commissionPercent: 0 })['commissionPercent']).toBe(
+  /**
+   * ⚠️ **El 0 % vale y significa «no trae clientes»** (decisión de Dorel, 12 de
+   * septiembre de 2026). Un colaborador puede ser solo el dueño de un coche
+   * cedido: exigirle una comisión de captación mayor que cero le obligaba a
+   * inventarse un número para algo que no hace.
+   */
+  it('el 0 % es una respuesta válida: no trae clientes', () => {
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: 0 })['commissionPercent']
+    ).toBeUndefined();
+  });
+
+  /**
+   * ⚠️ **Pero el hueco no vale.** `Number(null)` y `Number('')` son **0**, no
+   * `NaN`: si la ausencia no se comprueba antes de convertir, un campo vacío
+   * pasa como un 0 % legítimo y nadie se entera. Es el mismo fallo que salió
+   * escribiendo `ownerSharePercentProblem`.
+   */
+  it('pero dejarlo vacío no es decir cero', () => {
+    expect(validateCollaborator({ name: 'X' })['commissionPercent']).toBe(
       'collaborators.problems.percentRequired'
     );
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: null as unknown as number })[
+        'commissionPercent'
+      ]
+    ).toBe('collaborators.problems.percentRequired');
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: '' as unknown as number })[
+        'commissionPercent'
+      ]
+    ).toBe('collaborators.problems.percentRequired');
+  });
+
+  it('y un porcentaje negativo tampoco', () => {
+    expect(validateCollaborator({ name: 'X', commissionPercent: -1 })['commissionPercent']).toBe(
+      'collaborators.problems.percentRequired'
+    );
+  });
+
+  /**
+   * El reparto como propietario es **opcional**: quien no cede coches no tiene
+   * por qué contestarlo. Lo que no se admite es uno imposible.
+   */
+  it('el reparto de propietario solo se comprueba si se ha rellenado', () => {
+    expect(validateCollaborator({ name: 'X', commissionPercent: 25 })['ownerSharePercent'])
+      .toBeUndefined();
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: 25, ownerSharePercent: 75 })[
+        'ownerSharePercent'
+      ]
+    ).toBeUndefined();
+    expect(
+      validateCollaborator({ name: 'X', commissionPercent: 25, ownerSharePercent: 101 })[
+        'ownerSharePercent'
+      ]
+    ).toBe('vehicles.problems.ownerShareRange');
   });
 
   /**
@@ -434,23 +495,10 @@ describe('las dos clases de apunte', () => {
       netAmount: 100,
       commissionPercent: 25,
       commissionAmount: 25,
+      kind: 'referral',
       status: 'pending',
       ...p
     }) as CollaboratorSale;
-
-  /**
-   * ⚠️ La ausencia significa «captación»: era lo único que existía antes de que
-   * hubiera coches de colaborador. Se resuelve en un solo sitio a propósito.
-   */
-  it('sin kind es una comisión de captación', () => {
-    expect(kindOf(venta({}))).toBe('referral');
-    expect(kindOf(venta({ kind: undefined }))).toBe('referral');
-  });
-
-  it('lo demás se lee tal cual', () => {
-    expect(kindOf(venta({ kind: 'vehicle_owner' }))).toBe('vehicle_owner');
-    expect(kindOf(venta({ kind: 'referral' }))).toBe('referral');
-  });
 
   /**
    * ⚠️ **La prueba que pidió Dorel con esas palabras: no mezclar ni duplicar.**
@@ -484,5 +532,160 @@ describe('las dos clases de apunte', () => {
       venta({ kind: 'vehicle_owner', commissionAmount: 150, status: 'cancelled' })
     ]);
     expect(b.total).toEqual({ pending: 0, paid: 0 });
+  });
+});
+
+describe('cuándo salió el dinero', () => {
+  const diasDesdeHoy = (n: number): Date => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+
+  /**
+   * ⚠️ **La fecha se elige a propósito.** A un colaborador se le paga en
+   * efectivo el martes y se anota el jueves; sellando siempre el momento de la
+   * escritura, el histórico contaría ese pago en un día en el que no salió nada
+   * y no habría forma de cuadrarlo con el extracto.
+   */
+  it('una fecha pasada vale: se paga un día y se apunta otro', () => {
+    expect(paidAtProblem(diasDesdeHoy(-1))).toBeNull();
+    expect(paidAtProblem(diasDesdeHoy(-90))).toBeNull();
+  });
+
+  /**
+   * ⚠️ **Hoy entero vale, no solo lo ya transcurrido.** Comparando contra el
+   * instante actual, apuntar por la mañana un pago hecho esta misma tarde
+   * saldría como «futuro» — y el operador teclea un día, no una hora.
+   */
+  it('hoy vale, se apunte a la hora que se apunte', () => {
+    const hoyTarde = new Date();
+    hoyTarde.setHours(23, 30, 0, 0);
+    expect(paidAtProblem(hoyTarde)).toBeNull();
+  });
+
+  /**
+   * ⚠️ **La prueba que importa.** Marcar como pagado algo que aún no ha salido
+   * hace que el balance diga que no se le debe nada a alguien a quien sí se le
+   * debe, y eso se descubre cuando él lo reclama.
+   */
+  it('una fecha futura no: eso no se ha pagado todavía', () => {
+    expect(paidAtProblem(diasDesdeHoy(1))).toBe('collaborators.problems.paidAtFuture');
+    expect(paidAtProblem(diasDesdeHoy(30))).toBe('collaborators.problems.paidAtFuture');
+  });
+
+  it('sin fecha no hay problema: manda el sello del servidor', () => {
+    expect(paidAtProblem(null)).toBeNull();
+    expect(paidAtProblem(undefined)).toBeNull();
+  });
+
+  it('una fecha que no es fecha se rechaza', () => {
+    expect(paidAtProblem(new Date('no-es-una-fecha'))).toBe(
+      'collaborators.problems.paidAtInvalid'
+    );
+  });
+});
+
+describe('la factura que manda el propietario', () => {
+  const base = { number: '2026/014', date: new Date('2026-10-01'), amount: 400 };
+
+  it('una factura completa no da problemas', () => {
+    expect(validateCollaboratorInvoice(base)).toEqual({});
+  });
+
+  it('sin número, sin fecha o sin importe no se guarda', () => {
+    expect(validateCollaboratorInvoice({ ...base, number: '' })['number']).toBe(
+      'collaborators.problems.invoiceNumberRequired'
+    );
+    expect(validateCollaboratorInvoice({ ...base, date: undefined })['date']).toBe(
+      'collaborators.problems.invoiceDateRequired'
+    );
+    expect(validateCollaboratorInvoice({ ...base, amount: undefined })['amount']).toBe(
+      'collaborators.problems.invoiceAmountRequired'
+    );
+  });
+
+  /**
+   * ⚠️ `Number(null)` y `Number('')` son **0**, no `NaN`: sin comprobar la
+   * ausencia antes de convertir, un importe vacío pasaría como una factura de
+   * 0 € y nadie se enteraría. El mismo fallo de siempre con el dinero.
+   */
+  it('un importe vacío no es una factura de cero', () => {
+    expect(
+      validateCollaboratorInvoice({ ...base, amount: null as unknown as number })['amount']
+    ).toBe('collaborators.problems.invoiceAmountRequired');
+    expect(
+      validateCollaboratorInvoice({ ...base, amount: '' as unknown as number })['amount']
+    ).toBe('collaborators.problems.invoiceAmountRequired');
+  });
+
+  it('y cero o negativo tampoco son una factura', () => {
+    expect(validateCollaboratorInvoice({ ...base, amount: 0 })['amount']).toBe(
+      'collaborators.problems.invoiceAmountPositive'
+    );
+    expect(validateCollaboratorInvoice({ ...base, amount: -10 })['amount']).toBe(
+      'collaborators.problems.invoiceAmountPositive'
+    );
+  });
+
+  /**
+   * ⚠️ **La diferencia se enseña, no se prohíbe.** Una factura con IRPF
+   * retenido trae menos que la suma de los repartos y es perfectamente
+   * correcta; exigir que cuadre al céntimo rechazaría facturas buenas. Lo que no
+   * puede pasar es que la diferencia quede escondida.
+   */
+  it('la diferencia con lo que cubre se calcula, con signo', () => {
+    expect(invoiceMismatch(400, 400)).toBe(0);
+    expect(invoiceMismatch(380, 400)).toBe(-20);
+    expect(invoiceMismatch(420, 400)).toBe(20);
+  });
+
+  it('y se redondea al céntimo', () => {
+    expect(invoiceMismatch(0.3, 0.1 + 0.2)).toBe(0);
+  });
+
+  describe('qué está pendiente de justificar', () => {
+    const reparto = (p: Partial<CollaboratorSale>): CollaboratorSale =>
+      venta({ kind: 'vehicle_owner', commissionAmount: 100, ...p });
+
+    /**
+     * ⚠️ **Solo los repartos.** Una comisión de captación no lleva factura
+     * detrás en este negocio, así que contarla aquí dejaría a la vista una deuda
+     * documental que no existe y que nadie iba a resolver nunca.
+     */
+    it('una comisión de captación no espera factura', () => {
+      const s = [venta({ kind: 'referral', commissionAmount: 25 }), reparto({})];
+      expect(awaitingInvoice(s).map((x) => x.kind)).toEqual(['vehicle_owner']);
+      expect(awaitingInvoiceTotal(s)).toBe(100);
+    });
+
+    it('lo que ya tiene factura deja de esperarla', () => {
+      const s = [reparto({ receivedInvoiceId: 'f1' }), reparto({ commissionAmount: 50 })];
+      expect(awaitingInvoiceTotal(s)).toBe(50);
+    });
+
+    /** Un reparto anulado no necesita justificante de nada. */
+    it('lo anulado no espera factura', () => {
+      expect(awaitingInvoiceTotal([reparto({ status: 'cancelled' })])).toBe(0);
+    });
+
+    /**
+     * ⚠️ **Pagado no es justificado.** Se le puede pagar sin que su factura haya
+     * llegado —atar el pago al papel dejaría a alguien sin cobrar—, así que un
+     * reparto pagado sigue esperando su factura.
+     */
+    it('un reparto ya pagado sigue esperando su factura', () => {
+      expect(awaitingInvoiceTotal([reparto({ status: 'paid' })])).toBe(100);
+    });
+
+    it('lo que cubre una factura se suma por su id', () => {
+      const s = [
+        reparto({ id: 'a', receivedInvoiceId: 'f1', commissionAmount: 187.5 }),
+        reparto({ id: 'b', receivedInvoiceId: 'f1', commissionAmount: 150 }),
+        reparto({ id: 'c', receivedInvoiceId: 'f2', commissionAmount: 90 })
+      ];
+      expect(coveredByInvoice(s, 'f1')).toBe(337.5);
+      expect(coveredByInvoice(s, 'f2')).toBe(90);
+    });
   });
 });

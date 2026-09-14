@@ -281,8 +281,30 @@ if (composedOk && !unregistered.length) {
 }
 
 // 2. Orphans (against the reference locale)
+/**
+ * Claves que **emite una Cloud Function**, no una plantilla.
+ *
+ * ⚠️ **No son huérfanas aunque no aparezcan en `src/app`.** El backend lanza el
+ * error con la clave dentro del mensaje y el componente la pinta tal cual —
+ * `notifications.error(clave)`—, así que el texto sí llega al operador aunque
+ * aquí no haya ningún literal que buscar. Borrarlas por «no usadas» dejaría a
+ * quien devuelve un cobro leyendo `payments.refund.errors.rejected` en crudo,
+ * justo en el momento en que algo ha salido mal con dinero.
+ *
+ * Al añadir una clave de error a una function, va aquí. El fichero que la emite
+ * queda anotado al lado para poder comprobarlo.
+ */
+const DESDE_LAS_FUNCTIONS = [
+  // functions/src/redsys-refund.ts
+  'payments.refund.errors.unauthorized',
+  'payments.refund.errors.notConfigured',
+  'payments.refund.errors.rejected'
+];
+
 const orphans = Object.keys(flat[REFERENCE])
-  .filter((k) => !anyLiteral.has(k) && !coveredByPrefix(k))
+  .filter(
+    (k) => !anyLiteral.has(k) && !coveredByPrefix(k) && !DESDE_LAS_FUNCTIONS.includes(k)
+  )
   .sort();
 if (orphans.length) {
   failed = true;

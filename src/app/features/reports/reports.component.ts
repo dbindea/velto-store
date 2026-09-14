@@ -13,6 +13,8 @@ import { roundMoney } from '@shared/utils/payment-summary.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import {
   DateRange,
+  collaboratorOutgoings,
+  collaboratorPending,
   daysInRange,
   monthlyRevenue,
   netFromGross,
@@ -184,29 +186,42 @@ export class ReportsComponent implements OnInit {
   });
 
   /**
-   * Las comisiones **devengadas** en el periodo, pagadas o no.
+   * Lo que se les debe a los colaboradores en el periodo, **devengado** y
+   * separado por motivo.
    *
-   * Se sitúan por la fecha del alquiler que las generó, que es la misma vara con
-   * la que se miden en la ficha del colaborador.
+   * ⚠️ **El cálculo vive en `analytics.util.ts`**, que es la única autoridad:
+   * aquí solo se le pasan los datos. Sumarlo en la pantalla sería un segundo
+   * sitio donde vive la definición de «lo que sale», y es justo lo que esta
+   * pantalla lleva escrito que no hace.
+   *
+   * ⚠️ **Incluye el reparto devengado que aún no se ha reconocido.** Desde la
+   * entrega 3 ese dinero vive derivado de la reserva cerrada hasta que un
+   * administrador lo apunta; mirando solo `collaboratorSales`, no se restaría y
+   * el beneficio saldría inflado con una cifra perfectamente creíble.
    */
-  readonly commissions = computed(() => {
+  readonly collaboratorOut = computed(() => {
     const d = this.data();
-    if (!d) return 0;
-    const r = this.range();
-    return roundMoney(
-      d.commissions
-        .filter((c) => {
-          const f = c.reservationSnapshot?.pickupDate
-            ? toDate(c.reservationSnapshot.pickupDate)
-            : null;
-          return f && !isNaN(f.getTime()) && f >= r.from && f <= r.to;
-        })
-        .reduce((t, c) => t + (Number(c.commissionAmount) || 0), 0)
-    );
+    if (!d) return { referral: 0, ownerShare: 0, total: 0 };
+    return collaboratorOutgoings(d.commissions, d.reservations, this.range());
   });
 
+  /** Solo las comisiones por traer clientes. */
+  readonly commissions = computed(() => this.collaboratorOut().referral);
+
+  /**
+   * Solo el reparto a los dueños de los coches cedidos.
+   *
+   * ⚠️ **Va en su propia línea y no sumado a las comisiones.** Son dos cosas que
+   * se pactan, se liquidan y se justifican distinto —una lleva detrás una
+   * factura del propietario y la otra no—, y un informe que las funda no permite
+   * responder a «¿cuánto me cuestan los coches que no son míos?».
+   */
+  readonly ownerShares = computed(() => this.collaboratorOut().ownerShare);
+
   readonly totalOut = computed(() =>
-    roundMoney(this.expenses() + this.maintenanceCost() + this.commissions())
+    roundMoney(
+      this.expenses() + this.maintenanceCost() + this.commissions() + this.ownerShares()
+    )
   );
 
   /**
@@ -240,15 +255,17 @@ export class ReportsComponent implements OnInit {
     );
   });
 
-  /** Lo que se debe a los colaboradores y aún no ha salido. */
+  /**
+   * Lo que se debe a los colaboradores y aún no ha salido.
+   *
+   * ⚠️ **Cuenta también el reparto devengado sin reconocer**: no se le puede
+   * haber pagado a nadie algo que ni siquiera está apuntado, así que está
+   * pendiente por definición. Dejarlo fuera diría que no se debe nada cuando sí.
+   */
   readonly commissionsPending = computed(() => {
     const d = this.data();
     if (!d) return 0;
-    return roundMoney(
-      d.commissions
-        .filter((c) => c.status === 'pending')
-        .reduce((t, c) => t + (Number(c.commissionAmount) || 0), 0)
-    );
+    return collaboratorPending(d.commissions, d.reservations);
   });
 
   // --- Gráficos ------------------------------------------------------------

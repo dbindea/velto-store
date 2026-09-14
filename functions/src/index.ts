@@ -33,6 +33,12 @@
 import './global-options';
 
 export { createRedsysPaymentLink, getPaymentCheckout, redsysNotificationWebhook } from './redsys';
+/**
+ * ⚠️ **El único camino por el que sale dinero.** Solo administrador, con el
+ * importe topado por lo que de verdad entró y una reserva en transacción antes
+ * de llamar al banco. Ver `redsys-refund.ts`.
+ */
+export { refundRedsysPayment } from './redsys-refund';
 
 // Contracts
 export { generateContractPdf } from './contracts/generateContractPdf';

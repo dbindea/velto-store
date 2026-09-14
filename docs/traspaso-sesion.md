@@ -5,7 +5,12 @@
 
 ---
 
-## 0. LO PRIMERO DE TODO, ANTES DE PROGRAMAR NADA
+## 0. ~~LO PRIMERO DE TODO~~ — HECHO el 12 de septiembre de 2026
+
+> ✅ **YA ESTÁ HECHO. NO LO VUELVAS A HACER.** Se vaciaron las 16 colecciones de
+> `velto-store`, `authorizedUsers` quedó intacta con sus dos documentos y
+> producción no se tocó. Lo que sigue es el porqué, que se conserva para
+> entender las decisiones que salieron de ahí — no es una instrucción pendiente.
 
 **Vaciar Firestore de DESARROLLO entero y empezar de cero.** Es una decisión de
 Dorel del 12 de septiembre de 2026 y es la que desbloquea lo demás.
@@ -102,9 +107,17 @@ cesión y el otro no.
 del **0 %**, que aquí es legítimo, así que nada chirriaba: al propietario se le
 habría liquidado cero hasta que se quejara.
 
-### Entrega 2 — SIGUIENTE
+### Entrega 2 — HECHA (commit `87a2839`)
 
-Alta de vehículo con propietario y reparto automático en la reserva.
+Alta de vehículo con propietario y reparto automático en la reserva. El detalle
+de lo que entró, y de lo que **no**, está en `docs/mejoras-pendientes.md` (N-33).
+
+⚠️ **Lo que falta y es lo primero de la entrega 3: el DEVENGO.** Nadie crea
+todavía el `CollaboratorSale` de `kind: 'vehicle_owner'` al cerrar la reserva, así
+que el reparto se congela y se enseña, pero aún no llega al balance del
+colaborador.
+
+Lo que se pedía:
 
 - En `vehicle-form`: elegir «Propio» o «De colaborador». Si es de colaborador,
   **seleccionar uno existente o crearlo desde ahí** —Dorel lo pidió así— y
@@ -171,22 +184,46 @@ AEAT. Antes de tocarlo, leer `docs/verifactu-alta.md` y
 
 ## 4. Lo que está pendiente y NO es programar
 
-### 4.1 · Probar las reglas con la cuenta de empleado ⭐
+### 4.1 · Probar las reglas con la cuenta de empleado — ✅ HECHA el 14 de septiembre de 2026
+
+> Pasada con `dbindea@gmail.com` (`employee`) contra `velto-store`, **19
+> comprobaciones y cero fallos**. Lo que sigue explica qué se probó y cómo
+> repetirlo; ya no es una tarea pendiente.
 
 Dorel creó `dbindea@gmail.com` como `employee` en desarrollo el 12 de septiembre
-**para esto**, y sigue sin hacerse.
+**para esto**.
 
-Hace falta que **él** inicie sesión con esa cuenta (ventana de incógnito,
-`localhost:4200`) y entonces ejecutar
-**`docs/comprobar-reglas-financieras.js`** en la consola del navegador.
+Hace falta que **él** inicie sesión con esa cuenta en `localhost:4200` y
+entonces ejecutar **`docs/comprobar-reglas-financieras.js`** en la consola del
+navegador.
 
 ⚠️ **No intentes generar el token tú**: acuñar una credencial de sesión está
 bloqueado, y con razón.
 
+⚠️ **Ya no hace falta una ventana de incógnito.** Hasta el 14 de septiembre de
+2026 el popup de Google entraba con la última cuenta sin preguntar, porque el
+`GoogleAuthProvider` se creaba sin parámetros; ahora pide
+`prompt: 'select_account'` y se cambia de rol desde el propio botón de entrar.
+Era justo lo que hacía incómoda esta prueba y por lo que llevaba dos días sin
+hacerse.
+
 Lo que tiene que salir: **403** en `expenses`, `invoices`, `invoiceCounters`,
 `billingProfiles`, `verifactuDeclarations`, `verifactuSubmissions`,
-`collaborators` y `collaboratorSales`; **403** al ascenderse a admin; y **200**
-en `payments`, `reservations` y `vehicles`, que es lo que necesita para trabajar.
+`collaborators`, `collaboratorSales` y `collaboratorInvoices`; **403** al
+ascenderse a admin; y **200** en `payments`, `reservations` y `vehicles`, que es
+lo que necesita para trabajar.
+
+**Y lo que se comprobó además**, porque leer es solo la mitad:
+
+- **Crear** un gasto, una comisión o una factura de propietario: **403** los tres.
+- **Mover `ownerShareSnapshot`** de una reserva —subir el reparto del propietario
+  de un 75 % a un 95 %—: **403**, y el dato **seguía en 75** al volver a leerlo.
+  No basta con que la API responda mal: hay que mirar que no se movió.
+- **Mover `pricingSnapshot`** —poner el precio a 1 €—: **403**.
+- **Escribir el lugar de recogida**: **200**. Si esto fallara, la regla estaría
+  rota por el otro lado y el empleado no podría trabajar.
+- **Entrar por la URL** en `/reports` y `/collaborators`: devuelve al panel **con
+  el aviso** «Tu rol no tiene acceso a esa sección», no en silencio.
 
 ⚠️ **`payments` en 200 es correcto**, no un agujero olvidado: la ficha de la
 reserva necesita leer los pagos cobrados. Está explicado en `firestore.rules`.
@@ -249,7 +286,16 @@ La curva se aplanó: la cuarta no sacó ningún fallo estructural.
 
 **Todavía no se ha dado el visto bueno para producción**, y falta poco:
 
-- Ficha de cliente, detalle de pago y formulario de vehículo en móvil — las tres
-  que no se llegaron a abrir.
-- La prueba de reglas del punto 4.1.
-- El ensayo de restauración del 4.2.
+- ~~La prueba de reglas del punto 4.1.~~ ✅ **Hecha el 14 de septiembre de 2026**:
+  19 comprobaciones, cero fallos.
+- ~~Formulario de vehículo en móvil.~~ ✅ Abierto a 390 px el 12 y el 14 de
+  septiembre; y desde entonces las 16 rutas principales se comprueban a 390 px
+  midiendo el desbordamiento, no mirándolo.
+- **Ficha de cliente y detalle de pago en móvil** — las dos que siguen sin
+  abrirse de verdad. Que no desborden está medido; que se lean bien, no.
+- **El ensayo de restauración del 4.2.** Nunca se ha restaurado una copia.
+- ⚠️ **Las reglas nuevas están solo en desarrollo.** `collaboratorInvoices` y la
+  protección de `ownerShareSnapshot` no se han desplegado a producción.
+- **Un cobro por la vía pública del móvil que se registre solo.** Sigue sin
+  haberlo desde F-32: una vía de cobro no está probada hasta que alguien paga
+  por ella y la aplicación se entera sin ayuda.

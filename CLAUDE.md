@@ -33,6 +33,8 @@ npm run firebase:emulators
 
 # i18n (ver sección abajo)
 npm run i18n:audit        # verifica claves faltantes, huérfanas y paridad es/en/ro
+npm run css:audit         # clases usadas en plantillas que no declara nadie
+npm run spacing:audit     # espaciados fuera de la escala (--fix los alinea)
 
 # Cloud Functions
 npm --prefix functions run build      # tsc + copia de fuentes TTF
@@ -369,16 +371,150 @@ alquiler sin IVA, y solo el alquiler**. Tres exclusiones, las tres con motivo:
 
 ⚠️ **El porcentaje vive en el coche**, con el del colaborador como propuesta —un
 propietario puede ceder un utilitario y una furgoneta con repartos distintos— y
-la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. La parte
-se **devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. Lo
+congela `commitReservationWithPayments()`, que recibe el vehículo entero para que
+**ninguno de los dos creadores de reservas pueda olvidarse**. La parte se
+**devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+
+⚠️ **Y lo devengado se DERIVA de las reservas cerradas, no se guarda**
+(`ownerShareAccruals()`, 12 de septiembre de 2026). Hay dos motivos y los dos
+importan: una colección de devengos sería una segunda fuente de verdad para el
+mismo euro —la reserva ya lleva su reparto y su precio congelados—, y sobre todo
+**cerrar una reserva no pide ningún permiso** mientras `collaboratorSales` es de
+administrador. Escribiendo el apunte al cerrar, el empleado que termina la
+devolución en la calle vería fallar el cierre por permisos, o —peor— se tragaría
+el error y el propietario no cobraría sin que nadie se enterase.
+
+⚠️ **`unsettledAccruals()` quita lo ya liquidado, y sin eso se cuenta dos
+veces.** Al liquidar, el reparto pasa a ser un `CollaboratorSale` con su importe
+congelado; si la derivación siguiera contando esa reserva, el propietario
+aparecería con el doble de lo que se le debe. El apunte se escribe **al
+liquidar**, que siempre lo hace un administrador.
+
+⚠️ **`saleForReservation()` exige el `kind`, y no es una firma incómoda por
+gusto.** Una misma reserva puede tener los dos apuntes. Preguntando «¿esta
+reserva ya está asignada?» a secas, el reparto de un coche cedido haría que la
+comisión de captación de esa misma reserva se rechazara con «ya está asignada» —
+justo lo que se separó al crear `kind`. La pantalla de asignar filtra igual.
+
+⚠️ **El nombre del propietario se copia al COCHE (`ownerCollaboratorName`), y no
+es comodidad.** El snapshot lo lleva dentro para sobrevivir a un borrado de la
+ficha, pero `firestore.rules` solo deja leer `collaborators` a un administrador:
+yendo a buscarlo allí, un **empleado** que crea la reserva de un coche cedido
+recibiría un error de permisos a media operación, o —peor— se guardaría el
+reparto sin nombre y nadie sabría a quién hay que pagarle. Lo escribe el
+administrador al asignar el coche, y la reserva lo lee de un documento que sí
+puede leer.
+
+⚠️ **`ownerShareSnapshot` está protegido en las reglas igual que
+`pricingSnapshot`**: un no-administrador no puede moverlo en un `update`. Decide
+dinero exactamente igual que el precio, y se había quedado fuera.
+
+⚠️ **Pero se puede LEER**, como toda la reserva: un empleado ve por la API REST
+de quién es el coche y qué porcentaje se lleva. Es el caso de `payments` —no se
+puede cerrar sin romper la operación diaria— y no el de `invoices`, que sí era un
+descuido. Está dicho aquí para que nadie lo dé por lo que no es.
 
 ⚠️ **`CollaboratorSale.kind` separa dos cosas que se pagan a la misma persona.**
 Un colaborador puede traer el cliente **y** poner el coche de la **misma**
 reserva: son **dos apuntes**, no uno mayor. Se pactan, se calculan y se
 justifican distinto, y uno lleva detrás una factura suya por la cesión y el otro
-no. `balanceByKind()` los da separados; el total hay que pedirlo. La ausencia de
-`kind` se lee como `referral` y se resuelve **solo** en `kindOf()`: repartido por
-la aplicación, un `kind === 'referral'` suelto dejaría fuera todo lo anterior.
+no. `balanceByKind()` los da separados; el total hay que pedirlo.
+
+⚠️ **`kind` es OBLIGATORIO desde el 12 de septiembre de 2026**, al vaciarse la
+base de desarrollo. Nació opcional porque había cuatro comisiones antiguas sin
+él y la ausencia se leía como `referral` en `kindOf()`; sin esos apuntes, el
+campo se exige y **el compilador obliga a contestarlo**. `kindOf()` ya no
+existe. Un valor por defecto aquí sería peor que un hueco: apuntaría como
+comisión de captación el reparto de un coche cedido.
+
+⚠️ **Y un `commissionPercent` de 0 es válido: significa «no trae clientes».**
+Desde que un colaborador puede ser solo el dueño de un coche, exigir una comisión
+de captación mayor que cero obligaba a inventarse un número para alguien que no
+trae a nadie — y un número inventado que vive en la ficha acaba aplicándose el
+día que se le asigne una venta. Lo que sigue sin valer es el **hueco**:
+`Number(null)` y `Number('')` son **0**, no `NaN`, así que la ausencia se
+comprueba antes de convertir. Es el mismo fallo que salió con
+`ownerSharePercent`.
+
+### Liquidar, pagar y la factura: TRES cosas, no una
+
+⚠️ **Confundirlas es el error que Dorel avisó expresamente**, y la aplicación ya
+lo cometía: decía «liquidar» donde hacía «pagar».
+
+- **Liquidar** es *reconocer* lo que se le debe. En el reparto del propietario es
+  el momento en que el devengo derivado se convierte en un `CollaboratorSale` con
+  su importe **congelado** — ahí la cifra deja de salir de la reserva.
+- **Pagar** es entregarle el dinero: `status: 'paid'`, con su fecha, su forma y
+  su nota.
+- **La factura** es el justificante que manda él, y llega cuando llega.
+
+⚠️ **Se puede pagar sin factura, y tener factura no es estar pagado.** Atar el
+pago al papel dejaría a alguien sin cobrar por un trámite suyo.
+
+⚠️ **La fecha del pago se elige, y no es la de cuando se apunta.** A un
+colaborador se le paga en efectivo el martes y se anota el jueves; sellando
+siempre el momento de la escritura, el histórico —que agrupa por día— contaba el
+pago en un día en el que no salió nada. Una fecha **futura** se rechaza
+(`paidAtProblem()`): marcar como pagado algo que no ha salido hace que el balance
+diga que no se le debe nada a alguien a quien sí.
+
+⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar».** Es la frase
+literal de Dorel. Un «sin factura» a secas se lee como una exención, y entonces
+nadie la reclama nunca. Solo la esperan los apuntes de `vehicle_owner`: una
+comisión de captación no lleva factura detrás en este negocio.
+
+### La fecha de operación se PROPONE, y se explica
+
+⚠️ **No es la de expedición ni, por defecto, la de devolución.** Son tres cosas:
+cuándo se expide la factura, cuándo se devengó el impuesto y entre qué fechas
+duró el alquiler. El formulario ponía siempre la de devolución —lo que haría lo
+fácil— hasta el 12 de septiembre de 2026.
+
+`suggestOperationDate()` en `invoice.util.ts` propone según la **exigibilidad**:
+si el precio se cobró entero **antes de entregar** el coche, el IVA se devengó
+ese día (art. 75.Dos LIVA) y no al terminar; en otro caso, la fecha de
+finalización. Un **anticipo parcial** no mueve la fecha pero **avisa**: esa parte
+ya devengó al cobrarse y no se devenga otra vez.
+
+⚠️ **Propone, no decide, y por eso viaja con una explicación.** No hay ningún
+campo que diga qué se pactó con el cliente, así que la propuesta sale de lo único
+que consta: cuándo se cobró. Una fecha fiscal puesta sola es una cifra creíble
+que nadie revisa, y la factura no se puede corregir después.
+
+⚠️ **Los cobros se derivan de `payments`, nunca de `reservation.paymentSummary`**
+—la copia que se queda vieja y responde `0` en vez de fallar—, y **sin fianzas**:
+una fianza no es precio, es custodia, y no devenga nada.
+
+### `collaboratorInvoices`: la factura que manda el propietario
+
+⚠️ **No confundir con `invoices`, que son las de VELTO.** Aquellas las emite la
+empresa, son inmutables, consumen número de serie y van a la AEAT. Esta llega de
+fuera y solo registra un papel: se corrige y se borra, y `firestore.rules` lo
+permite a propósito.
+
+⚠️ **Es una colección propia y no unos campos dentro del apunte** (decisión de
+Dorel, 12 de septiembre de 2026). Una sola factura suele cubrir **varias**
+reservas, así que metida en cada apunte habría que teclearla tantas veces como
+repartos cubra, con el mismo número repetido y sin que su importe total constara
+en ninguna parte. Es la excepción razonada a «no hay colección de liquidaciones»:
+aquello era **derivable** de los pagos, y un número de factura no se deriva de
+nada.
+
+⚠️ **El importe NO tiene que cuadrar con lo que cubre.** Una factura con IRPF
+retenido trae menos que la suma de los repartos y es correcta. La diferencia se
+**enseña** (`invoiceMismatch()`), no se rechaza — y ese cálculo normaliza el cero
+negativo, porque `Intl.NumberFormat` escribe `-0` como «-0,00 €» y un aviso de
+descuadre de menos cero es peor que no avisar.
+
+⚠️ **Registrarla no la convierte en un gasto todavía**, igual que las comisiones
+(decisión del mismo día). No escribe en `expenses`. Con factura delante el
+reparto sí sería deducible, y los cuatro datos que hacen falta ya están
+guardados.
+
+⚠️ **Su carpeta de Storage hay que declararla en `storage.rules`.** El `match`
+final lo deniega todo, así que sin la regla el fichero no sube y la pantalla no
+dice por qué — el mismo descuido que tuvo la factura de un gasto.
 
 ### Colaboradores: comisiones que NO son contabilidad
 
@@ -453,7 +589,15 @@ firmado» del workflow. **También vale para las rutas**: `permissionGuard` leva
 un aviso antes de devolver al panel, porque una redirección muda es la versión
 de pantalla completa del mismo problema.
 
-**Los permisos están probados con un empleado real** (7 de septiembre de 2026),
+⚠️ **Para cambiar de cuenta basta el botón de entrar.** El
+`GoogleAuthProvider` pide `prompt: 'select_account'`: sin eso el popup entraba
+con la última sesión de Google **sin preguntar**, y cerrar sesión en la
+aplicación no servía de nada porque quien recuerda la cuenta es Google. Era lo
+que obligaba a una ventana de incógnito para probar las reglas como empleado, y
+por lo que esa prueba se posponía.
+
+**Los permisos están probados con un empleado real** (7 de septiembre de 2026,
+repetido y ampliado el 14 de septiembre: 19 comprobaciones, cero fallos),
 bajando el rol de la propia cuenta en el `authorizedUsers` de desarrollo. La
 prueba que vale es la de las reglas, atacadas **saltándose la aplicación**: con
 el token de la sesión sacado de IndexedDB y llamadas directas a la API REST de
@@ -584,6 +728,19 @@ mide.** Los ingresos y los gastos se cuentan **cuando el dinero se mueve**; las
 comisiones de colaborador, **cuando se devengan** aunque no estén pagadas
 (decisión de Dorel, por prudencia: nunca creerse más rico de lo que uno es).
 Mezclar dos criterios es legítimo mientras se diga.
+
+⚠️ **El reparto a los propietarios es una salida más, y se cuenta ESTÉ O NO
+reconocido** (`collaboratorOutgoings()`, 12 de septiembre de 2026). Desde que el
+devengo se deriva, un reparto vive en su reserva cerrada hasta que un
+administrador lo apunta, y eso puede tardar semanas: mirando solo
+`collaboratorSales`, todo ese dinero no se restaría y Velto aparecería ganando
+una parte del alquiler que no es suya. La función suma las dos fuentes y
+descuenta por `reservationId` lo ya reconocido, para no contarlo dos veces. Hay
+test de las tres cosas.
+
+⚠️ **Y va en su propia línea, no fundido con las comisiones.** Son dos conceptos
+que se pactan y se justifican distinto; juntos no se puede responder a «¿cuánto
+me cuestan los coches que no son míos?».
 
 ⚠️ **El beneficio se calcula sobre la base SIN IVA.** Restar gastos de un importe
 con IVA sin quitárselo a los ingresos infla el resultado un 21 %. Y esa base es
@@ -1265,6 +1422,51 @@ El plan de pruebas, con lo comprobado y lo que falta, está en
 (`VELTO_VERIFACTU_ENABLED=true`, `VELTO_VERIFACTU_ENV=test`). En producción sigue
 en `false` y **solo lo cambia Dorel**.
 
+### Devolver a la tarjeta: el único camino por el que SALE dinero
+
+⚠️ **Todo lo demás en esta aplicación registra; esto mueve.** El peor error del
+resto es una cifra equivocada en una pantalla; aquí es que salgan cien euros de
+la cuenta de la empresa. Y una devolución aceptada por el banco **no se deshace
+con un botón**: es una llamada al comercio.
+
+⚠️ **No es la misma integración que el cobro.** El cobro va **por formulario**:
+se manda al cliente a la pasarela y vuelve. En una devolución no hay cliente
+delante, así que se habla **de servidor a servidor** por la vía REST
+(`/sis/rest/trataPeticionREST`, otra URL distinta de `/sis/realizarPago`). Lo que
+sí se reutiliza es la firma, que es la misma HMAC_SHA256_V1 ya probada.
+
+⚠️ **La respuesta se lee con OTRA regla.** Un cobro aceptado responde
+`0000`–`0099`; una **devolución** aceptada, `0900`–`0999`. Leerla con la regla del
+cobro haría que una devolución correcta pareciera un error — y lo que sigue a un
+error es reintentar: dinero fuera dos veces. Comprobado contra la pasarela de
+test el 14 de septiembre de 2026: el cobro dio `0000` y su devolución `0900`.
+
+Los frenos, y ninguno sobra:
+
+- **Permiso propio `refundPayments`**, no `deleteRecords`. Borrar destruye
+  información nuestra; devolver saca dinero. Si fueran el mismo permiso, el día
+  que un encargado pueda borrar una reserva de prueba heredaría la llave de la
+  caja.
+- **El rol se lee de Firestore, no del token**: un token emitido cuando el
+  usuario era administrador sigue valiendo una hora.
+- **El importe no viaja como orden**: se topa contra lo que de verdad entró,
+  descontando lo ya devuelto.
+- **Se RESERVA en transacción antes de llamar al banco**, y se revierte si
+  rechaza. Es lo que impide que dos clics hagan dos devoluciones — la misma
+  lección que costó el cobro perdido de F-32.
+- **No se reintenta solo.** Un fallo posterior a la aceptación del banco es
+  indistinguible de uno anterior.
+
+⚠️ **Una devolución PARCIAL no cambia el estado del pago.** Sigue `paid` por el
+resto; marcarlo `refunded` entero haría que los informes dejaran de contar un
+dinero que sí entró y se quedó. Por eso `sumPaid()` **descuenta
+`refundedAmount`** en vez de mirar el estado.
+
+⚠️ **Y el pipe `date` no traga un `Timestamp` de Firestore.** Lanza
+`InvalidPipeArgument` y **tumba el bloque entero**, no solo la fecha. El
+`notifiedAt` de la pasarela llevaba así desde siempre y no se vio porque hasta
+que hubo un cobro real con notificación el `@if` no entraba nunca.
+
 ### El cliente paga desde su móvil
 
 `getPaymentCheckout` es **pública** y la abre el cliente en `/pay/:paymentId`, ruta
@@ -1522,7 +1724,7 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 ```
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
-collaborators  collaboratorSales  reminders
+collaborators  collaboratorSales  collaboratorInvoices  reminders
 invoices  invoiceCounters  billingProfiles  verifactuDeclarations
 verifactuSubmissions
 ```
@@ -1545,6 +1747,14 @@ Dorel, para empezar de cero: todas las colecciones **menos `authorizedUsers`**, 
 desarrollo y en producción. Esa se salva siempre y no es un detalle: es donde vive la
 autorización de acceso, y borrarla deja a todo el mundo fuera de la aplicación sin forma
 de entrar a arreglarlo desde la propia app.
+
+⚠️ **Y desarrollo se volvió a vaciar el 12 de septiembre de 2026**, esta vez
+**solo `velto-store`** —producción no se tocó—, para empezar de cero con coches
+de colaborador desde el principio. Otra vez todo menos `authorizedUsers`, que
+conserva sus dos documentos: `veltorent@gmail.com` (admin) y `dbindea@gmail.com`
+(employee, la cuenta con la que se prueban las reglas). Es lo que permitió hacer
+`CollaboratorSale.kind` obligatorio: sin apuntes antiguos, no hay nada a lo que
+dar compatibilidad.
 
 Así que hoy están **todas vacías**, y las colecciones de arriba son las que el código
 crea, no las que existen ahora mismo. `expenses` estuvo declarada en `firestore.rules`
@@ -1763,6 +1973,30 @@ porque su geometría no es esa.
 Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
 sin que se notara porque solo aparece cuando falta la declaración.
 
+
+### `npm run spacing:audit` — la escala de espaciado
+
+⚠️ **El problema no era un margen mal puesto: eran CUARENTA Y UN valores
+distintos.** El 14 de septiembre de 2026 la aplicación declaraba 1750
+espaciados con 41 valores diferentes —0,35 / 0,4 / 0,45 / 0,55 / 0,6 / 0,65 /
+0,85 / 0,9 rem…—, todos casi iguales entre sí y ninguno alineado con el
+siguiente. Por eso unas descripciones salían pegadas al campo y otras no, sin
+que hubiera un culpable concreto al que ir.
+
+La escala son **múltiplos de 2 px hasta 1 rem y de 4 px por encima**. El guion
+lleva a la escala lo que se salga y **falla con código 1** si queda algo fuera.
+
+⚠️ **`--fix` no mueve nada más de 2 px.** Sin ese tope, unificar deja de ser
+alinear y pasa a ser recomponer: un `margin-left: 260px` que empareja con el
+ancho de la barra lateral tiene su valor de escala más cercano en 96 px, y
+llevarlo ahí mete el contenido debajo del menú. Lo que se pasa del tope se
+**informa** para mirarlo a mano, y lo revisado va a `ACEPTADAS` con su motivo.
+
+⚠️ **Y el ritmo vertical de los formularios es global** (`styles.scss`). Un
+`.form-group` hijo directo de `.form-section` no estaba en ninguna `.form-row`,
+así que se quedaba **sin margen ninguno**: es lo que hacía que la descripción de
+un vehículo y la casilla de debajo se tocaran. Igual que con `.btn-primary`, no
+pisa a quien ya lo declara.
 
 ### `npm run css:audit` — la clase que nadie declara
 

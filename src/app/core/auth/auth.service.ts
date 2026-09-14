@@ -25,7 +25,31 @@ export class AuthService {
   private firestore = inject(Firestore);
   private router = inject(Router);
 
-  private googleProvider = new GoogleAuthProvider();
+  /**
+   * El proveedor de Google, **pidiendo siempre elegir cuenta**.
+   *
+   * ⚠️ **Sin `prompt: 'select_account'` el popup no pregunta**: si en el
+   * navegador hay una sesión de Google abierta, entra con ella directamente y no
+   * hay forma de cambiar de usuario desde la aplicación. Cerrar sesión aquí
+   * tampoco sirve, porque lo que recuerda la cuenta es Google, no nosotros: el
+   * único camino era ir a `accounts.google.com` y cerrar sesión allí.
+   *
+   * Importa más de lo que parece para este proyecto. La aplicación tiene **dos
+   * roles** y las reglas de Firestore se prueban entrando como empleado
+   * (`docs/comprobar-reglas-financieras.js`): sin poder elegir cuenta, esa
+   * prueba obliga a una ventana de incógnito cada vez. Y el día que haya un
+   * compañero en el mostrador, dos personas en el mismo móvil no podrían
+   * turnarse.
+   *
+   * ⚠️ **No fuerza a volver a teclear la contraseña**: `select_account` enseña
+   * el selector con las cuentas ya iniciadas, así que quien solo usa una sigue
+   * entrando con un clic más.
+   */
+  private googleProvider = (() => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    return provider;
+  })();
 
   // Firebase user observable
   readonly firebaseUser$: Observable<User | null> = user(this.auth);

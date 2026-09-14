@@ -77,12 +77,28 @@ service cloud.firestore {
       // llegar igual que estaba. Es lo que impide cambiar a mano lo que ya se
       // pactó.
       //
-      // Lo que esta regla NO cubre: el precio con el que la reserva **nace**.
-      // Al crear no hay valor anterior con el que comparar, así que ahí manda
-      // la comprobación del servicio. Ver N-11 en mejoras-pendientes.
+      // ⚠️ **Y tampoco el reparto con el dueño del coche** (12 de septiembre de
+      // 2026). `ownerShareSnapshot` decide dinero exactamente igual que el
+      // precio: es lo que se le liquida al propietario que cedió el vehículo, y
+      // se congela al crear la reserva por el mismo motivo. Dejarlo fuera de
+      // esta comprobación permitiría subir un 75 % a un 95 % desde la API REST
+      // con la pantalla perfectamente bloqueada — el agujero de `invoices` otra
+      // vez, pero cambiando una cifra en lugar de leerla.
+      //
+      // `==` sobre un mapa compara el mapa entero, así que vale igual para los
+      // dos, y para una reserva sin reparto —coche de Velto— compara ausente
+      // contra ausente, que también es igual.
+      //
+      // Lo que esta regla NO cubre: el precio ni el reparto con los que la
+      // reserva **nace**. Al crear no hay valor anterior con el que comparar,
+      // así que ahí manda la comprobación del servicio. Ver N-11 en
+      // mejoras-pendientes.
       allow update: if isAuthorized(request.auth.token.email) && (
-        callerIsAdmin() ||
-        request.resource.data.pricingSnapshot == resource.data.pricingSnapshot
+        callerIsAdmin() || (
+          request.resource.data.pricingSnapshot == resource.data.pricingSnapshot &&
+          request.resource.data.get('ownerShareSnapshot', null) ==
+            resource.data.get('ownerShareSnapshot', null)
+        )
       );
       allow delete: if callerIsAdmin();
     }
@@ -251,6 +267,20 @@ service cloud.firestore {
     // Las comisiones. Se pueden borrar —a diferencia de una factura, esto no
     // acredita nada ante nadie: es un registro interno— pero solo el admin.
     match /collaboratorSales/{saleId} {
+      allow read, write: if callerIsAdmin();
+    }
+
+    // Las facturas que MANDA el propietario por ceder su coche.
+    //
+    // ⚠️ **No confundir con `invoices`.** Aquellas las emite VELTO, son
+    // inmutables y van a la AEAT; estas llegan de fuera y solo registran un
+    // papel que está en un cajón, así que `update` y `delete` sí se permiten —
+    // una factura recibida mal tecleada se corrige. Lo que acredita no lo ha
+    // declarado la empresa ante nadie.
+    //
+    // De administrador, como las comisiones y por lo mismo: es lo que la
+    // empresa paga, y con el NIF y el importe de sus proveedores dentro.
+    match /collaboratorInvoices/{invoiceId} {
       allow read, write: if callerIsAdmin();
     }
 

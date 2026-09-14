@@ -26,6 +26,8 @@ import {
   resolveRentalPrice
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
+import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
@@ -74,6 +76,7 @@ export class ReservationService {
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
   private paymentService = inject(PaymentService);
+  private collaboratorService = inject(CollaboratorService);
   private inspectionService = inject(InspectionService);
   private authService = inject(AuthService);
   private settingsService = inject(SettingsService);
@@ -497,7 +500,7 @@ export class ReservationService {
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    return this.commitReservationWithPayments(reservation);
+    return this.commitReservationWithPayments(reservation, vehicle);
   }
 
   /**
@@ -665,7 +668,7 @@ export class ReservationService {
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    return this.commitReservationWithPayments(reservation);
+    return this.commitReservationWithPayments(reservation, vehicle);
   }
 
   /**
@@ -901,6 +904,24 @@ export class ReservationService {
     // Anything still seeded and untouched is not going to be collected on a
     // closed rental — otherwise the payment list contradicts the status.
     await this.paymentService.cancelUncollectedPayments(id);
+
+    /**
+     * ⚠️ **El reparto del propietario se reconoce solo al cerrar** (decisión de
+     * Dorel, 14 de septiembre de 2026): no hay que acordarse de pulsar nada, y
+     * el importe se le asigna con el porcentaje congelado en la reserva. Se
+     * puede cambiar después desde su ficha, que es justo lo que él pidió.
+     *
+     * ⚠️ **Y no puede tumbar el cierre.** Si quien cierra es un empleado no
+     * tiene permiso para escribir en `collaboratorSales`, así que el método
+     * devuelve `0` y no lanza; el apunte lo recoge el siguiente administrador
+     * que abra la ficha, y mientras tanto los informes ya lo cuentan porque el
+     * devengo se deriva de la reserva. Perder el apunte es un retraso; perder
+     * el cierre que el operador acaba de hacer, un problema mayor.
+     */
+    await this.collaboratorService.accrueFromReservation({
+      ...reservation,
+      reservationStatus: 'closed'
+    });
   }
 
   /**
@@ -930,7 +951,15 @@ export class ReservationService {
    * milisegundos. Reduce el riesgo; no lo elimina.
    */
   private async commitReservationWithPayments(
-    reservation: Omit<Reservation, 'id'>
+    reservation: Omit<Reservation, 'id'>,
+    /**
+     * El coche, **para congelar el reparto con su dueño**.
+     *
+     * Viaja hasta aquí en vez de resolverse en cada uno de los dos creadores a
+     * propósito: así ninguno de los dos puede olvidarse: es el mismo motivo por
+     * el que la reserva y sus filas de pago se escriben en un solo sitio.
+     */
+    vehicle: Vehicle
   ): Promise<string> {
     const availability = await this.checkVehicleAvailability(
       reservation.vehicleId,
@@ -941,12 +970,29 @@ export class ReservationService {
       throw new Error(availability.conflictMessage || 'reservations.availability.conflict');
     }
 
+    /**
+     * ⚠️ **El reparto se congela aquí, como el precio.** `ownerShareSnapshotOf()`
+     * devuelve `null` para un coche de Velto, que es la mayoría: entonces la
+     * reserva no lleva el campo y no hay nada que liquidar.
+     *
+     * ⚠️ **El nombre sale del vehículo y NO de `collaborators`.** Esa colección
+     * es de administrador en `firestore.rules`, y un empleado creando la reserva
+     * de un coche cedido recibiría un error de permisos en mitad de la
+     * operación. Lo escribe el administrador al asignar el coche; ver
+     * `Vehicle.ownerCollaboratorName`.
+     */
+    const conReparto: Omit<Reservation, 'id'> = {
+      ...reservation,
+      ownerShareSnapshot:
+        ownerShareSnapshotOf(vehicle, vehicle.ownerCollaboratorName) ?? undefined
+    };
+
     const batch = writeBatch(this.firestore);
 
     const reservationRef = doc(this.reservationsRef);
-    batch.set(reservationRef, this.cleanData(reservation));
+    batch.set(reservationRef, this.cleanData(conReparto));
 
-    const saved: Reservation = { id: reservationRef.id, ...reservation };
+    const saved: Reservation = { id: reservationRef.id, ...conReparto };
     const paymentsRef = collection(this.firestore, 'payments');
     for (const row of this.paymentService.buildInitialPayments(reservationRef.id, saved)) {
       batch.set(doc(paymentsRef), row);

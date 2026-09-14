@@ -79,6 +79,11 @@
     { nombre: 'verifactuSubmissions', soloAdmin: true, que: 'los acuses de la AEAT' },
     { nombre: 'collaborators', soloAdmin: true, que: 'a quién se le paga comisión' },
     { nombre: 'collaboratorSales', soloAdmin: true, que: 'cuánto se le debe a cada uno' },
+    {
+      nombre: 'collaboratorInvoices',
+      soloAdmin: true,
+      que: 'las facturas que mandan los propietarios, con su número e importe'
+    },
     { nombre: 'payments', soloAdmin: false, que: 'los cobros — abierto a propósito, ver cabecera' },
     { nombre: 'reservations', soloAdmin: false, que: 'las reservas' },
     { nombre: 'vehicles', soloAdmin: false, que: 'la flota' }
@@ -121,6 +126,76 @@
     // un gasto.
     const id = r.body?.name?.split('/').pop();
     if (r.status === 200 && id) await call('DELETE', `${e.nombre}/${id}`);
+  }
+
+  // --- Mover el dinero de una reserva ya creada ----------------------------
+  //
+  // ⚠️ **Leer una reserva es legítimo; MOVER lo que decide su dinero, no.** Un
+  // empleado tiene que poder cobrar, entregar y devolver, así que `update` está
+  // abierto — pero `pricingSnapshot` y `ownerShareSnapshot` tienen que llegar
+  // igual que estaban. El segundo se añadió el 12 de septiembre de 2026 y decide
+  // cuánto se le liquida al dueño del coche: sin esta comprobación, un 75 % se
+  // podía subir a un 95 % por la API REST con la pantalla perfectamente
+  // bloqueada.
+  console.log('%c=== MOVER EL DINERO DE UNA RESERVA ===', 'font-weight:bold');
+  const reservas = await call('GET', 'reservations?pageSize=20');
+  const conReparto = (reservas.body?.documents || []).find(
+    (d) => d.fields?.ownerShareSnapshot
+  );
+  const cualquiera = (reservas.body?.documents || [])[0];
+
+  const intentarMover = async (doc, campo, valor, queEs) => {
+    if (!doc) return console.log(`· ${campo}: no hay ninguna reserva con qué probarlo`);
+    const id = doc.name.split('/').pop();
+    const r = await call(
+      'PATCH',
+      `reservations/${id}?updateMask.fieldPaths=${campo}`,
+      { fields: { [campo]: valor } }
+    );
+    const deberia = esAdmin ? 200 : 403;
+    const ok = r.status === deberia;
+    if (!ok) fallos++;
+    console.log(
+      `${ok ? '✅' : '❌'} PATCH ${campo} → ${r.status} (esperado ${deberia}) — ${queEs}`
+    );
+  };
+
+  await intentarMover(
+    conReparto,
+    'ownerShareSnapshot',
+    {
+      mapValue: {
+        fields: {
+          collaboratorId: { stringValue: 'PRUEBA' },
+          collaboratorName: { stringValue: 'PRUEBA DE REGLAS' },
+          sharePercent: { integerValue: '95' }
+        }
+      }
+    },
+    'el reparto con el dueño del coche'
+  );
+
+  await intentarMover(
+    cualquiera,
+    'pricingSnapshot',
+    { mapValue: { fields: { netPrice: { integerValue: '1' } } } },
+    'el precio pactado'
+  );
+
+  // Y lo que sí tiene que poder: una nota interna es su trabajo.
+  if (cualquiera) {
+    const id = cualquiera.name.split('/').pop();
+    const nota = await call(
+      'PATCH',
+      `reservations/${id}?updateMask.fieldPaths=pickupLocation`,
+      { fields: { pickupLocation: cualquiera.fields?.pickupLocation || { stringValue: '' } } }
+    );
+    const ok = nota.status === 200;
+    if (!ok) fallos++;
+    console.log(
+      `${ok ? '✅' : '❌'} PATCH pickupLocation → ${nota.status} (esperado 200) — ` +
+        'lo que necesita para trabajar'
+    );
   }
 
   // --- Lo que lo desharía todo --------------------------------------------

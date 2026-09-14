@@ -5,6 +5,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -28,6 +29,7 @@ import {
   VehicleStatus,
 } from '@shared/models/vehicle.model';
 import { getDefaultPricingRules, sortPricingRules } from '@shared/utils/pricing.util';
+import { vehicleOwnershipProblem } from '@shared/utils/owner-share.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { Observable, from, throwError } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -77,7 +79,28 @@ export class VehicleService {
     );
   }
 
+  /**
+   * Lo que impide guardar la propiedad del coche.
+   *
+   * ⚠️ **Se comprueba aquí aunque la pantalla ya lo haya hecho**, y es la misma
+   * función: un coche marcado «de colaborador» sin colaborador deja una reserva
+   * que dice que hay que pagarle a alguien sin decir a quién, y eso no se
+   * descubre hasta que se cierra el primer alquiler. Es la defensa en
+   * profundidad de siempre — pantalla, servicio y reglas.
+   */
+  private assertOwnership(data: Partial<VehicleFormData>): void {
+    const problems = vehicleOwnershipProblem({
+      ownership: data.ownership,
+      ownerCollaboratorId: data.ownerCollaboratorId,
+      ownerSharePercent: data.ownerSharePercent
+    });
+    const primero: string | undefined = Object.values(problems)[0];
+    if (primero) throw new Error(primero);
+  }
+
   async createVehicle(vehicle: VehicleFormData, acrissCode: string): Promise<string> {
+    this.assertOwnership(vehicle);
+
     // Use default pricing rules if not provided
     const pricingRules = vehicle.pricingRules?.length
       ? vehicle.pricingRules
@@ -102,6 +125,8 @@ export class VehicleService {
   }
 
   async updateVehicle(id: string, data: Partial<VehicleFormData>): Promise<void> {
+    this.assertOwnership(data);
+
     // Sort pricing rules before saving
     let pricingRules = data.pricingRules;
     if (pricingRules?.length) {
@@ -109,14 +134,36 @@ export class VehicleService {
     }
 
     const docRef = doc(this.firestore, `vehicles/${id}`);
-    await updateDoc(
-      docRef,
-      this.cleanData({
-        ...data,
-        pricingRules,
-        updatedAt: { seconds: Date.now() / 1000 },
-      }),
-    );
+    const payload: Record<string, unknown> = this.cleanData({
+      ...data,
+      pricingRules,
+      updatedAt: { seconds: Date.now() / 1000 },
+    });
+
+    /**
+     * Un coche que deja de ser de un colaborador **se queda sin propietario de
+     * verdad**.
+     *
+     * ⚠️ `cleanData()` descarta `undefined`, así que no basta con dejar los
+     * campos vacíos: quedarían los de antes escritos en Firestore, y el coche
+     * diría a la vez que es propio y que le toca un 75 % a Juan. Hoy no
+     * repartiría —`ownerShareSnapshotOf()` mira `ownership` primero— pero es un
+     * dato creíble y falso esperando a que alguien lo lea.
+     *
+     * ⚠️ **El centinela se añade DESPUÉS de limpiar, nunca dentro.**
+     * `deleteField()` es un objeto con propiedades propias: pasarlo por un
+     * limpiador que recorre con `Object.entries()` lo convierte en un mapa
+     * vacío y Firestore escribiría `{}` en vez de borrar el campo. Es
+     * exactamente lo que corrompió los timestamps de los contratos (F-4).
+     */
+    if ((data.ownership || 'own') !== 'collaborator') {
+      payload['ownership'] = 'own';
+      payload['ownerCollaboratorId'] = deleteField();
+      payload['ownerCollaboratorName'] = deleteField();
+      payload['ownerSharePercent'] = deleteField();
+    }
+
+    await updateDoc(docRef, payload);
   }
 
   /**

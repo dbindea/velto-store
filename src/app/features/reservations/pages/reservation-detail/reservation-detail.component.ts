@@ -1,4 +1,5 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -55,7 +56,14 @@ import { TranslateService } from '@core/i18n/translate.service';
 import { NotificationService } from '@core/notifications/notification.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
 import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
-import { ReservationNote } from '@shared/models/reservation.model';
+import { ReservationNote, ReservationOwnerShare } from '@shared/models/reservation.model';
+// Con alias: los getters de la pantalla se llaman igual que las funciones, y
+// sin renombrar el getter se llamaría a sí mismo.
+import {
+  ownerShareAmount as calcOwnerShare,
+  veltoShareAmount as calcVeltoShare,
+  veltoSharePercent as calcVeltoPercent
+} from '@shared/utils/owner-share.util';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ClientService } from '@features/clients/services/client.service';
 import { Client } from '@shared/models/client.model';
@@ -178,6 +186,58 @@ export class ReservationDetailComponent implements OnInit {
   /** The rate as a percentage, for the "IVA (21 %)" label. */
   get vatPercent(): number {
     return Math.round(this.vat.rate * 100);
+  }
+
+  /**
+   * Capitaliza el nombre del conductor adicional según se escribe.
+   *
+   * ⚠️ **Acaba IMPRESO en el contrato**, bajo el arrendatario y como la
+   * persona a la que la cláusula 2 autoriza a conducir. Un «juan garcía» en
+   * minúsculas no es un detalle de pantalla: sale así en el PDF que se sella y
+   * que el cliente firma, y un contrato firmado no se regenera.
+   */
+  onDriverNameInput(event: Event): void {
+    this.driverForm.fullName = transformInput(
+      event.target as HTMLInputElement,
+      capitalizeWords
+    );
+  }
+
+  // --- El reparto con el dueño del coche -----------------------------------
+
+  /** El reparto congelado, o `null` si el coche es de Velto. */
+  get ownerShare(): ReservationOwnerShare | null {
+    return this.reservation?.ownerShareSnapshot ?? null;
+  }
+
+  /**
+   * Lo que le correspondería al propietario por este alquiler.
+   *
+   * ⚠️ **La base es el neto del alquiler, y solo el alquiler**: sin IVA, sin
+   * fianza y sin cargos extra. La aritmética está en `owner-share.util.ts`, que
+   * es la única autoridad — recalcularla aquí sería la segunda.
+   *
+   * ⚠️ **Es una previsión, no una deuda todavía.** La parte se devenga **al
+   * cerrar** la reserva, cuando los importes ya son definitivos; hasta entonces
+   * esta cifra se mueve si se mueve el precio. La pantalla lo dice con todas
+   * las letras, porque un número con un euro delante se lee como dinero
+   * comprometido.
+   */
+  get ownerShareAmount(): number {
+    const share = this.ownerShare;
+    if (!share) return 0;
+    return calcOwnerShare(this.reservation?.pricingSnapshot?.netPrice ?? 0, share.sharePercent);
+  }
+
+  /** Lo que le queda a Velto de este alquiler, que es el resto del neto. */
+  get veltoShareAmount(): number {
+    const share = this.ownerShare;
+    if (!share) return 0;
+    return calcVeltoShare(this.reservation?.pricingSnapshot?.netPrice ?? 0, share.sharePercent);
+  }
+
+  get veltoSharePercent(): number {
+    return calcVeltoPercent(this.ownerShare?.sharePercent ?? 0);
   }
 
   /**

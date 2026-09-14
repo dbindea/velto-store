@@ -677,6 +677,54 @@
           </div>
         </div>
       </div>
+
+      <!--
+        El reparto con el dueño del coche.
+
+        Solo si el coche es de un colaborador —la mayoría de la flota es de
+        Velto y entonces no hay nada que repartir— y solo con
+        `viewCollaborators`: a quién se le debe una parte del alquiler es
+        información de dueño, igual que los gastos y las comisiones.
+
+        ⚠️ La cifra es una PREVISIÓN hasta que se cierra la reserva, y el texto
+        lo dice. Un importe en euros sin ese aviso se lee como dinero ya
+        comprometido, y aquí todavía se mueve si se mueve el precio.
+      -->
+      @if (ownerShare && permissions.can('viewCollaborators')) {
+        <div class="detail-card owner-share-card">
+          <div class="card-header">
+            <i class="pi pi-users"></i>
+            <span>{{ 'reservations.ownerShare.title' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <div class="pricing-breakdown">
+              <div class="price-row">
+                <span>{{ 'reservations.ownerShare.owner' | translate }}:</span>
+                <span>{{ ownerShare.collaboratorName }}</span>
+              </div>
+              <div class="price-row">
+                <span>{{ 'reservations.ownerShare.base' | translate }}:</span>
+                <span>{{ reservation.pricingSnapshot.netPrice | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row total">
+                <span>
+                  {{ 'reservations.ownerShare.forOwner' | translate }}
+                  ({{ ownerShare.sharePercent }} %):
+                </span>
+                <span class="total-value">{{ ownerShareAmount | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row">
+                <span>
+                  {{ 'reservations.ownerShare.forVelto' | translate }}
+                  ({{ veltoSharePercent }} %):
+                </span>
+                <span>{{ veltoShareAmount | number:'1.2-2' }} €</span>
+              </div>
+            </div>
+            <p class="hint">{{ 'reservations.ownerShare.hint' | translate }}</p>
+          </div>
+        </div>
+      }
     </div>
 
     <!-- Payments & Deposit Section -->
@@ -1047,7 +1095,9 @@
                   <label class="required" for="dname">{{ 'reservations.drivers.name' | translate }}</label>
                   <input id="dname" type="text" class="form-control" name="dname"
                          [class.is-invalid]="driverSubmitted && driverProblems['fullName']"
-                         [(ngModel)]="driverForm.fullName" />
+                         [ngModel]="driverForm.fullName"
+                         (ngModelChange)="driverForm.fullName = $event"
+                         (input)="onDriverNameInput($event)" />
                   <app-form-error [problems]="driverProblems['fullName']" [show]="driverSubmitted" />
                 </div>
                 <div class="form-group">
@@ -1097,11 +1147,20 @@
       />
     </div>
 
-    <!-- Actions -->
+    <!--
+      Actions.
+
+      ⚠️ **Cancelar y eliminar NO son lo mismo, y el color lo dice.** Los dos
+      salían en rojo, así que la única diferencia entre dejar una reserva
+      archivada y borrarla de la base de datos con sus pagos y sus inspecciones
+      era leer bien la palabra. Ahora cancelar va en **ámbar** —es grave, se
+      deshace el alquiler, pero la reserva sigue ahí y sigue contando su
+      historia— y borrar en **rojo**, que es lo único irreversible de verdad.
+    -->
     <div class="page-actions">
       @if (canCancelReservation()) {
         <button
-          class="btn-danger"
+          class="btn-warning"
           type="button"
           (click)="openCancelModal()">
           <i class="pi pi-times"></i>
@@ -1109,7 +1168,7 @@
         </button>
       } @else if (reservation.reservationStatus !== 'cancelled') {
         <button
-          class="btn-danger"
+          class="btn-warning"
           type="button"
           disabled
           [attr.title]="cancelReservationBlockReason() | translate"
@@ -1124,6 +1183,9 @@
         historia, una borrada desaparece con sus pagos y sus inspecciones. Es
         para lo que nació por error o de prueba, y por eso el botón no compite
         con el de cancelar: va aparte y solo lo ve un administrador.
+
+        ⚠️ **Este es el rojo**, y ahora es el único de los dos: es el que no se
+        puede deshacer.
       -->
       @if (permissions.canDelete() && reservation.contractStatus !== 'signed') {
         <button class="btn-danger" type="button" (click)="deleteReservation()">
@@ -1132,6 +1194,15 @@
         </button>
       }
     </div>
+
+    <!--
+      Y dicho con palabras, no solo con color: quien llega aquí por primera vez
+      no sabe que «cancelar» conserva la reserva. El color avisa de que son
+      distintas; esto dice en qué.
+    -->
+    @if (reservation.reservationStatus !== 'cancelled') {
+      <p class="hint actions-hint">{{ 'reservations.actions.cancelVsDelete' | translate }}</p>
+    }
 
     <!-- Saltarse un paso del workflow (N-7).
          El motivo es obligatorio y queda registrado con autor y fecha: la
@@ -1196,7 +1267,7 @@
     @if (showCancelModal) {
       <div class="modal-overlay" (click)="closeCancelModal()">
         <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header danger">
+          <div class="modal-header warning">
             <i class="pi pi-exclamation-triangle"></i>
             <h3>{{ 'reservations.actions.cancel' | translate }}</h3>
             <button class="modal-close" type="button" (click)="closeCancelModal()">
@@ -1227,7 +1298,7 @@
                 {{ 'common.back' | translate }}
               </button>
               @if (permissions.canCancelReservations()) {
-              <button class="btn btn-danger-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
+              <button class="btn btn-warning-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
                 @if (cancelling) {
                   <i class="pi pi-spin pi-spinner"></i>
                 } @else {

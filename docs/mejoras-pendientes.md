@@ -91,8 +91,8 @@ así que un porcentaje sin rellenar pasaba como reparto del **0 %** — que aqu�
 un valor legítimo, o sea que nada habría chirriado. Al propietario se le habría
 liquidado cero por cada alquiler hasta que se quejara.
 
-- `Vehicle`: `ownership`, `ownerCollaboratorId`, `ownerSharePercent`. Ausente
-  vale «propio».
+- `Vehicle`: `ownership`, `ownerCollaboratorId`, `ownerSharePercent` —y
+  `ownerCollaboratorName`, añadido en la entrega 2—. Ausente vale «propio».
 - `Reservation`: `ownerShareSnapshot`, **congelado al crear** como el precio.
 - `Collaborator`: `ownerSharePercent`, **distinto** de `commissionPercent`.
 - `CollaboratorSale`: `kind` (`referral` | `vehicle_owner`) y `balanceByKind()`.
@@ -102,22 +102,152 @@ puede traer el cliente **y** poner el coche de la **misma** reserva: son dos
 apuntes, no uno mayor. Se pactan, se calculan y se justifican distinto, y uno
 lleva factura de cesión detrás y el otro no.
 
+### Entrega 2, hecha: el alta del coche y el congelado automático
+
+- **Ficha del vehículo**: sección «De quién es el coche», con el selector de
+  colaborador y el **alta rápida** desde ahí. Solo con `viewCollaborators`.
+- **`Vehicle.ownerCollaboratorName`**, copiado al coche a propósito: la reserva
+  necesita el nombre para el snapshot y `firestore.rules` **no deja leer
+  `collaborators` a un empleado**. Yendo a buscarlo allí, un empleado que crea
+  la reserva de un coche cedido recibiría un error de permisos a media
+  operación, o se guardaría el reparto sin nombre.
+- **`commitReservationWithPayments()`** congela `ownerShareSnapshot`. Recibe el
+  vehículo para que **ninguno de los dos creadores pueda olvidarse**.
+- **Ficha de la reserva**: de quién es el coche, la base, lo del propietario y
+  lo de Velto. Con el aviso de que es una **previsión** hasta el cierre.
+- **`firestore.rules`**: `ownerShareSnapshot` queda protegido igual que
+  `pricingSnapshot` — un empleado no puede moverlo por la API REST. Decide
+  dinero exactamente igual que el precio y se había quedado fuera.
+- **`CollaboratorSale.kind` es obligatorio** y `kindOf()` ya no existe: al
+  vaciarse la base de desarrollo no quedan apuntes antiguos, así que el campo se
+  exige y el compilador obliga a contestarlo.
+- **El 0 % de comisión de captación pasa a ser válido** y significa «no trae
+  clientes» (decisión de Dorel, 12 de septiembre de 2026). Sin eso, dar de alta
+  a alguien que solo cede un coche obligaba a inventarle una comisión.
+
+### El devengo: se DERIVA, no se guarda
+
+Decisión de Dorel del 12 de septiembre de 2026, tomada ante un choque real:
+**cerrar una reserva no pide ningún permiso** —lo hace el empleado que termina la
+devolución en la calle— pero `collaboratorSales` es de administrador en
+`firestore.rules`. Escribiendo el apunte al cerrar, ese cierre fallaría por
+permisos, o peor, se tragaría el error y el propietario no cobraría sin que nadie
+se enterase.
+
+Así que lo devengado **se deriva de las reservas cerradas**
+(`ownerShareAccruals()`), que ya llevan dentro su reparto y su precio congelados:
+
+- No hay segunda fuente de verdad que se quede vieja. Misma regla que «los
+  eventos próximos se derivan, no se guardan».
+- Da igual quién cierre la reserva.
+- No hay duplicados posibles.
+
+⚠️ **`unsettledAccruals()` quita lo ya liquidado, y sin eso se cuenta dos
+veces.** Al liquidar, el reparto pasará a ser un `CollaboratorSale` con su
+importe congelado; si la derivación siguiera contando esa reserva, el
+propietario aparecería con el doble de lo que se le debe — y sería una cifra
+creíble, que es la peor clase de error con dinero. Hay test.
+
+⚠️ **El apunte se escribirá al LIQUIDAR** (entrega 3), que siempre lo hace un
+administrador. Hasta entonces, la ficha del colaborador enseña lo devengado en su
+propia caja, **sin sumarlo** al balance de comisiones: son dos conceptos que se
+pactan, se liquidan y se justifican distinto.
+
+⚠️ **Y ojo con `saleForReservation()`: su `kind` es obligatorio a propósito.** Una
+misma reserva puede tener legítimamente los dos apuntes. Preguntando «¿esta
+reserva ya está asignada?» a secas, el reparto de un coche cedido haría que la
+comisión de captación de esa misma reserva se rechazara con «ya está asignada» —
+exactamente lo que se separó al crear `kind`. La pantalla de asignar filtra
+igual, y los dos sitios tienen que decir lo mismo.
+
+⚠️ **Y una consecuencia que hay que decir en voz alta:** `ownerShareSnapshot`
+vive dentro de la reserva, y `reservations` la puede **leer** cualquier usuario
+autorizado. Es decir: un empleado puede ver por la API REST de quién es el coche
+y qué porcentaje se lleva, aunque la pantalla se lo esconda. Es el mismo caso que
+`payments` —no se puede cerrar sin romper la operación diaria, porque la reserva
+se lee entera— y no el de `invoices`, que sí era un descuido. Escribirlo sí está
+cerrado. Si algún día molesta, la salida es sacar el reparto a una colección de
+administrador, no endurecer esta regla.
+
+### Entrega 3, hecha: liquidar, pagar y la factura del propietario
+
+**Tres cosas distintas, y la aplicación confundía dos**: decía «liquidar» donde
+hacía «pagar». Ahora:
+
+- **Reconocer lo devengado** convierte el reparto derivado en un apunte con su
+  importe **congelado**. En un `writeBatch`, y comprobando otra vez lo que hay
+  escrito: entre cargar la ficha y pulsar caben otra pestaña y otro operador.
+- **Pagar** deja de ser todo o nada: se elige qué entra y **cuándo salió el
+  dinero**. Una fecha futura se rechaza (`paidAtProblem()`, con tests).
+- **La factura** vive en `collaboratorInvoices`, colección propia porque una sola
+  suele cubrir varias reservas. Su importe **no tiene que cuadrar** con lo que
+  cubre —el IRPF retenido es el caso normal—: la diferencia se enseña.
+
+⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar»**, y el texto lo
+dice con esas palabras. Solo la esperan los apuntes de `vehicle_owner`.
+
+⚠️ **No escribe en `expenses`**, igual que las comisiones (decisión de Dorel del
+12 de septiembre de 2026). Los cuatro datos para convertirlo en gasto ya están
+guardados el día que se quiera.
+
+⚠️ **Y dos fallos que solo salieron mirando la pantalla**, los dos de
+reactividad: `invoiceDifference` era un `computed()` que leía
+`invoiceForm.amount` —una propiedad de `ngModel`, no una señal—, así que se
+quedaba con el valor de la primera evaluación y el aviso de descuadre enseñaba
+siempre el total de los repartos. Y `invoiceCandidates()` leía `editingInvoiceId`
+igual: funcionaba de rebote, cuando se movía otra señal. **Un `computed` que lee
+algo que no es señal no se entera de nada**, y compila igual.
+
+### Entrega 4, hecha: el reparto en el resultado de Velto
+
+`collaboratorOutgoings()` lo cuenta como una salida más, en su propia línea y no
+fundido con las comisiones.
+
+⚠️ **Y lo cuenta ESTÉ O NO reconocido.** Es lo que sostiene el beneficio: un
+reparto devengado vive derivado de su reserva cerrada hasta que se apunta, así
+que mirando solo `collaboratorSales` no se restaba y Velto aparecía ganando una
+parte del alquiler que no es suya.
+
+### N-33 está COMPLETO — las cuatro entregas
+
+⚠️ **Lo único que queda de N-33 no es código: es desplegar las reglas a
+producción.** `collaboratorInvoices` y la protección de `ownerShareSnapshot` se
+desplegaron a `velto-store` el 12 y el 14 de septiembre de 2026; en
+`rentalcar-veltomobility` **no están**. Sin ellas, esa colección y ese campo
+quedan con las reglas viejas el día que producción tenga datos.
+
 ### Lo que falta
 
-- **Entrega 2**: alta de vehículo con propietario (selector de colaborador, o
-  crearlo desde ahí) y el reparto que se congela solo al crear la reserva.
-- **Entrega 3**: liquidaciones agrupadas —varias reservas en un pago, con fecha,
-  importe y forma incluido efectivo— y el registro de la factura recibida, con
-  estado «pendiente de recibir» que **no** se confunda con «no hay que
-  facturar». ⚠️ Pagarle **no** genera una factura de venta de Velto.
-- **Entrega 4**: informes con el reparto y el resultado real de Velto, y la
-  **fecha de operación** de las facturas.
+### La fecha de operación — HECHA a medias, y hay que saber cuál mitad
 
-### La fecha de operación, sin empezar
+`suggestOperationDate()` la **propone y la explica**, y el campo se sigue
+pudiendo cambiar. Antes el formulario ponía siempre la fecha de devolución, que
+es justo lo que Dorel avisó que no se hiciera.
 
-Pedida el 12 de septiembre. Hoy `Invoice` ya tiene `operationDate` separada de
-`issueDate` y existe `needsOperationDate()`, pero **nadie la propone**. Lo que
-pidió Dorel:
+Lo que cubre hoy:
+
+- **Cobrado entero antes de entregar** → la fecha de ese cobro. El IVA de un
+  anticipo se devenga al cobrar (art. 75.Dos LIVA), no al terminar el alquiler.
+- **En otro caso** → la fecha de finalización, con su explicación.
+- **Anticipo parcial** → no mueve la fecha, pero **avisa**: esa parte ya devengó
+  el día que se cobró y no se devenga otra vez.
+
+⚠️ **Los cobros se derivan de `payments`, no de `paymentSummary`**: el resumen es
+una copia que se queda vieja y que no trae las fechas.
+
+⚠️ **Lo que NO cubre, y no es un olvido:**
+
+- **«Si se exige al entregar → esa fecha».** No hay ningún campo que diga qué se
+  pactó, así que la aplicación no puede distinguir «exigible al entregar» de
+  «exigible al finalizar». Por eso propone desde lo único que consta —cuándo se
+  cobró— y deja que el operador la cambie. Inventarse esa certeza sería poner una
+  fecha fiscal creíble y equivocada en un documento que no se puede corregir.
+  Si algún día hace falta, lo que toca es **pactarlo en la reserva**, no
+  adivinarlo aquí.
+- **Las mensualidades.** No existen alquileres por meses en el modelo; cuando
+  los haya, cada período tendrá su vencimiento y su factura.
+
+Lo que pidió Dorel, para cuando se retome:
 
 - Regla general: la fecha en que el precio resulta **exigible** según lo pactado.
 - Pago al entregar → fecha de entrega. Pago al finalizar → fecha de fin.
@@ -2010,9 +2140,21 @@ emitido en rumano se firma en rumano aunque el navegador esté en español.
 
 ### Lo que queda fuera, y conviene saberlo
 
-- [ ] **La cláusula pide algo más que no hacemos: que los conductores «firmen el
-  parte de entrega».** Hoy la inspección de entrega no lleva firma de nadie, ni
-  del arrendatario. Cumplirlo al pie de la letra es otra tarea.
+- [x] ~~**La cláusula pide que los conductores «firmen el parte de entrega».**~~
+  **Ya no lo pide** —se quitó el 8 de septiembre de 2026 al construir el parte—
+  y el apunte se había quedado viejo. Comprobado el 14 de septiembre contra
+  `clauses.ts`: la cláusula de conductores dice que solo conducen los declarados
+  **nominalmente en el contrato** y que **el ARRENDATARIO garantiza** que cumplen
+  los requisitos. No hay ninguna firma que recoger.
+
+  ⚠️ **Y así es como quiere funcionar Dorel** (14 de septiembre de 2026): los
+  conductores adicionales pueden firmar el papel impreso si se tercia, pero es
+  **opcional**, porque la responsabilidad es del conductor principal. El motivo
+  es práctico y decide el diseño: ante un radar **no hay forma de saber quién
+  conducía**, así que la multa se le repercute al arrendatario y es él quien
+  identifica al conductor ante la DGT. El contrato ya lo sostiene: la cláusula de
+  multas prevé repercutirle el importe íntegro, y la de colaboración con
+  autoridades le obliga a facilitar los datos del conductor.
 - [ ] **Contrato ya firmado: sigue siendo papel.** Un anexo firmable desde la
   aplicación reutilizaría el enlace de firma, el sellado y el QR que ya existen.
   Decidido dejarlo fuera hasta ver si pasa a menudo.

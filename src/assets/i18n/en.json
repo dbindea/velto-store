@@ -797,6 +797,35 @@
     "problems": {
       "depositAmountRequired": "Enter an amount greater than zero.",
       "depositExceedsAvailable": "You cannot move more deposit than is left. Check what was collected, less what has already been refunded and retained."
+    },
+    "refund": {
+      "title": "Refund to the card",
+      "hint": "Refunds the money to the same card it was charged to, through Redsys. No need to go into the bank panel.",
+      "start": "Refund",
+      "amount": "Amount to refund",
+      "max": "At most",
+      "reason": "Reason (optional)",
+      "warning": "This really takes money out of the company account. A refund accepted by the bank cannot be undone from here: it would take a call to the acquirer.",
+      "confirmTitle": "Refund to the card",
+      "confirmMessage": "Are you sure? The money leaves the account and this cannot be undone from the application.",
+      "confirmAction": "Yes, refund",
+      "done": "Refund accepted by the bank",
+      "refunded": "Refunded",
+      "lastError": "Last attempt rejected",
+      "errors": {
+        "notFound": "That payment was not found",
+        "notCard": "That payment was not taken by card through the gateway: refund it the way it was taken",
+        "notCollected": "That payment never came in, so there is nothing to refund",
+        "noOrder": "That payment has no Redsys order, so the bank cannot identify it",
+        "alreadyRefunded": "That payment is already fully refunded",
+        "amountRequired": "Enter the amount to refund",
+        "amountPositive": "The amount must be greater than zero",
+        "overRefund": "You cannot refund more than was charged",
+        "unauthorized": "Your role cannot refund payments",
+        "notConfigured": "Redsys is not configured in this environment",
+        "rejected": "The bank rejected the refund. Check the statement before trying again",
+        "failed": "The refund could not be completed. Check the statement before trying again"
+      }
     }
   },
   "permissions": {
@@ -815,7 +844,7 @@
     "dayInRange": "day in range",
     "daysInRange": "days in range",
     "profit": "Profit",
-    "profitHint": "Net of VAT, less expenses, maintenance and commissions.",
+    "profitHint": "Net of VAT, less expenses, servicing, incentives and the owners share.",
     "margin": "Margin",
     "grossRevenue": "Collected",
     "withVat": "VAT included",
@@ -825,7 +854,7 @@
     "vatHint": "Not the company's: it is collected and handed over.",
     "outgoings": "Outgoings",
     "outstanding": "Outstanding",
-    "commissionsPending": "Commissions to pay",
+    "commissionsPending": "Owed to partners",
     "yearOverYear": "Revenue by month, this year and last",
     "viewTable": "View table",
     "viewChart": "View chart",
@@ -861,14 +890,16 @@
     },
     "outExpenses": "Expenses",
     "outMaintenance": "Workshop",
-    "outCommissions": "Commissions"
+    "outCommissions": "Commissions",
+    "outOwnerShares": "Owners"
   },
   "reservations": {
     "actions": {
       "cancel": "Cancel reservation",
       "close": "Close reservation",
       "createReservation": "Create reservation",
-      "viewReservation": "View reservation"
+      "viewReservation": "View reservation",
+      "cancelVsDelete": "Cancelling undoes the rental but keeps the booking and its history. Deleting removes it for good, along with its payments, inspections and photos."
     },
     "availability": {
       "conflict": "There is already a booking for these dates",
@@ -1058,7 +1089,15 @@
       "skippedByException": "Skipped by exception",
       "title": "Reservation progress"
     },
-    "title": "Reservations"
+    "title": "Reservations",
+    "ownerShare": {
+      "title": "Split with the owner",
+      "owner": "Owner",
+      "base": "Split base (rental excluding VAT)",
+      "forOwner": "To the owner",
+      "forVelto": "To Velto",
+      "hint": "Frozen when the booking was created: changing the percentage on the car does not move this figure. It falls due when the booking is closed, once the amounts are final. The deposit and extra charges are not shared."
+    }
   },
   "search": {
     "close": "Close",
@@ -1222,7 +1261,8 @@
       "seatsRequired": "Enter how many seats it has",
       "delete": "The vehicle could not be deleted.",
       "statusChange": "The vehicle status could not be changed.",
-      "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead."
+      "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead.",
+      "saveFailed": "Could not save the vehicle."
     },
     "features": {
       "airConditioning": "Air conditioning",
@@ -1252,7 +1292,10 @@
       "hasGpsTracker": "Fitted with GPS tracker",
       "insurerName": "Insurance company",
       "insurancePolicy": "Policy number",
-      "roadsideAssistancePhone": "Roadside assistance phone"
+      "roadsideAssistancePhone": "Roadside assistance phone",
+      "ownership": "Ownership",
+      "owner": "Owner",
+      "ownerSharePercent": "Owner share"
     },
     "filterAllCategories": "All categories",
     "filterAllStatus": "All statuses",
@@ -1318,7 +1361,8 @@
       "pricing": "Pricing and conditions",
       "rentalClassification": "Rental classification",
       "reservations": "Reservations",
-      "insurance": "Insurance and roadside assistance"
+      "insurance": "Insurance and roadside assistance",
+      "ownership": "Who owns the car"
     },
     "status": {
       "available": "Available",
@@ -1354,9 +1398,20 @@
       "collaborator": "A collaborator's"
     },
     "problems": {
-      "ownerRequired": "Say whose car it is.",
+      "ownerRequired": "Choose the owner of the car.",
       "ownerShareRequired": "Enter the share of the rental the owner keeps.",
       "ownerShareRange": "The share runs from 0 to 100 %."
+    },
+    "owner": {
+      "hint": "A car on loan does not change who rents it out or who invoices: Velto still issues its own invoice for the full amount and the owner never appears to the customer. What is agreed here is what Velto owes them afterwards.",
+      "choose": "— Choose an owner —",
+      "create": "New",
+      "createTitle": "Quick owner setup",
+      "createHint": "Created with no referral commission (0 %): they are lending a car, not bringing customers. If they also bring customers, set their percentage on their record.",
+      "shareHint": "On the rental excluding VAT. Neither the deposit nor extra charges are shared.",
+      "veltoKeeps": "Velto keeps",
+      "loadError": "Could not load the partners. Without the list there is no owner to choose.",
+      "createError": "Could not create the partner."
     }
   },
   "workflow": {
@@ -1431,7 +1486,17 @@
     "lineVat": "VAT",
     "addLine": "Add item",
     "removeLine": "Remove",
-    "operationDate": "Date of supply",
+    "operationDate": {
+      "label": "Date of supply",
+      "reasonEnd": "Suggested: the rental ended that day and the price became due then. Change it if something else was agreed.",
+      "reasonPickup": "Suggested: the date the vehicle was handed over. Change it if something else was agreed.",
+      "reasonAdvance": "Suggested: the full amount was collected before the car was handed over, so the supply fell due that day and not at the end of the rental.",
+      "advanceWarning": "There is an advance collected before the rental started: that part fell due the day it was collected and does not fall due again now.",
+      "riskMonth": "Careful: that date falls in a different month than the suggested one. If the customer is a business, the deadline to issue the invoice is the 16th of the month after the supply, and it moves with it.",
+      "riskQuarter": "Careful: that date falls in a different quarter than the suggested one, so this invoice VAT will land in a different return.",
+      "riskYear": "Careful: that date is in a different tax year than the suggested one. The VAT and the result are declared in another year, and an issued invoice cannot be corrected.",
+      "riskFuture": "That date has not arrived yet: you would be declaring a supply that has not fallen due."
+    },
     "periodStart": "From",
     "periodEnd": "To",
     "base": "Taxable base",
@@ -1565,8 +1630,8 @@
     "cancelledByReservation": "The booking was cancelled",
     "cancelledTotal": "Cancelled",
     "clearPeriod": "Clear filter",
-    "commissionCount": "commission",
-    "commissionsCount": "commissions",
+    "commissionCount": "entry",
+    "commissionsCount": "entries",
     "confirmDelete": {
       "title": "Delete this partner?",
       "message": "Their record will be removed. This cannot be undone."
@@ -1601,7 +1666,11 @@
       "reservation": "Booking",
       "taxId": "Tax ID",
       "to": "To",
-      "year": "Year"
+      "year": "Year",
+      "ownerSharePercent": "Share as owner",
+      "ownerShareHint": "If they lend cars. It is the default: each car keeps its own and each booking freezes it.",
+      "paidAt": "Payment date",
+      "paidAtHint": "The day the money actually left, which need not be today."
     },
     "generated": "Generated",
     "generatedLower": "generated",
@@ -1634,27 +1703,35 @@
       "emailInvalid": "That email does not look valid",
       "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead",
       "nameRequired": "Enter the partner name",
-      "percentRequired": "Enter a commission percentage above zero",
+      "percentRequired": "Enter a commission percentage. Use 0 if they bring no customers",
       "percentTooHigh": "More than 50 % is not a commission. Check the figure",
       "reservationCancelled": "That booking is cancelled and earns no commission",
       "reservationRequired": "Choose a booking",
       "reservationWithoutNet": "That booking has no net amount, so there is nothing to calculate on",
       "saleCancelled": "That commission is cancelled",
-      "saleNotFound": "That commission was not found"
+      "saleNotFound": "That commission was not found",
+      "nothingSelected": "You have not ticked anything to pay",
+      "paidAtFuture": "That date has not arrived yet: a payment is recorded once the money has left",
+      "paidAtInvalid": "That date is not valid",
+      "invoiceNumberRequired": "Enter their invoice number",
+      "invoiceDateRequired": "Enter the invoice date",
+      "invoiceAmountRequired": "Enter the invoice amount",
+      "invoiceAmountPositive": "The amount must be greater than zero",
+      "mixedCollaborators": "Those shares belong to different partners and cannot be recognised together"
     },
     "saleAssigned": "Sale assigned",
-    "sales": "Sales and commission",
+    "sales": "Commissions and shares",
     "salesCount": "sales",
     "saved": "Partner saved",
-    "settleAll": "Settle everything outstanding",
-    "settleHint": "Marks every outstanding commission for this partner as paid, in one go.",
-    "settled": "Commissions settled",
+    "settleAll": "Pay what is owed",
+    "settleHint": "Marks the ones you tick as paid, with the date the money actually left. Recognising what is owed and paying it are two different things: this is the second.",
+    "settled": "Up to date",
     "status": {
       "pending": "Outstanding",
       "paid": "Paid",
       "cancelled": "Cancelled"
     },
-    "subtitle": "Agents who bring in customers, and the commission owed to them",
+    "subtitle": "Who brings customers or lends cars, and what they are owed",
     "title": "Partners",
     "totalPending": "Total outstanding",
     "vsCalculated": "versus the calculated amount",
@@ -1662,6 +1739,37 @@
     "kind": {
       "referral": "For bringing the client",
       "vehicleOwner": "For providing the car"
+    },
+    "referralShort": "referral",
+    "ownerShort": "owner share",
+    "ownerShare": {
+      "title": "Share for their cars",
+      "accrued": "Accrued, not yet settled",
+      "hint": "Derived from their closed bookings and not added to referral commissions: they are two different things and are justified differently. On the rental excluding VAT; the deposit and extra charges are not shared."
+    },
+    "settleTotal": "Total for this payment",
+    "paymentRecorded": "Payment recorded",
+    "noMovements": "No movements",
+    "invoice": {
+      "title": "Invoices received from the owner",
+      "awaiting": "Awaiting invoice",
+      "awaitingHint": "Awaiting an invoice is NOT the same as no invoice being due: these are shares already recognised whose paperwork has not arrived yet. They can be paid without it.",
+      "awaitingShort": "Invoice pending",
+      "short": "Invoice",
+      "register": "Record received invoice",
+      "formTitle": "Owner invoice",
+      "formHint": "This is their invoice, not one of ours: it carries no numbering of ours, it does not go to the tax office and it can be corrected. Tick the shares it covers.",
+      "number": "Their invoice number",
+      "date": "Invoice date",
+      "amount": "Amount",
+      "covered": "Shares it covers",
+      "mismatch": "Does not match what it covers:",
+      "file": "PDF or photo",
+      "open": "Open the invoice",
+      "saved": "Invoice recorded",
+      "deleted": "Invoice deleted",
+      "deleteTitle": "Delete the invoice",
+      "deleteMessage": "The shares it covered will go back to awaiting an invoice."
     }
   },
   "events": {

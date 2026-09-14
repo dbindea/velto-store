@@ -13,8 +13,21 @@
       <header class="page-header">
         <div>
           <h1>{{ c.name }}</h1>
+          <!--
+            ⚠️ **Los dos porcentajes, y solo el que aplique** — igual que en la
+            lista, y por el mismo motivo: desde que un colaborador puede ser solo
+            el dueño de un coche, su comisión de captación puede ser un 0 %
+            legítimo, y «0% del neto» a secas hacía que Andrei pareciera una
+            ficha rota cuando tiene pactado un 75 % de reparto.
+          -->
           <p class="subtitle">
-            {{ c.commissionPercent }}% {{ 'collaborators.ofNet' | translate }}
+            @if (c.commissionPercent) {
+              {{ c.commissionPercent }}% {{ 'collaborators.ofNet' | translate }}
+            }
+            @if (c.ownerSharePercent) {
+              @if (c.commissionPercent) { · }
+              {{ c.ownerSharePercent }}% {{ 'collaborators.ownerShort' | translate }}
+            }
             @if (c.phone) { · {{ c.phone }} }
             @if (c.email) { · <span class="email">{{ c.email }}</span> }
             @if (!c.active) { · {{ 'collaborators.inactive' | translate }} }
@@ -34,10 +47,35 @@
         <div class="figure pending">
           <span class="label">{{ 'collaborators.pending' | translate }}</span>
           <span class="value">{{ balance.pending | number: '1.2-2' }} €</span>
+          <!--
+            ⚠️ **El desglose solo cuando cobra por los dos conceptos.** Un total
+            que mezcla la comisión por traer clientes con el reparto por ceder un
+            coche no se puede explicar, y uno lleva detrás una factura suya y el
+            otro no. Con una sola clase el desglose repetiría el total y sería
+            ruido, que es por qué no sale siempre.
+          -->
+          @if (mixedKinds()) {
+            <span class="split">
+              {{ byKind().referral.pending | number: '1.2-2' }} €
+              {{ 'collaborators.referralShort' | translate }}
+              ·
+              {{ byKind().vehicleOwner.pending | number: '1.2-2' }} €
+              {{ 'collaborators.ownerShort' | translate }}
+            </span>
+          }
         </div>
         <div class="figure">
           <span class="label">{{ 'collaborators.paidTotal' | translate }}</span>
           <span class="value">{{ balance.paid | number: '1.2-2' }} €</span>
+          @if (mixedKinds()) {
+            <span class="split">
+              {{ byKind().referral.paid | number: '1.2-2' }} €
+              {{ 'collaborators.referralShort' | translate }}
+              ·
+              {{ byKind().vehicleOwner.paid | number: '1.2-2' }} €
+              {{ 'collaborators.ownerShort' | translate }}
+            </span>
+          }
         </div>
         @if (balance.cancelled > 0) {
           <div class="figure muted">
@@ -49,10 +87,48 @@
 
       @if (balance.pending > 0) {
         <button class="btn-secondary settle-btn" type="button" [disabled]="working()"
-          (click)="showSettle.set(true)">
+          (click)="startSettle()">
           <i class="pi pi-wallet"></i>
           {{ 'collaborators.settleAll' | translate }} ({{ balance.pending | number: '1.2-2' }} €)
         </button>
+      }
+
+      <!--
+        Lo devengado por sus coches, **derivado de las reservas cerradas**.
+
+        ⚠️ Va en su propia caja y NO sumado al balance de arriba, que es lo que
+        pidió Dorel al separar los dos conceptos: aquello es la comisión por
+        traer clientes, esto es el reparto por ceder un coche. Uno lleva detrás
+        una factura suya por la cesión y el otro no, así que sumarlos daría una
+        cifra que no se puede justificar ante nadie.
+
+        ⚠️ Y es una **previsión derivada, no una deuda apuntada**: sale de las
+        reservas cerradas y desaparece de aquí en cuanto se reconoce. El texto
+        lo dice, porque un importe en euros se lee como dinero comprometido.
+      -->
+      @if (ownerAccruals().length) {
+        <section class="accruals">
+          <h2>{{ 'collaborators.ownerShare.title' | translate }}</h2>
+          <div class="accrued-total">
+            <span class="label">{{ 'collaborators.ownerShare.accrued' | translate }}</span>
+            <span class="value">{{ accruedPending() | number: '1.2-2' }} €</span>
+          </div>
+          <ul class="accrual-list">
+            @for (a of ownerAccruals(); track a.reservationId) {
+              <li class="accrual">
+                <div class="what">
+                  <span class="vehicle">{{ a.vehicle }}</span>
+                  <span class="detail">
+                    {{ a.clientName }} ·
+                    {{ a.netAmount | number: '1.2-2' }} € × {{ a.sharePercent }}%
+                  </span>
+                </div>
+                <span class="amount">{{ a.amount | number: '1.2-2' }} €</span>
+              </li>
+            }
+          </ul>
+          <p class="hint">{{ 'collaborators.ownerShare.hint' | translate }}</p>
+        </section>
       }
     }
 
@@ -134,7 +210,49 @@
         <h2>{{ 'collaborators.settleAll' | translate }}</h2>
         <p class="hint">{{ 'collaborators.settleHint' | translate }}</p>
 
+        <!--
+          Qué entra en este pago.
+
+          ⚠️ **Todo marcado de salida**: lo normal es pagarle todo lo que se le
+          debe, y desmarcar una es más fácil que marcar seis. Un pago que solo
+          cubre parte de lo pendiente existe —se paga a cuenta— y esto es lo que
+          permite decir cuál parte, en vez de dejar el histórico diciendo que se
+          pagó todo.
+
+          ⚠️ Cada fila dice **por qué** se le debe: sin eso, dos importes
+          parecidos en la misma lista no se distinguen, y uno lleva detrás una
+          factura suya por la cesión del coche y el otro no.
+        -->
+        <ul class="settle-list">
+          @for (s of pendingSales(); track s.id) {
+            <li class="settle-row">
+              <label class="checkbox-item multiline">
+                <input type="checkbox" [checked]="isSelected(s.id!)"
+                  (change)="toggleSale(s.id!)" />
+                <span class="what">
+                  <span class="concept">{{ kindLabels[s.kind] | translate }}</span>
+                  <span class="detail">
+                    {{ s.reservationSnapshot.vehicle }} · {{ s.reservationSnapshot.clientName }}
+                  </span>
+                </span>
+              </label>
+              <span class="amount">{{ s.commissionAmount | number: '1.2-2' }} €</span>
+            </li>
+          }
+        </ul>
+
+        <div class="settle-total">
+          <span class="label">{{ 'collaborators.settleTotal' | translate }}</span>
+          <span class="value">{{ settleTotal() | number: '1.2-2' }} €</span>
+        </div>
+
         <div class="form-row">
+          <div class="form-group">
+            <label for="settleDate">{{ 'collaborators.fields.paidAt' | translate }}</label>
+            <input type="date" id="settleDate" class="form-control" [(ngModel)]="settleDate"
+              name="settleDate" />
+            <p class="field-hint">{{ 'collaborators.fields.paidAtHint' | translate }}</p>
+          </div>
           <div class="form-group">
             <label for="settleMethod">{{ 'collaborators.fields.method' | translate }}</label>
             <select id="settleMethod" class="form-control" [(ngModel)]="settleMethod"
@@ -157,6 +275,7 @@
           <button class="btn-primary" type="button" [disabled]="working()" (click)="settle()">
             @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
             {{ 'collaborators.confirmSettle' | translate }}
+            ({{ settleTotal() | number: '1.2-2' }} €)
           </button>
         </div>
       </div>
@@ -217,6 +336,172 @@
     }
 
     <!-- Las ventas -->
+    <!--
+      Las facturas que manda el propietario.
+
+      ⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar»**, y el
+      texto lo dice con esas palabras. Un «sin factura» a secas se lee como una
+      exención, y entonces nadie la reclama nunca.
+
+      ⚠️ Y esto **no son las facturas de VELTO**: llegan de fuera, así que se
+      corrigen y se borran. Las de `invoices` son inmutables porque acreditan
+      algo que la empresa ha declarado; esta solo registra un papel.
+    -->
+    @if (awaitingInvoiceSales().length || invoices().length) {
+      <h2 class="section-title">{{ 'collaborators.invoice.title' | translate }}</h2>
+
+      @if (awaitingInvoiceSales().length) {
+        <div class="awaiting-invoice">
+          <div class="awaiting-head">
+            <span class="label">{{ 'collaborators.invoice.awaiting' | translate }}</span>
+            <span class="value">{{ awaitingInvoiceAmount() | number: '1.2-2' }} €</span>
+          </div>
+          <p class="hint">{{ 'collaborators.invoice.awaitingHint' | translate }}</p>
+          <button class="btn-secondary" type="button" [disabled]="working()"
+            (click)="startInvoice()">
+            <i class="pi pi-file"></i>
+            {{ 'collaborators.invoice.register' | translate }}
+          </button>
+        </div>
+      }
+
+      @if (invoices().length) {
+        <ul class="invoice-list">
+          @for (f of invoices(); track f.id) {
+            <li class="received-invoice">
+              <div class="what">
+                <span class="number">{{ f.number }}</span>
+                <span class="detail">
+                  {{ asDate(f.date) | date: 'dd/MM/yyyy' }}
+                  @if (f.notes) { · {{ f.notes }} }
+                </span>
+              </div>
+              <span class="amount">{{ f.amount | number: '1.2-2' }} €</span>
+              <div class="actions">
+                @if (f.fileUrl) {
+                  <a class="btn-icon" [href]="f.fileUrl" target="_blank" rel="noopener"
+                    [attr.aria-label]="'collaborators.invoice.open' | translate">
+                    <i class="pi pi-external-link"></i>
+                  </a>
+                }
+                <button class="btn-icon" type="button" (click)="editInvoice(f)"
+                  [attr.aria-label]="'common.edit' | translate">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button class="btn-icon btn-icon--danger" type="button"
+                  [disabled]="working()" (click)="removeInvoice(f)"
+                  [attr.aria-label]="'common.delete' | translate">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (showInvoice()) {
+        <div class="card">
+          <h2>{{ 'collaborators.invoice.formTitle' | translate }}</h2>
+          <p class="hint">{{ 'collaborators.invoice.formHint' | translate }}</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="required" for="invoiceNumber">
+                {{ 'collaborators.invoice.number' | translate }}
+              </label>
+              <input type="text" id="invoiceNumber" class="form-control"
+                [(ngModel)]="invoiceForm.number" name="invoiceNumber"
+                [class.is-invalid]="invoiceSubmitted() && invoiceProblems['number']" />
+              <app-form-error [problems]="invoiceProblems['number']"
+                [show]="invoiceSubmitted()" />
+            </div>
+            <div class="form-group">
+              <label class="required" for="invoiceDate">
+                {{ 'collaborators.invoice.date' | translate }}
+              </label>
+              <input type="date" id="invoiceDate" class="form-control"
+                [(ngModel)]="invoiceForm.date" name="invoiceDate"
+                [class.is-invalid]="invoiceSubmitted() && invoiceProblems['date']" />
+              <app-form-error [problems]="invoiceProblems['date']" [show]="invoiceSubmitted()" />
+            </div>
+            <div class="form-group narrow">
+              <label class="required" for="invoiceAmount">
+                {{ 'collaborators.invoice.amount' | translate }}
+              </label>
+              <input type="number" id="invoiceAmount" class="form-control" step="0.01" min="0"
+                [(ngModel)]="invoiceForm.amount" name="invoiceAmount"
+                [class.is-invalid]="invoiceSubmitted() && invoiceProblems['amount']" />
+              <app-form-error [problems]="invoiceProblems['amount']"
+                [show]="invoiceSubmitted()" />
+            </div>
+          </div>
+
+          <!-- Qué repartos cubre esta factura. -->
+          @if (invoiceCandidates().length) {
+            <ul class="settle-list">
+              @for (s of invoiceCandidates(); track s.id) {
+                <li class="settle-row">
+                  <label class="checkbox-item multiline">
+                    <input type="checkbox" [checked]="isInvoiceSale(s.id!)"
+                      (change)="toggleInvoiceSale(s.id!)" />
+                    <span class="what">
+                      <span class="concept">{{ s.reservationSnapshot.vehicle }}</span>
+                      <span class="detail">{{ s.reservationSnapshot.clientName }}</span>
+                    </span>
+                  </label>
+                  <span class="amount">{{ s.commissionAmount | number: '1.2-2' }} €</span>
+                </li>
+              }
+            </ul>
+
+            <div class="settle-total">
+              <span class="label">{{ 'collaborators.invoice.covered' | translate }}</span>
+              <span class="value">{{ invoiceCovered() | number: '1.2-2' }} €</span>
+            </div>
+
+            <!--
+              ⚠️ **La diferencia se enseña, no se impide.** Una factura con IRPF
+              retenido trae menos que la suma de los repartos y es perfectamente
+              correcta; una que cubre algo más, también. Lo que no puede pasar es
+              que la diferencia quede escondida hasta que alguien cuadre el
+              ejercicio dentro de un año.
+            -->
+            @if (invoiceDifference !== 0 && invoiceForm.amount) {
+              <p class="hint mismatch">
+                {{ 'collaborators.invoice.mismatch' | translate }}
+                {{ invoiceDifference > 0 ? '+' : '' }}{{ invoiceDifference | number: '1.2-2' }} €
+              </p>
+            }
+          }
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="invoiceFile">{{ 'collaborators.invoice.file' | translate }}</label>
+              <input type="file" id="invoiceFile" class="form-control"
+                accept="application/pdf,image/*"
+                (change)="onInvoiceFile($any($event.target).files)" />
+            </div>
+            <div class="form-group">
+              <label for="invoiceNotes">{{ 'collaborators.fields.note' | translate }}</label>
+              <input type="text" id="invoiceNotes" class="form-control"
+                [(ngModel)]="invoiceForm.notes" name="invoiceNotes" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-secondary" type="button" (click)="showInvoice.set(false)">
+              {{ 'common.cancel' | translate }}
+            </button>
+            <button class="btn-primary" type="button" [disabled]="savingInvoice()"
+              (click)="saveInvoice()">
+              @if (savingInvoice()) { <i class="pi pi-spin pi-spinner"></i> }
+              {{ 'common.save' | translate }}
+            </button>
+          </div>
+        </div>
+      }
+    }
+
     <h2 class="section-title">{{ 'collaborators.sales' | translate }}</h2>
 
     @if (sales().length) {
@@ -280,6 +565,35 @@
           <li class="sale" [class.cancelled]="s.status === 'cancelled'">
             <div class="what" (click)="openReservation(s.reservationId)">
               <span class="client">{{ s.reservationSnapshot.clientName }}</span>
+              <!--
+                ⚠️ **Por qué se le debe, en cada fila.** Desde que un mismo
+                colaborador puede cobrar por traer el cliente **y** por poner el
+                coche, dos importes en esta misma lista no se distinguen de
+                ningún otro modo — y uno lleva detrás una factura suya por la
+                cesión y el otro no. Sin esto, la pantalla los mezcla justo
+                después de que el modelo se hubiera cuidado de separarlos.
+              -->
+              <span class="kind-tag" [class.owner]="s.kind === 'vehicle_owner'">
+                {{ kindLabels[s.kind] | translate }}
+              </span>
+              <!--
+                ⚠️ **«Pendiente de recibir factura», nunca «sin factura».** Dorel
+                lo pidió con esas palabras: lo primero es un trámite que falta y
+                lo segundo se lee como que no hace falta ninguna. Solo en los
+                repartos, porque una comisión de captación no lleva factura
+                detrás en este negocio.
+              -->
+              @if (s.kind === 'vehicle_owner' && s.status !== 'cancelled') {
+                @if (invoiceOf(s); as factura) {
+                  <span class="invoice-tag has">
+                    {{ 'collaborators.invoice.short' | translate }} {{ factura.number }}
+                  </span>
+                } @else {
+                  <span class="invoice-tag awaiting">
+                    {{ 'collaborators.invoice.awaitingShort' | translate }}
+                  </span>
+                }
+              }
               <span class="meta">
                 {{ s.reservationSnapshot.vehicle }}
                 @if (pickupDate(s); as fecha) {

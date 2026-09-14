@@ -797,6 +797,35 @@
     "problems": {
       "depositAmountRequired": "Pon un importe mayor que cero.",
       "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
+    },
+    "refund": {
+      "title": "Devolver a la tarjeta",
+      "hint": "Devuelve el dinero a la misma tarjeta con la que se cobró, a través de Redsys. No hace falta entrar al panel del banco.",
+      "start": "Devolver",
+      "amount": "Importe a devolver",
+      "max": "Como máximo",
+      "reason": "Motivo (opcional)",
+      "warning": "Esto saca dinero de la cuenta de la empresa de verdad. Una devolución aceptada por el banco no se deshace desde aquí: habría que llamar al comercio.",
+      "confirmTitle": "Devolver a la tarjeta",
+      "confirmMessage": "¿Seguro? El dinero sale de la cuenta y esta operación no se puede deshacer desde la aplicación.",
+      "confirmAction": "Sí, devolver",
+      "done": "Devolución aceptada por el banco",
+      "refunded": "Devuelto",
+      "lastError": "Último intento rechazado",
+      "errors": {
+        "notFound": "No se encontró ese cobro",
+        "notCard": "Ese cobro no se hizo con tarjeta por la pasarela: devuélvelo como se cobró",
+        "notCollected": "Ese cobro no ha entrado, así que no hay nada que devolver",
+        "noOrder": "Ese cobro no tiene el pedido de Redsys, así que el banco no puede identificarlo",
+        "alreadyRefunded": "Ese cobro ya está devuelto entero",
+        "amountRequired": "Pon el importe a devolver",
+        "amountPositive": "El importe tiene que ser mayor que cero",
+        "overRefund": "No se puede devolver más de lo que se cobró",
+        "unauthorized": "Tu rol no permite devolver cobros",
+        "notConfigured": "Redsys no está configurado en este entorno",
+        "rejected": "El banco ha rechazado la devolución. Comprueba el extracto antes de volver a intentarlo",
+        "failed": "No se ha podido completar la devolución. Comprueba el extracto antes de volver a intentarlo"
+      }
     }
   },
   "permissions": {
@@ -815,7 +844,7 @@
     "dayInRange": "día en el período",
     "daysInRange": "días en el período",
     "profit": "Beneficio",
-    "profitHint": "Base sin IVA, menos gastos, mantenimiento e incentivos.",
+    "profitHint": "Base sin IVA, menos gastos, taller, incentivos y la parte de los propietarios.",
     "margin": "Margen",
     "grossRevenue": "Cobrado",
     "withVat": "IVA incluido",
@@ -825,7 +854,7 @@
     "vatHint": "No es de la empresa: se recauda y se entrega.",
     "outgoings": "Salidas",
     "outstanding": "Pendiente de cobro",
-    "commissionsPending": "Incentivos por pagar",
+    "commissionsPending": "Por pagar a colaboradores",
     "yearOverYear": "Ingresos por mes, este año y el pasado",
     "viewTable": "Ver tabla",
     "viewChart": "Ver gráfico",
@@ -861,14 +890,16 @@
     },
     "outExpenses": "Gastos",
     "outMaintenance": "Taller",
-    "outCommissions": "Incentivos"
+    "outCommissions": "Incentivos",
+    "outOwnerShares": "Propietarios"
   },
   "reservations": {
     "actions": {
       "cancel": "Cancelar reserva",
       "close": "Cerrar reserva",
       "createReservation": "Crear reserva",
-      "viewReservation": "Ver reserva"
+      "viewReservation": "Ver reserva",
+      "cancelVsDelete": "Cancelar deshace el alquiler pero conserva la reserva y su historial. Eliminar la borra de verdad, con sus pagos, sus inspecciones y sus fotos."
     },
     "availability": {
       "conflict": "Ya hay una reserva para estas fechas",
@@ -1058,7 +1089,15 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas"
+    "title": "Reservas",
+    "ownerShare": {
+      "title": "Reparto con el propietario",
+      "owner": "Propietario",
+      "base": "Base del reparto (alquiler sin IVA)",
+      "forOwner": "Para el propietario",
+      "forVelto": "Para Velto",
+      "hint": "Congelado al crear la reserva: cambiar el porcentaje del coche no mueve esta cifra. Se devenga al cerrar la reserva, cuando los importes son definitivos. La fianza y los cargos extra no se reparten."
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -1222,7 +1261,8 @@
       "seatsRequired": "Indica cuántas plazas tiene",
       "delete": "No se ha podido eliminar el vehículo.",
       "statusChange": "No se ha podido cambiar el estado del vehículo.",
-      "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio»."
+      "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio».",
+      "saveFailed": "No se ha podido guardar el vehículo."
     },
     "features": {
       "airConditioning": "Aire acondicionado",
@@ -1252,7 +1292,10 @@
       "hasGpsTracker": "Lleva localizador GPS",
       "insurerName": "Compañía aseguradora",
       "insurancePolicy": "Número de póliza",
-      "roadsideAssistancePhone": "Teléfono de asistencia en carretera"
+      "roadsideAssistancePhone": "Teléfono de asistencia en carretera",
+      "ownership": "Propiedad",
+      "owner": "Propietario",
+      "ownerSharePercent": "Reparto del propietario"
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
@@ -1318,7 +1361,8 @@
       "pricing": "Tarifas y condiciones",
       "rentalClassification": "Clasificación de alquiler",
       "reservations": "Reservas",
-      "insurance": "Seguro y asistencia"
+      "insurance": "Seguro y asistencia",
+      "ownership": "De quién es el coche"
     },
     "status": {
       "available": "Disponible",
@@ -1354,9 +1398,20 @@
       "collaborator": "De un colaborador"
     },
     "problems": {
-      "ownerRequired": "Di de quién es el coche.",
+      "ownerRequired": "Elige el propietario del coche.",
       "ownerShareRequired": "Indica qué parte del alquiler se lleva el propietario.",
       "ownerShareRange": "El reparto va del 0 al 100 %."
+    },
+    "owner": {
+      "hint": "Un coche cedido no cambia quién alquila ni quién factura: Velto sigue emitiendo su factura por el total y el propietario no aparece ante el cliente. Lo que se pacta aquí es lo que Velto le debe después.",
+      "choose": "— Elige un propietario —",
+      "create": "Nuevo",
+      "createTitle": "Alta rápida de propietario",
+      "createHint": "Nace sin comisión de captación (0 %): está cediendo un coche, no trayendo clientes. Si además trae clientes, ponle su porcentaje en su ficha.",
+      "shareHint": "Sobre el alquiler sin IVA. Ni la fianza ni los cargos extra se reparten.",
+      "veltoKeeps": "Velto se queda el",
+      "loadError": "No se han podido cargar los colaboradores. Sin la lista no se puede elegir propietario.",
+      "createError": "No se ha podido crear el colaborador."
     }
   },
   "workflow": {
@@ -1431,7 +1486,17 @@
     "lineVat": "IVA",
     "addLine": "Añadir concepto",
     "removeLine": "Quitar",
-    "operationDate": "Fecha de la operación",
+    "operationDate": {
+      "label": "Fecha de la operación",
+      "reasonEnd": "Propuesta: el alquiler terminó ese día y el precio resultó exigible entonces. Cámbiala si se pactó otra cosa.",
+      "reasonPickup": "Propuesta: la fecha de entrega del vehículo. Cámbiala si se pactó otra cosa.",
+      "reasonAdvance": "Propuesta: el importe se cobró entero antes de entregar el coche, así que la operación se devengó ese día y no al terminar el alquiler.",
+      "advanceWarning": "Hay un anticipo cobrado antes de empezar el alquiler: esa parte se devengó el día que se cobró y no vuelve a devengarse ahora.",
+      "riskMonth": "Ojo: esa fecha cae en otro mes que la propuesta. Si el destinatario es una empresa, el plazo para expedir la factura es el día 16 del mes siguiente al devengo, y se mueve con ella.",
+      "riskQuarter": "Cuidado: esa fecha cae en otro trimestre que la propuesta, así que el IVA de esta factura entrará en otra declaración.",
+      "riskYear": "Cuidado: esa fecha es de otro ejercicio que la propuesta. El IVA y el resultado se declaran en otro año, y una factura emitida no se puede corregir.",
+      "riskFuture": "Esa fecha aún no ha llegado: estarías declarando una operación que todavía no se ha devengado."
+    },
     "periodStart": "Desde",
     "periodEnd": "Hasta",
     "base": "Base imponible",
@@ -1565,8 +1630,8 @@
     "cancelledByReservation": "La reserva se canceló",
     "cancelledTotal": "Anulado",
     "clearPeriod": "Quitar filtro",
-    "commissionCount": "comisión",
-    "commissionsCount": "comisiones",
+    "commissionCount": "apunte",
+    "commissionsCount": "apuntes",
     "confirmDelete": {
       "title": "¿Eliminar este colaborador?",
       "message": "Se borra su ficha. No se puede deshacer."
@@ -1601,7 +1666,11 @@
       "reservation": "Reserva",
       "taxId": "NIF",
       "to": "Hasta",
-      "year": "Año"
+      "year": "Año",
+      "ownerSharePercent": "Reparto como propietario",
+      "ownerShareHint": "Si cede coches. Es la propuesta: cada coche guarda el suyo y cada reserva lo congela.",
+      "paidAt": "Fecha del pago",
+      "paidAtHint": "El día en que salió el dinero, que no tiene por qué ser hoy."
     },
     "generated": "Generado",
     "generatedLower": "generado",
@@ -1634,27 +1703,35 @@
       "emailInvalid": "Ese correo no parece válido",
       "hasSales": "No se puede borrar: tiene ventas asignadas. Dalo de baja en su lugar",
       "nameRequired": "Pon el nombre del colaborador",
-      "percentRequired": "Indica un porcentaje de comisión mayor que cero",
+      "percentRequired": "Indica un porcentaje de comisión. Pon 0 si no trae clientes",
       "percentTooHigh": "Más de un 50 % no es una comisión. Revisa la cifra",
       "reservationCancelled": "Esa reserva está cancelada y no genera comisión",
       "reservationRequired": "Elige una reserva",
       "reservationWithoutNet": "Esa reserva no tiene precio neto, así que no hay base sobre la que calcular",
       "saleCancelled": "Esa comisión está anulada",
-      "saleNotFound": "No se encontró esa comisión"
+      "saleNotFound": "No se encontró esa comisión",
+      "nothingSelected": "No has marcado nada que pagar",
+      "paidAtFuture": "Esa fecha aún no ha llegado: un pago se apunta cuando el dinero ha salido",
+      "paidAtInvalid": "Esa fecha no es válida",
+      "invoiceNumberRequired": "Pon el número de su factura",
+      "invoiceDateRequired": "Pon la fecha de la factura",
+      "invoiceAmountRequired": "Pon el importe de la factura",
+      "invoiceAmountPositive": "El importe tiene que ser mayor que cero",
+      "mixedCollaborators": "Esos repartos son de colaboradores distintos y no se pueden reconocer juntos"
     },
     "saleAssigned": "Venta asignada",
-    "sales": "Ventas y comisiones",
+    "sales": "Comisiones y repartos",
     "salesCount": "ventas",
     "saved": "Colaborador guardado",
-    "settleAll": "Liquidar todo lo pendiente",
-    "settleHint": "Se marcan como pagadas todas las comisiones pendientes de este colaborador, de una vez.",
-    "settled": "Comisiones liquidadas",
+    "settleAll": "Pagarle lo pendiente",
+    "settleHint": "Marca como pagadas las que elijas, con la fecha en que salió el dinero. Reconocer lo que se le debe y pagárselo son dos cosas distintas: esto es la segunda.",
+    "settled": "Al día",
     "status": {
       "pending": "Pendiente",
       "paid": "Pagada",
       "cancelled": "Anulada"
     },
-    "subtitle": "Comerciales que traen clientes y las comisiones que se les deben",
+    "subtitle": "Quien trae clientes o cede coches, y lo que se le debe",
     "title": "Colaboradores",
     "totalPending": "Total pendiente de pagar",
     "vsCalculated": "sobre lo calculado",
@@ -1662,6 +1739,37 @@
     "kind": {
       "referral": "Por traer el cliente",
       "vehicleOwner": "Por ceder el coche"
+    },
+    "referralShort": "captación",
+    "ownerShort": "reparto",
+    "ownerShare": {
+      "title": "Reparto por sus coches",
+      "accrued": "Devengado, pendiente de liquidar",
+      "hint": "Sale de sus reservas ya cerradas y no se suma a las comisiones de captación: son dos cosas distintas y se justifican distinto. Sobre el alquiler sin IVA; la fianza y los cargos extra no se reparten."
+    },
+    "settleTotal": "Total de este pago",
+    "paymentRecorded": "Pago registrado",
+    "noMovements": "Sin movimientos",
+    "invoice": {
+      "title": "Facturas recibidas del propietario",
+      "awaiting": "Pendiente de recibir factura",
+      "awaitingHint": "Pendiente de recibir factura NO es que no haya que facturar: son repartos ya reconocidos cuyo justificante todavía no ha llegado. Se le puede pagar sin ella.",
+      "awaitingShort": "Falta su factura",
+      "short": "Factura",
+      "register": "Registrar factura recibida",
+      "formTitle": "Factura del propietario",
+      "formHint": "Es su factura, no una de Velto: no lleva numeración nuestra, no va a la AEAT y se puede corregir. Marca los repartos que cubre.",
+      "number": "Número de su factura",
+      "date": "Fecha de la factura",
+      "amount": "Importe",
+      "covered": "Repartos que cubre",
+      "mismatch": "No cuadra con lo que cubre:",
+      "file": "PDF o foto",
+      "open": "Abrir la factura",
+      "saved": "Factura registrada",
+      "deleted": "Factura eliminada",
+      "deleteTitle": "Eliminar la factura",
+      "deleteMessage": "Los repartos que cubría volverán a quedar pendientes de recibir factura."
     }
   },
   "events": {

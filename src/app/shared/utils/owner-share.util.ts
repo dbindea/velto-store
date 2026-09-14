@@ -145,3 +145,122 @@ export function ownerShareSnapshotOf(
     sharePercent: Number(vehicle.ownerSharePercent) || 0
   };
 }
+
+// ---------------------------------------------------------------------------
+// Lo devengado: se DERIVA de las reservas cerradas, no se guarda
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo justo de una reserva para saber si devenga reparto y de cuánto.
+ *
+ * Es un tipo propio y estrecho —no `Reservation`— para que esto se pueda probar
+ * sin construir una reserva entera, y para que se vea de un vistazo de qué
+ * campos depende el dinero.
+ */
+export interface ReservationForOwnerShare {
+  id?: string;
+  reservationStatus?: string;
+  ownerShareSnapshot?: OwnerShareSnapshot | null;
+  pricingSnapshot?: { netPrice?: number } | null;
+  vehicleSnapshot?: { brand?: string; model?: string; plateNumber?: string } | null;
+  clientSnapshot?: { fullName?: string } | null;
+  pickupDateTime?: unknown;
+}
+
+/** Una parte devengada y todavía sin reconocer. */
+export interface OwnerShareAccrual {
+  reservationId: string;
+  collaboratorId: string;
+  collaboratorName: string;
+  /** El porcentaje congelado en la reserva. */
+  sharePercent: number;
+  /** La base: el alquiler sin IVA. */
+  netAmount: number;
+  /** Lo que le toca. */
+  amount: number;
+  /** Para reconocer la fila sin abrir la reserva. */
+  vehicle: string;
+  clientName: string;
+  pickupDate: unknown;
+}
+
+/**
+ * Lo que se le ha devengado a los propietarios, **derivado de las reservas**.
+ *
+ * ⚠️ **No hay una colección de «devengos», y es deliberado** (decisión de Dorel,
+ * 12 de septiembre de 2026). Cada reserva cerrada ya lleva dentro su reparto
+ * congelado y su precio congelado: copiar eso a una segunda colección sería una
+ * segunda fuente de verdad para el mismo euro, y la primera vez que discreparan
+ * no habría forma de saber cuál manda. Es la misma regla que hace que los
+ * eventos próximos se deriven en vez de guardarse.
+ *
+ * ⚠️ **Y además resuelve un problema de permisos que no tiene otra salida
+ * limpia:** `collaboratorSales` es de administrador en `firestore.rules`, pero
+ * **cerrar una reserva no pide ningún permiso** — lo hace el empleado que
+ * termina la devolución en la calle. Escribiendo el apunte al cerrar, ese cierre
+ * fallaría por permisos, o peor, se tragaría el error y el propietario no
+ * cobraría sin que nadie se enterase. Derivando, da igual quién cierre.
+ *
+ * ⚠️ **Solo cuentan las CERRADAS.** El devengo es al cerrar, cuando los importes
+ * ya son definitivos; una reserva en curso todavía se puede mover.
+ */
+export function ownerShareAccruals(
+  reservations: ReservationForOwnerShare[],
+  collaboratorId?: string
+): OwnerShareAccrual[] {
+  const salida: OwnerShareAccrual[] = [];
+
+  for (const r of reservations || []) {
+    if (r?.reservationStatus !== 'closed') continue;
+    const share = r.ownerShareSnapshot;
+    if (!share?.collaboratorId) continue;
+    if (collaboratorId && share.collaboratorId !== collaboratorId) continue;
+
+    const neto = Number(r.pricingSnapshot?.netPrice) || 0;
+    const importe = ownerShareAmount(neto, share.sharePercent);
+
+    salida.push({
+      reservationId: r.id || '',
+      collaboratorId: share.collaboratorId,
+      collaboratorName: share.collaboratorName,
+      sharePercent: Number(share.sharePercent) || 0,
+      netAmount: roundMoney(neto),
+      amount: importe,
+      vehicle: [r.vehicleSnapshot?.brand, r.vehicleSnapshot?.model]
+        .filter(Boolean)
+        .join(' ')
+        .concat(r.vehicleSnapshot?.plateNumber ? ` · ${r.vehicleSnapshot.plateNumber}` : ''),
+      clientName: r.clientSnapshot?.fullName || '—',
+      pickupDate: r.pickupDateTime ?? null
+    });
+  }
+
+  return salida;
+}
+
+/**
+ * Lo devengado que **todavía no se ha reconocido** con un apunte.
+ *
+ * ⚠️ **Sin esto se cuenta dos veces.** En cuanto se liquida, el reparto pasa a
+ * ser un `CollaboratorSale` con su importe congelado; si la derivación siguiera
+ * incluyendo esa reserva, el propietario aparecería con el doble de lo que se le
+ * debe — y la cifra sería creíble, que es lo peor.
+ *
+ * Recibe los ids ya liquidados en vez de las ventas enteras para no tener que
+ * conocer `CollaboratorSale` desde aquí: quien llama sabe filtrar por `kind`, y
+ * así esto se prueba sin construir una venta.
+ */
+export function unsettledAccruals(
+  accruals: OwnerShareAccrual[],
+  settledReservationIds: Iterable<string>
+): OwnerShareAccrual[] {
+  const yaLiquidadas = new Set(settledReservationIds);
+  return (accruals || []).filter((a) => !yaLiquidadas.has(a.reservationId));
+}
+
+/** La suma de lo devengado, al céntimo. */
+export function accruedTotal(accruals: OwnerShareAccrual[]): number {
+  return roundMoney(
+    (accruals || []).reduce((total, a) => total + (Number(a.amount) || 0), 0)
+  );
+}

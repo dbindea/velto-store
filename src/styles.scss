@@ -384,7 +384,7 @@ select {
   background-repeat: no-repeat !important;
   background-position: right 0.75rem center !important;
   background-size: 0.7rem !important;
-  padding-right: 2.1rem !important;
+  padding-right: 2rem !important;
   cursor: pointer;
 
   &:disabled {
@@ -457,7 +457,7 @@ select {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.65rem;
+    padding: 0.5rem 0.625rem;
     border-radius: 0.35rem;
     color: var(--text-primary);
     background: transparent;
@@ -548,7 +548,7 @@ input[type='radio'] {
 .field-hint,
 .section-hint {
   display: block;
-  margin-top: 0.35rem;
+  margin-top: 0.375rem;
   font-size: 0.78rem;
   line-height: 1.45;
   color: var(--text-muted);
@@ -589,7 +589,7 @@ input[type='radio'] {
 .checkbox-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.625rem;
   padding: 0.75rem 1rem;
   background: var(--bg-main);
   border: 1px solid var(--border-color);
@@ -616,7 +616,7 @@ input[type='radio'] {
     align-items: flex-start;
 
     input[type='checkbox'] {
-      margin-top: 0.1rem;
+      margin-top: 0.125rem;
     }
   }
 
@@ -798,6 +798,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary,
 .btn-secondary,
 .btn-danger,
+.btn-warning,
 .btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -821,9 +822,104 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/**
+ * El botón de lo grave que **sí se puede deshacer**.
+ *
+ * ⚠️ **Existe para que el rojo signifique una sola cosa: irreversible.** En la
+ * ficha de la reserva, «Cancelar» y «Eliminar» salían los dos en rojo, así que
+ * la única diferencia entre dejar el alquiler archivado y borrarlo de la base
+ * de datos con sus pagos y sus inspecciones era leer bien la palabra. Cancelar
+ * es grave y hay que pensarlo, pero la reserva sigue ahí; borrar no tiene
+ * vuelta.
+ *
+ * Va en ámbar y **sobre relleno**, no con borde: al lado de un botón rojo
+ * sólido, uno con borde se lee como secundario y no como advertencia.
+ */
+.btn-warning {
+  background: var(--warning-color);
+  /* Sobre el ámbar del tema claro (#9A6700) el blanco contrasta, y sobre el
+     del oscuro (#F0B429) hace falta texto oscuro: el mismo ámbar con dos
+     acompañantes según el fondo del tema. */
+  color: #1A1400;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}
+
+:root .btn-warning {
+  color: #FFFFFF;
+}
+
+.dark .btn-warning {
+  color: #1A1400;
+}
+
 // PrimeIcons sizing fix
 .pi {
   font-size: 1rem;
+}
+
+/* =========================================================================
+   El ritmo vertical de los formularios
+   =========================================================================
+
+   ⚠️ **Un `.form-group` suelto no tenía NINGUNA separación**, y ahí está el
+   «demasiado pegado» que se ve en la ficha del vehículo: la descripción y la
+   casilla «Publicar en web» de debajo se tocan. Los formularios declaran el
+   margen en `.form-row` —el bloque de varias columnas— pero un `.form-group`
+   hijo directo de la sección no está en ninguna fila, así que se quedaba a cero.
+
+   Puesto aquí, la separación es la misma en los diez formularios de la
+   aplicación sin que cada uno tenga que acordarse. Y **no pisa a quien ya lo
+   declara**: la regla del componente lleva el atributo de encapsulación de
+   Angular y gana por especificidad, igual que con `.btn-primary`.
+
+   ⚠️ **El último no separa.** Sin esto, la sección se queda con un hueco muerto
+   debajo del último campo y parece que falta algo.
+   ========================================================================= */
+/**
+ * ⚠️ **Va por HERMANOS, no por contenedor, y esa es la corrección.**
+ *
+ * La primera versión de esta regla decía `.form-section > .form-group`, y solo
+ * arreglaba los formularios que usan esa caja. El de colaborador vive dentro de
+ * un `.card`, así que su casilla «Activo» seguía pegada a las Notas — **0 px
+ * medidos**. Es exactamente el error que esta regla venía a resolver: cubrir el
+ * caso que uno mira en vez del patrón.
+ *
+ * Con el hermano adyacente da igual dónde viva el formulario: lo que separa es
+ * que haya algo antes, que es la condición real.
+ *
+ * ⚠️ **Y por eso es `margin-top` y no `margin-bottom`.** El último elemento no
+ * lleva nada, sin tener que exceptuarlo: no hay hermano siguiente al que
+ * separar. Con `margin-bottom` hacía falta un `:last-child` que se olvida en
+ * cuanto alguien mete un elemento nuevo al final.
+ */
+.form-group + .form-group,
+.form-group + .form-row,
+.form-group + .checkbox-item,
+.form-row + .form-group,
+.form-row + .form-row,
+.form-row + .checkbox-item,
+.checkbox-item + .form-group,
+.checkbox-item + .form-row {
+  margin-top: 1rem;
+}
+
+/* El rótulo y su campo son **una** cosa, así que van más juntos entre sí que
+   de lo que viene debajo: sin esa diferencia, una etiqueta se lee tan pegada al
+   campo de arriba como al suyo. */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* La ayuda pertenece al campo que tiene encima, no al de abajo: pegada a los
+   dos por igual, el ojo no sabe a cuál se refiere. */
+.form-group > .field-hint,
+.form-group > .hint {
+  margin: 0.125rem 0 0;
 }
 
 /* =========================================================================
@@ -897,6 +993,7 @@ button.btn:disabled,
 button.btn-primary:disabled,
 button.btn-secondary:disabled,
 button.btn-danger:disabled,
+button.btn-warning:disabled,
 button.btn-ghost:disabled,
 button.btn-icon:disabled,
 button.btn-skip-step:disabled {
@@ -916,6 +1013,7 @@ button.btn:disabled:hover,
 button.btn-primary:disabled:hover,
 button.btn-secondary:disabled:hover,
 button.btn-danger:disabled:hover,
+button.btn-warning:disabled:hover,
 button.btn-ghost:disabled:hover,
 button.btn-icon:disabled:hover,
 button.btn-skip-step:disabled:hover {
@@ -949,15 +1047,15 @@ textarea.is-invalid:focus {
 .field-error {
   display: flex;
   align-items: flex-start;
-  gap: 0.35rem;
-  margin-top: 0.3rem;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
   color: var(--error-color);
   font-size: 0.75rem;
   line-height: 1.4;
 
   i {
     font-size: 0.7rem;
-    margin-top: 0.15rem;
+    margin-top: 0.125rem;
   }
 }
 
@@ -971,9 +1069,9 @@ textarea.is-invalid:focus {
 .form-blockers {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   margin: 0 0 0.75rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.625rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--error-color);
   background: var(--error-bg);
@@ -999,7 +1097,7 @@ textarea.is-invalid:focus {
 .permission-note {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.375rem;
   font-size: 0.78rem;
   font-style: italic;
   color: var(--text-muted);
@@ -1010,8 +1108,8 @@ textarea.is-invalid:focus {
 .price-locked {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0.35rem 0 0;
+  gap: 0.375rem;
+  margin: 0.375rem 0 0;
   font-size: 0.75rem;
   color: var(--text-muted);
 

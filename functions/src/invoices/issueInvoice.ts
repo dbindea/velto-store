@@ -24,6 +24,7 @@ import * as functions from 'firebase-functions';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { invoicingEnabled } from './issueComplianceDeclaration';
 import {
   computeRegistroAltaHash,
   formatFechaExpedicion,
@@ -262,6 +263,32 @@ export const issueInvoice = functions.https.onCall(
   async (request): Promise<IssueInvoiceResponse> => {
     if (!request.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+    }
+
+    /**
+     * ⚠️ **El freno de un entorno que todavía no factura, y hasta el 14 de
+     * septiembre de 2026 NO estaba aquí.**
+     *
+     * `issueComplianceDeclaration` sí lo comprobaba; esta no, y es la que de
+     * verdad hace daño: emitir una factura **consume número de serie**, sella
+     * una huella encadenada y crea un documento que `firestore.rules` prohíbe
+     * editar y borrar a todo el mundo, administrador incluido. Es el punto de no
+     * retorno de `invoices`.
+     *
+     * Lo único que lo impedía en producción era que esta function **no
+     * estuviera desplegada**, y eso no es un freno: es un hueco esperando al día
+     * que alguien despliegue las 26 de golpe con un `--only functions` a secas
+     * —que es justo lo que hace `npm run deploy:prod:functions`—. El entorno
+     * pasaría de «no puede facturar» a «factura» sin que nadie lo decidiera.
+     *
+     * Con esto, desplegarla es inocuo: la bandera vive en
+     * `functions/.env.<proyecto>` y encenderla es un acto aparte y deliberado.
+     */
+    if (!invoicingEnabled()) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'invoices.errors.invoicingDisabled'
+      );
     }
 
     const data = request.data as IssueInvoiceRequest;

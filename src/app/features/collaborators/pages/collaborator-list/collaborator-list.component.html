@@ -35,7 +35,9 @@
             type="text"
             id="name"
             class="form-control"
-            [(ngModel)]="form.name"
+            [ngModel]="form.name"
+            (ngModelChange)="form.name = $event"
+            (input)="onNameInput($event)"
             name="name"
             [class.is-invalid]="submitted() && problems['name']"
           />
@@ -62,6 +64,37 @@
           </div>
           <app-form-error [problems]="problems['commissionPercent']" [show]="submitted()" />
           <p class="field-hint">{{ 'collaborators.fields.commissionHint' | translate }}</p>
+        </div>
+
+        <!--
+          El reparto como propietario. **No es la comisión**, y por eso está al
+          lado y no en su lugar: aquel es lo que cobra por traer un cliente y
+          este por ceder un coche. El mismo colaborador puede cobrar los dos por
+          la misma reserva, y con un solo porcentaje habría que elegir cuál
+          miente.
+
+          Opcional: quien no cede coches no tiene por qué contestarlo.
+        -->
+        <div class="form-group narrow">
+          <label for="ownerSharePercent">
+            {{ 'collaborators.fields.ownerSharePercent' | translate }}
+          </label>
+          <div class="with-suffix">
+            <input
+              type="number"
+              id="ownerSharePercent"
+              class="form-control"
+              [(ngModel)]="form.ownerSharePercent"
+              name="ownerSharePercent"
+              min="0"
+              max="100"
+              step="1"
+              [class.is-invalid]="submitted() && problems['ownerSharePercent']"
+            />
+            <span class="suffix">%</span>
+          </div>
+          <app-form-error [problems]="problems['ownerSharePercent']" [show]="submitted()" />
+          <p class="field-hint">{{ 'collaborators.fields.ownerShareHint' | translate }}</p>
         </div>
       </div>
 
@@ -120,8 +153,26 @@
         <li class="collaborator" [class.inactive]="!c.active" (click)="open(c)">
           <div class="who">
             <span class="name">{{ c.name }}</span>
+            <!--
+              ⚠️ **Los dos porcentajes, y solo el que aplique.**
+
+              Desde que un colaborador puede ser solo el dueño de un coche, su
+              comisión de captación puede ser legítimamente **0 %** — y la fila
+              enseñaba «0% · 0 ventas» a secas, que parece una ficha a medio
+              rellenar cuando en realidad tiene pactado un 75 % de reparto que
+              aquí no salía por ninguna parte.
+
+              Cada uno se pinta solo si dice algo: un 0 % de captación en quien
+              no trae clientes es ruido, y un reparto vacío en quien no cede
+              coches, también.
+            -->
             <span class="meta">
-              {{ c.commissionPercent }}% ·
+              @if (c.commissionPercent) {
+                {{ c.commissionPercent }}% {{ 'collaborators.referralShort' | translate }} ·
+              }
+              @if (c.ownerSharePercent) {
+                {{ c.ownerSharePercent }}% {{ 'collaborators.ownerShort' | translate }} ·
+              }
               {{ balance(c.id).sales }} {{ 'collaborators.salesCount' | translate }}
               @if (!c.active) {
                 · {{ 'collaborators.inactive' | translate }}
@@ -136,7 +187,16 @@
               <span class="pending">{{ balance(c.id).pending | number: '1.2-2' }} €</span>
               <span class="pending-label">{{ 'collaborators.pending' | translate }}</span>
             } @else {
-              <span class="settled">{{ 'collaborators.settled' | translate }}</span>
+              <!--
+                ⚠️ **Sin movimientos no es lo mismo que estar al día.** Decirle
+                «liquidado» a un colaborador que nunca ha tenido nada sugiere que
+                hubo algo y se pagó. Es más frecuente desde que un colaborador
+                puede darse de alta solo para ceder un coche.
+              -->
+              <span class="settled">
+                {{ (balance(c.id).sales ? 'collaborators.settled' : 'collaborators.noMovements')
+                   | translate }}
+              </span>
             }
           </div>
 

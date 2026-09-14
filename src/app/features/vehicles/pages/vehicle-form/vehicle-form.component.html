@@ -313,6 +313,179 @@
         </div>
 
         <!--
+          Sección: de quién es el coche.
+
+          Solo con `viewCollaborators`, igual que el módulo entero: saber a quién
+          se le debe una parte del alquiler es información de dueño, no de
+          operación diaria, y `firestore.rules` tampoco deja leer `collaborators`
+          a un empleado. Lo que un empleado no ve aquí lo sigue llevando el
+          formulario por dentro (ver `loadVehicle`), o guardar los kilómetros de
+          un coche cedido le borraría el propietario.
+        -->
+        @if (permissions.can('viewCollaborators')) {
+          <div class="form-section">
+            <h2 class="section-title">{{ 'vehicles.sections.ownership' | translate }}</h2>
+            <p class="section-hint">{{ 'vehicles.owner.hint' | translate }}</p>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="required" for="ownership">
+                  {{ 'vehicles.fields.ownership' | translate }}
+                </label>
+                <select
+                  id="ownership"
+                  [(ngModel)]="formData.ownership"
+                  name="ownership"
+                  class="form-control"
+                  (ngModelChange)="onOwnershipChange()"
+                >
+                  @for (o of ownershipOptions; track o) {
+                    <option [value]="o">{{ getOwnershipLabel(o) }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            @if (formData.ownership === 'collaborator') {
+              @if (collaboratorsError) {
+                <div class="error-msg">{{ collaboratorsError | translate }}</div>
+              }
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="required" for="ownerCollaboratorId">
+                    {{ 'vehicles.fields.owner' | translate }}
+                  </label>
+                  <div class="owner-picker">
+                    <select
+                      id="ownerCollaboratorId"
+                      [(ngModel)]="formData.ownerCollaboratorId"
+                      name="ownerCollaboratorId"
+                      class="form-control"
+                      [class.is-invalid]="submitted && problems['ownerCollaboratorId']"
+                      [disabled]="loadingCollaborators"
+                      (ngModelChange)="onOwnerChange()"
+                    >
+                      <option [ngValue]="undefined">
+                        {{ 'vehicles.owner.choose' | translate }}
+                      </option>
+                      @for (c of collaborators; track c.id) {
+                        <option [ngValue]="c.id">
+                          {{ c.name }}@if (!c.active) { · {{ 'collaborators.inactive' | translate }} }
+                        </option>
+                      }
+                    </select>
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-new-owner"
+                      (click)="openCollaboratorForm()"
+                      [disabled]="creatingCollaborator"
+                    >
+                      <i class="pi pi-plus"></i>
+                      <span>{{ 'vehicles.owner.create' | translate }}</span>
+                    </button>
+                  </div>
+                  <app-form-error
+                    [problems]="problems['ownerCollaboratorId']"
+                    [show]="submitted"
+                  />
+                </div>
+              </div>
+
+              <!--
+                El alta rápida. Dorel la pidió aquí: el coche se da de alta con
+                el propietario delante, y mandar al operador a otra pantalla le
+                cuesta lo que lleva escrito del formulario.
+              -->
+              @if (creatingCollaborator) {
+                <div class="new-owner-panel">
+                  <h3 class="subsection-title">{{ 'vehicles.owner.createTitle' | translate }}</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="required" for="newCollaboratorName">
+                        {{ 'collaborators.fields.name' | translate }}
+                      </label>
+                      <input
+                        type="text"
+                        id="newCollaboratorName"
+                        [(ngModel)]="newCollaboratorName"
+                        name="newCollaboratorName"
+                        class="form-control"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label for="newCollaboratorShare">
+                        {{ 'vehicles.fields.ownerSharePercent' | translate }}
+                      </label>
+                      <input
+                        type="number"
+                        id="newCollaboratorShare"
+                        [(ngModel)]="newCollaboratorShare"
+                        name="newCollaboratorShare"
+                        class="form-control"
+                        min="0"
+                        max="100"
+                        step="1"
+                      />
+                    </div>
+                  </div>
+                  <p class="field-hint">{{ 'vehicles.owner.createHint' | translate }}</p>
+                  @if (newCollaboratorError) {
+                    <app-form-error [problems]="newCollaboratorError" />
+                  }
+                  <div class="new-owner-actions">
+                    <button
+                      type="button"
+                      class="btn btn-ghost"
+                      (click)="cancelCollaboratorForm()"
+                    >
+                      {{ 'common.cancel' | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      (click)="saveNewCollaborator()"
+                      [disabled]="savingCollaborator"
+                    >
+                      @if (savingCollaborator) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      }
+                      {{ 'common.save' | translate }}
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="required" for="ownerSharePercent">
+                    {{ 'vehicles.fields.ownerSharePercent' | translate }}
+                  </label>
+                  <input
+                    type="number"
+                    id="ownerSharePercent"
+                    [(ngModel)]="formData.ownerSharePercent"
+                    name="ownerSharePercent"
+                    class="form-control"
+                    [class.is-invalid]="submitted && problems['ownerSharePercent']"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                  <small class="field-hint">
+                    {{ 'vehicles.owner.shareHint' | translate }}
+                    @if (formData.ownerSharePercent !== null && formData.ownerSharePercent !== undefined) {
+                      · {{ 'vehicles.owner.veltoKeeps' | translate }} {{ veltoPercent }} %
+                    }
+                  </small>
+                  <app-form-error [problems]="problems['ownerSharePercent']" [show]="submitted" />
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!--
           Sección: seguro y asistencia.
 
           Sección propia y no una fila más en "Datos básicos" porque los tres
