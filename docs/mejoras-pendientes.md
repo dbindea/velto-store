@@ -2140,9 +2140,21 @@ emitido en rumano se firma en rumano aunque el navegador esté en español.
 
 ### Lo que queda fuera, y conviene saberlo
 
-- [ ] **La cláusula pide algo más que no hacemos: que los conductores «firmen el
-  parte de entrega».** Hoy la inspección de entrega no lleva firma de nadie, ni
-  del arrendatario. Cumplirlo al pie de la letra es otra tarea.
+- [x] ~~**La cláusula pide que los conductores «firmen el parte de entrega».**~~
+  **Ya no lo pide** —se quitó el 8 de septiembre de 2026 al construir el parte—
+  y el apunte se había quedado viejo. Comprobado el 14 de septiembre contra
+  `clauses.ts`: la cláusula de conductores dice que solo conducen los declarados
+  **nominalmente en el contrato** y que **el ARRENDATARIO garantiza** que cumplen
+  los requisitos. No hay ninguna firma que recoger.
+
+  ⚠️ **Y así es como quiere funcionar Dorel** (14 de septiembre de 2026): los
+  conductores adicionales pueden firmar el papel impreso si se tercia, pero es
+  **opcional**, porque la responsabilidad es del conductor principal. El motivo
+  es práctico y decide el diseño: ante un radar **no hay forma de saber quién
+  conducía**, así que la multa se le repercute al arrendatario y es él quien
+  identifica al conductor ante la DGT. El contrato ya lo sostiene: la cláusula de
+  multas prevé repercutirle el importe íntegro, y la de colaboración con
+  autoridades le obliga a facilitar los datos del conductor.
 - [ ] **Contrato ya firmado: sigue siendo papel.** Un anexo firmable desde la
   aplicación reutilizaría el enlace de firma, el sellado y el QR que ya existen.
   Decidido dejarlo fuera hasta ver si pasa a menudo.
