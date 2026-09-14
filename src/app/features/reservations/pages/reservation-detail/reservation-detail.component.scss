@@ -599,13 +599,17 @@ app-reservation-timeline {
   border-top: 1px solid var(--border-color);
 }
 
-.btn-danger {
+// Cancelar y eliminar comparten la geometría y **solo** se diferencian en el
+// color: si además midieran distinto, la diferencia se leería como jerarquía
+// —uno principal y otro secundario— en vez de como lo que es, dos acciones
+// graves de distinto alcance.
+.btn-danger,
+.btn-warning {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.25rem;
-  background: var(--error-color);
   color: white;
   border: none;
   border-radius: 8px;
@@ -622,6 +626,21 @@ app-reservation-timeline {
     opacity: 0.6;
     cursor: not-allowed;
   }
+}
+
+// Rojo: lo irreversible. Borra la reserva con sus pagos y sus inspecciones.
+.btn-danger {
+  background: var(--error-color);
+}
+
+// Ámbar: grave, pero la reserva se queda y sigue contando su historia.
+.btn-warning {
+  background: var(--warning-color);
+  color: #1A1400;
+}
+
+.actions-hint {
+  margin-top: 0.75rem;
 }
 
 // Status Colors
@@ -686,6 +705,12 @@ app-reservation-timeline {
 
   &.danger i:first-child {
     color: var(--error-color);
+  }
+
+  // Cancelar es grave pero reversible: su diálogo no usa el rojo, que aquí
+  // queda reservado para lo que no tiene vuelta.
+  &.warning i:first-child {
+    color: var(--warning-color);
   }
 }
 
@@ -868,6 +893,15 @@ app-reservation-timeline {
   background: var(--error-color);
   color: white;
   &:hover:not(:disabled) { filter: brightness(1.1); }
+}
+
+// El que confirma la cancelación. Ámbar, como el botón que abre el diálogo:
+// si el diálogo terminara en rojo, el color diría una cosa al entrar y otra al
+// confirmar.
+.btn-warning-solid {
+  background: var(--warning-color);
+  color: #1A1400;
+  &:hover:not(:disabled) { filter: brightness(1.08); }
 }
 
 // Payments Section

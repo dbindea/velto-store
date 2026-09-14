@@ -869,7 +869,8 @@
       "cancel": "Anulează rezervarea",
       "close": "Închide rezervarea",
       "createReservation": "Creare rezervare",
-      "viewReservation": "Vezi rezervarea"
+      "viewReservation": "Vezi rezervarea",
+      "cancelVsDelete": "Anularea desface închirierea, dar păstrează rezervarea și istoricul ei. Ștergerea o elimină definitiv, împreună cu plățile, inspecțiile și fotografiile ei."
     },
     "availability": {
       "conflict": "Există deja o rezervare pentru aceste date",
@@ -1461,7 +1462,11 @@
       "reasonEnd": "Propunere: închirierea s-a încheiat în acea zi și prețul a devenit exigibil atunci. Schimb-o dacă s-a convenit altceva.",
       "reasonPickup": "Propunere: data predării vehiculului. Schimb-o dacă s-a convenit altceva.",
       "reasonAdvance": "Propunere: suma a fost încasată integral înainte de predarea mașinii, așa că operațiunea a devenit exigibilă în acea zi, nu la finalul închirierii.",
-      "advanceWarning": "Există un avans încasat înainte de începerea închirierii: acea parte a devenit exigibilă în ziua încasării și nu devine din nou acum."
+      "advanceWarning": "Există un avans încasat înainte de începerea închirierii: acea parte a devenit exigibilă în ziua încasării și nu devine din nou acum.",
+      "riskMonth": "Atenție: acea dată cade în altă lună decât cea propusă. Dacă destinatarul este o firmă, termenul de emitere a facturii este 16 ale lunii următoare exigibilității și se mută odată cu ea.",
+      "riskQuarter": "Atenție: acea dată cade în alt trimestru decât cea propusă, așa că TVA-ul acestei facturi va intra în altă declarație.",
+      "riskYear": "Atenție: acea dată este din alt exercițiu decât cea propusă. TVA-ul și rezultatul se declară în alt an, iar o factură emisă nu se poate corecta.",
+      "riskFuture": "Acea dată nu a sosit încă: ai declara o operațiune care încă nu a devenit exigibilă."
     },
     "periodStart": "De la",
     "periodEnd": "Până la",
@@ -1682,7 +1687,8 @@
       "invoiceNumberRequired": "Introdu numărul facturii lui",
       "invoiceDateRequired": "Introdu data facturii",
       "invoiceAmountRequired": "Introdu suma facturii",
-      "invoiceAmountPositive": "Suma trebuie să fie mai mare decât zero"
+      "invoiceAmountPositive": "Suma trebuie să fie mai mare decât zero",
+      "mixedCollaborators": "Acele părți aparțin unor colaboratori diferiți și nu pot fi recunoscute împreună"
     },
     "saleAssigned": "Vânzare atribuită",
     "sales": "Comisioane și părți",
@@ -1710,9 +1716,7 @@
     "ownerShare": {
       "title": "Partea pentru mașinile lui",
       "accrued": "Cuvenit, încă nedecontat",
-      "hint": "Rezultă din rezervările lui deja închise și nu se adună la comisioanele de intermediere: sunt două lucruri diferite și se justifică diferit. Din închiriere, fără TVA; garanția și taxele suplimentare nu se împart.",
-      "settle": "Recunoaște ce s-a cuvenit",
-      "settled": "Partea a fost recunoscută. Acum i se poate plăti."
+      "hint": "Rezultă din rezervările lui deja închise și nu se adună la comisioanele de intermediere: sunt două lucruri diferite și se justifică diferit. Din închiriere, fără TVA; garanția și taxele suplimentare nu se împart."
     },
     "settleTotal": "Totalul acestei plăți",
     "paymentRecorded": "Plată înregistrată",

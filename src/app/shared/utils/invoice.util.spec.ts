@@ -26,6 +26,7 @@ import {
   needsOperationDate,
   rebuMargin,
   suggestPaymentMethod,
+  operationDateRisk,
   suggestOperationDate,
   validateInvoice,
   validateRectifying
@@ -781,5 +782,69 @@ describe('qué fecha de operación proponer', () => {
     const s = suggestOperationDate({ pickupDate: entrega, invoiceTotal: 100 });
     expect(s?.date).toEqual(entrega);
     expect(s?.reason).toBe('invoices.operationDate.reasonPickup');
+  });
+});
+
+describe('el riesgo de cambiar la fecha de operación', () => {
+  const propuesta = new Date('2026-06-15');
+  const hoy = new Date('2026-09-14T12:00:00');
+
+  it('la misma fecha no arriesga nada', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-06-15'), { now: hoy })).toBeNull();
+  });
+
+  it('otro día del mismo mes tampoco', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-06-20'), { now: hoy })).toBeNull();
+  });
+
+  /**
+   * ⚠️ **Cruzar un mes mueve el plazo del día 16** cuando el destinatario es
+   * empresa, y cruzar un trimestre mueve la declaración de IVA entera. Son
+   * riesgos distintos y se avisan distinto.
+   */
+  it('cruzar de mes avisa', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-05-20'), { now: hoy })).toBe(
+      'invoices.operationDate.riskMonth'
+    );
+  });
+
+  it('cruzar de trimestre avisa más fuerte que de mes', () => {
+    expect(operationDateRisk(propuesta, new Date('2026-03-20'), { now: hoy })).toBe(
+      'invoices.operationDate.riskQuarter'
+    );
+  });
+
+  it('cruzar de ejercicio es lo más grave', () => {
+    expect(operationDateRisk(propuesta, new Date('2025-06-15'), { now: hoy })).toBe(
+      'invoices.operationDate.riskYear'
+    );
+  });
+
+  /**
+   * ⚠️ Solo **un** aviso, el más grave: encadenar tres a la vez es ruido y
+   * entonces no se lee ninguno. Diciembre del año pasado cruza mes, trimestre y
+   * año, y lo que importa es el año.
+   */
+  it('solo se devuelve el riesgo más grave', () => {
+    expect(operationDateRisk(propuesta, new Date('2025-12-31'), { now: hoy })).toBe(
+      'invoices.operationDate.riskYear'
+    );
+  });
+
+  /** Una operación que aún no ha ocurrido no se puede haber devengado. */
+  it('una fecha futura avisa aunque caiga en el mismo mes', () => {
+    expect(operationDateRisk(new Date('2026-09-01'), new Date('2026-09-30'), { now: hoy })).toBe(
+      'invoices.operationDate.riskFuture'
+    );
+  });
+
+  it('y avisa aunque no hubiera propuesta', () => {
+    expect(operationDateRisk(null, new Date('2026-12-01'), { now: hoy })).toBe(
+      'invoices.operationDate.riskFuture'
+    );
+  });
+
+  it('sin fecha elegida no hay nada que avisar', () => {
+    expect(operationDateRisk(propuesta, null, { now: hoy })).toBeNull();
   });
 });

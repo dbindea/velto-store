@@ -798,6 +798,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary,
 .btn-secondary,
 .btn-danger,
+.btn-warning,
 .btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -819,6 +820,39 @@ h1, h2, h3, h4, h5, h6 {
   &:hover {
     background: var(--accent-hover);
   }
+}
+
+/**
+ * El botón de lo grave que **sí se puede deshacer**.
+ *
+ * ⚠️ **Existe para que el rojo signifique una sola cosa: irreversible.** En la
+ * ficha de la reserva, «Cancelar» y «Eliminar» salían los dos en rojo, así que
+ * la única diferencia entre dejar el alquiler archivado y borrarlo de la base
+ * de datos con sus pagos y sus inspecciones era leer bien la palabra. Cancelar
+ * es grave y hay que pensarlo, pero la reserva sigue ahí; borrar no tiene
+ * vuelta.
+ *
+ * Va en ámbar y **sobre relleno**, no con borde: al lado de un botón rojo
+ * sólido, uno con borde se lee como secundario y no como advertencia.
+ */
+.btn-warning {
+  background: var(--warning-color);
+  /* Sobre el ámbar del tema claro (#9A6700) el blanco contrasta, y sobre el
+     del oscuro (#F0B429) hace falta texto oscuro: el mismo ámbar con dos
+     acompañantes según el fondo del tema. */
+  color: #1A1400;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}
+
+:root .btn-warning {
+  color: #FFFFFF;
+}
+
+.dark .btn-warning {
+  color: #1A1400;
 }
 
 // PrimeIcons sizing fix
@@ -897,6 +931,7 @@ button.btn:disabled,
 button.btn-primary:disabled,
 button.btn-secondary:disabled,
 button.btn-danger:disabled,
+button.btn-warning:disabled,
 button.btn-ghost:disabled,
 button.btn-icon:disabled,
 button.btn-skip-step:disabled {
@@ -916,6 +951,7 @@ button.btn:disabled:hover,
 button.btn-primary:disabled:hover,
 button.btn-secondary:disabled:hover,
 button.btn-danger:disabled:hover,
+button.btn-warning:disabled:hover,
 button.btn-ghost:disabled:hover,
 button.btn-icon:disabled:hover,
 button.btn-skip-step:disabled:hover {

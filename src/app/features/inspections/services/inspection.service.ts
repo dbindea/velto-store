@@ -29,6 +29,7 @@ import {
 } from '@shared/models/inspection.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { PaymentService } from '@features/payments/services/payment.service';
+import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { ContractService } from '@features/contracts/services/contract.service';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import {
@@ -51,6 +52,7 @@ export class InspectionService {
   private storage = inject(Storage);
   private inspectionsRef: CollectionReference;
   private paymentService = inject(PaymentService);
+  private collaboratorService = inject(CollaboratorService);
   private contractService = inject(ContractService);
   private functions = inject(Functions);
   private translate = inject(TranslateService);
@@ -395,6 +397,25 @@ export class InspectionService {
         'cash',
         'Devolución fianza'
       );
+    }
+
+    /**
+     * ⚠️ **Este es el SEGUNDO camino que cierra una reserva**, y por eso el
+     * reconocimiento del reparto también tiene que estar aquí.
+     *
+     * La devolución con «cerrar la reserva» marcada pone el estado a `closed`
+     * sin pasar por `ReservationService.closeReservation()`: enganchándolo solo
+     * allí, el caso más frecuente —cerrar al devolver el coche, desde la
+     * calle— se quedaría sin apunte y nadie se enteraría.
+     *
+     * No lanza si falla: la devolución ya está hecha y el devengo se sigue
+     * derivando de la reserva.
+     */
+    if (newStatus === 'closed') {
+      await this.collaboratorService.accrueFromReservation({
+        ...reservation,
+        reservationStatus: 'closed'
+      });
     }
 
     return inspectionId;

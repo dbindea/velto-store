@@ -16,6 +16,7 @@ import {
 } from '@angular/fire/firestore';
 import { AuthService } from '@core/auth/auth.service';
 import { StorageService } from '@core/firebase/storage.service';
+import { PermissionsService } from '@core/auth/permissions.service';
 import {
   Collaborator,
   CollaboratorInvoice,
@@ -33,6 +34,11 @@ import {
   validateCollaborator,
   validateCollaboratorInvoice
 } from '@shared/utils/collaborator.util';
+import {
+  OwnerShareAccrual,
+  ownerShareAccruals,
+  unsettledAccruals
+} from '@shared/utils/owner-share.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { hasProblems } from '@shared/utils/form-problems.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
@@ -50,6 +56,7 @@ export class CollaboratorService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
   private storage = inject(StorageService);
+  private permissions = inject(PermissionsService);
 
   private collaboratorsRef = collection(this.firestore, 'collaborators');
   private salesRef = collection(this.firestore, 'collaboratorSales');
@@ -288,35 +295,27 @@ export class CollaboratorService {
    * liquidación hecha y a nadie sabiendo cuál mitad — el mismo motivo por el que
    * la reserva y sus pagos se escriben juntos.
    */
-  async settleOwnerShares(
-    collaborator: Collaborator,
-    accruals: {
-      reservationId: string;
-      collaboratorId: string;
-      collaboratorName: string;
-      sharePercent: number;
-      netAmount: number;
-      amount: number;
-      vehicle: string;
-      clientName: string;
-      pickupDate: unknown;
-    }[]
-  ): Promise<number> {
-    if (!collaborator?.id) throw new Error('collaborators.problems.collaboratorRequired');
-    const propios = (accruals || []).filter((a) => a.collaboratorId === collaborator.id);
+  async settleOwnerShares(accruals: OwnerShareAccrual[]): Promise<number> {
+    const propios = (accruals || []).filter((a) => a.collaboratorId);
     if (!propios.length) return 0;
 
+    const colaboradorId = propios[0].collaboratorId;
+    if (propios.some((a) => a.collaboratorId !== colaboradorId)) {
+      throw new Error('collaborators.problems.mixedCollaborators');
+    }
+
     /**
-     * ⚠️ **Se vuelve a mirar qué hay escrito, aunque la pantalla ya lo filtre.**
-     * Lo que llega es una derivación calculada al cargar la ficha: entre eso y
-     * este clic caben otra pestaña y otro operador. Sin esta comprobación, el
-     * mismo reparto se reconocería dos veces y al propietario se le deberia el
-     * doble — y las dos filas serían creíbles.
+     * ⚠️ **Se vuelve a mirar qué hay escrito, aunque quien llama ya lo filtre.**
+     * Lo que llega es una derivación calculada antes: entre eso y esta escritura
+     * caben otra pestaña, otro operador y —desde que se reconoce solo al cerrar
+     * la reserva— el propio cierre. Sin esta comprobación, el mismo reparto se
+     * reconocería dos veces y al propietario se le debería el doble, con las dos
+     * filas igual de creíbles.
      */
     const existentes = await getDocs(
       query(
         this.salesRef,
-        where('collaboratorId', '==', collaborator.id),
+        where('collaboratorId', '==', colaboradorId),
         where('kind', '==', 'vehicle_owner')
       )
     );
@@ -333,10 +332,13 @@ export class CollaboratorService {
     const batch = writeBatch(this.firestore);
     for (const a of nuevas) {
       const venta: Omit<CollaboratorSale, 'id'> = {
-        collaboratorId: collaborator.id,
-        // Del devengo y no de la ficha: es el nombre congelado en la reserva, el
-        // que estaba pactado el día del alquiler.
-        collaboratorName: a.collaboratorName || collaborator.name,
+        collaboratorId: a.collaboratorId,
+        /**
+         * ⚠️ **Del devengo y no de la ficha del colaborador**, y eso es lo que
+         * permite reconocer sin leer `collaborators`. Es además el nombre
+         * congelado en la reserva: el que estaba pactado el día del alquiler.
+         */
+        collaboratorName: a.collaboratorName,
         kind: 'vehicle_owner',
         reservationId: a.reservationId,
         reservationSnapshot: {
@@ -359,6 +361,76 @@ export class CollaboratorService {
 
     await batch.commit();
     return nuevas.length;
+  }
+
+  /**
+   * Reconocer el reparto de **una reserva recién cerrada**.
+   *
+   * ⚠️ **Se llama sola al cerrar, y por eso no puede tumbar el cierre.** Si
+   * falla —permisos, red— la reserva se queda cerrada igual y el reparto sigue
+   * derivándose de ella: lo recoge el siguiente administrador que abra la ficha
+   * del colaborador, y mientras tanto los informes ya lo cuentan. Perder el
+   * apunte es un retraso; perder el cierre que el operador acaba de hacer, un
+   * problema mucho mayor. Es el mismo criterio que el sellado del contrato.
+   *
+   * ⚠️ **Solo escribe quien puede.** `collaboratorSales` es de administrador en
+   * `firestore.rules` y **cerrar una reserva no pide ningún permiso**: el
+   * empleado que termina la devolución en la calle recibiría un
+   * `permission-denied` por algo que no ha pedido hacer. Devuelve `0` y sigue.
+   */
+  async accrueFromReservation(reservation: {
+    id?: string;
+    reservationStatus?: string;
+    ownerShareSnapshot?: unknown;
+    pricingSnapshot?: unknown;
+    vehicleSnapshot?: unknown;
+    clientSnapshot?: unknown;
+    pickupDateTime?: unknown;
+  }): Promise<number> {
+    if (!this.permissions.can('viewCollaborators')) return 0;
+
+    // La misma derivación que usa la ficha, sobre una sola reserva: si el coche
+    // es de Velto o la reserva no está cerrada, no sale nada y no se escribe.
+    const devengos = ownerShareAccruals([reservation as never]);
+    if (!devengos.length) return 0;
+
+    try {
+      return await this.settleOwnerShares(devengos);
+    } catch (error) {
+      console.error('Error accruing the owner share:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Reconocer todo lo que un colaborador tenga devengado y sin apuntar.
+   *
+   * Es la **red** del reconocimiento automático: recoge lo que quedó fuera
+   * porque quien cerró la reserva era un empleado, o porque la escritura falló.
+   */
+  async accruePendingFor(
+    collaboratorId: string,
+    reservations: unknown[]
+  ): Promise<number> {
+    if (!this.permissions.can('viewCollaborators')) return 0;
+
+    const ventas = await this.salesOf(collaboratorId);
+    const yaReconocidas = ventas
+      .filter((v) => v.kind === 'vehicle_owner' && v.status !== 'cancelled')
+      .map((v) => v.reservationId);
+
+    const pendientes = unsettledAccruals(
+      ownerShareAccruals((reservations || []) as never[], collaboratorId),
+      yaReconocidas
+    );
+    if (!pendientes.length) return 0;
+
+    try {
+      return await this.settleOwnerShares(pendientes);
+    } catch (error) {
+      console.error('Error accruing pending owner shares:', error);
+      return 0;
+    }
   }
 
   /**

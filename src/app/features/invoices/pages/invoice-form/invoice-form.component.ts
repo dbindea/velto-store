@@ -31,6 +31,7 @@ import {
   lineBase,
   validateRectifying,
   rebuMargin,
+  operationDateRisk,
   suggestOperationDate,
   suggestPaymentMethod,
   taxIdCarriesCountry,
@@ -343,6 +344,23 @@ export class InvoiceFormComponent implements OnInit {
 
   /** La explicación de la fecha propuesta, para que se pueda revisar. */
   operationDateReason = '';
+  /** La fecha que se propuso, para saber si el operador se ha apartado de ella. */
+  operationDateSuggested: Date | null = null;
+
+  /**
+   * Qué se arriesga con la fecha que hay puesta ahora mismo.
+   *
+   * ⚠️ **Getter y no `computed()`**, porque lee `operationDate`, que es una
+   * propiedad atada con `ngModel` y no una señal: un `computed` se quedaría con
+   * el valor de la primera evaluación y el aviso no cambiaría nunca al mover la
+   * fecha. Es el mismo fallo que ya salió con el descuadre de la factura del
+   * propietario.
+   */
+  get operationDateRiskKey(): string {
+    if (!this.operationDate) return '';
+    const elegida = new Date(`${this.operationDate}T12:00:00`);
+    return operationDateRisk(this.operationDateSuggested, elegida) || '';
+  }
   /** Aviso de anticipos que ya devengaron por su cuenta. */
   operationAdvanceWarning = '';
   operationAdvanceAmount = 0;
@@ -385,11 +403,13 @@ export class InvoiceFormComponent implements OnInit {
     if (!propuesta) {
       this.operationDate = fin;
       this.operationDateReason = '';
+      this.operationDateSuggested = null;
       return;
     }
 
     this.operationDate = this.toInputDate(propuesta.date);
     this.operationDateReason = propuesta.reason;
+    this.operationDateSuggested = propuesta.date;
     this.operationAdvanceWarning = propuesta.advanceWarning || '';
     this.operationAdvanceAmount = propuesta.advanceAmount || 0;
   }

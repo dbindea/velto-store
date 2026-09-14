@@ -487,6 +487,25 @@
         }
 
         <!--
+          ⚠️ **Qué se arriesga al apartarse de la fecha propuesta.**
+
+          La fecha de operación decide en qué declaración entra el IVA: un día
+          arriba o abajo suele dar igual, pero cruzar un trimestre o un ejercicio
+          no. Y la factura, una vez emitida, **no se puede corregir** — así que
+          el aviso tiene que llegar aquí y no después.
+
+          Avisa, no bloquea: lo pactado con el cliente manda sobre lo que la
+          aplicación deduzca de los cobros. Solo sale el riesgo **más grave**,
+          porque tres avisos a la vez no los lee nadie.
+        -->
+        @if (operationDateRiskKey) {
+          <div class="notice notice-warning">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ operationDateRiskKey | translate }}</span>
+          </div>
+        }
+
+        <!--
           Avisa, no bloquea. Solo aplica a empresas: a un particular se le
           factura cuando la pide, y ahí no hay plazo que vigilar.
         -->

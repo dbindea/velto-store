@@ -666,3 +666,58 @@ export function suggestOperationDate(
     advanceAmount: anticipado > 0 ? anticipado : undefined
   };
 }
+
+/**
+ * Qué se arriesga al **apartarse** de la fecha propuesta.
+ *
+ * ⚠️ **La fecha de operación no es un dato de adorno: decide en qué
+ * declaración entra el IVA.** Cambiarla un día suele ser inofensivo; cruzar un
+ * trimestre o un ejercicio no lo es, y desde 2027 la fecha queda registrada en
+ * la AEAT, así que deja de ser invisible. Y una factura emitida **no se puede
+ * corregir**: el aviso tiene que llegar antes de emitir, no después.
+ *
+ * ⚠️ **Avisa, no bloquea.** Lo pactado con el cliente manda sobre lo que la
+ * aplicación deduzca de los cobros, y puede ser perfectamente correcto mover la
+ * fecha. Lo que no puede pasar es moverla sin saber qué implica.
+ *
+ * Devuelve la clave del riesgo **más grave** que aplique, o `null` si no hay
+ * ninguno: encadenar tres avisos a la vez es ruido y no se lee ninguno.
+ */
+export function operationDateRisk(
+  suggested: Date | null | undefined,
+  chosen: Date | null | undefined,
+  options?: { now?: Date }
+): string | null {
+  if (!chosen || isNaN(chosen.getTime())) return null;
+
+  const hoy = options?.now || new Date();
+  const finDeHoy = new Date(hoy);
+  finDeHoy.setHours(23, 59, 59, 999);
+
+  /**
+   * ⚠️ **Lo futuro se avisa aunque no haya propuesta.** Una operación con fecha
+   * que no ha llegado es un devengo que todavía no ha ocurrido, y eso no depende
+   * de que la aplicación supiera proponer algo.
+   */
+  if (chosen.getTime() > finDeHoy.getTime()) {
+    return 'invoices.operationDate.riskFuture';
+  }
+
+  if (!suggested || isNaN(suggested.getTime())) return null;
+  if (suggested.toDateString() === chosen.toDateString()) return null;
+
+  if (suggested.getFullYear() !== chosen.getFullYear()) {
+    return 'invoices.operationDate.riskYear';
+  }
+
+  const trimestre = (d: Date) => Math.floor(d.getMonth() / 3);
+  if (trimestre(suggested) !== trimestre(chosen)) {
+    return 'invoices.operationDate.riskQuarter';
+  }
+
+  if (suggested.getMonth() !== chosen.getMonth()) {
+    return 'invoices.operationDate.riskMonth';
+  }
+
+  return null;
+}

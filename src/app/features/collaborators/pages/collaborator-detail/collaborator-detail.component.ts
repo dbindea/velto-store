@@ -113,10 +113,27 @@ export class CollaboratorDetailComponent implements OnInit {
   private async load(id: string): Promise<void> {
     this.loading.set(true);
     try {
-      const [ficha, ventas, reservas, facturas] = await Promise.all([
+      const reservas = await firstValueFrom(this.reservations.getReservations());
+
+      /**
+       * ⚠️ **La red del reconocimiento automático.**
+       *
+       * El reparto se apunta solo al cerrar la reserva, pero ese cierre puede
+       * haberlo hecho un **empleado**, que no tiene permiso para escribir en
+       * `collaboratorSales`. Lo que quedó derivado se recoge aquí, que es la
+       * pantalla donde un administrador viene a mirar lo que se le debe.
+       *
+       * ⚠️ **Escribe al cargar, y es deliberado.** Es el mismo patrón que
+       * `syncWithReservation()`: el estado se resuelve donde se mira, en vez de
+       * en un disparador que sería otra Cloud Function y otro sitio donde
+       * buscar cuando el número no cuadre. Si falla, no rompe la carga: el
+       * devengo se sigue derivando y los informes ya lo cuentan.
+       */
+      await this.service.accruePendingFor(id, reservas || []);
+
+      const [ficha, ventas, facturas] = await Promise.all([
         this.service.getById(id),
         this.service.salesOf(id),
-        firstValueFrom(this.reservations.getReservations()),
         this.service.invoicesOf(id)
       ]);
       this.collaborator.set(ficha);
@@ -425,31 +442,6 @@ export class CollaboratorDetailComponent implements OnInit {
       await this.service.pay(sale.id!, method);
       this.notifications.success('collaborators.paid');
       await this.load(this.collaborator()!.id!);
-    } catch (err) {
-      this.notifications.error(this.errorKeyOf(err));
-    } finally {
-      this.working.set(false);
-    }
-  }
-
-  /**
-   * Reconocer lo devengado por sus coches.
-   *
-   * ⚠️ **Reconocer no es pagar**, y por eso son dos gestos. Aquí el reparto
-   * derivado se convierte en un apunte con su importe congelado y estado
-   * «pendiente»; entregarle el dinero es el paso siguiente, con su fecha y su
-   * forma de pago. Juntarlos obligaría a pagar en el mismo momento en que se
-   * reconoce, y lo normal es reconocer al cerrar y pagar a fin de mes.
-   */
-  async settleAccruals(): Promise<void> {
-    const ficha = this.collaborator();
-    if (!ficha) return;
-
-    this.working.set(true);
-    try {
-      const cuantas = await this.service.settleOwnerShares(ficha, this.ownerAccruals());
-      if (cuantas) this.notifications.success('collaborators.ownerShare.settled');
-      await this.load(ficha.id!);
     } catch (err) {
       this.notifications.error(this.errorKeyOf(err));
     } finally {

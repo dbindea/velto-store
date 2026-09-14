@@ -869,7 +869,8 @@
       "cancel": "Cancelar reserva",
       "close": "Cerrar reserva",
       "createReservation": "Crear reserva",
-      "viewReservation": "Ver reserva"
+      "viewReservation": "Ver reserva",
+      "cancelVsDelete": "Cancelar deshace el alquiler pero conserva la reserva y su historial. Eliminar la borra de verdad, con sus pagos, sus inspecciones y sus fotos."
     },
     "availability": {
       "conflict": "Ya hay una reserva para estas fechas",
@@ -1461,7 +1462,11 @@
       "reasonEnd": "Propuesta: el alquiler terminó ese día y el precio resultó exigible entonces. Cámbiala si se pactó otra cosa.",
       "reasonPickup": "Propuesta: la fecha de entrega del vehículo. Cámbiala si se pactó otra cosa.",
       "reasonAdvance": "Propuesta: el importe se cobró entero antes de entregar el coche, así que la operación se devengó ese día y no al terminar el alquiler.",
-      "advanceWarning": "Hay un anticipo cobrado antes de empezar el alquiler: esa parte se devengó el día que se cobró y no vuelve a devengarse ahora."
+      "advanceWarning": "Hay un anticipo cobrado antes de empezar el alquiler: esa parte se devengó el día que se cobró y no vuelve a devengarse ahora.",
+      "riskMonth": "Ojo: esa fecha cae en otro mes que la propuesta. Si el destinatario es una empresa, el plazo para expedir la factura es el día 16 del mes siguiente al devengo, y se mueve con ella.",
+      "riskQuarter": "Cuidado: esa fecha cae en otro trimestre que la propuesta, así que el IVA de esta factura entrará en otra declaración.",
+      "riskYear": "Cuidado: esa fecha es de otro ejercicio que la propuesta. El IVA y el resultado se declaran en otro año, y una factura emitida no se puede corregir.",
+      "riskFuture": "Esa fecha aún no ha llegado: estarías declarando una operación que todavía no se ha devengado."
     },
     "periodStart": "Desde",
     "periodEnd": "Hasta",
@@ -1682,7 +1687,8 @@
       "invoiceNumberRequired": "Pon el número de su factura",
       "invoiceDateRequired": "Pon la fecha de la factura",
       "invoiceAmountRequired": "Pon el importe de la factura",
-      "invoiceAmountPositive": "El importe tiene que ser mayor que cero"
+      "invoiceAmountPositive": "El importe tiene que ser mayor que cero",
+      "mixedCollaborators": "Esos repartos son de colaboradores distintos y no se pueden reconocer juntos"
     },
     "saleAssigned": "Venta asignada",
     "sales": "Comisiones y repartos",
@@ -1710,9 +1716,7 @@
     "ownerShare": {
       "title": "Reparto por sus coches",
       "accrued": "Devengado, pendiente de liquidar",
-      "hint": "Sale de sus reservas ya cerradas y no se suma a las comisiones de captación: son dos cosas distintas y se justifican distinto. Sobre el alquiler sin IVA; la fianza y los cargos extra no se reparten.",
-      "settle": "Reconocer lo devengado",
-      "settled": "Reparto reconocido. Ya se le puede pagar."
+      "hint": "Sale de sus reservas ya cerradas y no se suma a las comisiones de captación: son dos cosas distintas y se justifican distinto. Sobre el alquiler sin IVA; la fianza y los cargos extra no se reparten."
     },
     "settleTotal": "Total de este pago",
     "paymentRecorded": "Pago registrado",

@@ -869,7 +869,8 @@
       "cancel": "Cancel reservation",
       "close": "Close reservation",
       "createReservation": "Create reservation",
-      "viewReservation": "View reservation"
+      "viewReservation": "View reservation",
+      "cancelVsDelete": "Cancelling undoes the rental but keeps the booking and its history. Deleting removes it for good, along with its payments, inspections and photos."
     },
     "availability": {
       "conflict": "There is already a booking for these dates",
@@ -1461,7 +1462,11 @@
       "reasonEnd": "Suggested: the rental ended that day and the price became due then. Change it if something else was agreed.",
       "reasonPickup": "Suggested: the date the vehicle was handed over. Change it if something else was agreed.",
       "reasonAdvance": "Suggested: the full amount was collected before the car was handed over, so the supply fell due that day and not at the end of the rental.",
-      "advanceWarning": "There is an advance collected before the rental started: that part fell due the day it was collected and does not fall due again now."
+      "advanceWarning": "There is an advance collected before the rental started: that part fell due the day it was collected and does not fall due again now.",
+      "riskMonth": "Careful: that date falls in a different month than the suggested one. If the customer is a business, the deadline to issue the invoice is the 16th of the month after the supply, and it moves with it.",
+      "riskQuarter": "Careful: that date falls in a different quarter than the suggested one, so this invoice VAT will land in a different return.",
+      "riskYear": "Careful: that date is in a different tax year than the suggested one. The VAT and the result are declared in another year, and an issued invoice cannot be corrected.",
+      "riskFuture": "That date has not arrived yet: you would be declaring a supply that has not fallen due."
     },
     "periodStart": "From",
     "periodEnd": "To",
@@ -1682,7 +1687,8 @@
       "invoiceNumberRequired": "Enter their invoice number",
       "invoiceDateRequired": "Enter the invoice date",
       "invoiceAmountRequired": "Enter the invoice amount",
-      "invoiceAmountPositive": "The amount must be greater than zero"
+      "invoiceAmountPositive": "The amount must be greater than zero",
+      "mixedCollaborators": "Those shares belong to different partners and cannot be recognised together"
     },
     "saleAssigned": "Sale assigned",
     "sales": "Commissions and shares",
@@ -1710,9 +1716,7 @@
     "ownerShare": {
       "title": "Share for their cars",
       "accrued": "Accrued, not yet settled",
-      "hint": "Derived from their closed bookings and not added to referral commissions: they are two different things and are justified differently. On the rental excluding VAT; the deposit and extra charges are not shared.",
-      "settle": "Recognise what is accrued",
-      "settled": "Share recognised. It can now be paid."
+      "hint": "Derived from their closed bookings and not added to referral commissions: they are two different things and are justified differently. On the rental excluding VAT; the deposit and extra charges are not shared."
     },
     "settleTotal": "Total for this payment",
     "paymentRecorded": "Payment recorded",

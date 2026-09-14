@@ -27,6 +27,7 @@ import {
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
 import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
+import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
@@ -75,6 +76,7 @@ export class ReservationService {
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
   private paymentService = inject(PaymentService);
+  private collaboratorService = inject(CollaboratorService);
   private inspectionService = inject(InspectionService);
   private authService = inject(AuthService);
   private settingsService = inject(SettingsService);
@@ -902,6 +904,24 @@ export class ReservationService {
     // Anything still seeded and untouched is not going to be collected on a
     // closed rental — otherwise the payment list contradicts the status.
     await this.paymentService.cancelUncollectedPayments(id);
+
+    /**
+     * ⚠️ **El reparto del propietario se reconoce solo al cerrar** (decisión de
+     * Dorel, 14 de septiembre de 2026): no hay que acordarse de pulsar nada, y
+     * el importe se le asigna con el porcentaje congelado en la reserva. Se
+     * puede cambiar después desde su ficha, que es justo lo que él pidió.
+     *
+     * ⚠️ **Y no puede tumbar el cierre.** Si quien cierra es un empleado no
+     * tiene permiso para escribir en `collaboratorSales`, así que el método
+     * devuelve `0` y no lanza; el apunte lo recoge el siguiente administrador
+     * que abra la ficha, y mientras tanto los informes ya lo cuentan porque el
+     * devengo se deriva de la reserva. Perder el apunte es un retraso; perder
+     * el cierre que el operador acaba de hacer, un problema mayor.
+     */
+    await this.collaboratorService.accrueFromReservation({
+      ...reservation,
+      reservationStatus: 'closed'
+    });
   }
 
   /**

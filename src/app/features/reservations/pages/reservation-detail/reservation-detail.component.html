@@ -1145,11 +1145,20 @@
       />
     </div>
 
-    <!-- Actions -->
+    <!--
+      Actions.
+
+      ⚠️ **Cancelar y eliminar NO son lo mismo, y el color lo dice.** Los dos
+      salían en rojo, así que la única diferencia entre dejar una reserva
+      archivada y borrarla de la base de datos con sus pagos y sus inspecciones
+      era leer bien la palabra. Ahora cancelar va en **ámbar** —es grave, se
+      deshace el alquiler, pero la reserva sigue ahí y sigue contando su
+      historia— y borrar en **rojo**, que es lo único irreversible de verdad.
+    -->
     <div class="page-actions">
       @if (canCancelReservation()) {
         <button
-          class="btn-danger"
+          class="btn-warning"
           type="button"
           (click)="openCancelModal()">
           <i class="pi pi-times"></i>
@@ -1157,7 +1166,7 @@
         </button>
       } @else if (reservation.reservationStatus !== 'cancelled') {
         <button
-          class="btn-danger"
+          class="btn-warning"
           type="button"
           disabled
           [attr.title]="cancelReservationBlockReason() | translate"
@@ -1172,6 +1181,9 @@
         historia, una borrada desaparece con sus pagos y sus inspecciones. Es
         para lo que nació por error o de prueba, y por eso el botón no compite
         con el de cancelar: va aparte y solo lo ve un administrador.
+
+        ⚠️ **Este es el rojo**, y ahora es el único de los dos: es el que no se
+        puede deshacer.
       -->
       @if (permissions.canDelete() && reservation.contractStatus !== 'signed') {
         <button class="btn-danger" type="button" (click)="deleteReservation()">
@@ -1180,6 +1192,15 @@
         </button>
       }
     </div>
+
+    <!--
+      Y dicho con palabras, no solo con color: quien llega aquí por primera vez
+      no sabe que «cancelar» conserva la reserva. El color avisa de que son
+      distintas; esto dice en qué.
+    -->
+    @if (reservation.reservationStatus !== 'cancelled') {
+      <p class="hint actions-hint">{{ 'reservations.actions.cancelVsDelete' | translate }}</p>
+    }
 
     <!-- Saltarse un paso del workflow (N-7).
          El motivo es obligatorio y queda registrado con autor y fecha: la
@@ -1244,7 +1265,7 @@
     @if (showCancelModal) {
       <div class="modal-overlay" (click)="closeCancelModal()">
         <div class="modal" (click)="$event.stopPropagation()">
-          <div class="modal-header danger">
+          <div class="modal-header warning">
             <i class="pi pi-exclamation-triangle"></i>
             <h3>{{ 'reservations.actions.cancel' | translate }}</h3>
             <button class="modal-close" type="button" (click)="closeCancelModal()">
@@ -1275,7 +1296,7 @@
                 {{ 'common.back' | translate }}
               </button>
               @if (permissions.canCancelReservations()) {
-              <button class="btn btn-danger-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
+              <button class="btn btn-warning-solid" type="button" [disabled]="cancelling" (click)="cancelReservation()">
                 @if (cancelling) {
                   <i class="pi pi-spin pi-spinner"></i>
                 } @else {

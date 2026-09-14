@@ -128,20 +128,6 @@
             }
           </ul>
           <p class="hint">{{ 'collaborators.ownerShare.hint' | translate }}</p>
-
-          <!--
-            ⚠️ **Reconocer no es pagar**, y por eso este botón no dice «pagar».
-            Aquí el reparto derivado se convierte en un apunte con su importe
-            congelado; entregarle el dinero es el paso siguiente, con su fecha y
-            su forma. Lo normal es reconocer al cerrar y pagar a fin de mes.
-          -->
-          <button class="btn-secondary settle-btn" type="button" [disabled]="working()"
-            (click)="settleAccruals()">
-            @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
-            <i class="pi pi-check-square"></i>
-            {{ 'collaborators.ownerShare.settle' | translate }}
-            ({{ accruedPending() | number: '1.2-2' }} €)
-          </button>
         </section>
       }
     }
