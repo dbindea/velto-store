@@ -589,7 +589,15 @@ firmado» del workflow. **También vale para las rutas**: `permissionGuard` leva
 un aviso antes de devolver al panel, porque una redirección muda es la versión
 de pantalla completa del mismo problema.
 
-**Los permisos están probados con un empleado real** (7 de septiembre de 2026),
+⚠️ **Para cambiar de cuenta basta el botón de entrar.** El
+`GoogleAuthProvider` pide `prompt: 'select_account'`: sin eso el popup entraba
+con la última sesión de Google **sin preguntar**, y cerrar sesión en la
+aplicación no servía de nada porque quien recuerda la cuenta es Google. Era lo
+que obligaba a una ventana de incógnito para probar las reglas como empleado, y
+por lo que esa prueba se posponía.
+
+**Los permisos están probados con un empleado real** (7 de septiembre de 2026,
+repetido y ampliado el 14 de septiembre: 19 comprobaciones, cero fallos),
 bajando el rol de la propia cuenta en el `authorizedUsers` de desarrollo. La
 prueba que vale es la de las reglas, atacadas **saltándose la aplicación**: con
 el token de la sesión sacado de IndexedDB y llamadas directas a la API REST de

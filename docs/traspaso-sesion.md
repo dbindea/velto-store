@@ -184,22 +184,46 @@ AEAT. Antes de tocarlo, leer `docs/verifactu-alta.md` y
 
 ## 4. Lo que está pendiente y NO es programar
 
-### 4.1 · Probar las reglas con la cuenta de empleado ⭐
+### 4.1 · Probar las reglas con la cuenta de empleado — ✅ HECHA el 14 de septiembre de 2026
+
+> Pasada con `dbindea@gmail.com` (`employee`) contra `velto-store`, **19
+> comprobaciones y cero fallos**. Lo que sigue explica qué se probó y cómo
+> repetirlo; ya no es una tarea pendiente.
 
 Dorel creó `dbindea@gmail.com` como `employee` en desarrollo el 12 de septiembre
-**para esto**, y sigue sin hacerse.
+**para esto**.
 
-Hace falta que **él** inicie sesión con esa cuenta (ventana de incógnito,
-`localhost:4200`) y entonces ejecutar
-**`docs/comprobar-reglas-financieras.js`** en la consola del navegador.
+Hace falta que **él** inicie sesión con esa cuenta en `localhost:4200` y
+entonces ejecutar **`docs/comprobar-reglas-financieras.js`** en la consola del
+navegador.
 
 ⚠️ **No intentes generar el token tú**: acuñar una credencial de sesión está
 bloqueado, y con razón.
 
+⚠️ **Ya no hace falta una ventana de incógnito.** Hasta el 14 de septiembre de
+2026 el popup de Google entraba con la última cuenta sin preguntar, porque el
+`GoogleAuthProvider` se creaba sin parámetros; ahora pide
+`prompt: 'select_account'` y se cambia de rol desde el propio botón de entrar.
+Era justo lo que hacía incómoda esta prueba y por lo que llevaba dos días sin
+hacerse.
+
 Lo que tiene que salir: **403** en `expenses`, `invoices`, `invoiceCounters`,
 `billingProfiles`, `verifactuDeclarations`, `verifactuSubmissions`,
-`collaborators` y `collaboratorSales`; **403** al ascenderse a admin; y **200**
-en `payments`, `reservations` y `vehicles`, que es lo que necesita para trabajar.
+`collaborators`, `collaboratorSales` y `collaboratorInvoices`; **403** al
+ascenderse a admin; y **200** en `payments`, `reservations` y `vehicles`, que es
+lo que necesita para trabajar.
+
+**Y lo que se comprobó además**, porque leer es solo la mitad:
+
+- **Crear** un gasto, una comisión o una factura de propietario: **403** los tres.
+- **Mover `ownerShareSnapshot`** de una reserva —subir el reparto del propietario
+  de un 75 % a un 95 %—: **403**, y el dato **seguía en 75** al volver a leerlo.
+  No basta con que la API responda mal: hay que mirar que no se movió.
+- **Mover `pricingSnapshot`** —poner el precio a 1 €—: **403**.
+- **Escribir el lugar de recogida**: **200**. Si esto fallara, la regla estaría
+  rota por el otro lado y el empleado no podría trabajar.
+- **Entrar por la URL** en `/reports` y `/collaborators`: devuelve al panel **con
+  el aviso** «Tu rol no tiene acceso a esa sección», no en silencio.
 
 ⚠️ **`payments` en 200 es correcto**, no un agujero olvidado: la ficha de la
 reserva necesita leer los pagos cobrados. Está explicado en `firestore.rules`.
