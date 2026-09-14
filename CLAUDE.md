@@ -1422,6 +1422,51 @@ El plan de pruebas, con lo comprobado y lo que falta, está en
 (`VELTO_VERIFACTU_ENABLED=true`, `VELTO_VERIFACTU_ENV=test`). En producción sigue
 en `false` y **solo lo cambia Dorel**.
 
+### Devolver a la tarjeta: el único camino por el que SALE dinero
+
+⚠️ **Todo lo demás en esta aplicación registra; esto mueve.** El peor error del
+resto es una cifra equivocada en una pantalla; aquí es que salgan cien euros de
+la cuenta de la empresa. Y una devolución aceptada por el banco **no se deshace
+con un botón**: es una llamada al comercio.
+
+⚠️ **No es la misma integración que el cobro.** El cobro va **por formulario**:
+se manda al cliente a la pasarela y vuelve. En una devolución no hay cliente
+delante, así que se habla **de servidor a servidor** por la vía REST
+(`/sis/rest/trataPeticionREST`, otra URL distinta de `/sis/realizarPago`). Lo que
+sí se reutiliza es la firma, que es la misma HMAC_SHA256_V1 ya probada.
+
+⚠️ **La respuesta se lee con OTRA regla.** Un cobro aceptado responde
+`0000`–`0099`; una **devolución** aceptada, `0900`–`0999`. Leerla con la regla del
+cobro haría que una devolución correcta pareciera un error — y lo que sigue a un
+error es reintentar: dinero fuera dos veces. Comprobado contra la pasarela de
+test el 14 de septiembre de 2026: el cobro dio `0000` y su devolución `0900`.
+
+Los frenos, y ninguno sobra:
+
+- **Permiso propio `refundPayments`**, no `deleteRecords`. Borrar destruye
+  información nuestra; devolver saca dinero. Si fueran el mismo permiso, el día
+  que un encargado pueda borrar una reserva de prueba heredaría la llave de la
+  caja.
+- **El rol se lee de Firestore, no del token**: un token emitido cuando el
+  usuario era administrador sigue valiendo una hora.
+- **El importe no viaja como orden**: se topa contra lo que de verdad entró,
+  descontando lo ya devuelto.
+- **Se RESERVA en transacción antes de llamar al banco**, y se revierte si
+  rechaza. Es lo que impide que dos clics hagan dos devoluciones — la misma
+  lección que costó el cobro perdido de F-32.
+- **No se reintenta solo.** Un fallo posterior a la aceptación del banco es
+  indistinguible de uno anterior.
+
+⚠️ **Una devolución PARCIAL no cambia el estado del pago.** Sigue `paid` por el
+resto; marcarlo `refunded` entero haría que los informes dejaran de contar un
+dinero que sí entró y se quedó. Por eso `sumPaid()` **descuenta
+`refundedAmount`** en vez de mirar el estado.
+
+⚠️ **Y el pipe `date` no traga un `Timestamp` de Firestore.** Lanza
+`InvalidPipeArgument` y **tumba el bloque entero**, no solo la fecha. El
+`notifiedAt` de la pasarela llevaba así desde siempre y no se vio porque hasta
+que hubo un cobro real con notificación el `@if` no entraba nunca.
+
 ### El cliente paga desde su móvil
 
 `getPaymentCheckout` es **pública** y la abre el cliente en `/pay/:paymentId`, ruta
