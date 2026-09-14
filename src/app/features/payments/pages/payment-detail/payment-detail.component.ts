@@ -70,6 +70,26 @@ export class PaymentDetailComponent implements OnInit {
   refunding = false;
   refundSubmitted = false;
 
+  /**
+   * Una fecha de Firestore como `Date`, para el pipe de la plantilla.
+   *
+   * ⚠️ **El pipe `date` de Angular NO entiende un `Timestamp` de Firestore**:
+   * lanza `InvalidPipeArgument` y **tumba el pintado de todo el bloque**, así
+   * que no se pierde la fecha, se pierde la tarjeta entera. Compila, pasa los
+   * tests y solo aparece cuando hay un dato real que pintar — por eso el
+   * `notifiedAt` de la pasarela llevaba aquí desde siempre sin que se viera:
+   * hasta hoy no había en desarrollo ningún cobro con notificación de Redsys.
+   */
+  asDate(value: unknown): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    const v = value as { toDate?: () => Date; seconds?: number; _seconds?: number };
+    if (typeof v.toDate === 'function') return v.toDate();
+    if (typeof v.seconds === 'number') return new Date(v.seconds * 1000);
+    if (typeof v._seconds === 'number') return new Date(v._seconds * 1000);
+    return null;
+  }
+
   /** ¿Se le ofrece siquiera el botón? */
   get canRefund(): boolean {
     return this.permissions.can('refundPayments') && canRefund(this.payment);

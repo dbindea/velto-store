@@ -169,7 +169,7 @@
             @if (payment.redsys.notifiedAt) {
               <div class="info-row">
                 <span class="label">{{ 'payments.redsys.notificationReceived' | translate }}:</span>
-                <span class="value">{{ payment.redsys.notifiedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="value">{{ asDate(payment.redsys.notifiedAt) | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
             }
 
@@ -187,7 +187,7 @@
               @for (r of payment.redsys.refunds || []; track $index) {
                 <div class="info-row refund-line">
                   <span class="label">
-                    {{ r.at | date:'dd/MM/yyyy HH:mm' }}
+                    {{ asDate(r.at) | date:'dd/MM/yyyy HH:mm' }}
                     @if (r.by) { · {{ r.by }} }
                   </span>
                   <span class="value">
