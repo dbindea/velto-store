@@ -32,6 +32,19 @@ Arreglado y desplegado el mismo día, pero **la vía pública sigue sin un cobro
 que haya cerrado el círculo entero por sí solo**. Hasta que eso pase, no está
 probada.
 
+**Devoluciones a la tarjeta desde la aplicación**, sin entrar al panel del
+banco, y solo administrador. Probadas con dinero real en producción el 14 y el
+15 de septiembre de 2026: tres cobros de 1 € devueltos, respuesta `0900` en los
+tres (C-36).
+
+⚠️ **Y desde el 15 de septiembre los cobros se refrescan solos.** Tres pantallas
+—la lista de Pagos, la ficha del pago y la ficha del contrato— leían una sola
+vez lo que cambia desde fuera, así que el operador tenía que pulsar F5 para ver
+un cobro que acababa de ver pagar al cliente delante. La regla que queda: un
+método que escucha se llama `watch…` y **no se vuelve a llamar para refrescar**
+—eso abre una suscripción más, no actualiza la que hay—; el que lee una vez se
+llama `get…`.
+
 **Contrato**: se sella con el certificado FNMT de la empresa.
 
 **Contrato en papel**: lleva QR y Código Seguro de Verificación desde el 4 de

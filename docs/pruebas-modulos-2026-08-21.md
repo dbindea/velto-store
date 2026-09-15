@@ -1841,3 +1841,62 @@ fue el adjunto.
 Repetido tras el arreglo: factura en
 `expenses/{id}/…-factura-lavadero.pdf`, gasto imputado a `R-AFRCNT · 4488LMN`, y
 el desglose 48,40 → 40,00 + 8,40 correcto.
+
+---
+
+## C-36 · Devolución real en producción, y el realtime que no era tal — 15 de septiembre de 2026
+
+Tercera devolución con dinero de verdad en `rentalcar-veltomobility`, la que
+Dorel dejó sin hacer a propósito para que la hiciera yo de punta a punta.
+
+| Paso | Resultado |
+|---|---|
+| Cobro a devolver | «Señal reserva» 1,21 €, respuesta `0000`, autorización `593332` |
+| Los dos cinturones | Aviso con el importe dentro del formulario **y** diálogo de confirmación aparte |
+| Respuesta del banco | **`0900` — devolución aceptada.** 1,21 € devueltos, 0 restantes |
+| Estado del pago | `Reembolsado`, sin recargar |
+| Inputs del formulario | Ya con su caja: el `.form-control` global está desplegado |
+
+Los tres cobros reales de producción quedan devueltos.
+
+**De paso, lo que Dorel había reportado y no estaba comprobado en producción:**
+
+| Reportado | En producción |
+|---|---|
+| Alta de coche de colaborador | ✅ «De quién es el coche» → Propiedad → Propietario + reparto |
+| Cancelar en ámbar, Eliminar en rojo | ✅ `btn-warning` (#9A6700) y `btn-danger` (#C8322B) |
+| Casillas pegadas a «Descripción» | ✅ 16 px, el ritmo vertical |
+
+**El fallo del día es el ámbar, y no se veía mirando:** el texto salía en
+`#1A1400` sobre `#9A6700`, **3,77:1**, por debajo del mínimo de 4,5:1. La causa
+es la trampa de siempre —`reservation-detail.component.scss` declara su propia
+`.btn-warning`, que encapsulada mide (0,2,0) igual que el corrector global
+`:root .btn-warning`, y en un empate manda el orden, que pone el componente
+detrás—. Se arregla con `var(--warning-on)`, puesta por el bloque del tema:
+4,87:1 en claro y 9,85:1 en oscuro, y así hasta una copia encapsulada sale bien.
+
+**Y el realtime, que era el motivo de la sesión.** Tres pantallas leían con
+`getDocs` lo que cambia desde fuera: la lista de Pagos, la ficha del pago —donde
+se genera el enlace de Redsys y donde uno se queda mirando— y la ficha del
+contrato, que es donde se espera la firma del cliente. Quien da un cobro por
+bueno es el webhook, minutos después; con una lectura única la pantalla se queda
+mintiendo hasta que alguien pulsa F5.
+
+Probado en desarrollo escribiendo en Firestore **por fuera de la aplicación**,
+que es exactamente lo que hace el webhook:
+
+| Cambio hecho desde fuera | La pantalla, sin recargar |
+|---|---|
+| `amount` 5 → 7,50 en la lista | «7,50 €» al momento |
+| `status` pending → paid en la ficha | «Pendiente» → «Pagado», 0,00 € pendiente |
+| Deshacer los dos | Volvió sola a 5,00 € / Pendiente |
+
+**Y detrás apareció un fallo mío de la sesión anterior**, que es el que hace
+falta anotar: al convertir `loadPayments` en stream vivo se quedaron las
+llamadas que lo invocaban después de cada mutación «para refrescar». Un stream
+vivo no se refresca: **se vuelve a suscribir**. `takeUntilDestroyed` solo corta
+al salir de la pantalla, no entre llamadas, así que cada cobro registrado
+apilaba un oyente de Firestore más, una reconciliación más y una escritura más.
+Estaba igual en el contrato y en la propia reserva, esas dos de antes: siete
+llamadas de más en total. Ahora los métodos vivos se llaman `watch…` y los de
+una vez `get…`, que es lo que separa un caso del otro a simple vista.

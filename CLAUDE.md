@@ -907,6 +907,36 @@ antes de borrarlo**: después ya no se sabe de qué coche era.
   borrado real de datos personales pasaría por **anonimizar** esos snapshots, que es otra
   tarea.
 
+## Firestore: lo que escucha se llama `watch…` y lo que lee una vez, `get…`
+
+⚠️ **No es estilo: es lo único que separa dos cosas que se usan distinto**, y
+las dos han fallado de verdad.
+
+**Lo que cambia desde fuera hay que escucharlo.** Quien da un cobro por bueno es
+el webhook de Redsys y quien firma un contrato es el cliente en su móvil, los
+dos minutos después de que el operador abriera la pantalla. Con `getDocs` la
+pantalla se queda mintiendo hasta que alguien pulsa F5 — y quien acaba de ver
+pagar al cliente delante no entiende por qué la aplicación dice que no. Hoy
+escuchan la lista de Pagos, la ficha del pago, la ficha del contrato, la ficha
+de la reserva y sus pagos, y las notas internas.
+
+⚠️ **Un stream vivo NO se refresca volviéndolo a llamar: se vuelve a
+suscribir.** `takeUntilDestroyed` corta al salir de la pantalla, **no entre
+llamadas**, así que un `watch…()` invocado después de cada mutación «para
+refrescar» apila un oyente de Firestore por mutación — y con él, todo lo que
+haya en el `next`: en la ficha de la reserva, una reconciliación de pagos y una
+escritura. Eran siete llamadas de más repartidas por tres pantallas. No hacen
+falta: quien escribe es el servicio o una Cloud Function, y Firestore reemite
+solo.
+
+⚠️ **Y el método de una vez no se convierte, se deja.** Un stream vivo no
+termina, así que quien espera a que **termine** se queda colgado sin decir nada:
+`.toPromise()` —lo usa `sendSignedContractEmail`—, `lastValueFrom()` y, el que
+más duele, un `forkJoin`, que no emite hasta que todas sus fuentes acaban; por
+eso `inspection.service.ts` lleva `.pipe(first())`. (`firstValueFrom` sí
+resuelve con la primera emisión y no cuelga; lo que deja es un oyente abierto
+para leer una vez.)
+
 ## Firestore: `undefined` está prohibido
 
 Firestore lanza `Cannot use 'undefined' as a Firestore value`. Hay dos defensas y conviene conocer ambas:
@@ -2051,6 +2081,16 @@ formulario nuevo ya no sale desnudo.
 ⚠️ Un `var(--x)` sin declarar **no falla, desaparece**: el navegador descarta la
 declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
 de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
+
+⚠️ **Cuando un color de marca es el FONDO, su acompañante también es variable.**
+`--warning-on` existe porque el ámbar cambia de tema —#9A6700 en claro, #F0B429
+en oscuro— y cada uno pide lo contrario: blanco el primero (4,87:1), negro el
+segundo (9,85:1). Estuvo escrito a mano con un `:root .btn-warning` y un
+`.dark .btn-warning` corrigiéndolo, y **no funcionaba**: los dos correctores
+miden (0,2,0), igual que el `.btn-warning[_ngcontent-xxx]` de un componente que
+declare su propia copia, y en un empate manda el orden — que pone al componente
+detrás. «Cancelar reserva» salía a **3,77:1** en tema claro. Con la variable, el
+valor lo pone el bloque del tema y hasta una copia encapsulada sale bien.
 
 El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#14181A).
 
