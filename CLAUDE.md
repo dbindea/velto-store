@@ -48,6 +48,19 @@ npx tsc -p tsconfig.app.json --noEmit
 cd functions && npx tsc --noEmit
 ```
 
+⚠️ **`tsc` NO comprueba las plantillas, y `strictTemplates` está activado.** Un
+`[problems]="problems"` que le pasa el mapa entero a un `@Input()` que espera una
+clave **pasa el typecheck y revienta en `npm run build`**, porque la que valida
+los tipos del HTML es la compilación de Angular. Es decir: el typecheck vale para
+iterar, pero antes de dar un cambio por bueno hay que construir.
+
+⚠️ **Y una Cloud Function editada no es una Cloud Function desplegada.** Lo
+obvio, hasta que se prueba contra desarrollo un cambio de backend que solo está
+en el disco: el frontend llama, la function **vieja** contesta, y lo que se ve
+es el comportamiento antiguo con el código nuevo delante. Pasó el 15 de
+septiembre de 2026 probando la sustitución de contratos, y costó un rato
+entender por qué el archivo no se creaba.
+
 ## Tests
 
 Hay dos suites independientes, ambas con Vitest:
@@ -308,6 +321,79 @@ Para saltarse un paso hay que llamar `buildWorkflowException(action, reason, cre
 tener reserva nueva, y punto: saltarse un paso es un atajo operativo, pero alquilar a alguien
 a quien has bloqueado es una decisión sobre ese cliente y se toma en su ficha, cambiándole el
 nivel de confianza. `risk` no bloquea; solo avisa vía `clientTrustWarning()`.
+
+### `reservation-edit.util.ts` es la única autoridad sobre qué se puede CAMBIAR
+
+Lo que el workflow es a «qué pasos se pueden dar», este util lo es a «qué campos
+de una reserva ya creada se pueden tocar y cuándo». La pantalla apaga o explica
+cada campo preguntándole, y `editReservation()` le pregunta lo mismo antes de
+escribir.
+
+⚠️ **La decisión es POR CAMPO, y ese es el motivo de que exista.** Las
+restricciones no se parecen: la fecha de **devolución** se mueve con el coche ya
+entregado —una prórroga es el caso más normal del negocio— y la de **recogida**
+no, porque el coche ya salió y la fecha real está en el parte de entrega. Un
+único «¿se puede editar esta reserva?» tendría que contestar lo más restrictivo
+para todos, y entonces no se podría prorrogar nada.
+
+⚠️ **El dinero se decide mirando `payments`, no `paymentSummary`.** La copia de
+la reserva se queda vieja y **responde `0` en vez de fallar**: con ella, una
+fianza ya cobrada parecería editable. Y se mide **movimiento, no saldo**
+(`movedOn`): una fianza cobrada y devuelta entera deja un neto de 0, pero al
+cliente se le cobraron 150 € y cambiar después el importe exigido dejaría la
+reserva diciendo otra cosa. Es justo lo contrario de `sumPaid()`, que sí resta —
+aquella contesta cuánto entró, y esta si ha pasado algo.
+
+⚠️ **La señal y el resto se reparten sin mover el total**
+(`redistributeInitialPayment`). Bajar la señal de 50 a 30 sube el resto a 272,50:
+los 20 € no desaparecen. Con dos campos sueltos, olvidar subir el resto dejaría
+la reserva debiendo 20 € menos de lo que vale el alquiler, y se podría cerrar
+cobrando de menos sin que nada avisara.
+
+⚠️ **La reserva y sus filas de cobro se reescriben en el MISMO `writeBatch`**,
+por lo mismo que al crearla: separadas, un fallo entre medias deja una reserva
+que dice valer 302,50 € y unas filas que piden 250 — y las dos cifras se enseñan
+en pantallas distintas, así que nadie se entera.
+
+⚠️ **Y un campo que llega igual que estaba no es un cambio.** Abrir el formulario
+de una reserva con la fianza cobrada y guardarlo sin tocar nada fallaría con «la
+fianza ya está cobrada», porque el importe viaja en la petición aunque nadie lo
+escribiera. Ojo con el precio: «sin precio acordado» **no es lo mismo que** el
+neto de la tarifa, y compararlo contra `netPrice` marcaba un cambio de precio que
+no existía. Lo resuelve `agreedNetPriceOf()`, que usan el formulario y el
+servicio para que las dos preguntas sean la misma.
+
+### Un contrato firmado se ARCHIVA, nunca se pisa
+
+Cuando cambia algo que el PDF imprime —el cliente, las fechas, el precio, la
+fianza o los conductores—, el contrato firmado deja de decir la verdad y hay que
+rehacerlo. **No se borra**: `firestore.rules` deniega `delete` en `contracts`
+incluso al administrador, y con razón. Se copia entero a
+`contracts/{reservaId}-v{n}` con estado `superseded` —su PDF firmado, su huella
+y su código de verificación— y el vigente se rehace limpio. Misma idea que la
+factura rectificativa: un error no se borra, se corrige con un documento nuevo.
+
+⚠️ **`generateContractPdf` escribía con `set(merge: true)` sin mirar el
+estado**, así que llamar al callable sobre una reserva ya firmada dejaba el
+documento en `generated` con un `pdfUrl` nuevo y los campos de la firma colgando
+de un fichero que ya no era ese. La pantalla lo impedía (`canGenerateContract`
+deniega si `signed`), pero eso es la interfaz, no la seguridad. Ahora el backend
+se niega sin `supersede: true` y sin motivo.
+
+⚠️ **Lo de la firma anterior hay que BORRARLO a mano** al rehacer. `merge: true`
+conserva lo que no se nombre, así que el contrato nuevo nacía con el `signedAt`,
+la huella y el código de verificación del anterior pegados encima.
+
+⚠️ **Y `superseded` tiene que ser un estado PROPIO en la verificación pública.**
+Cayendo en `unknown`, el QR del papel del cliente respondía «No encontrado» — se
+le decía que su contrato no existe, que es lo contrario de lo que pasó y lo único
+que archivarlo tenía que evitar. Tampoco vale devolverlo como `valid`: el papel
+ya no es el acuerdo vigente. Se le dicen las dos cosas.
+
+⚠️ **`getContractByReservation` descarta lo sustituido ANTES de ordenar.** El
+archivo copia el documento entero, `createdAt` incluido, así que empata con el
+vigente: ordenar por fecha y quedarse con el primero devolvería uno de los dos al
+azar.
 
 ### `pricing.util.ts` es la única autoridad sobre el precio
 

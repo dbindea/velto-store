@@ -1900,3 +1900,50 @@ apilaba un oyente de Firestore más, una reconciliación más y una escritura m�
 Estaba igual en el contrato y en la propia reserva, esas dos de antes: siete
 llamadas de más en total. Ahora los métodos vivos se llaman `watch…` y los de
 una vez `get…`, que es lo que separa un caso del otro a simple vista.
+
+---
+
+## C-37 · Modificar una reserva creada, y rehacer su contrato — 15 de septiembre de 2026
+
+Recorrido entero de N-34 en desarrollo, contra `velto-store` y con la function
+desplegada. Reserva nueva de 5 días, 302,50 €, señal 50 y fianza 400.
+
+| Paso | Resultado |
+|---|---|
+| Reserva **cerrada** → abrir edición | Los seis campos apagados, el motivo **una vez** arriba y sin botón de guardar |
+| Bajar la señal de 50 a 30 | «Resto del alquiler» pasó a **272,50 €** mientras se tecleaba |
+| Guardar | Reserva: señal 30, resto 272,50. **Filas de cobro reescritas**: 30 / 272,50 / 400 |
+| Fianza 400 → 300, precio en blanco | Nota: «Reserva modificada: **fianza**» — sin falso «precio» |
+| Generar contrato → firmar en `/sign-contract/…` | `signed`, sellado, huella `ee07acf3…` |
+| Cambiar la devolución con el contrato firmado | Aviso arriba + diálogo «Rehacer el contrato» |
+| Rehacer | Vigente: `generated`, **sin** `signedAt`, huella ni código; `supersedesId` puesto |
+| Archivo `…-v1` | `superseded`, conserva PDF firmado, huella y código `VRE88QWE8S55` |
+| QR del papel `/v/VRE88QWE8S55` | **«Contrato sustituido»** con su fecha, matrícula, sello y huella |
+| La ficha de edición | «CONTRATOS ANTERIORES · C-X91SQ8-2026 · Sustituido el 15/09/2026 · Descargar PDF firmado» |
+
+**El fallo del día es el que se reprodujo en vivo**, y ya existía antes de esta
+sesión: `generateContractPdf` escribía con `set(merge: true)` **sin mirar el
+estado del contrato**. La primera vuelta de la prueba se hizo con la function
+vieja todavía desplegada, así que el contrato firmado se pisó: quedó en
+`generated`, con un `pdfUrl` nuevo y el `signedAt`, la huella y el código de
+verificación del anterior colgando de un fichero que ya no era ese. La pantalla
+lo impedía —`canGenerateContract` deniega si está firmado— pero eso es la
+interfaz, no la seguridad: bastaba llamar al callable. Y como la verificación
+pública busca por `verificationCode` en ese mismo documento, el cliente que
+escaneara **su copia en papel** habría visto los datos de otro contrato y una
+huella que no cuadra.
+
+**Y el segundo solo se vio abriendo el QR:** con el archivo ya correcto,
+`/v/:codigo` seguía respondiendo «No encontrado», porque
+`getContractVerification` hacía `if (status !== 'signed') return unknownView()`.
+El documento estaba bien guardado y lo único para lo que existía no funcionaba.
+Ahora `superseded` es un estado propio: se le dice al cliente que su contrato es
+auténtico **y** que hay uno posterior.
+
+**Dos trampas de método que conviene anotar**, porque las dos costaron tiempo:
+
+- **`npx tsc --noEmit` no comprueba las plantillas.** Un `@Input()` mal tipado en
+  el HTML pasa el typecheck y solo falla en `npm run build`.
+- **Una Cloud Function editada no es una desplegada.** Probar un cambio de
+  backend contra desarrollo sin desplegarlo enseña el comportamiento viejo con el
+  código nuevo delante.
