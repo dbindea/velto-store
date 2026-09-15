@@ -178,10 +178,12 @@
       "title": "Send contract by email"
     },
     "errors": {
-      "generate": "The contract could not be generated.",
-      "createSigningLink": "The signing link could not be created.",
       "cancelSigningLink": "The signing link could not be cancelled.",
+      "createSigningLink": "The signing link could not be created.",
+      "generate": "The contract could not be generated.",
+      "invalidEmail": "Enter a valid email address",
       "pdfNotReady": "The PDF is not available yet.",
+      "sendFailed": "The email could not be sent.",
       "signedPdfNotReady": "The signed contract is not available yet."
     },
     "fields": {
@@ -205,18 +207,20 @@
     },
     "sign": {
       "acceptConditions": "I have read and accept the contract conditions.",
+      "additionalDrivers": "Authorised drivers",
+      "additionalDriversHint": "Besides you, these people may drive the vehicle. By signing, you authorise it.",
       "alreadySigned": "This contract is already signed.",
       "expired": "The signing link has expired.",
       "highlightsTitle": "Key contract terms",
       "invalid": "Invalid link.",
+      "padClear": "Clear",
+      "padHint": "Sign with your finger or the mouse",
       "readOnlyNotice": "Please review the contract details before signing.",
       "submitSignature": "Sign contract",
       "subtitle": "Digital signature of the rental contract",
       "successMessage": "Thank you. Your contract has been registered.",
       "successTitle": "Contract signed",
-      "title": "Contract signature",
-      "additionalDrivers": "Authorised drivers",
-      "additionalDriversHint": "Besides you, these people may drive the vehicle. By signing, you authorise it."
+      "title": "Contract signature"
     },
     "signingLink": {
       "title": "Active signing link"

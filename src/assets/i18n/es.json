@@ -178,10 +178,12 @@
       "title": "Enviar contrato por email"
     },
     "errors": {
-      "generate": "No se pudo generar el contrato.",
-      "createSigningLink": "No se pudo crear el enlace de firma.",
       "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
+      "createSigningLink": "No se pudo crear el enlace de firma.",
+      "generate": "No se pudo generar el contrato.",
+      "invalidEmail": "Introduce un email válido",
       "pdfNotReady": "El PDF todavía no está disponible.",
+      "sendFailed": "No se pudo enviar el email.",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible."
     },
     "fields": {
@@ -205,18 +207,20 @@
     },
     "sign": {
       "acceptConditions": "He leído y acepto las condiciones del contrato.",
+      "additionalDrivers": "Conductores autorizados",
+      "additionalDriversHint": "Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas.",
       "alreadySigned": "Este contrato ya ha sido firmado.",
       "expired": "El link de firma ha caducado.",
       "highlightsTitle": "Puntos clave del contrato",
       "invalid": "Link no válido.",
+      "padClear": "Limpiar",
+      "padHint": "Firma con el dedo o el ratón",
       "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
       "submitSignature": "Firmar contrato",
       "subtitle": "Firma digital de contrato de alquiler",
       "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
       "successTitle": "Contrato firmado",
-      "title": "Firma del contrato",
-      "additionalDrivers": "Conductores autorizados",
-      "additionalDriversHint": "Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas."
+      "title": "Firma del contrato"
     },
     "signingLink": {
       "title": "Link de firma activo"

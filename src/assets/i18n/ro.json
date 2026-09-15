@@ -178,10 +178,12 @@
       "title": "Trimite contract prin email"
     },
     "errors": {
-      "generate": "Contractul nu a putut fi generat.",
-      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
       "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
+      "createSigningLink": "Linkul de semnare nu a putut fi creat.",
+      "generate": "Contractul nu a putut fi generat.",
+      "invalidEmail": "Introdu o adresă de email validă",
       "pdfNotReady": "PDF-ul nu este încă disponibil.",
+      "sendFailed": "Emailul nu a putut fi trimis.",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
     },
     "fields": {
@@ -205,18 +207,20 @@
     },
     "sign": {
       "acceptConditions": "Am citit și accept condițiile contractului.",
+      "additionalDrivers": "Conducători autorizați",
+      "additionalDriversHint": "Pe lângă tine, aceste persoane pot conduce vehiculul. Prin semnare, autorizezi acest lucru.",
       "alreadySigned": "Acest contract este deja semnat.",
       "expired": "Link-ul de semnare a expirat.",
       "highlightsTitle": "Puncte cheie ale contractului",
       "invalid": "Link invalid.",
+      "padClear": "Șterge",
+      "padHint": "Semnează cu degetul sau cu mouse-ul",
       "readOnlyNotice": "Verifică datele contractului înainte de a semna.",
       "submitSignature": "Semnează contractul",
       "subtitle": "Semnătură digitală pentru contractul de închiriere",
       "successMessage": "Mulțumim. Contractul tău a fost înregistrat.",
       "successTitle": "Contract semnat",
-      "title": "Semnarea contractului",
-      "additionalDrivers": "Conducători autorizați",
-      "additionalDriversHint": "Pe lângă tine, aceste persoane pot conduce vehiculul. Prin semnare, autorizezi acest lucru."
+      "title": "Semnarea contractului"
     },
     "signingLink": {
       "title": "Link de semnare activ"

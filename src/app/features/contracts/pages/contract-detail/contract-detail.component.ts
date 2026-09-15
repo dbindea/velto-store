@@ -233,11 +233,21 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     this.emailError = '';
   }
 
+  /**
+   * ⚠️ **`emailError` guarda una CLAVE i18n, no una frase.** Llevaba las dos
+   * escritas en español duro —«Introduce un email válido», «Error al enviar el
+   * email»— y se pintaban sin pasar por el pipe, así que un operador rumano
+   * leía castellano justo cuando algo acababa de fallar.
+   *
+   * Y el mensaje del error **no se pinta tal cual**: lo que viene de un
+   * callable es texto del backend, en inglés, y enseñárselo al operador es la
+   * misma clase de fallo. Solo se respeta si ya es una clave de la aplicación.
+   */
   async sendEmail(): Promise<void> {
     if (!this.contract?.id) return;
     const email = (this.emailRecipient || '').trim();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      this.emailError = 'Introduce un email válido';
+      this.emailError = 'contracts.errors.invalidEmail';
       return;
     }
     this.sending = true;
@@ -247,7 +257,8 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
       this.showEmailForm = false;
     } catch (err: any) {
       console.error('Error sending email:', err);
-      this.emailError = err?.message || 'Error al enviar el email';
+      const clave = String(err?.message || '');
+      this.emailError = clave.startsWith('contracts.') ? clave : 'contracts.errors.sendFailed';
     } finally {
       this.sending = false;
     }

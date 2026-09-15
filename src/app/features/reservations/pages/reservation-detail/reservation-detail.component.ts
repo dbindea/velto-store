@@ -1572,11 +1572,12 @@ export class ReservationDetailComponent implements OnInit {
     this.emailError = '';
   }
 
+  /** `emailError` guarda una CLAVE i18n. Ver la nota de `contract-detail`. */
   async sendContractEmail(): Promise<void> {
     if (!this.contract?.id) return;
     const email = (this.emailRecipient || '').trim();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      this.emailError = 'Introduce un email válido';
+      this.emailError = 'contracts.errors.invalidEmail';
       return;
     }
     this.sendingEmail = true;
@@ -1586,7 +1587,8 @@ export class ReservationDetailComponent implements OnInit {
       this.showEmailForm = false;
     } catch (err: any) {
       console.error('Error sending email:', err);
-      this.emailError = err?.message || 'Error al enviar el email';
+      const clave = String(err?.message || '');
+      this.emailError = clave.startsWith('contracts.') ? clave : 'contracts.errors.sendFailed';
     } finally {
       this.sendingEmail = false;
     }
