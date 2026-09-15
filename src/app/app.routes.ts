@@ -88,6 +88,14 @@ export const routes: Routes = [
             path: 'new',
             loadComponent: () => import('./features/reservations/pages/reservation-create/reservation-create.component').then(m => m.ReservationCreateComponent)
           },
+          // ⚠️ `:id/edit` va ANTES que `:id`. Al revés, `:id` captura «edit»
+          // como si fuera el id de una reserva y la pantalla de edición no se
+          // alcanza nunca — es la misma trampa de orden que el rewrite `/d/**`
+          // delante del catch-all de la SPA en `firebase.json`.
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/reservations/pages/reservation-edit/reservation-edit.component').then(m => m.ReservationEditComponent)
+          },
           {
             path: ':id',
             loadComponent: () => import('./features/reservations/pages/reservation-detail/reservation-detail.component').then(m => m.ReservationDetailComponent)

@@ -178,13 +178,15 @@
       "title": "Trimite contract prin email"
     },
     "errors": {
+      "alreadySigned": "Acel contract este deja semnat. Ca să îl schimbi, trebuie refăcut.",
       "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
       "createSigningLink": "Linkul de semnare nu a putut fi creat.",
       "generate": "Contractul nu a putut fi generat.",
       "invalidEmail": "Introdu o adresă de email validă",
       "pdfNotReady": "PDF-ul nu este încă disponibil.",
       "sendFailed": "Emailul nu a putut fi trimis.",
-      "signedPdfNotReady": "Contractul semnat nu este încă disponibil."
+      "signedPdfNotReady": "Contractul semnat nu este încă disponibil.",
+      "supersedeReasonRequired": "Este nevoie de un motiv ca să refaci contractul."
     },
     "fields": {
       "allStatuses": "Toate stările",
@@ -231,7 +233,8 @@
       "expired": "Expirat",
       "generated": "Generat",
       "pendingSignature": "Așteaptă semnare",
-      "signed": "Semnat"
+      "signed": "Semnat",
+      "superseded": "Înlocuit"
     },
     "subtitle": "Generează, semnează și trimite contracte de închiriere",
     "title": "Contracte",
@@ -251,6 +254,8 @@
       "sealed": "Da, cu certificat digital",
       "signedAt": "Data semnării",
       "subtitle": "Verificarea contractului",
+      "supersededMessage": "Acest contract a fost semnat și este autentic, dar ulterior a fost refăcut: există unul mai nou care îl înlocuiește. Cere agenției copia în vigoare.",
+      "supersededTitle": "Contract înlocuit",
       "unknownMessage": "Nu există niciun contract cu acest cod. Verifică dacă l-ai copiat în întregime.",
       "unknownTitle": "Nu a fost găsit",
       "validMessage": "Acest contract există și este semnat.",
@@ -992,19 +997,77 @@
         "save": "Conducătorii nu au putut fi salvați."
       }
     },
+    "edit": {
+      "action": "Modifică",
+      "agreedPrice": "Preț convenit (fără TVA)",
+      "agreedPriceHint": "Lasă-l gol ca să revii la tarif cu reducerea de fidelitate.",
+      "client": "Chiriaș",
+      "contractNoticeBody": "Există un contract semnat. Dacă schimbi ceva din ce este tipărit pe el — clientul, datele, prețul, garanția sau șoferii — va trebui refăcut și semnat din nou. Cel anterior se arhivează, iar copia pe hârtie se poate verifica în continuare.",
+      "contractNoticeTitle": "Există un contract semnat",
+      "contractWarningBody": "Contractul semnat spune altceva decât ai schimbat acum. Trebuie refăcut și semnat din nou; cel anterior se arhivează, iar copia pe hârtie se poate verifica în continuare.",
+      "contractWarningTitle": "Asta lasă contractul semnat fără valoare",
+      "denied": {
+        "closed": "Rezervarea este închisă: istoricul ei nu se mai atinge.",
+        "cancelled": "Rezervarea este anulată.",
+        "contractSigned": "Contractul semnat spune cine închiriază. Ca să schimbi asta, trebuie refăcut.",
+        "vehicleOut": "Mașina a fost deja predată: este un fapt, nu un câmp.",
+        "returned": "Mașina a fost deja returnată: data reală este în procesul-verbal.",
+        "noPricingPermission": "Rolul tău nu permite modificarea prețului.",
+        "paymentsUnknown": "Încasările nu au putut fi citite, deci nu se poate ști dacă asta se poate schimba.",
+        "depositCollected": "Garanția s-a mișcat deja. Ca să o schimbi, returnează-o sau reține-o.",
+        "initialCollected": "Avansul a fost încasat parțial: nu mai este o sumă de negociat.",
+        "notSigned": "Nu există niciun contract semnat de înlocuit."
+      },
+      "deposit": "Garanție",
+      "fields": {
+        "client": "client",
+        "pickupDateTime": "data preluării",
+        "returnDateTime": "data predării",
+        "agreedPrice": "preț",
+        "depositAmount": "garanție",
+        "initialPaymentAmount": "avans",
+        "additionalDrivers": "șoferi"
+      },
+      "initialPayment": "Avans de încasat",
+      "initialPaymentHint": "Poate fi 0: atunci nu se cere avans. Cât scazi de aici se adaugă la rest.",
+      "noChanges": "Nu ai schimbat nimic.",
+      "note": "Rezervare modificată",
+      "problems": {
+        "initialRequired": "Pune o sumă pentru avans. Dacă nu vrei avans, scrie 0.",
+        "initialInvalid": "Suma avansului nu este validă.",
+        "initialNegative": "Avansul nu poate fi negativ.",
+        "initialOverTotal": "Avansul nu poate depăși totalul închirierii.",
+        "datesOrder": "Predarea trebuie să fie după preluare."
+      },
+      "remainingPreview": "Restul închirierii",
+      "save": "Salvează modificările",
+      "saved": "Rezervare modificată",
+      "sectionMoney": "Preț, avans și garanție",
+      "sectionWhen": "Preluare și predare",
+      "sectionWho": "Client și șoferi",
+      "subtitle": "Ce nu se poate schimba îți spune de ce.",
+      "supersede": "Reface contractul",
+      "supersedeDone": "Contract refăcut. Cel anterior rămâne arhivat.",
+      "supersededOn": "Înlocuit la",
+      "supersededTitle": "Contracte anterioare",
+      "title": "Modifică rezervarea"
+    },
     "errors": {
       "cancel": "Nu s-a putut anula rezervarea",
       "clientNameRequired": "Scrie numele clientului",
+      "create": "Rezervarea nu a putut fi creată. Încearcă din nou.",
       "createSigningLink": "Nu s-a putut crea linkul de semnare",
+      "delete": "Rezervarea nu a putut fi ștearsă.",
+      "deleteSignedContract": "O rezervare cu contractul semnat nu poate fi ștearsă. Anuleaz-o în schimb: contractul semnat atestă închirierea și nu se șterge niciodată.",
+      "editFailed": "Modificările nu au putut fi salvate.",
       "generateContract": "Nu s-a putut genera contractul",
+      "loadFailed": "Rezervarea nu a putut fi încărcată.",
+      "notFound": "Rezervarea nu a fost găsită.",
       "pdfNotReady": "PDF-ul nu este încă disponibil",
       "processDeposit": "Nu s-a putut procesa garanția",
       "registerPayment": "Nu s-a putut înregistra plata",
       "signedPdfNotReady": "Contractul semnat nu este încă disponibil",
-      "create": "Rezervarea nu a putut fi creată. Încearcă din nou.",
-      "notFound": "Rezervarea nu a fost găsită.",
-      "deleteSignedContract": "O rezervare cu contractul semnat nu poate fi ștearsă. Anuleaz-o în schimb: contractul semnat atestă închirierea și nu se șterge niciodată.",
-      "delete": "Rezervarea nu a putut fi ștearsă."
+      "vehicleNotFound": "Vehiculul rezervării nu a fost găsit."
     },
     "fields": {
       "duration": "Durată",
@@ -1033,6 +1096,14 @@
       "placeholder": "Adaugă o notă pentru echipă…",
       "systemUser": "Sistem",
       "title": "Note interne"
+    },
+    "ownerShare": {
+      "title": "Împărțirea cu proprietarul",
+      "owner": "Proprietar",
+      "base": "Baza împărțirii (închiriere fără TVA)",
+      "forOwner": "Pentru proprietar",
+      "forVelto": "Pentru Velto",
+      "hint": "Înghețat la crearea rezervării: schimbarea procentului mașinii nu mișcă această cifră. Se cuvine la închiderea rezervării, când sumele sunt definitive. Garanția și taxele suplimentare nu se împart."
     },
     "paymentStatus": {
       "paid": "Plătit",
@@ -1095,15 +1166,7 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări",
-    "ownerShare": {
-      "title": "Împărțirea cu proprietarul",
-      "owner": "Proprietar",
-      "base": "Baza împărțirii (închiriere fără TVA)",
-      "forOwner": "Pentru proprietar",
-      "forVelto": "Pentru Velto",
-      "hint": "Înghețat la crearea rezervării: schimbarea procentului mașinii nu mișcă această cifră. Se cuvine la închiderea rezervării, când sumele sunt definitive. Garanția și taxele suplimentare nu se împart."
-    }
+    "title": "Rezervări"
   },
   "search": {
     "close": "Închide",

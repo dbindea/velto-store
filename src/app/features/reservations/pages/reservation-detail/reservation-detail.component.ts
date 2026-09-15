@@ -1489,9 +1489,27 @@ export class ReservationDetailComponent implements OnInit {
     try {
       // El contrato lo crea una Cloud Function; el stream vivo lo trae solo.
       await this.contractService.generateContractFromReservation(this.reservation.id);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error generating contract:', err);
-      this.notifications.error('reservations.errors.generateContract', { retry: () => void this.generateContract() });
+      /**
+       * ⚠️ **Lo que rechaza la function se enseña tal cual si es una clave.**
+       * El caso concreto es `contracts.errors.alreadySigned`: desde que el
+       * backend se niega a pisar un contrato firmado, ese rechazo tiene una
+       * explicación buena —«para cambiarlo hay que rehacerlo»— y taparla con un
+       * «no se pudo generar el contrato» genérico dejaría al operador
+       * reintentando algo que no va a funcionar nunca.
+       *
+       * Y por eso `retry` solo se ofrece en el caso genérico: reintentar un
+       * rechazo permanente es pulsar un botón que ya sabemos que falla.
+       */
+      const clave = String((err as Error)?.message || '');
+      if (clave.startsWith('contracts.')) {
+        this.notifications.error(clave);
+      } else {
+        this.notifications.error('reservations.errors.generateContract', {
+          retry: () => void this.generateContract()
+        });
+      }
     } finally {
       this.generatingContract = false;
     }

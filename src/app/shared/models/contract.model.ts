@@ -21,7 +21,22 @@ export type ContractStatus =
   | 'pending_signature'
   | 'signed'
   | 'cancelled'
-  | 'expired';
+  | 'expired'
+  /**
+   * Firmado, y **sustituido después por otro contrato de la misma reserva**
+   * porque cambió algo que el PDF imprime: el arrendatario, las fechas, el
+   * precio, la fianza o los conductores autorizados.
+   *
+   * ⚠️ **Sustituido no es borrado, y la diferencia importa.** El documento
+   * sigue entero —su PDF firmado, su huella y su código de verificación—, así
+   * que el cliente que tenga la copia en papel la sigue pudiendo comprobar en
+   * `/v/:codigo`. `firestore.rules` deniega `delete` en `contracts` incluso al
+   * administrador por el mismo motivo: acredita un acuerdo que existió.
+   *
+   * Es la misma idea que la factura rectificativa: un error no se borra, se
+   * corrige emitiendo un documento nuevo.
+   */
+  | 'superseded';
 
 export interface ContractReservationSnapshot {
   pickupDateTime?: any;
@@ -181,6 +196,23 @@ export interface Contract {
   generatedAt?: any;
   emailedAt?: any;
 
+  /**
+   * Solo en los contratos `superseded`: cuándo se sustituyó, quién lo hizo y
+   * por qué. El motivo es **obligatorio** al sustituir, por lo mismo que lo es
+   * en una excepción de workflow — dentro de seis meses, «se rehízo el
+   * contrato» sin más no le sirve a nadie.
+   */
+  supersededAt?: any;
+  supersededBy?: string;
+  supersededReason?: string;
+  /** El id del contrato que lo sustituyó, para poder ir del viejo al vigente. */
+  supersededById?: string;
+  /**
+   * Solo en el contrato VIGENTE: el id del archivo al que mandó al anterior.
+   * Deja el rastro en los dos sentidos sin tener que consultar la colección.
+   */
+  supersedesId?: string;
+
   createdAt?: any;
   updatedAt?: any;
   createdBy?: string;
@@ -194,7 +226,8 @@ export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
   pending_signature: 'contracts.status.pendingSignature',
   signed: 'contracts.status.signed',
   cancelled: 'contracts.status.cancelled',
-  expired: 'contracts.status.expired'
+  expired: 'contracts.status.expired',
+  superseded: 'contracts.status.superseded'
 };
 
 export const CONTRACT_STATUS_COLORS: Record<ContractStatus, string> = {
@@ -203,5 +236,8 @@ export const CONTRACT_STATUS_COLORS: Record<ContractStatus, string> = {
   pending_signature: 'status-warning',
   signed: 'status-success',
   cancelled: 'status-muted',
-  expired: 'status-error'
+  expired: 'status-error',
+  // Apagado, como `cancelled`: sigue existiendo y acreditando lo que se firmó,
+  // pero no es el contrato vigente y no debe competir con él a la vista.
+  superseded: 'status-muted'
 };

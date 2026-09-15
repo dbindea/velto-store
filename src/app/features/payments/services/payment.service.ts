@@ -12,7 +12,8 @@ import {
   getDocs,
   query,
   orderBy,
-  where
+  where,
+  WriteBatch
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, firstValueFrom, from } from 'rxjs';
@@ -22,7 +23,8 @@ import {
   PaymentType,
   PaymentMethod,
   PaymentSource,
-  PaymentStatus
+  PaymentStatus,
+  PAYMENT_TYPE_LABELS
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { reservationStatusAfterPayment } from '@shared/utils/reservation-workflow.util';
@@ -601,6 +603,121 @@ export class PaymentService {
   private async depositAvailableFor(reservationId: string): Promise<number> {
     const pagos = await firstValueFrom(this.getPaymentsByReservation(reservationId));
     return depositAvailable(collectedTotalsOf(pagos));
+  }
+
+  /**
+   * Pone al día las filas **pendientes** de una reserva que se acaba de editar,
+   * dentro del `writeBatch` que ya trae quien llama.
+   *
+   * ⚠️ **Recibe el batch en vez de escribir por su cuenta, y es lo que hace que
+   * esto sea correcto.** La reserva nueva y sus filas de cobro tienen que
+   * entrar juntas o no entrar: escritas por separado, un fallo entre medias
+   * deja una reserva que dice valer 300 € y unas filas que piden 250 — y nadie
+   * se entera, porque las dos cifras se enseñan en pantallas distintas. Es la
+   * misma razón por la que crear una reserva es una sola escritura.
+   *
+   * Tres reglas, y las tres tienen su motivo:
+   *
+   * ⚠️ **Lo ya cobrado no se toca.** Una fila `paid` o `partial` documenta
+   * dinero que entró de verdad; reescribirle el importe haría que el recibo que
+   * tiene el cliente y la aplicación dijeran cosas distintas. Solo se mueven
+   * las filas que siguen enteras por cobrar.
+   *
+   * ⚠️ **Un concepto que baja a 0 se CANCELA, no se deja en 0.** Una fila
+   * pendiente de 0 € es una fila incobrable: no se puede marcar como cobrada
+   * porque no hay nada que cobrar, y mientras exista la reserva no se puede dar
+   * por pagada. Es el mismo motivo por el que la creación no siembra filas de
+   * conceptos a 0.
+   *
+   * ⚠️ **Y un concepto que sube desde 0 necesita fila nueva**, porque al crear
+   * la reserva no se sembró ninguna. Sin esto, subir la señal de 0 a 50 € no
+   * dejaría nada que cobrar y el dinero no se pediría nunca.
+   */
+  queueRepricedRows(
+    batch: WriteBatch,
+    payments: Payment[],
+    amounts: { initialRequired: number; remainingRequired: number; depositRequired?: number }
+  ): void {
+    const conceptos: Array<{ type: PaymentType; required: number | undefined }> = [
+      { type: 'initial_payment', required: amounts.initialRequired },
+      { type: 'remaining_payment', required: amounts.remainingRequired },
+      { type: 'deposit', required: amounts.depositRequired }
+    ];
+
+    for (const { type, required } of conceptos) {
+      if (required === undefined) continue;
+      const objetivo = roundMoney(required);
+      const abiertas = payments.filter(
+        (p) => p.type === type && (p.status === 'pending' || p.status === 'failed')
+      );
+
+      if (!abiertas.length) {
+        if (objetivo <= 0) continue;
+        const ref = doc(collection(this.firestore, 'payments'));
+        batch.set(ref, this.cleanData(this.buildRepricedRow(payments, type, objetivo)));
+        continue;
+      }
+
+      // Con varias filas abiertas del mismo concepto —puede pasar si un cobro
+      // falló y se sembró otro—, la primera se lleva el importe y las demás se
+      // cancelan: repartirlo entre todas dejaría cobros sueltos sin sentido.
+      const [principal, ...sobrantes] = abiertas;
+      for (const extra of sobrantes) {
+        batch.update(doc(this.firestore, `payments/${extra.id}`), {
+          status: 'cancelled',
+          pendingAmount: 0,
+          updatedAt: { seconds: Date.now() / 1000 }
+        });
+      }
+
+      const ref = doc(this.firestore, `payments/${principal.id}`);
+      if (objetivo <= 0) {
+        batch.update(ref, {
+          status: 'cancelled',
+          amount: 0,
+          pendingAmount: 0,
+          updatedAt: { seconds: Date.now() / 1000 }
+        });
+      } else {
+        batch.update(ref, {
+          amount: objetivo,
+          pendingAmount: calculatePendingAmount(objetivo, Number(principal.paidAmount) || 0),
+          status: calculatePaymentStatus(objetivo, Number(principal.paidAmount) || 0),
+          updatedAt: { seconds: Date.now() / 1000 }
+        });
+      }
+    }
+  }
+
+  /**
+   * Una fila nueva para un concepto que antes valía 0, copiando la reserva, el
+   * cliente y el vehículo de cualquier otra fila de la misma reserva: son datos
+   * que ya están congelados ahí y volver a buscarlos sería una lectura de más
+   * que además podría traer algo distinto.
+   */
+  private buildRepricedRow(payments: Payment[], type: PaymentType, amount: number): Payment {
+    const modelo = payments[0];
+    return {
+      reservationId: modelo?.reservationId,
+      clientId: modelo?.clientId,
+      vehicleId: modelo?.vehicleId,
+      isFreePayment: false,
+      reservationSnapshot: modelo?.reservationSnapshot,
+      clientSnapshot: modelo?.clientSnapshot,
+      vehicleSnapshot: modelo?.vehicleSnapshot,
+      type,
+      direction: 'income',
+      method: 'cash',
+      source: 'manual',
+      status: 'pending',
+      amount,
+      paidAmount: 0,
+      pendingAmount: amount,
+      currency: 'EUR',
+      concept: PAYMENT_TYPE_LABELS[type],
+      internalReference: generateInternalReference('PMT'),
+      createdAt: { seconds: Date.now() / 1000 }
+    } as Payment;
   }
 
   /**

@@ -178,13 +178,15 @@
       "title": "Enviar contrato por email"
     },
     "errors": {
+      "alreadySigned": "Ese contrato ya está firmado. Para cambiarlo hay que rehacerlo.",
       "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
       "createSigningLink": "No se pudo crear el enlace de firma.",
       "generate": "No se pudo generar el contrato.",
       "invalidEmail": "Introduce un email válido",
       "pdfNotReady": "El PDF todavía no está disponible.",
       "sendFailed": "No se pudo enviar el email.",
-      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible.",
+      "supersedeReasonRequired": "Hace falta un motivo para rehacer el contrato."
     },
     "fields": {
       "allStatuses": "Todos los estados",
@@ -231,7 +233,8 @@
       "expired": "Caducado",
       "generated": "Generado",
       "pendingSignature": "Pendiente de firma",
-      "signed": "Firmado"
+      "signed": "Firmado",
+      "superseded": "Sustituido"
     },
     "subtitle": "Genera, firma y envía contratos de alquiler",
     "title": "Contratos",
@@ -251,6 +254,8 @@
       "sealed": "Sí, con certificado digital",
       "signedAt": "Fecha de firma",
       "subtitle": "Verificación de contrato",
+      "supersededMessage": "Este contrato se firmó y es auténtico, pero después se rehízo: hay uno posterior que lo sustituye. Pide a la agencia la copia vigente.",
+      "supersededTitle": "Contrato sustituido",
       "unknownMessage": "No hay ningún contrato con ese código. Comprueba que lo has copiado entero.",
       "unknownTitle": "No encontrado",
       "validMessage": "Este contrato existe y está firmado.",
@@ -992,19 +997,77 @@
         "save": "No se pudieron guardar los conductores."
       }
     },
+    "edit": {
+      "action": "Modificar",
+      "agreedPrice": "Precio acordado (sin IVA)",
+      "agreedPriceHint": "Déjalo vacío para volver a la tarifa con su descuento de fidelidad.",
+      "client": "Arrendatario",
+      "contractNoticeBody": "Hay un contrato firmado. Si cambias algo de lo que va impreso en él —el cliente, las fechas, el precio, la fianza o los conductores— habrá que rehacerlo y que el cliente vuelva a firmar. El anterior se archiva y su copia en papel se sigue pudiendo verificar.",
+      "contractNoticeTitle": "Hay un contrato firmado",
+      "contractWarningBody": "El contrato firmado dice otra cosa de lo que acabas de cambiar. Hay que rehacerlo y que el cliente vuelva a firmar; el anterior se archiva y su copia en papel se sigue pudiendo verificar.",
+      "contractWarningTitle": "Esto deja el contrato firmado sin valer",
+      "denied": {
+        "closed": "La reserva está cerrada: su histórico ya no se toca.",
+        "cancelled": "La reserva está cancelada.",
+        "contractSigned": "El contrato firmado dice quién alquila. Para cambiarlo hay que rehacerlo.",
+        "vehicleOut": "El coche ya se entregó: esto es un hecho, no un dato.",
+        "returned": "El coche ya se devolvió: la fecha real está en el parte.",
+        "noPricingPermission": "Tu rol no permite cambiar el precio.",
+        "paymentsUnknown": "No se han podido leer los cobros, así que no se puede saber si esto se puede cambiar.",
+        "depositCollected": "La fianza ya se movió. Para cambiarla, devuélvela o reténla.",
+        "initialCollected": "La señal ya se cobró en parte: ya no es un importe a pactar.",
+        "notSigned": "No hay ningún contrato firmado que sustituir."
+      },
+      "deposit": "Fianza",
+      "fields": {
+        "client": "cliente",
+        "pickupDateTime": "fecha de recogida",
+        "returnDateTime": "fecha de devolución",
+        "agreedPrice": "precio",
+        "depositAmount": "fianza",
+        "initialPaymentAmount": "señal",
+        "additionalDrivers": "conductores"
+      },
+      "initialPayment": "Señal a cobrar",
+      "initialPaymentHint": "Puede ser 0: entonces no se pide señal. Lo que le quites se suma al resto.",
+      "noChanges": "No has cambiado nada.",
+      "note": "Reserva modificada",
+      "problems": {
+        "initialRequired": "Pon un importe de señal. Si no quieres cobrar señal, escribe 0.",
+        "initialInvalid": "El importe de la señal no es válido.",
+        "initialNegative": "La señal no puede ser negativa.",
+        "initialOverTotal": "La señal no puede pasar del total del alquiler.",
+        "datesOrder": "La devolución tiene que ser posterior a la recogida."
+      },
+      "remainingPreview": "Resto del alquiler",
+      "save": "Guardar cambios",
+      "saved": "Reserva modificada",
+      "sectionMoney": "Precio, señal y fianza",
+      "sectionWhen": "Recogida y devolución",
+      "sectionWho": "Cliente y conductores",
+      "subtitle": "Lo que no se pueda cambiar te dice por qué.",
+      "supersede": "Rehacer el contrato",
+      "supersedeDone": "Contrato rehecho. El anterior queda archivado.",
+      "supersededOn": "Sustituido el",
+      "supersededTitle": "Contratos anteriores",
+      "title": "Modificar reserva"
+    },
     "errors": {
       "cancel": "Error al cancelar la reserva",
       "clientNameRequired": "Escribe el nombre del cliente",
+      "create": "No se pudo crear la reserva. Inténtalo de nuevo.",
       "createSigningLink": "Error al crear el link de firma",
+      "delete": "No se pudo borrar la reserva.",
+      "deleteSignedContract": "No se puede borrar una reserva con el contrato ya firmado. Cancélala en su lugar: el contrato firmado acredita el alquiler y no se borra.",
+      "editFailed": "No se han podido guardar los cambios.",
       "generateContract": "Error al generar el contrato",
+      "loadFailed": "No se ha podido cargar la reserva.",
+      "notFound": "No se ha encontrado la reserva.",
       "pdfNotReady": "El PDF todavía no está disponible",
       "processDeposit": "Error al procesar la fianza",
       "registerPayment": "Error al registrar el pago",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible",
-      "create": "No se pudo crear la reserva. Inténtalo de nuevo.",
-      "notFound": "Reserva no encontrada.",
-      "deleteSignedContract": "No se puede borrar una reserva con el contrato ya firmado. Cancélala en su lugar: el contrato firmado acredita el alquiler y no se borra.",
-      "delete": "No se pudo borrar la reserva."
+      "vehicleNotFound": "No se ha encontrado el vehículo de la reserva."
     },
     "fields": {
       "duration": "Duración",
@@ -1033,6 +1096,14 @@
       "placeholder": "Añade una nota para el equipo…",
       "systemUser": "Sistema",
       "title": "Notas internas"
+    },
+    "ownerShare": {
+      "title": "Reparto con el propietario",
+      "owner": "Propietario",
+      "base": "Base del reparto (alquiler sin IVA)",
+      "forOwner": "Para el propietario",
+      "forVelto": "Para Velto",
+      "hint": "Congelado al crear la reserva: cambiar el porcentaje del coche no mueve esta cifra. Se devenga al cerrar la reserva, cuando los importes son definitivos. La fianza y los cargos extra no se reparten."
     },
     "paymentStatus": {
       "paid": "Pagado",
@@ -1095,15 +1166,7 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas",
-    "ownerShare": {
-      "title": "Reparto con el propietario",
-      "owner": "Propietario",
-      "base": "Base del reparto (alquiler sin IVA)",
-      "forOwner": "Para el propietario",
-      "forVelto": "Para Velto",
-      "hint": "Congelado al crear la reserva: cambiar el porcentaje del coche no mueve esta cifra. Se devenga al cerrar la reserva, cuando los importes son definitivos. La fianza y los cargos extra no se reparten."
-    }
+    "title": "Reservas"
   },
   "search": {
     "close": "Cerrar",

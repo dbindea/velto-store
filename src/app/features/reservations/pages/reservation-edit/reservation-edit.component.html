@@ -1,0 +1,284 @@
+<div class="page">
+  @if (loading()) {
+    <div class="loading-state">{{ 'common.loading' | translate }}</div>
+  } @else if (reservation) {
+    <div class="page-header">
+      <button type="button" class="btn-icon" (click)="cancel()" [attr.aria-label]="'common.back' | translate">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div>
+        <h1>{{ 'reservations.edit.title' | translate }}</h1>
+        <p class="hint">{{ 'reservations.edit.subtitle' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- Si la reserva entera está bloqueada, se dice UNA vez y aquí. Bajo cada
+         campo eran cinco copias de la misma frase. -->
+    @if (wholeReservationLocked) {
+      <div class="notice notice-warning">
+        <i class="pi pi-lock"></i>
+        <div>
+          <p>{{ wholeReservationLocked | translate }}</p>
+        </div>
+      </div>
+    }
+
+    <!--
+      Aviso de que hay un contrato firmado. Va ARRIBA y no al pulsar guardar:
+      enterarse después de haber decidido no sirve de nada.
+
+      ⚠️ **Está escrito en futuro, y no es un matiz.** Aparece con el formulario
+      intacto, así que el texto del diálogo —«lo que acabas de cambiar»— aquí
+      era literalmente falso: le decía al operador que había cambiado algo antes
+      de que tocara nada. Es la misma regla que el «Firmado digitalmente» del
+      contrato: la frase y el hecho se deciden juntos.
+    -->
+    @if (willInvalidateContract) {
+      <div class="notice notice-warning">
+        <i class="pi pi-exclamation-triangle"></i>
+        <div>
+          <strong>{{ 'reservations.edit.contractNoticeTitle' | translate }}</strong>
+          <p>{{ 'reservations.edit.contractNoticeBody' | translate }}</p>
+        </div>
+      </div>
+    }
+
+    <form class="form-section card" (ngSubmit)="save()" #f="ngForm">
+      <h2>{{ 'reservations.edit.sectionWho' | translate }}</h2>
+
+      <div class="form-group">
+        <label for="clientId" class="label required">{{ 'reservations.edit.client' | translate }}</label>
+        <select
+          id="clientId"
+          name="clientId"
+          class="form-control"
+          [(ngModel)]="form.clientId"
+          [disabled]="!editable('client')"
+        >
+          @for (c of clientList; track c.id) {
+            <option [value]="c.id">{{ c.fullName }}</option>
+          }
+        </select>
+        @if (lockReason('client')) {
+          <div class="field-hint">{{ lockReason('client') | translate }}</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="label">{{ 'reservations.drivers.title' | translate }}</label>
+        @for (d of drivers; track $index) {
+          <div class="form-row driver-row">
+            <input
+              type="text"
+              class="form-control"
+              [name]="'driverName' + $index"
+              [(ngModel)]="d.fullName"
+              [placeholder]="'reservations.drivers.name' | translate"
+              [disabled]="!editable('additionalDrivers')"
+            />
+            <input
+              type="text"
+              class="form-control"
+              [name]="'driverDoc' + $index"
+              [(ngModel)]="d.documentNumber"
+              [placeholder]="'reservations.drivers.document' | translate"
+              [disabled]="!editable('additionalDrivers')"
+            />
+            <button
+              type="button"
+              class="btn-icon btn-icon--danger"
+              [disabled]="!editable('additionalDrivers')"
+              (click)="removeDriver($index)"
+            >
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+        }
+        <!-- Los conductores se bloquean igual que todo lo demás. Sin esto la
+             sección quedaba viva en una reserva cerrada y el operador podía
+             teclear nombres que el servicio iba a rechazar al guardar. -->
+        <button
+          type="button"
+          class="btn-secondary"
+          [disabled]="!editable('additionalDrivers')"
+          (click)="addDriver()"
+        >
+          <i class="pi pi-plus"></i>
+          {{ 'reservations.drivers.add' | translate }}
+        </button>
+        @if (lockReason('additionalDrivers')) {
+          <div class="field-hint">{{ lockReason('additionalDrivers') | translate }}</div>
+        }
+      </div>
+
+      <h2>{{ 'reservations.edit.sectionWhen' | translate }}</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pickup" class="label required">{{ 'reservations.fields.pickupDate' | translate }}</label>
+          <input
+            id="pickup"
+            name="pickupDateTime"
+            type="datetime-local"
+            class="form-control"
+            [(ngModel)]="form.pickupDateTime"
+            [disabled]="!editable('pickupDateTime')"
+          />
+          @if (lockReason('pickupDateTime')) {
+            <div class="field-hint">{{ lockReason('pickupDateTime') | translate }}</div>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="return" class="label required">{{ 'reservations.fields.returnDate' | translate }}</label>
+          <input
+            id="return"
+            name="returnDateTime"
+            type="datetime-local"
+            class="form-control"
+            [(ngModel)]="form.returnDateTime"
+            [class.is-invalid]="submitted() && problems['returnDateTime']"
+            [disabled]="!editable('returnDateTime')"
+          />
+          <app-form-error [problems]="problems['returnDateTime']" [show]="submitted()" />
+          @if (lockReason('returnDateTime')) {
+            <div class="field-hint">{{ lockReason('returnDateTime') | translate }}</div>
+          }
+        </div>
+      </div>
+
+      <h2>{{ 'reservations.edit.sectionMoney' | translate }}</h2>
+
+      <div class="form-group">
+        <label for="agreed" class="label">{{ 'reservations.edit.agreedPrice' | translate }}</label>
+        <input
+          id="agreed"
+          name="agreedNetPrice"
+          type="number"
+          step="0.01"
+          min="0"
+          class="form-control"
+          [(ngModel)]="form.agreedNetPrice"
+          [disabled]="!editable('agreedPrice')"
+        />
+        <div class="field-hint">{{ 'reservations.edit.agreedPriceHint' | translate }}</div>
+        @if (lockReason('agreedPrice')) {
+          <div class="field-hint">{{ lockReason('agreedPrice') | translate }}</div>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="initial" class="label required">{{ 'reservations.edit.initialPayment' | translate }}</label>
+          <input
+            id="initial"
+            name="initialPaymentRequired"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            [(ngModel)]="form.initialPaymentRequired"
+            [class.is-invalid]="submitted() && problems['initialPaymentRequired']"
+            [disabled]="!editable('initialPaymentAmount')"
+          />
+          <app-form-error [problems]="problems['initialPaymentRequired']" [show]="submitted()" />
+          <div class="field-hint">{{ 'reservations.edit.initialPaymentHint' | translate }}</div>
+          @if (lockReason('initialPaymentAmount')) {
+            <div class="field-hint">{{ lockReason('initialPaymentAmount') | translate }}</div>
+          }
+        </div>
+
+        <!-- El resto se ENSEÑA mientras se teclea: es lo que hace visible que el
+             total no se mueve, solo se reparte. -->
+        <div class="form-group">
+          <label class="label">{{ 'reservations.edit.remainingPreview' | translate }}</label>
+          <div class="derived-amount">{{ remainingPreview | number: '1.2-2' }} €</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="deposit" class="label">{{ 'reservations.edit.deposit' | translate }}</label>
+          <input
+            id="deposit"
+            name="depositRequired"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            [(ngModel)]="form.depositRequired"
+            [disabled]="!editable('depositAmount')"
+          />
+          @if (lockReason('depositAmount')) {
+            <div class="field-hint">{{ lockReason('depositAmount') | translate }}</div>
+          }
+        </div>
+
+        @if (!form.depositRequired) {
+          <div class="form-group">
+            <label for="waived" class="label required">
+              {{ 'reservations.deposit.waivedReason' | translate }}
+            </label>
+            <input
+              id="waived"
+              name="depositWaivedReason"
+              type="text"
+              class="form-control"
+              [(ngModel)]="form.depositWaivedReason"
+              [class.is-invalid]="submitted() && problems['depositWaivedReason']"
+              [disabled]="!editable('depositAmount')"
+            />
+            <app-form-error [problems]="problems['depositWaivedReason']" [show]="submitted()" />
+          </div>
+        }
+      </div>
+
+      <!-- Resumen junto al botón: este formulario es largo y el campo en rojo
+           puede quedar fuera de la pantalla. -->
+      <app-form-error [problems]="problemList" [show]="submitted()" [summary]="true" />
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="cancel()">
+          {{ 'common.back' | translate }}
+        </button>
+        <!--
+          ⚠️ **Guardar solo existe si hay algo que guardar.** No se apaga por
+          datos que falten —eso se marca en el campo y se explica—, pero en una
+          reserva cerrada no hay ningún campo que se pueda mover: el botón
+          estaría ahí para no hacer nada, que es justo lo que esta aplicación
+          trata como un fallo. El motivo ya está arriba, así que no desaparece
+          sin explicación.
+        -->
+        @if (!wholeReservationLocked) {
+          <button type="submit" class="btn-primary" [disabled]="saving()">
+            {{ 'reservations.edit.save' | translate }}
+          </button>
+        }
+      </div>
+    </form>
+
+    <!-- Los contratos archivados se VEN. Uno que no se ve en ninguna parte es,
+         para quien usa la aplicación, uno borrado — y no perderlos era el
+         motivo entero de archivarlos. -->
+    @if (superseded.length) {
+      <div class="card">
+        <h2>{{ 'reservations.edit.supersededTitle' | translate }}</h2>
+        @for (c of superseded; track c.id) {
+          <div class="superseded-row">
+            <span class="mono">{{ c.contractNumber }}</span>
+            <span class="hint">
+              {{ 'reservations.edit.supersededOn' | translate }}
+              {{ c.supersededAt?.seconds * 1000 | date: 'dd/MM/yyyy' }}
+            </span>
+            @if (c.signedPdfUrl) {
+              <a class="btn-ghost" [href]="c.signedPdfUrl" target="_blank" rel="noopener">
+                <i class="pi pi-file-pdf"></i>
+                {{ 'contracts.actions.downloadSignedPdf' | translate }}
+              </a>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+</div>

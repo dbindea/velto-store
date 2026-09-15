@@ -178,13 +178,15 @@
       "title": "Send contract by email"
     },
     "errors": {
+      "alreadySigned": "That contract is already signed. Reissue it to change it.",
       "cancelSigningLink": "The signing link could not be cancelled.",
       "createSigningLink": "The signing link could not be created.",
       "generate": "The contract could not be generated.",
       "invalidEmail": "Enter a valid email address",
       "pdfNotReady": "The PDF is not available yet.",
       "sendFailed": "The email could not be sent.",
-      "signedPdfNotReady": "The signed contract is not available yet."
+      "signedPdfNotReady": "The signed contract is not available yet.",
+      "supersedeReasonRequired": "A reason is required to reissue the contract."
     },
     "fields": {
       "allStatuses": "All statuses",
@@ -231,7 +233,8 @@
       "expired": "Expired",
       "generated": "Generated",
       "pendingSignature": "Pending signature",
-      "signed": "Signed"
+      "signed": "Signed",
+      "superseded": "Superseded"
     },
     "subtitle": "Generate, sign and send rental contracts",
     "title": "Contracts",
@@ -251,6 +254,8 @@
       "sealed": "Yes, with a digital certificate",
       "signedAt": "Signed on",
       "subtitle": "Contract verification",
+      "supersededMessage": "This contract was signed and is genuine, but it was later reissued: a newer one replaces it. Ask the agency for the current copy.",
+      "supersededTitle": "Contract superseded",
       "unknownMessage": "There is no contract with that code. Check that you copied it in full.",
       "unknownTitle": "Not found",
       "validMessage": "This contract exists and has been signed.",
@@ -992,19 +997,77 @@
         "save": "The drivers could not be saved."
       }
     },
+    "edit": {
+      "action": "Edit",
+      "agreedPrice": "Agreed price (excl. VAT)",
+      "agreedPriceHint": "Leave it empty to go back to the tariff with its loyalty discount.",
+      "client": "Renter",
+      "contractNoticeBody": "There is a signed contract. If you change anything printed on it — the customer, the dates, the price, the deposit or the drivers — it will have to be reissued and signed again. The previous one is archived and its paper copy can still be verified.",
+      "contractNoticeTitle": "There is a signed contract",
+      "contractWarningBody": "The signed contract no longer matches what you just changed. It has to be reissued and signed again; the previous one is archived and its paper copy can still be verified.",
+      "contractWarningTitle": "This invalidates the signed contract",
+      "denied": {
+        "closed": "The reservation is closed: its record is not touched any more.",
+        "cancelled": "The reservation is cancelled.",
+        "contractSigned": "The signed contract states who is renting. Reissue it to change that.",
+        "vehicleOut": "The vehicle has been handed over: this is a fact, not a field.",
+        "returned": "The vehicle has been returned: the real date is on the report.",
+        "noPricingPermission": "Your role cannot change the price.",
+        "paymentsUnknown": "The payments could not be read, so there is no way to tell whether this can change.",
+        "depositCollected": "The deposit has already moved. Refund it or retain it to change it.",
+        "initialCollected": "The down payment has been partly collected: it is no longer an amount to agree.",
+        "notSigned": "There is no signed contract to supersede."
+      },
+      "deposit": "Deposit",
+      "fields": {
+        "client": "customer",
+        "pickupDateTime": "pick-up date",
+        "returnDateTime": "return date",
+        "agreedPrice": "price",
+        "depositAmount": "deposit",
+        "initialPaymentAmount": "down payment",
+        "additionalDrivers": "drivers"
+      },
+      "initialPayment": "Down payment to collect",
+      "initialPaymentHint": "It can be 0, meaning no down payment is asked for. Whatever you take off is added to the remainder.",
+      "noChanges": "You have not changed anything.",
+      "note": "Reservation edited",
+      "problems": {
+        "initialRequired": "Enter a down payment. Type 0 if you are not collecting one.",
+        "initialInvalid": "The down payment amount is not valid.",
+        "initialNegative": "The down payment cannot be negative.",
+        "initialOverTotal": "The down payment cannot exceed the rental total.",
+        "datesOrder": "The return must be after the pick-up."
+      },
+      "remainingPreview": "Remaining rental",
+      "save": "Save changes",
+      "saved": "Reservation updated",
+      "sectionMoney": "Price, down payment and deposit",
+      "sectionWhen": "Pick-up and return",
+      "sectionWho": "Customer and drivers",
+      "subtitle": "Anything you cannot change tells you why.",
+      "supersede": "Reissue the contract",
+      "supersedeDone": "Contract reissued. The previous one is archived.",
+      "supersededOn": "Superseded on",
+      "supersededTitle": "Previous contracts",
+      "title": "Edit reservation"
+    },
     "errors": {
       "cancel": "Could not cancel the reservation",
       "clientNameRequired": "Enter the client’s name",
+      "create": "The reservation could not be created. Please try again.",
       "createSigningLink": "Could not create the signing link",
+      "delete": "The reservation could not be deleted.",
+      "deleteSignedContract": "A reservation with a signed contract cannot be deleted. Cancel it instead: the signed contract evidences the rental and is never deleted.",
+      "editFailed": "The changes could not be saved.",
       "generateContract": "Could not generate the contract",
+      "loadFailed": "The reservation could not be loaded.",
+      "notFound": "The reservation was not found.",
       "pdfNotReady": "The PDF is not available yet",
       "processDeposit": "Could not process the deposit",
       "registerPayment": "Could not register the payment",
       "signedPdfNotReady": "The signed contract is not available yet",
-      "create": "The reservation could not be created. Please try again.",
-      "notFound": "Reservation not found.",
-      "deleteSignedContract": "A reservation with a signed contract cannot be deleted. Cancel it instead: the signed contract evidences the rental and is never deleted.",
-      "delete": "The reservation could not be deleted."
+      "vehicleNotFound": "The reservation vehicle was not found."
     },
     "fields": {
       "duration": "Duration",
@@ -1033,6 +1096,14 @@
       "placeholder": "Add a note for the team…",
       "systemUser": "System",
       "title": "Internal notes"
+    },
+    "ownerShare": {
+      "title": "Split with the owner",
+      "owner": "Owner",
+      "base": "Split base (rental excluding VAT)",
+      "forOwner": "To the owner",
+      "forVelto": "To Velto",
+      "hint": "Frozen when the booking was created: changing the percentage on the car does not move this figure. It falls due when the booking is closed, once the amounts are final. The deposit and extra charges are not shared."
     },
     "paymentStatus": {
       "paid": "Paid",
@@ -1095,15 +1166,7 @@
       "skippedByException": "Skipped by exception",
       "title": "Reservation progress"
     },
-    "title": "Reservations",
-    "ownerShare": {
-      "title": "Split with the owner",
-      "owner": "Owner",
-      "base": "Split base (rental excluding VAT)",
-      "forOwner": "To the owner",
-      "forVelto": "To Velto",
-      "hint": "Frozen when the booking was created: changing the percentage on the car does not move this figure. It falls due when the booking is closed, once the amounts are final. The deposit and extra charges are not shared."
-    }
+    "title": "Reservations"
   },
   "search": {
     "close": "Close",
