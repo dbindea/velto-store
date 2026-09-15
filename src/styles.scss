@@ -861,6 +861,61 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* =========================================================================
+   `.form-control`, por fin global
+   =========================================================================
+
+   ⚠️ **Es la CUARTA vez que este fallo muerde, y la primera que se cierra.**
+   Ya pasó con `.form-control` en un formulario, con `.btn-primary` en la
+   tarjeta de la declaración responsable, con `.checkbox-label` en la ficha de
+   vehículo — y el 14 de septiembre de 2026 con la tarjeta de devolución, cuyos
+   `input` salieron **sin caja ni borde**, como texto suelto sobre el fondo, en
+   una pantalla que mueve dinero.
+
+   Hasta hoy la regla de la casa era que cada formulario declarara la suya. Eso
+   convertía «acordarse» en el único mecanismo, y son **18 componentes** los que
+   la declaran por su cuenta: nadie se acuerda la decimonovena vez. Es la misma
+   corrección que ya se hizo con `.btn-*` y con `.checkbox-item`, por lo mismo.
+
+   ⚠️ **Y `css:audit` NO lo cazaba, que es lo que lo hacía invisible.** El guion
+   daba `.form-control` por global porque `styles.scss` declara
+   `input.form-control.is-invalid` más abajo — pero esa regla solo pinta el
+   **estado de error**, no la caja. Una clase «declarada» que no dibuja nada es
+   un falso negativo, y fue justo el que dejó pasar esto. Poniendo aquí la caja
+   de verdad, lo que afirma el auditor pasa a ser cierto.
+
+   ⚠️ **No pisa a los 18 que ya la declaran**: con la encapsulación de Angular
+   su regla es `.form-control[_ngcontent-xxx]` (0,2,0) y esta es (0,1,0). Cada
+   formulario sigue mandando sobre el suyo; lo que cambia es que uno nuevo ya no
+   sale desnudo.
+   ========================================================================= */
+.form-control {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+/* Un `textarea` crece a lo alto y nada a lo ancho: el redimensionado libre del
+   navegador lo saca de su columna. */
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* =========================================================================
    El ritmo vertical de los formularios
    =========================================================================
 
