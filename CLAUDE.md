@@ -1601,6 +1601,53 @@ del backoffice, para no duplicar la firma, el formato del pedido ni la URL del w
 error del banco; durante meses fue así y ningún cobro con tarjeta pudo completarse. El
 POST vive en `RedsysPaymentService.openGateway()`, compartido por las dos pantallas.
 
+⚠️ **Lo que se lleva a la pasarela es lo PENDIENTE, no `payment.amount`**
+(`outstandingAmount` en `redsys-charge-core.ts`). Con el total, un concepto de
+50 € del que ya se cobraron 20 € en efectivo generaba un enlace de **50 €** y el
+cliente pagaba 70 € por algo que valía 50. Y el webhook remataba poniendo
+`paidAmount = payment.amount`, así que esos 20 € reales desaparecían del
+registro: el dinero en el banco y en los libros no. Ahora **se suma** lo que
+cobró el banco, que lo dice `Ds_Amount` dentro de los parámetros firmados; sumar
+es seguro porque el webhook sale antes si el pago ya está `paid`.
+
+⚠️ **Un COBRO aceptado es `0000`–`0099`, y el webhook comprobaba
+`/^0[0-9][0-9][0-9]$/`** — que llega hasta `0999`, o sea el rango de una
+**devolución** aceptada. El comentario decía «0000-0099» y el código decía otra
+cosa. Con la regla ancha, el aviso de una devolución aceptada entraba por la rama
+de aprobado y dejaba el pago en `paid` con 0 pendiente: la devolución se deshacía
+sola en los libros con el dinero ya fuera del banco. Se comprueba además
+`Ds_TransactionType`, que viaja firmado.
+
+⚠️ **En `Ds_Merchant_Parameters` no va NINGÚN dato personal.** Ese bloque se
+serializa en base64 y se le entrega **al navegador** para que lo publique, así
+que lo lee cualquiera que tenga el enlace con un `atob()`. Llevaba
+`Ds_Merchant_Titular` con el nombre completo del arrendatario, de modo que un
+`/pay/:id` reenviado revelaba a nombre de quién está la reserva — contradiciendo
+lo que `getPaymentCheckout` se cuida de cumplir por el otro lado. La firma tapa
+la manipulación, no la lectura.
+
+⚠️ **Un cobro que ya entró no se cancela.** El resumen de la reserva descarta lo
+cancelado (`p.status !== 'cancelled'`), así que cancelar un pago cobrado borraba
+de los libros dinero que estaba en el banco. Lo que corresponde es devolverlo, o
+—si el resto no se va a cobrar— **corregir el importe** a lo que entró, que
+cierra la fila sin borrar nada.
+
+### `payment-edit.util.ts`: qué cobro se puede corregir
+
+Un importe se teclea mal, y hasta el 15 de septiembre de 2026 la única salida era
+cancelar la fila y crear otra, dejando dos apuntes donde había uno.
+
+⚠️ **Corregir no es cobrar ni devolver:** cambia lo que se pide y **no toca
+`paidAmount`**. Con 20 € cobrados de 50 corregidos a 35, el pago queda `partial`
+con 15 € pendientes. Por eso no puede quedar por debajo de lo ya cobrado — eso
+sería un pendiente negativo, y si hay que devolver dinero, eso es una devolución.
+
+⚠️ **La señal, el resto y la fianza NO se corrigen desde el pago.** Son un
+reparto del precio del alquiler: bajar la señal en la fila dejaría la reserva
+pidiendo 50 € y el cobro 30, sin que nada las volviera a cuadrar. Eso se toca en
+la edición de la reserva, que mueve las dos a la vez. La pantalla lo dice y
+ofrece el salto.
+
 ⚠️ **El pedido (`Ds_Merchant_Order`) NO se regenera en cada llamada.** Es la referencia
 con la que el webhook encuentra el pago, y esta misma función la invoca la pantalla que
 el cliente **refresca para ver si su pago ya consta**. Regenerándolo, el aviso de Redsys

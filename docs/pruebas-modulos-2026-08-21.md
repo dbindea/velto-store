@@ -1947,3 +1947,50 @@ auténtico **y** que hay uno posterior.
 - **Una Cloud Function editada no es una desplegada.** Probar un cambio de
   backend contra desarrollo sin desplegarlo enseña el comportamiento viejo con el
   código nuevo delante.
+
+---
+
+## C-38 · Repaso del cobro con tarjeta — 15 de septiembre de 2026
+
+Dorel pidió corregir el importe de un cobro manual, poder generar el enlace desde
+la ficha del pago, y «repasa un poco este flujo con pasarela para ver si
+encuentras más fallos». Salieron cuatro, todos con dinero y todos anteriores.
+
+| Comprobado | Resultado |
+|---|---|
+| Corregir un cobro libre 5,00 → 3,50 € | Importe y concepto cambiados; `paidAmount` intacto |
+| Cobrar con tarjeta / copiar enlace en la ficha | Salen, con el importe **pendiente** al lado |
+| La señal de una reserva | Bloqueada con su motivo + «Abrir la reserva» |
+| Señal de 30 € con 20 € ya cobrados → `/pay/…` | **10,00 €**, y `Ds_Merchant_Amount` firmado = `1000` |
+| El `formData` público | **Sin `Ds_Merchant_Titular`**: ya no lleva el nombre del cliente |
+| «Ver reserva» en un cobro libre | Ya no sale: no hay reserva a la que ir |
+
+**Los cuatro fallos:**
+
+1. **El enlace cobraba `payment.amount`, no lo pendiente.** Un concepto de 50 €
+   con 20 € ya cobrados en efectivo generaba un enlace de 50: el cliente pagaba
+   70 € por algo que valía 50.
+2. **El webhook ponía `paidAmount = payment.amount`**, así que esos 20 € reales
+   desaparecían del registro — el dinero en el banco y en los libros no. Ahora se
+   **suma** lo que cobró el banco (`Ds_Amount`, dentro de los parámetros
+   firmados).
+3. **`isApproved` era `/^0[0-9][0-9][0-9]$/`**, que llega hasta `0999`: el rango
+   de una **devolución** aceptada. El aviso de una devolución se leía como cobro
+   aprobado y la deshacía en los libros con el dinero ya fuera del banco. El
+   comentario de al lado decía «0000-0099» y el código decía otra cosa — y desde
+   que la aplicación devuelve por su cuenta (C-36) había dejado de ser teórico.
+4. **`Ds_Merchant_Titular` llevaba el nombre completo del arrendatario** en el
+   `formData` que se le entrega al navegador: un `/pay/:id` reenviado se descifra
+   con `atob()`. Contradecía lo que `getPaymentCheckout` cumple por el otro lado
+   —devolver importe, moneda, concepto y marca «y nada más»—. La firma tapa la
+   manipulación, no la lectura.
+
+**Y dos de la ficha del pago:** `cancelPayment()` no miraba el estado, y el
+resumen descarta lo cancelado, así que cancelar un cobro que entró borraba dinero
+de las cuentas; y «Ver reserva» salía en un cobro libre, que no tiene reserva.
+
+**Lo que no falló y conviene anotar:** los tres primeros son la misma pareja de
+errores vista desde dos sitios —qué se le pide al banco y qué se apunta cuando
+contesta— y ninguno da error. Dan una cifra creíble y equivocada, que es la peor
+clase de fallo con dinero. Los cubre ahora `redsys-charge-core.ts` con 28 tests,
+igual que `redsys-refund-core.ts` cubre la devolución.
