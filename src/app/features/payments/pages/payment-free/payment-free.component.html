@@ -68,6 +68,7 @@
               class="form-control"
               name="payerName"
               [(ngModel)]="form.payerName"
+              (input)="onPayerNameInput($event)"
             />
           </label>
           <label class="field">

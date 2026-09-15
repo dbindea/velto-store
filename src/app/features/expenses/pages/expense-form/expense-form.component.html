@@ -154,7 +154,7 @@
         <div class="field-row">
           <div class="field">
             <label for="supplier">{{ 'expenses.fields.supplier' | translate }}</label>
-            <input id="supplier" name="supplier" type="text" class="form-control" [(ngModel)]="supplier" />
+            <input id="supplier" name="supplier" type="text" class="form-control" [(ngModel)]="supplier" (input)="onSupplierInput($event)" />
           </div>
           <div class="field">
             <label for="invoice">{{ 'expenses.fields.invoiceNumber' | translate }}</label>
