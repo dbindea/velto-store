@@ -27,6 +27,7 @@ import {
   PAYMENT_TYPE_LABELS
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { amountProblem, canEditAmount } from '@shared/utils/payment-edit.util';
 import { reservationStatusAfterPayment } from '@shared/utils/reservation-workflow.util';
 import {
   applySettlement,
@@ -499,26 +500,54 @@ export class PaymentService {
   }
 
   /**
-   * Update a payment.
+   * Corrige el importe y el concepto de un cobro que aún no se ha cobrado del
+   * todo. Es para el importe mal tecleado: sin esto, la única salida era
+   * cancelar la fila y crear otra, dejando dos apuntes donde había uno.
+   *
+   * Sustituye a un `updatePayment(id, data: Partial<Payment>)` que existía
+   * desde el principio, **que no llamaba nadie** y que aceptaba cualquier campo
+   * del documento: habría dejado poner `status: 'paid'` a mano sobre un cobro
+   * que nunca entró, o mover el `paidAmount` sin que hubiera pasado dinero.
+   *
+   * ⚠️ **No toca `paidAmount` ni `paidAt`.** Corregir lo que se pide no es
+   * cobrar: lo que ya entró se queda como está, y el estado se recalcula a
+   * partir de los dos. Con 20 € cobrados de 50 corregidos a 35, el pago queda
+   * `partial` con 15 € pendientes.
    */
-  async updatePayment(id: string, data: Partial<Payment>): Promise<void> {
+  async editPendingPayment(
+    id: string,
+    changes: { amount: number; concept?: string; notes?: string }
+  ): Promise<void> {
     const docRef = doc(this.firestore, `payments/${id}`);
-    const update: any = {
-      ...data,
-      updatedAt: { seconds: Date.now() / 1000 }
-    };
-    if (data.amount !== undefined && data.paidAmount !== undefined) {
-      update.pendingAmount = calculatePendingAmount(data.amount, data.paidAmount);
-      update.status = calculatePaymentStatus(data.amount, data.paidAmount);
-    }
-    await updateDoc(docRef, this.cleanData(update));
-    // Recalc summary if the payment is linked to a reservation.
     const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const payment = snap.data() as Payment;
-      if (payment.reservationId) {
-        await this.recalculateReservationPaymentSummary(payment.reservationId);
-      }
+    if (!snap.exists()) throw new Error('payments.edit.denied.notFound');
+    const payment = { id: snap.id, ...snap.data() } as Payment;
+
+    // Defensa en profundidad: la pantalla ya lo impide, y esto rechaza la
+    // llamada venga por donde venga.
+    const decision = canEditAmount(payment);
+    if (!decision.ok) throw new Error(decision.reason);
+
+    const problema = amountProblem(changes.amount, payment);
+    if (problema) throw new Error(problema);
+
+    const importe = roundMoney(Number(changes.amount));
+    const cobrado = roundMoney(Number(payment.paidAmount) || 0);
+
+    await updateDoc(
+      docRef,
+      this.cleanData({
+        amount: importe,
+        pendingAmount: calculatePendingAmount(importe, cobrado),
+        status: calculatePaymentStatus(importe, cobrado),
+        concept: changes.concept?.trim() || payment.concept,
+        notes: changes.notes?.trim() || payment.notes,
+        updatedAt: { seconds: Date.now() / 1000 }
+      })
+    );
+
+    if (payment.reservationId) {
+      await this.recalculateReservationPaymentSummary(payment.reservationId);
     }
   }
 
@@ -584,6 +613,25 @@ export class PaymentService {
     const snap = await getDoc(docRef);
     if (!snap.exists()) return;
     const payment = snap.data() as Payment;
+
+    /**
+     * ⚠️ **Un cobro que ya entró no se cancela, y esto NO lo comprobaba.**
+     * El resumen de la reserva descarta lo cancelado
+     * (`payments.filter(p => p.status !== 'cancelled')`), así que cancelar un
+     * pago cobrado borraba de los libros dinero que estaba en el banco: la
+     * reserva pasaba a decir que ese cobro no ocurrió. La pantalla escondía el
+     * botón —`canCancel()` solo deja `pending` y `partial`—, pero eso es la
+     * interfaz, no la seguridad.
+     *
+     * Lo que corresponde con dinero ya cobrado es devolverlo, que deja rastro
+     * de las dos cosas: que entró y que salió.
+     */
+    if (payment.status === 'paid' || payment.status === 'refunded') {
+      throw new Error('payments.errors.cancelCollected');
+    }
+    if ((Number(payment.paidAmount) || 0) > 0) {
+      throw new Error('payments.errors.cancelCollected');
+    }
     await updateDoc(docRef, this.cleanData({
       status: 'cancelled',
       updatedAt: { seconds: Date.now() / 1000 }

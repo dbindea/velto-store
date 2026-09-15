@@ -23,6 +23,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { NotificationService } from '@core/notifications/notification.service';
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
+import { amountProblem, canEditAmount } from '@shared/utils/payment-edit.util';
 import {
   canRefund,
   refundProblem,
@@ -279,8 +280,128 @@ export class PaymentDetailComponent implements OnInit {
     return this.payment?.status === 'pending' || this.payment?.status === 'partial' || this.payment?.status === 'failed';
   }
 
+  /**
+   * ⚠️ **Con algo ya cobrado, NO.** Dejaba cancelar un pago `partial`, y el
+   * resumen de la reserva descarta lo cancelado: los 20 € que sí entraron
+   * desaparecían de los libros. El servicio ahora lo rechaza, así que dejar el
+   * botón encendido sería un botón que no hace nada.
+   *
+   * Lo que toca cuando el resto no se va a cobrar es **corregir el importe** a
+   * lo que entró, que cierra la fila sin borrar dinero.
+   */
   canCancel(): boolean {
-    return this.payment?.status === 'pending' || this.payment?.status === 'partial';
+    if (this.payment?.status !== 'pending' && this.payment?.status !== 'partial') return false;
+    return (Number(this.payment?.paidAmount) || 0) === 0;
+  }
+
+  // === Corregir el importe ===
+
+  showAmountForm = false;
+  savingAmount = false;
+  amountDraft: number | null = null;
+  conceptDraft = '';
+
+  /** La regla vive en el util; aquí solo se pinta lo que conteste. */
+  get amountEditable(): boolean {
+    return canEditAmount(this.payment).ok;
+  }
+
+  get amountLockReason(): string {
+    const d = canEditAmount(this.payment);
+    return d.ok ? '' : d.reason;
+  }
+
+  get amountDraftProblem(): string | null {
+    if (!this.payment) return null;
+    return amountProblem(this.amountDraft, this.payment);
+  }
+
+  openAmountForm(): void {
+    if (!this.payment) return;
+    this.amountDraft = this.payment.amount;
+    this.conceptDraft = this.payment.concept || '';
+    this.showAmountForm = true;
+  }
+
+  closeAmountForm(): void {
+    this.showAmountForm = false;
+  }
+
+  async saveAmount(): Promise<void> {
+    if (!this.payment?.id || this.amountDraftProblem) return;
+    this.savingAmount = true;
+    try {
+      await this.paymentService.editPendingPayment(this.payment.id, {
+        amount: Number(this.amountDraft),
+        concept: this.conceptDraft
+      });
+      this.showAmountForm = false;
+      this.notifications.success('payments.edit.saved');
+    } catch (error: unknown) {
+      const clave = String((error as Error)?.message || '');
+      this.notifications.error(clave.startsWith('payments.') ? clave : 'payments.edit.failed');
+    } finally {
+      this.savingAmount = false;
+    }
+  }
+
+  // === Enlace de pago y cobro con tarjeta ===
+  //
+  // ⚠️ **Estaban solo en la ficha de la RESERVA.** Quien abre Pagos para
+  // perseguir un cobro pendiente —que es para lo que se abre esa pantalla—
+  // tenía que saltar a la reserva para mandarle el enlace al cliente, y un
+  // cobro libre no tiene reserva a la que saltar: ahí no había forma ninguna.
+
+  chargingCard = false;
+  copied = false;
+
+  /** Lo que queda por cobrar; es lo que se le va a pedir al cliente. */
+  get outstanding(): number {
+    if (!this.payment) return 0;
+    const pendiente = Number(this.payment.pendingAmount);
+    if (Number.isFinite(pendiente)) return Math.max(0, pendiente);
+    return Math.max(0, (Number(this.payment.amount) || 0) - (Number(this.payment.paidAmount) || 0));
+  }
+
+  get canCharge(): boolean {
+    if (!this.payment) return false;
+    if (this.payment.status === 'cancelled' || this.payment.status === 'paid') return false;
+    // Una devolución o una retención no se cobran con tarjeta: van al revés.
+    if (this.payment.direction !== 'income' && this.payment.direction !== 'charge') return false;
+    return this.outstanding > 0;
+  }
+
+  async chargeWithCard(): Promise<void> {
+    if (!this.payment?.id || this.chargingCard) return;
+    this.chargingCard = true;
+    try {
+      // `openGateway` recibe la respuesta entera: dentro va el POST que Redsys
+      // exige. Abrirla con un GET lleva a una pantalla de error del banco.
+      const link = await this.redsys.createRedsysPaymentLink(this.payment.id);
+      this.redsys.openGateway(link);
+    } catch (error: unknown) {
+      const clave = String((error as Error)?.message || '');
+      this.notifications.error(
+        clave.startsWith('payments.') ? clave : 'payments.errors.redsysNotConfigured'
+      );
+    } finally {
+      this.chargingCard = false;
+    }
+  }
+
+  async copyPaymentLink(): Promise<void> {
+    if (!this.payment?.id) return;
+    const link = `${window.location.origin}/pay/${this.payment.id}`;
+    const ok = await navigator.clipboard
+      .writeText(link)
+      .then(() => true)
+      .catch(() => false);
+    if (ok) {
+      this.copied = true;
+      setTimeout(() => (this.copied = false), 2000);
+    } else {
+      this.notifications.error('payments.errors.copyFailed');
+    }
   }
 
   // === Recibo de cobro ===

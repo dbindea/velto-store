@@ -658,6 +658,9 @@
       "markAsPaid": "Marchează ca plătit",
       "viewReservation": "Vezi rezervare"
     },
+    "charge": {
+      "hint": "I se va încasa"
+    },
     "checkout": {
       "notFoundMessage": "Acest link de plată nu există sau nu mai este disponibil. Solicită unul nou.",
       "notFoundTitle": "Link invalid",
@@ -671,18 +674,48 @@
       "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
       "unavailableTitle": "Plată indisponibilă"
     },
+    "confirm": {
+      "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
+      "cancelTitle": "Anulează încasarea"
+    },
     "deposit": {
       "refundFull": "Restituie total",
       "retain": "Reține",
       "available": "Disponibil"
     },
+    "edit": {
+      "title": "Corectează suma",
+      "action": "Corectează suma",
+      "amount": "Sumă",
+      "concept": "Concept",
+      "alreadyCollected": "Deja încasat:",
+      "saved": "Sumă corectată",
+      "failed": "Suma nu a putut fi corectată.",
+      "goToReservation": "Deschide rezervarea",
+      "denied": {
+        "notFound": "Încasarea nu a fost găsită.",
+        "alreadyPaid": "Această încasare a intrat deja: suma nu se rescrie. Dacă trebuie returnați bani, returnează-i.",
+        "cancelled": "Această încasare este anulată.",
+        "refunded": "Această încasare a fost returnată.",
+        "notACharge": "Aceasta nu este o încasare: merge în sens invers și se decide în rezervare.",
+        "governedByReservation": "Avansul, restul și garanția sunt împărțite de rezervare. Schimbate aici, rezervarea ar cere una și încasarea alta."
+      },
+      "problems": {
+        "required": "Scrie suma.",
+        "invalid": "Suma nu este validă.",
+        "positive": "Suma trebuie să fie mai mare decât 0.",
+        "belowCollected": "Nu poate coborî sub ce s-a încasat deja."
+      }
+    },
     "errors": {
-      "invalidAmount": "Suma nu este validă",
+      "cancelCollected": "O încasare care a intrat deja nu poate fi anulată: ar dispărea din evidențe. Corectează suma sau returneaz-o.",
       "cancelFailed": "Încasarea nu a putut fi anulată.",
+      "copyFailed": "Linkul nu a putut fi copiat.",
+      "invalidAmount": "Suma nu este validă",
       "loadFailed": "Încasările nu au putut fi încărcate.",
       "markPaidFailed": "Încasarea nu a putut fi marcată ca plătită.",
-      "redsysNotConfigured": "Redsys nu este configurat în acest mediu",
-      "redsysNoForm": "Redsys nu a returnat datele formularului"
+      "redsysNoForm": "Redsys nu a returnat datele formularului",
+      "redsysNotConfigured": "Redsys nu este configurat în acest mediu"
     },
     "fields": {
       "amount": "Sumă",
@@ -737,6 +770,10 @@
       "physicalPos": "POS fizic",
       "redsys": "Redsys (online)"
     },
+    "problems": {
+      "depositAmountRequired": "Introdu o sumă mai mare decât zero.",
+      "depositExceedsAvailable": "Nu poți mișca mai multă garanție decât a rămas. Verifică ce s-a încasat, minus ce s-a returnat și reținut deja."
+    },
     "receipt": {
       "action": "Chitanță",
       "confirm": "Se va emite o chitanță pentru suma deja încasată:",
@@ -764,6 +801,35 @@
       "order": "Comandă",
       "responseCode": "Cod răspuns",
       "title": "Date Redsys"
+    },
+    "refund": {
+      "title": "Restituie pe card",
+      "hint": "Restituie banii pe același card cu care s-a încasat, prin Redsys. Nu trebuie să intri în panoul băncii.",
+      "start": "Restituie",
+      "amount": "Suma de restituit",
+      "max": "Cel mult",
+      "reason": "Motiv (opțional)",
+      "warning": "Aceasta scoate bani din contul firmei cu adevărat. O restituire acceptată de bancă nu se poate anula de aici: ar fi nevoie de un telefon la comerciant.",
+      "confirmTitle": "Restituie pe card",
+      "confirmMessage": "Sigur? Banii ies din cont și această operațiune nu se poate anula din aplicație.",
+      "confirmAction": "Da, restituie",
+      "done": "Restituire acceptată de bancă",
+      "refunded": "Restituit",
+      "lastError": "Ultima încercare respinsă",
+      "errors": {
+        "notFound": "Acea încasare nu a fost găsită",
+        "notCard": "Acea încasare nu s-a făcut cu cardul prin gateway: restituie-o cum s-a încasat",
+        "notCollected": "Acea încasare nu a intrat, deci nu este nimic de restituit",
+        "noOrder": "Acea încasare nu are comanda Redsys, deci banca nu o poate identifica",
+        "alreadyRefunded": "Acea încasare este deja restituită integral",
+        "amountRequired": "Introdu suma de restituit",
+        "amountPositive": "Suma trebuie să fie mai mare decât zero",
+        "overRefund": "Nu se poate restitui mai mult decât s-a încasat",
+        "unauthorized": "Rolul tău nu permite restituiri",
+        "notConfigured": "Redsys nu este configurat în acest mediu",
+        "rejected": "Banca a respins restituirea. Verifică extrasul înainte de a încerca din nou",
+        "failed": "Restituirea nu a putut fi finalizată. Verifică extrasul înainte de a încerca din nou"
+      }
     },
     "registerPayment": "Înregistrează plată",
     "status": {
@@ -800,43 +866,6 @@
       "refuelPenalty": "Penalizare realimentare",
       "remainingPayment": "Rest închiriere",
       "rentalPayment": "Plată integrală"
-    },
-    "confirm": {
-      "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
-      "cancelTitle": "Anulează încasarea"
-    },
-    "problems": {
-      "depositAmountRequired": "Introdu o sumă mai mare decât zero.",
-      "depositExceedsAvailable": "Nu poți mișca mai multă garanție decât a rămas. Verifică ce s-a încasat, minus ce s-a returnat și reținut deja."
-    },
-    "refund": {
-      "title": "Restituie pe card",
-      "hint": "Restituie banii pe același card cu care s-a încasat, prin Redsys. Nu trebuie să intri în panoul băncii.",
-      "start": "Restituie",
-      "amount": "Suma de restituit",
-      "max": "Cel mult",
-      "reason": "Motiv (opțional)",
-      "warning": "Aceasta scoate bani din contul firmei cu adevărat. O restituire acceptată de bancă nu se poate anula de aici: ar fi nevoie de un telefon la comerciant.",
-      "confirmTitle": "Restituie pe card",
-      "confirmMessage": "Sigur? Banii ies din cont și această operațiune nu se poate anula din aplicație.",
-      "confirmAction": "Da, restituie",
-      "done": "Restituire acceptată de bancă",
-      "refunded": "Restituit",
-      "lastError": "Ultima încercare respinsă",
-      "errors": {
-        "notFound": "Acea încasare nu a fost găsită",
-        "notCard": "Acea încasare nu s-a făcut cu cardul prin gateway: restituie-o cum s-a încasat",
-        "notCollected": "Acea încasare nu a intrat, deci nu este nimic de restituit",
-        "noOrder": "Acea încasare nu are comanda Redsys, deci banca nu o poate identifica",
-        "alreadyRefunded": "Acea încasare este deja restituită integral",
-        "amountRequired": "Introdu suma de restituit",
-        "amountPositive": "Suma trebuie să fie mai mare decât zero",
-        "overRefund": "Nu se poate restitui mai mult decât s-a încasat",
-        "unauthorized": "Rolul tău nu permite restituiri",
-        "notConfigured": "Redsys nu este configurat în acest mediu",
-        "rejected": "Banca a respins restituirea. Verifică extrasul înainte de a încerca din nou",
-        "failed": "Restituirea nu a putut fi finalizată. Verifică extrasul înainte de a încerca din nou"
-      }
     }
   },
   "permissions": {

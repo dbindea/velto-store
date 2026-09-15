@@ -305,14 +305,140 @@
           </div>
         </div>
       }
+
+      <!--
+        Cobrar con tarjeta y mandar el enlace.
+
+        ⚠️ **Estaban solo en la ficha de la RESERVA.** Esta pantalla es a la que
+        se entra para perseguir un cobro pendiente, y había que saltar a la
+        reserva para mandarle el enlace al cliente — y un **cobro libre** no tiene
+        reserva a la que saltar, así que ahí no había forma ninguna.
+
+        El importe que se enseña es lo PENDIENTE, que es lo que se le va a cargar.
+      -->
+      @if (canCharge) {
+        <div class="detail-card">
+          <div class="card-header">
+            <i class="pi pi-credit-card"></i>
+            <span>{{ 'payments.actions.chargeCard' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <p class="hint">
+              {{ 'payments.charge.hint' | translate }}
+              <strong>{{ outstanding | number: '1.2-2' }} €</strong>
+            </p>
+            <div class="charge-actions">
+              <button
+                type="button"
+                class="btn-primary"
+                [disabled]="chargingCard"
+                (click)="chargeWithCard()"
+              >
+                @if (chargingCard) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                  <i class="pi pi-credit-card"></i>
+                }
+                {{ 'payments.actions.chargeCard' | translate }}
+              </button>
+              <!-- Para cobrar SIN el cliente delante: se le manda el enlace y
+                   paga desde su móvil cuando pueda. -->
+              <button type="button" class="btn-secondary" (click)="copyPaymentLink()">
+                <i class="pi pi-link"></i>
+                {{ (copied ? 'contracts.messages.linkCopied' : 'payments.actions.copyPaymentLink') | translate }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!--
+        Corregir el importe. Es para el que se teclea mal: sin esto había que
+        cancelar la fila y crear otra, dejando dos apuntes donde había uno.
+      -->
+      <div class="detail-card">
+        <div class="card-header">
+          <i class="pi pi-pencil"></i>
+          <span>{{ 'payments.edit.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          @if (!amountEditable) {
+            <p class="hint">{{ amountLockReason | translate }}</p>
+            <!-- Y se dice DÓNDE se toca, no solo que aquí no. Los conceptos del
+                 alquiler los gobierna la reserva, que mueve señal y resto a la vez. -->
+            @if (amountLockReason === 'payments.edit.denied.governedByReservation' && payment.reservationId) {
+              <button class="btn-secondary" type="button" (click)="viewReservation()">
+                <i class="pi pi-external-link"></i>
+                {{ 'payments.edit.goToReservation' | translate }}
+              </button>
+            }
+          } @else if (!showAmountForm) {
+            <button class="btn-secondary" type="button" (click)="openAmountForm()">
+              <i class="pi pi-pencil"></i>
+              {{ 'payments.edit.action' | translate }}
+            </button>
+          } @else {
+            <div class="form-group">
+              <label for="newAmount" class="label required">
+                {{ 'payments.edit.amount' | translate }}
+              </label>
+              <input
+                id="newAmount"
+                name="newAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                class="form-control"
+                [(ngModel)]="amountDraft"
+                [class.is-invalid]="!!amountDraftProblem"
+              />
+              <app-form-error [problems]="amountDraftProblem" [show]="true" />
+              @if (payment.paidAmount > 0) {
+                <div class="field-hint">
+                  {{ 'payments.edit.alreadyCollected' | translate }}
+                  <strong>{{ payment.paidAmount | number: '1.2-2' }} €</strong>
+                </div>
+              }
+            </div>
+            <div class="form-group">
+              <label for="newConcept" class="label">{{ 'payments.edit.concept' | translate }}</label>
+              <input
+                id="newConcept"
+                name="newConcept"
+                type="text"
+                class="form-control"
+                [(ngModel)]="conceptDraft"
+              />
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" (click)="closeAmountForm()">
+                {{ 'common.cancel' | translate }}
+              </button>
+              <button
+                type="button"
+                class="btn-primary"
+                [disabled]="savingAmount"
+                (click)="saveAmount()"
+              >
+                {{ 'common.save' | translate }}
+              </button>
+            </div>
+          }
+        </div>
+      </div>
     </div>
 
     <!-- Actions -->
     <div class="page-actions">
-      <button class="btn-secondary" type="button" (click)="viewReservation()">
-        <i class="pi pi-external-link"></i>
-        {{ 'payments.actions.viewReservation' | translate }}
-      </button>
+      <!-- ⚠️ Un **cobro libre** no tiene reserva a la que ir, y este botón salía
+           igual: se pulsaba y no pasaba nada, porque `viewReservation()`
+           comprueba el id y se calla. -->
+      @if (payment.reservationId) {
+        <button class="btn-secondary" type="button" (click)="viewReservation()">
+          <i class="pi pi-external-link"></i>
+          {{ 'payments.actions.viewReservation' | translate }}
+        </button>
+      }
       @if (canMarkAsPaid()) {
         <button class="btn-primary" type="button" [disabled]="marking" (click)="markAsPaid()">
           @if (marking) {

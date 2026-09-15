@@ -48,6 +48,12 @@ import { defineSecret } from 'firebase-functions/params';
 import { FUNCTIONS_REGION } from './global-options';
 import { firestore } from './admin-guard';
 import { companyConfig } from './company-config';
+import {
+  appliedPaidAmount,
+  chargeAccepted,
+  isRefundNotification,
+  outstandingAmount
+} from './redsys-charge-core';
 import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 // ----- Secrets / config -----
@@ -134,7 +140,12 @@ async function prepareRedsysCheckout(
    * un pedido ya procesado con SIS0051.
    */
   const order = resolveOrder(payment.redsys);
-  const amount = Math.round((payment.amount || 0) * 100).toString();
+  /**
+   * ⚠️ **Lo PENDIENTE, no el total.** Ver `outstandingAmount`: con el total, un
+   * concepto de 50 € del que ya se cobraron 20 € en efectivo generaba un enlace
+   * de 50 € y el cliente pagaba 70 € por algo que valía 50.
+   */
+  const amount = Math.round(outstandingAmount(payment) * 100).toString();
 
   const paymentUrl =
     ENVIRONMENT === 'live'
@@ -174,7 +185,24 @@ async function prepareRedsysCheckout(
     Ds_Merchant_UrlOK: process.env.REDSYS_URL_OK || returnUrl,
     Ds_Merchant_UrlKO: process.env.REDSYS_URL_KO || returnUrl,
     Ds_Merchant_ProductDescription: (payment.concept || 'Cobro Velto').slice(0, 125),
-    Ds_Merchant_Titular: (payment.payerName || payment.clientSnapshot?.fullName || '').slice(0, 60),
+    /**
+     * ⚠️ **El nombre del cliente NO viaja aquí.**
+     *
+     * Este bloque se serializa en base64 y se le entrega **al navegador** para
+     * que lo publique en el formulario, así que todo lo que lleve dentro lo
+     * puede leer cualquiera que tenga el enlace: `atob()` y ya está. Iba
+     * `Ds_Merchant_Titular` con el nombre completo del arrendatario, de modo que
+     * un `/pay/:id` reenviado —a un grupo de WhatsApp, a quien sea— revelaba a
+     * nombre de quién está la reserva.
+     *
+     * Y contradecía lo que `getPaymentCheckout` se cuida de cumplir por el otro
+     * lado: devuelve importe, moneda, concepto y marca «y nada más» justamente
+     * para que un enlace reenviado no diga con quién trabajamos. La firma tapaba
+     * el agujero de la manipulación, no el de la lectura.
+     *
+     * El campo es opcional para Redsys: solo se enseña en la pasarela, y el
+     * titular real lo pone la tarjeta.
+     */
     Ds_Merchant_ConsumerLanguage: '001'
   };
 
@@ -293,7 +321,11 @@ export const getPaymentCheckout = functions.https.onCall(
 
     const company = companyConfig();
     const base = {
-      amount: Number(payment.amount) || 0,
+      // ⚠️ Lo que le queda por pagar, no el total del concepto: es el importe
+      // que se le va a cargar, y la pantalla que lo enseña tiene que decir esa
+      // cifra y no otra. Con el total, un cliente que ya dejó 20 € a cuenta veía
+      // «50,00 €» y pagaba 50 más.
+      amount: outstandingAmount(payment),
       currency: payment.currency || 'EUR',
       concept: String(payment.concept || ''),
       brandName: company.brandName
@@ -440,10 +472,22 @@ export const redsysNotificationWebhook = functions.https.onRequest(
 
     const responseCode: string = parsed.Ds_Response || '';
     const authCode: string = parsed.Ds_AuthorisationCode || '';
-    // Redsys response codes 0000-0099 = approved.  Anything else =
-    // declined / error.  The codes are 4 digits; the first 2 are
-    // the response family, the last 2 the sub-code.
-    const isApproved = /^0[0-9][0-9][0-9]$/.test(responseCode);
+    /**
+     * ⚠️ **Un COBRO aceptado es `0000`–`0099`, y esto era `/^0[0-9][0-9][0-9]$/`**
+     * — que llega hasta `0999`, o sea el rango de una **devolución** aceptada.
+     * El comentario decía «0000-0099» y el código decía otra cosa.
+     *
+     * Con la regla ancha, el aviso de una devolución aceptada entraba por la
+     * rama de aprobado y dejaba el pago en `paid` con 0 pendiente: la
+     * devolución se deshacía sola en los libros con el dinero ya fuera del
+     * banco. No era teórico desde que la aplicación devuelve por su cuenta.
+     *
+     * Se comprueba además el **tipo de operación**, que viaja firmado en el
+     * aviso: son dos hechos distintos —qué operación era y cómo fue— y con los
+     * dos no hace falta acertar a la primera con el rango.
+     */
+    const esDevolucion = isRefundNotification(parsed);
+    const isApproved = !esDevolucion && chargeAccepted(responseCode);
 
     const now = admin.firestore.FieldValue.serverTimestamp();
     const update: any = {
@@ -454,10 +498,31 @@ export const redsysNotificationWebhook = functions.https.onRequest(
       updatedAt: now
     };
     if (isApproved) {
-      update.status = 'paid';
-      update.paidAmount = payment.amount;
-      update.pendingAmount = 0;
+      /**
+       * ⚠️ **Se SUMA lo que cobró el banco, no se pisa con el total.** Antes
+       * era `paidAmount = payment.amount`, así que un concepto de 50 € con 20 €
+       * ya cobrados en efectivo quedaba con `paidAmount: 50` después de cobrar
+       * los 30 que faltaban: entraban 50 en total y el registro decía 50, sí,
+       * pero por casualidad — con el enlace cobrando el total (el otro fallo de
+       * esta pareja) entraban 70 y seguía diciendo 50. Veinte euros reales
+       * fuera de los libros.
+       *
+       * El importe lo pone `Ds_Amount`, que viaja dentro de los parámetros
+       * firmados: es lo que de verdad se cargó y no se puede falsear.
+       */
+      const cobrado = appliedPaidAmount(payment, parsed.Ds_Amount);
+      const total = Number(payment.amount) || 0;
+      update.paidAmount = cobrado;
+      update.pendingAmount = Math.max(0, Math.round((total - cobrado) * 100) / 100);
+      // Un cobro parcial no cierra el pago: queda `partial` y se puede seguir
+      // cobrando el resto. Marcarlo `paid` daría por saldado lo que no lo está.
+      update.status = cobrado + 0.005 >= total ? 'paid' : 'partial';
       update.paidAt = now;
+    } else if (esDevolucion) {
+      // El aviso de una devolución no dice nada sobre el cobro: se anota —ya
+      // está en `update`— y se sale sin tocar el estado. Lo que gobierna una
+      // devolución es `refundRedsysPayment`, que escribe `refundedAmount`.
+      console.info('Aviso de devolución: se anota y no se toca el estado', { order });
     } else if (order === payment.redsys?.order) {
       update.status = 'failed';
     }

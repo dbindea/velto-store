@@ -658,6 +658,9 @@
       "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
     },
+    "charge": {
+      "hint": "Se le cobrarán"
+    },
     "checkout": {
       "notFoundMessage": "Este enlace de pago no existe o ya no está disponible. Pide uno nuevo.",
       "notFoundTitle": "Enlace no válido",
@@ -671,18 +674,48 @@
       "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
       "unavailableTitle": "Pago no disponible"
     },
+    "confirm": {
+      "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
+      "cancelTitle": "Cancelar el cobro"
+    },
     "deposit": {
       "refundFull": "Devolver total",
       "retain": "Retener",
       "available": "Disponible"
     },
+    "edit": {
+      "title": "Corregir el importe",
+      "action": "Corregir importe",
+      "amount": "Importe",
+      "concept": "Concepto",
+      "alreadyCollected": "Ya cobrado:",
+      "saved": "Importe corregido",
+      "failed": "No se ha podido corregir el importe.",
+      "goToReservation": "Abrir la reserva",
+      "denied": {
+        "notFound": "No se ha encontrado el cobro.",
+        "alreadyPaid": "Este cobro ya entró: su importe no se reescribe. Si hay que devolver dinero, devuélvelo.",
+        "cancelled": "Este cobro está cancelado.",
+        "refunded": "Este cobro está devuelto.",
+        "notACharge": "Esto no es un cobro: va en la otra dirección y se decide en la reserva.",
+        "governedByReservation": "La señal, el resto y la fianza los reparte la reserva. Cambiándolos aquí, la reserva pediría una cosa y el cobro otra."
+      },
+      "problems": {
+        "required": "Escribe el importe.",
+        "invalid": "El importe no es válido.",
+        "positive": "El importe tiene que ser mayor que 0.",
+        "belowCollected": "No puede quedar por debajo de lo ya cobrado."
+      }
+    },
     "errors": {
+      "cancelCollected": "No se puede cancelar un cobro que ya entró: desaparecería de las cuentas. Corrige el importe o devuélvelo.",
       "cancelFailed": "No se ha podido anular el cobro.",
+      "copyFailed": "No se ha podido copiar el enlace.",
       "invalidAmount": "El importe no es válido",
       "loadFailed": "No se han podido cargar los cobros.",
       "markPaidFailed": "No se ha podido marcar el cobro como pagado.",
-      "redsysNotConfigured": "Redsys no está configurado en este entorno",
-      "redsysNoForm": "Redsys no ha devuelto los datos del formulario"
+      "redsysNoForm": "Redsys no ha devuelto los datos del formulario",
+      "redsysNotConfigured": "Redsys no está configurado en este entorno"
     },
     "fields": {
       "amount": "Importe",
@@ -737,6 +770,10 @@
       "physicalPos": "TPV físico",
       "redsys": "Redsys (online)"
     },
+    "problems": {
+      "depositAmountRequired": "Pon un importe mayor que cero.",
+      "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
+    },
     "receipt": {
       "action": "Recibo",
       "confirm": "Se emitirá un recibo por lo ya cobrado:",
@@ -764,6 +801,35 @@
       "order": "Orden",
       "responseCode": "Código respuesta",
       "title": "Datos Redsys"
+    },
+    "refund": {
+      "title": "Devolver a la tarjeta",
+      "hint": "Devuelve el dinero a la misma tarjeta con la que se cobró, a través de Redsys. No hace falta entrar al panel del banco.",
+      "start": "Devolver",
+      "amount": "Importe a devolver",
+      "max": "Como máximo",
+      "reason": "Motivo (opcional)",
+      "warning": "Esto saca dinero de la cuenta de la empresa de verdad. Una devolución aceptada por el banco no se deshace desde aquí: habría que llamar al comercio.",
+      "confirmTitle": "Devolver a la tarjeta",
+      "confirmMessage": "¿Seguro? El dinero sale de la cuenta y esta operación no se puede deshacer desde la aplicación.",
+      "confirmAction": "Sí, devolver",
+      "done": "Devolución aceptada por el banco",
+      "refunded": "Devuelto",
+      "lastError": "Último intento rechazado",
+      "errors": {
+        "notFound": "No se encontró ese cobro",
+        "notCard": "Ese cobro no se hizo con tarjeta por la pasarela: devuélvelo como se cobró",
+        "notCollected": "Ese cobro no ha entrado, así que no hay nada que devolver",
+        "noOrder": "Ese cobro no tiene el pedido de Redsys, así que el banco no puede identificarlo",
+        "alreadyRefunded": "Ese cobro ya está devuelto entero",
+        "amountRequired": "Pon el importe a devolver",
+        "amountPositive": "El importe tiene que ser mayor que cero",
+        "overRefund": "No se puede devolver más de lo que se cobró",
+        "unauthorized": "Tu rol no permite devolver cobros",
+        "notConfigured": "Redsys no está configurado en este entorno",
+        "rejected": "El banco ha rechazado la devolución. Comprueba el extracto antes de volver a intentarlo",
+        "failed": "No se ha podido completar la devolución. Comprueba el extracto antes de volver a intentarlo"
+      }
     },
     "registerPayment": "Registrar cobro",
     "status": {
@@ -800,43 +866,6 @@
       "refuelPenalty": "Penalización repostaje",
       "remainingPayment": "Resto alquiler",
       "rentalPayment": "Pago completo"
-    },
-    "confirm": {
-      "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
-      "cancelTitle": "Cancelar el cobro"
-    },
-    "problems": {
-      "depositAmountRequired": "Pon un importe mayor que cero.",
-      "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
-    },
-    "refund": {
-      "title": "Devolver a la tarjeta",
-      "hint": "Devuelve el dinero a la misma tarjeta con la que se cobró, a través de Redsys. No hace falta entrar al panel del banco.",
-      "start": "Devolver",
-      "amount": "Importe a devolver",
-      "max": "Como máximo",
-      "reason": "Motivo (opcional)",
-      "warning": "Esto saca dinero de la cuenta de la empresa de verdad. Una devolución aceptada por el banco no se deshace desde aquí: habría que llamar al comercio.",
-      "confirmTitle": "Devolver a la tarjeta",
-      "confirmMessage": "¿Seguro? El dinero sale de la cuenta y esta operación no se puede deshacer desde la aplicación.",
-      "confirmAction": "Sí, devolver",
-      "done": "Devolución aceptada por el banco",
-      "refunded": "Devuelto",
-      "lastError": "Último intento rechazado",
-      "errors": {
-        "notFound": "No se encontró ese cobro",
-        "notCard": "Ese cobro no se hizo con tarjeta por la pasarela: devuélvelo como se cobró",
-        "notCollected": "Ese cobro no ha entrado, así que no hay nada que devolver",
-        "noOrder": "Ese cobro no tiene el pedido de Redsys, así que el banco no puede identificarlo",
-        "alreadyRefunded": "Ese cobro ya está devuelto entero",
-        "amountRequired": "Pon el importe a devolver",
-        "amountPositive": "El importe tiene que ser mayor que cero",
-        "overRefund": "No se puede devolver más de lo que se cobró",
-        "unauthorized": "Tu rol no permite devolver cobros",
-        "notConfigured": "Redsys no está configurado en este entorno",
-        "rejected": "El banco ha rechazado la devolución. Comprueba el extracto antes de volver a intentarlo",
-        "failed": "No se ha podido completar la devolución. Comprueba el extracto antes de volver a intentarlo"
-      }
     }
   },
   "permissions": {
