@@ -669,7 +669,9 @@
     },
     "errors": {
       "invalidAmount": "Suma nu este validă",
+      "cancelFailed": "Încasarea nu a putut fi anulată.",
       "loadFailed": "Încasările nu au putut fi încărcate.",
+      "markPaidFailed": "Încasarea nu a putut fi marcată ca plătită.",
       "redsysNotConfigured": "Redsys nu este configurat în acest mediu",
       "redsysNoForm": "Redsys nu a returnat datele formularului"
     },

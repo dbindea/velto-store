@@ -78,6 +78,31 @@ export class ContractService {
   }
 
   /**
+   * El mismo contrato, **escuchando**. Es lo que ya hace
+   * `getContractByReservation` y por el mismo motivo —el operador mira esta
+   * pantalla mientras el cliente firma en su móvil—, pero la ficha del contrato
+   * entraba por id y se quedaba con una lectura única: la firma no se veía
+   * hasta pulsar F5 o alguna acción que refrescara a mano.
+   *
+   * ⚠️ **Es un método aparte y `getContractById` se queda como está.** Ese lo
+   * usa `sendSignedContractByEmail` con un `.toPromise()`, que espera a que el
+   * stream **termine**: sobre un `onSnapshot`, que no termina nunca, se
+   * quedaría colgado sin decir nada. El nombre lo avisa: `watch…` escucha,
+   * `get…` lee una vez.
+   */
+  watchContractById(id: string): Observable<Contract | null> {
+    const docRef = doc(this.firestore, `contracts/${id}`);
+    return new Observable<Contract | null>((subscriber) => {
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => subscriber.next(snap.exists() ? ({ id: snap.id, ...snap.data() } as Contract) : null),
+        (err) => subscriber.error(err)
+      );
+      return () => unsubscribe();
+    });
+  }
+
+  /**
    * Live subscription to the reservation's contract.
    *
    * This used to be a one-shot `getDocs()`, which meant the operator's screen

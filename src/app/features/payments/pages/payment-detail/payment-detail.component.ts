@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -50,6 +51,7 @@ export class PaymentDetailComponent implements OnInit {
   private paymentService = inject(PaymentService);
   private redsys = inject(RedsysPaymentService);
   private notifications = inject(NotificationService);
+  private destroyRef = inject(DestroyRef);
   /** Público: las plantillas preguntan qué permite el rol. */
   permissions = inject(PermissionsService);
 
@@ -156,7 +158,6 @@ export class PaymentDetailComponent implements OnInit {
       this.showRefund = false;
       this.notifications.success('payments.refund.done');
       void r;
-      this.loadPayment(this.payment.id);
     } catch (error: any) {
       /**
        * ⚠️ **No se reintenta, y se dice por qué.** Un fallo después de que el
@@ -183,28 +184,43 @@ export class PaymentDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.loadPayment(id);
+      this.watchPayment(id);
     } else {
       this.router.navigate(['/payments']);
     }
   }
 
-  loadPayment(id: string): void {
+  /**
+   * ⚠️ **Escucha el documento, no lo lee una vez.** Esta es la pantalla desde
+   * la que se genera el enlace de Redsys, así que el operador se queda aquí
+   * mirando mientras el cliente paga. Quien marca el pago como cobrado es el
+   * webhook, minutos después; con una lectura única la ficha seguía diciendo
+   * «Pendiente» hasta pulsar F5.
+   *
+   * ⚠️ **Se llama una sola vez, desde `ngOnInit`.** Antes las mutaciones
+   * —cobrar a mano, cancelar, devolver— la volvían a llamar para refrescar;
+   * ahora Firestore reemite solo, y repetir la llamada abriría una suscripción
+   * nueva por cada acción sin cerrar la anterior.
+   */
+  private watchPayment(id: string): void {
     this.loading = true;
-    this.paymentService.getPaymentById(id).subscribe({
-      next: (payment) => {
-        if (!payment) {
+    this.paymentService
+      .watchPaymentById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (payment) => {
+          if (!payment) {
+            this.router.navigate(['/payments']);
+            return;
+          }
+          this.payment = payment;
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
           this.router.navigate(['/payments']);
-          return;
         }
-        this.payment = payment;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.router.navigate(['/payments']);
-      }
-    });
+      });
   }
 
   goBack(): void {
@@ -222,9 +238,15 @@ export class PaymentDetailComponent implements OnInit {
     this.marking = true;
     try {
       await this.paymentService.markPaymentAsPaid(this.payment.id, {});
-      this.loadPayment(this.payment.id);
-    } catch (error) {
-      console.error('Error marking payment as paid:', error);
+    } catch {
+      /**
+       * ⚠️ Esto era un `console.error` y nada más: el operador pulsaba «Marcar
+       * como cobrado», el pago no se movía y la pantalla no decía nada. Si una
+       * acción puede fallar, tiene que contarlo.
+       */
+      this.notifications.error('payments.errors.markPaidFailed', {
+        retry: () => void this.markAsPaid()
+      });
     } finally {
       this.marking = false;
     }
@@ -243,9 +265,11 @@ export class PaymentDetailComponent implements OnInit {
     this.cancelling = true;
     try {
       await this.paymentService.cancelPayment(this.payment.id);
-      this.loadPayment(this.payment.id);
-    } catch (error) {
-      console.error('Error cancelling payment:', error);
+    } catch {
+      /** Mismo caso que `markAsPaid`: fallaba en silencio. */
+      this.notifications.error('payments.errors.cancelFailed', {
+        retry: () => void this.cancelPayment()
+      });
     } finally {
       this.cancelling = false;
     }

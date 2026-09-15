@@ -668,8 +668,10 @@
       "available": "Disponible"
     },
     "errors": {
+      "cancelFailed": "No se ha podido anular el cobro.",
       "invalidAmount": "El importe no es válido",
       "loadFailed": "No se han podido cargar los cobros.",
+      "markPaidFailed": "No se ha podido marcar el cobro como pagado.",
       "redsysNotConfigured": "Redsys no está configurado en este entorno",
       "redsysNoForm": "Redsys no ha devuelto los datos del formulario"
     },

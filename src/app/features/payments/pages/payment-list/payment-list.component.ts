@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -45,6 +46,7 @@ export class PaymentListComponent implements OnInit {
   private router = inject(Router);
   private paymentService = inject(PaymentService);
   private notifications = inject(NotificationService);
+  private destroyRef = inject(DestroyRef);
   readonly permissions = inject(PermissionsService);
 
   payments: Payment[] = [];
@@ -104,9 +106,21 @@ export class PaymentListComponent implements OnInit {
     this.loadPayments();
   }
 
+  /**
+   * ⚠️ **Escucha, no lee una vez.** Quien da por cobrado un pago con tarjeta es
+   * el webhook de Redsys, que escribe en Firestore minutos después de que el
+   * operador abriera esta pantalla. Con `getPayments()` la fila se quedaba en
+   * «Pendiente» hasta pulsar F5, y quien acaba de ver pagar al cliente delante
+   * no entiende por qué la aplicación dice que no.
+   *
+   * ⚠️ **Se suscribe una sola vez.** `takeUntilDestroyed` la corta al salir de
+   * la pantalla; sin él la suscripción sobrevive y sigue escribiendo en un
+   * componente que ya no existe. Y por eso el `retry` del aviso de error vuelve
+   * a llamar aquí: un stream que falla queda terminado y hay que rehacerlo.
+   */
   loadPayments(): void {
     this.loading = true;
-    this.paymentService.getPayments().subscribe({
+    this.paymentService.watchPayments().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (payments) => {
         // El recorte va aquí y no en `applyFilters()`: después, cualquier
         // pestaña volvería a enseñar lo que este permiso retira.

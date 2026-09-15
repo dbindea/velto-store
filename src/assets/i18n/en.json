@@ -669,7 +669,9 @@
     },
     "errors": {
       "invalidAmount": "The amount is not valid",
+      "cancelFailed": "The payment could not be cancelled.",
       "loadFailed": "The payments could not be loaded.",
+      "markPaidFailed": "The payment could not be marked as paid.",
       "redsysNotConfigured": "Redsys is not configured in this environment",
       "redsysNoForm": "Redsys did not return the form data"
     },

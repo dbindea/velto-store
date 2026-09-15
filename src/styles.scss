@@ -159,6 +159,12 @@
   --success-bg: #E1F4EA;
   --warning-color: #9A6700;
   --warning-bg: #FFF3D6;
+  /* El color que acompaña al ámbar cuando el ámbar es el FONDO (un botón
+     `.btn-warning`), y por eso es una variable y no un literal: el ámbar claro
+     (#9A6700) pide texto blanco —4,83:1— y el oscuro (#F0B429) lo pide negro
+     —9,97:1—. Escrito a mano, cualquier copia de la regla se queda con el par
+     de un solo tema y falla el contraste en el otro. Es lo que pasaba. */
+  --warning-on: #FFFFFF;
   --error-color: #C8322B;
   --error-bg: #FCE8E6;
   --danger-color: var(--error-color);
@@ -213,6 +219,7 @@
   --success-bg: rgba(76, 195, 138, 0.14);
   --warning-color: #F0B429;
   --warning-bg: rgba(240, 180, 41, 0.14);
+  --warning-on: #1A1400;
   --error-color: #F26B62;
   --error-bg: rgba(242, 107, 98, 0.14);
   --info-color: #7BA4EA;
@@ -837,22 +844,20 @@ h1, h2, h3, h4, h5, h6 {
  */
 .btn-warning {
   background: var(--warning-color);
-  /* Sobre el ámbar del tema claro (#9A6700) el blanco contrasta, y sobre el
-     del oscuro (#F0B429) hace falta texto oscuro: el mismo ámbar con dos
-     acompañantes según el fondo del tema. */
-  color: #1A1400;
+  /* ⚠️ **El acompañante va por variable, no por selector de tema.** Esto eran
+     un `.btn-warning { color: #1A1400 }` global más un `:root .btn-warning` y
+     un `.dark .btn-warning` que lo corregían, y no funcionaba: los dos
+     correctores miden (0,2,0), lo mismo que el `.btn-warning[_ngcontent-xxx]`
+     de un componente que declare su propia copia — y en un empate manda el
+     orden, que pone los estilos del componente detrás. El botón «Cancelar
+     reserva» salía en tema claro con texto casi negro sobre ámbar oscuro,
+     3,84:1, por debajo del mínimo. Con `var(--warning-on)` el valor lo pone el
+     bloque del tema, así que hasta una copia encapsulada sale correcta. */
+  color: var(--warning-on);
 
   &:hover {
     filter: brightness(1.08);
   }
-}
-
-:root .btn-warning {
-  color: #FFFFFF;
-}
-
-.dark .btn-warning {
-  color: #1A1400;
 }
 
 // PrimeIcons sizing fix

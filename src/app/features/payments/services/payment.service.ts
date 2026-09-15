@@ -8,6 +8,7 @@ import {
   updateDoc,
   getDoc,
   collectionData,
+  docData,
   getDocs,
   query,
   orderBy,
@@ -142,10 +143,38 @@ export class PaymentService {
     );
   }
 
+  /**
+   * El libro de cobros **escuchando**. Es la pantalla que el operador deja
+   * abierta mientras el cliente paga con tarjeta, así que una lectura única la
+   * deja mintiendo: quien da el cobro por bueno es el webhook de Redsys, no
+   * esta pantalla, y sin escuchar la fila se queda en «Pendiente» hasta que
+   * alguien pulsa F5. Ver la nota larga de `watchPaymentsByReservation`.
+   */
+  watchPayments(): Observable<Payment[]> {
+    const q = query(this.paymentsRef, orderBy('createdAt', 'desc'));
+    return collectionData(q, { idField: 'id' }) as Observable<Payment[]>;
+  }
+
   getPaymentById(id: string): Observable<Payment | null> {
     const docRef = doc(this.firestore, `payments/${id}`);
     return from(getDoc(docRef)).pipe(
       map(snap => snap.exists() ? { id: snap.id, ...snap.data() } as Payment : null)
+    );
+  }
+
+  /**
+   * El mismo pago, **escuchando**. Es el caso más agudo de los tres: aquí es
+   * donde el operador genera el enlace de Redsys y se queda mirando la ficha
+   * mientras el cliente paga delante de él.
+   *
+   * ⚠️ `docData` emite `undefined` cuando el documento no existe —no lanza—, y
+   * eso incluye **el pago que se acaba de borrar estando abierto**. Se traduce
+   * a `null` para que el componente lo trate igual que un id inventado.
+   */
+  watchPaymentById(id: string): Observable<Payment | null> {
+    const docRef = doc(this.firestore, `payments/${id}`);
+    return (docData(docRef, { idField: 'id' }) as Observable<Payment | undefined>).pipe(
+      map(data => data ?? null)
     );
   }
 
@@ -172,12 +201,14 @@ export class PaymentService {
    * cliente delante no entiende por qué la aplicación dice que no.
    *
    * ⚠️ **Es un método APARTE y no el de arriba convertido.** Un stream vivo no
-   * termina nunca, así que un `firstValueFrom()` sobre él **se queda colgado
-   * para siempre**: es lo que ya documenta `inspection.service.ts` sobre el
-   * contrato, que necesita un `.pipe(first())` por lo mismo. Hoy hay un
-   * `firstValueFrom` sobre el de arriba —el que calcula la fecha de operación de
-   * una factura— y convertirlo habría colgado esa pantalla sin decir nada. El
-   * nombre lo avisa: `watch…` escucha, `get…` lee una vez.
+   * termina nunca, y quien espera a que **termine** se queda colgado sin decir
+   * nada: `.toPromise()`, `lastValueFrom()` y —el caso que más duele— un
+   * `forkJoin`, que no emite hasta que todas sus fuentes han terminado. Es lo
+   * que documenta `inspection.service.ts` sobre el contrato, que por eso lleva
+   * `.pipe(first())`. (`firstValueFrom` sí resuelve con la primera emisión: ese
+   * es el uso del de arriba para la fecha de operación de una factura, y no
+   * cuelga. Lo que deja es un oyente abierto para leer una vez.) El nombre lo
+   * avisa: `watch…` escucha, `get…` lee una vez.
    *
    * ⚠️ **Quien se suscriba tiene que desengancharse.** Sin
    * `takeUntilDestroyed()`, la suscripción sobrevive a la pantalla y sigue
