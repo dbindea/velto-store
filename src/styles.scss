@@ -964,6 +964,27 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/**
+ * La superficie del campo, con el elemento delante para **ganar a las
+ * dieciocho copias encapsuladas**.
+ *
+ * ⚠️ **Sin esto el arreglo no llega.** Los dieciocho formularios que declaran
+ * su propio `.form-control` compilan a `.form-control[_ngcontent-xxx]`, que
+ * mide (0,2,0) y le gana a un `.form-control` global (0,1,0). Varias de esas
+ * copias ponen `border: 1px solid var(--border-color)` sin fondo, así que el
+ * borde seguía saliendo del gris de las separaciones —1,33:1 en tema oscuro—
+ * por mucho que la regla de arriba dijera otra cosa.
+ *
+ * `input.form-control` mide (0,2,1) y gana. Es el mismo recurso que ya usan
+ * `button:disabled` y `.is-invalid` en este fichero, y por el mismo motivo.
+ */
+input.form-control,
+select.form-control,
+textarea.form-control {
+  background: var(--bg-input);
+  border-color: var(--border-input);
+}
+
 /* Un `textarea` crece a lo alto y nada a lo ancho: el redimensionado libre del
    navegador lo saca de su columna. */
 textarea.form-control {
