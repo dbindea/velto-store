@@ -599,6 +599,46 @@ app-reservation-timeline {
   border-top: 1px solid var(--border-color);
 }
 
+/**
+ * En móvil las tres acciones caben en una línea, pero solo si adelgazan.
+ *
+ * ⚠️ **Medido, no estimado:** a 390 px el contenedor da **352 px** y los tres
+ * botones pedían **378** (109 + 120 + 117 y dos huecos de 16). Sin `wrap`, el
+ * sobrante se lo come el primero: «Modificar» empezaba en **x = −10**, fuera
+ * del borde izquierdo y recortado.
+ *
+ * Lo que se recorta es el **relleno**, el hueco y el icono — nunca la etiqueta.
+ * El icono es decoración y la palabra es la información: esconder el icono no
+ * quita nada que haya que leer, y es lo que compra el espacio para que quepan
+ * los tres textos enteros. Es la regla de siempre aquí: recolocar, no ocultar
+ * lo que dice algo.
+ *
+ * ⚠️ **`min-width: 0` y `wrap` son la red**, no el plan. El valor por defecto
+ * de un elemento flex es `min-width: auto`, que le impide encoger por debajo de
+ * su contenido — es justo lo que hacía que se saliera en vez de ajustarse. Y
+ * las etiquetas no miden lo mismo en los tres idiomas: «Cancelar reserva» son
+ * 16 caracteres y «Anulează rezervarea» son 19. Con la red, el peor caso baja a
+ * dos líneas; sin ella, vuelve a recortarse.
+ */
+@media (max-width: 640px) {
+  .page-actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    button {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding-left: 0.625rem;
+      padding-right: 0.625rem;
+      font-size: 0.8125rem;
+
+      i {
+        display: none;
+      }
+    }
+  }
+}
+
 // Cancelar y eliminar comparten la geometría y **solo** se diferencian en el
 // color: si además midieran distinto, la diferencia se leería como jerarquía
 // —uno principal y otro secundario— en vez de como lo que es, dos acciones

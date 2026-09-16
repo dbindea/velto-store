@@ -145,6 +145,9 @@
 
   // Form surfaces
   --bg-input: #ffffff;
+  /* Contorno del control: 3,03:1 sobre el blanco del campo. El de antes
+     —`--gray-200`— daba 1,24:1. Ver la nota de `.form-control`. */
+  --border-input: #8C9699;
 
   // ---------------------------------------------------------------------
   // Semantic status palette
@@ -207,7 +210,10 @@
   --bg-main: var(--gray-950);
   --bg-card: var(--gray-900);
   --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-input: var(--gray-950);
+  /* Un escalón por encima de la tarjeta, no por debajo: el campo se lee
+     como una caja y no como un hueco del mismo color que el fondo. */
+  --bg-input: var(--gray-800);
+  --border-input: var(--gray-600); /* 3,13:1 sobre la tarjeta */
   --text-primary: #ffffff;
   --text-secondary: var(--gray-300);
   --text-muted: var(--gray-400);
@@ -246,7 +252,8 @@
   --border-color: #2E3B38;
   --border-light: #253330;
   --border-strong: #3D4C48;
-  --bg-input: #151D1B;
+  --bg-input: #2E3B38;
+  --border-input: #63726E; /* 3,04:1 sobre la tarjeta */
   --bg-hover: rgba(255, 255, 255, 0.05);
   --text-primary: #F2F6F5;
   --text-secondary: #C2CFCB;
@@ -270,7 +277,8 @@
   --border-color: #334155;
   --border-light: #1E293B;
   --border-strong: #475569;
-  --bg-input: #0F172A;
+  --bg-input: #334155;
+  --border-input: #64748B; /* 3,07:1 sobre la tarjeta */
   --bg-hover: rgba(255, 255, 255, 0.04);
   --text-primary: #F1F5F9;
   --text-secondary: #CBD5E1;
@@ -830,6 +838,33 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /**
+ * El secundario: el que acompaña al principal sin competir con él.
+ *
+ * ⚠️ **No tenía color, solo geometría.** El bloque de arriba le daba relleno,
+ * radio y tamaño a las cuatro clases, pero el fondo y la tinta los ponía cada
+ * componente por su cuenta — y donde no lo hacía, el botón salía **transparente
+ * con la tinta heredada**. En el tema claro se lee igual; sobre el fondo casi
+ * negro del tema oscuro, un botón sin fondo ni borde no es un botón.
+ *
+ * Va con el mismo relleno y el mismo borde que un campo, y por el mismo motivo:
+ * es un control, y su contorno tiene que llegar a 3:1 contra lo que tenga
+ * detrás (WCAG 1.4.11).
+ *
+ * ⚠️ **No pisa a quien ya lo declara.** Esta regla mide (0,1,0) y la de un
+ * componente encapsulado mide (0,2,0), así que los que ya traen su color siguen
+ * mandando. Lo que cambia es que uno nuevo ya no nace invisible.
+ */
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+}
+
+/**
  * El botón de lo grave que **sí se puede deshacer**.
  *
  * ⚠️ **Existe para que el rojo signifique una sola cosa: irreversible.** En la
@@ -893,11 +928,27 @@ h1, h2, h3, h4, h5, h6 {
    formulario sigue mandando sobre el suyo; lo que cambia es que uno nuevo ya no
    sale desnudo.
    ========================================================================= */
+/**
+ * ⚠️ **El relleno sale de `--bg-input`, NO de `--bg-main`.**
+ *
+ * Ponía `var(--bg-main)`, que es el color de la **página**: un campo pintado
+ * con el fondo sobre el que se apoya. En el tema claro no se notaba porque la
+ * página es gris y el campo blanco; en los tres temas oscuros el campo y la
+ * página eran **el mismo color** —1,00:1— y lo único que delimitaba el input
+ * era un borde a 1,33:1, cuando el mínimo para el contorno de un control es
+ * 3:1 (WCAG 1.4.11). En el tema casi negro eso lo dejaba inutilizable.
+ *
+ * ⚠️ **Y el contorno lo lleva el BORDE, no el relleno.** Un relleno 3:1 más
+ * claro que una tarjeta casi negra sería gris medio, y el formulario dejaría de
+ * parecer lo que es. La norma pide **una** señal a 3:1, y en un campo la
+ * natural es su borde: por eso existe `--border-input`, aparte del
+ * `--border-color` de las separaciones, que sí puede y debe ser sutil.
+ */
 .form-control {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  background: var(--bg-main);
-  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 0.9rem;
