@@ -1042,6 +1042,49 @@ textarea.form-control {
   margin-top: 1rem;
 }
 
+/**
+ * ⚠️ **Dentro de una fila los hermanos van al LADO, no debajo.**
+ *
+ * El hermano adyacente no sabe en qué dirección coloca el contenedor, así que la
+ * regla de arriba le metía `margin-top: 1rem` al **segundo** hijo de cada fila —
+ * que es una rejilla horizontal. Resultado: la columna derecha bajaba 16 px y la
+ * fila entera quedaba en escalera. «Hora de recogida» salía descolocada respecto
+ * a «Fecha de recogida» en todos los formularios de dos columnas, que son casi
+ * todos. Lo encontró Dorel mirando la pantalla; ninguna auditoría lo vio.
+ *
+ * La separación entre columnas ya la pone el `gap` de la rejilla — y también la
+ * de las filas cuando baja de línea en móvil, así que quitar el margen no deja
+ * nada pegado.
+ *
+ * ⚠️ **La lista de contenedores está MEDIDA, no supuesta.** Son los cuatro que
+ * de verdad colocan campos en horizontal, sacados recorriendo la aplicación y
+ * buscando padres cuyos `.form-group` tengan distinto `left`. Si aparece uno
+ * nuevo, se añade aquí — y se encuentra volviendo a medir, no leyendo
+ * plantillas: los `div` anidados no se dejan buscar con una expresión regular.
+ *
+ * ⚠️ **Tres clases para ganar.** `.form-group + .form-group` mide (0,2,0); con
+ * el contenedor delante son (0,3,0) y esta gana. Misma aritmética que la de los
+ * campos: contar, no suponer.
+ */
+.form-row > .form-group + .form-group,
+.form-row > .form-group + .checkbox-item,
+.form-row > .checkbox-item + .form-group,
+.form-row > .checkbox-item + .checkbox-item,
+.form-grid > .form-group + .form-group,
+.form-grid > .form-group + .checkbox-item,
+.form-grid > .checkbox-item + .form-group,
+.form-grid > .checkbox-item + .checkbox-item,
+.features-checkboxes > .form-group + .form-group,
+.features-checkboxes > .form-group + .checkbox-item,
+.features-checkboxes > .checkbox-item + .form-group,
+.features-checkboxes > .checkbox-item + .checkbox-item,
+.rule-fields > .form-group + .form-group,
+.rule-fields > .form-group + .checkbox-item,
+.rule-fields > .checkbox-item + .form-group,
+.rule-fields > .checkbox-item + .checkbox-item {
+  margin-top: 0;
+}
+
 /* El rótulo y su campo son **una** cosa, así que van más juntos entre sí que
    de lo que viene debajo: sin esa diferencia, una etiqueta se lee tan pegada al
    campo de arriba como al suyo. */
