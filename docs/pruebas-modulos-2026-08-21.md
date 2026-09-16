@@ -1994,3 +1994,75 @@ errores vista desde dos sitios —qué se le pide al banco y qué se apunta cuan
 contesta— y ninguno da error. Dan una cifra creíble y equivocada, que es la peor
 clase de fallo con dinero. Los cubre ahora `redsys-charge-core.ts` con 28 tests,
 igual que `redsys-refund-core.ts` cubre la devolución.
+
+---
+
+## C-39 · Un cobro por la vía pública, y el contraste medido — 16 de septiembre de 2026
+
+### El cobro que faltaba desde el 4 de septiembre
+
+Primer pago **por la vía pública que la aplicación registra sola**. Cobro libre
+de 12 €, dejado a medias con 4 € para ejercitar de paso los arreglos de C-38.
+
+| | |
+|---|---|
+| La pantalla del cliente | **8,00 €** — lo pendiente, no los 12 |
+| `Ds_Merchant_Amount` firmado | `800` |
+| Pasarela de test | OPERACIÓN AUTORIZADA, código **297738** |
+| Lo que escribió el webhook | `paidAmount: 12` = 4 que había **+ 8 cobrados**; `pendingAmount: 0`; `paid` |
+| Quién lo escribió | El webhook, solo, sin tocar nada |
+
+Con el código anterior el enlace habría pedido 12 sobre los 4 ya cobrados —16 €
+por algo que vale 12— y el registro habría seguido diciendo 12. Cuatro euros
+fuera de los libros.
+
+### El auditor que faltaba
+
+Las tres auditorías del repositorio leen ficheros; ninguna abre un navegador, así
+que ninguna sabe si un texto **se lee**.
+[comprobar-contraste-y-desbordamiento.js](comprobar-contraste-y-desbordamiento.js)
+lo mide, componiendo los fondos translúcidos capa a capa — que es donde fallan
+los medidores ingenuos.
+
+Pasado por las catorce pantallas a 390 px: **cero desbordamiento horizontal**.
+
+Contraste, tres hallazgos:
+
+1. **El badge del coche, a 1,82:1.** `.vehicle-status` ponía una placa
+   translúcida porque va encima de la **foto**, y `.status-available` le ponía
+   `var(--success-color)` — que cambia con el tema. La placa no cambia nunca. Se
+   arregló haciendo la placa **opaca**: detrás hay una fotografía, un color que
+   no se puede saber, así que con transparencia no hay tinta garantizable.
+2. **`#20A48F`, el color de marca, falla como TEXTO** en las catorce pantallas:
+   3,10:1 en las dos direcciones, y 2,69–2,91:1 sobre los teales claros. Se
+   validó con el guion de `dataviz`, que mide colores de **gráfico** (umbral
+   3:1); como texto el umbral es 4,5:1. **Pendiente de decisión de Dorel**: es
+   identidad visual.
+3. Los badges «Pagado» (4,36:1) y «Pendiente» (4,41:1) se quedan a un pelo.
+
+### Los campos del tema oscuro
+
+Lo encontró Dorel usándolo: en el tema casi negro los inputs eran invisibles.
+`.form-control` pintaba el relleno con `--bg-main` —el color de la página— y en
+los **tres** temas oscuros `--bg-input` valía además lo mismo que `--bg-main`:
+**1,00:1**, con un borde a 1,33:1 cuando el mínimo de un control es 3:1.
+
+Arreglado con `--border-input` en los cuatro temas (3,03 / 3,13 / 3,04 / 3,07) y
+`--bg-input` levantado un escalón por encima de la tarjeta. `.btn-secondary`, que
+no tenía color global —solo geometría— y salía transparente, lleva ahora el mismo
+relleno y borde que un campo.
+
+⚠️ **Y costó dos iteraciones por la especificidad**, que es lo que hay que
+recordar: `input.form-control` es (0,1,1) y la copia encapsulada del componente
+es (0,2,0). Gana la copia. Hace falta (0,2,1). Ver la tabla en CLAUDE.md.
+
+### Los tres botones de la reserva
+
+A 390 px el contenedor da 352 px y los tres pedían 378: sin `wrap`, el sobrante
+se lo comía el primero y «Modificar» empezaba en **x = −10**. En móvil adelgazan
+relleno, hueco e icono —decoración; la palabra es la información— y nunca la
+etiqueta.
+
+Verificado en los dos idiomas críticos: español 103 + 141 + 92 y **rumano** 95 +
+161 + 80 («Anulează rezervarea» es el más largo). Los dos caben en una fila, con
+`wrap` de red por si alguna traducción futura se pasa.

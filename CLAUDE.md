@@ -2215,6 +2215,46 @@ formulario nuevo ya no sale desnudo.
 declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
 de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
 
+⚠️ **Un campo de formulario se delimita con su BORDE, no con su relleno**, y ese
+borde tiene su propia variable: `--border-input`. WCAG 1.4.11 pide **3:1** para
+el contorno de un control, y un relleno 3:1 más claro que una tarjeta casi negra
+sería gris medio — el formulario dejaría de parecer lo que es. `--border-color`
+es el de las separaciones y sí puede ser sutil; son dos cosas distintas.
+
+⚠️ **`.form-control` pintaba el relleno con `--bg-main`, el color de la
+PÁGINA.** En el tema claro no se notaba —la página es gris y el campo blanco—,
+pero en los **tres** temas oscuros `--bg-input` valía además exactamente lo mismo
+que `--bg-main`: el campo y el fondo eran el mismo color, **1,00:1**, y lo único
+que lo delimitaba era un borde a 1,33:1. En el tema casi negro eso lo dejaba
+inutilizable, y lo encontró Dorel usándolo, no ninguna auditoría.
+
+⚠️ **Y un fondo `var(--bg-card)` dentro de una tarjeta es igual de invisible**,
+en todos los temas — en el claro es blanco sobre blanco. Varias de las dieciocho
+copias encapsuladas de `.form-control` lo hacían.
+
+### La aritmética de la especificidad, que es donde se falla
+
+⚠️ **`input.form-control` NO gana a `.form-control[_ngcontent-xxx]`.** Es el
+error que cuesta una iteración entera, y lo cometí:
+
+| Selector | Cuenta | Especificidad |
+|---|---|---|
+| `.form-control` (global) | 1 clase | (0,1,0) |
+| `.form-control[_ngcontent-xxx]` (componente) | 1 clase + 1 atributo | **(0,2,0)** |
+| `input.form-control` | 1 elemento + 1 clase | (0,1,1) — **pierde** |
+| `input.form-control.is-invalid` | 1 elemento + 2 clases | (0,2,1) — gana |
+| `button.btn-primary:disabled` | 1 elemento + 1 clase + 1 pseudoclase | (0,2,1) — gana |
+
+La regla en una línea: **la encapsulación de Angular vale una clase**, así que
+para ganarle a una copia de componente hacen falta **dos** clases (o una clase y
+una pseudoclase) más el elemento. Anteponer solo el elemento no basta, aunque lo
+parezca. Cuando no hay una segunda clase real, repetirla —
+`input.form-control.form-control`— es la forma legítima de llegar a (0,2,1).
+
+⚠️ **Y se comprueba en el navegador, no se deduce.** Las dos veces que esto ha
+fallado, el CSS estaba escrito y desplegado y el valor calculado seguía siendo el
+viejo. `getComputedStyle()` es la única respuesta que vale.
+
 ⚠️ **Cuando un color de marca es el FONDO, su acompañante también es variable.**
 `--warning-on` existe porque el ámbar cambia de tema —#9A6700 en claro, #F0B429
 en oscuro— y cada uno pide lo contrario: blanco el primero (4,87:1), negro el
