@@ -965,22 +965,26 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /**
- * La superficie del campo, con el elemento delante para **ganar a las
+ * La superficie del campo, con la especificidad justa para **ganar a las
  * dieciocho copias encapsuladas**.
  *
- * ⚠️ **Sin esto el arreglo no llega.** Los dieciocho formularios que declaran
- * su propio `.form-control` compilan a `.form-control[_ngcontent-xxx]`, que
- * mide (0,2,0) y le gana a un `.form-control` global (0,1,0). Varias de esas
- * copias ponen `border: 1px solid var(--border-color)` sin fondo, así que el
- * borde seguía saliendo del gris de las separaciones —1,33:1 en tema oscuro—
- * por mucho que la regla de arriba dijera otra cosa.
+ * ⚠️ **Sin esto el arreglo no llega a ninguna pantalla.** Los dieciocho
+ * formularios que declaran su propio `.form-control` compilan a
+ * `.form-control[_ngcontent-xxx]`: eso es una clase **más un atributo**, o sea
+ * **(0,2,0)**, y le gana a un `.form-control` global (0,1,0). Y varias de esas
+ * copias ponen `background: var(--bg-card)`, que dentro de una tarjeta es el
+ * mismo color que la tarjeta — 1,00:1, en todos los temas, también el claro:
+ * blanco sobre blanco, salvado solo por un borde a 1,24:1.
  *
- * `input.form-control` mide (0,2,1) y gana. Es el mismo recurso que ya usan
- * `button:disabled` y `.is-invalid` en este fichero, y por el mismo motivo.
+ * ⚠️ **`input.form-control` NO basta**, aunque lo parezca: un elemento y una
+ * clase son **(0,1,1)**, que pierde contra (0,2,0). El precedente que funciona
+ * en este fichero es `input.form-control.is-invalid` — elemento y **dos**
+ * clases, (0,2,1). Repetir la clase es la forma legítima de llegar a (0,2,1)
+ * cuando no hay una segunda clase real que poner; no es un error de copia.
  */
-input.form-control,
-select.form-control,
-textarea.form-control {
+input.form-control.form-control,
+select.form-control.form-control,
+textarea.form-control.form-control {
   background: var(--bg-input);
   border-color: var(--border-input);
 }
