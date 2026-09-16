@@ -1081,7 +1081,11 @@ textarea.form-control {
 .rule-fields > .form-group + .form-group,
 .rule-fields > .form-group + .checkbox-item,
 .rule-fields > .checkbox-item + .form-group,
-.rule-fields > .checkbox-item + .checkbox-item {
+.rule-fields > .checkbox-item + .checkbox-item,
+.line-row > .form-group + .form-group,
+.line-row > .form-group + .checkbox-item,
+.line-row > .checkbox-item + .form-group,
+.line-row > .checkbox-item + .checkbox-item {
   margin-top: 0;
 }
 

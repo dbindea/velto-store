@@ -179,5 +179,59 @@
     return resultado;
   };
 
-  console.log('Listo. Llama a comprobarPantalla().');
+  /**
+   * Campos de dos columnas que salen **en escalera**.
+   *
+   * ⚠️ La regla de ritmo vertical de `styles.scss` va por **hermano
+   * adyacente**, y el hermano adyacente no sabe en qué dirección coloca el
+   * contenedor: dentro de una fila los hermanos van al lado, y el `margin-top`
+   * baja la segunda columna 16 px. Así salió «Hora de recogida» descolocada
+   * respecto a «Fecha de recogida» en casi todos los formularios.
+   *
+   * La cura es una lista de contenedores horizontales en `styles.scss`, y esa
+   * lista **se mantiene midiendo, no leyendo plantillas**: los `div` anidados no
+   * se dejan buscar con una expresión regular. Esto es lo que la mide.
+   *
+   * Un desfase de 0 está bien (alineados) y uno grande también (la rejilla bajó
+   * de línea, que en móvil es lo correcto). Lo que delata el fallo es un
+   * escalón pequeño entre elementos que están **uno al lado del otro**.
+   */
+  window.comprobarAlineacion = function comprobarAlineacion() {
+    const problemas = [];
+    document.querySelectorAll('body *').forEach((el) => {
+      const hijos = [...el.children].filter(
+        (h) =>
+          (h.classList.contains('form-group') || h.classList.contains('checkbox-item')) &&
+          h.getBoundingClientRect().height > 0
+      );
+      if (hijos.length < 2) return;
+      const cajas = hijos.map((h) => h.getBoundingClientRect());
+      for (let i = 1; i < cajas.length; i++) {
+        const unoAlLadoDelOtro = Math.abs(cajas[i].left - cajas[i - 1].left) > 2;
+        const desfase = Math.round(Math.abs(cajas[i].top - cajas[i - 1].top));
+        if (unoAlLadoDelOtro && desfase > 0 && desfase < 40) {
+          problemas.push({
+            contenedor: String(el.className)
+              .trim()
+              .split(/\s+/)
+              .filter((c) => !c.startsWith('ng-'))
+              .join('.'),
+            desfase,
+            margenes: hijos.map((h) => getComputedStyle(h).marginTop)
+          });
+          break;
+        }
+      }
+    });
+
+    if (!problemas.length) {
+      console.log(`✓ ${location.pathname} — campos alineados`);
+    } else {
+      console.warn(`✗ ${location.pathname} — campos en escalera`);
+      console.table(problemas);
+    }
+    return problemas;
+  };
+
+  console.log('Listo. Llama a comprobarPantalla() y a comprobarAlineacion().');
 })();
