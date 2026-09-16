@@ -191,8 +191,20 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    background: rgba(15, 23, 42, 0.78);
-    backdrop-filter: blur(6px);
+    /**
+     * ⚠️ **La placa es OPACA, y no es un capricho estético.**
+     *
+     * Iba a `rgba(15, 23, 42, 0.78)`, y lo que hay detrás es **la foto del
+     * coche**: un color que no se puede saber. Con una placa translúcida, el
+     * contraste del texto depende de si el coche es blanco o negro, así que no
+     * hay ninguna tinta que se pueda garantizar. Opaca, la cuenta se puede
+     * hacer: las cuatro tintas de abajo dan entre 6,00:1 y 9,58:1 sobre este
+     * fondo.
+     *
+     * Medido: con la placa translúcida sobre el hueco sin foto, «Disponible»
+     * salía a **1,82:1** — verde oscuro sobre casi negro, ilegible.
+     */
+    background: #0F172A;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
@@ -215,11 +227,21 @@
     }
   }
 
-  // Light inks: they always sit on the dark plate above.
-  .status-available { color: var(--success-color); }
-  .status-rented { color: var(--warning-color); }
-  .status-maintenance { color: var(--info-color); }
-  .status-out { color: var(--error-color); }
+  /**
+   * ⚠️ **Tintas FIJAS, no las variables del tema.** El comentario de antes
+   * decía «light inks: they always sit on the dark plate» y la intención era
+   * buena; el fallo es que `--success-color` **cambia con el tema** —#4CC38A en
+   * oscuro, #1E7F4F en claro— y la placa no cambia nunca. En tema claro las
+   * cuatro caían a entre 1,29:1 y 1,86:1.
+   *
+   * Es la misma lección que `--warning-on`: cuando el fondo es fijo, el color
+   * que va encima no puede seguir al tema. Son los valores del tema oscuro
+   * escritos a mano precisamente porque aquí NO deben variar.
+   */
+  .status-available { color: #4CC38A; }   /* 8,06:1 */
+  .status-rented { color: #F0B429; }      /* 9,58:1 */
+  .status-maintenance { color: #7BA4EA; } /* 7,09:1 */
+  .status-out { color: #F26B62; }         /* 6,00:1 */
 }
 
 .vehicle-info {
