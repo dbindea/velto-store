@@ -2066,3 +2066,68 @@ etiqueta.
 Verificado en los dos idiomas críticos: español 103 + 141 + 92 y **rumano** 95 +
 161 + 80 («Anulează rezervarea» es el más largo). Los dos caben en una fila, con
 `wrap` de red por si alguna traducción futura se pasa.
+
+---
+
+## C-40 · Velocidad de carga, volumen a 3-4 años y PWA — 17 de septiembre de 2026
+
+### Lo que bloqueaba, medido antes de tocar
+
+| Momento | Qué pasaba |
+|---|---|
+| 324–622 ms | Bundle: 13 ficheros en paralelo |
+| 810–1122 ms | Firebase Auth resuelve la sesión (**312 ms**) |
+| 1147–1213 ms | Firestore lee `authorizedUsers` (el guard) |
+| **1291 ms** | *Recién ahora* empiezan a bajar los chunks de la pantalla |
+| **1904 ms** | Primer pintado |
+
+Dos cosas independientes: la pantalla en blanco casi dos segundos, y medio
+segundo de red parada esperando al guard.
+
+**Resultado: primer pintado de 1.904 ms a 740 ms.** Y el tema ya se aplica antes
+de que baje el CSS —un script en línea de cuatro líneas—, así que desaparece el
+fogonazo blanco que veía quien trabaja en el tema oscuro.
+
+⚠️ La precarga **no** es `PreloadAllModules`: ese arranca justo cuando el panel
+está pidiendo sus datos a Firestore, y se ganaría en la segunda pantalla lo que
+se pierde en la primera. Espera a que el navegador esté ocioso. Y las rutas
+públicas quedan fuera: al cliente que abre un enlace para firmar no se le baja
+el backoffice entero con sus datos móviles.
+
+### El volumen
+
+El **panel no crece**: filtra por estado —reservas activas, contratos pendientes,
+mantenimiento vencido— así que lee lo mismo dentro de cuatro años. Está bien
+hecho y conviene no tocarlo.
+
+Lo que sí crecía sin freno: los cuatro listados traían su colección entera, y
+Pagos además la **escuchaba**. Con diez coches a cuatro años son del orden de
+1.760 reservas, 6.000 filas de cobro y 3.500 inspecciones, cada documento con
+sus snapshots dentro. Ahora traen 50 y ofrecen «cargar más antiguos».
+
+⚠️ **Y aquí estuvo el riesgo real del día.** `getReservations()` tiene **ocho
+llamantes**. Ponerle un tope por defecto habría roto tres en silencio, y uno de
+ellos con dinero: `collaborator-detail` **deriva de esa lista lo que se le debe
+al propietario** de un coche cedido. Con la lista cortada, las reservas cerradas
+que quedaran fuera no generarían devengo y el colaborador aparecería cobrando
+menos de lo que le corresponde — sin ningún error por ninguna parte. El tope es
+opcional y solo lo usa el listado.
+
+Lo que el calendario, Eventos y Informes necesitan no es un tope sino un **rango
+de fechas**, y eso pide índices compuestos nuevos. Queda pendiente y anotado:
+Informes sigue leyendo seis colecciones enteras y filtrando en memoria.
+
+### PWA
+
+Instalable: manifest, iconos PNG 192/512/maskable y `apple-touch-icon`.
+Verificado servido: `manifest.webmanifest` 200, los tres iconos 200,
+`display: standalone`, atajos a «Nueva reserva» y «Cobros pendientes».
+
+⚠️ **Sin service worker, a propósito.** Añade una capa de caché sobre una
+aplicación que mueve dinero, con el problema de la versión vieja servida después
+de desplegar hasta cerrar todas las pestañas — y offline no se puede tener de
+todas formas, porque el guard lee `authorizedUsers` de Firestore.
+
+⚠️ El `apple-touch-icon` apuntaba a un **SVG**, que iOS ignora: quien añadiera la
+aplicación a la pantalla de inicio de un iPhone veía un recorte de la web en vez
+del logotipo.
