@@ -118,6 +118,41 @@ Si eso imprime sin error, el código está bien y lo que falta es cuota: reinten
 Pasó el 7 de septiembre de 2026, y se perdió un rato buscando un error de
 compilación que no existía.
 
+⚠️ **Y hay un segundo error que también acusa al código sin motivo:**
+
+```
+Error: User code failed to load. Cannot determine backend specification.
+Timeout after 10000.
+```
+
+No dice lo que parece. Antes de subir nada, el CLI arranca `lib/index.js` en un
+servidor local y le pide el manifiesto por `http://127.0.0.1:<puerto>/__/functions.yaml`;
+si no contesta en **10 segundos**, aborta. O sea que significa «no me contestó a
+tiempo», no «tu código está roto» — y **no se despliega nada**, así que no deja
+medio estado.
+
+Medido el 17 de septiembre de 2026, cuando salió: el bundle carga en **1,2 s**, y
+**1,9 s** recién compilado; el descubrimiento entero responde `200` en **1,18 s**
+con las 26 functions. Lo que se comió los diez segundos era la máquina —31
+procesos de node, con un `ng serve` recompilando de fondo—. Se reproduce a mano
+así, que es lo que descarta el código:
+
+```bash
+cd functions
+FUNCTIONS_CONTROL_API=true PORT=8355 node node_modules/firebase-functions/lib/bin/firebase-functions.js . &
+curl -s -m 30 -o /dev/null -w "%{http_code} en %{time_total}s\n" http://127.0.0.1:8355/__/functions.yaml
+curl -s http://127.0.0.1:8355/__/quitquitquit   # apagarlo
+```
+
+⚠️ Sin `FUNCTIONS_CONTROL_API=true` esa ruta **no se registra** y responde `404`
+—que parece el fallo y no lo es—: el servidor solo la monta con esa variable.
+
+El plazo se sube con `FUNCTIONS_DISCOVERY_TIMEOUT`, **en segundos**:
+
+```bash
+FUNCTIONS_DISCOVERY_TIMEOUT=120 firebase deploy --only functions:x --project prod
+```
+
 ## Dos entornos, dos proyectos de Firebase
 
 Una sola base de código. Lo único que cambia entre entornos es **qué fichero de
