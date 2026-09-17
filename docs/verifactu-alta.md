@@ -355,6 +355,12 @@ firebase deploy --only functions:getVerifactuStatus,functions:checkVerifactuConn
 firebase deploy --only functions:sendVerifactuRecords,functions:retryVerifactuRecord --project prod
 firebase deploy --only functions:sweepVerifactuRecords --project prod   # activa Cloud Scheduler
 
+# ⚠️ Y ESTA, que no escribe nada y por eso es fácil dejársela: es la que le
+# dice a la pantalla si este entorno remite (`verifactuEnabled`). Sin
+# redesplegarla seguiría contestando lo de hoy —que no— y Ajustes diría «la
+# remisión está desactivada» con la remisión ya encendida y facturas saliendo.
+firebase deploy --only functions:getComplianceStatus --project prod
+
 npm run deploy:prod:rules    # reglas + índices (hace falta el de verifactuSubmissions)
 ```
 

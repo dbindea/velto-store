@@ -190,6 +190,32 @@ export class SettingsComponent implements OnInit {
     return this.complianceStatus()?.invoicingEnabled === true;
   }
 
+  /**
+   * ¿Se **remite** a la AEAT en este entorno? Que no es lo mismo que facturar.
+   *
+   * ⚠️ **Se compara contra `true`, no se convierte a booleano.** La function
+   * que lo sirve puede ser anterior a este campo y devolver `undefined`; así
+   * ese caso cae en «no se remite», que es el lado que no pregunta por una
+   * function que quizá no esté desplegada.
+   */
+  get verifactuEnabled(): boolean {
+    return this.complianceStatus()?.verifactuEnabled === true;
+  }
+
+  /**
+   * Aquí se factura pero **no se remite todavía**: el caso de producción entre
+   * el 17 de septiembre de 2026 y el 1 de enero de 2027.
+   *
+   * Merece tarjeta propia y no silencio. Los registros **sí** se están
+   * guardando con cada factura, y quien mira esta pantalla lo que quiere saber
+   * es si hay algo pendiente con la Agencia: no enseñar nada se lee como que no
+   * hay nada que remitir, cuando lo que pasa es que se remitirá todo junto más
+   * adelante.
+   */
+  get verifactuApagado(): boolean {
+    return this.invoicingEnabled && !this.verifactuEnabled;
+  }
+
   private async loadDeclarations(): Promise<void> {
     try {
       // El estado primero: sin saber qué versión corre no se puede decir si
@@ -200,13 +226,21 @@ export class SettingsComponent implements OnInit {
       this.declarationsLoaded = true;
 
       /**
-       * ⚠️ **La remisión solo se consulta si aquí se factura.** En un entorno
-       * que no emite facturas no hay nada que remitir, y preguntarlo daría un
-       * error —«no se pudo consultar el estado»— que hace pensar que algo está
-       * roto cuando lo que pasa es que aún no toca. Son dos cosas distintas y
-       * la pantalla tiene que distinguirlas.
+       * ⚠️ **La remisión solo se consulta si aquí se REMITE.** No si se
+       * factura: en un entorno que emite facturas pero todavía no las manda a
+       * la Agencia no hay estado que consultar, y preguntarlo da un error
+       * —«no se pudo consultar el estado»— que hace pensar que algo está roto
+       * cuando lo que pasa es que aún no toca.
+       *
+       * ⚠️ **Esta condición estuvo atada a `invoicingEnabled` y funcionaba de
+       * casualidad**, porque las dos banderas estuvieron apagadas a la vez
+       * hasta el 17 de septiembre de 2026. El día que producción empezó a
+       * facturar sin remitir, la pantalla llamó a `getVerifactuStatus` —que
+       * allí ni siquiera está desplegada, y no lo estará hasta enero— y soltó
+       * el error justo después de emitir la declaración responsable, que es el
+       * peor momento para dudar de si algo ha ido mal.
        */
-      if (this.invoicingEnabled) await this.loadVerifactu();
+      if (this.verifactuEnabled) await this.loadVerifactu();
     } catch {
       this.errorKey.set('settings.compliance.loadError');
     }

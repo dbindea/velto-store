@@ -23,7 +23,7 @@ import {
   buildDeclarationPdf,
   declarationStatements
 } from './compliance-declaration';
-import { sistemaInformatico, verifactuSystemVersion } from './verifactu';
+import { sistemaInformatico, verifactuEnabled, verifactuSystemVersion } from './verifactu';
 
 interface DeclarationResponse {
   version: string;
@@ -55,6 +55,19 @@ export const getComplianceStatus = functions.https.onCall(async (request) => {
     onlyVerifactu: sistema.tipoUsoPosibleSoloVerifactu,
     multipleTaxpayers: sistema.tipoUsoPosibleMultiOT,
     invoicingEnabled: invoicingEnabled(),
+    /**
+     * ⚠️ **Si este entorno REMITE, que no es si factura.** Viaja desde aquí
+     * porque la pantalla necesita saberlo **antes** de preguntar por el estado
+     * de la remisión: `getVerifactuStatus` puede no estar ni desplegada —en
+     * producción no lo está hasta el 1 de enero— y una llamada a un callable
+     * que no existe da un error, que se lee como avería y no como «esto aún no
+     * toca».
+     *
+     * Hasta el 17 de septiembre de 2026 la pantalla lo deducía de
+     * `invoicingEnabled`, y funcionaba de casualidad: las dos estaban apagadas
+     * a la vez. El día que producción empezó a facturar sin remitir, saltó.
+     */
+    verifactuEnabled: verifactuEnabled(),
     // Para que la pantalla no ofrezca dos regímenes que el backend va a
     // rechazar: un botón que no hace nada es un fallo, y aquí además el error
     // llegaría con el formulario entero relleno.
