@@ -29,19 +29,36 @@
   margin-bottom: 1.5rem;
   min-width: 0;
 
-  // On phones the identity takes the whole first row and the edit action
-  // drops to its own full-width row underneath, so the name has room to
-  // wrap between words instead of being squeezed beside a button.
+  /**
+   * En el móvil la identidad ocupa la primera fila entera —para que el nombre
+   * parta entre palabras en vez de estrujarse al lado de un botón— y las dos
+   * acciones comparten la segunda.
+   *
+   * ⚠️ **Editar y Borrar iban en filas distintas**: `.btn-primary` tenía
+   * `flex: 1 1 100%`, así que se llevaba la fila entera y el de borrar caía
+   * solo a una tercera, como un icono suelto sin contexto.
+   *
+   * ⚠️ **El 60/40 se hace con el factor de crecimiento y `flex-basis: 0`**, no
+   * con `flex-basis: 60%`. Con porcentajes, el `gap` de 12 px sale de algún
+   * sitio y el reparto real no es el que se pide; con la base a 0, todo el
+   * ancho disponible —ya descontado el hueco— se reparte 6 a 4 exacto.
+   */
   @media (max-width: 768px) {
     flex-wrap: wrap;
     gap: 0.75rem;
 
     .header-content {
-      flex: 1 1 auto;
+      flex: 1 1 100%;
     }
 
     .btn-primary {
-      flex: 1 1 100%;
+      flex: 6 1 0;
+      min-width: 0;
+    }
+
+    .btn-danger {
+      flex: 4 1 0;
+      min-width: 0;
     }
   }
 }
@@ -126,6 +143,20 @@
   color: var(--success-color);
   font-size: 0.7rem;
   font-weight: 600;
+
+  /**
+   * ⚠️ **El icono no seguía al texto del badge.** `styles.scss` declara
+   * `.pi { font-size: 1rem }` para todos los iconos de la aplicación, y este
+   * badge escribe a `0.7rem`: el icono salía a 16 px al lado de un texto de
+   * 11, casi el doble. La regla global mide (0,1,0) y aquí no había ninguna
+   * que la corrigiera.
+   *
+   * En `em` y no en `rem` a propósito: así queda atado al tamaño del badge y
+   * sigue cuadrando si algún día ese cambia.
+   */
+  i {
+    font-size: 1em;
+  }
 }
 
 .trust-badge {

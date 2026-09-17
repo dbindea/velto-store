@@ -35,15 +35,15 @@
         <div class="card-content">
           <div class="amount-row">
             <span class="label">{{ 'payments.fields.amount' | translate }}:</span>
-            <span class="value">{{ payment.amount | number:'1.2-2' }} €</span>
+            <span class="value">{{ payment.amount | number: '1.2-2' }} €</span>
           </div>
           <div class="amount-row">
             <span class="label">{{ 'payments.fields.paidAmount' | translate }}:</span>
-            <span class="value paid">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+            <span class="value paid">{{ payment.paidAmount | number: '1.2-2' }} €</span>
           </div>
           <div class="amount-row">
             <span class="label">{{ 'payments.fields.pendingAmount' | translate }}:</span>
-            <span class="value pending">{{ payment.pendingAmount | number:'1.2-2' }} €</span>
+            <span class="value pending">{{ payment.pendingAmount | number: '1.2-2' }} €</span>
           </div>
         </div>
       </div>
@@ -58,7 +58,9 @@
           @if (payment.reservationSnapshot?.finalPrice) {
             <div class="info-row">
               <span class="label">{{ 'reservations.title' | translate }}:</span>
-              <span class="value">{{ payment.reservationSnapshot?.finalPrice | number:'1.2-2' }} €</span>
+              <span class="value"
+                >{{ payment.reservationSnapshot?.finalPrice | number: '1.2-2' }} €</span
+              >
             </div>
           }
           @if (payment.clientSnapshot?.fullName) {
@@ -70,7 +72,10 @@
           @if (payment.vehicleSnapshot?.plateNumber) {
             <div class="info-row">
               <span class="label">{{ 'vehicles.title' | translate }}:</span>
-              <span class="value">{{ payment.vehicleSnapshot?.brand }} {{ payment.vehicleSnapshot?.model }} · {{ payment.vehicleSnapshot?.plateNumber }}</span>
+              <span class="value"
+                >{{ payment.vehicleSnapshot?.brand }} {{ payment.vehicleSnapshot?.model }} ·
+                {{ payment.vehicleSnapshot?.plateNumber }}</span
+              >
             </div>
           }
         </div>
@@ -86,19 +91,19 @@
           @if (getDueDate(); as due) {
             <div class="info-row">
               <span class="label">{{ 'payments.fields.dueDate' | translate }}:</span>
-              <span class="value">{{ due | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span class="value">{{ due | date: 'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }
           @if (getPaidAt(); as paid) {
             <div class="info-row">
               <span class="label">{{ 'payments.fields.paidAt' | translate }}:</span>
-              <span class="value">{{ paid | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span class="value">{{ paid | date: 'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }
           @if (getCreatedAt(); as created) {
             <div class="info-row">
               <span class="label">{{ 'common.create' | translate }}:</span>
-              <span class="value">{{ created | date:'dd/MM/yyyy HH:mm' }}</span>
+              <span class="value">{{ created | date: 'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }
         </div>
@@ -169,7 +174,9 @@
             @if (payment.redsys.notifiedAt) {
               <div class="info-row">
                 <span class="label">{{ 'payments.redsys.notificationReceived' | translate }}:</span>
-                <span class="value">{{ asDate(payment.redsys.notifiedAt) | date:'dd/MM/yyyy HH:mm' }}</span>
+                <span class="value">{{
+                  asDate(payment.redsys.notifiedAt) | date: 'dd/MM/yyyy HH:mm'
+                }}</span>
               </div>
             }
 
@@ -182,17 +189,21 @@
             @if (refunded > 0) {
               <div class="info-row">
                 <span class="label">{{ 'payments.refund.refunded' | translate }}:</span>
-                <span class="value refunded-amount">−{{ refunded | number:'1.2-2' }} €</span>
+                <span class="value refunded-amount">−{{ refunded | number: '1.2-2' }} €</span>
               </div>
               @for (r of payment.redsys.refunds || []; track $index) {
                 <div class="info-row refund-line">
                   <span class="label">
-                    {{ asDate(r.at) | date:'dd/MM/yyyy HH:mm' }}
-                    @if (r.by) { · {{ r.by }} }
+                    {{ asDate(r.at) | date: 'dd/MM/yyyy HH:mm' }}
+                    @if (r.by) {
+                      · {{ r.by }}
+                    }
                   </span>
                   <span class="value">
-                    {{ r.amount | number:'1.2-2' }} €
-                    @if (r.authorizationCode) { · {{ r.authorizationCode }} }
+                    {{ r.amount | number: '1.2-2' }} €
+                    @if (r.authorizationCode) {
+                      · {{ r.authorizationCode }}
+                    }
                   </span>
                 </div>
               }
@@ -233,7 +244,7 @@
               <button class="btn-warning" type="button" (click)="openRefund()">
                 <i class="pi pi-replay"></i>
                 {{ 'payments.refund.start' | translate }}
-                ({{ refundable | number:'1.2-2' }} €)
+                ({{ refundable | number: '1.2-2' }} €)
               </button>
             } @else {
               <div class="form-group">
@@ -252,7 +263,7 @@
                   [class.is-invalid]="refundSubmitted && refundProblemKey"
                 />
                 <small class="field-hint">
-                  {{ 'payments.refund.max' | translate }} {{ refundable | number:'1.2-2' }} €
+                  {{ 'payments.refund.max' | translate }} {{ refundable | number: '1.2-2' }} €
                 </small>
                 <app-form-error [problems]="refundProblemKey" [show]="refundSubmitted" />
               </div>
@@ -275,16 +286,22 @@
               -->
               <div class="notice notice-warning">
                 <i class="pi pi-exclamation-triangle"></i>
-                <span>{{ 'payments.refund.warning' | translate }}</span>
+                <span> {{ 'payments.refund.warning' | translate }}</span>
               </div>
 
               <div class="form-actions">
                 <button class="btn-secondary" type="button" (click)="showRefund = false">
                   {{ 'common.cancel' | translate }}
                 </button>
-                <button class="btn-danger" type="button" [disabled]="refunding"
-                  (click)="doRefund()">
-                  @if (refunding) { <i class="pi pi-spin pi-spinner"></i> }
+                <button
+                  class="btn-danger"
+                  type="button"
+                  [disabled]="refunding"
+                  (click)="doRefund()"
+                >
+                  @if (refunding) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                  }
                   {{ 'payments.refund.confirmAction' | translate }}
                 </button>
               </div>
@@ -345,7 +362,10 @@
                    paga desde su móvil cuando pueda. -->
               <button type="button" class="btn-secondary" (click)="copyPaymentLink()">
                 <i class="pi pi-link"></i>
-                {{ (copied ? 'contracts.messages.linkCopied' : 'payments.actions.copyPaymentLink') | translate }}
+                {{
+                  (copied ? 'contracts.messages.linkCopied' : 'payments.actions.copyPaymentLink')
+                    | translate
+                }}
               </button>
             </div>
           </div>
@@ -366,7 +386,10 @@
             <p class="hint">{{ amountLockReason | translate }}</p>
             <!-- Y se dice DÓNDE se toca, no solo que aquí no. Los conceptos del
                  alquiler los gobierna la reserva, que mueve señal y resto a la vez. -->
-            @if (amountLockReason === 'payments.edit.denied.governedByReservation' && payment.reservationId) {
+            @if (
+              amountLockReason === 'payments.edit.denied.governedByReservation' &&
+              payment.reservationId
+            ) {
               <button class="btn-secondary" type="button" (click)="viewReservation()">
                 <i class="pi pi-external-link"></i>
                 {{ 'payments.edit.goToReservation' | translate }}
@@ -401,7 +424,9 @@
               }
             </div>
             <div class="form-group">
-              <label for="newConcept" class="label">{{ 'payments.edit.concept' | translate }}</label>
+              <label for="newConcept" class="label">{{
+                'payments.edit.concept' | translate
+              }}</label>
               <input
                 id="newConcept"
                 name="newConcept"
@@ -459,14 +484,19 @@
       }
       @if (canCancel()) {
         @if (permissions.canCancelReservations()) {
-        <button class="btn-danger" type="button" [disabled]="cancelling" (click)="cancelPayment()">
-          @if (cancelling) {
-            <i class="pi pi-spin pi-spinner"></i>
-          } @else {
-            <i class="pi pi-times"></i>
-          }
-          {{ 'payments.actions.cancelPayment' | translate }}
-        </button>
+          <button
+            class="btn-danger"
+            type="button"
+            [disabled]="cancelling"
+            (click)="cancelPayment()"
+          >
+            @if (cancelling) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-times"></i>
+            }
+            {{ 'payments.actions.cancelPayment' | translate }}
+          </button>
         } @else {
           <span class="permission-note">
             <i class="pi pi-lock"></i>

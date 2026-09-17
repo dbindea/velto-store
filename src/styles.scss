@@ -865,6 +865,34 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /**
+ * El botón de lo irreversible.
+ *
+ * ⚠️ **Tenía geometría global pero NINGÚN color**, igual que le pasaba a
+ * `.btn-secondary`: el bloque de arriba le daba relleno, radio y tamaño, y el
+ * fondo lo ponía cada componente. De las siete plantillas que lo usan, **tres
+ * no lo declaraban** —la ficha de cliente, el formulario de gastos y Ajustes—,
+ * así que su botón de borrar salía como un icono de papelera suelto, sin caja
+ * y sin rojo. En un botón que borra de verdad, eso es lo contrario de lo que
+ * tiene que comunicar.
+ *
+ * Es el rojo sólido `--red-600`, no `--error-color`: el semántico es **tinta**
+ * y en tema oscuro es claro, así que de fondo con texto blanco encima el texto
+ * desaparece. Ver la nota de los colores de estado en su versión sólida.
+ *
+ * ⚠️ **No pisa a quien ya lo declara**: esta regla mide (0,1,0) y la de un
+ * componente encapsulado (0,2,0). Lo que cambia es que uno nuevo ya no nace
+ * invisible.
+ */
+.btn-danger {
+  background: var(--red-600);
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: var(--red-700);
+  }
+}
+
+/**
  * El botón de lo grave que **sí se puede deshacer**.
  *
  * ⚠️ **Existe para que el rojo signifique una sola cosa: irreversible.** En la
