@@ -71,6 +71,20 @@ export interface ComplianceStatus {
    */
   invoicingEnabled: boolean;
   /**
+   * Si **este entorno remite a la AEAT**, que es otra cosa que emitir.
+   *
+   * ⚠️ **Hace falta para no preguntar por una remisión que no existe.**
+   * `getVerifactuStatus` puede no estar desplegada —en producción no lo está
+   * hasta el 1 de enero de 2027— y llamar a un callable ausente da un error,
+   * que el operador lee como avería. Sabiéndolo de antemano, la pantalla
+   * explica que está apagada en vez de fallar.
+   *
+   * ⚠️ **Puede llegar `undefined`** si la function que lo sirve todavía no se
+   * ha redesplegado, y eso es deliberado: cae del lado de no preguntar, que es
+   * el que no rompe nada.
+   */
+  verifactuEnabled?: boolean;
+  /**
    * Si este entorno puede facturar con **régimen intracomunitario**: entrega
    * exenta del art. 25 e inversión del sujeto pasivo.
    *

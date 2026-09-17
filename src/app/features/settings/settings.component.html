@@ -487,6 +487,23 @@
             </p>
           }
         </div>
+      } @else if (verifactuApagado) {
+        <!-- Aquí se factura pero todavía no se remite: producción, entre el 17
+             de septiembre de 2026 y el 1 de enero de 2027.
+             ⚠️ No se puede preguntar por el estado —`getVerifactuStatus` ni
+             siquiera está desplegada allí—, así que la tarjeta se pinta con lo
+             que sí se sabe. Callarla sería peor: quien mira esto quiere saber
+             si hay algo pendiente con la Agencia, y una pantalla vacía se lee
+             como que no hay nada, cuando lo que hay es una cola guardándose
+             para más adelante. -->
+        <div class="card">
+          <h2>{{ 'settings.verifactu.title' | translate }}</h2>
+          <p class="hint">{{ 'settings.verifactu.hint' | translate }}</p>
+          <p class="compliance-state pending">
+            <i class="pi pi-pause-circle"></i>
+            {{ 'settings.verifactu.disabled' | translate }}
+          </p>
+        </div>
       }
     }
   }
