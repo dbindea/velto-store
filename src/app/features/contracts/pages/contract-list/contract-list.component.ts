@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject , signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -11,6 +11,7 @@ import {
   ContractStatus
 } from '@shared/models/contract.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
 
 @Component({
   selector: 'app-contract-list',
@@ -41,9 +42,36 @@ export class ContractListComponent implements OnInit, OnDestroy {
     { value: 'expired', label: 'contracts.status.expired' }
   ];
 
+  /** Cuántos contratos se traen. Sube al pulsar «cargar más antiguos». */
+  readonly tope = signal(PAGINA);
+  private recibidos = 0;
+
+  /** Se mira lo RECIBIDO, no lo filtrado. Ver `pagination.util.ts`. */
+  get puedeCargarMas(): boolean {
+    return hayMas(this.recibidos, this.tope());
+  }
+
+  /**
+   * ⚠️ **Cierra la anterior antes de abrir la nueva.** `getContracts` es un
+   * `onSnapshot`: sin desuscribir quedarían dos oyentes sobre la misma
+   * colección. Volver a llamar aquí es correcto porque cambia **la consulta**,
+   * no porque se quiera refrescar.
+   */
+  cargarMas(): void {
+    this.tope.set(siguientePagina(this.tope()));
+    this.cargar();
+  }
+
   ngOnInit(): void {
-    this.subscription = this.contractService.getContracts().subscribe({
+    this.cargar();
+  }
+
+  private cargar(): void {
+    this.loading = true;
+    this.subscription?.unsubscribe();
+    this.subscription = this.contractService.getContracts(this.tope()).subscribe({
       next: (items) => {
+        this.recibidos = items.length;
         this.contracts = items;
         this.loading = false;
       },

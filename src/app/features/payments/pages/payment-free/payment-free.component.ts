@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { RedsysPaymentService, RedsysLinkResponse } from '@features/payments/services/redsys-payment.service';
@@ -140,6 +141,20 @@ export class PaymentFreeComponent implements OnInit {
     const r = this.created()?.redsys;
     if (!r?.paymentUrl || !r.formData) return;
     this.redsysService.openGateway({ paymentUrl: r.paymentUrl, formData: r.formData, reference: r.order || '' });
+  }
+
+  /**
+   * ⚠️ **El nombre del pagador se capitaliza, y no es cosmético: sale impreso
+   * en el recibo**, detrás de «Recibido de». Tecleado deprisa en el mostrador
+   * salía «juan pérez» o «JUAN PEREZ» en un documento que la empresa firma.
+   *
+   * El concepto NO pasa por aquí, a propósito: es una frase —«señal de la
+   * reserva»—, y capitalizar cada palabra daría «Señal de la Reserva». Esta
+   * función es para nombres.
+   */
+  onPayerNameInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.form.payerName = transformInput(input, capitalizeWords);
   }
 
   reset(): void {

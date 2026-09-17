@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject , signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -13,6 +13,7 @@ import {
   INSPECTION_STATUS_COLORS
 } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
 
 @Component({
   selector: 'app-inspection-list',
@@ -57,10 +58,25 @@ export class InspectionListComponent implements OnInit {
     this.loadInspections();
   }
 
+  /** Cuántas inspecciones se traen. Sube al pulsar «cargar más antiguas». */
+  readonly tope = signal(PAGINA);
+  private recibidos = 0;
+
+  /** Se mira lo RECIBIDO, no lo filtrado. Ver `pagination.util.ts`. */
+  get puedeCargarMas(): boolean {
+    return hayMas(this.recibidos, this.tope());
+  }
+
+  cargarMas(): void {
+    this.tope.set(siguientePagina(this.tope()));
+    this.loadInspections();
+  }
+
   loadInspections(): void {
     this.loading = true;
-    this.inspectionService.getInspections().subscribe({
+    this.inspectionService.getInspections(this.tope()).subscribe({
       next: (inspections) => {
+        this.recibidos = inspections.length;
         this.inspections = inspections;
         this.applyFilters();
         this.loading = false;

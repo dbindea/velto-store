@@ -120,6 +120,7 @@
           class="form-control"
           name="provider"
           [(ngModel)]="form.provider"
+          (input)="onProviderInput($event)"
         />
       </label>
     </div>

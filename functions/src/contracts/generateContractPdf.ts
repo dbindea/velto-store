@@ -26,12 +26,35 @@ interface GenerateRequest {
   reservationId: string;
   /** Language of the platform when the operator pressed the button. */
   locale?: ContractLocale;
+  /**
+   * Sustituir un contrato **ya firmado** por uno nuevo, archivando el anterior.
+   *
+   * ⚠️ **Sin esta bandera, un contrato firmado no se toca.** Hasta el 15 de
+   * septiembre de 2026 esta function escribía con `set(merge: true)` **sin
+   * mirar el estado**, así que volver a llamarla sobre una reserva ya firmada
+   * dejaba el documento en `generated` con un `pdfUrl` nuevo y los campos de la
+   * firma —`signedAt`, la huella, el código de verificación— colgando de un
+   * fichero que ya no era ese. La pantalla lo impedía (`canGenerateContract`
+   * deniega si está firmado), pero eso es la interfaz, no la seguridad:
+   * bastaba llamar al callable.
+   *
+   * Y no es un detalle interno: la verificación pública busca por
+   * `verificationCode` en este mismo documento, así que el cliente que
+   * escaneara el QR de **su copia en papel** se habría encontrado los datos de
+   * otro contrato y una huella que no cuadra — la página le diría que su
+   * contrato está alterado.
+   */
+  supersede?: boolean;
+  /** Obligatorio con `supersede`: por qué se rehace. Se guarda en el archivo. */
+  supersedeReason?: string;
 }
 
 interface GenerateResponse {
   contractId: string;
   pdfUrl: string;
   pdfPath: string;
+  /** El id del contrato archivado, si esta llamada sustituyó a uno firmado. */
+  supersededId?: string;
 }
 
 function toDate(value: any): Date | undefined {
@@ -81,6 +104,30 @@ export const generateContractPdf = functions.https.onCall(
       throw new functions.https.HttpsError('not-found', 'Reserva no encontrada');
     }
     const reservation = resSnap.data() as any;
+
+    // 1 bis. ⚠️ Un contrato FIRMADO no se pisa.
+    //
+    // Se comprueba aquí, antes de componer y subir nada: rechazar al final
+    // dejaría el PDF nuevo huérfano en Storage con su token de descarga vivo.
+    //
+    // Ver la nota de `supersede` arriba para lo que esto evita. El motivo es
+    // obligatorio por lo mismo que en una excepción de workflow: dentro de seis
+    // meses, un contrato archivado sin explicación no le sirve a nadie.
+    const contractRefEarly = db.collection('contracts').doc(reservationId);
+    const previo = await contractRefEarly.get();
+    const previoFirmado = previo.exists && (previo.data() as any)?.status === 'signed';
+    if (previoFirmado && !data.supersede) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'contracts.errors.alreadySigned'
+      );
+    }
+    if (previoFirmado && !String(data.supersedeReason || '').trim()) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'contracts.errors.supersedeReasonRequired'
+      );
+    }
 
     // 2. Load client snapshot (prefer reservation snapshot to avoid extra read)
     const clientSnapshot = {
@@ -332,6 +379,62 @@ export const generateContractPdf = functions.https.onCall(
       baseUpdate.createdAt = now;
       baseUpdate.createdBy = request.auth!.uid || null;
     }
+
+    // 9 bis. Sustitución: el firmado se ARCHIVA, no se pierde.
+    //
+    // Se copia entero a un documento propio —con su PDF firmado, su huella y su
+    // código de verificación— y se marca `superseded`. Así el cliente que tenga
+    // la copia en papel la sigue pudiendo comprobar en `/v/:codigo`, y queda
+    // escrito qué se acordó antes y por qué se rehízo.
+    //
+    // ⚠️ **El id lleva un sufijo `-v{n}` y se comprueba que está libre.** Con un
+    // id fijo, sustituir dos veces machacaría el primer archivo — que es
+    // exactamente el fallo que este bloque existe para no cometer.
+    let supersededId: string | undefined;
+    if (previoFirmado) {
+      const anterior = previo.data() as any;
+      let n = 1;
+      // No hay carrera que valga aquí: sustituir un contrato es una acción de
+      // mostrador, no concurrente. Lo que se evita es el despiste de dos
+      // sustituciones seguidas.
+      while ((await db.collection('contracts').doc(`${reservationId}-v${n}`).get()).exists) {
+        n += 1;
+      }
+      supersededId = `${reservationId}-v${n}`;
+      await db.collection('contracts').doc(supersededId).set({
+        ...anterior,
+        status: 'superseded',
+        supersededAt: now,
+        supersededBy: request.auth!.uid || null,
+        supersededReason: String(data.supersedeReason || '').trim(),
+        supersededById: reservationId
+      });
+      baseUpdate.supersedesId = supersededId;
+
+      // ⚠️ **Lo de la firma anterior hay que BORRARLO a mano.** `merge: true`
+      // conserva todo lo que no se nombre, así que sin esto el contrato nuevo
+      // —sin firmar— nacería con el `signedAt`, la huella y el código de
+      // verificación del anterior pegados encima: la verificación pública
+      // encontraría dos contratos con el mismo código y la ficha diría que hay
+      // una firma donde no la hay.
+      const borrar = admin.firestore.FieldValue.delete();
+      for (const campo of [
+        'signedAt',
+        'signedPdfUrl',
+        'signedPdfPath',
+        'signedPdfSha256',
+        'signatureUrl',
+        'signaturePath',
+        'verificationCode',
+        'digitallySealed',
+        'signingTokenId',
+        'signingLinkPath',
+        'emailedAt'
+      ]) {
+        baseUpdate[campo] = borrar;
+      }
+    }
+
     await contractRef.set(baseUpdate, { merge: true });
 
     // 10. Update reservation contractStatus and contractInfo
@@ -351,7 +454,8 @@ export const generateContractPdf = functions.https.onCall(
     return {
       contractId: reservationId,
       pdfUrl,
-      pdfPath
+      pdfPath,
+      supersededId
     };
   }
 );

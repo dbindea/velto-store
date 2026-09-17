@@ -36,6 +36,7 @@ import {
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 
 /**
  * Alta y edición de un gasto.
@@ -126,6 +127,17 @@ export class ExpenseFormComponent implements OnInit {
   documentPath = '';
   uploading = false;
   pendingFile: File | null = null;
+
+  /**
+   * El proveedor es un **nombre** —«Talleres Hermanos Pérez»—, así que se
+   * capitaliza como el del cliente o el del colaborador. El concepto y el
+   * número de factura no: uno es una frase y el otro un código que hay que
+   * dejar exactamente como viene impreso en el papel.
+   */
+  onSupplierInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.supplier = transformInput(input, capitalizeWords);
+  }
 
   async ngOnInit(): Promise<void> {
     this.expenseId = this.route.snapshot.paramMap.get('id');

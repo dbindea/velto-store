@@ -299,7 +299,7 @@ export class ReservationDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.loadReservation(id);
+      this.watchReservation(id);
     } else {
       this.router.navigate(['/reservations']);
     }
@@ -310,8 +310,19 @@ export class ReservationDetailComponent implements OnInit {
    * open (the customer signs, an inspection completes). The related
    * collections are loaded once, on the first emission — re-running them on
    * every field change would refetch payments and inspections needlessly.
+   *
+   * ⚠️ **Tres de las cuatro cargas de esta pantalla son streams VIVOS, y por eso
+   * se llaman `watch…`.** Un stream vivo no termina, así que llamarlas otra vez
+   * no refresca: **abre una suscripción más** y deja abierta la anterior.
+   * `takeUntilDestroyed` solo las cierra al salir de la pantalla, no entre
+   * llamadas. Las tenía cada una de dos a tres llamadas de más —«refrescar»
+   * después de registrar un cobro, de mover la fianza, de generar el contrato—,
+   * y cada una apilaba un oyente de Firestore, una reconciliación de pagos y una
+   * escritura. No hacen falta: quien escribe es el servicio o una Cloud
+   * Function, y Firestore reemite solo. `loadInspections` sí lee una vez y sí se
+   * puede volver a llamar; el nombre es lo que separa un caso del otro.
    */
-  loadReservation(id: string): void {
+  watchReservation(id: string): void {
     this.loading = true;
     let relatedLoaded = false;
 
@@ -329,9 +340,9 @@ export class ReservationDetailComponent implements OnInit {
 
           if (!relatedLoaded) {
             relatedLoaded = true;
-            this.loadPayments(id);
+            this.watchPayments(id);
             this.loadInspections(id);
-            this.loadContract(id);
+            this.watchContract(id);
           }
         },
         error: (error) => {
@@ -347,7 +358,7 @@ export class ReservationDetailComponent implements OnInit {
    * signs on their own phone. `takeUntilDestroyed` closes the Firestore
    * listener when the view goes away.
    */
-  loadContract(reservationId: string): void {
+  watchContract(reservationId: string): void {
     this.contractService
       .getContractByReservation(reservationId)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -391,7 +402,7 @@ export class ReservationDetailComponent implements OnInit {
    * `reconcileAfterExternalPayment()` dentro, seguiría además **escribiendo en
    * Firestore** desde una reserva que el operador ya cerró.
    */
-  loadPayments(reservationId: string): void {
+  watchPayments(reservationId: string): void {
     this.loadingPayments = true;
     this.paymentService
       .watchPaymentsByReservation(reservationId)
@@ -870,8 +881,8 @@ export class ReservationDetailComponent implements OnInit {
         clientSnapshot: this.reservation.clientSnapshot,
         vehicleSnapshot: this.reservation.vehicleSnapshot
       });
-      this.loadPayments(this.reservation.id);
-      this.loadReservation(this.reservation.id);
+      // Sin refrescar a mano: el pago nuevo y el resumen que el servicio
+      // recalcula llegan por los dos streams vivos (ver `watchReservation`).
       this.showPaymentForm = false;
       this.resetPaymentForm();
     } catch (error) {
@@ -900,8 +911,8 @@ export class ReservationDetailComponent implements OnInit {
           this.depositForm.reason || 'Retención fianza'
         );
       }
-      this.loadPayments(this.reservation.id);
-      this.loadReservation(this.reservation.id);
+      // Igual que en `registerPayment`: los streams vivos traen el movimiento
+      // de fianza y el resumen recalculado sin volver a suscribirse.
       this.showDepositForm = false;
       this.depositForm = { type: 'refund', amount: 0, method: 'cash' };
     } catch (error) {
@@ -1476,11 +1487,29 @@ export class ReservationDetailComponent implements OnInit {
     if (!this.reservation?.id) return;
     this.generatingContract = true;
     try {
+      // El contrato lo crea una Cloud Function; el stream vivo lo trae solo.
       await this.contractService.generateContractFromReservation(this.reservation.id);
-      this.loadContract(this.reservation.id);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error generating contract:', err);
-      this.notifications.error('reservations.errors.generateContract', { retry: () => void this.generateContract() });
+      /**
+       * ⚠️ **Lo que rechaza la function se enseña tal cual si es una clave.**
+       * El caso concreto es `contracts.errors.alreadySigned`: desde que el
+       * backend se niega a pisar un contrato firmado, ese rechazo tiene una
+       * explicación buena —«para cambiarlo hay que rehacerlo»— y taparla con un
+       * «no se pudo generar el contrato» genérico dejaría al operador
+       * reintentando algo que no va a funcionar nunca.
+       *
+       * Y por eso `retry` solo se ofrece en el caso genérico: reintentar un
+       * rechazo permanente es pulsar un botón que ya sabemos que falla.
+       */
+      const clave = String((err as Error)?.message || '');
+      if (clave.startsWith('contracts.')) {
+        this.notifications.error(clave);
+      } else {
+        this.notifications.error('reservations.errors.generateContract', {
+          retry: () => void this.generateContract()
+        });
+      }
     } finally {
       this.generatingContract = false;
     }
@@ -1491,7 +1520,6 @@ export class ReservationDetailComponent implements OnInit {
     this.creatingSigningLink = true;
     try {
       await this.contractService.generateSigningLink(this.contract.id);
-      if (this.reservation?.id) this.loadContract(this.reservation.id);
     } catch (err) {
       console.error('Error creating signing link:', err);
       this.notifications.error('reservations.errors.createSigningLink', { retry: () => void this.createContractSigningLink() });
@@ -1562,11 +1590,12 @@ export class ReservationDetailComponent implements OnInit {
     this.emailError = '';
   }
 
+  /** `emailError` guarda una CLAVE i18n. Ver la nota de `contract-detail`. */
   async sendContractEmail(): Promise<void> {
     if (!this.contract?.id) return;
     const email = (this.emailRecipient || '').trim();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      this.emailError = 'Introduce un email válido';
+      this.emailError = 'contracts.errors.invalidEmail';
       return;
     }
     this.sendingEmail = true;
@@ -1574,10 +1603,10 @@ export class ReservationDetailComponent implements OnInit {
     try {
       await this.contractService.sendSignedContractByEmail(this.contract.id, email);
       this.showEmailForm = false;
-      if (this.reservation?.id) this.loadContract(this.reservation.id);
     } catch (err: any) {
       console.error('Error sending email:', err);
-      this.emailError = err?.message || 'Error al enviar el email';
+      const clave = String(err?.message || '');
+      this.emailError = clave.startsWith('contracts.') ? clave : 'contracts.errors.sendFailed';
     } finally {
       this.sendingEmail = false;
     }

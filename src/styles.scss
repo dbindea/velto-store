@@ -145,6 +145,9 @@
 
   // Form surfaces
   --bg-input: #ffffff;
+  /* Contorno del control: 3,03:1 sobre el blanco del campo. El de antes
+     —`--gray-200`— daba 1,24:1. Ver la nota de `.form-control`. */
+  --border-input: #8C9699;
 
   // ---------------------------------------------------------------------
   // Semantic status palette
@@ -159,6 +162,12 @@
   --success-bg: #E1F4EA;
   --warning-color: #9A6700;
   --warning-bg: #FFF3D6;
+  /* El color que acompaña al ámbar cuando el ámbar es el FONDO (un botón
+     `.btn-warning`), y por eso es una variable y no un literal: el ámbar claro
+     (#9A6700) pide texto blanco —4,83:1— y el oscuro (#F0B429) lo pide negro
+     —9,97:1—. Escrito a mano, cualquier copia de la regla se queda con el par
+     de un solo tema y falla el contraste en el otro. Es lo que pasaba. */
+  --warning-on: #FFFFFF;
   --error-color: #C8322B;
   --error-bg: #FCE8E6;
   --danger-color: var(--error-color);
@@ -201,7 +210,10 @@
   --bg-main: var(--gray-950);
   --bg-card: var(--gray-900);
   --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-input: var(--gray-950);
+  /* Un escalón por encima de la tarjeta, no por debajo: el campo se lee
+     como una caja y no como un hueco del mismo color que el fondo. */
+  --bg-input: var(--gray-800);
+  --border-input: var(--gray-600); /* 3,13:1 sobre la tarjeta */
   --text-primary: #ffffff;
   --text-secondary: var(--gray-300);
   --text-muted: var(--gray-400);
@@ -213,6 +225,7 @@
   --success-bg: rgba(76, 195, 138, 0.14);
   --warning-color: #F0B429;
   --warning-bg: rgba(240, 180, 41, 0.14);
+  --warning-on: #1A1400;
   --error-color: #F26B62;
   --error-bg: rgba(242, 107, 98, 0.14);
   --info-color: #7BA4EA;
@@ -239,7 +252,8 @@
   --border-color: #2E3B38;
   --border-light: #253330;
   --border-strong: #3D4C48;
-  --bg-input: #151D1B;
+  --bg-input: #2E3B38;
+  --border-input: #63726E; /* 3,04:1 sobre la tarjeta */
   --bg-hover: rgba(255, 255, 255, 0.05);
   --text-primary: #F2F6F5;
   --text-secondary: #C2CFCB;
@@ -263,7 +277,8 @@
   --border-color: #334155;
   --border-light: #1E293B;
   --border-strong: #475569;
-  --bg-input: #0F172A;
+  --bg-input: #334155;
+  --border-input: #64748B; /* 3,07:1 sobre la tarjeta */
   --bg-hover: rgba(255, 255, 255, 0.04);
   --text-primary: #F1F5F9;
   --text-secondary: #CBD5E1;
@@ -823,6 +838,61 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /**
+ * El secundario: el que acompaña al principal sin competir con él.
+ *
+ * ⚠️ **No tenía color, solo geometría.** El bloque de arriba le daba relleno,
+ * radio y tamaño a las cuatro clases, pero el fondo y la tinta los ponía cada
+ * componente por su cuenta — y donde no lo hacía, el botón salía **transparente
+ * con la tinta heredada**. En el tema claro se lee igual; sobre el fondo casi
+ * negro del tema oscuro, un botón sin fondo ni borde no es un botón.
+ *
+ * Va con el mismo relleno y el mismo borde que un campo, y por el mismo motivo:
+ * es un control, y su contorno tiene que llegar a 3:1 contra lo que tenga
+ * detrás (WCAG 1.4.11).
+ *
+ * ⚠️ **No pisa a quien ya lo declara.** Esta regla mide (0,1,0) y la de un
+ * componente encapsulado mide (0,2,0), así que los que ya traen su color siguen
+ * mandando. Lo que cambia es que uno nuevo ya no nace invisible.
+ */
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+}
+
+/**
+ * El botón de lo irreversible.
+ *
+ * ⚠️ **Tenía geometría global pero NINGÚN color**, igual que le pasaba a
+ * `.btn-secondary`: el bloque de arriba le daba relleno, radio y tamaño, y el
+ * fondo lo ponía cada componente. De las siete plantillas que lo usan, **tres
+ * no lo declaraban** —la ficha de cliente, el formulario de gastos y Ajustes—,
+ * así que su botón de borrar salía como un icono de papelera suelto, sin caja
+ * y sin rojo. En un botón que borra de verdad, eso es lo contrario de lo que
+ * tiene que comunicar.
+ *
+ * Es el rojo sólido `--red-600`, no `--error-color`: el semántico es **tinta**
+ * y en tema oscuro es claro, así que de fondo con texto blanco encima el texto
+ * desaparece. Ver la nota de los colores de estado en su versión sólida.
+ *
+ * ⚠️ **No pisa a quien ya lo declara**: esta regla mide (0,1,0) y la de un
+ * componente encapsulado (0,2,0). Lo que cambia es que uno nuevo ya no nace
+ * invisible.
+ */
+.btn-danger {
+  background: var(--red-600);
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: var(--red-700);
+  }
+}
+
+/**
  * El botón de lo grave que **sí se puede deshacer**.
  *
  * ⚠️ **Existe para que el rojo signifique una sola cosa: irreversible.** En la
@@ -837,22 +907,20 @@ h1, h2, h3, h4, h5, h6 {
  */
 .btn-warning {
   background: var(--warning-color);
-  /* Sobre el ámbar del tema claro (#9A6700) el blanco contrasta, y sobre el
-     del oscuro (#F0B429) hace falta texto oscuro: el mismo ámbar con dos
-     acompañantes según el fondo del tema. */
-  color: #1A1400;
+  /* ⚠️ **El acompañante va por variable, no por selector de tema.** Esto eran
+     un `.btn-warning { color: #1A1400 }` global más un `:root .btn-warning` y
+     un `.dark .btn-warning` que lo corregían, y no funcionaba: los dos
+     correctores miden (0,2,0), lo mismo que el `.btn-warning[_ngcontent-xxx]`
+     de un componente que declare su propia copia — y en un empate manda el
+     orden, que pone los estilos del componente detrás. El botón «Cancelar
+     reserva» salía en tema claro con texto casi negro sobre ámbar oscuro,
+     3,84:1, por debajo del mínimo. Con `var(--warning-on)` el valor lo pone el
+     bloque del tema, así que hasta una copia encapsulada sale correcta. */
+  color: var(--warning-on);
 
   &:hover {
     filter: brightness(1.08);
   }
-}
-
-:root .btn-warning {
-  color: #FFFFFF;
-}
-
-.dark .btn-warning {
-  color: #1A1400;
 }
 
 // PrimeIcons sizing fix
@@ -888,11 +956,27 @@ h1, h2, h3, h4, h5, h6 {
    formulario sigue mandando sobre el suyo; lo que cambia es que uno nuevo ya no
    sale desnudo.
    ========================================================================= */
+/**
+ * ⚠️ **El relleno sale de `--bg-input`, NO de `--bg-main`.**
+ *
+ * Ponía `var(--bg-main)`, que es el color de la **página**: un campo pintado
+ * con el fondo sobre el que se apoya. En el tema claro no se notaba porque la
+ * página es gris y el campo blanco; en los tres temas oscuros el campo y la
+ * página eran **el mismo color** —1,00:1— y lo único que delimitaba el input
+ * era un borde a 1,33:1, cuando el mínimo para el contorno de un control es
+ * 3:1 (WCAG 1.4.11). En el tema casi negro eso lo dejaba inutilizable.
+ *
+ * ⚠️ **Y el contorno lo lleva el BORDE, no el relleno.** Un relleno 3:1 más
+ * claro que una tarjeta casi negra sería gris medio, y el formulario dejaría de
+ * parecer lo que es. La norma pide **una** señal a 3:1, y en un campo la
+ * natural es su borde: por eso existe `--border-input`, aparte del
+ * `--border-color` de las separaciones, que sí puede y debe ser sutil.
+ */
 .form-control {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  background: var(--bg-main);
-  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 0.9rem;
@@ -906,6 +990,31 @@ h1, h2, h3, h4, h5, h6 {
   &::placeholder {
     color: var(--text-muted);
   }
+}
+
+/**
+ * La superficie del campo, con la especificidad justa para **ganar a las
+ * dieciocho copias encapsuladas**.
+ *
+ * ⚠️ **Sin esto el arreglo no llega a ninguna pantalla.** Los dieciocho
+ * formularios que declaran su propio `.form-control` compilan a
+ * `.form-control[_ngcontent-xxx]`: eso es una clase **más un atributo**, o sea
+ * **(0,2,0)**, y le gana a un `.form-control` global (0,1,0). Y varias de esas
+ * copias ponen `background: var(--bg-card)`, que dentro de una tarjeta es el
+ * mismo color que la tarjeta — 1,00:1, en todos los temas, también el claro:
+ * blanco sobre blanco, salvado solo por un borde a 1,24:1.
+ *
+ * ⚠️ **`input.form-control` NO basta**, aunque lo parezca: un elemento y una
+ * clase son **(0,1,1)**, que pierde contra (0,2,0). El precedente que funciona
+ * en este fichero es `input.form-control.is-invalid` — elemento y **dos**
+ * clases, (0,2,1). Repetir la clase es la forma legítima de llegar a (0,2,1)
+ * cuando no hay una segunda clase real que poner; no es un error de copia.
+ */
+input.form-control.form-control,
+select.form-control.form-control,
+textarea.form-control.form-control {
+  background: var(--bg-input);
+  border-color: var(--border-input);
 }
 
 /* Un `textarea` crece a lo alto y nada a lo ancho: el redimensionado libre del
@@ -959,6 +1068,53 @@ textarea.form-control {
 .checkbox-item + .form-group,
 .checkbox-item + .form-row {
   margin-top: 1rem;
+}
+
+/**
+ * ⚠️ **Dentro de una fila los hermanos van al LADO, no debajo.**
+ *
+ * El hermano adyacente no sabe en qué dirección coloca el contenedor, así que la
+ * regla de arriba le metía `margin-top: 1rem` al **segundo** hijo de cada fila —
+ * que es una rejilla horizontal. Resultado: la columna derecha bajaba 16 px y la
+ * fila entera quedaba en escalera. «Hora de recogida» salía descolocada respecto
+ * a «Fecha de recogida» en todos los formularios de dos columnas, que son casi
+ * todos. Lo encontró Dorel mirando la pantalla; ninguna auditoría lo vio.
+ *
+ * La separación entre columnas ya la pone el `gap` de la rejilla — y también la
+ * de las filas cuando baja de línea en móvil, así que quitar el margen no deja
+ * nada pegado.
+ *
+ * ⚠️ **La lista de contenedores está MEDIDA, no supuesta.** Son los cuatro que
+ * de verdad colocan campos en horizontal, sacados recorriendo la aplicación y
+ * buscando padres cuyos `.form-group` tengan distinto `left`. Si aparece uno
+ * nuevo, se añade aquí — y se encuentra volviendo a medir, no leyendo
+ * plantillas: los `div` anidados no se dejan buscar con una expresión regular.
+ *
+ * ⚠️ **Tres clases para ganar.** `.form-group + .form-group` mide (0,2,0); con
+ * el contenedor delante son (0,3,0) y esta gana. Misma aritmética que la de los
+ * campos: contar, no suponer.
+ */
+.form-row > .form-group + .form-group,
+.form-row > .form-group + .checkbox-item,
+.form-row > .checkbox-item + .form-group,
+.form-row > .checkbox-item + .checkbox-item,
+.form-grid > .form-group + .form-group,
+.form-grid > .form-group + .checkbox-item,
+.form-grid > .checkbox-item + .form-group,
+.form-grid > .checkbox-item + .checkbox-item,
+.features-checkboxes > .form-group + .form-group,
+.features-checkboxes > .form-group + .checkbox-item,
+.features-checkboxes > .checkbox-item + .form-group,
+.features-checkboxes > .checkbox-item + .checkbox-item,
+.rule-fields > .form-group + .form-group,
+.rule-fields > .form-group + .checkbox-item,
+.rule-fields > .checkbox-item + .form-group,
+.rule-fields > .checkbox-item + .checkbox-item,
+.line-row > .form-group + .form-group,
+.line-row > .form-group + .checkbox-item,
+.line-row > .checkbox-item + .form-group,
+.line-row > .checkbox-item + .checkbox-item {
+  margin-top: 0;
 }
 
 /* El rótulo y su campo son **una** cosa, así que van más juntos entre sí que
@@ -1169,4 +1325,28 @@ textarea.is-invalid:focus {
   color: var(--text-muted);
 
   i { font-size: 0.7rem; }
+}
+
+/**
+ * El pie de un listado paginado: «cargar más antiguos».
+ *
+ * ⚠️ **Global porque lo usan cuatro listados** —Pagos, Reservas, Contratos e
+ * Inspecciones— y ya sabemos cómo acaba declararlo en cada uno: con cuatro
+ * nombres distintos y tres tamaños, como pasó con las casillas y con
+ * `.form-control`.
+ *
+ * Centrado y discreto: no compite con las filas, que son lo que se viene a
+ * leer. Solo aparece cuando de verdad queda algo detrás.
+ */
+.cargar-mas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+
+  .hint {
+    margin: 0;
+    text-align: center;
+  }
 }

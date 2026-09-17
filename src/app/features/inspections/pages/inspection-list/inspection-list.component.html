@@ -118,6 +118,20 @@
           </div>
         </div>
       }
+
+      @if (puedeCargarMas) {
+        <div class="cargar-mas">
+          <button type="button" class="btn-secondary" [disabled]="loading" (click)="cargarMas()">
+            @if (loading) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-arrow-down"></i>
+            }
+            {{ 'common.loadMore' | translate }}
+          </button>
+          <p class="hint">{{ 'common.showingLatest' | translate }}</p>
+        </div>
+      }
     </div>
   }
 </div>

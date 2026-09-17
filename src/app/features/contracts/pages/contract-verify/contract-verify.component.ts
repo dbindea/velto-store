@@ -7,7 +7,8 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { BrandLogoComponent } from '@shared/components/brand-logo/brand-logo.component';
 
 interface VerificationView {
-  state: 'valid' | 'cancelled' | 'unknown';
+  /** `superseded`: se firmó, y después se sustituyó por otro contrato. */
+  state: 'valid' | 'cancelled' | 'superseded' | 'unknown';
   contractNumber?: string;
   signedAt?: string;
   vehiclePlate?: string;

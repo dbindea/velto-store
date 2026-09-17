@@ -27,8 +27,23 @@ import { companyConfig } from '../company-config';
 import { formatFingerprint, normalizeVerificationCode } from './verification';
 
 export interface PublicVerificationView {
-  /** `valid` solo si el contrato existe y está firmado. */
-  state: 'valid' | 'cancelled' | 'unknown';
+  /**
+   * `valid` solo si el contrato existe y está firmado.
+   *
+   * ⚠️ **`superseded` es un estado propio y no puede ser `unknown`.** Un
+   * contrato firmado y luego sustituido —porque cambiaron las fechas, el
+   * precio o quién conduce— se archiva entero **precisamente** para que el
+   * cliente que tenga la copia en papel la siga pudiendo comprobar. Cayendo en
+   * `unknown`, su QR respondía «No encontrado»: al cliente se le decía que su
+   * contrato no existe, que es lo contrario de lo que pasó y lo único que
+   * archivarlo tenía que evitar.
+   *
+   * Tampoco vale devolverlo como `valid`: el papel que tiene en la mano ya no
+   * es el acuerdo vigente, y decirle que sí lo es sería mentirle en la otra
+   * dirección. Se le dice las dos cosas — que se firmó de verdad y que hay uno
+   * posterior.
+   */
+  state: 'valid' | 'cancelled' | 'superseded' | 'unknown';
   contractNumber?: string;
   /** ISO 8601. La pantalla lo formatea en el idioma del que mira. */
   signedAt?: string;
@@ -80,10 +95,15 @@ export const getContractVerification = functions.https.onCall(
         brandName: companyConfig().brandName
       };
     }
-    if (contract.status !== 'signed') return unknownView();
+    if (contract.status !== 'signed' && contract.status !== 'superseded') {
+      return unknownView();
+    }
 
     return {
-      state: 'valid',
+      // Los mismos datos en los dos casos: el contrato se firmó de verdad y su
+      // huella sigue sirviendo para comprobar el fichero. Lo único que cambia
+      // es si sigue siendo el vigente.
+      state: contract.status === 'superseded' ? 'superseded' : 'valid',
       contractNumber: contract.contractNumber,
       signedAt: toIso(contract.signedAt),
       vehiclePlate: contract.vehicleSnapshot?.plateNumber || undefined,

@@ -1,7 +1,7 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, writeBatch } from '@angular/fire/firestore';
-import { Observable, from, forkJoin, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, limit, writeBatch, QueryConstraint } from '@angular/fire/firestore';
+import { Observable, from, firstValueFrom } from 'rxjs';
+import { map, first } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import {
@@ -46,6 +46,167 @@ import {
 } from '@shared/utils/reservation-workflow.util';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { StorageService } from '@core/firebase/storage.service';
+import { TranslateService } from '@core/i18n/translate.service';
+import {
+  canEditField,
+  EditableField,
+  initialPaymentProblem,
+  redistributeInitialPayment,
+  requiresNewContract
+} from '@shared/utils/reservation-edit.util';
+import { ContractService } from '@features/contracts/services/contract.service';
+
+/**
+ * Lo que se puede pedir cambiar de una reserva ya creada.
+ *
+ * ⚠️ **Es una lista cerrada y no un `Partial<Reservation>`.** Abierto —lo que
+ * aceptaba el viejo `updateReservation()`— deja escribir `reservationStatus`,
+ * `contractInfo` o `ownerShareSnapshot` desde cualquier llamada, saltándose el
+ * workflow y las reglas de Firestore. Aquí solo entra lo que un operador
+ * negocia con el cliente.
+ */
+export interface ReservationEdit {
+  /** La ficha entera del cliente nuevo: el snapshot se rehace desde ella. */
+  client?: Client;
+  pickupDateTime?: Date;
+  returnDateTime?: Date;
+  /**
+   * Precio acordado a mano, **NETO** como en la creación. `null` lo retira y
+   * devuelve la reserva a la tarifa con su descuento de fidelidad.
+   */
+  agreedNetPrice?: number | null;
+  depositRequired?: number;
+  /** Obligatorio si la fianza queda en 0. Lo exige `buildDeposit`. */
+  depositWaivedReason?: string;
+  /** Puede ser 0: «no se pide señal». */
+  initialPaymentRequired?: number;
+  additionalDrivers?: AdditionalDriver[];
+}
+
+export interface ReservationEditResult {
+  /** Qué cambió de verdad. Vacío si se guardó sin tocar nada. */
+  changed: EditableField[];
+  /**
+   * El contrato firmado ya no dice la verdad y hay que rehacerlo.
+   *
+   * ⚠️ **Esto no lo hace el servicio solo**, y es deliberado: sustituir un
+   * contrato firmado obliga a que el cliente vuelva a firmar, y eso es una
+   * decisión del operador delante del cliente, no un efecto secundario de
+   * guardar un formulario.
+   */
+  requiresNewContract: boolean;
+}
+
+/**
+ * El precio acordado a mano que tiene HOY la reserva, o `null` si no hay
+ * ninguno y manda la tarifa.
+ *
+ * ⚠️ **Exportada para que el formulario y el servicio pregunten lo mismo.** El
+ * formulario la usa al precargarse y `changedFields()` al comparar; escrita dos
+ * veces, la primera vez que discrepen una pantalla dirá que no se cambió nada y
+ * la otra que sí.
+ */
+export function agreedNetPriceOf(r: Reservation): number | null {
+  const snap = r.pricingSnapshot;
+  if (!snap?.manualAdjustment) return null;
+  return snap.netPrice === undefined ? null : roundMoney(snap.netPrice);
+}
+
+/** El snapshot del arrendatario, con los mismos campos que en la creación. */
+function clientSnapshotOf(client: Client) {
+  return {
+    fullName: client.fullName,
+    phone: client.phone,
+    email: client.email,
+    documentNumber: client.documentNumber
+  };
+}
+
+/**
+ * Qué campos cambian **de verdad**.
+ *
+ * ⚠️ Un campo que llega igual que estaba no es un cambio, y tratarlo como tal
+ * tiene una consecuencia concreta: abrir el formulario de una reserva con la
+ * fianza ya cobrada y guardarlo sin tocar nada fallaría con «la fianza ya está
+ * cobrada», porque el importe viaja en la petición aunque nadie lo escribiera.
+ */
+function changedFields(actual: Reservation, edit: ReservationEdit): EditableField[] {
+  const out: EditableField[] = [];
+  if (edit.client && edit.client.id !== actual.clientId) out.push('client');
+  if (edit.pickupDateTime && !sameInstant(edit.pickupDateTime, actual.pickupDateTime)) {
+    out.push('pickupDateTime');
+  }
+  if (edit.returnDateTime && !sameInstant(edit.returnDateTime, actual.returnDateTime)) {
+    out.push('returnDateTime');
+  }
+  if (edit.agreedNetPrice !== undefined) {
+    /**
+     * ⚠️ **«Sin precio acordado» no es lo mismo que «el neto de la tarifa».**
+     * Comparando contra `netPrice` a secas, una reserva sin precio a mano daba
+     * `null !== 250` y se contaba como cambio de precio **sin que nadie tocara
+     * el campo**: recalculaba de más y, lo que importa, marcaba la reserva como
+     * «hay que rehacer el contrato» por un cambio que no existió.
+     *
+     * Lo que hubo antes es un precio acordado **solo si hay
+     * `manualAdjustment`**, que es lo mismo que mira el formulario al
+     * precargarse. Las dos preguntas tienen que ser la misma o discrepan.
+     */
+    const anterior = agreedNetPriceOf(actual);
+    const pedido = edit.agreedNetPrice === null ? null : roundMoney(edit.agreedNetPrice);
+    if (pedido !== anterior) out.push('agreedPrice');
+  }
+  if (
+    edit.depositRequired !== undefined &&
+    roundMoney(edit.depositRequired) !== roundMoney(actual.deposit?.requiredAmount ?? 0)
+  ) {
+    out.push('depositAmount');
+  }
+  if (
+    edit.initialPaymentRequired !== undefined &&
+    roundMoney(edit.initialPaymentRequired) !==
+      roundMoney(actual.initialPayment?.requiredAmount ?? 0)
+  ) {
+    out.push('initialPaymentAmount');
+  }
+  if (edit.additionalDrivers && !sameDrivers(edit.additionalDrivers, actual.additionalDrivers)) {
+    out.push('additionalDrivers');
+  }
+  return out;
+}
+
+function sameInstant(a: Date, b: unknown): boolean {
+  const otra = toDate(b);
+  return a.getTime() === otra.getTime();
+}
+
+function sameDrivers(a: AdditionalDriver[], b?: AdditionalDriver[]): boolean {
+  const norm = (list?: AdditionalDriver[]) =>
+    JSON.stringify(
+      (list || []).map((d) => [
+        d.fullName || '',
+        d.documentNumber || '',
+        d.drivingLicenseNumber || ''
+      ])
+    );
+  return norm(a) === norm(b);
+}
+
+/**
+ * El texto de la nota interna: «Reserva modificada: precio, señal».
+ *
+ * ⚠️ **Se resuelve AQUÍ, no se guarda como clave.** Las notas internas son
+ * texto libre —se pintan tal cual, sin pasar por el pipe— y son un histórico:
+ * se escriben una vez y se leen dentro de meses. Guardada como clave salía
+ * literalmente `reservations.edit.note: agreedPrice, initialPaymentAmount` en
+ * la ficha, que no le dice nada a nadie.
+ *
+ * Queda en el idioma en que trabajaba quien la escribió, que es lo correcto
+ * para un histórico: dice lo que esa persona vio.
+ */
+function describeEdit(changed: EditableField[], t: TranslateService): string {
+  const nombres = changed.map((f) => t.translate(`reservations.edit.fields.${f}`));
+  return `${t.translate('reservations.edit.note')}: ${nombres.join(', ')}`;
+}
 
 export interface VehicleAvailabilityResult {
   vehicleId: string;
@@ -76,6 +237,10 @@ export class ReservationService {
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
   private paymentService = inject(PaymentService);
+  // Solo para leer el contrato vigente al editar. `contract.service.ts` no
+  // importa este servicio, así que no hay ciclo.
+  private contractService = inject(ContractService);
+  private translate = inject(TranslateService);
   private collaboratorService = inject(CollaboratorService);
   private inspectionService = inject(InspectionService);
   private authService = inject(AuthService);
@@ -112,8 +277,31 @@ export class ReservationService {
   /**
    * Get all reservations.
    */
-  getReservations(): Observable<Reservation[]> {
-    const q = query(this.reservationsRef, orderBy('pickupDateTime', 'asc'));
+  /**
+   * Todas las reservas, de la recogida más antigua a la más reciente.
+   *
+   * ⚠️ **El tope es OPCIONAL, y eso no es pereza: es que la mayoría de quienes
+   * llaman aquí NO pueden recibir una lista recortada.** Son ocho, y tres se
+   * romperían en silencio:
+   *
+   * - `collaborator-detail` deriva de aquí **lo que se le debe al propietario**
+   *   de un coche cedido. Con la lista cortada, las reservas cerradas que se
+   *   queden fuera no generan devengo y el colaborador aparece cobrando menos
+   *   de lo que le corresponde — sin ningún error por ninguna parte.
+   * - El **calendario** pinta un mes: recortando por número, el mes sale con
+   *   huecos.
+   * - **Eventos** deriva de aquí las entregas y devoluciones próximas.
+   *
+   * Lo que esos tres necesitan no es un tope sino un **rango de fechas**, y eso
+   * pide índices compuestos nuevos. Está anotado; hoy se cambia solo el
+   * listado, que es donde el tope sí es la respuesta correcta.
+   */
+  getReservations(tope?: number): Observable<Reservation[]> {
+    // El tipo se anota: sin él TypeScript lo deduce del primer elemento
+    // —`QueryOrderByConstraint`— y no deja añadir el `limit`.
+    const restricciones: QueryConstraint[] = [orderBy('pickupDateTime', 'asc')];
+    if (tope) restricciones.push(limit(tope));
+    const q = query(this.reservationsRef, ...restricciones);
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation)))
     );
@@ -178,9 +366,19 @@ export class ReservationService {
    * Check if a vehicle is available for given dates.
    */
   async checkVehicleAvailability(
-    vehicleId: string, 
-    pickupDateTime: Date, 
-    returnDateTime: Date
+    vehicleId: string,
+    pickupDateTime: Date,
+    returnDateTime: Date,
+    /**
+     * La reserva que se está **editando**, para que no se encuentre a sí misma.
+     *
+     * ⚠️ Sin esto, cambiar las fechas de una reserva es imposible: la propia
+     * reserva sigue en `reservations` con sus fechas viejas y un estado que
+     * bloquea, así que se solapa consigo misma y la comprobación responde
+     * «ya existe una reserva para estas fechas». Y el mensaje señalaría al
+     * operador un conflicto con una reserva que es la que tiene delante.
+     */
+    excludeReservationId?: string
   ): Promise<{ available: boolean; conflictId?: string; conflictMessage?: string }> {
     // Get all reservations for this vehicle
     const q = query(
@@ -194,7 +392,12 @@ export class ReservationService {
     
     for (const docSnap of snapshot.docs) {
       const reservation = docSnap.data() as Reservation;
-      
+
+      // La reserva que se está editando no compite consigo misma.
+      if (excludeReservationId && docSnap.id === excludeReservationId) {
+        continue;
+      }
+
       // Skip non-blocking statuses
       if (!BLOCKING_STATUSES.includes(reservation.reservationStatus)) {
         continue;
@@ -672,14 +875,200 @@ export class ReservationService {
   }
 
   /**
-   * Update reservation.
+   * Cambia los datos de una reserva **ya creada**.
+   *
+   * Sustituye a un `updateReservation(id, data: Partial<Reservation>)` que
+   * existía desde el principio, **que no llamaba nadie** y que no comprobaba
+   * nada: aceptaba cualquier campo del documento, así que habría dejado mover
+   * el `pricingSnapshot` de una reserva cerrada o cambiarle el
+   * `reservationStatus` a mano, saltándose el workflow entero.
+   *
+   * Lo que hace este, y en este orden porque el orden importa:
+   *
+   * 1. Mira **qué ha cambiado de verdad**. Un campo que llega igual que estaba
+   *    no es un cambio, y pedir permiso para él haría que abrir el formulario y
+   *    guardarlo sin tocar nada fallara.
+   * 2. Le pregunta a `canEditField()` por cada uno. Es la misma autoridad que
+   *    usa la pantalla para apagar los campos — aquí es la defensa en
+   *    profundidad, porque una pestaña vieja o una llamada directa no pasan por
+   *    ella.
+   * 3. **Recalcula** el precio en vez de fiarse del que venga. Es la regla de
+   *    `pricing.util.ts` y vale igual al editar: cambiar las fechas cambia los
+   *    días, y los días cambian la tarifa aunque nadie toque el importe.
+   * 4. Reparte la señal sin mover el total, y **reescribe las filas de pago
+   *    pendientes** para que el dinero por cobrar cuadre con el precio nuevo.
+   * 5. Escribe todo en un `writeBatch`: entra la reserva con sus filas o no
+   *    entra nada. Es lo mismo que hace la creación, y por el mismo motivo —
+   *    una reserva con un precio nuevo y unas filas de pago viejas pide dinero
+   *    que no corresponde.
+   *
+   * ⚠️ **Deja constancia en las notas internas.** Un cambio de precio o de
+   * fechas sin rastro es indistinguible de un error de quien lo tecleó, y estas
+   * notas son lo único que queda dentro de seis meses.
    */
-  async updateReservation(id: string, data: Partial<Reservation>): Promise<void> {
+  async editReservation(id: string, edit: ReservationEdit): Promise<ReservationEditResult> {
     const docRef = doc(this.firestore, `reservations/${id}`);
-    await updateDoc(docRef, this.cleanData({
-      ...data,
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) throw new Error('reservations.errors.notFound');
+    const actual = { id: snap.id, ...snap.data() } as Reservation;
+
+    // Los pagos son la fuente de verdad del dinero: sin ellos no se puede
+    // afirmar que una fianza está sin cobrar. Se leen de una vez, no se escucha.
+    const pagos = await firstValueFrom(this.paymentService.getPaymentsByReservation(id));
+    const contrato = await firstValueFrom(
+      this.contractService.getContractByReservation(id).pipe(first())
+    );
+
+    const cambiados = changedFields(actual, edit);
+    if (!cambiados.length) return { changed: [], requiresNewContract: false };
+
+    const ctx = {
+      reservation: actual,
+      contract: contrato,
+      payments: pagos,
+      canEditPricing: this.permissions.can('editPricing')
+    };
+    for (const campo of cambiados) {
+      const decision = canEditField(campo, ctx);
+      if (!decision.ok) throw new Error(decision.reason);
+    }
+
+    // Un cliente bloqueado no recibe una reserva, tampoco por la puerta de
+    // atrás de cambiarle el cliente a una que ya existe.
+    if (edit.client) {
+      const trust = canCreateReservationForClient(edit.client.trustLevel);
+      if (!trust.ok) throw new Error(trust.reason);
+    }
+
+    const pickup = edit.pickupDateTime ?? toDate(actual.pickupDateTime);
+    const returnAt = edit.returnDateTime ?? toDate(actual.returnDateTime);
+    if (pickup >= returnAt) throw new Error('reservations.edit.problems.datesOrder');
+
+    if (cambiados.includes('pickupDateTime') || cambiados.includes('returnDateTime')) {
+      const disponible = await this.checkVehicleAvailability(
+        actual.vehicleId,
+        pickup,
+        returnAt,
+        // Sin esto, la reserva se encontraría a sí misma y no se podría mover
+        // ninguna fecha.
+        id
+      );
+      if (!disponible.available) {
+        throw new Error(disponible.conflictMessage || 'reservations.availability.conflict');
+      }
+    }
+
+    const update: Record<string, unknown> = {
       updatedAt: { seconds: Date.now() / 1000 }
-    }));
+    };
+
+    if (edit.client) {
+      update['clientId'] = edit.client.id;
+      update['clientSnapshot'] = clientSnapshotOf(edit.client);
+    }
+    if (cambiados.includes('pickupDateTime')) update['pickupDateTime'] = toTimestamp(pickup);
+    if (cambiados.includes('returnDateTime')) update['returnDateTime'] = toTimestamp(returnAt);
+    if (cambiados.includes('additionalDrivers')) {
+      update['additionalDrivers'] = edit.additionalDrivers ?? [];
+    }
+
+    /**
+     * El precio se recalcula siempre que cambien las fechas o el importe
+     * acordado, **y el descuento de fidelidad sale del cliente que quede**: si
+     * se cambia el arrendatario, el que manda es el suyo, no el del anterior.
+     */
+    const totalDays = calculateCalendarDays(pickup, returnAt);
+    const recalcularPrecio =
+      cambiados.includes('agreedPrice') ||
+      cambiados.includes('pickupDateTime') ||
+      cambiados.includes('returnDateTime') ||
+      cambiados.includes('client');
+
+    let pricing = actual.pricingSnapshot;
+    if (recalcularPrecio) {
+      // `first()` porque `getVehicleById` puede ser un stream vivo: sin él, un
+      // `firstValueFrom` deja el oyente abierto y un `forkJoin` no emitiría.
+      const vehicle = await firstValueFrom(
+        this.vehicleService.getVehicleById(actual.vehicleId).pipe(first())
+      );
+      if (!vehicle) throw new Error('reservations.errors.vehicleNotFound');
+      const base = calculateBasePrice(vehicle.pricingRules || [], totalDays);
+      const fidelidad = edit.client
+        ? edit.client.loyaltyDiscountPercent
+        : actual.pricingSnapshot?.loyaltyDiscountPercent;
+      const acordado =
+        edit.agreedNetPrice !== undefined
+          ? edit.agreedNetPrice
+          : actual.pricingSnapshot?.manualAdjustment
+            ? actual.pricingSnapshot?.netPrice
+            : null;
+      const resultado = resolveRentalPrice(
+        base.basePrice,
+        fidelidad,
+        acordado,
+        // ⚠️ El tipo de IVA **se conserva**, no se relee de Ajustes: está
+        // congelado por reserva para que una subida futura no mueva un contrato
+        // ya firmado, y editar una fecha no es motivo para descongelarlo.
+        actual.pricingSnapshot?.vatRate
+      );
+      pricing = {
+        ...actual.pricingSnapshot,
+        basePrice: resultado.tariffPrice,
+        loyaltyDiscountPercent: resultado.loyaltyDiscountPercent,
+        loyaltyDiscount: resultado.loyaltyDiscount,
+        manualAdjustment: resultado.manualAdjustment,
+        netPrice: resultado.netPrice,
+        finalPrice: resultado.finalPrice
+      } as ReservationPricingSnapshot;
+      update['pricingSnapshot'] = pricing;
+      update['totalDays'] = totalDays;
+    }
+
+    if (cambiados.includes('depositAmount')) {
+      update['deposit'] = buildDeposit(edit.depositRequired!, edit.depositWaivedReason);
+    }
+
+    /**
+     * La señal y el resto se recalculan juntos, **siempre que se toque
+     * cualquiera de los dos o el precio**: el total es el invariante.
+     */
+    const totalDue = roundMoney(pricing?.finalPrice ?? actual.pricingSnapshot?.finalPrice ?? 0);
+    const señalActual = roundMoney(actual.initialPayment?.requiredAmount ?? 0);
+    const señalPedida =
+      edit.initialPaymentRequired !== undefined ? edit.initialPaymentRequired : señalActual;
+    const problema = initialPaymentProblem(señalPedida, totalDue);
+    if (problema) throw new Error(problema);
+    const reparto = redistributeInitialPayment(totalDue, Number(señalPedida));
+
+    update['initialPayment'] = {
+      ...actual.initialPayment,
+      requiredAmount: reparto.initial
+    };
+    update['remainingPayment'] = {
+      ...(actual.remainingPayment ?? { paidAmount: 0, status: 'pending' }),
+      requiredAmount: reparto.remaining
+    };
+
+    const batch = writeBatch(this.firestore);
+    batch.update(docRef, this.cleanData(update));
+    this.paymentService.queueRepricedRows(batch, pagos, {
+      initialRequired: reparto.initial,
+      remainingRequired: reparto.remaining,
+      depositRequired: cambiados.includes('depositAmount')
+        ? roundMoney(edit.depositRequired!)
+        : undefined
+    });
+    await batch.commit();
+
+    // La nota va después del commit y a propósito: si la escritura falla, no
+    // queda anotado un cambio que no llegó a ocurrir.
+    await this.addInternalNote(id, describeEdit(cambiados, this.translate));
+
+    return {
+      changed: cambiados,
+      requiresNewContract:
+        contrato?.status === 'signed' && requiresNewContract(cambiados)
+    };
   }
 
   /**

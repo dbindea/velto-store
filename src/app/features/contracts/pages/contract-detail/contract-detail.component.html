@@ -154,7 +154,7 @@
               />
             </div>
             @if (emailError) {
-              <div class="error-msg">{{ emailError }}</div>
+              <div class="error-msg">{{ emailError | translate }}</div>
             }
             <div class="modal-actions">
               <button class="btn btn-secondary" type="button" (click)="closeEmailForm()" [disabled]="sending">

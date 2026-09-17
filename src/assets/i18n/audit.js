@@ -122,6 +122,17 @@ const DYNAMIC_KEY_SETS = {
   'reservations.status.': ['reserved', 'confirmed', 'delivered', 'returned', 'closed', 'cancelled'],
   // reservation-create.component.ts › Step
   'reservations.steps.': ['dates', 'vehicle', 'client', 'summary'],
+  // reservation-edit.util.ts › EditableField. Son los nombres con los que la
+  // nota interna dice qué se cambió: «Reserva modificada: precio, señal».
+  'reservations.edit.fields.': [
+    'client',
+    'pickupDateTime',
+    'returnDateTime',
+    'agreedPrice',
+    'depositAmount',
+    'initialPaymentAmount',
+    'additionalDrivers'
+  ],
   // reservation-workflow.util.ts › TimelineStepKey
   'reservations.timeline.': [
     'reservationCreated',
@@ -298,7 +309,10 @@ const DESDE_LAS_FUNCTIONS = [
   // functions/src/redsys-refund.ts
   'payments.refund.errors.unauthorized',
   'payments.refund.errors.notConfigured',
-  'payments.refund.errors.rejected'
+  'payments.refund.errors.rejected',
+  // functions/src/contracts/generateContractPdf.ts
+  'contracts.errors.alreadySigned',
+  'contracts.errors.supersedeReasonRequired'
 ];
 
 const orphans = Object.keys(flat[REFERENCE])

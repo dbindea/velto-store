@@ -1,0 +1,48 @@
+{
+  "name": "VELTO MOBILITY · Backoffice",
+  "short_name": "Velto",
+  "description": "Gestión de alquiler de vehículos: reservas, contratos, cobros e inspecciones.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B0F0E",
+  "theme_color": "#20A48F",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "assets/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/brand/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva reserva",
+      "short_name": "Reservar",
+      "url": "/reservations/new",
+      "icons": [{ "src": "assets/brand/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cobros pendientes",
+      "short_name": "Pagos",
+      "url": "/payments",
+      "icons": [{ "src": "assets/brand/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

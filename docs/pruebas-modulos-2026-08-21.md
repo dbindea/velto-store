@@ -1841,3 +1841,293 @@ fue el adjunto.
 Repetido tras el arreglo: factura en
 `expenses/{id}/…-factura-lavadero.pdf`, gasto imputado a `R-AFRCNT · 4488LMN`, y
 el desglose 48,40 → 40,00 + 8,40 correcto.
+
+---
+
+## C-36 · Devolución real en producción, y el realtime que no era tal — 15 de septiembre de 2026
+
+Tercera devolución con dinero de verdad en `rentalcar-veltomobility`, la que
+Dorel dejó sin hacer a propósito para que la hiciera yo de punta a punta.
+
+| Paso | Resultado |
+|---|---|
+| Cobro a devolver | «Señal reserva» 1,21 €, respuesta `0000`, autorización `593332` |
+| Los dos cinturones | Aviso con el importe dentro del formulario **y** diálogo de confirmación aparte |
+| Respuesta del banco | **`0900` — devolución aceptada.** 1,21 € devueltos, 0 restantes |
+| Estado del pago | `Reembolsado`, sin recargar |
+| Inputs del formulario | Ya con su caja: el `.form-control` global está desplegado |
+
+Los tres cobros reales de producción quedan devueltos.
+
+**De paso, lo que Dorel había reportado y no estaba comprobado en producción:**
+
+| Reportado | En producción |
+|---|---|
+| Alta de coche de colaborador | ✅ «De quién es el coche» → Propiedad → Propietario + reparto |
+| Cancelar en ámbar, Eliminar en rojo | ✅ `btn-warning` (#9A6700) y `btn-danger` (#C8322B) |
+| Casillas pegadas a «Descripción» | ✅ 16 px, el ritmo vertical |
+
+**El fallo del día es el ámbar, y no se veía mirando:** el texto salía en
+`#1A1400` sobre `#9A6700`, **3,77:1**, por debajo del mínimo de 4,5:1. La causa
+es la trampa de siempre —`reservation-detail.component.scss` declara su propia
+`.btn-warning`, que encapsulada mide (0,2,0) igual que el corrector global
+`:root .btn-warning`, y en un empate manda el orden, que pone el componente
+detrás—. Se arregla con `var(--warning-on)`, puesta por el bloque del tema:
+4,87:1 en claro y 9,85:1 en oscuro, y así hasta una copia encapsulada sale bien.
+
+**Y el realtime, que era el motivo de la sesión.** Tres pantallas leían con
+`getDocs` lo que cambia desde fuera: la lista de Pagos, la ficha del pago —donde
+se genera el enlace de Redsys y donde uno se queda mirando— y la ficha del
+contrato, que es donde se espera la firma del cliente. Quien da un cobro por
+bueno es el webhook, minutos después; con una lectura única la pantalla se queda
+mintiendo hasta que alguien pulsa F5.
+
+Probado en desarrollo escribiendo en Firestore **por fuera de la aplicación**,
+que es exactamente lo que hace el webhook:
+
+| Cambio hecho desde fuera | La pantalla, sin recargar |
+|---|---|
+| `amount` 5 → 7,50 en la lista | «7,50 €» al momento |
+| `status` pending → paid en la ficha | «Pendiente» → «Pagado», 0,00 € pendiente |
+| Deshacer los dos | Volvió sola a 5,00 € / Pendiente |
+
+**Y detrás apareció un fallo mío de la sesión anterior**, que es el que hace
+falta anotar: al convertir `loadPayments` en stream vivo se quedaron las
+llamadas que lo invocaban después de cada mutación «para refrescar». Un stream
+vivo no se refresca: **se vuelve a suscribir**. `takeUntilDestroyed` solo corta
+al salir de la pantalla, no entre llamadas, así que cada cobro registrado
+apilaba un oyente de Firestore más, una reconciliación más y una escritura más.
+Estaba igual en el contrato y en la propia reserva, esas dos de antes: siete
+llamadas de más en total. Ahora los métodos vivos se llaman `watch…` y los de
+una vez `get…`, que es lo que separa un caso del otro a simple vista.
+
+---
+
+## C-37 · Modificar una reserva creada, y rehacer su contrato — 15 de septiembre de 2026
+
+Recorrido entero de N-34 en desarrollo, contra `velto-store` y con la function
+desplegada. Reserva nueva de 5 días, 302,50 €, señal 50 y fianza 400.
+
+| Paso | Resultado |
+|---|---|
+| Reserva **cerrada** → abrir edición | Los seis campos apagados, el motivo **una vez** arriba y sin botón de guardar |
+| Bajar la señal de 50 a 30 | «Resto del alquiler» pasó a **272,50 €** mientras se tecleaba |
+| Guardar | Reserva: señal 30, resto 272,50. **Filas de cobro reescritas**: 30 / 272,50 / 400 |
+| Fianza 400 → 300, precio en blanco | Nota: «Reserva modificada: **fianza**» — sin falso «precio» |
+| Generar contrato → firmar en `/sign-contract/…` | `signed`, sellado, huella `ee07acf3…` |
+| Cambiar la devolución con el contrato firmado | Aviso arriba + diálogo «Rehacer el contrato» |
+| Rehacer | Vigente: `generated`, **sin** `signedAt`, huella ni código; `supersedesId` puesto |
+| Archivo `…-v1` | `superseded`, conserva PDF firmado, huella y código `VRE88QWE8S55` |
+| QR del papel `/v/VRE88QWE8S55` | **«Contrato sustituido»** con su fecha, matrícula, sello y huella |
+| La ficha de edición | «CONTRATOS ANTERIORES · C-X91SQ8-2026 · Sustituido el 15/09/2026 · Descargar PDF firmado» |
+
+**El fallo del día es el que se reprodujo en vivo**, y ya existía antes de esta
+sesión: `generateContractPdf` escribía con `set(merge: true)` **sin mirar el
+estado del contrato**. La primera vuelta de la prueba se hizo con la function
+vieja todavía desplegada, así que el contrato firmado se pisó: quedó en
+`generated`, con un `pdfUrl` nuevo y el `signedAt`, la huella y el código de
+verificación del anterior colgando de un fichero que ya no era ese. La pantalla
+lo impedía —`canGenerateContract` deniega si está firmado— pero eso es la
+interfaz, no la seguridad: bastaba llamar al callable. Y como la verificación
+pública busca por `verificationCode` en ese mismo documento, el cliente que
+escaneara **su copia en papel** habría visto los datos de otro contrato y una
+huella que no cuadra.
+
+**Y el segundo solo se vio abriendo el QR:** con el archivo ya correcto,
+`/v/:codigo` seguía respondiendo «No encontrado», porque
+`getContractVerification` hacía `if (status !== 'signed') return unknownView()`.
+El documento estaba bien guardado y lo único para lo que existía no funcionaba.
+Ahora `superseded` es un estado propio: se le dice al cliente que su contrato es
+auténtico **y** que hay uno posterior.
+
+**Dos trampas de método que conviene anotar**, porque las dos costaron tiempo:
+
+- **`npx tsc --noEmit` no comprueba las plantillas.** Un `@Input()` mal tipado en
+  el HTML pasa el typecheck y solo falla en `npm run build`.
+- **Una Cloud Function editada no es una desplegada.** Probar un cambio de
+  backend contra desarrollo sin desplegarlo enseña el comportamiento viejo con el
+  código nuevo delante.
+
+---
+
+## C-38 · Repaso del cobro con tarjeta — 15 de septiembre de 2026
+
+Dorel pidió corregir el importe de un cobro manual, poder generar el enlace desde
+la ficha del pago, y «repasa un poco este flujo con pasarela para ver si
+encuentras más fallos». Salieron cuatro, todos con dinero y todos anteriores.
+
+| Comprobado | Resultado |
+|---|---|
+| Corregir un cobro libre 5,00 → 3,50 € | Importe y concepto cambiados; `paidAmount` intacto |
+| Cobrar con tarjeta / copiar enlace en la ficha | Salen, con el importe **pendiente** al lado |
+| La señal de una reserva | Bloqueada con su motivo + «Abrir la reserva» |
+| Señal de 30 € con 20 € ya cobrados → `/pay/…` | **10,00 €**, y `Ds_Merchant_Amount` firmado = `1000` |
+| El `formData` público | **Sin `Ds_Merchant_Titular`**: ya no lleva el nombre del cliente |
+| «Ver reserva» en un cobro libre | Ya no sale: no hay reserva a la que ir |
+
+**Los cuatro fallos:**
+
+1. **El enlace cobraba `payment.amount`, no lo pendiente.** Un concepto de 50 €
+   con 20 € ya cobrados en efectivo generaba un enlace de 50: el cliente pagaba
+   70 € por algo que valía 50.
+2. **El webhook ponía `paidAmount = payment.amount`**, así que esos 20 € reales
+   desaparecían del registro — el dinero en el banco y en los libros no. Ahora se
+   **suma** lo que cobró el banco (`Ds_Amount`, dentro de los parámetros
+   firmados).
+3. **`isApproved` era `/^0[0-9][0-9][0-9]$/`**, que llega hasta `0999`: el rango
+   de una **devolución** aceptada. El aviso de una devolución se leía como cobro
+   aprobado y la deshacía en los libros con el dinero ya fuera del banco. El
+   comentario de al lado decía «0000-0099» y el código decía otra cosa — y desde
+   que la aplicación devuelve por su cuenta (C-36) había dejado de ser teórico.
+4. **`Ds_Merchant_Titular` llevaba el nombre completo del arrendatario** en el
+   `formData` que se le entrega al navegador: un `/pay/:id` reenviado se descifra
+   con `atob()`. Contradecía lo que `getPaymentCheckout` cumple por el otro lado
+   —devolver importe, moneda, concepto y marca «y nada más»—. La firma tapa la
+   manipulación, no la lectura.
+
+**Y dos de la ficha del pago:** `cancelPayment()` no miraba el estado, y el
+resumen descarta lo cancelado, así que cancelar un cobro que entró borraba dinero
+de las cuentas; y «Ver reserva» salía en un cobro libre, que no tiene reserva.
+
+**Lo que no falló y conviene anotar:** los tres primeros son la misma pareja de
+errores vista desde dos sitios —qué se le pide al banco y qué se apunta cuando
+contesta— y ninguno da error. Dan una cifra creíble y equivocada, que es la peor
+clase de fallo con dinero. Los cubre ahora `redsys-charge-core.ts` con 28 tests,
+igual que `redsys-refund-core.ts` cubre la devolución.
+
+---
+
+## C-39 · Un cobro por la vía pública, y el contraste medido — 16 de septiembre de 2026
+
+### El cobro que faltaba desde el 4 de septiembre
+
+Primer pago **por la vía pública que la aplicación registra sola**. Cobro libre
+de 12 €, dejado a medias con 4 € para ejercitar de paso los arreglos de C-38.
+
+| | |
+|---|---|
+| La pantalla del cliente | **8,00 €** — lo pendiente, no los 12 |
+| `Ds_Merchant_Amount` firmado | `800` |
+| Pasarela de test | OPERACIÓN AUTORIZADA, código **297738** |
+| Lo que escribió el webhook | `paidAmount: 12` = 4 que había **+ 8 cobrados**; `pendingAmount: 0`; `paid` |
+| Quién lo escribió | El webhook, solo, sin tocar nada |
+
+Con el código anterior el enlace habría pedido 12 sobre los 4 ya cobrados —16 €
+por algo que vale 12— y el registro habría seguido diciendo 12. Cuatro euros
+fuera de los libros.
+
+### El auditor que faltaba
+
+Las tres auditorías del repositorio leen ficheros; ninguna abre un navegador, así
+que ninguna sabe si un texto **se lee**.
+[comprobar-contraste-y-desbordamiento.js](comprobar-contraste-y-desbordamiento.js)
+lo mide, componiendo los fondos translúcidos capa a capa — que es donde fallan
+los medidores ingenuos.
+
+Pasado por las catorce pantallas a 390 px: **cero desbordamiento horizontal**.
+
+Contraste, tres hallazgos:
+
+1. **El badge del coche, a 1,82:1.** `.vehicle-status` ponía una placa
+   translúcida porque va encima de la **foto**, y `.status-available` le ponía
+   `var(--success-color)` — que cambia con el tema. La placa no cambia nunca. Se
+   arregló haciendo la placa **opaca**: detrás hay una fotografía, un color que
+   no se puede saber, así que con transparencia no hay tinta garantizable.
+2. **`#20A48F`, el color de marca, falla como TEXTO** en las catorce pantallas:
+   3,10:1 en las dos direcciones, y 2,69–2,91:1 sobre los teales claros. Se
+   validó con el guion de `dataviz`, que mide colores de **gráfico** (umbral
+   3:1); como texto el umbral es 4,5:1. **Pendiente de decisión de Dorel**: es
+   identidad visual.
+3. Los badges «Pagado» (4,36:1) y «Pendiente» (4,41:1) se quedan a un pelo.
+
+### Los campos del tema oscuro
+
+Lo encontró Dorel usándolo: en el tema casi negro los inputs eran invisibles.
+`.form-control` pintaba el relleno con `--bg-main` —el color de la página— y en
+los **tres** temas oscuros `--bg-input` valía además lo mismo que `--bg-main`:
+**1,00:1**, con un borde a 1,33:1 cuando el mínimo de un control es 3:1.
+
+Arreglado con `--border-input` en los cuatro temas (3,03 / 3,13 / 3,04 / 3,07) y
+`--bg-input` levantado un escalón por encima de la tarjeta. `.btn-secondary`, que
+no tenía color global —solo geometría— y salía transparente, lleva ahora el mismo
+relleno y borde que un campo.
+
+⚠️ **Y costó dos iteraciones por la especificidad**, que es lo que hay que
+recordar: `input.form-control` es (0,1,1) y la copia encapsulada del componente
+es (0,2,0). Gana la copia. Hace falta (0,2,1). Ver la tabla en CLAUDE.md.
+
+### Los tres botones de la reserva
+
+A 390 px el contenedor da 352 px y los tres pedían 378: sin `wrap`, el sobrante
+se lo comía el primero y «Modificar» empezaba en **x = −10**. En móvil adelgazan
+relleno, hueco e icono —decoración; la palabra es la información— y nunca la
+etiqueta.
+
+Verificado en los dos idiomas críticos: español 103 + 141 + 92 y **rumano** 95 +
+161 + 80 («Anulează rezervarea» es el más largo). Los dos caben en una fila, con
+`wrap` de red por si alguna traducción futura se pasa.
+
+---
+
+## C-40 · Velocidad de carga, volumen a 3-4 años y PWA — 17 de septiembre de 2026
+
+### Lo que bloqueaba, medido antes de tocar
+
+| Momento | Qué pasaba |
+|---|---|
+| 324–622 ms | Bundle: 13 ficheros en paralelo |
+| 810–1122 ms | Firebase Auth resuelve la sesión (**312 ms**) |
+| 1147–1213 ms | Firestore lee `authorizedUsers` (el guard) |
+| **1291 ms** | *Recién ahora* empiezan a bajar los chunks de la pantalla |
+| **1904 ms** | Primer pintado |
+
+Dos cosas independientes: la pantalla en blanco casi dos segundos, y medio
+segundo de red parada esperando al guard.
+
+**Resultado: primer pintado de 1.904 ms a 740 ms.** Y el tema ya se aplica antes
+de que baje el CSS —un script en línea de cuatro líneas—, así que desaparece el
+fogonazo blanco que veía quien trabaja en el tema oscuro.
+
+⚠️ La precarga **no** es `PreloadAllModules`: ese arranca justo cuando el panel
+está pidiendo sus datos a Firestore, y se ganaría en la segunda pantalla lo que
+se pierde en la primera. Espera a que el navegador esté ocioso. Y las rutas
+públicas quedan fuera: al cliente que abre un enlace para firmar no se le baja
+el backoffice entero con sus datos móviles.
+
+### El volumen
+
+El **panel no crece**: filtra por estado —reservas activas, contratos pendientes,
+mantenimiento vencido— así que lee lo mismo dentro de cuatro años. Está bien
+hecho y conviene no tocarlo.
+
+Lo que sí crecía sin freno: los cuatro listados traían su colección entera, y
+Pagos además la **escuchaba**. Con diez coches a cuatro años son del orden de
+1.760 reservas, 6.000 filas de cobro y 3.500 inspecciones, cada documento con
+sus snapshots dentro. Ahora traen 50 y ofrecen «cargar más antiguos».
+
+⚠️ **Y aquí estuvo el riesgo real del día.** `getReservations()` tiene **ocho
+llamantes**. Ponerle un tope por defecto habría roto tres en silencio, y uno de
+ellos con dinero: `collaborator-detail` **deriva de esa lista lo que se le debe
+al propietario** de un coche cedido. Con la lista cortada, las reservas cerradas
+que quedaran fuera no generarían devengo y el colaborador aparecería cobrando
+menos de lo que le corresponde — sin ningún error por ninguna parte. El tope es
+opcional y solo lo usa el listado.
+
+Lo que el calendario, Eventos y Informes necesitan no es un tope sino un **rango
+de fechas**, y eso pide índices compuestos nuevos. Queda pendiente y anotado:
+Informes sigue leyendo seis colecciones enteras y filtrando en memoria.
+
+### PWA
+
+Instalable: manifest, iconos PNG 192/512/maskable y `apple-touch-icon`.
+Verificado servido: `manifest.webmanifest` 200, los tres iconos 200,
+`display: standalone`, atajos a «Nueva reserva» y «Cobros pendientes».
+
+⚠️ **Sin service worker, a propósito.** Añade una capa de caché sobre una
+aplicación que mueve dinero, con el problema de la versión vieja servida después
+de desplegar hasta cerrar todas las pestañas — y offline no se puede tener de
+todas formas, porque el guard lee `authorizedUsers` de Firestore.
+
+⚠️ El `apple-touch-icon` apuntaba a un **SVG**, que iOS ignora: quien añadiera la
+aplicación a la pantalla de inicio de un iPhone veía un recorte de la web en vez
+del logotipo.

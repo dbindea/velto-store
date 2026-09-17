@@ -385,7 +385,7 @@
               />
             </div>
             @if (emailError) {
-              <div class="error-msg">{{ emailError }}</div>
+              <div class="error-msg">{{ emailError | translate }}</div>
             }
             <div class="modal-actions">
               <button class="btn btn-secondary" type="button" (click)="closeContractEmailForm()" [disabled]="sendingEmail">
@@ -1158,6 +1158,18 @@
       historia— y borrar en **rojo**, que es lo único irreversible de verdad.
     -->
     <div class="page-actions">
+      <!--
+        Modificar va con los demás pero **en secundario**: es la acción menos
+        grave de las tres y la única reversible. Lo que se pueda cambiar o no lo
+        decide la propia pantalla de edición campo a campo, no este botón: uno
+        que solo apareciera a veces dejaría al operador sin saber si la reserva
+        es editable o si la aplicación se ha roto.
+      -->
+      <button class="btn-secondary" type="button" [routerLink]="['/reservations', reservation.id, 'edit']">
+        <i class="pi pi-pencil"></i>
+        {{ 'reservations.edit.action' | translate }}
+      </button>
+
       @if (canCancelReservation()) {
         <button
           class="btn-warning"

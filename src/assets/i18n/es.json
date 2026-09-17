@@ -133,9 +133,11 @@
     "close": "Cerrar",
     "continue": "Continuar",
     "create": "Crear",
+    "date": "Fecha",
     "days": "días",
     "delete": "Eliminar",
     "edit": "Editar",
+    "loadMore": "Cargar más antiguos",
     "loading": "Cargando...",
     "missingFields": "Falta por completar:",
     "photos": {
@@ -153,8 +155,8 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo",
-    "date": "Fecha"
+    "showingLatest": "Se muestran los más recientes. Para uno antiguo concreto, usa el buscador.",
+    "viewAll": "Ver todo"
   },
   "contracts": {
     "actions": {
@@ -178,11 +180,15 @@
       "title": "Enviar contrato por email"
     },
     "errors": {
-      "generate": "No se pudo generar el contrato.",
-      "createSigningLink": "No se pudo crear el enlace de firma.",
+      "alreadySigned": "Ese contrato ya está firmado. Para cambiarlo hay que rehacerlo.",
       "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
+      "createSigningLink": "No se pudo crear el enlace de firma.",
+      "generate": "No se pudo generar el contrato.",
+      "invalidEmail": "Introduce un email válido",
       "pdfNotReady": "El PDF todavía no está disponible.",
-      "signedPdfNotReady": "El contrato firmado todavía no está disponible."
+      "sendFailed": "No se pudo enviar el email.",
+      "signedPdfNotReady": "El contrato firmado todavía no está disponible.",
+      "supersedeReasonRequired": "Hace falta un motivo para rehacer el contrato."
     },
     "fields": {
       "allStatuses": "Todos los estados",
@@ -205,18 +211,20 @@
     },
     "sign": {
       "acceptConditions": "He leído y acepto las condiciones del contrato.",
+      "additionalDrivers": "Conductores autorizados",
+      "additionalDriversHint": "Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas.",
       "alreadySigned": "Este contrato ya ha sido firmado.",
       "expired": "El link de firma ha caducado.",
       "highlightsTitle": "Puntos clave del contrato",
       "invalid": "Link no válido.",
+      "padClear": "Limpiar",
+      "padHint": "Firma con el dedo o el ratón",
       "readOnlyNotice": "Revisa los datos del contrato antes de firmar.",
       "submitSignature": "Firmar contrato",
       "subtitle": "Firma digital de contrato de alquiler",
       "successMessage": "Gracias. Tu contrato ha sido registrado correctamente.",
       "successTitle": "Contrato firmado",
-      "title": "Firma del contrato",
-      "additionalDrivers": "Conductores autorizados",
-      "additionalDriversHint": "Además de ti, estas personas podrán conducir el vehículo. Al firmar, lo autorizas."
+      "title": "Firma del contrato"
     },
     "signingLink": {
       "title": "Link de firma activo"
@@ -227,7 +235,8 @@
       "expired": "Caducado",
       "generated": "Generado",
       "pendingSignature": "Pendiente de firma",
-      "signed": "Firmado"
+      "signed": "Firmado",
+      "superseded": "Sustituido"
     },
     "subtitle": "Genera, firma y envía contratos de alquiler",
     "title": "Contratos",
@@ -247,6 +256,8 @@
       "sealed": "Sí, con certificado digital",
       "signedAt": "Fecha de firma",
       "subtitle": "Verificación de contrato",
+      "supersededMessage": "Este contrato se firmó y es auténtico, pero después se rehízo: hay uno posterior que lo sustituye. Pide a la agencia la copia vigente.",
+      "supersededTitle": "Contrato sustituido",
       "unknownMessage": "No hay ningún contrato con ese código. Comprueba que lo has copiado entero.",
       "unknownTitle": "No encontrado",
       "validMessage": "Este contrato existe y está firmado.",
@@ -649,6 +660,9 @@
       "markAsPaid": "Marcar como pagado",
       "viewReservation": "Ver reserva"
     },
+    "charge": {
+      "hint": "Se le cobrarán"
+    },
     "checkout": {
       "notFoundMessage": "Este enlace de pago no existe o ya no está disponible. Pide uno nuevo.",
       "notFoundTitle": "Enlace no válido",
@@ -662,16 +676,48 @@
       "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
       "unavailableTitle": "Pago no disponible"
     },
+    "confirm": {
+      "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
+      "cancelTitle": "Cancelar el cobro"
+    },
     "deposit": {
       "refundFull": "Devolver total",
       "retain": "Retener",
       "available": "Disponible"
     },
+    "edit": {
+      "title": "Corregir el importe",
+      "action": "Corregir importe",
+      "amount": "Importe",
+      "concept": "Concepto",
+      "alreadyCollected": "Ya cobrado:",
+      "saved": "Importe corregido",
+      "failed": "No se ha podido corregir el importe.",
+      "goToReservation": "Abrir la reserva",
+      "denied": {
+        "notFound": "No se ha encontrado el cobro.",
+        "alreadyPaid": "Este cobro ya entró: su importe no se reescribe. Si hay que devolver dinero, devuélvelo.",
+        "cancelled": "Este cobro está cancelado.",
+        "refunded": "Este cobro está devuelto.",
+        "notACharge": "Esto no es un cobro: va en la otra dirección y se decide en la reserva.",
+        "governedByReservation": "La señal, el resto y la fianza los reparte la reserva. Cambiándolos aquí, la reserva pediría una cosa y el cobro otra."
+      },
+      "problems": {
+        "required": "Escribe el importe.",
+        "invalid": "El importe no es válido.",
+        "positive": "El importe tiene que ser mayor que 0.",
+        "belowCollected": "No puede quedar por debajo de lo ya cobrado."
+      }
+    },
     "errors": {
+      "cancelCollected": "No se puede cancelar un cobro que ya entró: desaparecería de las cuentas. Corrige el importe o devuélvelo.",
+      "cancelFailed": "No se ha podido anular el cobro.",
+      "copyFailed": "No se ha podido copiar el enlace.",
       "invalidAmount": "El importe no es válido",
       "loadFailed": "No se han podido cargar los cobros.",
-      "redsysNotConfigured": "Redsys no está configurado en este entorno",
-      "redsysNoForm": "Redsys no ha devuelto los datos del formulario"
+      "markPaidFailed": "No se ha podido marcar el cobro como pagado.",
+      "redsysNoForm": "Redsys no ha devuelto los datos del formulario",
+      "redsysNotConfigured": "Redsys no está configurado en este entorno"
     },
     "fields": {
       "amount": "Importe",
@@ -726,6 +772,10 @@
       "physicalPos": "TPV físico",
       "redsys": "Redsys (online)"
     },
+    "problems": {
+      "depositAmountRequired": "Pon un importe mayor que cero.",
+      "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
+    },
     "receipt": {
       "action": "Recibo",
       "confirm": "Se emitirá un recibo por lo ya cobrado:",
@@ -753,6 +803,35 @@
       "order": "Orden",
       "responseCode": "Código respuesta",
       "title": "Datos Redsys"
+    },
+    "refund": {
+      "title": "Devolver a la tarjeta",
+      "hint": "Devuelve el dinero a la misma tarjeta con la que se cobró, a través de Redsys. No hace falta entrar al panel del banco.",
+      "start": "Devolver",
+      "amount": "Importe a devolver",
+      "max": "Como máximo",
+      "reason": "Motivo (opcional)",
+      "warning": "Esto saca dinero de la cuenta de la empresa de verdad. Una devolución aceptada por el banco no se deshace desde aquí: habría que llamar al comercio.",
+      "confirmTitle": "Devolver a la tarjeta",
+      "confirmMessage": "¿Seguro? El dinero sale de la cuenta y esta operación no se puede deshacer desde la aplicación.",
+      "confirmAction": "Sí, devolver",
+      "done": "Devolución aceptada por el banco",
+      "refunded": "Devuelto",
+      "lastError": "Último intento rechazado",
+      "errors": {
+        "notFound": "No se encontró ese cobro",
+        "notCard": "Ese cobro no se hizo con tarjeta por la pasarela: devuélvelo como se cobró",
+        "notCollected": "Ese cobro no ha entrado, así que no hay nada que devolver",
+        "noOrder": "Ese cobro no tiene el pedido de Redsys, así que el banco no puede identificarlo",
+        "alreadyRefunded": "Ese cobro ya está devuelto entero",
+        "amountRequired": "Pon el importe a devolver",
+        "amountPositive": "El importe tiene que ser mayor que cero",
+        "overRefund": "No se puede devolver más de lo que se cobró",
+        "unauthorized": "Tu rol no permite devolver cobros",
+        "notConfigured": "Redsys no está configurado en este entorno",
+        "rejected": "El banco ha rechazado la devolución. Comprueba el extracto antes de volver a intentarlo",
+        "failed": "No se ha podido completar la devolución. Comprueba el extracto antes de volver a intentarlo"
+      }
     },
     "registerPayment": "Registrar cobro",
     "status": {
@@ -789,43 +868,6 @@
       "refuelPenalty": "Penalización repostaje",
       "remainingPayment": "Resto alquiler",
       "rentalPayment": "Pago completo"
-    },
-    "confirm": {
-      "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
-      "cancelTitle": "Cancelar el cobro"
-    },
-    "problems": {
-      "depositAmountRequired": "Pon un importe mayor que cero.",
-      "depositExceedsAvailable": "No puedes mover más fianza de la que queda. Mira lo cobrado menos lo ya devuelto y retenido."
-    },
-    "refund": {
-      "title": "Devolver a la tarjeta",
-      "hint": "Devuelve el dinero a la misma tarjeta con la que se cobró, a través de Redsys. No hace falta entrar al panel del banco.",
-      "start": "Devolver",
-      "amount": "Importe a devolver",
-      "max": "Como máximo",
-      "reason": "Motivo (opcional)",
-      "warning": "Esto saca dinero de la cuenta de la empresa de verdad. Una devolución aceptada por el banco no se deshace desde aquí: habría que llamar al comercio.",
-      "confirmTitle": "Devolver a la tarjeta",
-      "confirmMessage": "¿Seguro? El dinero sale de la cuenta y esta operación no se puede deshacer desde la aplicación.",
-      "confirmAction": "Sí, devolver",
-      "done": "Devolución aceptada por el banco",
-      "refunded": "Devuelto",
-      "lastError": "Último intento rechazado",
-      "errors": {
-        "notFound": "No se encontró ese cobro",
-        "notCard": "Ese cobro no se hizo con tarjeta por la pasarela: devuélvelo como se cobró",
-        "notCollected": "Ese cobro no ha entrado, así que no hay nada que devolver",
-        "noOrder": "Ese cobro no tiene el pedido de Redsys, así que el banco no puede identificarlo",
-        "alreadyRefunded": "Ese cobro ya está devuelto entero",
-        "amountRequired": "Pon el importe a devolver",
-        "amountPositive": "El importe tiene que ser mayor que cero",
-        "overRefund": "No se puede devolver más de lo que se cobró",
-        "unauthorized": "Tu rol no permite devolver cobros",
-        "notConfigured": "Redsys no está configurado en este entorno",
-        "rejected": "El banco ha rechazado la devolución. Comprueba el extracto antes de volver a intentarlo",
-        "failed": "No se ha podido completar la devolución. Comprueba el extracto antes de volver a intentarlo"
-      }
     }
   },
   "permissions": {
@@ -986,19 +1028,77 @@
         "save": "No se pudieron guardar los conductores."
       }
     },
+    "edit": {
+      "action": "Modificar",
+      "agreedPrice": "Precio acordado (sin IVA)",
+      "agreedPriceHint": "Déjalo vacío para volver a la tarifa con su descuento de fidelidad.",
+      "client": "Arrendatario",
+      "contractNoticeBody": "Hay un contrato firmado. Si cambias algo de lo que va impreso en él —el cliente, las fechas, el precio, la fianza o los conductores— habrá que rehacerlo y que el cliente vuelva a firmar. El anterior se archiva y su copia en papel se sigue pudiendo verificar.",
+      "contractNoticeTitle": "Hay un contrato firmado",
+      "contractWarningBody": "El contrato firmado dice otra cosa de lo que acabas de cambiar. Hay que rehacerlo y que el cliente vuelva a firmar; el anterior se archiva y su copia en papel se sigue pudiendo verificar.",
+      "contractWarningTitle": "Esto deja el contrato firmado sin valer",
+      "denied": {
+        "closed": "La reserva está cerrada: su histórico ya no se toca.",
+        "cancelled": "La reserva está cancelada.",
+        "contractSigned": "El contrato firmado dice quién alquila. Para cambiarlo hay que rehacerlo.",
+        "vehicleOut": "El coche ya se entregó: esto es un hecho, no un dato.",
+        "returned": "El coche ya se devolvió: la fecha real está en el parte.",
+        "noPricingPermission": "Tu rol no permite cambiar el precio.",
+        "paymentsUnknown": "No se han podido leer los cobros, así que no se puede saber si esto se puede cambiar.",
+        "depositCollected": "La fianza ya se movió. Para cambiarla, devuélvela o reténla.",
+        "initialCollected": "La señal ya se cobró en parte: ya no es un importe a pactar.",
+        "notSigned": "No hay ningún contrato firmado que sustituir."
+      },
+      "deposit": "Fianza",
+      "fields": {
+        "client": "cliente",
+        "pickupDateTime": "fecha de recogida",
+        "returnDateTime": "fecha de devolución",
+        "agreedPrice": "precio",
+        "depositAmount": "fianza",
+        "initialPaymentAmount": "señal",
+        "additionalDrivers": "conductores"
+      },
+      "initialPayment": "Señal a cobrar",
+      "initialPaymentHint": "Puede ser 0: entonces no se pide señal. Lo que le quites se suma al resto.",
+      "noChanges": "No has cambiado nada.",
+      "note": "Reserva modificada",
+      "problems": {
+        "initialRequired": "Pon un importe de señal. Si no quieres cobrar señal, escribe 0.",
+        "initialInvalid": "El importe de la señal no es válido.",
+        "initialNegative": "La señal no puede ser negativa.",
+        "initialOverTotal": "La señal no puede pasar del total del alquiler.",
+        "datesOrder": "La devolución tiene que ser posterior a la recogida."
+      },
+      "remainingPreview": "Resto del alquiler",
+      "save": "Guardar cambios",
+      "saved": "Reserva modificada",
+      "sectionMoney": "Precio, señal y fianza",
+      "sectionWhen": "Recogida y devolución",
+      "sectionWho": "Cliente y conductores",
+      "subtitle": "Lo que no se pueda cambiar te dice por qué.",
+      "supersede": "Rehacer el contrato",
+      "supersedeDone": "Contrato rehecho. El anterior queda archivado.",
+      "supersededOn": "Sustituido el",
+      "supersededTitle": "Contratos anteriores",
+      "title": "Modificar reserva"
+    },
     "errors": {
       "cancel": "Error al cancelar la reserva",
       "clientNameRequired": "Escribe el nombre del cliente",
+      "create": "No se pudo crear la reserva. Inténtalo de nuevo.",
       "createSigningLink": "Error al crear el link de firma",
+      "delete": "No se pudo borrar la reserva.",
+      "deleteSignedContract": "No se puede borrar una reserva con el contrato ya firmado. Cancélala en su lugar: el contrato firmado acredita el alquiler y no se borra.",
+      "editFailed": "No se han podido guardar los cambios.",
       "generateContract": "Error al generar el contrato",
+      "loadFailed": "No se ha podido cargar la reserva.",
+      "notFound": "No se ha encontrado la reserva.",
       "pdfNotReady": "El PDF todavía no está disponible",
       "processDeposit": "Error al procesar la fianza",
       "registerPayment": "Error al registrar el pago",
       "signedPdfNotReady": "El contrato firmado todavía no está disponible",
-      "create": "No se pudo crear la reserva. Inténtalo de nuevo.",
-      "notFound": "Reserva no encontrada.",
-      "deleteSignedContract": "No se puede borrar una reserva con el contrato ya firmado. Cancélala en su lugar: el contrato firmado acredita el alquiler y no se borra.",
-      "delete": "No se pudo borrar la reserva."
+      "vehicleNotFound": "No se ha encontrado el vehículo de la reserva."
     },
     "fields": {
       "duration": "Duración",
@@ -1027,6 +1127,14 @@
       "placeholder": "Añade una nota para el equipo…",
       "systemUser": "Sistema",
       "title": "Notas internas"
+    },
+    "ownerShare": {
+      "title": "Reparto con el propietario",
+      "owner": "Propietario",
+      "base": "Base del reparto (alquiler sin IVA)",
+      "forOwner": "Para el propietario",
+      "forVelto": "Para Velto",
+      "hint": "Congelado al crear la reserva: cambiar el porcentaje del coche no mueve esta cifra. Se devenga al cerrar la reserva, cuando los importes son definitivos. La fianza y los cargos extra no se reparten."
     },
     "paymentStatus": {
       "paid": "Pagado",
@@ -1089,15 +1197,7 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas",
-    "ownerShare": {
-      "title": "Reparto con el propietario",
-      "owner": "Propietario",
-      "base": "Base del reparto (alquiler sin IVA)",
-      "forOwner": "Para el propietario",
-      "forVelto": "Para Velto",
-      "hint": "Congelado al crear la reserva: cambiar el porcentaje del coche no mueve esta cifra. Se devenga al cerrar la reserva, cuando los importes son definitivos. La fianza y los cargos extra no se reparten."
-    }
+    "title": "Reservas"
   },
   "search": {
     "close": "Cerrar",

@@ -14,18 +14,21 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, updateDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, updateDoc , limit} from '@angular/fire/firestore';
 import { Storage, ref as storageRef, getDownloadURL } from '@angular/fire/storage';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Contract } from '@shared/models/contract.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { PAGINA } from '@shared/utils/pagination.util';
 
 export interface GenerateContractResponse {
   contractId: string;
   pdfUrl: string;
   pdfPath: string;
+  /** El id del contrato archivado, si la llamada sustituyó a uno firmado. */
+  supersededId?: string;
 }
 
 export interface CreateSigningLinkResponse {
@@ -54,9 +57,14 @@ export class ContractService {
   // Firestore reads (allowed by rules for authenticated users)
   // ============================================================
 
-  getContracts(): Observable<Contract[]> {
+  /**
+   * ⚠️ **Con tope, y escuchando.** Sin él esto leía **y mantenía un oyente
+   * sobre** todos los contratos emitidos desde el primer día. Un contrato
+   * antiguo se busca, no se hojea. Ver `pagination.util.ts`.
+   */
+  getContracts(tope: number = PAGINA): Observable<Contract[]> {
     const colRef = collection(this.firestore, 'contracts');
-    const q = query(colRef, orderBy('createdAt', 'desc'));
+    const q = query(colRef, orderBy('createdAt', 'desc'), limit(tope));
     return new Observable<Contract[]>((subscriber) => {
       const unsubscribe = onSnapshot(
         q,
@@ -75,6 +83,31 @@ export class ContractService {
     return from(getDoc(docRef)).pipe(
       map((snap) => (snap.exists() ? ({ id: snap.id, ...snap.data() } as Contract) : null))
     );
+  }
+
+  /**
+   * El mismo contrato, **escuchando**. Es lo que ya hace
+   * `getContractByReservation` y por el mismo motivo —el operador mira esta
+   * pantalla mientras el cliente firma en su móvil—, pero la ficha del contrato
+   * entraba por id y se quedaba con una lectura única: la firma no se veía
+   * hasta pulsar F5 o alguna acción que refrescara a mano.
+   *
+   * ⚠️ **Es un método aparte y `getContractById` se queda como está.** Ese lo
+   * usa `sendSignedContractByEmail` con un `.toPromise()`, que espera a que el
+   * stream **termine**: sobre un `onSnapshot`, que no termina nunca, se
+   * quedaría colgado sin decir nada. El nombre lo avisa: `watch…` escucha,
+   * `get…` lee una vez.
+   */
+  watchContractById(id: string): Observable<Contract | null> {
+    const docRef = doc(this.firestore, `contracts/${id}`);
+    return new Observable<Contract | null>((subscriber) => {
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => subscriber.next(snap.exists() ? ({ id: snap.id, ...snap.data() } as Contract) : null),
+        (err) => subscriber.error(err)
+      );
+      return () => unsubscribe();
+    });
   }
 
   /**
@@ -102,8 +135,22 @@ export class ContractService {
             subscriber.next(null);
             return;
           }
+          /**
+           * ⚠️ **Lo sustituido se descarta ANTES de ordenar, no después.**
+           * Un contrato archivado se guarda copiando el documento entero,
+           * `createdAt` incluido, así que empata con el vigente: ordenar por
+           * fecha y quedarse con el primero devolvería uno de los dos al azar,
+           * y la mitad de las veces la ficha enseñaría el contrato viejo como
+           * si fuera el bueno.
+           */
+          const docs = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }) as Contract)
+            .filter((c) => c.status !== 'superseded');
+          if (!docs.length) {
+            subscriber.next(null);
+            return;
+          }
           // Most recent first if there are multiple
-          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Contract);
           docs.sort((a, b) => {
             const aT = a.createdAt?.seconds || 0;
             const bT = b.createdAt?.seconds || 0;
@@ -139,6 +186,61 @@ export class ContractService {
       locale: this.translateService.getCurrentLanguage()
     });
     return result.data;
+  }
+
+  /**
+   * Sustituye un contrato **ya firmado** por uno nuevo, archivando el anterior.
+   *
+   * ⚠️ **Es una llamada aparte y no una bandera del método de arriba**, a
+   * propósito: generar un contrato es rutina y sustituir uno firmado no lo es.
+   * Con un parámetro opcional en el método normal, la diferencia entre las dos
+   * cosas sería un `true` fácil de copiar sin pensarlo; con dos métodos, quien
+   * escriba la llamada tiene que decir cuál de las dos está haciendo.
+   *
+   * El motivo es obligatorio y viaja al archivo. Lo que garantiza que no se
+   * pierde nada es la function, no esto: aquí no hay forma de saltarse la
+   * comprobación porque la hace el backend.
+   */
+  async supersedeSignedContract(
+    reservationId: string,
+    reason: string
+  ): Promise<GenerateContractResponse> {
+    const motivo = (reason || '').trim();
+    if (motivo.length < 3) {
+      throw new Error('contracts.errors.supersedeReasonRequired');
+    }
+    const fn = httpsCallable<
+      { reservationId: string; locale: string; supersede: boolean; supersedeReason: string },
+      GenerateContractResponse
+    >(this.functions, 'generateContractPdf');
+    const result = await fn({
+      reservationId,
+      locale: this.translateService.getCurrentLanguage(),
+      supersede: true,
+      supersedeReason: motivo
+    });
+    return result.data;
+  }
+
+  /**
+   * Los contratos **sustituidos** de una reserva, del más reciente al más
+   * antiguo.
+   *
+   * Existen para que la ficha pueda enseñarlos: un contrato archivado que no se
+   * ve en ninguna parte es lo mismo que uno borrado para quien usa la
+   * aplicación, y el motivo entero de archivarlos era no perderlos.
+   *
+   * ⚠️ Lectura **de una vez** (`get…`), no un stream: un contrato archivado ya
+   * no cambia nunca.
+   */
+  async supersededContractsOf(reservationId: string): Promise<Contract[]> {
+    const colRef = collection(this.firestore, 'contracts');
+    const q = query(colRef, where('reservationId', '==', reservationId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }) as Contract)
+      .filter((c) => c.status === 'superseded')
+      .sort((a, b) => (b.supersededAt?.seconds || 0) - (a.supersededAt?.seconds || 0));
   }
 
   /**

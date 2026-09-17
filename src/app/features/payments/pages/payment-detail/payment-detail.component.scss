@@ -256,6 +256,20 @@
     margin-top: 1rem;
   }
 
+  /**
+   * Cobrar con tarjeta y copiar el enlace, uno al lado del otro.
+   *
+   * `wrap` porque son dos etiquetas largas: en un móvil estrecho bajan en vez
+   * de comprimirse, que es la regla de esta aplicación — recolocar, nunca
+   * esconder.
+   */
+  .charge-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
   .notice {
     margin-top: 1rem;
   }

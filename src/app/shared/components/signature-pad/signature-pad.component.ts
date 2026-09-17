@@ -10,6 +10,7 @@ import {
   HostListener
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe } from '@shared/pipes/translate.pipe';
 
 /**
  * Touch + mouse signature pad.
@@ -25,7 +26,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-signature-pad',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   template: `
     <div class="signature-pad">
       <canvas
@@ -37,11 +38,11 @@ import { CommonModule } from '@angular/common';
         (pointercancel)="onPointerUp($event)"
         (pointerleave)="onPointerUp($event)"
       ></canvas>
-      <div class="signature-hint">{{ hint }}</div>
+      <div class="signature-hint">{{ hint | translate }}</div>
       <div class="signature-actions">
         <button type="button" class="btn-clear" (click)="clear()" [disabled]="isEmpty">
           <i class="pi pi-eraser"></i>
-          {{ clearLabel }}
+          {{ clearLabel | translate }}
         </button>
       </div>
     </div>
@@ -95,10 +96,19 @@ import { CommonModule } from '@angular/common';
 export class SignaturePadComponent implements AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
 
-  /** Hint text shown below the canvas. */
-  @Input() hint = 'Firma con el dedo o el ratón';
+  /**
+   * ⚠️ **Los dos son CLAVES i18n, no texto**, y este es el sitio donde más
+   * importa: el pad vive en la pantalla **pública de firma**, la única que lee
+   * el cliente. Estaban escritos en español duro —«Firma con el dedo o el
+   * ratón», «Limpiar»— y nadie le pasa estos `@Input`, así que el defecto
+   * salía siempre: un cliente rumano firmaba su contrato leyendo castellano.
+   *
+   * Siguen siendo `@Input` para poder cambiarlos por otra clave; como el pipe
+   * devuelve la propia clave si no la encuentra, un literal también funciona.
+   */
+  @Input() hint = 'contracts.sign.padHint';
   /** Label for the clear button. */
-  @Input() clearLabel = 'Limpiar';
+  @Input() clearLabel = 'contracts.sign.padClear';
 
   /** Emits the latest empty/non-empty state. */
   @Output() emptyChange = new EventEmitter<boolean>();

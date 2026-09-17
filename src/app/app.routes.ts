@@ -12,11 +12,13 @@ export const routes: Routes = [
   },
   {
     path: 'login',
+    data: { precargar: false },
     loadComponent: () => import('./login/login.component').then(m => m.LoginComponent),
     canActivate: [publicGuard]
   },
   {
     path: 'sign-contract/:token',
+    data: { precargar: false },
     loadComponent: () => import('./features/contracts/pages/sign-contract/sign-contract.component').then(m => m.SignContractComponent)
   },
   /**
@@ -29,6 +31,7 @@ export const routes: Routes = [
    */
   {
     path: 'd/:id',
+    data: { precargar: false },
     loadComponent: () => import('./features/documents/document-redirect.component').then(m => m.DocumentRedirectComponent)
   },
   /**
@@ -53,14 +56,17 @@ export const routes: Routes = [
    */
   {
     path: 'v',
+    data: { precargar: false },
     loadComponent: () => import('./features/contracts/pages/contract-verify/contract-verify.component').then(m => m.ContractVerifyComponent)
   },
   {
     path: 'v/:code',
+    data: { precargar: false },
     loadComponent: () => import('./features/contracts/pages/contract-verify/contract-verify.component').then(m => m.ContractVerifyComponent)
   },
   {
     path: 'pay/:paymentId',
+    data: { precargar: false },
     loadComponent: () => import('./features/payments/pages/payment-checkout/payment-checkout.component').then(m => m.PaymentCheckoutComponent)
   },
   {
@@ -87,6 +93,14 @@ export const routes: Routes = [
           {
             path: 'new',
             loadComponent: () => import('./features/reservations/pages/reservation-create/reservation-create.component').then(m => m.ReservationCreateComponent)
+          },
+          // ⚠️ `:id/edit` va ANTES que `:id`. Al revés, `:id` captura «edit»
+          // como si fuera el id de una reserva y la pantalla de edición no se
+          // alcanza nunca — es la misma trampa de orden que el rewrite `/d/**`
+          // delante del catch-all de la SPA en `firebase.json`.
+          {
+            path: ':id/edit',
+            loadComponent: () => import('./features/reservations/pages/reservation-edit/reservation-edit.component').then(m => m.ReservationEditComponent)
           },
           {
             path: ':id',

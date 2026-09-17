@@ -17,15 +17,131 @@
     -->
     <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="apple-touch-icon" href="assets/brand/isologo-on-dark.svg" />
+    <!--
+      ⚠️ **PNG, no SVG.** iOS **no acepta SVG** en `apple-touch-icon`: lo ignora
+      y pone en su lugar un recorte de la propia pantalla. Esto apuntaba a un
+      `.svg`, así que quien añadiera la aplicación a la pantalla de inicio de un
+      iPhone se encontraba una miniatura de la web en vez del logotipo.
+    -->
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/brand/apple-touch-icon.png" />
+
+    <!--
+      El manifest es lo que la hace **instalable**: icono propio en la pantalla
+      de inicio y ventana sin barra del navegador.
+      ⚠️ No hay service worker a propósito. Ver la nota en CLAUDE.md: añadir una
+      capa de caché sobre una aplicación que mueve dinero trae el problema de la
+      versión vieja servida después de desplegar, y offline no se puede tener de
+      todas formas porque el guard lee `authorizedUsers` de Firestore.
+    -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Velto" />
 
     <meta property="og:title" content="VELTO MOBILITY · Backoffice" />
     <meta property="og:description" content="Plataforma de gestión de alquiler de vehículos" />
     <meta property="og:type" content="website" />
     <!-- Social previews render on white cards, so use the light-background art. -->
     <meta property="og:image" content="assets/brand/logo-on-light.svg" />
+
+    <!--
+      ⚠️ **El tema se aplica ANTES de que baje una sola línea de CSS.**
+
+      El tema vive en `localStorage` y hasta ahora lo ponía el `ThemeService`,
+      que no existe hasta que Angular arranca: durante casi dos segundos el
+      fondo era el del navegador. Quien trabaja en el tema oscuro veía un
+      fogonazo blanco a pantalla completa en cada apertura.
+
+      Va aquí, en línea y sin `defer`, a propósito: cualquier cosa que lo
+      retrase devuelve el fogonazo. Son cuatro líneas y se ejecutan antes del
+      primer pintado.
+
+      La clave es `theme` — la misma que escribe `theme.service.ts`. Si allí
+      cambia, aquí también.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme') || 'light';
+          var e = document.documentElement;
+          if (t === 'dark' || t === 'forest' || t === 'ocean') e.classList.add('dark');
+          if (t === 'forest') e.classList.add('theme-forest');
+          if (t === 'ocean') e.classList.add('theme-ocean');
+        } catch (_) {
+          /* Modo privado sin almacenamiento: se queda el tema claro. */
+        }
+      })();
+    </script>
+
+    <style>
+      /**
+       * El arranque, escrito a mano y sin una sola petición.
+       *
+       * ⚠️ **Va dentro de `<app-root>` y eso es lo que lo hace desaparecer
+       * solo**: Angular vacía el contenido del elemento raíz al pintar, así que
+       * no hace falta ningún código que lo quite — ni una clase, ni un timeout,
+       * ni un `DOMContentLoaded`. Lo que no existe no se puede quedar colgado.
+       *
+       * Los colores están escritos aquí y no con `var(--bg-main)` porque esto
+       * tiene que pintar **antes** de que el CSS de la aplicación llegue; son
+       * los mismos valores de `styles.scss`, y si allí cambian, aquí también.
+       */
+      .arranque {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        background: #f6f8f8;
+      }
+      .dark .arranque { background: #0b0f0e; }
+      .dark.theme-forest .arranque { background: #151d1b; }
+      .dark.theme-ocean .arranque { background: #0f172a; }
+
+      .arranque-marca {
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: #5f686b;
+      }
+
+      .arranque-giro {
+        width: 28px;
+        height: 28px;
+        border: 2px solid rgba(32, 164, 143, 0.25);
+        border-top-color: #20a48f;
+        border-radius: 50%;
+        animation: arranque-vuelta 0.7s linear infinite;
+      }
+
+      @keyframes arranque-vuelta {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Quien ha pedido menos movimiento no quiere una ruleta girando: se le
+         deja el mismo aro, quieto. */
+      @media (prefers-reduced-motion: reduce) {
+        .arranque-giro { animation: none; }
+      }
+    </style>
   </head>
   <body>
-    <app-root></app-root>
+    <app-root>
+      <div class="arranque">
+        <!-- El isologotipo en línea: dibujarlo aquí evita una petición más en
+             el único momento en el que no hay nada que enseñar. -->
+        <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true">
+          <path
+            d="M6 10 L24 40 L42 10 L34 10 L24 26 L14 10 Z"
+            fill="#20a48f"
+          />
+        </svg>
+        <div class="arranque-giro"></div>
+        <div class="arranque-marca">Velto Mobility</div>
+      </div>
+    </app-root>
   </body>
 </html>

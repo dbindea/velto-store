@@ -22,8 +22,14 @@
                 {{ getTrustLabel(client.trustLevel) }}
               </span>
               @if (client.loyaltyDiscountPercent) {
+                <!--
+                  ⚠️ **Etiqueta, no porcentaje.** El icono era `pi-percentage` y
+                  el texto que va detrás ya dice «5 %»: el símbolo salía dos
+                  veces seguidas, una en grande y otra en pequeño. `pi-tag` es
+                  un descuento sin repetir lo que la cifra ya cuenta.
+                -->
                 <span class="loyalty-badge">
-                  <i class="pi pi-percentage"></i>
+                  <i class="pi pi-tag"></i>
                   {{ client.loyaltyDiscountPercent }} %
                   {{ 'clients.fields.loyaltyDiscount' | translate }}
                 </span>
@@ -45,6 +51,7 @@
       @if (permissions.canDelete()) {
         <button class="btn-danger" type="button" (click)="deleteClient()">
           <i class="pi pi-trash"></i>
+          {{ 'common.delete' | translate }}
         </button>
       }
     </div>

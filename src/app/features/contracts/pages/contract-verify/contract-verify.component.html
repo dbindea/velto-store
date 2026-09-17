@@ -12,11 +12,31 @@
         <i class="pi pi-spin pi-spinner"></i>
         <p>{{ 'common.loading' | translate }}</p>
       </div>
-    } @else if (view()?.state === 'valid') {
-      <div class="status-card success">
-        <i class="pi pi-verified"></i>
-        <h1>{{ 'contracts.verify.validTitle' | translate }}</h1>
-        <p>{{ 'contracts.verify.validMessage' | translate }}</p>
+    <!--
+      ⚠️ **`superseded` comparte este bloque con `valid`, y es deliberado.**
+      Un contrato sustituido se firmó de verdad: su fecha, su matrícula y su
+      huella siguen siendo ciertas y siguen sirviendo para comprobar el fichero
+      que el cliente tiene en la mano. Lo único que cambia es que ya no es el
+      acuerdo vigente, y eso lo dicen el título, el mensaje y el color.
+
+      Duplicando el bloque, la primera vez que se añada un dato se añadiría solo
+      a uno de los dos y el cliente con el papel viejo vería menos de lo que hay.
+    -->
+    } @else if (view()?.state === 'valid' || view()?.state === 'superseded') {
+      <div class="status-card" [class.success]="view()?.state === 'valid'"
+           [class.warning]="view()?.state === 'superseded'">
+        <i class="pi" [class.pi-verified]="view()?.state === 'valid'"
+           [class.pi-history]="view()?.state === 'superseded'"></i>
+        <h1>
+          {{ (view()?.state === 'superseded'
+                ? 'contracts.verify.supersededTitle'
+                : 'contracts.verify.validTitle') | translate }}
+        </h1>
+        <p>
+          {{ (view()?.state === 'superseded'
+                ? 'contracts.verify.supersededMessage'
+                : 'contracts.verify.validMessage') | translate }}
+        </p>
 
         <dl class="facts">
           @if (view()!.contractNumber) {

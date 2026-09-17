@@ -64,14 +64,24 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.sub = this.contractService.getContractById(id).subscribe({
+      /**
+       * ⚠️ **Escucha el documento.** El cliente firma en su móvil, no aquí: con
+       * una lectura única esta pantalla seguía diciendo «Pendiente de firma»
+       * hasta que alguien pulsaba F5. Es el mismo motivo por el que la ficha de
+       * la reserva escucha su contrato.
+       *
+       * ⚠️ El correo del destinatario **solo se rellena si está vacío**: se
+       * reemite en cada cambio del contrato y, escribiéndolo siempre, pisaría
+       * lo que el operador esté tecleando en el formulario de envío.
+       */
+      this.sub = this.contractService.watchContractById(id).subscribe({
         next: (c) => {
           if (!c) {
             this.router.navigate(['/contracts']);
             return;
           }
           this.contract = c;
-          this.emailRecipient = c.clientSnapshot?.email || '';
+          if (!this.emailRecipient) this.emailRecipient = c.clientSnapshot?.email || '';
           this.loading = false;
         },
         error: (err) => {
@@ -125,9 +135,9 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     if (!this.contract?.reservationId) return;
     this.generating = true;
     try {
+      // Sin refrescar a mano: es el mismo documento, y el stream vivo trae el
+      // estado nuevo en cuanto la Cloud Function lo escribe.
       const res = await this.contractService.generateContractFromReservation(this.contract.reservationId);
-      // Refresh from server to pick up new contractId, status, etc.
-      this.refresh();
       void res;
     } catch (err) {
       console.error('Error generating contract:', err);
@@ -142,7 +152,6 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     this.creatingLink = true;
     try {
       await this.contractService.generateSigningLink(this.contract.id);
-      this.refresh();
     } catch (err) {
       console.error('Error creating signing link:', err);
       this.notifications.error('contracts.errors.createSigningLink', { retry: () => void this.createLink() });
@@ -162,7 +171,6 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     if (!seguir) return;
     try {
       await this.contractService.cancelSigningLink(this.contract.id);
-      this.refresh();
     } catch (err) {
       console.error('Error cancelling signing link:', err);
       this.notifications.error('contracts.errors.cancelSigningLink', { retry: () => void this.cancelLink() });
@@ -225,11 +233,21 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     this.emailError = '';
   }
 
+  /**
+   * ⚠️ **`emailError` guarda una CLAVE i18n, no una frase.** Llevaba las dos
+   * escritas en español duro —«Introduce un email válido», «Error al enviar el
+   * email»— y se pintaban sin pasar por el pipe, así que un operador rumano
+   * leía castellano justo cuando algo acababa de fallar.
+   *
+   * Y el mensaje del error **no se pinta tal cual**: lo que viene de un
+   * callable es texto del backend, en inglés, y enseñárselo al operador es la
+   * misma clase de fallo. Solo se respeta si ya es una clave de la aplicación.
+   */
   async sendEmail(): Promise<void> {
     if (!this.contract?.id) return;
     const email = (this.emailRecipient || '').trim();
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      this.emailError = 'Introduce un email válido';
+      this.emailError = 'contracts.errors.invalidEmail';
       return;
     }
     this.sending = true;
@@ -237,10 +255,10 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
     try {
       await this.contractService.sendSignedContractByEmail(this.contract.id, email);
       this.showEmailForm = false;
-      this.refresh();
     } catch (err: any) {
       console.error('Error sending email:', err);
-      this.emailError = err?.message || 'Error al enviar el email';
+      const clave = String(err?.message || '');
+      this.emailError = clave.startsWith('contracts.') ? clave : 'contracts.errors.sendFailed';
     } finally {
       this.sending = false;
     }
@@ -263,19 +281,6 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
   // ============================================================
   // Helpers
   // ============================================================
-
-  private refresh(): void {
-    if (!this.contract?.id) return;
-    this.sub?.unsubscribe();
-    this.sub = this.contractService.getContractById(this.contract.id).subscribe({
-      next: (c) => {
-        if (c) {
-          this.contract = c;
-          if (!this.emailRecipient) this.emailRecipient = c.clientSnapshot?.email || '';
-        }
-      }
-    });
-  }
 
   getCreatedAt(c: Contract): Date | null {
     return c.createdAt ? toDate(c.createdAt) : null;

@@ -17,6 +17,7 @@ import { Timestamp } from '@angular/fire/firestore';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import {
   MAINTENANCE_PRIORITY_LABELS,
   MAINTENANCE_STATUS_LABELS,
@@ -173,6 +174,15 @@ export class VehicleMaintenanceFormComponent implements OnChanges, OnInit {
       invoiceUrl: '',
       invoicePath: ''
     };
+  }
+
+  /**
+   * El taller es un **nombre**, como el proveedor de un gasto. El título y la
+   * descripción no pasan por aquí: son frases —«cambio de aceite y filtros»—.
+   */
+  onProviderInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.form.provider = transformInput(input, capitalizeWords);
   }
 
   private toDateInput(value: any): string {

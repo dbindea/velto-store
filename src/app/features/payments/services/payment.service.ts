@@ -8,10 +8,13 @@ import {
   updateDoc,
   getDoc,
   collectionData,
+  docData,
   getDocs,
   query,
   orderBy,
-  where
+  where,
+  limit,
+  WriteBatch
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, firstValueFrom, from } from 'rxjs';
@@ -21,9 +24,12 @@ import {
   PaymentType,
   PaymentMethod,
   PaymentSource,
-  PaymentStatus
+  PaymentStatus,
+  PAYMENT_TYPE_LABELS
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { PAGINA } from '@shared/utils/pagination.util';
+import { amountProblem, canEditAmount } from '@shared/utils/payment-edit.util';
 import { reservationStatusAfterPayment } from '@shared/utils/reservation-workflow.util';
 import {
   applySettlement,
@@ -142,10 +148,44 @@ export class PaymentService {
     );
   }
 
+  /**
+   * El libro de cobros **escuchando**. Es la pantalla que el operador deja
+   * abierta mientras el cliente paga con tarjeta, así que una lectura única la
+   * deja mintiendo: quien da el cobro por bueno es el webhook de Redsys, no
+   * esta pantalla, y sin escuchar la fila se queda en «Pendiente» hasta que
+   * alguien pulsa F5. Ver la nota larga de `watchPaymentsByReservation`.
+   */
+  /**
+   * ⚠️ **Y con tope.** Sin él esto leía —y escuchaba— la colección entera:
+   * cada apertura de Pagos traía todos los cobros desde el primer día, y el
+   * oyente los mantenía abiertos. Ver `pagination.util.ts` para el porqué del
+   * número y de por qué el tope crece en vez de encadenar cursores.
+   */
+  watchPayments(tope: number = PAGINA): Observable<Payment[]> {
+    const q = query(this.paymentsRef, orderBy('createdAt', 'desc'), limit(tope));
+    return collectionData(q, { idField: 'id' }) as Observable<Payment[]>;
+  }
+
   getPaymentById(id: string): Observable<Payment | null> {
     const docRef = doc(this.firestore, `payments/${id}`);
     return from(getDoc(docRef)).pipe(
       map(snap => snap.exists() ? { id: snap.id, ...snap.data() } as Payment : null)
+    );
+  }
+
+  /**
+   * El mismo pago, **escuchando**. Es el caso más agudo de los tres: aquí es
+   * donde el operador genera el enlace de Redsys y se queda mirando la ficha
+   * mientras el cliente paga delante de él.
+   *
+   * ⚠️ `docData` emite `undefined` cuando el documento no existe —no lanza—, y
+   * eso incluye **el pago que se acaba de borrar estando abierto**. Se traduce
+   * a `null` para que el componente lo trate igual que un id inventado.
+   */
+  watchPaymentById(id: string): Observable<Payment | null> {
+    const docRef = doc(this.firestore, `payments/${id}`);
+    return (docData(docRef, { idField: 'id' }) as Observable<Payment | undefined>).pipe(
+      map(data => data ?? null)
     );
   }
 
@@ -172,12 +212,14 @@ export class PaymentService {
    * cliente delante no entiende por qué la aplicación dice que no.
    *
    * ⚠️ **Es un método APARTE y no el de arriba convertido.** Un stream vivo no
-   * termina nunca, así que un `firstValueFrom()` sobre él **se queda colgado
-   * para siempre**: es lo que ya documenta `inspection.service.ts` sobre el
-   * contrato, que necesita un `.pipe(first())` por lo mismo. Hoy hay un
-   * `firstValueFrom` sobre el de arriba —el que calcula la fecha de operación de
-   * una factura— y convertirlo habría colgado esa pantalla sin decir nada. El
-   * nombre lo avisa: `watch…` escucha, `get…` lee una vez.
+   * termina nunca, y quien espera a que **termine** se queda colgado sin decir
+   * nada: `.toPromise()`, `lastValueFrom()` y —el caso que más duele— un
+   * `forkJoin`, que no emite hasta que todas sus fuentes han terminado. Es lo
+   * que documenta `inspection.service.ts` sobre el contrato, que por eso lleva
+   * `.pipe(first())`. (`firstValueFrom` sí resuelve con la primera emisión: ese
+   * es el uso del de arriba para la fecha de operación de una factura, y no
+   * cuelga. Lo que deja es un oyente abierto para leer una vez.) El nombre lo
+   * avisa: `watch…` escucha, `get…` lee una vez.
    *
    * ⚠️ **Quien se suscriba tiene que desengancharse.** Sin
    * `takeUntilDestroyed()`, la suscripción sobrevive a la pantalla y sigue
@@ -466,26 +508,54 @@ export class PaymentService {
   }
 
   /**
-   * Update a payment.
+   * Corrige el importe y el concepto de un cobro que aún no se ha cobrado del
+   * todo. Es para el importe mal tecleado: sin esto, la única salida era
+   * cancelar la fila y crear otra, dejando dos apuntes donde había uno.
+   *
+   * Sustituye a un `updatePayment(id, data: Partial<Payment>)` que existía
+   * desde el principio, **que no llamaba nadie** y que aceptaba cualquier campo
+   * del documento: habría dejado poner `status: 'paid'` a mano sobre un cobro
+   * que nunca entró, o mover el `paidAmount` sin que hubiera pasado dinero.
+   *
+   * ⚠️ **No toca `paidAmount` ni `paidAt`.** Corregir lo que se pide no es
+   * cobrar: lo que ya entró se queda como está, y el estado se recalcula a
+   * partir de los dos. Con 20 € cobrados de 50 corregidos a 35, el pago queda
+   * `partial` con 15 € pendientes.
    */
-  async updatePayment(id: string, data: Partial<Payment>): Promise<void> {
+  async editPendingPayment(
+    id: string,
+    changes: { amount: number; concept?: string; notes?: string }
+  ): Promise<void> {
     const docRef = doc(this.firestore, `payments/${id}`);
-    const update: any = {
-      ...data,
-      updatedAt: { seconds: Date.now() / 1000 }
-    };
-    if (data.amount !== undefined && data.paidAmount !== undefined) {
-      update.pendingAmount = calculatePendingAmount(data.amount, data.paidAmount);
-      update.status = calculatePaymentStatus(data.amount, data.paidAmount);
-    }
-    await updateDoc(docRef, this.cleanData(update));
-    // Recalc summary if the payment is linked to a reservation.
     const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      const payment = snap.data() as Payment;
-      if (payment.reservationId) {
-        await this.recalculateReservationPaymentSummary(payment.reservationId);
-      }
+    if (!snap.exists()) throw new Error('payments.edit.denied.notFound');
+    const payment = { id: snap.id, ...snap.data() } as Payment;
+
+    // Defensa en profundidad: la pantalla ya lo impide, y esto rechaza la
+    // llamada venga por donde venga.
+    const decision = canEditAmount(payment);
+    if (!decision.ok) throw new Error(decision.reason);
+
+    const problema = amountProblem(changes.amount, payment);
+    if (problema) throw new Error(problema);
+
+    const importe = roundMoney(Number(changes.amount));
+    const cobrado = roundMoney(Number(payment.paidAmount) || 0);
+
+    await updateDoc(
+      docRef,
+      this.cleanData({
+        amount: importe,
+        pendingAmount: calculatePendingAmount(importe, cobrado),
+        status: calculatePaymentStatus(importe, cobrado),
+        concept: changes.concept?.trim() || payment.concept,
+        notes: changes.notes?.trim() || payment.notes,
+        updatedAt: { seconds: Date.now() / 1000 }
+      })
+    );
+
+    if (payment.reservationId) {
+      await this.recalculateReservationPaymentSummary(payment.reservationId);
     }
   }
 
@@ -551,6 +621,25 @@ export class PaymentService {
     const snap = await getDoc(docRef);
     if (!snap.exists()) return;
     const payment = snap.data() as Payment;
+
+    /**
+     * ⚠️ **Un cobro que ya entró no se cancela, y esto NO lo comprobaba.**
+     * El resumen de la reserva descarta lo cancelado
+     * (`payments.filter(p => p.status !== 'cancelled')`), así que cancelar un
+     * pago cobrado borraba de los libros dinero que estaba en el banco: la
+     * reserva pasaba a decir que ese cobro no ocurrió. La pantalla escondía el
+     * botón —`canCancel()` solo deja `pending` y `partial`—, pero eso es la
+     * interfaz, no la seguridad.
+     *
+     * Lo que corresponde con dinero ya cobrado es devolverlo, que deja rastro
+     * de las dos cosas: que entró y que salió.
+     */
+    if (payment.status === 'paid' || payment.status === 'refunded') {
+      throw new Error('payments.errors.cancelCollected');
+    }
+    if ((Number(payment.paidAmount) || 0) > 0) {
+      throw new Error('payments.errors.cancelCollected');
+    }
     await updateDoc(docRef, this.cleanData({
       status: 'cancelled',
       updatedAt: { seconds: Date.now() / 1000 }
@@ -570,6 +659,121 @@ export class PaymentService {
   private async depositAvailableFor(reservationId: string): Promise<number> {
     const pagos = await firstValueFrom(this.getPaymentsByReservation(reservationId));
     return depositAvailable(collectedTotalsOf(pagos));
+  }
+
+  /**
+   * Pone al día las filas **pendientes** de una reserva que se acaba de editar,
+   * dentro del `writeBatch` que ya trae quien llama.
+   *
+   * ⚠️ **Recibe el batch en vez de escribir por su cuenta, y es lo que hace que
+   * esto sea correcto.** La reserva nueva y sus filas de cobro tienen que
+   * entrar juntas o no entrar: escritas por separado, un fallo entre medias
+   * deja una reserva que dice valer 300 € y unas filas que piden 250 — y nadie
+   * se entera, porque las dos cifras se enseñan en pantallas distintas. Es la
+   * misma razón por la que crear una reserva es una sola escritura.
+   *
+   * Tres reglas, y las tres tienen su motivo:
+   *
+   * ⚠️ **Lo ya cobrado no se toca.** Una fila `paid` o `partial` documenta
+   * dinero que entró de verdad; reescribirle el importe haría que el recibo que
+   * tiene el cliente y la aplicación dijeran cosas distintas. Solo se mueven
+   * las filas que siguen enteras por cobrar.
+   *
+   * ⚠️ **Un concepto que baja a 0 se CANCELA, no se deja en 0.** Una fila
+   * pendiente de 0 € es una fila incobrable: no se puede marcar como cobrada
+   * porque no hay nada que cobrar, y mientras exista la reserva no se puede dar
+   * por pagada. Es el mismo motivo por el que la creación no siembra filas de
+   * conceptos a 0.
+   *
+   * ⚠️ **Y un concepto que sube desde 0 necesita fila nueva**, porque al crear
+   * la reserva no se sembró ninguna. Sin esto, subir la señal de 0 a 50 € no
+   * dejaría nada que cobrar y el dinero no se pediría nunca.
+   */
+  queueRepricedRows(
+    batch: WriteBatch,
+    payments: Payment[],
+    amounts: { initialRequired: number; remainingRequired: number; depositRequired?: number }
+  ): void {
+    const conceptos: Array<{ type: PaymentType; required: number | undefined }> = [
+      { type: 'initial_payment', required: amounts.initialRequired },
+      { type: 'remaining_payment', required: amounts.remainingRequired },
+      { type: 'deposit', required: amounts.depositRequired }
+    ];
+
+    for (const { type, required } of conceptos) {
+      if (required === undefined) continue;
+      const objetivo = roundMoney(required);
+      const abiertas = payments.filter(
+        (p) => p.type === type && (p.status === 'pending' || p.status === 'failed')
+      );
+
+      if (!abiertas.length) {
+        if (objetivo <= 0) continue;
+        const ref = doc(collection(this.firestore, 'payments'));
+        batch.set(ref, this.cleanData(this.buildRepricedRow(payments, type, objetivo)));
+        continue;
+      }
+
+      // Con varias filas abiertas del mismo concepto —puede pasar si un cobro
+      // falló y se sembró otro—, la primera se lleva el importe y las demás se
+      // cancelan: repartirlo entre todas dejaría cobros sueltos sin sentido.
+      const [principal, ...sobrantes] = abiertas;
+      for (const extra of sobrantes) {
+        batch.update(doc(this.firestore, `payments/${extra.id}`), {
+          status: 'cancelled',
+          pendingAmount: 0,
+          updatedAt: { seconds: Date.now() / 1000 }
+        });
+      }
+
+      const ref = doc(this.firestore, `payments/${principal.id}`);
+      if (objetivo <= 0) {
+        batch.update(ref, {
+          status: 'cancelled',
+          amount: 0,
+          pendingAmount: 0,
+          updatedAt: { seconds: Date.now() / 1000 }
+        });
+      } else {
+        batch.update(ref, {
+          amount: objetivo,
+          pendingAmount: calculatePendingAmount(objetivo, Number(principal.paidAmount) || 0),
+          status: calculatePaymentStatus(objetivo, Number(principal.paidAmount) || 0),
+          updatedAt: { seconds: Date.now() / 1000 }
+        });
+      }
+    }
+  }
+
+  /**
+   * Una fila nueva para un concepto que antes valía 0, copiando la reserva, el
+   * cliente y el vehículo de cualquier otra fila de la misma reserva: son datos
+   * que ya están congelados ahí y volver a buscarlos sería una lectura de más
+   * que además podría traer algo distinto.
+   */
+  private buildRepricedRow(payments: Payment[], type: PaymentType, amount: number): Payment {
+    const modelo = payments[0];
+    return {
+      reservationId: modelo?.reservationId,
+      clientId: modelo?.clientId,
+      vehicleId: modelo?.vehicleId,
+      isFreePayment: false,
+      reservationSnapshot: modelo?.reservationSnapshot,
+      clientSnapshot: modelo?.clientSnapshot,
+      vehicleSnapshot: modelo?.vehicleSnapshot,
+      type,
+      direction: 'income',
+      method: 'cash',
+      source: 'manual',
+      status: 'pending',
+      amount,
+      paidAmount: 0,
+      pendingAmount: amount,
+      currency: 'EUR',
+      concept: PAYMENT_TYPE_LABELS[type],
+      internalReference: generateInternalReference('PMT'),
+      createdAt: { seconds: Date.now() / 1000 }
+    } as Payment;
   }
 
   /**

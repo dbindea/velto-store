@@ -1,0 +1,109 @@
+.page {
+  padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+
+  h2 {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+    margin: 1.5rem 0 0.75rem;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+}
+
+.notice {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+
+  p {
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+  }
+}
+
+.notice-warning {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-color);
+  color: var(--text-primary);
+
+  i {
+    color: var(--warning-color);
+  }
+}
+
+.form-row {
+  display: grid;
+  // `minmax(0, 1fr)` y no `1fr`: con texto que no parte, `1fr` no baja del
+  // contenido y estira la rejilla entera.
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 1rem;
+}
+
+.driver-row {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: start;
+  margin-bottom: 0.5rem;
+}
+
+/**
+ * El resto del alquiler es un valor DERIVADO, no un campo: se lee igual que un
+ * importe pero no se puede teclear. Se pinta con la misma caja para que quede
+ * alineado con la señal que tiene al lado, y apagado para que no invite a
+ * escribir en él.
+ */
+.derived-amount {
+  padding: 0.625rem 0.75rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.superseded-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-light);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}

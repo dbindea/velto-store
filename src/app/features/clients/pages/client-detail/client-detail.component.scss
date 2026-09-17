@@ -29,19 +29,48 @@
   margin-bottom: 1.5rem;
   min-width: 0;
 
-  // On phones the identity takes the whole first row and the edit action
-  // drops to its own full-width row underneath, so the name has room to
-  // wrap between words instead of being squeezed beside a button.
+  /**
+   * En el móvil la identidad ocupa la primera fila entera —para que el nombre
+   * parta entre palabras en vez de estrujarse al lado de un botón— y las dos
+   * acciones comparten la segunda.
+   *
+   * ⚠️ **Editar y Borrar iban en filas distintas**: `.btn-primary` tenía
+   * `flex: 1 1 100%`, así que se llevaba la fila entera y el de borrar caía
+   * solo a una tercera, como un icono suelto sin contexto.
+   *
+   * ⚠️ **El 60/40 NO sale de `flex: 6` y `flex: 4` con la base a 0**, aunque lo
+   * parezca: con `box-sizing: border-box` una base de 0 no puede bajar del
+   * relleno propio del botón —20 px a cada lado—, así que 80 px se reparten
+   * antes que nada y solo el resto se divide 6 a 4. Medido en el navegador: el
+   * reparto real era 57,7/42,3, ocho píxeles corridos a cualquier ancho.
+   * Con porcentajes sí es exacto, restándole a cada parte **su parte del
+   * hueco**: 60 % de 0,75rem son 0,45rem, y el 40 %, 0,3rem.
+   */
   @media (max-width: 768px) {
     flex-wrap: wrap;
     gap: 0.75rem;
 
     .header-content {
-      flex: 1 1 auto;
+      flex: 1 1 100%;
     }
 
     .btn-primary {
-      flex: 1 1 100%;
+      flex: 0 1 calc(60% - 0.45rem);
+      min-width: 0;
+    }
+
+    .btn-danger {
+      flex: 0 1 calc(40% - 0.3rem);
+      min-width: 0;
+    }
+
+    // Y la misma caja para los dos. El de borrar no lo declara este componente:
+    // viene del global, con menos relleno y menos cuerpo, y en la misma fila eso
+    // se veía —46 px contra 41— como si uno de los dos estuviera mal puesto.
+    .btn-primary,
+    .btn-danger {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
     }
   }
 }
@@ -126,6 +155,20 @@
   color: var(--success-color);
   font-size: 0.7rem;
   font-weight: 600;
+
+  /**
+   * ⚠️ **El icono no seguía al texto del badge.** `styles.scss` declara
+   * `.pi { font-size: 1rem }` para todos los iconos de la aplicación, y este
+   * badge escribe a `0.7rem`: el icono salía a 16 px al lado de un texto de
+   * 11, casi el doble. La regla global mide (0,1,0) y aquí no había ninguna
+   * que la corrigiera.
+   *
+   * En `em` y no en `rem` a propósito: así queda atado al tamaño del badge y
+   * sigue cuadrando si algún día ese cambia.
+   */
+  i {
+    font-size: 1em;
+  }
 }
 
 .trust-badge {

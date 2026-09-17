@@ -48,6 +48,19 @@ npx tsc -p tsconfig.app.json --noEmit
 cd functions && npx tsc --noEmit
 ```
 
+⚠️ **`tsc` NO comprueba las plantillas, y `strictTemplates` está activado.** Un
+`[problems]="problems"` que le pasa el mapa entero a un `@Input()` que espera una
+clave **pasa el typecheck y revienta en `npm run build`**, porque la que valida
+los tipos del HTML es la compilación de Angular. Es decir: el typecheck vale para
+iterar, pero antes de dar un cambio por bueno hay que construir.
+
+⚠️ **Y una Cloud Function editada no es una Cloud Function desplegada.** Lo
+obvio, hasta que se prueba contra desarrollo un cambio de backend que solo está
+en el disco: el frontend llama, la function **vieja** contesta, y lo que se ve
+es el comportamiento antiguo con el código nuevo delante. Pasó el 15 de
+septiembre de 2026 probando la sustitución de contratos, y costó un rato
+entender por qué el archivo no se creaba.
+
 ## Tests
 
 Hay dos suites independientes, ambas con Vitest:
@@ -308,6 +321,79 @@ Para saltarse un paso hay que llamar `buildWorkflowException(action, reason, cre
 tener reserva nueva, y punto: saltarse un paso es un atajo operativo, pero alquilar a alguien
 a quien has bloqueado es una decisión sobre ese cliente y se toma en su ficha, cambiándole el
 nivel de confianza. `risk` no bloquea; solo avisa vía `clientTrustWarning()`.
+
+### `reservation-edit.util.ts` es la única autoridad sobre qué se puede CAMBIAR
+
+Lo que el workflow es a «qué pasos se pueden dar», este util lo es a «qué campos
+de una reserva ya creada se pueden tocar y cuándo». La pantalla apaga o explica
+cada campo preguntándole, y `editReservation()` le pregunta lo mismo antes de
+escribir.
+
+⚠️ **La decisión es POR CAMPO, y ese es el motivo de que exista.** Las
+restricciones no se parecen: la fecha de **devolución** se mueve con el coche ya
+entregado —una prórroga es el caso más normal del negocio— y la de **recogida**
+no, porque el coche ya salió y la fecha real está en el parte de entrega. Un
+único «¿se puede editar esta reserva?» tendría que contestar lo más restrictivo
+para todos, y entonces no se podría prorrogar nada.
+
+⚠️ **El dinero se decide mirando `payments`, no `paymentSummary`.** La copia de
+la reserva se queda vieja y **responde `0` en vez de fallar**: con ella, una
+fianza ya cobrada parecería editable. Y se mide **movimiento, no saldo**
+(`movedOn`): una fianza cobrada y devuelta entera deja un neto de 0, pero al
+cliente se le cobraron 150 € y cambiar después el importe exigido dejaría la
+reserva diciendo otra cosa. Es justo lo contrario de `sumPaid()`, que sí resta —
+aquella contesta cuánto entró, y esta si ha pasado algo.
+
+⚠️ **La señal y el resto se reparten sin mover el total**
+(`redistributeInitialPayment`). Bajar la señal de 50 a 30 sube el resto a 272,50:
+los 20 € no desaparecen. Con dos campos sueltos, olvidar subir el resto dejaría
+la reserva debiendo 20 € menos de lo que vale el alquiler, y se podría cerrar
+cobrando de menos sin que nada avisara.
+
+⚠️ **La reserva y sus filas de cobro se reescriben en el MISMO `writeBatch`**,
+por lo mismo que al crearla: separadas, un fallo entre medias deja una reserva
+que dice valer 302,50 € y unas filas que piden 250 — y las dos cifras se enseñan
+en pantallas distintas, así que nadie se entera.
+
+⚠️ **Y un campo que llega igual que estaba no es un cambio.** Abrir el formulario
+de una reserva con la fianza cobrada y guardarlo sin tocar nada fallaría con «la
+fianza ya está cobrada», porque el importe viaja en la petición aunque nadie lo
+escribiera. Ojo con el precio: «sin precio acordado» **no es lo mismo que** el
+neto de la tarifa, y compararlo contra `netPrice` marcaba un cambio de precio que
+no existía. Lo resuelve `agreedNetPriceOf()`, que usan el formulario y el
+servicio para que las dos preguntas sean la misma.
+
+### Un contrato firmado se ARCHIVA, nunca se pisa
+
+Cuando cambia algo que el PDF imprime —el cliente, las fechas, el precio, la
+fianza o los conductores—, el contrato firmado deja de decir la verdad y hay que
+rehacerlo. **No se borra**: `firestore.rules` deniega `delete` en `contracts`
+incluso al administrador, y con razón. Se copia entero a
+`contracts/{reservaId}-v{n}` con estado `superseded` —su PDF firmado, su huella
+y su código de verificación— y el vigente se rehace limpio. Misma idea que la
+factura rectificativa: un error no se borra, se corrige con un documento nuevo.
+
+⚠️ **`generateContractPdf` escribía con `set(merge: true)` sin mirar el
+estado**, así que llamar al callable sobre una reserva ya firmada dejaba el
+documento en `generated` con un `pdfUrl` nuevo y los campos de la firma colgando
+de un fichero que ya no era ese. La pantalla lo impedía (`canGenerateContract`
+deniega si `signed`), pero eso es la interfaz, no la seguridad. Ahora el backend
+se niega sin `supersede: true` y sin motivo.
+
+⚠️ **Lo de la firma anterior hay que BORRARLO a mano** al rehacer. `merge: true`
+conserva lo que no se nombre, así que el contrato nuevo nacía con el `signedAt`,
+la huella y el código de verificación del anterior pegados encima.
+
+⚠️ **Y `superseded` tiene que ser un estado PROPIO en la verificación pública.**
+Cayendo en `unknown`, el QR del papel del cliente respondía «No encontrado» — se
+le decía que su contrato no existe, que es lo contrario de lo que pasó y lo único
+que archivarlo tenía que evitar. Tampoco vale devolverlo como `valid`: el papel
+ya no es el acuerdo vigente. Se le dicen las dos cosas.
+
+⚠️ **`getContractByReservation` descarta lo sustituido ANTES de ordenar.** El
+archivo copia el documento entero, `createdAt` incluido, así que empata con el
+vigente: ordenar por fecha y quedarse con el primero devolvería uno de los dos al
+azar.
 
 ### `pricing.util.ts` es la única autoridad sobre el precio
 
@@ -907,6 +993,36 @@ antes de borrarlo**: después ya no se sabe de qué coche era.
   borrado real de datos personales pasaría por **anonimizar** esos snapshots, que es otra
   tarea.
 
+## Firestore: lo que escucha se llama `watch…` y lo que lee una vez, `get…`
+
+⚠️ **No es estilo: es lo único que separa dos cosas que se usan distinto**, y
+las dos han fallado de verdad.
+
+**Lo que cambia desde fuera hay que escucharlo.** Quien da un cobro por bueno es
+el webhook de Redsys y quien firma un contrato es el cliente en su móvil, los
+dos minutos después de que el operador abriera la pantalla. Con `getDocs` la
+pantalla se queda mintiendo hasta que alguien pulsa F5 — y quien acaba de ver
+pagar al cliente delante no entiende por qué la aplicación dice que no. Hoy
+escuchan la lista de Pagos, la ficha del pago, la ficha del contrato, la ficha
+de la reserva y sus pagos, y las notas internas.
+
+⚠️ **Un stream vivo NO se refresca volviéndolo a llamar: se vuelve a
+suscribir.** `takeUntilDestroyed` corta al salir de la pantalla, **no entre
+llamadas**, así que un `watch…()` invocado después de cada mutación «para
+refrescar» apila un oyente de Firestore por mutación — y con él, todo lo que
+haya en el `next`: en la ficha de la reserva, una reconciliación de pagos y una
+escritura. Eran siete llamadas de más repartidas por tres pantallas. No hacen
+falta: quien escribe es el servicio o una Cloud Function, y Firestore reemite
+solo.
+
+⚠️ **Y el método de una vez no se convierte, se deja.** Un stream vivo no
+termina, así que quien espera a que **termine** se queda colgado sin decir nada:
+`.toPromise()` —lo usa `sendSignedContractEmail`—, `lastValueFrom()` y, el que
+más duele, un `forkJoin`, que no emite hasta que todas sus fuentes acaban; por
+eso `inspection.service.ts` lleva `.pipe(first())`. (`firstValueFrom` sí
+resuelve con la primera emisión y no cuelga; lo que deja es un oyente abierto
+para leer una vez.)
+
 ## Firestore: `undefined` está prohibido
 
 Firestore lanza `Cannot use 'undefined' as a Firestore value`. Hay dos defensas y conviene conocer ambas:
@@ -1485,6 +1601,53 @@ del backoffice, para no duplicar la firma, el formato del pedido ni la URL del w
 error del banco; durante meses fue así y ningún cobro con tarjeta pudo completarse. El
 POST vive en `RedsysPaymentService.openGateway()`, compartido por las dos pantallas.
 
+⚠️ **Lo que se lleva a la pasarela es lo PENDIENTE, no `payment.amount`**
+(`outstandingAmount` en `redsys-charge-core.ts`). Con el total, un concepto de
+50 € del que ya se cobraron 20 € en efectivo generaba un enlace de **50 €** y el
+cliente pagaba 70 € por algo que valía 50. Y el webhook remataba poniendo
+`paidAmount = payment.amount`, así que esos 20 € reales desaparecían del
+registro: el dinero en el banco y en los libros no. Ahora **se suma** lo que
+cobró el banco, que lo dice `Ds_Amount` dentro de los parámetros firmados; sumar
+es seguro porque el webhook sale antes si el pago ya está `paid`.
+
+⚠️ **Un COBRO aceptado es `0000`–`0099`, y el webhook comprobaba
+`/^0[0-9][0-9][0-9]$/`** — que llega hasta `0999`, o sea el rango de una
+**devolución** aceptada. El comentario decía «0000-0099» y el código decía otra
+cosa. Con la regla ancha, el aviso de una devolución aceptada entraba por la rama
+de aprobado y dejaba el pago en `paid` con 0 pendiente: la devolución se deshacía
+sola en los libros con el dinero ya fuera del banco. Se comprueba además
+`Ds_TransactionType`, que viaja firmado.
+
+⚠️ **En `Ds_Merchant_Parameters` no va NINGÚN dato personal.** Ese bloque se
+serializa en base64 y se le entrega **al navegador** para que lo publique, así
+que lo lee cualquiera que tenga el enlace con un `atob()`. Llevaba
+`Ds_Merchant_Titular` con el nombre completo del arrendatario, de modo que un
+`/pay/:id` reenviado revelaba a nombre de quién está la reserva — contradiciendo
+lo que `getPaymentCheckout` se cuida de cumplir por el otro lado. La firma tapa
+la manipulación, no la lectura.
+
+⚠️ **Un cobro que ya entró no se cancela.** El resumen de la reserva descarta lo
+cancelado (`p.status !== 'cancelled'`), así que cancelar un pago cobrado borraba
+de los libros dinero que estaba en el banco. Lo que corresponde es devolverlo, o
+—si el resto no se va a cobrar— **corregir el importe** a lo que entró, que
+cierra la fila sin borrar nada.
+
+### `payment-edit.util.ts`: qué cobro se puede corregir
+
+Un importe se teclea mal, y hasta el 15 de septiembre de 2026 la única salida era
+cancelar la fila y crear otra, dejando dos apuntes donde había uno.
+
+⚠️ **Corregir no es cobrar ni devolver:** cambia lo que se pide y **no toca
+`paidAmount`**. Con 20 € cobrados de 50 corregidos a 35, el pago queda `partial`
+con 15 € pendientes. Por eso no puede quedar por debajo de lo ya cobrado — eso
+sería un pendiente negativo, y si hay que devolver dinero, eso es una devolución.
+
+⚠️ **La señal, el resto y la fianza NO se corrigen desde el pago.** Son un
+reparto del precio del alquiler: bajar la señal en la fila dejaría la reserva
+pidiendo 50 € y el cobro 30, sin que nada las volviera a cuadrar. Eso se toca en
+la edición de la reserva, que mueve las dos a la vez. La pantalla lo dice y
+ofrece el salto.
+
 ⚠️ **El pedido (`Ds_Merchant_Order`) NO se regenera en cada llamada.** Es la referencia
 con la que el webhook encuentra el pago, y esta misma función la invoca la pantalla que
 el cliente **refresca para ver si su pago ya consta**. Regenerándolo, el aviso de Redsys
@@ -2051,6 +2214,56 @@ formulario nuevo ya no sale desnudo.
 ⚠️ Un `var(--x)` sin declarar **no falla, desaparece**: el navegador descarta la
 declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
 de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
+
+⚠️ **Un campo de formulario se delimita con su BORDE, no con su relleno**, y ese
+borde tiene su propia variable: `--border-input`. WCAG 1.4.11 pide **3:1** para
+el contorno de un control, y un relleno 3:1 más claro que una tarjeta casi negra
+sería gris medio — el formulario dejaría de parecer lo que es. `--border-color`
+es el de las separaciones y sí puede ser sutil; son dos cosas distintas.
+
+⚠️ **`.form-control` pintaba el relleno con `--bg-main`, el color de la
+PÁGINA.** En el tema claro no se notaba —la página es gris y el campo blanco—,
+pero en los **tres** temas oscuros `--bg-input` valía además exactamente lo mismo
+que `--bg-main`: el campo y el fondo eran el mismo color, **1,00:1**, y lo único
+que lo delimitaba era un borde a 1,33:1. En el tema casi negro eso lo dejaba
+inutilizable, y lo encontró Dorel usándolo, no ninguna auditoría.
+
+⚠️ **Y un fondo `var(--bg-card)` dentro de una tarjeta es igual de invisible**,
+en todos los temas — en el claro es blanco sobre blanco. Varias de las dieciocho
+copias encapsuladas de `.form-control` lo hacían.
+
+### La aritmética de la especificidad, que es donde se falla
+
+⚠️ **`input.form-control` NO gana a `.form-control[_ngcontent-xxx]`.** Es el
+error que cuesta una iteración entera, y lo cometí:
+
+| Selector | Cuenta | Especificidad |
+|---|---|---|
+| `.form-control` (global) | 1 clase | (0,1,0) |
+| `.form-control[_ngcontent-xxx]` (componente) | 1 clase + 1 atributo | **(0,2,0)** |
+| `input.form-control` | 1 elemento + 1 clase | (0,1,1) — **pierde** |
+| `input.form-control.is-invalid` | 1 elemento + 2 clases | (0,2,1) — gana |
+| `button.btn-primary:disabled` | 1 elemento + 1 clase + 1 pseudoclase | (0,2,1) — gana |
+
+La regla en una línea: **la encapsulación de Angular vale una clase**, así que
+para ganarle a una copia de componente hacen falta **dos** clases (o una clase y
+una pseudoclase) más el elemento. Anteponer solo el elemento no basta, aunque lo
+parezca. Cuando no hay una segunda clase real, repetirla —
+`input.form-control.form-control`— es la forma legítima de llegar a (0,2,1).
+
+⚠️ **Y se comprueba en el navegador, no se deduce.** Las dos veces que esto ha
+fallado, el CSS estaba escrito y desplegado y el valor calculado seguía siendo el
+viejo. `getComputedStyle()` es la única respuesta que vale.
+
+⚠️ **Cuando un color de marca es el FONDO, su acompañante también es variable.**
+`--warning-on` existe porque el ámbar cambia de tema —#9A6700 en claro, #F0B429
+en oscuro— y cada uno pide lo contrario: blanco el primero (4,87:1), negro el
+segundo (9,85:1). Estuvo escrito a mano con un `:root .btn-warning` y un
+`.dark .btn-warning` corrigiéndolo, y **no funcionaba**: los dos correctores
+miden (0,2,0), igual que el `.btn-warning[_ngcontent-xxx]` de un componente que
+declare su propia copia, y en un empate manda el orden — que pone al componente
+detrás. «Cancelar reserva» salía a **3,77:1** en tema claro. Con la variable, el
+valor lo pone el bloque del tema y hasta una copia encapsulada sale bien.
 
 El tema real de uso es el **oscuro**. Contraste mínimo 4,5:1 sobre `--bg-card` (#14181A).
 
