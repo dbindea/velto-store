@@ -358,12 +358,17 @@ firebase deploy --only functions:sweepVerifactuRecords --project prod   # activa
 npm run deploy:prod:rules    # reglas + índices (hace falta el de verifactuSubmissions)
 ```
 
-### Paso 2 — Encender la facturación, y comprobar el certificado
+### Paso 2 — Encender la REMISIÓN, y comprobar el certificado
+
+⚠️ **La facturación ya está encendida desde el 17 de septiembre de 2026**, así
+que en enero solo quedan las dos de abajo. Lo de arriba se adelantó porque la
+empresa empezó a operar en real ese día y un cliente que pide factura no puede
+esperar a enero — es legal, VeriFactu no obliga hasta el 1 de enero de 2027.
 
 En `functions/.env.rentalcar-veltomobility`:
 
 ```
-VELTO_INVOICING_ENABLED=true
+VELTO_INVOICING_ENABLED=true     # ya estaba, desde el 17 de septiembre de 2026
 VELTO_VERIFACTU_ENABLED=true
 VELTO_VERIFACTU_ENV=live
 ```
@@ -382,11 +387,47 @@ Ajustes › Declaración responsable › **Emitir declaración**. Hace falta una
 cada versión del sistema, y tiene que existir la de la versión que está
 emitiendo. Una vez emitida **no se puede borrar**.
 
-### Paso 4 — La primera factura, y a partir de ahí en cadena
+### Paso 3 bis — Qué hacer con el ATRASO de 2026. Decidir ANTES de encender
 
-La serie sale del año, así que la primera será **`2027/0001`**. En producción no
-hay ni una factura ni contador —`issueInvoice` no se ha desplegado nunca allí—,
-así que esa primera nace limpia y su registro se declara `PrimerRegistro`.
+⚠️ **Esto no existía cuando se escribió el guion, y lo crea haber empezado a
+facturar el 17 de septiembre de 2026.** Para enero habrá en producción una
+cadena de facturas `2026/…` con su registro guardado y **sin remitir**, porque
+entonces no había obligación.
+
+El problema es que `sendVerifactuRecords` toma la cola así:
+
+```ts
+.where('pendienteEnvio', '==', true).orderBy('chainIndex', 'asc')
+```
+
+**Sin filtro de fecha.** O sea que el primer barrido de enero intentará remitir
+también todas las de 2026, con meses de retraso y sin estar obligadas. Nadie
+decidió eso: es lo que pasa si no se toca nada.
+
+Las dos salidas, y **ninguna se elige a ojo**:
+
+1. **Remitir el atraso.** La cadena queda íntegra en la AEAT —la primera de 2026
+   va como `PrimerRegistro`— a cambio de presentar registros extemporáneos que
+   no se debían.
+2. **Marcar las de 2026 como no exigibles** (`pendienteEnvio: false` con su
+   motivo). Entonces el primer registro de 2027 **no es `PrimerRegistro`**: su
+   `Encadenamiento` apunta a una factura de diciembre que la AEAT no tiene, y
+   hay que ver qué contesta.
+
+⚠️ **Se prueba contra PREPRODUCCIÓN, desde desarrollo, y antes de enero.** Es
+justo el caso que los tests no cogen —el XML es válido en las dos— y el que ya
+enseñó la lección el 9 de septiembre: un registro válido contra el esquema puede
+ser rechazado por lo que significa. En desarrollo se puede montar el escenario
+entero: emitir dos facturas con la remisión apagada, encenderla y ver qué pasa.
+
+### Paso 4 — La primera factura de 2027, que ya NO es la primera
+
+La serie sale del año, así que la primera de enero será **`2027/0001`**.
+
+⚠️ **Pero no será la primera factura de la empresa ni el primer registro de la
+cadena**, como decía este guion hasta el 17 de septiembre de 2026: desde ese día
+producción emite, así que para enero habrá facturas `2026/…` y un contador en
+marcha. `2027/0001` encadenará con la última de 2026 — ver el paso 3 bis.
 
 ⚠️ **A partir de ahí, todas encadenadas y todas remitidas**, que es lo que hace
 que la serie cuadre en la AEAT. No hay nada que hacer para conseguirlo: la

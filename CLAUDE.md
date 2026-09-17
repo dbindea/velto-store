@@ -197,26 +197,42 @@ sentencia escrita en ese fichero. Por eso vive en su propio módulo importado en
 la primera línea y no como una llamada suelta: ahí llegaría tarde y las
 functions se desplegarían en la región por defecto sin que nadie se enterase.
 
-### Los datos todavía se pueden borrar — NO escribas parches de compatibilidad
+### Los datos de producción YA SON REALES — se migra, no se borra
 
-⚠️ **Vigente desde el 29 de agosto de 2026 y hasta que Dorel diga lo contrario.**
-Aunque `rentalcar-veltomobility` sea el entorno de producción, sus datos **aún
-son desechables**: se pueden borrar colecciones, cambiar índices, renombrar
-campos y cambiar la forma de un documento sin migración.
+⚠️ **Vigente desde el 17 de septiembre de 2026.** Dorel avisó ese día de que la
+empresa empieza a trabajar en real sobre `rentalcar-veltomobility`. Hasta
+entonces regía la regla contraria —datos desechables, nada de parches de
+compatibilidad— y esta sección se escribió desde el principio para ser
+sustituida el día que llegara este aviso. Ha llegado.
 
-Por tanto, y esto es lo importante:
+Lo que había detrás de aquella regla sigue siendo cierto y por eso se cuenta:
+**un parche de compatibilidad se escribe en un minuto y se arrastra durante
+meses** (`tariffIncludesVat`), así que la forma de un documento se pensaba bien
+y, si había que cambiarla, se borraba y se volvía a crear. Eso ya no está
+disponible.
 
-- **No se escribe código para leer datos viejos.** Nada de `campo ?? valorAntiguo`,
-  ni ramas «si no tiene X, entonces era el formato anterior», ni banderas
-  congeladas por documento. Eso fue `tariffIncludesVat`, y costó más quitarlo
-  que ponerlo.
-- Si una forma tiene que cambiar: se cambia, se borran los datos y se vuelven a
-  crear. Es más barato y deja el código limpio.
-- Todo se prueba antes en `velto-store`.
+A partir de ahora, y esto es lo importante:
 
-Cuando Dorel avise de que los datos ya son reales, esta sección se sustituye por
-la regla contraria: campos solo aditivos, migración en despliegues separados y
-nunca renombrar en sitio.
+- **Los campos son solo aditivos.** Uno nuevo nace opcional y con su valor por
+  defecto resuelto **al leer**, no rellenando la colección entera.
+- **Nunca se renombra en sitio.** Renombrar es escribir el nuevo, migrar y
+  borrar el viejo, **en despliegues separados**: entre el primero y el último
+  hay clientes usando la aplicación, y un móvil con la pestaña abierta desde
+  ayer sigue ejecutando el bundle anterior.
+- **Nada de borrar colecciones en producción.** Lo del 17 de septiembre fue el
+  último; después de él hay reservas y clientes de verdad.
+- **Se prueba en `velto-store`, no en producción.** Mientras los datos fueron
+  desechables estuvo permitido ensuciar producción para probar, y ya no lo está:
+  una reserva de prueba entre las reales es una reserva que alguien atenderá.
+- **Un cambio de forma se prueba contra una copia**, no contra la base viva. Las
+  copias diarias y el PITR están activos desde el 11 de septiembre; el
+  procedimiento, en [docs/copias-de-seguridad.md](docs/copias-de-seguridad.md).
+
+⚠️ **Y lo que no se puede migrar hacia atrás es lo congelado.** Los snapshots
+—`pricingSnapshot`, `ownerShareSnapshot`, `clientSnapshot`, el del contrato— son
+histórico: si el modelo cambia, los antiguos **se quedan como están**, y el
+código nuevo tiene que saber leerlos. Eso no es un parche de compatibilidad, es
+la razón de ser de un snapshot.
 
 ⚠️ **La facturación va a ser la primera excepción, y ya está aprobada** (N-18, 8
 de septiembre de 2026). Una factura emitida **no se borra ni se edita nunca**:
@@ -1918,6 +1934,23 @@ conserva sus dos documentos: `veltorent@gmail.com` (admin) y `dbindea@gmail.com`
 (employee, la cuenta con la que se prueban las reglas). Es lo que permitió hacer
 `CollaboratorSale.kind` obligatorio: sin apuntes antiguos, no hay nada a lo que
 dar compatibilidad.
+
+⚠️ **Y producción se vació el 17 de septiembre de 2026**, por decisión de Dorel y
+antes de empezar con datos reales. Tenía siete colecciones con datos —`clients`,
+`contracts`, `contractSigningTokens`, `inspections`, `payments`, `reservations` y
+`vehicles`— y quedó **solo `authorizedUsers`**, con su único documento
+(`veltorent@gmail.com`, admin). Nunca llegó a haber `invoices` allí, que es lo
+que hacía este borrado posible: una factura emitida no se borra ni se edita, así
+que después del 1 de enero **esto ya no se podrá hacer**.
+
+⚠️ **Esta vez sí se vació también Storage**, que es la mitad que se olvidó en los
+borrados anteriores: siete ficheros —el contrato original y el firmado, la firma
+manuscrita, un parte de inspección, un presupuesto y las dos fotos de un
+vehículo—, versiones incluidas. Firestore y Storage son dos servicios distintos y
+el CLI de Firebase no borra el segundo; se hizo con
+`gcloud storage rm --recursive`, que sí se lleva las generaciones del versionado.
+Dejar los ficheros habría sido dejar el DNI, el carné y la firma de una persona
+con su token de descarga vivo y sin ninguna ficha que los nombrara.
 
 Así que hoy están **todas vacías**, y las colecciones de arriba son las que el código
 crea, no las que existen ahora mismo. `expenses` estuvo declarada en `firestore.rules`
