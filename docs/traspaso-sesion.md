@@ -1,54 +1,35 @@
-# Traspaso de sesión — 12 de septiembre de 2026
+# Traspaso de sesión — 17 de septiembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
-> visto nada de lo anterior**: dice qué hacer, en qué orden, y qué NO tocar.
+> visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
+> trabajo a partir de ahora.
 
 ---
 
-## 0. ~~LO PRIMERO DE TODO~~ — HECHO el 12 de septiembre de 2026
+## 0. LO PRIMERO: esto ya no es un proyecto en construcción
 
-> ✅ **YA ESTÁ HECHO. NO LO VUELVAS A HACER.** Se vaciaron las 16 colecciones de
-> `velto-store`, `authorizedUsers` quedó intacta con sus dos documentos y
-> producción no se tocó. Lo que sigue es el porqué, que se conserva para
-> entender las decisiones que salieron de ahí — no es una instrucción pendiente.
+⚠️ **El 17 de septiembre de 2026 la empresa empezó a trabajar en real sobre
+producción.** Es la frase más importante de este documento y lo cambia todo lo
+demás.
 
-**Vaciar Firestore de DESARROLLO entero y empezar de cero.** Es una decisión de
-Dorel del 12 de septiembre de 2026 y es la que desbloquea lo demás.
+Hasta ese día `rentalcar-veltomobility` tenía datos desechables y estaba
+permitido ensuciarlo para probar. **Ya no.** Lo que hay dentro son clientes,
+reservas, cobros y facturas de verdad.
 
-**Por qué:** la funcionalidad nueva —coches de colaborador— cambia la forma de
-`vehicles`, `reservations` y `collaboratorSales`. Con datos viejos dentro habría
-que escribir código para leerlos, y **este proyecto tiene prohibido hacer eso**
-(ver CLAUDE.md, «Los datos todavía se pueden borrar»). Borrar sale más barato y
-deja el código limpio.
+Lo que eso significa, en concreto:
 
-### ⚠️ Lo que NO se borra
+| | Antes | Ahora |
+|---|---|---|
+| Cambiar la forma de un documento | se cambiaba y se borraban los datos | **campos aditivos y migración** |
+| Renombrar un campo | en sitio | **tres despliegues**: escribir, migrar, borrar |
+| Borrar una colección en producción | se hizo tres veces | **no** |
+| Probar | valía producción | **solo `velto-store`** |
 
-- **`authorizedUsers`.** Es donde vive la autorización de acceso: borrarla deja a
-  todo el mundo fuera **sin forma de entrar a arreglarlo desde la aplicación**.
-  Ahora tiene **dos** documentos y los dos hacen falta:
-  `veltorent@gmail.com` (admin) y `dbindea@gmail.com` (employee, creado el 12 de
-  septiembre para probar las reglas).
-- **Producción.** `rentalcar-veltomobility` no se toca. Solo `velto-store`.
-
-### ⚠️ Y tres cosas que hay que saber antes de ejecutar
-
-1. **Vaciar Firestore no vacía Storage.** Los PDF, las firmas y las fotos se
-   quedan, huérfanos y con su token de descarga vivo. Se limpian aparte, desde la
-   consola de Firebase.
-2. **Hay copias programadas y PITR desde el 11 de septiembre**, así que el
-   borrado es recuperable durante 7 días. No es una red para confiarse, pero
-   quita hierro.
-3. **La protección contra borrado de la base está activada.** Eso impide
-   `databases delete`, no borrar documentos: para esto no estorba.
-
-### Después de borrar, lo que el borrado permite
-
-- Hacer **`CollaboratorSale.kind` obligatorio** y retirar la tolerancia a su
-  ausencia en `kindOf()` — hoy la ausencia se lee como `referral` porque hay
-  cuatro comisiones antiguas. Sin ellas, el campo puede exigirse y el compilador
-  ayuda.
-- Recrear datos de prueba **con coches de colaborador desde el principio**, que
-  es lo que hace falta para probar el reparto de verdad.
+La regla larga, con sus motivos, está en CLAUDE.md § «Los datos de producción YA
+SON REALES». Y hay un matiz que se olvida: **lo congelado no se migra**. Los
+snapshots —`pricingSnapshot`, `ownerShareSnapshot`, `clientSnapshot`, el del
+contrato— son histórico, y el código nuevo tiene que saber leer los viejos. Eso
+no es un parche de compatibilidad: es la razón de ser de un snapshot.
 
 ---
 
@@ -61,241 +42,150 @@ móvil, en la calle**. El dueño se llama **Dorel** y es quien programa.
 Lee **`CLAUDE.md`** entero antes de tocar nada: es largo y cada aviso está ahí
 porque el fallo ya ocurrió. Y **`FUNCIONAL.md`** para el negocio.
 
-Dos entornos, dos proyectos: `velto-store` (desarrollo, rama `develop`) y
-`rentalcar-veltomobility` (producción, rama `master`).
-
-Estado a 12 de septiembre de 2026: **469 tests** en la app y **369** en las
-functions, build, `i18n:audit` y `css:audit` en verde. Todo subido a `develop`.
+Dos entornos, dos proyectos: `velto-store` (desarrollo, rama `develop`,
+`store.veltorent.com`) y `rentalcar-veltomobility` (producción, rama `master`,
+`rentalcar.veltomobility.com`).
 
 ---
 
-## 2. La tarea principal: coches de colaborador (N-33)
+## 2. Dónde quedó todo el 17 de septiembre
 
-Velto alquila también vehículos cedidos por colaboradores, que cobran una parte.
+Fue un día largo y conviene saber qué se movió, porque casi todo fue en
+producción.
 
-⚠️ **Velto sigue siendo quien alquila y quien factura al cliente**, por el total
-y en nombre de VELTO MOBILITY. El propietario **no aparece** de cara al cliente.
-Lo que hay detrás es otra relación: Velto le debe su parte por la cesión.
+**Producción se vació entera** antes de empezar en real: siete colecciones y los
+siete ficheros de Storage, versiones incluidas. Quedó solo `authorizedUsers` con
+`veltorent@gmail.com`. Fue el último borrado; ya no se puede repetir.
 
-### Las cuatro decisiones, ya tomadas por Dorel. No volver a preguntarlas
+**Se desplegaron a producción** las cinco functions que se habían quedado atrás
+—`generateContractPdf` con el archivado de contratos, `getContractVerification`
+con el estado `superseded`, y las tres de Redsys con el importe pendiente, el
+nombre del cliente fuera del base64 y la devolución que ya no se lee como
+cobro—. Verificadas: las dos públicas responden bien.
 
-| | Decisión |
-|---|---|
-| **Extras** | **No se reparten**: son de Velto. Combustible, limpieza, daños, km de más y multas cubren un coste que pone la agencia |
-| **Devengo** | **Al cerrar la reserva**, con los importes definitivos |
-| **Porcentaje** | **En cada coche**, con el del colaborador como propuesta |
-| **Factura** | **La manda el propietario y Velto la registra.** Sin autofacturación |
+**Y producción empezó a facturar.** `VELTO_INVOICING_ENABLED=true`,
+`issueInvoice` e `issueComplianceDeclaration` desplegadas, y la declaración
+responsable emitida (`verifactuDeclarations/1.0`). La primera factura será
+`2026/0001`.
 
-### Entrega 1 — HECHA (commit `5ca5f74`)
+⚠️ **Emite pero NO remite.** `VELTO_VERIFACTU_ENABLED` sigue en `false`: los
+registros se guardan con cada factura y no se envían a la AEAT hasta el 1 de
+enero de 2027. Es legal —la obligación no empieza hasta entonces— y es lo que
+mantiene apagados el QR y la leyenda, que es lo correcto mientras la sede no
+tenga esas facturas.
 
-- **`src/app/shared/utils/owner-share.util.ts`** + spec. Única autoridad sobre la
-  base: el alquiler **sin IVA y solo el alquiler**.
-- `Vehicle`: `ownership` (`own` | `collaborator`), `ownerCollaboratorId`,
-  `ownerSharePercent`. Ausente vale «propio».
-- `Reservation`: `ownerShareSnapshot`, **congelado al crear**.
-- `Collaborator`: `ownerSharePercent`, **distinto** de `commissionPercent`.
-- `CollaboratorSale`: `kind` (`referral` | `vehicle_owner`), `kindOf()`,
-  `balanceByKind()`.
+**Estado de las functions** (verificado ese día): producción **22**, desarrollo
+**27**. Las cinco que faltan son las que hablan con la Agencia, y faltan a
+propósito.
 
-⚠️ **`kind` es la petición literal de Dorel: «no mezclar ni duplicar».** El mismo
-colaborador puede traer el cliente **y** poner el coche de la **misma** reserva:
-son **dos apuntes**, no uno mayor. Uno lleva detrás una factura suya por la
-cesión y el otro no.
-
-⚠️ **Un fallo que salió escribiendo el test y conviene recordar:**
-`Number(null)` es `0`, no `NaN`. Un porcentaje sin rellenar pasaba como reparto
-del **0 %**, que aquí es legítimo, así que nada chirriaba: al propietario se le
-habría liquidado cero hasta que se quejara.
-
-### Entrega 2 — HECHA (commit `87a2839`)
-
-Alta de vehículo con propietario y reparto automático en la reserva. El detalle
-de lo que entró, y de lo que **no**, está en `docs/mejoras-pendientes.md` (N-33).
-
-⚠️ **Lo que falta y es lo primero de la entrega 3: el DEVENGO.** Nadie crea
-todavía el `CollaboratorSale` de `kind: 'vehicle_owner'` al cerrar la reserva, así
-que el reparto se congela y se enseña, pero aún no llega al balance del
-colaborador.
-
-Lo que se pedía:
-
-- En `vehicle-form`: elegir «Propio» o «De colaborador». Si es de colaborador,
-  **seleccionar uno existente o crearlo desde ahí** —Dorel lo pidió así— y
-  proponer su `ownerSharePercent`, editable por coche.
-- Validar con `vehicleOwnershipProblem()`, que ya existe. Recordar la regla de la
-  casa: **el botón de guardar no se deshabilita**, se marca el campo y se
-  explica.
-- Al crear la reserva, llamar a `ownerShareSnapshotOf()` y guardar el resultado.
-  El sitio es `commitReservationWithPayments()`, que ya mete reserva y pagos en un
-  `writeBatch`.
-- Enseñarlo en la ficha de la reserva: de quién es el coche y cuánto le toca.
-
-### Entrega 3
-
-Liquidaciones agrupadas y la factura del propietario.
-
-- Agrupar **varias reservas en un pago**: fecha, importe y forma, **incluido
-  efectivo**. Hoy `collaborator.util.ts` tiene `settlements()` y las ventas se
-  marcan pagadas de una en una.
-- Registrar **la factura recibida** del propietario: número, fecha, importe, PDF.
-- ⚠️ **Tres cosas distintas que no se pueden confundir**: la **liquidación** (lo
-  que se le reconoce), el **pago** (que se le entrega el dinero) y la **factura**
-  (el justificante). Se puede pagar sin factura todavía.
-- ⚠️ **«Pendiente de recibir factura» NO es «no hay que facturar».** Dorel lo
-  dijo expresamente. Que el estado no se lea como una exención.
-- ⚠️ **Pagarle no genera ninguna factura de venta de Velto.** Es un gasto de
-  Velto, no una venta.
-
-### Entrega 4
-
-- **Informes**: el reparto y el resultado real de Velto. Hoy `analytics.util.ts`
-  es la única autoridad sobre qué cuenta como ingreso; la parte del propietario
-  es una **salida** más, junto a gastos, mantenimiento y comisiones.
-- **La fecha de operación de las facturas** — ver abajo, es tarea aparte.
+**Reglas e índices de producción: al día.** Comprobado descargando el ruleset
+desplegado y comparándolo — `firestore.rules` solo difiere en un comentario,
+`storage.rules` es idéntico y los 13 índices declarados están los 13. La
+advertencia de traspasos anteriores («las reglas nuevas están solo en
+desarrollo») **ya no aplica**.
 
 ---
 
-## 3. La otra tarea: fecha de operación de las facturas
+## 3. Cómo entra el trabajo a partir de ahora
 
-Pedida el 12 de septiembre, **sin empezar**. Hoy `Invoice` ya tiene
-`operationDate` separada de `issueDate` y existe `needsOperationDate()`, pero
-**nadie la propone**.
+El desarrollo por tandas se cierra aquí. Lo que venga vendrá de **Dorel
+trabajando en producción**: un fallo que le salga, algo que le estorbe, o una
+funcionalidad que eche en falta con clientes delante.
 
-Lo que pidió Dorel, literal:
+Cuando llegue uno de esos, el orden que ha funcionado:
 
-- Regla general: **la fecha en que el precio del alquiler resulta exigible** según
-  lo pactado.
-- Si se exige **al entregar** el coche → esa fecha. Si **al finalizar** → la de
-  finalización.
-- Si hay un **anticipo cobrado antes** → la fecha de cobro para el importe
-  anticipado, **sin volver a contarlo** en la factura final.
-- Si hay **mensualidades** → el vencimiento de cada período.
-- **Una explicación breve** de la fecha propuesta, para poder revisarla.
-
-⚠️ **Separadas**: fecha de expedición, fecha de operación y fechas del alquiler
-son tres cosas. **No usar la de emisión ni la de devolución para todos los
-casos**, que es lo que haría lo fácil.
-
-⚠️ Y esto toca VeriFactu: `FechaOperacion` va en el registro que se remite a la
-AEAT. Antes de tocarlo, leer `docs/verifactu-alta.md` y
-`functions/src/invoices/verifactu.ts`.
+1. **Reproducirlo, no imaginarlo.** El patrón de fallo dominante aquí es código
+   escrito y nunca ejecutado; el segundo es código que sí se ejecutó pero en el
+   otro entorno.
+2. **Preguntarse si es de producción o del código.** El 17 de septiembre, un
+   «User code failed to load» del despliegue no era el código —cargaba en 1,2 s—
+   sino la máquina ocupada; y un «No se pudo consultar el estado de la remisión»
+   sí era el código, pero no donde parecía.
+3. **Arreglarlo en `develop`, probarlo en desarrollo, y luego a `master`.** El
+   CI despliega hosting; **las functions van a mano**.
+4. ⚠️ **Los despliegues de functions a producción los lanza Dorel.** A mí me los
+   bloquea el clasificador de permisos, así que lo que hago es dejarle el
+   comando exacto, con `--only` explícito y por tandas.
 
 ---
 
-## 4. Lo que está pendiente y NO es programar
+## 4. Lo que NO se toca
 
-### 4.1 · Probar las reglas con la cuenta de empleado — ✅ HECHA el 14 de septiembre de 2026
-
-> Pasada con `dbindea@gmail.com` (`employee`) contra `velto-store`, **19
-> comprobaciones y cero fallos**. Lo que sigue explica qué se probó y cómo
-> repetirlo; ya no es una tarea pendiente.
-
-Dorel creó `dbindea@gmail.com` como `employee` en desarrollo el 12 de septiembre
-**para esto**.
-
-Hace falta que **él** inicie sesión con esa cuenta en `localhost:4200` y
-entonces ejecutar **`docs/comprobar-reglas-financieras.js`** en la consola del
-navegador.
-
-⚠️ **No intentes generar el token tú**: acuñar una credencial de sesión está
-bloqueado, y con razón.
-
-⚠️ **Ya no hace falta una ventana de incógnito.** Hasta el 14 de septiembre de
-2026 el popup de Google entraba con la última cuenta sin preguntar, porque el
-`GoogleAuthProvider` se creaba sin parámetros; ahora pide
-`prompt: 'select_account'` y se cambia de rol desde el propio botón de entrar.
-Era justo lo que hacía incómoda esta prueba y por lo que llevaba dos días sin
-hacerse.
-
-Lo que tiene que salir: **403** en `expenses`, `invoices`, `invoiceCounters`,
-`billingProfiles`, `verifactuDeclarations`, `verifactuSubmissions`,
-`collaborators`, `collaboratorSales` y `collaboratorInvoices`; **403** al
-ascenderse a admin; y **200** en `payments`, `reservations` y `vehicles`, que es
-lo que necesita para trabajar.
-
-**Y lo que se comprobó además**, porque leer es solo la mitad:
-
-- **Crear** un gasto, una comisión o una factura de propietario: **403** los tres.
-- **Mover `ownerShareSnapshot`** de una reserva —subir el reparto del propietario
-  de un 75 % a un 95 %—: **403**, y el dato **seguía en 75** al volver a leerlo.
-  No basta con que la API responda mal: hay que mirar que no se movió.
-- **Mover `pricingSnapshot`** —poner el precio a 1 €—: **403**.
-- **Escribir el lugar de recogida**: **200**. Si esto fallara, la regla estaría
-  rota por el otro lado y el empleado no podría trabajar.
-- **Entrar por la URL** en `/reports` y `/collaborators`: devuelve al panel **con
-  el aviso** «Tu rol no tiene acceso a esa sección», no en silencio.
-
-⚠️ **`payments` en 200 es correcto**, no un agujero olvidado: la ficha de la
-reserva necesita leer los pagos cobrados. Está explicado en `firestore.rules`.
-
-### 4.2 · Ensayar una restauración
-
-Las copias están activas desde el 11 de septiembre, **y nunca se ha restaurado
-ninguna**. Procedimiento en `docs/copias-de-seguridad.md` § 4.
-
-⚠️ Lo que hay que entender antes: **restaurar un estado anterior reintroduce
-numeraciones y huellas ya consumidas**. Con facturas emitidas, lo primero es
-**parar la emisión**, no restaurar.
-
-### 4.3 · Producción, el 1 de enero
-
-`VELTO_INVOICING_ENABLED=false` en producción y las siete functions que escriben
-facturas **sin desplegar**, a propósito. El guion está en
-`docs/verifactu-alta.md` § 5 bis. **Producción no se toca sin Dorel.**
-
-### 4.4 · Aparcado por decisión suya
-
-- **RD 933/2021** (registro ante Interior). ⚠️ Es una obligación que **ya corre**
-  desde el 2 de diciembre de 2024. Aparcada el 11 de septiembre; ver N-30. No es
-  un olvido, no hace falta volver a plantearla.
-- **ROI / VIES**: sin pedir. `exempt_eu` y `reverse_charge` están **bloqueados
-  técnicamente en producción** desde el 11 de septiembre.
+- **Producción no se usa para probar.** Ni una reserva de prueba, ni un cobro:
+  allí Redsys está en `live` y cobra de verdad.
+- **No se borran colecciones en producción.** Nunca más.
+- **`invoices` es inmutable.** `update` y `delete` denegados a todo el mundo,
+  administrador incluido. Un error se corrige con una rectificativa.
+- **La declaración responsable tampoco se borra.** Hay una por versión del
+  sistema y ya existe la 1.0.
+- **`VELTO_VERIFACTU_ENABLED` en producción solo lo enciende Dorel**, con el
+  guion del 1 de enero delante.
+- **`veltorent@gmail.com`** es el único propietario de los dos proyectos y el
+  único usuario. Si se pierde esa cuenta no hay forma de entrar, restaurar ni
+  desplegar. Sigue siendo el primer punto pendiente del sobre
+  ([emergencia.md](emergencia.md)).
 
 ---
 
-## 5. Cómo se trabaja aquí
+## 5. Lo que queda pendiente
+
+La lista viva está en [mejoras-pendientes.md](mejoras-pendientes.md). Lo que hay
+que tener en la cabeza al retomar:
+
+**Con fecha, y es lo único con fecha:** el guion del 1 de enero de 2027
+([verifactu-alta.md](verifactu-alta.md) § 5 bis). Incluye un paso nuevo —el 3
+bis— que no existía y que lo crea haber empezado a facturar antes: **qué se hace
+con las facturas de 2026** cuando se encienda la remisión. El barrido se lleva
+todas las filas pendientes **sin filtro de fecha**, así que si no se decide
+nada, en enero intentará remitir meses de facturas que nunca estuvieron
+obligadas. Las dos salidas están escritas y **hay que probarlas contra
+preproducción desde desarrollo, antes de enero**.
+
+**Decisiones de Dorel, sin prisa:** el turquesa `#20A48F` como texto se queda en
+3,10:1 y hace falta 4,5:1 —haría falta un tono propio para texto—; la fianza
+automática a clientes conocidos (M-21); y consultar VIES antes de emitir, que
+hoy no se hace y una factura con un NIF-IVA que la AEAT no reconozca no se puede
+remitir nunca.
+
+**Deuda técnica que ahora sí puede morder:** Informes se trae seis colecciones
+enteras y filtra en memoria —es lo primero que se rompe cuando crezcan los
+datos—; dos operadores pueden reservar el mismo coche, reducido a milisegundos
+pero no cerrado; y no hay lint.
+
+**Sin cerrar desde hace tiempo:** un cobro por la vía pública del móvil que se
+registre solo en **producción**. En desarrollo ya ocurrió; una vía de cobro no
+está probada hasta que alguien paga por ella y la aplicación se entera sin
+ayuda.
+
+---
+
+## 6. Cómo se trabaja aquí
 
 Esto no es estilo, es lo que hace que la aplicación no mienta:
 
 1. **Antes de dar algo por bueno**: `npm run build` (comprueba las plantillas,
    cosa que `tsc --noEmit` no hace), `npm test`, `npm --prefix functions test`,
-   `npm run i18n:audit` y `npm run css:audit`.
+   `npm run i18n:audit`, `npm run css:audit` y `npm run spacing:audit`.
 2. **Y además abrir la pantalla.** El patrón de fallo dominante es **código
-   escrito y nunca ejecutado**. Los tres fallos más caros de septiembre no los
-   habría cazado ninguna auditoría. Hay sesión abierta en `localhost:4200`.
+   escrito y nunca ejecutado**. Los fallos más caros de septiembre no los habría
+   cazado ninguna auditoría.
 3. **Mirar también el móvil**, a 390 px. Es una aplicación de móvil.
-4. **El texto y el hecho se deciden juntos.** Ha mordido cinco veces: el contrato
-   afirmaba una firma que no tenía, el presupuesto decía «IVA incluido» sobre un
-   desglose que lo sumaba, el correo decía «el coche no se puede alquilar» y la
-   aplicación lo alquilaba…
-5. **Nada de texto en español dentro del código.** Todo clave i18n, en los tres
-   idiomas, y `i18n:audit` en verde.
-6. **Un botón que no hace nada es un fallo**, y un permiso denegado se explica.
-7. **Commits en español**, formato convencional, contando **por qué**. Se puede
-   commitear en `develop`; `master` necesita el visto bueno de Dorel.
+4. **Medir, no deducir.** Vale para el CSS —`getComputedStyle` es la única
+   respuesta buena, y la especificidad de Angular engaña— y vale para los
+   despliegues: el 17 de septiembre, dos errores seguidos acusaban al código y
+   ninguno era del código.
+5. **El texto y el hecho se deciden juntos.** Ha mordido cinco veces: el
+   contrato afirmaba una firma que no tenía, el presupuesto decía «IVA incluido»
+   sobre un desglose que lo sumaba…
+6. **Nada de texto en español dentro del código.** Todo clave i18n, en los tres
+   idiomas.
+7. **Un botón que no hace nada es un fallo**, y un permiso denegado se explica.
+8. **Cada pregunta se contesta con su propia bandera**, aunque hoy dos coincidan.
+   Es la lección de `invoicingEnabled` contra `verifactuEnabled`: coincidieron
+   durante meses y el día que se separaron rompieron una pantalla.
+9. **Commits en español**, formato convencional, contando **por qué**. Se puede
+   commitear en `develop`; **`master` necesita el visto bueno de Dorel**, y
+   ahora con más razón: merge a `master` es desplegar sobre datos reales.
 
 ⚠️ **Y lo más importante de todo:** cuando algo no cuadre, **decirlo**. La regla
 de esta casa es que una cifra creíble y equivocada es peor que un error.
-
----
-
-## 6. Estado del repaso previo a producción
-
-Cuatro tandas entre el 11 y el 12 de septiembre, **unos treinta fallos** (N-32).
-La curva se aplanó: la cuarta no sacó ningún fallo estructural.
-
-**Todavía no se ha dado el visto bueno para producción**, y falta poco:
-
-- ~~La prueba de reglas del punto 4.1.~~ ✅ **Hecha el 14 de septiembre de 2026**:
-  19 comprobaciones, cero fallos.
-- ~~Formulario de vehículo en móvil.~~ ✅ Abierto a 390 px el 12 y el 14 de
-  septiembre; y desde entonces las 16 rutas principales se comprueban a 390 px
-  midiendo el desbordamiento, no mirándolo.
-- **Ficha de cliente y detalle de pago en móvil** — las dos que siguen sin
-  abrirse de verdad. Que no desborden está medido; que se lean bien, no.
-- **El ensayo de restauración del 4.2.** Nunca se ha restaurado una copia.
-- ⚠️ **Las reglas nuevas están solo en desarrollo.** `collaboratorInvoices` y la
-  protección de `ownerShareSnapshot` no se han desplegado a producción.
-- **Un cobro por la vía pública del móvil que se registre solo.** Sigue sin
-  haberlo desde F-32: una vía de cobro no está probada hasta que alguien paga
-  por ella y la aplicación se entera sin ayuda.
