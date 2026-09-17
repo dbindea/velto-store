@@ -687,9 +687,10 @@ remisión buena.
 
 ### Lo que queda de la prueba
 
-- [ ] Escanear el QR con un **móvil sobre papel impreso**. Es lo único que prueba
-      el tamaño: un lector por software descifra el símbolo aunque esté fuera de
-      norma, así que el test mide milímetros, no descifra.
+- [x] Escanear el QR con un **móvil sobre papel impreso**. *(17 sep 2026, dado
+      por hecho por Dorel)* Es lo único que prueba el tamaño: un lector por
+      software descifra el símbolo aunque esté fuera de norma, así que el test
+      mide milímetros, no descifra.
 - [ ] Una **rectificativa por sustitución** (`S`) y una con **inversión del sujeto
       pasivo** (`S2`). Validan contra el esquema; falta mandarlas.
 
@@ -2556,8 +2557,8 @@ fallo… salvo D-5, que resultó serlo.
   nuevos, incluido el que comprueba que tras el reparto la reserva queda pagada
   y se puede cerrar, que es la razón de ser del arreglo.
 
-- [ ] **D-6 · Confirmar la subida de fotos en tu móvil.** Sigue pendiente y solo
-  la puedes hacer tú: al unificar el control se quitó `capture="environment"`,
+- [x] **D-6 · Confirmar la subida de fotos en tu móvil.** *(17 sep 2026, dado
+  por hecho por Dorel)* Solo la podía hacer él: al unificar el control se quitó `capture="environment"`,
   que forzaba la cámara e impedía subir un documento de la galería. Ahora abre
   el selector del sistema, que ofrece las dos cosas.
 
@@ -2717,10 +2718,15 @@ cargos extra, resolución de fianza y cierre. Queda:
       detectaban: el título del presupuesto al doble de tamaño que el del
       contrato y las etiquetas «Lugar de entre…» recortadas. Falta repetirlo en
       **en** y **ro**.
-- [ ] **Elegir y conectar el dominio de los enlaces al cliente.** Hoy salen con
-      `velto-store.web.app`. Al conectarlo basta con apuntar
-      `VELTO_PUBLIC_BASE_URL` al dominio nuevo: **no hay que tocar código**, y
-      los enlaces de firma se mueven con él.
+- [x] **Elegir y conectar el dominio de los enlaces al cliente.** *(17 sep 2026)*
+      Decidido por Dorel: **`store.veltorent.com`** en desarrollo y
+      **`rentalcar.veltomobility.com`** en producción. Ya era lo que decían los
+      dos `functions/.env.<proyecto>` —la línea de producción está ahí desde el
+      31 de agosto— y los dos dominios responden `200`. Comprobado además que el
+      `/d/…` de producción **lo contesta la function y no la SPA**: devuelve
+      `404` a un id inventado, que es lo correcto; si lo hubiera capturado el
+      catch-all, la respuesta habría sido `200` con el `index.html` y el cliente
+      habría acabado en la pantalla de login.
 
       ⚠️ **No apuntar la raíz de `veltorent.com` a este hosting.** La §11 del
       documento funcional reserva ese dominio para la **web pública** de coches
@@ -2728,14 +2734,18 @@ cargos extra, resolución de fianza y cierre. Queda:
       sirve el backoffice: si se le cuelga la raíz, se cierra la puerta a la web
       pública. Usar un subdominio (`store.` o uno propio para documentos).
       `veltomobility.com` sirve igual; la elección es comercial, no técnica.
-- [ ] **Probar un enlace corto desde el móvil**, fuera de la sesión del
-      operador, para confirmar que abre el PDF en el navegador de WhatsApp
-- [ ] **Revisar los secrets de empresa** antes de dar por buena la marca:
-      `VELTO_COMPANY_NAME`, `_ADDRESS`, `_PHONE`, `_REGISTRY`. Si están puestos
-      con los valores antiguos, el código nuevo no los cambia.
-- [ ] **Confirmar los datos registrales con la gestoría.** El código traía
-      «Tomo 45067, Folio 44, Hoja M-793170» y la factura dice «Hoja M-893718 ·
-      IRUS 1000477431057». Se ha adoptado el de la factura.
+- [x] **Probar un enlace corto desde el móvil**, fuera de la sesión del
+      operador. *(17 sep 2026, dado por hecho por Dorel)*
+- [x] **Revisar los secrets de empresa** antes de dar por buena la marca.
+      *(17 sep 2026)* **Ninguno de los cuatro existe en producción** —
+      `VELTO_COMPANY_NAME`, `_ADDRESS`, `_PHONE` y `_REGISTRY` dan error al
+      accederlos—, así que manda `company-config.ts` y lo que imprimen los PDF
+      es lo que dice el código. Era la duda al revés de la que había: el riesgo
+      era que un secret viejo tapara al código, y no hay ninguno.
+- [x] **Confirmar los datos registrales con la gestoría.** *(17 sep 2026)*
+      Dorel confirma que el bueno es **M-893718**, el de la factura. Ya es lo
+      que lleva `company-config.ts` desde el 7 de septiembre y, por lo de
+      arriba, lo que sale impreso.
 
 ---
 

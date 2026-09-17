@@ -1919,6 +1919,23 @@ conserva sus dos documentos: `veltorent@gmail.com` (admin) y `dbindea@gmail.com`
 `CollaboratorSale.kind` obligatorio: sin apuntes antiguos, no hay nada a lo que
 dar compatibilidad.
 
+⚠️ **Y producción se vació el 17 de septiembre de 2026**, por decisión de Dorel y
+antes de empezar con datos reales. Tenía siete colecciones con datos —`clients`,
+`contracts`, `contractSigningTokens`, `inspections`, `payments`, `reservations` y
+`vehicles`— y quedó **solo `authorizedUsers`**, con su único documento
+(`veltorent@gmail.com`, admin). Nunca llegó a haber `invoices` allí, que es lo
+que hacía este borrado posible: una factura emitida no se borra ni se edita, así
+que después del 1 de enero **esto ya no se podrá hacer**.
+
+⚠️ **Esta vez sí se vació también Storage**, que es la mitad que se olvidó en los
+borrados anteriores: siete ficheros —el contrato original y el firmado, la firma
+manuscrita, un parte de inspección, un presupuesto y las dos fotos de un
+vehículo—, versiones incluidas. Firestore y Storage son dos servicios distintos y
+el CLI de Firebase no borra el segundo; se hizo con
+`gcloud storage rm --recursive`, que sí se lleva las generaciones del versionado.
+Dejar los ficheros habría sido dejar el DNI, el carné y la firma de una persona
+con su token de descarga vivo y sin ninguna ficha que los nombrara.
+
 Así que hoy están **todas vacías**, y las colecciones de arriba son las que el código
 crea, no las que existen ahora mismo. `expenses` estuvo declarada en `firestore.rules`
 desde el principio sin que nada la usara; desde el 4 de septiembre de 2026 la escribe el
