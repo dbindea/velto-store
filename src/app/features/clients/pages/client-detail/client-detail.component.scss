@@ -38,10 +38,13 @@
    * `flex: 1 1 100%`, así que se llevaba la fila entera y el de borrar caía
    * solo a una tercera, como un icono suelto sin contexto.
    *
-   * ⚠️ **El 60/40 se hace con el factor de crecimiento y `flex-basis: 0`**, no
-   * con `flex-basis: 60%`. Con porcentajes, el `gap` de 12 px sale de algún
-   * sitio y el reparto real no es el que se pide; con la base a 0, todo el
-   * ancho disponible —ya descontado el hueco— se reparte 6 a 4 exacto.
+   * ⚠️ **El 60/40 NO sale de `flex: 6` y `flex: 4` con la base a 0**, aunque lo
+   * parezca: con `box-sizing: border-box` una base de 0 no puede bajar del
+   * relleno propio del botón —20 px a cada lado—, así que 80 px se reparten
+   * antes que nada y solo el resto se divide 6 a 4. Medido en el navegador: el
+   * reparto real era 57,7/42,3, ocho píxeles corridos a cualquier ancho.
+   * Con porcentajes sí es exacto, restándole a cada parte **su parte del
+   * hueco**: 60 % de 0,75rem son 0,45rem, y el 40 %, 0,3rem.
    */
   @media (max-width: 768px) {
     flex-wrap: wrap;
@@ -52,13 +55,22 @@
     }
 
     .btn-primary {
-      flex: 6 1 0;
+      flex: 0 1 calc(60% - 0.45rem);
       min-width: 0;
     }
 
     .btn-danger {
-      flex: 4 1 0;
+      flex: 0 1 calc(40% - 0.3rem);
       min-width: 0;
+    }
+
+    // Y la misma caja para los dos. El de borrar no lo declara este componente:
+    // viene del global, con menos relleno y menos cuerpo, y en la misma fila eso
+    // se veía —46 px contra 41— como si uno de los dos estuviera mal puesto.
+    .btn-primary,
+    .btn-danger {
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
     }
   }
 }
