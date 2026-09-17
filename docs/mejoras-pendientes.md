@@ -15,6 +15,40 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 17 de septiembre de 2026 — producción en real
+
+⚠️ **Ese día se cerró la etapa de construcción y la empresa empezó a operar
+sobre producción.** Lo que sigue en este documento se escribió antes; sigue
+sirviendo como historial y como lista de pendientes, pero **la regla de los
+datos está invertida** desde entonces: campos aditivos, migración en despliegues
+separados, nada de borrar colecciones y **nada de probar en producción**. Ver
+CLAUDE.md § «Los datos de producción YA SON REALES» y
+[traspaso-sesion.md](traspaso-sesion.md), que es el documento que hay que leer
+al retomar.
+
+Lo que se movió ese día, en corto:
+
+- Producción **vaciada** —siete colecciones y siete ficheros de Storage,
+  quedando solo `authorizedUsers`— y acto seguido puesta en real. Fue el último
+  borrado posible.
+- Desplegadas las **cinco functions atrasadas** (archivado de contratos, estado
+  `superseded` y las tres de Redsys).
+- Producción **emite facturas** desde ese día: `VELTO_INVOICING_ENABLED=true`,
+  `issueInvoice` e `issueComplianceDeclaration` desplegadas y declaración
+  responsable emitida (`verifactuDeclarations/1.0`). La primera será
+  `2026/0001`.
+- ⚠️ **Emite pero no remite.** La remisión a la AEAT sigue apagada hasta el 1 de
+  enero de 2027, y eso creó un paso nuevo en el guion —el 3 bis— sobre qué hacer
+  con el atraso de 2026.
+- Separar esas dos banderas **rompió una pantalla el mismo día**: Ajustes
+  consultaba la remisión si el entorno *facturaba*. Corregido; la lección está
+  en CLAUDE.md.
+- Comprobado que **reglas e índices de producción están al día**, descargando lo
+  desplegado y comparándolo. La advertencia de traspasos anteriores sobre reglas
+  sin desplegar ya no aplica.
+
+---
+
 ## Estado a 4 de septiembre de 2026
 
 **El ciclo del alquiler está completo y probado de extremo a extremo**, en

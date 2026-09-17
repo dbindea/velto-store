@@ -1142,22 +1142,26 @@ cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
 necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
 conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
-⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado con
-`firebase functions:list` el 8 de septiembre de 2026, ampliado el 9):
+⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 17 de
+septiembre de 2026 con `gcloud functions list`, que además da la fecha de cada
+una — `firebase functions:list` no la da):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| desarrollo | 26 | — |
-| producción | **19** | `issueInvoice`, `issueComplianceDeclaration` y las cinco de la remisión a la AEAT |
+| desarrollo | 27 | — |
+| producción | **22** | `sendVerifactuRecords`, `sweepVerifactuRecords`, `getVerifactuStatus`, `retryVerifactuRecord` y `checkVerifactuConnection` |
 
-⚠️ **Lo que falta en producción falta a propósito**: son las que **escriben**
-facturas o hablan con la Agencia, y van con el guion del 1 de enero
-([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis). Lo que sí está
-desplegado es todo lo que no cruza ese punto de no retorno.
+⚠️ **Lo que falta en producción falta a propósito**: son las cinco que **hablan
+con la Agencia**, y van con el guion del 1 de enero
+([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis).
 
-Es deliberado mientras se prueba: la primera factura emitida en producción marca el punto
-de no retorno de `invoices`. Pero es justo el desajuste que CLAUDE.md avisa que es fácil
-olvidar, así que **la lista de arriba no vale como inventario**: se comprueba con
+⚠️ **`issueInvoice` e `issueComplianceDeclaration` YA están allí** desde el 17 de
+septiembre de 2026: producción emite facturas —y ya tiene su declaración
+responsable, `verifactuDeclarations/1.0`— pero **no remite**. Emitir y remitir
+son dos cosas separadas, y este es exactamente el período en que se ve.
+
+Y **la lista de arriba no vale como inventario**: es justo el desajuste que este
+fichero avisa que es fácil olvidar. Se comprueba con
 `firebase functions:list --project prod`.
 
 `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que desplegarla no basta: el
@@ -1804,7 +1808,22 @@ justo lo que los `VELTO_COMPANY_*` nunca hicieron estando puestos como secrets.
 
 ⚠️ **`VELTO_INVOICING_ENABLED` dice si el entorno EMITE facturas**, y no es lo
 mismo que `VELTO_VERIFACTU_ENABLED`, que dice si los registros se **remiten** a
-la AEAT. Hoy: desarrollo `true`, **producción `false`**.
+la AEAT. Hoy, y esta combinación es la que importa:
+
+| | Emite (`INVOICING`) | Remite (`VERIFACTU`) |
+|---|---|---|
+| desarrollo | `true` | `true`, contra **preproducción** |
+| producción | **`true`** desde el 17 sep 2026 | **`false`** hasta el 1 de enero |
+
+⚠️ **Que las dos banderas dejaran de ir juntas rompió una pantalla el mismo
+día.** Ajustes decidía si consultar la remisión mirando `invoicingEnabled`, y
+funcionaba **de casualidad** mientras las dos estuvieron apagadas a la vez: al
+encender solo la primera, llamó a `getVerifactuStatus` —que en producción no
+está desplegada— y soltó «No se pudo consultar el estado de la remisión» justo
+después de emitir la declaración responsable. Por eso `getComplianceStatus`
+sirve **las dos**, `invoicingEnabled` y `verifactuEnabled`. Si aparece una
+tercera bandera de este tipo, la regla es la misma: **cada pregunta se contesta
+con su propia bandera**, aunque hoy coincidan.
 
 Existe porque «producción todavía no factura» era un hecho real que no estaba
 escrito en ninguna parte: la pantalla ofrecía «Emitir declaración» y el módulo de
