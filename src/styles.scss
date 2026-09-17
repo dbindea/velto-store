@@ -1298,3 +1298,27 @@ textarea.is-invalid:focus {
 
   i { font-size: 0.7rem; }
 }
+
+/**
+ * El pie de un listado paginado: «cargar más antiguos».
+ *
+ * ⚠️ **Global porque lo usan cuatro listados** —Pagos, Reservas, Contratos e
+ * Inspecciones— y ya sabemos cómo acaba declararlo en cada uno: con cuatro
+ * nombres distintos y tres tamaños, como pasó con las casillas y con
+ * `.form-control`.
+ *
+ * Centrado y discreto: no compite con las filas, que son lo que se viene a
+ * leer. Solo aparece cuando de verdad queda algo detrás.
+ */
+.cargar-mas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+
+  .hint {
+    margin: 0;
+    text-align: center;
+  }
+}

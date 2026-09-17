@@ -14,13 +14,14 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, updateDoc } from '@angular/fire/firestore';
+import { Firestore, collection, doc, getDoc, getDocs, query, where, orderBy, onSnapshot, updateDoc , limit} from '@angular/fire/firestore';
 import { Storage, ref as storageRef, getDownloadURL } from '@angular/fire/storage';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Contract } from '@shared/models/contract.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { PAGINA } from '@shared/utils/pagination.util';
 
 export interface GenerateContractResponse {
   contractId: string;
@@ -56,9 +57,14 @@ export class ContractService {
   // Firestore reads (allowed by rules for authenticated users)
   // ============================================================
 
-  getContracts(): Observable<Contract[]> {
+  /**
+   * ⚠️ **Con tope, y escuchando.** Sin él esto leía **y mantenía un oyente
+   * sobre** todos los contratos emitidos desde el primer día. Un contrato
+   * antiguo se busca, no se hojea. Ver `pagination.util.ts`.
+   */
+  getContracts(tope: number = PAGINA): Observable<Contract[]> {
     const colRef = collection(this.firestore, 'contracts');
-    const q = query(colRef, orderBy('createdAt', 'desc'));
+    const q = query(colRef, orderBy('createdAt', 'desc'), limit(tope));
     return new Observable<Contract[]>((subscriber) => {
       const unsubscribe = onSnapshot(
         q,

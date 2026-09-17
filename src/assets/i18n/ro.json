@@ -133,9 +133,11 @@
     "close": "Închide",
     "continue": "Continuă",
     "create": "Creează",
+    "date": "Dată",
     "days": "zile",
     "delete": "Șterge",
     "edit": "Editează",
+    "loadMore": "Încarcă mai vechi",
     "loading": "Se încarcă...",
     "missingFields": "Mai lipsește:",
     "photos": {
@@ -153,8 +155,8 @@
     "retry": "Reîncearcă",
     "save": "Salvează",
     "search": "Caută",
-    "viewAll": "Vezi tot",
-    "date": "Dată"
+    "showingLatest": "Se afișează cele mai recente. Pentru unul vechi anume, folosește căutarea.",
+    "viewAll": "Vezi tot"
   },
   "contracts": {
     "actions": {

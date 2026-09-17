@@ -148,6 +148,26 @@
           </div>
         </div>
       }
+
+      <!--
+        ⚠️ **Solo si de verdad queda algo detrás.** `puedeCargarMas` mira lo
+        RECIBIDO contra el tope, no lo que se ve después de filtrar: con un
+        filtro puesto la lista puede quedarse en dos filas y seguir habiendo
+        miles por debajo.
+      -->
+      @if (puedeCargarMas) {
+        <div class="cargar-mas">
+          <button type="button" class="btn-secondary" [disabled]="loading" (click)="cargarMas()">
+            @if (loading) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-arrow-down"></i>
+            }
+            {{ 'common.loadMore' | translate }}
+          </button>
+          <p class="hint">{{ 'common.showingLatest' | translate }}</p>
+        </div>
+      }
     </div>
   }
 </div>

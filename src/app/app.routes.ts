@@ -12,11 +12,13 @@ export const routes: Routes = [
   },
   {
     path: 'login',
+    data: { precargar: false },
     loadComponent: () => import('./login/login.component').then(m => m.LoginComponent),
     canActivate: [publicGuard]
   },
   {
     path: 'sign-contract/:token',
+    data: { precargar: false },
     loadComponent: () => import('./features/contracts/pages/sign-contract/sign-contract.component').then(m => m.SignContractComponent)
   },
   /**
@@ -29,6 +31,7 @@ export const routes: Routes = [
    */
   {
     path: 'd/:id',
+    data: { precargar: false },
     loadComponent: () => import('./features/documents/document-redirect.component').then(m => m.DocumentRedirectComponent)
   },
   /**
@@ -53,14 +56,17 @@ export const routes: Routes = [
    */
   {
     path: 'v',
+    data: { precargar: false },
     loadComponent: () => import('./features/contracts/pages/contract-verify/contract-verify.component').then(m => m.ContractVerifyComponent)
   },
   {
     path: 'v/:code',
+    data: { precargar: false },
     loadComponent: () => import('./features/contracts/pages/contract-verify/contract-verify.component').then(m => m.ContractVerifyComponent)
   },
   {
     path: 'pay/:paymentId',
+    data: { precargar: false },
     loadComponent: () => import('./features/payments/pages/payment-checkout/payment-checkout.component').then(m => m.PaymentCheckoutComponent)
   },
   {

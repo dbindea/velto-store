@@ -13,6 +13,7 @@ import {
   query,
   orderBy,
   where,
+  limit,
   WriteBatch
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
@@ -27,6 +28,7 @@ import {
   PAYMENT_TYPE_LABELS
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
+import { PAGINA } from '@shared/utils/pagination.util';
 import { amountProblem, canEditAmount } from '@shared/utils/payment-edit.util';
 import { reservationStatusAfterPayment } from '@shared/utils/reservation-workflow.util';
 import {
@@ -153,8 +155,14 @@ export class PaymentService {
    * esta pantalla, y sin escuchar la fila se queda en «Pendiente» hasta que
    * alguien pulsa F5. Ver la nota larga de `watchPaymentsByReservation`.
    */
-  watchPayments(): Observable<Payment[]> {
-    const q = query(this.paymentsRef, orderBy('createdAt', 'desc'));
+  /**
+   * ⚠️ **Y con tope.** Sin él esto leía —y escuchaba— la colección entera:
+   * cada apertura de Pagos traía todos los cobros desde el primer día, y el
+   * oyente los mantenía abiertos. Ver `pagination.util.ts` para el porqué del
+   * número y de por qué el tope crece en vez de encadenar cursores.
+   */
+  watchPayments(tope: number = PAGINA): Observable<Payment[]> {
+    const q = query(this.paymentsRef, orderBy('createdAt', 'desc'), limit(tope));
     return collectionData(q, { idField: 'id' }) as Observable<Payment[]>;
   }
 

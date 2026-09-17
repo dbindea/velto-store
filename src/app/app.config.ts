@@ -6,7 +6,8 @@ import {
 } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEs from '@angular/common/locales/es';
-import { provideRouter, withInMemoryScrolling } from '@angular/router';
+import { provideRouter, withInMemoryScrolling, withPreloading } from '@angular/router';
+import { CuandoLaRedEsteLibre } from '@core/routing/preload.strategy';
 import { provideHttpClient } from '@angular/common/http';
 import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
@@ -58,7 +59,16 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({
         scrollPositionRestoration: 'top',
         anchorScrolling: 'enabled'
-      })
+      }),
+      /**
+       * Los trozos de las demás pantallas bajan cuando la red está libre.
+       *
+       * Sin esto, el trozo de una sección no se pedía hasta navegar a ella:
+       * cada primer salto a Pagos, Reservas o Facturas esperaba su descarga.
+       * Ver `CuandoLaRedEsteLibre` para por qué espera en vez de empezar en
+       * cuanto termina la primera navegación.
+       */
+      withPreloading(CuandoLaRedEsteLibre)
     ),
     provideHttpClient(),
     provideFirebaseApp(() => initializeApp(environment.firebase)),

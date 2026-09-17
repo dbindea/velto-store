@@ -1,5 +1,5 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, writeBatch } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, limit, writeBatch, QueryConstraint } from '@angular/fire/firestore';
 import { Observable, from, firstValueFrom } from 'rxjs';
 import { map, first } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
@@ -277,8 +277,31 @@ export class ReservationService {
   /**
    * Get all reservations.
    */
-  getReservations(): Observable<Reservation[]> {
-    const q = query(this.reservationsRef, orderBy('pickupDateTime', 'asc'));
+  /**
+   * Todas las reservas, de la recogida más antigua a la más reciente.
+   *
+   * ⚠️ **El tope es OPCIONAL, y eso no es pereza: es que la mayoría de quienes
+   * llaman aquí NO pueden recibir una lista recortada.** Son ocho, y tres se
+   * romperían en silencio:
+   *
+   * - `collaborator-detail` deriva de aquí **lo que se le debe al propietario**
+   *   de un coche cedido. Con la lista cortada, las reservas cerradas que se
+   *   queden fuera no generan devengo y el colaborador aparece cobrando menos
+   *   de lo que le corresponde — sin ningún error por ninguna parte.
+   * - El **calendario** pinta un mes: recortando por número, el mes sale con
+   *   huecos.
+   * - **Eventos** deriva de aquí las entregas y devoluciones próximas.
+   *
+   * Lo que esos tres necesitan no es un tope sino un **rango de fechas**, y eso
+   * pide índices compuestos nuevos. Está anotado; hoy se cambia solo el
+   * listado, que es donde el tope sí es la respuesta correcta.
+   */
+  getReservations(tope?: number): Observable<Reservation[]> {
+    // El tipo se anota: sin él TypeScript lo deduce del primer elemento
+    // —`QueryOrderByConstraint`— y no deja añadir el `limit`.
+    const restricciones: QueryConstraint[] = [orderBy('pickupDateTime', 'asc')];
+    if (tope) restricciones.push(limit(tope));
+    const q = query(this.reservationsRef, ...restricciones);
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reservation)))
     );

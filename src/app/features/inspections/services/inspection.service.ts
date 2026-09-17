@@ -11,7 +11,7 @@ import {
   query,
   orderBy,
   where
-} from '@angular/fire/firestore';
+, limit} from '@angular/fire/firestore';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { TranslateService } from '@core/i18n/translate.service';
@@ -32,6 +32,7 @@ import { PaymentService } from '@features/payments/services/payment.service';
 import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { ContractService } from '@features/contracts/services/contract.service';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
+import { PAGINA } from '@shared/utils/pagination.util';
 import {
   Workflow,
   WorkflowContext,
@@ -105,8 +106,12 @@ export class InspectionService {
 
   // === Queries ===
 
-  getInspections(): Observable<Inspection[]> {
-    const q = query(this.inspectionsRef, orderBy('createdAt', 'desc'));
+  /**
+   * ⚠️ **Con tope.** Sin él esto leía todas las inspecciones desde el primer
+   * día, y cada alquiler genera dos. Ver `pagination.util.ts`.
+   */
+  getInspections(tope: number = PAGINA): Observable<Inspection[]> {
+    const q = query(this.inspectionsRef, orderBy('createdAt', 'desc'), limit(tope));
     return from(getDocs(q)).pipe(
       map(snapshot => snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Inspection)))
     );

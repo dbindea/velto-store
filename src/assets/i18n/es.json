@@ -133,9 +133,11 @@
     "close": "Cerrar",
     "continue": "Continuar",
     "create": "Crear",
+    "date": "Fecha",
     "days": "días",
     "delete": "Eliminar",
     "edit": "Editar",
+    "loadMore": "Cargar más antiguos",
     "loading": "Cargando...",
     "missingFields": "Falta por completar:",
     "photos": {
@@ -153,8 +155,8 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "search": "Buscar",
-    "viewAll": "Ver todo",
-    "date": "Fecha"
+    "showingLatest": "Se muestran los más recientes. Para uno antiguo concreto, usa el buscador.",
+    "viewAll": "Ver todo"
   },
   "contracts": {
     "actions": {

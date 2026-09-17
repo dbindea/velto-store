@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -12,6 +12,7 @@ import {
 } from '@shared/models/reservation.model';
 import { TranslateService } from '@core/i18n/translate.service';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
 
 @Component({
   selector: 'app-reservation-list',
@@ -28,6 +29,22 @@ export class ReservationListComponent implements OnInit {
   reservations: Reservation[] = [];
   filteredReservations: Reservation[] = [];
   loading = true;
+
+  /** Cuántas reservas se traen. Sube al pulsar «cargar más antiguas». */
+  readonly tope = signal(PAGINA);
+  /** Cuántas devolvió la última consulta, para saber si queda más detrás. */
+  private recibidos = 0;
+
+  /** Se mira lo RECIBIDO, no lo filtrado: con un filtro puesto la lista puede
+      quedarse en dos filas y seguir habiendo miles por debajo. */
+  get puedeCargarMas(): boolean {
+    return hayMas(this.recibidos, this.tope());
+  }
+
+  cargarMas(): void {
+    this.tope.set(siguientePagina(this.tope()));
+    this.loadReservations();
+  }
 
   // Filters. Defaults to `reserved`: the day-to-day question is "what have I
   // got booked", not "everything that ever happened".
@@ -49,10 +66,18 @@ export class ReservationListComponent implements OnInit {
     this.loadReservations();
   }
 
+  /**
+   * ⚠️ **Con tope.** Sin él esto leía todas las reservas desde el primer día.
+   * El tope es un argumento y no el valor por defecto del servicio a propósito:
+   * el calendario, Eventos y el detalle de colaborador llaman al mismo método y
+   * **no pueden** recibir una lista recortada — ese último deriva de ahí lo que
+   * se le debe a un propietario. Ver la nota en `getReservations()`.
+   */
   loadReservations(): void {
     this.loading = true;
-    this.reservationService.getReservations().subscribe({
+    this.reservationService.getReservations(this.tope()).subscribe({
       next: (reservations) => {
+        this.recibidos = reservations.length;
         this.reservations = reservations;
         this.applyFilters();
         this.loading = false;
