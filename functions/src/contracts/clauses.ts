@@ -547,6 +547,52 @@ export const CONTRACT_CLAUSES: ContractClauses = {
 };
 
 /**
+ * La mención del IVA dentro del articulado, y con qué se sustituye cuando el
+ * alquiler no lo lleva.
+ *
+ * ⚠️ **Existe porque el contrato no puede mencionar un impuesto que no cobra.**
+ * La cláusula de precio enumera lo que compone el total —«tarifa base,
+ * kilometraje, seguros, tasas aeroportuarias si las hubiere, IVA aplicable…»— y
+ * en un alquiler sin IVA esa enumeración remite a una línea que el desglose ya
+ * no imprime. Es exactamente el fallo de F-36: se corrigió la aritmética y la
+ * frase que la explicaba se quedó diciendo lo contrario.
+ *
+ * ⚠️ **El recorte es literal y por idioma, no una expresión regular sobre texto
+ * legal.** Una regex que busque «IVA» en tres idiomas acabaría mordiendo una
+ * cláusula que no es esta. Y si algún día el articulado se reescribe y este
+ * fragmento deja de encontrarse, el recorte no haría nada **en silencio**: por
+ * eso lo comprueba `clauses-vat.spec.ts`, que lee el articulado ya recortado y
+ * exige que no quede ni una mención del impuesto.
+ */
+const VAT_MENTION: Record<ContractLocale, { presente: string; ausente: string }> = {
+  es: { presente: ', IVA aplicable y ', ausente: ' y ' },
+  en: { presente: ', applicable VAT and ', ausente: ' and ' },
+  ro: { presente: ', TVA aplicabil și ', ausente: ' și ' }
+};
+
+/**
+ * El mismo articulado, con la mención del IVA fuera.
+ *
+ * Lo usan los dos sitios que enseñan cláusulas —el PDF y la pantalla pública de
+ * firma—, porque el cliente las lee en los dos y una sola de las dos versiones
+ * corregida es peor que ninguna: firmaría un texto distinto del que leyó.
+ */
+export function withoutVatMentions(
+  bundle: ContractClauseBundle,
+  locale: ContractLocale
+): ContractClauseBundle {
+  const { presente, ausente } = VAT_MENTION[locale] ?? VAT_MENTION.es;
+  const limpia = (t: string) => t.split(presente).join(ausente);
+  return {
+    ...bundle,
+    highlights: bundle.highlights.map(limpia),
+    acknowledgement: limpia(bundle.acknowledgement),
+    footerNotes: bundle.footerNotes.map(limpia),
+    clauses: bundle.clauses.map((c) => ({ ...c, body: c.body.map(limpia) }))
+  };
+}
+
+/**
  * Pick the right locale bundle for a given preferred locale.
  * Falls back to the contract default locale, then to es.
  */

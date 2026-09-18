@@ -167,6 +167,35 @@
         }
       </div>
 
+      <!--
+        Sin IVA. Va pegado al precio porque decide lo mismo: lo que el cliente
+        acaba pagando. El total de debajo se mueve al marcarlo, que es lo que
+        hace evidente qué se está cambiando.
+      -->
+      <div class="form-group">
+        <label class="checkbox-item plain">
+          <input
+            type="checkbox"
+            name="vatExempt"
+            [(ngModel)]="form.vatExempt"
+            [disabled]="!editable('vatExempt')"
+          />
+          <span>{{ 'reservations.pricing.vatExempt' | translate }}</span>
+        </label>
+        <div class="field-hint">{{ 'reservations.pricing.vatExemptHint' | translate }}</div>
+        @if (lockReason('vatExempt')) {
+          <div class="field-hint">{{ lockReason('vatExempt') | translate }}</div>
+        }
+        <div class="field-hint">
+          {{ 'reservations.edit.totalPreview' | translate }}:
+          <strong>{{ totalDue | number: '1.2-2' }} €</strong>
+          @if (!form.vatExempt) {
+            ({{ 'reservations.pricing.vat' | translate }}
+            {{ previewVatAmount | number: '1.2-2' }} €)
+          }
+        </div>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label for="initial" class="label required">{{ 'reservations.edit.initialPayment' | translate }}</label>

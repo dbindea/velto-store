@@ -191,7 +191,24 @@ export interface ReservationInitialPayment {
   requiredAmount: number;
   paidAmount: number;
   dueDate?: any;
-  status: 'pending' | 'paid';
+  /**
+   * ⚠️ **`waived` no es «cobrada»: es que no se pide.** Misma distinción que en
+   * la fianza, y por el mismo motivo — una señal de 0 € en `pending` es una
+   * deuda de cero euros que nadie puede cobrar nunca, así que la reserva se
+   * quedaba en `reserved` para siempre y la ficha decía «Señal 0,00 € ·
+   * Pendiente». Con `waived` la reserva nace confirmada y la pantalla dice «No
+   * se solicita».
+   *
+   * ⚠️ **A diferencia de la fianza, aquí NO se exige motivo.** El de la fianza
+   * no es papeleo: sin él `isDepositSettled()` no da la fianza por resuelta y la
+   * reserva no se puede cerrar. La señal no gobierna ningún cierre — el precio
+   * entero sigue exigido en `remainingPayment`, y `canStartPickup` no entrega el
+   * coche sin cobrarlo. No se perdona dinero, solo se cobra más tarde.
+   *
+   * Valor añadido el 18 de septiembre de 2026. Es aditivo: las reservas
+   * anteriores siguen leyéndose, porque ninguna lo lleva.
+   */
+  status: 'pending' | 'paid' | 'waived';
 }
 
 export interface ReservationRemainingPayment {
@@ -386,6 +403,20 @@ export const RESERVATION_PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus,
  * `reservation.deposit.status` raw — the operator saw the Firestore value
  * "pending" in English regardless of the selected language.
  */
+/**
+ * Estado de la señal. Existe por lo mismo que el de la fianza: la plantilla
+ * pintaba `status === 'paid' ? 'Cobrada' : 'Pendiente'` a pelo, así que el
+ * tercer estado —`waived`, no se pide— habría salido como «Pendiente».
+ */
+export const RESERVATION_INITIAL_PAYMENT_STATUS_LABELS: Record<
+  ReservationInitialPayment['status'],
+  string
+> = {
+  pending: 'reservations.paymentStatus.pending',
+  paid: 'reservations.paymentStatus.paid',
+  waived: 'reservations.initialPayment.waived'
+};
+
 export const RESERVATION_DEPOSIT_STATUS_LABELS: Record<ReservationDeposit['status'], string> = {
   pending: 'reservations.depositStatus.pending',
   paid: 'reservations.depositStatus.paid',

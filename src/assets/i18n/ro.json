@@ -1041,6 +1041,7 @@
         "closed": "Rezervarea este închisă: istoricul ei nu se mai atinge.",
         "cancelled": "Rezervarea este anulată.",
         "contractSigned": "Contractul semnat spune cine închiriază. Ca să schimbi asta, trebuie refăcut.",
+        "rentalCollected": "O parte din închiriere a fost deja încasată: pentru a schimba TVA-ul ar trebui returnată.",
         "vehicleOut": "Mașina a fost deja predată: este un fapt, nu un câmp.",
         "returned": "Mașina a fost deja returnată: data reală este în procesul-verbal.",
         "noPricingPermission": "Rolul tău nu permite modificarea prețului.",
@@ -1057,7 +1058,8 @@
         "agreedPrice": "preț",
         "depositAmount": "garanție",
         "initialPaymentAmount": "avans",
-        "additionalDrivers": "șoferi"
+        "additionalDrivers": "șoferi",
+        "vatExempt": "TVA"
       },
       "initialPayment": "Avans de încasat",
       "initialPaymentHint": "Poate fi 0: atunci nu se cere avans. Cât scazi de aici se adaugă la rest.",
@@ -1081,7 +1083,8 @@
       "supersedeDone": "Contract refăcut. Cel anterior rămâne arhivat.",
       "supersededOn": "Înlocuit la",
       "supersededTitle": "Contracte anterioare",
-      "title": "Modifică rezervarea"
+      "title": "Modifică rezervarea",
+      "totalPreview": "Total închiriere"
     },
     "errors": {
       "cancel": "Nu s-a putut anula rezervarea",
@@ -1156,7 +1159,10 @@
       "remainingPayment": "Rest de plată",
       "resetToCalculated": "Revino la prețul calculat",
       "vat": "TVA",
-      "vatBase": "Bază impozabilă"
+      "vatBase": "Bază impozabilă",
+      "vatExempt": "Fără TVA",
+      "vatExemptHint": "Clientul plătește prețul convenit, iar nici contractul, nici oferta nu menționează TVA.",
+      "vatExemptTag": "Închiriere fără TVA"
     },
     "quote": {
       "copied": "Link copiat. Îl poți lipi în WhatsApp.",
@@ -1197,7 +1203,11 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări"
+    "title": "Rezervări",
+    "initialPayment": {
+      "waived": "Nu se solicită",
+      "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
+    }
   },
   "search": {
     "close": "Închide",
@@ -1562,6 +1572,7 @@
     "unsettledDeposit": "Garanție nerezolvată"
   },
   "invoices": {
+    "reservationWithoutVat": "Această rezervare a fost convenită fără TVA. O factură îl include, deci totalul nu va coincide cu suma încasată: verifică baza înainte de emitere, pentru că o factură emisă nu se poate edita sau șterge.",
     "title": "Facturi",
     "subtitle": "Emite și consultă facturile",
     "new": "Factură nouă",

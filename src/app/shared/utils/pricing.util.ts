@@ -87,6 +87,30 @@ export function resolveVatRate(rate: number | null | undefined): number {
 }
 
 /**
+ * ¿Este alquiler lleva IVA?
+ *
+ * ⚠️ **El tipo a 0 es la única señal, y no hace falta otra.** Se pensó en un
+ * campo aparte —`vatExempt`— y sobra: dos datos para un mismo hecho son dos
+ * datos que pueden discrepar, y el día que discrepen el contrato diría una cosa
+ * y el importe otra. Un tipo de cero **es** «aquí no hay IVA», y `resolveVatRate`
+ * ya lo respeta en vez de caer al general.
+ *
+ * ⚠️ **Y decide TEXTO, no solo aritmética.** Con el tipo a 0 la resta ya sale
+ * bien sola; para lo que existe esta función es para que el contrato, el
+ * presupuesto y el justificante **no mencionen el impuesto**: ni la fila del
+ * desglose, ni la nota que explica que se suma, ni el «(no sujeta a IVA)» de la
+ * fianza. Es la lección de F-36 —una frase sobrevivió al cambio de convención y
+ * el presupuesto siguió diciendo lo contrario de lo que sumaba—, con la
+ * diferencia de que ahora la frase y el número los decide el mismo dato.
+ *
+ * El caso es de Dorel: al cliente que no va a pedir factura se le cobran los
+ * 200 € pactados y el papel no habla de impuestos.
+ */
+export function chargesVat(snapshot: { vatRate?: number | null }): boolean {
+  return resolveVatRate(snapshot?.vatRate) > 0;
+}
+
+/**
  * Clamp a loyalty discount to something sane: never negative, never above the
  * ceiling, at most two decimals.
  */

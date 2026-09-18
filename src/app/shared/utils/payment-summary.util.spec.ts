@@ -4,7 +4,9 @@ import type { Reservation } from '@shared/models/reservation.model';
 import {
   applySettlement,
   distributeRentalPayment,
+  buildInitialPayment,
   buildInitialPaymentRows,
+  initialPaymentStatus,
   calculateReservationPaymentSummary,
   collectedTotalsOf,
   distributeRetentionAcrossCharges,
@@ -471,5 +473,67 @@ describe('buildInitialPaymentRows', () => {
     const refs = rows.map(r => r['internalReference']);
     expect(refs.every(Boolean)).toBe(true);
     expect(new Set(refs).size).toBe(refs.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// La señal que no se pide
+//
+// Caso de Dorel: a un conocido no se le cobra señal. «No se pide» y «pendiente
+// de cobrar 0 €» son estados distintos, y confundirlos dejaba la reserva sin
+// poder confirmarse nunca — a `confirmed` solo se llega cobrando, y aquí no hay
+// nada que cobrar.
+// ---------------------------------------------------------------------------
+
+describe('buildInitialPayment — una señal de 0 es «no se pide»', () => {
+  it('nace waived, no pendiente', () => {
+    const s = buildInitialPayment(0);
+    expect(s.status).toBe('waived');
+    expect(s.requiredAmount).toBe(0);
+    expect(s.paidAmount).toBe(0);
+  });
+
+  it('una señal normal nace pendiente', () => {
+    expect(buildInitialPayment(50).status).toBe('pending');
+  });
+
+  it('redondea el importe, como todo el dinero que se escribe', () => {
+    expect(buildInitialPayment(58.900000000000006).requiredAmount).toBe(58.9);
+  });
+
+  it('un importe negativo no crea una señal a deber', () => {
+    const s = buildInitialPayment(-10);
+    expect(s.requiredAmount).toBe(0);
+    expect(s.status).toBe('waived');
+  });
+
+  it('no inventa `dueDate` cuando no se le da ninguna', () => {
+    // Firestore rechaza `undefined`, así que la clave no debe ni aparecer.
+    expect('dueDate' in buildInitialPayment(50)).toBe(false);
+  });
+});
+
+describe('initialPaymentStatus — lo cobrado manda sobre lo que se pida', () => {
+  it('cobrada del todo es `paid`', () => {
+    expect(initialPaymentStatus(50, 50)).toBe('paid');
+    expect(initialPaymentStatus(50, 60)).toBe('paid');
+  });
+
+  it('cobrada a medias sigue pendiente', () => {
+    expect(initialPaymentStatus(50, 20)).toBe('pending');
+  });
+
+  /**
+   * ⚠️ El caso que separa «exenta» de «cobrada»: bajar a 0 una señal que ya se
+   * cobró **no** la convierte en «no se pide». Ese dinero entró, y decir que no
+   * se pidió nada dejaría la reserva contando una cosa y los pagos otra. Si hay
+   * que devolverlo, eso es una devolución.
+   */
+  it('bajar a 0 una señal ya cobrada no la vuelve exenta', () => {
+    expect(initialPaymentStatus(0, 30)).toBe('paid');
+  });
+
+  it('sin cobrar nada y sin pedir nada, exenta', () => {
+    expect(initialPaymentStatus(0, 0)).toBe('waived');
   });
 });

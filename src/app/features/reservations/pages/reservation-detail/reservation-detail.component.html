@@ -582,9 +582,14 @@
                   <span class="paid">{{ reservation.initialPayment.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
                 }
               </div>
-              <span class="payment-status" [ngClass]="reservation.initialPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
-                {{ reservation.initialPayment.status === 'paid' ? ('reservations.paymentStatus.paid' | translate) : ('reservations.paymentStatus.pending' | translate) }}
+              <span class="payment-status" [ngClass]="getInitialPaymentStatusClass(reservation.initialPayment.status)">
+                {{ getInitialPaymentStatusLabel(reservation.initialPayment.status) }}
               </span>
+              <!-- Una señal exenta es una decisión, no un cobro que falta: se
+                   dice para que nadie la persiga. -->
+              @if (reservation.initialPayment.status === 'waived') {
+                <small class="hint">{{ 'reservations.initialPayment.waivedHint' | translate }}</small>
+              }
             </div>
 
             <!-- Remaining Payment -->
@@ -662,14 +667,22 @@
                 </span>
               </div>
             }
-            <div class="price-row">
-              <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
-              <span>{{ vat.base | number:'1.2-2' }} €</span>
-            </div>
-            <div class="price-row">
-              <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
-              <span>{{ vat.vat | number:'1.2-2' }} €</span>
-            </div>
+            <!-- Sin IVA no hay base imponible ni cuota que enseñar: el total ES
+                 el precio pactado. Mismo dato que usa el contrato. -->
+            @if (hasVat) {
+              <div class="price-row">
+                <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
+                <span>{{ vat.base | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row">
+                <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+                <span>{{ vat.vat | number:'1.2-2' }} €</span>
+              </div>
+            } @else {
+              <div class="price-row">
+                <span class="hint">{{ 'reservations.pricing.vatExemptTag' | translate }}</span>
+              </div>
+            }
             <div class="price-row total">
               <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
               <span class="total-value">{{ vat.total | number:'1.2-2' }} €</span>

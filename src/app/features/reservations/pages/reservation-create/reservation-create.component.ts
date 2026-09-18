@@ -340,6 +340,7 @@ export class ReservationCreateComponent implements OnInit {
         // discounted by 10 €.
         this.priceOverridden ? this.netPrice : undefined,
         this.depositWaived ? this.depositWaivedReason.trim() : undefined,
+        this.vatExempt
       );
 
       this.router.navigate(['/reservations', reservationId]);
@@ -538,7 +539,12 @@ export class ReservationCreateComponent implements OnInit {
     return resolveRentalPrice(
       this.selectedVehicle?.pricing?.finalPrice || 0,
       this.selectedClient?.loyaltyDiscountPercent,
-      this.finalPriceOverride
+      this.finalPriceOverride,
+      // ⚠️ **El tipo se pasa.** Sin el cuarto argumento esto usaba el 21 % fijo
+      // de `DEFAULT_VAT_RATE` mientras la fila del IVA de al lado usaba el de
+      // Ajustes: con el general los dos coincidían de casualidad, y con «sin
+      // IVA» el total habría seguido llevando el impuesto sumado dentro.
+      this.vatRate
     );
   }
 
@@ -595,8 +601,19 @@ export class ReservationCreateComponent implements OnInit {
    * congelado es lo que hace que sea seguro tenerlo configurable.
    */
   get vatRate(): number {
-    return this.settingsService.settings().vatRate;
+    return this.vatExempt ? 0 : this.settingsService.settings().vatRate;
   }
+
+  /**
+   * Este alquiler se cobra **sin IVA**: el cliente paga el neto pactado y ni el
+   * contrato ni el presupuesto mencionan el impuesto.
+   *
+   * ⚠️ **Es una decisión por reserva, no un ajuste global**, y por eso vive aquí
+   * y no en Ajustes: el caso es el cliente que no va a pedir factura, y el de al
+   * lado sí la pide. Lo que se guarda es el tipo congelado a 0 en el snapshot;
+   * `chargesVat()` es quien decide con él qué imprime cada documento.
+   */
+  vatExempt = false;
 
   /**
    * Los días que el presupuesto se anuncia como válido.

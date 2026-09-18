@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_VAT_RATE,
   addVat,
+  chargesVat,
   vatBreakdownOf,
   MAX_LOYALTY_DISCOUNT_PERCENT,
   normalizeLoyaltyDiscountPercent,
@@ -243,5 +244,56 @@ describe('suggestExtraKmCharge', () => {
       extraKmPrice: 0.17
     });
     expect(r?.amount).toBe(56.61);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reservas sin IVA
+//
+// El caso de Dorel: al cliente que no va a pedir factura se le cobran los 200 €
+// pactados y ni el contrato ni el presupuesto mencionan el impuesto. Lo que se
+// guarda es el tipo congelado a 0, y `chargesVat()` es quien lo traduce a «no
+// lo menciones». Estos tests fijan que un 0 NO se confunda con «no hay tipo».
+// ---------------------------------------------------------------------------
+
+describe('chargesVat — el 0 es un dato, no un hueco', () => {
+  it('un tipo de 0 significa que este alquiler no lleva IVA', () => {
+    expect(chargesVat({ vatRate: 0 })).toBe(false);
+  });
+
+  it('un tipo normal sí lo lleva', () => {
+    expect(chargesVat({ vatRate: 0.21 })).toBe(true);
+    expect(chargesVat({ vatRate: 0.1 })).toBe(true);
+  });
+
+  /**
+   * ⚠️ La diferencia que costaría dinero: **ausencia no es exención**. Una
+   * reserva antigua sin `vatRate` guardado lleva IVA al tipo general, y leerla
+   * como exenta dejaría de repercutir el impuesto en contratos ya firmados.
+   */
+  it('sin tipo guardado manda el general, no la exención', () => {
+    expect(chargesVat({})).toBe(true);
+    expect(chargesVat({ vatRate: undefined })).toBe(true);
+    expect(chargesVat({ vatRate: null })).toBe(true);
+  });
+});
+
+describe('sin IVA, el cliente paga exactamente el neto', () => {
+  it('el total es el precio pactado, sin nada encima', () => {
+    const r = resolveRentalPrice(200, 0, undefined, 0);
+    expect(r.netPrice).toBe(200);
+    expect(r.vatAmount).toBe(0);
+    expect(r.finalPrice).toBe(200);
+  });
+
+  it('y con IVA ese mismo alquiler cuesta 242', () => {
+    // El mismo neto con el tipo general: la diferencia entre los dos es
+    // exactamente lo que el checkbox decide.
+    expect(resolveRentalPrice(200, 0, undefined, 0.21).finalPrice).toBe(242);
+  });
+
+  it('el desglose de un snapshot exento no inventa una base distinta', () => {
+    const b = vatBreakdownOf({ netPrice: 200, vatRate: 0 });
+    expect(b).toEqual({ rate: 0, base: 200, vat: 0, total: 200 });
   });
 });

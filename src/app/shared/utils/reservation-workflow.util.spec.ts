@@ -13,6 +13,7 @@ import {
   canStartReturn,
   canWithException,
   getReservationNextRequiredAction,
+  reservationStatusAfterInitialChange,
   getReservationTimelineSteps,
   reasonOf,
   reservationStatusAfterPayment,
@@ -404,6 +405,40 @@ describe('reservationStatusAfterPayment', () => {
   it('never walks a reservation backwards', () => {
     for (const status of ['confirmed', 'delivered', 'returned', 'closed', 'cancelled'] as const) {
       expect(reservationStatusAfterPayment(status, true)).toBeNull();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Una reserva sin señal nace confirmada
+//
+// `confirmed` significa «la entrada está resuelta», y la única vía hasta ahora
+// era `reservationStatusAfterPayment()`, que corre **al registrar un cobro**.
+// Sin señal no hay cobro, así que la reserva se quedaba en `reserved` de por
+// vida y su justificante —que exige `confirmed`— no se podía emitir nunca.
+// ---------------------------------------------------------------------------
+
+describe('reservationStatusAfterInitialChange', () => {
+  it('sin señal que pedir, confirma', () => {
+    expect(reservationStatusAfterInitialChange('reserved', 0)).toBe('confirmed');
+  });
+
+  it('con señal pendiente, se queda como está', () => {
+    expect(reservationStatusAfterInitialChange('reserved', 50)).toBeNull();
+  });
+
+  it('con la señal ya cobrada, confirma', () => {
+    expect(reservationStatusAfterInitialChange('reserved', 50, 50)).toBe('confirmed');
+  });
+
+  /**
+   * ⚠️ Solo avanza. Un alquiler ya entregado, devuelto o cerrado no se camina
+   * hacia atrás por tocarle la señal — es la misma regla que protege
+   * `reservationStatusAfterPayment()` de un cobro tardío.
+   */
+  it('no mueve una reserva que ya pasó de reservada', () => {
+    for (const estado of ['confirmed', 'delivered', 'returned', 'closed', 'cancelled'] as const) {
+      expect(reservationStatusAfterInitialChange(estado, 0)).toBeNull();
     }
   });
 });

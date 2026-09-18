@@ -21,6 +21,7 @@ import {
   RESERVATION_PAYMENT_STATUS_LABELS,
   RESERVATION_CONTRACT_STATUS_LABELS,
   RESERVATION_DEPOSIT_STATUS_LABELS,
+  RESERVATION_INITIAL_PAYMENT_STATUS_LABELS,
   ReservationPaymentSummary,
   AdditionalDriver
 } from '@shared/models/reservation.model';
@@ -44,7 +45,7 @@ import {
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
-import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
+import { chargesVat, vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
 import {
   collectedTotalsOf,
   calculateReservationPaymentSummary
@@ -186,6 +187,15 @@ export class ReservationDetailComponent implements OnInit {
   /** The rate as a percentage, for the "IVA (21 %)" label. */
   get vatPercent(): number {
     return Math.round(this.vat.rate * 100);
+  }
+
+  /**
+   * ¿Esta reserva lleva IVA? Con el tipo congelado a 0 no lo lleva, y entonces
+   * la ficha tampoco lo enseña: ni base imponible ni cuota, solo el total. Es el
+   * mismo dato con el que el contrato decide no mencionarlo.
+   */
+  get hasVat(): boolean {
+    return chargesVat(this.reservation?.pricingSnapshot ?? {});
   }
 
   /**
@@ -769,6 +779,28 @@ export class ReservationDetailComponent implements OnInit {
     );
   }
 
+  /**
+   * ⚠️ Lo pintaba la plantilla con un ternario `=== 'paid'`, así que una señal
+   * `waived` —la que no se pide— salía como «Pendiente»: el mismo cero que el
+   * operador acababa de decidir, presentado como una deuda.
+   */
+  getInitialPaymentStatusLabel(status: string): string {
+    return this.t(
+      RESERVATION_INITIAL_PAYMENT_STATUS_LABELS[
+        status as keyof typeof RESERVATION_INITIAL_PAYMENT_STATUS_LABELS
+      ],
+      status
+    );
+  }
+
+  getInitialPaymentStatusClass(status: string): string {
+    if (status === 'paid') return 'status-paid';
+    // Exenta no es cobrada ni pendiente: es un asunto cerrado sin dinero de por
+    // medio, igual que la fianza exenta.
+    if (status === 'waived') return 'status-waived';
+    return 'status-pending';
+  }
+
   getContractLabel(status: string): string {
     return this.t(
       RESERVATION_CONTRACT_STATUS_LABELS[status as keyof typeof RESERVATION_CONTRACT_STATUS_LABELS],
@@ -809,7 +841,10 @@ export class ReservationDetailComponent implements OnInit {
       paid: 'deposit-paid',
       partial_returned: 'deposit-partial',
       returned: 'deposit-returned',
-      retained: 'deposit-retained'
+      retained: 'deposit-retained',
+      // Faltaba, así que la etiqueta de una fianza exenta salía sin caja: texto
+      // suelto entre badges. Es el mismo descuido que `.checkbox-label`.
+      waived: 'deposit-waived'
     };
     return statusClasses[status] || '';
   }

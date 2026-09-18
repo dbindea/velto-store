@@ -20,6 +20,7 @@ import {
   PdfBuilder,
   companyFooterLines,
   companyHeaderLines,
+  chargesVat,
   vatBreakdownOf,
   formatDate,
   formatDayOnly,
@@ -238,6 +239,17 @@ function labels(loc: ContractLocale) {
     remaining: en ? 'Outstanding balance' : ro ? 'Rest de plată' : 'Resto pendiente',
     deposit: en ? 'Security deposit' : ro ? 'Garanție' : 'Fianza',
     noDeposit: en ? 'Not required' : ro ? 'Nu se solicită' : 'No se solicita',
+    /**
+     * Señal exenta. ⚠️ **No es «0,00 € pagado de 0,00 €»**, que es lo que salía:
+     * el mismo sinsentido que la fianza exenta ya evitaba una línea más abajo.
+     * Y tampoco es «pendiente»: no se pide, y el importe entero está en el
+     * resto.
+     */
+    noSignal: en
+      ? 'Not required — the full amount is in the outstanding balance'
+      : ro
+        ? 'Nu se solicită — întreaga sumă este în restul de plată'
+        : 'No se solicita — el importe completo va en el resto',
     paidOf: en ? 'paid of' : ro ? 'plătit din' : 'pagado de',
     dueOn: en ? 'due on' : ro ? 'scadent la' : 'a pagar antes del',
 
@@ -283,6 +295,21 @@ function labels(loc: ContractLocale) {
       : ro
         ? 'Această ofertă nu este obligatorie și NU rezervă vehiculul: disponibilitatea se confirmă doar după efectuarea rezervării și plata avansului. Tariful zilnic este afișat fără TVA; TVA-ul se adaugă și este detaliat mai sus, astfel încât totalul afișat este suma finală de plată.'
         : 'Este presupuesto no es vinculante y NO reserva el vehículo: la disponibilidad se confirma solo al formalizar la reserva y abonar la señal. El precio por día se indica sin IVA; el impuesto se suma y va desglosado arriba, de modo que el total indicado es el importe final a pagar.',
+
+    /**
+     * El mismo aviso para un presupuesto **sin IVA**.
+     *
+     * ⚠️ **No es la frase de arriba recortada, es otra frase.** La de arriba
+     * existe para explicar una aritmética —«el precio del día es neto y el
+     * impuesto se suma»— que aquí no ocurre: no hay nada que sumar y el precio
+     * del día ya es el que se paga. Dejar media frase del impuesto sería volver
+     * a nombrarlo justo en el documento que se propone no nombrarlo.
+     */
+    quoteDisclaimerNoVat: en
+      ? 'This quote is non-binding and does NOT reserve the vehicle: availability is confirmed only once the booking is made and the deposit is paid. The total shown is the final amount payable.'
+      : ro
+        ? 'Această ofertă nu este obligatorie și NU rezervă vehiculul: disponibilitatea se confirmă doar după efectuarea rezervării și plata avansului. Totalul afișat este suma finală de plată.'
+        : 'Este presupuesto no es vinculante y NO reserva el vehículo: la disponibilidad se confirma solo al formalizar la reserva y abonar la señal. El total indicado es el importe final a pagar.',
     bookingDisclaimer: en
       ? 'This document confirms your booking. It is NOT the rental agreement: the vehicle can only be handed over once the rental agreement has been signed and the outstanding amounts have been paid.'
       : ro
@@ -436,13 +463,22 @@ function drawPriceBlock(
   }
 
   const vat = vatBreakdownOf(pricing);
+  // Sin IVA no se imprime ninguna línea de IVA, ni siquiera la base imponible:
+  // sin cuota que separar sería el total repetido con otro nombre. Mismo
+  // criterio que el contrato, para que los tres papeles se puedan poner uno al
+  // lado del otro y digan lo mismo.
+  const conIva = chargesVat(pricing);
   b.totalsBlock(
     [
-      { label: L.vatBase, value: formatMoney(vat.base, loc) },
-      { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
+      ...(conIva
+        ? [
+            { label: L.vatBase, value: formatMoney(vat.base, loc) },
+            { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) }
+          ]
+        : []),
       { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
       {
-        label: pricing.depositAmount ? L.depositVatNote : L.deposit,
+        label: pricing.depositAmount && conIva ? L.depositVatNote : L.deposit,
         value: pricing.depositAmount ? formatMoney(pricing.depositAmount, loc) : L.noDeposit
       }
     ],
@@ -497,7 +533,13 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<Uint8Array> {
   drawRentalBlock(b, L, input.rental, loc);
   drawPriceBlock(b, L, input.pricing, loc);
 
-  drawDisclaimer(b, L.quoteDisclaimer);
+  // El aviso explica la aritmética del IVA; sin IVA se cambia por el que no lo
+  // menciona. La frase y el desglose se deciden con el mismo dato — es lo que
+  // faltó cuando el texto sobrevivió al cambio de convención (F-36).
+  drawDisclaimer(
+    b,
+    chargesVat(input.pricing) ? L.quoteDisclaimer : L.quoteDisclaimerNoVat
+  );
   drawClosingLine(b, L);
 
   b.finalizeFooters();
@@ -534,10 +576,14 @@ export async function buildBookingConfirmationPdf(
 
   // Payment status
   section(b, L.paymentsSection);
+  // Mismo criterio que la fianza de abajo: una señal que no se pide es una
+  // decisión, no un cobro de cero euros pendiente.
   row(
     b,
     L.signal + ':',
-    `${formatMoney(p.initialPaid ?? 0, loc)} ${L.paidOf} ${formatMoney(p.initialRequired ?? 0, loc)}`,
+    (p.initialRequired ?? 0) > 0
+      ? `${formatMoney(p.initialPaid ?? 0, loc)} ${L.paidOf} ${formatMoney(p.initialRequired ?? 0, loc)}`
+      : L.noSignal,
     true
   );
   const remainingPending = Math.max(0, (p.remainingRequired ?? 0) - (p.remainingPaid ?? 0));

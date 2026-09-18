@@ -48,6 +48,7 @@ export type EditableField =
   | 'pickupDateTime'
   | 'returnDateTime'
   | 'agreedPrice'
+  | 'vatExempt'
   | 'depositAmount'
   | 'initialPaymentAmount'
   | 'additionalDrivers';
@@ -166,6 +167,26 @@ export function canEditField(field: EditableField, ctx: EditContext): WorkflowDe
       return ALLOW;
 
     /**
+     * Quitar o poner el IVA cambia lo que el cliente paga, así que es una
+     * decisión de precio y va por el mismo permiso: `firestore.rules` tampoco
+     * deja mover `pricingSnapshot` a un no-administrador, y ahí es donde vive el
+     * tipo.
+     *
+     * ⚠️ **Y con la señal o el resto ya cobrados, no.** Cambiar el tipo mueve el
+     * total, y el total ya repartido en filas de cobro con dinero dentro dejaría
+     * la reserva pidiendo una cifra distinta de la que se cobró. Cuando no se ha
+     * tocado nada todavía, el reparto se rehace entero sin estropear nada — que
+     * es lo mismo que hace un cambio de precio acordado.
+     */
+    case 'vatExempt': {
+      if (!ctx.canEditPricing) return deny('reservations.edit.denied.noPricingPermission');
+      if (!ctx.payments) return deny('reservations.edit.denied.paymentsUnknown');
+      const cobrado = movedOn(ctx.payments, ['initial_payment', 'remaining_payment', 'rental_payment']);
+      if (cobrado > 0) return deny('reservations.edit.denied.rentalCollected');
+      return ALLOW;
+    }
+
+    /**
      * La fianza se puede cambiar mientras **no se haya tocado dinero**. Una vez
      * cobrada, bajarla no devuelve nada y subirla no cobra nada: lo único que
      * haría es que la reserva dijera que se debe algo distinto de lo que hay.
@@ -213,6 +234,12 @@ export function canEditField(field: EditableField, ctx: EditContext): WorkflowDe
  * Solo lo pide lo que **está impreso en el PDF**. El importe de la señal no lo
  * está —el contrato imprime el precio y la fianza, no el calendario de
  * cobros—, así que cambiarla no invalida nada.
+ *
+ * ⚠️ **El IVA sí está impreso**, y por partida doble: mueve el total y además
+ * cambia lo que el contrato dice —con «sin IVA» desaparecen la base imponible,
+ * la cuota y la mención del impuesto en las cláusulas—. Un contrato firmado que
+ * desglosa un IVA que ya no se cobra es justo el caso que esta función existe
+ * para detectar.
  */
 export function requiresNewContract(fields: EditableField[]): boolean {
   const impresos: EditableField[] = [
@@ -220,6 +247,7 @@ export function requiresNewContract(fields: EditableField[]): boolean {
     'pickupDateTime',
     'returnDateTime',
     'agreedPrice',
+    'vatExempt',
     'depositAmount',
     'additionalDrivers'
   ];

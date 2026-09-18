@@ -7,7 +7,11 @@
  */
 
 import { Payment, PaymentStatus, PaymentType } from '@shared/models/payment.model';
-import { Reservation, ReservationPaymentSummary } from '@shared/models/reservation.model';
+import {
+  Reservation,
+  ReservationInitialPayment,
+  ReservationPaymentSummary
+} from '@shared/models/reservation.model';
 
 const ROUND = 100;
 
@@ -357,6 +361,66 @@ export function distributeRentalPayment(
   }
 
   return { steps, leftover: left };
+}
+
+/**
+ * El bloque de señal de una reserva, con el estado que de verdad le toca.
+ *
+ * ⚠️ **Una señal de 0 nace `waived`, no `pending`.** Es la misma distinción que
+ * `buildDeposit()` hace con la fianza y el mismo fallo si se pierde: «0,00 €
+ * pendientes» es una deuda que nadie puede cobrar, así que la reserva se
+ * quedaba en `reserved` de por vida —`confirmed` solo llega **cobrando** la
+ * señal— y con ella se quedaban fuera el justificante de reserva, que exige
+ * `confirmed`, y el estado que la ficha enseña, que decía «Pendiente» junto a un
+ * cero.
+ *
+ * El caso es de Dorel y es corriente: a un conocido no se le pide señal. Lo que
+ * eso significa es «me fío, ya me pagará», no «se le perdona»: el precio entero
+ * sigue exigido, solo que todo él en `remainingPayment`.
+ *
+ * ⚠️ **Sin motivo obligatorio, al revés que la fianza.** Allí el motivo es lo
+ * único que deja cerrar la reserva (`isDepositSettled`); aquí no hay ningún
+ * guard que dependa de la señal, así que exigirlo sería friccón sin efecto.
+ *
+ * ⚠️ **El hueco no es el cero.** `Number(null)` y `Number('')` son 0, no `NaN`:
+ * un campo vacío se guardaría como «no se pide señal» sin que nadie lo
+ * decidiera. Quien valida eso es `initialPaymentProblem()`, antes de llegar
+ * aquí.
+ */
+export function buildInitialPayment(
+  requiredAmount: number,
+  extra?: { paidAmount?: number; dueDate?: any }
+): ReservationInitialPayment {
+  const required = roundMoney(Math.max(0, Number(requiredAmount) || 0));
+  const paid = roundMoney(Math.max(0, Number(extra?.paidAmount) || 0));
+
+  return {
+    requiredAmount: required,
+    paidAmount: paid,
+    ...(extra?.dueDate !== undefined ? { dueDate: extra.dueDate } : {}),
+    status: initialPaymentStatus(required, paid)
+  };
+}
+
+/**
+ * El estado que le corresponde a una señal por sus dos importes.
+ *
+ * Vive aparte de `buildInitialPayment()` porque hace falta también al **editar**,
+ * donde el bloque ya existe y solo cambia el importe exigido: el estado tiene
+ * que recalcularse ahí con la misma regla, o bajar la señal a 0 dejaría el
+ * `pending` de antes pegado.
+ */
+export function initialPaymentStatus(
+  requiredAmount: number,
+  paidAmount: number
+): ReservationInitialPayment['status'] {
+  const required = roundMoney(Math.max(0, Number(requiredAmount) || 0));
+  const paid = roundMoney(Math.max(0, Number(paidAmount) || 0));
+  // Cobrada antes de renunciar a ella: lo que entró manda. Bajar a 0 una señal
+  // ya cobrada no la convierte en «no se pide» — eso sería una devolución.
+  if (paid > 0) return paid >= required ? 'paid' : 'pending';
+  if (required <= 0) return 'waived';
+  return 'pending';
 }
 
 /**

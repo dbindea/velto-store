@@ -527,6 +527,13 @@ app-reservation-timeline {
       background: var(--warning-bg);
       color: var(--warning-color);
     }
+
+    /* Exenta no es ni cobrada ni pendiente: es un asunto cerrado sin dinero de
+       por medio, y en ámbar se leería como algo que falta por hacer. */
+    &.status-waived {
+      background: var(--info-bg);
+      color: var(--info-color);
+    }
   }
 
   .deposit-status {
@@ -542,6 +549,9 @@ app-reservation-timeline {
     &.deposit-partial { background: var(--warning-bg); color: var(--warning-color); }
     &.deposit-returned { background: var(--success-bg); color: var(--success-color); }
     &.deposit-retained { background: var(--error-bg); color: var(--error-color); }
+    /* La fianza exenta no tenía clase, así que su etiqueta salía como texto
+       suelto entre badges con caja. Mismo criterio que la señal exenta. */
+    &.deposit-waived { background: var(--info-bg); color: var(--info-color); }
   }
 }
 

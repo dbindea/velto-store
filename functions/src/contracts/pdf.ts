@@ -46,6 +46,7 @@ import {
   type Logo
 } from './brand';
 import { buildQrMatrix, qrRects, type QrMatrix } from './qr';
+import { withoutVatMentions } from './clauses';
 
 const BOX_BORDER = rgb(0.8, 0.8, 0.8);
 
@@ -508,6 +509,28 @@ export function vatBreakdownOf(pricing: {
   const total = round(net * (1 + rate));
 
   return { base: net, vat: round(total - net), total, percent: Math.round(rate * 100) };
+}
+
+/**
+ * ¿Este alquiler lleva IVA?
+ *
+ * ⚠️ **Decide TEXTO, no aritmética.** Con el tipo a 0 las cuentas ya salen
+ * solas; esto existe para que el contrato, el presupuesto y el justificante
+ * **no mencionen el impuesto** cuando no lo hay: ni la fila de la base
+ * imponible, ni la de la cuota, ni el «(no sujeta a IVA)» de la fianza, ni la
+ * enumeración de la cláusula de precio.
+ *
+ * El caso es el cliente que no va a pedir factura: se le cobran los 200 € que
+ * se pactaron y el papel no habla de impuestos. Nombrar un IVA del 0 % sería
+ * peor que no nombrarlo — lee como si algo hubiera fallado al calcularlo.
+ *
+ * Espejo de `chargesVat()` en `src/app/shared/utils/pricing.util.ts`. La
+ * duplicación es deliberada —tsconfigs separados— y las dos se mueven juntas.
+ */
+export function chargesVat(pricing: { vatRate?: number | null }): boolean {
+  const rate = pricing?.vatRate;
+  if (typeof rate !== 'number' || !isFinite(rate) || rate < 0) return DEFAULT_VAT_RATE > 0;
+  return rate > 0;
 }
 
 export function formatMoney(n?: number, locale: ContractLocale = 'es'): string {
@@ -2300,8 +2323,19 @@ export async function buildContractPdf(
   input: ContractPdfInput,
   signed: boolean
 ): Promise<Uint8Array> {
-  const { locale, bundle, fuelLabels } = pickBundle(input);
+  const { locale, bundle: articulado, fuelLabels } = pickBundle(input);
   const loc = locale;
+
+  /**
+   * ⚠️ **Las cláusulas también hablan del IVA, y también se callan.** La de
+   * precio enumera qué compone el total e incluye el «IVA aplicable»; en un
+   * alquiler sin impuesto remitiría a una línea que el desglose de arriba ya no
+   * imprime. Un contrato que remite a un dato que no imprime es el fallo que
+   * este proyecto ya ha cometido cuatro veces.
+   */
+  const bundle = chargesVat(input.reservation)
+    ? articulado
+    : withoutVatMentions(articulado, loc);
 
   // Localised section labels
   const L = {
@@ -2651,14 +2685,29 @@ export async function buildContractPdf(
   }
 
   const vat = vatBreakdownOf(input.reservation);
+  /**
+   * ⚠️ **Sin IVA no se imprime ninguna línea de IVA**, y eso incluye la base
+   * imponible: sin cuota que separar, «base» y «total» serían el mismo número
+   * dos veces con dos nombres distintos, y el segundo sugiere que falta algo.
+   * Lo que se pactó son estos euros, y eso es lo único que dice el papel.
+   */
+  const conIva = chargesVat(input.reservation);
   b.totalsBlock([
-    { label: L.vatBase, value: formatMoney(vat.base, loc) },
-    { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) },
+    ...(conIva
+      ? [
+          { label: L.vatBase, value: formatMoney(vat.base, loc) },
+          { label: `${L.vat} (${vat.percent} %)`, value: formatMoney(vat.vat, loc) }
+        ]
+      : []),
     { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
     // Not every rental carries a deposit. Printing "0,00 €" against "Fianza"
     // reads like something failed to load; saying it is not required does not.
+    //
+    // ⚠️ Y el «(no sujeta a IVA)» solo tiene sentido donde hay un IVA del que
+    // distinguirla: en un contrato sin impuesto es una mención gratuita al
+    // único impuesto que el documento se propone no nombrar.
     {
-      label: input.reservation.depositAmount ? L.depositVatNote : L.deposit,
+      label: input.reservation.depositAmount && conIva ? L.depositVatNote : L.deposit,
       value: input.reservation.depositAmount
         ? formatMoney(input.reservation.depositAmount, loc)
         : L.noDeposit

@@ -22,6 +22,8 @@ import { Payment } from '@shared/models/payment.model';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
+import { chargesVat, resolveVatRate } from '@shared/utils/pricing.util';
+import { SettingsService } from '@features/settings/services/settings.service';
 import {
   canEditField,
   canResignContract,
@@ -62,6 +64,7 @@ export class ReservationEditComponent implements OnInit {
   private payments = inject(PaymentService);
   private contracts = inject(ContractService);
   private clients = inject(ClientService);
+  private settings = inject(SettingsService);
   private notifications = inject(NotificationService);
   private confirm = inject(ConfirmService);
   private translate = inject(TranslateService);
@@ -86,7 +89,9 @@ export class ReservationEditComponent implements OnInit {
     agreedNetPrice: null as number | null,
     depositRequired: 0,
     depositWaivedReason: '',
-    initialPaymentRequired: 0
+    initialPaymentRequired: 0,
+    /** Sin IVA: el cliente paga el neto y los documentos no lo mencionan. */
+    vatExempt: false
   };
 
   drivers: AdditionalDriver[] = [];
@@ -138,7 +143,10 @@ export class ReservationEditComponent implements OnInit {
       agreedNetPrice: agreedNetPriceOf(r),
       depositRequired: r.deposit?.requiredAmount ?? 0,
       depositWaivedReason: r.deposit?.waivedReason ?? '',
-      initialPaymentRequired: r.initialPayment?.requiredAmount ?? 0
+      initialPaymentRequired: r.initialPayment?.requiredAmount ?? 0,
+      // Se precarga del hecho guardado —el tipo congelado—, no de una bandera
+      // aparte: así abrir y guardar sin tocar nada no cuenta como cambio.
+      vatExempt: !chargesVat(r.pricingSnapshot ?? {})
     };
     this.drivers = (r.additionalDrivers || []).map((d) => ({ ...d }));
   }
@@ -207,12 +215,36 @@ export class ReservationEditComponent implements OnInit {
   get totalDue(): number {
     const snap = this.reservation?.pricingSnapshot;
     if (!snap) return 0;
+    const tipo = this.previewVatRate;
     const acordado = this.form.agreedNetPrice;
     if (acordado === null || acordado === undefined || !isFinite(Number(acordado))) {
-      return roundMoney(snap.finalPrice ?? 0);
+      // Sin precio a mano manda lo guardado, salvo que la casilla del IVA se
+      // acabe de mover: entonces el total de antes ya no vale y hay que rehacerlo
+      // sobre el neto, que es lo que no cambia.
+      if (tipo === resolveVatRate(snap.vatRate)) return roundMoney(snap.finalPrice ?? 0);
+      return roundMoney((snap.netPrice ?? snap.finalPrice ?? 0) * (1 + tipo));
     }
-    const tipo = snap.vatRate ?? 0.21;
     return roundMoney(Number(acordado) * (1 + tipo));
+  }
+
+  /**
+   * El tipo que se aplicaría al guardar **con la casilla como está ahora**.
+   *
+   * ⚠️ Es un getter y no un `computed()`, por lo mismo que `totalDue`: lee
+   * `form.vatExempt`, que es una propiedad de `ngModel` y no una señal.
+   */
+  get previewVatRate(): number {
+    if (this.form.vatExempt) return 0;
+    const snap = this.reservation?.pricingSnapshot;
+    // Volver a poner el IVA repone el tipo vigente: el congelado era 0 y no hay
+    // otro al que regresar. Es lo mismo que hace el servicio al guardar.
+    if (snap && chargesVat(snap)) return resolveVatRate(snap.vatRate);
+    return this.settings.settings().vatRate;
+  }
+
+  /** Lo que el cliente pagaría de IVA con la casilla como está. */
+  get previewVatAmount(): number {
+    return roundMoney(this.totalDue - this.totalDue / (1 + this.previewVatRate));
   }
 
   /** Lo que quedaría de resto. Es lo que Dorel pidió ver: la señal baja, esto sube. */
@@ -284,6 +316,7 @@ export class ReservationEditComponent implements OnInit {
         depositRequired: Number(this.form.depositRequired) || 0,
         depositWaivedReason: this.form.depositWaivedReason.trim() || undefined,
         initialPaymentRequired: Number(this.form.initialPaymentRequired) || 0,
+        vatExempt: this.form.vatExempt,
         additionalDrivers: this.drivers
       });
 

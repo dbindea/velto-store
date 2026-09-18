@@ -1041,6 +1041,7 @@
         "closed": "La reserva está cerrada: su histórico ya no se toca.",
         "cancelled": "La reserva está cancelada.",
         "contractSigned": "El contrato firmado dice quién alquila. Para cambiarlo hay que rehacerlo.",
+        "rentalCollected": "Ya se ha cobrado parte del alquiler: para cambiar el IVA habría que devolver lo cobrado.",
         "vehicleOut": "El coche ya se entregó: esto es un hecho, no un dato.",
         "returned": "El coche ya se devolvió: la fecha real está en el parte.",
         "noPricingPermission": "Tu rol no permite cambiar el precio.",
@@ -1057,7 +1058,8 @@
         "agreedPrice": "precio",
         "depositAmount": "fianza",
         "initialPaymentAmount": "señal",
-        "additionalDrivers": "conductores"
+        "additionalDrivers": "conductores",
+        "vatExempt": "IVA"
       },
       "initialPayment": "Señal a cobrar",
       "initialPaymentHint": "Puede ser 0: entonces no se pide señal. Lo que le quites se suma al resto.",
@@ -1081,7 +1083,8 @@
       "supersedeDone": "Contrato rehecho. El anterior queda archivado.",
       "supersededOn": "Sustituido el",
       "supersededTitle": "Contratos anteriores",
-      "title": "Modificar reserva"
+      "title": "Modificar reserva",
+      "totalPreview": "Total del alquiler"
     },
     "errors": {
       "cancel": "Error al cancelar la reserva",
@@ -1156,7 +1159,10 @@
       "remainingPayment": "Resto pendiente",
       "resetToCalculated": "Volver al precio calculado",
       "vat": "IVA",
-      "vatBase": "Base imponible"
+      "vatBase": "Base imponible",
+      "vatExempt": "Sin IVA",
+      "vatExemptHint": "El cliente paga el precio pactado y ni el contrato ni el presupuesto mencionan el IVA.",
+      "vatExemptTag": "Alquiler sin IVA"
     },
     "quote": {
       "copied": "Enlace copiado. Ya puedes pegarlo en WhatsApp.",
@@ -1197,7 +1203,11 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas"
+    "title": "Reservas",
+    "initialPayment": {
+      "waived": "No se solicita",
+      "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -1562,6 +1572,7 @@
     "unsettledDeposit": "Fianza pendiente de resolver"
   },
   "invoices": {
+    "reservationWithoutVat": "Esta reserva se pactó sin IVA. Una factura sí lo lleva, así que el total no coincidirá con lo que se cobró: revisa la base antes de emitir, porque una factura emitida no se edita ni se borra.",
     "title": "Facturas",
     "subtitle": "Emite y consulta las facturas",
     "new": "Nueva factura",

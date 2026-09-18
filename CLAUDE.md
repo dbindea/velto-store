@@ -35,6 +35,7 @@ npm run firebase:emulators
 npm run i18n:audit        # verifica claves faltantes, huérfanas y paridad es/en/ro
 npm run css:audit         # clases usadas en plantillas que no declara nadie
 npm run spacing:audit     # espaciados fuera de la escala (--fix los alinea)
+npm run rows:audit        # formularios en escalera: campos que van al lado y salen escalonados
 
 # Cloud Functions
 npm --prefix functions run build      # tsc + copia de fuentes TTF
@@ -467,6 +468,60 @@ que es el derivado. El IVA se calcula por resta para que `base + vat` cuadre al 
 
 El tipo sí se congela por reserva en `pricingSnapshot.vatRate`, para que una subida futura
 del tipo general no mueva un contrato ya firmado.
+
+#### Una reserva puede ir SIN IVA, y entonces los papeles no lo nombran
+
+Decisión de Dorel del 18 de septiembre de 2026, y el caso es el que esta misma
+sección ya describía: **el cliente que no va a pedir factura paga exactamente el
+neto**. Ahora eso se puede pactar con una casilla —«Sin IVA», en el asistente y
+en la edición de la reserva— en vez de a mano.
+
+⚠️ **Lo único que se guarda es el tipo congelado a 0.** Se pensó en un campo
+aparte (`vatExempt`) y sobra: dos datos para el mismo hecho son dos datos que
+pueden discrepar, y el día que discrepen el contrato diría una cosa y el importe
+otra. `resolveVatRate()` ya respeta el 0 en vez de caer al general, así que la
+aritmética sale sola.
+
+⚠️ **Y `chargesVat()` decide TEXTO, no aritmética.** Es toda su razón de ser: el
+contrato, el presupuesto y el justificante **no mencionan el impuesto** cuando no
+lo hay — ni la base imponible, ni la cuota, ni el «(no sujeta a IVA)» de la
+fianza, ni el aviso del presupuesto que explica que el IVA se suma, ni la
+enumeración de la cláusula de precio («…tasas aeroportuarias si las hubiere, IVA
+aplicable y…»), que la recorta `withoutVatMentions()` en `clauses.ts`. Un IVA del
+0 % impreso se lee como si algo hubiera fallado al calcularlo. Está duplicada en
+`functions/src/contracts/pdf.ts`, como el resto de la aritmética del IVA.
+
+⚠️ **El recorte de las cláusulas puede fallar EN SILENCIO**, porque es una
+sustitución literal dentro de una frase legal larga: el día que alguien reescriba
+la cláusula de precio, el fragmento deja de encontrarse y el contrato vuelve a
+nombrar el impuesto sin que nada avise. Lo cubre `clauses-vat.spec.ts`, que lee
+el articulado ya recortado en los tres idiomas y **comprueba también el control**
+—que el articulado normal sí lo menciona—, o el test pasaría por no encontrar
+nada que quitar. Y `layout.spec.ts` lo comprueba sobre los PDF reales: los tres
+documentos × tres idiomas, con IVA y sin él.
+
+⚠️ **Ausencia no es exención.** Una reserva antigua sin `vatRate` guardado lleva
+IVA al tipo general; leerla como exenta dejaría de repercutirlo en contratos ya
+firmados. Hay test de las dos cosas en los dos lados.
+
+⚠️ **La factura NO hereda el 0.** Si un cliente de estos acaba pidiendo factura,
+va en régimen general y el 0 % no se sostiene — y una factura emitida no se edita
+ni se borra. El formulario propone el tipo general y **lo explica**: el total no
+va a coincidir con lo que se cobró, y qué hacer con esa diferencia lo decide el
+operador.
+
+⚠️ **Cambiarlo obliga a rehacer el contrato** (`requiresNewContract`) y **no se
+puede tocar con parte del alquiler ya cobrada**: mover el total cuando las filas
+de cobro ya llevan dinero dentro dejaría la reserva pidiendo una cifra distinta
+de la que entró.
+
+⚠️ **Y salió a la luz un tipo que se calculaba con un número y se guardaba con
+otro.** `resolveRentalPrice()` se llamaba **sin su cuarto argumento** en los dos
+creadores de reservas y en el asistente, así que el precio se componía con el
+21 % fijo de `DEFAULT_VAT_RATE` mientras el snapshot congelaba el tipo de
+Ajustes. Con el general los dos coincidían de casualidad y no se notaba; bajando
+el tipo en Ajustes, el contrato habría desglosado un IVA y cobrado otro. Ahora el
+tipo viaja explícito, que es lo que además hace posible el 0.
 
 > Hubo un `tariffIncludesVat` que congelaba también la **dirección**, porque las reservas
 > anteriores al 27 de agosto de 2026 se guardaron con el IVA incluido. Se retiró el 28 de
@@ -989,6 +1044,26 @@ la declara su propio SCSS.
   contaba como ingreso pero no para `remainingPaid`, así que **la reserva se cobraba
   entera y no se podía cerrar nunca** (D-5).
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
+- **La señal también puede ser 0, y entonces la reserva nace CONFIRMADA.**
+  `buildInitialPayment()` en `payment-summary.util.ts` la crea `waived`, no
+  `pending`. ⚠️ **«0,00 € pendiente» es una deuda que nadie puede cobrar**, y
+  costaba dos cosas a la vez: a `confirmed` solo se llegaba **cobrando** la
+  señal (`reservationStatusAfterPayment`, que corre al registrar un cobro), así
+  que sin señal la reserva se quedaba `reserved` de por vida —y con ella, el
+  justificante de reserva, que exige `confirmed`, no se podía emitir nunca—; y
+  la ficha enseñaba «Señal 0,00 € · Pendiente» al lado de un cero que el
+  operador acababa de decidir. Lo resuelve
+  `reservationStatusAfterInitialChange()`, que contesta lo mismo al crear y al
+  editar.
+  ⚠️ **Aquí el motivo NO es obligatorio, al revés que en la fianza**, y la
+  asimetría tiene razón: el de la fianza es lo único que deja cerrar la reserva
+  (`isDepositSettled`), mientras que ningún guard depende de la señal — el
+  precio entero sigue exigido en `remainingPayment` y `canStartPickup()` no
+  entrega el coche sin cobrarlo. No se perdona dinero, se cobra más tarde.
+  ⚠️ **Y lo cobrado manda sobre lo que se pida** (`initialPaymentStatus`):
+  bajar a 0 una señal ya cobrada la deja `paid`, no `waived`. Decir que no se
+  pidió nada cuando entraron 30 € dejaría la reserva contando una cosa y
+  `payments` otra; si hay que devolverlo, eso es una devolución.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
 ### Crear una reserva es una sola escritura
@@ -2290,6 +2365,39 @@ caja está ahí de verdad, así que lo que afirma el auditor es cierto. Las
 dieciocho declaraciones siguen mandando sobre lo suyo por especificidad —la del
 componente lleva el atributo de encapsulación—; lo que cambia es que un
 formulario nuevo ya no sale desnudo.
+
+### `npm run rows:audit` — el formulario en escalera
+
+⚠️ **Es la cuarta auditoría, y nace de una lista enumerada a mano que se quedó
+corta.** `styles.scss` le da a cada `.form-group` un `margin-top: 1rem` para
+separarlo del hermano de arriba, y esa regla **no sabe en qué dirección coloca
+el contenedor**: dentro de una rejilla horizontal el margen se lo come la
+columna derecha, que baja 16 px y deja la fila torcida. La corrección —anular el
+margen dentro de los contenedores horizontales— traía **cinco** nombres de clase
+escritos a mano, y faltaban **cuatro**: `.form-grid-inner`, `.checklist`,
+`.driver-form-grid` y `.line-regime`.
+
+El que se vio fue el primero, el 18 de septiembre de 2026: en «Estado del
+vehículo» de las inspecciones, «Nivel de combustible» salía 16 px por debajo de
+«Kilometraje». Lo encontró Dorel mirando la pantalla — que es exactamente lo que
+la nota anterior daba por suficiente («se encuentra volviendo a medir, no
+leyendo plantillas»).
+
+El guion recorre las plantillas con un **analizador de etiquetas**, no con una
+expresión regular: eso es lo que permite saber quién es el padre de cada campo,
+y es la parte que se daba por imposible. De cada contenedor con dos o más campos
+mira el `display` en el SCSS —`grid` coloca en horizontal, y `flex` también
+salvo que declare `flex-direction: column`— y **falla con código 1** si alguno no
+está exceptuado. La lista la lee del propio `styles.scss`: copiarla aquí sería
+una segunda fuente de verdad.
+
+⚠️ **Y comprueba que cada exceptuado declara `gap`.** Es la condición que hace
+seguro quitar el margen: sin `gap`, al bajar de línea en móvil las filas se
+tocarían.
+
+⚠️ **Lo que no puede saber:** un contenedor cuyo `display` venga de otro sitio
+—una clase heredada, un estilo en línea—. Para eso sigue valiendo mirar la
+pantalla y medir con `getComputedStyle()`.
 
 ### Tema y color
 

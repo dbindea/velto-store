@@ -129,6 +129,7 @@ const DYNAMIC_KEY_SETS = {
     'pickupDateTime',
     'returnDateTime',
     'agreedPrice',
+    'vatExempt',
     'depositAmount',
     'initialPaymentAmount',
     'additionalDrivers'
