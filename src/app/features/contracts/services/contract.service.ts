@@ -21,6 +21,7 @@ import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Contract } from '@shared/models/contract.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { contractFileName } from '@shared/utils/storage-name.util';
 import { PAGINA } from '@shared/utils/pagination.util';
 
 export interface GenerateContractResponse {
@@ -338,12 +339,24 @@ export class ContractService {
   }
 
   /**
-   * Convenience: triggers a browser download of a URL. Used for the
-   * "Download PDF" / "Download signed PDF" buttons.
+   * Descarga un PDF con el nombre que se le dé.
+   *
+   * ⚠️ **Se baja a un blob a propósito, y no es un rodeo.** Apuntando un enlace
+   * directamente a la URL de Storage, el navegador obedece a la cabecera
+   * `Content-Disposition` que manda Storage — y esa lleva **el nombre completo
+   * del objeto**, con sus barras. Chrome trata cada barra como una carpeta, así
+   * que descargar un contrato creaba una carpeta con el id de la reserva y
+   * dentro un PDF llamado `contract-original.pdf`. Con el blob, el nombre lo
+   * decide `a.download` y no hay ruta que interpretar.
+   *
+   * ⚠️ **Y si la descarga falla, la pestaña nueva vuelve a traer la carpeta.**
+   * Es el mismo fallo por la puerta de atrás, así que el aviso lo dice: lo que
+   * se abre no es lo que se pidió.
    */
   async triggerDownload(url: string, filename: string): Promise<void> {
     try {
       const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -354,10 +367,32 @@ export class ContractService {
       document.body.removeChild(a);
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
-      // Fallback: open in new tab
       console.warn('Download failed, opening in new tab:', error);
       window.open(url, '_blank');
+      throw error;
     }
+  }
+
+  /**
+   * El nombre con el que se le ofrece un contrato al operador.
+   *
+   * ⚠️ **Vive en el servicio y no en cada pantalla**, porque son dos —la ficha
+   * del contrato y la de la reserva— y ya llegaron a ofrecer nombres distintos
+   * para el mismo fichero.
+   *
+   * Las palabras van traducidas: el fichero lo lee una persona, y aquí no se
+   * deja español duro. La composición la hace `contractFileName()`.
+   */
+  fileNameFor(contract: Contract, signed: boolean): string {
+    return contractFileName({
+      documentWord: this.translateService.translate('contracts.file.document'),
+      stateWord: this.translateService.translate(
+        signed ? 'contracts.file.signed' : 'contracts.file.original'
+      ),
+      plate: contract.vehicleSnapshot?.plateNumber,
+      clientName: contract.clientSnapshot?.fullName,
+      contractNumber: contract.contractNumber || contract.id
+    });
   }
 
   // ============================================================

@@ -189,6 +189,7 @@
       "alreadySigned": "That contract is already signed. Reissue it to change it.",
       "cancelSigningLink": "The signing link could not be cancelled.",
       "createSigningLink": "The signing link could not be created.",
+      "downloadFallback": "The PDF could not be downloaded; it was opened in a new tab. Save it from there.",
       "generate": "The contract could not be generated.",
       "invalidEmail": "Enter a valid email address",
       "pdfNotReady": "The PDF is not available yet.",
@@ -268,6 +269,11 @@
       "unknownTitle": "Not found",
       "validMessage": "This contract exists and has been signed.",
       "validTitle": "Contract verified"
+    },
+    "file": {
+      "document": "Contract",
+      "original": "original",
+      "signed": "signed"
     }
   },
   "dashboard": {

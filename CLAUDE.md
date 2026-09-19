@@ -1246,7 +1246,66 @@ comprobaciones de disponibilidad lanzaban `'Vehicle no longer available…'` en 
 así que la capa de avisos no lo distinguía de un fallo cualquiera y ofrecía «Reintentar» —
 que iba a fallar igual, porque hay que cambiar de coche o de fechas.
 
-### Borrar un documento no borra sus ficheros
+### Cómo se llaman los ficheros
+
+`storage-name.util.ts` es la única autoridad, y separa dos reglas que es fácil
+mezclar.
+
+⚠️ **Un fichero se llamaba como lo llamara el móvil.** Una foto de coche se
+guardaba como `1758291600000-IMG_20260919_143201.jpg` y el DNI de un cliente
+como `1758291600000-Screenshot_2026-09-19.png`. Dentro de la carpeta de su ficha
+se sabe de quién es; **fuera de ella no**, y es ahí —descargado, adjunto a un
+correo, abierto desde el disco— donde hace falta saberlo. Ahora el nombre lleva
+el dato que identifica: `4466LKK_mfk3n1.jpg`,
+`Andreea-Mitoseriu_X1234567L_driving-license_mfk3n1.png`,
+`4466LKK_pickup_exterior-front_mfk3n1.jpg`.
+
+⚠️ **Lo que se SUBE no se traduce; lo que se DESCARGA sí.** El nombre de un
+objeto de Storage es un dato: con palabras traducidas dentro, el mismo coche
+tendría ficheros con prefijos distintos según el idioma del operador que los
+subió, y buscar en el bucket dejaría fuera la mitad. Por eso ahí solo entran
+datos del negocio y valores de enumerado. El nombre de una **descarga** lo lee
+una persona, así que sigue la misma regla que los PDF: el idioma de la
+plataforma, con las palabras ya traducidas por quien llama.
+
+⚠️ **`_` separa campos y `-` une palabras**, también dentro de un enumerado:
+`driving_license` sale `driving-license`. Así el nombre se puede partir por `_`
+y saber qué es cada trozo.
+
+⚠️ **El sufijo único no es decorativo.** En Storage subir dos veces el mismo
+nombre **pisa el anterior sin avisar**: sin él, la segunda foto de un coche
+borraría la primera y la ficha se quedaría con dos entradas apuntando al mismo
+fichero.
+
+⚠️ **Y una barra dentro del nombre crea una carpeta.** Por eso `slugForFile()`
+no la deja pasar — ni en el nombre de un cliente ni en una matrícula mal
+tecleada.
+
+Quedan con su nombre original las facturas de **gastos** y de
+**mantenimiento**: llegan de un proveedor ya llamadas `factura-taller.pdf`, que
+es descriptivo. El problema son las fotos de móvil y las capturas.
+
+### Descargar un contrato bajaba una CARPETA
+
+⚠️ **Apuntar un enlace a la URL de Storage no descarga lo que parece.** Storage
+manda el nombre completo del objeto en `Content-Disposition`
+—`contracts/<reservaId>/contract-signed.pdf`— y el navegador trata **cada barra
+como un directorio**: se bajaba una carpeta con el id de la reserva y dentro un
+PDF llamado `contract-signed.pdf`. Dos identificadores y ni rastro del cliente
+ni del coche.
+
+Por eso `triggerDownload()` baja el fichero a un blob y pone el nombre con
+`a.download`: así no hay ruta que interpretar. El contrato se llama
+`Contrato_4466LKK_Andreea-Mitoseriu_firmado.pdf`, compuesto por
+`contractFileName()` — que lo usan la ficha del contrato **y** la de la reserva,
+porque ya llegaron a ofrecer nombres distintos para el mismo fichero.
+
+⚠️ **Y si la descarga falla, el respaldo vuelve a traer la carpeta.** Abrir la
+URL en otra pestaña es el mismo fallo por la puerta de atrás, así que
+`triggerDownload()` **relanza** después de abrirla y quien llama lo dice: lo que
+se abre no es lo que se pidió.
+
+## Borrar un documento no borra sus ficheros
 
 ⚠️ **Firestore y Storage son dos servicios distintos.** Borrar el documento deja los
 ficheros donde estaban, con su token de descarga vivo. En un cliente eso no es desorden:

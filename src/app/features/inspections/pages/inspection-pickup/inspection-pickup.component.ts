@@ -272,8 +272,15 @@ export class InspectionPickupComponent implements OnInit {
       // propio navegador, y lanzar ocho a la vez con mala cobertura las hace
       // competir por el ancho de banda y bloquea el hilo del canvas.
       for (const file of files) {
+        // La matrícula viaja con la foto: es el nombre con el que se guarda,
+        // y estas fotos hay que poder enseñarlas sueltas.
         const photo = await this.inspectionService.uploadInspectionPhoto(
-          this.reservationId, 'pickup', file, category
+          this.reservationId,
+          'pickup',
+          file,
+          category,
+          undefined,
+          this.reservation?.vehicleSnapshot?.plateNumber
         );
         this.formData.photos = [...(this.formData.photos || []), photo];
       }

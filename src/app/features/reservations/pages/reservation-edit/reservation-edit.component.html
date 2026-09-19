@@ -348,11 +348,18 @@
               {{ 'reservations.edit.supersededOn' | translate }}
               {{ c.supersededAt?.seconds * 1000 | date: 'dd/MM/yyyy' }}
             </span>
+            <!--
+              ⚠️ **Era un enlace directo a Storage, y eso descarga una CARPETA.**
+              Storage manda el nombre completo del objeto en `Content-Disposition`
+              —`contracts/<id>/contract-signed.pdf`— y el navegador trata cada
+              barra como un directorio. Pasando por el servicio, el fichero baja
+              suelto y con un nombre que dice de qué contrato es.
+            -->
             @if (c.signedPdfUrl) {
-              <a class="btn-ghost" [href]="c.signedPdfUrl" target="_blank" rel="noopener">
+              <button class="btn-ghost" type="button" (click)="downloadSuperseded(c)">
                 <i class="pi pi-file-pdf"></i>
                 {{ 'contracts.actions.downloadSignedPdf' | translate }}
-              </a>
+              </button>
             }
           </div>
         }

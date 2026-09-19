@@ -189,6 +189,7 @@
       "alreadySigned": "Ese contrato ya está firmado. Para cambiarlo hay que rehacerlo.",
       "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
       "createSigningLink": "No se pudo crear el enlace de firma.",
+      "downloadFallback": "No se pudo descargar el PDF; se ha abierto en otra pestaña. Guárdalo desde ahí.",
       "generate": "No se pudo generar el contrato.",
       "invalidEmail": "Introduce un email válido",
       "pdfNotReady": "El PDF todavía no está disponible.",
@@ -268,6 +269,11 @@
       "unknownTitle": "No encontrado",
       "validMessage": "Este contrato existe y está firmado.",
       "validTitle": "Contrato verificado"
+    },
+    "file": {
+      "document": "Contrato",
+      "original": "original",
+      "signed": "firmado"
     }
   },
   "dashboard": {

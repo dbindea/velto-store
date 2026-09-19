@@ -43,9 +43,9 @@ import { roundMoney, distributeRetentionAcrossCharges } from '@shared/utils/paym
 import {
   MAX_IMAGE_SIZE,
   MAX_THUMBNAIL_SIZE,
-  resizeImage,
-  resizedFilename
+  resizeImage
 } from '@shared/utils/image-resize.util';
+import { inspectionPhotoName } from '@shared/utils/storage-name.util';
 
 @Injectable({ providedIn: 'root' })
 export class InspectionService {
@@ -433,7 +433,16 @@ export class InspectionService {
     type: InspectionType,
     file: File,
     category?: PhotoCategory,
-    label?: string
+    label?: string,
+    /**
+     * La matrícula del coche, para que la foto se llame por él.
+     *
+     * ⚠️ **Estas fotos son la PRUEBA de un cargo.** Sin firma en el parte, lo
+     * que sostiene un cobro por combustible o por un golpe es el estado
+     * fotografiado; y una foto que hay que enseñar suelta —en un correo, ante
+     * una reclamación— tiene que decir de qué coche es sin abrir la aplicación.
+     */
+    plate?: string
   ): Promise<InspectionPhoto> {
     const timestamp = Date.now();
     const base = `inspections/${reservationId}/${type}`;
@@ -443,10 +452,14 @@ export class InspectionService {
     // la cobertura que haya, y son varias fotos seguidas.
     const resized = await resizeImage(file, MAX_IMAGE_SIZE);
     const body = resized ?? file;
-    const safeName = resized
-      ? resizedFilename(file.name)
-      : file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storagePath = `${base}/${timestamp}-${safeName}`;
+    const storagePath = `${base}/${inspectionPhotoName({
+      plate,
+      reservationId,
+      phase: type,
+      category,
+      originalName: file.name,
+      at: timestamp
+    })}`;
     const storageRef = ref(this.storage, storagePath);
 
     await uploadBytes(storageRef, body);
@@ -456,7 +469,15 @@ export class InspectionService {
     let thumbnailPath: string | undefined;
     const thumb = await resizeImage(file, MAX_THUMBNAIL_SIZE);
     if (thumb) {
-      thumbnailPath = `${base}/${timestamp}-${resizedFilename(file.name, '-thumb')}`;
+      thumbnailPath = `${base}/${inspectionPhotoName({
+        plate,
+        reservationId,
+        phase: type,
+        category,
+        originalName: file.name,
+        variant: '-thumb',
+        at: timestamp
+      })}`;
       await uploadBytes(ref(this.storage, thumbnailPath), thumb);
       thumbnailUrl = await getDownloadURL(ref(this.storage, thumbnailPath));
     }
