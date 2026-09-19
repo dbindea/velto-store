@@ -9,6 +9,7 @@ import {
   ReservationStatus,
   BLOCKING_STATUSES,
   ReservationPricingSnapshot,
+  ReservationDeliveryFees,
   ReservationNote,
   WorkflowException,
   AdditionalDriver
@@ -27,6 +28,7 @@ import {
   resolveRentalPrice
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { deliveryFeeBreakdown } from '@shared/utils/pricing.util';
 import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
 import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { SettingsService } from '@features/settings/services/settings.service';
@@ -94,6 +96,11 @@ export interface ReservationEdit {
    * `canEditField('vatExempt')`.
    */
   vatExempt?: boolean;
+  /**
+   * Entrega y recogida a domicilio, en **neto**. `undefined` deja lo que haya;
+   * un trayecto a 0 deja de cobrarse y su fila se cancela.
+   */
+  deliveryFees?: ReservationDeliveryFees;
   additionalDrivers?: AdditionalDriver[];
 }
 
@@ -120,6 +127,24 @@ export interface ReservationEditResult {
  * veces, la primera vez que discrepen una pantalla dirá que no se cambió nada y
  * la otra que sí.
  */
+/**
+ * Los importes de entrega tal y como se guardan: números limpios o nada.
+ *
+ * ⚠️ **Devuelve `undefined` cuando no se cobra ningún trayecto**, y no un objeto
+ * con dos ceros. Un `{ pickupFee: 0, returnFee: 0 }` en todas las reservas es
+ * ruido en Firestore que además se lee como «aquí hay servicio a domicilio» al
+ * mirar el documento. La ausencia del campo es la forma honesta de decir que no
+ * lo hay — la misma idea que «un concepto a 0 no genera fila».
+ */
+function normalizeDeliveryFees(
+  fees: ReservationDeliveryFees | undefined
+): ReservationDeliveryFees | undefined {
+  const ida = Math.max(0, roundMoney(Number(fees?.pickupFee) || 0));
+  const vuelta = Math.max(0, roundMoney(Number(fees?.returnFee) || 0));
+  if (ida <= 0 && vuelta <= 0) return undefined;
+  return { pickupFee: ida, returnFee: vuelta };
+}
+
 export function agreedNetPriceOf(r: Reservation): number | null {
   const snap = r.pricingSnapshot;
   if (!snap?.manualAdjustment) return null;
@@ -191,6 +216,18 @@ function changedFields(actual: Reservation, edit: ReservationEdit): EditableFiel
     edit.vatExempt === chargesVat(actual.pricingSnapshot ?? {})
   ) {
     out.push('vatExempt');
+  }
+  // Se comparan los dos trayectos por separado, que es como se pactan. El
+  // objeto ausente y el objeto con dos ceros son lo mismo aquí: no se cobra
+  // nada, así que abrir y guardar sin tocar no cuenta como cambio.
+  if (edit.deliveryFees !== undefined) {
+    const antes = actual.deliveryFees;
+    const mismo =
+      roundMoney(Number(edit.deliveryFees.pickupFee) || 0) ===
+        roundMoney(Number(antes?.pickupFee) || 0) &&
+      roundMoney(Number(edit.deliveryFees.returnFee) || 0) ===
+        roundMoney(Number(antes?.returnFee) || 0);
+    if (!mismo) out.push('deliveryFees');
   }
   if (edit.additionalDrivers && !sameDrivers(edit.additionalDrivers, actual.additionalDrivers)) {
     out.push('additionalDrivers');
@@ -625,7 +662,12 @@ export class ReservationService {
     /** Required when `depositRequired` is 0. See `buildDeposit`. */
     depositWaivedReason?: string,
     /** Sin IVA: el cliente paga el neto y los documentos no lo mencionan. */
-    vatExempt?: boolean
+    vatExempt?: boolean,
+    /**
+     * Entrega y recogida a domicilio, en **neto**. Se congelan en la reserva y
+     * siembran una fila de cobro cada una. Ver `ReservationDeliveryFees`.
+     */
+    deliveryFees?: ReservationDeliveryFees
   ): Promise<string> {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicleId, pickupDateTime, returnDateTime);
@@ -712,6 +754,15 @@ export class ReservationService {
         includedKmPerDay: vehicle.includedKmPerDay,
         extraKmPrice: vehicle.extraKmPrice
       },
+      /**
+       * Entrega y recogida a domicilio. Se guarda el **neto** tecleado; el bruto
+       * de cada fila de cobro lo pone `deliveryFeeBreakdown()` con el tipo
+       * congelado de esta reserva.
+       *
+       * ⚠️ Fuera de `pricingSnapshot` a propósito: el reparto con el dueño del
+       * coche sale del neto del alquiler, y el desplazamiento lo pone la agencia.
+       */
+      deliveryFees: normalizeDeliveryFees(deliveryFees),
       // Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
       // `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
       initialPayment: buildInitialPayment(initialPaymentRequired),
@@ -772,7 +823,12 @@ export class ReservationService {
      * Congela `pricingSnapshot.vatRate` a 0, que es toda la señal que hace
      * falta — ver `chargesVat()` en `pricing.util.ts`.
      */
-    vatExempt?: boolean
+    vatExempt?: boolean,
+    /**
+     * Entrega y recogida a domicilio, en **neto**. Se congelan en la reserva y
+     * siembran una fila de cobro cada una. Ver `ReservationDeliveryFees`.
+     */
+    deliveryFees?: ReservationDeliveryFees
   ): Promise<string> {
     // Do not rent to a customer marked `blocked`. The wizard disables the
     // button; this is the half that a stale tab or a direct call cannot skip.
@@ -900,6 +956,15 @@ export class ReservationService {
         includedKmPerDay: vehicle.includedKmPerDay,
         extraKmPrice: vehicle.extraKmPrice
       },
+      /**
+       * Entrega y recogida a domicilio. Se guarda el **neto** tecleado; el bruto
+       * de cada fila de cobro lo pone `deliveryFeeBreakdown()` con el tipo
+       * congelado de esta reserva.
+       *
+       * ⚠️ Fuera de `pricingSnapshot` a propósito: el reparto con el dueño del
+       * coche sale del neto del alquiler, y el desplazamiento lo pone la agencia.
+       */
+      deliveryFees: normalizeDeliveryFees(deliveryFees),
       // Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
       // `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
       initialPayment: buildInitialPayment(initialPayment),
@@ -1088,6 +1153,28 @@ export class ReservationService {
     }
 
     /**
+     * Entrega y recogida a domicilio.
+     *
+     * ⚠️ **Se recalcula el bruto también cuando cambia el IVA**, aunque nadie
+     * haya tocado los importes: lo guardado es el neto y el cliente paga neto
+     * más impuesto, así que quitar el IVA de una reserva con entrega tiene que
+     * bajar también esas dos filas. Sin esto, la reserva pasaría a no llevar IVA
+     * y el desplazamiento seguiría cobrándolo.
+     */
+    const feesNuevas = cambiados.includes('deliveryFees')
+      ? normalizeDeliveryFees(edit.deliveryFees)
+      : actual.deliveryFees;
+    if (cambiados.includes('deliveryFees')) {
+      // `cleanData` quita los `undefined`, así que borrar el servicio a domicilio
+      // pide un `null` explícito: sin él el campo viejo se quedaría escrito.
+      update['deliveryFees'] = feesNuevas ?? null;
+    }
+    const entregaNueva =
+      cambiados.includes('deliveryFees') || cambiados.includes('vatExempt')
+        ? deliveryFeeBreakdown(feesNuevas, vatRate)
+        : null;
+
+    /**
      * La señal y el resto se recalculan juntos, **siempre que se toque
      * cualquiera de los dos o el precio**: el total es el invariante.
      */
@@ -1143,7 +1230,9 @@ export class ReservationService {
       remainingRequired: reparto.remaining,
       depositRequired: cambiados.includes('depositAmount')
         ? roundMoney(edit.depositRequired!)
-        : undefined
+        : undefined,
+      deliveryRequired: entregaNueva ? entregaNueva.pickupGross : undefined,
+      collectionRequired: entregaNueva ? entregaNueva.returnGross : undefined
     });
     await batch.commit();
 

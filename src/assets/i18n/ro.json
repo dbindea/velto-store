@@ -12,6 +12,7 @@
     "next": "Luna următoare",
     "prev": "Luna anterioară",
     "subtitle": "Vizualizare lunară a rezervărilor. Apasă pe o zi pentru detalii.",
+    "swipeHint": "Glisează lateral pentru a schimba luna.",
     "today": "Astăzi",
     "weekdays": {
       "fri": "Vin",
@@ -21,6 +22,11 @@
       "thu": "Joi",
       "tue": "Mar",
       "wed": "Mie"
+    },
+    "dayRole": {
+      "ongoing": "Închiriat",
+      "pickup": "Predare",
+      "return": "Returnare"
     }
   },
   "clients": {
@@ -854,6 +860,8 @@
     },
     "title": "Plăți",
     "types": {
+      "collectionFee": "Ridicare de la adresă",
+      "deliveryFee": "Livrare la adresă",
       "deposit": "Garanție",
       "depositRefund": "Returnare garanție",
       "depositRetention": "Reținere garanție",
@@ -1041,6 +1049,7 @@
         "closed": "Rezervarea este închisă: istoricul ei nu se mai atinge.",
         "cancelled": "Rezervarea este anulată.",
         "contractSigned": "Contractul semnat spune cine închiriază. Ca să schimbi asta, trebuie refăcut.",
+        "deliveryCollected": "Serviciul la domiciliu a fost deja încasat: pentru a-l schimba ar trebui returnată suma.",
         "rentalCollected": "O parte din închiriere a fost deja încasată: pentru a schimba TVA-ul ar trebui returnată.",
         "vehicleOut": "Mașina a fost deja predată: este un fapt, nu un câmp.",
         "returned": "Mașina a fost deja returnată: data reală este în procesul-verbal.",
@@ -1053,6 +1062,7 @@
       "deposit": "Garanție",
       "fields": {
         "client": "client",
+        "deliveryFees": "serviciu la domiciliu",
         "pickupDateTime": "data preluării",
         "returnDateTime": "data predării",
         "agreedPrice": "preț",
@@ -1207,6 +1217,12 @@
     "initialPayment": {
       "waived": "Nu se solicită",
       "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
+    },
+    "delivery": {
+      "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
+      "pickupFee": "Livrare la adresă",
+      "returnFee": "Ridicare de la adresă",
+      "total": "Serviciu la domiciliu"
     }
   },
   "search": {

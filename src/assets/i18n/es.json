@@ -12,6 +12,7 @@
     "next": "Mes siguiente",
     "prev": "Mes anterior",
     "subtitle": "Vista mensual de las reservas. Pulsa un día para ver el detalle.",
+    "swipeHint": "Desliza a los lados para cambiar de mes.",
     "today": "Hoy",
     "weekdays": {
       "fri": "Vie",
@@ -21,6 +22,11 @@
       "thu": "Jue",
       "tue": "Mar",
       "wed": "Mié"
+    },
+    "dayRole": {
+      "ongoing": "Alquilado",
+      "pickup": "Entrega",
+      "return": "Devolución"
     }
   },
   "clients": {
@@ -854,6 +860,8 @@
     },
     "title": "Pagos",
     "types": {
+      "collectionFee": "Recogida a domicilio",
+      "deliveryFee": "Entrega a domicilio",
       "deposit": "Fianza",
       "depositRefund": "Devolución fianza",
       "depositRetention": "Retención fianza",
@@ -1041,6 +1049,7 @@
         "closed": "La reserva está cerrada: su histórico ya no se toca.",
         "cancelled": "La reserva está cancelada.",
         "contractSigned": "El contrato firmado dice quién alquila. Para cambiarlo hay que rehacerlo.",
+        "deliveryCollected": "Ya se ha cobrado el servicio a domicilio: para cambiarlo habría que devolver lo cobrado.",
         "rentalCollected": "Ya se ha cobrado parte del alquiler: para cambiar el IVA habría que devolver lo cobrado.",
         "vehicleOut": "El coche ya se entregó: esto es un hecho, no un dato.",
         "returned": "El coche ya se devolvió: la fecha real está en el parte.",
@@ -1053,6 +1062,7 @@
       "deposit": "Fianza",
       "fields": {
         "client": "cliente",
+        "deliveryFees": "entrega a domicilio",
         "pickupDateTime": "fecha de recogida",
         "returnDateTime": "fecha de devolución",
         "agreedPrice": "precio",
@@ -1207,6 +1217,12 @@
     "initialPayment": {
       "waived": "No se solicita",
       "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
+    },
+    "delivery": {
+      "hint": "Suplemento por llevar y recoger el coche fuera de la zona de entrega gratuita. Importe sin IVA; déjalo vacío si no se cobra.",
+      "pickupFee": "Entrega a domicilio",
+      "returnFee": "Recogida a domicilio",
+      "total": "Servicio a domicilio"
     }
   },
   "search": {

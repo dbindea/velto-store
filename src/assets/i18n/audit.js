@@ -122,6 +122,9 @@ const DYNAMIC_KEY_SETS = {
   'reservations.status.': ['reserved', 'confirmed', 'delivered', 'returned', 'closed', 'cancelled'],
   // reservation-create.component.ts › Step
   'reservations.steps.': ['dates', 'vehicle', 'client', 'summary'],
+  // calendar.component.ts › dayRole(): qué pasa ese día con la reserva. La
+  // plantilla compone 'calendar.dayRole.' + dayRole(r).
+  'calendar.dayRole.': ['pickup', 'return', 'ongoing'],
   // reservation-edit.util.ts › EditableField. Son los nombres con los que la
   // nota interna dice qué se cambió: «Reserva modificada: precio, señal».
   'reservations.edit.fields.': [
@@ -130,6 +133,7 @@ const DYNAMIC_KEY_SETS = {
     'returnDateTime',
     'agreedPrice',
     'vatExempt',
+    'deliveryFees',
     'depositAmount',
     'initialPaymentAmount',
     'additionalDrivers'

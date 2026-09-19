@@ -211,6 +211,40 @@ export interface ReservationInitialPayment {
   status: 'pending' | 'paid' | 'waived';
 }
 
+/**
+ * Entrega y recogida a domicilio.
+ *
+ * El negocio lo entrega gratis en un radio corto alrededor de Arganda; fuera de
+ * ahí se pacta un suplemento, y los dos trayectos son **independientes**: hay
+ * clientes que recogen en oficina y solo piden que se les vaya a buscar.
+ *
+ * ⚠️ **Los importes son NETOS**, como todo lo que se negocia en esta aplicación:
+ * el operador teclea el número redondo que dijo por teléfono y el IVA se suma
+ * encima con el tipo congelado de la reserva. Con la casilla «sin IVA» el
+ * cliente paga exactamente lo tecleado. Ver `deliveryFeeBreakdown()`.
+ *
+ * ⚠️ **Vive FUERA de `pricingSnapshot`, y no es colocación casual.** El reparto
+ * con el dueño del coche se calcula sobre `pricingSnapshot.netPrice`
+ * (`owner-share.util.ts`), y llevar el coche a 30 km es un servicio que pone la
+ * agencia con su furgoneta y su hora — no lo pone el coche. Metido en el
+ * snapshot, el propietario cobraría un porcentaje del desplazamiento sin que
+ * nadie lo hubiera decidido. Es la misma razón por la que los cargos extra son
+ * de Velto.
+ *
+ * ⚠️ **Y por eso tampoco son `extra_*`:** un cargo extra nace de la inspección
+ * de devolución y cubre un perjuicio. Esto se pacta al reservar y se imprime en
+ * el contrato, que es lo que permite cobrarlo.
+ *
+ * Campo opcional y aditivo: las reservas anteriores al 19 de septiembre de 2026
+ * no lo llevan y se leen como «sin servicio a domicilio».
+ */
+export interface ReservationDeliveryFees {
+  /** Lo que se cobra por llevarle el coche. Neto. 0 o ausente = no se cobra. */
+  pickupFee: number;
+  /** Lo que se cobra por ir a recogerlo. Neto. 0 o ausente = no se cobra. */
+  returnFee: number;
+}
+
 export interface ReservationRemainingPayment {
   requiredAmount: number;
   paidAmount: number;
@@ -239,6 +273,19 @@ export interface ReservationPaymentSummary {
   extrasRequired: number;
   /** Cargos extra que quedan por cobrar. Es deuda viva del cliente. */
   extrasPending: number;
+  /**
+   * Entrega y recogida a domicilio: lo **devengado**, lo cobrado y lo que falta.
+   *
+   * ⚠️ **Tienen su propia línea y no se suman a los cargos extra**, aunque
+   * ahorraría tres campos. Un cargo extra es un perjuicio que se descubre al
+   * devolver el coche y se puede cubrir con la fianza; esto es un servicio
+   * pactado al reservar. Juntos, la ficha diría «Cargos extra 20 €» de una
+   * reserva sin un solo daño, y el reparto de la retención de fianza se llevaría
+   * por delante el desplazamiento.
+   */
+  servicesRequired: number;
+  servicesPaid: number;
+  servicesPending: number;
   totalPaid: number;
   totalPending: number;
   balance: number;
@@ -322,6 +369,12 @@ export interface Reservation {
 
   initialPayment: ReservationInitialPayment;
   remainingPayment: ReservationRemainingPayment;
+  /**
+   * Entrega y recogida a domicilio, si se pactaron. Ver
+   * `ReservationDeliveryFees`: importes NETOS y fuera de `pricingSnapshot` a
+   * propósito, para que no entren en el reparto con el dueño del coche.
+   */
+  deliveryFees?: ReservationDeliveryFees;
   deposit: ReservationDeposit;
 
   paymentStatus: ReservationPaymentStatus;

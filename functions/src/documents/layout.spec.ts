@@ -472,6 +472,79 @@ describe('the real documents, in every language', () => {
   }
 
   /**
+   * ⚠️ **Un cargo que el documento no imprime es un cargo que no se puede
+   * cobrar.** Es la regla que este proyecto ya ha roto cuatro veces —la póliza,
+   * el combustible de entrega, la dotación, el parte de entrega— y el
+   * desplazamiento a domicilio es la quinta oportunidad: se pacta al reservar,
+   * se cobra en su propia fila, y si el contrato firmado no lo nombra el cliente
+   * lo discute con razón.
+   *
+   * Se comprueba sobre el PDF real, en los tres idiomas y en los tres
+   * documentos: el presupuesto es lo que el cliente acepta, el justificante lo
+   * que recibe al confirmar y el contrato lo que firma. Los tres tienen que
+   * decir la misma cifra.
+   */
+  describe('la entrega a domicilio sale impresa', () => {
+    const CON_ENTREGA = {
+      ...pricing,
+      netPrice: 3000,
+      finalPrice: 3630,
+      // 15 € y 20 € netos: 18,15 € y 24,20 € con el 21 %.
+      deliveryPickupFee: 15,
+      deliveryReturnFee: 20
+    };
+    const ROTULOS: Record<ContractLocale, string[]> = {
+      es: ['Entrega a domicilio', 'Recogida a domicilio'],
+      en: ['Delivery to your address', 'Collection from your address'],
+      ro: ['Livrare la adresă', 'Ridicare de la adresă']
+    };
+
+    /**
+     * El texto del documento **en minúsculas**: el bloque de totales rotula en
+     * mayúsculas, y lo que hay que comprobar es que el concepto se nombra, no
+     * con qué caja se compone.
+     */
+    const texto = (b: PdfBuilder) =>
+      b.boxes
+        .map((box) => box.text)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+
+    for (const kind of ['quote', 'booking', 'contract'] as const) {
+      for (const locale of LOCALES) {
+        it(`${kind} / ${locale}: nombra los dos trayectos y sus importes`, async () => {
+          const t = texto(await layoutOf(kind, locale, CON_ENTREGA));
+          for (const rotulo of ROTULOS[locale]) {
+            expect(t, `falta «${rotulo}»`).toContain(rotulo.toLowerCase());
+          }
+          // El BRUTO, que es lo que hay que cobrarle: lo guardado es neto.
+          expect(t).toContain(formatMoney(18.15, locale).toLowerCase());
+          expect(t).toContain(formatMoney(24.2, locale).toLowerCase());
+        }, 30_000);
+
+        it(`${kind} / ${locale}: sin servicio pactado no lo nombra`, async () => {
+          // Un «0,00 €» junto a «Entrega a domicilio» en todos los contratos
+          // anuncia un servicio que nadie pidió.
+          const t = texto(await layoutOf(kind, locale));
+          for (const rotulo of ROTULOS[locale]) {
+            expect(t, `sobra «${rotulo}»`).not.toContain(rotulo.toLowerCase());
+          }
+        }, 30_000);
+
+        it(`${kind} / ${locale}: con entrega la maquetación sigue entera`, async () => {
+          // Son dos filas más en el bloque de totales: empujan lo que viene
+          // debajo, que en el contrato son las cláusulas y las firmas.
+          const b = await layoutOf(kind, locale, CON_ENTREGA);
+          expect(b.assertNoOverlaps()).toEqual([]);
+          expect(b.assertInsideMargins()).toEqual([]);
+          expect(b.assertNoMissingGlyphs()).toEqual([]);
+        }, 30_000);
+      }
+    }
+  });
+
+  /**
    * ⚠️ **Un alquiler sin IVA no puede nombrar el IVA, y eso no lo ve ningún
    * invariante de arriba**: los cinco miran dónde cae el texto, nunca qué dice.
    * Es el mismo hueco por el que el presupuesto afirmó durante meses que los

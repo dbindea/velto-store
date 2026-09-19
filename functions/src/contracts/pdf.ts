@@ -290,6 +290,17 @@ export interface ContractPdfInput {
      */
     includedKmPerDay?: number;
     extraKmPrice?: number;
+    /**
+     * Entrega y recogida a domicilio, en **neto** y cada trayecto por su lado.
+     *
+     * ⚠️ **Tiene que ir impreso o no se puede cobrar.** Es la regla que este
+     * proyecto ya ha roto cuatro veces: un cargo que el contrato firmado no
+     * menciona es un cargo que el cliente discute con razón. La cláusula de
+     * precio remite a «Precio y fianza» para los suplementos pactados, así que
+     * ahí es exactamente donde tienen que salir.
+     */
+    deliveryPickupFee?: number;
+    deliveryReturnFee?: number;
   };
   inspection?: {
     pickupKm?: number;
@@ -527,6 +538,35 @@ export function vatBreakdownOf(pricing: {
  * Espejo de `chargesVat()` en `src/app/shared/utils/pricing.util.ts`. La
  * duplicación es deliberada —tsconfigs separados— y las dos se mueven juntas.
  */
+/**
+ * Lo que se cobra por llevar el coche al cliente y volver a por él.
+ *
+ * ⚠️ **Lo guardado es NETO y el IVA se suma**, igual que la tarifa: el operador
+ * teclea el número redondo que pactó y el cliente paga eso más impuesto. Con el
+ * tipo a 0 —una reserva «sin IVA»— paga exactamente lo tecleado.
+ *
+ * Espejo de `deliveryFeeBreakdown()` en `src/app/shared/utils/pricing.util.ts`.
+ * La duplicación es deliberada —tsconfigs separados— y las dos se mueven juntas.
+ */
+export function deliveryFeesOf(pricing: {
+  deliveryPickupFee?: number;
+  deliveryReturnFee?: number;
+  vatRate?: number;
+}): { pickupGross: number; returnGross: number; any: boolean } {
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const rate =
+    typeof pricing.vatRate === 'number' && isFinite(pricing.vatRate) && pricing.vatRate >= 0
+      ? pricing.vatRate
+      : DEFAULT_VAT_RATE;
+  const bruto = (neto?: number) => {
+    const n = Number(neto);
+    return isFinite(n) && n > 0 ? round(round(n) * (1 + rate)) : 0;
+  };
+  const pickupGross = bruto(pricing.deliveryPickupFee);
+  const returnGross = bruto(pricing.deliveryReturnFee);
+  return { pickupGross, returnGross, any: pickupGross > 0 || returnGross > 0 };
+}
+
 export function chargesVat(pricing: { vatRate?: number | null }): boolean {
   const rate = pricing?.vatRate;
   if (typeof rate !== 'number' || !isFinite(rate) || rate < 0) return DEFAULT_VAT_RATE > 0;
@@ -2394,6 +2434,18 @@ export async function buildContractPdf(
     rentalTotal:
       loc === 'en' ? 'Total rental' : loc === 'ro' ? 'Total închiriere' : 'Total alquiler',
     deposit: loc === 'en' ? 'Security deposit' : loc === 'ro' ? 'Garanție (fianță)' : 'Fianza',
+    deliveryPickup:
+      loc === 'en'
+        ? 'Delivery to your address'
+        : loc === 'ro'
+          ? 'Livrare la adresă'
+          : 'Entrega a domicilio',
+    deliveryReturn:
+      loc === 'en'
+        ? 'Collection from your address'
+        : loc === 'ro'
+          ? 'Ridicare de la adresă'
+          : 'Recogida a domicilio',
     includedKm:
       loc === 'en'
         ? 'Included mileage'
@@ -2692,6 +2744,7 @@ export async function buildContractPdf(
    * Lo que se pactó son estos euros, y eso es lo único que dice el papel.
    */
   const conIva = chargesVat(input.reservation);
+  const entrega = deliveryFeesOf(input.reservation);
   b.totalsBlock([
     ...(conIva
       ? [
@@ -2700,6 +2753,25 @@ export async function buildContractPdf(
         ]
       : []),
     { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
+    /**
+     * Entrega y recogida a domicilio, **debajo del total del alquiler y cada
+     * una por su lado**.
+     *
+     * ⚠️ **No se suman al total del alquiler.** «Total alquiler» es lo que vale
+     * el coche esos días, y es la cifra con la que se reparte con su dueño
+     * cuando el coche es de un colaborador; metiendo dentro el desplazamiento,
+     * el propietario cobraría un porcentaje de la gasolina de la agencia. Van
+     * en su línea, que además es como el cliente entiende lo que le cobran.
+     *
+     * ⚠️ **Y solo si se pactaron**: un «0,00 €» junto a «Entrega a domicilio»
+     * en todos los contratos anuncia un servicio que nadie pidió.
+     */
+    ...(entrega.pickupGross > 0
+      ? [{ label: L.deliveryPickup, value: formatMoney(entrega.pickupGross, loc) }]
+      : []),
+    ...(entrega.returnGross > 0
+      ? [{ label: L.deliveryReturn, value: formatMoney(entrega.returnGross, loc) }]
+      : []),
     // Not every rental carries a deposit. Printing "0,00 €" against "Fianza"
     // reads like something failed to load; saying it is not required does not.
     //

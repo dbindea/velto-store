@@ -25,12 +25,24 @@
       <p>{{ 'common.loading' | translate }}</p>
     </div>
   } @else {
-    <app-month-grid
-      [month]="currentMonth()"
-      [reservations]="reservations()"
-      (dayClick)="onDayClick($event)"
-      (reservationClick)="onReservationClick($event)"
-    />
+    <!--
+      Deslizar para cambiar de mes. Va en un envoltorio propio y no en el `body`
+      para que el gesto solo cuente sobre el calendario: arrastrando sobre el
+      menú o la leyenda no se cambia de mes sin querer.
+    -->
+    <div
+      class="swipe-area"
+      (touchstart)="onTouchStart($event)"
+      (touchend)="onTouchEnd($event)"
+    >
+      <app-month-grid
+        [month]="currentMonth()"
+        [reservations]="reservations()"
+        (dayClick)="onDayClick($event)"
+        (reservationClick)="onReservationClick($event)"
+      />
+      <p class="swipe-hint">{{ 'calendar.swipeHint' | translate }}</p>
+    </div>
 
     <div class="legend">
       <span class="legend-item"><span class="dot status-reserved"></span>{{ 'reservations.status.reserved' | translate }}</span>
@@ -42,15 +54,29 @@
     </div>
   }
 
+  <!--
+    Los coches que ese día están alquilados. Se abre tocando el día y cada fila
+    lleva a su reserva.
+
+    ⚠️ **Lo primero que se lee es el COCHE**, no el cliente: la pregunta del
+    mostrador es «¿qué tengo fuera hoy?» y antes había que abrir cada reserva
+    para saber la matrícula. Y cada fila dice qué pasa ese día —se entrega, se
+    devuelve o sigue fuera— con su hora, que es lo que decide el orden del día.
+  -->
   @if (dayDetail()) {
-    <div class="modal-overlay" (click)="closeDayDetail()">
-      <div class="modal" (click)="$event.stopPropagation()">
+    <div
+      class="modal-overlay"
+      (click)="closeDayDetail()"
+      (keydown.escape)="closeDayDetail()"
+      tabindex="-1"
+    >
+      <div class="modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h3>
             <i class="pi pi-calendar"></i>
             {{ dayDetailDate() }}
           </h3>
-          <button class="modal-close" (click)="closeDayDetail()">
+          <button class="modal-close" type="button" (click)="closeDayDetail()" [attr.aria-label]="'common.close' | translate">
             <i class="pi pi-times"></i>
           </button>
         </div>
@@ -60,15 +86,30 @@
           } @else {
             <ul class="day-reservations">
               @for (r of dayDetail()!.reservations; track r.id) {
-                <li class="day-reservation" (click)="onReservationClick(r); closeDayDetail()">
-                  <span class="res-client">{{ r.clientSnapshot.fullName }}</span>
-                  <span class="res-vehicle">
-                    <i class="pi pi-car"></i>
-                    {{ r.vehicleSnapshot.plateNumber }}
-                  </span>
-                  <span class="res-status" [class]="'status-' + r.reservationStatus">
-                    {{ ('reservations.status.' + r.reservationStatus) | translate }}
-                  </span>
+                <li>
+                  <button
+                    type="button"
+                    class="day-reservation"
+                    (click)="onReservationClick(r); closeDayDetail()"
+                  >
+                    <span class="res-main">
+                      <span class="res-vehicle">
+                        <i class="pi pi-car"></i>
+                        {{ vehicleLabel(r) }}
+                      </span>
+                      <span class="res-plate mono">{{ r.vehicleSnapshot.plateNumber }}</span>
+                    </span>
+                    <span class="res-client">{{ r.clientSnapshot.fullName }}</span>
+                    <span class="res-meta">
+                      <span class="res-role" [class]="'role-' + dayRole(r)">
+                        {{ 'calendar.dayRole.' + dayRole(r) | translate }}
+                        @if (dayTime(r)) { · {{ dayTime(r) }} }
+                      </span>
+                      <span class="res-status" [class]="'status-' + r.reservationStatus">
+                        {{ ('reservations.status.' + r.reservationStatus) | translate }}
+                      </span>
+                    </span>
+                  </button>
                 </li>
               }
             </ul>

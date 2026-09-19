@@ -21,6 +21,7 @@ import {
   companyFooterLines,
   companyHeaderLines,
   chargesVat,
+  deliveryFeesOf,
   vatBreakdownOf,
   formatDate,
   formatDayOnly,
@@ -120,6 +121,14 @@ export interface DocumentPricing {
   /** Taxable base actually agreed. This is what drives the split. */
   netPrice?: number;
   vatRate?: number;
+  /**
+   * Entrega y recogida a domicilio, en **neto** y por trayecto. Se imprimen en
+   * su propia línea, debajo del total del alquiler: no son parte de lo que vale
+   * el coche, y sumarlas dentro haría que el reparto con su dueño se llevara el
+   * desplazamiento que pone la agencia.
+   */
+  deliveryPickupFee?: number;
+  deliveryReturnFee?: number;
 }
 
 export interface DocumentPayments {
@@ -228,6 +237,16 @@ function labels(loc: ContractLocale) {
     vat: en ? 'VAT' : ro ? 'TVA' : 'IVA',
     // No "(VAT incl.)": it sits directly under the base and the tax.
     rentalTotal: en ? 'Total rental' : ro ? 'Total închiriere' : 'Total alquiler',
+    deliveryPickup: en
+      ? 'Delivery to your address'
+      : ro
+        ? 'Livrare la adresă'
+        : 'Entrega a domicilio',
+    deliveryReturn: en
+      ? 'Collection from your address'
+      : ro
+        ? 'Ridicare de la adresă'
+        : 'Recogida a domicilio',
     depositVatNote: en
       ? 'Security deposit (not subject to VAT)'
       : ro
@@ -468,6 +487,7 @@ function drawPriceBlock(
   // criterio que el contrato, para que los tres papeles se puedan poner uno al
   // lado del otro y digan lo mismo.
   const conIva = chargesVat(pricing);
+  const entrega = deliveryFeesOf(pricing);
   b.totalsBlock(
     [
       ...(conIva
@@ -477,6 +497,15 @@ function drawPriceBlock(
           ]
         : []),
       { label: L.rentalTotal, value: formatMoney(vat.total, loc), total: true },
+      // Entrega y recogida, cada una en su línea y solo si se pactaron. Mismo
+      // criterio que el contrato, para que los tres papeles se puedan poner uno
+      // al lado del otro y digan lo mismo.
+      ...(entrega.pickupGross > 0
+        ? [{ label: L.deliveryPickup, value: formatMoney(entrega.pickupGross, loc) }]
+        : []),
+      ...(entrega.returnGross > 0
+        ? [{ label: L.deliveryReturn, value: formatMoney(entrega.returnGross, loc) }]
+        : []),
       {
         label: pricing.depositAmount && conIva ? L.depositVatNote : L.deposit,
         value: pricing.depositAmount ? formatMoney(pricing.depositAmount, loc) : L.noDeposit

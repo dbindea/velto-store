@@ -528,6 +528,56 @@
                   <span>{{ 'reservations.pricing.remainingPayment' | translate }}:</span>
                   <span>{{ remainingPayment | number:'1.2-2' }} €</span>
                 </div>
+
+                <!--
+                  Entrega y recogida a domicilio. Los dos trayectos por separado
+                  porque se pactan por separado: hay clientes que recogen en
+                  oficina y solo piden que se les vaya a buscar.
+
+                  El importe que se teclea es NETO, como el precio del alquiler.
+                  Debajo se enseña lo que el cliente acaba pagando, que es lo que
+                  evita la sorpresa.
+                -->
+                <div class="price-row editable-price">
+                  <span>{{ 'reservations.delivery.pickupFee' | translate }}:</span>
+                  <span class="price-input-wrap">
+                    <input
+                      type="number"
+                      class="price-input"
+                      [(ngModel)]="deliveryPickupFee"
+                      name="deliveryPickupFee"
+                      min="0"
+                      step="0.01"
+                      [attr.aria-label]="'reservations.delivery.pickupFee' | translate">
+                    <span class="price-currency">€</span>
+                  </span>
+                </div>
+                <div class="price-row editable-price">
+                  <span>{{ 'reservations.delivery.returnFee' | translate }}:</span>
+                  <span class="price-input-wrap">
+                    <input
+                      type="number"
+                      class="price-input"
+                      [(ngModel)]="deliveryReturnFee"
+                      name="deliveryReturnFee"
+                      min="0"
+                      step="0.01"
+                      [attr.aria-label]="'reservations.delivery.returnFee' | translate">
+                    <span class="price-currency">€</span>
+                  </span>
+                </div>
+                @if (deliveryFeesBreakdown.any) {
+                  <p class="field-hint">
+                    {{ 'reservations.delivery.total' | translate }}:
+                    <strong>{{ deliveryFeesBreakdown.gross | number:'1.2-2' }} €</strong>
+                    @if (vatPercent > 0) {
+                      ({{ 'reservations.pricing.vat' | translate }}
+                      {{ deliveryFeesBreakdown.vat | number:'1.2-2' }} €)
+                    }
+                  </p>
+                } @else {
+                  <p class="field-hint">{{ 'reservations.delivery.hint' | translate }}</p>
+                }
                 <!-- Editable: not every rental carries a deposit. -->
                 <div class="price-row editable-price">
                   <span>{{ 'reservations.pricing.deposit' | translate }}:</span>

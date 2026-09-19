@@ -71,6 +71,9 @@ interface QuoteRequest {
     manualAdjustment?: number;
     netPrice?: number;
     vatRate?: number;
+    /** Entrega y recogida a domicilio, en neto. Ver `DocumentPricing`. */
+    deliveryPickupFee?: number;
+    deliveryReturnFee?: number;
   };
   locale?: ContractLocale;
 }
@@ -158,7 +161,11 @@ export const generateQuotePdf = functions.https.onCall(
         loyaltyDiscount: finiteOrUndefined(data.pricing?.loyaltyDiscount),
         manualAdjustment: finiteOrUndefined(data.pricing?.manualAdjustment),
         netPrice: finiteOrUndefined(data.pricing?.netPrice),
-        vatRate: finiteOrUndefined(data.pricing?.vatRate)
+        vatRate: finiteOrUndefined(data.pricing?.vatRate),
+        // El presupuesto tiene que decir lo mismo que el contrato: sin esto el
+        // cliente acepta un precio y firma otro.
+        deliveryPickupFee: finiteOrUndefined(data.pricing?.deliveryPickupFee),
+        deliveryReturnFee: finiteOrUndefined(data.pricing?.deliveryReturnFee)
       },
       locale,
       generatedAt,

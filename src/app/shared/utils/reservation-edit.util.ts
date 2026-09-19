@@ -49,6 +49,7 @@ export type EditableField =
   | 'returnDateTime'
   | 'agreedPrice'
   | 'vatExempt'
+  | 'deliveryFees'
   | 'depositAmount'
   | 'initialPaymentAmount'
   | 'additionalDrivers';
@@ -213,6 +214,29 @@ export function canEditField(field: EditableField, ctx: EditContext): WorkflowDe
     }
 
     /**
+     * Entrega y recogida a domicilio: se pueden cambiar mientras **ese trayecto**
+     * no se haya cobrado.
+     *
+     * ⚠️ **Se miran los dos juntos y no uno cada vez**, y es una simplificación
+     * consciente: la pantalla ofrece los dos campos en el mismo bloque, así que
+     * apagar solo uno dejaría la mitad editable sin poder explicar por qué. Con
+     * cualquiera de los dos cobrado, el bloque se apaga entero y lo que
+     * corresponde es corregir el cobro o devolverlo.
+     *
+     * ⚠️ **Y no lo gobierna `editPricing`.** Esto no es el precio del alquiler:
+     * es un servicio que se pacta en el mostrador —«te lo acerco y vengo a por
+     * él»— y lo decide quien atiende. El precio del coche sí es del
+     * administrador, y `firestore.rules` lo protege por su lado moviendo
+     * `pricingSnapshot`, que es justo donde esto **no** vive.
+     */
+    case 'deliveryFees': {
+      if (!ctx.payments) return deny('reservations.edit.denied.paymentsUnknown');
+      const cobrado = movedOn(ctx.payments, ['delivery_fee', 'collection_fee']);
+      if (cobrado > 0) return deny('reservations.edit.denied.deliveryCollected');
+      return ALLOW;
+    }
+
+    /**
      * Los conductores se pueden tocar siempre que la reserva siga viva. Con el
      * contrato firmado hace falta volver a firmarlo —la cláusula 2 dice que
      * solo conducen los declarados nominalmente—, y de eso decide
@@ -248,6 +272,10 @@ export function requiresNewContract(fields: EditableField[]): boolean {
     'returnDateTime',
     'agreedPrice',
     'vatExempt',
+    // La entrega a domicilio va impresa en «Precio y fianza»: un contrato
+    // firmado que no la nombra no permite cobrarla, y uno que nombra otra cifra
+    // dice algo que ya no es verdad.
+    'deliveryFees',
     'depositAmount',
     'additionalDrivers'
   ];

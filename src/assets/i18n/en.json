@@ -12,6 +12,7 @@
     "next": "Next month",
     "prev": "Previous month",
     "subtitle": "Monthly view of all reservations. Tap a day to see the details.",
+    "swipeHint": "Swipe sideways to change month.",
     "today": "Today",
     "weekdays": {
       "fri": "Fri",
@@ -21,6 +22,11 @@
       "thu": "Thu",
       "tue": "Tue",
       "wed": "Wed"
+    },
+    "dayRole": {
+      "ongoing": "Out on rent",
+      "pickup": "Pickup",
+      "return": "Return"
     }
   },
   "clients": {
@@ -854,6 +860,8 @@
     },
     "title": "Payments",
     "types": {
+      "collectionFee": "Collection from address",
+      "deliveryFee": "Delivery to address",
       "deposit": "Deposit",
       "depositRefund": "Deposit refund",
       "depositRetention": "Deposit retention",
@@ -1041,6 +1049,7 @@
         "closed": "The reservation is closed: its record is not touched any more.",
         "cancelled": "The reservation is cancelled.",
         "contractSigned": "The signed contract states who is renting. Reissue it to change that.",
+        "deliveryCollected": "The door-to-door service has already been collected: changing it would mean refunding it first.",
         "rentalCollected": "Part of the rental has already been collected: changing VAT would mean refunding it first.",
         "vehicleOut": "The vehicle has been handed over: this is a fact, not a field.",
         "returned": "The vehicle has been returned: the real date is on the report.",
@@ -1053,6 +1062,7 @@
       "deposit": "Deposit",
       "fields": {
         "client": "customer",
+        "deliveryFees": "door-to-door service",
         "pickupDateTime": "pick-up date",
         "returnDateTime": "return date",
         "agreedPrice": "price",
@@ -1207,6 +1217,12 @@
     "initialPayment": {
       "waived": "Not required",
       "waivedHint": "No deposit on booking: the whole amount stays in the rental balance."
+    },
+    "delivery": {
+      "hint": "Surcharge for delivering and collecting the car outside the free delivery area. Amount excluding VAT; leave empty if not charged.",
+      "pickupFee": "Delivery to address",
+      "returnFee": "Collection from address",
+      "total": "Door-to-door service"
     }
   },
   "search": {

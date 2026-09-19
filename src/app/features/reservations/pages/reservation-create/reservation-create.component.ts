@@ -15,6 +15,8 @@ import {
 } from '@shared/utils/reservation-date.util';
 import {
   addVat,
+  deliveryFeeBreakdown,
+  DeliveryFeeBreakdown,
   resolveRentalPrice,
   RentalPriceBreakdown,
   VatBreakdown
@@ -340,7 +342,8 @@ export class ReservationCreateComponent implements OnInit {
         // discounted by 10 €.
         this.priceOverridden ? this.netPrice : undefined,
         this.depositWaived ? this.depositWaivedReason.trim() : undefined,
-        this.vatExempt
+        this.vatExempt,
+        { pickupFee: Number(this.deliveryPickupFee) || 0, returnFee: Number(this.deliveryReturnFee) || 0 }
       );
 
       this.router.navigate(['/reservations', reservationId]);
@@ -420,7 +423,11 @@ export class ReservationCreateComponent implements OnInit {
           loyaltyDiscount: breakdown.loyaltyDiscount || undefined,
           manualAdjustment: breakdown.priceOverridden ? breakdown.manualAdjustment : undefined,
           netPrice: breakdown.netPrice,
-          vatRate: this.vatRate
+          vatRate: this.vatRate,
+          // El presupuesto tiene que decir lo mismo que el contrato: si el
+          // desplazamiento no sale aquí, el cliente acepta un precio y firma otro.
+          deliveryPickupFee: Number(this.deliveryPickupFee) || undefined,
+          deliveryReturnFee: Number(this.deliveryReturnFee) || undefined
         }
       });
 
@@ -614,6 +621,25 @@ export class ReservationCreateComponent implements OnInit {
    * `chargesVat()` es quien decide con él qué imprime cada documento.
    */
   vatExempt = false;
+
+  /**
+   * Entrega y recogida a domicilio, en **neto**.
+   *
+   * Velto entrega gratis cerca de Arganda; fuera de ahí se pacta un suplemento,
+   * y los dos trayectos son independientes. Se teclean a mano: no hay tarifa por
+   * kilómetro (decisión de Dorel, 19 de septiembre de 2026), así que cada
+   * reserva lleva la cifra que se dijo por teléfono.
+   */
+  deliveryPickupFee: number | null = null;
+  deliveryReturnFee: number | null = null;
+
+  /** Lo que el cliente paga por el servicio a domicilio, con su IVA. */
+  get deliveryFeesBreakdown(): DeliveryFeeBreakdown {
+    return deliveryFeeBreakdown(
+      { pickupFee: this.deliveryPickupFee, returnFee: this.deliveryReturnFee },
+      this.vatRate
+    );
+  }
 
   /**
    * Los días que el presupuesto se anuncia como válido.

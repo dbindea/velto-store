@@ -22,7 +22,12 @@ import { Payment } from '@shared/models/payment.model';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
-import { chargesVat, resolveVatRate } from '@shared/utils/pricing.util';
+import {
+  chargesVat,
+  deliveryFeeBreakdown,
+  DeliveryFeeBreakdown,
+  resolveVatRate
+} from '@shared/utils/pricing.util';
 import { SettingsService } from '@features/settings/services/settings.service';
 import {
   canEditField,
@@ -91,7 +96,10 @@ export class ReservationEditComponent implements OnInit {
     depositWaivedReason: '',
     initialPaymentRequired: 0,
     /** Sin IVA: el cliente paga el neto y los documentos no lo mencionan. */
-    vatExempt: false
+    vatExempt: false,
+    /** Entrega y recogida a domicilio, en neto. Se teclean a mano. */
+    deliveryPickupFee: null as number | null,
+    deliveryReturnFee: null as number | null
   };
 
   drivers: AdditionalDriver[] = [];
@@ -146,7 +154,11 @@ export class ReservationEditComponent implements OnInit {
       initialPaymentRequired: r.initialPayment?.requiredAmount ?? 0,
       // Se precarga del hecho guardado —el tipo congelado—, no de una bandera
       // aparte: así abrir y guardar sin tocar nada no cuenta como cambio.
-      vatExempt: !chargesVat(r.pricingSnapshot ?? {})
+      vatExempt: !chargesVat(r.pricingSnapshot ?? {}),
+      // `null` y no 0: un campo vacío se lee como «no se cobra», y un cero
+      // escrito parece una cifra que alguien decidió.
+      deliveryPickupFee: r.deliveryFees?.pickupFee || null,
+      deliveryReturnFee: r.deliveryFees?.returnFee || null
     };
     this.drivers = (r.additionalDrivers || []).map((d) => ({ ...d }));
   }
@@ -247,6 +259,19 @@ export class ReservationEditComponent implements OnInit {
     return roundMoney(this.totalDue - this.totalDue / (1 + this.previewVatRate));
   }
 
+  /**
+   * Lo que se cobra por el servicio a domicilio con los campos como están.
+   *
+   * ⚠️ Usa `previewVatRate` y no el tipo guardado: quitar el IVA baja también
+   * estas dos filas, y el operador tiene que verlo en el mismo gesto.
+   */
+  get deliveryPreview(): DeliveryFeeBreakdown {
+    return deliveryFeeBreakdown(
+      { pickupFee: this.form.deliveryPickupFee, returnFee: this.form.deliveryReturnFee },
+      this.previewVatRate
+    );
+  }
+
   /** Lo que quedaría de resto. Es lo que Dorel pidió ver: la señal baja, esto sube. */
   get remainingPreview(): number {
     return redistributeInitialPayment(this.totalDue, Number(this.form.initialPaymentRequired) || 0)
@@ -317,6 +342,10 @@ export class ReservationEditComponent implements OnInit {
         depositWaivedReason: this.form.depositWaivedReason.trim() || undefined,
         initialPaymentRequired: Number(this.form.initialPaymentRequired) || 0,
         vatExempt: this.form.vatExempt,
+        deliveryFees: {
+          pickupFee: Number(this.form.deliveryPickupFee) || 0,
+          returnFee: Number(this.form.deliveryReturnFee) || 0
+        },
         additionalDrivers: this.drivers
       });
 

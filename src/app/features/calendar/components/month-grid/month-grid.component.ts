@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
@@ -41,15 +41,24 @@ interface ReservationWithSegments extends Reservation {
   styleUrl: './month-grid.component.scss'
 })
 export class MonthGridComponent {
-  @Input({ required: true }) month!: Date;
-  @Input() reservations: Reservation[] = [];
+  /**
+   * ⚠️ **Entradas de señal, y no es estilo.** `cells` era un **getter**, así que
+   * se recalculaba en cada ciclo de detección de cambios: 42 celdas × todas las
+   * reservas, varias veces por interacción. Se sostenía porque el padre
+   * recortaba la lista a tres meses — y ese recorte era justo el fallo que
+   * dejaba el calendario vacío. Al quitarlo entran todas las reservas, así que
+   * el cálculo tiene que hacerse **una vez por cambio real** de mes o de datos.
+   */
+  readonly month = input.required<Date>();
+  readonly reservations = input<Reservation[]>([]);
 
   @Output() dayClick = new EventEmitter<Date>();
   @Output() reservationClick = new EventEmitter<Reservation>();
 
   /** Returns the calendar grid: 6 rows × 7 columns of DayCell. */
-  get cells(): DayCell[] {
-    const firstOfMonth = new Date(this.month.getFullYear(), this.month.getMonth(), 1);
+  readonly cells = computed<DayCell[]>(() => {
+    const month = this.month();
+    const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
     const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // Monday = 0
     const gridStart = new Date(firstOfMonth);
     gridStart.setDate(firstOfMonth.getDate() - firstWeekday);
@@ -65,14 +74,14 @@ export class MonthGridComponent {
 
       cells.push({
         date: d,
-        inMonth: d.getMonth() === this.month.getMonth(),
+        inMonth: d.getMonth() === month.getMonth(),
         isToday: d.getTime() === today.getTime(),
         isWeekend: d.getDay() === 0 || d.getDay() === 6,
         reservations: this.getDayReservations(d)
       });
     }
     return cells;
-  }
+  });
 
   weekdayLabels(): string[] {
     // Monday first.
@@ -87,7 +96,7 @@ export class MonthGridComponent {
     const dayEnd = new Date(day);
     dayEnd.setHours(23, 59, 59, 999);
 
-    return this.reservations
+    return this.reservations()
       .filter((r) => {
         const pickup = toDate(r.pickupDateTime);
         const ret = toDate(r.returnDateTime);
