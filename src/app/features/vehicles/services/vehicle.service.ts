@@ -19,9 +19,9 @@ import { Storage, deleteObject, getDownloadURL, ref, uploadBytes } from '@angula
 import {
   MAX_IMAGE_SIZE,
   MAX_THUMBNAIL_SIZE,
-  resizeImage,
-  resizedFilename
+  resizeImage
 } from '@shared/utils/image-resize.util';
+import { vehiclePhotoName } from '@shared/utils/storage-name.util';
 import {
   Vehicle,
   VehicleFormData,
@@ -226,14 +226,27 @@ export class VehicleService {
    * Si el navegador no sabe reducir el fichero —un HEIC, por ejemplo— se sube
    * el original y se sigue: **una miniatura que falla no puede costar la foto**.
    */
-  async uploadImage(vehicleId: string, file: File): Promise<VehicleImage> {
+  async uploadImage(vehicleId: string, file: File, plate?: string): Promise<VehicleImage> {
     const timestamp = Date.now();
 
     const resized = await resizeImage(file, MAX_IMAGE_SIZE);
     const body = resized ?? file;
-    const filename = resized
-      ? `${timestamp}-${resizedFilename(file.name)}`
-      : `${timestamp}-${file.name}`;
+    /**
+     * ⚠️ **El fichero se llama por la MATRÍCULA, no como lo llamara el móvil.**
+     * Antes salía `1758291600000-IMG_20260919_143201.jpg`: dentro de la carpeta
+     * del coche se sabe de quién es, pero descargada o adjunta a un correo no
+     * se sabe de qué coche — y es ahí donde hace falta saberlo.
+     *
+     * La matrícula llega del llamante porque este servicio recibe el id: leer
+     * el vehículo aquí sería una lectura de más justo antes de una escritura, y
+     * quien sube la foto tiene la ficha delante.
+     */
+    const filename = vehiclePhotoName({
+      plate,
+      vehicleId,
+      originalName: file.name,
+      at: timestamp
+    });
     const storagePath = `vehicles/${vehicleId}/gallery/${filename}`;
     const storageRef = ref(this.storage, storagePath);
 
@@ -245,7 +258,13 @@ export class VehicleService {
     let thumbnailPath: string | undefined;
     const thumb = await resizeImage(file, MAX_THUMBNAIL_SIZE);
     if (thumb) {
-      thumbnailPath = `vehicles/${vehicleId}/gallery/${timestamp}-${resizedFilename(file.name, '-thumb')}`;
+      thumbnailPath = `vehicles/${vehicleId}/gallery/${vehiclePhotoName({
+        plate,
+        vehicleId,
+        originalName: file.name,
+        variant: '-thumb',
+        at: timestamp
+      })}`;
       await uploadBytes(ref(this.storage, thumbnailPath), thumb);
       thumbnailUrl = await getDownloadURL(ref(this.storage, thumbnailPath));
     }

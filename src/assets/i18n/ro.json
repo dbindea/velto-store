@@ -189,6 +189,7 @@
       "alreadySigned": "Acel contract este deja semnat. Ca să îl schimbi, trebuie refăcut.",
       "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
       "createSigningLink": "Linkul de semnare nu a putut fi creat.",
+      "downloadFallback": "PDF-ul nu a putut fi descărcat; s-a deschis într-o filă nouă. Salvează-l de acolo.",
       "generate": "Contractul nu a putut fi generat.",
       "invalidEmail": "Introdu o adresă de email validă",
       "pdfNotReady": "PDF-ul nu este încă disponibil.",
@@ -268,6 +269,11 @@
       "unknownTitle": "Nu a fost găsit",
       "validMessage": "Acest contract există și este semnat.",
       "validTitle": "Contract verificat"
+    },
+    "file": {
+      "document": "Contract",
+      "original": "original",
+      "signed": "semnat"
     }
   },
   "dashboard": {

@@ -83,22 +83,60 @@ describe('resolveRentalPrice', () => {
     expect(price.finalPrice).toBe(217.8);
   });
 
-  it('stacks the agreed net ON TOP of the loyalty discount, keeping both', () => {
-    // 600 € tariff, 10 % loyalty → 540 €, closed by hand at 500 € net.
+  /**
+   * ⚠️ **Un precio a mano DEROGA el descuento de fidelidad**, no se apila sobre
+   * él (decisión de Dorel, 19 de septiembre de 2026). Antes se guardaban los
+   * dos y el ajuste se medía contra el precio ya descontado.
+   */
+  it('el precio acordado deroga el descuento de fidelidad', () => {
+    // 600 € de tarifa, 10 % de fidelidad, cerrado a mano en 500 €.
     const price = resolveRentalPrice(600, 10, 500);
-    expect(price.loyaltyDiscount).toBe(-60);
-    expect(price.discountedPrice).toBe(540);
-    expect(price.manualAdjustment).toBe(-40);
+    expect(price.loyaltyDiscount).toBe(0);
+    expect(price.manualAdjustment).toBe(-100);
     expect(price.netPrice).toBe(500);
     expect(price.finalPrice).toBe(605);
     expect(price.priceOverridden).toBe(true);
   });
 
-  it('measures the manual adjustment against the discounted net, not the tariff', () => {
+  it('el ajuste se mide contra la TARIFA', () => {
     const price = resolveRentalPrice(600, 10, 500);
-    expect(price.tariffPrice + price.loyaltyDiscount + price.manualAdjustment).toBe(
-      price.netPrice
-    );
+    expect(price.tariffPrice + price.manualAdjustment).toBe(price.netPrice);
+  });
+
+  /**
+   * ⚠️ **El caso que lo motivó, tal y como salía impreso en un contrato:**
+   *
+   *     Importe alquiler (tarifa):   60,00 €
+   *     Descuento fidelidad (5 %):   -3,00 €
+   *     Ajuste acordado:             +3,00 €
+   *
+   * Un descuento y su devolución inmediata. Ahora no se imprime ninguna línea:
+   * el precio pactado es la tarifa y no hay nada que explicar.
+   */
+  it('pactar justo la tarifa no imprime descuento ni ajuste', () => {
+    const price = resolveRentalPrice(60, 5, 60);
+    expect(price.loyaltyDiscount).toBe(0);
+    expect(price.manualAdjustment).toBe(0);
+    expect(price.netPrice).toBe(60);
+    // Y sigue constando que hubo un precio pactado, aunque el ajuste sea 0:
+    // sin esto, editar una fecha recalcularía desde la tarifa con descuento.
+    expect(price.priceOverridden).toBe(true);
+  });
+
+  /** El porcentaje se conserva: se renuncia al dinero, no al dato. */
+  it('el porcentaje de fidelidad se sigue guardando', () => {
+    expect(resolveRentalPrice(600, 10, 500).loyaltyDiscountPercent).toBe(10);
+  });
+
+  /**
+   * ⚠️ La detección del override **sí** compara contra el precio con descuento:
+   * teclear los 540 € que ya ofrecía la pantalla no es negociar, es aceptar.
+   */
+  it('aceptar el precio con descuento no cuenta como precio a mano', () => {
+    const price = resolveRentalPrice(600, 10, 540);
+    expect(price.priceOverridden).toBe(false);
+    expect(price.loyaltyDiscount).toBe(-60);
+    expect(price.netPrice).toBe(540);
   });
 
   it('reports no override when the agreed net equals the discounted one', () => {

@@ -494,7 +494,8 @@ export class VehicleFormComponent implements OnInit {
     try {
       for (const file of Array.from(files)) {
         if (!this.validateImage(file)) continue;
-        await this.vehicleService.uploadImage(this.vehicleId, file);
+        // La matrícula viaja con la foto: es el nombre con el que se guarda.
+        await this.vehicleService.uploadImage(this.vehicleId, file, this.formData.plateNumber);
       }
       await this.refreshImages();
     } catch (error) {

@@ -74,6 +74,9 @@ cert.b64
 # (~3,4 MB entre los tres). Se regeneran solos y su historia no le sirve a
 # nadie; en el repositorio solo engordan cada clon.
 deploy.log
+# Lo deja el CLI de Firebase al fallar un despliegue. Pasó con la cuota de
+# CPU de Cloud Run el 19 de septiembre de 2026.
+firebase-debug.log
 test-contract-*.pdf
 
 # El kit del Velto Design System tal cual lo entrega Claude Design: 1,2 MB de

@@ -454,6 +454,44 @@ fidelidad del cliente → precio acordado a mano — y devuelve cada tramo por s
 La usan el asistente de creación y `reservation.service.ts`, que **recalcula** en vez de
 fiarse de la cifra que enseñó la UI. No dupliques la aritmética en un componente.
 
+⚠️ **Un precio acordado a mano DEROGA el descuento de fidelidad**, no se apila
+sobre él. Decisión de Dorel del 19 de septiembre de 2026, y el motivo salía
+impreso en un contrato de verdad:
+
+```
+Importe alquiler (tarifa):   60,00 €
+Descuento fidelidad (5 %):   -3,00 €
+Ajuste acordado:             +3,00 €
+```
+
+Aritméticamente impecable y comercialmente absurdo: al cliente se le enseña un
+descuento y su devolución inmediata. Y **no es un caso raro**: sale siempre que
+el precio pactado coincide con la tarifa, que es lo más normal al cerrar en un
+número redondo. Ahora el ajuste se mide contra la **tarifa**, así que ese
+contrato no imprime ninguna línea y dice 60,00 €; y un trato cerrado en 50 €
+imprime una sola línea de −10,00 €, que es lo que de verdad pasó.
+
+⚠️ **No mueve ni un céntimo.** `netPrice` sigue siendo el precio acordado pase lo
+que pase; lo único que cambia es **cómo se descompone** para explicarlo. Por eso
+fue seguro hacerlo con reservas vivas: ningún alquiler vale distinto después.
+
+⚠️ **El porcentaje SÍ se conserva** en `loyaltyDiscountPercent`. Se renuncia al
+dinero, no al dato: dentro de seis meses hay que poder decir que ese cliente
+tenía un 5 % y que aun así se cerró en 60.
+
+⚠️ **La DETECCIÓN del override sigue comparando contra el precio con descuento**,
+y tiene que ser así: teclear los 57 € que la pantalla ya ofrecía no es negociar,
+es aceptar la tarifa con su descuento — y ahí el descuento se aplica entero.
+
+⚠️ **Y por eso hizo falta `pricingSnapshot.priceOverridden`.** Desde que el
+ajuste se mide contra la tarifa, pactar justo la tarifa da un ajuste de **0**,
+indistinguible de «no se pactó nada». `agreedNetPriceOf()` usaba precisamente
+`manualAdjustment` como marcador, así que editar una fecha habría recalculado
+desde la tarifa con descuento y **se habrían perdido los 60 € acordados**. El
+campo es opcional y aditivo; para las reservas anteriores sigue valiendo
+`manualAdjustment`, que bajo la regla vieja solo era 0 cuando no hubo precio a
+mano.
+
 Dos convenciones distintas que conviene no confundir, y por eso los nombres son explícitos:
 
 - `vatRate` es una **fracción** (`0.21`)
@@ -1153,6 +1191,14 @@ la declara su propio SCSS.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
   ⚠️ **`delivery_fee` y `collection_fee` son la entrega y la recogida a domicilio**, y
   no son cargos extra: ver «Entrega y recogida a domicilio» más arriba.
+  ⚠️ **El `concept` de una fila lo pinta `PaymentConceptPipe`, y pasa SIEMPRE por el
+  traductor.** `translate()` devuelve la clave tal cual si no la encuentra, así que el
+  texto libre sale intacto y una clave guardada sale traducida. Hace falta porque
+  `buildRepricedRow()` llegó a guardar `PAYMENT_TYPE_LABELS[type]` —la clave— en vez del
+  tipo, y cualquier fila recreada quedó titulada «payments.types.remainingPayment». Se
+  corrigió en origen, pero los documentos ya escritos se arreglan **al leerlos**, sin
+  migrar nada. Si algún día se guarda otra clave en un campo que se pinta, esta es la
+  forma: traducir al leer.
   ⚠️ **`rental_payment` no es un concepto, es «cobrarlo todo de una vez».** No tiene fila
   sembrada propia: `distributeRentalPayment()` lo reparte entre señal y resto, en ese
   orden, y el sobrante abre fila aparte. Creando fila propia —como hacía— el dinero
@@ -1200,7 +1246,66 @@ comprobaciones de disponibilidad lanzaban `'Vehicle no longer available…'` en 
 así que la capa de avisos no lo distinguía de un fallo cualquiera y ofrecía «Reintentar» —
 que iba a fallar igual, porque hay que cambiar de coche o de fechas.
 
-### Borrar un documento no borra sus ficheros
+### Cómo se llaman los ficheros
+
+`storage-name.util.ts` es la única autoridad, y separa dos reglas que es fácil
+mezclar.
+
+⚠️ **Un fichero se llamaba como lo llamara el móvil.** Una foto de coche se
+guardaba como `1758291600000-IMG_20260919_143201.jpg` y el DNI de un cliente
+como `1758291600000-Screenshot_2026-09-19.png`. Dentro de la carpeta de su ficha
+se sabe de quién es; **fuera de ella no**, y es ahí —descargado, adjunto a un
+correo, abierto desde el disco— donde hace falta saberlo. Ahora el nombre lleva
+el dato que identifica: `4466LKK_mfk3n1.jpg`,
+`Andreea-Mitoseriu_X1234567L_driving-license_mfk3n1.png`,
+`4466LKK_pickup_exterior-front_mfk3n1.jpg`.
+
+⚠️ **Lo que se SUBE no se traduce; lo que se DESCARGA sí.** El nombre de un
+objeto de Storage es un dato: con palabras traducidas dentro, el mismo coche
+tendría ficheros con prefijos distintos según el idioma del operador que los
+subió, y buscar en el bucket dejaría fuera la mitad. Por eso ahí solo entran
+datos del negocio y valores de enumerado. El nombre de una **descarga** lo lee
+una persona, así que sigue la misma regla que los PDF: el idioma de la
+plataforma, con las palabras ya traducidas por quien llama.
+
+⚠️ **`_` separa campos y `-` une palabras**, también dentro de un enumerado:
+`driving_license` sale `driving-license`. Así el nombre se puede partir por `_`
+y saber qué es cada trozo.
+
+⚠️ **El sufijo único no es decorativo.** En Storage subir dos veces el mismo
+nombre **pisa el anterior sin avisar**: sin él, la segunda foto de un coche
+borraría la primera y la ficha se quedaría con dos entradas apuntando al mismo
+fichero.
+
+⚠️ **Y una barra dentro del nombre crea una carpeta.** Por eso `slugForFile()`
+no la deja pasar — ni en el nombre de un cliente ni en una matrícula mal
+tecleada.
+
+Quedan con su nombre original las facturas de **gastos** y de
+**mantenimiento**: llegan de un proveedor ya llamadas `factura-taller.pdf`, que
+es descriptivo. El problema son las fotos de móvil y las capturas.
+
+### Descargar un contrato bajaba una CARPETA
+
+⚠️ **Apuntar un enlace a la URL de Storage no descarga lo que parece.** Storage
+manda el nombre completo del objeto en `Content-Disposition`
+—`contracts/<reservaId>/contract-signed.pdf`— y el navegador trata **cada barra
+como un directorio**: se bajaba una carpeta con el id de la reserva y dentro un
+PDF llamado `contract-signed.pdf`. Dos identificadores y ni rastro del cliente
+ni del coche.
+
+Por eso `triggerDownload()` baja el fichero a un blob y pone el nombre con
+`a.download`: así no hay ruta que interpretar. El contrato se llama
+`Contrato_4466LKK_Andreea-Mitoseriu_firmado.pdf`, compuesto por
+`contractFileName()` — que lo usan la ficha del contrato **y** la de la reserva,
+porque ya llegaron a ofrecer nombres distintos para el mismo fichero.
+
+⚠️ **Y si la descarga falla, el respaldo vuelve a traer la carpeta.** Abrir la
+URL en otra pestaña es el mismo fallo por la puerta de atrás, así que
+`triggerDownload()` **relanza** después de abrirla y quien llama lo dice: lo que
+se abre no es lo que se pidió.
+
+## Borrar un documento no borra sus ficheros
 
 ⚠️ **Firestore y Storage son dos servicios distintos.** Borrar el documento deja los
 ficheros donde estaban, con su token de descarga vivo. En un cliente eso no es desorden:

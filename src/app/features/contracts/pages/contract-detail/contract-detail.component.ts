@@ -208,8 +208,16 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
       this.notifications.error('contracts.errors.pdfNotReady');
       return;
     }
-    const filename = `contrato-${this.contract.contractNumber || this.contract.id}.pdf`;
-    await this.contractService.triggerDownload(url, filename);
+    try {
+      await this.contractService.triggerDownload(
+        url,
+        this.contractService.fileNameFor(this.contract, false)
+      );
+    } catch {
+      // El PDF ya se ha abierto en otra pestaña, pero eso baja la ruta entera
+      // de Storage —una carpeta— así que hay que decirlo en vez de callar.
+      this.notifications.error('contracts.errors.downloadFallback');
+    }
   }
 
   async downloadSigned(): Promise<void> {
@@ -219,8 +227,16 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
       this.notifications.error('contracts.errors.signedPdfNotReady');
       return;
     }
-    const filename = `contrato-firmado-${this.contract.contractNumber || this.contract.id}.pdf`;
-    await this.contractService.triggerDownload(url, filename);
+    try {
+      await this.contractService.triggerDownload(
+        url,
+        this.contractService.fileNameFor(this.contract, true)
+      );
+    } catch {
+      // El PDF ya se ha abierto en otra pestaña, pero eso baja la ruta entera
+      // de Storage —una carpeta— así que hay que decirlo en vez de callar.
+      this.notifications.error('contracts.errors.downloadFallback');
+    }
   }
 
   openEmailForm(): void {

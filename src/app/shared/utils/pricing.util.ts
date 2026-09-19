@@ -226,11 +226,32 @@ export interface RentalPriceBreakdown {
  * The one place that decides what a rental costs.
  *
  * Order of application: tariff → loyalty discount → hand-agreed price on top.
- * The two discounts stay SEPARATE on purpose. They answer different questions
- * — "what is this customer entitled to" versus "what did we close this deal
- * at" — and the contract has to be able to justify each line on its own. Merged
- * into a single number, the VAT breakdown could not explain where the price
- * came from.
+ *
+ * ⚠️ **Un precio acordado a mano DEROGA el descuento de fidelidad**, no se suma
+ * a él. Decisión de Dorel del 19 de septiembre de 2026, y el caso que la motiva
+ * sale en el contrato:
+ *
+ *     Importe alquiler (tarifa):   60,00 €
+ *     Descuento fidelidad (5 %):   -3,00 €
+ *     Ajuste acordado:             +3,00 €
+ *     TOTAL                        60,00 €
+ *
+ * Aritméticamente impecable y comercialmente absurdo: el cliente lee que le han
+ * hecho un descuento y se lo han vuelto a sumar. Y no es un caso raro — sale
+ * **siempre** que el precio a mano coincide con la tarifa, que es lo más normal
+ * al cerrar un trato en un número redondo.
+ *
+ * Con la derogación, el ajuste se mide contra la **tarifa**: ese contrato no
+ * imprime ninguna línea y dice 60,00 €, que es lo que se pactó. Y un trato a 50 €
+ * imprime una sola línea de −10,00 €, que es lo que de verdad pasó.
+ *
+ * ⚠️ **No mueve ni un céntimo.** `netPrice` sigue siendo el precio acordado
+ * pase lo que pase; lo único que cambia es **cómo se descompone** para
+ * explicarlo. Por eso es seguro: ningún alquiler vale distinto después de esto.
+ *
+ * ⚠️ **El porcentaje SÍ se conserva** en `loyaltyDiscountPercent`. A lo que se
+ * renuncia es al dinero, no al dato: dentro de seis meses hay que poder decir
+ * que este cliente tenía un 5 % y que aun así se cerró en 60.
  *
  * `agreedPrice` of `undefined`/`null` means "no override": use the discounted
  * tariff. A negative or unparseable override is ignored rather than written as
@@ -264,12 +285,21 @@ export function resolveRentalPrice(
   const netPrice = hasOverride ? roundMoney(agreedPrice!) : discountedPrice;
   const vat = addVat(netPrice, vatRate);
 
+  /**
+   * ⚠️ **Con precio a mano, el descuento de fidelidad no se aplica** y el ajuste
+   * se mide contra la tarifa. Ver la nota de arriba: lo que se evita es un
+   * contrato que resta 3 € y los vuelve a sumar.
+   *
+   * La **detección** del override sí sigue comparando contra el precio con
+   * descuento, y tiene que ser así: teclear exactamente los 57 € que ya ofrecía
+   * la pantalla no es negociar nada, es aceptar la tarifa con su descuento.
+   */
   return {
     tariffPrice: tariff,
     loyaltyDiscountPercent: percent,
-    loyaltyDiscount,
+    loyaltyDiscount: hasOverride ? 0 : loyaltyDiscount,
     discountedPrice,
-    manualAdjustment: hasOverride ? roundMoney(netPrice - discountedPrice) : 0,
+    manualAdjustment: hasOverride ? roundMoney(netPrice - tariff) : 0,
     netPrice,
     vatAmount: vat.vat,
     finalPrice: vat.total,

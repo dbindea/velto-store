@@ -147,8 +147,12 @@ function normalizeDeliveryFees(
 
 export function agreedNetPriceOf(r: Reservation): number | null {
   const snap = r.pricingSnapshot;
-  if (!snap?.manualAdjustment) return null;
-  return snap.netPrice === undefined ? null : roundMoney(snap.netPrice);
+  // El marcador explícito manda; `manualAdjustment` es el de las reservas
+  // anteriores al 19 de septiembre de 2026, donde un ajuste de 0 solo podía
+  // significar que no hubo precio a mano. Ver `priceOverridden` en el modelo.
+  const pactado = snap?.priceOverridden ?? !!snap?.manualAdjustment;
+  if (!pactado) return null;
+  return snap?.netPrice === undefined ? null : roundMoney(snap.netPrice);
 }
 
 /** El snapshot del arrendatario, con los mismos campos que en la creación. */
@@ -944,6 +948,9 @@ export class ReservationService {
         loyaltyDiscountPercent: pricing.loyaltyDiscountPercent || undefined,
         loyaltyDiscount: pricing.loyaltyDiscount || undefined,
         manualAdjustment: pricing.priceOverridden ? pricing.manualAdjustment : undefined,
+        // El marcador, porque el ajuste puede ser 0 y aun así haber precio
+        // pactado: ver `priceOverridden` en el modelo.
+        priceOverridden: pricing.priceOverridden || undefined,
         netPrice: pricing.netPrice,
         finalPrice,
         // Frozen so a future change of the general rate never moves a contract
@@ -1140,6 +1147,7 @@ export class ReservationService {
         loyaltyDiscountPercent: resultado.loyaltyDiscountPercent,
         loyaltyDiscount: resultado.loyaltyDiscount,
         manualAdjustment: resultado.manualAdjustment,
+        priceOverridden: resultado.priceOverridden || undefined,
         netPrice: resultado.netPrice,
         finalPrice: resultado.finalPrice,
         vatRate

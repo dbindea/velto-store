@@ -4,6 +4,7 @@ import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angula
 import { Observable, from, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Client, QuickClientData, ClientDocumentFile, ClientDocumentType_File, LoyaltyDiscountChange } from '@shared/models/client.model';
+import { clientDocumentName } from '@shared/utils/storage-name.util';
 import { normalizeLoyaltyDiscountPercent } from '@shared/utils/pricing.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { AuthService } from '@core/auth/auth.service';
@@ -315,8 +316,26 @@ export class ClientService {
     label?: string
   ): Promise<ClientDocumentFile> {
     const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}-${safeName}`;
+
+    /**
+     * ⚠️ **El fichero lleva el nombre y el documento del cliente**, no el que
+     * traía del móvil. Lo que se sube aquí es **el DNI o el carné de una
+     * persona**, y acaba descargado, reenviado o adjuntado a un correo: un
+     * `Screenshot_2026-09-19.png` fuera de la carpeta de su ficha no dice de
+     * quién es, y estos son justo los ficheros en los que eso importa.
+     *
+     * Se lee la ficha antes de subir para tener esos dos datos. Es una lectura
+     * de más, y aquí se paga a gusto: sin ella el nombre no se puede construir.
+     */
+    const clientRefForName = doc(this.firestore, `clients/${clientId}`);
+    const clientForName = (await getDoc(clientRefForName)).data() as Client | undefined;
+    const filename = clientDocumentName({
+      fullName: clientForName?.fullName,
+      documentNumber: clientForName?.documentNumber,
+      type,
+      originalName: file.name,
+      at: timestamp
+    });
     const storagePath = `clients/${clientId}/documents/${filename}`;
     const storageRef = ref(this.storage, storagePath);
 

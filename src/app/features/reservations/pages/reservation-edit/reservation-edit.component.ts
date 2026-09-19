@@ -254,6 +254,29 @@ export class ReservationEditComponent implements OnInit {
     return this.settings.settings().vatRate;
   }
 
+  /**
+   * Descarga el PDF de un contrato ya sustituido.
+   *
+   * ⚠️ **Era un `<a href>` a la URL de Storage**, y eso baja una **carpeta**: la
+   * cabecera de Storage lleva el nombre completo del objeto, barras incluidas, y
+   * el navegador las trata como directorios. Por aquí el fichero cae suelto y
+   * con un nombre que dice de qué contrato es.
+   */
+  async downloadSuperseded(c: Contract): Promise<void> {
+    const url = await this.contracts.getSignedPdfUrl(c);
+    if (!url) {
+      this.notifications.error('contracts.errors.signedPdfNotReady');
+      return;
+    }
+    try {
+      await this.contracts.triggerDownload(url, this.contracts.fileNameFor(c, true));
+    } catch {
+      // `triggerDownload` ya ha abierto el PDF en otra pestaña; lo que no puede
+      // es quedarse callado, porque lo que se abre no es lo que se pidió.
+      this.notifications.error('contracts.errors.downloadFallback');
+    }
+  }
+
   /** Lo que el cliente pagaría de IVA con la casilla como está. */
   get previewVatAmount(): number {
     return roundMoney(this.totalDue - this.totalDue / (1 + this.previewVatRate));
