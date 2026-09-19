@@ -454,6 +454,44 @@ fidelidad del cliente → precio acordado a mano — y devuelve cada tramo por s
 La usan el asistente de creación y `reservation.service.ts`, que **recalcula** en vez de
 fiarse de la cifra que enseñó la UI. No dupliques la aritmética en un componente.
 
+⚠️ **Un precio acordado a mano DEROGA el descuento de fidelidad**, no se apila
+sobre él. Decisión de Dorel del 19 de septiembre de 2026, y el motivo salía
+impreso en un contrato de verdad:
+
+```
+Importe alquiler (tarifa):   60,00 €
+Descuento fidelidad (5 %):   -3,00 €
+Ajuste acordado:             +3,00 €
+```
+
+Aritméticamente impecable y comercialmente absurdo: al cliente se le enseña un
+descuento y su devolución inmediata. Y **no es un caso raro**: sale siempre que
+el precio pactado coincide con la tarifa, que es lo más normal al cerrar en un
+número redondo. Ahora el ajuste se mide contra la **tarifa**, así que ese
+contrato no imprime ninguna línea y dice 60,00 €; y un trato cerrado en 50 €
+imprime una sola línea de −10,00 €, que es lo que de verdad pasó.
+
+⚠️ **No mueve ni un céntimo.** `netPrice` sigue siendo el precio acordado pase lo
+que pase; lo único que cambia es **cómo se descompone** para explicarlo. Por eso
+fue seguro hacerlo con reservas vivas: ningún alquiler vale distinto después.
+
+⚠️ **El porcentaje SÍ se conserva** en `loyaltyDiscountPercent`. Se renuncia al
+dinero, no al dato: dentro de seis meses hay que poder decir que ese cliente
+tenía un 5 % y que aun así se cerró en 60.
+
+⚠️ **La DETECCIÓN del override sigue comparando contra el precio con descuento**,
+y tiene que ser así: teclear los 57 € que la pantalla ya ofrecía no es negociar,
+es aceptar la tarifa con su descuento — y ahí el descuento se aplica entero.
+
+⚠️ **Y por eso hizo falta `pricingSnapshot.priceOverridden`.** Desde que el
+ajuste se mide contra la tarifa, pactar justo la tarifa da un ajuste de **0**,
+indistinguible de «no se pactó nada». `agreedNetPriceOf()` usaba precisamente
+`manualAdjustment` como marcador, así que editar una fecha habría recalculado
+desde la tarifa con descuento y **se habrían perdido los 60 € acordados**. El
+campo es opcional y aditivo; para las reservas anteriores sigue valiendo
+`manualAdjustment`, que bajo la regla vieja solo era 0 cuando no hubo precio a
+mano.
+
 Dos convenciones distintas que conviene no confundir, y por eso los nombres son explícitos:
 
 - `vatRate` es una **fracción** (`0.21`)
@@ -1153,6 +1191,14 @@ la declara su propio SCSS.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
   ⚠️ **`delivery_fee` y `collection_fee` son la entrega y la recogida a domicilio**, y
   no son cargos extra: ver «Entrega y recogida a domicilio» más arriba.
+  ⚠️ **El `concept` de una fila lo pinta `PaymentConceptPipe`, y pasa SIEMPRE por el
+  traductor.** `translate()` devuelve la clave tal cual si no la encuentra, así que el
+  texto libre sale intacto y una clave guardada sale traducida. Hace falta porque
+  `buildRepricedRow()` llegó a guardar `PAYMENT_TYPE_LABELS[type]` —la clave— en vez del
+  tipo, y cualquier fila recreada quedó titulada «payments.types.remainingPayment». Se
+  corrigió en origen, pero los documentos ya escritos se arreglan **al leerlos**, sin
+  migrar nada. Si algún día se guarda otra clave en un campo que se pinta, esta es la
+  forma: traducir al leer.
   ⚠️ **`rental_payment` no es un concepto, es «cobrarlo todo de una vez».** No tiene fila
   sembrada propia: `distributeRentalPayment()` lo reparte entre señal y resto, en ese
   orden, y el sobrante abre fila aparte. Creando fila propia —como hacía— el dinero

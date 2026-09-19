@@ -91,6 +91,21 @@ export interface ReservationPricingSnapshot {
    */
   manualAdjustment?: number;
   /**
+   * Hubo un precio pactado a mano, aunque el ajuste saliera a cero.
+   *
+   * ⚠️ **`manualAdjustment` dejó de servir como marcador** el 19 de septiembre
+   * de 2026, y por eso existe este campo. Desde que un precio a mano deroga el
+   * descuento de fidelidad, el ajuste se mide contra la **tarifa**: pactar 60 €
+   * sobre una tarifa de 60 € da un ajuste de **0**, que es indistinguible de
+   * «no se pactó nada». Con esa confusión, editar una fecha recalculaba el
+   * precio desde la tarifa y **se perdían los 60 € acordados**.
+   *
+   * Opcional y aditivo: las reservas anteriores no lo llevan, y para ellas un
+   * `manualAdjustment` distinto de cero sigue siendo señal exacta — bajo la
+   * regla vieja, un ajuste de 0 solo podía significar que no hubo precio a mano.
+   */
+  priceOverridden?: boolean;
+  /**
    * Taxable base actually agreed, after both discounts. This is the round
    * number the operator negotiates, and what a customer who wants no invoice
    * pays. Absent on reservations created when tariffs were VAT-inclusive.
