@@ -430,13 +430,27 @@
                   <span>{{ selectedVehicle?.pricing?.basePrice }} €</span>
                 </div>
 
+                <!--
+                  El descuento de fidelidad.
+
+                  ⚠️ **Con un precio pactado a mano NO se aplica**, y eso hay que
+                  DECIRLO en vez de enseñar «Descuento fidelidad (5 %): 0,00 €»,
+                  que se lee como si hubiera fallado el cálculo. El operador
+                  tiene que saber que ese cliente tenía un 5 % y que el precio
+                  que acaba de teclear lo deroga — si no, puede creer que se lo
+                  está aplicando encima.
+                -->
                 @if (loyaltyDiscountPercent > 0) {
                   <div class="price-row discount">
                     <span>
                       {{ 'reservations.pricing.loyaltyDiscount' | translate }}
                       ({{ loyaltyDiscountPercent }} %):
                     </span>
-                    <span class="discount-value">{{ loyaltyDiscount | number:'1.2-2' }} €</span>
+                    @if (priceOverridden) {
+                      <span class="hint">{{ 'reservations.pricing.loyaltyOverridden' | translate }}</span>
+                    } @else {
+                      <span class="discount-value">{{ loyaltyDiscount | number:'1.2-2' }} €</span>
+                    }
                   </div>
                 }
 
@@ -469,11 +483,19 @@
                   </p>
                 }
 
+                <!--
+                  ⚠️ **El importe del ajuste solo si lo hay.** Pactar justo la
+                  tarifa da un ajuste de 0, y «Ajuste manual: 0,00 €» es una
+                  línea que no informa de nada. Lo que sí hace falta siempre que
+                  haya precio a mano es el botón de volver al calculado.
+                -->
                 @if (priceOverridden) {
                   <div class="price-row adjustment">
                     <span>{{ 'reservations.pricing.manualAdjustment' | translate }}:</span>
                     <span class="adjustment-value">
-                      {{ manualAdjustment > 0 ? '+' : '' }}{{ manualAdjustment | number:'1.2-2' }} €
+                      @if (manualAdjustment !== 0) {
+                        {{ manualAdjustment > 0 ? '+' : '' }}{{ manualAdjustment | number:'1.2-2' }} €
+                      }
                       <button
                         class="btn-reset-price"
                         type="button"

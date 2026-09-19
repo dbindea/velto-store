@@ -1169,6 +1169,7 @@
       "finalPrice": "Total price",
       "initialPayment": "Signal",
       "loyaltyDiscount": "Loyalty discount",
+      "loyaltyOverridden": "not applied: price agreed by hand",
       "manualAdjustment": "Manual adjustment",
       "netPrice": "Price excl. VAT",
       "pricePerDay": "Price/day",

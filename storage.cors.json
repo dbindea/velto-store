@@ -1,0 +1,14 @@
+[
+  {
+    "origin": [
+      "https://store.veltorent.com",
+      "https://rentalcar.veltomobility.com",
+      "https://velto-store.web.app",
+      "https://rentalcar-veltomobility.web.app",
+      "http://localhost:4200"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Disposition", "Content-Length"],
+    "maxAgeSeconds": 3600
+  }
+]
