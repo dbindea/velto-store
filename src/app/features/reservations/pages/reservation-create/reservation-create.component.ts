@@ -15,6 +15,8 @@ import {
 } from '@shared/utils/reservation-date.util';
 import {
   addVat,
+  deliveryFeeBreakdown,
+  DeliveryFeeBreakdown,
   resolveRentalPrice,
   RentalPriceBreakdown,
   VatBreakdown
@@ -340,6 +342,8 @@ export class ReservationCreateComponent implements OnInit {
         // discounted by 10 €.
         this.priceOverridden ? this.netPrice : undefined,
         this.depositWaived ? this.depositWaivedReason.trim() : undefined,
+        this.vatExempt,
+        { pickupFee: Number(this.deliveryPickupFee) || 0, returnFee: Number(this.deliveryReturnFee) || 0 }
       );
 
       this.router.navigate(['/reservations', reservationId]);
@@ -419,7 +423,11 @@ export class ReservationCreateComponent implements OnInit {
           loyaltyDiscount: breakdown.loyaltyDiscount || undefined,
           manualAdjustment: breakdown.priceOverridden ? breakdown.manualAdjustment : undefined,
           netPrice: breakdown.netPrice,
-          vatRate: this.vatRate
+          vatRate: this.vatRate,
+          // El presupuesto tiene que decir lo mismo que el contrato: si el
+          // desplazamiento no sale aquí, el cliente acepta un precio y firma otro.
+          deliveryPickupFee: Number(this.deliveryPickupFee) || undefined,
+          deliveryReturnFee: Number(this.deliveryReturnFee) || undefined
         }
       });
 
@@ -538,7 +546,12 @@ export class ReservationCreateComponent implements OnInit {
     return resolveRentalPrice(
       this.selectedVehicle?.pricing?.finalPrice || 0,
       this.selectedClient?.loyaltyDiscountPercent,
-      this.finalPriceOverride
+      this.finalPriceOverride,
+      // ⚠️ **El tipo se pasa.** Sin el cuarto argumento esto usaba el 21 % fijo
+      // de `DEFAULT_VAT_RATE` mientras la fila del IVA de al lado usaba el de
+      // Ajustes: con el general los dos coincidían de casualidad, y con «sin
+      // IVA» el total habría seguido llevando el impuesto sumado dentro.
+      this.vatRate
     );
   }
 
@@ -595,7 +608,37 @@ export class ReservationCreateComponent implements OnInit {
    * congelado es lo que hace que sea seguro tenerlo configurable.
    */
   get vatRate(): number {
-    return this.settingsService.settings().vatRate;
+    return this.vatExempt ? 0 : this.settingsService.settings().vatRate;
+  }
+
+  /**
+   * Este alquiler se cobra **sin IVA**: el cliente paga el neto pactado y ni el
+   * contrato ni el presupuesto mencionan el impuesto.
+   *
+   * ⚠️ **Es una decisión por reserva, no un ajuste global**, y por eso vive aquí
+   * y no en Ajustes: el caso es el cliente que no va a pedir factura, y el de al
+   * lado sí la pide. Lo que se guarda es el tipo congelado a 0 en el snapshot;
+   * `chargesVat()` es quien decide con él qué imprime cada documento.
+   */
+  vatExempt = false;
+
+  /**
+   * Entrega y recogida a domicilio, en **neto**.
+   *
+   * Velto entrega gratis cerca de Arganda; fuera de ahí se pacta un suplemento,
+   * y los dos trayectos son independientes. Se teclean a mano: no hay tarifa por
+   * kilómetro (decisión de Dorel, 19 de septiembre de 2026), así que cada
+   * reserva lleva la cifra que se dijo por teléfono.
+   */
+  deliveryPickupFee: number | null = null;
+  deliveryReturnFee: number | null = null;
+
+  /** Lo que el cliente paga por el servicio a domicilio, con su IVA. */
+  get deliveryFeesBreakdown(): DeliveryFeeBreakdown {
+    return deliveryFeeBreakdown(
+      { pickupFee: this.deliveryPickupFee, returnFee: this.deliveryReturnFee },
+      this.vatRate
+    );
   }
 
   /**

@@ -6,7 +6,7 @@
   </div>
 
   <div class="grid">
-    @for (cell of cells; track $index) {
+    @for (cell of cells(); track $index) {
       <div
         class="cell"
         [class.out-of-month]="!cell.inMonth"

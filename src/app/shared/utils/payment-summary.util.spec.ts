@@ -4,11 +4,14 @@ import type { Reservation } from '@shared/models/reservation.model';
 import {
   applySettlement,
   distributeRentalPayment,
+  buildInitialPayment,
   buildInitialPaymentRows,
+  initialPaymentStatus,
   calculateReservationPaymentSummary,
   collectedTotalsOf,
   distributeRetentionAcrossCharges,
-  selectSettleablePayment
+  selectSettleablePayment,
+  SERVICE_TYPES
 } from './payment-summary.util';
 
 // ---------------------------------------------------------------------------
@@ -471,5 +474,212 @@ describe('buildInitialPaymentRows', () => {
     const refs = rows.map(r => r['internalReference']);
     expect(refs.every(Boolean)).toBe(true);
     expect(new Set(refs).size).toBe(refs.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// La señal que no se pide
+//
+// Caso de Dorel: a un conocido no se le cobra señal. «No se pide» y «pendiente
+// de cobrar 0 €» son estados distintos, y confundirlos dejaba la reserva sin
+// poder confirmarse nunca — a `confirmed` solo se llega cobrando, y aquí no hay
+// nada que cobrar.
+// ---------------------------------------------------------------------------
+
+describe('buildInitialPayment — una señal de 0 es «no se pide»', () => {
+  it('nace waived, no pendiente', () => {
+    const s = buildInitialPayment(0);
+    expect(s.status).toBe('waived');
+    expect(s.requiredAmount).toBe(0);
+    expect(s.paidAmount).toBe(0);
+  });
+
+  it('una señal normal nace pendiente', () => {
+    expect(buildInitialPayment(50).status).toBe('pending');
+  });
+
+  it('redondea el importe, como todo el dinero que se escribe', () => {
+    expect(buildInitialPayment(58.900000000000006).requiredAmount).toBe(58.9);
+  });
+
+  it('un importe negativo no crea una señal a deber', () => {
+    const s = buildInitialPayment(-10);
+    expect(s.requiredAmount).toBe(0);
+    expect(s.status).toBe('waived');
+  });
+
+  it('no inventa `dueDate` cuando no se le da ninguna', () => {
+    // Firestore rechaza `undefined`, así que la clave no debe ni aparecer.
+    expect('dueDate' in buildInitialPayment(50)).toBe(false);
+  });
+});
+
+describe('initialPaymentStatus — lo cobrado manda sobre lo que se pida', () => {
+  it('cobrada del todo es `paid`', () => {
+    expect(initialPaymentStatus(50, 50)).toBe('paid');
+    expect(initialPaymentStatus(50, 60)).toBe('paid');
+  });
+
+  it('cobrada a medias sigue pendiente', () => {
+    expect(initialPaymentStatus(50, 20)).toBe('pending');
+  });
+
+  /**
+   * ⚠️ El caso que separa «exenta» de «cobrada»: bajar a 0 una señal que ya se
+   * cobró **no** la convierte en «no se pide». Ese dinero entró, y decir que no
+   * se pidió nada dejaría la reserva contando una cosa y los pagos otra. Si hay
+   * que devolverlo, eso es una devolución.
+   */
+  it('bajar a 0 una señal ya cobrada no la vuelve exenta', () => {
+    expect(initialPaymentStatus(0, 30)).toBe('paid');
+  });
+
+  it('sin cobrar nada y sin pedir nada, exenta', () => {
+    expect(initialPaymentStatus(0, 0)).toBe('waived');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Entrega y recogida a domicilio
+//
+// Es una tercera categoría, ni alquiler ni cargo extra. Estos tests fijan las
+// tres consecuencias que se pueden romper sin que nada avise: que cuenta como
+// ingreso, que NO se cuela entre los cargos extra, y que impide dar la reserva
+// por pagada mientras esté sin cobrar.
+// ---------------------------------------------------------------------------
+
+describe('el servicio a domicilio es ingreso, y no es un cargo extra', () => {
+  const cobrados = [
+    makePayment('remaining_payment', 'paid', 100, 100),
+    makePayment('delivery_fee', 'paid', 18.15, 18.15),
+    makePayment('collection_fee', 'paid', 18.15, 18.15)
+  ];
+
+  it('entra en los ingresos', () => {
+    const t = collectedTotalsOf(cobrados);
+    expect(t.services).toBe(36.3);
+    expect(t.income).toBe(136.3);
+  });
+
+  /**
+   * ⚠️ El error que habría salido gratis y habría sido mentira: meterlos en
+   * `EXTRA_TYPES`. La ficha diría «Cargos extra 36,30 €» de un alquiler sin un
+   * solo daño, y la retención de fianza podría cubrirlos.
+   */
+  it('no se cuenta entre los cargos extra', () => {
+    expect(collectedTotalsOf(cobrados).extras).toBe(0);
+  });
+
+  it('tampoco entre el alquiler, que es la base del reparto con el dueño', () => {
+    expect(collectedTotalsOf(cobrados).rental).toBe(100);
+  });
+});
+
+describe('calculateReservationPaymentSummary — con servicio a domicilio', () => {
+  const reserva = {
+    pricingSnapshot: { finalPrice: 121, netPrice: 100, vatRate: 0.21 },
+    initialPayment: { requiredAmount: 0, paidAmount: 0, status: 'waived' },
+    remainingPayment: { requiredAmount: 121, paidAmount: 121, status: 'paid' },
+    deposit: { requiredAmount: 0, paidAmount: 0, returnedAmount: 0, retainedAmount: 0, waivedReason: 'conocido', status: 'waived' }
+  } as unknown as Reservation;
+
+  it('lo devengado y lo pendiente van en su propia línea', () => {
+    const s = calculateReservationPaymentSummary(
+      [
+        makePayment('remaining_payment', 'paid', 121, 121),
+        makePayment('delivery_fee', 'pending', 18.15, 0),
+        makePayment('collection_fee', 'pending', 18.15, 0)
+      ],
+      reserva
+    );
+    expect(s.servicesRequired).toBe(36.3);
+    expect(s.servicesPaid).toBe(0);
+    expect(s.servicesPending).toBe(36.3);
+    expect(s.extrasRequired).toBe(0);
+  });
+
+  /**
+   * ⚠️ Lo que este test protege: una reserva con el alquiler cobrado y el
+   * desplazamiento sin cobrar **no está pagada**. Sin contarlo, se cerraría
+   * dejándose 36,30 € y nada lo diría.
+   */
+  it('no se da por pagada con el desplazamiento sin cobrar', () => {
+    const s = calculateReservationPaymentSummary(
+      [
+        makePayment('remaining_payment', 'paid', 121, 121),
+        makePayment('delivery_fee', 'pending', 18.15, 0)
+      ],
+      reserva
+    );
+    expect(s.paymentStatus).toBe('partial');
+    expect(s.totalPending).toBe(18.15);
+  });
+
+  it('cobrado todo, la reserva sí está pagada', () => {
+    const s = calculateReservationPaymentSummary(
+      [
+        makePayment('remaining_payment', 'paid', 121, 121),
+        makePayment('delivery_fee', 'paid', 18.15, 18.15)
+      ],
+      reserva
+    );
+    expect(s.paymentStatus).toBe('paid');
+    expect(s.totalPending).toBe(0);
+    expect(s.totalPaid).toBe(139.15);
+  });
+});
+
+describe('buildInitialPaymentRows — las filas del servicio a domicilio', () => {
+  const base = {
+    clientId: 'c1',
+    vehicleId: 'v1',
+    pickupDateTime: { seconds: 1 },
+    returnDateTime: { seconds: 2 },
+    totalDays: 3,
+    clientSnapshot: { fullName: 'X' },
+    vehicleSnapshot: { brand: 'A', model: 'B', plateNumber: '1234ABC' },
+    pricingSnapshot: { finalPrice: 121, netPrice: 100, vatRate: 0.21 },
+    initialPayment: { requiredAmount: 50, paidAmount: 0, status: 'pending' },
+    remainingPayment: { requiredAmount: 71, paidAmount: 0, status: 'pending' },
+    deposit: { requiredAmount: 0, paidAmount: 0, returnedAmount: 0, retainedAmount: 0, status: 'waived' }
+  } as unknown as Reservation;
+
+  it('siembra una fila por trayecto, en BRUTO', () => {
+    const filas = buildInitialPaymentRows('r1', {
+      ...base,
+      deliveryFees: { pickupFee: 15, returnFee: 15 }
+    } as Reservation);
+    const entrega = filas.find((f) => f['type'] === 'delivery_fee');
+    const recogida = filas.find((f) => f['type'] === 'collection_fee');
+    expect(entrega?.['amount']).toBe(18.15);
+    expect(recogida?.['amount']).toBe(18.15);
+  });
+
+  /** Un trayecto a 0 no es una fila pendiente de 0 €: es que no se cobra. */
+  it('el trayecto que no se cobra no genera fila', () => {
+    const filas = buildInitialPaymentRows('r1', {
+      ...base,
+      deliveryFees: { pickupFee: 0, returnFee: 20 }
+    } as Reservation);
+    expect(filas.some((f) => f['type'] === 'delivery_fee')).toBe(false);
+    expect(filas.find((f) => f['type'] === 'collection_fee')?.['amount']).toBe(24.2);
+  });
+
+  it('sin servicio pactado no siembra ninguna de las dos', () => {
+    const filas = buildInitialPaymentRows('r1', base);
+    expect(filas.some((f) => SERVICE_TYPES.includes(f['type']))).toBe(false);
+  });
+
+  /**
+   * ⚠️ El concepto es el TIPO y no una frase: `PaymentConceptPipe` solo traduce
+   * cuando coinciden, así que una frase en español la leería un operador rumano
+   * en español.
+   */
+  it('el concepto se guarda traducible', () => {
+    const filas = buildInitialPaymentRows('r1', {
+      ...base,
+      deliveryFees: { pickupFee: 15, returnFee: 15 }
+    } as Reservation);
+    expect(filas.find((f) => f['type'] === 'delivery_fee')?.['concept']).toBe('delivery_fee');
   });
 });

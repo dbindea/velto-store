@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_VAT_RATE,
   addVat,
+  chargesVat,
+  deliveryFeeBreakdown,
   vatBreakdownOf,
   MAX_LOYALTY_DISCOUNT_PERCENT,
   normalizeLoyaltyDiscountPercent,
@@ -243,5 +245,125 @@ describe('suggestExtraKmCharge', () => {
       extraKmPrice: 0.17
     });
     expect(r?.amount).toBe(56.61);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reservas sin IVA
+//
+// El caso de Dorel: al cliente que no va a pedir factura se le cobran los 200 €
+// pactados y ni el contrato ni el presupuesto mencionan el impuesto. Lo que se
+// guarda es el tipo congelado a 0, y `chargesVat()` es quien lo traduce a «no
+// lo menciones». Estos tests fijan que un 0 NO se confunda con «no hay tipo».
+// ---------------------------------------------------------------------------
+
+describe('chargesVat — el 0 es un dato, no un hueco', () => {
+  it('un tipo de 0 significa que este alquiler no lleva IVA', () => {
+    expect(chargesVat({ vatRate: 0 })).toBe(false);
+  });
+
+  it('un tipo normal sí lo lleva', () => {
+    expect(chargesVat({ vatRate: 0.21 })).toBe(true);
+    expect(chargesVat({ vatRate: 0.1 })).toBe(true);
+  });
+
+  /**
+   * ⚠️ La diferencia que costaría dinero: **ausencia no es exención**. Una
+   * reserva antigua sin `vatRate` guardado lleva IVA al tipo general, y leerla
+   * como exenta dejaría de repercutir el impuesto en contratos ya firmados.
+   */
+  it('sin tipo guardado manda el general, no la exención', () => {
+    expect(chargesVat({})).toBe(true);
+    expect(chargesVat({ vatRate: undefined })).toBe(true);
+    expect(chargesVat({ vatRate: null })).toBe(true);
+  });
+});
+
+describe('sin IVA, el cliente paga exactamente el neto', () => {
+  it('el total es el precio pactado, sin nada encima', () => {
+    const r = resolveRentalPrice(200, 0, undefined, 0);
+    expect(r.netPrice).toBe(200);
+    expect(r.vatAmount).toBe(0);
+    expect(r.finalPrice).toBe(200);
+  });
+
+  it('y con IVA ese mismo alquiler cuesta 242', () => {
+    // El mismo neto con el tipo general: la diferencia entre los dos es
+    // exactamente lo que el checkbox decide.
+    expect(resolveRentalPrice(200, 0, undefined, 0.21).finalPrice).toBe(242);
+  });
+
+  it('el desglose de un snapshot exento no inventa una base distinta', () => {
+    const b = vatBreakdownOf({ netPrice: 200, vatRate: 0 });
+    expect(b).toEqual({ rate: 0, base: 200, vat: 0, total: 200 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Entrega y recogida a domicilio
+//
+// Velto entrega gratis cerca de Arganda; más lejos se pacta un suplemento por
+// trayecto. Lo que se teclea es NETO, como todo lo que se negocia aquí.
+// ---------------------------------------------------------------------------
+
+describe('deliveryFeeBreakdown', () => {
+  it('suma el IVA a lo tecleado, no se lo extrae', () => {
+    // 15 € pactados son 15 € de base y el cliente paga 18,15.
+    const d = deliveryFeeBreakdown({ pickupFee: 15, returnFee: 15 }, 0.21);
+    expect(d.pickupNet).toBe(15);
+    expect(d.pickupGross).toBe(18.15);
+    expect(d.net).toBe(30);
+    expect(d.gross).toBe(36.3);
+    expect(d.vat).toBe(6.3);
+  });
+
+  /**
+   * ⚠️ El error que daría una cifra creíble y equivocada: extraer el IVA de los
+   * 15 € daría 12,40 de base. Es la dirección de un gasto, no la de un alquiler.
+   */
+  it('15 € nunca se convierten en 12,40 de base', () => {
+    expect(deliveryFeeBreakdown({ pickupFee: 15 }, 0.21).pickupNet).toBe(15);
+  });
+
+  it('sin IVA el cliente paga exactamente lo tecleado', () => {
+    const d = deliveryFeeBreakdown({ pickupFee: 15, returnFee: 15 }, 0);
+    expect(d.gross).toBe(30);
+    expect(d.vat).toBe(0);
+  });
+
+  it('los dos trayectos son independientes', () => {
+    // El caso real: recoge en oficina y solo pide que se lo vayan a buscar.
+    const d = deliveryFeeBreakdown({ pickupFee: 0, returnFee: 20 }, 0.21);
+    expect(d.pickupGross).toBe(0);
+    expect(d.returnGross).toBe(24.2);
+    expect(d.any).toBe(true);
+  });
+
+  it('sin servicio pactado no hay nada que cobrar', () => {
+    expect(deliveryFeeBreakdown(undefined, 0.21).any).toBe(false);
+    expect(deliveryFeeBreakdown({}, 0.21).gross).toBe(0);
+    expect(deliveryFeeBreakdown({ pickupFee: null, returnFee: null }, 0.21).any).toBe(false);
+  });
+
+  /**
+   * ⚠️ Un suplemento en negativo es un descuento que nadie pactó, y se colaría
+   * en el contrato como una línea a favor del cliente.
+   */
+  it('un importe negativo no se convierte en descuento', () => {
+    const d = deliveryFeeBreakdown({ pickupFee: -10, returnFee: 10 }, 0.21);
+    expect(d.pickupNet).toBe(0);
+    expect(d.gross).toBe(12.1);
+  });
+
+  it('cada trayecto se redondea por su cuenta, como su fila de cobro', () => {
+    // 0,11 € × 1,21 = 0,1331 → 0,13 cada uno; el total son 0,26, no 0,27.
+    const d = deliveryFeeBreakdown({ pickupFee: 0.11, returnFee: 0.11 }, 0.21);
+    expect(d.pickupGross).toBe(0.13);
+    expect(d.returnGross).toBe(0.13);
+    expect(d.gross).toBe(0.26);
+  });
+
+  it('sin tipo guardado manda el general', () => {
+    expect(deliveryFeeBreakdown({ pickupFee: 100 }, undefined).pickupGross).toBe(121);
   });
 });

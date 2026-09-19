@@ -10,7 +10,10 @@
  */
 
 import { VehiclePricingRule } from '@shared/models/vehicle.model';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+// El primitivo del dinero, no el resumen de pagos: este fichero es el que aquel
+// importa para el IVA del servicio a domicilio, y cogerlo de allí los dejaría
+// importándose en círculo. Ver `money.util.ts`.
+import { roundMoney } from '@shared/utils/money.util';
 
 /**
  * Spanish standard VAT rate, as a FRACTION (0.21 = 21 %).
@@ -84,6 +87,102 @@ export function vatBreakdownOf(snapshot: { netPrice?: number; vatRate?: number }
  */
 export function resolveVatRate(rate: number | null | undefined): number {
   return typeof rate === 'number' && isFinite(rate) && rate >= 0 ? rate : DEFAULT_VAT_RATE;
+}
+
+/**
+ * ¿Este alquiler lleva IVA?
+ *
+ * ⚠️ **El tipo a 0 es la única señal, y no hace falta otra.** Se pensó en un
+ * campo aparte —`vatExempt`— y sobra: dos datos para un mismo hecho son dos
+ * datos que pueden discrepar, y el día que discrepen el contrato diría una cosa
+ * y el importe otra. Un tipo de cero **es** «aquí no hay IVA», y `resolveVatRate`
+ * ya lo respeta en vez de caer al general.
+ *
+ * ⚠️ **Y decide TEXTO, no solo aritmética.** Con el tipo a 0 la resta ya sale
+ * bien sola; para lo que existe esta función es para que el contrato, el
+ * presupuesto y el justificante **no mencionen el impuesto**: ni la fila del
+ * desglose, ni la nota que explica que se suma, ni el «(no sujeta a IVA)» de la
+ * fianza. Es la lección de F-36 —una frase sobrevivió al cambio de convención y
+ * el presupuesto siguió diciendo lo contrario de lo que sumaba—, con la
+ * diferencia de que ahora la frase y el número los decide el mismo dato.
+ *
+ * El caso es de Dorel: al cliente que no va a pedir factura se le cobran los
+ * 200 € pactados y el papel no habla de impuestos.
+ */
+export function chargesVat(snapshot: { vatRate?: number | null }): boolean {
+  return resolveVatRate(snapshot?.vatRate) > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Entrega y recogida a domicilio
+// ---------------------------------------------------------------------------
+
+export interface DeliveryFeeBreakdown {
+  /** Lo tecleado por llevar el coche, y lo que el cliente paga por ello. */
+  pickupNet: number;
+  pickupGross: number;
+  /** Lo tecleado por ir a recogerlo, y lo que el cliente paga por ello. */
+  returnNet: number;
+  returnGross: number;
+  /** Los dos trayectos juntos. */
+  net: number;
+  vat: number;
+  gross: number;
+  /** Verdadero si se cobra algo por alguno de los dos trayectos. */
+  any: boolean;
+}
+
+/**
+ * Lo que cuesta llevar el coche al cliente y volver a por él.
+ *
+ * ⚠️ **Los importes tecleados son NETOS y el IVA se SUMA**, igual que la tarifa
+ * del alquiler: el operador escribe el número redondo que pactó por teléfono y
+ * el cliente paga eso más impuesto. Con el tipo de la reserva a 0 —la casilla
+ * «sin IVA»— paga exactamente lo tecleado. Extraer el IVA de lo tecleado, que es
+ * lo que hace un gasto, daría una cifra creíble y equivocada; son las dos
+ * direcciones que `expense.util.ts` y este fichero mantienen separadas a
+ * propósito.
+ *
+ * ⚠️ **Cada trayecto se redondea por su cuenta antes de sumarlos**, porque cada
+ * uno abre su propia fila de cobro: si el total se redondeara y las filas no,
+ * el contrato y los pagos discreparían en un céntimo — y un céntimo que no
+ * cuadra obliga a mirar dónde está el error cada vez.
+ *
+ * ⚠️ **Y no entra en `pricingSnapshot`.** Ver la nota de `ReservationDeliveryFees`:
+ * el reparto con el dueño del coche se calcula sobre el neto del alquiler, y el
+ * desplazamiento lo pone la agencia, no el coche.
+ */
+export function deliveryFeeBreakdown(
+  fees: { pickupFee?: number | null; returnFee?: number | null } | null | undefined,
+  vatRate?: number | null
+): DeliveryFeeBreakdown {
+  const rate = resolveVatRate(vatRate);
+  const ida = addVat(sanearImporte(fees?.pickupFee), rate);
+  const vuelta = addVat(sanearImporte(fees?.returnFee), rate);
+
+  return {
+    pickupNet: ida.base,
+    pickupGross: ida.total,
+    returnNet: vuelta.base,
+    returnGross: vuelta.total,
+    net: roundMoney(ida.base + vuelta.base),
+    vat: roundMoney(ida.vat + vuelta.vat),
+    gross: roundMoney(ida.total + vuelta.total),
+    any: ida.base > 0 || vuelta.base > 0
+  };
+}
+
+/**
+ * Un importe de servicio tal y como puede llegar de un formulario.
+ *
+ * ⚠️ `Number(null)` y `Number('')` son **0**, no `NaN`, así que un campo vacío
+ * ya significa «no se cobra» sin ayuda. Lo que sí hay que atajar es un negativo:
+ * un suplemento en negativo es un descuento que nadie pactó, y se colaría en el
+ * contrato como una línea a favor del cliente.
+ */
+function sanearImporte(valor: number | null | undefined): number {
+  const n = Number(valor);
+  return isFinite(n) && n > 0 ? roundMoney(n) : 0;
 }
 
 /**

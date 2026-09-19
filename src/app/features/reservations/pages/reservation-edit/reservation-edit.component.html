@@ -167,6 +167,84 @@
         }
       </div>
 
+      <!--
+        Sin IVA. Va pegado al precio porque decide lo mismo: lo que el cliente
+        acaba pagando. El total de debajo se mueve al marcarlo, que es lo que
+        hace evidente qué se está cambiando.
+      -->
+      <div class="form-group">
+        <label class="checkbox-item plain">
+          <input
+            type="checkbox"
+            name="vatExempt"
+            [(ngModel)]="form.vatExempt"
+            [disabled]="!editable('vatExempt')"
+          />
+          <span>{{ 'reservations.pricing.vatExempt' | translate }}</span>
+        </label>
+        <div class="field-hint">{{ 'reservations.pricing.vatExemptHint' | translate }}</div>
+        @if (lockReason('vatExempt')) {
+          <div class="field-hint">{{ lockReason('vatExempt') | translate }}</div>
+        }
+        <div class="field-hint">
+          {{ 'reservations.edit.totalPreview' | translate }}:
+          <strong>{{ totalDue | number: '1.2-2' }} €</strong>
+          @if (!form.vatExempt) {
+            ({{ 'reservations.pricing.vat' | translate }}
+            {{ previewVatAmount | number: '1.2-2' }} €)
+          }
+        </div>
+      </div>
+
+      <!--
+        Entrega y recogida a domicilio. Los dos trayectos por separado: se
+        pactan por separado y se cobran en momentos distintos.
+      -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="deliveryPickup" class="label">{{ 'reservations.delivery.pickupFee' | translate }}</label>
+          <input
+            id="deliveryPickup"
+            name="deliveryPickupFee"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            [(ngModel)]="form.deliveryPickupFee"
+            [disabled]="!editable('deliveryFees')"
+          />
+        </div>
+        <div class="form-group">
+          <label for="deliveryReturn" class="label">{{ 'reservations.delivery.returnFee' | translate }}</label>
+          <input
+            id="deliveryReturn"
+            name="deliveryReturnFee"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            [(ngModel)]="form.deliveryReturnFee"
+            [disabled]="!editable('deliveryFees')"
+          />
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="field-hint">{{ 'reservations.delivery.hint' | translate }}</div>
+        @if (lockReason('deliveryFees')) {
+          <div class="field-hint">{{ lockReason('deliveryFees') | translate }}</div>
+        }
+        @if (deliveryPreview.any) {
+          <div class="field-hint">
+            {{ 'reservations.delivery.total' | translate }}:
+            <strong>{{ deliveryPreview.gross | number: '1.2-2' }} €</strong>
+            @if (previewVatRate > 0) {
+              ({{ 'reservations.pricing.vat' | translate }}
+              {{ deliveryPreview.vat | number: '1.2-2' }} €)
+            }
+          </div>
+        }
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label for="initial" class="label required">{{ 'reservations.edit.initialPayment' | translate }}</label>

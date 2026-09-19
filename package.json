@@ -18,6 +18,7 @@
     "deploy:prod:functions": "npm --prefix functions run build && firebase deploy --only functions --project prod",
     "deploy:prod:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage --project prod",
     "css:audit": "node scripts/css-audit.js",
+    "rows:audit": "node scripts/rows-audit.js",
     "spacing:audit": "node scripts/spacing-audit.js"
   },
   "prettier": {

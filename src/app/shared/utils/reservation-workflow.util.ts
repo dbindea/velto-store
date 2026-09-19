@@ -178,6 +178,36 @@ export function reservationStatusAfterPayment(
   return initialPaid ? 'confirmed' : null;
 }
 
+/**
+ * El estado con el que nace —o al que vuelve tras una edición— una reserva
+ * según lo que se pida de señal.
+ *
+ * ⚠️ **Una señal de 0 confirma la reserva en el acto**, y hay que decirlo aquí
+ * porque la única vía a `confirmed` era `reservationStatusAfterPayment()`, que
+ * solo corre **al registrar un cobro**. Sin señal no hay cobro que registrar, así
+ * que la reserva se quedaba en `reserved` de por vida: el justificante de reserva
+ * —que exige `confirmed`— no se podía emitir nunca, y el paso de la señal se
+ * quedaba a medias en la ficha.
+ *
+ * No es adelantar nada: `confirmed` significa «la entrada está resuelta», y con
+ * señal 0 lo está por decisión del operador. Lo que queda por cobrar sigue
+ * exigido entero en `remainingPayment`, y `canStartPickup()` no entrega el coche
+ * sin ello.
+ *
+ * Solo mueve `reserved`. Una reserva entregada, devuelta, cerrada o cancelada no
+ * se camina hacia atrás por tocarle la señal.
+ */
+export function reservationStatusAfterInitialChange(
+  current: ReservationStatus,
+  initialPaymentRequired: number,
+  initialPaidAmount = 0
+): ReservationStatus | null {
+  if (current !== 'reserved') return null;
+  const required = Number(initialPaymentRequired) || 0;
+  const paid = Number(initialPaidAmount) || 0;
+  return required <= 0 || paid >= required ? 'confirmed' : null;
+}
+
 /** Generate the original PDF contract from the reservation. */
 export function canGenerateContract(ctx: WorkflowContext): WorkflowDecision {
   if (!ctx.reservation) return deny('workflow.missingReservation');
@@ -470,6 +500,7 @@ export function canWithException(
 // ---------------------------------------------------------------------------
 
 export const Workflow = {
+  reservationStatusAfterInitialChange,
   canGenerateContract,
   canGenerateSigningLink,
   canRegisterPayment,

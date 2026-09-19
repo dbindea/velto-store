@@ -35,6 +35,7 @@ npm run firebase:emulators
 npm run i18n:audit        # verifica claves faltantes, huérfanas y paridad es/en/ro
 npm run css:audit         # clases usadas en plantillas que no declara nadie
 npm run spacing:audit     # espaciados fuera de la escala (--fix los alinea)
+npm run rows:audit        # formularios en escalera: campos que van al lado y salen escalonados
 
 # Cloud Functions
 npm --prefix functions run build      # tsc + copia de fuentes TTF
@@ -468,6 +469,60 @@ que es el derivado. El IVA se calcula por resta para que `base + vat` cuadre al 
 El tipo sí se congela por reserva en `pricingSnapshot.vatRate`, para que una subida futura
 del tipo general no mueva un contrato ya firmado.
 
+#### Una reserva puede ir SIN IVA, y entonces los papeles no lo nombran
+
+Decisión de Dorel del 18 de septiembre de 2026, y el caso es el que esta misma
+sección ya describía: **el cliente que no va a pedir factura paga exactamente el
+neto**. Ahora eso se puede pactar con una casilla —«Sin IVA», en el asistente y
+en la edición de la reserva— en vez de a mano.
+
+⚠️ **Lo único que se guarda es el tipo congelado a 0.** Se pensó en un campo
+aparte (`vatExempt`) y sobra: dos datos para el mismo hecho son dos datos que
+pueden discrepar, y el día que discrepen el contrato diría una cosa y el importe
+otra. `resolveVatRate()` ya respeta el 0 en vez de caer al general, así que la
+aritmética sale sola.
+
+⚠️ **Y `chargesVat()` decide TEXTO, no aritmética.** Es toda su razón de ser: el
+contrato, el presupuesto y el justificante **no mencionan el impuesto** cuando no
+lo hay — ni la base imponible, ni la cuota, ni el «(no sujeta a IVA)» de la
+fianza, ni el aviso del presupuesto que explica que el IVA se suma, ni la
+enumeración de la cláusula de precio («…tasas aeroportuarias si las hubiere, IVA
+aplicable y…»), que la recorta `withoutVatMentions()` en `clauses.ts`. Un IVA del
+0 % impreso se lee como si algo hubiera fallado al calcularlo. Está duplicada en
+`functions/src/contracts/pdf.ts`, como el resto de la aritmética del IVA.
+
+⚠️ **El recorte de las cláusulas puede fallar EN SILENCIO**, porque es una
+sustitución literal dentro de una frase legal larga: el día que alguien reescriba
+la cláusula de precio, el fragmento deja de encontrarse y el contrato vuelve a
+nombrar el impuesto sin que nada avise. Lo cubre `clauses-vat.spec.ts`, que lee
+el articulado ya recortado en los tres idiomas y **comprueba también el control**
+—que el articulado normal sí lo menciona—, o el test pasaría por no encontrar
+nada que quitar. Y `layout.spec.ts` lo comprueba sobre los PDF reales: los tres
+documentos × tres idiomas, con IVA y sin él.
+
+⚠️ **Ausencia no es exención.** Una reserva antigua sin `vatRate` guardado lleva
+IVA al tipo general; leerla como exenta dejaría de repercutirlo en contratos ya
+firmados. Hay test de las dos cosas en los dos lados.
+
+⚠️ **La factura NO hereda el 0.** Si un cliente de estos acaba pidiendo factura,
+va en régimen general y el 0 % no se sostiene — y una factura emitida no se edita
+ni se borra. El formulario propone el tipo general y **lo explica**: el total no
+va a coincidir con lo que se cobró, y qué hacer con esa diferencia lo decide el
+operador.
+
+⚠️ **Cambiarlo obliga a rehacer el contrato** (`requiresNewContract`) y **no se
+puede tocar con parte del alquiler ya cobrada**: mover el total cuando las filas
+de cobro ya llevan dinero dentro dejaría la reserva pidiendo una cifra distinta
+de la que entró.
+
+⚠️ **Y salió a la luz un tipo que se calculaba con un número y se guardaba con
+otro.** `resolveRentalPrice()` se llamaba **sin su cuarto argumento** en los dos
+creadores de reservas y en el asistente, así que el precio se componía con el
+21 % fijo de `DEFAULT_VAT_RATE` mientras el snapshot congelaba el tipo de
+Ajustes. Con el general los dos coincidían de casualidad y no se notaba; bajando
+el tipo en Ajustes, el contrato habría desglosado un IVA y cobrado otro. Ahora el
+tipo viaja explícito, que es lo que además hace posible el 0.
+
 > Hubo un `tariffIncludesVat` que congelaba también la **dirección**, porque las reservas
 > anteriores al 27 de agosto de 2026 se guardaron con el IVA incluido. Se retiró el 28 de
 > agosto, al borrar los datos de producción y empezar de cero: ya no existe ninguna reserva
@@ -680,6 +735,119 @@ escribe en `expenses`. Decisión de Dorel del 10 de septiembre de 2026. Queda
 anotado en el modelo que una comisión suele ser gasto deducible y que si el
 colaborador es autónomo lo normal es que emita factura con retención de IRPF —
 está preparado para convertir un pago en gasto sin rehacer nada.
+
+### El calendario, y la conversión de fechas que lo vaciaba
+
+⚠️ **El calendario no enseñaba ninguna reserva en producción, y la causa era una
+conversión de fechas escrita a mano.** `calendar.component.ts` filtraba con su
+propia copia de `toDate()`:
+
+```ts
+const pickup = (r.pickupDateTime as any)?.toDate
+  ? (r.pickupDateTime as any).toDate()
+  : new Date(r.pickupDateTime);
+```
+
+Esa copia solo entiende un `Timestamp` del SDK, con su método `.toDate()`, y
+**esta aplicación no guarda eso**: `toTimestamp()` escribe un mapa
+`{ seconds, nanoseconds }` normal, que es lo que Firestore devuelve. Así que
+caía en `new Date({seconds})` → **Invalid Date**, toda comparación salía falsa y
+la reserva se descartaba. `toDate()`, el util de verdad, sí cubre las cuatro
+formas (`Date`, `Timestamp`, `seconds`, `_seconds`).
+
+⚠️ **Y lo que lo hacía difícil de ver es que las canceladas SÍ salían**: el
+filtro las dejaba pasar con un `return true` antes de tocar las fechas. O sea
+que el calendario no estaba vacío —enseñaba justo las reservas que no
+importan—, y eso se lee como «faltan datos», no como «hay un fallo». Medido en
+desarrollo: **2 barras antes, 19 después**.
+
+⚠️ **El segundo fallo, en la misma función: la ventana se calculaba desde HOY.**
+Traía tres meses alrededor de `new Date()`, no del mes que se está mirando, así
+que al avanzar dos meses la rejilla salía vacía aunque hubiera reservas. Se ha
+quitado entera: quien decide qué se pinta en cada día es `MonthGridComponent`,
+que ya filtra celda a celda, así que la ventana no ahorraba nada.
+
+⚠️ **Al quitarla, `cells` tuvo que dejar de ser un getter.** Era un `get cells()`
+—42 celdas × todas las reservas, recalculado en cada ciclo de detección de
+cambios— y se sostenía porque el padre recortaba la lista. Ahora es un
+`computed()` con entradas de señal: una vez por cambio real de mes o de datos.
+
+**El detalle del día es una modal y lo primero que se lee es el COCHE.** La
+pregunta del mostrador es «¿qué tengo fuera hoy?», y antes había que abrir cada
+reserva para saber la matrícula. Cada fila dice además qué pasa **ese día**
+—entrega, devolución o sigue alquilado— con su hora, y lleva a la reserva.
+
+**En móvil se cambia de mes deslizando.** Solo cuenta el gesto claramente
+horizontal (60 px y más que el vertical): sin comparar contra el desplazamiento
+vertical, bajar por el calendario cambiaba de mes a media lectura, y sin el
+umbral pulsar un día saltaría de mes. Con el detalle abierto el gesto no cuenta.
+⚠️ **Y se anuncia**: un gesto que no se dice no existe, así que hay una pista
+bajo la rejilla, solo en pantalla estrecha.
+
+⚠️ **`text-transform: capitalize` no sirve para un título en español.**
+Capitaliza **todas** las palabras: «Sábado, 12 De Septiembre De 2026». Ya se
+había corregido en el rótulo del mes poniendo en mayúscula solo la primera letra,
+y reapareció en la cabecera de la modal porque allí lo hacía el CSS y no el
+texto.
+
+### Entrega y recogida a domicilio: un servicio, no un cargo extra
+
+Velto entrega gratis cerca de Arganda; más lejos se pacta un suplemento.
+Decisión de Dorel del 19 de septiembre de 2026, con dos partes:
+
+- **El importe se teclea a mano**, no hay tarifa por kilómetro en Ajustes. Cada
+  reserva lleva la cifra que se dijo por teléfono.
+- **Son dos cobros, no uno.** Los dos trayectos se pactan por separado —hay
+  quien recoge en oficina y solo pide que se le vaya a buscar— y se cobran en
+  momentos distintos.
+
+⚠️ **`deliveryFees` vive FUERA de `pricingSnapshot`, y ese es el punto que
+decide dinero de otra persona.** El reparto con el dueño del coche se calcula
+sobre `pricingSnapshot.netPrice` (`owner-share.util.ts`), y llevar el coche a
+30 km lo pone la agencia con su furgoneta y su hora — no lo pone el coche. Metido
+en el snapshot, el propietario cobraría un porcentaje del desplazamiento sin que
+nadie lo hubiera decidido. Es la misma razón por la que los cargos extra son de
+Velto.
+
+⚠️ **Y tampoco son `extra_*`.** Un cargo extra nace de la inspección de
+devolución y cubre un perjuicio; esto se pacta al reservar y va impreso en el
+contrato. Mezclarlos tenía dos consecuencias visibles: la ficha diría «Cargos
+extra 36,30 €» de un alquiler sin un solo daño, y
+`distributeRetentionAcrossCharges()` dejaría cubrir el desplazamiento con la
+**fianza retenida**, que es dinero del cliente guardado para responder de daños.
+Por eso hay una tercera categoría, `SERVICE_TYPES`, con sus tres campos propios
+en el resumen (`servicesRequired`, `servicesPaid`, `servicesPending`).
+
+⚠️ **Lo tecleado es NETO y el IVA se suma**, como la tarifa: 15 € pactados son
+15 € de base y el cliente paga 18,15 €. Con la casilla «sin IVA» paga
+exactamente 15. Lo resuelve `deliveryFeeBreakdown()` en `pricing.util.ts`,
+duplicada en `functions/src/contracts/pdf.ts` como el resto de la aritmética del
+impuesto. **Cada trayecto se redondea por su cuenta** antes de sumarlos, porque
+cada uno abre su propia fila de cobro.
+
+⚠️ **`collectedTotalsOf()` va por lista blanca, al revés que `analytics.util.ts`.**
+Aquel usa una lista de lo que **no** es ingreso, así que un tipo nuevo cuenta
+solo; este enumera lo que **sí**, y un tipo que no se añada deja de contar como
+ingreso **en silencio**. Al crear un `PaymentType` de cobro, hay que pasar por
+las dos.
+
+⚠️ **Y el recálculo de pagos reescribía el estado de la señal sin saber decir
+`waived`.** `recalculateReservationPaymentSummary()` traía un ternario suelto
+—con las dos ramas del final iguales— que solo producía `paid` o `pending`: cada
+recálculo volvía a etiquetar como PENDIENTE una señal que el operador había
+decidido no cobrar. Era el mismo fallo que la fianza ya tenía resuelto tres
+líneas más abajo con `depositStatusFromSummary()`. Ahora lo decide
+`initialPaymentStatus()`, la misma función que usan la creación y la edición.
+**Se vio guardando la reserva**: la ficha pasaba sola de «No se solicita» a
+«Pendiente».
+
+**Los tres documentos lo imprimen** —presupuesto, justificante y contrato— en su
+propia línea, debajo del total del alquiler y solo si se pactó. No se suman al
+«Total alquiler», que es lo que vale el coche y la base del reparto con su dueño.
+⚠️ Un cargo que el contrato firmado no menciona es un cargo que el cliente
+discute con razón: lo comprueba `layout.spec.ts` sobre los PDF reales, en los
+tres idiomas y los tres documentos, **y también que no aparezca** cuando no se
+pactó.
 
 ### Eventos próximos: se derivan, no se guardan
 
@@ -983,12 +1151,34 @@ la declara su propio SCSS.
   y atarla hoy a un interruptor sería inventarse cuándo llega el ROI.
 - El **descuento de fidelidad** (`Client.loyaltyDiscountPercent`, máx. 30 %) se asigna a mano y es independiente de `trustLevel`, salvo que bloquear a un cliente se lo retira. Cada cambio se anota en `loyaltyDiscountHistory[]` con autor y fecha.
 - Pagos: 3 acciones en UI — Registrar cobro / Devolver fianza / Retener fianza.
+  ⚠️ **`delivery_fee` y `collection_fee` son la entrega y la recogida a domicilio**, y
+  no son cargos extra: ver «Entrega y recogida a domicilio» más arriba.
   ⚠️ **`rental_payment` no es un concepto, es «cobrarlo todo de una vez».** No tiene fila
   sembrada propia: `distributeRentalPayment()` lo reparte entre señal y resto, en ese
   orden, y el sobrante abre fila aparte. Creando fila propia —como hacía— el dinero
   contaba como ingreso pero no para `remainingPaid`, así que **la reserva se cobraba
   entera y no se podía cerrar nunca** (D-5).
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
+- **La señal también puede ser 0, y entonces la reserva nace CONFIRMADA.**
+  `buildInitialPayment()` en `payment-summary.util.ts` la crea `waived`, no
+  `pending`. ⚠️ **«0,00 € pendiente» es una deuda que nadie puede cobrar**, y
+  costaba dos cosas a la vez: a `confirmed` solo se llegaba **cobrando** la
+  señal (`reservationStatusAfterPayment`, que corre al registrar un cobro), así
+  que sin señal la reserva se quedaba `reserved` de por vida —y con ella, el
+  justificante de reserva, que exige `confirmed`, no se podía emitir nunca—; y
+  la ficha enseñaba «Señal 0,00 € · Pendiente» al lado de un cero que el
+  operador acababa de decidir. Lo resuelve
+  `reservationStatusAfterInitialChange()`, que contesta lo mismo al crear y al
+  editar.
+  ⚠️ **Aquí el motivo NO es obligatorio, al revés que en la fianza**, y la
+  asimetría tiene razón: el de la fianza es lo único que deja cerrar la reserva
+  (`isDepositSettled`), mientras que ningún guard depende de la señal — el
+  precio entero sigue exigido en `remainingPayment` y `canStartPickup()` no
+  entrega el coche sin cobrarlo. No se perdona dinero, se cobra más tarde.
+  ⚠️ **Y lo cobrado manda sobre lo que se pida** (`initialPaymentStatus`):
+  bajar a 0 una señal ya cobrada la deja `paid`, no `waived`. Decir que no se
+  pidió nada cuando entraron 30 € dejaría la reserva contando una cosa y
+  `payments` otra; si hay que devolverlo, eso es una devolución.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
 ### Crear una reserva es una sola escritura
@@ -2290,6 +2480,39 @@ caja está ahí de verdad, así que lo que afirma el auditor es cierto. Las
 dieciocho declaraciones siguen mandando sobre lo suyo por especificidad —la del
 componente lleva el atributo de encapsulación—; lo que cambia es que un
 formulario nuevo ya no sale desnudo.
+
+### `npm run rows:audit` — el formulario en escalera
+
+⚠️ **Es la cuarta auditoría, y nace de una lista enumerada a mano que se quedó
+corta.** `styles.scss` le da a cada `.form-group` un `margin-top: 1rem` para
+separarlo del hermano de arriba, y esa regla **no sabe en qué dirección coloca
+el contenedor**: dentro de una rejilla horizontal el margen se lo come la
+columna derecha, que baja 16 px y deja la fila torcida. La corrección —anular el
+margen dentro de los contenedores horizontales— traía **cinco** nombres de clase
+escritos a mano, y faltaban **cuatro**: `.form-grid-inner`, `.checklist`,
+`.driver-form-grid` y `.line-regime`.
+
+El que se vio fue el primero, el 18 de septiembre de 2026: en «Estado del
+vehículo» de las inspecciones, «Nivel de combustible» salía 16 px por debajo de
+«Kilometraje». Lo encontró Dorel mirando la pantalla — que es exactamente lo que
+la nota anterior daba por suficiente («se encuentra volviendo a medir, no
+leyendo plantillas»).
+
+El guion recorre las plantillas con un **analizador de etiquetas**, no con una
+expresión regular: eso es lo que permite saber quién es el padre de cada campo,
+y es la parte que se daba por imposible. De cada contenedor con dos o más campos
+mira el `display` en el SCSS —`grid` coloca en horizontal, y `flex` también
+salvo que declare `flex-direction: column`— y **falla con código 1** si alguno no
+está exceptuado. La lista la lee del propio `styles.scss`: copiarla aquí sería
+una segunda fuente de verdad.
+
+⚠️ **Y comprueba que cada exceptuado declara `gap`.** Es la condición que hace
+seguro quitar el margen: sin `gap`, al bajar de línea en móvil las filas se
+tocarían.
+
+⚠️ **Lo que no puede saber:** un contenedor cuyo `display` venga de otro sitio
+—una clase heredada, un estilo en línea—. Para eso sigue valiendo mirar la
+pantalla y medir con `getComputedStyle()`.
 
 ### Tema y color
 

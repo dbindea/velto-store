@@ -191,7 +191,58 @@ export interface ReservationInitialPayment {
   requiredAmount: number;
   paidAmount: number;
   dueDate?: any;
-  status: 'pending' | 'paid';
+  /**
+   * ⚠️ **`waived` no es «cobrada»: es que no se pide.** Misma distinción que en
+   * la fianza, y por el mismo motivo — una señal de 0 € en `pending` es una
+   * deuda de cero euros que nadie puede cobrar nunca, así que la reserva se
+   * quedaba en `reserved` para siempre y la ficha decía «Señal 0,00 € ·
+   * Pendiente». Con `waived` la reserva nace confirmada y la pantalla dice «No
+   * se solicita».
+   *
+   * ⚠️ **A diferencia de la fianza, aquí NO se exige motivo.** El de la fianza
+   * no es papeleo: sin él `isDepositSettled()` no da la fianza por resuelta y la
+   * reserva no se puede cerrar. La señal no gobierna ningún cierre — el precio
+   * entero sigue exigido en `remainingPayment`, y `canStartPickup` no entrega el
+   * coche sin cobrarlo. No se perdona dinero, solo se cobra más tarde.
+   *
+   * Valor añadido el 18 de septiembre de 2026. Es aditivo: las reservas
+   * anteriores siguen leyéndose, porque ninguna lo lleva.
+   */
+  status: 'pending' | 'paid' | 'waived';
+}
+
+/**
+ * Entrega y recogida a domicilio.
+ *
+ * El negocio lo entrega gratis en un radio corto alrededor de Arganda; fuera de
+ * ahí se pacta un suplemento, y los dos trayectos son **independientes**: hay
+ * clientes que recogen en oficina y solo piden que se les vaya a buscar.
+ *
+ * ⚠️ **Los importes son NETOS**, como todo lo que se negocia en esta aplicación:
+ * el operador teclea el número redondo que dijo por teléfono y el IVA se suma
+ * encima con el tipo congelado de la reserva. Con la casilla «sin IVA» el
+ * cliente paga exactamente lo tecleado. Ver `deliveryFeeBreakdown()`.
+ *
+ * ⚠️ **Vive FUERA de `pricingSnapshot`, y no es colocación casual.** El reparto
+ * con el dueño del coche se calcula sobre `pricingSnapshot.netPrice`
+ * (`owner-share.util.ts`), y llevar el coche a 30 km es un servicio que pone la
+ * agencia con su furgoneta y su hora — no lo pone el coche. Metido en el
+ * snapshot, el propietario cobraría un porcentaje del desplazamiento sin que
+ * nadie lo hubiera decidido. Es la misma razón por la que los cargos extra son
+ * de Velto.
+ *
+ * ⚠️ **Y por eso tampoco son `extra_*`:** un cargo extra nace de la inspección
+ * de devolución y cubre un perjuicio. Esto se pacta al reservar y se imprime en
+ * el contrato, que es lo que permite cobrarlo.
+ *
+ * Campo opcional y aditivo: las reservas anteriores al 19 de septiembre de 2026
+ * no lo llevan y se leen como «sin servicio a domicilio».
+ */
+export interface ReservationDeliveryFees {
+  /** Lo que se cobra por llevarle el coche. Neto. 0 o ausente = no se cobra. */
+  pickupFee: number;
+  /** Lo que se cobra por ir a recogerlo. Neto. 0 o ausente = no se cobra. */
+  returnFee: number;
 }
 
 export interface ReservationRemainingPayment {
@@ -222,6 +273,19 @@ export interface ReservationPaymentSummary {
   extrasRequired: number;
   /** Cargos extra que quedan por cobrar. Es deuda viva del cliente. */
   extrasPending: number;
+  /**
+   * Entrega y recogida a domicilio: lo **devengado**, lo cobrado y lo que falta.
+   *
+   * ⚠️ **Tienen su propia línea y no se suman a los cargos extra**, aunque
+   * ahorraría tres campos. Un cargo extra es un perjuicio que se descubre al
+   * devolver el coche y se puede cubrir con la fianza; esto es un servicio
+   * pactado al reservar. Juntos, la ficha diría «Cargos extra 20 €» de una
+   * reserva sin un solo daño, y el reparto de la retención de fianza se llevaría
+   * por delante el desplazamiento.
+   */
+  servicesRequired: number;
+  servicesPaid: number;
+  servicesPending: number;
   totalPaid: number;
   totalPending: number;
   balance: number;
@@ -305,6 +369,12 @@ export interface Reservation {
 
   initialPayment: ReservationInitialPayment;
   remainingPayment: ReservationRemainingPayment;
+  /**
+   * Entrega y recogida a domicilio, si se pactaron. Ver
+   * `ReservationDeliveryFees`: importes NETOS y fuera de `pricingSnapshot` a
+   * propósito, para que no entren en el reparto con el dueño del coche.
+   */
+  deliveryFees?: ReservationDeliveryFees;
   deposit: ReservationDeposit;
 
   paymentStatus: ReservationPaymentStatus;
@@ -386,6 +456,20 @@ export const RESERVATION_PAYMENT_STATUS_LABELS: Record<ReservationPaymentStatus,
  * `reservation.deposit.status` raw — the operator saw the Firestore value
  * "pending" in English regardless of the selected language.
  */
+/**
+ * Estado de la señal. Existe por lo mismo que el de la fianza: la plantilla
+ * pintaba `status === 'paid' ? 'Cobrada' : 'Pendiente'` a pelo, así que el
+ * tercer estado —`waived`, no se pide— habría salido como «Pendiente».
+ */
+export const RESERVATION_INITIAL_PAYMENT_STATUS_LABELS: Record<
+  ReservationInitialPayment['status'],
+  string
+> = {
+  pending: 'reservations.paymentStatus.pending',
+  paid: 'reservations.paymentStatus.paid',
+  waived: 'reservations.initialPayment.waived'
+};
+
 export const RESERVATION_DEPOSIT_STATUS_LABELS: Record<ReservationDeposit['status'], string> = {
   pending: 'reservations.depositStatus.pending',
   paid: 'reservations.depositStatus.paid',

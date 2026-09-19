@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
-import { buildContractPdf, PdfBuilder, formatIdDocument, companyFooterLines } from '../contracts/pdf';
+import { buildContractPdf, PdfBuilder, formatIdDocument, formatMoney, companyFooterLines } from '../contracts/pdf';
 import { buildQuotePdf, buildBookingConfirmationPdf } from './documents-pdf';
 import { buildInspectionPdf } from './inspection-pdf';
 import { buildInvoicePdf } from '../invoices/invoice-pdf';
@@ -184,7 +184,12 @@ describe('the real documents, in every language', () => {
 
   async function layoutOf(
     kind: 'quote' | 'booking' | 'contract' | 'invoice' | 'receipt' | 'inspection',
-    locale: ContractLocale
+    locale: ContractLocale,
+    /**
+     * El precio con el que se compone el documento. Se puede sustituir para
+     * comprobar un alquiler **sin IVA**, que imprime menos filas y otro aviso.
+     */
+    precios: typeof pricing = pricing
   ): Promise<PdfBuilder> {
     let captured: PdfBuilder | null = null;
     const onLayout = (b: PdfBuilder) => {
@@ -197,7 +202,7 @@ describe('the real documents, in every language', () => {
         client,
         vehicle,
         rental,
-        pricing,
+        pricing: precios,
         locale,
         generatedAt: new Date('2026-08-27T09:00:00Z'),
         validUntil: new Date('2026-09-03T09:00:00Z'),
@@ -209,7 +214,7 @@ describe('the real documents, in every language', () => {
         client,
         vehicle,
         rental,
-        pricing,
+        pricing: precios,
         payments: {
           initialRequired: 500,
           initialPaid: 500,
@@ -388,7 +393,7 @@ describe('the real documents, in every language', () => {
           company,
           client,
           vehicle,
-          reservation: { ...rental, ...pricing },
+          reservation: { ...rental, ...precios },
           // El caso real de Velto: una cuadrilla que comparte el coche.
           additionalDrivers: [
             { fullName: 'María del Carmen Fernández-Sánchez', documentNumber: 'X4273299Z', drivingLicenseNumber: 'B1234567' },
@@ -465,6 +470,145 @@ describe('the real documents, in every language', () => {
       }, 30_000);
     }
   }
+
+  /**
+   * ⚠️ **Un cargo que el documento no imprime es un cargo que no se puede
+   * cobrar.** Es la regla que este proyecto ya ha roto cuatro veces —la póliza,
+   * el combustible de entrega, la dotación, el parte de entrega— y el
+   * desplazamiento a domicilio es la quinta oportunidad: se pacta al reservar,
+   * se cobra en su propia fila, y si el contrato firmado no lo nombra el cliente
+   * lo discute con razón.
+   *
+   * Se comprueba sobre el PDF real, en los tres idiomas y en los tres
+   * documentos: el presupuesto es lo que el cliente acepta, el justificante lo
+   * que recibe al confirmar y el contrato lo que firma. Los tres tienen que
+   * decir la misma cifra.
+   */
+  describe('la entrega a domicilio sale impresa', () => {
+    const CON_ENTREGA = {
+      ...pricing,
+      netPrice: 3000,
+      finalPrice: 3630,
+      // 15 € y 20 € netos: 18,15 € y 24,20 € con el 21 %.
+      deliveryPickupFee: 15,
+      deliveryReturnFee: 20
+    };
+    const ROTULOS: Record<ContractLocale, string[]> = {
+      es: ['Entrega a domicilio', 'Recogida a domicilio'],
+      en: ['Delivery to your address', 'Collection from your address'],
+      ro: ['Livrare la adresă', 'Ridicare de la adresă']
+    };
+
+    /**
+     * El texto del documento **en minúsculas**: el bloque de totales rotula en
+     * mayúsculas, y lo que hay que comprobar es que el concepto se nombra, no
+     * con qué caja se compone.
+     */
+    const texto = (b: PdfBuilder) =>
+      b.boxes
+        .map((box) => box.text)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+
+    for (const kind of ['quote', 'booking', 'contract'] as const) {
+      for (const locale of LOCALES) {
+        it(`${kind} / ${locale}: nombra los dos trayectos y sus importes`, async () => {
+          const t = texto(await layoutOf(kind, locale, CON_ENTREGA));
+          for (const rotulo of ROTULOS[locale]) {
+            expect(t, `falta «${rotulo}»`).toContain(rotulo.toLowerCase());
+          }
+          // El BRUTO, que es lo que hay que cobrarle: lo guardado es neto.
+          expect(t).toContain(formatMoney(18.15, locale).toLowerCase());
+          expect(t).toContain(formatMoney(24.2, locale).toLowerCase());
+        }, 30_000);
+
+        it(`${kind} / ${locale}: sin servicio pactado no lo nombra`, async () => {
+          // Un «0,00 €» junto a «Entrega a domicilio» en todos los contratos
+          // anuncia un servicio que nadie pidió.
+          const t = texto(await layoutOf(kind, locale));
+          for (const rotulo of ROTULOS[locale]) {
+            expect(t, `sobra «${rotulo}»`).not.toContain(rotulo.toLowerCase());
+          }
+        }, 30_000);
+
+        it(`${kind} / ${locale}: con entrega la maquetación sigue entera`, async () => {
+          // Son dos filas más en el bloque de totales: empujan lo que viene
+          // debajo, que en el contrato son las cláusulas y las firmas.
+          const b = await layoutOf(kind, locale, CON_ENTREGA);
+          expect(b.assertNoOverlaps()).toEqual([]);
+          expect(b.assertInsideMargins()).toEqual([]);
+          expect(b.assertNoMissingGlyphs()).toEqual([]);
+        }, 30_000);
+      }
+    }
+  });
+
+  /**
+   * ⚠️ **Un alquiler sin IVA no puede nombrar el IVA, y eso no lo ve ningún
+   * invariante de arriba**: los cinco miran dónde cae el texto, nunca qué dice.
+   * Es el mismo hueco por el que el presupuesto afirmó durante meses que los
+   * precios llevaban el impuesto incluido (F-36).
+   *
+   * El caso es el de Dorel: al cliente que no va a pedir factura se le cobran
+   * los 200 € pactados y el papel no habla de impuestos. La mención puede
+   * colarse por cuatro sitios distintos —el desglose, la etiqueta de la fianza,
+   * el aviso del presupuesto y el articulado—, así que se lee **todo** el texto
+   * del documento y se exige que no aparezca por ninguno.
+   */
+  describe('sin IVA, ningún documento lo menciona', () => {
+    /**
+     * ⚠️ **Lleva `netPrice`, que el fixture de arriba no trae.** El desglose
+     * parte siempre del neto —nunca de `finalPrice`, que es el derivado—, así
+     * que sin él el documento imprime «Total 0,00 €» y la comprobación del
+     * importe no estaría mirando nada.
+     */
+    const SIN_IVA = { ...pricing, netPrice: 3000, finalPrice: 3000, vatRate: 0 };
+    const MENCIONES: Record<ContractLocale, RegExp> = {
+      es: /\bIVA\b/,
+      en: /\bVAT\b/,
+      ro: /\bTVA\b/
+    };
+
+    const texto = (b: PdfBuilder) =>
+      b.boxes
+        .map((box) => box.text)
+        .join(' ')
+        .replace(/\s+/g, ' ');
+
+    for (const kind of ['quote', 'booking', 'contract'] as const) {
+      for (const locale of LOCALES) {
+        it(`${kind} / ${locale}: con IVA sí lo nombra`, async () => {
+          // El control del experimento: si el documento normal dejara de
+          // nombrarlo, el test de abajo pasaría sin comprobar nada.
+          expect(texto(await layoutOf(kind, locale))).toMatch(MENCIONES[locale]);
+        }, 30_000);
+
+        it(`${kind} / ${locale}: sin IVA no lo nombra en ninguna parte`, async () => {
+          expect(texto(await layoutOf(kind, locale, SIN_IVA))).not.toMatch(MENCIONES[locale]);
+        }, 30_000);
+
+        it(`${kind} / ${locale}: sin IVA la maquetación sigue entera`, async () => {
+          // Quitar filas mueve lo que viene debajo: el bloque de totales, el
+          // aviso y, en el contrato, las cláusulas y las firmas.
+          const b = await layoutOf(kind, locale, SIN_IVA);
+          expect(b.assertNoOverlaps()).toEqual([]);
+          expect(b.assertInsideMargins()).toEqual([]);
+          expect(b.assertNoMissingGlyphs()).toEqual([]);
+        }, 30_000);
+
+        it(`${kind} / ${locale}: sin IVA el total es el neto pactado`, async () => {
+          // 3.000 €, no 3.630: si el impuesto se colara en la aritmética el
+          // documento saldría sin nombrarlo y cobrándolo igual. El importe se
+          // compone con el mismo formateador que el documento, porque cada
+          // idioma escribe los miles y los decimales a su manera.
+          expect(texto(await layoutOf(kind, locale, SIN_IVA))).toContain(
+            formatMoney(3000, locale)
+          );
+        }, 30_000);
+      }
+    }
+  });
 
   /**
    * ⚠️ **Un recibo no puede parecer una factura**, y eso no lo comprueba

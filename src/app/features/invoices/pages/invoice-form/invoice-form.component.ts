@@ -44,7 +44,7 @@ import { CountryOption, countryOptions } from '@shared/utils/country.util';
 import { TranslateService } from '@core/i18n/translate.service';
 import { ComplianceService } from '@features/settings/services/compliance.service';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
-import { DEFAULT_VAT_RATE } from '@shared/utils/pricing.util';
+import { chargesVat, DEFAULT_VAT_RATE } from '@shared/utils/pricing.util';
 import { toDate, toDateString } from '@shared/utils/reservation-date.util';
 
 @Component({
@@ -104,6 +104,17 @@ export class InvoiceFormComponent implements OnInit {
   vehicleLabel?: string;
   contractNumber?: string;
   reservationTotal?: number;
+  /**
+   * La reserva se pactó **sin IVA** y ahora se le va a facturar.
+   *
+   * ⚠️ **Se avisa, no se impide.** El alquiler se cobró sin repercutir el
+   * impuesto porque el cliente no iba a pedir factura; si la pide, la factura
+   * lleva IVA y el total no va a coincidir con lo que se le cobró. Quien decide
+   * qué hacer con esa diferencia —subirla al cliente o sacarla del precio— es
+   * el operador, y lo único que la aplicación puede hacer es no dejar que se le
+   * pase: una factura emitida no se edita ni se borra.
+   */
+  reservationWithoutVat = false;
   amountAlreadyPaid = 0;
 
   profiles = signal<BillingProfile[]>([]);
@@ -306,9 +317,20 @@ export class InvoiceFormComponent implements OnInit {
           unitPrice: r.pricingSnapshot?.netPrice ?? 0,
           // El tipo se congeló en la reserva: una subida futura del general no
           // puede mover lo que se pactó.
-          vatRate: r.pricingSnapshot?.vatRate ?? DEFAULT_VAT_RATE
+          //
+          // ⚠️ **Salvo el 0, que aquí NO se hereda.** Una reserva «sin IVA» es
+          // un alquiler que se cobró sin repercutir el impuesto porque el
+          // cliente no iba a pedir factura; si acaba pidiéndola, la factura va
+          // en régimen general y el 0 % no se sostiene. Heredándolo saldría una
+          // factura al 0 % emitida por inercia — y una factura emitida no se
+          // edita ni se borra. Se propone el general y el aviso de abajo lo
+          // explica: el importe lo decide el operador, no este prellenado.
+          vatRate: chargesVat(r.pricingSnapshot ?? {})
+            ? (r.pricingSnapshot?.vatRate ?? DEFAULT_VAT_RATE)
+            : DEFAULT_VAT_RATE
         })
       ];
+      this.reservationWithoutVat = !chargesVat(r.pricingSnapshot ?? {});
 
       // El periodo del servicio sale de las fechas de la reserva. Es lo que
       // permite facturar hoy un alquiler de hace dos meses sin retrodatar la

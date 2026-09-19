@@ -9,6 +9,7 @@ import {
   ReservationStatus,
   BLOCKING_STATUSES,
   ReservationPricingSnapshot,
+  ReservationDeliveryFees,
   ReservationNote,
   WorkflowException,
   AdditionalDriver
@@ -22,14 +23,20 @@ import {
 } from '@shared/utils/reservation-date.util';
 import {
   calculateBasePrice,
+  chargesVat,
   findPricingRuleByDays,
   resolveRentalPrice
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
+import { deliveryFeeBreakdown } from '@shared/utils/pricing.util';
 import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
 import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { SettingsService } from '@features/settings/services/settings.service';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+import {
+  buildInitialPayment,
+  initialPaymentStatus,
+  roundMoney
+} from '@shared/utils/payment-summary.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
@@ -42,6 +49,7 @@ import {
   canCloseReservation as assertCanClose,
   canCreateReservationForClient,
   buildWorkflowException,
+  reservationStatusAfterInitialChange,
   ExceptionableAction
 } from '@shared/utils/reservation-workflow.util';
 import { PermissionsService } from '@core/auth/permissions.service';
@@ -80,6 +88,19 @@ export interface ReservationEdit {
   depositWaivedReason?: string;
   /** Puede ser 0: «no se pide señal». */
   initialPaymentRequired?: number;
+  /**
+   * El alquiler pasa a cobrarse **sin IVA**, o vuelve a llevarlo.
+   *
+   * Descongela `pricingSnapshot.vatRate` a propósito — es la única cosa que lo
+   * hace—, y solo mientras no se haya cobrado nada del alquiler: ver
+   * `canEditField('vatExempt')`.
+   */
+  vatExempt?: boolean;
+  /**
+   * Entrega y recogida a domicilio, en **neto**. `undefined` deja lo que haya;
+   * un trayecto a 0 deja de cobrarse y su fila se cancela.
+   */
+  deliveryFees?: ReservationDeliveryFees;
   additionalDrivers?: AdditionalDriver[];
 }
 
@@ -106,6 +127,24 @@ export interface ReservationEditResult {
  * veces, la primera vez que discrepen una pantalla dirá que no se cambió nada y
  * la otra que sí.
  */
+/**
+ * Los importes de entrega tal y como se guardan: números limpios o nada.
+ *
+ * ⚠️ **Devuelve `undefined` cuando no se cobra ningún trayecto**, y no un objeto
+ * con dos ceros. Un `{ pickupFee: 0, returnFee: 0 }` en todas las reservas es
+ * ruido en Firestore que además se lee como «aquí hay servicio a domicilio» al
+ * mirar el documento. La ausencia del campo es la forma honesta de decir que no
+ * lo hay — la misma idea que «un concepto a 0 no genera fila».
+ */
+function normalizeDeliveryFees(
+  fees: ReservationDeliveryFees | undefined
+): ReservationDeliveryFees | undefined {
+  const ida = Math.max(0, roundMoney(Number(fees?.pickupFee) || 0));
+  const vuelta = Math.max(0, roundMoney(Number(fees?.returnFee) || 0));
+  if (ida <= 0 && vuelta <= 0) return undefined;
+  return { pickupFee: ida, returnFee: vuelta };
+}
+
 export function agreedNetPriceOf(r: Reservation): number | null {
   const snap = r.pricingSnapshot;
   if (!snap?.manualAdjustment) return null;
@@ -167,6 +206,28 @@ function changedFields(actual: Reservation, edit: ReservationEdit): EditableFiel
       roundMoney(actual.initialPayment?.requiredAmount ?? 0)
   ) {
     out.push('initialPaymentAmount');
+  }
+  // Se compara contra el hecho, no contra la bandera: lo que hay guardado es un
+  // tipo, y «sin IVA» es ese tipo a 0. Así una reserva que ya estaba exenta y
+  // se guarda sin tocar la casilla no cuenta como cambio — el mismo cuidado que
+  // con el precio acordado.
+  if (
+    edit.vatExempt !== undefined &&
+    edit.vatExempt === chargesVat(actual.pricingSnapshot ?? {})
+  ) {
+    out.push('vatExempt');
+  }
+  // Se comparan los dos trayectos por separado, que es como se pactan. El
+  // objeto ausente y el objeto con dos ceros son lo mismo aquí: no se cobra
+  // nada, así que abrir y guardar sin tocar no cuenta como cambio.
+  if (edit.deliveryFees !== undefined) {
+    const antes = actual.deliveryFees;
+    const mismo =
+      roundMoney(Number(edit.deliveryFees.pickupFee) || 0) ===
+        roundMoney(Number(antes?.pickupFee) || 0) &&
+      roundMoney(Number(edit.deliveryFees.returnFee) || 0) ===
+        roundMoney(Number(antes?.returnFee) || 0);
+    if (!mismo) out.push('deliveryFees');
   }
   if (edit.additionalDrivers && !sameDrivers(edit.additionalDrivers, actual.additionalDrivers)) {
     out.push('additionalDrivers');
@@ -254,9 +315,14 @@ export class ReservationService {
    * general no puede mover un contrato ya firmado. El servicio lo lee por su
    * cuenta y no se fía del que traiga la pantalla, igual que recalcula el precio
    * en vez de fiarse de la cifra que enseñó la UI.
+   *
+   * ⚠️ **`vatExempt` lo pone a 0, y eso es todo lo que hay que guardar.** Un
+   * tipo de cero es la forma que tiene una reserva de decir «aquí no hay IVA»:
+   * la aritmética sale sola y `chargesVat()` decide con el mismo dato qué
+   * imprimen el contrato y el presupuesto. Ver la nota de `chargesVat`.
    */
-  private currentVatRate(): number {
-    return this.settingsService.settings().vatRate;
+  private currentVatRate(vatExempt?: boolean): number {
+    return vatExempt ? 0 : this.settingsService.settings().vatRate;
   }
 
   constructor() {
@@ -594,7 +660,14 @@ export class ReservationService {
     pickupLocation?: string,
     returnLocation?: string,
     /** Required when `depositRequired` is 0. See `buildDeposit`. */
-    depositWaivedReason?: string
+    depositWaivedReason?: string,
+    /** Sin IVA: el cliente paga el neto y los documentos no lo mencionan. */
+    vatExempt?: boolean,
+    /**
+     * Entrega y recogida a domicilio, en **neto**. Se congelan en la reserva y
+     * siembran una fila de cobro cada una. Ver `ReservationDeliveryFees`.
+     */
+    deliveryFees?: ReservationDeliveryFees
   ): Promise<string> {
     // Re-check availability
     const availability = await this.checkVehicleAvailability(vehicleId, pickupDateTime, returnDateTime);
@@ -621,8 +694,10 @@ export class ReservationService {
     
     // Same authority as `createReservationWithClient`: the tariff is net and
     // VAT is added on top. Without this the two entry points would create
-    // reservations priced differently.
-    const pricing = resolveRentalPrice(basePriceResult.basePrice, 0);
+    // reservations priced differently — and the rate travels explicitly for the
+    // same reason: the snapshot must freeze the rate the price was built with.
+    const vatRate = this.currentVatRate(vatExempt);
+    const pricing = resolveRentalPrice(basePriceResult.basePrice, 0, undefined, vatRate);
     const finalPrice = pricing.finalPrice;
     const remainingPaymentRequired = Math.max(0, finalPrice - initialPaymentRequired);
 
@@ -672,18 +747,25 @@ export class ReservationService {
         basePrice: basePriceResult.basePrice,
         netPrice: pricing.netPrice,
         finalPrice,
-        vatRate: this.currentVatRate(),
+        vatRate,
         // Se congelan con el precio: el cargo por kilómetros de la devolución
         // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
         // que se pactó en un alquiler ya cerrado.
         includedKmPerDay: vehicle.includedKmPerDay,
         extraKmPrice: vehicle.extraKmPrice
       },
-      initialPayment: {
-        requiredAmount: initialPaymentRequired,
-        paidAmount: 0,
-        status: 'pending'
-      },
+      /**
+       * Entrega y recogida a domicilio. Se guarda el **neto** tecleado; el bruto
+       * de cada fila de cobro lo pone `deliveryFeeBreakdown()` con el tipo
+       * congelado de esta reserva.
+       *
+       * ⚠️ Fuera de `pricingSnapshot` a propósito: el reparto con el dueño del
+       * coche sale del neto del alquiler, y el desplazamiento lo pone la agencia.
+       */
+      deliveryFees: normalizeDeliveryFees(deliveryFees),
+      // Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
+      // `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
+      initialPayment: buildInitialPayment(initialPaymentRequired),
       remainingPayment: {
         requiredAmount: remainingPaymentRequired,
         paidAmount: 0,
@@ -697,7 +779,10 @@ export class ReservationService {
       deposit: buildDeposit(depositRequired, depositWaivedReason),
       paymentStatus: 'pending',
       contractStatus: 'pending',
-      reservationStatus: 'reserved',
+      // Sin señal no hay cobro que dispare la confirmación, así que la reserva
+      // nace ya confirmada. Ver `reservationStatusAfterInitialChange`.
+      reservationStatus:
+        reservationStatusAfterInitialChange('reserved', initialPaymentRequired) ?? 'reserved',
       notes,
       createdAt: { seconds: Date.now() / 1000 },
       updatedAt: { seconds: Date.now() / 1000 }
@@ -730,7 +815,20 @@ export class ReservationService {
      */
     agreedNetPrice?: number,
     /** Required when `depositRequired` is 0. See `buildDeposit`. */
-    depositWaivedReason?: string
+    depositWaivedReason?: string,
+    /**
+     * El alquiler se pacta **sin IVA**: el cliente paga exactamente el neto y
+     * ni el contrato ni el presupuesto mencionan el impuesto.
+     *
+     * Congela `pricingSnapshot.vatRate` a 0, que es toda la señal que hace
+     * falta — ver `chargesVat()` en `pricing.util.ts`.
+     */
+    vatExempt?: boolean,
+    /**
+     * Entrega y recogida a domicilio, en **neto**. Se congelan en la reserva y
+     * siembran una fila de cobro cada una. Ver `ReservationDeliveryFees`.
+     */
+    deliveryFees?: ReservationDeliveryFees
   ): Promise<string> {
     // Do not rent to a customer marked `blocked`. The wizard disables the
     // button; this is the half that a stale tab or a direct call cannot skip.
@@ -759,10 +857,20 @@ export class ReservationService {
     // Tariff → loyalty discount → hand-agreed price. The service recomputes it
     // instead of trusting the figure the wizard showed: this is the value that
     // gets frozen into the contract.
+    /**
+     * ⚠️ **El tipo se pasa, no se deja al valor por defecto.** Sin el cuarto
+     * argumento `resolveRentalPrice()` usa el 21 % de `DEFAULT_VAT_RATE`
+     * mientras el snapshot guardaba el de Ajustes: con cualquier tipo distinto
+     * del general, el `finalPrice` calculado y el `vatRate` congelado decían
+     * cosas distintas del mismo alquiler. Y con `vatExempt` habría sido peor —el
+     * snapshot a 0 y el precio con un 21 % sumado dentro—.
+     */
+    const vatRate = this.currentVatRate(vatExempt);
     const pricing = resolveRentalPrice(
       basePriceResult.basePrice,
       client.loyaltyDiscountPercent,
-      agreedNetPrice
+      agreedNetPrice,
+      vatRate
     );
 
     /**
@@ -839,19 +947,27 @@ export class ReservationService {
         netPrice: pricing.netPrice,
         finalPrice,
         // Frozen so a future change of the general rate never moves a contract
-        // already signed.
-        vatRate: this.currentVatRate(),
+        // already signed. A 0 here means the rental carries no VAT at all, and
+        // it is what stops the documents from mentioning it (`chargesVat`).
+        vatRate,
         // Se congelan con el precio: el cargo por kilómetros de la devolución
         // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
         // que se pactó en un alquiler ya cerrado.
         includedKmPerDay: vehicle.includedKmPerDay,
         extraKmPrice: vehicle.extraKmPrice
       },
-      initialPayment: {
-        requiredAmount: initialPayment,
-        paidAmount: 0,
-        status: 'pending'
-      },
+      /**
+       * Entrega y recogida a domicilio. Se guarda el **neto** tecleado; el bruto
+       * de cada fila de cobro lo pone `deliveryFeeBreakdown()` con el tipo
+       * congelado de esta reserva.
+       *
+       * ⚠️ Fuera de `pricingSnapshot` a propósito: el reparto con el dueño del
+       * coche sale del neto del alquiler, y el desplazamiento lo pone la agencia.
+       */
+      deliveryFees: normalizeDeliveryFees(deliveryFees),
+      // Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
+      // `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
+      initialPayment: buildInitialPayment(initialPayment),
       remainingPayment: {
         requiredAmount: remainingPaymentRequired,
         paidAmount: 0,
@@ -865,7 +981,10 @@ export class ReservationService {
       deposit: buildDeposit(depositRequired, depositWaivedReason),
       paymentStatus: 'pending',
       contractStatus: 'pending',
-      reservationStatus: 'reserved',
+      // Sin señal no hay cobro que dispare la confirmación, así que la reserva
+      // nace ya confirmada. Ver `reservationStatusAfterInitialChange`.
+      reservationStatus:
+        reservationStatusAfterInitialChange('reserved', initialPayment) ?? 'reserved',
       notes,
       createdAt: { seconds: Date.now() / 1000 },
       updatedAt: { seconds: Date.now() / 1000 }
@@ -980,9 +1099,21 @@ export class ReservationService {
     const totalDays = calculateCalendarDays(pickup, returnAt);
     const recalcularPrecio =
       cambiados.includes('agreedPrice') ||
+      cambiados.includes('vatExempt') ||
       cambiados.includes('pickupDateTime') ||
       cambiados.includes('returnDateTime') ||
       cambiados.includes('client');
+
+    /**
+     * ⚠️ **El tipo se conserva salvo que se pida quitarlo o ponerlo.** Está
+     * congelado por reserva para que una subida futura del general no mueva un
+     * contrato ya firmado, así que editar una fecha **no** lo descongela; lo
+     * único que lo mueve es la casilla «sin IVA», y cuando vuelve a llevarlo se
+     * repone el tipo vigente de Ajustes porque no hay otro al que volver.
+     */
+    const vatRate = cambiados.includes('vatExempt')
+      ? this.currentVatRate(edit.vatExempt)
+      : actual.pricingSnapshot?.vatRate;
 
     let pricing = actual.pricingSnapshot;
     if (recalcularPrecio) {
@@ -1002,15 +1133,7 @@ export class ReservationService {
           : actual.pricingSnapshot?.manualAdjustment
             ? actual.pricingSnapshot?.netPrice
             : null;
-      const resultado = resolveRentalPrice(
-        base.basePrice,
-        fidelidad,
-        acordado,
-        // ⚠️ El tipo de IVA **se conserva**, no se relee de Ajustes: está
-        // congelado por reserva para que una subida futura no mueva un contrato
-        // ya firmado, y editar una fecha no es motivo para descongelarlo.
-        actual.pricingSnapshot?.vatRate
-      );
+      const resultado = resolveRentalPrice(base.basePrice, fidelidad, acordado, vatRate);
       pricing = {
         ...actual.pricingSnapshot,
         basePrice: resultado.tariffPrice,
@@ -1018,7 +1141,8 @@ export class ReservationService {
         loyaltyDiscount: resultado.loyaltyDiscount,
         manualAdjustment: resultado.manualAdjustment,
         netPrice: resultado.netPrice,
-        finalPrice: resultado.finalPrice
+        finalPrice: resultado.finalPrice,
+        vatRate
       } as ReservationPricingSnapshot;
       update['pricingSnapshot'] = pricing;
       update['totalDays'] = totalDays;
@@ -1027,6 +1151,28 @@ export class ReservationService {
     if (cambiados.includes('depositAmount')) {
       update['deposit'] = buildDeposit(edit.depositRequired!, edit.depositWaivedReason);
     }
+
+    /**
+     * Entrega y recogida a domicilio.
+     *
+     * ⚠️ **Se recalcula el bruto también cuando cambia el IVA**, aunque nadie
+     * haya tocado los importes: lo guardado es el neto y el cliente paga neto
+     * más impuesto, así que quitar el IVA de una reserva con entrega tiene que
+     * bajar también esas dos filas. Sin esto, la reserva pasaría a no llevar IVA
+     * y el desplazamiento seguiría cobrándolo.
+     */
+    const feesNuevas = cambiados.includes('deliveryFees')
+      ? normalizeDeliveryFees(edit.deliveryFees)
+      : actual.deliveryFees;
+    if (cambiados.includes('deliveryFees')) {
+      // `cleanData` quita los `undefined`, así que borrar el servicio a domicilio
+      // pide un `null` explícito: sin él el campo viejo se quedaría escrito.
+      update['deliveryFees'] = feesNuevas ?? null;
+    }
+    const entregaNueva =
+      cambiados.includes('deliveryFees') || cambiados.includes('vatExempt')
+        ? deliveryFeeBreakdown(feesNuevas, vatRate)
+        : null;
 
     /**
      * La señal y el resto se recalculan juntos, **siempre que se toque
@@ -1040,14 +1186,42 @@ export class ReservationService {
     if (problema) throw new Error(problema);
     const reparto = redistributeInitialPayment(totalDue, Number(señalPedida));
 
+    /**
+     * ⚠️ **El estado se recalcula, no se arrastra.** Con un `...actual` a secas,
+     * bajar la señal a 0 dejaba pegado el `pending` de antes y la ficha seguía
+     * diciendo «Señal 0,00 € · Pendiente»: una deuda de cero euros que nadie
+     * puede cobrar. La regla es la misma que al crear, y por eso la contesta la
+     * misma función.
+     */
+    const señalPagada = roundMoney(actual.initialPayment?.paidAmount ?? 0);
     update['initialPayment'] = {
       ...actual.initialPayment,
-      requiredAmount: reparto.initial
+      requiredAmount: reparto.initial,
+      status: initialPaymentStatus(reparto.initial, señalPagada)
     };
     update['remainingPayment'] = {
       ...(actual.remainingPayment ?? { paidAmount: 0, status: 'pending' }),
       requiredAmount: reparto.remaining
     };
+
+    /**
+     * ⚠️ **Y renunciar a la señal confirma la reserva**, por lo mismo: a
+     * `confirmed` solo se llegaba **cobrando**, así que una reserva sin señal se
+     * quedaba `reserved` para siempre y su justificante —que exige `confirmed`—
+     * no se podía emitir nunca.
+     *
+     * Solo avanza; nunca retrocede. Devolver la señal a un importe mayor que 0
+     * no desconfirma una reserva ya confirmada, porque eso lo decide el dinero
+     * que entró, no lo que se pida.
+     */
+    const siguiente = reservationStatusAfterInitialChange(
+      actual.reservationStatus,
+      reparto.initial,
+      señalPagada
+    );
+    if (siguiente && siguiente !== actual.reservationStatus) {
+      update['reservationStatus'] = siguiente;
+    }
 
     const batch = writeBatch(this.firestore);
     batch.update(docRef, this.cleanData(update));
@@ -1056,7 +1230,9 @@ export class ReservationService {
       remainingRequired: reparto.remaining,
       depositRequired: cambiados.includes('depositAmount')
         ? roundMoney(edit.depositRequired!)
-        : undefined
+        : undefined,
+      deliveryRequired: entregaNueva ? entregaNueva.pickupGross : undefined,
+      collectionRequired: entregaNueva ? entregaNueva.returnGross : undefined
     });
     await batch.commit();
 

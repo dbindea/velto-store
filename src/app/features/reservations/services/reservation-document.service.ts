@@ -49,6 +49,9 @@ export interface QuoteDocumentRequest {
     manualAdjustment?: number;
     netPrice?: number;
     vatRate?: number;
+    /** Entrega y recogida a domicilio, en neto. Se imprimen en su línea. */
+    deliveryPickupFee?: number;
+    deliveryReturnFee?: number;
   };
   locale?: string;
 }

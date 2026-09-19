@@ -7,14 +7,22 @@
  */
 
 import { Payment, PaymentStatus, PaymentType } from '@shared/models/payment.model';
-import { Reservation, ReservationPaymentSummary } from '@shared/models/reservation.model';
+import { roundMoney } from './money.util';
+import { deliveryFeeBreakdown } from './pricing.util';
+import {
+  Reservation,
+  ReservationInitialPayment,
+  ReservationPaymentSummary
+} from '@shared/models/reservation.model';
 
-const ROUND = 100;
-
-/** Round to 2 decimals */
-export function roundMoney(value: number): number {
-  return Math.round(value * ROUND) / ROUND;
-}
+/**
+ * ⚠️ **Se reexporta, no se define aquí.** Vivía en este fichero y lo importaban
+ * media docena de módulos, `pricing.util.ts` entre ellos; cuando este resumen
+ * necesitó una función de precios, los dos quedaron importándose mutuamente.
+ * Ver `money.util.ts`. Reexportarlo evita tocar a todos los que ya lo piden
+ * aquí.
+ */
+export { roundMoney } from './money.util';
 
 /** Calculate pending amount */
 export function calculatePendingAmount(amount: number, paidAmount: number): number {
@@ -30,6 +38,22 @@ export function calculatePaymentStatus(amount: number, paidAmount: number): Paym
 
 /** Rental money proper: the signal, the balance, or a single full payment. */
 const RENTAL_TYPES: PaymentType[] = ['initial_payment', 'remaining_payment', 'rental_payment'];
+
+/**
+ * Servicios pactados **al reservar** y facturados aparte del alquiler.
+ *
+ * ⚠️ **Es una tercera categoría y no un apaño.** Meterlos en `EXTRA_TYPES`
+ * habría salido gratis —contarían como ingreso, sumarían a lo pendiente y el
+ * cierre ya avisa de los extras—, y habría sido mentira en dos sitios que se
+ * ven: la ficha diría «Cargos extra 20 €» de un alquiler sin un solo daño, y
+ * `distributeRetentionAcrossCharges()` dejaría cubrir el desplazamiento con la
+ * fianza retenida, que es dinero del cliente guardado para responder de
+ * perjuicios.
+ *
+ * Y en `RENTAL_TYPES` tampoco: el alquiler es lo que el coche vale, y es la
+ * base sobre la que se reparte con su dueño.
+ */
+export const SERVICE_TYPES: PaymentType[] = ['delivery_fee', 'collection_fee'];
 
 /** Add-ons billed during or after the rental. */
 export const EXTRA_TYPES: PaymentType[] = [
@@ -47,6 +71,8 @@ export interface CollectedTotals {
   rental: number;
   /** Extra charges collected. */
   extras: number;
+  /** Entrega y recogida a domicilio cobradas. */
+  services: number;
   /** Free-standing collections not tied to a rental concept. */
   other: number;
   /** What the business actually earned: rental + extras + other. */
@@ -84,6 +110,11 @@ export function collectedTotalsOf(payments: Payment[]): CollectedTotals {
 
   const rental = sum(RENTAL_TYPES);
   const extras = sum(EXTRA_TYPES);
+  // ⚠️ **Esta lista es un permiso, no una prohibición**, al revés que la de
+  // `analytics.util.ts`: un tipo de cobro nuevo que no se añada aquí deja de
+  // contar como ingreso **en silencio**. Por eso los servicios entran también en
+  // `income` justo debajo.
+  const services = sum(SERVICE_TYPES);
   const other = sum(['free_payment']);
   const depositCollected = sum(['deposit']);
   const depositReturned = sum(['deposit_refund']);
@@ -92,8 +123,9 @@ export function collectedTotalsOf(payments: Payment[]): CollectedTotals {
   return {
     rental,
     extras,
+    services,
     other,
-    income: roundMoney(rental + extras + other),
+    income: roundMoney(rental + extras + services + other),
     depositCollected,
     depositReturned,
     depositRetained,
@@ -148,6 +180,22 @@ export function calculateReservationPaymentSummary(
     extraCharges.reduce((sum, p) => sum + (p.paidAmount || 0), 0)
   );
 
+  /**
+   * Entrega y recogida a domicilio. Se pactan al reservar, así que su importe
+   * exigido es el de la fila: no hay un campo en la reserva con el bruto, solo
+   * los netos, y derivarlo aquí obligaría a repetir la suma del IVA.
+   */
+  const serviceCharges = active.filter(p => SERVICE_TYPES.includes(p.type));
+  const servicesRequired = roundMoney(
+    serviceCharges.reduce((sum, p) => sum + (p.amount || 0), 0)
+  );
+  const servicesPaid = roundMoney(
+    serviceCharges.reduce((sum, p) => sum + (p.paidAmount || 0), 0)
+  );
+  const servicesPending = roundMoney(
+    serviceCharges.reduce((sum, p) => sum + calculatePendingAmount(p.amount, p.paidAmount), 0)
+  );
+
   // Refunds
   const allRefunds = active.filter(p =>
     p.direction === 'refund' || p.type === 'deposit_refund'
@@ -158,11 +206,14 @@ export function calculateReservationPaymentSummary(
 
   // Totals
   const rentalTotal = reservation.pricingSnapshot?.finalPrice || 0;
-  const totalPaid = roundMoney(initialPaymentPaid + remainingPaymentPaid + extraChargesTotal);
+  const totalPaid = roundMoney(
+    initialPaymentPaid + remainingPaymentPaid + extraChargesTotal + servicesPaid
+  );
   const totalPending = roundMoney(
     Math.max(0, initialPaymentRequired - initialPaymentPaid) +
     Math.max(0, remainingPaymentRequired - remainingPaymentPaid) +
-    extraCharges.reduce((sum, p) => sum + calculatePendingAmount(p.amount, p.paidAmount), 0)
+    extraCharges.reduce((sum, p) => sum + calculatePendingAmount(p.amount, p.paidAmount), 0) +
+    servicesPending
   );
 
   const balance = roundMoney(totalPaid - refundsTotal);
@@ -185,9 +236,15 @@ export function calculateReservationPaymentSummary(
   const extraChargesRequired = roundMoney(
     extraCharges.reduce((sum, p) => sum + (p.amount || 0), 0)
   );
+  /**
+   * ⚠️ **La entrega a domicilio cuenta para el estado**, por lo mismo que los
+   * cargos extra: es deuda del cliente pactada por escrito, y una reserva que
+   * se anuncia como PAGADA con 20 € de desplazamiento sin cobrar es una reserva
+   * que se cierra dejándose dinero.
+   */
   const calculatedStatus = calculatePaymentStatus(
-    initialPaymentRequired + remainingPaymentRequired + extraChargesRequired,
-    initialPaymentPaid + remainingPaymentPaid + extraChargesTotal
+    initialPaymentRequired + remainingPaymentRequired + extraChargesRequired + servicesRequired,
+    initialPaymentPaid + remainingPaymentPaid + extraChargesTotal + servicesPaid
   );
   const paymentStatus: 'pending' | 'partial' | 'paid' =
     calculatedStatus === 'paid' ? 'paid' :
@@ -217,6 +274,9 @@ export function calculateReservationPaymentSummary(
     extrasPending: roundMoney(
       extraCharges.reduce((sum, p) => sum + calculatePendingAmount(p.amount, p.paidAmount), 0)
     ),
+    servicesRequired,
+    servicesPaid,
+    servicesPending,
     totalPaid,
     totalPending,
     balance,
@@ -360,6 +420,66 @@ export function distributeRentalPayment(
 }
 
 /**
+ * El bloque de señal de una reserva, con el estado que de verdad le toca.
+ *
+ * ⚠️ **Una señal de 0 nace `waived`, no `pending`.** Es la misma distinción que
+ * `buildDeposit()` hace con la fianza y el mismo fallo si se pierde: «0,00 €
+ * pendientes» es una deuda que nadie puede cobrar, así que la reserva se
+ * quedaba en `reserved` de por vida —`confirmed` solo llega **cobrando** la
+ * señal— y con ella se quedaban fuera el justificante de reserva, que exige
+ * `confirmed`, y el estado que la ficha enseña, que decía «Pendiente» junto a un
+ * cero.
+ *
+ * El caso es de Dorel y es corriente: a un conocido no se le pide señal. Lo que
+ * eso significa es «me fío, ya me pagará», no «se le perdona»: el precio entero
+ * sigue exigido, solo que todo él en `remainingPayment`.
+ *
+ * ⚠️ **Sin motivo obligatorio, al revés que la fianza.** Allí el motivo es lo
+ * único que deja cerrar la reserva (`isDepositSettled`); aquí no hay ningún
+ * guard que dependa de la señal, así que exigirlo sería friccón sin efecto.
+ *
+ * ⚠️ **El hueco no es el cero.** `Number(null)` y `Number('')` son 0, no `NaN`:
+ * un campo vacío se guardaría como «no se pide señal» sin que nadie lo
+ * decidiera. Quien valida eso es `initialPaymentProblem()`, antes de llegar
+ * aquí.
+ */
+export function buildInitialPayment(
+  requiredAmount: number,
+  extra?: { paidAmount?: number; dueDate?: any }
+): ReservationInitialPayment {
+  const required = roundMoney(Math.max(0, Number(requiredAmount) || 0));
+  const paid = roundMoney(Math.max(0, Number(extra?.paidAmount) || 0));
+
+  return {
+    requiredAmount: required,
+    paidAmount: paid,
+    ...(extra?.dueDate !== undefined ? { dueDate: extra.dueDate } : {}),
+    status: initialPaymentStatus(required, paid)
+  };
+}
+
+/**
+ * El estado que le corresponde a una señal por sus dos importes.
+ *
+ * Vive aparte de `buildInitialPayment()` porque hace falta también al **editar**,
+ * donde el bloque ya existe y solo cambia el importe exigido: el estado tiene
+ * que recalcularse ahí con la misma regla, o bajar la señal a 0 dejaría el
+ * `pending` de antes pegado.
+ */
+export function initialPaymentStatus(
+  requiredAmount: number,
+  paidAmount: number
+): ReservationInitialPayment['status'] {
+  const required = roundMoney(Math.max(0, Number(requiredAmount) || 0));
+  const paid = roundMoney(Math.max(0, Number(paidAmount) || 0));
+  // Cobrada antes de renunciar a ella: lo que entró manda. Bajar a 0 una señal
+  // ya cobrada no la convierte en «no se pide» — eso sería una devolución.
+  if (paid > 0) return paid >= required ? 'paid' : 'pending';
+  if (required <= 0) return 'waived';
+  return 'pending';
+}
+
+/**
  * Las filas de pago que le corresponden a una reserva recién creada.
  *
  * Una por concepto esperado —señal, resto, fianza— y **ninguna para un concepto
@@ -378,6 +498,12 @@ export function buildInitialPaymentRows(
 ): Record<string, any>[] {
   const finalPrice = reservation.pricingSnapshot?.finalPrice || 0;
   const now = { seconds: Date.now() / 1000 };
+  // El bruto de cada trayecto, con el tipo congelado de esta reserva. Una
+  // reserva «sin IVA» cobra exactamente lo que el operador tecleó.
+  const entrega = deliveryFeeBreakdown(
+    reservation.deliveryFees,
+    reservation.pricingSnapshot?.vatRate
+  );
 
   const common = {
     reservationId,
@@ -420,6 +546,37 @@ export function buildInitialPaymentRows(
       concept: 'Resto alquiler',
       prefix: 'REMAIN',
       dueDate: reservation.remainingPayment?.dueDate
+    },
+    /**
+     * Entrega y recogida a domicilio, **una fila cada una** (decisión de Dorel,
+     * 19 de septiembre de 2026): se pactan por separado y se cobran en momentos
+     * distintos — la entrega al salir y la recogida al volver, que es lo que
+     * dicen sus vencimientos.
+     *
+     * ⚠️ El importe que va a la fila es el **bruto**: lo tecleado es neto y el
+     * IVA se suma con el tipo congelado de la reserva. Una fila de cobro dice lo
+     * que hay que cobrarle al cliente, no la base imponible.
+     */
+    /**
+     * ⚠️ **El concepto es el TIPO, no una frase en español.** Los tres de arriba
+     * guardan un literal castellano por herencia, y `PaymentConceptPipe` los
+     * pinta tal cual: un operador rumano lee «Señal reserva». Con el tipo dentro,
+     * el pipe resuelve la etiqueta traducida, que es lo que hay que hacer con un
+     * concepto que escribe el sistema y no una persona.
+     */
+    {
+      type: 'delivery_fee',
+      amount: entrega.pickupGross,
+      concept: 'delivery_fee',
+      prefix: 'DLV',
+      dueDate: reservation.pickupDateTime
+    },
+    {
+      type: 'collection_fee',
+      amount: entrega.returnGross,
+      concept: 'collection_fee',
+      prefix: 'COL',
+      dueDate: reservation.returnDateTime
     },
     {
       type: 'deposit',

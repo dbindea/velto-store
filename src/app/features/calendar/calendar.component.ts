@@ -1,16 +1,21 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { Reservation } from '@shared/models/reservation.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { toDate } from '@shared/utils/reservation-date.util';
 import { MonthGridComponent } from './components/month-grid/month-grid.component';
+import { firstValueFrom } from 'rxjs';
 
 interface DayReservations {
   date: Date;
   reservations: Reservation[];
 }
+
+/** Cuánto hay que arrastrar el dedo para que cuente como cambio de mes. */
+const SWIPE_MIN_PX = 60;
 
 @Component({
   selector: 'app-calendar',
@@ -38,45 +43,49 @@ export class CalendarComponent implements OnInit {
   }
 
   currentMonth = signal(new Date());
-  reservations = signal<Reservation[]>([]);
   loading = signal(true);
 
-  // Day detail modal
+  /**
+   * Todas las reservas, sin recortar por fecha.
+   *
+   * ⚠️ **Aquí había un filtro que se cargaba el calendario entero.** Recortaba a
+   * una ventana de tres meses **alrededor de HOY** —no del mes que se está
+   * mirando—, así que al avanzar dos meses la rejilla salía vacía aunque
+   * hubiera reservas. Quién decide qué se pinta en cada día es
+   * `MonthGridComponent`, que ya filtra celda a celda: la ventana no ahorraba
+   * nada y solo escondía reservas.
+   */
+  reservations = signal<Reservation[]>([]);
+
+  /** Day detail modal */
   dayDetail = signal<DayReservations | null>(null);
 
+  /** El mes en curso, para el título y para el gesto de deslizar. */
+  monthTitle = computed(() => {
+    const d = this.currentMonth();
+    /**
+     * ⚠️ **La primera letra, no cada palabra.** El SCSS llevaba
+     * `text-transform: capitalize`, que capitaliza **todas**: «Septiembre De
+     * 2026». En español la preposición va en minúscula — es la misma regla que
+     * ya se aplica a «Arganda del Rey» en los topónimos.
+     */
+    const texto = d.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  });
+
   ngOnInit(): void {
-    this.loadReservations();
+    void this.loadReservations();
   }
 
   private async loadReservations(): Promise<void> {
     this.loading.set(true);
-    // Pull a 3-month window centered on the current month so the
-    // grid shows overlap and the user can navigate freely.
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-
     try {
-      const all = await new Promise<Reservation[]>((resolve, reject) => {
-        this.reservationService.getReservations().subscribe({
-          next: (rows) => resolve(rows),
-          error: (e) => reject(e)
-        });
-      });
-      const filtered = all.filter((r) => {
-        // Cheap date check — we just want non-cancelled reservations
-        // touching the visible window.  MonthGridComponent does the
-        // exact per-day filtering.
-        if (r.reservationStatus === 'cancelled') return true; // keep for transparency
-        const pickup = (r.pickupDateTime as any)?.toDate
-          ? (r.pickupDateTime as any).toDate()
-          : new Date(r.pickupDateTime);
-        const ret = (r.returnDateTime as any)?.toDate
-          ? (r.returnDateTime as any).toDate()
-          : new Date(r.returnDateTime);
-        return pickup <= end && ret >= start;
-      });
-      this.reservations.set(filtered);
+      /**
+       * `getReservations()` es una lectura de una vez, así que `firstValueFrom`
+       * resuelve y se acabó. No es un `watch…`: el calendario se mira, no se
+       * vigila, y quien quiera lo último tiene el botón de hoy y la navegación.
+       */
+      this.reservations.set(await firstValueFrom(this.reservationService.getReservations()));
     } finally {
       this.loading.set(false);
     }
@@ -97,32 +106,68 @@ export class CalendarComponent implements OnInit {
   }
 
   monthLabel(): string {
-    const d = this.currentMonth();
-    // Locale-aware (es, en, ro).
-    /**
-     * ⚠️ **La primera letra, no cada palabra.** El SCSS llevaba
-     * `text-transform: capitalize`, que capitaliza **todas**: «Septiembre De
-     * 2026». En español la preposición va en minúscula — es la misma regla que
-     * ya se aplica a «Arganda del Rey» en los topónimos.
-     */
-    const texto = d.toLocaleDateString(this.locale, { month: 'long', year: 'numeric' });
-    return texto.charAt(0).toUpperCase() + texto.slice(1);
+    return this.monthTitle();
   }
+
+  // -------------------------------------------------------------------------
+  // Deslizar para cambiar de mes
+  //
+  // ⚠️ **Solo cuenta el gesto claramente horizontal.** Sin comparar contra el
+  // desplazamiento vertical, bajar por el calendario con el dedo cambiaba de
+  // mes a media lectura. Y el umbral no es cosmético: un toque normal mueve
+  // unos pocos píxeles, así que sin él pulsar un día saltaría de mes.
+  //
+  // Va en el componente y no en una directiva compartida porque no hay una
+  // segunda pantalla que deslice: inventar una API compartida para un solo uso
+  // es otra cosa que mantener.
+  // -------------------------------------------------------------------------
+
+  private touchX = 0;
+  private touchY = 0;
+
+  onTouchStart(event: TouchEvent): void {
+    const t = event.changedTouches[0];
+    this.touchX = t.clientX;
+    this.touchY = t.clientY;
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    // Con el detalle del día abierto el gesto es suyo: cambiar de mes por
+    // debajo de una modal dejaría al operador mirando otro mes al cerrarla.
+    if (this.dayDetail()) return;
+
+    const t = event.changedTouches[0];
+    const dx = t.clientX - this.touchX;
+    const dy = t.clientY - this.touchY;
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) <= Math.abs(dy)) return;
+
+    // Arrastrar hacia la izquierda trae el mes siguiente, como pasar una hoja.
+    if (dx < 0) this.nextMonth();
+    else this.prevMonth();
+  }
+
+  // -------------------------------------------------------------------------
+  // Detalle del día
+  // -------------------------------------------------------------------------
 
   onDayClick(date: Date): void {
     const day = new Date(date);
     day.setHours(0, 0, 0, 0);
     const dayEnd = new Date(day);
     dayEnd.setHours(23, 59, 59, 999);
-    const hits = this.reservations().filter((r) => {
-      const pickup = (r.pickupDateTime as any)?.toDate
-        ? (r.pickupDateTime as any).toDate()
-        : new Date(r.pickupDateTime);
-      const ret = (r.returnDateTime as any)?.toDate
-        ? (r.returnDateTime as any).toDate()
-        : new Date(r.returnDateTime);
-      return pickup <= dayEnd && ret >= day;
-    });
+
+    /**
+     * ⚠️ **Las fechas se convierten con `toDate()`, la única autoridad.** Aquí
+     * había una conversión escrita a mano que solo entendía un `Timestamp` del
+     * SDK con su `.toDate()`, y **esta aplicación no guarda eso**: `toTimestamp()`
+     * escribe un mapa `{ seconds, nanoseconds }` normal. Así que
+     * `new Date({seconds})` daba **Invalid Date**, toda comparación salía falsa
+     * y no aparecía ninguna reserva — ni en la rejilla ni aquí.
+     */
+    const hits = this.reservations()
+      .filter((r) => toDate(r.pickupDateTime) <= dayEnd && toDate(r.returnDateTime) >= day)
+      .sort((a, b) => toDate(a.pickupDateTime).getTime() - toDate(b.pickupDateTime).getTime());
+
     this.dayDetail.set({ date: day, reservations: hits });
   }
 
@@ -144,5 +189,48 @@ export class CalendarComponent implements OnInit {
       year: 'numeric'
     });
     return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  // -------------------------------------------------------------------------
+  // Lo que el operador necesita leer de un vistazo en el detalle del día
+  // -------------------------------------------------------------------------
+
+  /** «Dacia Duster · 1234JKL». El coche es lo que se pregunta el operador. */
+  vehicleLabel(r: Reservation): string {
+    const v = r.vehicleSnapshot;
+    const modelo = [v?.brand, v?.model].filter(Boolean).join(' ');
+    return modelo || v?.plateNumber || '—';
+  }
+
+  /**
+   * Qué pasa **ese día** con esta reserva: se entrega, se devuelve, o el coche
+   * sigue fuera.
+   *
+   * ⚠️ Sin esto, un día con cuatro reservas es una lista de cuatro nombres y hay
+   * que abrir cada uno para saber cuál toca hoy. Es justo lo que se mira el
+   * calendario por la mañana.
+   */
+  dayRole(r: Reservation): 'pickup' | 'return' | 'ongoing' {
+    const day = this.dayDetail()?.date;
+    if (!day) return 'ongoing';
+    if (this.sameDay(toDate(r.pickupDateTime), day)) return 'pickup';
+    if (this.sameDay(toDate(r.returnDateTime), day)) return 'return';
+    return 'ongoing';
+  }
+
+  /** La hora del hito del día, o '' cuando el coche solo está fuera. */
+  dayTime(r: Reservation): string {
+    const rol = this.dayRole(r);
+    if (rol === 'ongoing') return '';
+    const fecha = toDate(rol === 'pickup' ? r.pickupDateTime : r.returnDateTime);
+    return fecha.toLocaleTimeString(this.locale, { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private sameDay(a: Date, b: Date): boolean {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
   }
 }

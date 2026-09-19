@@ -12,6 +12,7 @@
     "next": "Luna următoare",
     "prev": "Luna anterioară",
     "subtitle": "Vizualizare lunară a rezervărilor. Apasă pe o zi pentru detalii.",
+    "swipeHint": "Glisează lateral pentru a schimba luna.",
     "today": "Astăzi",
     "weekdays": {
       "fri": "Vin",
@@ -21,6 +22,11 @@
       "thu": "Joi",
       "tue": "Mar",
       "wed": "Mie"
+    },
+    "dayRole": {
+      "ongoing": "Închiriat",
+      "pickup": "Predare",
+      "return": "Returnare"
     }
   },
   "clients": {
@@ -854,6 +860,8 @@
     },
     "title": "Plăți",
     "types": {
+      "collectionFee": "Ridicare de la adresă",
+      "deliveryFee": "Livrare la adresă",
       "deposit": "Garanție",
       "depositRefund": "Returnare garanție",
       "depositRetention": "Reținere garanție",
@@ -1041,6 +1049,8 @@
         "closed": "Rezervarea este închisă: istoricul ei nu se mai atinge.",
         "cancelled": "Rezervarea este anulată.",
         "contractSigned": "Contractul semnat spune cine închiriază. Ca să schimbi asta, trebuie refăcut.",
+        "deliveryCollected": "Serviciul la domiciliu a fost deja încasat: pentru a-l schimba ar trebui returnată suma.",
+        "rentalCollected": "O parte din închiriere a fost deja încasată: pentru a schimba TVA-ul ar trebui returnată.",
         "vehicleOut": "Mașina a fost deja predată: este un fapt, nu un câmp.",
         "returned": "Mașina a fost deja returnată: data reală este în procesul-verbal.",
         "noPricingPermission": "Rolul tău nu permite modificarea prețului.",
@@ -1052,12 +1062,14 @@
       "deposit": "Garanție",
       "fields": {
         "client": "client",
+        "deliveryFees": "serviciu la domiciliu",
         "pickupDateTime": "data preluării",
         "returnDateTime": "data predării",
         "agreedPrice": "preț",
         "depositAmount": "garanție",
         "initialPaymentAmount": "avans",
-        "additionalDrivers": "șoferi"
+        "additionalDrivers": "șoferi",
+        "vatExempt": "TVA"
       },
       "initialPayment": "Avans de încasat",
       "initialPaymentHint": "Poate fi 0: atunci nu se cere avans. Cât scazi de aici se adaugă la rest.",
@@ -1081,7 +1093,8 @@
       "supersedeDone": "Contract refăcut. Cel anterior rămâne arhivat.",
       "supersededOn": "Înlocuit la",
       "supersededTitle": "Contracte anterioare",
-      "title": "Modifică rezervarea"
+      "title": "Modifică rezervarea",
+      "totalPreview": "Total închiriere"
     },
     "errors": {
       "cancel": "Nu s-a putut anula rezervarea",
@@ -1156,7 +1169,10 @@
       "remainingPayment": "Rest de plată",
       "resetToCalculated": "Revino la prețul calculat",
       "vat": "TVA",
-      "vatBase": "Bază impozabilă"
+      "vatBase": "Bază impozabilă",
+      "vatExempt": "Fără TVA",
+      "vatExemptHint": "Clientul plătește prețul convenit, iar nici contractul, nici oferta nu menționează TVA.",
+      "vatExemptTag": "Închiriere fără TVA"
     },
     "quote": {
       "copied": "Link copiat. Îl poți lipi în WhatsApp.",
@@ -1197,7 +1213,17 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări"
+    "title": "Rezervări",
+    "initialPayment": {
+      "waived": "Nu se solicită",
+      "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
+    },
+    "delivery": {
+      "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
+      "pickupFee": "Livrare la adresă",
+      "returnFee": "Ridicare de la adresă",
+      "total": "Serviciu la domiciliu"
+    }
   },
   "search": {
     "close": "Închide",
@@ -1562,6 +1588,7 @@
     "unsettledDeposit": "Garanție nerezolvată"
   },
   "invoices": {
+    "reservationWithoutVat": "Această rezervare a fost convenită fără TVA. O factură îl include, deci totalul nu va coincide cu suma încasată: verifică baza înainte de emitere, pentru că o factură emisă nu se poate edita sau șterge.",
     "title": "Facturi",
     "subtitle": "Emite și consultă facturile",
     "new": "Factură nouă",

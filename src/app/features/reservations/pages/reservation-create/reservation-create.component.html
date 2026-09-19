@@ -486,12 +486,25 @@
                   </div>
                 }
 
-                <!-- VAT is extracted from the final price, never added to it. -->
+                <!--
+                  Sin IVA: el cliente paga el neto pactado y nada de lo que
+                  recibe menciona el impuesto. Es el caso del cliente que no va a
+                  pedir factura, y se decide por reserva.
+                -->
+                <label class="checkbox-item plain">
+                  <input type="checkbox" [(ngModel)]="vatExempt" name="vatExempt">
+                  <span>{{ 'reservations.pricing.vatExempt' | translate }}</span>
+                </label>
+                <p class="field-hint">{{ 'reservations.pricing.vatExemptHint' | translate }}</p>
+
+                <!-- VAT is added on top of the net — the tariff is net. -->
                 <div class="vat-breakdown">
-                  <div class="price-row vat-row">
-                    <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
-                    <span>{{ vat.vat | number:'1.2-2' }} €</span>
-                  </div>
+                  @if (vatPercent > 0) {
+                    <div class="price-row vat-row">
+                      <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+                      <span>{{ vat.vat | number:'1.2-2' }} €</span>
+                    </div>
+                  }
                   <div class="price-row vat-total">
                     <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
                     <span>{{ finalPrice | number:'1.2-2' }} €</span>
@@ -515,6 +528,56 @@
                   <span>{{ 'reservations.pricing.remainingPayment' | translate }}:</span>
                   <span>{{ remainingPayment | number:'1.2-2' }} €</span>
                 </div>
+
+                <!--
+                  Entrega y recogida a domicilio. Los dos trayectos por separado
+                  porque se pactan por separado: hay clientes que recogen en
+                  oficina y solo piden que se les vaya a buscar.
+
+                  El importe que se teclea es NETO, como el precio del alquiler.
+                  Debajo se enseña lo que el cliente acaba pagando, que es lo que
+                  evita la sorpresa.
+                -->
+                <div class="price-row editable-price">
+                  <span>{{ 'reservations.delivery.pickupFee' | translate }}:</span>
+                  <span class="price-input-wrap">
+                    <input
+                      type="number"
+                      class="price-input"
+                      [(ngModel)]="deliveryPickupFee"
+                      name="deliveryPickupFee"
+                      min="0"
+                      step="0.01"
+                      [attr.aria-label]="'reservations.delivery.pickupFee' | translate">
+                    <span class="price-currency">€</span>
+                  </span>
+                </div>
+                <div class="price-row editable-price">
+                  <span>{{ 'reservations.delivery.returnFee' | translate }}:</span>
+                  <span class="price-input-wrap">
+                    <input
+                      type="number"
+                      class="price-input"
+                      [(ngModel)]="deliveryReturnFee"
+                      name="deliveryReturnFee"
+                      min="0"
+                      step="0.01"
+                      [attr.aria-label]="'reservations.delivery.returnFee' | translate">
+                    <span class="price-currency">€</span>
+                  </span>
+                </div>
+                @if (deliveryFeesBreakdown.any) {
+                  <p class="field-hint">
+                    {{ 'reservations.delivery.total' | translate }}:
+                    <strong>{{ deliveryFeesBreakdown.gross | number:'1.2-2' }} €</strong>
+                    @if (vatPercent > 0) {
+                      ({{ 'reservations.pricing.vat' | translate }}
+                      {{ deliveryFeesBreakdown.vat | number:'1.2-2' }} €)
+                    }
+                  </p>
+                } @else {
+                  <p class="field-hint">{{ 'reservations.delivery.hint' | translate }}</p>
+                }
                 <!-- Editable: not every rental carries a deposit. -->
                 <div class="price-row editable-price">
                   <span>{{ 'reservations.pricing.deposit' | translate }}:</span>

@@ -12,6 +12,7 @@
     "next": "Next month",
     "prev": "Previous month",
     "subtitle": "Monthly view of all reservations. Tap a day to see the details.",
+    "swipeHint": "Swipe sideways to change month.",
     "today": "Today",
     "weekdays": {
       "fri": "Fri",
@@ -21,6 +22,11 @@
       "thu": "Thu",
       "tue": "Tue",
       "wed": "Wed"
+    },
+    "dayRole": {
+      "ongoing": "Out on rent",
+      "pickup": "Pickup",
+      "return": "Return"
     }
   },
   "clients": {
@@ -854,6 +860,8 @@
     },
     "title": "Payments",
     "types": {
+      "collectionFee": "Collection from address",
+      "deliveryFee": "Delivery to address",
       "deposit": "Deposit",
       "depositRefund": "Deposit refund",
       "depositRetention": "Deposit retention",
@@ -1041,6 +1049,8 @@
         "closed": "The reservation is closed: its record is not touched any more.",
         "cancelled": "The reservation is cancelled.",
         "contractSigned": "The signed contract states who is renting. Reissue it to change that.",
+        "deliveryCollected": "The door-to-door service has already been collected: changing it would mean refunding it first.",
+        "rentalCollected": "Part of the rental has already been collected: changing VAT would mean refunding it first.",
         "vehicleOut": "The vehicle has been handed over: this is a fact, not a field.",
         "returned": "The vehicle has been returned: the real date is on the report.",
         "noPricingPermission": "Your role cannot change the price.",
@@ -1052,12 +1062,14 @@
       "deposit": "Deposit",
       "fields": {
         "client": "customer",
+        "deliveryFees": "door-to-door service",
         "pickupDateTime": "pick-up date",
         "returnDateTime": "return date",
         "agreedPrice": "price",
         "depositAmount": "deposit",
         "initialPaymentAmount": "down payment",
-        "additionalDrivers": "drivers"
+        "additionalDrivers": "drivers",
+        "vatExempt": "VAT"
       },
       "initialPayment": "Down payment to collect",
       "initialPaymentHint": "It can be 0, meaning no down payment is asked for. Whatever you take off is added to the remainder.",
@@ -1081,7 +1093,8 @@
       "supersedeDone": "Contract reissued. The previous one is archived.",
       "supersededOn": "Superseded on",
       "supersededTitle": "Previous contracts",
-      "title": "Edit reservation"
+      "title": "Edit reservation",
+      "totalPreview": "Rental total"
     },
     "errors": {
       "cancel": "Could not cancel the reservation",
@@ -1156,7 +1169,10 @@
       "remainingPayment": "Remaining",
       "resetToCalculated": "Back to calculated price",
       "vat": "VAT",
-      "vatBase": "Taxable base"
+      "vatBase": "Taxable base",
+      "vatExempt": "No VAT",
+      "vatExemptHint": "The customer pays the agreed price, and neither the contract nor the quote mentions VAT.",
+      "vatExemptTag": "Rental without VAT"
     },
     "quote": {
       "copied": "Link copied. You can paste it into WhatsApp.",
@@ -1197,7 +1213,17 @@
       "skippedByException": "Skipped by exception",
       "title": "Reservation progress"
     },
-    "title": "Reservations"
+    "title": "Reservations",
+    "initialPayment": {
+      "waived": "Not required",
+      "waivedHint": "No deposit on booking: the whole amount stays in the rental balance."
+    },
+    "delivery": {
+      "hint": "Surcharge for delivering and collecting the car outside the free delivery area. Amount excluding VAT; leave empty if not charged.",
+      "pickupFee": "Delivery to address",
+      "returnFee": "Collection from address",
+      "total": "Door-to-door service"
+    }
   },
   "search": {
     "close": "Close",
@@ -1562,6 +1588,7 @@
     "unsettledDeposit": "Deposit still pending settlement"
   },
   "invoices": {
+    "reservationWithoutVat": "This booking was agreed without VAT. An invoice does carry it, so the total will not match what was collected: check the taxable base before issuing, because an issued invoice cannot be edited or deleted.",
     "title": "Invoices",
     "subtitle": "Issue and review invoices",
     "new": "New invoice",

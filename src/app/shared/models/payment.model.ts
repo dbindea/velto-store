@@ -18,6 +18,22 @@ export type PaymentType =
   | 'initial_payment'      // Señal inicial al reservar
   | 'remaining_payment'    // Resto del alquiler
   | 'rental_payment'       // Pago completo del alquiler
+  /**
+   * Entrega y recogida a domicilio, cobradas **aparte del alquiler**.
+   *
+   * ⚠️ **Son dos filas, no una, y es decisión de Dorel** (19 de septiembre de
+   * 2026): los dos trayectos se pactan por separado —a veces el cliente recoge
+   * en oficina y solo pide que se lo recojan— y se cobran en momentos
+   * distintos, la entrega al salir y la recogida al volver. Con una sola fila,
+   * anular medio servicio obligaría a recalcular un importe mezclado.
+   *
+   * ⚠️ **No son `extra_*`.** Los cargos extra nacen de la inspección de
+   * devolución y cubren un perjuicio; esto es un servicio pactado al reservar y
+   * va impreso en el contrato. Mezclarlos pondría una entrega a domicilio bajo
+   * el rótulo «daños» y la dejaría cubrible con la fianza retenida.
+   */
+  | 'delivery_fee'         // Entrega a domicilio
+  | 'collection_fee'       // Recogida a domicilio
   | 'deposit'              // Fianza cobrada
   | 'deposit_refund'       // Devolución de fianza
   | 'deposit_retention'    // Retención de fianza
@@ -183,6 +199,8 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   initial_payment: 'payments.types.initialPayment',
   remaining_payment: 'payments.types.remainingPayment',
   rental_payment: 'payments.types.rentalPayment',
+  delivery_fee: 'payments.types.deliveryFee',
+  collection_fee: 'payments.types.collectionFee',
   deposit: 'payments.types.deposit',
   deposit_refund: 'payments.types.depositRefund',
   deposit_retention: 'payments.types.depositRetention',

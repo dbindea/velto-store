@@ -145,7 +145,11 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
         loyaltyDiscount: pricingSnapshot.loyaltyDiscount,
         manualAdjustment: pricingSnapshot.manualAdjustment,
         netPrice: pricingSnapshot.netPrice,
-        vatRate: pricingSnapshot.vatRate
+        vatRate: pricingSnapshot.vatRate,
+        // Fuera de `pricingSnapshot` en la reserva: el desplazamiento lo pone la
+        // agencia, no el coche, y por eso no entra en el reparto con su dueño.
+        deliveryPickupFee: reservation.deliveryFees?.pickupFee,
+        deliveryReturnFee: reservation.deliveryFees?.returnFee
       },
       payments: {
         initialRequired: reservation.initialPayment?.requiredAmount,

@@ -24,8 +24,7 @@ import {
   PaymentType,
   PaymentMethod,
   PaymentSource,
-  PaymentStatus,
-  PAYMENT_TYPE_LABELS
+  PaymentStatus
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { PAGINA } from '@shared/utils/pagination.util';
@@ -37,6 +36,7 @@ import {
   calculatePaymentStatus,
   calculatePendingAmount,
   generateInternalReference,
+  initialPaymentStatus,
   roundMoney,
   selectSettleablePayment,
   buildInitialPaymentRows,
@@ -692,11 +692,25 @@ export class PaymentService {
   queueRepricedRows(
     batch: WriteBatch,
     payments: Payment[],
-    amounts: { initialRequired: number; remainingRequired: number; depositRequired?: number }
+    amounts: {
+      initialRequired: number;
+      remainingRequired: number;
+      depositRequired?: number;
+      /**
+       * Entrega y recogida a domicilio, **en bruto** y cada una por su lado.
+       * `undefined` significa «no se ha tocado»; 0 significa «ya no se cobra»,
+       * y entonces la fila se cancela como cualquier otro concepto que baja a
+       * cero.
+       */
+      deliveryRequired?: number;
+      collectionRequired?: number;
+    }
   ): void {
     const conceptos: Array<{ type: PaymentType; required: number | undefined }> = [
       { type: 'initial_payment', required: amounts.initialRequired },
       { type: 'remaining_payment', required: amounts.remainingRequired },
+      { type: 'delivery_fee', required: amounts.deliveryRequired },
+      { type: 'collection_fee', required: amounts.collectionRequired },
       { type: 'deposit', required: amounts.depositRequired }
     ];
 
@@ -770,7 +784,19 @@ export class PaymentService {
       paidAmount: 0,
       pendingAmount: amount,
       currency: 'EUR',
-      concept: PAYMENT_TYPE_LABELS[type],
+      /**
+       * ⚠️ **El TIPO, no su clave de traducción.** Aquí ponía
+       * `PAYMENT_TYPE_LABELS[type]`, o sea `payments.types.initialPayment`, y
+       * `PaymentConceptPipe` solo traduce cuando el concepto **es** el tipo: con
+       * la clave dentro la pintaba en crudo, así que subir la señal desde 0
+       * dejaba una fila titulada «payments.types.initialPayment» en la ficha de
+       * la reserva.
+       *
+       * Y tampoco vale guardar el texto ya traducido: congelaría el idioma del
+       * operador que lo tecleó, y un rumano le dejaría el concepto en rumano al
+       * siguiente.
+       */
+      concept: type,
       internalReference: generateInternalReference('PMT'),
       createdAt: { seconds: Date.now() / 1000 }
     } as Payment;
@@ -920,8 +946,24 @@ export class PaymentService {
       paymentStatus: summary.paymentStatus,
       ...(nextStatus ? { reservationStatus: nextStatus } : {}),
       'initialPayment.paidAmount': summary.initialPaymentPaid,
-      'initialPayment.status': summary.initialPaymentPaid >= summary.initialPaymentRequired && summary.initialPaymentRequired > 0 ? 'paid' :
-                                 summary.initialPaymentPaid > 0 ? 'pending' : 'pending',
+      /**
+       * ⚠️ **Lo decide `initialPaymentStatus()`, no un ternario aquí.**
+       *
+       * Lo que había era `… ? 'paid' : paid > 0 ? 'pending' : 'pending'` —las
+       * dos ramas del final iguales— y **no sabía decir `waived`**: cada
+       * recálculo de pagos volvía a etiquetar como PENDIENTE una señal que el
+       * operador había decidido no cobrar. Es exactamente el fallo que la fianza
+       * ya tenía resuelto tres líneas más abajo con `depositStatusFromSummary()`,
+       * y la nota de aquella lo dice con todas las letras: caer en `pending`
+       * convierte una decisión deliberada en una deuda.
+       *
+       * Se veía al guardar la reserva: la ficha pasaba de «No se solicita» a
+       * «Pendiente» sola, sin que nadie tocara la señal.
+       */
+      'initialPayment.status': initialPaymentStatus(
+        summary.initialPaymentRequired,
+        summary.initialPaymentPaid
+      ),
       'remainingPayment.paidAmount': summary.remainingPaymentPaid,
       'remainingPayment.status': summary.remainingPaymentPaid >= summary.remainingPaymentRequired && summary.remainingPaymentRequired > 0 ? 'paid' : 'pending',
       'deposit.paidAmount': summary.depositPaid,

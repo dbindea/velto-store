@@ -582,9 +582,14 @@
                   <span class="paid">{{ reservation.initialPayment.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
                 }
               </div>
-              <span class="payment-status" [ngClass]="reservation.initialPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
-                {{ reservation.initialPayment.status === 'paid' ? ('reservations.paymentStatus.paid' | translate) : ('reservations.paymentStatus.pending' | translate) }}
+              <span class="payment-status" [ngClass]="getInitialPaymentStatusClass(reservation.initialPayment.status)">
+                {{ getInitialPaymentStatusLabel(reservation.initialPayment.status) }}
               </span>
+              <!-- Una señal exenta es una decisión, no un cobro que falta: se
+                   dice para que nadie la persiga. -->
+              @if (reservation.initialPayment.status === 'waived') {
+                <small class="hint">{{ 'reservations.initialPayment.waivedHint' | translate }}</small>
+              }
             </div>
 
             <!-- Remaining Payment -->
@@ -600,6 +605,33 @@
                 {{ reservation.remainingPayment.status === 'paid' ? ('reservations.paymentStatus.paid' | translate) : ('reservations.paymentStatus.pending' | translate) }}
               </span>
             </div>
+
+            <!--
+              Entrega y recogida a domicilio. Solo aparece si se pactó: una fila
+              a «0,00 €» en todas las reservas se lee como un servicio que existe
+              y no se ha cobrado. Mismo criterio que la fianza exenta.
+
+              ⚠️ Los importes salen de `deliveryFees`, que es el NETO pactado; lo
+              que se enseña es el bruto, que es lo que hay que cobrarle.
+            -->
+            @if (deliveryFees.any) {
+              @if (deliveryFees.pickupGross > 0) {
+                <div class="payment-item">
+                  <span class="payment-label">{{ 'reservations.delivery.pickupFee' | translate }}</span>
+                  <div class="payment-amounts">
+                    <span class="required">{{ deliveryFees.pickupGross | number:'1.2-2' }} €</span>
+                  </div>
+                </div>
+              }
+              @if (deliveryFees.returnGross > 0) {
+                <div class="payment-item">
+                  <span class="payment-label">{{ 'reservations.delivery.returnFee' | translate }}</span>
+                  <div class="payment-amounts">
+                    <span class="required">{{ deliveryFees.returnGross | number:'1.2-2' }} €</span>
+                  </div>
+                </div>
+              }
+            }
 
             <!-- Deposit -->
             <div class="payment-item">
@@ -662,14 +694,22 @@
                 </span>
               </div>
             }
-            <div class="price-row">
-              <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
-              <span>{{ vat.base | number:'1.2-2' }} €</span>
-            </div>
-            <div class="price-row">
-              <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
-              <span>{{ vat.vat | number:'1.2-2' }} €</span>
-            </div>
+            <!-- Sin IVA no hay base imponible ni cuota que enseñar: el total ES
+                 el precio pactado. Mismo dato que usa el contrato. -->
+            @if (hasVat) {
+              <div class="price-row">
+                <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
+                <span>{{ vat.base | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row">
+                <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+                <span>{{ vat.vat | number:'1.2-2' }} €</span>
+              </div>
+            } @else {
+              <div class="price-row">
+                <span class="hint">{{ 'reservations.pricing.vatExemptTag' | translate }}</span>
+              </div>
+            }
             <div class="price-row total">
               <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
               <span class="total-value">{{ vat.total | number:'1.2-2' }} €</span>

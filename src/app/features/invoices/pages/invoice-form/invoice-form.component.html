@@ -441,6 +441,19 @@
             <span>{{ 'invoices.differsFromReservation' | translate }}</span>
           </div>
         }
+
+        <!--
+          La reserva se pactó sin IVA y aquí se le va a facturar. El tipo NO se
+          hereda —una factura en régimen general lo lleva— así que el total no
+          coincidirá con lo que se le cobró, y eso hay que decirlo antes de
+          consumir número: una factura emitida no se edita ni se borra.
+        -->
+        @if (reservationWithoutVat) {
+          <div class="notice notice-warning">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ 'invoices.reservationWithoutVat' | translate }}</span>
+          </div>
+        }
       </div>
 
       <!-- Fechas -->

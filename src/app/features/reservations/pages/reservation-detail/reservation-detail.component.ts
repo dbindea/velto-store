@@ -21,6 +21,7 @@ import {
   RESERVATION_PAYMENT_STATUS_LABELS,
   RESERVATION_CONTRACT_STATUS_LABELS,
   RESERVATION_DEPOSIT_STATUS_LABELS,
+  RESERVATION_INITIAL_PAYMENT_STATUS_LABELS,
   ReservationPaymentSummary,
   AdditionalDriver
 } from '@shared/models/reservation.model';
@@ -44,7 +45,13 @@ import {
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
-import { vatBreakdownOf, VatBreakdown } from '@shared/utils/pricing.util';
+import {
+  chargesVat,
+  deliveryFeeBreakdown,
+  DeliveryFeeBreakdown,
+  vatBreakdownOf,
+  VatBreakdown
+} from '@shared/utils/pricing.util';
 import {
   collectedTotalsOf,
   calculateReservationPaymentSummary
@@ -168,8 +175,23 @@ export class ReservationDetailComponent implements OnInit {
   PAYMENT_STATUS_COLORS = PAYMENT_STATUS_COLORS;
   PAYMENT_METHOD_ICONS = PAYMENT_METHOD_ICONS;
 
+  /**
+   * Los conceptos que el operador puede cobrar a mano desde la ficha.
+   *
+   * ⚠️ **La entrega y la recogida entran aquí**, aunque se siembren solas al
+   * crear la reserva: hay clientes que piden el servicio **después** de haber
+   * reservado —«ya que vienes, tráemelo»—, y sin estas dos opciones el cobro
+   * habría que apuntarlo como «otros cargos», que es el cajón de lo que no se
+   * sabe clasificar. Ahí dejaría de contarse como servicio y se sumaría a los
+   * cargos extra, que son otra cosa.
+   */
   paymentTypeOptions: PaymentType[] = [
-    'initial_payment', 'remaining_payment', 'rental_payment', 'deposit'
+    'initial_payment',
+    'remaining_payment',
+    'rental_payment',
+    'delivery_fee',
+    'collection_fee',
+    'deposit'
   ];
   methodOptions: PaymentMethod[] = ['cash', 'bank_transfer', 'bizum', 'physical_pos', 'redsys', 'manual_card', 'other'];
 
@@ -186,6 +208,28 @@ export class ReservationDetailComponent implements OnInit {
   /** The rate as a percentage, for the "IVA (21 %)" label. */
   get vatPercent(): number {
     return Math.round(this.vat.rate * 100);
+  }
+
+  /**
+   * ¿Esta reserva lleva IVA? Con el tipo congelado a 0 no lo lleva, y entonces
+   * la ficha tampoco lo enseña: ni base imponible ni cuota, solo el total. Es el
+   * mismo dato con el que el contrato decide no mencionarlo.
+   */
+  get hasVat(): boolean {
+    return chargesVat(this.reservation?.pricingSnapshot ?? {});
+  }
+
+  /**
+   * Entrega y recogida a domicilio, con su IVA.
+   *
+   * Lo guardado es el neto pactado; lo que la ficha enseña es lo que hay que
+   * cobrarle al cliente, que es lo mismo que dicen las filas de cobro.
+   */
+  get deliveryFees(): DeliveryFeeBreakdown {
+    return deliveryFeeBreakdown(
+      this.reservation?.deliveryFees,
+      this.reservation?.pricingSnapshot?.vatRate
+    );
   }
 
   /**
@@ -465,7 +509,13 @@ export class ReservationDetailComponent implements OnInit {
       // —el resto coincide— y cualquier pantalla que la lea seguiría diciendo
       // que no se debe nada.
       difiere(fresco.extrasRequired, guardado.extrasRequired) ||
-      difiere(fresco.extrasPending, guardado.extrasPending);
+      difiere(fresco.extrasPending, guardado.extrasPending) ||
+      // Y lo mismo con la entrega a domicilio, por el mismo motivo: son campos
+      // nuevos, así que una copia escrita antes los trae a cero con todo lo
+      // demás cuadrando. Al añadir un campo al resumen hay que venir aquí, o la
+      // copia no se pone al día nunca.
+      difiere(fresco.servicesRequired, guardado.servicesRequired) ||
+      difiere(fresco.servicesPending, guardado.servicesPending);
     if (!desincronizada) return;
 
     try {
@@ -769,6 +819,28 @@ export class ReservationDetailComponent implements OnInit {
     );
   }
 
+  /**
+   * ⚠️ Lo pintaba la plantilla con un ternario `=== 'paid'`, así que una señal
+   * `waived` —la que no se pide— salía como «Pendiente»: el mismo cero que el
+   * operador acababa de decidir, presentado como una deuda.
+   */
+  getInitialPaymentStatusLabel(status: string): string {
+    return this.t(
+      RESERVATION_INITIAL_PAYMENT_STATUS_LABELS[
+        status as keyof typeof RESERVATION_INITIAL_PAYMENT_STATUS_LABELS
+      ],
+      status
+    );
+  }
+
+  getInitialPaymentStatusClass(status: string): string {
+    if (status === 'paid') return 'status-paid';
+    // Exenta no es cobrada ni pendiente: es un asunto cerrado sin dinero de por
+    // medio, igual que la fianza exenta.
+    if (status === 'waived') return 'status-waived';
+    return 'status-pending';
+  }
+
   getContractLabel(status: string): string {
     return this.t(
       RESERVATION_CONTRACT_STATUS_LABELS[status as keyof typeof RESERVATION_CONTRACT_STATUS_LABELS],
@@ -809,7 +881,10 @@ export class ReservationDetailComponent implements OnInit {
       paid: 'deposit-paid',
       partial_returned: 'deposit-partial',
       returned: 'deposit-returned',
-      retained: 'deposit-retained'
+      retained: 'deposit-retained',
+      // Faltaba, así que la etiqueta de una fianza exenta salía sin caja: texto
+      // suelto entre badges. Es el mismo descuido que `.checkbox-label`.
+      waived: 'deposit-waived'
     };
     return statusClasses[status] || '';
   }

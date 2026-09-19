@@ -1084,11 +1084,26 @@ textarea.form-control {
  * de las filas cuando baja de línea en móvil, así que quitar el margen no deja
  * nada pegado.
  *
- * ⚠️ **La lista de contenedores está MEDIDA, no supuesta.** Son los cuatro que
- * de verdad colocan campos en horizontal, sacados recorriendo la aplicación y
- * buscando padres cuyos `.form-group` tengan distinto `left`. Si aparece uno
- * nuevo, se añade aquí — y se encuentra volviendo a medir, no leyendo
- * plantillas: los `div` anidados no se dejan buscar con una expresión regular.
+ * ⚠️ **La lista se quedó corta, y esa es la lección.** Traía cinco
+ * contenedores, medidos a mano recorriendo la aplicación, y faltaban **cuatro**
+ * — `.form-grid-inner`, `.checklist`, `.driver-form-grid` y `.line-regime`—.
+ * El que se vio es el de las inspecciones: en «Estado del vehículo», «Nivel de
+ * combustible» salía 16 px por debajo de «Kilometraje», con su caja también
+ * descolgada. Lo volvió a encontrar Dorel mirando la pantalla, que es
+ * exactamente lo que la versión anterior de esta nota daba por suficiente.
+ *
+ * Una lista que hay que acordarse de ampliar no es un mecanismo, y este fallo
+ * no se ve en ningún test: compila, pasa las auditorías y solo se nota en el
+ * formulario. Por eso ahora la comprueba `npm run rows:audit`, que recorre las
+ * plantillas con un analizador de etiquetas —no con una expresión regular, que
+ * es lo que antes hacía parecer imposible buscarlos—, mira el `display` del
+ * SCSS de cada contenedor y **falla** si uno coloca campos en horizontal sin
+ * estar aquí. Al añadir un contenedor nuevo, el guion lo dice; no hay que
+ * recordarlo.
+ *
+ * ⚠️ **Y todos llevan `gap`, comprobado uno a uno.** Es la condición que hace
+ * seguro quitar el margen: el `gap` separa las columnas y también las filas
+ * cuando la rejilla baja de línea en móvil.
  *
  * ⚠️ **Tres clases para ganar.** `.form-group + .form-group` mide (0,2,0); con
  * el contenedor delante son (0,3,0) y esta gana. Misma aritmética que la de los
@@ -1113,7 +1128,23 @@ textarea.form-control {
 .line-row > .form-group + .form-group,
 .line-row > .form-group + .checkbox-item,
 .line-row > .checkbox-item + .form-group,
-.line-row > .checkbox-item + .checkbox-item {
+.line-row > .checkbox-item + .checkbox-item,
+.form-grid-inner > .form-group + .form-group,
+.form-grid-inner > .form-group + .checkbox-item,
+.form-grid-inner > .checkbox-item + .form-group,
+.form-grid-inner > .checkbox-item + .checkbox-item,
+.checklist > .form-group + .form-group,
+.checklist > .form-group + .checkbox-item,
+.checklist > .checkbox-item + .form-group,
+.checklist > .checkbox-item + .checkbox-item,
+.driver-form-grid > .form-group + .form-group,
+.driver-form-grid > .form-group + .checkbox-item,
+.driver-form-grid > .checkbox-item + .form-group,
+.driver-form-grid > .checkbox-item + .checkbox-item,
+.line-regime > .form-group + .form-group,
+.line-regime > .form-group + .checkbox-item,
+.line-regime > .checkbox-item + .form-group,
+.line-regime > .checkbox-item + .checkbox-item {
   margin-top: 0;
 }
 

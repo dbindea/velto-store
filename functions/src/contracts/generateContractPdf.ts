@@ -284,6 +284,9 @@ export const generateContractPdf = functions.https.onCall(
           manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
           netPrice: reservation.pricingSnapshot?.netPrice,
           vatRate: reservation.pricingSnapshot?.vatRate,
+          // Fuera de `pricingSnapshot` en la reserva, y por eso se leen aparte.
+          deliveryPickupFee: reservation.deliveryFees?.pickupFee,
+          deliveryReturnFee: reservation.deliveryFees?.returnFee,
           // Lo que se pactó, no lo que hoy diga la ficha del coche.
           includedKmPerDay: reservation.pricingSnapshot?.includedKmPerDay,
           extraKmPrice: reservation.pricingSnapshot?.extraKmPrice
@@ -343,7 +346,11 @@ export const generateContractPdf = functions.https.onCall(
         loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
         manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
         netPrice: reservation.pricingSnapshot?.netPrice,
-        vatRate: reservation.pricingSnapshot?.vatRate
+        vatRate: reservation.pricingSnapshot?.vatRate,
+        // Se congelan en el contrato como el resto del dinero: el documento
+        // firmado tiene que seguir diciendo qué se pactó por el desplazamiento.
+        deliveryPickupFee: reservation.deliveryFees?.pickupFee,
+        deliveryReturnFee: reservation.deliveryFees?.returnFee
       },
       clientSnapshot,
       // Se congelan en el contrato igual que el arrendatario: el documento
