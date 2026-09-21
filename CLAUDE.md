@@ -1312,11 +1312,29 @@ gcloud storage buckets update gs://velto-store.firebasestorage.app --cors-file=s
 gcloud storage buckets update gs://rentalcar-veltomobility.firebasestorage.app --cors-file=storage.cors.json
 ```
 
-⚠️ **No se puede lanzar desde esta máquina**: `gcloud` y `gsutil` son Python, y
-el `python3` del PATH es el stub de la Microsoft Store, que responde «Permission
-denied». Se hace desde **Cloud Shell**, donde ya vienen instalados. Y no hay
-interfaz para esto: ni la consola de Firebase ni la de Cloud tienen pantalla de
-CORS.
+⚠️ **`gcloud` SÍ está instalado aquí; lo que falla es el SHELL.** El lanzador de
+`gcloud` es un script que busca `python3` en el PATH, y desde Git Bash ese
+`python3` resuelve al stub de la Microsoft Store, que contesta «Permission
+denied» — de ahí la conclusión equivocada de que la máquina no lo tenía. Desde
+**PowerShell funciona** (SDK 583.0.0, comprobado el 21 de septiembre de 2026), y
+desde un shell tipo Unix se llega igual:
+
+```bash
+powershell.exe -NoProfile -Command "gcloud storage buckets describe gs://velto-store.firebasestorage.app --format='default(cors_config)'"
+```
+
+Cloud Shell sigue valiendo, pero no hace falta. Lo que **no** hay es interfaz: ni
+la consola de Firebase ni la de Cloud tienen pantalla de CORS.
+
+⚠️ **Y comprobarlo es `describe`, no una petición de prueba.** Un preflight
+`OPTIONS` contesta **lo mismo en un bucket configurado y en uno que no**
+—`access-control-allow-origin: *` y la misma lista de métodos—, así que no
+distingue nada; y un `curl` contra un objeto inexistente devuelve un 403 que
+también trae la cabecera. Dos señales falsas seguidas en el mismo asunto. Lo que
+vale es `gcloud storage buckets describe … --format='default(cors_config)'`, o
+un `fetch` de verdad desde el navegador contra un objeto que exista.
+
+Aplicado en los dos buckets el 21 de septiembre de 2026.
 
 Por eso `triggerDownload()` baja el fichero a un blob y pone el nombre con
 `a.download`: así no hay ruta que interpretar. El contrato se llama
