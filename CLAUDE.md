@@ -1461,6 +1461,29 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 
 ⚠️ `TranslateService.translate()` devuelve **la propia clave** si no la encuentra, y **no hay fallback a español**: si falta en `ro.json`, el usuario rumano ve la clave en crudo.
 
+⚠️ **Y una clave puede faltar sin faltar en el repositorio: por CACHÉ.** El
+dominio propio va detrás de Cloudflare y los ficheros de i18n se servían con
+`max-age=3600`. Angular pone huella a los bundles —`main-APWSE7JM.js`— pero
+**no a `assets/i18n/*.json`**, así que tras un despliegue se puede quedar el
+**JavaScript nuevo con las traducciones viejas**: el código pide una clave que el
+JSON cacheado no tiene y sale en crudo.
+
+Medido el 21 de septiembre de 2026, minutos después de un despliegue:
+`index.html` ya era del día y apuntaba al bundle nuevo, mientras
+`assets/i18n/es.json` seguía siendo el del 19 y no traía
+`reservations.pricing.loyaltyOverridden`. En `rentalcar-veltomobility.web.app`
+—el dominio de Firebase, sin Cloudflare delante— ya estaba el bueno. Se arregló
+solo al vencer el plazo.
+
+Por eso `firebase.json` declara `Cache-Control: no-cache` en `/assets/i18n/**`:
+se siguen cacheando, pero **revalidando**, así que no pueden quedar desparejados
+del bundle que los pide. Requiere desplegar hosting para que tome efecto.
+
+⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
+propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
+Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
+igualmente la copia vieja.
+
 ## Cloud Functions
 
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
