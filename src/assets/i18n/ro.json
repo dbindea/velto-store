@@ -1169,6 +1169,7 @@
       "finalPrice": "Preț total",
       "initialPayment": "Avans",
       "loyaltyDiscount": "Reducere fidelitate",
+      "loyaltyOverridden": "nu se aplică: preț convenit manual",
       "manualAdjustment": "Ajustare manuală",
       "netPrice": "Preț fără TVA",
       "pricePerDay": "Preț/zi",

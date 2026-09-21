@@ -1287,12 +1287,54 @@ es descriptivo. El problema son las fotos de móvil y las capturas.
 
 ### Descargar un contrato bajaba una CARPETA
 
-⚠️ **Apuntar un enlace a la URL de Storage no descarga lo que parece.** Storage
-manda el nombre completo del objeto en `Content-Disposition`
-—`contracts/<reservaId>/contract-signed.pdf`— y el navegador trata **cada barra
-como un directorio**: se bajaba una carpeta con el id de la reserva y dentro un
-PDF llamado `contract-signed.pdf`. Dos identificadores y ni rastro del cliente
-ni del coche.
+⚠️ **Apuntar un enlace a la URL de Storage no descarga lo que parece.**
+Medido contra la respuesta real: Storage **no manda `Content-Disposition`
+ninguna**, solo `content-type: application/pdf`. Sin esa cabecera el navegador
+saca el nombre **de la ruta de la URL** —`…/o/contracts%2F<reservaId>%2Fcontract-signed.pdf`—,
+la descodifica y trata **cada barra como un directorio**: se bajaba una carpeta
+con el id de la reserva y dentro un PDF llamado `contract-signed.pdf`. Dos
+identificadores y ni rastro del cliente ni del coche.
+
+⚠️ **Y la causa de que se llegara ahí es CORS, no el nombre.** El `fetch` al
+blob falla **siempre** mientras el bucket no tenga configuración de CORS
+—«No 'Access-Control-Allow-Origin' header is present»—, así que la descarga se
+va por el respaldo, que es justo el camino que produce la carpeta.
+
+⚠️ **Cuidado al comprobarlo con `curl`:** el camino de **error** sí manda
+`access-control-allow-origin: *`. Probando contra un objeto inexistente sale un
+403 con la cabecera puesta y se descarta CORS por un falso negativo — pasó. Hay
+que probar contra un objeto que exista, o mirar la consola del navegador.
+
+La configuración está en `storage.cors.json` y se aplica **una vez por bucket**:
+
+```bash
+gcloud storage buckets update gs://velto-store.firebasestorage.app --cors-file=storage.cors.json
+gcloud storage buckets update gs://rentalcar-veltomobility.firebasestorage.app --cors-file=storage.cors.json
+```
+
+⚠️ **`gcloud` SÍ está instalado aquí; lo que falla es el SHELL.** El lanzador de
+`gcloud` es un script que busca `python3` en el PATH, y desde Git Bash ese
+`python3` resuelve al stub de la Microsoft Store, que contesta «Permission
+denied» — de ahí la conclusión equivocada de que la máquina no lo tenía. Desde
+**PowerShell funciona** (SDK 583.0.0, comprobado el 21 de septiembre de 2026), y
+desde un shell tipo Unix se llega igual:
+
+```bash
+powershell.exe -NoProfile -Command "gcloud storage buckets describe gs://velto-store.firebasestorage.app --format='default(cors_config)'"
+```
+
+Cloud Shell sigue valiendo, pero no hace falta. Lo que **no** hay es interfaz: ni
+la consola de Firebase ni la de Cloud tienen pantalla de CORS.
+
+⚠️ **Y comprobarlo es `describe`, no una petición de prueba.** Un preflight
+`OPTIONS` contesta **lo mismo en un bucket configurado y en uno que no**
+—`access-control-allow-origin: *` y la misma lista de métodos—, así que no
+distingue nada; y un `curl` contra un objeto inexistente devuelve un 403 que
+también trae la cabecera. Dos señales falsas seguidas en el mismo asunto. Lo que
+vale es `gcloud storage buckets describe … --format='default(cors_config)'`, o
+un `fetch` de verdad desde el navegador contra un objeto que exista.
+
+Aplicado en los dos buckets el 21 de septiembre de 2026.
 
 Por eso `triggerDownload()` baja el fichero a un blob y pone el nombre con
 `a.download`: así no hay ruta que interpretar. El contrato se llama
@@ -2176,6 +2218,14 @@ functions aunque no se haya tocado una línea de código; y a la inversa, un
 `Skipped (No changes detected)` en las once significa que el fichero que tienes
 delante es el que está desplegado.
 
+⚠️ **Ese truco solo funciona con `--only functions` a secas.** Nombrando
+functions —`--only functions:a,functions:b`— el CLI **no salta ninguna**: las
+actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
+producción, donde nombrarlas es obligatorio, no hay forma de usar el
+`Skipped` como comprobación; lo que vale es que cada una diga
+`Successful update operation` y que `firebase functions:list --project prod`
+siga dando **22**.
+
 ### Secrets
 
 Nunca en el frontend. Se configuran con `firebase functions:secrets:set`.
@@ -2291,6 +2341,25 @@ antes de empezar con datos reales. Tenía siete colecciones con datos —`client
 (`veltorent@gmail.com`, admin). Nunca llegó a haber `invoices` allí, que es lo
 que hacía este borrado posible: una factura emitida no se borra ni se edita, así
 que después del 1 de enero **esto ya no se podrá hacer**.
+
+⚠️ **Y desarrollo se vació otra vez el 21 de septiembre de 2026**, con
+producción ya en real y el frontend nuevo desplegado. Se borró todo menos
+`authorizedUsers` —46 documentos y 8 ficheros de Storage, entre ellos un contrato
+firmado y una firma manuscrita—, y con los ficheros **antes** que los documentos.
+
+⚠️ **Quedaron 4 documentos en `contracts`, y no es un descuido:**
+`firestore.rules` deniega `delete` en esa colección **a todo el mundo, incluido
+el administrador**, así que no se pueden borrar con la sesión de la aplicación
+por mucho que sea admin. Sus PDF y su firma sí se borraron. Para quitarlos hace
+falta la consola de Firebase o el Admin SDK. Lo mismo vale para
+`contractSigningTokens`, que ni siquiera se deja **listar** desde cliente.
+
+⚠️ **Y para borrar Storage desde una sesión normal hay que ir por prefijo.**
+Listar la **raíz** del bucket da 403 —el `match` final lo deniega todo— y
+`vehicles/` también: la regla es `/vehicles/{vehicleId}/{allPaths=**}`, así que
+el prefijo tiene que llegar hasta el id (`vehicles/<id>/`). Los ids se sacan de
+Firestore **antes** de borrar los documentos, o se pierde el rastro de qué
+ficheros había que borrar.
 
 ⚠️ **Esta vez sí se vació también Storage**, que es la mitad que se olvidó en los
 borrados anteriores: siete ficheros —el contrato original y el firmado, la firma

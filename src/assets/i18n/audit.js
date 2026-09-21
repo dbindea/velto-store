@@ -36,11 +36,21 @@ const APP_DIR = path.resolve(__dirname, '../../app');
 const LOCALES = ['es', 'en', 'ro'];
 const REFERENCE = 'es';
 
+/**
+ * Los ficheros donde puede haber una clave i18n.
+ *
+ * ⚠️ **Los `.spec.ts` quedan fuera, y no es por rapidez.** Un test no le enseña
+ * texto a nadie, así que sus literales no son claves — pero tienen su forma.
+ * `storage-name.util.spec.ts` usa `'a.jpg'` y `'a.pdf'` como nombres de fichero
+ * de prueba, y el auditor los reclamó como claves que faltaban en los tres
+ * idiomas. Traducirlos habría sido absurdo, y silenciarlos a mano es un parche
+ * que hay que repetir con el siguiente test.
+ */
 function* walk(dir) {
   for (const entry of fs.readdirSync(dir)) {
     const full = path.join(dir, entry);
     if (fs.statSync(full).isDirectory()) yield* walk(full);
-    else if (/\.(ts|html)$/.test(entry)) yield full;
+    else if (/\.(ts|html)$/.test(entry) && !/\.spec\.ts$/.test(entry)) yield full;
   }
 }
 

@@ -341,17 +341,19 @@ export class ContractService {
   /**
    * Descarga un PDF con el nombre que se le dé.
    *
-   * ⚠️ **Se baja a un blob a propósito, y no es un rodeo.** Apuntando un enlace
-   * directamente a la URL de Storage, el navegador obedece a la cabecera
-   * `Content-Disposition` que manda Storage — y esa lleva **el nombre completo
-   * del objeto**, con sus barras. Chrome trata cada barra como una carpeta, así
-   * que descargar un contrato creaba una carpeta con el id de la reserva y
-   * dentro un PDF llamado `contract-original.pdf`. Con el blob, el nombre lo
-   * decide `a.download` y no hay ruta que interpretar.
+   * ⚠️ **Se baja a un blob a propósito, y no es un rodeo.** Medido contra la
+   * respuesta real de Storage: **no manda `Content-Disposition` ninguna**, solo
+   * `content-type: application/pdf`. Sin esa cabecera el navegador saca el
+   * nombre **de la ruta de la URL** —`…/o/contracts%2F<reservaId>%2Fcontract-original.pdf`—,
+   * la descodifica y trata cada barra como un directorio: de ahí la carpeta con
+   * el id de la reserva y dentro un PDF llamado `contract-original.pdf`. Con el
+   * blob el nombre lo decide `a.download` y no hay ruta que interpretar.
    *
-   * ⚠️ **Y si la descarga falla, la pestaña nueva vuelve a traer la carpeta.**
-   * Es el mismo fallo por la puerta de atrás, así que el aviso lo dice: lo que
-   * se abre no es lo que se pidió.
+   * ⚠️ **Pero el `fetch` necesita CORS en el bucket**, y sin él esto se va
+   * siempre por el respaldo — que abre la URL de Storage y vuelve a traer la
+   * carpeta. Es el mismo fallo por la puerta de atrás. La configuración está en
+   * `storage.cors.json`; hasta aplicarla, el aviso dice que lo que se abre no
+   * es lo que se pidió.
    */
   async triggerDownload(url: string, filename: string): Promise<void> {
     try {

@@ -1169,6 +1169,7 @@
       "finalPrice": "Precio total",
       "initialPayment": "Señal",
       "loyaltyDiscount": "Descuento fidelidad",
+      "loyaltyOverridden": "no se aplica: hay precio pactado",
       "manualAdjustment": "Ajuste manual",
       "netPrice": "Precio sin IVA",
       "pricePerDay": "Precio/día",
