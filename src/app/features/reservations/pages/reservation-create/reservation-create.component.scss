@@ -409,9 +409,15 @@ textarea.form-control {
     }
   }
 
+  // El motivo dejó de ser una etiqueta de dos palabras: desde que la ITV
+  // caducada bloquea, aquí cabe una frase entera que dice qué hay que hacer.
+  // Sin `flex-wrap` —y con `align-items: center`— la línea se salía de la
+  // tarjeta en vez de partirse, que es el desbordamiento horizontal de
+  // siempre; `baseline` deja el icono a la altura de la primera línea.
   .unavailable-badge {
     display: inline-flex;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: baseline;
     gap: 0.25rem;
     margin-top: 0.5rem;
     padding: 0.25rem 0.5rem;
@@ -422,6 +428,13 @@ textarea.form-control {
 
     i {
       font-size: 0.75rem;
+    }
+
+    // La fecha no se parte nunca: «10/10/» en una línea y «2026» en la
+    // siguiente se lee como dos datos.
+    .due-date {
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
     }
   }
 }

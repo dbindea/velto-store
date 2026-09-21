@@ -256,6 +256,28 @@ existing.pickupDateTime < requested.returnDateTime
 AND existing.returnDateTime > requested.pickupDateTime
 ```
 
+### Los papeles del coche: ITV y seguro
+
+Desde el 21 de septiembre de 2026, un coche **no se alquila** si su ITV o su
+seguro caducan **antes de la fecha de devolución** — no antes de hoy. Con la ITV
+caducando el 10 de octubre, del 1 al 5 se alquila y del 8 al 12 no.
+
+Se comprueba en los tres sitios por los que un coche puede salir: el buscador de
+disponibilidad, el servicio que crea o edita la reserva y el parte de entrega. El
+mensaje **nombra el papel** («La ITV caduca antes de la devolución. No se puede
+alquilar hasta pasarla») y lleva al lado la fecha.
+
+**Solo bloquean `itv` y `insurance`**: son los que impiden circular. Un cambio de
+aceite o unos neumáticos vencidos siguen avisando sin bloquear, porque el coche
+puede circular y quien atiende decide.
+
+**No se puede saltar.** A diferencia de los pasos del workflow, la entrega no
+ofrece «Saltar este paso» cuando el que falta es un papel: entregar un coche sin
+ITV no es un atajo operativo.
+
+Antes de bloquear ya avisaban, y siguen haciéndolo: el correo de las 9:00 lista
+los vencimientos con 30 días de antelación y la pantalla de Eventos con 7.
+
 ### Cálculo de días
 
 Por bloques de 24 horas, **redondeando hacia arriba** ante cualquier exceso.

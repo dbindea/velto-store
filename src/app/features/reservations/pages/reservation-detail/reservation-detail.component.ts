@@ -45,6 +45,8 @@ import {
 } from '@shared/models/payment.model';
 import { Inspection, INSPECTION_STATUS_LABELS } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-maintenance.service';
+import type { MaintenanceBlock } from '@shared/utils/vehicle-availability.util';
 import {
   chargesVat,
   deliveryFeeBreakdown,
@@ -102,6 +104,7 @@ export class ReservationDetailComponent implements OnInit {
   private reservationService = inject(ReservationService);
   private paymentService = inject(PaymentService);
   private inspectionService = inject(InspectionService);
+  private maintenanceService = inject(VehicleMaintenanceService);
   private contractService = inject(ContractService);
   private documentService = inject(ReservationDocumentService);
   private redsysService = inject(RedsysPaymentService);
@@ -128,6 +131,13 @@ export class ReservationDetailComponent implements OnInit {
   pickupInspection: Inspection | null = null;
   returnInspection: Inspection | null = null;
   contract: Contract | null = null;
+  /**
+   * El papel caducado que impide entregar este coche, si lo hay.
+   *
+   * Vive aquí y no en el `WorkflowContext` porque no es una condición de la
+   * reserva —es del coche— y porque el workflow admite excepciones y esto no.
+   */
+  vehicleBlock: MaintenanceBlock | null = null;
   loading = true;
   generatingContract = false;
   creatingSigningLink = false;
@@ -387,6 +397,7 @@ export class ReservationDetailComponent implements OnInit {
             this.watchPayments(id);
             this.loadInspections(id);
             this.watchContract(id);
+            this.loadVehicleBlock(reservation);
           }
         },
         error: (error) => {
@@ -394,6 +405,25 @@ export class ReservationDetailComponent implements OnInit {
           this.loading = false;
         }
       });
+  }
+
+  /**
+   * La ITV o el seguro del coche, contra la fecha de devolución de ESTA reserva.
+   *
+   * ⚠️ **Se carga una vez y no se vigila.** Una fecha de ITV no cambia mientras
+   * alguien mira una reserva; lo que sí cambia es el contrato —lo firma el
+   * cliente en su móvil— y por eso aquel sí escucha. Un oyente más por pantalla
+   * que no aporta nada es el «refrescar volviendo a llamar» que ya costó siete
+   * suscripciones apiladas.
+   *
+   * Si la consulta falla no se bloquea nada: el servicio vuelve a preguntar
+   * antes de entregar el coche, y esa es la que de verdad impide.
+   */
+  private loadVehicleBlock(reservation: Reservation): void {
+    this.maintenanceService
+      .blockingFor(reservation.vehicleId, toDate(reservation.returnDateTime))
+      .then((bloqueo) => (this.vehicleBlock = bloqueo ?? null))
+      .catch((err) => console.error('Error loading vehicle maintenance block:', err));
   }
 
   /**
@@ -1406,8 +1436,16 @@ export class ReservationDetailComponent implements OnInit {
     return value ? toDate(value) : null;
   }
 
-  /** Returns the workflow decision for "start pickup inspection". */
+  /**
+   * Returns the workflow decision for "start pickup inspection".
+   *
+   * ⚠️ **La ITV y el seguro se miran ANTES de `decide()`, y no dentro.**
+   * `decide()` pasa por `canWithException`, que permite saltarse el paso
+   * documentando un motivo; un coche sin ITV no es un paso que saltarse. Es la
+   * misma excepción a la excepción que `canCreateReservationForClient()`.
+   */
   startPickupDecision(): WorkflowDecision {
+    if (this.vehicleBlock) return { ok: false, reason: this.vehicleBlock.message };
     return this.decide('startPickup', Workflow.canStartPickup);
   }
 

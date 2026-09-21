@@ -1479,9 +1479,9 @@ Por eso `firebase.json` declara `Cache-Control: no-cache` en `/assets/i18n/**`:
 se siguen cacheando, pero **revalidando**, así que no pueden quedar desparejados
 del bundle que los pide. Requiere desplegar hosting para que tome efecto.
 
-⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
-propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
-Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
+⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
+propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
+Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
 igualmente la copia vieja.
 
 ⚠️ **Y el pie dice qué commit se está ejecutando**, que es la forma de
@@ -2897,23 +2897,70 @@ el cruce con las reservas que bloquean.
 
 Salió en producción el 21 de septiembre de 2026: un coche alquilado hasta el 26
 se ofrecía como «El vehículo no está disponible en la flota» al pedirlo para el
-1 de octubre, cinco días después. Y se notaba poco porque **el estado solo se
-cambia a mano** desde la ficha del coche —nada en el flujo de alquiler lo
-mueve—, así que un coche marcado «En alquiler» se quedaba inalquilable hasta que
-alguien se acordara de devolverlo a «Disponible».
+1 de octubre, cinco días después. Y se veía en **todos** los coches en curso,
+porque el estado **sí se mueve solo**: lo pone `rented` el parte de entrega y lo
+devuelve el de devolución (`inspection.service.ts`). Es decir, durante todo un
+alquiler el coche estaba inalquilable para cualquier fecha futura.
+
+⚠️ **La devolución no resucita lo que alguien apartó** (`statusAfterReturn()`).
+Ponía `available` a secas, así que un coche marcado «Fuera de servicio» o «En
+taller» durante el alquiler —que es cuando se rompen— volvía a la flota solo por
+terminar el parte. Ahora `maintenance` y `out_of_service` se respetan.
 
 ⚠️ **Y las dos autoridades discrepaban**, que es lo que lo hacía difícil de ver:
 `searchAvailability()` miraba el estado y `checkVehicleAvailability()` —el que
 de verdad guarda la creación— **no lo miró nunca**. El asistente escondía un
 coche que el servicio habría dejado reservar.
 
-⚠️ **En mantenimiento se ofrece y se AVISA**, no se esconde: misma regla que la
-ITV vencida. Quien atiende con el cliente delante tiene que poder decidir, y lo
-que no puede es no saberlo.
+⚠️ **En mantenimiento se ofrece y se AVISA**, no se esconde. Quien atiende con
+el cliente delante tiene que poder decidir, y lo que no puede es no saberlo.
 
-⚠️ **El estado del coche es manual, y eso sigue siendo así.** No lo cambia la
-entrega ni el cierre de la reserva. Automatizarlo es una decisión pendiente: hoy
-es un rótulo para el operador, no un dato del que dependa nada.
+⚠️ **La ITV y el seguro SÍ bloquean desde el 21 de septiembre de 2026, y es una
+REVERSIÓN — por eso está escrita.** Hasta ese día una ITV vencida
+solo **avisaba** en el buscador, con el argumento de que quien está en el
+mostrador tiene que poder decidir — una ITV caducada de un día con cita dada no
+es lo mismo que una de hace tres meses. Dorel lo revocó con dos frases: *«esta
+app tiene que ser automática en muchos aspectos si no yo no me acuerdo»* y *«que
+yo no pueda alquilar el coche pasada esta fecha hasta no hacer la itv»*.
+
+La raya nueva es **qué impide circular**, y separa dos cosas que antes iban
+juntas:
+
+- **`itv` y `insurance` bloquean.** Sin ellos el coche no puede estar en la vía
+  pública y un siniestro no tiene cobertura: eso no es una decisión de
+  mostrador. `BLOCKING_MAINTENANCE_TYPES` en `vehicle-availability.util.ts`.
+- **Todo lo demás sigue avisando.** Un cambio de aceite vencido conviene
+  hacerlo, y el coche circula. El argumento de antes sigue vivo aquí.
+
+⚠️ **Se compara contra la fecha de DEVOLUCIÓN, no contra hoy.** Con la ITV
+caducando el 10 de octubre, del 1 al 5 se alquila y del 8 al 12 no, porque los
+días 11 y 12 el coche estaría en la calle sin ella. Mirando solo el día de hoy,
+el segundo alquiler se aceptaría sin que nada avisara. Y **por días**, no por
+instantes: la fecha se guarda a medianoche y la devolución tiene hora, así que
+devolver el día 10 a las diez de la mañana saldría bloqueado por diez horas.
+
+⚠️ **Lo preguntan TRES sitios y la consulta vive en uno**
+(`VehicleMaintenanceService.blockingFor()`): el buscador, la comprobación que
+guarda la creación y la entrega del coche. Copiada tres veces, el día que
+cambie se arreglaría en dos y el tercero seguiría dejando salir el coche. La
+**regla** es aparte y pura (`blockingMaintenance()`), con sus tests.
+
+⚠️ **La entrega lo comprueba otra vez, y no es redundante.** La disponibilidad
+se mira al **crear** la reserva, así que una reserva hecha en agosto para
+octubre no sabe nada de una ITV cuya fecha se escribió en septiembre. El parte
+de entrega es donde el coche sale de verdad a la calle.
+
+⚠️ **Y no admite excepción de workflow.** Saltarse un paso es un atajo operativo
+—el cliente firmó en papel—, pero entregar un coche sin ITV es circular
+ilegalmente: la comprobación va **antes** de `canWithException` y la pantalla
+**no ofrece** «Saltar este paso». Misma razón que
+`canCreateReservationForClient()`. Un botón que no puede funcionar no se enseña.
+
+⚠️ **El recordatorio ya existía y no hizo falta construirlo.** El correo de las
+9:00 (`sendDailyDigest`, desplegado en los dos proyectos) lista los vencimientos
+de la flota con **30 días** de antelación, y la pantalla de Eventos los deriva
+con `DEFAULT_EVENT_HORIZON = 7`. Lo que faltaba no era el aviso: era que el
+aviso tuviera consecuencias.
 
 ⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
   escribe después, y entre medias cabe otra reserva. **No se puede cerrar desde el

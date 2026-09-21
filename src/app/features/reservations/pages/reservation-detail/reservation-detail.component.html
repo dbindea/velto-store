@@ -472,11 +472,19 @@
                   el caso real es el cliente que firma el contrato en papel.
                   Solo aparece si el workflow dice que no; si deja pasar, el
                   botón de arriba ya sirve.
+
+                  ⚠️ **Con la ITV o el seguro caducados NO se ofrece.** El
+                  servicio se niega igual aunque se documente el motivo, así que
+                  el botón no haría nada — y un botón que no hace nada es un
+                  fallo. Lo que hay que hacer aquí es pasar la ITV, no explicar
+                  por qué se salta.
                 -->
-                <button class="btn-skip-step" type="button" (click)="openSkipDialog('startPickup')">
-                  <i class="pi pi-directions-alt"></i>
-                  {{ 'workflow.skipStep' | translate }}
-                </button>
+                @if (!vehicleBlock) {
+                  <button class="btn-skip-step" type="button" (click)="openSkipDialog('startPickup')">
+                    <i class="pi pi-directions-alt"></i>
+                    {{ 'workflow.skipStep' | translate }}
+                  </button>
+                }
               }
             }
           </div>

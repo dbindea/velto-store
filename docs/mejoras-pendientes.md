@@ -107,6 +107,46 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ N-34 · La ITV y el seguro impiden alquilar — 21 de septiembre de 2026
+
+⚠️ **Es una reversión de N-25, y conviene leerla como tal.** Aquella dejó la ITV
+vencida como **aviso** en el buscador, razonando que quien está en el mostrador
+tiene que poder decidir. Dorel lo revocó el 21 de septiembre: *«esta app tiene
+que ser automática en muchos aspectos si no yo no me acuerdo»*.
+
+Lo que cambia:
+
+- **`itv` y `insurance` bloquean**; el resto de mantenimientos siguen avisando.
+  La raya es **qué impide circular**, no qué conviene hacer.
+- Se compara contra la **fecha de devolución** y **por días**. Con la ITV hasta
+  el 10 de octubre, del 1 al 5 se alquila y del 8 al 12 no.
+- Lo comprueban **los tres caminos** por los que sale un coche: el buscador, el
+  servicio que crea o edita la reserva y el **parte de entrega** — este último
+  porque una reserva de agosto para octubre no sabe nada de una ITV escrita en
+  septiembre.
+- **No se puede saltar.** La entrega no ofrece «Saltar este paso» cuando falta
+  un papel: el servicio se negaría igual y un botón que no hace nada es un fallo.
+
+⚠️ **El recordatorio no hubo que construirlo: ya existía.** El correo de las
+9:00 avisa con 30 días y Eventos con 7. Lo que faltaba era que el aviso tuviera
+consecuencias.
+
+Salieron dos cosas por el camino, las dos por mirar el código de verdad:
+
+- **La devolución resucitaba coches apartados.** Ponía `available` a secas, así
+  que un coche marcado «Fuera de servicio» durante el alquiler volvía a la flota
+  solo por terminar el parte (`statusAfterReturn()`).
+- **El estado del coche NO era manual**, como decían CLAUDE.md y un comentario
+  escrito el día anterior: lo mueven los dos partes de inspección. Corregido en
+  los dos sitios — una nota que afirma algo falso es peor que no tenerla.
+
+Verificado en desarrollo con un coche de prueba y la ITV al 10 de octubre: 1–5 se
+ofrece, 8–12 sale bloqueado con el mensaje y la fecha, mover las fechas de una
+reserva ya creada se rechaza con el mismo texto, y la entrega queda deshabilitada
+sin ofrecer el salto. Los datos de prueba se borraron después.
+
+---
+
 ## 🚧 N-33 · Coches de colaborador y reparto — EMPEZADO el 12 de septiembre de 2026
 
 Velto alquila también vehículos que no son suyos: un colaborador cede su coche y

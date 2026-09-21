@@ -21,10 +21,17 @@ import { map } from 'rxjs/operators';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import {
   MaintenanceStatus,
+  MaintenanceType,
   MAINTENANCE_DUE_SOON_DAYS,
   MAINTENANCE_DUE_SOON_KM,
   VehicleMaintenance,
 } from '@shared/models/vehicle-maintenance.model';
+import {
+  blockingMaintenance,
+  type MaintenanceBlock,
+  type MaintenanceDue
+} from '@shared/utils/vehicle-availability.util';
+import { toDate } from '@shared/utils/reservation-date.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { StorageService } from '@core/firebase/storage.service';
 
@@ -89,6 +96,40 @@ export class VehicleMaintenanceService {
       map((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }) as VehicleMaintenance)),
       map((records) => records.sort((a, b) => this.sortKey(b) - this.sortKey(a)))
     );
+  }
+
+  /**
+   * El papel caducado que impide alquilar este coche para esas fechas.
+   *
+   * ⚠️ **Vive aquí, y no en cada sitio que pregunta.** Lo preguntan tres: el
+   * buscador de disponibilidad, la comprobación que guarda la creación de la
+   * reserva y la entrega del coche. Con la consulta copiada tres veces, el día
+   * que cambie —otro estado, otro campo de fecha— se arreglaría en dos sitios y
+   * el tercero seguiría dejando salir el coche. La **regla** está en
+   * `blockingMaintenance()`, que es pura y tiene sus tests; esto solo trae los
+   * datos.
+   *
+   * ⚠️ **Se consulta por `vehicleId` a secas.** Un `where('status','in',…)`
+   * junto a la igualdad pediría un índice compuesto que no está declarado, y la
+   * consulta fallaría en tiempo de ejecución la primera vez que se usara — en el
+   * camino que crea una reserva. Los mantenimientos de un coche son unas pocas
+   * filas y el estado se filtra en memoria.
+   */
+  async blockingFor(
+    vehicleId: string,
+    returnDateTime: Date
+  ): Promise<MaintenanceBlock | undefined> {
+    const snap = await getDocs(query(this.maintenanceRef, where('vehicleId', '==', vehicleId)));
+    const registros: MaintenanceDue[] = snap.docs.map((d) => {
+      const m = d.data() as Partial<VehicleMaintenance>;
+      const cuando = m.nextDueDate ? toDate(m.nextDueDate) : null;
+      return {
+        type: m.type as MaintenanceType,
+        status: m.status as MaintenanceStatus,
+        dueDate: cuando && !isNaN(cuando.getTime()) ? cuando : null
+      };
+    });
+    return blockingMaintenance(registros, returnDateTime);
   }
 
   /**

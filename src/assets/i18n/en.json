@@ -967,7 +967,9 @@
       "unavailable": "Not available",
       "perDay": "€/day",
       "searchFailed": "Availability could not be searched.",
-      "maintenanceOverdue": "Roadworthiness test or servicing overdue"
+      "maintenanceOverdue": "Roadworthiness test or servicing overdue",
+      "itvExpired": "The roadworthiness test (ITV) expires before the return date. It cannot be rented until it is passed.",
+      "insuranceExpired": "The insurance expires before the return date. It cannot be rented until it is renewed."
     },
     "bookingConfirmation": {
       "copyLink": "Copy link",

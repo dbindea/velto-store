@@ -967,7 +967,9 @@
       "unavailable": "No disponible",
       "perDay": "€/día",
       "searchFailed": "No se ha podido buscar la disponibilidad.",
-      "maintenanceOverdue": "ITV o mantenimiento vencido"
+      "maintenanceOverdue": "ITV o mantenimiento vencido",
+      "itvExpired": "La ITV caduca antes de la devolución. No se puede alquilar hasta pasarla.",
+      "insuranceExpired": "El seguro caduca antes de la devolución. No se puede alquilar hasta renovarlo."
     },
     "bookingConfirmation": {
       "copyLink": "Copiar enlace",
