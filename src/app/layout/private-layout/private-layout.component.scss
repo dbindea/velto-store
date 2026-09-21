@@ -342,6 +342,15 @@ app-brand-logo {
   @media (max-width: 767px) {
     display: none;
   }
+
+  /* El commit, al lado de la versión y más apagado: es un dato de diagnóstico,
+     no algo que haya que leer todos los días. Se selecciona con el ratón para
+     poder pegarlo en un mensaje. */
+  .build {
+    margin-left: 0.5rem;
+    opacity: 0.65;
+    user-select: all;
+  }
 }
 
 // Mobile Navigation

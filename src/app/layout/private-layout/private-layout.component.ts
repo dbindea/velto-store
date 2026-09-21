@@ -8,6 +8,7 @@ import { LanguageSelectorComponent } from '@shared/components/language-selector/
 import { GlobalSearchComponent } from '@shared/components/global-search/global-search.component';
 import { BrandLogoComponent } from '@shared/components/brand-logo/brand-logo.component';
 import { Permission, ROUTE_PERMISSIONS, can } from '@shared/utils/permissions.util';
+import { BUILD_INFO } from '@core/config/build-info';
 
 interface MenuItem {
   path: string;
@@ -39,6 +40,27 @@ export class PrivateLayoutComponent {
   themeService = inject(ThemeService);
 
   sidebarOpen = signal(false);
+
+  /**
+   * El commit que se está ejecutando, para poder contestar «¿estoy viendo lo
+   * último?» sin salir de la pantalla.
+   *
+   * ⚠️ **La pregunta es real y ya costó una tarde.** El 21 de septiembre de 2026
+   * producción sirvió el JavaScript nuevo con las traducciones viejas por la
+   * caché de Cloudflare, y desde la aplicación no había forma de notarlo: el pie
+   * ponía `VELTO v1.0`, que es lo mismo en todos los despliegues desde el primer
+   * día.
+   *
+   * Siete caracteres bastan para comparar con la rama de un vistazo; el
+   * completo y la fecha van en el `title`, que es donde se miran cuando de
+   * verdad hace falta.
+   */
+  readonly buildLabel = BUILD_INFO.commit === 'local' ? 'local' : BUILD_INFO.commit.slice(0, 7);
+
+  /** El commit entero y cuándo se compiló, para el `title`. */
+  readonly buildDetail = BUILD_INFO.commit === 'local'
+    ? ''
+    : `${BUILD_INFO.branch} · ${BUILD_INFO.commit}${BUILD_INFO.builtAt ? ' · ' + BUILD_INFO.builtAt : ''}`;
 
   /**
    * El menú completo. Lo que cada uno ve sale de `visibleMenuItems`.

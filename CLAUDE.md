@@ -1479,10 +1479,30 @@ Por eso `firebase.json` declara `Cache-Control: no-cache` en `/assets/i18n/**`:
 se siguen cacheando, pero **revalidando**, así que no pueden quedar desparejados
 del bundle que los pide. Requiere desplegar hosting para que tome efecto.
 
-⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
-propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
-Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
+⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
+propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
+Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
 igualmente la copia vieja.
+
+⚠️ **Y el pie dice qué commit se está ejecutando**, que es la forma de
+contestarlo desde la propia pantalla: `VELTO v1.0  0d32ba4`, con la rama, el SHA
+completo y la fecha en el `title`. Lo escribe `scripts/write-build-info.js` en
+`src/app/core/config/build-info.ts`.
+
+⚠️ **Lo llama `package.json`, no el workflow**, y esa es la parte que importa:
+`firebase init hosting:github` **reescribe los workflows sin avisar** —ya pasó—,
+y metido ahí el paso desaparecería con ellos. El pie seguiría pintando un commit:
+el de la última vez que funcionó. Colgado de `build` y `build:prod` sobrevive.
+
+⚠️ **Fuera de CI vale `local` a propósito.** Con el SHA de verdad, cada
+`npm run build` dejaría el fichero modificado y habría que descartarlo a mano
+antes de cada commit. En CI hay `GITHUB_SHA` —en `master`, el del merge— y ahí
+sí se sella.
+
+⚠️ **El fichero generado NO lleva `as const`.** Con él, TypeScript estrecha
+`commit` al literal del fichero y `BUILD_INFO.commit.slice(0, 7)` deja de
+compilar **solo en local**, porque en CI el literal es un SHA. Un fallo que no
+aparece donde se trabaja.
 
 ## Cloud Functions
 
