@@ -29,6 +29,7 @@ import {
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
 import { deliveryFeeBreakdown } from '@shared/utils/pricing.util';
+import { fleetAvailability } from '@shared/utils/vehicle-availability.util';
 import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
 import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { SettingsService } from '@features/settings/services/settings.service';
@@ -555,8 +556,15 @@ export class ReservationService {
     const results: VehicleAvailabilityResult[] = [];
 
     for (const vehicle of vehicles) {
-      // Only consider available vehicles
-      if (vehicle.status !== 'available') {
+      /**
+       * ⚠️ **El estado NO decide la disponibilidad; las fechas sí.** La regla
+       * vive en `fleetAvailability()` con su porqué: un coche alquilado hasta
+       * el 26 salía como «no está disponible en la flota» al pedirlo para el 1
+       * de octubre. Lo que contesta de verdad es el cruce con las reservas que
+       * bloquean, unas líneas más abajo.
+       */
+      const porEstado = fleetAvailability(vehicle.status);
+      if (porEstado.blocks) {
         results.push({
           vehicleId: vehicle.id!,
           vehicle,
@@ -632,10 +640,18 @@ export class ReservationService {
         available: true,
         totalDays,
         pricing,
-        // Se ofrece igual, pero con el aviso delante. Ver `warningMessage`.
+        /**
+         * Se ofrece igual, pero con el aviso delante. Ver `warningMessage`.
+         *
+         * ⚠️ **Un coche en taller se ofrece y se avisa**, no se esconde. Es la
+         * misma regla que la ITV vencida: quien está en el mostrador con el
+         * cliente delante tiene que poder decidir, y lo que no puede es **no
+         * saberlo**. El mantenimiento vencido manda sobre el estado porque es
+         * el aviso más concreto de los dos.
+         */
         warningMessage: vencidosPorVehiculo.has(vehicle.id!)
           ? 'reservations.availability.maintenanceOverdue'
-          : undefined
+          : porEstado.warning
       });
     }
 

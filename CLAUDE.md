@@ -2889,7 +2889,33 @@ no están allí hasta el 1 de enero. Un despliegue completo las subiría.
   ya seguido, hace falta `git rm --cached`.
 - `CREDENTIALS.md` **sí está** en `.gitignore`, junto a `*.p12`, `*.pfx`, `*.key` y
   `cert.b64`.
-- ⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
+- ⚠️ **El ESTADO del coche no decide la disponibilidad; las fechas sí.**
+`fleetAvailability()` en `vehicle-availability.util.ts` es la única autoridad
+sobre lo que el estado permite, y solo aparta `out_of_service`. Un coche
+`rented` está fuera **ahora**, no en las fechas que se piden: quien contesta es
+el cruce con las reservas que bloquean.
+
+Salió en producción el 21 de septiembre de 2026: un coche alquilado hasta el 26
+se ofrecía como «El vehículo no está disponible en la flota» al pedirlo para el
+1 de octubre, cinco días después. Y se notaba poco porque **el estado solo se
+cambia a mano** desde la ficha del coche —nada en el flujo de alquiler lo
+mueve—, así que un coche marcado «En alquiler» se quedaba inalquilable hasta que
+alguien se acordara de devolverlo a «Disponible».
+
+⚠️ **Y las dos autoridades discrepaban**, que es lo que lo hacía difícil de ver:
+`searchAvailability()` miraba el estado y `checkVehicleAvailability()` —el que
+de verdad guarda la creación— **no lo miró nunca**. El asistente escondía un
+coche que el servicio habría dejado reservar.
+
+⚠️ **En mantenimiento se ofrece y se AVISA**, no se esconde: misma regla que la
+ITV vencida. Quien atiende con el cliente delante tiene que poder decidir, y lo
+que no puede es no saberlo.
+
+⚠️ **El estado del coche es manual, y eso sigue siendo así.** No lo cambia la
+entrega ni el cierre de la reserva. Automatizarlo es una decisión pendiente: hoy
+es un rótulo para el operador, no un dato del que dependa nada.
+
+⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
   escribe después, y entre medias cabe otra reserva. **No se puede cerrar desde el
   cliente**: el SDK web no permite consultas dentro de una transacción, solo lecturas por
   id. Haría falta una Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.

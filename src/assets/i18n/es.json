@@ -959,6 +959,7 @@
     },
     "availability": {
       "conflict": "Ya hay una reserva para estas fechas",
+      "inMaintenance": "El coche está marcado como en mantenimiento. Comprueba que estará listo para estas fechas.",
       "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas",
       "notInFleet": "El vehículo no está disponible en la flota",
       "search": "Buscar disponibilidad",

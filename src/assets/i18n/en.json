@@ -959,6 +959,7 @@
     },
     "availability": {
       "conflict": "There is already a booking for these dates",
+      "inMaintenance": "This car is marked as under maintenance. Check that it will be ready for these dates.",
       "noVehiclesAvailable": "No vehicles available for these dates",
       "notInFleet": "The vehicle is not available in the fleet",
       "search": "Search availability",

@@ -959,6 +959,7 @@
     },
     "availability": {
       "conflict": "Există deja o rezervare pentru aceste date",
+      "inMaintenance": "Mașina este marcată ca fiind în mentenanță. Verifică dacă va fi gata pentru aceste date.",
       "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date",
       "notInFleet": "Vehiculul nu este disponibil în flotă",
       "search": "Caută disponibilitate",
