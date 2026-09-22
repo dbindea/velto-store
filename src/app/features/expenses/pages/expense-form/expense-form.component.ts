@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -50,7 +51,7 @@ import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 @Component({
   selector: 'app-expense-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
   templateUrl: './expense-form.component.html',
   styleUrl: './expense-form.component.scss'
 })

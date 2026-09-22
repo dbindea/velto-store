@@ -276,6 +276,15 @@
       "signed": "signed"
     }
   },
+  "datePicker": {
+    "title": "Pick a date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "today": "Today",
+    "now": "Now"
+  },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",
     "allClearTitle": "All clear",

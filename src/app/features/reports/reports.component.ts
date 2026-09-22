@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
@@ -60,7 +61,7 @@ function mesesAbreviados(idioma: string): string[] {
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, LineChartComponent, DonutChartComponent, BarChartComponent],
+  imports: [CommonModule, TranslatePipe, LineChartComponent, DonutChartComponent, BarChartComponent, DatePickerDirective],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.scss'
 })

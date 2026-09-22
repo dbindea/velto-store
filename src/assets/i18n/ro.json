@@ -276,6 +276,15 @@
       "signed": "semnat"
     }
   },
+  "datePicker": {
+    "title": "Alege data",
+    "previousMonth": "Luna anterioară",
+    "nextMonth": "Luna următoare",
+    "hours": "Ore",
+    "minutes": "Minute",
+    "today": "Azi",
+    "now": "Acum"
+  },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",
     "allClearTitle": "Totul e în regulă",

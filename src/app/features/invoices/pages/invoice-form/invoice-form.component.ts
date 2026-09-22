@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 import { Component, OnInit, inject, signal } from '@angular/core';
@@ -50,7 +51,7 @@ import { toDate, toDateString } from '@shared/utils/reservation-date.util';
 @Component({
   selector: 'app-invoice-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
   templateUrl: './invoice-form.component.html',
   styleUrl: './invoice-form.component.scss'
 })

@@ -276,6 +276,15 @@
       "signed": "firmado"
     }
   },
+  "datePicker": {
+    "title": "Elegir fecha",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "hours": "Horas",
+    "minutes": "Minutos",
+    "today": "Hoy",
+    "now": "Ahora"
+  },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",
     "allClearTitle": "Todo al día",

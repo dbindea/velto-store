@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -53,7 +54,7 @@ import { invoiceDeadlineFor } from '@shared/utils/invoice.util';
 @Component({
   selector: 'app-event-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, DatePickerDirective],
   templateUrl: './event-list.component.html',
   styleUrl: './event-list.component.scss'
 })

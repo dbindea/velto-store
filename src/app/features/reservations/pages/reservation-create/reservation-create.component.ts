@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { NotificationService } from '@core/notifications/notification.service';
@@ -43,7 +44,7 @@ type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 @Component({
   selector: 'app-reservation-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
   templateUrl: './reservation-create.component.html',
   styleUrl: './reservation-create.component.scss',
 })

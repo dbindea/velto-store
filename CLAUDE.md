@@ -2466,6 +2466,41 @@ Corregido el 28 de agosto de 2026, junto con el índice que faltaba de `inspecti
 Ninguna regla lo alcanza; el único mecanismo es **`color-scheme`**, declarado en `:root`
 (claro) y `.dark` (oscuro) en `styles.scss`.
 
+**Y por eso, desde el 22 de septiembre de 2026, en escritorio hay uno nuestro.** Dorel lo
+pidió viendo que «los calendarios y las horas vienen en bruto»: no había forma de vestir
+el del navegador, así que se pone otro delante.
+[`DatePickerDirective`](src/app/shared/directives/date-picker.directive.ts) +
+[`DatePickerPanelComponent`](src/app/shared/components/date-picker/date-picker-panel.component.ts),
+con la aritmética aparte y con tests en `date-picker.util.ts`.
+
+Cuatro decisiones, y las cuatro importan:
+
+- ⚠️ **En móvil sigue mandando el nativo** (`prefersNativePicker()`). La hoja a pantalla
+  completa de iOS y Android es mejor que cualquier cosa que dibujemos, y esta es una
+  aplicación que se usa en la calle. Se decide por **puntero**, no solo por ancho: una
+  tableta con dedos quiere la del sistema y un portátil estrecho con ratón, la nuestra.
+- ⚠️ **El campo sigue siendo un `input[type=date]` de verdad.** El panel solo escribe en
+  él y dispara sus eventos, así que el valor, `min`, `max`, la validación y el teclado no
+  cambian. Quitar la directiva de los `imports` devuelve todo a como estaba **sin tocar
+  una plantilla**.
+- ⚠️ **La directiva se aplica POR TIPO de campo**, sin atributo que recordar. Es la
+  lección de `.form-control`, que pasó a global después de olvidarse cuatro veces.
+- ⚠️ **Solo abre la zona del icono** (los 34 px de la derecha), que es exactamente lo que
+  hace el navegador. Abriéndose con cualquier clic, taparía media pantalla cada vez que
+  alguien va a teclear una fecha.
+
+Tres trampas que costaron un rato y que volverían a costarlo:
+
+- **Enfocar el campo desplaza la página** si no está entero a la vista, y ese
+  desplazamiento llegaba al oyente que cierra el panel: se abría y se cerraba en el mismo
+  clic, sin error en consola. Lo arregla `focus({ preventScroll: true })`.
+- **Un evento de desplazamiento no burbujea, pero sí baja en la captura.** El oyente que
+  cierra va en captura —para enterarse de lo que se desplace en un modal— así que también
+  cazaba el de la propia lista de horas al centrarla: el panel se cerraba a sí mismo.
+- **`offsetTop` se mide contra el antepasado POSICIONADO**, que es el panel y no la
+  columna. Centrar la hora funcionaba en el campo de hora sola y se iba 250 px en el de
+  fecha **y** hora, que es el que casi no se mira.
+
 Con los `<select>` **eso dejó de ser cierto el 7 de septiembre de 2026**. Chrome 135+ trae
 el *customizable select*: con `appearance: base-select` la lista sale del sistema y entra
 en la página como `::picker(select)`, así que las `option` se estilizan como cualquier otro
