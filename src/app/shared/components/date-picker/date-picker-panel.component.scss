@@ -1,0 +1,225 @@
+/**
+ * El calendario propio, con la paleta del tema.
+ *
+ * Todo sale de las variables: el panel se ve igual de bien en los cuatro temas
+ * sin una sola regla por tema, que es la condición para que esto no se quede
+ * viejo cuando alguien añada el quinto.
+ */
+
+:host {
+  // El componente en sí no ocupa: quien se coloca es el panel de dentro.
+  display: contents;
+}
+
+.picker-panel {
+  position: fixed;
+  z-index: 200; // Por encima de la cabecera pegajosa (50) y del menú (100).
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  // Sin esto hereda el tamaño del sitio desde donde se abrió, y el panel de un
+  // formulario compacto salía con letra de 13 px.
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.picker-month {
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-align: center;
+  flex: 1;
+}
+
+.picker-nav {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  i {
+    font-size: 0.75rem;
+  }
+}
+
+.picker-weekdays,
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 32px);
+  gap: 2px;
+}
+
+.picker-weekdays span {
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  padding-bottom: 0.25rem;
+}
+
+.picker-day {
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  // Los días del mes de al lado se ven —da contexto— pero se apagan.
+  &.is-outside {
+    color: var(--text-muted);
+    opacity: 0.55;
+  }
+
+  // Hoy se marca con un borde y no con relleno: el relleno es para lo elegido,
+  // y si los dos pintan igual no se distingue uno de otro.
+  &.is-today {
+    box-shadow: inset 0 0 0 1px var(--accent-color);
+  }
+
+  &.is-selected {
+    background: var(--accent-color);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.picker-time {
+  display: flex;
+  gap: 0.5rem;
+
+  // Cuando va debajo de un calendario, se separa con un filete.
+  &.with-calendar {
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.5rem;
+  }
+}
+
+.picker-time-col {
+  // Alto fijo con desplazamiento: 24 horas no caben en pantalla y una lista
+  // sin tope estiraría el panel hasta salirse.
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 56px;
+
+  /**
+   * ⚠️ **La barra de desplazamiento también es parte del panel.** Por defecto
+   * sale la del sistema —ancha, con su carril y sus flechas— y dentro de un
+   * panel de 150 px eso es lo primero que se ve al abrir el reloj.
+   *
+   * Van las **dos formas** a propósito: la estándar la entiende Firefox y los
+   * pseudo-elementos con prefijo los aplica Chrome, que es donde se trabaja.
+   * Medido aquí: el ancho acaba en 6 px, que es el de los pseudo-elementos.
+   */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+}
+
+.picker-time-item {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    background: var(--bg-hover);
+  }
+
+  &.is-selected {
+    background: var(--accent-color);
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.picker-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.5rem;
+}
+
+.picker-now,
+.picker-close {
+  border: none;
+  background: transparent;
+  color: var(--accent-color);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.picker-close {
+  color: var(--text-muted);
+}

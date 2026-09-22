@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -27,7 +28,7 @@ import { NotificationService } from '@core/notifications/notification.service';
 @Component({
   selector: 'app-invoice-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, DatePickerDirective],
   templateUrl: './invoice-list.component.html',
   styleUrl: './invoice-list.component.scss'
 })

@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -58,7 +59,7 @@ import { first } from 'rxjs/operators';
 @Component({
   selector: 'app-reservation-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
   templateUrl: './reservation-edit.component.html',
   styleUrl: './reservation-edit.component.scss'
 })

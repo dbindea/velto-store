@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -41,7 +42,8 @@ import { ConfirmService } from '@core/notifications/confirm.service';
     FormsModule,
     TranslatePipe,
     PhotoUploadButtonsComponent,
-    FormErrorComponent
+    FormErrorComponent,
+    DatePickerDirective
   ],
   templateUrl: './client-form.component.html',
   styleUrl: './client-form.component.scss'

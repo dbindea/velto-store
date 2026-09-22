@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -59,7 +60,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 @Component({
   selector: 'app-collaborator-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
   templateUrl: './collaborator-detail.component.html',
   styleUrl: './collaborator-detail.component.scss'
 })

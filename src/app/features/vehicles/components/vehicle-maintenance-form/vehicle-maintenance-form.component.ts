@@ -1,3 +1,4 @@
+import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import {
   Component,
   DestroyRef,
@@ -77,7 +78,7 @@ export type MaintenanceSubmitData = Omit<
 @Component({
   selector: 'app-vehicle-maintenance-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
   templateUrl: './vehicle-maintenance-form.component.html',
   styleUrl: './vehicle-maintenance-form.component.scss'
 })

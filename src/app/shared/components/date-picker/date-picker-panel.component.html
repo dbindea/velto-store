@@ -1,0 +1,94 @@
+<!--
+  El panel entero es `position: fixed` y lo coloca el componente: por eso no
+  lleva `top` ni `left` escritos aquí.
+-->
+<div class="picker-panel" role="dialog" [attr.aria-label]="t('datePicker.title')">
+  @if (showsCalendar()) {
+    <div class="picker-head">
+      <button
+        type="button"
+        class="picker-nav"
+        (click)="prevMonth()"
+        [attr.aria-label]="t('datePicker.previousMonth')"
+      >
+        <i class="pi pi-chevron-left"></i>
+      </button>
+      <span class="picker-month" aria-live="polite">{{ monthLabel() }}</span>
+      <button
+        type="button"
+        class="picker-nav"
+        (click)="nextMonth()"
+        [attr.aria-label]="t('datePicker.nextMonth')"
+      >
+        <i class="pi pi-chevron-right"></i>
+      </button>
+    </div>
+
+    <div class="picker-weekdays" aria-hidden="true">
+      @for (d of weekdays(); track $index) {
+        <span>{{ d }}</span>
+      }
+    </div>
+
+    <div class="picker-grid" role="grid">
+      @for (c of cells(); track c.date.getTime()) {
+        <button
+          type="button"
+          class="picker-day"
+          role="gridcell"
+          [class.is-outside]="!c.inMonth"
+          [class.is-today]="c.today"
+          [class.is-selected]="c.selected"
+          [disabled]="c.disabled"
+          [attr.aria-selected]="c.selected"
+          (click)="pickDay(c)"
+        >
+          {{ c.date.getDate() }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (showsTime()) {
+    <!--
+      Dos columnas y no una lista de horas completas: 24 × 12 son 288 filas
+      que no se recorren de un vistazo. Y el campo sigue admitiendo el teclado
+      para cualquier minuto que no esté en los saltos de cinco.
+    -->
+    <div class="picker-time" [class.with-calendar]="showsCalendar()">
+      <div class="picker-time-col" [attr.aria-label]="t('datePicker.hours')">
+        @for (h of hours; track h) {
+          <button
+            type="button"
+            class="picker-time-item"
+            [class.is-selected]="pickedHour() === h"
+            (click)="pickHour(h)"
+          >
+            {{ pad(h) }}
+          </button>
+        }
+      </div>
+      <div class="picker-time-col" [attr.aria-label]="t('datePicker.minutes')">
+        @for (m of minutes; track m) {
+          <button
+            type="button"
+            class="picker-time-item"
+            [class.is-selected]="pickedMinute() === m"
+            (click)="pickMinute(m)"
+          >
+            {{ pad(m) }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="picker-foot">
+    <button type="button" class="picker-now" [disabled]="nowDisabled()" (click)="pickNow()">
+      {{ showsCalendar() ? t('datePicker.today') : t('datePicker.now') }}
+    </button>
+    <button type="button" class="picker-close" (click)="closed.emit()">
+      {{ t('common.close') }}
+    </button>
+  </div>
+</div>
