@@ -5,8 +5,30 @@
 }
 
 // Header
+/**
+ * ⚠️ **Le faltaba el `display: flex`, y por eso el subtítulo se leía pegado al
+ * botón.** Sin él, `.header-content` y `.header-actions` eran dos bloques
+ * sueltos sin nada entre medias: el título y su explicación quedaban a 4 px, y
+ * la explicación y el botón **a cero**. Lo que se lee entonces no es «Pagos ·
+ * gestiona pagos y fianzas», es «gestiona pagos y fianzas · Nuevo cobro», que
+ * es lo contrario de lo que dice. Lo vio Dorel en la pantalla.
+ *
+ * Medidas las catorce pantallas a 390 px: las demás dejan **16 px** entre el
+ * subtítulo y lo que venga debajo —el `gap` de esta misma regla, que allí sí
+ * estaba— y solo esta se quedaba en cero. Ahora es la misma cabecera que las
+ * otras, también en escritorio: el botón vuelve al lado del título en vez de
+ * debajo.
+ */
 .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
 }
 
 .header-content {

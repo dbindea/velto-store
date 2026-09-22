@@ -107,6 +107,94 @@ certificado vive solo en Secret Manager, que es su sitio.
 
 ---
 
+## ✅ M-48 · Seis arreglos de pantalla — 21 y 22 de septiembre de 2026
+
+Todos los encontró **Dorel mirando la aplicación**, ninguno un test, y todos
+están verificados en el navegador antes de darse por buenos.
+
+- **Los iconos de fecha y hora no se veían en tema oscuro.** Un
+  `filter: invert(0.75)` escrito cuando el navegador los pintaba en negro — que
+  dejó de ser cierto al declarar `color-scheme`. Afectaba a los 24 campos.
+- **El menú «Más» no se cerraba al elegir una opción.** El panel vivía **dentro**
+  del botón que lo abre, así que el clic lo cerraba y, al propagarse, el botón lo
+  reabría. Ahora la **navegación** cierra todos los menús: los cierres escritos
+  enlace a enlace se olvidan, y la barra inferior no tenía ninguno.
+- **Los filtros de Inspecciones se salían de su caja** en el móvil: el buscador
+  se quedaba 200 px de los 358 y a cada `select` le sobraban 67 para un texto de
+  91. Un `<select>` nativo no parte su etiqueta.
+- **La papelera de conductores salía pegada arriba** en vez de centrada.
+- **Los botones de cobro no estaban «pegados»: estaban sin estilo.**
+  `.charge-actions` se había escrito dentro de `.refund-card` y los botones viven
+  en otra tarjeta.
+- **El subtítulo de Pagos explicaba el botón y no el título**, porque a esa
+  cabecera le faltaba el `display: flex`: 4 px arriba y **cero** abajo.
+- **Los `select` del móvil no se cerraban al volver a tocarlos.** El
+  *customizable select* entraba también en Chrome para Android, así que el
+  teléfono había dejado de abrir la hoja del sistema.
+
+⚠️ **Dos de ellos son la misma trampa, y es nueva: una clase DECLARADA que no se
+APLICA.** `css:audit` no la caza —para él existe— y lo único que la distingue es
+`getComputedStyle()` en la pantalla. Queda documentada en CLAUDE.md y en la
+propia excepción del auditor que la tapó.
+
+⚠️ **Y una lección de método: encoger la ventana no es un móvil.** Sigue habiendo
+ratón, así que `pointer: fine` sigue siendo verdad. Lo de los `select` solo se ve
+emulando el puntero.
+
+---
+
+## ✅ N-36 · ESLint, que no existía — 22 de septiembre de 2026
+
+`npm run lint`, con las reglas escogidas **a mano** y cada una con su motivo en
+`eslint.config.mjs`. No se extiende `tseslint.configs.recommended` entero porque
+trae `no-explicit-any` como error y aquí hay decenas de `any` legítimos: una
+regla que marca cien sitios correctos se apaga a la semana.
+
+Queda en **0 errores y 283 avisos**, y esa diferencia es el diseño: los avisos
+son deuda reconocida —107 promesas sin esperar, la mayoría deliberadas, y 172 de
+accesibilidad en plantillas— así que **un error nuevo es de lo que acabas de
+tocar**. Se repasan por tandas y entonces suben a `error`.
+
+Lo que encontró la primera pasada: 37 imports y variables muertos, **un parámetro
+que mentía** (`getUpcomingMaintenance(withinDays, withinKm)` documentaba filtrar
+por kilómetros y no lo hacía), tres `@Output()` con nombre de evento del DOM, un
+`ngOnInit` vacío y un escape inútil.
+
+⚠️ **Sin plugin de RxJS a propósito**: su regla principal exige guardar la
+`Subscription` de `.subscribe()`, y aquí el patrón correcto es el contrario
+—`takeUntilDestroyed()` en el `pipe`—. Marcaría como fallo lo que CLAUDE.md
+manda hacer.
+
+⚠️ **`functions/` queda fuera**, porque su tsconfig excluye los `*.spec.ts` —y no
+se puede tocar— así que sus tests darían error de análisis. Entra el día que se
+le ponga un tsconfig propio para el lint.
+
+---
+
+## ✅ N-35 · Calendario y reloj propios en escritorio — 22 de septiembre de 2026
+
+El panel que abre un `input[type=date]` lo dibuja el navegador y **no hay
+selector de CSS que lo alcance**. Para que tenga la cara de la aplicación hay que
+poner otro delante: `DatePickerDirective` + `DatePickerPanelComponent`, con la
+aritmética aparte y 21 tests.
+
+- **En móvil sigue mandando el nativo** (`prefersNativePicker()`), decidido por
+  **puntero** y no solo por ancho.
+- **El campo sigue siendo un `input[type=date]` de verdad**: valor, `min`, `max`,
+  validación y teclado son los del navegador. Quitar la directiva de los
+  `imports` lo devuelve todo a como estaba sin tocar una plantilla.
+- **La directiva se aplica por TIPO de campo**, sin atributo que recordar — la
+  lección de `.form-control`, que se olvidó cuatro veces.
+- Los nombres de meses y días salen de `Intl`: 87 cadenas por idioma que el
+  navegador ya sabe.
+
+Tres trampas documentadas donde vuelven a morder: enfocar el campo **desplaza la
+página** y eso cerraba el panel en el mismo clic; un evento de desplazamiento no
+burbujea **pero sí baja en la captura**, así que el panel se cerraba a sí mismo
+al centrar la hora; y `offsetTop` se mide contra el antepasado **posicionado**.
+
+---
+
 ## ✅ N-34 · La ITV y el seguro impiden alquilar — 21 de septiembre de 2026
 
 ⚠️ **Es una reversión de N-25, y conviene leerla como tal.** Aquella dejó la ITV

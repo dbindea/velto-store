@@ -2512,6 +2512,27 @@ y Android —hoja a pantalla completa— es mejor que cualquier lista propia, y 
 de móvil: se mejora el escritorio sin tocar el caso principal. Y el control **cerrado** no
 cambia — el `::picker-icon` del navegador se esconde y se mantiene el chevron de siempre.
 
+⚠️ **Y para que eso sea cierto hace falta una MEDIA QUERY: el `@supports` solo no basta.**
+Del 7 al 22 de septiembre de 2026 no la hubo, porque esta misma nota daba por hecho que un
+teléfono no soportaría `base-select`. **Chrome para Android sí lo soporta**, así que entraba
+por el mismo `@supports` y el móvil dejó de abrir la hoja del sistema sin que nadie lo
+decidiera. El síntoma con el que se descubrió no fue estético: **el desplegable dejó de
+cerrarse al volver a tocar el campo** y obligaba a elegir una opción para salir — la hoja
+del sistema se cierra tocando fuera, y la lista de la página es un `popover` que con el dedo
+no se comporta igual. Ahora el bloque vive dentro de
+`@media (hover: hover) and (pointer: fine)`.
+
+La regla general, que vale para lo que venga: **`@supports` contesta si el navegador
+*puede*, nunca si *conviene*.** Cuando la respuesta depende del aparato —dedo o ratón— hay
+que preguntar por el aparato. Es la misma frontera que decide el calendario propio
+(`prefersNativePicker()`), y por el mismo motivo.
+
+⚠️ **Se comprueba emulando el puntero, no encogiendo la ventana.** Una ventana estrecha
+sigue teniendo ratón: `pointer: fine` sigue siendo verdad y la regla entra igual. Lo que
+cambia las media features es el modo dispositivo —`Emulation.setTouchEmulationEnabled` por
+CDP—, y con él se ve lo que hay que ver: `appearance: base-select` con ratón y `none` con
+dedo.
+
 Tiene que ir en la clase del tema, **no** en el `<meta name="color-scheme">` de `index.html`:
 el meta solo declara qué esquemas soportamos y luego sigue al sistema operativo, así que un
 usuario con Windows en claro y la app en oscuro seguía viendo desplegables blancos. Era la
@@ -2724,6 +2745,20 @@ solo nombra, va ahí, y si una empieza a tener que pintar algo, se saca.
 390 px comprobando `scrollWidth > clientWidth` encontró que Facturas desbordaba
 —dos declaraciones de `.invoice-row`, la segunda pisando a la primera y con ella
 el media query de móvil—. Ninguna otra pantalla lo hacía.
+
+⚠️ **Hay una variante que este guion NO caza: la clase declarada bajo un
+antepasado que no la envuelve.** Salió el 22 de septiembre de 2026 en la ficha
+de un pago: `.charge-actions` estaba escrita **dentro de `.refund-card`** y los
+botones que la llevan viven en otra tarjeta, así que `display: flex` y su `gap`
+no se aplicaban nunca — los dos botones salían como bloques sueltos, uno debajo
+de otro y pegados. Para el auditor la clase **está declarada**, que es lo único
+que él comprueba; lo que falla es dónde.
+
+Lo que lo distingue es `getComputedStyle()` en la pantalla de verdad: ahí se ve
+`display: block` donde el fichero dice `flex`. La regla práctica: **al anidar en
+un SCSS de componente, comprueba que el antepasado envuelve de verdad a la
+clase**, sobre todo en ficheros donde conviven varias tarjetas parecidas
+(`.detail-card`, `.refund-card`, `.pricing-card`).
 
 ⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
 2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,

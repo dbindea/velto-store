@@ -1,8 +1,11 @@
-# Traspaso de sesión — 17 de septiembre de 2026
+# Traspaso de sesión — 22 de septiembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
+>
+> Lo primero que hay que mirar es **§ 2 bis**, que es lo que se movió los días
+> 21 y 22, y **§ 2 ter**, que dice qué hay sin subir y qué falta por desplegar.
 
 ---
 
@@ -86,6 +89,95 @@ desarrollo») **ya no aplica**.
 
 ---
 
+## 2 bis. Lo que se movió el 21 y el 22 de septiembre
+
+Todo esto salió de **Dorel usando la aplicación en producción**, que es el modo
+de trabajo que anunciaba el § 3. Ni una sola de estas cosas la encontró un test.
+Van de más importante a menos.
+
+**La ITV y el seguro ahora BLOQUEAN el alquiler** (`fd0db71`). Es una reversión
+de una decisión escrita —antes solo avisaban— y el motivo es de Dorel: *«esta
+app tiene que ser automática en muchos aspectos si no yo no me acuerdo»*. La
+raya nueva es **qué impide circular**: `itv` y `insurance` bloquean, y el resto
+de mantenimientos siguen avisando. Se compara contra la **fecha de devolución** y
+por días. Lo miran los tres caminos por los que sale un coche —el buscador, el
+servicio que crea o edita, y el parte de entrega— con una sola consulta
+(`VehicleMaintenanceService.blockingFor()`) y la regla pura aparte
+(`blockingMaintenance()`, con tests). **No admite excepción de workflow** y la
+pantalla no ofrece «Saltar este paso».
+
+⚠️ **El recordatorio de 7 días que pedía ya existía**: el correo de las 9:00
+avisa con 30 días y la pantalla de Eventos con 7. Lo que faltaba no era el aviso,
+era que tuviera consecuencias. Conviene saberlo para no construirlo otra vez.
+
+**Un coche alquilado hoy ya se puede reservar para otras fechas** (`713ffe4`).
+Fallo de producción: un coche alquilado hasta el 26 salía como «no está
+disponible en la flota» al pedirlo para el 1 de octubre. El estado es un hecho de
+hoy; la disponibilidad es una pregunta sobre un rango. Y el estado **sí se mueve
+solo** —lo ponen los dos partes de inspección—, cosa que CLAUDE.md negaba.
+
+**Calendario y reloj propios en escritorio** (`8dd487d`). El panel de un
+`input[type=date]` lo dibuja el navegador y no hay CSS que lo alcance, así que
+hay uno nuestro: `DatePickerDirective` + `DatePickerPanelComponent`, con la
+aritmética aparte y 21 tests. **En móvil sigue mandando el nativo**, y el campo
+sigue siendo un `input[type=date]` de verdad — quitar la directiva de los
+`imports` lo devuelve todo a como estaba sin tocar una plantilla.
+
+**ESLint, que no existía** (`4755be8`). `npm run lint`, con las reglas escogidas
+a mano y su motivo escrito en `eslint.config.mjs`. Queda en **0 errores y 283
+avisos**: los avisos son deuda reconocida —107 promesas sin esperar y 172 de
+accesibilidad en plantillas—, así que **si sale un error nuevo es de lo que
+acabas de tocar**. Encontró un parámetro que mentía
+(`getUpcomingMaintenance(withinDays, withinKm)` decía filtrar por kilómetros y no
+lo hacía) y tres `@Output()` con nombre de evento del DOM.
+
+**Y seis arreglos de pantalla**, todos vistos por Dorel y todos verificados en el
+navegador antes de darlos por buenos (`3602dbf`, `7c1015b`, `a5dbf63`,
+`f1b7611`):
+
+- Los **iconos de fecha y hora no se veían en tema oscuro**: un `filter: invert()`
+  escrito antes de que existiera `color-scheme` los estaba oscureciendo.
+- El **menú «Más» no se cerraba** al elegir una opción: el panel vivía dentro del
+  botón que lo abre y el clic lo reabría al propagarse. Ahora **la navegación
+  cierra todos los menús**.
+- Los **filtros de Inspecciones** se salían de su caja en el móvil.
+- La **papelera de conductores** salía pegada arriba en vez de centrada.
+- Los **botones de cobro** no estaban «pegados»: estaban **sin estilo**, porque
+  `.charge-actions` se había escrito dentro de `.refund-card` y los botones viven
+  en otra tarjeta.
+- El **subtítulo de Pagos explicaba el botón en vez del título**, porque a esa
+  cabecera le faltaba el `display: flex`.
+- Y **los `select` del móvil**: el *customizable select* entraba también en
+  Android —`@supports` dice si el navegador *puede*, no si *conviene*— y el
+  desplegable había dejado de cerrarse al tocar fuera. Ahora el bloque vive
+  dentro de `@media (hover: hover) and (pointer: fine)`.
+
+⚠️ **Dos de esos seis son la misma trampa y va a volver: una clase declarada que
+NO se aplica**, porque el antepasado no la envuelve o porque la regla vive donde
+no toca. `css:audit` **no la caza** —para él la clase está declarada— y lo único
+que la distingue es `getComputedStyle()` en la pantalla de verdad.
+
+---
+
+## 2 ter. Qué hay sin subir y qué falta por desplegar
+
+Medido el 22 de septiembre al cerrar la sesión:
+
+- **`develop` tiene 10 commits que NO están en producción.** Son los de § 2 bis.
+- **De esos, 3 están solo en local** (`7c1015b`, `a5dbf63`, `f1b7611`): los
+  arreglos de pantalla del día 22. Los otros 7 ya están en `origin/develop`.
+- **`origin/master` está en `0d32ba4`** (21 de septiembre).
+- ⚠️ **NO hace falta desplegar Cloud Functions.** Comprobado: de los 66 ficheros
+  que cambian entre producción y `develop`, **ninguno está en `functions/`**. Un
+  merge a `master` despliega hosting por CI y con eso está todo.
+
+Lo que hay que hacer para ponerlo en producción, en este orden: subir los 3
+commits locales, que Dorel lo revise, merge a `master`, y comprobar en el pie de
+la aplicación que el commit que se está ejecutando es el del merge — para eso se
+puso (`98436c5`).
+
+---
+
 ## 3. Cómo entra el trabajo a partir de ahora
 
 El desarrollo por tandas se cierra aquí. Lo que venga vendrá de **Dorel
@@ -149,13 +241,40 @@ remitir nunca.
 
 **Deuda técnica que ahora sí puede morder:** Informes se trae seis colecciones
 enteras y filtra en memoria —es lo primero que se rompe cuando crezcan los
-datos—; dos operadores pueden reservar el mismo coche, reducido a milisegundos
-pero no cerrado; y no hay lint.
+datos—; y dos operadores pueden reservar el mismo coche, reducido a milisegundos
+pero no cerrado. Lo del lint **ya no aplica**: existe desde el 22 de septiembre.
 
 **Sin cerrar desde hace tiempo:** un cobro por la vía pública del móvil que se
 registre solo en **producción**. En desarrollo ya ocurrió; una vía de cobro no
 está probada hasta que alguien paga por ella y la aplicación se entera sin
 ayuda.
+
+### Lo que dejó abierto la sesión del 22 de septiembre
+
+Tres cosas que hay que retomar, y ninguna es código a medias:
+
+1. ⚠️ **Confirmar en un Android de verdad que el `select` ya se cierra.** El
+   arreglo está verificado emulando el puntero por CDP —`base-select` con ratón,
+   `none` con dedo— pero **nadie lo ha abierto en un teléfono**. Es lo primero
+   que hay que preguntarle a Dorel al retomar.
+2. **El redirigir `store.veltomobility.com` → `rentalcar.veltomobility.com`.**
+   Decidido: solo redirección, las URL del cliente no cambian. Se hace **en el
+   panel de Cloudflare** (registro `A` a `192.0.2.1` proxado + una Redirect Rule)
+   o, si se prefiere todo en Google, añadiendo el dominio en Firebase Hosting con
+   la opción de redirigir. **No hay nada que programar** y no está hecho.
+   ⚠️ Añadir un dominio es reversible; **retirar el viejo no**: los contratos
+   firmados llevan impreso un QR que apunta a `/v/…` del dominio con el que se
+   generaron.
+3. **Los 283 avisos del lint.** Son deuda reconocida, no ruido: 107 promesas sin
+   esperar —la mayoría a propósito— y 172 de accesibilidad en plantillas (47
+   `<div (click)>` que no se alcanzan con el teclado). Se repasan por tandas y
+   **entonces** se suben a `error`.
+
+Y dos cosas menores que quedaron sin ejercitar en su pantalla real, por no haber
+datos en desarrollo: el panel de **fecha y hora juntas** (solo existe en editar
+reserva; se probó el mismo código cambiándole el tipo a otro campo) y la
+**galería de fotos**, cuyo `(closed)` se renombró y se comprobó por grep y por
+compilación pero no abriendo una foto.
 
 ---
 
@@ -165,15 +284,25 @@ Esto no es estilo, es lo que hace que la aplicación no mienta:
 
 1. **Antes de dar algo por bueno**: `npm run build` (comprueba las plantillas,
    cosa que `tsc --noEmit` no hace), `npm test`, `npm --prefix functions test`,
-   `npm run i18n:audit`, `npm run css:audit` y `npm run spacing:audit`.
+   `npm run lint` y las cuatro auditorías — `i18n:audit`, `css:audit`,
+   `spacing:audit` y `rows:audit`. Hoy el lint queda en **0 errores**: si sale
+   uno, es de lo que acabas de tocar.
 2. **Y además abrir la pantalla.** El patrón de fallo dominante es **código
    escrito y nunca ejecutado**. Los fallos más caros de septiembre no los habría
-   cazado ninguna auditoría.
+   cazado ninguna auditoría — y los seis del día 22 los encontró Dorel mirando,
+   no un test.
 3. **Mirar también el móvil**, a 390 px. Es una aplicación de móvil.
+   ⚠️ **Y encoger la ventana NO es un móvil.** Una ventana estrecha sigue
+   teniendo ratón: `pointer: fine` sigue siendo verdad. Para lo que dependa del
+   dedo hay que emular el puntero (`Emulation.setTouchEmulationEnabled` por CDP),
+   que es lo que destapó lo de los `select`.
 4. **Medir, no deducir.** Vale para el CSS —`getComputedStyle` es la única
    respuesta buena, y la especificidad de Angular engaña— y vale para los
    despliegues: el 17 de septiembre, dos errores seguidos acusaban al código y
    ninguno era del código.
+   ⚠️ **Y «declarado» no es «aplicado».** Dos veces en el mismo día: una clase
+   escrita bajo un antepasado que no la envuelve no pinta nada, y el auditor de
+   CSS la da por buena porque existe.
 5. **El texto y el hecho se deciden juntos.** Ha mordido cinco veces: el
    contrato afirmaba una firma que no tenía, el presupuesto decía «IVA incluido»
    sobre un desglose que lo sumaba…
