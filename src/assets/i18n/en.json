@@ -1946,7 +1946,7 @@
     },
     "fields": {
       "title": "What needs doing",
-      "titlePlaceholder": "Buy air fresheners for every car",
+      "titlePlaceholder": "Reminder text...",
       "category": "Type",
       "dueDate": "Date",
       "notes": "Notes"

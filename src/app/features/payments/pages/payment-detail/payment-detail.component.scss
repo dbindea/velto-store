@@ -256,22 +256,58 @@
     margin-top: 1rem;
   }
 
-  /**
-   * Cobrar con tarjeta y copiar el enlace, uno al lado del otro.
-   *
-   * `wrap` porque son dos etiquetas largas: en un móvil estrecho bajan en vez
-   * de comprimirse, que es la regla de esta aplicación — recolocar, nunca
-   * esconder.
-   */
-  .charge-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-  }
-
   .notice {
     margin-top: 1rem;
+  }
+}
+
+/**
+ * Cobrar con tarjeta y copiar el enlace.
+ *
+ * ⚠️ **Esto estaba escrito DENTRO de `.refund-card` y no se aplicaba nunca.**
+ * La tarjeta de cobrar es otra —`.detail-card` a secas—, así que
+ * `.refund-card .charge-actions` no encontraba nada: los dos botones salían
+ * como dos bloques sueltos, uno debajo de otro y **sin la separación** que este
+ * bloque creía estar poniendo. Eso es lo que Dorel vio como «muy pegados»: no
+ * era el hueco, era que aquí no había ningún estilo. Lo encontró mirando los
+ * estilos calculados en el navegador, que es lo único que distingue «declarado»
+ * de «aplicado» — y `css:audit` no lo caza, porque la clase **sí** está
+ * declarada; lo que falla es el antepasado.
+ *
+ * ⚠️ Al sacarlo, cuidado con volver a anidarlo: en este fichero conviven
+ * `.detail-card`, `.refund-card` y `.pricing-card`, y solo una de las tres
+ * envuelve estos botones.
+ */
+.charge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+
+  /**
+   * En el móvil, los dos en la misma fila y a medias.
+   *
+   * ⚠️ **El texto se deja partir, y eso es lo que lo hace de fiar.** Medido a
+   * 390 px: los dos rótulos en español suman 323 px y en la tarjeta caben
+   * 336 — por trece píxeles. Ajustar las proporciones a ese pelo es afinar
+   * para un idioma, y en inglés y en rumano son más largos. Así que se
+   * reparten a partes iguales y el que no quepa pasa a dos líneas: los dos
+   * crecen igual, que es lo que hace que siga leyéndose como una fila y no
+   * como un descuadre.
+   */
+  @media (max-width: 767px) {
+    flex-wrap: nowrap;
+
+    > button {
+      flex: 1 1 0;
+      // Sin esto un botón no baja de lo que mide su texto y se sale de la
+      // tarjeta: la misma trampa de `min-width: auto` que estiraba la
+      // aplicación entera.
+      min-width: 0;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.25;
+    }
   }
 }
 

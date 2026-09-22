@@ -31,6 +31,24 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
+
+  /**
+   * En el móvil, el mes ARRIBA y los tres botones debajo.
+   *
+   * ⚠️ **Los cuatro en una fila no caben en 352 px** —los botones miden 179 y
+   * «Septiembre de 2026» a 1,125 rem otros 180—, así que el rótulo se iba solo
+   * a una segunda línea, partido en dos y arrimado a la derecha: «Septiembre
+   * de» encima de «2026». Puesto a propósito en su propia fila y alineado a la
+   * izquierda, se lee como el título que es.
+   */
+  @media (max-width: 767px) {
+    .month-label {
+      flex: 1 0 100%;
+      order: -1;
+      text-align: left;
+      margin-bottom: 0.25rem;
+    }
+  }
 }
 
 .month-label {

@@ -69,7 +69,15 @@
 
 .driver-row {
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
-  align-items: start;
+  /**
+   * La papelera, a media altura de los campos que borra.
+   *
+   * ⚠️ **Estaba en `start`**, así que se pegaba al borde de arriba y quedaba
+   * más alta que los dos campos de la fila — no alineada con nada. Aquí no hay
+   * etiquetas encima que justifiquen ese `start`: son dos campos con su texto
+   * de ejemplo dentro. Lo vio Dorel en el móvil.
+   */
+  align-items: center;
   margin-bottom: 0.5rem;
 }
 

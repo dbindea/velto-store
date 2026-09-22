@@ -2725,6 +2725,20 @@ solo nombra, va ahí, y si una empieza a tener que pintar algo, se saca.
 —dos declaraciones de `.invoice-row`, la segunda pisando a la primera y con ella
 el media query de móvil—. Ninguna otra pantalla lo hacía.
 
+⚠️ **Hay una variante que este guion NO caza: la clase declarada bajo un
+antepasado que no la envuelve.** Salió el 22 de septiembre de 2026 en la ficha
+de un pago: `.charge-actions` estaba escrita **dentro de `.refund-card`** y los
+botones que la llevan viven en otra tarjeta, así que `display: flex` y su `gap`
+no se aplicaban nunca — los dos botones salían como bloques sueltos, uno debajo
+de otro y pegados. Para el auditor la clase **está declarada**, que es lo único
+que él comprueba; lo que falla es dónde.
+
+Lo que lo distingue es `getComputedStyle()` en la pantalla de verdad: ahí se ve
+`display: block` donde el fichero dice `flex`. La regla práctica: **al anidar en
+un SCSS de componente, comprueba que el antepasado envuelve de verdad a la
+clase**, sobre todo en ficheros donde conviven varias tarjetas parecidas
+(`.detail-card`, `.refund-card`, `.pricing-card`).
+
 ⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
 2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,
 `section-hint`, `total-hint`…) en 44 sitios, y `.loading-state` usado 25 veces y

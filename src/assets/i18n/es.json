@@ -1946,7 +1946,7 @@
     },
     "fields": {
       "title": "Qué hay que hacer",
-      "titlePlaceholder": "Comprar ambientadores para todos los coches",
+      "titlePlaceholder": "Texto del recordatorio...",
       "category": "Tipo",
       "dueDate": "Fecha",
       "notes": "Notas"
