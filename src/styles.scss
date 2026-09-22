@@ -430,82 +430,95 @@ select {
  *
  * ⚠️ **En un móvil eso es lo que se quiere.** El selector nativo de iOS y
  * Android —hoja a pantalla completa, con su rueda— es mejor que cualquier lista
- * que dibujemos nosotros: más grande, familiar y accesible. Aquí se mejora el
- * escritorio sin tocarlo.
+ * que dibujemos nosotros: más grande, familiar y accesible.
+ *
+ * ⚠️ **Y por eso hay una media query, que faltaba: el `@supports` solo NO
+ * bastaba.** Esta nota decía «aquí se mejora el escritorio sin tocar el móvil»
+ * dando por hecho que el teléfono no soportaría `base-select`. Chrome para
+ * Android **sí lo soporta**, así que entraba por el mismo `@supports` y el
+ * móvil dejó de abrir la hoja del sistema para abrir esta lista. Dorel lo notó
+ * usándolo el 22 de septiembre de 2026, por el síntoma que delata el cambio de
+ * control: **el desplegable ya no se cerraba volviendo a tocar el campo**, y
+ * había que elegir una opción para salir. La hoja del sistema se cierra tocando
+ * fuera; esta es un `popover` de la página y con el dedo no se comporta igual.
+ *
+ * La lección, que es la de siempre en este fichero: `@supports` contesta **si
+ * el navegador puede**, nunca **si conviene**. Cuando la respuesta depende del
+ * aparato —dedo o ratón— hace falta preguntar por el aparato.
  * ------------------------------------------------------------------------- */
-@supports (appearance: base-select) {
-  select {
-    appearance: base-select;
-    display: flex;
-    align-items: center;
+@media (hover: hover) and (pointer: fine) {
+  @supports (appearance: base-select) {
+    select {
+      appearance: base-select;
+      display: flex;
+      align-items: center;
 
-    /**
-     * El control cerrado no cambia.
-     *
-     * `base-select` trae su propio `::picker-icon`, un triángulo gris del
-     * navegador que no se parece a nada de la aplicación. Se esconde y se
-     * mantiene el chevron SVG de siempre: lo que se ha venido a mejorar es la
-     * lista, y el campo cerrado ya estaba bien.
-     */
-    &::picker-icon {
-      display: none;
-    }
-  }
-
-  /* La lista. Mismo lenguaje que el resto de superficies flotantes de la
-     aplicación: tarjeta, borde fino y la sombra de los avisos. */
-  ::picker(select) {
-    appearance: base-select;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 0.5rem;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
-    padding: 0.25rem;
-    margin-top: 0.25rem;
-    /* Una lista larga —los 30 y pico modelos de coche— no puede tapar la
-       pantalla entera. */
-    max-height: 18rem;
-    overflow-y: auto;
-  }
-
-  option {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.625rem;
-    border-radius: 0.35rem;
-    color: var(--text-primary);
-    background: transparent;
-    font-size: 0.9rem;
-    cursor: pointer;
-
-    /* El check de la opción elegida lo dibuja el navegador y ocupa sitio
-       aunque no se vea; sin esto las etiquetas bailan al abrir. */
-    &::checkmark {
-      color: var(--accent-color);
-      order: 1;
-      margin-left: auto;
+      /**
+       * El control cerrado no cambia.
+       *
+       * `base-select` trae su propio `::picker-icon`, un triángulo gris del
+       * navegador que no se parece a nada de la aplicación. Se esconde y se
+       * mantiene el chevron SVG de siempre: lo que se ha venido a mejorar es la
+       * lista, y el campo cerrado ya estaba bien.
+       */
+      &::picker-icon {
+        display: none;
+      }
     }
 
-    &:hover,
-    &:focus {
-      background: var(--bg-main);
+    /* La lista. Mismo lenguaje que el resto de superficies flotantes de la
+       aplicación: tarjeta, borde fino y la sombra de los avisos. */
+    ::picker(select) {
+      appearance: base-select;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+      padding: 0.25rem;
+      margin-top: 0.25rem;
+      /* Una lista larga —los 30 y pico modelos de coche— no puede tapar la
+         pantalla entera. */
+      max-height: 18rem;
+      overflow-y: auto;
+    }
+
+    option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.625rem;
+      border-radius: 0.35rem;
       color: var(--text-primary);
-    }
+      background: transparent;
+      font-size: 0.9rem;
+      cursor: pointer;
 
-    &:checked {
-      color: var(--accent-color);
-      font-weight: 600;
-    }
+      /* El check de la opción elegida lo dibuja el navegador y ocupa sitio
+         aunque no se vea; sin esto las etiquetas bailan al abrir. */
+      &::checkmark {
+        color: var(--accent-color);
+        order: 1;
+        margin-left: auto;
+      }
 
-    &:disabled {
-      color: var(--text-muted);
-      cursor: not-allowed;
+      &:hover,
+      &:focus {
+        background: var(--bg-main);
+        color: var(--text-primary);
+      }
+
+      &:checked {
+        color: var(--accent-color);
+        font-weight: 600;
+      }
+
+      &:disabled {
+        color: var(--text-muted);
+        cursor: not-allowed;
+      }
     }
   }
-
 }
-
 
 /* ---------------------------------------------------------------------------
  * Casillas de verificación

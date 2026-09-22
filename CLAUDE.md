@@ -2512,6 +2512,27 @@ y Android —hoja a pantalla completa— es mejor que cualquier lista propia, y 
 de móvil: se mejora el escritorio sin tocar el caso principal. Y el control **cerrado** no
 cambia — el `::picker-icon` del navegador se esconde y se mantiene el chevron de siempre.
 
+⚠️ **Y para que eso sea cierto hace falta una MEDIA QUERY: el `@supports` solo no basta.**
+Del 7 al 22 de septiembre de 2026 no la hubo, porque esta misma nota daba por hecho que un
+teléfono no soportaría `base-select`. **Chrome para Android sí lo soporta**, así que entraba
+por el mismo `@supports` y el móvil dejó de abrir la hoja del sistema sin que nadie lo
+decidiera. El síntoma con el que se descubrió no fue estético: **el desplegable dejó de
+cerrarse al volver a tocar el campo** y obligaba a elegir una opción para salir — la hoja
+del sistema se cierra tocando fuera, y la lista de la página es un `popover` que con el dedo
+no se comporta igual. Ahora el bloque vive dentro de
+`@media (hover: hover) and (pointer: fine)`.
+
+La regla general, que vale para lo que venga: **`@supports` contesta si el navegador
+*puede*, nunca si *conviene*.** Cuando la respuesta depende del aparato —dedo o ratón— hay
+que preguntar por el aparato. Es la misma frontera que decide el calendario propio
+(`prefersNativePicker()`), y por el mismo motivo.
+
+⚠️ **Se comprueba emulando el puntero, no encogiendo la ventana.** Una ventana estrecha
+sigue teniendo ratón: `pointer: fine` sigue siendo verdad y la regla entra igual. Lo que
+cambia las media features es el modo dispositivo —`Emulation.setTouchEmulationEnabled` por
+CDP—, y con él se ve lo que hay que ver: `appearance: base-select` con ratón y `none` con
+dedo.
+
 Tiene que ir en la clase del tema, **no** en el `<meta name="color-scheme">` de `index.html`:
 el meta solo declara qué esquemas soportamos y luego sigue al sistema operativo, así que un
 usuario con Windows en claro y la app en oscuro seguía viendo desplegables blancos. Era la
