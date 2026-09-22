@@ -1,6 +1,8 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { AuthService } from '@core/auth/auth.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
@@ -38,8 +40,35 @@ interface MenuItem {
 export class PrivateLayoutComponent {
   authService = inject(AuthService);
   themeService = inject(ThemeService);
+  private router = inject(Router);
 
   sidebarOpen = signal(false);
+
+  /**
+   * Al cambiar de pantalla no queda ningún menú abierto.
+   *
+   * ⚠️ **Es la garantía general, y hace falta porque los cierres uno a uno se
+   * olvidan.** Cada enlace del menú lateral llevaba el suyo, pero la barra
+   * inferior no cerraba el menú «Más»: se pulsaba «Reservas» con el panel
+   * abierto, se navegaba, y el panel se quedaba flotando encima de la pantalla
+   * nueva. Colgado de la navegación, da igual desde dónde se salga — un enlace,
+   * el buscador global o un aviso que lleve a otro sitio.
+   *
+   * No sustituye a los `(click)` de cada opción: pulsar la pantalla en la que
+   * ya estás **no genera navegación**, y ahí solo cierra el del propio enlace.
+   */
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => {
+        this.sidebarOpen.set(false);
+        this.moreMenuOpen.set(false);
+        this.searchOpen.set(false);
+      });
+  }
 
   /**
    * El commit que se está ejecutando, para poder contestar «¿estoy viendo lo

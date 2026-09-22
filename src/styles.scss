@@ -649,21 +649,39 @@ input[type='radio'] {
   }
 }
 
-// The calendar/clock button inside date and time inputs is drawn by the
-// browser in a fixed near-black; on a dark field it disappears.
-.dark {
-  input[type='date'],
-  input[type='time'],
-  input[type='datetime-local'],
-  input[type='month'] {
-    &::-webkit-calendar-picker-indicator {
-      filter: invert(0.75);
-      cursor: pointer;
-      opacity: 0.85;
+/* ---------------------------------------------------------------------------
+ * El botón de calendario y el de reloj
+ *
+ * Los dibuja el navegador, y con `color-scheme: dark` —declarado en `.dark`,
+ * que llevan los tres temas oscuros— **los dibuja claros él solo**. No hay nada
+ * que corregir.
+ *
+ * ⚠️ **Aquí había un `filter: invert(0.75)` que los volvía a oscurecer.** Se
+ * escribió cuando la nota de arriba decía que el navegador los pintaba «en un
+ * negro fijo», que era cierto **antes** de que existiera el `color-scheme`; al
+ * declararlo, el filtro pasó de arreglar el problema a causarlo. Invertir un
+ * icono ya claro da un gris oscuro sobre un campo oscuro: el del calendario
+ * quedaba como una mancha y **el del reloj no se veía en absoluto**. Lo
+ * encontró Dorel mirando la pantalla el 22 de septiembre de 2026, y se
+ * comprobó anulando el filtro en el navegador y comparando las dos capturas.
+ *
+ * ⚠️ **La lección vale para cualquier control nativo**: si `color-scheme` ya
+ * lo resuelve, un filtro de color encima no lo mejora, lo rompe — y lo rompe
+ * solo en el tema en el que casi nadie mira dos veces.
+ *
+ * Lo único nuestro es la mano al pasar por encima: el indicador es pulsable y
+ * el navegador no lo dice.
+ * ------------------------------------------------------------------------- */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='month'] {
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.9;
 
-      &:hover {
-        opacity: 1;
-      }
+    &:hover {
+      opacity: 1;
     }
   }
 }

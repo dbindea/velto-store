@@ -2479,8 +2479,21 @@ usuario con Windows en claro y la app en oscuro seguía viendo desplegables blan
 causa de que los selects parecieran «en bruto».
 
 Lo que sí es nuestro —el control cerrado— se estiliza **globalmente** en `styles.scss`:
-`appearance: none` + chevron SVG propio, y el icono del calendario invertido en tema oscuro.
-Global a propósito: son 30 `select` y 9 campos de fecha repartidos por 13 componentes.
+`appearance: none` + chevron SVG propio. Global a propósito: son 30 `select` y 9 campos de
+fecha repartidos por 13 componentes.
+
+⚠️ **El botón de calendario y el de reloj NO se retocan, y esa nota decía lo contrario
+hasta el 22 de septiembre de 2026.** Aquí ponía «el icono del calendario invertido en tema
+oscuro», y ese `filter: invert(0.75)` llevaba meses **escondiéndolos**: con `color-scheme:
+dark` el navegador ya los dibuja claros, así que invertirlos los devolvía a gris oscuro
+sobre un campo oscuro. El del calendario quedaba como una mancha y **el del reloj no se
+veía en absoluto** — lo encontró Dorel mirando la pantalla, en los 24 campos de fecha y
+hora de la aplicación a la vez.
+
+La regla general, que vale para cualquier control nativo: **si `color-scheme` ya lo
+resuelve, un filtro de color encima no lo mejora, lo rompe.** Y lo rompe solo en un tema,
+que es donde menos se mira. Lo único que queda es el `cursor: pointer`, porque el
+navegador no dice que el indicador se puede pulsar.
 
 ### Un botón que no hace nada es un fallo
 
@@ -2826,6 +2839,26 @@ Dos trampas de CSS que ya han roto esta app entera:
 Prosa larga (emails, matrículas, referencias): parte en dos líneas antes que truncar con
 puntos suspensivos o forzar scroll horizontal. `body` ya lleva `overflow-wrap: break-word`
 y las clases `.email` / `.mono` usan `anywhere`.
+
+⚠️ **Un `<select>` NO puede partir su propia etiqueta**, así que la regla de arriba no le
+aplica: o cabe, o se corta. En una fila con un buscador de `min-width: 200px` y dos
+filtros, a cada filtro le quedaban 67 px de los 358 de un móvil y «Entregas y
+devoluciones» necesitaba 91 — salía por fuera de su caja (Inspecciones, 22 de septiembre
+de 2026). La corrección es la que ya llevaba la lista de vehículos: **el buscador se queda
+con su fila y los selects con la suya**, y por debajo de 480 px una fila cada uno.
+
+⚠️ **Y un panel desplegable no se mete DENTRO del botón que lo abre.** El menú «Más» de la
+barra inferior vivía dentro de su `<div (click)="toggleMoreMenu()">`, así que al elegir una
+opción el clic hacía las dos cosas: el enlace cerraba el menú y, al propagarse, el botón lo
+**volvía a abrir**. Se navegaba bien —por eso costaba verlo— y el panel se quedaba encima
+de la pantalla nueva. Sacarlo a hermano es todo el arreglo; la posición no cambia, porque
+se colocaba contra `.mobile-nav` y no contra el botón.
+
+⚠️ **Lo que cierra los menús de verdad es la NAVEGACIÓN** (`closeMenusOnNavigation`, en el
+layout). Los cierres escritos enlace a enlace se olvidan: el menú lateral los tenía y la
+barra inferior no, así que pulsar «Reservas» con el menú «Más» abierto navegaba y dejaba el
+panel flotando. Colgado de `NavigationEnd` da igual por dónde se salga. Los `(click)` de
+cada opción **se quedan igualmente**: pulsar la pantalla en la que ya estás no navega.
 
 ## Continuidad: copias, emergencia y una sola cuenta
 
