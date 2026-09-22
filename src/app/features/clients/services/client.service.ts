@@ -388,7 +388,7 @@ export class ClientService {
     try {
       const storageRef = ref(this.storage, document.path);
       await deleteObject(storageRef);
-    } catch (e) {
+    } catch {
       // Ignore storage delete errors (file may not exist)
     }
 

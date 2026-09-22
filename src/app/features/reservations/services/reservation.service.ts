@@ -1,5 +1,5 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, arrayUnion, collection, doc, addDoc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, limit, writeBatch, QueryConstraint } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, arrayUnion, collection, doc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, limit, writeBatch, QueryConstraint } from '@angular/fire/firestore';
 import { Observable, from, firstValueFrom } from 'rxjs';
 import { map, first } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
@@ -24,7 +24,6 @@ import {
 import {
   calculateBasePrice,
   chargesVat,
-  findPricingRuleByDays,
   resolveRentalPrice
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
@@ -55,7 +54,6 @@ import { PaymentService } from '@features/payments/services/payment.service';
 import { InspectionService } from '@features/inspections/services/inspection.service';
 import { AuthService } from '@core/auth/auth.service';
 import {
-  Workflow,
   WorkflowContext,
   canCloseReservation as assertCanClose,
   canCreateReservationForClient,
@@ -483,8 +481,6 @@ export class ReservationService {
     );
     const snapshot = await getDocs(q);
     
-    const pickupTimestamp = toTimestamp(pickupDateTime);
-    const returnTimestamp = toTimestamp(returnDateTime);
     
     for (const docSnap of snapshot.docs) {
       const reservation = docSnap.data() as Reservation;
@@ -600,8 +596,6 @@ export class ReservationService {
       // Un aviso que no se puede calcular no puede impedir buscar un coche.
     }
 
-    const pickupTimestamp = toTimestamp(pickupDateTime);
-    const returnTimestamp = toTimestamp(returnDateTime);
 
     const results: VehicleAvailabilityResult[] = [];
 

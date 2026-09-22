@@ -87,7 +87,6 @@ export class GlobalSearchService {
         totalCount: 0
       });
     }
-    const lower = cleaned.toLowerCase();
     const upper = cleaned.toUpperCase();
 
     return forkJoin({

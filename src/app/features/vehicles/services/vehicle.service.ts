@@ -291,7 +291,7 @@ export class VehicleService {
       if (!path) continue;
       try {
         await deleteObject(ref(this.storage, path));
-      } catch (e) {
+      } catch {
         // Ignore storage delete errors
       }
     }

@@ -28,7 +28,7 @@ import {
   styleUrl: './global-search.component.scss'
 })
 export class GlobalSearchComponent {
-  @Output() close = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
 
   private searchService = inject(GlobalSearchService);
   private router = inject(Router);
@@ -95,7 +95,7 @@ export class GlobalSearchComponent {
 
   navigate(hit: GlobalSearchHit): void {
     this.router.navigateByUrl(hit.route);
-    this.close.emit();
+    this.closed.emit();
   }
 
   onKeyDown(event: KeyboardEvent): void {
@@ -113,7 +113,7 @@ export class GlobalSearchComponent {
         this.navigate(hit);
       }
     } else if (event.key === 'Escape') {
-      this.close.emit();
+      this.closed.emit();
     }
   }
 
@@ -149,12 +149,12 @@ export class GlobalSearchComponent {
 
   @HostListener('document:keydown', ['$event'])
   onDocKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') this.close.emit();
+    if (event.key === 'Escape') this.closed.emit();
   }
 
   onBackdropClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.close.emit();
+      this.closed.emit();
     }
   }
 }

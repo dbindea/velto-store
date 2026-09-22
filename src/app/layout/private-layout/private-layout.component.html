@@ -99,7 +99,7 @@
 
   <!-- Global search overlay -->
   @if (searchOpen()) {
-    <app-global-search (close)="closeSearch()" />
+    <app-global-search (closed)="closeSearch()" />
   }
 
   <!--

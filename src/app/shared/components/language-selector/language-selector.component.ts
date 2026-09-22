@@ -11,9 +11,8 @@ import { TranslateService, Language } from '@core/i18n/translate.service';
 })
 export class LanguageSelectorComponent {
   translateService = inject(TranslateService);
+  private elementRef = inject(ElementRef);
   isOpen = false;
-
-  constructor(private elementRef: ElementRef) {}
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, HostListener, signal, computed } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostListener, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 
@@ -25,7 +25,7 @@ export class ImageGalleryComponent {
   @Input() images: GalleryImage[] = [];
   @Input() initialIndex = 0;
   @Input() isOpen = false;
-  @Output() close = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
 
   currentIndex = signal(0);
 
@@ -61,7 +61,7 @@ export class ImageGalleryComponent {
   }
 
   onClose(): void {
-    this.close.emit();
+    this.closed.emit();
   }
 
   onOverlayClick(event: MouseEvent): void {

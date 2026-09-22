@@ -37,6 +37,9 @@ npm run css:audit         # clases usadas en plantillas que no declara nadie
 npm run spacing:audit     # espaciados fuera de la escala (--fix los alinea)
 npm run rows:audit        # formularios en escalera: campos que van al lado y salen escalonados
 
+npm run lint              # ESLint: lo genérico que las auditorías de arriba no miran
+npm run lint:fix          # lo que se arregla solo
+
 # Cloud Functions
 npm --prefix functions run build      # tsc + copia de fuentes TTF
 npm --prefix functions run logs:dev   # o logs:prod
@@ -96,7 +99,8 @@ tsconfigs separados.
 
 ## Lo que NO existe en este proyecto
 
-- **No hay lint.** No hay ESLint configurado ni script `lint`.
+- **No hay formateador en marcha.** La configuración de Prettier está en
+  `package.json` y **no la ejecuta nada**: ni un script, ni el lint, ni el CI.
 - **El CI no despliega Cloud Functions.** Solo hosting. Van a mano y con destino explícito: `npm run deploy:dev:functions` o `deploy:prod:functions`. Es el punto más frágil de los dos entornos — es fácil arreglar algo en uno y olvidarlo en el otro.
 - **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
@@ -2710,6 +2714,60 @@ caja está ahí de verdad, así que lo que afirma el auditor es cierto. Las
 dieciocho declaraciones siguen mandando sobre lo suyo por especificidad —la del
 componente lleva el atributo de encapsulación—; lo que cambia es que un
 formulario nuevo ya no sale desnudo.
+
+### `npm run lint` — lo genérico, y por qué llegó el último
+
+⚠️ **Existe desde el 22 de septiembre de 2026, y hasta ese día este fichero
+decía «no hay lint».** No fue un descuido: las cuatro auditorías propias cubren
+muy bien lo de esta aplicación —claves sin traducir, clases sin declarar,
+espaciados fuera de la escala, formularios en escalera— y **nada** de lo común.
+Un import muerto, una promesa sin esperar o una celda que se pulsa con el ratón
+y no se alcanza con el teclado no los ve ninguna.
+
+La configuración es `eslint.config.mjs` y cada regla lleva escrito su motivo.
+Tres decisiones que conviene conocer antes de tocarla:
+
+- ⚠️ **No se extiende `tseslint.configs.recommended` entero.** Trae
+  `no-explicit-any` como error y aquí hay decenas de `any` legítimos —las fechas
+  de Firestore llegan como `Timestamp | {seconds} | string`—. Una regla que
+  marca cien sitios correctos se apaga a la semana, y con ella se apaga el lint.
+- ⚠️ **Dos niveles con significados distintos.** `error` es algo que se arregla
+  hoy y **hace fallar el comando**; `warn` es una deuda reconocida que no
+  bloquea. Hoy: **0 errores y 283 avisos**, que son 107 promesas sin esperar
+  —casi todas a propósito, un `router.navigate()` no se espera nunca— y 172 de
+  accesibilidad en plantillas. Se repasan por tandas y entonces se suben a
+  `error`; ponerlas en rojo el primer día es como se aprende a ignorar un lint.
+- ⚠️ **`functions/` se queda fuera**, y no por olvido: su tsconfig **excluye**
+  los `*.spec.ts` —y no se puede tocar, porque `firebase deploy` sube todo lo
+  que haya en `lib/`— así que sus tests darían un error de análisis. Entrarán el
+  día que se les ponga un tsconfig propio para el lint.
+
+⚠️ **Y `no-undef` está apagado en TypeScript**, que parece temerario y no lo es:
+no conoce el entorno del tsconfig y marcaba `document` y `console` como no
+definidos. Quien comprueba que un identificador existe es el compilador, y ese
+corre en cada `npm run build`.
+
+**Lo que encontró la primera pasada**, que es la mejor defensa de tenerlo:
+
+- **37 imports y variables muertos**, entre ellos cuatro `const … =
+  toTimestamp(…)` calculados y nunca usados en la disponibilidad.
+- **Un parámetro que mentía**: `getUpcomingMaintenance(withinDays, withinKm)`
+  documentaba que filtraba por kilómetros y **no lo hacía** — el segundo
+  argumento no aparecía en la consulta. Nadie lo llamaba con dos, así que
+  quitarlo no cambió nada; pero el día que alguien lo hubiera llamado, se habría
+  llevado la lista de siempre sin que nada avisara.
+- **Tres `@Output()` con nombre de evento del DOM** (`close`, `cancel`), que
+  chocan con el evento nativo que sube por el árbol. Renombrados a `closed` y
+  `cancelled`, que es lo que ya hacía `receipt-dialog`.
+- **Un `ngOnInit` vacío**, un escape inútil en una expresión regular y una
+  inyección por constructor de las de antes.
+
+⚠️ **Lo que el lint NO trae, a propósito: el plugin de RxJS.** En una
+aplicación llena de suscripciones es lo primero que uno busca, pero su regla
+principal —`no-ignored-subscription`— exige guardar la `Subscription` que
+devuelve `.subscribe()`, y aquí el patrón correcto es el contrario:
+`takeUntilDestroyed()` en el `pipe`, que no devuelve nada que guardar. Marcaría
+como fallo justo lo que este fichero manda hacer.
 
 ### `npm run rows:audit` — el formulario en escalera
 

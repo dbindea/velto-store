@@ -12,7 +12,6 @@ import { InspectionService } from '@features/inspections/services/inspection.ser
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import {
   Inspection,
-  InspectionType,
   FuelLevel,
   VehicleCleanliness,
   InspectionChecklist,
@@ -26,7 +25,6 @@ import { Reservation } from '@shared/models/reservation.model';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { toDate } from '@shared/utils/reservation-date.util';
 import {
-  Workflow,
   WorkflowContext,
   canStartPickup
 } from '@shared/utils/reservation-workflow.util';
