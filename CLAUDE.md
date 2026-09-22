@@ -37,6 +37,9 @@ npm run css:audit         # clases usadas en plantillas que no declara nadie
 npm run spacing:audit     # espaciados fuera de la escala (--fix los alinea)
 npm run rows:audit        # formularios en escalera: campos que van al lado y salen escalonados
 
+npm run lint              # ESLint: lo genérico que las auditorías de arriba no miran
+npm run lint:fix          # lo que se arregla solo
+
 # Cloud Functions
 npm --prefix functions run build      # tsc + copia de fuentes TTF
 npm --prefix functions run logs:dev   # o logs:prod
@@ -96,7 +99,8 @@ tsconfigs separados.
 
 ## Lo que NO existe en este proyecto
 
-- **No hay lint.** No hay ESLint configurado ni script `lint`.
+- **No hay formateador en marcha.** La configuración de Prettier está en
+  `package.json` y **no la ejecuta nada**: ni un script, ni el lint, ni el CI.
 - **El CI no despliega Cloud Functions.** Solo hosting. Van a mano y con destino explícito: `npm run deploy:dev:functions` o `deploy:prod:functions`. Es el punto más frágil de los dos entornos — es fácil arreglar algo en uno y olvidarlo en el otro.
 - **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
@@ -2479,8 +2483,21 @@ usuario con Windows en claro y la app en oscuro seguía viendo desplegables blan
 causa de que los selects parecieran «en bruto».
 
 Lo que sí es nuestro —el control cerrado— se estiliza **globalmente** en `styles.scss`:
-`appearance: none` + chevron SVG propio, y el icono del calendario invertido en tema oscuro.
-Global a propósito: son 30 `select` y 9 campos de fecha repartidos por 13 componentes.
+`appearance: none` + chevron SVG propio. Global a propósito: son 30 `select` y 9 campos de
+fecha repartidos por 13 componentes.
+
+⚠️ **El botón de calendario y el de reloj NO se retocan, y esa nota decía lo contrario
+hasta el 22 de septiembre de 2026.** Aquí ponía «el icono del calendario invertido en tema
+oscuro», y ese `filter: invert(0.75)` llevaba meses **escondiéndolos**: con `color-scheme:
+dark` el navegador ya los dibuja claros, así que invertirlos los devolvía a gris oscuro
+sobre un campo oscuro. El del calendario quedaba como una mancha y **el del reloj no se
+veía en absoluto** — lo encontró Dorel mirando la pantalla, en los 24 campos de fecha y
+hora de la aplicación a la vez.
+
+La regla general, que vale para cualquier control nativo: **si `color-scheme` ya lo
+resuelve, un filtro de color encima no lo mejora, lo rompe.** Y lo rompe solo en un tema,
+que es donde menos se mira. Lo único que queda es el `cursor: pointer`, porque el
+navegador no dice que el indicador se puede pulsar.
 
 ### Un botón que no hace nada es un fallo
 
@@ -2698,6 +2715,60 @@ dieciocho declaraciones siguen mandando sobre lo suyo por especificidad —la de
 componente lleva el atributo de encapsulación—; lo que cambia es que un
 formulario nuevo ya no sale desnudo.
 
+### `npm run lint` — lo genérico, y por qué llegó el último
+
+⚠️ **Existe desde el 22 de septiembre de 2026, y hasta ese día este fichero
+decía «no hay lint».** No fue un descuido: las cuatro auditorías propias cubren
+muy bien lo de esta aplicación —claves sin traducir, clases sin declarar,
+espaciados fuera de la escala, formularios en escalera— y **nada** de lo común.
+Un import muerto, una promesa sin esperar o una celda que se pulsa con el ratón
+y no se alcanza con el teclado no los ve ninguna.
+
+La configuración es `eslint.config.mjs` y cada regla lleva escrito su motivo.
+Tres decisiones que conviene conocer antes de tocarla:
+
+- ⚠️ **No se extiende `tseslint.configs.recommended` entero.** Trae
+  `no-explicit-any` como error y aquí hay decenas de `any` legítimos —las fechas
+  de Firestore llegan como `Timestamp | {seconds} | string`—. Una regla que
+  marca cien sitios correctos se apaga a la semana, y con ella se apaga el lint.
+- ⚠️ **Dos niveles con significados distintos.** `error` es algo que se arregla
+  hoy y **hace fallar el comando**; `warn` es una deuda reconocida que no
+  bloquea. Hoy: **0 errores y 283 avisos**, que son 107 promesas sin esperar
+  —casi todas a propósito, un `router.navigate()` no se espera nunca— y 172 de
+  accesibilidad en plantillas. Se repasan por tandas y entonces se suben a
+  `error`; ponerlas en rojo el primer día es como se aprende a ignorar un lint.
+- ⚠️ **`functions/` se queda fuera**, y no por olvido: su tsconfig **excluye**
+  los `*.spec.ts` —y no se puede tocar, porque `firebase deploy` sube todo lo
+  que haya en `lib/`— así que sus tests darían un error de análisis. Entrarán el
+  día que se les ponga un tsconfig propio para el lint.
+
+⚠️ **Y `no-undef` está apagado en TypeScript**, que parece temerario y no lo es:
+no conoce el entorno del tsconfig y marcaba `document` y `console` como no
+definidos. Quien comprueba que un identificador existe es el compilador, y ese
+corre en cada `npm run build`.
+
+**Lo que encontró la primera pasada**, que es la mejor defensa de tenerlo:
+
+- **37 imports y variables muertos**, entre ellos cuatro `const … =
+  toTimestamp(…)` calculados y nunca usados en la disponibilidad.
+- **Un parámetro que mentía**: `getUpcomingMaintenance(withinDays, withinKm)`
+  documentaba que filtraba por kilómetros y **no lo hacía** — el segundo
+  argumento no aparecía en la consulta. Nadie lo llamaba con dos, así que
+  quitarlo no cambió nada; pero el día que alguien lo hubiera llamado, se habría
+  llevado la lista de siempre sin que nada avisara.
+- **Tres `@Output()` con nombre de evento del DOM** (`close`, `cancel`), que
+  chocan con el evento nativo que sube por el árbol. Renombrados a `closed` y
+  `cancelled`, que es lo que ya hacía `receipt-dialog`.
+- **Un `ngOnInit` vacío**, un escape inútil en una expresión regular y una
+  inyección por constructor de las de antes.
+
+⚠️ **Lo que el lint NO trae, a propósito: el plugin de RxJS.** En una
+aplicación llena de suscripciones es lo primero que uno busca, pero su regla
+principal —`no-ignored-subscription`— exige guardar la `Subscription` que
+devuelve `.subscribe()`, y aquí el patrón correcto es el contrario:
+`takeUntilDestroyed()` en el `pipe`, que no devuelve nada que guardar. Marcaría
+como fallo justo lo que este fichero manda hacer.
+
 ### `npm run rows:audit` — el formulario en escalera
 
 ⚠️ **Es la cuarta auditoría, y nace de una lista enumerada a mano que se quedó
@@ -2826,6 +2897,26 @@ Dos trampas de CSS que ya han roto esta app entera:
 Prosa larga (emails, matrículas, referencias): parte en dos líneas antes que truncar con
 puntos suspensivos o forzar scroll horizontal. `body` ya lleva `overflow-wrap: break-word`
 y las clases `.email` / `.mono` usan `anywhere`.
+
+⚠️ **Un `<select>` NO puede partir su propia etiqueta**, así que la regla de arriba no le
+aplica: o cabe, o se corta. En una fila con un buscador de `min-width: 200px` y dos
+filtros, a cada filtro le quedaban 67 px de los 358 de un móvil y «Entregas y
+devoluciones» necesitaba 91 — salía por fuera de su caja (Inspecciones, 22 de septiembre
+de 2026). La corrección es la que ya llevaba la lista de vehículos: **el buscador se queda
+con su fila y los selects con la suya**, y por debajo de 480 px una fila cada uno.
+
+⚠️ **Y un panel desplegable no se mete DENTRO del botón que lo abre.** El menú «Más» de la
+barra inferior vivía dentro de su `<div (click)="toggleMoreMenu()">`, así que al elegir una
+opción el clic hacía las dos cosas: el enlace cerraba el menú y, al propagarse, el botón lo
+**volvía a abrir**. Se navegaba bien —por eso costaba verlo— y el panel se quedaba encima
+de la pantalla nueva. Sacarlo a hermano es todo el arreglo; la posición no cambia, porque
+se colocaba contra `.mobile-nav` y no contra el botón.
+
+⚠️ **Lo que cierra los menús de verdad es la NAVEGACIÓN** (`closeMenusOnNavigation`, en el
+layout). Los cierres escritos enlace a enlace se olvidan: el menú lateral los tenía y la
+barra inferior no, así que pulsar «Reservas» con el menú «Más» abierto navegaba y dejaba el
+panel flotando. Colgado de `NavigationEnd` da igual por dónde se salga. Los `(click)` de
+cada opción **se quedan igualmente**: pulsar la pantalla en la que ya estás no navega.
 
 ## Continuidad: copias, emergencia y una sola cuenta
 

@@ -8,7 +8,6 @@ import { PaymentConceptPipe } from '@shared/pipes/payment-concept.pipe';
 import { PaymentService } from '@features/payments/services/payment.service';
 import {
   Payment,
-  PaymentStatus,
   PAYMENT_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_TYPE_LABELS,

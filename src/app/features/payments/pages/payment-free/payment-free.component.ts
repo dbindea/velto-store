@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -43,7 +43,7 @@ interface CreatedPayment {
   templateUrl: './payment-free.component.html',
   styleUrl: './payment-free.component.scss'
 })
-export class PaymentFreeComponent implements OnInit {
+export class PaymentFreeComponent {
   private paymentService = inject(PaymentService);
   private redsysService = inject(RedsysPaymentService);
 
@@ -69,10 +69,6 @@ export class PaymentFreeComponent implements OnInit {
     { value: 'manual_card', label: 'payments.methods.manualCard' },
     { value: 'other', label: 'payments.methods.other' }
   ];
-
-  ngOnInit(): void {
-    // No data to load — pure form page.
-  }
 
   /** Si ya se ha intentado cobrar. Hasta entonces no se marca nada en rojo. */
   readonly submitted = signal(false);

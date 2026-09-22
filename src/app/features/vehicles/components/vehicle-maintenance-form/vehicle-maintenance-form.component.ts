@@ -92,7 +92,7 @@ export class VehicleMaintenanceFormComponent implements OnChanges, OnInit {
   @Input() invoicePath: string | null = null;
 
   @Output() submitForm = new EventEmitter<MaintenanceSubmitData>();
-  @Output() cancel = new EventEmitter<void>();
+  @Output() cancelled = new EventEmitter<void>();
   @Output() invoiceSelected = new EventEmitter<File>();
 
   typeOptions: { value: MaintenanceType; label: string; icon: string }[] = (
@@ -276,6 +276,6 @@ export class VehicleMaintenanceFormComponent implements OnChanges, OnInit {
   }
 
   onCancel(): void {
-    this.cancel.emit();
+    this.cancelled.emit();
   }
 }

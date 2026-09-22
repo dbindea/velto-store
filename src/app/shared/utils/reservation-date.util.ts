@@ -7,7 +7,6 @@
  * - Minimum is 1 day if return > pickup
  */
 
-import { Timestamp } from '@angular/fire/firestore';
 
 /**
  * Calculate calendar days between two datetimes.

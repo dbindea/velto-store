@@ -16,14 +16,13 @@ import {
   where,
 } from '@angular/fire/firestore';
 import { Storage, deleteObject, getDownloadURL, ref, uploadBytes } from '@angular/fire/storage';
-import { Observable, from, of } from 'rxjs';
+import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import {
   MaintenanceStatus,
   MaintenanceType,
   MAINTENANCE_DUE_SOON_DAYS,
-  MAINTENANCE_DUE_SOON_KM,
   VehicleMaintenance,
 } from '@shared/models/vehicle-maintenance.model';
 import {
@@ -157,14 +156,23 @@ export class VehicleMaintenanceService {
   }
 
   /**
-   * Returns scheduled/pending items for any vehicle whose due
-   * date is within `withinDays` (default 30) or whose km threshold
-   * is within `withinKm` (default 1000).  Used by the dashboard
-   * "due soon" cards.
+   * Lo pendiente o programado que vence dentro de `withinDays` (30 por
+   * defecto). Lo usan las tarjetas de «próximos a vencer» del panel.
+   *
+   * ⚠️ **Filtra por FECHA y no por kilómetros, aunque decía que sí.** Recibía
+   * un segundo argumento `withinKm` que no se usaba en ninguna parte de la
+   * consulta, y el comentario prometía «or whose km threshold is within
+   * withinKm». Quien lo llamara pasando un margen de kilómetros se habría
+   * llevado la lista de siempre sin que nada avisara. Lo encontró el lint al
+   * montarlo, el 22 de septiembre de 2026 — nadie lo llamaba con dos
+   * argumentos, así que quitarlo no cambia ningún comportamiento.
+   *
+   * El aviso por kilómetros sí existe, pero se calcula donde están los dos
+   * datos que hacen falta: `nextDueKm` del mantenimiento y `currentKm` del
+   * coche, que este servicio no tiene delante.
    */
   getUpcomingMaintenance(
-    withinDays: number = MAINTENANCE_DUE_SOON_DAYS,
-    withinKm: number = MAINTENANCE_DUE_SOON_KM
+    withinDays: number = MAINTENANCE_DUE_SOON_DAYS
   ): Observable<VehicleMaintenance[]> {
     const now = new Date();
     const horizon = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);

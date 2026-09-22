@@ -65,7 +65,7 @@ import { TranslateService } from '@core/i18n/translate.service';
 import { NotificationService } from '@core/notifications/notification.service';
 import { ReservationTimelineComponent } from '@shared/components/reservation-timeline/reservation-timeline.component';
 import { ReservationNotesPanelComponent } from '@features/reservations/components/reservation-notes-panel/reservation-notes-panel.component';
-import { ReservationNote, ReservationOwnerShare } from '@shared/models/reservation.model';
+import { ReservationOwnerShare } from '@shared/models/reservation.model';
 // Con alias: los getters de la pantalla se llaman igual que las funciones, y
 // sin renombrar el getter se llamaría a sí mismo.
 import {

@@ -19,7 +19,9 @@
     "deploy:prod:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage --project prod",
     "css:audit": "node scripts/css-audit.js",
     "rows:audit": "node scripts/rows-audit.js",
-    "spacing:audit": "node scripts/spacing-audit.js"
+    "spacing:audit": "node scripts/spacing-audit.js",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix"
   },
   "prettier": {
     "printWidth": 100,
@@ -54,12 +56,15 @@
     "@angular/cli": "^20.3.27",
     "@angular/compiler-cli": "^20.3.0",
     "@tailwindcss/postcss": "^4.3.0",
+    "angular-eslint": "^20.7.0",
     "autoprefixer": "^10.5.0",
+    "eslint": "^9.39.5",
     "jsdom": "^30.0.1",
     "postcss": "^8.5.15",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.3.0",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.70.1",
     "vitest": "^3.2.7"
   }
 }

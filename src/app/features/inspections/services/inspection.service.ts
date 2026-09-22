@@ -15,26 +15,22 @@ import {
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { TranslateService } from '@core/i18n/translate.service';
-import { Observable, from, of, firstValueFrom } from 'rxjs';
-import { map, switchMap, first } from 'rxjs/operators';
+import { Observable, from, firstValueFrom } from 'rxjs';
+import { map, first } from 'rxjs/operators';
 import {
   Inspection,
   InspectionType,
-  InspectionStatus,
   InspectionPhoto,
   PhotoCategory,
   VehicleDamage,
-  InspectionExtraCharges,
-  InspectionChecklist
+  InspectionExtraCharges
 } from '@shared/models/inspection.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { ContractService } from '@features/contracts/services/contract.service';
-import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { PAGINA } from '@shared/utils/pagination.util';
 import {
-  Workflow,
   WorkflowContext,
   canStartPickup as assertCanStartPickup,
   canStartReturn as assertCanStartReturn
@@ -539,7 +535,7 @@ export class InspectionService {
     try {
       const storageRef = ref(this.storage, photo.path);
       await deleteObject(storageRef);
-    } catch (e) {
+    } catch {
       // Ignore storage delete errors
     }
 

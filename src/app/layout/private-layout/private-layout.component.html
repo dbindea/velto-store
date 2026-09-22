@@ -99,7 +99,17 @@
 
   <!-- Global search overlay -->
   @if (searchOpen()) {
-    <app-global-search (close)="closeSearch()" />
+    <app-global-search (closed)="closeSearch()" />
+  }
+
+  <!--
+    Tocar fuera cierra el menú «Más», igual que el fondo del menú lateral. Va
+    fuera de `.mobile-nav` para poder cubrir la pantalla, y se esconde por
+    encima de 767 px: ahí la barra inferior no existe, y un fondo invisible que
+    sobreviviera a un cambio de tamaño se comería todos los clics de la página.
+  -->
+  @if (moreMenuOpen()) {
+    <div class="more-menu-backdrop" (click)="moreMenuOpen.set(false)"></div>
   }
 
   <!-- Mobile Bottom Navigation -->
@@ -115,25 +125,42 @@
       </a>
     }
 
-    <div class="mobile-nav-item" (click)="toggleMoreMenu()">
+    <button type="button" class="mobile-nav-item" (click)="toggleMoreMenu()">
       <i class="pi pi-bars"></i>
       <span>{{ 'layout.more' | translate }}</span>
+    </button>
 
-      @if (moreMenuOpen()) {
-        <div class="more-menu">
-          @for (item of remainingMenuItems(); track item.path) {
-            <a
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              class="more-menu-item"
-              (click)="moreMenuOpen.set(false)"
-            >
-              <i [class]="item.iconClass"></i>
-              <span>{{ item.labelKey | translate }}</span>
-            </a>
-          }
-        </div>
-      }
-    </div>
+    <!--
+      ⚠️ **El panel va FUERA del botón que lo abre, y ese es todo el arreglo.**
+      Estaba dentro, así que al pulsar una opción el clic hacía dos cosas: el
+      `(click)` del enlace cerraba el menú y, al propagarse, el del botón lo
+      **volvía a abrir**. Se navegaba bien y el menú se quedaba encima, y había
+      que darle otra vez a «Más» para quitarlo — que es justo lo que contó
+      Dorel el 22 de septiembre de 2026.
+
+      La posición no cambia al sacarlo: `.more-menu` se coloca contra
+      `.mobile-nav`, que es `position: fixed`, y sigue siendo su antepasado.
+    -->
+    @if (moreMenuOpen()) {
+      <div class="more-menu">
+        @for (item of remainingMenuItems(); track item.path) {
+          <!--
+            El cierre está por partida doble a propósito: la navegación cierra
+            todos los menús (ver `closeMenusOnNavigation`), pero pulsar la
+            pantalla en la que ya estás **no navega**, así que sin esto el menú
+            se quedaría abierto justo en ese caso.
+          -->
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            class="more-menu-item"
+            (click)="moreMenuOpen.set(false)"
+          >
+            <i [class]="item.iconClass"></i>
+            <span>{{ item.labelKey | translate }}</span>
+          </a>
+        }
+      </div>
+    }
   </nav>
 </div>

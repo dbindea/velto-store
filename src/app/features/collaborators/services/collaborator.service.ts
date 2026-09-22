@@ -693,7 +693,7 @@ export class CollaboratorService {
     invoiceId: string,
     file: File
   ): Promise<{ fileUrl: string; filePath: string }> {
-    const limpio = file.name.replace(/[^\w.\-]/g, '_');
+    const limpio = file.name.replace(/[^\w.-]/g, '_');
     const filePath = `collaborator-invoices/${invoiceId}/${Date.now()}_${limpio}`;
     const bytes = new Uint8Array(await file.arrayBuffer());
     await this.storage.uploadFile(filePath, bytes);

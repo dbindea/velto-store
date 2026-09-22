@@ -23,8 +23,7 @@ import {
   Payment,
   PaymentType,
   PaymentMethod,
-  PaymentSource,
-  PaymentStatus
+  PaymentSource
 } from '@shared/models/payment.model';
 import { Reservation } from '@shared/models/reservation.model';
 import { PAGINA } from '@shared/utils/pagination.util';

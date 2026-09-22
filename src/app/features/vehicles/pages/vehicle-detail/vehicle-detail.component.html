@@ -710,7 +710,7 @@
               [invoiceUrl]="pendingInvoiceUrl"
               [invoicePath]="pendingInvoicePath"
               (submitForm)="submitMaintenanceForm($event)"
-              (cancel)="cancelMaintenanceForm()"
+              (cancelled)="cancelMaintenanceForm()"
               (invoiceSelected)="onMaintenanceInvoiceSelected($event)"
             />
           </div>
@@ -722,7 +722,7 @@
       [images]="galleryImages()"
       [initialIndex]="galleryIndex"
       [isOpen]="showGallery"
-      (close)="closeGallery()"
+      (closed)="closeGallery()"
     />
   </div>
 }

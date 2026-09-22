@@ -37,6 +37,17 @@
   gap: 0.75rem;
   flex: 1;
   min-width: 200px;
+
+  // En el móvil se queda con la fila entera.
+  //
+  // ⚠️ **Es lo que aplastaba a los dos filtros.** Con `min-width: 200px` en una
+  // fila de 358 px, a los dos selects les quedaban 67 px cada uno y su texto
+  // —«Entregas y devoluciones»— necesitaba 91: salía cortado por fuera de la
+  // caja. Y un `<select>` nativo **no puede partir su propia etiqueta**, así
+  // que estrecharlo no lo arregla, solo lo recorta.
+  @media (max-width: 640px) {
+    flex: 1 1 100%;
+  }
   padding: 0.75rem 1rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -65,12 +76,19 @@
   cursor: pointer;
   &:focus { outline: none; border-color: var(--accent-color); }
 
-  // Two filters share the row instead of each taking half the width and
-  // stacking, which left the right half of the screen empty.
+  // Los dos filtros comparten su propia fila, debajo del buscador, en vez de
+  // pelearse con él por lo que sobre.
   @media (max-width: 640px) {
     flex: 1;
     min-width: 0;
     padding: 0.75rem 0.5rem;
+  }
+
+  // Y en un móvil estrecho, una fila cada uno. Es la misma corrección que ya
+  // llevaba la lista de vehículos —donde «Todas las categorías» salía cortado
+  // a media palabra—, y por el mismo motivo: el texto de un select no se parte.
+  @media (max-width: 480px) {
+    flex: 1 1 100%;
   }
 }
 

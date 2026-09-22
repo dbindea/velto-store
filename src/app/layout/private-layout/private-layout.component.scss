@@ -397,6 +397,18 @@ app-brand-logo {
   }
 }
 
+// El fondo que cierra el menú «Más» al tocar fuera. Sin color: lo único que
+// hace es recoger el toque.
+.more-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
 // More menu
 .more-menu {
   position: absolute;

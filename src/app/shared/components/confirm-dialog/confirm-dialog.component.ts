@@ -37,7 +37,13 @@ import { TranslateService } from '@core/i18n/translate.service';
               {{ text(request.cancelLabel || 'common.cancel') }}
             </button>
             <!-- Enfocado al abrir: quien confirma con el teclado no tiene que
-                 buscar el botón, y quien no quiere ya tiene Escape. -->
+                 buscar el botón, y quien no quiere ya tiene Escape.
+
+                 El lint lo desaconseja con razón —un autofocus suelto en una
+                 página mueve el foco sin avisar—, pero un diálogo modal es la
+                 excepción: se abre porque alguien lo pidió, bloquea el resto y
+                 lo que se espera es contestarlo. -->
+            <!-- eslint-disable @angular-eslint/template/no-autofocus -->
             <button
               type="button"
               class="confirm-ok"
@@ -47,6 +53,7 @@ import { TranslateService } from '@core/i18n/translate.service';
             >
               {{ text(request.confirmLabel || 'common.accept') }}
             </button>
+            <!-- eslint-enable @angular-eslint/template/no-autofocus -->
           </div>
         </div>
       </div>

@@ -222,7 +222,7 @@ export class ReservationCreateComponent implements OnInit {
         returnDateTime,
       );
       this.currentStep = 'vehicle';
-    } catch (error) {
+    } catch {
       // ⚠️ Estaba en español duro, y la plantilla ya lo pasa por el pipe: un
       // operador rumano leía castellano justo cuando algo falla, y encima el
       // texto no se podía traducir aunque se quisiera.

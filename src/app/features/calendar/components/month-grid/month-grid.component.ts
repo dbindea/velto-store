@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Output, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { TranslateService } from '@core/i18n/translate.service';
 import { Reservation } from '@shared/models/reservation.model';

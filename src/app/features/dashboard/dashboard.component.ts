@@ -18,7 +18,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
-import { forkJoin } from 'rxjs';
 import {
   Firestore,
   collection,
