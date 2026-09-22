@@ -161,20 +161,36 @@ que la distingue es `getComputedStyle()` en la pantalla de verdad.
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-Medido el 22 de septiembre al cerrar la sesión:
+Medido el 22 de septiembre al cerrar la sesión. **No te fíes de las cifras, que
+envejecen — vuelve a preguntarlo:**
 
-- **`develop` tiene 10 commits que NO están en producción.** Son los de § 2 bis.
-- **De esos, 3 están solo en local** (`7c1015b`, `a5dbf63`, `f1b7611`): los
-  arreglos de pantalla del día 22. Los otros 7 ya están en `origin/develop`.
-- **`origin/master` está en `0d32ba4`** (21 de septiembre).
-- ⚠️ **NO hace falta desplegar Cloud Functions.** Comprobado: de los 66 ficheros
-  que cambian entre producción y `develop`, **ninguno está en `functions/`**. Un
-  merge a `master` despliega hosting por CI y con eso está todo.
+```bash
+git log --oneline origin/master..HEAD     # lo que develop tiene y produccion no
+git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
+git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
+```
 
-Lo que hay que hacer para ponerlo en producción, en este orden: subir los 3
-commits locales, que Dorel lo revise, merge a `master`, y comprobar en el pie de
-la aplicación que el commit que se está ejecutando es el del merge — para eso se
-puso (`98436c5`).
+Ese día: **`develop` al día con `origin/develop`**, con **11 commits que NO están
+en producción** — los diez de § 2 bis más el de esta documentación —, y
+`origin/master` en `0d32ba4` (21 de septiembre).
+
+⚠️ **NO hace falta desplegar Cloud Functions.** Comprobado con el tercer comando:
+de los 66 ficheros que cambian entre producción y `develop`, **ninguno está en
+`functions/`**. Un merge a `master` despliega hosting por CI y con eso está todo.
+Es la excepción, no la regla: normalmente hay que mirarlo.
+
+Para ponerlo en producción: que Dorel lo revise, merge a `master`, y **comprobar
+en el pie de la aplicación que el commit que se está ejecutando es el del
+merge** — para eso se puso (`98436c5`). Ojo con la caché de Cloudflare: el
+dominio propio puede seguir sirviendo lo viejo un rato, y quien dice la verdad es
+`rentalcar-veltomobility.web.app`.
+
+⚠️ **Y una advertencia de historial: Dorel commitea y sube en paralelo mientras
+yo trabajo.** El día 22, tres commits míos que estaban sin subir aparecieron en
+`origin/develop` a mitad de sesión, y una documentación mía se subió con el
+mensaje «claude» tres segundos después de crearse. **Antes de enmendar nada,
+comprobar si ya está en el remoto** (`git log origin/develop..HEAD`): enmendar un
+commit ya publicado obliga a un force-push, y aquí eso no se hace.
 
 ---
 
