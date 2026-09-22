@@ -47,7 +47,20 @@ const ACEPTADAS = new Set([
   // tamaño los pone `.subtitle`; estos dos nombran las partes.
   'client-name',
   'vehicle-name',
-  // La cabecera la coloca `.page-header`, que es flex; estos dos son sus huecos.
+  /**
+   * La cabecera la coloca `.page-header`, que es flex; estos dos son sus
+   * huecos.
+   *
+   * ⚠️ **Y esa frase es una SUPOSICIÓN sobre otro fichero, que ya falló una
+   * vez.** El 22 de septiembre de 2026 la lista de Pagos tenía un
+   * `.page-header` sin `display: flex` —solo un margen—, así que aquí no había
+   * ningún hueco que repartir: el subtítulo quedaba a 4 px del título y **a
+   * cero** del botón, y se leía como si explicara el botón. Esta excepción es
+   * lo que silenció el aviso.
+   *
+   * Si vuelve a aparecer una cabecera rara, lo que hay que mirar es si **su**
+   * `.page-header` coloca de verdad, no si estas dos clases están en la lista.
+   */
   'header-content',
   'header-actions',
   // El texto dentro del botón de cámara: el botón ya lo estiliza entero.
