@@ -4,8 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build --configuration dev",
-    "build:prod": "ng build --configuration production",
+    "build": "node scripts/write-build-info.js && ng build --configuration dev",
+    "build:prod": "node scripts/write-build-info.js && ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:hosting": "npm run build && firebase emulators:start --only hosting",

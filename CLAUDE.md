@@ -1461,6 +1461,49 @@ Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelv
 
 ⚠️ `TranslateService.translate()` devuelve **la propia clave** si no la encuentra, y **no hay fallback a español**: si falta en `ro.json`, el usuario rumano ve la clave en crudo.
 
+⚠️ **Y una clave puede faltar sin faltar en el repositorio: por CACHÉ.** El
+dominio propio va detrás de Cloudflare y los ficheros de i18n se servían con
+`max-age=3600`. Angular pone huella a los bundles —`main-APWSE7JM.js`— pero
+**no a `assets/i18n/*.json`**, así que tras un despliegue se puede quedar el
+**JavaScript nuevo con las traducciones viejas**: el código pide una clave que el
+JSON cacheado no tiene y sale en crudo.
+
+Medido el 21 de septiembre de 2026, minutos después de un despliegue:
+`index.html` ya era del día y apuntaba al bundle nuevo, mientras
+`assets/i18n/es.json` seguía siendo el del 19 y no traía
+`reservations.pricing.loyaltyOverridden`. En `rentalcar-veltomobility.web.app`
+—el dominio de Firebase, sin Cloudflare delante— ya estaba el bueno. Se arregló
+solo al vencer el plazo.
+
+Por eso `firebase.json` declara `Cache-Control: no-cache` en `/assets/i18n/**`:
+se siguen cacheando, pero **revalidando**, así que no pueden quedar desparejados
+del bundle que los pide. Requiere desplegar hosting para que tome efecto.
+
+⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
+propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
+Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
+igualmente la copia vieja.
+
+⚠️ **Y el pie dice qué commit se está ejecutando**, que es la forma de
+contestarlo desde la propia pantalla: `VELTO v1.0  0d32ba4`, con la rama, el SHA
+completo y la fecha en el `title`. Lo escribe `scripts/write-build-info.js` en
+`src/app/core/config/build-info.ts`.
+
+⚠️ **Lo llama `package.json`, no el workflow**, y esa es la parte que importa:
+`firebase init hosting:github` **reescribe los workflows sin avisar** —ya pasó—,
+y metido ahí el paso desaparecería con ellos. El pie seguiría pintando un commit:
+el de la última vez que funcionó. Colgado de `build` y `build:prod` sobrevive.
+
+⚠️ **Fuera de CI vale `local` a propósito.** Con el SHA de verdad, cada
+`npm run build` dejaría el fichero modificado y habría que descartarlo a mano
+antes de cada commit. En CI hay `GITHUB_SHA` —en `master`, el del merge— y ahí
+sí se sella.
+
+⚠️ **El fichero generado NO lleva `as const`.** Con él, TypeScript estrecha
+`commit` al literal del fichero y `BUILD_INFO.commit.slice(0, 7)` deja de
+compilar **solo en local**, porque en CI el literal es un SHA. Un fallo que no
+aparece donde se trabaja.
+
 ## Cloud Functions
 
 Desplegadas: `generateContractPdf`, `createContractSigningLink`, `cancelContractSigningLink`, `getContractForSigning` (público), `signContract` (público), `sendSignedContractEmail`, `createRedsysPaymentLink`, `redsysNotificationWebhook` (público).
@@ -2846,7 +2889,80 @@ no están allí hasta el 1 de enero. Un despliegue completo las subiría.
   ya seguido, hace falta `git rm --cached`.
 - `CREDENTIALS.md` **sí está** en `.gitignore`, junto a `*.p12`, `*.pfx`, `*.key` y
   `cert.b64`.
-- ⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
+- ⚠️ **El ESTADO del coche no decide la disponibilidad; las fechas sí.**
+`fleetAvailability()` en `vehicle-availability.util.ts` es la única autoridad
+sobre lo que el estado permite, y solo aparta `out_of_service`. Un coche
+`rented` está fuera **ahora**, no en las fechas que se piden: quien contesta es
+el cruce con las reservas que bloquean.
+
+Salió en producción el 21 de septiembre de 2026: un coche alquilado hasta el 26
+se ofrecía como «El vehículo no está disponible en la flota» al pedirlo para el
+1 de octubre, cinco días después. Y se veía en **todos** los coches en curso,
+porque el estado **sí se mueve solo**: lo pone `rented` el parte de entrega y lo
+devuelve el de devolución (`inspection.service.ts`). Es decir, durante todo un
+alquiler el coche estaba inalquilable para cualquier fecha futura.
+
+⚠️ **La devolución no resucita lo que alguien apartó** (`statusAfterReturn()`).
+Ponía `available` a secas, así que un coche marcado «Fuera de servicio» o «En
+taller» durante el alquiler —que es cuando se rompen— volvía a la flota solo por
+terminar el parte. Ahora `maintenance` y `out_of_service` se respetan.
+
+⚠️ **Y las dos autoridades discrepaban**, que es lo que lo hacía difícil de ver:
+`searchAvailability()` miraba el estado y `checkVehicleAvailability()` —el que
+de verdad guarda la creación— **no lo miró nunca**. El asistente escondía un
+coche que el servicio habría dejado reservar.
+
+⚠️ **En mantenimiento se ofrece y se AVISA**, no se esconde. Quien atiende con
+el cliente delante tiene que poder decidir, y lo que no puede es no saberlo.
+
+⚠️ **La ITV y el seguro SÍ bloquean desde el 21 de septiembre de 2026, y es una
+REVERSIÓN — por eso está escrita.** Hasta ese día una ITV vencida
+solo **avisaba** en el buscador, con el argumento de que quien está en el
+mostrador tiene que poder decidir — una ITV caducada de un día con cita dada no
+es lo mismo que una de hace tres meses. Dorel lo revocó con dos frases: *«esta
+app tiene que ser automática en muchos aspectos si no yo no me acuerdo»* y *«que
+yo no pueda alquilar el coche pasada esta fecha hasta no hacer la itv»*.
+
+La raya nueva es **qué impide circular**, y separa dos cosas que antes iban
+juntas:
+
+- **`itv` y `insurance` bloquean.** Sin ellos el coche no puede estar en la vía
+  pública y un siniestro no tiene cobertura: eso no es una decisión de
+  mostrador. `BLOCKING_MAINTENANCE_TYPES` en `vehicle-availability.util.ts`.
+- **Todo lo demás sigue avisando.** Un cambio de aceite vencido conviene
+  hacerlo, y el coche circula. El argumento de antes sigue vivo aquí.
+
+⚠️ **Se compara contra la fecha de DEVOLUCIÓN, no contra hoy.** Con la ITV
+caducando el 10 de octubre, del 1 al 5 se alquila y del 8 al 12 no, porque los
+días 11 y 12 el coche estaría en la calle sin ella. Mirando solo el día de hoy,
+el segundo alquiler se aceptaría sin que nada avisara. Y **por días**, no por
+instantes: la fecha se guarda a medianoche y la devolución tiene hora, así que
+devolver el día 10 a las diez de la mañana saldría bloqueado por diez horas.
+
+⚠️ **Lo preguntan TRES sitios y la consulta vive en uno**
+(`VehicleMaintenanceService.blockingFor()`): el buscador, la comprobación que
+guarda la creación y la entrega del coche. Copiada tres veces, el día que
+cambie se arreglaría en dos y el tercero seguiría dejando salir el coche. La
+**regla** es aparte y pura (`blockingMaintenance()`), con sus tests.
+
+⚠️ **La entrega lo comprueba otra vez, y no es redundante.** La disponibilidad
+se mira al **crear** la reserva, así que una reserva hecha en agosto para
+octubre no sabe nada de una ITV cuya fecha se escribió en septiembre. El parte
+de entrega es donde el coche sale de verdad a la calle.
+
+⚠️ **Y no admite excepción de workflow.** Saltarse un paso es un atajo operativo
+—el cliente firmó en papel—, pero entregar un coche sin ITV es circular
+ilegalmente: la comprobación va **antes** de `canWithException` y la pantalla
+**no ofrece** «Saltar este paso». Misma razón que
+`canCreateReservationForClient()`. Un botón que no puede funcionar no se enseña.
+
+⚠️ **El recordatorio ya existía y no hizo falta construirlo.** El correo de las
+9:00 (`sendDailyDigest`, desplegado en los dos proyectos) lista los vencimientos
+de la flota con **30 días** de antelación, y la pantalla de Eventos los deriva
+con `DEFAULT_EVENT_HORIZON = 7`. Lo que faltaba no era el aviso: era que el
+aviso tuviera consecuencias.
+
+⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
   escribe después, y entre medias cabe otra reserva. **No se puede cerrar desde el
   cliente**: el SDK web no permite consultas dentro de una transacción, solo lecturas por
   id. Haría falta una Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.

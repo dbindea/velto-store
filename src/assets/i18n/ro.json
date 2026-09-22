@@ -959,6 +959,7 @@
     },
     "availability": {
       "conflict": "Există deja o rezervare pentru aceste date",
+      "inMaintenance": "Mașina este marcată ca fiind în mentenanță. Verifică dacă va fi gata pentru aceste date.",
       "noVehiclesAvailable": "Nu există vehicule disponibile pentru aceste date",
       "notInFleet": "Vehiculul nu este disponibil în flotă",
       "search": "Caută disponibilitate",
@@ -966,7 +967,9 @@
       "unavailable": "Indisponibil",
       "perDay": "€/zi",
       "searchFailed": "Disponibilitatea nu a putut fi căutată.",
-      "maintenanceOverdue": "ITP sau revizie expirată"
+      "maintenanceOverdue": "ITP sau revizie expirată",
+      "itvExpired": "ITP-ul expiră înainte de data returnării. Nu se poate închiria până nu se trece ITP-ul.",
+      "insuranceExpired": "Asigurarea expiră înainte de data returnării. Nu se poate închiria până nu se reînnoiește."
     },
     "bookingConfirmation": {
       "copyLink": "Copiază linkul",

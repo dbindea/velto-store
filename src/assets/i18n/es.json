@@ -959,6 +959,7 @@
     },
     "availability": {
       "conflict": "Ya hay una reserva para estas fechas",
+      "inMaintenance": "El coche está marcado como en mantenimiento. Comprueba que estará listo para estas fechas.",
       "noVehiclesAvailable": "No hay vehículos disponibles para estas fechas",
       "notInFleet": "El vehículo no está disponible en la flota",
       "search": "Buscar disponibilidad",
@@ -966,7 +967,9 @@
       "unavailable": "No disponible",
       "perDay": "€/día",
       "searchFailed": "No se ha podido buscar la disponibilidad.",
-      "maintenanceOverdue": "ITV o mantenimiento vencido"
+      "maintenanceOverdue": "ITV o mantenimiento vencido",
+      "itvExpired": "La ITV caduca antes de la devolución. No se puede alquilar hasta pasarla.",
+      "insuranceExpired": "El seguro caduca antes de la devolución. No se puede alquilar hasta renovarlo."
     },
     "bookingConfirmation": {
       "copyLink": "Copiar enlace",

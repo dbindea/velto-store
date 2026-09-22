@@ -959,6 +959,7 @@
     },
     "availability": {
       "conflict": "There is already a booking for these dates",
+      "inMaintenance": "This car is marked as under maintenance. Check that it will be ready for these dates.",
       "noVehiclesAvailable": "No vehicles available for these dates",
       "notInFleet": "The vehicle is not available in the fleet",
       "search": "Search availability",
@@ -966,7 +967,9 @@
       "unavailable": "Not available",
       "perDay": "€/day",
       "searchFailed": "Availability could not be searched.",
-      "maintenanceOverdue": "Roadworthiness test or servicing overdue"
+      "maintenanceOverdue": "Roadworthiness test or servicing overdue",
+      "itvExpired": "The roadworthiness test (ITV) expires before the return date. It cannot be rented until it is passed.",
+      "insuranceExpired": "The insurance expires before the return date. It cannot be rented until it is renewed."
     },
     "bookingConfirmation": {
       "copyLink": "Copy link",

@@ -29,6 +29,17 @@ import {
 } from '@shared/utils/pricing.util';
 import { buildDeposit } from '@shared/utils/deposit.util';
 import { deliveryFeeBreakdown } from '@shared/utils/pricing.util';
+import {
+  blockingMaintenance,
+  fleetAvailability,
+  type MaintenanceDue
+} from '@shared/utils/vehicle-availability.util';
+import type {
+  MaintenanceStatus,
+  MaintenanceType,
+  VehicleMaintenance
+} from '@shared/models/vehicle-maintenance.model';
+import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-maintenance.service';
 import { ownerShareSnapshotOf } from '@shared/utils/owner-share.util';
 import { CollaboratorService } from '@features/collaborators/services/collaborator.service';
 import { SettingsService } from '@features/settings/services/settings.service';
@@ -282,15 +293,29 @@ export interface VehicleAvailabilityResult {
   conflictReservationId?: string;
   conflictMessage?: string;
   /**
-   * Un aviso sobre el coche que **no impide alquilarlo**: hoy, la ITV o un
-   * mantenimiento vencidos.
+   * Cuándo caduca el papel que bloquea, para enseñarlo al lado del motivo.
    *
-   * ⚠️ **Avisa y no bloquea, a propósito.** Una ITV caducada de un día con cita
-   * dada no es lo mismo que una de hace tres meses, y quien está en el mostrador
-   * con el cliente delante tiene que poder decidir. Lo que no puede es **no
-   * saberlo**: hasta el 11 de septiembre de 2026 el asistente ofrecía el coche
-   * sin decir nada, mientras el correo de las 9:00 afirmaba que «el coche no se
-   * puede alquilar». La frase y el hecho se deciden juntos.
+   * Viaja como fecha y no dentro de la frase: el mensaje es una clave i18n y la
+   * fecha la formatea la plantilla en el idioma que toque.
+   */
+  blockingDueDate?: Date;
+  /**
+   * Un aviso sobre el coche que **no impide alquilarlo**: hoy, un mantenimiento
+   * vencido de los que no impiden circular —un cambio de aceite, unos
+   * neumáticos— o un coche marcado en taller.
+   *
+   * ⚠️ **Avisar y bloquear se reparten por lo que impide CIRCULAR**, y esa raya
+   * se movió el 21 de septiembre de 2026. Hasta entonces la ITV vencida solo
+   * avisaba, con el argumento de que quien está en el mostrador tiene que poder
+   * decidir; Dorel lo revocó — *«que yo no pueda alquilar el coche pasada esta
+   * fecha hasta no hacer la itv»*— y la ITV y el seguro pasaron a
+   * `blockingMaintenance()`. El argumento de entonces sigue vivo aquí, para lo
+   * que no saca al coche de la calle.
+   *
+   * Lo que no cambia es que el operador **no puede no saberlo**: hasta el 11 de
+   * septiembre de 2026 el asistente ofrecía el coche sin decir nada, mientras el
+   * correo de las 9:00 afirmaba que «el coche no se puede alquilar». La frase y
+   * el hecho se deciden juntos.
    */
   warningMessage?: string;
 }
@@ -301,6 +326,7 @@ export class ReservationService {
   private permissions = inject(PermissionsService);
   private reservationsRef: CollectionReference;
   private vehicleService = inject(VehicleService);
+  private maintenanceService = inject(VehicleMaintenanceService);
   private paymentService = inject(PaymentService);
   // Solo para leer el contrato vigente al editar. `contract.service.ts` no
   // importa este servicio, así que no hay ciclo.
@@ -490,7 +516,24 @@ export class ReservationService {
         };
       }
     }
-    
+
+    /**
+     * Y los papeles del coche.
+     *
+     * ⚠️ **Va DESPUÉS del cruce de fechas y antes de devolver disponible**,
+     * porque esta función es la última que pregunta antes de escribir: la
+     * llaman la creación, la edición de fechas y el commit con las filas de
+     * cobro. Si solo lo mirase el buscador, una reserva creada por cualquier
+     * otro camino —editar las fechas de una existente, por ejemplo— podría
+     * acabar entregando un coche sin ITV, que es justo lo que se quiere impedir.
+     * Es la misma lección de `fleetAvailability()`: las dos autoridades tienen
+     * que contestar lo mismo.
+     */
+    const bloqueo = await this.maintenanceService.blockingFor(vehicleId, returnDateTime);
+    if (bloqueo) {
+      return { available: false, conflictMessage: bloqueo.message };
+    }
+
     return { available: true };
   }
 
@@ -521,7 +564,7 @@ export class ReservationService {
     } as Reservation));
 
     /**
-     * Los mantenimientos vencidos, para poder avisar.
+     * Los mantenimientos abiertos de toda la flota, por coche.
      *
      * ⚠️ **Se filtra por fecha en memoria.** `nextDueDate` es opcional y un
      * `orderBy` sobre un campo opcional deja fuera, sin avisar, a los que no lo
@@ -529,6 +572,7 @@ export class ReservationService {
      * (M-40). Aquí serían justo los que hay que enseñar.
      */
     const ahora = Date.now();
+    const pendientesPorVehiculo = new Map<string, MaintenanceDue[]>();
     const vencidosPorVehiculo = new Set<string>();
     try {
       const mantenimientos = await getDocs(
@@ -538,10 +582,17 @@ export class ReservationService {
         )
       );
       for (const d of mantenimientos.docs) {
-        const m = d.data() as { vehicleId?: string; nextDueDate?: unknown };
-        if (!m.vehicleId || !m.nextDueDate) continue;
-        const cuando = toDate(m.nextDueDate);
-        if (!isNaN(cuando.getTime()) && cuando.getTime() < ahora) {
+        const m = d.data() as Partial<VehicleMaintenance>;
+        if (!m.vehicleId) continue;
+        const cuando = m.nextDueDate ? toDate(m.nextDueDate) : null;
+        const lista = pendientesPorVehiculo.get(m.vehicleId) ?? [];
+        lista.push({
+          type: m.type as MaintenanceType,
+          status: m.status as MaintenanceStatus,
+          dueDate: cuando && !isNaN(cuando.getTime()) ? cuando : null
+        });
+        pendientesPorVehiculo.set(m.vehicleId, lista);
+        if (cuando && !isNaN(cuando.getTime()) && cuando.getTime() < ahora) {
           vencidosPorVehiculo.add(m.vehicleId);
         }
       }
@@ -555,8 +606,15 @@ export class ReservationService {
     const results: VehicleAvailabilityResult[] = [];
 
     for (const vehicle of vehicles) {
-      // Only consider available vehicles
-      if (vehicle.status !== 'available') {
+      /**
+       * ⚠️ **El estado NO decide la disponibilidad; las fechas sí.** La regla
+       * vive en `fleetAvailability()` con su porqué: un coche alquilado hasta
+       * el 26 salía como «no está disponible en la flota» al pedirlo para el 1
+       * de octubre. Lo que contesta de verdad es el cruce con las reservas que
+       * bloquean, unas líneas más abajo.
+       */
+      const porEstado = fleetAvailability(vehicle.status);
+      if (porEstado.blocks) {
         results.push({
           vehicleId: vehicle.id!,
           vehicle,
@@ -566,6 +624,30 @@ export class ReservationService {
           // Estaba en español duro y además con la tilde corrupta:
           // 'VehÃ­culo no disponible en flota', que es lo que leía el operador.
           conflictMessage: 'reservations.availability.notInFleet'
+        });
+        continue;
+      }
+
+      /**
+       * Los papeles del coche, contra las fechas que se piden.
+       *
+       * ⚠️ **Esto sí bloquea**, a diferencia del estado: sin ITV o sin seguro en
+       * vigor el coche no puede circular, así que alquilarlo no es una decisión
+       * del mostrador. Ver `blockingMaintenance()`.
+       */
+      const bloqueo = blockingMaintenance(
+        pendientesPorVehiculo.get(vehicle.id!) ?? [],
+        returnDateTime
+      );
+      if (bloqueo) {
+        results.push({
+          vehicleId: vehicle.id!,
+          vehicle,
+          available: false,
+          totalDays,
+          pricing: null,
+          conflictMessage: bloqueo.message,
+          blockingDueDate: bloqueo.dueDate
         });
         continue;
       }
@@ -632,10 +714,18 @@ export class ReservationService {
         available: true,
         totalDays,
         pricing,
-        // Se ofrece igual, pero con el aviso delante. Ver `warningMessage`.
+        /**
+         * Se ofrece igual, pero con el aviso delante. Ver `warningMessage`.
+         *
+         * ⚠️ **Un coche en taller se ofrece y se avisa**, no se esconde. Es la
+         * misma regla que la ITV vencida: quien está en el mostrador con el
+         * cliente delante tiene que poder decidir, y lo que no puede es **no
+         * saberlo**. El mantenimiento vencido manda sobre el estado porque es
+         * el aviso más concreto de los dos.
+         */
         warningMessage: vencidosPorVehiculo.has(vehicle.id!)
           ? 'reservations.availability.maintenanceOverdue'
-          : undefined
+          : porEstado.warning
       });
     }
 

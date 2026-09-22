@@ -86,8 +86,14 @@
       <router-outlet />
     </main>
 
+    <!--
+      El pie dice qué commit se está ejecutando. `VELTO v1.0` no se mueve nunca,
+      así que por sí solo no distingue un despliegue de otro — y hay un caso real
+      en el que eso importó: ver `buildLabel`.
+    -->
     <footer class="footer">
       <span>{{ 'layout.footer' | translate }}</span>
+      <span class="build mono" [attr.title]="buildDetail || null">{{ buildLabel }}</span>
     </footer>
   </div>
 

@@ -46,6 +46,10 @@ import {
   resizeImage
 } from '@shared/utils/image-resize.util';
 import { inspectionPhotoName } from '@shared/utils/storage-name.util';
+import { statusAfterReturn } from '@shared/utils/vehicle-availability.util';
+import type { VehicleStatus } from '@shared/models/vehicle.model';
+import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-maintenance.service';
+import { toDate } from '@shared/utils/reservation-date.util';
 
 @Injectable({ providedIn: 'root' })
 export class InspectionService {
@@ -55,6 +59,7 @@ export class InspectionService {
   private paymentService = inject(PaymentService);
   private collaboratorService = inject(CollaboratorService);
   private contractService = inject(ContractService);
+  private maintenanceService = inject(VehicleMaintenanceService);
   private functions = inject(Functions);
   private translate = inject(TranslateService);
 
@@ -219,6 +224,28 @@ export class InspectionService {
       throw new Error(decision.reason);
     }
 
+    /**
+     * Los papeles del coche, otra vez y en el último momento.
+     *
+     * ⚠️ **Sin esto el bloqueo tiene un agujero que se abre solo:** la
+     * disponibilidad se comprueba al **crear** la reserva, así que una reserva
+     * hecha en agosto para octubre no sabe nada de una ITV cuya fecha se
+     * escribió en septiembre. Aquí es donde el coche sale de verdad a la calle.
+     *
+     * ⚠️ **Y no pasa por `canWithException`, a propósito.** Saltarse un paso del
+     * workflow es un atajo operativo —el cliente ya pagó y el justificante está
+     * en el móvil—, pero entregar un coche sin ITV o sin seguro no es un atajo:
+     * es circular ilegalmente y sin cobertura. Misma razón por la que
+     * `canCreateReservationForClient()` tampoco admite excepción.
+     */
+    const bloqueo = await this.maintenanceService.blockingFor(
+      reservation.vehicleId,
+      toDate(reservation.returnDateTime)
+    );
+    if (bloqueo) {
+      throw new Error(bloqueo.message);
+    }
+
     const baseData: Partial<Inspection> = {
       reservationId,
       vehicleId: reservation.vehicleId,
@@ -364,11 +391,22 @@ export class InspectionService {
       updatedAt: { seconds: Date.now() / 1000 }
     }));
 
-    // Update vehicle
+    /**
+     * El coche vuelve a la flota **solo si estaba alquilado**.
+     *
+     * ⚠️ Ponía `available` a secas, así que un coche marcado «Fuera de
+     * servicio» o «En taller» durante el alquiler —que es cuando se rompen—
+     * volvía a ofrecerse solo por terminar el parte, y sin que nadie lo
+     * decidiera. Ver `statusAfterReturn()`.
+     */
     const vehicleRef = doc(this.firestore, `vehicles/${reservation.vehicleId}`);
+    const vehicleSnap = await getDoc(vehicleRef);
+    const estadoActual = vehicleSnap.exists()
+      ? (vehicleSnap.data()['status'] as VehicleStatus | undefined)
+      : undefined;
     await updateDoc(vehicleRef, this.cleanData({
       currentKm: inspection.km,
-      status: 'available',
+      status: statusAfterReturn(estadoActual),
       updatedAt: { seconds: Date.now() / 1000 }
     }));
 

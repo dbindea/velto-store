@@ -190,6 +190,15 @@
                       <div class="unavailable-badge">
                         <i class="pi pi-ban"></i>
                         {{ (result.conflictMessage || 'reservations.availability.unavailable') | translate }}
+                        <!--
+                          La fecha de caducidad, al lado del motivo. Va suelta y
+                          no dentro de la frase porque el mensaje es una clave
+                          i18n: la fecha la formatea la plantilla, y así no hay
+                          que interpolar nada en los tres idiomas.
+                        -->
+                        @if (result.blockingDueDate) {
+                          <span class="due-date">({{ result.blockingDueDate | date:'dd/MM/yyyy' }})</span>
+                        }
                       </div>
                     }
 
