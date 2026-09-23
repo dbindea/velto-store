@@ -2585,6 +2585,15 @@ Cuatro decisiones, y las cuatro importan:
   lado y abierto por el otro, o un píxel vaciaría el campo **y** abriría el
   calendario.
 
+⚠️ **Y se cuelga del `<body>`, así que compite con TODO lo que flota.** Su
+`z-index` era 200 «por encima de la cabecera pegajosa (50) y del menú (100)» —
+cierto, y corto: los modales están en **1000** y el diálogo de confirmación en
+**1100**, así que al programar una ITV desde la ficha del coche el calendario
+salía **detrás** del modal y no había forma de elegir fecha. Hoy va en **1200**.
+La escalera completa está escrita en `date-picker-panel.component.scss`, que es
+lo que faltaba tener delante al elegir el número: al añadir una capa que flote,
+mírala ahí en vez de inventar un valor mirando solo a la vecina.
+
 Tres trampas que costaron un rato y que volverían a costarlo:
 
 - **Enfocar el campo desplaza la página** si no está entero a la vista, y ese

@@ -13,7 +13,37 @@
 
 .picker-panel {
   position: fixed;
-  z-index: 200; // Por encima de la cabecera pegajosa (50) y del menú (100).
+  /**
+   * ⚠️ **Por encima de CUALQUIER modal, no solo de la cabecera.**
+   *
+   * Aquí ponía `200`, «por encima de la cabecera pegajosa (50) y del menú
+   * (100)» — que es cierto y no basta: el panel se cuelga del `<body>`, así que
+   * compite con **todo** lo que flota, y los modales están un orden de magnitud
+   * por encima. Consecuencia, encontrada por Dorel el 23 de septiembre de 2026
+   * al programar una ITV: el calendario se abría **detrás** del modal de
+   * mantenimiento y no había forma de elegir fecha. Medido: panel 200, modal
+   * 1000, y en el centro del propio panel lo que responde al ratón es el
+   * contenido del modal.
+   *
+   * La escalera completa de la aplicación, que es lo que faltaba tener a la
+   * vista al elegir un número:
+   *
+   *   100   barra lateral · desplegable de idioma · modal del calendario
+   *   200   buscador global
+   *   900   pila de avisos
+   *   1000  modales (ficha de vehículo, de reserva, de contrato, recibo)
+   *   1100  diálogo de confirmación
+   *   1200  **este panel**
+   *   2000  toasts
+   *   9999  visor de imágenes a pantalla completa
+   *
+   * Va por encima de los modales porque **se ancla a un campo que puede estar
+   * dentro de uno**; y por debajo de los toasts y del visor porque esos tapan
+   * la pantalla entera a propósito. Hoy el único modal con campos de fecha es
+   * el de mantenimiento, pero el siguiente que los tenga habría repetido el
+   * fallo: el problema no era de esa pantalla, era del número.
+   */
+  z-index: 1200;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
