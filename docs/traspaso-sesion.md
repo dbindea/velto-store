@@ -159,22 +159,127 @@ que la distingue es `getComputedStyle()` en la pantalla de verdad.
 
 ---
 
+## 2 quater. Lo que se movió el 23 de septiembre
+
+Otra tanda salida de **Dorel usando la aplicación**, en un solo mensaje con ocho
+peticiones. Ninguna la habría encontrado un test. De más importante a menos.
+
+**La fecha del mantenimiento sí se deja borrar, y el fallo no estaba donde
+parecía.** Dorel lo contó como «la fecha no me la permite borrar»; el campo se
+vaciaba perfectamente y lo que fallaba era **la escritura**: el limpiador de
+Firestore descarta `undefined` y `null`, y un `updateDoc` **sin la clave deja
+intacto lo que hubiera**. Al recargar, la fecha volvía. Y no era una fecha: eran
+los **diez** campos opcionales del mantenimiento, más otros tres en **Gastos**,
+que nadie había mirado. Ahora un campo presente y vacío viaja como
+`deleteField()`. Verificado de punta a punta con una recarga completa contra
+Firestore.
+
+**El aspa para vaciar un campo**, que Dorel pidió señalando la de Android.
+`ClearInputDirective`, por tipo de campo y sin atributo que recordar, en 27
+componentes. Se dibuja como **fondo del propio campo** —cero elementos nuevos,
+cero riesgo de romper la maquetación de decenas de formularios— y en los campos
+de fecha va **a la izquierda del calendario**, en una banda contigua del mismo
+ancho. La aritmética está aparte y con tests, por la misma razón que el QR: un
+aspa que no se puede pulsar tiene la misma pinta que una buena.
+
+**La fianza ya se puede bajar a 0 borrando.** Al vaciar con retroceso se reponía
+sola al valor por defecto, porque el manejador trataba «vacío» como «ilegible».
+Son **tres** estados y no dos —sin tocar, con importe, y vacío— y hacía falta una
+bandera aparte. El mismo fallo estaba en el precio acordado, donde vaciar «540»
+para escribir «200» dejaba **540200**.
+
+**Nueve campos que no normalizaban lo que se teclea**, todos nacidos fuera del
+formulario al que pertenecen: el alta rápida de propietario («Daniel defoe»), el
+DNI del alta rápida de cliente, la aseguradora, los conductores de la edición de
+reserva, el DNI y el carné de los del detalle, el NIF del colaborador, y el
+domicilio y el NIF del destinatario de una factura. Ojo: **el asistente de
+creación no tiene conductores adicionales**; el campo que Dorel señaló es el de
+la pantalla de edición.
+
+**El lugar de recogida y el de devolución nacen escritos** («Oficinas Velto -
+Arganda», `APP_DEFAULTS.DEFAULT_RENTAL_LOCATION`) **y ahora se pueden editar**.
+Lo segundo es consecuencia de lo primero: hasta ese día no se podían corregir en
+ninguna parte, y era inocuo porque el campo solía ir vacío; con defecto puesto,
+**todas** las reservas llevan una frase impresa en el presupuesto, el
+justificante y el contrato. Van en la lista de campos impresos de
+`requiresNewContract()`.
+
+**El formulario de mantenimiento, reordenado**: primero «Nuevo recordatorio»
+—que es lo que de verdad hace algo: dispara el correo de las 9:00 y la fila de
+Eventos— y debajo «Realización (opcional)». Y un aviso ámbar al vaciar la fecha
+de una ITV o un seguro, porque eso **devuelve el coche a la flota en silencio**:
+es el reverso de la reversión del día 21 y no lo había visto nadie.
+
+**Y tres cosas de colocación**: el menú lateral reordenado por uso (dashboard,
+reservas, eventos, calendario, coches, clientes, informes, y detrás el resto),
+que gobierna también la barra del móvil desde el mismo array; la lista de
+Reservas abierta en **«Todas»**, porque una lista recortada no se lee como un
+filtro puesto sino como que no hay más; y el justificante y la factura movidos al
+**final** de la ficha de reserva, que es cuando el cliente los pide.
+
+⚠️ **Lo que conviene recordar de esta tanda**, porque va a volver: **vaciar un
+campo en pantalla no es vaciarlo en Firestore**. Era un caso raro mientras había
+que borrar a mano carácter a carácter; con un aspa en cada campo está a un toque,
+y cualquier servicio con campos opcionales editables lo tiene.
+
+**Y lo que encontró la revisión del propio cambio**, que es lo más instructivo:
+
+- **Cancelar `pointerdown` no cancela el `click`** —Pointer Events solo suprime
+  los eventos de compatibilidad de ratón—, y en un `input[type=date]` el `click`
+  es lo que abre la hoja del sistema. O sea que en el móvil el aspa habría
+  vaciado la fecha y abierto el calendario encima pidiendo la que se acababa de
+  quitar. **Probado con ratón no salía**: en escritorio el panel propio escucha
+  `mousedown`, que sí se suprime. Una comprobación con ratón no dice nada del
+  caso táctil cuando lo que se prueba es quién abre un control nativo.
+- **El desplazamiento del aspa seguía al tipo del campo y tiene que seguir a
+  quién pinta el calendario.** Con el dedo el icono lo pone el navegador, al
+  final de la caja de contenido, así que el relleno lo empuja hacia dentro: el
+  aspa acababa a su derecha y la zona pulsable montada encima.
+- **En Informes vaciar el filtro de fechas dejaba el campo en blanco y los
+  números en el rango viejo** — y en blanco para siempre, porque `[value]` es de
+  una vía y la expresión no cambiaba. Estaba así desde siempre; lo destapó poder
+  vaciar.
+- **`capitalizeWords()` degradaba las direcciones españolas**: «2ºA» salía
+  «2ºa» y «(MADRID)», «(madrid)», porque capitalizaba desde el carácter 0 y ahí
+  había un dígito o un paréntesis. Ahora empieza en la primera letra **con
+  caja** —ojo, «º» es letra para Unicode y no tiene caja—. Salió al aplicarla al
+  domicilio fiscal del destinatario de una factura, que es un documento que no
+  se puede corregir.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-Medido el 22 de septiembre al cerrar la sesión:
+Medido el 22 de septiembre al cerrar la sesión. **No te fíes de las cifras, que
+envejecen — vuelve a preguntarlo:**
 
-- **`develop` tiene 10 commits que NO están en producción.** Son los de § 2 bis.
-- **De esos, 3 están solo en local** (`7c1015b`, `a5dbf63`, `f1b7611`): los
-  arreglos de pantalla del día 22. Los otros 7 ya están en `origin/develop`.
-- **`origin/master` está en `0d32ba4`** (21 de septiembre).
-- ⚠️ **NO hace falta desplegar Cloud Functions.** Comprobado: de los 66 ficheros
-  que cambian entre producción y `develop`, **ninguno está en `functions/`**. Un
-  merge a `master` despliega hosting por CI y con eso está todo.
+```bash
+git log --oneline origin/master..HEAD     # lo que develop tiene y produccion no
+git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
+git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
+```
 
-Lo que hay que hacer para ponerlo en producción, en este orden: subir los 3
-commits locales, que Dorel lo revise, merge a `master`, y comprobar en el pie de
-la aplicación que el commit que se está ejecutando es el del merge — para eso se
-puso (`98436c5`).
+Ese día: **`develop` al día con `origin/develop`**, con **11 commits que NO están
+en producción** — los diez de § 2 bis más el de esta documentación —, y
+`origin/master` en `0d32ba4` (21 de septiembre).
+
+⚠️ **NO hace falta desplegar Cloud Functions.** Comprobado con el tercer comando:
+de los 66 ficheros que cambian entre producción y `develop`, **ninguno está en
+`functions/`**. Un merge a `master` despliega hosting por CI y con eso está todo.
+Es la excepción, no la regla: normalmente hay que mirarlo.
+
+Para ponerlo en producción: que Dorel lo revise, merge a `master`, y **comprobar
+en el pie de la aplicación que el commit que se está ejecutando es el del
+merge** — para eso se puso (`98436c5`). Ojo con la caché de Cloudflare: el
+dominio propio puede seguir sirviendo lo viejo un rato, y quien dice la verdad es
+`rentalcar-veltomobility.web.app`.
+
+⚠️ **Y una advertencia de historial: Dorel commitea y sube en paralelo mientras
+yo trabajo.** El día 22, tres commits míos que estaban sin subir aparecieron en
+`origin/develop` a mitad de sesión, y una documentación mía se subió con el
+mensaje «claude» tres segundos después de crearse. **Antes de enmendar nada,
+comprobar si ya está en el remoto** (`git log origin/develop..HEAD`): enmendar un
+commit ya publicado obliga a un force-push, y aquí eso no se hace.
 
 ---
 

@@ -38,11 +38,12 @@ import { toDate } from '@shared/utils/reservation-date.util';
 import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workflow.util';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { FormDraftService } from '@core/forms/form-draft.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-inspection-return',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, FormErrorComponent, ClearInputDirective],
   templateUrl: './inspection-return.component.html',
   styleUrl: './inspection-return.component.scss'
 })

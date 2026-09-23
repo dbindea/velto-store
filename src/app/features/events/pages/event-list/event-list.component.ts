@@ -37,6 +37,7 @@ import {
 import { can } from '@shared/utils/permissions.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { invoiceDeadlineFor } from '@shared/utils/invoice.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * Eventos próximos: todo lo que hay que hacer, mezclado y en una sola lista.
@@ -54,7 +55,7 @@ import { invoiceDeadlineFor } from '@shared/utils/invoice.util';
 @Component({
   selector: 'app-event-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, DatePickerDirective, ClearInputDirective],
   templateUrl: './event-list.component.html',
   styleUrl: './event-list.component.scss'
 })

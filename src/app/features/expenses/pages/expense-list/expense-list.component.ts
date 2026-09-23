@@ -13,6 +13,7 @@ import {
   ExpenseScope
 } from '@shared/models/expense.model';
 import { ExpenseTotals, totalsOf } from '@shared/utils/expense.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * Listado de gastos: lo que sale, frente al módulo de Pagos, que es lo que entra.
@@ -26,7 +27,7 @@ import { ExpenseTotals, totalsOf } from '@shared/utils/expense.util';
 @Component({
   selector: 'app-expense-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, ClearInputDirective],
   templateUrl: './expense-list.component.html',
   styleUrl: './expense-list.component.scss'
 })

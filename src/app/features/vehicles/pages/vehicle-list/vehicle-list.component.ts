@@ -14,11 +14,12 @@ import {
 } from '@shared/models/vehicle.model';
 import { getLowestPricePerDay } from '@shared/utils/pricing.util';
 import { TranslateService } from '@core/i18n/translate.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-vehicle-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, TranslatePipe],
+  imports: [CommonModule, RouterLink, FormsModule, TranslatePipe, ClearInputDirective],
   templateUrl: './vehicle-list.component.html',
   styleUrl: './vehicle-list.component.scss'
 })

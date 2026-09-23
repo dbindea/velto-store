@@ -37,6 +37,8 @@ import {
   ResumenEnvio,
   VerifactuService
 } from '@features/settings/services/verifactu.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
+import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 
 type Tab = 'operation' | 'users' | 'appearance' | 'compliance';
 
@@ -54,7 +56,7 @@ type Tab = 'operation' | 'users' | 'appearance' | 'compliance';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, ClearInputDirective],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })
@@ -102,6 +104,18 @@ export class SettingsComponent implements OnInit {
   newEmail = '';
   newName = '';
   newRole: UserRole = 'employee';
+
+  /**
+   * El nombre del usuario que se autoriza, capitalizado según se escribe.
+   *
+   * Es el nombre de una persona como cualquier otro de la aplicación, y se
+   * queda guardado en `authorizedUsers` — sale en esta misma lista y en la
+   * cabecera de quien entra. El correo **no** pasa por aquí: se guarda en
+   * minúsculas porque es el id del documento.
+   */
+  onNewNameInput(event: Event): void {
+    this.newName = transformInput(event.target as HTMLInputElement, capitalizeWords);
+  }
 
   readonly currentEmail = computed(() =>
     (this.auth.authorizedUser()?.email || '').toLowerCase()

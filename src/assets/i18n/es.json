@@ -608,15 +608,18 @@
       "titleRequired": "Escribe qué mantenimiento es"
     },
     "fields": {
+      "blockingNoDate": "Sin fecha, este recordatorio deja de salir en Eventos y el coche vuelve a poder alquilarse.",
       "cost": "Coste",
       "description": "Descripción",
       "invoice": "Factura / documento",
-      "nextDue": "Próxima",
-      "nextDueDate": "Próxima fecha",
-      "nextDueKm": "Próximo km",
+      "nextDue": "Nuevo recordatorio",
+      "nextDueDate": "Fecha del recordatorio",
+      "nextDueHint": "Cuándo hay que volver a hacerlo. Es lo que saca el aviso en Eventos y en el correo de la mañana.",
+      "nextDueKm": "Km del recordatorio",
       "notes": "Notas",
-      "performedAt": "Realización",
+      "performedAt": "Realización (opcional)",
       "performedAtDate": "Fecha realizado",
+      "performedAtHint": "Opcional: rellénalo solo si el mantenimiento ya está hecho.",
       "performedAtKm": "Km realizado",
       "priority": "Prioridad",
       "provider": "Proveedor",
@@ -1086,6 +1089,7 @@
         "agreedPrice": "precio",
         "depositAmount": "fianza",
         "initialPaymentAmount": "señal",
+        "locations": "lugar de entrega y devolución",
         "additionalDrivers": "conductores",
         "vatExempt": "IVA"
       },
@@ -1239,6 +1243,7 @@
     },
     "delivery": {
       "hint": "Suplemento por llevar y recoger el coche fuera de la zona de entrega gratuita. Importe sin IVA; déjalo vacío si no se cobra.",
+        "locationMismatch": "Has puesto suplemento por domicilio y el lugar sigue siendo el de la oficina: el contrato imprimirá las dos cosas. Cambia el lugar si el coche no sale de allí.",
       "pickupFee": "Entrega a domicilio",
       "returnFee": "Recogida a domicilio",
       "total": "Servicio a domicilio"

@@ -94,7 +94,11 @@
         align-items: center;
         justify-content: center;
         gap: 1.25rem;
-        background: #f6f8f8;
+        /* ⚠️ Se quedó en `#f6f8f8` —la página de antes del 23 de septiembre de
+           2026— y cada recarga en tema claro parpadeaba: pintaba casi blanco y
+           saltaba a gris en cuanto llegaba el CSS de la aplicación. Es
+           exactamente lo que avisa el comentario de arriba. */
+        background: #e1e6e7;
       }
       .dark .arranque { background: #0b0f0e; }
       .dark.theme-forest .arranque { background: #151d1b; }

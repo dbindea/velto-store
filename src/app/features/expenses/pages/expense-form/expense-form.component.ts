@@ -38,6 +38,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * Alta y edición de un gasto.
@@ -51,7 +52,7 @@ import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
 @Component({
   selector: 'app-expense-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './expense-form.component.html',
   styleUrl: './expense-form.component.scss'
 })

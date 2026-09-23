@@ -408,7 +408,9 @@
                       <input
                         type="text"
                         id="newCollaboratorName"
-                        [(ngModel)]="newCollaboratorName"
+                        [ngModel]="newCollaboratorName"
+                        (ngModelChange)="newCollaboratorName = $event"
+                        (input)="onNewCollaboratorNameInput($event)"
                         name="newCollaboratorName"
                         class="form-control"
                       />
@@ -505,7 +507,9 @@
               <input
                 type="text"
                 id="insurerName"
-                [(ngModel)]="formData.insurerName"
+                [ngModel]="formData.insurerName"
+                (ngModelChange)="formData.insurerName = $event"
+                (input)="onTextCapitalize($event, 'insurerName')"
                 name="insurerName"
                 class="form-control"
                 [placeholder]="'vehicles.insurance.insurerPlaceholder' | translate"

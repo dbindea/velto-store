@@ -163,7 +163,10 @@
           </div>
           <div class="field">
             <label for="name">{{ 'settings.users.name' | translate }}</label>
-            <input id="name" name="name" type="text" class="form-control" [(ngModel)]="newName" />
+            <input id="name" name="name" type="text" class="form-control"
+                   [ngModel]="newName"
+                   (ngModelChange)="newName = $event"
+                   (input)="onNewNameInput($event)" />
           </div>
           <div class="field">
             <label for="role">{{ 'settings.users.role' | translate }}</label>

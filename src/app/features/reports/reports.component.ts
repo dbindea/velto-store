@@ -30,6 +30,7 @@ import {
   vatRateOf,
   yearToDate
 } from '@shared/utils/analytics.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * Los meses del eje, en el idioma de la plataforma.
@@ -61,7 +62,7 @@ function mesesAbreviados(idioma: string): string[] {
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, TranslatePipe, LineChartComponent, DonutChartComponent, BarChartComponent, DatePickerDirective],
+  imports: [CommonModule, TranslatePipe, LineChartComponent, DonutChartComponent, BarChartComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.scss'
 })
@@ -79,13 +80,37 @@ export class ReportsComponent implements OnInit {
 
   // --- Filtro --------------------------------------------------------------
 
-  setFrom(v: string): void {
-    if (!v) return;
+  /**
+   * ⚠️ **Un campo vaciado se REPINTA con lo que el informe está usando.**
+   *
+   * El informe no admite un rango abierto —`DateRange` declara `from` y `to`
+   * como `Date`, y de ahí cuelgan la ocupación, la facturación mensual y el
+   * beneficio—, así que un vacío no se puede aceptar. Pero descartarlo a secas
+   * con `if (!v) return` dejaba algo peor: **el campo se quedaba en blanco y
+   * los números seguían saliendo del rango viejo**. El operador leía «Desde:
+   * (vacío)» como «sin límite inferior» mientras todas las cifras se
+   * calculaban desde el 1 de enero.
+   *
+   * Y se quedaba en blanco **para siempre**: `[value]` es un binding de una
+   * vía, así que Angular solo reescribe el DOM cuando la expresión cambia, y
+   * aquí no cambia — ni pulsando «Este año».
+   *
+   * Era invisible mientras la única forma de vaciar un `input[type=date]` era
+   * no tenerla; con el aspa está a un toque.
+   */
+  setFrom(v: string, campo: HTMLInputElement): void {
+    if (!v) {
+      campo.value = this.dateInput(this.range().from);
+      return;
+    }
     this.range.set({ ...this.range(), from: new Date(`${v}T00:00:00`) });
   }
 
-  setTo(v: string): void {
-    if (!v) return;
+  setTo(v: string, campo: HTMLInputElement): void {
+    if (!v) {
+      campo.value = this.dateInput(this.range().to);
+      return;
+    }
     const to = new Date(`${v}T00:00:00`);
     to.setHours(23, 59, 59, 999);
     this.range.set({ ...this.range(), to });

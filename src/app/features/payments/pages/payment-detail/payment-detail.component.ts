@@ -29,6 +29,7 @@ import {
   refundableAmount,
   refundedSoFar
 } from '@shared/utils/refund.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-payment-detail',
@@ -39,7 +40,8 @@ import {
     TranslatePipe,
     PaymentConceptPipe,
     ReceiptDialogComponent,
-    FormErrorComponent
+    FormErrorComponent,
+    ClearInputDirective
   ],
   templateUrl: './payment-detail.component.html',
   styleUrl: './payment-detail.component.scss'

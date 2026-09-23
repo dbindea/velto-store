@@ -608,15 +608,18 @@
       "titleRequired": "Scrie despre ce mentenanță este vorba"
     },
     "fields": {
+      "blockingNoDate": "Fără dată, acest memento nu mai apare în Evenimente și mașina poate fi închiriată din nou.",
       "cost": "Cost",
       "description": "Descriere",
       "invoice": "Factură / document",
-      "nextDue": "Următoarea",
-      "nextDueDate": "Data următoare",
-      "nextDueKm": "Km următor",
+      "nextDue": "Memento nou",
+      "nextDueDate": "Data mementoului",
+      "nextDueHint": "Când trebuie făcut din nou. Acesta este avizul care apare în Evenimente și în e-mailul de dimineață.",
+      "nextDueKm": "Km memento",
       "notes": "Note",
-      "performedAt": "Efectuare",
+      "performedAt": "Efectuare (opțional)",
       "performedAtDate": "Data efectuarii",
+      "performedAtHint": "Opțional: completează-l doar dacă mentenanța este deja făcută.",
       "performedAtKm": "Km la efectuare",
       "priority": "Prioritate",
       "provider": "Furnizor",
@@ -1086,6 +1089,7 @@
         "agreedPrice": "preț",
         "depositAmount": "garanție",
         "initialPaymentAmount": "avans",
+        "locations": "locul predării și al returnării",
         "additionalDrivers": "șoferi",
         "vatExempt": "TVA"
       },
@@ -1239,6 +1243,7 @@
     },
     "delivery": {
       "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
+        "locationMismatch": "Ai pus un supliment la domiciliu, iar locul este tot biroul: contractul le va tipări pe amândouă. Schimbă locul dacă mașina nu pleacă de acolo.",
       "pickupFee": "Livrare la adresă",
       "returnFee": "Ridicare de la adresă",
       "total": "Serviciu la domiciliu"

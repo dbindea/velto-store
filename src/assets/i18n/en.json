@@ -608,15 +608,18 @@
       "titleRequired": "Enter what the maintenance is"
     },
     "fields": {
+      "blockingNoDate": "With no date, this reminder stops showing in Events and the car can be rented again.",
       "cost": "Cost",
       "description": "Description",
       "invoice": "Invoice / document",
-      "nextDue": "Next due",
-      "nextDueDate": "Next due date",
-      "nextDueKm": "Next due km",
+      "nextDue": "New reminder",
+      "nextDueDate": "Reminder date",
+      "nextDueHint": "When it has to be done again. This is what raises the notice in Events and in the morning email.",
+      "nextDueKm": "Reminder km",
       "notes": "Notes",
-      "performedAt": "Performed",
+      "performedAt": "Performed (optional)",
       "performedAtDate": "Date performed",
+      "performedAtHint": "Optional: fill it in only if the maintenance has already been done.",
       "performedAtKm": "Km performed",
       "priority": "Priority",
       "provider": "Provider",
@@ -1086,6 +1089,7 @@
         "agreedPrice": "price",
         "depositAmount": "deposit",
         "initialPaymentAmount": "down payment",
+        "locations": "pick-up and return location",
         "additionalDrivers": "drivers",
         "vatExempt": "VAT"
       },
@@ -1239,6 +1243,7 @@
     },
     "delivery": {
       "hint": "Surcharge for delivering and collecting the car outside the free delivery area. Amount excluding VAT; leave empty if not charged.",
+        "locationMismatch": "You have set a door-to-door surcharge while the location is still the office: the contract will print both. Change the location if the car is not leaving from there.",
       "pickupFee": "Delivery to address",
       "returnFee": "Collection from address",
       "total": "Door-to-door service"

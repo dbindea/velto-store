@@ -12,11 +12,12 @@ import {
 } from '@shared/models/contract.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-contract-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, ClearInputDirective],
   templateUrl: './contract-list.component.html',
   styleUrl: './contract-list.component.scss'
 })

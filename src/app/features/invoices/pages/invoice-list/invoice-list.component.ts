@@ -24,11 +24,12 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { TranslateService } from '@core/i18n/translate.service';
 import { canRectify } from '@shared/utils/invoice.util';
 import { NotificationService } from '@core/notifications/notification.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-invoice-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, DatePickerDirective],
+  imports: [CommonModule, FormsModule, RouterLink, TranslatePipe, DatePickerDirective, ClearInputDirective],
   templateUrl: './invoice-list.component.html',
   styleUrl: './invoice-list.component.scss'
 })

@@ -14,11 +14,12 @@ import {
 } from '@shared/models/inspection.model';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-inspection-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, ClearInputDirective],
   templateUrl: './inspection-list.component.html',
   styleUrl: './inspection-list.component.scss'
 })

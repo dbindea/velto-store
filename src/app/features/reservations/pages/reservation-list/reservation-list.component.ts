@@ -13,11 +13,12 @@ import {
 import { TranslateService } from '@core/i18n/translate.service';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-reservation-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, ClearInputDirective],
   templateUrl: './reservation-list.component.html',
   styleUrl: './reservation-list.component.scss'
 })
@@ -46,9 +47,18 @@ export class ReservationListComponent implements OnInit {
     this.loadReservations();
   }
 
-  // Filters. Defaults to `reserved`: the day-to-day question is "what have I
-  // got booked", not "everything that ever happened".
-  statusFilter: ReservationStatus | 'all' = 'reserved';
+  /**
+   * Filtros. Arranca en **todas**, por decisión de Dorel del 23 de septiembre
+   * de 2026.
+   *
+   * ⚠️ **Estuvo en `reserved` y era peor de lo que parecía.** El argumento era
+   * «la pregunta del día a día es qué tengo reservado», pero una lista que se
+   * abre recortada no se lee como un filtro puesto: se lee como que no hay más
+   * reservas. Con una flota entregada y devolviendo, la pantalla decía «Ninguna
+   * reserva con este filtro» teniendo trabajo dentro. Se abre entera y filtra
+   * quien quiera filtrar.
+   */
+  statusFilter: ReservationStatus | 'all' = 'all';
   searchTerm = '';
 
   // Status options for filter

@@ -81,6 +81,7 @@ Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar d
 - `pricing.util.spec.ts` — que el IVA se **extrae** y no se suma, que `base + vat` cuadra al céntimo, y que el descuento de fidelidad y el precio acordado se acumulan sin fundirse
 - `functions/src/redsys.spec.ts` — la firma `HMAC_SHA256_V1` contra un vector de referencia congelado
 - `functions/src/contracts/qr.spec.ts` — que el QR del contrato **se lee de verdad**: rasteriza los rectángulos que se dibujan y los descifra con `jsqr`. Un símbolo mal montado tiene la misma pinta que uno bueno
+- `clear-input.util.spec.ts` — dónde se puede pulsar para vaciar un campo, y sobre todo que esa zona **no invade la del calendario**. Misma razón que el QR: un aspa que no se puede pulsar tiene la misma pinta que una buena
 
 El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
 
@@ -391,6 +392,16 @@ entregado —una prórroga es el caso más normal del negocio— y la de **recog
 no, porque el coche ya salió y la fecha real está en el parte de entrega. Un
 único «¿se puede editar esta reserva?» tendría que contestar lo más restrictivo
 para todos, y entonces no se podría prorrogar nada.
+
+⚠️ **El lugar de entrega y el de devolución se editan desde el 23 de septiembre
+de 2026** (`locations`), y hasta ese día **no se podían corregir en ninguna
+parte**. Mientras el asistente los dejaba casi siempre vacíos era inocuo —lo que
+no se rellenaba no se imprimía—, pero ese mismo día nacieron con un texto por
+defecto (`APP_DEFAULTS.DEFAULT_RENTAL_LOCATION`), así que **todas** las reservas
+nuevas llevan una frase impresa en el presupuesto, el justificante y el contrato,
+y el único arreglo de un error habría sido la consola de Firestore. Van en la
+lista de campos **impresos** de `requiresNewContract()`, como debe ser: un
+contrato firmado que manda al cliente a otro sitio ya no dice la verdad.
 
 ⚠️ **El dinero se decide mirando `payments`, no `paymentSummary`.** La copia de
 la reserva se queda vieja y **responde `0` en vez de fallar**: con ella, una
@@ -1209,6 +1220,20 @@ la declara su propio SCSS.
   contaba como ingreso pero no para `remainingPaid`, así que **la reserva se cobraba
   entera y no se podía cerrar nunca** (D-5).
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
+  ⚠️ **Y un campo numérico VACÍO no es un campo ilegible.** Confundirlos hacía la
+  fianza imposible de bajar a 0: el manejador decía «lo que no se pueda
+  interpretar, vuelve al valor por defecto», y un `input[type=number]` vaciado
+  emite `null`, que `parseFloat(String(null ?? ''))` convierte en `NaN` — o sea
+  ilegible, o sea de vuelta a los 150 €. Borrando con retroceso el importe se
+  reponía solo en cuanto desaparecía el último dígito, y para poner 0 había que
+  seleccionar y sobrescribir (23 de septiembre de 2026). **Son tres estados y no
+  dos**: sin tocar (manda el defecto del coche), con un importe puesto, y vacío
+  —que es una decisión del operador y hace falta una bandera aparte para
+  distinguirlo, porque en `depositOverride` el `null` ya significa «sin tocar»—.
+  El mismo patrón estaba en el precio acordado, donde vaciar «540» para escribir
+  «200» dejaba **540200**; allí vacío significa «no hay precio acordado», o sea
+  la tarifa, y no 0. Al tocar un campo numérico con valor por defecto,
+  comprueba los tres estados.
 - **La señal también puede ser 0, y entonces la reserva nace CONFIRMADA.**
   `buildInitialPayment()` en `payment-summary.util.ts` la crea `waived`, no
   `pending`. ⚠️ **«0,00 € pendiente» es una deuda que nadie puede cobrar**, y
@@ -1249,6 +1274,41 @@ fila incobrable que impide dar la reserva por pagada.
 comprobaciones de disponibilidad lanzaban `'Vehicle no longer available…'` en inglés duro,
 así que la capa de avisos no lo distinguía de un fallo cualquiera y ofrecía «Reintentar» —
 que iba a fallar igual, porque hay que cambiar de coche o de fechas.
+
+### Cómo se escribe lo que el operador teclea
+
+`text-case.util.ts` es la única autoridad, y separa dos cosas que no se
+parecen:
+
+- **Un nombre se capitaliza** (`capitalizeWords`): personas, marcas,
+  poblaciones, direcciones, razones sociales, proveedores, lugares de recogida.
+  Respeta guiones, barras y apóstrofos —«Madrid-Barajas», «O'Brien»— y deja en
+  minúscula las preposiciones internas, que es la regla del español: «Arganda
+  **del** Rey», no «Arganda Del Rey».
+- **Una referencia va en MAYÚSCULAS y sin espacios** (`toReference`): matrícula,
+  bastidor, DNI, carné de conducir, NIF. No es texto libre, es un
+  identificador que después hay que cuadrar con un papel de fuera.
+
+⚠️ **Y las dos pasan por `transformInput()`, nunca por una asignación a
+`input.value`.** Asignarlo directamente manda el cursor al final en cada tecla,
+así que corregir un dígito en medio de una matrícula te salta al final y la
+siguiente pulsación cae en el sitio equivocado. En un móvil, donde el cursor se
+coloca tocando, esos campos se sienten rotos.
+
+⚠️ **Esto no es cosmética de formulario: casi todo acaba impreso.** El lugar de
+recogida sale en el presupuesto y en el contrato; el nombre de un conductor
+adicional, en la cláusula que autoriza a quien conduce; el domicilio del
+destinatario, en una factura que **no se puede editar ni borrar**; el NIF, en el
+registro que se manda a la AEAT. Un «juan garcía» en minúsculas sale así en el
+PDF que el cliente firma.
+
+⚠️ **El fallo que se repite es el campo que nace fuera del formulario.** Los
+nueve que faltaban el 23 de septiembre de 2026 eran todos así: el alta rápida de
+propietario dentro de la ficha de vehículo, el alta rápida de cliente dentro del
+asistente, la aseguradora, los conductores de la pantalla de edición, el NIF del
+colaborador, el del destinatario de una factura. Se escribieron aparte del
+formulario al que pertenecen y se quedaron sin la regla. **Al añadir un campo de
+nombre o de referencia, la pregunta es cuál de las dos funciones le toca.**
 
 ### Cómo se llaman los ficheros
 
@@ -1438,6 +1498,35 @@ regla: **solo reconstruye objetos planos de verdad**. Cualquier cosa con prototi
 
 Aun así, **lo que viaja dentro de un `arrayUnion()` tiene que nacer sin `undefined`**: el
 centinela no se limpia, así que el objeto se construye ya limpio (`buildReservationNote()`).
+
+### Y por eso VACIAR un campo no es lo mismo que borrarlo
+
+⚠️ **Limpiar `undefined` y `null` antes de un `updateDoc` tiene una consecuencia
+que no se ve hasta que alguien intenta vaciar algo: la clave desaparece del
+payload, y un `updateDoc` sin la clave DEJA INTACTO lo que hubiera en
+Firestore.** Es decir, el formulario manda «sin fecha», el limpiador quita la
+clave por el camino y el documento conserva la de antes. Al recargar, vuelve.
+
+Es exactamente lo que Dorel reportó el 23 de septiembre de 2026 —«la fecha no me
+la permite borrar»—, y el fallo **no estaba en la pantalla**: el campo se vaciaba
+perfectamente. Y no era una fecha: eran los **diez** campos opcionales del
+mantenimiento, más otros tres en Gastos, todos igual y todos en silencio.
+
+La forma correcta ya estaba en el repositorio, en `vehicle.service.ts`: un campo
+**presente y vacío** viaja como `deleteField()`, que es lo único que Firestore
+entiende como «quita esto»; uno **ausente** se deja en paz, que es lo que un
+`Partial<…>` significa. Hoy lo hacen `vehicle-maintenance.service.ts` y
+`expense.service.ts`, cada uno con su lista de campos vaciables.
+
+⚠️ **El centinela se añade DESPUÉS de limpiar, nunca dentro**, por lo mismo que
+el resto: `deleteField()` es un objeto con propiedades propias y un limpiador que
+lo recorriera lo dejaría en un mapa vacío — Firestore escribiría `{}` en vez de
+borrar.
+
+⚠️ **Y esto pasó de raro a diario con el aspa.** Vaciar un campo entero a mano
+era algo que casi nadie hacía; desde que hay un aspa en cada campo, está a un
+toque. Si añades un servicio con campos opcionales editables, esta comprobación
+va en la lista.
 
 ## i18n
 
@@ -2488,6 +2577,13 @@ Cuatro decisiones, y las cuatro importan:
 - ⚠️ **Solo abre la zona del icono** (los 34 px de la derecha), que es exactamente lo que
   hace el navegador. Abriéndose con cualquier clic, taparía media pantalla cada vez que
   alguien va a teclear una fecha.
+  ⚠️ **Y desde el 23 de septiembre de 2026 esos 34 px tienen vecina**: los 34
+  siguientes son el aspa que vacía el campo. Son dos bandas **contiguas**, y
+  miden lo mismo a propósito (`ZONA_ICONO_PX` = `ZONA_ASPA_PX` = 34) porque si
+  midieran distinto una se comería parte del icono de la otra. Una escucha
+  `mousedown` y la otra `pointerdown`; el límite entre ambas es cerrado por un
+  lado y abierto por el otro, o un píxel vaciaría el campo **y** abriría el
+  calendario.
 
 Tres trampas que costaron un rato y que volverían a costarlo:
 
@@ -2500,6 +2596,94 @@ Tres trampas que costaron un rato y que volverían a costarlo:
 - **`offsetTop` se mide contra el antepasado POSICIONADO**, que es el panel y no la
   columna. Centrar la hora funcionaba en el campo de hora sola y se iba 250 px en el de
   fecha **y** hora, que es el que casi no se mira.
+
+### El aspa que vacía un campo
+
+Es el **tercer** tratamiento global de un control nativo, después del chevron de
+los `select` y del calendario, y el más extendido: 27 componentes, todos los
+campos de texto, correo, teléfono y URL, y los de fecha y hora.
+[`ClearInputDirective`](src/app/shared/directives/clear-input.directive.ts), con
+la aritmética aparte y probada en
+[`clear-input.util.ts`](src/app/shared/utils/clear-input.util.ts).
+
+La pidió Dorel el 23 de septiembre de 2026 señalando la de Android. Y hacía
+falta por algo más que comodidad: **los campos que más se reescriben son los que
+traen un valor puesto** —el lugar de recogida, una fecha que se completó por
+error— y en un `input[type=date]` **no hay forma de vaciar desde el móvil**: la
+hoja del sistema solo sabe elegir otro día. Era literalmente el fallo que Dorel
+reportó en el mantenimiento.
+
+⚠️ **No envuelve el campo ni le mete un `<button>` al lado**, y esa decisión
+sostiene todo lo demás. Son decenas de campos en rejillas, dentro de `<label>`
+que los envuelven, en filas de flex con el `flex: 1` puesto **en el input**:
+cualquier elemento nuevo o contenedor intercalado rompe la maquetación de unos
+cuantos y no la de los demás, que es la peor forma de romperla. El aspa se
+dibuja como **fondo del propio campo**, igual que el chevron y el calendario.
+
+⚠️ **El aspa y el calendario comparten UNA SOLA declaración `background-image`,
+de dos capas** (`styles.scss`). Dos reglas con `!important` no se suman: gana
+una y la otra desaparece, así que declaradas por separado el aspa **borraba el
+calendario**. Es justo el tipo de trampa que esta sección existe para avisar.
+
+⚠️ **Cancelar `pointerdown` NO cancela el `click`, y darlo por hecho habría roto
+todos los campos de fecha del móvil.** Pointer Events solo suprime los eventos
+**de compatibilidad de ratón** —`mousedown` y `mouseup`—; `click`, `auxclick` y
+`contextmenu` quedan expresamente fuera. Y eso importa porque en un
+`input[type=date]` **el `click` es la activación que abre la hoja del sistema**:
+tocar el aspa vaciaba la fecha y acto seguido se abría el calendario pidiendo la
+que el operador acababa de quitar. Hace falta cancelar **también** el `click`,
+con una bandera puesta en el `pointerdown` — para cuando llega el `click` el
+campo ya está vacío, así que volver a preguntar por la zona contesta que no.
+
+⚠️ **Y no se vio en escritorio**, que es donde se probó primero: allí
+`picker-custom` esconde el indicador del navegador y el panel propio escucha
+`mousedown`, que sí queda suprimido. No había nada que se abriera. La regla
+general: **una comprobación con ratón no dice nada del caso táctil** cuando lo
+que se está probando es quién abre un control nativo. Es la misma frontera que
+ya obligó a poner un media query al `@supports` de los `select`.
+
+⚠️ **El desplazamiento del aspa sigue a QUIÉN pinta el calendario, no al tipo
+del campo.** La aplicación solo dibuja el suyo en escritorio; con el dedo manda
+el del navegador, que vive **al final de la caja de contenido** — o sea que el
+`padding-right` lo empuja hacia dentro en vez de dejarlo donde estaba. Mirando
+solo el tipo, los 3,5 rem metían el icono del sistema 56 px hacia dentro y el
+aspa acababa a su derecha, con la zona pulsable montada encima. Cada plataforma
+los coloca al revés, y es correcto: en escritorio el calendario al borde y el
+aspa a su izquierda; en el móvil al revés, porque ahí el sitio del calendario no
+lo decidimos nosotros.
+
+⚠️ **En un campo de fecha del móvil, el foco NO vuelve al campo tras vaciar.**
+En los demás sí, para que el teclado siga abierto y se pueda escribir otra cosa;
+pero en un campo de fecha no hay teclado que mantener y enfocar **abre el
+selector** —en Safari basta el foco—, así que cancelar el `click` no bastaría.
+
+⚠️ **`cursor: pointer` va en su propia clase, no en el campo entero.** El
+calendario sí lo pone en todo el `input` —allí el campo entero se pulsa—, pero
+aquí se teclea: un campo de texto con cursor de mano dice que no se puede
+escribir en él. La directiva enciende `--hover` solo sobre la banda, y el
+`mousemove` que lo decide corre **fuera de Angular**.
+
+⚠️ **Y hay un efecto que no es de la directiva: un campo que ANTES no se podía
+vaciar ahora sí.** Salió en dos sitios. El filtro de fechas de Informes
+descartaba el vacío con un `if (!v) return`, así que el campo se quedaba en
+blanco —y `[value]`, al ser binding de una vía, **no lo repintaba nunca**—
+mientras todos los números seguían saliendo del rango viejo. Y en el
+mantenimiento, vaciar no llegaba a Firestore (ver `deleteField()` arriba). Al
+añadir el aspa a una pantalla, la pregunta es **qué pasa cuando ese campo queda
+vacío**, no si el aspa funciona.
+
+⚠️ **No es un control más:** no entra en el orden de tabulación y no lo anuncia
+ningún lector de pantalla. Con teclado ya se vacía un campo seleccionándolo
+todo, y una parada de tabulación por campo haría más lento justo a quien navega
+con teclado.
+
+⚠️ **El buscador global se queda fuera a propósito**: ya tiene una × que
+**cierra la modal**, y dos aspas idénticas a pocos píxeles con significados
+distintos son peores que una sola.
+
+⚠️ **Y vaciar en pantalla no es vaciar en Firestore** — ver la nota de
+`deleteField()` en «Firestore: `undefined` está prohibido». Es lo que hacía que
+la fecha del mantenimiento «no se dejara borrar».
 
 Con los `<select>` **eso dejó de ser cierto el 7 de septiembre de 2026**. Chrome 135+ trae
 el *customizable select*: con `appearance: base-select` la lista sale del sistema y entra
@@ -2883,6 +3067,90 @@ pantalla y medir con `getComputedStyle()`.
 declaración entera. Las once semánticas se usaron durante meses sin existir y los badges
 de estado salían sin fondo. Si añades una variable nueva, decláralas en los dos bloques.
 
+#### Las cuatro superficies del tema claro
+
+⚠️ **Página, hueco, tarjeta y campo. Las cuatro tienen que distinguirse a ojo.**
+En el tema claro no se distinguían: la página era `--gray-50` y la tarjeta
+blanca —**1,06:1**, o sea el mismo color— y el campo era blanco **también**, así
+que lo único que separaba un formulario de su tarjeta era una raya de 1 px.
+Dorel lo dijo usándolo en el ordenador, que es donde se usa el claro: «todo es
+demasiado blanqueado». Corregido el 23 de septiembre de 2026.
+
+| | Claro | Qué es |
+|---|---|---|
+| `--bg-page` | `--gray-200` | la página. **Solo la usa el `body`** |
+| `--bg-card` | `#FFFFFF` | la tarjeta, lo único blanco |
+| `--bg-main` | `--gray-100` | el **hueco hundido** dentro de una tarjeta |
+| `--bg-input` | `#EAF4F1` | el campo, con tinte |
+
+⚠️ **`--bg-main` NO es la página, y creerlo costó una iteración entera.** Además
+del `body`, ese valor pinta **87 sitios** que son superficies hundidas dentro de
+una tarjeta: cabeceras de sección, miniaturas de foto, botones de subir,
+cabeceras de modal, botones secundarios. Al oscurecerlo para oscurecer el fondo
+se oscurecieron los 87 de golpe y el panel se quedó apagado. Por eso la página
+tiene ahora variable propia. **Antes de tocar un color de superficie, mira
+cuántos sitios lo usan y para qué.**
+
+⚠️ **Un relleno gris liso significa «deshabilitado».** El primer intento puso el
+campo en `--gray-200`, gris puro, y la respuesta fue inmediata: «los input parece
+que no tienen vida». Es la convención universal, no una manía. El tinte teal de
+la marca lo devuelve al lado de lo activo sin subir el contraste — y el campo
+relleno sigue siendo la convención de Material: la caja se ve porque tiene
+superficie propia, no porque alguien haya dibujado su contorno.
+
+Eso deja los cuatro temas contando lo mismo, que antes no pasaba: **en los tres
+oscuros el campo ya se separaba de la tarjeta** (`--gray-800` sobre
+`--gray-900`), subiendo de tono en vez de bajar. El claro era el raro.
+
+⚠️ **Cambiar el relleno obliga a recalcular el borde.** `--border-input` estaba
+calculado contra un campo **blanco** (3,03:1) y sobre cualquier relleno con
+cuerpo se queda corto — con `--gray-200` daba 2,40:1, por debajo del 3:1 que
+WCAG 1.4.11 pide al contorno de un control. Y el arreglo se pasó al otro lado:
+`--gray-600` daba 5,09:1, un contorno que pesaba más que el contenido de la
+caja. Hoy `--gray-500`, **3,32:1**.
+
+⚠️ **`--bg-hover` es un TINTE, no una superficie.** Es translúcido a propósito,
+para componerse sobre lo que haya debajo; escrito como `background:` a secas
+**borra** la superficie del elemento. Doce sitios lo hacían —incluido el
+`.btn-secondary` global— y con la página casi blanca no se notaba: al oscurecer
+el fondo, una tarjeta se volvía gris entera al pasar el ratón. Si el elemento
+tiene fondo propio, se superpone:
+`background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`.
+
+⚠️ **Y el contorno de un control es `--border-input`, nunca `--border-color`.**
+Aquel es el de las **separaciones** y puede ser sutil; este tiene que llegar a
+3:1 contra el relleno del campo. Los dos filtros de Informes se quedaron **sin
+borde ninguno** por usar el equivocado el día que el relleno dejó de ser blanco.
+
+⚠️ **Las copias en duro del color se quedan viejas, y hay dos.** La miniatura de
+cada tema en Ajustes › Apariencia y la pantalla de arranque de `index.html`
+repiten los valores a mano —la primera porque dibuja los cuatro temas a la vez,
+la segunda porque tiene que pintar antes de que llegue el CSS— y las dos llevan
+un comentario que avisa de mantenerlas al día. Las dos se quedaron atrás igual:
+la miniatura del claro enseñaba el tema **anterior** justo mientras se elegía
+tema, y cada recarga parpadeaba de casi blanco a gris. Al tocar `:root` o
+`.dark`, esos dos van en la misma pasada.
+
+⚠️ **Lo que decide si un control está bien pintado NO es leer el SCSS**, porque
+el color llega por tres caminos —la variable, la copia encapsulada del
+componente, y la regla global con su `!important`—. Se mide: recorrer las rutas
+y comparar el fondo pintado de cada `input`, `select` y `textarea` contra
+`--bg-input`, subiendo al primer antepasado **opaco** cuando el campo es
+transparente (los buscadores lo son: el borde y el fondo los pone su
+`.search-box`). Así salieron los **doce** controles de filtro que seguían
+blancos, repartidos por seis listas, que ninguna búsqueda de texto agrupaba.
+
+⚠️ **Y al mover una superficie hay que medir el TEXTO que se apoya en ella**, no
+solo la superficie. Es la comprobación que se olvidó: se midió texto en el campo
+y en la tarjeta, y no sobre la página — donde `--text-muted` habría caído de
+5,35:1 a **3,65:1**, por debajo del mínimo, en el pie, en los estados vacíos y en
+las dos pantallas públicas. El recorrido que lo caza resuelve, para cada nodo de
+texto, el primer antepasado con fondo **opaco** y compara contra 4,5:1 —o 3:1 si
+es texto grande— en todas las rutas.
+
+El único par que sigue por debajo es el turquesa de marca sobre blanco, **3,10:1**,
+que es anterior a todo esto y es la concesión que la identidad ya tenía hecha.
+
 ⚠️ **Un campo de formulario se delimita con su BORDE, no con su relleno**, y ese
 borde tiene su propia variable: `--border-input`. WCAG 1.4.11 pide **3:1** para
 el contorno de un control, y un relleno 3:1 más claro que una tarjeta casi negra
@@ -2987,6 +3255,22 @@ layout). Los cierres escritos enlace a enlace se olvidan: el menú lateral los t
 barra inferior no, así que pulsar «Reservas» con el menú «Más» abierto navegaba y dejaba el
 panel flotando. Colgado de `NavigationEnd` da igual por dónde se salga. Los `(click)` de
 cada opción **se quedan igualmente**: pulsar la pantalla en la que ya estás no navega.
+
+⚠️ **El orden del menú lo decide UN solo array** (`allMenuItems`, en el layout), y
+la barra inferior del móvil sale de filtrarlo por `showInMobile`. Dos listas
+serían dos fuentes de verdad para la misma prioridad, y la del móvil se quedaría
+vieja la primera vez que alguien reordenara solo la lateral. El orden vigente es
+de Dorel, del 23 de septiembre de 2026, y va de lo que más se abre a lo que
+menos: **dashboard, reservas, eventos, calendario, coches, clientes, informes**, y
+detrás el resto. Antes empezaba por calendario y dejaba coches y clientes por
+debajo de Pagos.
+
+⚠️ **La lista de Reservas se abre en «Todas»**, desde el mismo día. Estuvo
+arrancando en `reserved` con el argumento de que «la pregunta del día a día es
+qué tengo reservado», y era peor de lo que parecía: **una lista que se abre
+recortada no se lee como un filtro puesto, se lee como que no hay más reservas**.
+Con la flota entregada y devolviendo, la pantalla decía «Ninguna reserva con este
+filtro» teniendo trabajo dentro.
 
 ## Continuidad: copias, emergencia y una sola cuenta
 

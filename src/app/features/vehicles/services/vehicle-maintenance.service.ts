@@ -6,6 +6,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -214,9 +215,66 @@ export class VehicleMaintenanceService {
     return ref.id;
   }
 
+  /**
+   * Los campos que se pueden **quedar vacíos** en un mantenimiento ya guardado.
+   *
+   * Son todos los opcionales del modelo. La lista está escrita a mano y no
+   * derivada del tipo porque no hay forma de preguntarle a TypeScript en
+   * tiempo de ejecución qué propiedades llevaban `?`; el compilador sí avisa si
+   * alguna deja de existir, que es lo que importa.
+   */
+  private static readonly VACIABLES = [
+    'description',
+    'performedAtKm',
+    'performedAtDate',
+    'nextDueKm',
+    'nextDueDate',
+    'cost',
+    'provider',
+    'invoiceUrl',
+    'invoicePath',
+    'notes'
+  ] as const satisfies readonly (keyof VehicleMaintenance)[];
+
+  /**
+   * ⚠️ **Vaciar un campo NO era borrarlo, y por eso «la fecha no se deja
+   * borrar».** Lo contó Dorel el 23 de septiembre de 2026 con la fecha de
+   * realización, que se rellena sola al pulsar «completar»; pero el fallo no
+   * estaba en la pantalla —el campo se vaciaba perfectamente— sino aquí:
+   * `cleanData()` descarta `undefined` y `null`, y un `updateDoc` sin la clave
+   * **deja intacto lo que hubiera en Firestore**. O sea que el formulario
+   * mandaba «sin fecha», la clave desaparecía por el camino y el documento
+   * conservaba la de antes. Al recargar, la fecha volvía.
+   *
+   * Y no eran las dos fechas: son los **diez** campos opcionales. Vaciar el
+   * coste, el proveedor, los kilómetros o las notas de un registro ya guardado
+   * fallaba exactamente igual y en silencio.
+   *
+   * Un campo **presente y vacío** viaja ahora como `deleteField()`, que es lo
+   * único que Firestore entiende como «quita esto». Uno **ausente** se deja en
+   * paz: este método recibe `Partial<…>` y otras llamadas mandan solo lo que
+   * tocan.
+   *
+   * ⚠️ **El centinela se añade DESPUÉS de limpiar, nunca dentro**, igual que en
+   * `vehicle.service.ts`: `deleteField()` es un objeto con propiedades propias
+   * y un limpiador que recorra con `Object.entries()` lo dejaría en un mapa
+   * vacío, que Firestore escribiría como `{}` en vez de borrar. Es lo que
+   * corrompió los timestamps de los contratos (F-4).
+   */
   async updateMaintenance(id: string, data: Partial<VehicleMaintenance>): Promise<void> {
     const docRef = doc(this.firestore, `vehicleMaintenance/${id}`);
-    const payload = this.cleanData({ ...data, updatedAt: serverTimestamp() });
+    const payload: Record<string, unknown> = this.cleanData({
+      ...data,
+      updatedAt: serverTimestamp()
+    });
+
+    for (const campo of VehicleMaintenanceService.VACIABLES) {
+      const valor = data[campo];
+      if (campo in data && (valor === undefined || valor === null || valor === '')) {
+        payload[campo] = deleteField();
+      }
+    }
+
     await updateDoc(docRef, payload);
   }
 

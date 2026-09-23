@@ -1,5 +1,5 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
-import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -83,6 +83,7 @@ import {
 } from '@shared/utils/additional-driver.util';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { depositAvailable } from '@shared/utils/deposit.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -93,7 +94,9 @@ import { depositAvailable } from '@shared/utils/deposit.util';
     PaymentConceptPipe,
     ReservationTimelineComponent,
     ReservationNotesPanelComponent, FormErrorComponent, RouterLink,
-    ReceiptDialogComponent],
+    ReceiptDialogComponent,
+    ClearInputDirective
+  ],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
 })
@@ -254,6 +257,34 @@ export class ReservationDetailComponent implements OnInit {
     this.driverForm.fullName = transformInput(
       event.target as HTMLInputElement,
       capitalizeWords
+    );
+  }
+
+  /**
+   * El documento y el carné, en mayúsculas y sin espacios según se escriben.
+   *
+   * ⚠️ **`buildAdditionalDriver()` ya los normaliza al guardar, y aun así hacen
+   * falta aquí.** Lo que normaliza el util es lo que se escribe en Firestore;
+   * lo que el operador tiene delante mientras teclea es otra cosa, y salía
+   * «X9400726m». Sobre un DNI eso no es un detalle estético: el campo de al
+   * lado detecta **duplicados comparando la cadena en mayúsculas**, así que dos
+   * grafías del mismo documento se leen distinto en pantalla y el operador no
+   * puede comprobar a ojo lo que la aplicación sí distingue.
+   *
+   * Misma convención que la matrícula, el VIN y el documento del cliente:
+   * `toReference()` es la única autoridad sobre esto.
+   */
+  onDriverDocumentInput(event: Event): void {
+    this.driverForm.documentNumber = transformInput(
+      event.target as HTMLInputElement,
+      toReference
+    );
+  }
+
+  onDriverLicenseInput(event: Event): void {
+    this.driverForm.drivingLicenseNumber = transformInput(
+      event.target as HTMLInputElement,
+      toReference
     );
   }
 

@@ -26,7 +26,7 @@ import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
-import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import {
   canCreateReservationForClient,
@@ -38,13 +38,14 @@ import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import { ReservationService, VehicleAvailabilityResult } from '@features/reservations/services/reservation.service';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { PermissionsService } from '@core/auth/permissions.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 
 @Component({
   selector: 'app-reservation-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './reservation-create.component.html',
   styleUrl: './reservation-create.component.scss',
 })
@@ -74,9 +75,25 @@ export class ReservationCreateComponent implements OnInit {
   returnDate = toDateString(getDefaultReturnDateTime());
   returnTime = toTimeString(getDefaultReturnDateTime());
 
-  // Location fields
-  pickupLocation = '';
-  returnLocation = '';
+  /**
+   * Dónde se entrega y dónde se devuelve.
+   *
+   * Nacen **escritos**: casi todas las reservas salen y vuelven a la oficina,
+   * y el operador solo los toca cuando no es así —para eso tienen el aspa—.
+   *
+   * ⚠️ **Los dos con la MISMA cadena, y eso no es pereza.** En cuanto se
+   * teclea la primera letra en la recogida, la devolución se sobrescribe con
+   * lo tecleado mientras nadie la haya tocado (ver `onPickupLocationChange`).
+   * Con dos textos por defecto distintos, el de la devolución duraría hasta la
+   * primera pulsación y desaparecería sin que nadie lo hubiera decidido.
+   *
+   * ⚠️ **El defecto se pone UNA vez, aquí, y no al leer.** Resolverlo en un
+   * getter —«si está vacío, devuelve el de por defecto»— haría que vaciar el
+   * campo lo repusiera solo: exactamente el fallo que la fianza tenía tres
+   * campos más abajo.
+   */
+  pickupLocation = APP_DEFAULTS.DEFAULT_RENTAL_LOCATION;
+  returnLocation = APP_DEFAULTS.DEFAULT_RENTAL_LOCATION;
 
   // Availability results
   availabilityResults: VehicleAvailabilityResult[] = [];
@@ -105,11 +122,30 @@ export class ReservationCreateComponent implements OnInit {
   finalPriceOverride: number | null = null;
 
   /**
+   * El operador ha vaciado el campo del precio.
+   *
+   * Solo gobierna lo que se **pinta**: el precio sigue siendo el de tarifa
+   * mientras no se teclee otro. Ver `netPriceInput()`.
+   */
+  priceCleared = false;
+
+  /**
    * Deposit agreed with the customer. `null` means "use the vehicle's
    * default". 0 is a real answer: regular customers are often not asked for a
    * deposit, and then `depositWaivedReason` becomes mandatory.
    */
   depositOverride: number | null = null;
+
+  /**
+   * El operador ha vaciado el campo de fianza.
+   *
+   * ⚠️ **No se puede decir con `depositOverride` solo.** Ahí `null` ya
+   * significa «no lo ha tocado, manda el defecto del coche», y vaciar es lo
+   * contrario: es tocarlo para decir que no se pide nada. Sin esta bandera las
+   * dos cosas son el mismo valor, y el campo se repone solo al borrarlo. Ver
+   * `onDepositChange()`.
+   */
+  depositCleared = false;
   depositWaivedReason = '';
 
   // Notes
@@ -215,7 +251,7 @@ export class ReservationCreateComponent implements OnInit {
     this.selectedClient = null;
     // New dates mean a new calculation; an agreed price for the old one no
     // longer applies.
-    this.finalPriceOverride = null;
+    this.resetFinalPrice();
 
     try {
       this.availabilityResults = await this.reservationService.searchAvailability(
@@ -236,7 +272,7 @@ export class ReservationCreateComponent implements OnInit {
   selectVehicle(result: VehicleAvailabilityResult): void {
     if (!result.available) return;
     if (this.selectedVehicle?.vehicleId !== result.vehicleId) {
-      this.finalPriceOverride = null;
+      this.resetFinalPrice();
     }
     this.selectedVehicle = result;
     this.currentStep = 'client';
@@ -258,7 +294,7 @@ export class ReservationCreateComponent implements OnInit {
     // the calculated price. An agreed price measured against the previous
     // baseline no longer means what the operator intended.
     if (this.selectedClient?.id !== client.id) {
-      this.finalPriceOverride = null;
+      this.resetFinalPrice();
     }
     this.selectedClient = client;
     this.searchResults = [];
@@ -299,7 +335,7 @@ export class ReservationCreateComponent implements OnInit {
       this.clientService.getClientById(clientId).subscribe((client) => {
         if (client) {
           // Same reasoning as selectClient(): a new baseline for the price.
-          this.finalPriceOverride = null;
+          this.resetFinalPrice();
           this.selectedClient = client;
           this.showQuickClientForm = false;
           this.quickClient = { fullName: '', phone: '', email: '', documentNumber: '' };
@@ -470,6 +506,21 @@ export class ReservationCreateComponent implements OnInit {
     this.quickClient.fullName = transformInput(input, capitalizeWords);
   }
 
+  /**
+   * El documento del alta rápida, en mayúsculas y sin espacios.
+   *
+   * Es el mismo campo que en la ficha de cliente, donde sí se normalizaba: el
+   * alta rápida se escribió aparte y se quedó sin ello. Un documento tecleado
+   * «x1234567l» acaba impreso así en el contrato, y es el dato con el que se
+   * busca a esa persona la próxima vez.
+   */
+  onQuickClientDocumentInput(event: Event): void {
+    this.quickClient.documentNumber = transformInput(
+      event.target as HTMLInputElement,
+      toReference
+    );
+  }
+
   // Computed values for summary
   get pickupDateTime(): Date {
     return combineDateAndTime(this.pickupDate, this.pickupTime);
@@ -499,8 +550,8 @@ export class ReservationCreateComponent implements OnInit {
    * What the guard actually wants to know is whether the operator has typed in
    * the return field, not whether it currently holds text.
    */
-  onPickupLocationChange(value: string): void {
-    const formatted = capitalizeWords(value);
+  onPickupLocationChange(event: Event): void {
+    const formatted = transformInput(event.target as HTMLInputElement, capitalizeWords);
     this.pickupLocation = formatted;
     if (!this.returnLocationEdited) {
       this.returnLocation = formatted;
@@ -508,15 +559,24 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   /**
-   * Return location. Bound to `(ngModelChange)`, which emits the new value —
-   * not a DOM Event.
+   * Return location.
    *
    * Clearing the field resumes mirroring the pickup location, so an operator
    * who empties it by mistake is not left having to retype the whole thing.
+   *
+   * ⚠️ **Los dos lugares pasan por `transformInput()` y no por
+   * `capitalizeWords()` a secas.** Colgados de `(ngModelChange)` nadie tocaba
+   * `input.value`, así que el `writeValue` de `NgModel` reescribía el campo
+   * con un valor distinto al del DOM y **el cursor saltaba al final en cada
+   * pulsación**. Con el campo vacío casi no se notaba, porque se escribe de
+   * izquierda a derecha; desde que nacen con un texto puesto, corregir en
+   * medio es el caso normal. Es el mismo fallo que `transformInput()` vino a
+   * resolver en las matrículas.
    */
-  onReturnLocationInput(value: string): void {
+  onReturnLocationInput(event: Event): void {
+    const value = transformInput(event.target as HTMLInputElement, capitalizeWords);
     this.returnLocationEdited = !!value;
-    this.returnLocation = capitalizeWords(value);
+    this.returnLocation = value;
   }
 
   /**
@@ -584,6 +644,46 @@ export class ReservationCreateComponent implements OnInit {
    */
   get netPrice(): number {
     return this.priceBreakdown.netPrice;
+  }
+
+  /**
+   * Lo que se pinta en el campo del precio acordado.
+   *
+   * ⚠️ **Mismo caso que la fianza, y aquí se notaba menos porque el valor al
+   * que volvía era creíble.** Al borrar el último dígito, `ngModel` reescribía
+   * el precio de tarifa en el hueco y lo tecleado a continuación se pegaba
+   * detrás: vaciar «540» para poner «200» dejaba 540200. Vacío se queda
+   * vacío.
+   *
+   * ⚠️ **Y aquí vaciar significa otra cosa que en la fianza**: no es un precio
+   * de 0 —eso sería regalar el alquiler—, es «no hay precio acordado», o sea
+   * la tarifa con su descuento. Por eso `finalPriceOverride` se queda en `null`
+   * y no en 0.
+   */
+  get netPriceInput(): number | null {
+    return this.priceCleared ? null : this.netPrice;
+  }
+
+  /**
+   * Se cobra desplazamiento y el lugar sigue diciendo «oficina».
+   *
+   * ⚠️ **Lo crea el valor por defecto, y por eso el aviso nace con él.** Cuando
+   * el campo salía vacío, quien cobraba entrega a domicilio veía el hueco y
+   * escribía la dirección; con «Oficinas Velto - Arganda» ya escrito, el
+   * contrato puede salir cobrando 30 € por llevar el coche **y diciendo que se
+   * entrega en la oficina**. Las dos líneas se imprimen, una al lado de la
+   * otra, y es justo la clase de contradicción que un cliente discute con
+   * razón.
+   *
+   * No se impide —hay quien paga el desplazamiento de vuelta y recoge en
+   * oficina, y entonces el par es correcto—: se dice. Cada trayecto se mira
+   * contra su propio lugar.
+   */
+  get lugarSinTocarConDomicilio(): boolean {
+    const defecto = APP_DEFAULTS.DEFAULT_RENTAL_LOCATION;
+    const entrega = Number(this.deliveryPickupFee) > 0 && this.pickupLocation === defecto;
+    const recogida = Number(this.deliveryReturnFee) > 0 && this.returnLocation === defecto;
+    return entrega || recogida;
   }
 
   /** What the customer actually pays: net plus VAT. */
@@ -673,13 +773,20 @@ export class ReservationCreateComponent implements OnInit {
    * the label said "sin IVA" made the two disagree by 21 %.
    */
   onNetPriceChange(value: unknown): void {
-    const parsed = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+    if (value === null || value === undefined || value === '') {
+      this.priceCleared = true;
+      this.finalPriceOverride = null;
+      return;
+    }
+    this.priceCleared = false;
+    const parsed = typeof value === 'number' ? value : parseFloat(String(value));
     this.finalPriceOverride =
       !isFinite(parsed) || parsed < 0 ? null : Math.round(parsed * 100) / 100;
   }
 
   resetFinalPrice(): void {
     this.finalPriceOverride = null;
+    this.priceCleared = false;
   }
 
   /**
@@ -719,9 +826,26 @@ export class ReservationCreateComponent implements OnInit {
   /**
    * The deposit actually agreed. Editable, and legitimately 0: known customers
    * are not asked for one.
+   *
+   * Un campo **vaciado** vale 0, que es lo que dice la pantalla: no se pide
+   * fianza. Y como cualquier otro 0, exige motivo para poder guardar.
    */
   get deposit(): number {
+    if (this.depositCleared) return 0;
     return this.depositOverride ?? this.defaultDeposit;
+  }
+
+  /**
+   * Lo que se pinta en el campo, que **no** es lo mismo que `deposit`.
+   *
+   * ⚠️ **Un campo vacío tiene que quedarse vacío**, y por eso hay dos getters
+   * donde parecía bastar uno. Devolviendo aquí el 0 de `deposit`, `ngModel`
+   * escribiría un «0» en el hueco en cuanto se borra el último dígito, y el
+   * siguiente número se teclearía detrás: quien vacía «150» para escribir
+   * «200» acabaría con 0200. Vacío es un estado del campo, no un importe.
+   */
+  get depositInput(): number | null {
+    return this.depositCleared ? null : this.deposit;
   }
 
   /** True when this rental carries no deposit, which needs a recorded reason. */
@@ -750,16 +874,38 @@ export class ReservationCreateComponent implements OnInit {
 
   /**
    * Bound to `(ngModelChange)`, which emits the value — not a DOM Event.
-   * Anything unparseable falls back to the vehicle default rather than
-   * writing a nonsense deposit.
+   *
+   * ⚠️ **Vaciar el campo NO es escribir algo ilegible, y confundir las dos
+   * cosas hacía la fianza imposible de bajar a 0.** Esto decía «lo que no se
+   * pueda interpretar, vuelve al valor por defecto», y un campo numérico vacío
+   * emite `null`: `parseFloat(String(null ?? ''))` es `NaN`, o sea ilegible, o
+   * sea de vuelta a los 150 €. Consecuencia, contada por Dorel el 23 de
+   * septiembre de 2026: borrando con retroceso, el importe se reponía solo en
+   * cuanto desaparecía el último dígito, y para poner 0 había que seleccionar
+   * el contenido y sobrescribirlo.
+   *
+   * Son tres estados y no dos, y por eso hace falta la bandera: **sin tocar**
+   * (manda el defecto del coche), **con un importe puesto**, y **vacío**, que
+   * es una decisión del operador —no pido fianza— y vale 0 con su motivo
+   * obligatorio, como cualquier otro 0.
+   *
+   * Lo ilegible de verdad —un texto que el navegador no acepta como número, un
+   * importe negativo— sí sigue cayendo al defecto.
    */
   onDepositChange(value: unknown): void {
-    const parsed = typeof value === 'number' ? value : parseFloat(String(value ?? ''));
+    if (value === null || value === undefined || value === '') {
+      this.depositCleared = true;
+      this.depositOverride = null;
+      return;
+    }
+    this.depositCleared = false;
+    const parsed = typeof value === 'number' ? value : parseFloat(String(value));
     this.depositOverride = !isFinite(parsed) || parsed < 0 ? null : Math.round(parsed * 100) / 100;
   }
 
   resetDeposit(): void {
     this.depositOverride = null;
+    this.depositCleared = false;
     this.depositWaivedReason = '';
   }
 }

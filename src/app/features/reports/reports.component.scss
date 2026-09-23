@@ -52,7 +52,12 @@
 .filter-control {
   padding: 0.375rem 0.625rem;
   background: var(--bg-input);
-  border: 1px solid var(--border-color);
+  // ⚠️ El contorno de un control es `--border-input`, no `--border-color`.
+  // Aquel es el de las separaciones y puede ser sutil; este tiene que llegar a
+  // 3:1 contra el relleno del campo (WCAG 1.4.11). Desde que el campo dejó de
+  // ser blanco los dos valores coincidían —#E1E6E7 sobre #E1E6E7, 1,00:1— y
+  // estos dos filtros se quedaron **sin borde ninguno**.
+  border: 1px solid var(--border-input);
   border-radius: 8px;
   color: var(--text-primary);
   font-size: 0.85rem;

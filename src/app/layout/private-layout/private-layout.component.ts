@@ -98,14 +98,31 @@ export class PrivateLayoutComponent {
    * mismo sitio del que los leen los guards de ruta: si el menú y el guard
    * tuvieran cada uno su lista, el día que discrepen alguien vería una entrada
    * que al pulsarla le devuelve al dashboard.
+   *
+   * ⚠️ **El orden es el de Dorel, y va de lo que más se abre a lo que menos**
+   * (23 de septiembre de 2026): reservas antes que calendario, y los informes
+   * subidos por delante del dinero del día a día. Antes empezaba por calendario
+   * y dejaba los coches y los clientes detrás de Pagos.
+   *
+   * ⚠️ **Y este array manda también sobre la barra inferior del móvil**, que
+   * sale de filtrarlo por `showInMobile`. Es a propósito: dos listas serían dos
+   * fuentes de verdad para la misma prioridad, y la del móvil se quedaría vieja
+   * la primera vez que alguien reordenara solo la lateral.
    */
   private readonly allMenuItems: MenuItem[] = [
     { path: '/dashboard', iconClass: 'pi pi-home', labelKey: 'menu.dashboard', showInMobile: true },
-    { path: '/calendar', iconClass: 'pi pi-calendar', labelKey: 'menu.calendar', showInMobile: true },
-    { path: '/events', iconClass: 'pi pi-bell', labelKey: 'menu.events', showInMobile: true },
     { path: '/reservations', iconClass: 'pi pi-book', labelKey: 'menu.reservations', showInMobile: true },
+    { path: '/events', iconClass: 'pi pi-bell', labelKey: 'menu.events', showInMobile: true },
+    { path: '/calendar', iconClass: 'pi pi-calendar', labelKey: 'menu.calendar', showInMobile: true },
     { path: '/vehicles', iconClass: 'pi pi-car', labelKey: 'menu.vehicles', showInMobile: false },
     { path: '/clients', iconClass: 'pi pi-users', labelKey: 'menu.clients', showInMobile: false },
+    {
+      path: '/reports',
+      iconClass: 'pi pi-chart-line',
+      labelKey: 'menu.reports',
+      showInMobile: false,
+      permission: ROUTE_PERMISSIONS['reports']
+    },
     { path: '/payments', iconClass: 'pi pi-credit-card', labelKey: 'menu.payments', showInMobile: true },
     {
       path: '/expenses',
@@ -130,13 +147,6 @@ export class PrivateLayoutComponent {
     },
     { path: '/contracts', iconClass: 'pi pi-file-pdf', labelKey: 'menu.contracts', showInMobile: false },
     { path: '/inspections', iconClass: 'pi pi-check-square', labelKey: 'menu.inspections', showInMobile: false },
-    {
-      path: '/reports',
-      iconClass: 'pi pi-chart-line',
-      labelKey: 'menu.reports',
-      showInMobile: false,
-      permission: ROUTE_PERMISSIONS['reports']
-    },
     {
       path: '/settings',
       iconClass: 'pi pi-cog',

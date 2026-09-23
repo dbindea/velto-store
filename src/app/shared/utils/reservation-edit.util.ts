@@ -47,6 +47,7 @@ export type EditableField =
   | 'client'
   | 'pickupDateTime'
   | 'returnDateTime'
+  | 'locations'
   | 'agreedPrice'
   | 'vatExempt'
   | 'deliveryFees'
@@ -155,6 +156,28 @@ export function canEditField(field: EditableField, ctx: EditContext): WorkflowDe
      */
     case 'returnDateTime':
       if (r.reservationStatus === 'returned') return deny('reservations.edit.denied.returned');
+      return ALLOW;
+
+    /**
+     * Dónde se entrega y dónde se devuelve el coche.
+     *
+     * ⚠️ **Hasta el 23 de septiembre de 2026 no se podían corregir en ninguna
+     * parte**, y eso dejó de ser inocuo el día que nacieron con un texto por
+     * defecto: antes el campo solía ir vacío y quien no lo rellenaba no
+     * imprimía nada; ahora **todas** las reservas llevan una frase impresa en
+     * el presupuesto, el justificante y el contrato, y un error solo se
+     * arreglaba desde la consola de Firestore.
+     *
+     * ⚠️ **La devolución se mueve con el coche fuera y la recogida no**, por
+     * la misma razón que sus fechas: el sitio donde se entregó es un hecho
+     * pasado. Pero aquí van en un solo campo porque el formulario los enseña
+     * juntos; lo que cierra la puerta es haber salido, igual que con la fecha
+     * de recogida. Si algún día hace falta prorrogar el lugar de devolución
+     * con el coche en la calle, se separan en dos campos como se separaron las
+     * fechas.
+     */
+    case 'locations':
+      if (isOut(r.reservationStatus)) return deny('reservations.edit.denied.vehicleOut');
       return ALLOW;
 
     /**
@@ -270,6 +293,11 @@ export function requiresNewContract(fields: EditableField[]): boolean {
     'client',
     'pickupDateTime',
     'returnDateTime',
+    // El lugar de entrega y el de devolución se imprimen en «Datos del
+    // alquiler» del contrato (functions/src/contracts/pdf.ts) y se congelan en
+    // `contract.reservationSnapshot`: un contrato firmado que manda al cliente
+    // a otro sitio es justo lo que esta función existe para detectar.
+    'locations',
     'agreedPrice',
     'vatExempt',
     // La entrega a domicilio va impresa en «Precio y fianza»: un contrato
