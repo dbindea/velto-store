@@ -74,11 +74,86 @@
     </div>
   </div>
 
+  <!--
+    ⚠️ **El recordatorio va ANTES que la realización, y no es una preferencia
+    de maquetación.** Dorel lo pidió el 23 de septiembre de 2026 diciendo que
+    el formulario era ambiguo, y la ambigüedad venía del orden: la primera
+    sección era «Realización», así que la pantalla parecía preguntar por algo
+    ya hecho cuando lo que se abre casi siempre es lo contrario —programar la
+    ITV, apuntar la próxima revisión—. La realización es el caso menos
+    frecuente y se rellena después, si es que se rellena.
+
+    Y es lo que de verdad hace algo: la fecha del recordatorio es la que
+    dispara el correo de las 9:00 y la que saca la fila en Eventos. Una
+    realización sin recordatorio no avisa de nada.
+  -->
+  <div class="form-section">
+    <h3 class="section-title">
+      <i class="pi pi-bell"></i>
+      {{ 'maintenance.fields.nextDue' | translate }}
+    </h3>
+    <p class="section-hint">{{ 'maintenance.fields.nextDueHint' | translate }}</p>
+    <div class="form-grid">
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.nextDueDate' | translate }}</span>
+        <input
+          type="date"
+          class="form-control"
+          name="nextDueDate"
+          [(ngModel)]="form.nextDueDate"
+        />
+      </label>
+
+      <label class="field">
+        <span class="label">{{ 'maintenance.fields.nextDueKm' | translate }}</span>
+        <input
+          type="number"
+          min="0"
+          class="form-control"
+          name="nextDueKm"
+          [(ngModel)]="form.nextDueKm"
+        />
+      </label>
+    </div>
+
+    <!--
+      ⚠️ **Vaciar esta fecha en una ITV o en un seguro desbloquea el coche**, y
+      hasta hoy no podía pasar porque no había forma de vaciarla. Sin fecha,
+      `blockingMaintenance()` no lo mira (vehicle-availability.util.ts), las
+      consultas que filtran por `nextDueDate` lo dejan fuera, y el registro
+      desaparece de Eventos, del panel y del correo de las 9:00. O sea que el
+      coche vuelve a la flota **sin que nada avise**, que es justo lo contrario
+      de la reversión del 21 de septiembre de 2026 que Dorel pidió para no
+      tener que acordarse él.
+
+      No se impide —a veces la ITV se pasa a otro registro y este sobra—, se
+      dice. Es la misma regla que el resto de la aplicación: un permiso
+      denegado o un paso saltado se explican, no se esconden.
+    -->
+    @if (avisaDesbloqueo) {
+      <p class="field-hint warn">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ 'maintenance.fields.blockingNoDate' | translate }}
+      </p>
+    }
+  </div>
+
+  <!--
+    La realización, opcional y dicho con todas las letras.
+
+    ⚠️ **Se llega aquí con la fecha ya puesta** cuando se entra por el botón de
+    completar (`prefillCompleted`), y hasta el 23 de septiembre de 2026 no había
+    forma de quitarla: un `<input type="date">` con valor no se vacía ni con el
+    teclado del móvil ni con la hoja del sistema, que solo sabe elegir otro día.
+    El aspa de `ClearInputDirective` es lo que lo resuelve, y por eso el campo
+    no necesita ningún botón propio.
+  -->
   <div class="form-section">
     <h3 class="section-title">
       <i class="pi pi-check-circle"></i>
       {{ 'maintenance.fields.performedAt' | translate }}
     </h3>
+    <p class="section-hint">{{ 'maintenance.fields.performedAtHint' | translate }}</p>
     <div class="form-grid">
       <label class="field">
         <span class="label">{{ 'maintenance.fields.performedAtDate' | translate }}</span>
@@ -121,35 +196,6 @@
           name="provider"
           [(ngModel)]="form.provider"
           (input)="onProviderInput($event)"
-        />
-      </label>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <h3 class="section-title">
-      <i class="pi pi-clock"></i>
-      {{ 'maintenance.fields.nextDue' | translate }}
-    </h3>
-    <div class="form-grid">
-      <label class="field">
-        <span class="label">{{ 'maintenance.fields.nextDueDate' | translate }}</span>
-        <input
-          type="date"
-          class="form-control"
-          name="nextDueDate"
-          [(ngModel)]="form.nextDueDate"
-        />
-      </label>
-
-      <label class="field">
-        <span class="label">{{ 'maintenance.fields.nextDueKm' | translate }}</span>
-        <input
-          type="number"
-          min="0"
-          class="form-control"
-          name="nextDueKm"
-          [(ngModel)]="form.nextDueKm"
         />
       </label>
     </div>

@@ -23,6 +23,7 @@ import { Payment } from '@shared/models/payment.model';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { roundMoney } from '@shared/utils/payment-summary.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import {
   chargesVat,
   deliveryFeeBreakdown,
@@ -41,6 +42,7 @@ import {
 } from '@shared/utils/reservation-edit.util';
 import { firstValueFrom } from 'rxjs';
 import { first } from 'rxjs/operators';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * Modificar una reserva ya creada.
@@ -59,7 +61,7 @@ import { first } from 'rxjs/operators';
 @Component({
   selector: 'app-reservation-edit',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './reservation-edit.component.html',
   styleUrl: './reservation-edit.component.scss'
 })
@@ -92,6 +94,8 @@ export class ReservationEditComponent implements OnInit {
     clientId: '',
     pickupDateTime: '',
     returnDateTime: '',
+    pickupLocation: '',
+    returnLocation: '',
     agreedNetPrice: null as number | null,
     depositRequired: 0,
     depositWaivedReason: '',
@@ -144,6 +148,11 @@ export class ReservationEditComponent implements OnInit {
       clientId: r.clientId,
       pickupDateTime: toInput(r.pickupDateTime),
       returnDateTime: toInput(r.returnDateTime),
+      // Sin respaldo al texto por defecto: aquí se corrige lo que hay, y
+      // rellenarlo solo haría que abrir la pantalla escribiera un lugar en una
+      // reserva antigua que no lo tenía.
+      pickupLocation: r.pickupLocation ?? '',
+      returnLocation: r.returnLocation ?? '',
       // ⚠️ Solo se precarga si de verdad hubo un precio acordado a mano. Con el
       // neto de la tarifa metido aquí, guardar sin tocar nada congelaría ese
       // importe como «acordado» y el descuento de fidelidad dejaría de
@@ -361,6 +370,8 @@ export class ReservationEditComponent implements OnInit {
         returnDateTime: this.form.returnDateTime
           ? new Date(this.form.returnDateTime)
           : undefined,
+        pickupLocation: this.form.pickupLocation,
+        returnLocation: this.form.returnLocation,
         agreedNetPrice: this.form.agreedNetPrice,
         depositRequired: Number(this.form.depositRequired) || 0,
         depositWaivedReason: this.form.depositWaivedReason.trim() || undefined,
@@ -447,6 +458,50 @@ export class ReservationEditComponent implements OnInit {
 
   addDriver(): void {
     this.drivers = [...this.drivers, { fullName: '' }];
+  }
+
+  /**
+   * Nombre y documento de un conductor autorizado, normalizados al teclearlos.
+   *
+   * ⚠️ **Aquí no había nada, y es la pantalla desde la que más se tocan.** El
+   * asistente no tiene conductores y la ficha sí los normaliza, así que esta
+   * era la única de las tres donde un «adrian bindea» con su «x9400726m» se
+   * quedaba tal cual — y de aquí salen impresos al contrato, bajo el
+   * arrendatario y como las personas que la cláusula 2 autoriza a conducir.
+   *
+   * El conductor se pasa entero en vez del índice: la lista se reconstruye al
+   * añadir y al quitar (`[...this.drivers]`), y un índice capturado en la
+   * plantilla puede referirse a otra fila para cuando llega aquí.
+   */
+  onDriverNameInput(event: Event, driver: AdditionalDriver): void {
+    driver.fullName = transformInput(event.target as HTMLInputElement, capitalizeWords);
+  }
+
+  onDriverDocumentInput(event: Event, driver: AdditionalDriver): void {
+    driver.documentNumber = transformInput(event.target as HTMLInputElement, toReference);
+  }
+
+  /**
+   * Los lugares, capitalizados como en el asistente.
+   *
+   * ⚠️ **Aquí NO hay espejo de recogida a devolución**, al revés que al crear.
+   * Allí los dos campos nacen vacíos a la vez y copiar ahorra teclear; aquí se
+   * viene a corregir uno de los dos, y sobrescribir el otro «de paso» cambiaría
+   * un dato que nadie pidió cambiar — y `locations` está entre los campos
+   * impresos, así que pediría rehacer el contrato por ello.
+   */
+  onPickupLocationInput(event: Event): void {
+    this.form.pickupLocation = transformInput(
+      event.target as HTMLInputElement,
+      capitalizeWords
+    );
+  }
+
+  onReturnLocationInput(event: Event): void {
+    this.form.returnLocation = transformInput(
+      event.target as HTMLInputElement,
+      capitalizeWords
+    );
   }
 
   removeDriver(index: number): void {

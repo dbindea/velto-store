@@ -198,74 +198,6 @@
     </div>
 
     <!--
-      Booking confirmation (N-2). Deliberately its own card, ABOVE the contract
-      and visually distinct: it is a proof of booking, not a step of the signing
-      flow, and it must never read as a substitute for the contract.
-    -->
-    @if (canIssueBookingConfirmation) {
-      <div class="detail-card booking-confirmation-card" style="grid-column: 1 / -1; margin-top: 1rem;">
-        <div class="card-header">
-          <i class="pi pi-verified"></i>
-          <span>{{ 'reservations.bookingConfirmation.title' | translate }}</span>
-        </div>
-        <div class="card-content">
-          <p class="booking-confirmation-hint">
-            {{ 'reservations.bookingConfirmation.hint' | translate }}
-          </p>
-          <div class="contract-actions">
-            <button
-              class="btn-secondary"
-              type="button"
-              [disabled]="generatingBookingConfirmation"
-              (click)="generateBookingConfirmation()">
-              @if (generatingBookingConfirmation) { <i class="pi pi-spin pi-spinner"></i> }
-              @else { <i class="pi pi-file-pdf"></i> }
-              {{ 'reservations.bookingConfirmation.generate' | translate }}
-            </button>
-            @if (bookingConfirmationUrl) {
-              <a class="btn-secondary" [href]="bookingConfirmationStorageUrl" target="_blank" rel="noopener">
-                <i class="pi pi-external-link"></i>
-                {{ 'reservations.bookingConfirmation.open' | translate }}
-              </a>
-              <button class="btn-secondary" type="button" (click)="copyBookingConfirmationLink()">
-                <i class="pi pi-copy"></i>
-                {{ 'reservations.bookingConfirmation.copyLink' | translate }}
-              </button>
-            }
-          </div>
-          @if (bookingConfirmationError) {
-            <small class="action-blocked">{{ bookingConfirmationError | translate }}</small>
-          }
-        </div>
-      </div>
-    }
-
-    <!--
-      Facturar. Es un atajo, no un paso del workflow: la factura se emite
-      cuando el cliente la pide, en cualquier momento y también meses después,
-      así que no depende del estado de la reserva ni lo cambia.
-
-      Solo lleva al formulario con los datos ya rellenos; emitir es una decisión
-      que se toma allí, con el aviso de que no se podrá deshacer.
-    -->
-    @if (canIssueInvoice) {
-      <div class="detail-card" style="grid-column: 1 / -1; margin-top: 1rem;">
-        <div class="card-header">
-          <i class="pi pi-receipt"></i>
-          <span>{{ 'invoices.title' | translate }}</span>
-        </div>
-        <div class="card-content">
-          <div class="contract-actions">
-            <a class="btn-secondary" [routerLink]="['/invoices/new']" [queryParams]="{ reservation: reservation.id }">
-              <i class="pi pi-plus"></i>
-              {{ 'invoices.issue' | translate }}
-            </a>
-          </div>
-        </div>
-      </div>
-    }
-
-    <!--
       Contract — one block, not two. There used to be a second card up in the
       grid whose whole content was this same status, which meant the page said
       "contrato" twice and the operator had to look in two places to learn one
@@ -1152,14 +1084,18 @@
                   <label class="required" for="ddoc">{{ 'reservations.drivers.document' | translate }}</label>
                   <input id="ddoc" type="text" class="form-control" name="ddoc"
                          [class.is-invalid]="driverSubmitted && driverProblems['documentNumber']"
-                         [(ngModel)]="driverForm.documentNumber" />
+                         [ngModel]="driverForm.documentNumber"
+                         (ngModelChange)="driverForm.documentNumber = $event"
+                         (input)="onDriverDocumentInput($event)" />
                   <app-form-error [problems]="driverProblems['documentNumber']" [show]="driverSubmitted" />
                 </div>
                 <div class="form-group">
                   <label class="required" for="dlic">{{ 'reservations.drivers.license' | translate }}</label>
                   <input id="dlic" type="text" class="form-control" name="dlic"
                          [class.is-invalid]="driverSubmitted && driverProblems['drivingLicenseNumber']"
-                         [(ngModel)]="driverForm.drivingLicenseNumber" />
+                         [ngModel]="driverForm.drivingLicenseNumber"
+                         (ngModelChange)="driverForm.drivingLicenseNumber = $event"
+                         (input)="onDriverLicenseInput($event)" />
                   <app-form-error [problems]="driverProblems['drivingLicenseNumber']" [show]="driverSubmitted" />
                 </div>
               </div>
@@ -1184,6 +1120,87 @@
         }
       </div>
     </div>
+
+    <!--
+      Justificante de reserva y factura, los dos al final.
+
+      ⚠️ **Estaban arriba, justo debajo de las fechas, y ahí estorbaban.** Son
+      papeles que el cliente pide **al final** —«mándame algo que acredite la
+      reserva», «esto necesito facturarlo»— y ninguno de los dos es un paso del
+      alquiler: no cambian el estado de la reserva ni habilitan la entrega. Con
+      dos botones de generar PDF en lo primero que se ve, lo prioritario —el
+      contrato, la entrega, el cobro— quedaba por debajo. Decisión de Dorel del
+      23 de septiembre de 2026.
+
+      Siguen siendo dos tarjetas y no una: la primera es informativa y la
+      segunda emite un documento fiscal que **no se puede deshacer**.
+
+      El justificante deliberadamente su propia tarjeta y visualmente distinto
+      del contrato: acredita una reserva, no es un paso de la firma, y no puede
+      leerse nunca como un sustituto del contrato (N-2).
+    -->
+    @if (canIssueBookingConfirmation) {
+      <div class="detail-card booking-confirmation-card" style="margin-top: 1rem;">
+        <div class="card-header">
+          <i class="pi pi-verified"></i>
+          <span>{{ 'reservations.bookingConfirmation.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <p class="booking-confirmation-hint">
+            {{ 'reservations.bookingConfirmation.hint' | translate }}
+          </p>
+          <div class="contract-actions">
+            <button
+              class="btn-secondary"
+              type="button"
+              [disabled]="generatingBookingConfirmation"
+              (click)="generateBookingConfirmation()">
+              @if (generatingBookingConfirmation) { <i class="pi pi-spin pi-spinner"></i> }
+              @else { <i class="pi pi-file-pdf"></i> }
+              {{ 'reservations.bookingConfirmation.generate' | translate }}
+            </button>
+            @if (bookingConfirmationUrl) {
+              <a class="btn-secondary" [href]="bookingConfirmationStorageUrl" target="_blank" rel="noopener">
+                <i class="pi pi-external-link"></i>
+                {{ 'reservations.bookingConfirmation.open' | translate }}
+              </a>
+              <button class="btn-secondary" type="button" (click)="copyBookingConfirmationLink()">
+                <i class="pi pi-copy"></i>
+                {{ 'reservations.bookingConfirmation.copyLink' | translate }}
+              </button>
+            }
+          </div>
+          @if (bookingConfirmationError) {
+            <small class="action-blocked">{{ bookingConfirmationError | translate }}</small>
+          }
+        </div>
+      </div>
+    }
+
+    <!--
+      Facturar. Es un atajo, no un paso del workflow: la factura se emite
+      cuando el cliente la pide, en cualquier momento y también meses después,
+      así que no depende del estado de la reserva ni lo cambia.
+
+      Solo lleva al formulario con los datos ya rellenos; emitir es una decisión
+      que se toma allí, con el aviso de que no se podrá deshacer.
+    -->
+    @if (canIssueInvoice) {
+      <div class="detail-card" style="margin-top: 1rem;">
+        <div class="card-header">
+          <i class="pi pi-receipt"></i>
+          <span>{{ 'invoices.title' | translate }}</span>
+        </div>
+        <div class="card-content">
+          <div class="contract-actions">
+            <a class="btn-secondary" [routerLink]="['/invoices/new']" [queryParams]="{ reservation: reservation.id }">
+              <i class="pi pi-plus"></i>
+              {{ 'invoices.issue' | translate }}
+            </a>
+          </div>
+        </div>
+      </div>
+    }
 
     <!-- Internal notes: the last block on the page, because it is the only one
          that is neither the rental nor the money — it is the operator talking

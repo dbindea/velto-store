@@ -141,6 +141,7 @@ const DYNAMIC_KEY_SETS = {
     'client',
     'pickupDateTime',
     'returnDateTime',
+    'locations',
     'agreedPrice',
     'vatExempt',
     'deliveryFees',

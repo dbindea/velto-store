@@ -157,3 +157,31 @@ describe('capitalizeWords · preposiciones', () => {
     expect(capitalizeWords('san lorenzo de el escorial')).toBe('San Lorenzo de El Escorial');
   });
 });
+
+/**
+ * Lo que sale al capitalizar una dirección española de verdad.
+ *
+ * ⚠️ Estos casos salieron revisando el **domicilio fiscal del destinatario de
+ * una factura**, que es contenido obligatorio (art. 6.1.c) de un documento que
+ * no se puede editar ni borrar. Hasta el 23 de septiembre de 2026 la función
+ * degradaba la única mayúscula de la palabra cuando esta no empezaba por letra.
+ */
+describe('capitalizeWords · direcciones', () => {
+  it('no se come la letra del piso', () => {
+    expect(capitalizeWords('calle mayor 3, 2ºA')).toBe('Calle Mayor 3, 2ºA');
+    expect(capitalizeWords('AVDA DE ESPAÑA 12, 4ºB')).toBe('Avda de España 12, 4ºB');
+  });
+
+  it('capitaliza dentro de un paréntesis en vez de apagarlo', () => {
+    expect(capitalizeWords('28850 TORREJON (MADRID)')).toBe('28850 Torrejon (Madrid)');
+    expect(capitalizeWords('(ARGANDA DEL REY)')).toBe('(Arganda del Rey)');
+  });
+
+  it('deja intacta una palabra sin ninguna letra con caja', () => {
+    // El ordinal «º» es letra para Unicode (categoría Lo) pero no tiene caja:
+    // buscar `\p{L}` en vez de `\p{Lu}|\p{Ll}` volvería a dar «2ºa».
+    expect(capitalizeWords('3')).toBe('3');
+    expect(capitalizeWords('115')).toBe('115');
+    expect(capitalizeWords('n-340 km 22')).toBe('N-340 Km 22');
+  });
+});

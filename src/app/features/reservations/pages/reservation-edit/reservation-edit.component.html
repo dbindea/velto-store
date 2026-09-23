@@ -72,7 +72,9 @@
               type="text"
               class="form-control"
               [name]="'driverName' + $index"
-              [(ngModel)]="d.fullName"
+              [ngModel]="d.fullName"
+              (ngModelChange)="d.fullName = $event"
+              (input)="onDriverNameInput($event, d)"
               [placeholder]="'reservations.drivers.name' | translate"
               [disabled]="!editable('additionalDrivers')"
             />
@@ -80,7 +82,9 @@
               type="text"
               class="form-control"
               [name]="'driverDoc' + $index"
-              [(ngModel)]="d.documentNumber"
+              [ngModel]="d.documentNumber"
+              (ngModelChange)="d.documentNumber = $event"
+              (input)="onDriverDocumentInput($event, d)"
               [placeholder]="'reservations.drivers.document' | translate"
               [disabled]="!editable('additionalDrivers')"
             />
@@ -146,6 +150,55 @@
           }
         </div>
       </div>
+
+      <!--
+        Dónde se entrega y dónde se devuelve.
+
+        ⚠️ **No se podían corregir en ninguna parte hasta el 23 de septiembre de
+        2026.** Mientras el asistente los dejaba casi siempre vacíos no se
+        notaba: lo que no se rellenaba no se imprimía. Desde que nacen con un
+        texto por defecto, **todas** las reservas llevan una frase impresa en el
+        presupuesto, el justificante y el contrato, y sin esta sección el único
+        arreglo de un error era la consola de Firestore.
+      -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pickupLocation" class="label">
+            {{ 'reservations.fields.pickupLocation' | translate }}
+          </label>
+          <input
+            id="pickupLocation"
+            name="pickupLocation"
+            type="text"
+            class="form-control"
+            [ngModel]="form.pickupLocation"
+            (ngModelChange)="form.pickupLocation = $event"
+            (input)="onPickupLocationInput($event)"
+            [disabled]="!editable('locations')"
+            [placeholder]="'reservations.fields.pickupLocation' | translate"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="returnLocation" class="label">
+            {{ 'reservations.fields.returnLocation' | translate }}
+          </label>
+          <input
+            id="returnLocation"
+            name="returnLocation"
+            type="text"
+            class="form-control"
+            [ngModel]="form.returnLocation"
+            (ngModelChange)="form.returnLocation = $event"
+            (input)="onReturnLocationInput($event)"
+            [disabled]="!editable('locations')"
+            [placeholder]="'reservations.fields.returnLocation' | translate"
+          />
+        </div>
+      </div>
+      @if (lockReason('locations')) {
+        <div class="field-hint">{{ lockReason('locations') | translate }}</div>
+      }
 
       <h2>{{ 'reservations.edit.sectionMoney' | translate }}</h2>
 

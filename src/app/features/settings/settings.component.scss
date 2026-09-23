@@ -397,9 +397,17 @@
 }
 
 // Los cuatro juegos, en duro. Copiados de los bloques de :root y .dark.
+//
+// ⚠️ **Y una copia en duro se queda vieja: esta ya lo hizo.** El cuerpo del
+// claro se quedó en `#f6f8f8`, el valor de la página de antes del 23 de
+// septiembre de 2026, así que la miniatura del tema **que está seleccionado**
+// enseñaba un fondo casi blanco sobre una tarjeta blanca —1,07:1— mientras la
+// pantalla de detrás ya era gris. O sea que quien elige tema desde aquí decide
+// mirando el tema anterior. Al tocar un color de `:root` o de `.dark`, este
+// bloque va en la misma pasada.
 .theme-option[data-theme='light'] {
   .preview-sidebar { background: #14181a; }
-  .preview-body { background: #f6f8f8; }
+  .preview-body { background: #e1e6e7; }
   .preview-card { background: #ffffff; }
   .preview-line { background: #c9d0d2; }
 }

@@ -72,7 +72,33 @@ export function capitalizeWords(value: string): string {
       if (!isFirstWord && LOWERCASE_WITHIN_NAME.has(part.toLowerCase())) {
         return part.toLowerCase();
       }
-      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+
+      /**
+       * ⚠️ **Se capitaliza desde la primera letra CON CAJA, no desde el
+       * carácter 0**, y esa diferencia decide dos casos muy españoles.
+       *
+       * Con `charAt(0)` a secas, una palabra que empieza por algo que no es
+       * letra se llevaba por delante su única mayúscula: el piso y la puerta de
+       * una dirección —«2ºA» salía «2ºa»— y cualquier topónimo entre paréntesis
+       * —«(MADRID)» salía «(madrid)»—, porque el primer carácter era un dígito
+       * o un paréntesis y todo lo de detrás se minusculizaba. Salió revisando
+       * el domicilio fiscal del destinatario de una factura, que es contenido
+       * obligatorio (art. 6.1.c) de un documento que **no se puede corregir**.
+       *
+       * ⚠️ **Y no vale buscar `\p{L}`**: el ordinal «º» (U+00BA) ES letra
+       * —categoría Lo— y no tiene mayúscula, así que «2ºA» se habría quedado
+       * igualmente en «2ºa». Hay que buscar una letra que tenga caja.
+       *
+       * Una palabra sin ninguna letra con caja —«3», «115», «1.5»— se devuelve
+       * tal cual: no hay nada que capitalizar.
+       */
+      const primera = part.search(/[\p{Lu}\p{Ll}]/u);
+      if (primera < 0) return part;
+      return (
+        part.slice(0, primera) +
+        part.charAt(primera).toUpperCase() +
+        part.slice(primera + 1).toLowerCase()
+      );
     })
     .join('');
 }

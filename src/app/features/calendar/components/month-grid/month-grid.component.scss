@@ -51,7 +51,9 @@
   }
 
   &:hover {
-    background: var(--bg-hover);
+    // El tinte se SUPERPONE: `background` a secas borraría la superficie del
+    // elemento y `--bg-hover` es translúcido, así que se vería la página a través.
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
   }
 
   &.out-of-month {

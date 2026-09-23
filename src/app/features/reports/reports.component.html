@@ -15,13 +15,13 @@
   <div class="filters">
     <label class="filter">
       <span class="filter-label">{{ 'reports.from' | translate }}</span>
-      <input type="date" class="filter-control" [value]="dateInput(range().from)"
-        (change)="setFrom($any($event.target).value)" />
+      <input type="date" class="filter-control" #desde [value]="dateInput(range().from)"
+        (change)="setFrom(desde.value, desde)" />
     </label>
     <label class="filter">
       <span class="filter-label">{{ 'reports.to' | translate }}</span>
-      <input type="date" class="filter-control" [value]="dateInput(range().to)"
-        (change)="setTo($any($event.target).value)" />
+      <input type="date" class="filter-control" #hasta [value]="dateInput(range().to)"
+        (change)="setTo(hasta.value, hasta)" />
     </label>
     <button class="btn-ghost" type="button" (click)="resetRange()">
       {{ 'reports.thisYear' | translate }}

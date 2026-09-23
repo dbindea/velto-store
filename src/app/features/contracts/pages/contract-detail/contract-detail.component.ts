@@ -26,11 +26,12 @@ import {
   reasonOf
 } from '@shared/utils/reservation-workflow.util';
 import { ConfirmService } from '@core/notifications/confirm.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-contract-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, ClearInputDirective],
   templateUrl: './contract-detail.component.html',
   styleUrl: './contract-detail.component.scss'
 })

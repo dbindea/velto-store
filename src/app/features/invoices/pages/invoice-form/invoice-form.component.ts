@@ -1,6 +1,6 @@
 import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
-import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -47,11 +47,12 @@ import { ComplianceService } from '@features/settings/services/compliance.servic
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { chargesVat, DEFAULT_VAT_RATE } from '@shared/utils/pricing.util';
 import { toDate, toDateString } from '@shared/utils/reservation-date.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-invoice-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './invoice-form.component.html',
   styleUrl: './invoice-form.component.scss'
 })
@@ -379,6 +380,31 @@ export class InvoiceFormComponent implements OnInit {
    */
   onRecipientNameInput(event: Event): void {
     this.recipient.name = transformInput(event.target as HTMLInputElement, capitalizeWords);
+  }
+
+  /**
+   * El domicilio fiscal del destinatario.
+   *
+   * ⚠️ **Es contenido obligatorio de la factura (art. 6.1.c)**, y una factura
+   * emitida no se edita ni se borra: lo que salga impreso se queda. Capitaliza
+   * como el domicilio de la ficha de cliente, que ya lo hacía — este se había
+   * quedado fuera. `capitalizeWords()` respeta las preposiciones internas, así
+   * que «CALLE DEL PEZ, 3» sale «Calle del Pez, 3» y no «Calle Del Pez».
+   */
+  onRecipientAddressInput(event: Event): void {
+    this.recipient.address = transformInput(event.target as HTMLInputElement, capitalizeWords);
+  }
+
+  /**
+   * El NIF del destinatario, en mayúsculas y sin espacios.
+   *
+   * ⚠️ **Se manda a la AEAT**, no solo se imprime: entra en el registro de
+   * facturación y en la huella que lo encadena. Es una referencia, como la
+   * matrícula o el VIN, y por eso pasa por `toReference()` y no por una
+   * capitalización.
+   */
+  onRecipientTaxIdInput(event: Event): void {
+    this.recipient.taxId = transformInput(event.target as HTMLInputElement, toReference);
   }
 
   /** La explicación de la fecha propuesta, para que se pueda revisar. */

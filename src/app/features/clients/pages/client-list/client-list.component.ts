@@ -7,11 +7,12 @@ import { ClientService } from '@features/clients/services/client.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
 import { Client, ClientTrustLevel, CLIENT_TRUST_LEVEL_LABELS, CLIENT_TRUST_LEVEL_COLORS } from '@shared/models/client.model';
 import { TranslateService } from '@core/i18n/translate.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-client-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, ClearInputDirective],
   templateUrl: './client-list.component.html',
   styleUrl: './client-list.component.scss'
 })

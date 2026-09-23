@@ -3594,3 +3594,39 @@ es lo mismo.
   pulsar creaba un segundo gasto idéntico**. Ahora se recuerda el id para que el
   reintento actualice el mismo, y el aviso distingue «no se ha guardado» de «se
   ha guardado sin la factura».
+
+---
+
+## Lo que quedó fuera de la tanda del 23 de septiembre de 2026
+
+Ocho peticiones de Dorel en un mensaje —el aspa de borrado, el formulario de
+mantenimiento, la fianza, los lugares por defecto, la capitalización, el filtro
+de reservas, el orden de las tarjetas de la ficha y el menú— están **hechas y
+verificadas en el navegador**; el relato está en
+[traspaso-sesion.md § 2 quater](traspaso-sesion.md). Aquí va solo lo que se vio
+por el camino y **no** se tocó, para que no se busque dos veces.
+
+- [ ] **`resetDeposit()` sigue sin enlazar a ningún botón.** Era código muerto
+  antes y lo sigue siendo, pero ahora tiene sentido: desde que vaciar la fianza
+  significa 0, quien la vacía por error tiene que acordarse del importe del
+  coche. Un «volver al valor del coche» al lado del campo lo resolvería. No se
+  añadió porque nadie lo ha pedido y es interfaz nueva.
+- [ ] **Varias tarjetas de la ficha de reserva llevan un `grid-column: 1 / -1`
+  que no hace nada.** `.detail-grid` cierra mucho antes que ellas —comprobado
+  contando la anidación—, así que la declaración es inofensiva y falsa. Se
+  quitó de las dos que se movieron; las demás siguen. Si alguien mete una
+  tarjeta nueva copiando a la de al lado, copiará también esto.
+- [ ] **`reservation-detail.component.scss` se pasa del presupuesto de 20 kB**
+  (23,4 kB). Es un aviso de la compilación, no un error, y viene de antes.
+- [ ] **El panel propio de fecha no tiene botón de «Vaciar», y no hace falta.**
+  Se planteó al arreglar el mantenimiento y se descartó: el aspa cubre ya los
+  campos de fecha, hora y fecha-hora, **y además funciona en el móvil**, que es
+  donde de verdad no había forma de vaciar una fecha. Anotado para que no se
+  construya la segunda mitad de una solución que ya está entera.
+- [ ] **Vaciar campos sigue sin arreglarse en el resto de servicios.** Se
+  corrigió donde se vio —`vehicle-maintenance.service.ts` y
+  `expense.service.ts`—, pero cualquier `updateDoc` con un limpiador que
+  descarte `undefined`/`null` tiene el mismo agujero: la clave desaparece y el
+  valor anterior sobrevive. Con el aspa en todos los campos, esto pasó de raro
+  a estar a un toque. Al tocar un servicio con campos opcionales editables,
+  comprobarlo.

@@ -6,6 +6,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -147,12 +148,51 @@ export class ExpenseService {
     return created.id;
   }
 
+  /**
+   * Los campos de un gasto que se pueden **quedar vacíos** al corregirlo.
+   *
+   * Son los opcionales de texto libre. Ni el importe, ni la fecha, ni el
+   * concepto entran: sin ellos el gasto no es un gasto, y el formulario ya los
+   * exige.
+   */
+  private static readonly VACIABLES = [
+    'supplier',
+    'invoiceNumber',
+    'notes'
+  ] as const satisfies readonly (keyof Expense)[];
+
+  /**
+   * ⚠️ **Vaciar un campo no era borrarlo, exactamente igual que en el
+   * mantenimiento.** `clean()` descarta `undefined` y `null`, y un `updateDoc`
+   * sin la clave **deja intacto lo que hubiera en Firestore**: borrar el
+   * proveedor, el número de factura o las notas de un gasto ya guardado no
+   * persistía, y al recargar volvían. Nadie lo había reportado porque hacía
+   * falta vaciar un campo entero a mano; desde que hay un aspa en cada campo,
+   * está a un toque.
+   *
+   * Un campo **presente y vacío** viaja como `deleteField()`; uno **ausente**
+   * se deja en paz, que es lo que un `Partial<…>` significa.
+   *
+   * ⚠️ **El centinela se añade DESPUÉS de limpiar**, como en
+   * `vehicle.service.ts`: `deleteField()` es un objeto con propiedades propias
+   * y un limpiador que lo recorriera lo dejaría en un mapa vacío — Firestore
+   * escribiría `{}` en vez de borrar, que es lo que corrompió los timestamps de
+   * los contratos (F-4).
+   */
   async updateExpense(id: string, data: Partial<Expense>): Promise<void> {
-    const payload = this.clean({
+    const payload: Record<string, unknown> = this.clean({
       ...data,
       ...(data.date ? { date: this.toTimestamp(data.date) } : {}),
       updatedAt: serverTimestamp()
     });
+
+    for (const campo of ExpenseService.VACIABLES) {
+      const valor = data[campo];
+      if (campo in data && (valor === undefined || valor === null || valor === '')) {
+        payload[campo] = deleteField();
+      }
+    }
+
     await updateDoc(doc(this.firestore, `expenses/${id}`), payload);
   }
 

@@ -33,6 +33,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-client-form',
@@ -43,7 +44,8 @@ import { ConfirmService } from '@core/notifications/confirm.service';
     TranslatePipe,
     PhotoUploadButtonsComponent,
     FormErrorComponent,
-    DatePickerDirective
+    DatePickerDirective,
+    ClearInputDirective
   ],
   templateUrl: './client-form.component.html',
   styleUrl: './client-form.component.scss'

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
+import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,6 +15,7 @@ import {
 } from '@shared/models/collaborator.model';
 import { balanceOf, validateCollaborator } from '@shared/utils/collaborator.util';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * Los colaboradores y lo que se les debe.
@@ -27,7 +28,7 @@ import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 @Component({
   selector: 'app-collaborator-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, ClearInputDirective],
   templateUrl: './collaborator-list.component.html',
   styleUrl: './collaborator-list.component.scss'
 })
@@ -96,6 +97,18 @@ export class CollaboratorListComponent implements OnInit {
    */
   onNameInput(event: Event): void {
     this.form.name = transformInput(event.target as HTMLInputElement, capitalizeWords);
+  }
+
+  /**
+   * El NIF, en mayúsculas y sin espacios.
+   *
+   * Es una referencia, no texto libre: la misma convención que la matrícula,
+   * el VIN y el documento de un cliente. Y a un colaborador con NIF se le paga
+   * contra factura suya, así que el dato acaba teniendo que cuadrar con un
+   * papel de fuera.
+   */
+  onTaxIdInput(event: Event): void {
+    this.form.taxId = transformInput(event.target as HTMLInputElement, toReference);
   }
 
   private emptyForm(): Partial<Collaborator> {

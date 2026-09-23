@@ -130,8 +130,30 @@
   --border-strong: var(--gray-300);
 
   // Backgrounds
-  --bg-main: var(--gray-50);
+  //
+  // ⚠️ **La página y el hueco hundido son DOS colores, no uno.** Hasta el 23 de
+  // septiembre de 2026 `--bg-main` hacía los dos papeles, y por eso oscurecer
+  // la página apagó medio interfaz de golpe: además del `body`, ese valor pinta
+  // **87 sitios** que no son la página sino superficies **hundidas dentro de
+  // una tarjeta** — cabeceras de sección, miniaturas de foto, botones de subir,
+  // cabeceras de modal, botones secundarios. Con la página en `--gray-300`
+  // todos esos huecos se volvieron gris oscuro y el panel se quedó sin vida.
+  //
+  // Así que la página tiene ahora su propia variable y **solo la usa el
+  // `body`**. `--bg-main` se queda con lo que de verdad hace en esos 87 sitios:
+  // el hueco hundido, que vive sobre una tarjeta blanca y tiene que ser claro.
+  //
+  // De fuera adentro: página gris · tarjeta blanca · hueco gris muy claro. Y el
+  // campo de formulario aparte, con su propio tono (ver `--bg-input`).
+  --bg-page: var(--gray-200);
+  --bg-main: var(--gray-100);
   --bg-card: #ffffff;
+  /* ⚠️ **Es un TINTE, no una superficie**: translúcido a propósito, para
+     componerse sobre lo que haya debajo. Escrito como `background:` a secas
+     **borra** la superficie del elemento y deja ver la página a través — con la
+     página casi blanca no se notaba, y con una página gris una tarjeta se
+     volvía gris entera al pasar el ratón. Si el elemento tiene fondo propio, se
+     superpone: `background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`. */
   --bg-hover: rgba(0, 0, 0, 0.02);
 
   // Text
@@ -144,10 +166,38 @@
   --text-muted: var(--gray-600);
 
   // Form surfaces
-  --bg-input: #ffffff;
-  /* Contorno del control: 3,03:1 sobre el blanco del campo. El de antes
-     —`--gray-200`— daba 1,24:1. Ver la nota de `.form-control`. */
-  --border-input: #8C9699;
+  //
+  // ⚠️ **El campo es MÁS OSCURO que la tarjeta que lo contiene, y eso es
+  // deliberado.** Era blanco sobre blanco: lo único que separaba un campo de la
+  // tarjeta era su borde, así que un formulario parecía una lista de rótulos
+  // con rayas. Dorel lo pidió así —«casillas vivas»—, y es la misma idea que el
+  // campo relleno de Material: la caja se ve porque tiene superficie propia, no
+  // porque alguien haya dibujado su contorno.
+  //
+  // Es la única de las tres superficies que sube de tono hacia dentro en vez de
+  // bajar, y por eso no basta con «un gris más»: hay que elegirlo contra lo que
+  // se escribe encima.
+  //
+  // ⚠️ **Y lleva TINTE, no gris neutro.** Un relleno gris liso es exactamente
+  // la señal universal de «campo deshabilitado», así que el primer intento
+  // —`--gray-200`, gris puro— dejó los formularios con pinta de estar
+  // apagados: «los input parece que no tienen vida». El tinte teal de la marca
+  // los devuelve al lado de lo activo sin subir el contraste.
+  //
+  // ⚠️ **El techo lo pone el texto apagado, no el principal.** Sobre este tono,
+  // `--text-muted` —que es lo que pinta los *placeholder*— da **5,09:1**. Con un
+  // relleno bastante más oscuro se acercaría al mínimo de 4,5:1; si algún día se
+  // oscurece, hay que oscurecer también `--text-muted`.
+  --bg-input: #EAF4F1;
+  /* Contorno del control: **3,32:1** sobre el relleno del campo, por encima del
+     3:1 que WCAG 1.4.11 pide.
+     ⚠️ El de antes —#8C9699— estaba calculado contra un campo BLANCO y sobre
+     cualquier relleno con cuerpo se queda corto. Y el primer arreglo se pasó al
+     otro lado: `--gray-600` daba 5,09:1, un contorno tan oscuro que la caja
+     pesaba más que su contenido. El relleno no delimita por sí solo —mide
+     1,12:1 contra la tarjeta—, así que el borde tiene que verse; lo que no
+     tiene que hacer es gritar. */
+  --border-input: var(--gray-500);
 
   // ---------------------------------------------------------------------
   // Semantic status palette
@@ -207,6 +257,10 @@
   --border-color: var(--gray-800);
   --border-light: var(--gray-900);
   --border-strong: var(--gray-700);
+  // En los oscuros la página y el hueco hundido coinciden, así que apuntan al
+  // mismo valor. La variable tiene que existir igualmente: un `var()` sin
+  // declarar no falla, desaparece — y con él, el fondo de la aplicación.
+  --bg-page: var(--gray-950);
   --bg-main: var(--gray-950);
   --bg-card: var(--gray-900);
   --bg-hover: rgba(255, 255, 255, 0.04);
@@ -247,6 +301,10 @@
  */
 .dark.theme-forest {
   --sidebar-bg: #101614;
+  // En los oscuros la página y el hueco hundido coinciden, así que apuntan al
+  // mismo valor. La variable tiene que existir igualmente: un `var()` sin
+  // declarar no falla, desaparece — y con él, el fondo de la aplicación.
+  --bg-page: #151D1B;
   --bg-main: #151D1B;
   --bg-card: #1D2725;
   --border-color: #2E3B38;
@@ -272,6 +330,10 @@
  */
 .dark.theme-ocean {
   --sidebar-bg: #0B1220;
+  // En los oscuros la página y el hueco hundido coinciden, así que apuntan al
+  // mismo valor. La variable tiene que existir igualmente: un `var()` sin
+  // declarar no falla, desaparece — y con él, el fondo de la aplicación.
+  --bg-page: #0F172A;
   --bg-main: #0F172A;
   --bg-card: #1E293B;
   --border-color: #334155;
@@ -325,7 +387,10 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
   color: var(--text-primary);
-  background: var(--bg-main);
+  // ⚠️ `--bg-page`, no `--bg-main`: este es el ÚNICO sitio que pinta la página.
+  // `--bg-main` es el hueco hundido de dentro de una tarjeta, y confundirlos
+  // fue lo que oscureció 87 superficies al oscurecer el fondo.
+  background: var(--bg-page);
   line-height: 1.5;
 
   // Long unbroken strings — emails, plates, references, URLs — wrap onto a
@@ -614,6 +679,33 @@ input[type='radio'] {
   color: var(--error-color);
 }
 
+/* ---------------------------------------------------------------------------
+ * Una ayuda que además avisa
+ *
+ * Un `.field-hint` es gris, y el gris dice «esto es secundario». Cuando el
+ * texto pasa a contar una consecuencia —«sin fecha, el coche vuelve a poder
+ * alquilarse»— tiene que dejar de leerse como un pie de foto.
+ *
+ * ⚠️ **`.error` sola no estaba declarada en ninguna parte**, y este es el
+ * fallo que `css:audit` avisa una y otra vez: la clase se escribe, compila,
+ * pasa los tests, se despliega, y el aviso sale **del mismo gris que la ayuda
+ * de al lado**. Lo llevaba así el motivo de la fianza exenta del asistente.
+ *
+ * Dos niveles, porque no son lo mismo: `.warn` es algo que conviene saber y
+ * que se puede hacer igualmente; `.error` es algo que está mal. Y va aquí,
+ * global, junto al resto de estados genéricos — no pisa a quien lo declare por
+ * su cuenta, que mide (0,3,0) con la encapsulación.
+ * ------------------------------------------------------------------------- */
+.field-hint.warn,
+.section-hint.warn {
+  color: var(--warning-color);
+}
+
+.field-hint.error,
+.section-hint.error {
+  color: var(--error-color);
+}
+
 .checkbox-item {
   display: flex;
   align-items: center;
@@ -739,6 +831,81 @@ input[type='datetime-local'].picker-custom {
 
 input[type='time'].picker-custom {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * El aspa que vacía el campo
+ *
+ * La pone `ClearInputDirective` —por tipo de campo, sin atributo— y solo
+ * mientras hay algo que vaciar. Toda la explicación de por qué se dibuja como
+ * fondo y no como un `<button>` está en la directiva; aquí basta con lo que
+ * afecta a este fichero.
+ *
+ * ⚠️ **Lleva `!important` por lo mismo que el chevron y el calendario**, y no
+ * por costumbre: `input.form-control.form-control` declara `background:` —la
+ * forma corta, que borra `background-image` sin avisar— y la declaran además
+ * dieciocho hojas de componente. Sin `!important` el aspa desaparecería en la
+ * mitad de las pantallas y no en la otra mitad.
+ *
+ * ⚠️ **La mano va en su propia clase.** `cursor: pointer` sobre todo el campo
+ * es lo que hace `.picker-custom`, y allí está bien porque el campo entero se
+ * pulsa; aquí se teclea, y un campo de texto con cursor de mano dice que no se
+ * puede escribir en él. La directiva enciende `--hover` solo sobre la zona.
+ * ------------------------------------------------------------------------- */
+input.has-clear {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 0.875rem !important;
+  padding-right: 2rem !important;
+}
+
+input.has-clear--hover {
+  cursor: pointer;
+}
+
+/* En un campo de fecha u hora el borde derecho ya está ocupado, así que el
+   aspa se mete un hueco hacia dentro y el calendario se queda donde estaba —
+   moverlo descolocaría la fila respecto a los campos de al lado. La distancia
+   es la misma que `ZONA_ASPA_PX` en la directiva: las dos zonas van pegadas y
+   ninguna se come a la otra.
+
+   ⚠️ **Quien decide esto es la clase que pone la directiva, no el tipo del
+   campo.** Escrito como `input[type='date'].has-clear` funcionaba igual, pero
+   dejaba `has-clear--offset` sin declarar en ninguna parte: una clase muerta
+   que `css:audit` no puede cazar —solo lee plantillas, y esta la pone un
+   `HostBinding`— y que el día que alguien la mirara parecería un descuido.
+   Ahora el criterio vive en un solo sitio, la directiva, y el CSS lo obedece.
+
+   La clase se repite para llegar a (0,2,1) y ganarle sin depender del orden. */
+input.has-clear.has-clear--offset {
+  background-position: right 2.25rem center !important;
+  padding-right: 3.5rem !important;
+}
+
+/* ⚠️ **Y cuando el calendario también lo pinta la aplicación, los dos iconos
+   van en la MISMA declaración.** `background-image` es una sola propiedad: dos
+   reglas con `!important` no se suman, gana una y la otra desaparece — el aspa
+   borraría el calendario. Se declaran como dos capas, en orden, con su
+   posición cada una. En el móvil no hace falta: allí el indicador del
+   navegador es un pseudoelemento y no compite por el fondo. */
+input[type='date'].picker-custom.has-clear,
+input[type='datetime-local'].picker-custom.has-clear {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E") !important;
+  background-position: right 2.25rem center, right 0.75rem center !important;
+  background-size: 0.875rem, 0.875rem !important;
+  padding-right: 3.5rem !important;
+}
+
+input[type='time'].picker-custom.has-clear {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") !important;
+  background-position: right 2.25rem center, right 0.75rem center !important;
+  background-size: 0.875rem, 0.875rem !important;
+  padding-right: 3.5rem !important;
 }
 
 // A visible, consistent focus ring on every control — several components
@@ -933,7 +1100,9 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--border-input);
 
   &:hover:not(:disabled) {
-    background: var(--bg-hover);
+    // El tinte se SUPERPONE: `background` a secas borraría la superficie del
+    // elemento y `--bg-hover` es translúcido, así que se vería la página a través.
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
   }
 }
 

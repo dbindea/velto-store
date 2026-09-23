@@ -9,6 +9,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 import { PaymentService } from '@features/payments/services/payment.service';
 import { RedsysPaymentService, RedsysLinkResponse } from '@features/payments/services/redsys-payment.service';
 import { PaymentMethod } from '@shared/models/payment.model';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 interface FormState {
   amount: number | null;
@@ -39,7 +40,7 @@ interface CreatedPayment {
 @Component({
   selector: 'app-payment-free',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, RouterLink, FormErrorComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, RouterLink, FormErrorComponent, ClearInputDirective],
   templateUrl: './payment-free.component.html',
   styleUrl: './payment-free.component.scss'
 })

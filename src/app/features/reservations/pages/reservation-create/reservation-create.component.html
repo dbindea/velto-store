@@ -67,7 +67,8 @@
               type="text"
               id="pickupLocation"
               [ngModel]="pickupLocation"
-              (ngModelChange)="onPickupLocationChange($event)"
+              (ngModelChange)="pickupLocation = $event"
+              (input)="onPickupLocationChange($event)"
               name="pickupLocation"
               class="form-control"
               [placeholder]="'reservations.fields.pickupLocation' | translate">
@@ -105,7 +106,8 @@
               type="text"
               id="returnLocation"
               [ngModel]="returnLocation"
-              (ngModelChange)="onReturnLocationInput($event)"
+              (ngModelChange)="returnLocation = $event"
+              (input)="onReturnLocationInput($event)"
               name="returnLocation"
               class="form-control"
               [placeholder]="'reservations.fields.returnLocation' | translate">
@@ -347,8 +349,10 @@
                 <label for="documentNumber">{{ 'reservations.client.documentNumber' | translate }}</label>
                 <input 
                   type="text" 
-                  id="documentNumber" 
-                  [(ngModel)]="quickClient.documentNumber"
+                  id="documentNumber"
+                  [ngModel]="quickClient.documentNumber"
+                  (ngModelChange)="quickClient.documentNumber = $event"
+                  (input)="onQuickClientDocumentInput($event)"
                   class="form-control">
               </div>
 
@@ -475,7 +479,7 @@
                       type="number"
                       class="price-input"
                       [class.overridden]="priceOverridden"
-                      [ngModel]="netPrice"
+                      [ngModel]="netPriceInput"
                       (ngModelChange)="onNetPriceChange($event)"
                       name="netPrice"
                       min="0"
@@ -609,6 +613,12 @@
                 } @else {
                   <p class="field-hint">{{ 'reservations.delivery.hint' | translate }}</p>
                 }
+                @if (lugarSinTocarConDomicilio) {
+                  <p class="field-hint warn">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    {{ 'reservations.delivery.locationMismatch' | translate }}
+                  </p>
+                }
                 <!-- Editable: not every rental carries a deposit. -->
                 <div class="price-row editable-price">
                   <span>{{ 'reservations.pricing.deposit' | translate }}:</span>
@@ -617,7 +627,7 @@
                       type="number"
                       class="price-input"
                       [class.overridden]="depositWaived"
-                      [ngModel]="deposit"
+                      [ngModel]="depositInput"
                       (ngModelChange)="onDepositChange($event)"
                       name="deposit"
                       min="0"

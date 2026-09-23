@@ -22,6 +22,7 @@ import { visiblePayments } from '@shared/utils/payment-scope.util';
 import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { NotificationService } from '@core/notifications/notification.service';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 type TabFilter = 'all' | 'pending' | 'paid' | 'failed';
 
@@ -40,7 +41,7 @@ type TabFilter = 'all' | 'pending' | 'paid' | 'failed';
 @Component({
   selector: 'app-payment-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, PaymentConceptPipe],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, PaymentConceptPipe, ClearInputDirective],
   templateUrl: './payment-list.component.html',
   styleUrl: './payment-list.component.scss'
 })

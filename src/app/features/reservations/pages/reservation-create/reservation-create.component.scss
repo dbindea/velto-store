@@ -26,7 +26,9 @@
   transition: all 0.2s;
 
   &:hover {
-    background: var(--bg-hover);
+    // El tinte se SUPERPONE: `background` a secas borraría la superficie del
+    // elemento y `--bg-hover` es translúcido, así que se vería la página a través.
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
   }
 }
 
@@ -255,7 +257,9 @@ textarea.form-control {
   border: 1px solid var(--border-color);
 
   &:hover:not(:disabled) {
-    background: var(--bg-hover);
+    // El tinte se SUPERPONE: `background` a secas borraría la superficie del
+    // elemento y `--bg-hover` es translúcido, así que se vería la página a través.
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
   }
 }
 

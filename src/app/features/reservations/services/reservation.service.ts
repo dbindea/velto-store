@@ -88,6 +88,17 @@ export interface ReservationEdit {
   pickupDateTime?: Date;
   returnDateTime?: Date;
   /**
+   * Dónde se entrega y dónde se devuelve el coche.
+   *
+   * ⚠️ **Se aceptan vacíos a propósito.** Una cadena vacía no es «deja lo que
+   * había» —eso es `undefined`—, es «quita el lugar», y hay reservas donde no
+   * procede ninguno. Desde que el asistente los rellena solos, el operador
+   * tiene que poder quitarlos: si un vacío se leyera como «sin cambios», el
+   * texto por defecto se quedaría impreso para siempre.
+   */
+  pickupLocation?: string;
+  returnLocation?: string;
+  /**
    * Precio acordado a mano, **NETO** como en la creación. `null` lo retira y
    * devuelve la reserva a la tarifa con su descuento de fidelidad.
    */
@@ -191,6 +202,23 @@ function changedFields(actual: Reservation, edit: ReservationEdit): EditableFiel
   if (edit.returnDateTime && !sameInstant(edit.returnDateTime, actual.returnDateTime)) {
     out.push('returnDateTime');
   }
+  /**
+   * Los dos lugares van en un solo campo editable porque el formulario los
+   * enseña juntos y las restricciones son las mismas.
+   *
+   * ⚠️ **Se comparan recortados y contra `?? ''`.** Una reserva antigua no
+   * tiene el campo escrito, así que sin el respaldo `undefined !== ''` contaría
+   * como cambio al abrir y guardar sin tocar nada — y `locations` está en la
+   * lista de campos impresos, o sea que la pantalla pediría rehacer y volver a
+   * firmar un contrato por un cambio que nadie hizo. Es el mismo cuidado que
+   * con el precio acordado y con el IVA.
+   */
+  const lugarCambiado =
+    (edit.pickupLocation !== undefined &&
+      edit.pickupLocation.trim() !== (actual.pickupLocation ?? '').trim()) ||
+    (edit.returnLocation !== undefined &&
+      edit.returnLocation.trim() !== (actual.returnLocation ?? '').trim());
+  if (lugarCambiado) out.push('locations');
   if (edit.agreedNetPrice !== undefined) {
     /**
      * ⚠️ **«Sin precio acordado» no es lo mismo que «el neto de la tarifa».**
@@ -1180,6 +1208,13 @@ export class ReservationService {
     if (cambiados.includes('returnDateTime')) update['returnDateTime'] = toTimestamp(returnAt);
     if (cambiados.includes('additionalDrivers')) {
       update['additionalDrivers'] = edit.additionalDrivers ?? [];
+    }
+    if (cambiados.includes('locations')) {
+      // Vacío se escribe como cadena vacía y no se omite: omitirlo dejaría el
+      // texto anterior en Firestore —`cleanData` descarta los `undefined`— y el
+      // contrato seguiría imprimiendo un lugar que el operador acaba de quitar.
+      if (edit.pickupLocation !== undefined) update['pickupLocation'] = edit.pickupLocation.trim();
+      if (edit.returnLocation !== undefined) update['returnLocation'] = edit.returnLocation.trim();
     }
 
     /**

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { BrandLogoComponent } from '@shared/components/brand-logo/brand-logo.component';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 interface VerificationView {
   /** `superseded`: se firmó, y después se sustituyó por otro contrato. */
@@ -39,7 +40,7 @@ interface VerificationView {
 @Component({
   selector: 'app-contract-verify',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, BrandLogoComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, BrandLogoComponent, ClearInputDirective],
   templateUrl: './contract-verify.component.html',
   styleUrl: './contract-verify.component.scss'
 })

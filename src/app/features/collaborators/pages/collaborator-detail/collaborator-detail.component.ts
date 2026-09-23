@@ -48,6 +48,7 @@ import {
 import { roundMoney } from '@shared/utils/payment-summary.util';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
  * La ficha de un colaborador: lo que ha traído y lo que se le debe.
@@ -60,7 +61,7 @@ import { FormErrorComponent } from '@shared/components/form-error/form-error.com
 @Component({
   selector: 'app-collaborator-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './collaborator-detail.component.html',
   styleUrl: './collaborator-detail.component.scss'
 })

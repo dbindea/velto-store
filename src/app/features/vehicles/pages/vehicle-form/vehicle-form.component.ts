@@ -44,6 +44,7 @@ import {
   vehicleOwnershipProblem,
   veltoSharePercent
 } from '@shared/utils/owner-share.util';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 @Component({
   selector: 'app-vehicle-form',
@@ -53,7 +54,8 @@ import {
     FormsModule,
     TranslatePipe,
     PhotoUploadButtonsComponent,
-    FormErrorComponent
+    FormErrorComponent,
+    ClearInputDirective
   ],
   templateUrl: './vehicle-form.component.html',
   styleUrl: './vehicle-form.component.scss',
@@ -444,8 +446,15 @@ export class VehicleFormComponent implements OnInit {
   // `transformInput()` so the caret stays where the operator put it. Assigning
   // `input.value` directly sent it to the end of the field on every keystroke.
 
-  /** Generic text input that capitalizes first letter of every word */
-  onTextCapitalize(event: Event, field: 'version' | 'color'): void {
+  /**
+   * Generic text input that capitalizes first letter of every word.
+   *
+   * La aseguradora entra aquí porque es una **marca** —«Mapfre», no «mapfre»—
+   * y porque acaba impresa en «Datos del vehículo» del contrato, que es la
+   * sección a la que remite la cláusula de accidentes. Un dato al que una
+   * cláusula manda mirar no puede salir como se teclee.
+   */
+  onTextCapitalize(event: Event, field: 'version' | 'color' | 'insurerName'): void {
     const input = event.target as HTMLInputElement;
     this.formData[field] = transformInput(input, capitalizeWords);
   }
@@ -472,6 +481,20 @@ export class VehicleFormComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     this.formData.vin = transformInput(input, toReference);
     this.updateAcrissCode();
+  }
+
+  /**
+   * El nombre del propietario en el alta rápida.
+   *
+   * ⚠️ **Es un nombre propio como cualquier otro, y se quedaba sin capitalizar
+   * porque el alta rápida nació aparte del resto del formulario.** Lo señaló
+   * Dorel el 23 de septiembre de 2026 con un «Daniel defoe» en pantalla. No es
+   * cosmético: ese nombre se copia al coche (`ownerCollaboratorName`), de ahí
+   * al `ownerShareSnapshot` de cada reserva que se haga con él, y es el nombre
+   * con el que aparece la persona a la que hay que pagarle.
+   */
+  onNewCollaboratorNameInput(event: Event): void {
+    this.newCollaboratorName = transformInput(event.target as HTMLInputElement, capitalizeWords);
   }
 
   /**

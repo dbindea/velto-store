@@ -43,9 +43,9 @@
     input {
       width: 100%;
       padding: 0.625rem 0.75rem 0.625rem 2.25rem;
-      background: var(--bg-card);
+      background: var(--bg-input);
       color: var(--text-primary);
-      border: 1px solid var(--border-color);
+      border: 1px solid var(--border-input);
       border-radius: 8px;
       font-size: 0.9rem;
       &:focus { outline: none; border-color: var(--accent-color); }
@@ -54,9 +54,9 @@
 
   .form-control {
     padding: 0.625rem 0.75rem;
-    background: var(--bg-card);
+    background: var(--bg-input);
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-input);
     border-radius: 8px;
     font-size: 0.9rem;
     min-width: 180px;

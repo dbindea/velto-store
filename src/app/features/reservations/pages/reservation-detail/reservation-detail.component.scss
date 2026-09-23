@@ -41,7 +41,9 @@
   flex-shrink: 0;
 
   &:hover {
-    background: var(--bg-hover);
+    // El tinte se SUPERPONE: `background` a secas borraría la superficie del
+    // elemento y `--bg-hover` es translúcido, así que se vería la página a través.
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
   }
 }
 
@@ -149,8 +151,26 @@ app-reservation-timeline {
   }
 
   @media (min-width: 640px) {
-    &.pricing-card,
     &.payments-card {
+      grid-column: span 2;
+    }
+
+    /**
+     * ⚠️ **El precio y el reparto con el propietario van en la MISMA fila.**
+     * Son la misma pregunta por los dos lados —cuánto vale el alquiler y de
+     * quién es ese dinero— y leerlas juntas es la mitad de su valor; el precio
+     * ocupaba las dos columnas y empujaba el reparto a la fila de abajo, a
+     * media anchura y descolgado. Lo pidió Dorel el 23 de septiembre de 2026.
+     *
+     * ⚠️ **Salvo cuando el precio se queda solo**, que es el caso normal: el
+     * reparto solo existe si el coche es de un colaborador **y** quien mira
+     * tiene permiso para verlo, así que casi siempre el precio es el último de
+     * la rejilla. Ahí sí ocupa las dos columnas, porque media tarjeta con medio
+     * hueco al lado se lee como que falta algo.
+     *
+     * En móvil no aplica: la rejilla es de una columna y van una debajo de otra.
+     */
+    &.pricing-card:last-child {
       grid-column: span 2;
     }
   }

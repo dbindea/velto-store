@@ -19,6 +19,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { capitalizeWords, transformInput } from '@shared/utils/text-case.util';
+import { BLOCKING_MAINTENANCE_TYPES } from '@shared/utils/vehicle-availability.util';
 import {
   MAINTENANCE_PRIORITY_LABELS,
   MAINTENANCE_STATUS_LABELS,
@@ -29,6 +30,7 @@ import {
   MaintenanceType,
   VehicleMaintenance
 } from '@shared/models/vehicle-maintenance.model';
+import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 interface MaintenanceFormData {
   type: MaintenanceType;
@@ -78,7 +80,7 @@ export type MaintenanceSubmitData = Omit<
 @Component({
   selector: 'app-vehicle-maintenance-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective],
+  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
   templateUrl: './vehicle-maintenance-form.component.html',
   styleUrl: './vehicle-maintenance-form.component.scss'
 })
@@ -199,6 +201,26 @@ export class VehicleMaintenanceFormComponent implements OnChanges, OnInit {
     if (input.files && input.files.length > 0) {
       this.invoiceSelected.emit(input.files[0]);
     }
+  }
+
+  /**
+   * Si hay que avisar de que este registro ha dejado de frenar al coche.
+   *
+   * ⚠️ **Solo la ITV y el seguro bloquean** (`BLOCKING_MAINTENANCE_TYPES`), y
+   * solo mientras tengan fecha: sin ella el coche vuelve a poder alquilarse y
+   * el aviso desaparece de Eventos, del panel y del correo de la mañana. Es un
+   * efecto que no se ve desde esta pantalla, así que se cuenta aquí.
+   *
+   * Se pregunta a la misma constante que decide la disponibilidad de verdad:
+   * copiar la lista de tipos aquí sería la segunda fuente de verdad, y el día
+   * que se añada un tercer concepto bloqueante este aviso dejaría de salir sin
+   * que nadie se enterase.
+   */
+  get avisaDesbloqueo(): boolean {
+    return (
+      !this.form.nextDueDate &&
+      (BLOCKING_MAINTENANCE_TYPES as readonly MaintenanceType[]).includes(this.form.type)
+    );
   }
 
   /** Si ya se ha intentado guardar. Hasta entonces no se marca nada en rojo. */
