@@ -91,15 +91,19 @@
             </select>
             <app-form-error [problems]="problems['fuelLevel']" [show]="submitted" />
           </div>
-          <div class="form-group">
-            <label>{{ 'inspections.fields.cleanliness' | translate }}</label>
-            <select class="form-control" [(ngModel)]="formData.cleanliness" name="clean">
-              <option [ngValue]="undefined" disabled>--</option>
-              @for (c of cleanlinessLevels; track c) {
-                <option [ngValue]="c">{{ CLEANLINESS_LABELS[c] | translate }}</option>
-              }
-            </select>
-          </div>
+          <!--
+            ⚠️ **Las dos casillas van JUNTAS y en su propia fila, y el orden del
+            marcado es lo único que lo decide.** Con la limpieza en medio, la
+            rejilla de dos columnas repartía así: (limpieza | llaves) y
+            (accesorios | hueco), o sea cada casilla en una fila distinta y cada
+            una emparejada con un campo que tiene rótulo encima. No había forma
+            de alinearlas entre sí porque no compartían fila. Lo señaló Dorel el
+            24 de septiembre de 2026 con la captura delante.
+
+            Juntas se alinean solas —miden lo mismo y ninguna lleva rótulo—, y la
+            limpieza baja a una fila propia, que es donde se lee mejor: es el
+            último dato del estado del coche antes de las observaciones.
+          -->
           <div class="form-group">
             <label class="checkbox-item">
               <input type="checkbox" [(ngModel)]="formData.checklist!.keysReturned" name="keysR">
@@ -111,6 +115,15 @@
               <input type="checkbox" [(ngModel)]="formData.checklist!.accessoriesChecked" name="accR">
               <span>{{ 'inspections.checklist.accessoriesChecked' | translate }}</span>
             </label>
+          </div>
+          <div class="form-group">
+            <label>{{ 'inspections.fields.cleanliness' | translate }}</label>
+            <select class="form-control" [(ngModel)]="formData.cleanliness" name="clean">
+              <option [ngValue]="undefined" disabled>--</option>
+              @for (c of cleanlinessLevels; track c) {
+                <option [ngValue]="c">{{ CLEANLINESS_LABELS[c] | translate }}</option>
+              }
+            </select>
           </div>
           <div class="form-group full">
             <label>{{ 'inspections.fields.notes' | translate }}</label>
