@@ -811,6 +811,61 @@ input[type='radio'] {
   }
 }
 
+/**
+ * ⚠️ **Una casilla dentro de un `.form-group` la DEGRADA la regla de la
+ * etiqueta, y deja de parecer una casilla.**
+ *
+ * Casi todos los formularios declaran en su SCSS algo así:
+ *
+ *     .form-group { label { display: block; font-size: 0.75rem; … } }
+ *
+ * que es correcto para el rótulo de un campo. Pero una casilla **también es un
+ * `<label>`**, así que cuando va dentro de un `.form-group` se come esa regla:
+ * con la encapsulación de Angular mide **(0,2,1)** y `.checkbox-item` mide
+ * **(0,1,0)**, o sea que gana ella y convierte el `flex` en `block`. Y al dejar
+ * de ser flex **el `gap` no se aplica**: la casilla se queda pegada al texto y
+ * ligeramente alta, porque pasa a alinearse por la línea base.
+ *
+ * Medido en la pantalla de devolución, que es donde lo vio Dorel el 24 de
+ * septiembre de 2026: `display: block`, **0 px** de hueco al texto y la casilla
+ * 2,3 px por encima del centro, contra los 10 px y el centrado exacto de las
+ * ocho de la pantalla de entrega — que son idénticas salvo por ir dentro de un
+ * `.checklist` en vez de un `.form-group`. Además le bajaba la letra a 0,75 rem
+ * y la aclaraba a `--text-secondary`, así que la misma casilla se veía distinta
+ * según la pantalla.
+ *
+ * ⚠️ **La clase va TRIPLE, y el número sale de una cuenta que yo tenía mal.**
+ * La encapsulación de Angular no añade un atributo a la regla: lo añade a
+ * **cada elemento del selector**. O sea que `.form-group label` compila a
+ * `.form-group[_ngcontent-xxx] label[_ngcontent-xxx]` y mide **(0,3,1)**, no
+ * (0,2,1). Con la clase doble yo llegaba a (0,3,1) también, **empataba**, y en
+ * un empate manda el orden — que pone los estilos del componente detrás. Se
+ * quedó sin efecto y solo se vio volviendo a medir en el navegador.
+ *
+ * Con la tercera repetición son **(0,4,1)** y gana. Es el mismo recurso que ya
+ * usa `input.form-control.form-control`; lo que cambia es de cuánto hay que
+ * pasarse, y por eso la cuenta está escrita aquí.
+ *
+ * ⚠️ **Y esto es la RED, no el arreglo.** La causa se corrige en el componente
+ * excluyendo la casilla de su regla de etiqueta —`label:not(.checkbox-item)`—,
+ * que es donde se lee el porqué. Esto está para el siguiente formulario que
+ * escriba `.form-group label { display: block }` sin acordarse de las casillas.
+ */
+.form-group > label.checkbox-item.checkbox-item.checkbox-item,
+.form-row > label.checkbox-item.checkbox-item.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 0;
+
+  &.multiline {
+    align-items: flex-start;
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * El botón de calendario y el de reloj
  *

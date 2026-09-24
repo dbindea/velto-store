@@ -3487,9 +3487,27 @@ una pseudoclase) más el elemento. Anteponer solo el elemento no basta, aunque l
 parezca. Cuando no hay una segunda clase real, repetirla —
 `input.form-control.form-control`— es la forma legítima de llegar a (0,2,1).
 
-⚠️ **Y se comprueba en el navegador, no se deduce.** Las dos veces que esto ha
-fallado, el CSS estaba escrito y desplegado y el valor calculado seguía siendo el
-viejo. `getComputedStyle()` es la única respuesta que vale.
+⚠️ **Y vale una clase POR ELEMENTO del selector, no una por regla.** Es el matiz
+que faltaba aquí y que costó un intento fallido el 24 de septiembre de 2026.
+Angular no le cuelga el atributo a la regla: se lo cuelga a **cada** compuesto.
+
+| Escrito en el componente | Lo que compila | Mide |
+|---|---|---|
+| `.form-control` | `.form-control[_ngcontent]` | (0,2,0) |
+| `.form-group label` | `.form-group[_ngcontent] label[_ngcontent]` | **(0,3,1)** |
+| `.card .title span` | tres compuestos, tres atributos | (0,5,2) |
+
+O sea que **un selector de dos niveles cuesta el doble de ganar**. Contra
+`.form-group label` no basta con `.form-group > label.checkbox-item.checkbox-item`
+—empata en (0,3,1), y en un empate manda el orden, que pone al componente
+detrás—: hace falta la tercera repetición para llegar a (0,4,1).
+
+⚠️ **Y se comprueba en el navegador, no se deduce.** Las **tres** veces que esto
+ha fallado, el CSS estaba escrito y desplegado y el valor calculado seguía siendo
+el viejo. `getComputedStyle()` es la única respuesta que vale — y cuando no
+cuadra, lo que hay que mirar es el `selectorText` de la regla que gana,
+recorriendo `document.styleSheets`: ahí se lee el selector **ya compilado**, con
+sus atributos, que es lo que de verdad se está contando.
 
 ⚠️ **Cuando un color de marca es el FONDO, su acompañante también es variable.**
 `--warning-on` existe porque el ámbar cambia de tema —#9A6700 en claro, #F0B429
