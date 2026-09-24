@@ -1162,8 +1162,9 @@
       "emptyFiltered": "Ninguna reserva con este filtro"
     },
     "messages": {
-      "datesRequired": "Falta la fecha de recogida o la de devolución.",
-      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida"
+      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
+      "pickupDateRequired": "Falta la fecha de recogida.",
+      "returnDateRequired": "Falta la fecha de devolución."
     },
     "money": {
       "title": "Dinero",

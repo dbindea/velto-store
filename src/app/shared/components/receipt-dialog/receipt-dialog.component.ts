@@ -129,10 +129,13 @@ import { copyToClipboard } from '@shared/utils/clipboard.util';
         align-items: center;
         gap: 0.625rem;
         padding: 1rem 1.25rem;
+        /* La banda de cabecera, igual que en las fichas y las secciones: ver
+           \`--bg-header\` en styles.scss. */
+        background: var(--bg-header);
         border-bottom: 1px solid var(--border-color);
 
         i {
-          color: var(--accent-color);
+          color: var(--icon-header);
         }
 
         h3 {

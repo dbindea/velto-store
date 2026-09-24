@@ -3290,6 +3290,27 @@ con ella. Medido sobre la banda clara, los valores de antes **no llegaban**: el
 que se note el cambio: **6,23:1** y **4,24:1**. En los oscuros apuntan a los de
 siempre, que ahí ya pasan.
 
+⚠️ **La banda la llevan TRES familias de cabecera, no solo las fichas**
+(24 de septiembre de 2026): `.detail-card .card-header` en las cinco fichas de
+detalle, `.section-header` en los formularios largos —alta de cliente, entrega y
+devolución— y `.modal-header` en los cinco modales. Las tres están en la regla
+global y las copias de componente apuntan a las mismas variables, así que una
+pantalla nueva sale igual sin que nadie se acuerde. Lo pidió Dorel: «unificar el
+mismo aspecto en todas y para todos los temas».
+
+⚠️ **El filete se quita SOLO en las fichas.** En una sección de formulario y en
+un modal la banda toca el contenido que se rellena, y ahí el filete marca dónde
+acaba el rótulo y empieza el campo; en una ficha de detalle el cambio de color ya
+separa y la línea solo añade ruido.
+
+⚠️ **Y una casilla dentro de una rejilla de formulario se alinea por ABAJO.** No
+tiene rótulo encima, así que su control arranca donde los demás tienen la
+etiqueta: medido en «Estado del vehículo», 28 px más arriba que el `select` de al
+lado — justo lo que mide el rótulo con su margen. Se corrige con `align-self:
+end` sobre la celda, **no** restando la altura del rótulo: restar ataría el
+arreglo al tamaño de letra de cada formulario y la escalera volvería con el
+primero que use otro.
+
 ⚠️ **La regla global lleva `.detail-card` delante a propósito.** El panel también
 usa `.card-header`, pero allí no es una banda: es una fila de icono y rótulo
 **dentro** de una tarjeta de estadística. El panel usa `.card` y las fichas

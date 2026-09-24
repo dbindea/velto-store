@@ -273,13 +273,12 @@ export class ReservationCreateComponent implements OnInit {
      * `startOfDay(dueDate) >= devolucion` también es falsa, así que toda ITV o
      * seguro con fecha abierta pasaría a bloquear el coche.
      */
-    if (isNaN(pickupDateTime.getTime()) || isNaN(returnDateTime.getTime())) {
-      this.dateError = 'reservations.messages.datesRequired';
-      return;
-    }
-
-    if (returnDateTime <= pickupDateTime) {
-      this.dateError = 'reservations.messages.invalidDates';
+    this.datesSubmitted = true;
+    if (hasProblems(this.dateProblems)) {
+      // El detalle lo pinta `<app-form-error>` bajo cada campo, que además dice
+      // CUÁL de las dos falta. El aviso de arriba se queda para lo que no es de
+      // un campo concreto, como un fallo de la búsqueda.
+      this.dateError = '';
       return;
     }
 
@@ -345,6 +344,41 @@ export class ReservationCreateComponent implements OnInit {
     if (this.showQuickClientForm) {
       this.searchResults = [];
     }
+  }
+
+  /** Si ya se ha pulsado «Buscar disponibilidad». */
+  datesSubmitted = false;
+
+  /**
+   * Lo que impide buscar: campo → clave de i18n.
+   *
+   * ⚠️ **Sin fecha no hay alquiler, y hasta ahora no había nada que lo dijera.**
+   * Vaciar un campo dejaba pasar el asistente entero: `parseDateTimeInput('')`
+   * devuelve `new Date(NaN)` y **toda comparación con `NaN` es falsa**, así que
+   * ni el guard de la pantalla ni el del servicio la paraban. Se llegaba al
+   * resumen con «NaN días», sin desglose y sin botón de crear — un callejón sin
+   * salida que no explicaba nada.
+   *
+   * Sigue el patrón del resto de la aplicación, que es el que Dorel pidió: el
+   * botón **no** se apaga por un dato que falte —eso deja al operador pulsando
+   * sin que pase nada—, se pulsa, se marca el campo en rojo y se explica debajo.
+   * El `required` del HTML va además en los dos campos, para que el navegador y
+   * Angular sepan que lo son.
+   */
+  get dateProblems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (!this.pickupDateTimeInput || isNaN(this.pickupDateTime.getTime())) {
+      problems['pickupDateTime'] = 'reservations.messages.pickupDateRequired';
+    }
+    if (!this.returnDateTimeInput || isNaN(this.returnDateTime.getTime())) {
+      problems['returnDateTime'] = 'reservations.messages.returnDateRequired';
+    } else if (
+      !problems['pickupDateTime'] &&
+      this.returnDateTime <= this.pickupDateTime
+    ) {
+      problems['returnDateTime'] = 'reservations.messages.invalidDates';
+    }
+    return problems;
   }
 
   /** Si ya se ha intentado crear el cliente rápido. */

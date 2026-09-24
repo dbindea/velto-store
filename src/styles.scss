@@ -866,6 +866,30 @@ input[type='radio'] {
   }
 }
 
+/**
+ * ⚠️ **Y una casilla en una rejilla de formulario flota por encima de sus
+ * vecinos, porque no tiene etiqueta que la baje.**
+ *
+ * Los demás campos son rótulo + control, así que su control arranca por debajo
+ * de una línea de texto; una casilla es solo el control. Medido en «Estado del
+ * vehículo» de la devolución: la celda de «Limpieza» empieza en 614 y su
+ * `select` en **642**, mientras «Llaves devueltas» empieza en **614** — 28 px
+ * más arriba, que es justo lo que mide el rótulo con su margen. Por eso se ve
+ * torcida aunque la casilla en sí esté perfecta. Lo señaló Dorel el 24 de
+ * septiembre de 2026 con la captura delante.
+ *
+ * ⚠️ **Se alinea por ABAJO y no restando la altura del rótulo.** Restar 28 px
+ * sería atar esto al tamaño de letra del rótulo de cada formulario, y el día que
+ * uno use otro tamaño vuelve la escalera. `align-self: end` encaja la celda
+ * contra el borde inferior de su fila, que es donde también acaban los campos
+ * vecinos, sin saber cuánto miden.
+ */
+.form-grid > .form-group:has(> .checkbox-item),
+.form-grid-inner > .form-group:has(> .checkbox-item),
+.form-row > .form-group:has(> .checkbox-item) {
+  align-self: end;
+}
+
 /* ---------------------------------------------------------------------------
  * El botón de calendario y el de reloj
  *
@@ -1123,14 +1147,26 @@ h1, h2, h3, h4, h5, h6 {
  * Sin filete: lo que separa la banda del contenido es el propio cambio de
  * color, y una línea entre dos superficies que ya contrastan solo añade ruido.
  */
-.detail-card .card-header {
+.detail-card .card-header,
+.section-header,
+.modal-header {
   background: var(--bg-header);
-  border-bottom: none;
   color: var(--text-header);
 
   i {
     color: var(--icon-header);
   }
+}
+
+/**
+ * ⚠️ **El filete se quita SOLO en las fichas de detalle**, no en las secciones
+ * ni en los modales. Ahí la banda toca el contenido directamente y el cambio de
+ * color ya separa; en un formulario largo —«Estado del vehículo», «Daños
+ * registrados»— y en la cabecera de un modal, el filete marca dónde acaba el
+ * rótulo y empieza lo que se rellena, que es otra cosa.
+ */
+.detail-card .card-header {
+  border-bottom: none;
 }
 
 /**

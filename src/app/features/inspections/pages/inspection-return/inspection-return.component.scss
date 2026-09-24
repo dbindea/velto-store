@@ -89,16 +89,16 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-main);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
-  i { color: var(--accent-color); font-size: 1.1rem; }
+  i { color: var(--icon-header); font-size: 1.1rem; }
   h2 {
     flex: 1;
     margin: 0;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-header);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }

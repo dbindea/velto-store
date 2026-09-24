@@ -1162,8 +1162,9 @@
       "emptyFiltered": "Nicio rezervare cu acest filtru"
     },
     "messages": {
-      "datesRequired": "Lipsește data de ridicare sau cea de returnare.",
-      "invalidDates": "Data returnării trebuie să fie după data preluării"
+      "invalidDates": "Data returnării trebuie să fie după data preluării",
+      "pickupDateRequired": "Lipsește data de ridicare.",
+      "returnDateRequired": "Lipsește data de returnare."
     },
     "money": {
       "title": "Bani",

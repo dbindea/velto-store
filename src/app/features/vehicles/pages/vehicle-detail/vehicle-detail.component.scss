@@ -599,6 +599,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
+  // La banda de cabecera, igual que en las fichas: ver `--bg-header`.
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
   h3 {

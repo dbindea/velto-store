@@ -676,6 +676,8 @@ app-reservation-timeline {
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
+  // La banda de cabecera, igual que en las fichas: ver `--bg-header`.
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
   h3 {

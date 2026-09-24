@@ -236,10 +236,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: var(--bg-main);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
-  i { color: var(--accent-color); }
+  i { color: var(--icon-header); }
   h3 { margin: 0; flex: 1; font-size: 1rem; color: var(--text-primary); }
 }
 
