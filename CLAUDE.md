@@ -3535,22 +3535,38 @@ que se ve es la que más pesa, no la última que uno editó. Se resuelve borrand
 no añadiendo una cuarta. Y **un hover solo está comprobado si se ha pasado el
 ratón por encima**: medir el estado de reposo no dice nada del hover.
 
-⚠️ **El tinte es del 2 % A PROPÓSITO, y eso está decidido.**
-`rgba(0, 0, 0, 0.02)` sobre blanco da `#FAFAFA` —razón de 1,04—, o sea que
-**incluso donde se aplica bien, el hover está en el límite de lo perceptible**.
-Se midió, se le propuso a Dorel subirlo a un 5 % en claro y un 7 % en los
-oscuros, y el 24 de septiembre de 2026 decidió **dejarlo como está**.
+⚠️ **El tinte estuvo en el 2 % y no se veía. Desde el 24 de septiembre de 2026
+es del 5 % en claro y del 7 % en los tres oscuros.** `rgba(0,0,0,0.02)` sobre
+blanco daba `#FAFAFA` —razón **1,04**—, por debajo de lo que el ojo distingue: el
+hover estaba escrito y aplicado en los treinta sitios, y no comunicaba nada. Era
+la queja de Dorel, literal, y era cierta.
 
-Se escribe aquí porque es la respuesta a «¿por qué apenas se ve el hover?»: la
-cifra es la que él ha querido, no un descuido pendiente de arreglar. Cambiarla
-toca los veintiséis sitios a la vez y es decisión suya, así que **no se vuelve a
-proponer** salvo que lo pida.
+⚠️ **El arreglo es la VARIABLE, no los treinta sitios.** Todos leen
+`var(--bg-hover)`, así que se cambia en los cuatro bloques de tema de
+`styles.scss` y ya está. Lo que hay que hacer uno a uno es **comprobarlo**, que
+es otra cosa.
 
-⚠️ **Y no confundirlo con el fallo que sí hubo ese día**: los trece sitios donde
+⚠️ **Y se calibra por NIVELES sRGB, no por razón de contraste.** Medido con el
+ratón encima, sobre la tarjeta: claro `#FFFFFF → #F2F2F2` (razón 1,12, **Δ 13**
+niveles) y los oscuros con Δ 16 —razones de 1,21 a 1,24—. La razón **exagera** la
+zona oscura, porque el `+0,05` del denominador pesa mucho cuando la luminancia es
+casi cero: el salto del tema oscuro es diez veces menor en luminancia absoluta y
+aun así su razón sale mayor. Igualando razones, los oscuros se habrían quedado
+otra vez sin hover perceptible.
+
+⚠️ **Un tinte de hover NO es una superficie, y alguien lo usó como tal.** La
+chapa de la forma de pago en la lista de facturas tenía `background:
+var(--bg-hover)` como fondo **permanente**. Mientras el tinte valió el 2 % no se
+notaba —la chapa salía casi invisible, que ya era el defecto—, pero ataba su
+aspecto a una variable que existe para otra cosa: al subir el hover se habría
+oscurecido sin que nadie lo decidiera. Ahora usa `--bg-main`. Si necesitas una
+superficie tenue, hay variables de superficie; `--bg-hover` es el estado.
+
+⚠️ **Y no confundirlo con el fallo de la misma semana**: los trece sitios donde
 el tinte, escrito como `background:` a secas, **borraba el relleno** del elemento
 —un botón turquesa que al pasar el ratón se quedaba con texto blanco sobre fondo
-blanco—. Eso estaba mal y está corregido. Lo del 2 % es cuánto se nota donde se
-aplica bien, que es otra pregunta.
+blanco—. Eso era otra cosa y está corregido; comprobado al subir el tinte que no
+queda ninguno (92 elementos × 4 temas, cero rellenos borrados).
 
 ⚠️ **Y el contorno de un control es `--border-input`, nunca `--border-color`.**
 Aquel es el de las **separaciones** y puede ser sutil; este tiene que llegar a

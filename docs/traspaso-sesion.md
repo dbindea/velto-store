@@ -383,11 +383,11 @@ especificidad.
 - **El barrido del hover**: eran **trece** los sitios donde el tinte translúcido
   borraba el relleno del elemento, no uno.
 
-⚠️ **El tinte del hover se queda en el 2 %** —`#FAFAFA` sobre blanco, razón
-1,04—, así que incluso donde se aplica bien está en el límite de lo perceptible.
-Se midió, se propuso subirlo a un 5 % en claro y un 7 % en los oscuros, y **Dorel
-decidió ese mismo día dejarlo como está** (M-50). No es un pendiente: es la
-respuesta si alguien vuelve a preguntar por qué el hover apenas se nota.
+⚠️ **El tinte del hover estaba en el 2 % y se subió ese mismo día** (M-50):
+`rgba(0,0,0,0.02)` daba `#FAFAFA` sobre blanco, razón 1,04, o sea que el hover
+estaba escrito y aplicado en los treinta sitios y **no se veía**. Ahora es el 5 %
+en claro y el 7 % en los tres oscuros — la asimetría se calibra por niveles sRGB,
+no por razón de contraste, porque la razón exagera la zona oscura.
 
 ---
 
@@ -563,11 +563,20 @@ ninguno abierto. El detalle está en
 **no lo comprueba nadie** al crear una reserva. Se rellena en la ficha, se guarda
 y no hace nada. Es lo que obliga a que la tarifa cubra desde el día 1.
 
-**M-50, decidido y cerrado:** el tinte del hover se queda en el **2 %**
-(`rgba(0,0,0,0.02)`, razón 1,04). Se midió, se propuso subirlo a un 5 % en claro
-y un 7 % en los oscuros —26 sitios— y Dorel lo revisó y dijo que se queda como
-está. **No es un pendiente**: si alguien vuelve a notar que el hover apenas se
-ve, esta es la respuesta.
+**M-50, hecho:** el tinte del hover pasa del 2 % al **5 % en claro y 7 % en los
+tres oscuros**. Estaba en razón 1,04 —por debajo de lo que el ojo distingue—, así
+que el hover existía en los treinta sitios y no comunicaba nada. Se cambia en la
+**variable**, no sitio a sitio; lo que hubo que hacer uno a uno fue comprobarlo:
+92 elementos × 4 temas, con el ratón encima de verdad, sin que ningún texto baje
+de 4,5:1 ni ningún relleno se borre. Por el camino salió una chapa de Facturas
+que usaba `--bg-hover` como **superficie fija**, ahora con `--bg-main`.
+
+⚠️ **Y una trampa de medición que va a volver:** recorriendo los cuatro temas en
+bucle, el puntero se queda encima del elemento entre iteraciones, así que
+«reposo» y «hover» son la misma lectura — sale un salto de 1,000 y parece que el
+CSS no se aplica. **Hay que apartar el ratón antes de leer el reposo.** Y la
+primera muestra de una lista suele ser la **activa**, cuyo fondo propio gana al
+hover: también da 1,000 y tampoco es un fallo.
 
 **Sin cerrar desde hace tiempo:** un cobro por la vía pública del móvil que se
 registre solo en **producción**. En desarrollo ya ocurrió; una vía de cobro no
