@@ -618,8 +618,16 @@ alquiler sin IVA, y solo el alquiler**. Tres exclusiones, las tres con motivo:
 propietario puede ceder un utilitario y una furgoneta con repartos distintos— y
 la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. Lo
 congela `commitReservationWithPayments()`, que recibe el vehículo entero para que
-**ninguno de los dos creadores de reservas pueda olvidarse**. La parte se
-**devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+**quien cree la reserva no pueda olvidarse**. La parte se **devenga al cerrar**
+la reserva, cuando los importes ya son definitivos.
+
+> Aquí ponía «ninguno de los **dos** creadores», y desde el 24 de septiembre de
+> 2026 solo hay uno: `createReservationWithClient()`. El otro
+> —`createReservation(vehicleId, clientId, …)`— no lo llamaba nadie y escribía el
+> snapshot del cliente **vacío**, el descuento de fidelidad a **0** y sin
+> comprobar si el cliente estaba bloqueado. Se borró. Ese reparto sí lo congelaba
+> bien, porque lo hace `commitReservationWithPayments()` y los dos pasaban por
+> ahí: exactamente lo que esta nota decía que protegía.
 
 ⚠️ **Y lo devengado se DERIVA de las reservas cerradas, no se guarda**
 (`ownerShareAccruals()`, 12 de septiembre de 2026). Hay dos motivos y los dos

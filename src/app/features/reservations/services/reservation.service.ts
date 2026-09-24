@@ -761,154 +761,31 @@ export class ReservationService {
     return results;
   }
 
-  /**
-   * Create a new reservation.
-   * Re-checks availability before saving.
-   */
-  async createReservation(
-    vehicleId: string,
-    clientId: string,
-    pickupDateTime: Date,
-    returnDateTime: Date,
-    initialPaymentRequired: number,
-    depositRequired: number,
-    notes?: string,
-    pickupLocation?: string,
-    returnLocation?: string,
-    /** Required when `depositRequired` is 0. See `buildDeposit`. */
-    depositWaivedReason?: string,
-    /** Sin IVA: el cliente paga el neto y los documentos no lo mencionan. */
-    vatExempt?: boolean,
-    /**
-     * Entrega y recogida a domicilio, en **neto**. Se congelan en la reserva y
-     * siembran una fila de cobro cada una. Ver `ReservationDeliveryFees`.
-     */
-    deliveryFees?: ReservationDeliveryFees
-  ): Promise<string> {
-    // Re-check availability
-    const availability = await this.checkVehicleAvailability(vehicleId, pickupDateTime, returnDateTime);
-    if (!availability.available) {
-      // Clave i18n, no una frase en inglés: este mensaje llega a la pantalla y
-      // se le enseña al operador. En inglés duro, la capa de avisos no podía
-      // distinguirlo de un fallo cualquiera y ofrecía «Reintentar», que aquí no
-      // sirve de nada: hay que cambiar de coche o de fechas.
-      throw new Error(availability.conflictMessage || 'reservations.availability.conflict');
-    }
-
-    // Get vehicle data
-    const vehicle = await new Promise<Vehicle | null>((resolve) => {
-      this.vehicleService.getVehicleById(vehicleId).subscribe(v => resolve(v));
-    });
-    if (!vehicle) {
-      throw new Error('Vehicle not found');
-    }
-
-    // Calculate pricing
-    const totalDays = calculateCalendarDays(pickupDateTime, returnDateTime);
-    const pricingRules = vehicle.pricingRules || [];
-    const basePriceResult = calculateBasePrice(pricingRules, totalDays);
-    
-    // Same authority as `createReservationWithClient`: the tariff is net and
-    // VAT is added on top. Without this the two entry points would create
-    // reservations priced differently — and the rate travels explicitly for the
-    // same reason: the snapshot must freeze the rate the price was built with.
-    const vatRate = this.currentVatRate(vatExempt);
-    const pricing = resolveRentalPrice(basePriceResult.basePrice, 0, undefined, vatRate);
-    const finalPrice = pricing.finalPrice;
-    const remainingPaymentRequired = Math.max(0, finalPrice - initialPaymentRequired);
-
-    // TODO: Use Firestore transaction or Cloud Function for atomic operations
-    // This is client-side validation only for MVP
-
-    const reservation: Omit<Reservation, 'id'> = {
-      vehicleId,
-      vehicleSnapshot: {
-        brand: vehicle.brand,
-        model: vehicle.model,
-        // La versión viaja al contrato para que identifique el coche igual que
-        // la oferta que el cliente aceptó (D-2).
-        version: vehicle.version,
-        plateNumber: vehicle.plateNumber,
-        year: vehicle.year,
-        acrissCode: vehicle.acrissCode,
-        fuelType: vehicle.fuelType,
-        transmission: vehicle.transmission,
-        seats: vehicle.seats,
-        luggageCapacity: vehicle.luggageCapacity,
-        currentKm: vehicle.currentKm,
-        color: vehicle.color,
-        hasGpsTracker: vehicle.hasGpsTracker
-      },
-      clientId,
-      clientSnapshot: {
-        fullName: '', // Will be filled after client lookup
-        phone: undefined,
-        email: undefined,
-        documentNumber: undefined
-      },
-      pickupDateTime: toTimestamp(pickupDateTime),
-      returnDateTime: toTimestamp(returnDateTime),
-      pickupLocation,
-      returnLocation,
-      totalDays,
-      pricingSnapshot: {
-        totalDays,
-        appliedRule: basePriceResult.appliedRule ? {
-          minDays: basePriceResult.appliedRule.minDays,
-          maxDays: basePriceResult.appliedRule.maxDays,
-          pricePerDay: basePriceResult.appliedRule.pricePerDay,
-          label: basePriceResult.appliedRule.label
-        } : null,
-        pricePerDay: basePriceResult.pricePerDay,
-        basePrice: basePriceResult.basePrice,
-        netPrice: pricing.netPrice,
-        finalPrice,
-        vatRate,
-        // Se congelan con el precio: el cargo por kilómetros de la devolución
-        // los lee de aquí, así que cambiar la ficha del coche no puede mover lo
-        // que se pactó en un alquiler ya cerrado.
-        includedKmPerDay: vehicle.includedKmPerDay,
-        extraKmPrice: vehicle.extraKmPrice
-      },
-      /**
-       * Entrega y recogida a domicilio. Se guarda el **neto** tecleado; el bruto
-       * de cada fila de cobro lo pone `deliveryFeeBreakdown()` con el tipo
-       * congelado de esta reserva.
-       *
-       * ⚠️ Fuera de `pricingSnapshot` a propósito: el reparto con el dueño del
-       * coche sale del neto del alquiler, y el desplazamiento lo pone la agencia.
-       */
-      deliveryFees: normalizeDeliveryFees(deliveryFees),
-      // Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
-      // `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
-      initialPayment: buildInitialPayment(initialPaymentRequired),
-      remainingPayment: {
-        requiredAmount: remainingPaymentRequired,
-        paidAmount: 0,
-        dueDate: toTimestamp(new Date(pickupDateTime.getTime() - APP_DEFAULTS.REMAINING_PAYMENT_DUE_DAYS_BEFORE_PICKUP * 24 * 60 * 60 * 1000)), // days before pickup from APP_DEFAULTS
-        status: 'pending'
-      },
-      // A deposit of 0 is a legitimate business decision — known customers
-      // are not asked for one — but it is not the same thing as a deposit
-      // nobody has collected yet. It is born `waived`, with its reason, so
-      // the workflow never sits waiting for money no one intends to pay.
-      deposit: buildDeposit(depositRequired, depositWaivedReason),
-      paymentStatus: 'pending',
-      contractStatus: 'pending',
-      // Sin señal no hay cobro que dispare la confirmación, así que la reserva
-      // nace ya confirmada. Ver `reservationStatusAfterInitialChange`.
-      reservationStatus:
-        reservationStatusAfterInitialChange('reserved', initialPaymentRequired) ?? 'reserved',
-      notes,
-      createdAt: { seconds: Date.now() / 1000 },
-      updatedAt: { seconds: Date.now() / 1000 }
-    };
-
-    return this.commitReservationWithPayments(reservation, vehicle);
-  }
 
   /**
-   * Create reservation with full client snapshot.
+   * Crear una reserva. **Es el único creador**, y eso es lo que importa aquí.
+   *
+   * ⚠️ **Había un segundo, `createReservation(vehicleId, clientId, …)`, y estaba
+   * roto por tres sitios.** No lo llamaba nadie —ni una pantalla, ni un test, ni
+   * la documentación— y escribía:
+   *
+   * - el **snapshot del cliente vacío**, con un `fullName: ''` y un comentario
+   *   que decía «Will be filled after client lookup» describiendo algo que no
+   *   pasaba en ninguna parte. La ficha salía con la tarjeta del cliente en
+   *   blanco, y el contrato habría impreso un alquiler sin arrendatario;
+   * - el **descuento de fidelidad a 0** fijo, porque nunca leía el cliente: a
+   *   quien tuviera un 5 % se le habría cobrado de más;
+   * - y **sin `canCreateReservationForClient()`**, o sea que se podía alquilar a
+   *   un cliente marcado como bloqueado.
+   *
+   * Se borró el 24 de septiembre de 2026, después de que Dorel viera la tarjeta
+   * de cliente en blanco en una reserva de prueba. Es el caso de libro del patrón
+   * que CLAUDE.md llama dominante —código escrito y nunca ejecutado—: mientras
+   * nadie lo llamaba parecía una alternativa, y en cuanto alguien lo llamó
+   * produjo una reserva silenciosamente mal.
+   *
+   * Si algún día hace falta crear desde ids, la forma es leer el vehículo y el
+   * cliente y llamar aquí: tres líneas en quien llama, y una sola autoridad.
    */
   async createReservationWithClient(
     vehicle: Vehicle,
