@@ -138,7 +138,6 @@
     "cancel": "Anulează",
     "close": "Închide",
     "continue": "Continuă",
-    "create": "Creează",
     "date": "Dată",
     "days": "zile",
     "delete": "Șterge",
@@ -746,7 +745,9 @@
     },
     "fields": {
       "amount": "Sumă",
+      "client": "Client",
       "concept": "Concept",
+      "createdAt": "Data creării",
       "dueDate": "Scadență",
       "externalReference": "Referință externă",
       "internalReference": "Referință internă",
@@ -755,8 +756,10 @@
       "paidAmount": "Plătit",
       "paidAt": "Data plății",
       "pendingAmount": "Rest de plată",
+      "rentalTotal": "Total închiriere",
       "source": "Sursă",
-      "type": "Tip"
+      "type": "Tip",
+      "vehicle": "Vehicul"
     },
     "filters": {
       "freePayments": "Plăți libere",

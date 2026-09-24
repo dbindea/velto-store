@@ -138,7 +138,6 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "continue": "Continuar",
-    "create": "Crear",
     "date": "Fecha",
     "days": "días",
     "delete": "Eliminar",
@@ -746,7 +745,9 @@
     },
     "fields": {
       "amount": "Importe",
+      "client": "Cliente",
       "concept": "Concepto",
+      "createdAt": "Fecha de creación",
       "dueDate": "Vencimiento",
       "externalReference": "Referencia externa",
       "internalReference": "Referencia interna",
@@ -755,8 +756,10 @@
       "paidAmount": "Pagado",
       "paidAt": "Fecha de pago",
       "pendingAmount": "Pendiente",
+      "rentalTotal": "Total alquiler",
       "source": "Fuente",
-      "type": "Tipo"
+      "type": "Tipo",
+      "vehicle": "Vehículo"
     },
     "filters": {
       "freePayments": "Cobros libres",
