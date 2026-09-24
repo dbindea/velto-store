@@ -1078,6 +1078,51 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/**
+ * ⚠️ **UNA BANDA NUEVA ROMPE LAS CHAPAS QUE VAN ENCIMA, y eso hay que
+ * arreglarlo en la misma pasada.**
+ *
+ * En los tres temas oscuros el fondo de una chapa es un **tinte translúcido**
+ * —`rgba(color, 0.14)`— calculado para componerse sobre la tarjeta. Al meter
+ * debajo una banda **más clara**, el tinte compone contra otra cosa, el fondo
+ * de la chapa se aclara y su texto pierde contraste. Medido antes y después de
+ * este cambio, dentro de la propia cabecera:
+ *
+ *   ocean  · «Cancelado» (error)   5,03 → 3,31
+ *   forest · «Cancelado» (error)   4,78 → 3,41
+ *   dark   · «Cancelado» (error)   5,50 → 3,77
+ *   ocean  · «Pagado» (success)    6,31 → 4,08
+ *
+ * O sea: una regresión de verdad, causada por un cambio que en sí mismo medía
+ * bien. **Un tinte translúcido solo es correcto sobre la superficie para la que
+ * se calculó**, y esa es la lección que se lleva — la misma que ya obligó a
+ * superponer `--bg-hover` en vez de sustituir.
+ *
+ * ⚠️ **Se arregla redefiniendo las variables, no con reglas por clase.** Las
+ * chapas se llaman distinto en cada ficha —`status-*` en contratos e
+ * inspecciones, `payment-*` en la cabecera de la reserva— y una regla por clase
+ * habría que ampliarla cada vez que aparezca un estado nuevo. Cambiando lo que
+ * significa `--success-bg` **dentro** de la cabecera, el `background:
+ * var(--success-bg)` que ya escribe cada componente coge el valor bueno sin
+ * tocar un solo fichero de componente, y sin pelear ninguna especificidad: una
+ * variable se resuelve por herencia, no por quién gana.
+ *
+ * `color-mix(... 14%, var(--bg-card))` reproduce **exactamente** el compuesto
+ * que se pretendía —`0,14·color + 0,86·tarjeta`, la misma cuenta que hace el
+ * navegador con el `rgba`— pero opaco, así que ya no depende de lo que tenga
+ * debajo.
+ *
+ * Solo en `.dark` (y por tanto en forest y ocean): en el tema claro estos
+ * cuatro valores **ya son opacos**, y mezclarlos aquí los cambiaría sin motivo.
+ * Comprobado: en claro las chapas miden igual antes y después.
+ */
+.dark .detail-card .card-header {
+  --success-bg: color-mix(in srgb, var(--success-color) 14%, var(--bg-card));
+  --warning-bg: color-mix(in srgb, var(--warning-color) 14%, var(--bg-card));
+  --error-bg: color-mix(in srgb, var(--error-color) 14%, var(--bg-card));
+  --info-bg: color-mix(in srgb, var(--info-color) 14%, var(--bg-card));
+}
+
 .card-body {
   padding: 1.5rem;
 }

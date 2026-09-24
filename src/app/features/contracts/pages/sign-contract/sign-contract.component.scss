@@ -220,7 +220,7 @@
   font-weight: 500;
   cursor: pointer;
 
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .public-footer {

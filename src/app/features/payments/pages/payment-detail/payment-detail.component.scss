@@ -233,7 +233,7 @@
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  &:hover:not(:disabled) { background: var(--bg-hover); }
+  &:hover:not(:disabled) { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .btn-danger {

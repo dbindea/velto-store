@@ -33,7 +33,7 @@
   color: var(--text-primary);
   cursor: pointer;
   flex-shrink: 0;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .header-content {
@@ -316,5 +316,5 @@
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }

@@ -52,7 +52,7 @@
   color: var(--text-primary);
   cursor: pointer;
   flex-shrink: 0;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .header-content {
@@ -530,7 +530,7 @@ textarea.form-control { resize: vertical; min-height: 50px; }
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  &:hover:not(:disabled) { background: var(--bg-hover); }
+  &:hover:not(:disabled) { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 /* Lo que la fianza no cubre. Ámbar y no rojo: no impide cerrar la devolución

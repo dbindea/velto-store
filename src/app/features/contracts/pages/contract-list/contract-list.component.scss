@@ -98,7 +98,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
 
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .row-main {

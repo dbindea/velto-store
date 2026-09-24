@@ -3298,6 +3298,41 @@ acordarse. Y no gana a una copia de componente —**empata** en (0,2,0) y el ord
 pone al componente detrás—, así que los cuatro ficheros de detalle se cambiaron
 igualmente: la global es la red para la quinta pantalla, no el mecanismo.
 
+⚠️ **Y una superficie nueva ROMPE LAS CHAPAS que van encima.** Es la
+consecuencia que no se ve viniendo y que hay que arreglar en la misma pasada: en
+los tres temas oscuros el fondo de una chapa es un **tinte translúcido**
+—`rgba(color, 0.14)`— calculado para componerse sobre la tarjeta. Con una banda
+más clara debajo, compone contra otra cosa y el texto pierde contraste. Medido
+antes y después dentro de la propia cabecera:
+
+| | antes | después de la banda | arreglado |
+|---|---|---|---|
+| ocean · «Cancelado» | 5,03 | **3,31** | 4,09 |
+| forest · «Cancelado» | 4,78 | **3,41** | 4,26 |
+| dark · «Cancelado» | 5,50 | **3,77** | 4,99 |
+| ocean · «Pagado» | 6,31 | **4,08** | 5,08 |
+
+**Un tinte translúcido solo es correcto sobre la superficie para la que se
+calculó**, que es la misma lección que obligó a superponer `--bg-hover` en vez de
+sustituirlo.
+
+⚠️ **Se arregla redefiniendo las VARIABLES dentro de la cabecera, no con reglas
+por clase.** Las chapas se llaman distinto en cada ficha —`status-*` en contratos
+e inspecciones, `payment-*` en la de la reserva— y una regla por clase habría que
+ampliarla cada vez que aparezca un estado nuevo. Cambiando qué significa
+`--success-bg` **dentro** de la banda, el `background: var(--success-bg)` que ya
+escribe cada componente coge el valor bueno sin tocar un solo fichero de
+componente y sin pelear ninguna especificidad: **una variable se resuelve por
+herencia, no por quién gana**. `color-mix(… 14%, var(--bg-card))` reproduce
+exactamente el compuesto que se pretendía, pero opaco. Comprobado: dentro de la
+cabecera las chapas miden ahora **lo mismo** que en el cuerpo de la tarjeta.
+
+⚠️ **Ojo al medir: el navegador serializa un `color-mix` como
+`color(srgb 0.20 0.14 0.14)`**, con flotantes de 0 a 1 y no de 0 a 255. Un
+medidor escrito para `rgb()` lo lee como casi negro y da contrastes altísimos y
+falsos —salieron 9,47 y 11,25 en los tres temas a la vez, idénticos, que es la
+señal de que el parser está roto y no de que el CSS esté bien—.
+
 ⚠️ **`--bg-main` NO es la página, y creerlo costó una iteración entera.** Además
 del `body`, ese valor pinta **87 sitios** que son superficies hundidas dentro de
 una tarjeta: cabeceras de sección, miniaturas de foto, botones de subir,
@@ -3351,9 +3386,36 @@ La regla completa, que es la que hay que aplicar una a una: **si el elemento
 lleva un color de marca, el hover es ese color oscuro** (`--accent-hover`), no un
 tinte gris encima; **si lleva una superficie**, el tinte se superpone con el
 `linear-gradient`; y **si es transparente**, entonces sí vale `background` a
-secas. Los 28 `background: var(--bg-hover)` que quedan en `src/` son casi todos
-del tercer caso —celdas de calendario, filas de menú, botones del panel de
-fechas—, pero ahí es donde hay que mirar cuando un hover «no se ve».
+secas.
+
+⚠️ **Se barrieron los 29 sitios el 24 de septiembre de 2026, y eran TRECE los
+rotos, no uno.** Doce botones —`.btn-back` y `.btn-secondary` de contratos,
+inspecciones y pagos, más el `.btn-clear` del lienzo de firma y la fila entera de
+la lista de contratos— perdían su relleno al pasar el ratón. En claro se
+**apagan** en vez de encenderse; en los tres oscuros `--bg-card` sobre `--bg-main`
+está a un paso del negro, así que el control se borra. Los quince restantes son
+correctos: pestañas, celdas del calendario, filas de menú y los botones del panel
+de fechas, todos transparentes de base.
+
+⚠️ **Y el arreglo del primero estuvo MUERTO una hora sin que se notara.** Este
+fichero llegó a tener **tres** declaraciones de primer nivel de `.btn-secondary`,
+así que el aspecto del botón salía de mezclar las tres — y el hover lo ponía la
+que llevaba `:not(:disabled)`, que mide `(0,4,0)` contra `(0,3,0)`. El
+`linear-gradient` nuevo no llegaba a aplicarse nunca. Se vio **pasando el ratón y
+midiendo**: `background-color: rgba(0, 0, 0, 0.02)` con `background-image: none`.
+
+De ahí la regla que vale para cualquier corrección de CSS en este proyecto:
+**antes de arreglar una regla, comprueba que es la que gana.** Un fichero con la
+misma clase declarada tres veces no tiene «la regla del botón», tiene tres, y la
+que se ve es la que más pesa, no la última que uno editó. Se resuelve borrando,
+no añadiendo una cuarta. Y **un hover solo está comprobado si se ha pasado el
+ratón por encima**: medir el estado de reposo no dice nada del hover.
+
+⚠️ **Queda una cosa medida y no decidida: el tinte es del 2 %.**
+`rgba(0, 0, 0, 0.02)` sobre blanco da `#FAFAFA` —razón de 1,04— o sea que
+**incluso donde se aplica bien, el hover está en el límite de lo perceptible**.
+Es la queja de Dorel («no se ve nada») en su forma general, y afecta a los
+veintiséis sitios a la vez, así que subirlo es una decisión suya, no un arreglo.
 
 ⚠️ **Y el contorno de un control es `--border-input`, nunca `--border-color`.**
 Aquel es el de las **separaciones** y puede ser sutil; este tiene que llegar a

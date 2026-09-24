@@ -760,12 +760,27 @@ app-reservation-timeline {
   }
 }
 
-.btn-secondary {
-  background: var(--bg-main);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  &:hover:not(:disabled) { background: var(--bg-hover); }
-}
+/**
+ * ⚠️ **Aquí había una SEGUNDA declaración de `.btn-secondary`, y era la que de
+ * verdad mandaba en el hover.** Este fichero llegó a tener tres bloques
+ * `.btn-secondary` de primer nivel —763, 924 y 950—, así que el aspecto del
+ * botón salía de mezclar los tres: el relleno del último, el borde del
+ * compartido y el hover de este, que era el único con `:not(:disabled)` y por
+ * eso **ganaba**: `(0,4,0)` contra `(0,3,0)`.
+ *
+ * Consecuencia medida: el arreglo del tinte —superponerlo con un
+ * `linear-gradient` en vez de sustituir— **no llegaba a aplicarse**. Con el
+ * ratón encima de «Devolver total» el botón daba `background-color:
+ * rgba(0, 0, 0, 0.02)` y `background-image: none`, o sea que perdía su blanco y
+ * enseñaba lo que hubiera detrás. Lo arreglé una vez, lo di por bueno sin
+ * pasar el ratón, y seguía roto.
+ *
+ * La lección, que es la cara b de la del tinte: **antes de arreglar una regla,
+ * comprueba que es la que gana.** Un fichero con la misma clase declarada tres
+ * veces no tiene «la regla del botón», tiene tres, y la que se ve es la que
+ * más pesa — no la última que uno editó. Se resuelve borrando, no añadiendo una
+ * cuarta.
+ */
 
 // Inspections Section
 .inspections-grid {
@@ -941,7 +956,7 @@ app-reservation-timeline {
 
   // El mismo hover que el `.btn-primary` global usa en el resto de la
   // aplicación: el verde oscuro de marca. Así los dos se comportan igual.
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--accent-hover);
     border-color: var(--accent-hover);
   }
@@ -953,7 +968,11 @@ app-reservation-timeline {
 
   // Este SÍ lleva tinte, porque su relleno es la superficie de la tarjeta; pero
   // superpuesto, no sustituyendo, o enseñaría la página a través del botón.
-  &:hover {
+  //
+  // ⚠️ El `:not(:disabled)` no es solo corrección: un botón apagado no se
+  // ilumina al pasar por encima. Y de paso iguala la especificidad con la regla
+  // que había más arriba y ganaba a esta.
+  &:hover:not(:disabled) {
     background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
     border-color: var(--border-strong);
   }
