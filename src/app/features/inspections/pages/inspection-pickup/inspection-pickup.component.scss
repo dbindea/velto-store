@@ -53,7 +53,7 @@
   color: var(--text-primary);
   cursor: pointer;
   flex-shrink: 0;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .header-content {
@@ -94,11 +94,11 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-main);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
   i {
-    color: var(--accent-color);
+    color: var(--icon-header);
     font-size: 1.1rem;
   }
 
@@ -106,7 +106,7 @@
     margin: 0;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-header);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -391,5 +391,5 @@ textarea.form-control {
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  &:hover:not(:disabled) { background: var(--bg-hover); }
+  &:hover:not(:disabled) { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }

@@ -149,7 +149,7 @@
                 class="form-control"
                 [(ngModel)]="emailRecipient"
                 name="emailRecipient"
-                placeholder="cliente@email.com"
+                [attr.placeholder]="'common.emailPlaceholder' | translate"
                 [disabled]="sending"
               />
             </div>

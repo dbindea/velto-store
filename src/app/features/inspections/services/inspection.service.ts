@@ -33,7 +33,9 @@ import { PAGINA } from '@shared/utils/pagination.util';
 import {
   WorkflowContext,
   canStartPickup as assertCanStartPickup,
-  canStartReturn as assertCanStartReturn
+  canStartReturn as assertCanStartReturn,
+  canCloseReservation,
+  canWithException
 } from '@shared/utils/reservation-workflow.util';
 import { roundMoney, distributeRetentionAcrossCharges } from '@shared/utils/payment-summary.util';
 import {
@@ -211,11 +213,24 @@ export class InspectionService {
       this.contractService.getContractByReservation(reservationId).pipe(first())
     );
     const pickupInspection = existing || null;
-    const decision = assertCanStartPickup({
-      reservation,
-      pickupInspection,
-      contract
-    } as WorkflowContext);
+    const ctx = { reservation, pickupInspection, contract } as WorkflowContext;
+    /**
+     * ⚠️ **Pasa por `canWithException`, y sin eso «Saltar este paso» no servía
+     * de nada.** La pantalla resuelve el guard honrando las excepciones
+     * documentadas y habilita el botón; aquí se volvía a preguntar **a secas**,
+     * así que la operación fallaba igual. El resultado era el peor de los dos
+     * mundos: la excepción quedaba escrita en la reserva —con su motivo, su
+     * autor y su fecha, para siempre— y la entrega no se hacía.
+     *
+     * El propio util lo dice en su comentario: «Service-layer callers can use
+     * this to honour `workflowExceptions`». No lo hacía nadie.
+     *
+     * ⚠️ **Y solo vale para el guard del workflow.** La comprobación de ITV y
+     * seguro de más abajo sigue sin admitir excepción a propósito: saltarse un
+     * paso es un atajo operativo, y entregar un coche sin papeles es circular
+     * ilegalmente. El motivo largo está escrito ahí.
+     */
+    const decision = canWithException(assertCanStartPickup(ctx), ctx, 'startPickup');
     if (!decision.ok) {
       throw new Error(decision.reason);
     }
@@ -330,11 +345,15 @@ export class InspectionService {
     // Workflow guard: return only allowed after a completed pickup.
     const existing = await this.getInspectionByReservationAndType(reservationId, 'return');
     const pickup = await this.getInspectionByReservationAndType(reservationId, 'pickup');
-    const decision = assertCanStartReturn({
+    // Mismo caso que la entrega: la pantalla ofrece «Saltar este paso» para
+    // `startReturn`, así que aquí hay que honrar la excepción o el botón
+    // escribe el motivo en la reserva y la operación falla igual.
+    const ctx = {
       reservation,
       pickupInspection: pickup || null,
       returnInspection: existing || null
-    } as WorkflowContext);
+    } as WorkflowContext;
+    const decision = canWithException(assertCanStartReturn(ctx), ctx, 'startReturn');
     if (!decision.ok) {
       throw new Error(decision.reason);
     }
@@ -354,7 +373,46 @@ export class InspectionService {
       clientSnapshot: reservation.clientSnapshot
     };
 
-    const newStatus: 'returned' | 'closed' = options.closeReservation ? 'closed' : 'returned';
+    /**
+     * ⚠️ **Cerrar aquí PREGUNTA al guard, y antes no.** Esta línea era
+     * `options.closeReservation ? 'closed' : 'returned'` a secas, así que la
+     * casilla del parte se saltaba `canCloseReservation()` entero: se podía dar
+     * por terminado un alquiler con el resto sin cobrar o la fianza sin
+     * resolver. El botón de la ficha sí lo comprueba —y `closeReservation()` del
+     * servicio también—; el atajo de aquí era el agujero.
+     *
+     * ⚠️ **Se evalúa contra el estado PROYECTADO**, porque el guard exige
+     * `reservationStatus === 'returned'` y una inspección de devolución
+     * `completed`: las dos cosas son ciertas **después** de esta escritura, no
+     * antes. Preguntarle al estado actual diría siempre que no.
+     *
+     * ⚠️ **Y si dice que no, la devolución se hace igual y la reserva se queda
+     * en `returned`.** El coche ha vuelto: eso es un hecho físico y no se puede
+     * deshacer porque falten 53 €. Cerrar es una decisión de dinero, y se toma
+     * en la ficha, donde el importe está delante y existe «Saltar este paso»
+     * con su motivo obligatorio. La pantalla ya lo dice antes de guardar; esto
+     * es la segunda capa, para cuando la llamada no venga de esa pantalla.
+     */
+    let newStatus: 'returned' | 'closed' = 'returned';
+    if (options.closeReservation) {
+      const proyectada = {
+        ...reservation,
+        reservationStatus: 'returned',
+        deposit: reservation.deposit && {
+          ...reservation.deposit,
+          returnedAmount:
+            (reservation.deposit.returnedAmount || 0) + (options.refundDepositAmount || 0),
+          retainedAmount:
+            (reservation.deposit.retainedAmount || 0) + (options.retainDepositAmount || 0)
+        }
+      } as Reservation;
+      const cierre = canCloseReservation({
+        reservation: proyectada,
+        pickupInspection: pickup || null,
+        returnInspection: { ...(existing || {}), status: 'completed' }
+      } as WorkflowContext);
+      if (cierre.ok) newStatus = 'closed';
+    }
 
     let inspectionId: string;
     if (existing?.id) {

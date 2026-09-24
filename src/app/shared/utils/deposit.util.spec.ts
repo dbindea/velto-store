@@ -85,7 +85,29 @@ describe('devolver y retener la fianza', () => {
 
   it('nunca es negativo, aunque los datos vengan raros', () => {
     expect(depositAvailable(resumen(300, 400))).toBe(0);
-    expect(depositAvailable({})).toBe(0);
+    expect(depositAvailable(resumen(0))).toBe(0);
+  });
+
+  /**
+   * ⚠️ **El caso que rompió la devolución de fianza entera y no lo cazó nadie.**
+   * La fianza cobrada se llama `depositPaid` en `ReservationPaymentSummary` y
+   * `depositCollected` en `CollectedTotals`, y **los dos llamadores reales pasan
+   * el segundo** —`depositAvailable(collectedTotalsOf(pagos))`—. Con la firma
+   * vieja, de campos opcionales, eso compilaba y contestaba **0 siempre**: cada
+   * devolución de fianza se rechazaba con «el importe supera la fianza
+   * disponible», en los dos entornos y desde el día que se escribió.
+   *
+   * Este test existe por la forma del dato, no por la aritmética: es la única
+   * forma de que un renombrado futuro vuelva a fallar en rojo y no en silencio.
+   */
+  it('acepta la fianza cobrada con los dos nombres que tiene en el código', () => {
+    const deCollectedTotals = {
+      depositCollected: 300,
+      depositReturned: 100,
+      depositRetained: 50
+    };
+    expect(depositAvailable(deCollectedTotals)).toBe(150);
+    expect(depositAvailable(resumen(300, 100, 50))).toBe(150);
   });
 
   /**

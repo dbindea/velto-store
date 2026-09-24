@@ -148,6 +148,48 @@
   --bg-page: var(--gray-200);
   --bg-main: var(--gray-100);
   --bg-card: #ffffff;
+  /**
+   * La banda de la cabecera de una tarjeta.
+   *
+   * ⚠️ **Es una superficie propia porque una cabecera no es un hueco.** Se
+   * pintaba con `--bg-main`, o sea con el mismo gris que las superficies
+   * **hundidas**, y por eso no se leía como cabecera: en el tema claro quedaba a
+   * un paso del blanco de la tarjeta y lo único que la delimitaba era el filete
+   * de abajo. Lo dijo Dorel el 24 de septiembre de 2026 y trajo el tono elegido.
+   *
+   * ⚠️ **El valor sale de su maqueta, medido píxel a píxel, y NO de la rampa a
+   * propósito.** El gris de rampa más parecido es `--gray-300` (#C9D0D2) y deja
+   * el rótulo en **3,62:1**, por debajo del 4,5:1 que pide el texto; este tono,
+   * más claro y con más cian, lo sube a **4,55:1**. Es el mismo caso que
+   * `--bg-input`, que tampoco es un valor de rampa sino un tinte afinado a mano.
+   *
+   * ⚠️ **En los tres temas oscuros va al revés: la banda es MÁS CLARA que la
+   * tarjeta.** En claro una cabecera se hunde respecto al blanco; en oscuro, un
+   * tono por debajo del panel se lee como un agujero. Lo que se conserva es el
+   * salto —entre 1,25 y 1,35 de razón de luminancia contra la tarjeta—, no la
+   * dirección.
+   */
+  --bg-header: #CEDEE0;
+  /**
+   * ⚠️ **El rótulo y el icono de la banda son variables PROPIAS, y no es
+   * ceremonia.** Es la regla que ya obligó a crear `--warning-on`: cuando un
+   * color deja de ser el fondo neutro de siempre, su acompañante tiene que poder
+   * cambiar con él.
+   *
+   * Medido en el navegador sobre la banda de este tema, que es lo único que
+   * vale: el `--text-muted` de hoy (#5F686B) se queda en **4,12:1**, por debajo
+   * del 4,5:1 que pide un texto de 12,8 px; y el turquesa de marca en el icono
+   * cae a **2,24:1**, cuando un icono pide 3:1. Un escalón más oscuro en cada
+   * uno lo resuelve sin tocar el aspecto: gris 700 da **6,23:1** y el teal 700
+   * da **4,24:1**, y los dos siguen siendo el mismo color a ojo.
+   *
+   * En los tres temas oscuros la banda es oscura, así que ahí los valores de
+   * siempre ya pasan (5,73 / 4,52 / 4,52 el rótulo) y estas variables apuntan a
+   * ellos. Se declaran igualmente en los cuatro bloques: un `var()` que no
+   * exista en uno no falla, **desaparece**.
+   */
+  --text-header: var(--gray-700);
+  --icon-header: var(--teal-700);
   /* ⚠️ **Es un TINTE, no una superficie**: translúcido a propósito, para
      componerse sobre lo que haya debajo. Escrito como `background:` a secas
      **borra** la superficie del elemento y deja ver la página a través — con la
@@ -263,6 +305,12 @@
   --bg-page: var(--gray-950);
   --bg-main: var(--gray-950);
   --bg-card: var(--gray-900);
+  /* Un paso POR ENCIMA de la tarjeta, con el mismo tinte teal que la banda
+     clara: en oscuro un tono más bajo que el panel se lee como un hueco, no
+     como una cabecera. Ver la nota larga en `:root`. */
+  --bg-header: #22322F;
+  --text-header: var(--text-muted);
+  --icon-header: var(--accent-color);
   --bg-hover: rgba(255, 255, 255, 0.04);
   /* Un escalón por encima de la tarjeta, no por debajo: el campo se lee
      como una caja y no como un hueco del mismo color que el fondo. */
@@ -307,6 +355,10 @@
   --bg-page: #151D1B;
   --bg-main: #151D1B;
   --bg-card: #1D2725;
+  /* Un paso por encima de la tarjeta, en el verde del tema. */
+  --bg-header: #283A36;
+  --text-header: var(--text-muted);
+  --icon-header: var(--accent-color);
   --border-color: #2E3B38;
   --border-light: #253330;
   --border-strong: #3D4C48;
@@ -336,6 +388,11 @@
   --bg-page: #0F172A;
   --bg-main: #0F172A;
   --bg-card: #1E293B;
+  /* Un paso por encima de la tarjeta, en el azul del tema: aquí la banda sigue
+     a la superficie y no al verde de marca, que es lo que hace `ocean` distinto. */
+  --bg-header: #2A3A4E;
+  --text-header: var(--text-muted);
+  --icon-header: var(--accent-color);
   --border-color: #334155;
   --border-light: #1E293B;
   --border-strong: #475569;
@@ -679,6 +736,32 @@ input[type='radio'] {
   color: var(--error-color);
 }
 
+/**
+ * «Esto no se puede hacer todavía, y por esto».
+ *
+ * Es la etiqueta que acompaña a un botón o una casilla que el workflow bloquea:
+ * «Falta firma del contrato», «Falta cobrar el resto del alquiler». En ámbar y
+ * no en rojo a propósito — **no ha fallado nada**, falta un paso; el rojo es
+ * para lo que se ha hecho mal.
+ *
+ * ⚠️ **Global desde el 24 de septiembre de 2026**, y por el motivo de siempre:
+ * la declaraban dos pantallas con dos copias idénticas, y la tercera que la usó
+ * —la casilla de cerrar en el parte de devolución— salió **sin estilo ninguno**,
+ * o sea un aviso que no se veía como aviso. Lo cazó `css:audit`.
+ *
+ * No pisa a quien ya la declara: las copias de componente miden (0,2,0) y esta
+ * (0,1,0).
+ */
+.action-blocked {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--warning-color);
+  background: var(--warning-bg);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+}
+
 /* ---------------------------------------------------------------------------
  * Una ayuda que además avisa
  *
@@ -740,6 +823,29 @@ input[type='radio'] {
     }
   }
 
+  /**
+   * ⚠️ **Una casilla apagada tiene que PARECERLO.** Es la misma lección que
+   * `button:disabled`: sin esto, «Cerrar reserva al completar» se veía igual de
+   * pulsable cuando el workflow no deja cerrar, y el operador la marcaba
+   * esperando algo. El motivo va escrito al lado; esto es lo que hace que se
+   * mire.
+   *
+   * No se esconde: saber que la opción existe y por qué está apagada es
+   * justamente lo que evita tener que explicárselo a nadie.
+   */
+  &.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+
+    input[type='checkbox'] {
+      cursor: not-allowed;
+    }
+
+    &:hover {
+      border-color: var(--border-color);
+    }
+  }
+
   /* Sin caja, para las casillas que van sueltas dentro de una barra de acciones
      —«Cerrar reserva al completar»— donde un recuadro más competiría con los
      botones que tiene al lado. El control y el hueco no cambian. */
@@ -752,6 +858,85 @@ input[type='radio'] {
       border-color: transparent;
     }
   }
+}
+
+/**
+ * ⚠️ **Una casilla dentro de un `.form-group` la DEGRADA la regla de la
+ * etiqueta, y deja de parecer una casilla.**
+ *
+ * Casi todos los formularios declaran en su SCSS algo así:
+ *
+ *     .form-group { label { display: block; font-size: 0.75rem; … } }
+ *
+ * que es correcto para el rótulo de un campo. Pero una casilla **también es un
+ * `<label>`**, así que cuando va dentro de un `.form-group` se come esa regla:
+ * con la encapsulación de Angular mide **(0,2,1)** y `.checkbox-item` mide
+ * **(0,1,0)**, o sea que gana ella y convierte el `flex` en `block`. Y al dejar
+ * de ser flex **el `gap` no se aplica**: la casilla se queda pegada al texto y
+ * ligeramente alta, porque pasa a alinearse por la línea base.
+ *
+ * Medido en la pantalla de devolución, que es donde lo vio Dorel el 24 de
+ * septiembre de 2026: `display: block`, **0 px** de hueco al texto y la casilla
+ * 2,3 px por encima del centro, contra los 10 px y el centrado exacto de las
+ * ocho de la pantalla de entrega — que son idénticas salvo por ir dentro de un
+ * `.checklist` en vez de un `.form-group`. Además le bajaba la letra a 0,75 rem
+ * y la aclaraba a `--text-secondary`, así que la misma casilla se veía distinta
+ * según la pantalla.
+ *
+ * ⚠️ **La clase va TRIPLE, y el número sale de una cuenta que yo tenía mal.**
+ * La encapsulación de Angular no añade un atributo a la regla: lo añade a
+ * **cada elemento del selector**. O sea que `.form-group label` compila a
+ * `.form-group[_ngcontent-xxx] label[_ngcontent-xxx]` y mide **(0,3,1)**, no
+ * (0,2,1). Con la clase doble yo llegaba a (0,3,1) también, **empataba**, y en
+ * un empate manda el orden — que pone los estilos del componente detrás. Se
+ * quedó sin efecto y solo se vio volviendo a medir en el navegador.
+ *
+ * Con la tercera repetición son **(0,4,1)** y gana. Es el mismo recurso que ya
+ * usa `input.form-control.form-control`; lo que cambia es de cuánto hay que
+ * pasarse, y por eso la cuenta está escrita aquí.
+ *
+ * ⚠️ **Y esto es la RED, no el arreglo.** La causa se corrige en el componente
+ * excluyendo la casilla de su regla de etiqueta —`label:not(.checkbox-item)`—,
+ * que es donde se lee el porqué. Esto está para el siguiente formulario que
+ * escriba `.form-group label { display: block }` sin acordarse de las casillas.
+ */
+.form-group > label.checkbox-item.checkbox-item.checkbox-item,
+.form-row > label.checkbox-item.checkbox-item.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 0;
+
+  &.multiline {
+    align-items: flex-start;
+  }
+}
+
+/**
+ * ⚠️ **Y una casilla en una rejilla de formulario flota por encima de sus
+ * vecinos, porque no tiene etiqueta que la baje.**
+ *
+ * Los demás campos son rótulo + control, así que su control arranca por debajo
+ * de una línea de texto; una casilla es solo el control. Medido en «Estado del
+ * vehículo» de la devolución: la celda de «Limpieza» empieza en 614 y su
+ * `select` en **642**, mientras «Llaves devueltas» empieza en **614** — 28 px
+ * más arriba, que es justo lo que mide el rótulo con su margen. Por eso se ve
+ * torcida aunque la casilla en sí esté perfecta. Lo señaló Dorel el 24 de
+ * septiembre de 2026 con la captura delante.
+ *
+ * ⚠️ **Se alinea por ABAJO y no restando la altura del rótulo.** Restar 28 px
+ * sería atar esto al tamaño de letra del rótulo de cada formulario, y el día que
+ * uno use otro tamaño vuelve la escalera. `align-self: end` encaja la celda
+ * contra el borde inferior de su fila, que es donde también acaban los campos
+ * vecinos, sin saber cuánto miden.
+ */
+.form-grid > .form-group:has(> .checkbox-item),
+.form-grid-inner > .form-group:has(> .checkbox-item),
+.form-row > .form-group:has(> .checkbox-item) {
+  align-self: end;
 }
 
 /* ---------------------------------------------------------------------------
@@ -852,61 +1037,37 @@ input[type='time'].picker-custom {
  * pulsa; aquí se teclea, y un campo de texto con cursor de mano dice que no se
  * puede escribir en él. La directiva enciende `--hover` solo sobre la zona.
  * ------------------------------------------------------------------------- */
+/* ⚠️ **Tres medidas distintas que es fácil confundir en una sola.**
+   - El **dibujo** son 1,125 rem (18 px). Una cruz de 44 px pintada gritaría en
+     una fila de formulario.
+   - La **zona pulsable** son 44 px, y vive en `ZONA_ASPA_PX`, no aquí: es el
+     mínimo que piden Apple y Android para algo que se toca. Estuvo en 34 —el
+     ancho del icono del calendario, copiado sin pensar— y Dorel la encontró
+     pequeña con el pulgar el 24 de septiembre de 2026.
+   - El **relleno** son 2,5 rem (40 px), y solo tiene que apartar el texto: el
+     icono acaba a 31 px del borde. No hace falta que empareje con la zona, y
+     de hecho no debe: 2,75 rem se sale de la escala de espaciado y el guion lo
+     caza con razón. Lo que crece para el dedo es dónde se acierta, no el hueco. */
 input.has-clear {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
-  background-position: right 0.75rem center !important;
-  background-size: 0.875rem !important;
-  padding-right: 2rem !important;
+  background-position: right 0.8125rem center !important;
+  background-size: 1.125rem !important;
+  padding-right: 2.5rem !important;
 }
 
 input.has-clear--hover {
   cursor: pointer;
 }
 
-/* En un campo de fecha u hora el borde derecho ya está ocupado, así que el
-   aspa se mete un hueco hacia dentro y el calendario se queda donde estaba —
-   moverlo descolocaría la fila respecto a los campos de al lado. La distancia
-   es la misma que `ZONA_ASPA_PX` en la directiva: las dos zonas van pegadas y
-   ninguna se come a la otra.
-
-   ⚠️ **Quien decide esto es la clase que pone la directiva, no el tipo del
-   campo.** Escrito como `input[type='date'].has-clear` funcionaba igual, pero
-   dejaba `has-clear--offset` sin declarar en ninguna parte: una clase muerta
-   que `css:audit` no puede cazar —solo lee plantillas, y esta la pone un
-   `HostBinding`— y que el día que alguien la mirara parecería un descuido.
-   Ahora el criterio vive en un solo sitio, la directiva, y el CSS lo obedece.
-
-   La clase se repite para llegar a (0,2,1) y ganarle sin depender del orden. */
-input.has-clear.has-clear--offset {
-  background-position: right 2.25rem center !important;
-  padding-right: 3.5rem !important;
-}
-
-/* ⚠️ **Y cuando el calendario también lo pinta la aplicación, los dos iconos
-   van en la MISMA declaración.** `background-image` es una sola propiedad: dos
-   reglas con `!important` no se suman, gana una y la otra desaparece — el aspa
-   borraría el calendario. Se declaran como dos capas, en orden, con su
-   posición cada una. En el móvil no hace falta: allí el indicador del
-   navegador es un pseudoelemento y no compite por el fondo. */
-input[type='date'].picker-custom.has-clear,
-input[type='datetime-local'].picker-custom.has-clear {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E") !important;
-  background-position: right 2.25rem center, right 0.75rem center !important;
-  background-size: 0.875rem, 0.875rem !important;
-  padding-right: 3.5rem !important;
-}
-
-input[type='time'].picker-custom.has-clear {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") !important;
-  background-position: right 2.25rem center, right 0.75rem center !important;
-  background-size: 0.875rem, 0.875rem !important;
-  padding-right: 3.5rem !important;
-}
+/* ⚠️ **Los campos de fecha y hora NO llevan aspa desde el 24 de septiembre de
+   2026.** Aquí vivían tres reglas más: una para correr el aspa hacia dentro y
+   dos que componían el aspa y el calendario como dos capas de la misma
+   `background-image`, porque dos reglas con `!important` no se suman. Todo eso
+   se fue con la decisión de Dorel —«el aspa al lado de la flecha de despliegue
+   no tiene sentido, con el dedo se confunde»—: esos campos se vacían ahora con
+   el botón «Borrar» del panel. Queda anotado porque el problema de las dos
+   capas volverá el día que alguien quiera dos iconos en un mismo campo. */
 
 // A visible, consistent focus ring on every control — several components
 // removed the outline without putting anything in its place.
@@ -1008,6 +1169,98 @@ h1, h2, h3, h4, h5, h6 {
 .card-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+/**
+ * LA BANDA DE CABECERA DE UNA FICHA DE DETALLE.
+ *
+ * ⚠️ **Va aquí para que la próxima pantalla de detalle no nazca gris.** El tono
+ * estaba copiado a mano en los cuatro ficheros de detalle —reserva, contrato,
+ * inspección y pago— y la quinta pantalla que se escribiera se habría quedado
+ * con `--bg-main` sin que nadie lo notara. Es la misma lección que ya obligó a
+ * subir `.form-control`, `.btn-*` y `.checkbox-item` a global.
+ *
+ * ⚠️ **El selector lleva `.detail-card` delante a propósito, y no es
+ * decoración.** El panel también usa `.card-header`, pero allí no es una banda:
+ * es una fila de icono y rótulo **dentro** de una tarjeta de estadística, y
+ * pintarla de color la convertiría en otra cosa. El panel usa `.card` y las
+ * fichas `.detail-card`, así que el prefijo separa los dos casos sin que nadie
+ * tenga que acordarse. (Medido: hoy esas cabeceras del panel ya heredan de la
+ * regla de arriba un `padding: 20px 24px` que nadie eligió para ellas.)
+ *
+ * ⚠️ **Y no gana a una copia de componente: empata.** `.detail-card .card-header`
+ * mide (0,2,0) y `.card-header[_ngcontent-xxx]` también, así que en el empate
+ * manda el orden y Angular pone los estilos del componente detrás. Por eso los
+ * cuatro ficheros se han cambiado igualmente: esto es la red, no el mecanismo.
+ *
+ * Sin filete: lo que separa la banda del contenido es el propio cambio de
+ * color, y una línea entre dos superficies que ya contrastan solo añade ruido.
+ */
+.detail-card .card-header,
+.section-header,
+.modal-header {
+  background: var(--bg-header);
+  color: var(--text-header);
+
+  i {
+    color: var(--icon-header);
+  }
+}
+
+/**
+ * ⚠️ **El filete se quita SOLO en las fichas de detalle**, no en las secciones
+ * ni en los modales. Ahí la banda toca el contenido directamente y el cambio de
+ * color ya separa; en un formulario largo —«Estado del vehículo», «Daños
+ * registrados»— y en la cabecera de un modal, el filete marca dónde acaba el
+ * rótulo y empieza lo que se rellena, que es otra cosa.
+ */
+.detail-card .card-header {
+  border-bottom: none;
+}
+
+/**
+ * ⚠️ **UNA BANDA NUEVA ROMPE LAS CHAPAS QUE VAN ENCIMA, y eso hay que
+ * arreglarlo en la misma pasada.**
+ *
+ * En los tres temas oscuros el fondo de una chapa es un **tinte translúcido**
+ * —`rgba(color, 0.14)`— calculado para componerse sobre la tarjeta. Al meter
+ * debajo una banda **más clara**, el tinte compone contra otra cosa, el fondo
+ * de la chapa se aclara y su texto pierde contraste. Medido antes y después de
+ * este cambio, dentro de la propia cabecera:
+ *
+ *   ocean  · «Cancelado» (error)   5,03 → 3,31
+ *   forest · «Cancelado» (error)   4,78 → 3,41
+ *   dark   · «Cancelado» (error)   5,50 → 3,77
+ *   ocean  · «Pagado» (success)    6,31 → 4,08
+ *
+ * O sea: una regresión de verdad, causada por un cambio que en sí mismo medía
+ * bien. **Un tinte translúcido solo es correcto sobre la superficie para la que
+ * se calculó**, y esa es la lección que se lleva — la misma que ya obligó a
+ * superponer `--bg-hover` en vez de sustituir.
+ *
+ * ⚠️ **Se arregla redefiniendo las variables, no con reglas por clase.** Las
+ * chapas se llaman distinto en cada ficha —`status-*` en contratos e
+ * inspecciones, `payment-*` en la cabecera de la reserva— y una regla por clase
+ * habría que ampliarla cada vez que aparezca un estado nuevo. Cambiando lo que
+ * significa `--success-bg` **dentro** de la cabecera, el `background:
+ * var(--success-bg)` que ya escribe cada componente coge el valor bueno sin
+ * tocar un solo fichero de componente, y sin pelear ninguna especificidad: una
+ * variable se resuelve por herencia, no por quién gana.
+ *
+ * `color-mix(... 14%, var(--bg-card))` reproduce **exactamente** el compuesto
+ * que se pretendía —`0,14·color + 0,86·tarjeta`, la misma cuenta que hace el
+ * navegador con el `rgba`— pero opaco, así que ya no depende de lo que tenga
+ * debajo.
+ *
+ * Solo en `.dark` (y por tanto en forest y ocean): en el tema claro estos
+ * cuatro valores **ya son opacos**, y mezclarlos aquí los cambiaría sin motivo.
+ * Comprobado: en claro las chapas miden igual antes y después.
+ */
+.dark .detail-card .card-header {
+  --success-bg: color-mix(in srgb, var(--success-color) 14%, var(--bg-card));
+  --warning-bg: color-mix(in srgb, var(--warning-color) 14%, var(--bg-card));
+  --error-bg: color-mix(in srgb, var(--error-color) 14%, var(--bg-card));
+  --info-bg: color-mix(in srgb, var(--info-color) 14%, var(--bg-card));
 }
 
 .card-body {

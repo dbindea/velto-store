@@ -52,7 +52,7 @@
   color: var(--text-primary);
   cursor: pointer;
   flex-shrink: 0;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .header-content {
@@ -89,16 +89,16 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-main);
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
-  i { color: var(--accent-color); font-size: 1.1rem; }
+  i { color: var(--icon-header); font-size: 1.1rem; }
   h2 {
     flex: 1;
     margin: 0;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-header);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -151,7 +151,21 @@
 }
 
 .form-group {
-  label {
+  /**
+   * ⚠️ **El `:not(.checkbox-item)` es la causa del fallo, no un adorno.** Una
+   * casilla también es un `<label>`, así que las dos de esta pantalla —«Llaves
+   * devueltas» y «Accesorios revisados»— se comían esta regla por ir dentro de
+   * un `.form-group`: pasaban de `flex` a `block` y, al dejar de ser flex, el
+   * `gap` de `.checkbox-item` **no se aplicaba**. Medido: 0 px de hueco entre
+   * la casilla y el texto y 2,3 px por encima del centro, contra los 10 px y el
+   * centrado exacto de las ocho de la pantalla de entrega, que son idénticas
+   * salvo por colgar de un `.checklist`. Encima les bajaba la letra a 0,75 rem
+   * y las aclaraba. Lo vio Dorel el 24 de septiembre de 2026.
+   *
+   * Esto lo arregla en origen; `styles.scss` lleva además una red para el
+   * siguiente formulario que escriba esta misma regla sin acordarse.
+   */
+  label:not(.checkbox-item) {
     display: block;
     font-size: 0.75rem;
     font-weight: 500;
@@ -530,7 +544,7 @@ textarea.form-control { resize: vertical; min-height: 50px; }
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  &:hover:not(:disabled) { background: var(--bg-hover); }
+  &:hover:not(:disabled) { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 /* Lo que la fianza no cubre. Ámbar y no rojo: no impide cerrar la devolución

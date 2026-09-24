@@ -138,7 +138,6 @@
     "cancel": "Anulează",
     "close": "Închide",
     "continue": "Continuă",
-    "create": "Creează",
     "date": "Dată",
     "days": "zile",
     "delete": "Șterge",
@@ -162,7 +161,8 @@
     "save": "Salvează",
     "search": "Caută",
     "showingLatest": "Se afișează cele mai recente. Pentru unul vechi anume, folosește căutarea.",
-    "viewAll": "Vezi tot"
+    "viewAll": "Vezi tot",
+    "emailPlaceholder": "client@email.com"
   },
   "contracts": {
     "actions": {
@@ -280,6 +280,7 @@
     "title": "Alege data",
     "previousMonth": "Luna anterioară",
     "nextMonth": "Luna următoare",
+    "clear": "Golește",
     "hours": "Ore",
     "minutes": "Minute",
     "today": "Azi",
@@ -429,6 +430,8 @@
   },
   "inspections": {
     "actions": {
+      "continuePickup": "Continuă predarea",
+      "continueReturn": "Continuă returnarea",
       "startPickup": "Începe predare",
       "startReturn": "Începe returnare",
       "view": "Vezi detalii"
@@ -481,11 +484,7 @@
       "returnFailed": "Returnarea nu a putut fi finalizată",
       "photoType": "Sunt acceptate doar imagini JPG, PNG sau WebP.",
       "photoTooLarge": "Imaginea depășește limita de 5 MB.",
-      "photoUpload": "Fotografia nu a putut fi încărcată.",
-      "noAmountToRetain": "Nu există sumă de reținut.",
-      "noAmountToRefund": "Nu există sumă de restituit.",
-      "retainDeposit": "Garanția nu a putut fi reținută.",
-      "refundDeposit": "Garanția nu a putut fi restituită."
+      "photoUpload": "Fotografia nu a putut fi încărcată."
     },
     "extraCharges": {
       "cleaning": "Taxă curățenie",
@@ -516,9 +515,12 @@
     },
     "messages": {
       "noPickup": "Fără inspecție de predare",
-      "noReturn": "Fără inspecție de returnare"
+      "noReturn": "Fără inspecție de returnare",
+      "pickupDraft": "Procesul-verbal este început și neterminat: vehiculul nu figurează ca predat.",
+      "returnDraft": "Procesul-verbal este început și neterminat: vehiculul nu figurează ca returnat."
     },
     "photos": {
+      "advice": "Recomandăm încărcarea a cel puțin 4 fotografii (față, spate, lateral, interior).",
       "damage": "Deteriorare",
       "dashboard": "Bord",
       "front": "Față",
@@ -556,12 +558,7 @@
       "pickup": "Predare",
       "return": "Returnare"
     },
-    "success": {
-      "depositRetained": "S-au reținut {amount} € din garanție.",
-      "depositRefunded": "S-au restituit {amount} € din garanție."
-    },
-    "retentionReasonPrompt": "Motivul reținerii:",
-    "retentionDefaultReason": "Taxe predare/returnare",
+    "success": {},
     "confirm": {
       "checklistMessage": "Există puncte nebifate în listă. Dacă continui, predarea va fi înregistrată așa.",
       "checklistTitle": "Lipsesc verificări",
@@ -745,7 +742,9 @@
     },
     "fields": {
       "amount": "Sumă",
+      "client": "Client",
       "concept": "Concept",
+      "createdAt": "Data creării",
       "dueDate": "Scadență",
       "externalReference": "Referință externă",
       "internalReference": "Referință internă",
@@ -754,8 +753,10 @@
       "paidAmount": "Plătit",
       "paidAt": "Data plății",
       "pendingAmount": "Rest de plată",
+      "rentalTotal": "Total închiriere",
       "source": "Sursă",
-      "type": "Tip"
+      "type": "Tip",
+      "vehicle": "Vehicul"
     },
     "filters": {
       "freePayments": "Plăți libere",
@@ -868,13 +869,10 @@
     },
     "subtitle": "Gestionează plăți și garanții",
     "summary": {
-      "depositHeld": "Garanție depusă",
-      "extraChargesTotal": "Taxe extra",
-      "incomeTotal": "Încasat (fără garanție)",
+      "collectedShort": "încasați",
+      "missingShort": "lipsesc",
       "rentalTotal": "Total închiriere",
-      "title": "Rezumat",
-      "totalRental": "Total închiriere",
-      "extraChargesPending": "De încasat"
+      "totalRental": "Total închiriere"
     },
     "title": "Plăți",
     "types": {
@@ -981,7 +979,8 @@
       "searchFailed": "Disponibilitatea nu a putut fi căutată.",
       "maintenanceOverdue": "ITP sau revizie expirată",
       "itvExpired": "ITP-ul expiră înainte de data returnării. Nu se poate închiria până nu se trece ITP-ul.",
-      "insuranceExpired": "Asigurarea expiră înainte de data returnării. Nu se poate închiria până nu se reînnoiește."
+      "insuranceExpired": "Asigurarea expiră înainte de data returnării. Nu se poate închiria până nu se reînnoiește.",
+      "noTariff": "Acest vehicul nu are tarif pentru această durată. Verifică intervalele de preț din fișa lui."
     },
     "bookingConfirmation": {
       "copyLink": "Copiază linkul",
@@ -1019,6 +1018,13 @@
       "pending": "În așteptare",
       "pendingSignature": "Așteaptă semnare",
       "signed": "Semnat"
+    },
+    "delivery": {
+      "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
+      "locationMismatch": "Ai pus un supliment la domiciliu, iar locul este tot biroul: contractul le va tipări pe amândouă. Schimbă locul dacă mașina nu pleacă de acolo.",
+      "pickupFee": "Livrare la adresă",
+      "returnFee": "Ridicare de la adresă",
+      "total": "Serviciu la domiciliu"
     },
     "deposit": {
       "retained": "Reținută",
@@ -1140,19 +1146,40 @@
       "notes": "Note",
       "pickupDate": "Data preluării",
       "pickupLocation": "Locație preluare",
-      "pickupTime": "Ora preluării",
       "returnDate": "Data returnării",
       "returnLocation": "Locație returnare",
-      "returnTime": "Ora returnării",
       "totalDays": "zile",
       "totalDay": "zi"
+    },
+    "initialPayment": {
+      "waived": "Nu se solicită",
+      "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
     },
     "list": {
       "empty": "Nu există rezervări",
       "emptyFiltered": "Nicio rezervare cu acest filtru"
     },
     "messages": {
-      "invalidDates": "Data returnării trebuie să fie după data preluării"
+      "invalidDates": "Data returnării trebuie să fie după data preluării",
+      "pickupDateRequired": "Lipsește data de ridicare.",
+      "returnDateRequired": "Lipsește data de returnare."
+    },
+    "money": {
+      "title": "Bani",
+      "pending": "De încasat",
+      "collected": "Deja achitat",
+      "required": "Total rezervare",
+      "pendingIncludesDeposit": "Din care garanție:",
+      "depositHeldHint": "În depozit, se returnează clientului:",
+      "priceDetail": "Detalierea prețului închirierii",
+      "noDeposit": "Fără garanție",
+      "groups": {
+        "rental": "Închiriere",
+        "services": "Livrare și ridicare",
+        "extras": "Taxe suplimentare",
+        "deposit": "Garanție",
+        "other": "Alte încasări"
+      }
     },
     "new": "Rezervare nouă",
     "notes": {
@@ -1236,18 +1263,7 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări",
-    "initialPayment": {
-      "waived": "Nu se solicită",
-      "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
-    },
-    "delivery": {
-      "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
-        "locationMismatch": "Ai pus un supliment la domiciliu, iar locul este tot biroul: contractul le va tipări pe amândouă. Schimbă locul dacă mașina nu pleacă de acolo.",
-      "pickupFee": "Livrare la adresă",
-      "returnFee": "Ridicare de la adresă",
-      "total": "Serviciu la domiciliu"
-    }
+    "title": "Rezervări"
   },
   "search": {
     "close": "Închide",
@@ -1412,7 +1428,18 @@
       "delete": "Vehiculul nu a putut fi șters.",
       "statusChange": "Statusul vehiculului nu a putut fi schimbat.",
       "deleteHasReservations": "Această mașină are rezervări și nu poate fi ștearsă: numărul ei de înmatriculare este în fiecare dintre ele. Pentru o mașină vândută sau retrasă, schimbă-i statusul în „Scos din uz\".",
-      "saveFailed": "Vehiculul nu a putut fi salvat."
+      "saveFailed": "Vehiculul nu a putut fi salvat.",
+      "pricingRulesInvalid": "Verifică intervalele de tarif: așa cum sunt, o închiriere ar putea ieși 0 €",
+      "pricingNoRules": "Este nevoie de cel puțin un interval de tarif",
+      "pricingMinDays": "Intervalul „{rule}” trebuie să înceapă din ziua 1 sau mai târziu",
+      "pricingPrice": "Intervalul „{rule}” trebuie să aibă un preț pe zi mai mare decât 0",
+      "pricingMaxBeforeMin": "Intervalul „{rule}” se termină înainte să înceapă",
+      "pricingOverlap": "Intervalele „{rule}” și „{next}” se suprapun",
+      "pricingDoesNotStartAtOne": "Primul interval începe din ziua {from}: o închiriere mai scurtă ar rămâne fără preț și ar ieși 0 €",
+      "pricingGap": "Lipsesc zilele {from} până la {to}: o închiriere de această durată ar ieși 0 €",
+      "pricingOpenNotLast": "Intervalul „{rule}” nu are zile maxime, așa că „{next}” și următoarele nu s-ar aplica niciodată",
+      "pricingLastNotOpen": "Ultimul interval „{rule}” are zile maxime: o închiriere de {days} zile sau mai mult ar ieși 0 €. Lasă-l fără maxim",
+      "pricingGapSingle": "Lipsește ziua {day}: o închiriere de această durată ar ieși 0 €"
     },
     "features": {
       "airConditioning": "Aer condiționat",

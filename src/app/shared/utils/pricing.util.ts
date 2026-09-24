@@ -14,6 +14,7 @@ import { VehiclePricingRule } from '@shared/models/vehicle.model';
 // importa para el IVA del servicio a domicilio, y cogerlo de allí los dejaría
 // importándose en círculo. Ver `money.util.ts`.
 import { roundMoney } from '@shared/utils/money.util';
+import { TranslatableMessage } from '@shared/utils/i18n-params.util';
 
 /**
  * Spanish standard VAT rate, as a FRACTION (0.21 = 21 %).
@@ -330,44 +331,130 @@ export function sortPricingRules(rules: VehiclePricingRule[]): VehiclePricingRul
 }
 
 /**
- * Validate pricing rules and return array of error messages.
- * Returns empty array if all validations pass.
+ * Cómo se nombra un tramo en un mensaje de error.
+ *
+ * El rótulo que escribió el operador si lo hay, y si no el rango en crudo. Antes
+ * era `fila ${i + 1}`, que además de ser español dentro del código contaba desde
+ * la lista **ya ordenada**: con las filas en otro orden en pantalla, señalaba una
+ * distinta de la que fallaba.
  */
-export function validatePricingRules(rules: VehiclePricingRule[]): string[] {
-  const errors: string[] = [];
+function ruleName(rule: VehiclePricingRule): string {
+  if (rule.label?.trim()) return rule.label.trim();
+  return rule.maxDays === null ? `${rule.minDays}+` : `${rule.minDays}-${rule.maxDays}`;
+}
+
+/**
+ * Qué impide que estos tramos sirvan para cobrar un alquiler.
+ *
+ * ⚠️ **Un hueco entre tramos alquila el coche a 0 €, y en silencio.** Es el
+ * fallo que motivó las dos comprobaciones nuevas del 24 de septiembre de 2026:
+ * con los tramos `1-1` y `3-5`, un alquiler de **2 días** no encuentra regla,
+ * `findPricingRuleByDays()` devuelve `null` y `calculateBasePrice()` contesta
+ * `basePrice: 0`. Nada falla: la reserva se crea, el contrato se genera y el
+ * coche sale a la calle gratis. Lo mismo si el último tramo tiene días máximos
+ * —un alquiler más largo que ese techo cae fuera de todo—.
+ *
+ * Por eso los tramos tienen que **cubrir de 1 a infinito sin interrupción**:
+ * empezar en el día 1, encadenar sin huecos y terminar en un tramo abierto
+ * (`maxDays: null`). No es una preferencia de forma, es la única manera de que
+ * `findPricingRuleByDays()` no pueda contestar `null`.
+ *
+ * ⚠️ **Y `minimumRentalDays` no vale como excusa para no empezar en el día 1**:
+ * hoy no lo comprueba nadie al crear una reserva, así que un alquiler de un día
+ * entra igual. Si algún día se hiciera valer, esta comprobación se revisa
+ * entonces, no antes.
+ *
+ * Devuelve claves de i18n con sus sustituciones, no frases: esto se pinta en la
+ * ficha del vehículo y la lee un operador que puede tener la aplicación en
+ * rumano. Lista vacía = los tramos sirven.
+ */
+export function validatePricingRules(rules: VehiclePricingRule[]): TranslatableMessage[] {
+  const errors: TranslatableMessage[] = [];
 
   if (!rules || rules.length === 0) {
-    errors.push('Debe existir al menos una regla de precio');
-    return errors;
+    return [{ key: 'vehicles.errors.pricingNoRules' }];
   }
 
   const sorted = sortPricingRules(rules);
 
   for (let i = 0; i < sorted.length; i++) {
     const rule = sorted[i];
+    const name = ruleName(rule);
 
-    // Check minDays
     if (!rule.minDays || rule.minDays < 1) {
-      errors.push(`La regla "${rule.label || `fila ${i + 1}`}" debe tener días mínimos mayor a 0`);
+      errors.push({ key: 'vehicles.errors.pricingMinDays', params: { rule: name } });
     }
 
-    // Check pricePerDay
     if (!rule.pricePerDay || rule.pricePerDay <= 0) {
-      errors.push(`La regla "${rule.label || `fila ${i + 1}`}" debe tener precio por día mayor a 0`);
+      errors.push({ key: 'vehicles.errors.pricingPrice', params: { rule: name } });
     }
 
-    // Check maxDays
     if (rule.maxDays !== null && rule.maxDays < rule.minDays) {
-      errors.push(`La regla "${rule.label || `fila ${i + 1}`}" tiene días máximos menor a días mínimos`);
+      errors.push({ key: 'vehicles.errors.pricingMaxBeforeMin', params: { rule: name } });
     }
 
-    // Check for overlaps with next rule
+    // Solape con el siguiente.
     if (i < sorted.length - 1 && rule.maxDays !== null) {
-      const nextRule = sorted[i + 1];
-      if (rule.maxDays >= nextRule.minDays) {
-        errors.push(`Los rangos "${rule.label}" y "${nextRule.label}" se solapan`);
+      const next = sorted[i + 1];
+      if (rule.maxDays >= next.minDays) {
+        errors.push({
+          key: 'vehicles.errors.pricingOverlap',
+          params: { rule: name, next: ruleName(next) }
+        });
       }
     }
+  }
+
+  /**
+   * La cobertura se mira solo si los tramos son coherentes de uno en uno. Con un
+   * `maxDays` menor que su `minDays` de por medio, «falta cubrir del día 7 al 3»
+   * es ruido encima del error de verdad, y el operador acaba persiguiendo el
+   * mensaje equivocado.
+   */
+  if (errors.length > 0) return errors;
+
+  if (sorted[0].minDays !== 1) {
+    errors.push({
+      key: 'vehicles.errors.pricingDoesNotStartAtOne',
+      params: { from: String(sorted[0].minDays) }
+    });
+  }
+
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const rule = sorted[i];
+    const next = sorted[i + 1];
+    // Un tramo abierto antes del último se come todo lo que viene detrás: el
+    // hueco no existe, pero los tramos siguientes no se aplican nunca.
+    if (rule.maxDays === null) {
+      errors.push({
+        key: 'vehicles.errors.pricingOpenNotLast',
+        params: { rule: ruleName(rule), next: ruleName(next) }
+      });
+      continue;
+    }
+    if (rule.maxDays + 1 < next.minDays) {
+      const desde = rule.maxDays + 1;
+      const hasta = next.minDays - 1;
+      /**
+       * Un solo día tiene su propia frase. «Faltan los días 3 a 3» es lo que
+       * salía, y se lee como un error del programa antes que como el aviso que
+       * es — además de ser el caso más común, porque el hueco aparece al quitar
+       * un día del final de un tramo.
+       */
+      errors.push(
+        desde === hasta
+          ? { key: 'vehicles.errors.pricingGapSingle', params: { day: String(desde) } }
+          : { key: 'vehicles.errors.pricingGap', params: { from: String(desde), to: String(hasta) } }
+      );
+    }
+  }
+
+  const last = sorted[sorted.length - 1];
+  if (last.maxDays !== null) {
+    errors.push({
+      key: 'vehicles.errors.pricingLastNotOpen',
+      params: { rule: ruleName(last), days: String(last.maxDays + 1) }
+    });
   }
 
   return errors;

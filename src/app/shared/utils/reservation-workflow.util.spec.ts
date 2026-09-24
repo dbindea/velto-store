@@ -442,3 +442,92 @@ describe('reservationStatusAfterInitialChange', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// El timeline y el parte a medias
+//
+// ⚠️ **La primera foto que se sube crea la inspección en Firestore con
+// `status: 'draft'`.** Es lo que hace que este caso no sea raro: basta con abrir
+// el parte de entrega, hacer una foto y salirse — algo que en la calle pasa
+// solo, porque Android puede matar la pestaña mientras la cámara está abierta.
+//
+// El timeline miraba la **existencia** del documento, así que ese borrador
+// marcaba «Entrega» como hecha: la reserva parecía entregada sin kilómetros, sin
+// combustible y sin checklist. Los guards del mismo fichero ya comparaban contra
+// `'completed'` desde siempre; el timeline era el único que contaba otra cosa, y
+// es justo el que se lee de un vistazo.
+// ---------------------------------------------------------------------------
+
+describe('getReservationTimelineSteps — un borrador no es un paso dado', () => {
+  const draftInspection = { status: 'draft' } as unknown as Inspection;
+
+  const estadoDe = (ctx: WorkflowContext, key: string) =>
+    getReservationTimelineSteps(ctx).find(s => s.key === key)?.state;
+
+  it('una entrega en borrador NO marca el hito como completado', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation(),
+      contract: signedContract,
+      pickupInspection: draftInspection
+    };
+    expect(estadoDe(ctx, 'pickupCompleted')).not.toBe('completed');
+  });
+
+  it('completada sí lo marca', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation(),
+      contract: signedContract,
+      pickupInspection: completedInspection
+    };
+    expect(estadoDe(ctx, 'pickupCompleted')).toBe('completed');
+  });
+
+  it('una devolución en borrador tampoco', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'delivered' }),
+      contract: signedContract,
+      pickupInspection: completedInspection,
+      returnInspection: draftInspection
+    };
+    expect(estadoDe(ctx, 'returnCompleted')).not.toBe('completed');
+  });
+
+  /**
+   * ⚠️ El respaldo que hace falta conservar: en las tarjetas del panel las
+   * inspecciones **no vienen cargadas**, y ahí quien contesta es el estado de la
+   * reserva. Solo se mueve al completar el parte, así que como respaldo dice la
+   * verdad — y sin él, exigir `'completed'` habría dejado el panel enseñando
+   * pasos sin dar en reservas ya entregadas.
+   */
+  it('sin inspecciones cargadas manda el estado de la reserva', () => {
+    const entregada: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'delivered' }),
+      contract: signedContract
+    };
+    expect(estadoDe(entregada, 'pickupCompleted')).toBe('completed');
+
+    const devuelta: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'returned' }),
+      contract: signedContract
+    };
+    // ⚠️ Este es el que además ARREGLA algo: el respaldo estaba escrito en el
+    // paso de la entrega y no en el de la devolución, así que una reserva
+    // `returned` sin inspecciones cargadas enseñaba los dos hitos sin dar.
+    expect(estadoDe(devuelta, 'pickupCompleted')).toBe('completed');
+    expect(estadoDe(devuelta, 'returnCompleted')).toBe('completed');
+  });
+
+  /**
+   * Y lo que el borrador NO puede hacer: dejar pasar al siguiente paso. Esto ya
+   * era así —`canStartReturn()` siempre miró el estado— y se fija aquí porque es
+   * la mitad que impide que un parte a medias entregue el coche de verdad.
+   */
+  it('con la entrega en borrador no se puede empezar la devolución', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'delivered' }),
+      contract: signedContract,
+      pickupInspection: draftInspection
+    };
+    expect(canStartReturn(ctx).ok).toBe(false);
+  });
+});

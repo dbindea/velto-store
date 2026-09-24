@@ -109,16 +109,17 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-main);
-  border-bottom: 1px solid var(--border-color);
+  // La banda de cabecera: ver `--bg-header` en styles.scss. Era `--bg-main`, el
+  // gris de las superficies hundidas, que no se lee como una cabecera.
+  background: var(--bg-header);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-header);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 
   i {
-    color: var(--accent-color);
+    color: var(--icon-header);
     font-size: 1rem;
   }
 }
@@ -232,7 +233,7 @@
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  &:hover:not(:disabled) { background: var(--bg-hover); }
+  &:hover:not(:disabled) { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .btn-danger {

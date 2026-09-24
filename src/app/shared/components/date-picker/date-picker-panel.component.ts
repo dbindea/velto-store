@@ -229,6 +229,20 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
     if (this.mode() === 'time') this.closed.emit();
   }
 
+  /**
+   * Vacía el campo y cierra.
+   *
+   * ⚠️ **Emite la cadena vacía por el mismo canal que una fecha elegida**, así
+   * que la directiva la escribe en el campo y dispara `input` y `change` igual
+   * que si el operador la hubiera borrado a mano: `ngModel` se entera, la
+   * validación se rehace y el formulario queda coherente. Escribir directamente
+   * en el `input` desde aquí dejaría a Angular con el valor anterior.
+   */
+  clear(): void {
+    this.valuePicked.emit('');
+    this.closed.emit();
+  }
+
   /** «Hoy» en un calendario y «Ahora» en un reloj: el mismo botón. */
   pickNow(): void {
     const ahora = new Date();

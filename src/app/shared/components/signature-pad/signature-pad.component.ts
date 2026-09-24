@@ -88,7 +88,12 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
       font-size: 0.8rem;
       cursor: pointer;
 
-      &:hover:not(:disabled) { background: var(--bg-hover); }
+      /* El tinte se SUPERPONE, no sustituye: este botón tiene relleno propio
+         (--bg-card) y \`background\` a secas se lo borraría, dejándolo
+         transparente sobre el lienzo de la firma. */
+      &:hover:not(:disabled) {
+        background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
+      }
       &:disabled { opacity: 0.5; cursor: not-allowed; }
     }
   `]

@@ -2,15 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_VAT_RATE,
   addVat,
+  calculateBasePrice,
   chargesVat,
   deliveryFeeBreakdown,
+  getDefaultPricingRules,
   vatBreakdownOf,
   MAX_LOYALTY_DISCOUNT_PERCENT,
   normalizeLoyaltyDiscountPercent,
   resolveRentalPrice,
   resolveVatRate,
-  suggestExtraKmCharge
+  suggestExtraKmCharge,
+  validatePricingRules
 } from './pricing.util';
+import { VehiclePricingRule } from '@shared/models/vehicle.model';
 
 // ---------------------------------------------------------------------------
 // VAT
@@ -403,5 +407,152 @@ describe('deliveryFeeBreakdown', () => {
 
   it('sin tipo guardado manda el general', () => {
     expect(deliveryFeeBreakdown({ pickupFee: 100 }, undefined).pickupGross).toBe(121);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Los tramos de tarifa
+//
+// ⚠️ La razón de ser de estos tests, en una línea: **un hueco entre tramos
+// alquila el coche a 0 € y no falla nada**. `findPricingRuleByDays()` contesta
+// `null`, `calculateBasePrice()` contesta `basePrice: 0`, la reserva se crea, el
+// contrato se genera y el coche sale a la calle gratis. Es la peor clase de
+// fallo con dinero: una cifra creíble y equivocada.
+//
+// Por eso lo que se comprueba aquí no es la forma de los mensajes, es la
+// **cobertura**: que de 1 a infinito no queda ni un solo número de días sin
+// tramo que lo cubra.
+// ---------------------------------------------------------------------------
+
+describe('validatePricingRules — la cobertura, que es lo que cuesta dinero', () => {
+  const claves = (rules: VehiclePricingRule[]) => validatePricingRules(rules).map(e => e.key);
+
+  it('las tarifas por defecto valen: cubren de 1 a infinito', () => {
+    expect(validatePricingRules(getDefaultPricingRules())).toEqual([]);
+  });
+
+  /**
+   * El caso exacto de M-49: los tramos `1-1` y `3-5` dejan el día **2** sin
+   * cubrir. Se comprueba además el fallo de verdad —que el precio sale 0— para
+   * que quede claro que esto no es una comprobación de estilo.
+   */
+  it('caza el hueco entre dos tramos, que es el que alquila a 0 €', () => {
+    const conHueco: VehiclePricingRule[] = [
+      { minDays: 1, maxDays: 1, pricePerDay: 60 },
+      { minDays: 3, maxDays: null, pricePerDay: 50 }
+    ];
+    expect(claves(conHueco)).toContain('vehicles.errors.pricingGapSingle');
+    // Y esto es lo que pasaba sin la comprobación:
+    expect(calculateBasePrice(conHueco, 2).basePrice).toBe(0);
+  });
+
+  /**
+   * Un día suelto tiene frase propia. «Faltan los días 3 a 3» es lo que salía, y
+   * se lee como un error del programa antes que como el aviso que es — además de
+   * ser el caso más común, porque el hueco aparece al recortar un tramo por el
+   * final.
+   */
+  it('un hueco de un solo día se dice en singular', () => {
+    const problems = validatePricingRules([
+      { minDays: 1, maxDays: 2, pricePerDay: 60 },
+      { minDays: 4, maxDays: null, pricePerDay: 50 }
+    ]);
+    expect(problems).toEqual([
+      { key: 'vehicles.errors.pricingGapSingle', params: { day: '3' } }
+    ]);
+  });
+
+  it('el mensaje del hueco dice qué días faltan', () => {
+    const problems = validatePricingRules([
+      { minDays: 1, maxDays: 3, pricePerDay: 60 },
+      { minDays: 8, maxDays: null, pricePerDay: 50 }
+    ]);
+    expect(problems[0].params).toEqual({ from: '4', to: '7' });
+  });
+
+  /**
+   * ⚠️ El otro extremo, y el más fácil de dejarse: tramos impecables que
+   * terminan en un techo. Todo cuadra hasta el día 30 y el alquiler de 31 sale
+   * gratis.
+   */
+  it('exige que el último tramo quede abierto', () => {
+    const conTecho: VehiclePricingRule[] = [
+      { minDays: 1, maxDays: 30, pricePerDay: 60 }
+    ];
+    expect(claves(conTecho)).toEqual(['vehicles.errors.pricingLastNotOpen']);
+    expect(calculateBasePrice(conTecho, 31).basePrice).toBe(0);
+  });
+
+  it('exige empezar en el día 1', () => {
+    const empiezaEnTres: VehiclePricingRule[] = [
+      { minDays: 3, maxDays: null, pricePerDay: 60 }
+    ];
+    expect(claves(empiezaEnTres)).toEqual(['vehicles.errors.pricingDoesNotStartAtOne']);
+    expect(calculateBasePrice(empiezaEnTres, 1).basePrice).toBe(0);
+  });
+
+  /**
+   * Un tramo abierto en medio no deja hueco, pero se come todo lo que viene
+   * detrás: los tramos siguientes no se aplican **nunca**, así que un alquiler
+   * largo se cobra al precio del corto sin que nadie lo note.
+   */
+  it('avisa del tramo abierto que no es el último', () => {
+    const abiertoEnMedio: VehiclePricingRule[] = [
+      { minDays: 1, maxDays: null, pricePerDay: 60 },
+      { minDays: 8, maxDays: null, pricePerDay: 40 }
+    ];
+    expect(claves(abiertoEnMedio)).toContain('vehicles.errors.pricingOpenNotLast');
+    expect(calculateBasePrice(abiertoEnMedio, 30).pricePerDay).toBe(60);
+  });
+
+  it('sigue cazando lo de antes: solape, precio a 0 y rango invertido', () => {
+    expect(claves([
+      { minDays: 1, maxDays: 5, pricePerDay: 60 },
+      { minDays: 4, maxDays: null, pricePerDay: 50 }
+    ])).toContain('vehicles.errors.pricingOverlap');
+
+    expect(claves([{ minDays: 1, maxDays: null, pricePerDay: 0 }]))
+      .toContain('vehicles.errors.pricingPrice');
+
+    expect(claves([{ minDays: 5, maxDays: 2, pricePerDay: 60 }]))
+      .toContain('vehicles.errors.pricingMaxBeforeMin');
+  });
+
+  it('sin tramos, un solo mensaje', () => {
+    expect(claves([])).toEqual(['vehicles.errors.pricingNoRules']);
+  });
+
+  /**
+   * ⚠️ La cobertura no se mira si hay tramos incoherentes de uno en uno. Con un
+   * `maxDays` menor que su `minDays`, «falta cubrir del día 7 al 3» es ruido
+   * encima del error de verdad y manda al operador a perseguir el mensaje
+   * equivocado.
+   */
+  it('no añade errores de cobertura sobre tramos ya incoherentes', () => {
+    expect(claves([{ minDays: 5, maxDays: 2, pricePerDay: 60 }]))
+      .toEqual(['vehicles.errors.pricingMaxBeforeMin']);
+  });
+
+  /** El orden de las filas en pantalla no cambia el veredicto. */
+  it('el desorden de las filas no importa', () => {
+    expect(validatePricingRules([
+      { minDays: 8, maxDays: null, pricePerDay: 40 },
+      { minDays: 1, maxDays: 7, pricePerDay: 60 }
+    ])).toEqual([]);
+  });
+
+  /**
+   * El nombre del tramo sale del rótulo si lo hay, y si no del rango. Antes era
+   * `fila ${i + 1}` contando sobre la lista **ya ordenada**, así que con las
+   * filas en otro orden señalaba una distinta de la que fallaba.
+   */
+  it('nombra el tramo por su rótulo, y por su rango cuando no lo tiene', () => {
+    const conRotulo = validatePricingRules([
+      { minDays: 1, maxDays: 3, pricePerDay: 0, label: '1-3 días' }
+    ]);
+    expect(conRotulo[0].params).toEqual({ rule: '1-3 días' });
+
+    const sinRotulo = validatePricingRules([{ minDays: 1, maxDays: 3, pricePerDay: 0 }]);
+    expect(sinRotulo[0].params).toEqual({ rule: '1-3' });
   });
 });

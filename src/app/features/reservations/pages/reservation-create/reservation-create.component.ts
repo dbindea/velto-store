@@ -8,11 +8,11 @@ import { Client, QuickClientData } from '@shared/models/client.model';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import {
   calculateCalendarDays,
-  combineDateAndTime,
   getDefaultPickupDateTime,
   getDefaultReturnDateTime,
+  parseDateTimeInput,
   toDateString,
-  toTimeString,
+  toDateTimeInput,
 } from '@shared/utils/reservation-date.util';
 import {
   addVat,
@@ -69,11 +69,24 @@ export class ReservationCreateComponent implements OnInit {
   searching = false;
   saving = false;
 
-  // Date fields
-  pickupDate = toDateString(getDefaultPickupDateTime());
-  pickupTime = toTimeString(getDefaultPickupDateTime());
-  returnDate = toDateString(getDefaultReturnDateTime());
-  returnTime = toTimeString(getDefaultReturnDateTime());
+  /**
+   * Cuándo se recoge y cuándo se devuelve, **fecha y hora en un solo campo**.
+   *
+   * ⚠️ **Eran cuatro campos —dos fechas y dos horas— y ahora son dos.** Lo pidió
+   * Dorel el 24 de septiembre de 2026 al ver que la edición de reserva ya usaba
+   * un `datetime-local` y era mejor: una recogida es **un instante**, no una
+   * fecha y aparte una hora, y partirla en dos controles obliga a abrir dos
+   * selectores y a que alguien los cuadre. Era además el único sitio de la
+   * aplicación con un `input[type=time]`; con esto ya no queda ninguno.
+   *
+   * ⚠️ **Lo que llega a Firestore no cambia nada.** Estos dos campos son lo que
+   * se pinta —cadenas `yyyy-MM-ddTHH:mm`, que es lo que exige el control—; lo
+   * que se guarda sigue saliendo de `pickupDateTime` y `returnDateTime`, que
+   * siguen devolviendo un `Date` y pasando por `toTimestamp()`. Es el mismo
+   * reparto que ya hay entre `netPriceInput` y `netPrice` en este fichero.
+   */
+  pickupDateTimeInput = toDateTimeInput(getDefaultPickupDateTime());
+  returnDateTimeInput = toDateTimeInput(getDefaultReturnDateTime());
 
   /**
    * Dónde se entrega y dónde se devuelve.
@@ -237,11 +250,35 @@ export class ReservationCreateComponent implements OnInit {
 
   async searchAvailability(): Promise<void> {
     // Validate dates
-    const pickupDateTime = combineDateAndTime(this.pickupDate, this.pickupTime);
-    const returnDateTime = combineDateAndTime(this.returnDate, this.returnTime);
+    const pickupDateTime = this.pickupDateTime;
+    const returnDateTime = this.returnDateTime;
 
-    if (returnDateTime <= pickupDateTime) {
-      this.dateError = 'reservations.messages.invalidDates';
+    /**
+     * ⚠️ **Una fecha VACÍA no la paraba nadie, y no se para sola.**
+     * `parseDateTimeInput('')` devuelve `new Date(NaN)` a propósito, pero
+     * **toda comparación con `NaN` es falsa**: el guard de abajo
+     * —`returnDateTime <= pickupDateTime`— la dejaba pasar, y el del servicio
+     * —`if (totalDays <= 0) throw`— también, porque `calculateCalendarDays()`
+     * ya había devuelto `NaN`. El asistente seguía hasta el resumen, que se
+     * quedaba a medio dibujar con «NaN días · 0,00 €», sin desglose y **sin
+     * botón de crear**: un callejón sin salida que no explica nada.
+     *
+     * Era raro hasta el 24 de septiembre de 2026 —había que seleccionar y
+     * borrar a mano—, y dejó de serlo el mismo día: el panel de fechas propio
+     * pasó a mandar también en el móvil y trae un botón «Borrar», así que
+     * vaciar una fecha es ahora un gesto de un toque.
+     *
+     * De propina, con la devolución en `NaN` el bloqueo por papeles se
+     * **invierte**: en `blockingMaintenance()` la comparación
+     * `startOfDay(dueDate) >= devolucion` también es falsa, así que toda ITV o
+     * seguro con fecha abierta pasaría a bloquear el coche.
+     */
+    this.datesSubmitted = true;
+    if (hasProblems(this.dateProblems)) {
+      // El detalle lo pinta `<app-form-error>` bajo cada campo, que además dice
+      // CUÁL de las dos falta. El aviso de arriba se queda para lo que no es de
+      // un campo concreto, como un fallo de la búsqueda.
+      this.dateError = '';
       return;
     }
 
@@ -309,6 +346,41 @@ export class ReservationCreateComponent implements OnInit {
     }
   }
 
+  /** Si ya se ha pulsado «Buscar disponibilidad». */
+  datesSubmitted = false;
+
+  /**
+   * Lo que impide buscar: campo → clave de i18n.
+   *
+   * ⚠️ **Sin fecha no hay alquiler, y hasta ahora no había nada que lo dijera.**
+   * Vaciar un campo dejaba pasar el asistente entero: `parseDateTimeInput('')`
+   * devuelve `new Date(NaN)` y **toda comparación con `NaN` es falsa**, así que
+   * ni el guard de la pantalla ni el del servicio la paraban. Se llegaba al
+   * resumen con «NaN días», sin desglose y sin botón de crear — un callejón sin
+   * salida que no explicaba nada.
+   *
+   * Sigue el patrón del resto de la aplicación, que es el que Dorel pidió: el
+   * botón **no** se apaga por un dato que falte —eso deja al operador pulsando
+   * sin que pase nada—, se pulsa, se marca el campo en rojo y se explica debajo.
+   * El `required` del HTML va además en los dos campos, para que el navegador y
+   * Angular sepan que lo son.
+   */
+  get dateProblems(): FieldProblems {
+    const problems: FieldProblems = {};
+    if (!this.pickupDateTimeInput || isNaN(this.pickupDateTime.getTime())) {
+      problems['pickupDateTime'] = 'reservations.messages.pickupDateRequired';
+    }
+    if (!this.returnDateTimeInput || isNaN(this.returnDateTime.getTime())) {
+      problems['returnDateTime'] = 'reservations.messages.returnDateRequired';
+    } else if (
+      !problems['pickupDateTime'] &&
+      this.returnDateTime <= this.pickupDateTime
+    ) {
+      problems['returnDateTime'] = 'reservations.messages.invalidDates';
+    }
+    return problems;
+  }
+
   /** Si ya se ha intentado crear el cliente rápido. */
   quickClientSubmitted = false;
 
@@ -359,8 +431,8 @@ export class ReservationCreateComponent implements OnInit {
 
     this.saving = true;
     try {
-      const pickupDateTime = combineDateAndTime(this.pickupDate, this.pickupTime);
-      const returnDateTime = combineDateAndTime(this.returnDate, this.returnTime);
+      const pickupDateTime = this.pickupDateTime;
+      const returnDateTime = this.returnDateTime;
 
       const reservationId = await this.reservationService.createReservationWithClient(
         this.selectedVehicle.vehicle,
@@ -523,12 +595,21 @@ export class ReservationCreateComponent implements OnInit {
 
   // Computed values for summary
   get pickupDateTime(): Date {
-    return combineDateAndTime(this.pickupDate, this.pickupTime);
+    return parseDateTimeInput(this.pickupDateTimeInput);
   }
 
-  // Today's date as YYYY-MM-DD for HTML5 date min attribute
-  get todayString(): string {
-    return toDateString(new Date());
+  /**
+   * El suelo del campo de recogida: hoy a las 00:00.
+   *
+   * ⚠️ **Un `datetime-local` exige el `min` con hora**, `yyyy-MM-ddTHH:mm`. Con
+   * el `yyyy-MM-dd` de antes el navegador **ignora el atributo entero** —no
+   * avisa, simplemente no limita— y se podría crear una reserva con fecha de
+   * recogida pasada. A las 00:00 y no a la hora actual, porque una reserva que
+   * se crea a las 19:00 para recoger a las 18:00 del mismo día es una
+   * corrección normal de mostrador.
+   */
+  get minPickupDateTime(): string {
+    return `${toDateString(new Date())}T00:00`;
   }
 
   /**
@@ -580,18 +661,68 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   /**
-   * When pickup date changes, ensure return date is not before pickup.
+   * Al mover la recogida, la devolución no puede quedarse antes.
+   *
+   * ⚠️ **Se comparan las CADENAS, y es correcto.** `yyyy-MM-ddTHH:mm` ordena
+   * igual alfabéticamente que cronológicamente —por eso el formato es ese— así
+   * que no hace falta convertir a `Date` para saber cuál va primero. Antes se
+   * comparaban solo las fechas y la hora se quedaba fuera: recoger a las 18:00
+   * y devolver el mismo día a las 12:00 pasaba el guard de aquí y lo paraba
+   * después `searchAvailability()`. Ahora no llega a formarse.
    */
-  onPickupDateChange(value: string): void {
-    this.pickupDate = value;
-    // If return date is now invalid, push it to pickup date
-    if (this.returnDate < this.pickupDate) {
-      this.returnDate = this.pickupDate;
+  onPickupDateTimeChange(value: string): void {
+    this.pickupDateTimeInput = value;
+    if (this.returnDateTimeInput < this.pickupDateTimeInput) {
+      this.returnDateTimeInput = this.pickupDateTimeInput;
     }
+    this.invalidateAvailability();
+  }
+
+  onReturnDateTimeChange(value: string): void {
+    this.returnDateTimeInput = value;
+    this.invalidateAvailability();
+  }
+
+  /**
+   * Mover una fecha INVALIDA la búsqueda anterior.
+   *
+   * ⚠️ **Sin esto, la pantalla enseñaba un precio y la reserva se creaba con
+   * otro.** `isStepComplete('dates')` contesta `availabilityResults.length > 0`,
+   * o sea «hubo una búsqueda alguna vez», y nadie vaciaba ese resultado al
+   * cambiar las fechas. Así que se podía volver al paso 1, poner otras fechas y
+   * pulsar directamente «Resumen» en el stepper: `totalDays` ya era el nuevo
+   * —se calcula en vivo de los campos— mientras el precio seguía saliendo del
+   * `selectedVehicle.pricing` congelado en la búsqueda vieja.
+   *
+   * Reproducido con el Renault Clio, cuyas tarifas son 60 €/día a un día y
+   * 50 €/día de cuatro a siete: buscando 1 día y cambiando después a 5, el
+   * resumen decía «5 días», «5 x 60 € : 60 €» —aritmética imposible— y
+   * «Precio total: 72,60 €», con «Crear reserva» activo. Lo que
+   * `createReservationWithClient()` habría escrito son 5 × 50 = 250 € netos,
+   * **302,50 €**: 229,90 € de diferencia entre lo que se confirma delante del
+   * cliente y lo que se crea. Y el mismo estado alimenta «Generar presupuesto»,
+   * así que el PDF que se manda por WhatsApp llevaba la cifra equivocada.
+   *
+   * ⚠️ **La disponibilidad sí estaba protegida y el precio no**, y ese contraste
+   * es lo que lo hacía invisible: el servicio revuelve las fechas antes de
+   * escribir y falla con un mensaje si el coche ya no está libre, pero el precio
+   * lo **recalcula en silencio**. El caso ruidoso avisaba; el del dinero, no.
+   *
+   * Vaciar el resultado devuelve `isStepComplete('dates')` a `false`, así que el
+   * stepper deja de dejar pasar y hay que volver a buscar — que es lo que el
+   * asistente siempre quiso decir.
+   */
+  private invalidateAvailability(): void {
+    if (!this.availabilityResults.length && !this.selectedVehicle) return;
+    this.availabilityResults = [];
+    this.selectedVehicle = null;
+    // Un precio acordado lo era para unas fechas concretas; con otras, no.
+    this.resetFinalPrice();
+    if (this.currentStep !== 'dates') this.currentStep = 'dates';
   }
 
   get returnDateTime(): Date {
-    return combineDateAndTime(this.returnDate, this.returnTime);
+    return parseDateTimeInput(this.returnDateTimeInput);
   }
 
   get totalDays(): number {

@@ -1,6 +1,5 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NotificationService } from '@core/notifications/notification.service';
-import { TranslateService } from '@core/i18n/translate.service';
 import { firstValueFrom } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
@@ -35,7 +34,15 @@ import { suggestExtraKmCharge } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { calculateCalendarDays } from '@shared/utils/reservation-date.util';
 import { toDate } from '@shared/utils/reservation-date.util';
-import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workflow.util';
+import {
+  canStartReturn,
+  canCloseReservation,
+  reasonOf,
+  WorkflowContext,
+  WorkflowDecision
+} from '@shared/utils/reservation-workflow.util';
+import { calculateReservationPaymentSummary, roundMoney } from '@shared/utils/payment-summary.util';
+import { PaymentService } from '@features/payments/services/payment.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { FormDraftService } from '@core/forms/form-draft.service';
 import { ClearInputDirective } from '@shared/directives/clear-input.directive';
@@ -54,12 +61,22 @@ export class InspectionReturnComponent implements OnInit {
   /** Borrador vivo del formulario; se limpia al completar la devolución. */
   private draft: { clear: () => void } | null = null;
   private notifications = inject(NotificationService);
-  private translateService = inject(TranslateService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private inspectionService = inject(InspectionService);
   private reservationService = inject(ReservationService);
   private vehicleService = inject(VehicleService);
+  private paymentService = inject(PaymentService);
+
+  /**
+   * Si el resto del alquiler está cobrado, **derivado de `payments`**.
+   *
+   * Se resuelve al cargar la pantalla y no al vuelo: la decisión de si se puede
+   * cerrar se consulta en cada ciclo de detección de cambios, y ahí no cabe una
+   * consulta a Firestore. Lo que cambia mientras el operador rellena el parte
+   * son los cargos y la fianza, no lo que ya estaba cobrado.
+   */
+  private remainingPaid = false;
 
   reservationId: string | null = null;
   reservation: Reservation | null = null;
@@ -127,6 +144,26 @@ export class InspectionReturnComponent implements OnInit {
         return;
       }
       this.pickupInspection = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'pickup');
+
+      /**
+       * Si el resto del alquiler está cobrado, **derivado de la colección** y no
+       * de la copia que lleva la reserva dentro. Esa copia se queda vieja y
+       * **responde `0` en vez de fallar**, así que con ella la casilla de cerrar
+       * diría que no se puede justo después de cobrar, o —peor— que sí cuando no.
+       *
+       * Si la lectura falla se queda en `false`, que es el lado seguro: la
+       * casilla sale bloqueada y el operador cierra desde la ficha, donde el
+       * dato se vuelve a mirar.
+       */
+      try {
+        const pagos = await firstValueFrom(
+          this.paymentService.getPaymentsByReservation(reservationId).pipe(first())
+        );
+        const resumen = calculateReservationPaymentSummary(pagos, this.reservation);
+        this.remainingPaid = resumen.remainingPaymentPaid >= resumen.remainingPaymentRequired;
+      } catch {
+        this.remainingPaid = false;
+      }
 
       // Solo para el aviso de kilómetros: la tarifa de km extra vive en la
       // ficha del vehículo y no viaja en `vehicleSnapshot`. Si la lectura
@@ -224,6 +261,51 @@ export class InspectionReturnComponent implements OnInit {
 
   get toRefund(): number {
     return Math.max(0, this.depositPaid - this.totalExtraCharges);
+  }
+
+  /**
+   * ¿Se va a poder cerrar la reserva al terminar esta devolución?
+   *
+   * ⚠️ **Antes no se preguntaba y la casilla cerraba a pelo**, saltándose
+   * `canCloseReservation()` entero: se podía dar por terminado un alquiler con
+   * el resto sin cobrar o la fianza sin resolver, y nadie se enteraba. El botón
+   * de la ficha sí lo comprueba; el atajo de aquí, no.
+   *
+   * ⚠️ **Se le pregunta al MISMO guard, con el estado PROYECTADO.** Copiar sus
+   * condiciones aquí sería una segunda autoridad sobre cuándo se cierra un
+   * alquiler, y el día que cambie una se quedaría la otra. Lo que se proyecta es
+   * solo lo que este formulario está a punto de hacer: la reserva pasará a
+   * `returned`, la inspección quedará `completed` y la fianza se habrá movido lo
+   * que digan «A retener» y «A devolver».
+   *
+   * ⚠️ **Y `remainingPaid` viaja explícito, derivado de `payments`.** Sin él el
+   * guard cae a la copia desnormalizada de la reserva, que se queda vieja y
+   * **responde que no está pagado en vez de fallar** — o al revés. El dinero se
+   * decide mirando la colección, como en el resto de la aplicación.
+   */
+  get closeDecision(): WorkflowDecision {
+    if (!this.reservation) return { ok: false, reason: 'workflow.missingReservation' };
+    const d = this.reservation.deposit;
+    const proyectada = {
+      ...this.reservation,
+      reservationStatus: 'returned',
+      deposit: d && {
+        ...d,
+        returnedAmount: roundMoney((d.returnedAmount || 0) + this.toRefund),
+        retainedAmount: roundMoney((d.retainedAmount || 0) + this.toRetain)
+      }
+    } as Reservation;
+
+    return canCloseReservation({
+      reservation: proyectada,
+      returnInspection: { status: 'completed' },
+      remainingPaid: this.remainingPaid
+    } as WorkflowContext);
+  }
+
+  /** Lo que impide cerrar, para decirlo al lado de la casilla. */
+  closeBlockReason(): string {
+    return reasonOf(this.closeDecision);
   }
 
   /**
@@ -490,45 +572,24 @@ export class InspectionReturnComponent implements OnInit {
     }
   }
 
-  async retainDeposit(): Promise<void> {
-    if (!this.reservationId) return;
-    const amount = this.toRetain;
-    if (amount <= 0) {
-      this.notifications.error('inspections.errors.noAmountToRetain');
-      return;
-    }
-    const fallback = this.translateService.translate('inspections.retentionDefaultReason');
-    const reason = prompt(this.translateService.translate('inspections.retentionReasonPrompt'), fallback) || fallback;
-    try {
-      await this.inspectionService['paymentService'].retainDeposit(this.reservationId, amount, reason);
-      this.recalculateTotal();
-      this.notifications.success('inspections.success.depositRetained', { amount: amount.toFixed(2) });
-      this.router.navigate(['/reservations', this.reservationId]);
-    } catch (error) {
-      console.error('Error retaining deposit:', error);
-      // Antes solo se registraba en consola: el operador pulsaba «Retener», la
-      // fianza no se movía y la pantalla no decía nada.
-      this.notifications.error('inspections.errors.retainDeposit', { retry: () => void this.retainDeposit() });
-    }
-  }
-
-  async refundDeposit(): Promise<void> {
-    if (!this.reservationId) return;
-    const amount = this.toRefund;
-    if (amount <= 0) {
-      this.notifications.error('inspections.errors.noAmountToRefund');
-      return;
-    }
-    try {
-      await this.inspectionService['paymentService'].refundDeposit(this.reservationId, amount, 'cash', 'Devolución fianza');
-      this.notifications.success('inspections.success.depositRefunded', { amount: amount.toFixed(2) });
-      this.router.navigate(['/reservations', this.reservationId]);
-    } catch (error) {
-      console.error('Error refunding deposit:', error);
-      this.notifications.error('inspections.errors.refundDeposit', { retry: () => void this.refundDeposit() });
-    }
-  }
-
+  /**
+   * ⚠️ **Aquí vivían `retainDeposit()` y `refundDeposit()`, y se borraron el 24
+   * de septiembre de 2026 sin sustituirlos por nada.** No las llamaba nadie —ni
+   * esta plantilla, ni otra, ni un test— y tenían los tres defectos a la vez:
+   *
+   * - llegaban al servicio por `this.inspectionService['paymentService']`,
+   *   saltándose el `private` con un índice de cadena, que es la forma de que un
+   *   cambio de firma no dé error de compilación;
+   * - una abría un `prompt()` del navegador, prohibido desde M-43 por lo mismo
+   *   que los `alert()`: lo pinta el navegador, sale en el idioma del sistema y
+   *   no se puede vestir;
+   * - y devolvían la fianza **sin tope**, que es justo el fallo que
+   *   `depositAvailable()` vino a cerrar ese mismo día.
+   *
+   * Los movimientos de fianza de la devolución los hace
+   * `completeReturnInspection()` con los importes de «A retener» y «A devolver»,
+   * dentro de la misma escritura que el parte. Ese es el único camino.
+   */
   getPickupDate(): Date {
     return this.reservation ? toDate(this.reservation.pickupDateTime) : new Date();
   }

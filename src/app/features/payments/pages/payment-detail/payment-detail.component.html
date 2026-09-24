@@ -55,9 +55,19 @@
           <span>{{ 'reservations.title' | translate }}</span>
         </div>
         <div class="card-content">
+          <!--
+            ⚠️ **Estas tres etiquetas eran títulos de MENÚ, y se notaba.** Salía
+            «Reservas: 199,65 €» —una sección entera en plural etiquetando un
+            importe—, «Clientes:» para una persona y «Vehículos:» para un coche.
+            Un título de sección nombra una lista; una etiqueta de campo nombra
+            un dato, y va en singular.
+
+            La primera además no etiqueta la reserva: etiqueta el `finalPrice`
+            congelado en el pago, o sea lo que vale el alquiler.
+          -->
           @if (payment.reservationSnapshot?.finalPrice) {
             <div class="info-row">
-              <span class="label">{{ 'reservations.title' | translate }}:</span>
+              <span class="label">{{ 'payments.fields.rentalTotal' | translate }}:</span>
               <span class="value"
                 >{{ payment.reservationSnapshot?.finalPrice | number: '1.2-2' }} €</span
               >
@@ -65,13 +75,13 @@
           }
           @if (payment.clientSnapshot?.fullName) {
             <div class="info-row">
-              <span class="label">{{ 'clients.title' | translate }}:</span>
+              <span class="label">{{ 'payments.fields.client' | translate }}:</span>
               <span class="value">{{ payment.clientSnapshot?.fullName }}</span>
             </div>
           }
           @if (payment.vehicleSnapshot?.plateNumber) {
             <div class="info-row">
-              <span class="label">{{ 'vehicles.title' | translate }}:</span>
+              <span class="label">{{ 'payments.fields.vehicle' | translate }}:</span>
               <span class="value"
                 >{{ payment.vehicleSnapshot?.brand }} {{ payment.vehicleSnapshot?.model }} ·
                 {{ payment.vehicleSnapshot?.plateNumber }}</span
@@ -100,9 +110,15 @@
               <span class="value">{{ paid | date: 'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }
+          <!--
+            ⚠️ **Y esta era el VERBO de un botón.** `common.create` es «Crear»,
+            lo que pone un botón que crea algo; aquí etiqueta la fecha en que se
+            creó el cobro, así que ponía «Crear: 24/09/2026». Una acción y un
+            dato no comparten rótulo aunque compartan raíz.
+          -->
           @if (getCreatedAt(); as created) {
             <div class="info-row">
-              <span class="label">{{ 'common.create' | translate }}:</span>
+              <span class="label">{{ 'payments.fields.createdAt' | translate }}:</span>
               <span class="value">{{ created | date: 'dd/MM/yyyy HH:mm' }}</span>
             </div>
           }

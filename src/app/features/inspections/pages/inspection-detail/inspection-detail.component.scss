@@ -33,7 +33,7 @@
   color: var(--text-primary);
   cursor: pointer;
   flex-shrink: 0;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }
 
 .header-content {
@@ -102,11 +102,12 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-main);
-  border-bottom: 1px solid var(--border-color);
+  // La banda de cabecera: ver `--bg-header` en styles.scss. Era `--bg-main`, el
+  // gris de las superficies hundidas, que no se lee como una cabecera.
+  background: var(--bg-header);
 
   i {
-    color: var(--accent-color);
+    color: var(--icon-header);
     font-size: 1.1rem;
   }
 
@@ -114,7 +115,7 @@
     flex: 1;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-header);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -315,5 +316,5 @@
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  &:hover { background: var(--bg-hover); }
+  &:hover { background-image: linear-gradient(var(--bg-hover), var(--bg-hover)); }
 }

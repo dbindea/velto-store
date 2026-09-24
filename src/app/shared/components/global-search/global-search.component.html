@@ -17,7 +17,12 @@
       @if (loading()) {
         <i class="pi pi-spin pi-spinner loading-icon"></i>
       } @else {
-        <button type="button" class="close-btn" (click)="closed.emit()" aria-label="Close">
+        <button
+          type="button"
+          class="close-btn"
+          (click)="closed.emit()"
+          [attr.aria-label]="'common.close' | translate"
+        >
           <i class="pi pi-times"></i>
         </button>
       }

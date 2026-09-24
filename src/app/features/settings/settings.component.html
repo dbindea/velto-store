@@ -158,7 +158,7 @@
             <input id="email" name="email" type="email" class="form-control"
                    autocomplete="off" [(ngModel)]="newEmail"
                    [class.is-invalid]="userSubmitted() && userProblems['email']"
-                   placeholder="persona@ejemplo.com" />
+                   [attr.placeholder]="'common.emailPlaceholder' | translate" />
             <app-form-error [problems]="userProblems['email']" [show]="userSubmitted()" />
           </div>
           <div class="field">

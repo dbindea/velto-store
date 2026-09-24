@@ -165,6 +165,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1rem;
+  // La banda de cabecera, igual que en las fichas: ver `--bg-header`.
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
 
   h3 {
@@ -183,7 +185,11 @@
     gap: 0.5rem;
 
     i {
-      color: var(--accent-color);
+      // Sobre la banda de cabecera el turquesa de marca se queda en 2,24:1 en
+      // el tema claro, por debajo del 3:1 que pide un icono. `--icon-header` es
+      // un escalón más oscuro y no se distingue a ojo. Misma razón que en las
+      // fichas de detalle.
+      color: var(--icon-header);
     }
   }
 }

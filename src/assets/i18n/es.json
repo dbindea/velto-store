@@ -138,7 +138,6 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "continue": "Continuar",
-    "create": "Crear",
     "date": "Fecha",
     "days": "días",
     "delete": "Eliminar",
@@ -162,7 +161,8 @@
     "save": "Guardar",
     "search": "Buscar",
     "showingLatest": "Se muestran los más recientes. Para uno antiguo concreto, usa el buscador.",
-    "viewAll": "Ver todo"
+    "viewAll": "Ver todo",
+    "emailPlaceholder": "cliente@email.com"
   },
   "contracts": {
     "actions": {
@@ -280,6 +280,7 @@
     "title": "Elegir fecha",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
+    "clear": "Borrar",
     "hours": "Horas",
     "minutes": "Minutos",
     "today": "Hoy",
@@ -429,6 +430,8 @@
   },
   "inspections": {
     "actions": {
+      "continuePickup": "Continuar la entrega",
+      "continueReturn": "Continuar la devolución",
       "startPickup": "Iniciar entrega",
       "startReturn": "Iniciar devolución",
       "view": "Ver detalle"
@@ -481,11 +484,7 @@
       "returnFailed": "No se ha podido completar la devolución",
       "photoType": "Solo se admiten imágenes JPG, PNG o WebP.",
       "photoTooLarge": "La imagen supera el tamaño máximo de 5 MB.",
-      "photoUpload": "No se pudo subir la foto.",
-      "noAmountToRetain": "No hay importe que retener.",
-      "noAmountToRefund": "No hay importe que devolver.",
-      "retainDeposit": "No se pudo retener la fianza.",
-      "refundDeposit": "No se pudo devolver la fianza."
+      "photoUpload": "No se pudo subir la foto."
     },
     "extraCharges": {
       "cleaning": "Cargo de limpieza",
@@ -516,9 +515,12 @@
     },
     "messages": {
       "noPickup": "Sin inspección de entrega",
-      "noReturn": "Sin inspección de devolución"
+      "noReturn": "Sin inspección de devolución",
+      "pickupDraft": "El parte está empezado y sin terminar: el vehículo no consta como entregado.",
+      "returnDraft": "El parte está empezado y sin terminar: el vehículo no consta como devuelto."
     },
     "photos": {
+      "advice": "Recomendado subir al menos 4 fotos (frontal, trasera, laterales, interior).",
       "damage": "Daño",
       "dashboard": "Cuadro",
       "front": "Frontal",
@@ -556,12 +558,7 @@
       "pickup": "Entrega",
       "return": "Devolución"
     },
-    "success": {
-      "depositRetained": "Retenidos {amount} € de la fianza.",
-      "depositRefunded": "Devueltos {amount} € de la fianza."
-    },
-    "retentionReasonPrompt": "Motivo de la retención:",
-    "retentionDefaultReason": "Cargos entrega/devolución",
+    "success": {},
     "confirm": {
       "checklistMessage": "Hay puntos del checklist sin marcar. Si continúas, la entrega quedará registrada así.",
       "checklistTitle": "Faltan comprobaciones",
@@ -745,7 +742,9 @@
     },
     "fields": {
       "amount": "Importe",
+      "client": "Cliente",
       "concept": "Concepto",
+      "createdAt": "Fecha de creación",
       "dueDate": "Vencimiento",
       "externalReference": "Referencia externa",
       "internalReference": "Referencia interna",
@@ -754,8 +753,10 @@
       "paidAmount": "Pagado",
       "paidAt": "Fecha de pago",
       "pendingAmount": "Pendiente",
+      "rentalTotal": "Total alquiler",
       "source": "Fuente",
-      "type": "Tipo"
+      "type": "Tipo",
+      "vehicle": "Vehículo"
     },
     "filters": {
       "freePayments": "Cobros libres",
@@ -868,13 +869,10 @@
     },
     "subtitle": "Gestiona pagos y fianzas",
     "summary": {
-      "depositHeld": "Fianza depositada",
-      "extraChargesTotal": "Cargos extra",
-      "incomeTotal": "Cobrado (sin fianza)",
+      "collectedShort": "cobrados",
+      "missingShort": "faltan",
       "rentalTotal": "Total alquiler",
-      "title": "Resumen",
-      "totalRental": "Total alquiler",
-      "extraChargesPending": "Pendiente de cobro"
+      "totalRental": "Total alquiler"
     },
     "title": "Pagos",
     "types": {
@@ -981,7 +979,8 @@
       "searchFailed": "No se ha podido buscar la disponibilidad.",
       "maintenanceOverdue": "ITV o mantenimiento vencido",
       "itvExpired": "La ITV caduca antes de la devolución. No se puede alquilar hasta pasarla.",
-      "insuranceExpired": "El seguro caduca antes de la devolución. No se puede alquilar hasta renovarlo."
+      "insuranceExpired": "El seguro caduca antes de la devolución. No se puede alquilar hasta renovarlo.",
+      "noTariff": "Este vehículo no tiene tarifa para esa duración. Revisa los tramos de precio en su ficha."
     },
     "bookingConfirmation": {
       "copyLink": "Copiar enlace",
@@ -1019,6 +1018,13 @@
       "pending": "Pendiente",
       "pendingSignature": "Pendiente de firma",
       "signed": "Firmado"
+    },
+    "delivery": {
+      "hint": "Suplemento por llevar y recoger el coche fuera de la zona de entrega gratuita. Importe sin IVA; déjalo vacío si no se cobra.",
+      "locationMismatch": "Has puesto suplemento por domicilio y el lugar sigue siendo el de la oficina: el contrato imprimirá las dos cosas. Cambia el lugar si el coche no sale de allí.",
+      "pickupFee": "Entrega a domicilio",
+      "returnFee": "Recogida a domicilio",
+      "total": "Servicio a domicilio"
     },
     "deposit": {
       "retained": "Retenida",
@@ -1140,19 +1146,40 @@
       "notes": "Notas",
       "pickupDate": "Fecha de recogida",
       "pickupLocation": "Lugar de recogida",
-      "pickupTime": "Hora de recogida",
       "returnDate": "Fecha de devolución",
       "returnLocation": "Lugar de devolución",
-      "returnTime": "Hora de devolución",
       "totalDays": "días",
       "totalDay": "día"
+    },
+    "initialPayment": {
+      "waived": "No se solicita",
+      "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
     },
     "list": {
       "empty": "No hay reservas todavía",
       "emptyFiltered": "Ninguna reserva con este filtro"
     },
     "messages": {
-      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida"
+      "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
+      "pickupDateRequired": "Falta la fecha de recogida.",
+      "returnDateRequired": "Falta la fecha de devolución."
+    },
+    "money": {
+      "title": "Dinero",
+      "pending": "Pendiente de cobro",
+      "collected": "Ya entregado",
+      "required": "Total de la reserva",
+      "pendingIncludesDeposit": "De eso es fianza:",
+      "depositHeldHint": "En depósito, se le devuelve al cliente:",
+      "priceDetail": "Detalle del precio del alquiler",
+      "noDeposit": "No se pide fianza",
+      "groups": {
+        "rental": "Alquiler",
+        "services": "Entrega y recogida",
+        "extras": "Cargos extra",
+        "deposit": "Fianza",
+        "other": "Otros cobros"
+      }
     },
     "new": "Nueva reserva",
     "notes": {
@@ -1236,18 +1263,7 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas",
-    "initialPayment": {
-      "waived": "No se solicita",
-      "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
-    },
-    "delivery": {
-      "hint": "Suplemento por llevar y recoger el coche fuera de la zona de entrega gratuita. Importe sin IVA; déjalo vacío si no se cobra.",
-        "locationMismatch": "Has puesto suplemento por domicilio y el lugar sigue siendo el de la oficina: el contrato imprimirá las dos cosas. Cambia el lugar si el coche no sale de allí.",
-      "pickupFee": "Entrega a domicilio",
-      "returnFee": "Recogida a domicilio",
-      "total": "Servicio a domicilio"
-    }
+    "title": "Reservas"
   },
   "search": {
     "close": "Cerrar",
@@ -1412,7 +1428,18 @@
       "delete": "No se ha podido eliminar el vehículo.",
       "statusChange": "No se ha podido cambiar el estado del vehículo.",
       "deleteHasReservations": "Este coche tiene reservas y no se puede eliminar: su matrícula sigue dentro de cada una. Para un coche vendido o retirado, cámbiale el estado a «Fuera de servicio».",
-      "saveFailed": "No se ha podido guardar el vehículo."
+      "saveFailed": "No se ha podido guardar el vehículo.",
+      "pricingRulesInvalid": "Revisa los tramos de tarifa: tal y como están, un alquiler podría salir a 0 €",
+      "pricingNoRules": "Hace falta al menos un tramo de tarifa",
+      "pricingMinDays": "El tramo «{rule}» tiene que empezar en el día 1 o más",
+      "pricingPrice": "El tramo «{rule}» tiene que llevar un precio por día mayor que 0",
+      "pricingMaxBeforeMin": "El tramo «{rule}» termina antes de empezar",
+      "pricingOverlap": "Los tramos «{rule}» y «{next}» se solapan",
+      "pricingDoesNotStartAtOne": "El primer tramo empieza en el día {from}: un alquiler más corto se quedaría sin precio y saldría a 0 €",
+      "pricingGap": "Faltan los días {from} a {to}: un alquiler de esa duración saldría a 0 €",
+      "pricingOpenNotLast": "El tramo «{rule}» no tiene días máximos, así que «{next}» y los siguientes no se aplicarían nunca",
+      "pricingLastNotOpen": "El último tramo «{rule}» tiene días máximos: un alquiler de {days} días o más saldría a 0 €. Déjalo sin máximo",
+      "pricingGapSingle": "Falta el día {day}: un alquiler de esa duración saldría a 0 €"
     },
     "features": {
       "airConditioning": "Aire acondicionado",

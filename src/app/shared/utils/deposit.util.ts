@@ -82,13 +82,29 @@ export function buildDeposit(
  * separado. Devolver 300 y retener 300 de una fianza de 300 son dos operaciones
  * que por separado parecen correctas y juntas entregan el doble de lo que el
  * cliente depositó.
+ *
+ * ⚠️ **La firma pide el dato bajo SUS DOS NOMBRES REALES, y todos obligatorios.**
+ * Antes eran tres campos opcionales, y eso la rompió entera sin que nada
+ * avisara: la fianza cobrada se llama `depositPaid` en `ReservationPaymentSummary`
+ * y `depositCollected` en `CollectedTotals`, y **los dos llamadores pasaban el
+ * segundo**. Con los campos opcionales, `summary.depositPaid` salía `undefined`,
+ * caía a `0` por el `|| 0`, y esta función contestaba **0 disponible siempre** —
+ * así que `depositMovementProblem()` rechazaba cualquier devolución de fianza con
+ * «el importe supera la fianza disponible». Es decir: la comprobación escrita
+ * para que no se regalara dinero impedía devolver la fianza a nadie, en los dos
+ * entornos, desde que se escribió. Encontrado el 24 de septiembre de 2026.
+ *
+ * Con la unión de abajo el error es de **compilación**: un objeto que no traiga
+ * la fianza cobrada con uno de los dos nombres no entra. Un `?` aquí no es
+ * comodidad, es apagar al único que puede cazar esto.
  */
-export function depositAvailable(summary: {
-  depositPaid?: number;
-  depositReturned?: number;
-  depositRetained?: number;
-}): number {
-  const cobrado = Number(summary.depositPaid) || 0;
+export function depositAvailable(
+  summary:
+    | { depositCollected: number; depositReturned: number; depositRetained: number }
+    | { depositPaid: number; depositReturned: number; depositRetained: number }
+): number {
+  const cobrado =
+    Number('depositCollected' in summary ? summary.depositCollected : summary.depositPaid) || 0;
   const devuelto = Number(summary.depositReturned) || 0;
   const retenido = Number(summary.depositRetained) || 0;
   return roundMoney(Math.max(0, cobrado - devuelto - retenido));

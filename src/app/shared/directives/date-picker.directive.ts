@@ -28,18 +28,28 @@ const ZONA_ICONO_PX = 34;
 /**
  * ¿Manda el selector del sistema?
  *
- * ⚠️ **En el móvil, sí, y no es una concesión: es lo mejor.** El selector
- * nativo de iOS y Android es una hoja a pantalla completa con su rueda, pensada
- * para el pulgar, y esta es una aplicación que se usa en la calle. Lo dice
- * CLAUDE.md desde que se estilizaron los `<select>`, y vale igual aquí.
+ * ⚠️ **Ya no: nunca. Y esto es una REVERSIÓN, por eso está escrita.** Del 22 al
+ * 24 de septiembre de 2026 esta función devolvía `true` con el dedo, con un
+ * argumento que sigue siendo bueno —la hoja a pantalla completa de iOS y
+ * Android está pensada para el pulgar y esta aplicación se usa en la calle—.
+ * Lo que lo tumbó fue una cosa que no se había mirado: **el diálogo de fecha de
+ * Android no tiene forma de vaciar**. Solo trae «Cancelar» y «Aceptar», así que
+ * una fecha puesta por error no se podía quitar ni con el dedo ni con el
+ * teclado. El de hora sí trae «Borrar»; el de fecha no.
  *
- * Se decide por el **puntero**, no solo por el ancho: una tableta de 1024 px
- * con dedos quiere la hoja del sistema, y un portátil estrecho con ratón
- * quiere el panel nuestro.
+ * Se tapó un tiempo con el aspa dentro del campo, y Dorel la quitó el día 24
+ * porque con el dedo se confunde con el botón de abrir: «mejor en modal y en
+ * form dejarlo limpio». Quitada el aspa y sin «Borrar» en el diálogo del
+ * sistema, no quedaba ninguna forma de vaciar una fecha en un teléfono.
+ *
+ * Así que manda el panel propio en los dos sitios: es el único que tiene
+ * «Borrar», y de paso los dos se comportan igual. Se conserva la función —y no
+ * se borra la llamada— porque el argumento de la hoja del sistema sigue siendo
+ * cierto y este es el punto donde volver si algún día el diálogo de Android
+ * aprende a vaciar.
  */
 export function prefersNativePicker(): boolean {
-  if (typeof window === 'undefined' || !window.matchMedia) return true;
-  return window.matchMedia('(pointer: coarse), (max-width: 767px)').matches;
+  return false;
 }
 
 /**

@@ -379,6 +379,34 @@ tener reserva nueva, y punto: saltarse un paso es un atajo operativo, pero alqui
 a quien has bloqueado es una decisión sobre ese cliente y se toma en su ficha, cambiándole el
 nivel de confianza. `risk` no bloquea; solo avisa vía `clientTrustWarning()`.
 
+⚠️ **Una inspección que EXISTE no es una inspección HECHA.** La primera foto que
+se sube crea el documento en Firestore con `status: 'draft'`, así que la pregunta
+buena es siempre `status === 'completed'` y nunca `!!inspection`. Los guards
+—`canStartReturn()`, `canCloseReservation()`— lo hacían bien desde siempre; el
+**timeline** y la **ficha de la reserva** preguntaban por la existencia, y eso
+dejaba una entrega a medias contada como hecha: la reserva parecía entregada sin
+kilómetros, sin combustible y sin checklist, y **sin ningún botón para volver al
+parte**, porque el de empezar vivía en el `@else` que ya no se pintaba.
+No es un caso raro: Android puede matar la pestaña mientras la cámara está
+abierta, que es lo que `FormDraftService` existe para sobrevivir.
+
+Corregido el 24 de septiembre de 2026, y de ahí salen tres cosas que conviene
+llevarse:
+
+- **La ficha tiene TRES ramas y no dos** —hecha, a medias, sin empezar—, porque
+  caer al `@else` del borrador habría dicho «No hay parte de entrega» teniéndolo.
+  El texto y el hecho se deciden juntos, también aquí.
+- **A medias no se ofrece el PDF del parte.** Ese papel acredita en qué estado
+  salió el coche; a medias no acredita nada que se le pueda enseñar al cliente.
+- **Continuar es el MISMO botón que empezar** (`startPickup()`): la ruta es la
+  misma y el formulario ya recuperaba el borrador. Lo que faltaba era ofrecerlo.
+
+⚠️ **Y el respaldo del timeline al estado de la reserva tiene que estar en los
+DOS hitos.** Estaba escrito solo en la entrega, así que una reserva `returned`
+sin inspecciones cargadas —las tarjetas del panel, que no las cargan— enseñaba
+los dos pasos sin dar. El estado solo se mueve al **completar** el parte, así que
+como respaldo dice la verdad; lo que no vale es tenerlo en uno y no en el otro.
+
 ### `reservation-edit.util.ts` es la única autoridad sobre qué se puede CAMBIAR
 
 Lo que el workflow es a «qué pasos se pueden dar», este util lo es a «qué campos
@@ -507,6 +535,37 @@ campo es opcional y aditivo; para las reservas anteriores sigue valiendo
 `manualAdjustment`, que bajo la regla vieja solo era 0 cuando no hubo precio a
 mano.
 
+#### Los tramos tienen que cubrir de 1 a infinito, o el coche se alquila gratis
+
+⚠️ **Un hueco entre tramos da `basePrice: 0` y no falla nada.** Con los tramos
+`1-1` y `3-5`, un alquiler de **2 días** no encuentra regla,
+`findPricingRuleByDays()` devuelve `null`, `calculateBasePrice()` contesta 0, la
+reserva se crea, el contrato se genera y el coche sale a la calle **gratis**. Lo
+mismo si el último tramo lleva `maxDays`: todo cuadra hasta el día 30 y el
+alquiler de 31 sale a cero. Y las reglas se editan a mano en la ficha del coche.
+
+Por eso `validatePricingRules()` exige **empezar en el día 1, encadenar sin
+huecos y terminar en un tramo abierto** (`maxDays: null`). No es una preferencia
+de forma: es lo único que impide que `findPricingRuleByDays()` conteste `null`.
+⚠️ Y `minimumRentalDays` **no vale como excusa para no empezar en 1**: se guarda
+en el vehículo y **no lo comprueba nadie** al crear una reserva, así que un
+alquiler de un día entra igual.
+
+⚠️ **Y esos errores se pintaban en rojo sin impedir NADA** hasta el 24 de
+septiembre de 2026 —tampoco los que ya existían: solapes, precio 0, rango
+invertido—. Un formulario que marca en rojo y deja guardar es peor que uno que no
+avisa, porque el operador da por hecho que algo lo habría parado. Ahora entran en
+`problems`, que es el mecanismo de la casa.
+
+⚠️ **Hacen falta TRES capas, porque un coche ya guardado sigue roto.** La
+validación impide que nazcan tarifas con hueco, pero no arregla las que ya
+estaban: el buscador marca el coche **no disponible con su motivo** —sin eso
+salía a 0,00 € y, al ordenar por precio, **el primero de la lista**, o sea el más
+barato de todos— y `createReservationWithClient()` y el recálculo de
+`editReservation()` se niegan. En la edición duele más: una prórroga hasta una
+duración sin tramo reescribiría a 0 el `pricingSnapshot` de un alquiler que ya
+tenía precio.
+
 Dos convenciones distintas que conviene no confundir, y por eso los nombres son explícitos:
 
 - `vatRate` es una **fracción** (`0.21`)
@@ -618,8 +677,16 @@ alquiler sin IVA, y solo el alquiler**. Tres exclusiones, las tres con motivo:
 propietario puede ceder un utilitario y una furgoneta con repartos distintos— y
 la reserva lo **congela** en `ownerShareSnapshot`, igual que el precio. Lo
 congela `commitReservationWithPayments()`, que recibe el vehículo entero para que
-**ninguno de los dos creadores de reservas pueda olvidarse**. La parte se
-**devenga al cerrar** la reserva, cuando los importes ya son definitivos.
+**quien cree la reserva no pueda olvidarse**. La parte se **devenga al cerrar**
+la reserva, cuando los importes ya son definitivos.
+
+> Aquí ponía «ninguno de los **dos** creadores», y desde el 24 de septiembre de
+> 2026 solo hay uno: `createReservationWithClient()`. El otro
+> —`createReservation(vehicleId, clientId, …)`— no lo llamaba nadie y escribía el
+> snapshot del cliente **vacío**, el descuento de fidelidad a **0** y sin
+> comprobar si el cliente estaba bloqueado. Se borró. Ese reparto sí lo congelaba
+> bien, porque lo hace `commitReservationWithPayments()` y los dos pasaban por
+> ahí: exactamente lo que esta nota decía que protegía.
 
 ⚠️ **Y lo devengado se DERIVA de las reservas cerradas, no se guarda**
 (`ownerShareAccruals()`, 12 de septiembre de 2026). Hay dos motivos y los dos
@@ -923,6 +990,42 @@ es peor que no tenerla.
 
 La pantalla la ve **todo el equipo**, sin permiso: «limpiar coches» es trabajo de
 la agencia. Las comisiones no — esas van con `viewCollaborators`.
+
+### Cerrar la reserva desde el parte de devolución
+
+La casilla «Cerrar reserva al completar» escribía `closed` **a pelo**, saltándose
+`canCloseReservation()` entero: se podía dar por terminado un alquiler con el
+resto sin cobrar o la fianza sin resolver. El botón de la ficha sí lo comprueba y
+`closeReservation()` del servicio también; el atajo del parte era el agujero.
+Corregido el 24 de septiembre de 2026.
+
+⚠️ **La devolución se hace SIEMPRE; lo que no se hace es cerrar.** El coche ha
+vuelto: eso es un hecho físico y no se deshace porque falten 53 €. Cerrar es una
+decisión de dinero, y se toma en la ficha, donde el importe está delante.
+
+⚠️ **Se le pregunta al MISMO guard, con el estado PROYECTADO.** `canCloseReservation()`
+exige `reservationStatus === 'returned'` y una inspección de devolución
+`completed`, y las dos son ciertas **después** de esta escritura: preguntarle al
+estado actual diría siempre que no. Se proyecta solo lo que el formulario va a
+hacer —el estado, la inspección y los movimientos de fianza de «A retener» y «A
+devolver»—. Copiar las condiciones del guard aquí habría sido una segunda
+autoridad sobre cuándo se cierra un alquiler.
+
+⚠️ **Y `remainingPaid` viaja explícito, derivado de `payments`.** Sin él el guard
+cae a la copia desnormalizada de la reserva, que se queda vieja y **responde
+`0`**: la casilla diría que no se puede cerrar justo después de cobrar, o peor,
+que sí cuando no. El parte no cargaba los pagos y ahora sí, una vez al abrir.
+
+**La pantalla lo dice antes de marcar.** La casilla se ve, sale apagada y lleva el
+motivo al lado —«Falta cobrar el resto del alquiler»—, igual que el botón de la
+ficha. Es la decisión de Dorel y su motivo está en una frase suya: *«a un empleado
+no hay que explicarle los enrevesados»*. Esconderla dejaría al operador sin saber
+que la opción existe; dejarla marcable sin efecto es peor todavía.
+
+⚠️ **Para cerrar de todos modos está «Saltar este paso»**, en la ficha, que pide
+motivo obligatorio y lo guarda con autor y fecha en `workflowExceptions[]`. **No
+se añadió una nota nueva a propósito**: sería un segundo mecanismo para la misma
+decisión, con su propio formato y su propia pantalla donde mirarlo.
 
 ### `permissions.util.ts` es la única autoridad sobre quién puede qué
 
@@ -2160,6 +2263,94 @@ de los libros dinero que estaba en el banco. Lo que corresponde es devolverlo, o
 —si el resto no se va a cobrar— **corregir el importe** a lo que entró, que
 cierra la fila sin borrar nada.
 
+### La ficha de la reserva enseña el dinero en UNA tarjeta
+
+Eran **tres**, y ese era el problema entero: «Pendiente», «Precio total» y
+«Resumen de pagos» contaban lo mismo desde tres fuentes distintas —la copia
+desnormalizada de la reserva, el `pricingSnapshot` y las filas vivas—, así que
+podían discrepar sin que nada fallara. Ninguna contestaba la pregunta del
+mostrador —cuánto tiene que darme el cliente— y «Precio total» **no era el
+total**: no llevaba fianza, ni entrega a domicilio, ni cargos de la devolución.
+Lo dijo Dorel el 24 de septiembre de 2026 mirando la pantalla.
+
+La regla que sustituye a las tres, y de la que cuelga todo lo demás: **toda cifra
+de la cabecera es la suma de unas filas que están a la vista debajo.** Si no
+cuadra, se ve dónde.
+
+- Arriba, **Pendiente de cobro** en grande —la pregunta del mostrador—, y debajo
+  **Ya entregado** y **Total de la reserva**, que suman a ella.
+- Las filas se agrupan en cuatro bloques con su subtotal: alquiler, entrega y
+  recogida, cargos extra y fianza. El agrupador es
+  [payment-groups.util.ts](src/app/shared/utils/payment-groups.util.ts).
+- El desglose del precio ya no es una tarjeta: va **plegado** dentro del bloque
+  del alquiler, que es lo que explica.
+
+⚠️ **El agrupador NO es una lista blanca, y eso está probado.** `collectedTotalsOf()`
+enumera lo que **sí** es ingreso, así que un `PaymentType` nuevo que nadie añada
+deja de contar **en silencio**; aquí un tipo sin clasificar cae en «otros» y **se
+ve en la pantalla**. El test recorre `PAYMENT_TYPE_LABELS`, que el compilador
+obliga a tener completo.
+
+⚠️ **Una devolución y una retención de fianza se ENSEÑAN en su bloque pero no
+suman al subtotal.** Llevan importe y van en dirección contraria: sumadas, una
+fianza de 150 € cobrada y devuelta diría 300 €. Es el mismo error que Informes ya
+tuvo que corregir contando una fianza dos veces.
+
+⚠️ **Lo cancelado también se enseña y tampoco suma**, con la misma regla que
+`calculateReservationPaymentSummary()`. Si las dos no coincidieran, el subtotal
+del bloque no cuadraría con la cabecera — y entonces volveríamos a tener dos
+cifras que se contradicen, que es lo que esto venía a quitar.
+
+⚠️ **El importe pendiente de una fila se CALCULA, no se lee de
+`payment.pendingAmount`.** El subtotal lo deriva con `calculatePendingAmount()`,
+así que leer un campo guardado abre la puerta a que la fila diga «faltan 30 €» y
+su bloque sume 10.
+
+⚠️ **Y donde la fila ponía un MENOS, ahora pone palabras.** «50,00 €» arriba y
+«-30,00 €» debajo, sin nada que dijera qué era, fue literalmente la primera
+pregunta de Dorel al abrir la ficha: se lee como un descuento, como una
+devolución o como un error. Ahora dice «50,00 € cobrados · faltan 30,00 €», que
+ocupa lo mismo.
+
+⚠️ **El reparto con el dueño del coche se queda FUERA**, en su propia tarjeta
+debajo. Es otra cosa —lo que Velto le debe a un tercero, no lo que el cliente
+entrega— y fundirlo dentro daría un cuarto significado de «total» en la misma
+pantalla.
+
+⚠️ **Y el tipo de cobro solo se imprime si añade algo al concepto.** La
+aplicación siembra el concepto con el mismo texto que el rótulo del tipo, así que
+salía «Fianza / Fianza», «Entrega a domicilio / Entrega a domicilio»… en casi
+todas las filas. Es el mismo defecto que ya tuvo el recibo en PDF y se arregla
+igual: comparando **el texto ya traducido**, no el campo.
+
+### La fianza no se podía devolver, y la comprobación escrita para protegerla era la causa
+
+⚠️ **`depositAvailable()` contestaba `0` SIEMPRE**, en los dos entornos y desde
+que se escribió. La fianza cobrada se llama `depositPaid` en
+`ReservationPaymentSummary` y `depositCollected` en `CollectedTotals`, y **los
+dos llamadores reales pasan el segundo** —`depositAvailable(collectedTotalsOf(pagos))`—.
+Como los tres campos de la firma eran **opcionales**, aquello compilaba,
+`summary.depositPaid` salía `undefined`, caía a `0` por el `|| 0`, y
+`depositMovementProblem()` rechazaba cualquier devolución con «el importe supera
+la fianza disponible». La pantalla remataba proponiendo `0` en el campo.
+
+Encontrado el 24 de septiembre de 2026. La firma es ahora una **unión con los dos
+nombres reales y todos los campos obligatorios**, así que pasar un objeto que no
+traiga la fianza cobrada es un **error de compilación**. Un `?` ahí no era
+comodidad: era apagar al único que podía cazar esto.
+
+⚠️ **Y `retainDeposit()` no tenía tope ninguno.** `depositAvailable()` se
+documenta como «el techo de las dos operaciones a la vez», pero solo lo
+preguntaba `refundDeposit`: se podía retener más fianza de la que el cliente
+depositó. Añadido el mismo día. Probado de punta a punta contra desarrollo:
+150 disponibles → retener 60 → quedan 90 → devolver 90 → quedan 0, y los dos
+movimientos de más rechazados.
+
+La regla general, que es la que hay que llevarse: **un parámetro con todos los
+campos opcionales no valida nada.** TypeScript solo comprueba el exceso de
+propiedades en objetos literales, así que un renombrado o un cambio de forma pasa
+sin ruido y lo que falla es el comportamiento, no la compilación.
+
 ### `payment-edit.util.ts`: qué cobro se puede corregir
 
 Un importe se teclea mal, y hasta el 15 de septiembre de 2026 la única salida era
@@ -2564,10 +2755,18 @@ con la aritmética aparte y con tests en `date-picker.util.ts`.
 
 Cuatro decisiones, y las cuatro importan:
 
-- ⚠️ **En móvil sigue mandando el nativo** (`prefersNativePicker()`). La hoja a pantalla
-  completa de iOS y Android es mejor que cualquier cosa que dibujemos, y esta es una
-  aplicación que se usa en la calle. Se decide por **puntero**, no solo por ancho: una
-  tableta con dedos quiere la del sistema y un portátil estrecho con ratón, la nuestra.
+- ⚠️ **En móvil mandaba el nativo hasta el 24 de septiembre de 2026, y ya no. Es una
+  REVERSIÓN y por eso está escrita.** El argumento de entonces sigue siendo bueno —la hoja
+  a pantalla completa de iOS y Android está pensada para el pulgar y esta aplicación se usa
+  en la calle— y lo tumbó un hecho que nadie había mirado: **el diálogo de fecha de Android
+  no tiene forma de vaciar.** Solo trae «Cancelar» y «Aceptar». El de hora sí trae
+  «Borrar»; el de fecha, no.
+  Se tapó un tiempo con el aspa dentro del campo, y Dorel la quitó de ahí —«con el dedo se
+  confunde» con el botón de abrir—. Sin aspa y sin «Borrar» en el diálogo del sistema, una
+  fecha puesta por error no se podía quitar en un teléfono. Así que manda el panel propio
+  en los dos sitios: es el único que tiene «Borrar», y de paso los dos se comportan igual.
+  `prefersNativePicker()` se conserva devolviendo `false` a propósito: es el punto donde
+  volver el día que el diálogo de Android aprenda a vaciar.
 - ⚠️ **El campo sigue siendo un `input[type=date]` de verdad.** El panel solo escribe en
   él y dispara sus eventos, así que el valor, `min`, `max`, la validación y el teclado no
   cambian. Quitar la directiva de los `imports` devuelve todo a como estaba **sin tocar
@@ -2577,13 +2776,15 @@ Cuatro decisiones, y las cuatro importan:
 - ⚠️ **Solo abre la zona del icono** (los 34 px de la derecha), que es exactamente lo que
   hace el navegador. Abriéndose con cualquier clic, taparía media pantalla cada vez que
   alguien va a teclear una fecha.
-  ⚠️ **Y desde el 23 de septiembre de 2026 esos 34 px tienen vecina**: los 34
-  siguientes son el aspa que vacía el campo. Son dos bandas **contiguas**, y
-  miden lo mismo a propósito (`ZONA_ICONO_PX` = `ZONA_ASPA_PX` = 34) porque si
-  midieran distinto una se comería parte del icono de la otra. Una escucha
-  `mousedown` y la otra `pointerdown`; el límite entre ambas es cerrado por un
-  lado y abierto por el otro, o un píxel vaciaría el campo **y** abriría el
-  calendario.
+  ⚠️ El 23 de septiembre de 2026 esos 34 px tuvieron vecina —otros 34 para el
+  aspa— y **duró un día**: el 24 el aspa salió de estos campos porque con el
+  dedo se confunde con el botón de abrir. Hoy la banda del icono vuelve a estar
+  sola, y lo que vacía es el botón «Borrar» del panel.
+- ⚠️ **Un `input[type=date]` acepta el `min` como `yyyy-MM-dd`; un
+  `datetime-local`, NO.** Necesita la hora (`yyyy-MM-ddTHH:mm`) y si no la lleva
+  **ignora el atributo entero, sin avisar**. Al unificar el asistente, el `min`
+  de la recogida se quedó un rato en el formato viejo y dejaba elegir fechas
+  pasadas sin que nada fallara.
 
 ⚠️ **Y se cuelga del `<body>`, así que compite con TODO lo que flota.** Su
 `z-index` era 200 «por encima de la cabecera pegajosa (50) y del menú (100)» —
@@ -2606,21 +2807,63 @@ Tres trampas que costaron un rato y que volverían a costarlo:
   columna. Centrar la hora funcionaba en el campo de hora sola y se iba 250 px en el de
   fecha **y** hora, que es el que casi no se mira.
 
+### Fecha y hora van en UN campo, no en dos
+
+⚠️ **Donde se piden las dos cosas, el control es `datetime-local`; donde solo se
+pide una fecha, `date`. Y `type=time` ya no existe en la aplicación.**
+
+Lo pidió Dorel el 24 de septiembre de 2026 viendo que la edición de reserva ya
+lo hacía así: **una recogida es un instante**, no una fecha y aparte una hora.
+Partida en dos controles hay que abrir dos selectores y cuadrarlos a mano, y el
+móvil abría además dos diálogos del sistema distintos. El asistente de creación
+era el único sitio que quedaba con el par separado —cuatro campos— y ahora son
+dos.
+
+⚠️ **Lo que llega a Firestore NO cambió, y se comprobó creando una reserva de
+verdad y leyendo el documento.** Sigue siendo el mapa `{ seconds, nanoseconds }`
+que escribe `toTimestamp()`, con el instante correcto en hora local y los
+minutos incluidos. Lo único que cambió es el estado local del formulario: de
+cuatro cadenas a dos. El reparto es el mismo que ya había entre `netPriceInput`
+y `netPrice` — lo que se pinta y lo que se guarda son dos cosas.
+
+⚠️ **La conversión vive en `reservation-date.util.ts`**, no copiada en cada
+pantalla: `toDateTimeInput()` y `parseDateTimeInput()`. Estaba duplicada dentro
+de `reservation-edit.component.ts` y lleva una nota que hay que respetar —**nada
+de `toISOString()`**, que pasa a UTC: una recogida a las 00:30 de Madrid saldría
+escrita como las 22:30 del día anterior.
+
+⚠️ **Y el guard de «la devolución no puede ir antes» compara las CADENAS.**
+`yyyy-MM-ddTHH:mm` ordena igual alfabéticamente que cronológicamente —por eso el
+formato es ese—. Antes se comparaban solo las fechas y la hora quedaba fuera:
+recoger a las 18:00 y devolver el mismo día a las 12:00 pasaba el guard.
+
 ### El aspa que vacía un campo
 
 Es el **tercer** tratamiento global de un control nativo, después del chevron de
-los `select` y del calendario, y el más extendido: 27 componentes, todos los
-campos de texto, correo, teléfono y URL, y los de fecha y hora.
-[`ClearInputDirective`](src/app/shared/directives/clear-input.directive.ts), con
-la aritmética aparte y probada en
+los `select` y del calendario: 27 componentes, todos los campos de texto, correo,
+teléfono y URL. [`ClearInputDirective`](src/app/shared/directives/clear-input.directive.ts),
+con la aritmética aparte y probada en
 [`clear-input.util.ts`](src/app/shared/utils/clear-input.util.ts).
 
 La pidió Dorel el 23 de septiembre de 2026 señalando la de Android. Y hacía
 falta por algo más que comodidad: **los campos que más se reescriben son los que
-traen un valor puesto** —el lugar de recogida, una fecha que se completó por
-error— y en un `input[type=date]` **no hay forma de vaciar desde el móvil**: la
-hoja del sistema solo sabe elegir otro día. Era literalmente el fallo que Dorel
-reportó en el mantenimiento.
+traen un valor puesto**, como el lugar de recogida.
+
+⚠️ **Los campos de FECHA Y HORA se quedaron fuera al día siguiente**, y la razón
+es de uso con el pulgar: «el aspa al lado de la flecha de despliegue no tiene
+mucho sentido porque uno con el dedo se confunde». Dos botones a pocos
+milímetros, uno que abre el calendario y otro que destruye lo que hay, es una
+trampa. Esos campos se vacían con el botón «Borrar» del panel —que es además el
+sitio donde ya se estaba eligiendo la fecha— y por eso el panel propio pasó a
+usarse también en el móvil: era el único que lo tiene.
+
+⚠️ **La zona pulsable mide 44 px y el dibujo 18, y no es una incoherencia.**
+Estuvo en 34 —el ancho del icono del calendario, copiado sin pensar— y Dorel la
+encontró pequeña con el pulgar. Lo que crece para el dedo es **dónde se
+acierta**, no el dibujo: una cruz de 44 px pintada gritaría en una fila de
+formulario. Y el `padding-right` es otra medida distinta, 2,5 rem, que solo
+tiene que apartar el texto — emparejarlo con los 44 px se sale de la escala de
+espaciado y el guion lo caza con razón.
 
 ⚠️ **No envuelve el campo ni le mete un `<button>` al lado**, y esa decisión
 sostiene todo lo demás. Son decenas de campos en rejillas, dentro de `<label>`
@@ -2629,10 +2872,12 @@ cualquier elemento nuevo o contenedor intercalado rompe la maquetación de unos
 cuantos y no la de los demás, que es la peor forma de romperla. El aspa se
 dibuja como **fondo del propio campo**, igual que el chevron y el calendario.
 
-⚠️ **El aspa y el calendario comparten UNA SOLA declaración `background-image`,
-de dos capas** (`styles.scss`). Dos reglas con `!important` no se suman: gana
-una y la otra desaparece, así que declaradas por separado el aspa **borraba el
-calendario**. Es justo el tipo de trampa que esta sección existe para avisar.
+⚠️ **Mientras el aspa convivió con el calendario, los dos iconos iban en UNA
+SOLA declaración `background-image`, de dos capas.** Dos reglas con `!important`
+no se suman: gana una y la otra desaparece, así que declaradas por separado el
+aspa **borraba el calendario**. Ya no hace falta —son campos distintos— pero
+queda anotado porque el problema vuelve el día que alguien quiera dos iconos en
+un mismo campo.
 
 ⚠️ **Cancelar `pointerdown` NO cancela el `click`, y darlo por hecho habría roto
 todos los campos de fecha del móvil.** Pointer Events solo suprime los eventos
@@ -2953,6 +3198,31 @@ un SCSS de componente, comprueba que el antepasado envuelve de verdad a la
 clase**, sobre todo en ficheros donde conviven varias tarjetas parecidas
 (`.detail-card`, `.refund-card`, `.pricing-card`).
 
+⚠️ **Y volvió a pasar el 24 de septiembre de 2026, con un mapa `*_COLORS`.**
+`PAYMENT_STATUS_COLORS` produce seis clases y la ficha de la reserva solo
+declaraba `.badge.status-pending`; las otras cinco existían, pero **dentro de
+`.payment-icon`**, que pinta el cuadrito de la izquierda y no alcanza al badge.
+Consecuencia medida: «Pendiente» salía en ámbar con su pastilla y «Pagado» y
+«Parcial» como texto suelto a `rgb(0, 0, 0)` — **invisible en los tres temas
+oscuros**. El auditor lo daba por bueno porque las clases estaban escritas.
+
+De ahí la regla concreta: **al pintar con un `Record<Enum, string>` de clases,
+declara el enumerado ENTERO bajo el selector que de verdad lo lleva.** Media
+tabla estilada no da error en ninguna parte, y el estado que falta es siempre el
+que nadie mira hasta que aparece.
+
+⚠️ **Y había un SEGUNDO mapa en la misma pantalla, con las cuatro clases sin
+declarar.** `getPaymentStatusClass()` produce `payment-pending`, `payment-partial`,
+`payment-paid` y `payment-refunded` para la chapa de la **cabecera**, y las únicas
+copias vivían dentro de `.payment-status-badge`, una tarjeta que ya no existe.
+Medido: la pastilla salía con `background: rgba(0, 0, 0, 0)` heredando el gris del
+rótulo, así que «DINERO **PARCIAL**» se leía como una sola frase gris. Lo señaló
+Dorel en la captura, no lo cazó ninguna auditoría.
+
+La lección práctica, más allá de la regla: **al borrar una tarjeta, comprueba qué
+clases se llevaba por delante.** Esas cuatro dejaron de estar declaradas cuando se
+retiró la tarjeta que las contenía, y el elemento que las usa vive en otro sitio.
+
 ⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
 2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,
 `section-hint`, `total-hint`…) en 44 sitios, y `.loading-state` usado 25 veces y
@@ -3091,6 +3361,101 @@ demasiado blanqueado». Corregido el 23 de septiembre de 2026.
 | `--bg-card` | `#FFFFFF` | la tarjeta, lo único blanco |
 | `--bg-main` | `--gray-100` | el **hueco hundido** dentro de una tarjeta |
 | `--bg-input` | `#EAF4F1` | el campo, con tinte |
+| `--bg-header` | `#CEDEE0` | la **banda de cabecera** de una ficha |
+
+⚠️ **Y una quinta, desde el 24 de septiembre de 2026: la cabecera no es un
+hueco.** Se pintaba con `--bg-main`, o sea con el gris de las superficies
+**hundidas**, y por eso no se leía como cabecera: a un paso del blanco de la
+tarjeta, delimitada solo por un filete. Lo dijo Dorel —«es gris delimitada por un
+border, ¿puedes poner otro color para que se vea como un header?»— y trajo el
+tono en una maqueta.
+
+⚠️ **El valor sale de su maqueta, MEDIDO píxel a píxel, y no de la rampa.** El
+gris de rampa más cercano, `--gray-300`, deja el rótulo en **3,62:1**, por debajo
+del 4,5:1 que pide un texto de 12,8 px; su tono, más claro y con más cian, lo
+sube. Es el mismo caso que `--bg-input`, que tampoco es un valor de rampa sino un
+tinte afinado a mano. La regla de «las rampas no se usan directamente» sigue
+valiendo: lo que se prohíbe es pintar con `--gray-300` **desde un componente**,
+no afinar un valor dentro de un bloque de tema.
+
+⚠️ **En los tres temas oscuros la banda va al revés: MÁS CLARA que la tarjeta.**
+En claro una cabecera se hunde respecto al blanco; en oscuro, un tono por debajo
+del panel se lee como un agujero. Lo que se conserva es el **salto** —entre 1,26
+y 1,39 de razón de luminancia contra la tarjeta—, no la dirección. Y `ocean`
+sigue a su azul en vez de al verde de marca, que es lo que lo hace `ocean`.
+
+⚠️ **El rótulo y el icono son variables propias** (`--text-header`,
+`--icon-header`), por la misma razón que existe `--warning-on`: cuando la
+superficie deja de ser el gris de siempre, su acompañante tiene que poder cambiar
+con ella. Medido sobre la banda clara, los valores de antes **no llegaban**: el
+`--text-muted` se quedaba en **4,12:1** y el turquesa del icono en **2,24:1**
+—cuando un icono pide 3:1—. Un escalón más oscuro en cada uno lo resuelve sin
+que se note el cambio: **6,23:1** y **4,24:1**. En los oscuros apuntan a los de
+siempre, que ahí ya pasan.
+
+⚠️ **La banda la llevan TRES familias de cabecera, no solo las fichas**
+(24 de septiembre de 2026): `.detail-card .card-header` en las cinco fichas de
+detalle, `.section-header` en los formularios largos —alta de cliente, entrega y
+devolución— y `.modal-header` en los cinco modales. Las tres están en la regla
+global y las copias de componente apuntan a las mismas variables, así que una
+pantalla nueva sale igual sin que nadie se acuerde. Lo pidió Dorel: «unificar el
+mismo aspecto en todas y para todos los temas».
+
+⚠️ **El filete se quita SOLO en las fichas.** En una sección de formulario y en
+un modal la banda toca el contenido que se rellena, y ahí el filete marca dónde
+acaba el rótulo y empieza el campo; en una ficha de detalle el cambio de color ya
+separa y la línea solo añade ruido.
+
+⚠️ **Y una casilla dentro de una rejilla de formulario se alinea por ABAJO.** No
+tiene rótulo encima, así que su control arranca donde los demás tienen la
+etiqueta: medido en «Estado del vehículo», 28 px más arriba que el `select` de al
+lado — justo lo que mide el rótulo con su margen. Se corrige con `align-self:
+end` sobre la celda, **no** restando la altura del rótulo: restar ataría el
+arreglo al tamaño de letra de cada formulario y la escalera volvería con el
+primero que use otro.
+
+⚠️ **La regla global lleva `.detail-card` delante a propósito.** El panel también
+usa `.card-header`, pero allí no es una banda: es una fila de icono y rótulo
+**dentro** de una tarjeta de estadística. El panel usa `.card` y las fichas
+`.detail-card`, así que el prefijo separa los dos casos sin que nadie tenga que
+acordarse. Y no gana a una copia de componente —**empata** en (0,2,0) y el orden
+pone al componente detrás—, así que los cuatro ficheros de detalle se cambiaron
+igualmente: la global es la red para la quinta pantalla, no el mecanismo.
+
+⚠️ **Y una superficie nueva ROMPE LAS CHAPAS que van encima.** Es la
+consecuencia que no se ve viniendo y que hay que arreglar en la misma pasada: en
+los tres temas oscuros el fondo de una chapa es un **tinte translúcido**
+—`rgba(color, 0.14)`— calculado para componerse sobre la tarjeta. Con una banda
+más clara debajo, compone contra otra cosa y el texto pierde contraste. Medido
+antes y después dentro de la propia cabecera:
+
+| | antes | después de la banda | arreglado |
+|---|---|---|---|
+| ocean · «Cancelado» | 5,03 | **3,31** | 4,09 |
+| forest · «Cancelado» | 4,78 | **3,41** | 4,26 |
+| dark · «Cancelado» | 5,50 | **3,77** | 4,99 |
+| ocean · «Pagado» | 6,31 | **4,08** | 5,08 |
+
+**Un tinte translúcido solo es correcto sobre la superficie para la que se
+calculó**, que es la misma lección que obligó a superponer `--bg-hover` en vez de
+sustituirlo.
+
+⚠️ **Se arregla redefiniendo las VARIABLES dentro de la cabecera, no con reglas
+por clase.** Las chapas se llaman distinto en cada ficha —`status-*` en contratos
+e inspecciones, `payment-*` en la de la reserva— y una regla por clase habría que
+ampliarla cada vez que aparezca un estado nuevo. Cambiando qué significa
+`--success-bg` **dentro** de la banda, el `background: var(--success-bg)` que ya
+escribe cada componente coge el valor bueno sin tocar un solo fichero de
+componente y sin pelear ninguna especificidad: **una variable se resuelve por
+herencia, no por quién gana**. `color-mix(… 14%, var(--bg-card))` reproduce
+exactamente el compuesto que se pretendía, pero opaco. Comprobado: dentro de la
+cabecera las chapas miden ahora **lo mismo** que en el cuerpo de la tarjeta.
+
+⚠️ **Ojo al medir: el navegador serializa un `color-mix` como
+`color(srgb 0.20 0.14 0.14)`**, con flotantes de 0 a 1 y no de 0 a 255. Un
+medidor escrito para `rgb()` lo lee como casi negro y da contrastes altísimos y
+falsos —salieron 9,47 y 11,25 en los tres temas a la vez, idénticos, que es la
+señal de que el parser está roto y no de que el CSS esté bien—.
 
 ⚠️ **`--bg-main` NO es la página, y creerlo costó una iteración entera.** Además
 del `body`, ese valor pinta **87 sitios** que son superficies hundidas dentro de
@@ -3125,6 +3490,56 @@ para componerse sobre lo que haya debajo; escrito como `background:` a secas
 el fondo, una tarjeta se volvía gris entera al pasar el ratón. Si el elemento
 tiene fondo propio, se superpone:
 `background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`.
+
+⚠️ **Y apareció el sitio TRECE el 24 de septiembre de 2026, o sea que aquella
+pasada se quedó corta.** En la ficha de la reserva, un `&:hover` compartido por
+`.btn-primary, .btn-secondary` le ponía el tinte al botón **turquesa**: al pasar
+el ratón perdía su relleno de marca y se quedaba con **texto blanco sobre la
+tarjeta blanca**. Lo encontró Dorel usándolo.
+
+Dos cosas que lo hacían difícil de ver, y las dos se repetirán:
+
+- **Lo tapaba un `filter: brightness(1.1)`** escrito en la regla de al lado. Son
+  propiedades distintas, así que se aplicaban **las dos**, y aclarar un fondo casi
+  blanco no se nota: parecía que el hover estaba resuelto.
+- **Un selector compartido no comparte fondo.** Agrupar `.btn-primary` y
+  `.btn-secondary` para la geometría está bien; darles el mismo `:hover` no,
+  porque uno tiene un color de marca debajo y el otro la superficie de la tarjeta.
+
+La regla completa, que es la que hay que aplicar una a una: **si el elemento
+lleva un color de marca, el hover es ese color oscuro** (`--accent-hover`), no un
+tinte gris encima; **si lleva una superficie**, el tinte se superpone con el
+`linear-gradient`; y **si es transparente**, entonces sí vale `background` a
+secas.
+
+⚠️ **Se barrieron los 29 sitios el 24 de septiembre de 2026, y eran TRECE los
+rotos, no uno.** Doce botones —`.btn-back` y `.btn-secondary` de contratos,
+inspecciones y pagos, más el `.btn-clear` del lienzo de firma y la fila entera de
+la lista de contratos— perdían su relleno al pasar el ratón. En claro se
+**apagan** en vez de encenderse; en los tres oscuros `--bg-card` sobre `--bg-main`
+está a un paso del negro, así que el control se borra. Los quince restantes son
+correctos: pestañas, celdas del calendario, filas de menú y los botones del panel
+de fechas, todos transparentes de base.
+
+⚠️ **Y el arreglo del primero estuvo MUERTO una hora sin que se notara.** Este
+fichero llegó a tener **tres** declaraciones de primer nivel de `.btn-secondary`,
+así que el aspecto del botón salía de mezclar las tres — y el hover lo ponía la
+que llevaba `:not(:disabled)`, que mide `(0,4,0)` contra `(0,3,0)`. El
+`linear-gradient` nuevo no llegaba a aplicarse nunca. Se vio **pasando el ratón y
+midiendo**: `background-color: rgba(0, 0, 0, 0.02)` con `background-image: none`.
+
+De ahí la regla que vale para cualquier corrección de CSS en este proyecto:
+**antes de arreglar una regla, comprueba que es la que gana.** Un fichero con la
+misma clase declarada tres veces no tiene «la regla del botón», tiene tres, y la
+que se ve es la que más pesa, no la última que uno editó. Se resuelve borrando,
+no añadiendo una cuarta. Y **un hover solo está comprobado si se ha pasado el
+ratón por encima**: medir el estado de reposo no dice nada del hover.
+
+⚠️ **Queda una cosa medida y no decidida: el tinte es del 2 %.**
+`rgba(0, 0, 0, 0.02)` sobre blanco da `#FAFAFA` —razón de 1,04— o sea que
+**incluso donde se aplica bien, el hover está en el límite de lo perceptible**.
+Es la queja de Dorel («no se ve nada») en su forma general, y afecta a los
+veintiséis sitios a la vez, así que subirlo es una decisión suya, no un arreglo.
 
 ⚠️ **Y el contorno de un control es `--border-input`, nunca `--border-color`.**
 Aquel es el de las **separaciones** y puede ser sutil; este tiene que llegar a
@@ -3196,9 +3611,27 @@ una pseudoclase) más el elemento. Anteponer solo el elemento no basta, aunque l
 parezca. Cuando no hay una segunda clase real, repetirla —
 `input.form-control.form-control`— es la forma legítima de llegar a (0,2,1).
 
-⚠️ **Y se comprueba en el navegador, no se deduce.** Las dos veces que esto ha
-fallado, el CSS estaba escrito y desplegado y el valor calculado seguía siendo el
-viejo. `getComputedStyle()` es la única respuesta que vale.
+⚠️ **Y vale una clase POR ELEMENTO del selector, no una por regla.** Es el matiz
+que faltaba aquí y que costó un intento fallido el 24 de septiembre de 2026.
+Angular no le cuelga el atributo a la regla: se lo cuelga a **cada** compuesto.
+
+| Escrito en el componente | Lo que compila | Mide |
+|---|---|---|
+| `.form-control` | `.form-control[_ngcontent]` | (0,2,0) |
+| `.form-group label` | `.form-group[_ngcontent] label[_ngcontent]` | **(0,3,1)** |
+| `.card .title span` | tres compuestos, tres atributos | (0,5,2) |
+
+O sea que **un selector de dos niveles cuesta el doble de ganar**. Contra
+`.form-group label` no basta con `.form-group > label.checkbox-item.checkbox-item`
+—empata en (0,3,1), y en un empate manda el orden, que pone al componente
+detrás—: hace falta la tercera repetición para llegar a (0,4,1).
+
+⚠️ **Y se comprueba en el navegador, no se deduce.** Las **tres** veces que esto
+ha fallado, el CSS estaba escrito y desplegado y el valor calculado seguía siendo
+el viejo. `getComputedStyle()` es la única respuesta que vale — y cuando no
+cuadra, lo que hay que mirar es el `selectorText` de la regla que gana,
+recorriendo `document.styleSheets`: ahí se lee el selector **ya compilado**, con
+sus atributos, que es lo que de verdad se está contando.
 
 ⚠️ **Cuando un color de marca es el FONDO, su acompañante también es variable.**
 `--warning-on` existe porque el ámbar cambia de tema —#9A6700 en claro, #F0B429

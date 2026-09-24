@@ -23,6 +23,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
 import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
+import { TranslatableMessage, interpolate } from '@shared/utils/i18n-params.util';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
@@ -87,7 +88,28 @@ export class VehicleFormComponent implements OnInit {
   uploadError = '';
 
   // Pricing validation errors
-  pricingErrors: string[] = [];
+  /**
+   * Lo que impide que los tramos de tarifa sirvan para cobrar.
+   *
+   * ⚠️ **Hasta el 24 de septiembre de 2026 esto se pintaba en rojo y no impedía
+   * nada**: se podía guardar un coche con tramos solapados, con un precio a 0 o
+   * —lo que costaba dinero— con un hueco entre tramos, que alquila el coche a
+   * 0 € sin que nada falle. Ahora entra en `problems`, así que el guardado se
+   * para y el resumen junto al botón manda aquí.
+   */
+  pricingErrors: TranslatableMessage[] = [];
+
+  /**
+   * El texto ya resuelto de un error de tarifa.
+   *
+   * Se traduce aquí y no con el pipe porque la clave viaja en un dato, no
+   * escrita en la plantilla, y lleva sustituciones —el nombre del tramo, los
+   * días que faltan— que van sobre el texto **ya traducido**, donde el traductor
+   * decidió su sitio.
+   */
+  pricingErrorText(error: TranslatableMessage): string {
+    return interpolate(this.translateService.translate(error.key), error.params);
+  }
 
   // --- Propiedad del coche -------------------------------------------------
 
@@ -608,6 +630,20 @@ export class VehicleFormComponent implements OnInit {
      * se descubre hasta que se cierra el primer alquiler.
      */
     Object.assign(problems, vehicleOwnershipProblem(this.formData));
+    /**
+     * ⚠️ **Los tramos de tarifa, que hasta hoy se pintaban en rojo sin impedir
+     * nada.** Un hueco entre tramos hace que `findPricingRuleByDays()` no
+     * encuentre ninguno y el alquiler salga a **0 €**, sin error por ninguna
+     * parte. Va **al final** porque la sección de tarifas es la última del
+     * formulario, y el resumen junto al botón se lee en el orden de la pantalla.
+     *
+     * Aquí va una sola entrada genérica a propósito: el detalle —qué tramo y qué
+     * días faltan— ya está en rojo dentro de la propia sección, y repetir cinco
+     * mensajes largos junto al botón tapa los demás campos que falten.
+     */
+    if (validatePricingRules(this.formData.pricingRules || []).length > 0) {
+      problems['pricingRules'] = 'vehicles.errors.pricingRulesInvalid';
+    }
     return problems;
   }
 

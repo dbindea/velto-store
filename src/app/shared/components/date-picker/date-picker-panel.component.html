@@ -83,12 +83,25 @@
     </div>
   }
 
+  <!--
+    ⚠️ **«Borrar» es la ÚNICA forma de vaciar una fecha**, desde que el aspa
+    dejó de ponerse en estos campos (24 de septiembre de 2026). Antes no había
+    ninguna: el diálogo de fecha de Android solo trae «Cancelar» y «Aceptar»,
+    así que una fecha puesta por error no se podía quitar ni con el dedo ni con
+    el teclado. Va a la izquierda y separado de los otros dos, que no destruyen
+    nada.
+  -->
   <div class="picker-foot">
-    <button type="button" class="picker-now" [disabled]="nowDisabled()" (click)="pickNow()">
-      {{ showsCalendar() ? t('datePicker.today') : t('datePicker.now') }}
+    <button type="button" class="picker-clear" (click)="clear()">
+      {{ t('datePicker.clear') }}
     </button>
-    <button type="button" class="picker-close" (click)="closed.emit()">
-      {{ t('common.close') }}
-    </button>
+    <span class="picker-foot-right">
+      <button type="button" class="picker-now" [disabled]="nowDisabled()" (click)="pickNow()">
+        {{ showsCalendar() ? t('datePicker.today') : t('datePicker.now') }}
+      </button>
+      <button type="button" class="picker-close" (click)="closed.emit()">
+        {{ t('common.close') }}
+      </button>
+    </span>
   </div>
 </div>
