@@ -75,15 +75,24 @@ comprueba nadie** al crear una reserva. Se rellena en la ficha, se guarda y no
 hace nada. Es lo que obliga a que la tarifa cubra desde el día 1; si algún día se
 hace valer, esa comprobación se revisa.
 
-### 🚧 M-50 · El hover se ve, pero apenas — decisión de Dorel
+### ✅ M-50 · El tinte del hover se queda como está — decidido el 24 de septiembre de 2026
 
-- [ ] `--bg-hover` vale `rgba(0, 0, 0, 0.02)` en claro, que sobre blanco da
-  `#FAFAFA`: **razón 1,04**, o sea al límite de lo perceptible. El 24 de
-  septiembre se arreglaron los **trece** sitios donde el tinte además **borraba**
-  el relleno del elemento, pero eso es otra cosa: donde se aplica bien, sigue
-  casi sin verse. Subirlo a un 5 % en claro y un 7 % en los oscuros lo pondría en
-  el rango normal de una interfaz y toca **26 sitios** a la vez, así que es
-  decisión suya. Medido y listo para aplicar.
+- [x] **Decisión de Dorel: no se toca.** `--bg-hover` sigue valiendo
+  `rgba(0, 0, 0, 0.02)` en claro —`#FAFAFA` sobre blanco, razón **1,04**—, o sea
+  al límite de lo perceptible, y así se queda. Estaba medido y listo para subirlo
+  a un 5 % en claro y un 7 % en los oscuros, y él lo ha revisado y lo ha dado por
+  bueno.
+
+⚠️ **Queda cerrado, no pendiente.** La cifra se deja escrita porque es la
+respuesta a «¿por qué apenas se ve el hover?»: está así a propósito y ya se
+preguntó. Si alguien lo vuelve a notar, esto es la decisión, no un despiste — y
+volver a proponerlo es hacerle revisar dos veces lo mismo.
+
+⚠️ **Y no confundirlo con lo que SÍ se arregló ese día**, que es otra cosa: los
+**trece** sitios donde el tinte translúcido, escrito como `background:` a secas,
+**borraba el relleno** del elemento en vez de superponerse. Aquello era un fallo
+—un botón turquesa que al pasar el ratón se quedaba con texto blanco sobre fondo
+blanco— y está corregido. Lo de aquí es solo cuánto se nota donde se aplica bien.
 
 ### ✅ Lo que se cerró ese día
 

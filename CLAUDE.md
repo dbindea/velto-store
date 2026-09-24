@@ -3535,11 +3535,22 @@ que se ve es la que más pesa, no la última que uno editó. Se resuelve borrand
 no añadiendo una cuarta. Y **un hover solo está comprobado si se ha pasado el
 ratón por encima**: medir el estado de reposo no dice nada del hover.
 
-⚠️ **Queda una cosa medida y no decidida: el tinte es del 2 %.**
-`rgba(0, 0, 0, 0.02)` sobre blanco da `#FAFAFA` —razón de 1,04— o sea que
+⚠️ **El tinte es del 2 % A PROPÓSITO, y eso está decidido.**
+`rgba(0, 0, 0, 0.02)` sobre blanco da `#FAFAFA` —razón de 1,04—, o sea que
 **incluso donde se aplica bien, el hover está en el límite de lo perceptible**.
-Es la queja de Dorel («no se ve nada») en su forma general, y afecta a los
-veintiséis sitios a la vez, así que subirlo es una decisión suya, no un arreglo.
+Se midió, se le propuso a Dorel subirlo a un 5 % en claro y un 7 % en los
+oscuros, y el 24 de septiembre de 2026 decidió **dejarlo como está**.
+
+Se escribe aquí porque es la respuesta a «¿por qué apenas se ve el hover?»: la
+cifra es la que él ha querido, no un descuido pendiente de arreglar. Cambiarla
+toca los veintiséis sitios a la vez y es decisión suya, así que **no se vuelve a
+proponer** salvo que lo pida.
+
+⚠️ **Y no confundirlo con el fallo que sí hubo ese día**: los trece sitios donde
+el tinte, escrito como `background:` a secas, **borraba el relleno** del elemento
+—un botón turquesa que al pasar el ratón se quedaba con texto blanco sobre fondo
+blanco—. Eso estaba mal y está corregido. Lo del 2 % es cuánto se nota donde se
+aplica bien, que es otra pregunta.
 
 ⚠️ **Y el contorno de un control es `--border-input`, nunca `--border-color`.**
 Aquel es el de las **separaciones** y puede ser sutil; este tiene que llegar a

@@ -383,9 +383,11 @@ especificidad.
 - **El barrido del hover**: eran **trece** los sitios donde el tinte translúcido
   borraba el relleno del elemento, no uno.
 
-⚠️ **Queda medido y sin decidir: el tinte del hover es del 2 %** —`#FAFAFA` sobre
-blanco, razón 1,04—, así que incluso donde se aplica bien está en el límite de lo
-perceptible. Subirlo toca los veintiséis sitios a la vez y es decisión de Dorel.
+⚠️ **El tinte del hover se queda en el 2 %** —`#FAFAFA` sobre blanco, razón
+1,04—, así que incluso donde se aplica bien está en el límite de lo perceptible.
+Se midió, se propuso subirlo a un 5 % en claro y un 7 % en los oscuros, y **Dorel
+decidió ese mismo día dejarlo como está** (M-50). No es un pendiente: es la
+respuesta si alguien vuelve a preguntar por qué el hover apenas se nota.
 
 ---
 
@@ -533,32 +535,39 @@ enteras y filtra en memoria —es lo primero que se rompe cuando crezcan los
 datos—; y dos operadores pueden reservar el mismo coche, reducido a milisegundos
 pero no cerrado. Lo del lint **ya no aplica**: existe desde el 22 de septiembre.
 
-### Lo que dejó el repaso del 24 de septiembre, confirmado y SIN arreglar
+### Lo que dejó el repaso del 24 de septiembre — CERRADO ese mismo día
 
 Salieron de un repaso del flujo reserva → entrega → devolución hecho antes de
-subir a producción. Trece hallazgos confirmados, siete arreglados ese día, y
-estos cuatro quedaron. Están verificados contra el código, no supuestos:
+subir a producción: trece hallazgos confirmados, siete arreglados en la primera
+tanda y **los otros cuatro en la segunda** (M-49, commit `e4d9ab9`). Ya no queda
+ninguno abierto. El detalle está en
+[mejoras-pendientes.md](mejoras-pendientes.md) § M-49; lo que hay que llevarse:
 
-1. **Una foto subida antes de «Completar entrega» deja la entrega a medias.** La
-   primera foto crea la inspección en Firestore con `status: 'draft'`, y tanto la
-   ficha como el timeline deciden si la entrega está hecha por la **existencia**
-   del documento, no por su estado. Resultado: la reserva parece entregada, y no
-   hay botón para volver al parte.
-2. **Un hueco entre tramos de tarifa alquila el coche a 0 €.**
-   `validatePricingRules()` comprueba solapes, mínimos y precios, pero **no** que
-   los tramos cubran todos los días ni que el último tenga `maxDays: null`.
-   `findPricingRuleByDays()` devuelve `null` y `calculateBasePrice()` contesta 0.
-3. **Español duro** en la pantalla de entrega —el consejo de las fotos— y un
-   `title="Eliminar"` en entrega y devolución. Ninguna auditoría lo caza.
-4. **Código muerto con un `prompt()` del navegador**: `retainDeposit()` y
-   `refundDeposit()` de `inspection-return.component.ts` no los llama nadie,
-   llegan al servicio por `this.inspectionService['paymentService']` saltándose el
-   `private`, y uno abre un `prompt()` — que esta aplicación tiene prohibido.
+1. **Una foto dejaba la entrega a medias y sin salida.** La primera foto crea la
+   inspección en `draft`, y la ficha y el timeline miraban la **existencia** del
+   documento. La reserva parecía entregada y no había botón para volver al parte.
+   Ahora la ficha tiene **tres ramas** —hecha, a medias, sin empezar— y el
+   timeline compara contra `'completed'`, como los guards.
+2. **Un hueco entre tramos alquilaba el coche a 0 €.** `validatePricingRules()`
+   exige cubrir de 1 a infinito y terminar abierto. ⚠️ Y salió algo peor de lo
+   apuntado: **esos errores no impedían guardar nada**, ni los que ya existían.
+   Hacen falta **tres capas**, porque un coche ya guardado con la tarifa rota
+   seguía alquilando gratis — el buscador salía a 0,00 € y, al ordenar por
+   precio, **el primero de la lista**.
+3. **Español duro**, y eran más de los apuntados: también un `aria-label` en
+   castellano en la **pantalla pública de firma**, la que ve el cliente.
+4. **El código muerto con el `prompt()`**, borrado. Además de lo apuntado,
+   devolvía fianza **sin tope**.
 
-Y una **decisión pendiente, medida**: el tinte del hover es del **2 %**
-(`rgba(0,0,0,0.02)`, `#FAFAFA` sobre blanco, razón 1,04), así que incluso donde
-se aplica bien está al límite de lo perceptible. Subirlo a un 5 % en claro y un
-7 % en los oscuros lo pondría en el rango normal, y toca **26 sitios** a la vez.
+⚠️ **Y un hallazgo nuevo, visto y NO arreglado:** `minimumRentalDays` del vehículo
+**no lo comprueba nadie** al crear una reserva. Se rellena en la ficha, se guarda
+y no hace nada. Es lo que obliga a que la tarifa cubra desde el día 1.
+
+**M-50, decidido y cerrado:** el tinte del hover se queda en el **2 %**
+(`rgba(0,0,0,0.02)`, razón 1,04). Se midió, se propuso subirlo a un 5 % en claro
+y un 7 % en los oscuros —26 sitios— y Dorel lo revisó y dijo que se queda como
+está. **No es un pendiente**: si alguien vuelve a notar que el hover apenas se
+ve, esta es la respuesta.
 
 **Sin cerrar desde hace tiempo:** un cobro por la vía pública del móvil que se
 registre solo en **producción**. En desarrollo ya ocurrió; una vía de cobro no

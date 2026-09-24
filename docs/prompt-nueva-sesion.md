@@ -25,8 +25,9 @@ de septiembre de 2026.
 2. **`docs/traspaso-sesion.md`** — dónde quedó todo. Empieza por **§ 2
    quinquies** (los doce commits del 24 de septiembre, que tocan el camino del
    dinero) y **§ 2 ter** (qué hay sin subir y qué falta por desplegar).
-3. **`docs/mejoras-pendientes.md`** — la lista viva. **M-49** y **M-50** son lo
-   que quedó abierto.
+3. **`docs/mejoras-pendientes.md`** — la lista viva. **M-49 y M-50 están
+   cerrados** desde el 24 de septiembre de 2026; lo que queda abierto está más
+   abajo en ese mismo fichero.
 4. **`FUNCIONAL.md`** — el negocio, si la tarea lo toca.
 
 ⚠️ **Las cifras de esos documentos envejecen.** El estado del repositorio se
@@ -106,10 +107,13 @@ Cuatro trampas al medir, todas pagadas ya:
 1. Pregunta el estado del repositorio con los comandos de arriba.
 2. Si hay commits sin subir a producción, **dilo** y recuerda que el merge lo
    decide él.
-3. Si no te da una tarea concreta, lo que hay sobre la mesa es **M-49** —los
-   cuatro hallazgos del repaso que quedaron sin arreglar, el primero de los
-   cuales deja una entrega a medias sin que nada lo diga— y **M-50**, que es una
-   decisión suya sobre el tinte del hover.
+3. Si no te da una tarea concreta, **pregúntale**. M-49 y M-50 se cerraron el 24
+   de septiembre de 2026 y el desarrollo por tandas se acabó: lo que viene ahora
+   viene de él usando la aplicación en producción. Lo que sigue esperando está en
+   [traspaso-sesion.md](traspaso-sesion.md) § 5 — entre otras cosas, el **Storage
+   de producción sin vaciar**, que son el DNI, el carné y la firma de personas
+   reales cuyas fichas ya no existen, y confirmar en un **Android de verdad** que
+   el `select` ya se cierra.
 
 ⚠️ **Y una cosa que decide muchas discusiones de diseño:** Dorel quiere que la
 aplicación **le vaya guiando**. Lo bloqueado se ve, sale apagado y lleva el
