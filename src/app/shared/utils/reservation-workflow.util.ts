@@ -601,8 +601,33 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
   const remainingPaid = remainingPaidOf(ctx);
   const depositSettled = depositSettledOf(ctx);
 
-  const pickupDone = !!ctx.pickupInspection;
-  const returnDone = !!ctx.returnInspection;
+  /**
+   * ⚠️ **Un parte a medias NO es un paso dado.** Esto miraba la **existencia**
+   * del documento (`!!ctx.pickupInspection`) y ahí está el fallo que costó
+   * encontrar: la primera foto que se sube crea la inspección en Firestore con
+   * `status: 'draft'`, así que subir una foto y salirse de la pantalla marcaba
+   * «Entrega» como completada en el timeline. La reserva parecía entregada sin
+   * que nadie hubiera consignado los kilómetros, el combustible ni el checklist.
+   *
+   * Los guards del mismo fichero —`canStartReturn()`, `canCloseReservation()`—
+   * ya comparaban contra `'completed'` desde siempre: el timeline era el único
+   * que contaba la historia de otra manera, y es justo el que se lee de un
+   * vistazo.
+   *
+   * El respaldo al estado de la reserva se conserva —es lo que sostiene el caso
+   * que documenta esta función: en las tarjetas del panel las inspecciones no
+   * vienen cargadas— y ahora vive **aquí y no repartido por los pasos**, que era
+   * como estaba: la entrega lo tenía y la devolución no, así que una reserva
+   * `returned` sin inspecciones cargadas enseñaba los dos hitos sin dar. El
+   * estado solo se mueve al **completar** el parte, así que como respaldo dice
+   * la verdad.
+   */
+  const estado = r.reservationStatus;
+  const entregada = estado === 'delivered' || estado === 'returned' || closed;
+  const devuelta = estado === 'returned' || closed;
+
+  const pickupDone = ctx.pickupInspection?.status === 'completed' || entregada;
+  const returnDone = ctx.returnInspection?.status === 'completed' || devuelta;
 
   const contractGenerated = !!contract && contract.status !== 'cancelled' && contract.status !== 'expired';
   const contractSigned = contract?.status === 'signed';
@@ -672,7 +697,7 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
 
     // Step 7 — Pickup completed.
     if (key === 'pickupCompleted') {
-      if (pickupDone || r.reservationStatus === 'delivered' || closed) {
+      if (pickupDone) {
         state = 'completed';
       } else if (nextActionKey === 'workflow.startPickup') {
         state = 'current';
@@ -688,7 +713,7 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
 
     // Step 8 — Return completed.
     if (key === 'returnCompleted') {
-      if (returnDone || closed) {
+      if (returnDone) {
         state = 'completed';
       } else if (nextActionKey === 'workflow.startReturn') {
         state = 'current';
@@ -703,7 +728,8 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
 
     // Step 9 — Deposit settled (refunded or retained).
     if (key === 'depositSettled') {
-      if (depositSettled && (returnDone || closed)) state = 'completed';
+      // `returnDone` ya contempla la reserva cerrada; ver su definición arriba.
+      if (depositSettled && returnDone) state = 'completed';
       else if (nextActionKey === 'workflow.settleDeposit') {
         state = 'current';
         action = 'settle_deposit';

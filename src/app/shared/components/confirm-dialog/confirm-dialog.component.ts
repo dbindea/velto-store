@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { TranslateService } from '@core/i18n/translate.service';
+import { interpolate } from '@shared/utils/i18n-params.util';
 
 /**
  * El diálogo de sí o no, con la cara de la aplicación.
@@ -153,12 +154,7 @@ export class ConfirmDialogComponent {
 
   /** Misma sustitución que la pila de avisos: `{nombre}`, no otra convención. */
   text(key: string, params?: Record<string, string>): string {
-    const raw = this.translate.translate(key);
-    if (!params) return raw;
-    return Object.entries(params).reduce(
-      (out, [name, value]) => out.split(`{${name}}`).join(value),
-      raw
-    );
+    return interpolate(this.translate.translate(key), params);
   }
 
   /** Escape cancela, como en el diálogo del navegador que sustituye. */

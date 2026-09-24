@@ -21,34 +21,59 @@ Sesión larga que tocó **el camino del dinero**. Lo hecho está en
 [traspaso-sesion.md](traspaso-sesion.md) § 2 quinquies; aquí va solo lo que
 **queda abierto**, que es para lo que sirve este documento.
 
-### 🚧 M-49 · Lo que dejó el repaso del flujo, confirmado y sin arreglar
+### ✅ M-49 · Lo que dejó el repaso del flujo — cerrado el 24 de septiembre de 2026
 
 Un repaso de reserva → entrega → devolución hecho antes de subir a producción dio
-trece hallazgos confirmados. Siete se arreglaron el mismo día. Estos cuatro no, y
-están verificados contra el código:
+trece hallazgos confirmados. Siete se arreglaron el mismo día y estos cuatro
+quedaron abiertos. Los cuatro están arreglados, con tests que **fallan con el
+código anterior** y verificados en el navegador contra desarrollo:
 
-- [ ] **La foto que deja la entrega a medias.** La primera foto crea la
-  inspección con `status: 'draft'`, y la ficha y el timeline deciden si la entrega
-  está hecha por la **existencia** del documento, no por su estado
-  (`reservation-detail.component.html`, `@if (pickupInspection)`). La reserva
-  parece entregada y no hay botón para volver al parte. **Lo que hay que mirar al
-  arreglarlo:** no basta con filtrar por `status === 'completed'` en la ficha;
-  hay que decidir qué se ve mientras el parte está a medias, porque hoy no se ve
-  nada que lo diga.
-- [ ] **Un hueco entre tramos de tarifa alquila el coche a 0 €.**
-  `validatePricingRules()` (`pricing.util.ts`) comprueba solapes, mínimos y
-  precios, pero no que los tramos **cubran todos los días** ni que el último
-  tenga `maxDays: null`. `findPricingRuleByDays()` devuelve `null` y
-  `calculateBasePrice()` contesta `basePrice: 0`. No es hipotético: las reglas se
-  editan a mano en la ficha del coche.
-- [ ] **Español duro** en la pantalla de entrega —el consejo de las cuatro
-  fotos— y `title="Eliminar"` en entrega y devolución. `i18n:audit` no lo caza
-  porque no hay clave que falte: es texto escrito directamente en la plantilla.
-- [ ] **Código muerto con un `prompt()` del navegador.** `retainDeposit()` y
-  `refundDeposit()` de `inspection-return.component.ts` no los llama nadie, llegan
-  al servicio por `this.inspectionService['paymentService']` saltándose el
-  `private`, y uno abre un `prompt()`, que esta aplicación tiene prohibido desde
-  M-43. Borrarlos es lo que toca.
+- [x] **La foto que dejaba la entrega a medias.** La primera foto crea la
+  inspección con `status: 'draft'`, y tanto la ficha como el timeline decidían si
+  la entrega estaba hecha por la **existencia** del documento. La reserva parecía
+  entregada y **no había botón para volver al parte**, porque el de empezar vivía
+  en el `@else` que ya no se pintaba.
+  La ficha tiene ahora **tres ramas y no dos**: hecha, a medias y sin empezar. La
+  de en medio dice en ámbar que el parte está sin terminar y ofrece «Continuar la
+  entrega», que lleva al mismo formulario —ya recuperaba el borrador— y **no
+  ofrece el PDF del parte**: un papel que acredita en qué estado salió el coche,
+  a medias, no acredita nada. El timeline compara contra `'completed'`, igual que
+  los guards del mismo fichero.
+  ⚠️ Y de paso salió que **el respaldo al estado de la reserva solo estaba en la
+  entrega**: una reserva `returned` sin inspecciones cargadas —las tarjetas del
+  panel— enseñaba los dos hitos sin dar. Ahora está en los dos.
+- [x] **Un hueco entre tramos de tarifa alquilaba el coche a 0 €.**
+  `validatePricingRules()` gana la cobertura: los tramos tienen que **empezar en
+  el día 1, encadenar sin huecos y terminar abiertos** (`maxDays: null`), que es
+  la única forma de que `findPricingRuleByDays()` no pueda contestar `null`.
+  ⚠️ **Y salió algo peor que lo apuntado: esos errores se pintaban en rojo y no
+  impedían guardar nada.** Se podía guardar un coche con tramos solapados o con
+  un precio a 0. Ahora entran en `problems` y el guardado se para con su resumen
+  junto al botón.
+  Y hay **tres capas**, porque un coche ya guardado con la tarifa rota seguiría
+  alquilando gratis: el buscador lo marca no disponible **con su motivo** —antes
+  salía a 0,00 € y, al ordenar por precio, **el primero de la lista**—, y crear o
+  reprogramar una reserva sin tramo aplicable se rechaza.
+  Los mensajes pasaron a claves i18n: estaban en español dentro del código.
+- [x] **Español duro**, y eran más de los apuntados. El consejo de las cuatro
+  fotos y los dos `title="Eliminar"`, más un `aria-label` en castellano en la
+  **pantalla pública de firma** —la del cliente—, un `aria-label="Close"` en
+  inglés y tres `placeholder` de correo. Verificado cambiando el idioma.
+- [x] **Código muerto con un `prompt()` del navegador.** `retainDeposit()` y
+  `refundDeposit()` de `inspection-return.component.ts`, borrados. No los llamaba
+  nadie, llegaban al servicio por `this.inspectionService['paymentService']`
+  saltándose el `private`, uno abría un `prompt()` —prohibido desde M-43— y
+  **devolvían fianza sin tope**, que es justo lo que se cerró ese mismo día.
+
+Y dos cosas que aparecieron por el camino y van en el mismo cambio: «No hay parte
+de devolución» estaba escrito **dos veces** en la misma rama de la plantilla, y la
+interpolación de `{parámetros}` sobre un texto traducido estaba duplicada en dos
+componentes — ahora es `i18n-params.util.ts`, con tests.
+
+⚠️ **Lo que quedó visto y no arreglado:** `minimumRentalDays` del vehículo **no lo
+comprueba nadie** al crear una reserva. Se rellena en la ficha, se guarda y no
+hace nada. Es lo que obliga a que la tarifa cubra desde el día 1; si algún día se
+hace valer, esa comprobación se revisa.
 
 ### 🚧 M-50 · El hover se ve, pero apenas — decisión de Dorel
 

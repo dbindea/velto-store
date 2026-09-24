@@ -637,8 +637,8 @@
 
             @if (pricingErrors.length > 0) {
               <div class="pricing-errors">
-                @for (error of pricingErrors; track error) {
-                  <p class="error-text">{{ error }}</p>
+                @for (error of pricingErrors; track $index) {
+                  <p class="error-text">{{ pricingErrorText(error) }}</p>
                 }
               </div>
             }

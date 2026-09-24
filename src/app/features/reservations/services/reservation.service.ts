@@ -716,7 +716,32 @@ export class ReservationService {
       // Calculate pricing
       const pricingRules = vehicle.pricingRules || [];
       const basePriceResult = calculateBasePrice(pricingRules, totalDays);
-      
+
+      /**
+       * ⚠️ **Sin tramo aplicable NO se ofrece el coche, aunque esté libre.**
+       * `calculateBasePrice()` contesta `basePrice: 0` cuando ningún tramo cubre
+       * esos días —un hueco entre tramos, o un último tramo con techo—, así que
+       * el coche salía en la lista a **0,00 €** y, al ordenar por precio,
+       * **el primero**: el más barato de todos. Quien reservara desde ahí
+       * alquilaba el coche gratis sin que nada fallara.
+       *
+       * Se marca no disponible con su motivo, como el resto de bloqueos, y no se
+       * esconde: el operador tiene que saber que lo que hay que arreglar son las
+       * tarifas de ese coche, no las fechas. Ver `validatePricingRules()`, que
+       * es lo que impide que vuelvan a nacer así.
+       */
+      if (!basePriceResult.appliedRule) {
+        results.push({
+          vehicleId: vehicle.id!,
+          vehicle,
+          available: false,
+          totalDays,
+          pricing: null,
+          conflictMessage: 'reservations.availability.noTariff'
+        });
+        continue;
+      }
+
       const pricing: ReservationPricingSnapshot = {
         totalDays,
         appliedRule: basePriceResult.appliedRule ? {
@@ -846,6 +871,22 @@ export class ReservationService {
     const totalDays = calculateCalendarDays(pickupDateTime, returnDateTime);
     const pricingRules = vehicle.pricingRules || [];
     const basePriceResult = calculateBasePrice(pricingRules, totalDays);
+
+    /**
+     * ⚠️ **La mitad que una pestaña vieja no se puede saltar.** El asistente ya
+     * no ofrece un coche sin tramo para esos días, pero esto es lo que impide
+     * crear la reserva viniendo por otro camino — una pantalla abierta desde
+     * antes de arreglar las tarifas, o una llamada directa al servicio.
+     *
+     * Sin esto la reserva nace con `netPrice: 0`: se cobra una señal de 0, se
+     * genera un contrato que dice que el alquiler vale cero euros y el coche
+     * sale a la calle gratis. Un precio de 0 no es un precio, es la ausencia de
+     * uno, y aquí no hay forma de distinguirlo de un regalo deliberado — por eso
+     * se para en vez de avisar.
+     */
+    if (!basePriceResult.appliedRule) {
+      throw new Error('reservations.availability.noTariff');
+    }
 
     // Tariff → loyalty discount → hand-agreed price. The service recomputes it
     // instead of trusting the figure the wizard showed: this is the value that
@@ -1127,6 +1168,14 @@ export class ReservationService {
       );
       if (!vehicle) throw new Error('reservations.errors.vehicleNotFound');
       const base = calculateBasePrice(vehicle.pricingRules || [], totalDays);
+      /**
+       * ⚠️ **Aquí duele más que al crear**: alargar una reserva viva hasta una
+       * duración que ningún tramo cubre recalcularía la tarifa a **0** y
+       * reescribiría el `pricingSnapshot` de un alquiler que ya tenía precio —y
+       * con él las filas de cobro—. La prórroga se para y el operador arregla
+       * los tramos del coche, que es lo que de verdad está mal.
+       */
+      if (!base.appliedRule) throw new Error('reservations.availability.noTariff');
       const fidelidad = edit.client
         ? edit.client.loyaltyDiscountPercent
         : actual.pricingSnapshot?.loyaltyDiscountPercent;

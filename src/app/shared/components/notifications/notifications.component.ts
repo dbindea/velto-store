@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotificationService, Notice } from '@core/notifications/notification.service';
 import { TranslateService } from '@core/i18n/translate.service';
+import { interpolate } from '@shared/utils/i18n-params.util';
 
 /**
  * La pila de avisos, abajo a la derecha.
@@ -170,12 +171,7 @@ export class NotificationsComponent {
    * decidió dónde van.
    */
   textOf(notice: Notice): string {
-    const raw = this.translateService.translate(notice.key);
-    if (!notice.params) return raw;
-    return Object.entries(notice.params).reduce(
-      (text, [name, value]) => text.split(`{${name}}`).join(value),
-      raw
-    );
+    return interpolate(this.translateService.translate(notice.key), notice.params);
   }
 
   label(key: string): string {

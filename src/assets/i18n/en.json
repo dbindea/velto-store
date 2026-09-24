@@ -161,7 +161,8 @@
     "save": "Save",
     "search": "Search",
     "showingLatest": "Showing the most recent ones. To find an older one, use the search box.",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "emailPlaceholder": "customer@email.com"
   },
   "contracts": {
     "actions": {
@@ -429,6 +430,8 @@
   },
   "inspections": {
     "actions": {
+      "continuePickup": "Continue delivery",
+      "continueReturn": "Continue return",
       "startPickup": "Start pickup",
       "startReturn": "Start return",
       "view": "View details"
@@ -481,11 +484,7 @@
       "returnFailed": "The return could not be completed",
       "photoType": "Only JPG, PNG or WebP images are allowed.",
       "photoTooLarge": "The image exceeds the 5 MB limit.",
-      "photoUpload": "The photo could not be uploaded.",
-      "noAmountToRetain": "There is no amount to retain.",
-      "noAmountToRefund": "There is no amount to refund.",
-      "retainDeposit": "The deposit could not be retained.",
-      "refundDeposit": "The deposit could not be refunded."
+      "photoUpload": "The photo could not be uploaded."
     },
     "extraCharges": {
       "cleaning": "Cleaning charge",
@@ -516,9 +515,12 @@
     },
     "messages": {
       "noPickup": "No pickup inspection",
-      "noReturn": "No return inspection"
+      "noReturn": "No return inspection",
+      "pickupDraft": "The report is started but unfinished: the vehicle is not recorded as delivered.",
+      "returnDraft": "The report is started but unfinished: the vehicle is not recorded as returned."
     },
     "photos": {
+      "advice": "We recommend uploading at least 4 photos (front, rear, sides, interior).",
       "damage": "Damage",
       "dashboard": "Dashboard",
       "front": "Front",
@@ -556,12 +558,7 @@
       "pickup": "Pickup",
       "return": "Return"
     },
-    "success": {
-      "depositRetained": "{amount} € retained from the deposit.",
-      "depositRefunded": "{amount} € refunded from the deposit."
-    },
-    "retentionReasonPrompt": "Reason for the retention:",
-    "retentionDefaultReason": "Pickup/return charges",
+    "success": {},
     "confirm": {
       "checklistMessage": "Some checklist items are unticked. If you continue, the handover will be recorded as it stands.",
       "checklistTitle": "Checks missing",
@@ -982,7 +979,8 @@
       "searchFailed": "Availability could not be searched.",
       "maintenanceOverdue": "Roadworthiness test or servicing overdue",
       "itvExpired": "The roadworthiness test (ITV) expires before the return date. It cannot be rented until it is passed.",
-      "insuranceExpired": "The insurance expires before the return date. It cannot be rented until it is renewed."
+      "insuranceExpired": "The insurance expires before the return date. It cannot be rented until it is renewed.",
+      "noTariff": "This vehicle has no rate for that length of rental. Check its pricing bands."
     },
     "bookingConfirmation": {
       "copyLink": "Copy link",
@@ -1430,7 +1428,18 @@
       "delete": "The vehicle could not be deleted.",
       "statusChange": "The vehicle status could not be changed.",
       "deleteHasReservations": "This car has reservations and cannot be deleted: its plate is inside every one of them. For a sold or retired car, set its status to \"Out of service\" instead.",
-      "saveFailed": "Could not save the vehicle."
+      "saveFailed": "Could not save the vehicle.",
+      "pricingRulesInvalid": "Check the pricing bands: as they stand, a rental could come out at €0",
+      "pricingNoRules": "At least one pricing band is required",
+      "pricingMinDays": "Band “{rule}” must start on day 1 or later",
+      "pricingPrice": "Band “{rule}” must have a price per day greater than 0",
+      "pricingMaxBeforeMin": "Band “{rule}” ends before it starts",
+      "pricingOverlap": "Bands “{rule}” and “{next}” overlap",
+      "pricingDoesNotStartAtOne": "The first band starts on day {from}: a shorter rental would have no price and come out at €0",
+      "pricingGap": "Days {from} to {to} are missing: a rental of that length would come out at €0",
+      "pricingOpenNotLast": "Band “{rule}” has no maximum days, so “{next}” and the ones after it would never apply",
+      "pricingLastNotOpen": "The last band “{rule}” has a maximum: a rental of {days} days or more would come out at €0. Leave it open-ended",
+      "pricingGapSingle": "Day {day} is missing: a rental of that length would come out at €0"
     },
     "features": {
       "airConditioning": "Air conditioning",

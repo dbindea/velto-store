@@ -45,8 +45,16 @@
         </p>
 
         @if (view.highlights && view.highlights.length > 0) {
-          <section class="highlights-section" aria-label="Lo principal a tener en cuenta">
-            <h2 class="highlights-title">
+          <!--
+            ⚠️ **`aria-labelledby`, no un `aria-label` escrito a mano.** Aquí
+            ponía «Lo principal a tener en cuenta» en español duro, y esta es la
+            pantalla del CLIENTE: un rumano firmando su contrato en rumano tenía
+            el único rótulo de esta sección en castellano. Apuntando al `h2` que
+            ya está debajo, el lector de pantalla lee exactamente el mismo texto
+            que se ve, traducido, y no hay una segunda frase que mantener.
+          -->
+          <section class="highlights-section" aria-labelledby="highlights-title">
+            <h2 class="highlights-title" id="highlights-title">
               <i class="pi pi-exclamation-circle"></i>
               {{ 'contracts.sign.highlightsTitle' | translate }}
             </h2>

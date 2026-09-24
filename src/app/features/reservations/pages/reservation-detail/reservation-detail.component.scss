@@ -850,6 +850,21 @@ app-reservation-timeline {
   padding: 0.5rem 0;
 }
 
+// El parte empezado y sin terminar.
+//
+// ⚠️ No es `.inspection-empty`, y la diferencia es el color. «No hay parte» es
+// el estado normal de una reserva que todavía no ha salido y va en gris de
+// texto secundario; un parte a medias es algo que quedó abierto y que hay que
+// cerrar, así que va en ámbar, que es como esta aplicación dice «mira esto».
+// Con el gris de al lado se lee como información y no como aviso.
+.inspection-draft {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--warning-color);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
 // Contract Section
 .contract-actions {
   display: flex;

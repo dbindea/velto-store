@@ -312,7 +312,7 @@
                 class="form-control"
                 [(ngModel)]="emailRecipient"
                 name="contractEmailRecipient"
-                placeholder="cliente@email.com"
+                [attr.placeholder]="'common.emailPlaceholder' | translate"
                 [disabled]="sendingEmail"
               />
             </div>
@@ -348,43 +348,82 @@
               <i class="pi pi-sign-out"></i>
               <h4>{{ 'inspections.type.pickup' | translate }}</h4>
             </div>
-            @if (pickupInspection) {
+            <!--
+              TRES ramas, no dos, y ese es todo el arreglo.
+
+              ⚠️ **Esto preguntaba por la EXISTENCIA del documento.** La primera
+              foto que se sube crea la inspección en Firestore con
+              `status: 'draft'`, así que subir una foto y salirse dejaba la ficha
+              enseñando la entrega como hecha —con su botón de generar el parte
+              en PDF— y **sin ninguna forma de volver al formulario**: el botón
+              de empezar vivía en el `@else`, que ya no se pintaba. La reserva
+              se quedaba en tierra de nadie.
+
+              La rama de en medio es la que faltaba: se dice que está a medias y
+              se ofrece terminarlo. No lleva el PDF a propósito — un parte
+              acredita el estado en que salió el coche, y a medias no acredita
+              nada que se le pueda enseñar al cliente.
+            -->
+            @if (pickupInspection; as pickup) {
               <div class="inspection-info">
-                <span class="badge" [ngClass]="'status-' + pickupInspection.status">
-                  {{ getInspectionStatusLabel(pickupInspection.status) }}
+                <span class="badge" [ngClass]="'status-' + pickup.status">
+                  {{ getInspectionStatusLabel(pickup.status) }}
                 </span>
-                @if (pickupInspection.km !== undefined) {
+                @if (pickup.km !== undefined) {
                   <div class="info-line">
                     <span class="lbl">{{ 'inspections.fields.km' | translate }}:</span>
-                    <span class="val">{{ pickupInspection.km | number }}</span>
+                    <span class="val">{{ pickup.km | number }}</span>
                   </div>
                 }
-                @if (pickupInspection.photos && pickupInspection.photos.length > 0) {
+                @if (pickup.photos && pickup.photos.length > 0) {
                   <div class="info-line">
                     <span class="lbl">{{ 'inspections.sections.photos' | translate }}:</span>
-                    <span class="val">{{ pickupInspection.photos.length }}</span>
+                    <span class="val">{{ pickup.photos.length }}</span>
                   </div>
                 }
               </div>
-              <button class="btn-secondary" type="button" (click)="viewPickup()">
-                <i class="pi pi-eye"></i>
-                {{ 'inspections.actions.view' | translate }}
-              </button>
-              <!-- El parte al que el contrato remite. No se manda solo: se
-                   genera y se copia el enlace cuando el cliente lo pide. -->
-              <button
-                class="btn-secondary"
-                type="button"
-                [disabled]="generatingReport() === pickupInspection.id"
-                (click)="shareInspectionReport(pickupInspection)"
-              >
-                @if (generatingReport() === pickupInspection.id) {
-                  <i class="pi pi-spin pi-spinner"></i>
-                } @else {
-                  <i class="pi pi-file-pdf"></i>
+              @if (pickup.status === 'completed') {
+                <button class="btn-secondary" type="button" (click)="viewPickup()">
+                  <i class="pi pi-eye"></i>
+                  {{ 'inspections.actions.view' | translate }}
+                </button>
+                <!-- El parte al que el contrato remite. No se manda solo: se
+                     genera y se copia el enlace cuando el cliente lo pide. -->
+                <button
+                  class="btn-secondary"
+                  type="button"
+                  [disabled]="generatingReport() === pickup.id"
+                  (click)="shareInspectionReport(pickup)"
+                >
+                  @if (generatingReport() === pickup.id) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                  } @else {
+                    <i class="pi pi-file-pdf"></i>
+                  }
+                  {{ 'inspections.report.action' | translate }}
+                </button>
+              } @else {
+                <p class="inspection-draft">{{ 'inspections.messages.pickupDraft' | translate }}</p>
+                <button
+                  class="btn-primary"
+                  type="button"
+                  [disabled]="!canStartPickup()"
+                  [attr.title]="startPickupBlockReason() | translate"
+                  (click)="startPickup()"
+                >
+                  <i class="pi pi-pencil"></i>
+                  {{ 'inspections.actions.continuePickup' | translate }}
+                </button>
+                @if (startPickupBlockReason()) {
+                  <small class="action-blocked">{{ startPickupBlockReason() | translate }}</small>
+                  @if (!vehicleBlock) {
+                    <button class="btn-skip-step" type="button" (click)="openSkipDialog('startPickup')">
+                      <i class="pi pi-directions-alt"></i>
+                      {{ 'workflow.skipStep' | translate }}
+                    </button>
+                  }
                 }
-                {{ 'inspections.report.action' | translate }}
-              </button>
+              }
             } @else {
               <p class="inspection-empty">{{ 'inspections.messages.noPickup' | translate }}</p>
               <button
@@ -427,48 +466,74 @@
               <i class="pi pi-sign-in"></i>
               <h4>{{ 'inspections.type.return' | translate }}</h4>
             </div>
-            @if (returnInspection) {
+            <!-- Las mismas tres ramas que la entrega, y por el mismo motivo:
+                 la primera foto crea el documento en `draft`. -->
+            @if (returnInspection; as ret) {
               <div class="inspection-info">
-                <span class="badge" [ngClass]="'status-' + returnInspection.status">
-                  {{ getInspectionStatusLabel(returnInspection.status) }}
+                <span class="badge" [ngClass]="'status-' + ret.status">
+                  {{ getInspectionStatusLabel(ret.status) }}
                 </span>
-                @if (returnInspection.km !== undefined) {
+                @if (ret.km !== undefined) {
                   <div class="info-line">
                     <span class="lbl">{{ 'inspections.fields.km' | translate }}:</span>
-                    <span class="val">{{ returnInspection.km | number }}</span>
+                    <span class="val">{{ ret.km | number }}</span>
                   </div>
                 }
-                @if (returnInspection.damages && returnInspection.damages.length > 0) {
+                @if (ret.damages && ret.damages.length > 0) {
                   <div class="info-line">
                     <span class="lbl">{{ 'inspections.sections.damages' | translate }}:</span>
-                    <span class="val">{{ returnInspection.damages.length }}</span>
+                    <span class="val">{{ ret.damages.length }}</span>
                   </div>
                 }
-                @if (returnInspection.extraCharges && returnInspection.extraCharges.totalExtraCharges > 0) {
+                @if (ret.extraCharges && ret.extraCharges.totalExtraCharges > 0) {
                   <div class="info-line">
                     <span class="lbl">{{ 'inspections.extraCharges.total' | translate }}:</span>
-                    <span class="val">{{ returnInspection.extraCharges.totalExtraCharges | number:'1.2-2' }} €</span>
+                    <span class="val">{{ ret.extraCharges.totalExtraCharges | number:'1.2-2' }} €</span>
                   </div>
                 }
               </div>
-              <button class="btn-secondary" type="button" (click)="viewReturn()">
-                <i class="pi pi-eye"></i>
-                {{ 'inspections.actions.view' | translate }}
-              </button>
-              <button
-                class="btn-secondary"
-                type="button"
-                [disabled]="generatingReport() === returnInspection.id"
-                (click)="shareInspectionReport(returnInspection)"
-              >
-                @if (generatingReport() === returnInspection.id) {
-                  <i class="pi pi-spin pi-spinner"></i>
-                } @else {
-                  <i class="pi pi-file-pdf"></i>
+              @if (ret.status === 'completed') {
+                <button class="btn-secondary" type="button" (click)="viewReturn()">
+                  <i class="pi pi-eye"></i>
+                  {{ 'inspections.actions.view' | translate }}
+                </button>
+                <button
+                  class="btn-secondary"
+                  type="button"
+                  [disabled]="generatingReport() === ret.id"
+                  (click)="shareInspectionReport(ret)"
+                >
+                  @if (generatingReport() === ret.id) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                  } @else {
+                    <i class="pi pi-file-pdf"></i>
+                  }
+                  {{ 'inspections.report.action' | translate }}
+                </button>
+              } @else {
+                <p class="inspection-draft">{{ 'inspections.messages.returnDraft' | translate }}</p>
+                <button
+                  class="btn-primary"
+                  type="button"
+                  [disabled]="!canStartReturn()"
+                  [attr.title]="startReturnBlockReason() | translate"
+                  (click)="startReturn()"
+                >
+                  <i class="pi pi-pencil"></i>
+                  {{ 'inspections.actions.continueReturn' | translate }}
+                </button>
+                @if (startReturnBlockReason()) {
+                  <small class="action-blocked">{{ startReturnBlockReason() | translate }}</small>
+                  <button class="btn-skip-step" type="button" (click)="openSkipDialog('startReturn')">
+                    <i class="pi pi-directions-alt"></i>
+                    {{ 'workflow.skipStep' | translate }}
+                  </button>
                 }
-                {{ 'inspections.report.action' | translate }}
-              </button>
+              }
             } @else {
+              <!-- ⚠️ Aquí «No hay parte de devolución» estaba escrito DOS veces,
+                   una arriba y otra al final del bloque, así que el mensaje
+                   salía duplicado con los botones en medio. -->
               <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
               <button
                 class="btn-primary"
@@ -487,7 +552,6 @@
                   {{ 'workflow.skipStep' | translate }}
                 </button>
               }
-              <p class="inspection-empty">{{ 'inspections.messages.noReturn' | translate }}</p>
             }
           </div>
         </div>

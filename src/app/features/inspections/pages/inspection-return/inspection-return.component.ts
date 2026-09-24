@@ -1,6 +1,5 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { NotificationService } from '@core/notifications/notification.service';
-import { TranslateService } from '@core/i18n/translate.service';
 import { firstValueFrom } from 'rxjs';
 import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
@@ -62,7 +61,6 @@ export class InspectionReturnComponent implements OnInit {
   /** Borrador vivo del formulario; se limpia al completar la devolución. */
   private draft: { clear: () => void } | null = null;
   private notifications = inject(NotificationService);
-  private translateService = inject(TranslateService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private inspectionService = inject(InspectionService);
@@ -574,45 +572,24 @@ export class InspectionReturnComponent implements OnInit {
     }
   }
 
-  async retainDeposit(): Promise<void> {
-    if (!this.reservationId) return;
-    const amount = this.toRetain;
-    if (amount <= 0) {
-      this.notifications.error('inspections.errors.noAmountToRetain');
-      return;
-    }
-    const fallback = this.translateService.translate('inspections.retentionDefaultReason');
-    const reason = prompt(this.translateService.translate('inspections.retentionReasonPrompt'), fallback) || fallback;
-    try {
-      await this.inspectionService['paymentService'].retainDeposit(this.reservationId, amount, reason);
-      this.recalculateTotal();
-      this.notifications.success('inspections.success.depositRetained', { amount: amount.toFixed(2) });
-      this.router.navigate(['/reservations', this.reservationId]);
-    } catch (error) {
-      console.error('Error retaining deposit:', error);
-      // Antes solo se registraba en consola: el operador pulsaba «Retener», la
-      // fianza no se movía y la pantalla no decía nada.
-      this.notifications.error('inspections.errors.retainDeposit', { retry: () => void this.retainDeposit() });
-    }
-  }
-
-  async refundDeposit(): Promise<void> {
-    if (!this.reservationId) return;
-    const amount = this.toRefund;
-    if (amount <= 0) {
-      this.notifications.error('inspections.errors.noAmountToRefund');
-      return;
-    }
-    try {
-      await this.inspectionService['paymentService'].refundDeposit(this.reservationId, amount, 'cash', 'Devolución fianza');
-      this.notifications.success('inspections.success.depositRefunded', { amount: amount.toFixed(2) });
-      this.router.navigate(['/reservations', this.reservationId]);
-    } catch (error) {
-      console.error('Error refunding deposit:', error);
-      this.notifications.error('inspections.errors.refundDeposit', { retry: () => void this.refundDeposit() });
-    }
-  }
-
+  /**
+   * ⚠️ **Aquí vivían `retainDeposit()` y `refundDeposit()`, y se borraron el 24
+   * de septiembre de 2026 sin sustituirlos por nada.** No las llamaba nadie —ni
+   * esta plantilla, ni otra, ni un test— y tenían los tres defectos a la vez:
+   *
+   * - llegaban al servicio por `this.inspectionService['paymentService']`,
+   *   saltándose el `private` con un índice de cadena, que es la forma de que un
+   *   cambio de firma no dé error de compilación;
+   * - una abría un `prompt()` del navegador, prohibido desde M-43 por lo mismo
+   *   que los `alert()`: lo pinta el navegador, sale en el idioma del sistema y
+   *   no se puede vestir;
+   * - y devolvían la fianza **sin tope**, que es justo el fallo que
+   *   `depositAvailable()` vino a cerrar ese mismo día.
+   *
+   * Los movimientos de fianza de la devolución los hace
+   * `completeReturnInspection()` con los importes de «A retener» y «A devolver»,
+   * dentro de la misma escritura que el parte. Ese es el único camino.
+   */
   getPickupDate(): Date {
     return this.reservation ? toDate(this.reservation.pickupDateTime) : new Date();
   }

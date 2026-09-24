@@ -237,7 +237,12 @@
             @for (photo of formData.photos; track photo.path) {
               <div class="photo-thumb">
                 <img [src]="photo.thumbnailUrl || photo.url" [alt]="photo.fileName || ''">
-                <button type="button" class="photo-remove" (click)="deletePhoto(photo)" title="Eliminar">
+                <button
+                  type="button"
+                  class="photo-remove"
+                  (click)="deletePhoto(photo)"
+                  [attr.title]="'common.delete' | translate"
+                >
                   <i class="pi pi-times"></i>
                 </button>
                 @if (photo.category) {
