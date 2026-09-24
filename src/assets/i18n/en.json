@@ -1162,6 +1162,7 @@
       "emptyFiltered": "No reservations match this filter"
     },
     "messages": {
+      "datesRequired": "The pickup or return date is missing.",
       "invalidDates": "Return date must be after pickup date"
     },
     "money": {

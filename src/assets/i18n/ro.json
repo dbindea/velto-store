@@ -1162,6 +1162,7 @@
       "emptyFiltered": "Nicio rezervare cu acest filtru"
     },
     "messages": {
+      "datesRequired": "Lipsește data de ridicare sau cea de returnare.",
       "invalidDates": "Data returnării trebuie să fie după data preluării"
     },
     "money": {

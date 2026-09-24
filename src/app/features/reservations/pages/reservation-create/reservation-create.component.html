@@ -82,7 +82,7 @@
               type="datetime-local"
               id="returnDateTime"
               [ngModel]="returnDateTimeInput"
-              (ngModelChange)="returnDateTimeInput = $event"
+              (ngModelChange)="onReturnDateTimeChange($event)"
               [min]="pickupDateTimeInput"
               name="returnDateTime"
               class="form-control">

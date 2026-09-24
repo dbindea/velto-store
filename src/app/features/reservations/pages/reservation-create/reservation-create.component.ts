@@ -253,6 +253,31 @@ export class ReservationCreateComponent implements OnInit {
     const pickupDateTime = this.pickupDateTime;
     const returnDateTime = this.returnDateTime;
 
+    /**
+     * ⚠️ **Una fecha VACÍA no la paraba nadie, y no se para sola.**
+     * `parseDateTimeInput('')` devuelve `new Date(NaN)` a propósito, pero
+     * **toda comparación con `NaN` es falsa**: el guard de abajo
+     * —`returnDateTime <= pickupDateTime`— la dejaba pasar, y el del servicio
+     * —`if (totalDays <= 0) throw`— también, porque `calculateCalendarDays()`
+     * ya había devuelto `NaN`. El asistente seguía hasta el resumen, que se
+     * quedaba a medio dibujar con «NaN días · 0,00 €», sin desglose y **sin
+     * botón de crear**: un callejón sin salida que no explica nada.
+     *
+     * Era raro hasta el 24 de septiembre de 2026 —había que seleccionar y
+     * borrar a mano—, y dejó de serlo el mismo día: el panel de fechas propio
+     * pasó a mandar también en el móvil y trae un botón «Borrar», así que
+     * vaciar una fecha es ahora un gesto de un toque.
+     *
+     * De propina, con la devolución en `NaN` el bloqueo por papeles se
+     * **invierte**: en `blockingMaintenance()` la comparación
+     * `startOfDay(dueDate) >= devolucion` también es falsa, así que toda ITV o
+     * seguro con fecha abierta pasaría a bloquear el coche.
+     */
+    if (isNaN(pickupDateTime.getTime()) || isNaN(returnDateTime.getTime())) {
+      this.dateError = 'reservations.messages.datesRequired';
+      return;
+    }
+
     if (returnDateTime <= pickupDateTime) {
       this.dateError = 'reservations.messages.invalidDates';
       return;
@@ -616,6 +641,50 @@ export class ReservationCreateComponent implements OnInit {
     if (this.returnDateTimeInput < this.pickupDateTimeInput) {
       this.returnDateTimeInput = this.pickupDateTimeInput;
     }
+    this.invalidateAvailability();
+  }
+
+  onReturnDateTimeChange(value: string): void {
+    this.returnDateTimeInput = value;
+    this.invalidateAvailability();
+  }
+
+  /**
+   * Mover una fecha INVALIDA la búsqueda anterior.
+   *
+   * ⚠️ **Sin esto, la pantalla enseñaba un precio y la reserva se creaba con
+   * otro.** `isStepComplete('dates')` contesta `availabilityResults.length > 0`,
+   * o sea «hubo una búsqueda alguna vez», y nadie vaciaba ese resultado al
+   * cambiar las fechas. Así que se podía volver al paso 1, poner otras fechas y
+   * pulsar directamente «Resumen» en el stepper: `totalDays` ya era el nuevo
+   * —se calcula en vivo de los campos— mientras el precio seguía saliendo del
+   * `selectedVehicle.pricing` congelado en la búsqueda vieja.
+   *
+   * Reproducido con el Renault Clio, cuyas tarifas son 60 €/día a un día y
+   * 50 €/día de cuatro a siete: buscando 1 día y cambiando después a 5, el
+   * resumen decía «5 días», «5 x 60 € : 60 €» —aritmética imposible— y
+   * «Precio total: 72,60 €», con «Crear reserva» activo. Lo que
+   * `createReservationWithClient()` habría escrito son 5 × 50 = 250 € netos,
+   * **302,50 €**: 229,90 € de diferencia entre lo que se confirma delante del
+   * cliente y lo que se crea. Y el mismo estado alimenta «Generar presupuesto»,
+   * así que el PDF que se manda por WhatsApp llevaba la cifra equivocada.
+   *
+   * ⚠️ **La disponibilidad sí estaba protegida y el precio no**, y ese contraste
+   * es lo que lo hacía invisible: el servicio revuelve las fechas antes de
+   * escribir y falla con un mensaje si el coche ya no está libre, pero el precio
+   * lo **recalcula en silencio**. El caso ruidoso avisaba; el del dinero, no.
+   *
+   * Vaciar el resultado devuelve `isStepComplete('dates')` a `false`, así que el
+   * stepper deja de dejar pasar y hay que volver a buscar — que es lo que el
+   * asistente siempre quiso decir.
+   */
+  private invalidateAvailability(): void {
+    if (!this.availabilityResults.length && !this.selectedVehicle) return;
+    this.availabilityResults = [];
+    this.selectedVehicle = null;
+    // Un precio acordado lo era para unas fechas concretas; con otras, no.
+    this.resetFinalPrice();
+    if (this.currentStep !== 'dates') this.currentStep = 'dates';
   }
 
   get returnDateTime(): Date {

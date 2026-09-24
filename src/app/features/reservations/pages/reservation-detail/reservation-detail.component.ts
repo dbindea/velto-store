@@ -47,8 +47,6 @@ import { VehicleMaintenanceService } from '@features/vehicles/services/vehicle-m
 import type { MaintenanceBlock } from '@shared/utils/vehicle-availability.util';
 import {
   chargesVat,
-  deliveryFeeBreakdown,
-  DeliveryFeeBreakdown,
   vatBreakdownOf,
   VatBreakdown
 } from '@shared/utils/pricing.util';
@@ -56,6 +54,7 @@ import {
   collectedTotalsOf,
   calculateReservationPaymentSummary,
   calculatePendingAmount,
+  calculatePaymentStatus,
   roundMoney
 } from '@shared/utils/payment-summary.util';
 import {
@@ -237,18 +236,11 @@ export class ReservationDetailComponent implements OnInit {
     return chargesVat(this.reservation?.pricingSnapshot ?? {});
   }
 
-  /**
-   * Entrega y recogida a domicilio, con su IVA.
-   *
-   * Lo guardado es el neto pactado; lo que la ficha enseña es lo que hay que
-   * cobrarle al cliente, que es lo mismo que dicen las filas de cobro.
-   */
-  get deliveryFees(): DeliveryFeeBreakdown {
-    return deliveryFeeBreakdown(
-      this.reservation?.deliveryFees,
-      this.reservation?.pricingSnapshot?.vatRate
-    );
-  }
+  // La entrega y la recogida a domicilio ya no se derivan aquí: se leen de sus
+  // propias filas de cobro, en el bloque «servicios» de la tarjeta del dinero.
+  // El getter que las recalculaba desde `deliveryFees` se quedó sin usar al
+  // retirar la tarjeta vieja y se ha borrado, para que no haya dos formas de
+  // llegar al mismo importe.
 
   /**
    * Capitaliza el nombre del conductor adicional según se escribe.
@@ -1015,7 +1007,19 @@ export class ReservationDetailComponent implements OnInit {
       this.depositForm = { type: 'refund', amount: 0, method: 'cash' };
     } catch (error) {
       console.error('Error processing deposit:', error);
-      this.notifications.error('reservations.errors.processDeposit');
+      /**
+       * ⚠️ **El motivo exacto estaba traducido a tres idiomas y no se enseñaba
+       * en ninguna parte.** `depositMovementProblem()` distingue dos cosas
+       * distintas —falta el importe, o el importe supera lo que queda de
+       * fianza— y el servicio las lanza como clave i18n; aquí se tiraban las dos
+       * y se ponía «No se pudo procesar la fianza», que no dice qué corregir.
+       *
+       * Mismo criterio que el alta de reserva: una clave conocida se enseña tal
+       * cual, y lo demás —un fallo de red— sigue con el mensaje genérico.
+       */
+      const motivo: string = (error as Error)?.message || '';
+      const esClave = /^(payments|reservations|workflow)\./.test(motivo);
+      this.notifications.error(esClave ? motivo : 'reservations.errors.processDeposit');
     } finally {
       this.savingDeposit = false;
     }
@@ -1110,9 +1114,29 @@ export class ReservationDetailComponent implements OnInit {
     } else {
       this.showDepositForm = true;
       this.showPaymentForm = false;
-      // Se propone lo que queda: es el caso normal —devolver la fianza entera—
-      // y evita teclear una cifra que el operador ya sabe.
-      this.depositForm = { type, amount: this.depositAvailableAmount(), method: 'cash' };
+      /**
+       * ⚠️ **Solo se propone importe al DEVOLVER, nunca al retener.**
+       *
+       * Aquí se proponía lo que quedara de fianza para los dos botones, y el
+       * comentario que lo explicaba decía «es el caso normal —devolver la fianza
+       * entera—»: estaba escrito pensando en uno solo. Devolver el resto es el
+       * caso normal y ahorra teclear; **retener el resto no lo es**, porque lo
+       * que se retiene es lo que han costado los daños, y esa cifra no la sabe
+       * la aplicación.
+       *
+       * No se notaba porque `depositAvailable()` contestaba **0 siempre** —el
+       * fallo que se arregló el 24 de septiembre de 2026—, así que el campo
+       * salía vacío en los dos casos. Al arreglarlo, «Retener» pasó a abrirse
+       * con los 150 € del cliente dentro y a un clic de quedárselos enteros.
+       * Es la cara b de aquel arreglo, y la lección es que **destapar un valor
+       * que llevaba tiempo en cero puede activar código que nadie había visto
+       * funcionar**.
+       */
+      this.depositForm = {
+        type,
+        amount: type === 'refund' ? this.depositAvailableAmount() : 0,
+        method: 'cash'
+      };
     }
   }
 
@@ -1275,6 +1299,30 @@ export class ReservationDetailComponent implements OnInit {
    */
   get moneyPending(): number {
     return roundMoney(this.paymentGroups.reduce((t, g) => t + g.pending, 0));
+  }
+
+  /**
+   * El estado que enseña la chapa de la cabecera de ESTA tarjeta.
+   *
+   * ⚠️ **No es `reservation.paymentStatus`, y mezclarlos se contradecía a la
+   * vista.** Aquel deja la fianza fuera a propósito —es custodia, no precio, y
+   * como estado de la **reserva** está bien—, pero aquí queda tres líneas
+   * encima de un «Pendiente de cobro» que sí la cuenta: una reserva con el
+   * alquiler cobrado y la fianza sin depositar salía con la chapa **PAGADO** y
+   * el titular diciendo **150,00 €** por cobrar. Justo el tipo de contradicción
+   * que esta tarjeta vino a quitar.
+   *
+   * Se deriva de las mismas dos cifras que pinta la cabecera, así que no puede
+   * discrepar de ellas. La lista de reservas sigue con `paymentStatus`, que
+   * allí significa «el alquiler está cobrado» y no tiene ninguna cifra al lado
+   * que lo desmienta.
+   */
+  get moneyStatus(): 'pending' | 'partial' | 'paid' {
+    // `calculatePaymentStatus` declara también `failed`, que aquí no se puede
+    // dar: solo compara dos importes. Se estrecha para que la chapa no reciba
+    // un estado que no sabe pintar.
+    const estado = calculatePaymentStatus(this.moneyRequired, this.moneyCollected);
+    return estado === 'paid' ? 'paid' : estado === 'partial' ? 'partial' : 'pending';
   }
 
   /** El bloque de la fianza, que es el único que se explica aparte. */

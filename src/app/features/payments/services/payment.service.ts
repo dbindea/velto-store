@@ -41,7 +41,8 @@ import {
   buildInitialPaymentRows,
   distributeRentalPayment,
   collectedTotalsOf,
-  EXTRA_TYPES
+  EXTRA_TYPES,
+  SERVICE_TYPES
 } from '@shared/utils/payment-summary.util';
 import { depositAvailable, depositMovementProblem } from '@shared/utils/deposit.util';
 import { PermissionsService } from '@core/auth/permissions.service';
@@ -463,7 +464,17 @@ export class PaymentService {
       // deuda del cliente. Cancelarlo al cerrar hacía desaparecer el dinero
       // igual que marcarlo pagado sin cobrarlo, solo que con otra etiqueta.
       // Se nota sobre todo con la fianza a 0, donde nada los cubre.
-      !EXTRA_TYPES.includes(p.type)
+      !EXTRA_TYPES.includes(p.type) &&
+      // ⚠️ **Y la entrega y la recogida a domicilio son el mismo caso**, aunque
+      // se sembraran al crear la reserva: no son un concepto que se quedó sin
+      // usar, son un servicio **pactado, impreso en el contrato firmado y
+      // prestado** —la furgoneta hizo el viaje—. Cancelarlas al cerrar borraba
+      // de los libros un dinero que el cliente debe, sin que nada avisara.
+      //
+      // Si de verdad no se prestó, lo que corresponde es quitarlas en la
+      // edición de la reserva, que mueve el total y la fila a la vez; no
+      // hacerlas desaparecer por el camino del cierre.
+      !SERVICE_TYPES.includes(p.type)
     );
     if (stale.length === 0) return 0;
 
