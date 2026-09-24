@@ -379,6 +379,34 @@ tener reserva nueva, y punto: saltarse un paso es un atajo operativo, pero alqui
 a quien has bloqueado es una decisión sobre ese cliente y se toma en su ficha, cambiándole el
 nivel de confianza. `risk` no bloquea; solo avisa vía `clientTrustWarning()`.
 
+⚠️ **Una inspección que EXISTE no es una inspección HECHA.** La primera foto que
+se sube crea el documento en Firestore con `status: 'draft'`, así que la pregunta
+buena es siempre `status === 'completed'` y nunca `!!inspection`. Los guards
+—`canStartReturn()`, `canCloseReservation()`— lo hacían bien desde siempre; el
+**timeline** y la **ficha de la reserva** preguntaban por la existencia, y eso
+dejaba una entrega a medias contada como hecha: la reserva parecía entregada sin
+kilómetros, sin combustible y sin checklist, y **sin ningún botón para volver al
+parte**, porque el de empezar vivía en el `@else` que ya no se pintaba.
+No es un caso raro: Android puede matar la pestaña mientras la cámara está
+abierta, que es lo que `FormDraftService` existe para sobrevivir.
+
+Corregido el 24 de septiembre de 2026, y de ahí salen tres cosas que conviene
+llevarse:
+
+- **La ficha tiene TRES ramas y no dos** —hecha, a medias, sin empezar—, porque
+  caer al `@else` del borrador habría dicho «No hay parte de entrega» teniéndolo.
+  El texto y el hecho se deciden juntos, también aquí.
+- **A medias no se ofrece el PDF del parte.** Ese papel acredita en qué estado
+  salió el coche; a medias no acredita nada que se le pueda enseñar al cliente.
+- **Continuar es el MISMO botón que empezar** (`startPickup()`): la ruta es la
+  misma y el formulario ya recuperaba el borrador. Lo que faltaba era ofrecerlo.
+
+⚠️ **Y el respaldo del timeline al estado de la reserva tiene que estar en los
+DOS hitos.** Estaba escrito solo en la entrega, así que una reserva `returned`
+sin inspecciones cargadas —las tarjetas del panel, que no las cargan— enseñaba
+los dos pasos sin dar. El estado solo se mueve al **completar** el parte, así que
+como respaldo dice la verdad; lo que no vale es tenerlo en uno y no en el otro.
+
 ### `reservation-edit.util.ts` es la única autoridad sobre qué se puede CAMBIAR
 
 Lo que el workflow es a «qué pasos se pueden dar», este util lo es a «qué campos
@@ -506,6 +534,37 @@ desde la tarifa con descuento y **se habrían perdido los 60 € acordados**. El
 campo es opcional y aditivo; para las reservas anteriores sigue valiendo
 `manualAdjustment`, que bajo la regla vieja solo era 0 cuando no hubo precio a
 mano.
+
+#### Los tramos tienen que cubrir de 1 a infinito, o el coche se alquila gratis
+
+⚠️ **Un hueco entre tramos da `basePrice: 0` y no falla nada.** Con los tramos
+`1-1` y `3-5`, un alquiler de **2 días** no encuentra regla,
+`findPricingRuleByDays()` devuelve `null`, `calculateBasePrice()` contesta 0, la
+reserva se crea, el contrato se genera y el coche sale a la calle **gratis**. Lo
+mismo si el último tramo lleva `maxDays`: todo cuadra hasta el día 30 y el
+alquiler de 31 sale a cero. Y las reglas se editan a mano en la ficha del coche.
+
+Por eso `validatePricingRules()` exige **empezar en el día 1, encadenar sin
+huecos y terminar en un tramo abierto** (`maxDays: null`). No es una preferencia
+de forma: es lo único que impide que `findPricingRuleByDays()` conteste `null`.
+⚠️ Y `minimumRentalDays` **no vale como excusa para no empezar en 1**: se guarda
+en el vehículo y **no lo comprueba nadie** al crear una reserva, así que un
+alquiler de un día entra igual.
+
+⚠️ **Y esos errores se pintaban en rojo sin impedir NADA** hasta el 24 de
+septiembre de 2026 —tampoco los que ya existían: solapes, precio 0, rango
+invertido—. Un formulario que marca en rojo y deja guardar es peor que uno que no
+avisa, porque el operador da por hecho que algo lo habría parado. Ahora entran en
+`problems`, que es el mecanismo de la casa.
+
+⚠️ **Hacen falta TRES capas, porque un coche ya guardado sigue roto.** La
+validación impide que nazcan tarifas con hueco, pero no arregla las que ya
+estaban: el buscador marca el coche **no disponible con su motivo** —sin eso
+salía a 0,00 € y, al ordenar por precio, **el primero de la lista**, o sea el más
+barato de todos— y `createReservationWithClient()` y el recálculo de
+`editReservation()` se niegan. En la edición duele más: una prórroga hasta una
+duración sin tramo reescribiría a 0 el `pricingSnapshot` de un alquiler que ya
+tenía precio.
 
 Dos convenciones distintas que conviene no confundir, y por eso los nombres son explícitos:
 
