@@ -924,6 +924,42 @@ es peor que no tenerla.
 La pantalla la ve **todo el equipo**, sin permiso: «limpiar coches» es trabajo de
 la agencia. Las comisiones no — esas van con `viewCollaborators`.
 
+### Cerrar la reserva desde el parte de devolución
+
+La casilla «Cerrar reserva al completar» escribía `closed` **a pelo**, saltándose
+`canCloseReservation()` entero: se podía dar por terminado un alquiler con el
+resto sin cobrar o la fianza sin resolver. El botón de la ficha sí lo comprueba y
+`closeReservation()` del servicio también; el atajo del parte era el agujero.
+Corregido el 24 de septiembre de 2026.
+
+⚠️ **La devolución se hace SIEMPRE; lo que no se hace es cerrar.** El coche ha
+vuelto: eso es un hecho físico y no se deshace porque falten 53 €. Cerrar es una
+decisión de dinero, y se toma en la ficha, donde el importe está delante.
+
+⚠️ **Se le pregunta al MISMO guard, con el estado PROYECTADO.** `canCloseReservation()`
+exige `reservationStatus === 'returned'` y una inspección de devolución
+`completed`, y las dos son ciertas **después** de esta escritura: preguntarle al
+estado actual diría siempre que no. Se proyecta solo lo que el formulario va a
+hacer —el estado, la inspección y los movimientos de fianza de «A retener» y «A
+devolver»—. Copiar las condiciones del guard aquí habría sido una segunda
+autoridad sobre cuándo se cierra un alquiler.
+
+⚠️ **Y `remainingPaid` viaja explícito, derivado de `payments`.** Sin él el guard
+cae a la copia desnormalizada de la reserva, que se queda vieja y **responde
+`0`**: la casilla diría que no se puede cerrar justo después de cobrar, o peor,
+que sí cuando no. El parte no cargaba los pagos y ahora sí, una vez al abrir.
+
+**La pantalla lo dice antes de marcar.** La casilla se ve, sale apagada y lleva el
+motivo al lado —«Falta cobrar el resto del alquiler»—, igual que el botón de la
+ficha. Es la decisión de Dorel y su motivo está en una frase suya: *«a un empleado
+no hay que explicarle los enrevesados»*. Esconderla dejaría al operador sin saber
+que la opción existe; dejarla marcable sin efecto es peor todavía.
+
+⚠️ **Para cerrar de todos modos está «Saltar este paso»**, en la ficha, que pide
+motivo obligatorio y lo guarda con autor y fecha en `workflowExceptions[]`. **No
+se añadió una nota nueva a propósito**: sería un segundo mecanismo para la misma
+decisión, con su propio formato y su propia pantalla donde mirarlo.
+
 ### `permissions.util.ts` es la única autoridad sobre quién puede qué
 
 Rol → permisos, en una tabla. El menú y los guards de ruta preguntan ahí; un

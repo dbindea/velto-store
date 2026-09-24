@@ -361,10 +361,27 @@
     </div>
 
     <div class="page-actions">
-      <label class="checkbox-item plain">
-        <input type="checkbox" [(ngModel)]="closeReservation" name="close">
+      <!--
+        ⚠️ **La casilla se VE aunque no se pueda usar, y dice por qué.**
+        Escondiéndola, el operador no sabría que existe la opción; sin bloquearla,
+        la marcaría y no pasaría nada — que es lo que hacía hasta ahora, solo que
+        peor: cerraba de verdad, saltándose `canCloseReservation()` entero.
+
+        Es el mismo patrón que el botón «Cerrar reserva» de la ficha: apagado con
+        el motivo escrito al lado. Un empleado no tiene que saber nada del
+        workflow; le basta con leer «Falta cobrar el resto del alquiler».
+      -->
+      <label class="checkbox-item plain" [class.is-disabled]="!closeDecision.ok">
+        <input
+          type="checkbox"
+          [(ngModel)]="closeReservation"
+          [disabled]="!closeDecision.ok"
+          name="close">
         <span>{{ 'inspections.closeReservation' | translate }}</span>
       </label>
+      @if (!closeDecision.ok) {
+        <small class="action-blocked">{{ closeBlockReason() | translate }}</small>
+      }
       <!-- El resumen aquí: la devolución es una pantalla muy larga y los km
            están arriba del todo, así que el campo en rojo queda fuera de la
            vista cuando se pulsa el botón. -->

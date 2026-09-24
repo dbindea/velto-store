@@ -736,6 +736,32 @@ input[type='radio'] {
   color: var(--error-color);
 }
 
+/**
+ * «Esto no se puede hacer todavía, y por esto».
+ *
+ * Es la etiqueta que acompaña a un botón o una casilla que el workflow bloquea:
+ * «Falta firma del contrato», «Falta cobrar el resto del alquiler». En ámbar y
+ * no en rojo a propósito — **no ha fallado nada**, falta un paso; el rojo es
+ * para lo que se ha hecho mal.
+ *
+ * ⚠️ **Global desde el 24 de septiembre de 2026**, y por el motivo de siempre:
+ * la declaraban dos pantallas con dos copias idénticas, y la tercera que la usó
+ * —la casilla de cerrar en el parte de devolución— salió **sin estilo ninguno**,
+ * o sea un aviso que no se veía como aviso. Lo cazó `css:audit`.
+ *
+ * No pisa a quien ya la declara: las copias de componente miden (0,2,0) y esta
+ * (0,1,0).
+ */
+.action-blocked {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--warning-color);
+  background: var(--warning-bg);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+}
+
 /* ---------------------------------------------------------------------------
  * Una ayuda que además avisa
  *
@@ -794,6 +820,29 @@ input[type='radio'] {
 
     input[type='checkbox'] {
       margin-top: 0.125rem;
+    }
+  }
+
+  /**
+   * ⚠️ **Una casilla apagada tiene que PARECERLO.** Es la misma lección que
+   * `button:disabled`: sin esto, «Cerrar reserva al completar» se veía igual de
+   * pulsable cuando el workflow no deja cerrar, y el operador la marcaba
+   * esperando algo. El motivo va escrito al lado; esto es lo que hace que se
+   * mire.
+   *
+   * No se esconde: saber que la opción existe y por qué está apagada es
+   * justamente lo que evita tener que explicárselo a nadie.
+   */
+  &.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+
+    input[type='checkbox'] {
+      cursor: not-allowed;
+    }
+
+    &:hover {
+      border-color: var(--border-color);
     }
   }
 

@@ -35,7 +35,15 @@ import { suggestExtraKmCharge } from '@shared/utils/pricing.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { calculateCalendarDays } from '@shared/utils/reservation-date.util';
 import { toDate } from '@shared/utils/reservation-date.util';
-import { canStartReturn, WorkflowContext } from '@shared/utils/reservation-workflow.util';
+import {
+  canStartReturn,
+  canCloseReservation,
+  reasonOf,
+  WorkflowContext,
+  WorkflowDecision
+} from '@shared/utils/reservation-workflow.util';
+import { calculateReservationPaymentSummary, roundMoney } from '@shared/utils/payment-summary.util';
+import { PaymentService } from '@features/payments/services/payment.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { FormDraftService } from '@core/forms/form-draft.service';
 import { ClearInputDirective } from '@shared/directives/clear-input.directive';
@@ -60,6 +68,17 @@ export class InspectionReturnComponent implements OnInit {
   private inspectionService = inject(InspectionService);
   private reservationService = inject(ReservationService);
   private vehicleService = inject(VehicleService);
+  private paymentService = inject(PaymentService);
+
+  /**
+   * Si el resto del alquiler está cobrado, **derivado de `payments`**.
+   *
+   * Se resuelve al cargar la pantalla y no al vuelo: la decisión de si se puede
+   * cerrar se consulta en cada ciclo de detección de cambios, y ahí no cabe una
+   * consulta a Firestore. Lo que cambia mientras el operador rellena el parte
+   * son los cargos y la fianza, no lo que ya estaba cobrado.
+   */
+  private remainingPaid = false;
 
   reservationId: string | null = null;
   reservation: Reservation | null = null;
@@ -127,6 +146,26 @@ export class InspectionReturnComponent implements OnInit {
         return;
       }
       this.pickupInspection = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'pickup');
+
+      /**
+       * Si el resto del alquiler está cobrado, **derivado de la colección** y no
+       * de la copia que lleva la reserva dentro. Esa copia se queda vieja y
+       * **responde `0` en vez de fallar**, así que con ella la casilla de cerrar
+       * diría que no se puede justo después de cobrar, o —peor— que sí cuando no.
+       *
+       * Si la lectura falla se queda en `false`, que es el lado seguro: la
+       * casilla sale bloqueada y el operador cierra desde la ficha, donde el
+       * dato se vuelve a mirar.
+       */
+      try {
+        const pagos = await firstValueFrom(
+          this.paymentService.getPaymentsByReservation(reservationId).pipe(first())
+        );
+        const resumen = calculateReservationPaymentSummary(pagos, this.reservation);
+        this.remainingPaid = resumen.remainingPaymentPaid >= resumen.remainingPaymentRequired;
+      } catch {
+        this.remainingPaid = false;
+      }
 
       // Solo para el aviso de kilómetros: la tarifa de km extra vive en la
       // ficha del vehículo y no viaja en `vehicleSnapshot`. Si la lectura
@@ -224,6 +263,51 @@ export class InspectionReturnComponent implements OnInit {
 
   get toRefund(): number {
     return Math.max(0, this.depositPaid - this.totalExtraCharges);
+  }
+
+  /**
+   * ¿Se va a poder cerrar la reserva al terminar esta devolución?
+   *
+   * ⚠️ **Antes no se preguntaba y la casilla cerraba a pelo**, saltándose
+   * `canCloseReservation()` entero: se podía dar por terminado un alquiler con
+   * el resto sin cobrar o la fianza sin resolver, y nadie se enteraba. El botón
+   * de la ficha sí lo comprueba; el atajo de aquí, no.
+   *
+   * ⚠️ **Se le pregunta al MISMO guard, con el estado PROYECTADO.** Copiar sus
+   * condiciones aquí sería una segunda autoridad sobre cuándo se cierra un
+   * alquiler, y el día que cambie una se quedaría la otra. Lo que se proyecta es
+   * solo lo que este formulario está a punto de hacer: la reserva pasará a
+   * `returned`, la inspección quedará `completed` y la fianza se habrá movido lo
+   * que digan «A retener» y «A devolver».
+   *
+   * ⚠️ **Y `remainingPaid` viaja explícito, derivado de `payments`.** Sin él el
+   * guard cae a la copia desnormalizada de la reserva, que se queda vieja y
+   * **responde que no está pagado en vez de fallar** — o al revés. El dinero se
+   * decide mirando la colección, como en el resto de la aplicación.
+   */
+  get closeDecision(): WorkflowDecision {
+    if (!this.reservation) return { ok: false, reason: 'workflow.missingReservation' };
+    const d = this.reservation.deposit;
+    const proyectada = {
+      ...this.reservation,
+      reservationStatus: 'returned',
+      deposit: d && {
+        ...d,
+        returnedAmount: roundMoney((d.returnedAmount || 0) + this.toRefund),
+        retainedAmount: roundMoney((d.retainedAmount || 0) + this.toRetain)
+      }
+    } as Reservation;
+
+    return canCloseReservation({
+      reservation: proyectada,
+      returnInspection: { status: 'completed' },
+      remainingPaid: this.remainingPaid
+    } as WorkflowContext);
+  }
+
+  /** Lo que impide cerrar, para decirlo al lado de la casilla. */
+  closeBlockReason(): string {
+    return reasonOf(this.closeDecision);
   }
 
   /**

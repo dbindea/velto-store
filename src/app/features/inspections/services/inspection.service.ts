@@ -34,6 +34,7 @@ import {
   WorkflowContext,
   canStartPickup as assertCanStartPickup,
   canStartReturn as assertCanStartReturn,
+  canCloseReservation,
   canWithException
 } from '@shared/utils/reservation-workflow.util';
 import { roundMoney, distributeRetentionAcrossCharges } from '@shared/utils/payment-summary.util';
@@ -372,7 +373,46 @@ export class InspectionService {
       clientSnapshot: reservation.clientSnapshot
     };
 
-    const newStatus: 'returned' | 'closed' = options.closeReservation ? 'closed' : 'returned';
+    /**
+     * ⚠️ **Cerrar aquí PREGUNTA al guard, y antes no.** Esta línea era
+     * `options.closeReservation ? 'closed' : 'returned'` a secas, así que la
+     * casilla del parte se saltaba `canCloseReservation()` entero: se podía dar
+     * por terminado un alquiler con el resto sin cobrar o la fianza sin
+     * resolver. El botón de la ficha sí lo comprueba —y `closeReservation()` del
+     * servicio también—; el atajo de aquí era el agujero.
+     *
+     * ⚠️ **Se evalúa contra el estado PROYECTADO**, porque el guard exige
+     * `reservationStatus === 'returned'` y una inspección de devolución
+     * `completed`: las dos cosas son ciertas **después** de esta escritura, no
+     * antes. Preguntarle al estado actual diría siempre que no.
+     *
+     * ⚠️ **Y si dice que no, la devolución se hace igual y la reserva se queda
+     * en `returned`.** El coche ha vuelto: eso es un hecho físico y no se puede
+     * deshacer porque falten 53 €. Cerrar es una decisión de dinero, y se toma
+     * en la ficha, donde el importe está delante y existe «Saltar este paso»
+     * con su motivo obligatorio. La pantalla ya lo dice antes de guardar; esto
+     * es la segunda capa, para cuando la llamada no venga de esa pantalla.
+     */
+    let newStatus: 'returned' | 'closed' = 'returned';
+    if (options.closeReservation) {
+      const proyectada = {
+        ...reservation,
+        reservationStatus: 'returned',
+        deposit: reservation.deposit && {
+          ...reservation.deposit,
+          returnedAmount:
+            (reservation.deposit.returnedAmount || 0) + (options.refundDepositAmount || 0),
+          retainedAmount:
+            (reservation.deposit.retainedAmount || 0) + (options.retainDepositAmount || 0)
+        }
+      } as Reservation;
+      const cierre = canCloseReservation({
+        reservation: proyectada,
+        pickupInspection: pickup || null,
+        returnInspection: { ...(existing || {}), status: 'completed' }
+      } as WorkflowContext);
+      if (cierre.ok) newStatus = 'closed';
+    }
 
     let inspectionId: string;
     if (existing?.id) {
