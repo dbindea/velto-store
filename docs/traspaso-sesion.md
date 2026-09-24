@@ -1,11 +1,18 @@
-# Traspaso de sesión — 22 de septiembre de 2026
+# Traspaso de sesión — 24 de septiembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> Lo primero que hay que mirar es **§ 2 bis**, que es lo que se movió los días
-> 21 y 22, y **§ 2 ter**, que dice qué hay sin subir y qué falta por desplegar.
+> Lo primero que hay que mirar es **§ 2 quinquies**, que son los doce commits del
+> día 24 y tocan el camino del dinero, y **§ 2 ter**, que dice qué hay sin subir y
+> qué falta por desplegar. Las secciones anteriores (§ 2, § 2 bis, § 2 quater)
+> son historia: se leen si algo no cuadra.
+>
+> Si lo que buscas es **el mensaje con el que abrir la sesión**, está aparte en
+> [prompt-nueva-sesion.md](prompt-nueva-sesion.md): aquel dice *cómo se trabaja*
+> y este *dónde estamos*. Son dos cosas distintas y por eso no están en el mismo
+> fichero.
 
 ---
 
@@ -248,64 +255,137 @@ y cualquier servicio con campos opcionales editables lo tiene.
 
 ---
 
-## 2 quinquies. Lo que se movió el 24 de septiembre
+## 2 quinquies. Lo que se movió el 24 de septiembre — DOCE commits
 
-**Fecha y hora van en un solo campo.** El asistente de creación era el último
-sitio con el par separado —un `date` y un `time` al lado— y ahora usa el mismo
-`datetime-local` que la edición de reserva. **`type=time` ya no existe en la
-aplicación.** Comprobado creando una reserva de verdad y leyendo el documento:
-lo que llega a Firestore no cambió —el mapa `{ seconds, nanoseconds }` con el
-instante correcto y los minutos— y lo único que cambió es el estado local del
-formulario, de cuatro cadenas a dos.
+Fue la sesión más larga hasta ahora y tocó el camino del dinero, así que conviene
+leerla entera antes de mover nada de reservas, pagos o inspecciones. En orden:
 
-**El calendario propio manda también en el móvil, y es una reversión.** Hasta
-ahora con el dedo salía el diálogo del sistema, por un argumento que sigue
-siendo bueno. Lo tumbó un hecho que nadie había mirado: **el diálogo de fecha de
-Android no tiene forma de vaciar** —solo «Cancelar» y «Aceptar»—, y el aspa que
-lo tapaba se quitó de esos campos porque con el pulgar se confunde con el botón
-de abrir. El panel propio tiene ahora un botón **«Borrar»**, en rojo porque es
-el único de los tres que destruye algo, y cabe entero en una pantalla de 390 px
-—que es lo que el «Establecer» del diálogo de Android se comía—.
+```
+b366ca9  la fianza no se podía devolver, y retener no tenía tope
+c8bc9ac  el dinero de la reserva, en una sola tarjeta
+74027ce  la cabecera de una ficha es una banda, y el hover del botón se veía
+e45138f  el barrido del hover, y las chapas que la banda nueva había roto
+82f296a  la ficha de pago usaba títulos de menú como etiquetas de campo
+17c2f2e  las casillas de devolución iban pegadas al texto y descentradas
+ab6660b  el asistente enseñaba un precio y creaba otro, y cuatro cosas más
+f65b58d  «Saltar este paso» escribía la excepción y la operación fallaba igual
+98814c3  la banda de cabecera en todas las pantallas, y las fechas obligatorias
+aa2de85  las dos casillas de la devolución, juntas y en su propia fila
+336fc30  cerrar desde el parte de devolución ya no se salta el guard
+3220cab  un solo creador de reservas, y el otro escribía el cliente vacío
+```
 
-**El aspa creció a 44 px de zona pulsable**, el mínimo que piden Apple y
-Android. Estaba en 34, que es lo que mide un icono y no lo que mide una yema.
+### Lo que costaba dinero, que es lo que hay que saber
 
-⚠️ **Y una lección de las tres auditorías, que cazaron tres cosas seguidas:**
-`css:audit` las dos clases nuevas del pie del panel sin declarar, `spacing:audit`
-un `padding` de 2,75 rem fuera de escala, e `i18n:audit` habría cazado las dos
-claves de «hora» que quedaron huérfanas. El `padding` tuvo además un intento de
-arreglo malo por mi parte —meter `styles.scss` entero en la lista de aceptadas,
-que habría apagado la auditoría en toda la hoja global—: lo correcto era ver que
-el relleno y la zona pulsable son **dos medidas distintas** y que solo una tiene
-que crecer para el dedo.
+⚠️ **La fianza no se podía devolver, en ningún alquiler, desde que se escribió la
+comprobación que debía protegerla.** `depositAvailable()` leía
+`summary.depositPaid` y sus dos llamadores le pasan un `CollectedTotals`, que
+llama a ese dato `depositCollected`. Con los tres campos de la firma declarados
+**opcionales**, aquello compilaba, salía `undefined`, caía a `0` y la función
+contestaba **0 disponible siempre**: toda devolución se rechazaba con «el importe
+supera la fianza disponible». Y `retainDeposit()` no tenía tope ninguno. La firma
+es ahora una unión con los dos nombres reales y **todos los campos obligatorios**,
+así que el error volvería a ser de compilación.
 
-**Y se vaciaron las dos bases de datos**, por decisión de Dorel. Ver § 2 sexies.
+⚠️ **El asistente enseñaba un precio y creaba otro.** `isStepComplete('dates')`
+significaba «hubo una búsqueda alguna vez» y nadie vaciaba el resultado al cambiar
+las fechas: se podía volver al paso 1, poner otras fechas y pulsar «Resumen» en el
+stepper. Los días ya eran los nuevos —se calculan en vivo— y el precio seguía
+saliendo del vehículo congelado en la búsqueda vieja. Con el Clio, la pantalla
+decía «5 días · 5 x 60 € : 60 € · Total 72,60 €» y lo que se habría creado son
+**302,50 €**. El mismo estado alimenta «Generar presupuesto», así que el PDF de
+WhatsApp iba igual.
+La disponibilidad **sí** estaba protegida —el servicio la revuelve antes de
+escribir y falla con un mensaje— y el precio no: se recalculaba en silencio.
 
-### El dinero de la reserva, en una sola tarjeta
+⚠️ **Cerrar la reserva desde el parte de devolución se saltaba
+`canCloseReservation()` entero**, así que se podía dar por terminado un alquiler
+con el resto sin cobrar o la fianza sin resolver. Ahora se le pregunta al mismo
+guard con el estado **proyectado** —la reserva pasará a `returned`, la inspección
+a `completed` y la fianza se habrá movido lo que digan «A retener» y «A
+devolver»— y si dice que no, **la devolución se hace igual y la reserva se queda
+en `returned`**. El coche ha vuelto: eso no se deshace porque falten 53 €.
 
-Dorel abrió una ficha y preguntó por **el importe en negativo** que sale debajo
-de cada fila de cobro. La respuesta corta es que era lo que faltaba por cobrar,
-sin ninguna palabra que lo dijera; la larga es que la pantalla tenía **tres
-tarjetas de dinero** contándose la vida desde tres sitios, y que «Precio total»
-ni siquiera era el total —no llevaba fianza, ni entrega a domicilio, ni cargos—.
+⚠️ **Cerrar cancelaba la entrega y la recogida a domicilio sin cobrar.**
+`cancelUncollectedPayments()` solo exceptuaba los cargos extra; un desplazamiento
+pactado, impreso en el contrato y prestado desaparecía de los libros.
 
-Ahora es **una**: arriba lo pendiente en grande, debajo lo entregado y el total,
-y las filas agrupadas en alquiler / entrega y recogida / cargos extra / fianza,
-cada bloque con su subtotal. La regla es que **toda cifra de arriba es la suma de
-filas que se ven abajo**. El desglose del precio pasa a ir plegado dentro del
-bloque del alquiler, que es lo que explica.
+⚠️ **«Saltar este paso» no servía de nada.** La pantalla habilitaba el botón
+honrando la excepción y el servicio volvía a preguntar al guard **a secas**: la
+excepción quedaba escrita en la reserva para siempre y la operación fallaba igual.
+`canWithException()` lo dice en su propio comentario y no la llamaba ningún
+servicio.
 
-No hay documentos nuevos, ni tipos de cobro nuevos, ni cobro agrupado: eso se
-propuso y Dorel lo descartó por complicarlo. Los cobros funcionan exactamente
-igual que antes.
+⚠️ **Había DOS creadores de reservas y el segundo estaba roto por tres sitios.**
+`createReservation(vehicleId, clientId, …)` no la llamaba nadie y escribía el
+snapshot del cliente **vacío** —un contrato sin arrendatario—, el descuento de
+fidelidad a **0** fijo y **sin comprobar si el cliente estaba bloqueado**. Se
+borró. Queda `createReservationWithClient()`, que es ahora el único.
 
-⚠️ **Y por el camino salió que la fianza no se podía devolver.** `depositAvailable()`
-leía `summary.depositPaid` mientras sus dos llamadores le pasan `CollectedTotals`,
-que llama a ese dato `depositCollected`: con los campos opcionales de la firma,
-eso compilaba y contestaba **0 disponible siempre**, así que toda devolución se
-rechazaba con «el importe supera la fianza disponible». Y `retainDeposit()` no
-tenía tope ninguno. Las dos cosas arregladas y probadas de punta a punta contra
-desarrollo. Está contado en CLAUDE.md § «La fianza no se podía devolver».
+### La tarjeta del dinero
+
+Las tres tarjetas de la ficha —«Pendiente», «Precio total» y «Resumen»— eran una
+sola pregunta contada desde tres fuentes distintas, y «Precio total» **no era el
+total**: sin fianza, sin entrega a domicilio y sin cargos. Ahora es **una**, con
+una regla de la que cuelga todo: **toda cifra de la cabecera es la suma de unas
+filas que están a la vista debajo.**
+
+El agrupador es `payment-groups.util.ts` (nuevo, con tests) y **no es una lista
+blanca**: un `PaymentType` sin clasificar cae en «otros» y **se ve**, en vez de
+desaparecer en silencio como pasa en `collectedTotalsOf()`.
+
+Y desapareció el menos: donde ponía «-30,00 €» sin explicación ahora dice «20,00 €
+cobrados · faltan 30,00 €».
+
+### La identidad visual, unificada
+
+`--bg-header`, `--text-header` e `--icon-header` en los cuatro temas. La banda la
+llevan **tres familias** —`.card-header` de las fichas, `.section-header` de los
+formularios largos y `.modal-header`—, y la regla global las cubre para que una
+pantalla nueva no nazca gris. El tono del claro (`#CEDEE0`) sale de una maqueta de
+Dorel **medida píxel a píxel**: el gris de rampa más cercano dejaba el rótulo en
+3,62:1, por debajo del mínimo.
+
+⚠️ **Y cambiar esa superficie rompió las chapas que van encima**, que es la
+consecuencia que no se ve venir: en los temas oscuros su fondo es un tinte
+translúcido calculado para la tarjeta, y sobre la banda su texto cayó de 5,03 a
+3,31. Se arregla **redefiniendo las variables dentro de la cabecera** —no con
+reglas por clase—, porque una variable se resuelve por herencia y no por
+especificidad.
+
+### Lo que hay que saber para no repetir tres errores míos
+
+1. ⚠️ **La encapsulación de Angular vale una clase POR ELEMENTO del selector, no
+   una por regla.** `.form-group label` compila a
+   `.form-group[_ngcontent] label[_ngcontent]` y mide **(0,3,1)**, no (0,2,1). Mi
+   primer intento de red empataba y perdía por orden, **en silencio**. La tabla de
+   CLAUDE.md está corregida.
+2. ⚠️ **Antes de arreglar una regla, comprueba que es la que gana.** Un fichero
+   tenía **tres** declaraciones de `.btn-secondary`; arreglé el hover en una y
+   mandaba otra. Se ve leyendo el `selectorText` **ya compilado** en
+   `document.styleSheets`.
+3. ⚠️ **Un hover solo está comprobado si has pasado el ratón.** Medir el reposo no
+   dice nada.
+
+### Y lo demás
+
+- **Fechas obligatorias en el asistente**, con `required` y validación por campo:
+  el botón no se apaga, se pulsa, se marca el campo y se dice **cuál** falta. Sin
+  eso, vaciar una fecha llegaba al resumen con «NaN días» y sin botón de crear —
+  y eso dejó de ser raro el mismo día, al pasar el panel de fechas propio al móvil
+  con su botón «Borrar».
+- **La ficha de pago** usaba títulos de menú como etiquetas de campo: «Reservas:
+  199,65 €», «Clientes:», «Vehículos:» y «Crear:» para una fecha.
+- **Las casillas de la devolución** iban pegadas al texto y descentradas, y luego
+  desalineadas entre sí. Dos causas distintas: una regla `.form-group label` que
+  las convertía en `block`, y que la limpieza en medio las metía en filas
+  distintas.
+- **El barrido del hover**: eran **trece** los sitios donde el tinte translúcido
+  borraba el relleno del elemento, no uno.
+
+⚠️ **Queda medido y sin decidir: el tinte del hover es del 2 %** —`#FAFAFA` sobre
+blanco, razón 1,04—, así que incluso donde se aplica bien está en el límite de lo
+perceptible. Subirlo toca los veintiséis sitios a la vez y es decisión de Dorel.
 
 ---
 
@@ -354,14 +434,23 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-Ese día: **`develop` al día con `origin/develop`**, con **11 commits que NO están
-en producción** — los diez de § 2 bis más el de esta documentación —, y
-`origin/master` en `0d32ba4` (21 de septiembre).
+**Medido el 24 de septiembre al cerrar**: `develop` en `3220cab` y
+**`origin/develop` en el mismo commit** —Dorel fue subiendo en paralelo—, con
+**12 commits que NO están en producción** (los de § 2 quinquies). `origin/master`
+en `12ea9f0`.
 
-⚠️ **NO hace falta desplegar Cloud Functions.** Comprobado con el tercer comando:
-de los 66 ficheros que cambian entre producción y `develop`, **ninguno está en
-`functions/`**. Un merge a `master` despliega hosting por CI y con eso está todo.
-Es la excepción, no la regla: normalmente hay que mirarlo.
+⚠️ **NO hace falta desplegar Cloud Functions, ni reglas, ni índices.**
+Comprobado: entre `origin/master` y `develop` **no cambia un solo fichero de
+`functions/`**, ni `firestore.rules`, ni `firestore.indexes.json`, ni
+`storage.rules`, ni `firebase.json`. Todo el trabajo del día 24 es frontend. Un
+merge a `master` despliega hosting por CI y con eso está todo. Es la excepción,
+no la regla: normalmente hay que mirarlo.
+
+⚠️ **Pero SÍ hay claves i18n nuevas** —41 líneas añadidas en `es.json`, y los
+tres idiomas—, así que aplica la nota de la caché: `assets/i18n/*.json` no lleva
+huella, y aunque `firebase.json` ya declara `no-cache` para esa ruta, el dominio
+propio va detrás de Cloudflare. **Quien dice la verdad sobre lo publicado es
+`rentalcar-veltomobility.web.app`**, no el dominio propio.
 
 Para ponerlo en producción: que Dorel lo revise, merge a `master`, y **comprobar
 en el pie de la aplicación que el commit que se está ejecutando es el del
@@ -443,6 +532,33 @@ remitir nunca.
 enteras y filtra en memoria —es lo primero que se rompe cuando crezcan los
 datos—; y dos operadores pueden reservar el mismo coche, reducido a milisegundos
 pero no cerrado. Lo del lint **ya no aplica**: existe desde el 22 de septiembre.
+
+### Lo que dejó el repaso del 24 de septiembre, confirmado y SIN arreglar
+
+Salieron de un repaso del flujo reserva → entrega → devolución hecho antes de
+subir a producción. Trece hallazgos confirmados, siete arreglados ese día, y
+estos cuatro quedaron. Están verificados contra el código, no supuestos:
+
+1. **Una foto subida antes de «Completar entrega» deja la entrega a medias.** La
+   primera foto crea la inspección en Firestore con `status: 'draft'`, y tanto la
+   ficha como el timeline deciden si la entrega está hecha por la **existencia**
+   del documento, no por su estado. Resultado: la reserva parece entregada, y no
+   hay botón para volver al parte.
+2. **Un hueco entre tramos de tarifa alquila el coche a 0 €.**
+   `validatePricingRules()` comprueba solapes, mínimos y precios, pero **no** que
+   los tramos cubran todos los días ni que el último tenga `maxDays: null`.
+   `findPricingRuleByDays()` devuelve `null` y `calculateBasePrice()` contesta 0.
+3. **Español duro** en la pantalla de entrega —el consejo de las fotos— y un
+   `title="Eliminar"` en entrega y devolución. Ninguna auditoría lo caza.
+4. **Código muerto con un `prompt()` del navegador**: `retainDeposit()` y
+   `refundDeposit()` de `inspection-return.component.ts` no los llama nadie,
+   llegan al servicio por `this.inspectionService['paymentService']` saltándose el
+   `private`, y uno abre un `prompt()` — que esta aplicación tiene prohibido.
+
+Y una **decisión pendiente, medida**: el tinte del hover es del **2 %**
+(`rgba(0,0,0,0.02)`, `#FAFAFA` sobre blanco, razón 1,04), así que incluso donde
+se aplica bien está al límite de lo perceptible. Subirlo a un 5 % en claro y un
+7 % en los oscuros lo pondría en el rango normal, y toca **26 sitios** a la vez.
 
 **Sin cerrar desde hace tiempo:** un cobro por la vía pública del móvil que se
 registre solo en **producción**. En desarrollo ya ocurrió; una vía de cobro no

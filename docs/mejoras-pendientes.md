@@ -15,6 +15,74 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 24 de septiembre de 2026 — doce commits y un repaso del flujo
+
+Sesión larga que tocó **el camino del dinero**. Lo hecho está en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 quinquies; aquí va solo lo que
+**queda abierto**, que es para lo que sirve este documento.
+
+### 🚧 M-49 · Lo que dejó el repaso del flujo, confirmado y sin arreglar
+
+Un repaso de reserva → entrega → devolución hecho antes de subir a producción dio
+trece hallazgos confirmados. Siete se arreglaron el mismo día. Estos cuatro no, y
+están verificados contra el código:
+
+- [ ] **La foto que deja la entrega a medias.** La primera foto crea la
+  inspección con `status: 'draft'`, y la ficha y el timeline deciden si la entrega
+  está hecha por la **existencia** del documento, no por su estado
+  (`reservation-detail.component.html`, `@if (pickupInspection)`). La reserva
+  parece entregada y no hay botón para volver al parte. **Lo que hay que mirar al
+  arreglarlo:** no basta con filtrar por `status === 'completed'` en la ficha;
+  hay que decidir qué se ve mientras el parte está a medias, porque hoy no se ve
+  nada que lo diga.
+- [ ] **Un hueco entre tramos de tarifa alquila el coche a 0 €.**
+  `validatePricingRules()` (`pricing.util.ts`) comprueba solapes, mínimos y
+  precios, pero no que los tramos **cubran todos los días** ni que el último
+  tenga `maxDays: null`. `findPricingRuleByDays()` devuelve `null` y
+  `calculateBasePrice()` contesta `basePrice: 0`. No es hipotético: las reglas se
+  editan a mano en la ficha del coche.
+- [ ] **Español duro** en la pantalla de entrega —el consejo de las cuatro
+  fotos— y `title="Eliminar"` en entrega y devolución. `i18n:audit` no lo caza
+  porque no hay clave que falte: es texto escrito directamente en la plantilla.
+- [ ] **Código muerto con un `prompt()` del navegador.** `retainDeposit()` y
+  `refundDeposit()` de `inspection-return.component.ts` no los llama nadie, llegan
+  al servicio por `this.inspectionService['paymentService']` saltándose el
+  `private`, y uno abre un `prompt()`, que esta aplicación tiene prohibido desde
+  M-43. Borrarlos es lo que toca.
+
+### 🚧 M-50 · El hover se ve, pero apenas — decisión de Dorel
+
+- [ ] `--bg-hover` vale `rgba(0, 0, 0, 0.02)` en claro, que sobre blanco da
+  `#FAFAFA`: **razón 1,04**, o sea al límite de lo perceptible. El 24 de
+  septiembre se arreglaron los **trece** sitios donde el tinte además **borraba**
+  el relleno del elemento, pero eso es otra cosa: donde se aplica bien, sigue
+  casi sin verse. Subirlo a un 5 % en claro y un 7 % en los oscuros lo pondría en
+  el rango normal de una interfaz y toca **26 sitios** a la vez, así que es
+  decisión suya. Medido y listo para aplicar.
+
+### ✅ Lo que se cerró ese día
+
+Siete de los trece hallazgos, más el trabajo pedido. En una línea cada uno,
+porque el detalle está en el traspaso y en CLAUDE.md:
+
+- **La fianza no se podía devolver** en ningún alquiler, y `retainDeposit()` no
+  tenía tope. `depositAvailable()` contestaba 0 siempre.
+- **El asistente enseñaba un precio y creaba otro** al cambiar las fechas sin
+  volver a buscar. Diferencia medida: 72,60 € contra 302,50 €.
+- **Cerrar desde el parte de devolución** se saltaba `canCloseReservation()`.
+- **Cerrar cancelaba la entrega a domicilio** sin cobrar.
+- **«Saltar este paso»** escribía la excepción y la operación fallaba igual.
+- **Había dos creadores de reservas** y el segundo escribía el cliente vacío, el
+  descuento de fidelidad a 0 y sin mirar si el cliente estaba bloqueado.
+- **La ficha de la reserva enseñaba el dinero en tres tarjetas** que se
+  contradecían. Ahora es una.
+
+Y de interfaz: la banda de cabecera unificada en las tres familias y los cuatro
+temas, las fechas obligatorias del asistente, las casillas de la devolución, las
+etiquetas de la ficha de pago y el barrido del hover.
+
+---
+
 ## Estado a 17 de septiembre de 2026 — producción en real
 
 ⚠️ **Ese día se cerró la etapa de construcción y la empresa empezó a operar
