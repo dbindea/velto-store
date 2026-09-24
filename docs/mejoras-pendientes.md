@@ -75,15 +75,46 @@ comprueba nadie** al crear una reserva. Se rellena en la ficha, se guarda y no
 hace nada. Es lo que obliga a que la tarifa cubra desde el día 1; si algún día se
 hace valer, esa comprobación se revisa.
 
-### 🚧 M-50 · El hover se ve, pero apenas — decisión de Dorel
+### ✅ M-50 · El hover ahora se ve — hecho el 24 de septiembre de 2026
 
-- [ ] `--bg-hover` vale `rgba(0, 0, 0, 0.02)` en claro, que sobre blanco da
-  `#FAFAFA`: **razón 1,04**, o sea al límite de lo perceptible. El 24 de
-  septiembre se arreglaron los **trece** sitios donde el tinte además **borraba**
-  el relleno del elemento, pero eso es otra cosa: donde se aplica bien, sigue
-  casi sin verse. Subirlo a un 5 % en claro y un 7 % en los oscuros lo pondría en
-  el rango normal de una interfaz y toca **26 sitios** a la vez, así que es
-  decisión suya. Medido y listo para aplicar.
+- [x] **Subido: 5 % en claro, 7 % en los tres oscuros.** Estaba en el 2 %
+  (`rgba(0,0,0,0.02)`, `#FAFAFA` sobre blanco, razón **1,04**), por debajo de lo
+  que el ojo distingue — el hover estaba escrito y aplicado en los treinta sitios
+  y no comunicaba nada.
+
+**El arreglo es la variable, no los treinta sitios**: todos leen
+`var(--bg-hover)`, así que se cambia en los cuatro bloques de tema de
+`styles.scss`. Lo que hubo que hacer uno a uno fue **comprobarlo**.
+
+⚠️ **Se calibra por niveles sRGB, no por razón de contraste**, y por eso los
+oscuros llevan más porcentaje. Medido con el ratón encima, sobre la tarjeta:
+
+| tema | reposo → hover | razón | Δ niveles |
+|---|---|---|---|
+| light | `#FFFFFF` → `#F2F2F2` | 1,12 | 13 |
+| dark | `#14181A` → `#24282A` | 1,21 | 16 |
+| forest | `#1D2725` → `#2D3634` | 1,24 | 16 |
+| ocean | `#1E293B` → `#2E3849` | 1,24 | 16 |
+
+La razón **exagera** la zona oscura —el `+0,05` del denominador pesa mucho cuando
+la luminancia es casi cero—, así que igualar razones habría dejado los temas
+oscuros otra vez sin hover perceptible.
+
+**Comprobado**: 92 elementos × 4 temas en 10 rutas, con el ratón encima de
+verdad. 84 cambian; los 8 que no son pestañas y filas **activas**, cuyo fondo
+propio gana al hover, que es lo correcto. Ningún texto baja de 4,5:1 sobre el
+hover nuevo y **ningún relleno se borra**.
+
+⚠️ **Y salió un uso equivocado de la variable**: la chapa de la forma de pago en
+la lista de facturas la usaba como **fondo permanente**. Con el tinte al 2 % no
+se notaba —salía casi invisible, que ya era el defecto—, pero ataba su aspecto al
+estado de hover: al subirlo se habría oscurecido sin que nadie lo decidiera.
+Ahora usa `--bg-main`. `--bg-hover` es un estado, no una superficie.
+
+⚠️ **No confundirlo con lo que se arregló en la tanda anterior**: los **trece**
+sitios donde el tinte, escrito como `background:` a secas, **borraba el relleno**
+del elemento. Aquello era un fallo distinto y ya estaba corregido; este barrido
+confirma que no queda ninguno.
 
 ### ✅ Lo que se cerró ese día
 

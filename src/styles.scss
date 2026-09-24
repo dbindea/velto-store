@@ -195,8 +195,36 @@
      **borra** la superficie del elemento y deja ver la página a través — con la
      página casi blanca no se notaba, y con una página gris una tarjeta se
      volvía gris entera al pasar el ratón. Si el elemento tiene fondo propio, se
-     superpone: `background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`. */
-  --bg-hover: rgba(0, 0, 0, 0.02);
+     superpone: `background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`.
+
+     ⚠️ **Estuvo en el 2 % hasta el 24 de septiembre de 2026, y no se veía.**
+     `rgba(0,0,0,0.02)` sobre blanco da `#FAFAFA`: razón **1,04**, o sea por
+     debajo de lo que el ojo distingue. La queja de Dorel fue literal —«no se ve
+     nada»— y era cierta: el hover estaba escrito, aplicado, y no comunicaba
+     nada. Claro al **5 %**, los tres oscuros al **7 %**.
+
+     ⚠️ **La asimetría se calibra por NIVELES sRGB, no por razón de contraste**,
+     y por eso los números de abajo parecen descuadrados sin estarlo. Medido
+     sobre la tarjeta, con el ratón encima de verdad:
+
+       light   #FFFFFF → #F2F2F2   razón 1,12   Δ 13 niveles
+       dark    #14181A → #24282A   razón 1,21   Δ 16
+       forest  #1D2725 → #2D3634   razón 1,24   Δ 16
+       ocean   #1E293B → #2E3849   razón 1,24   Δ 16
+
+     La razón de contraste **exagera** las diferencias en la zona oscura, porque
+     el `+0,05` del denominador pesa mucho cuando la luminancia es casi cero: en
+     luminancia absoluta el salto del tema oscuro es **diez veces menor** que el
+     del claro y aun así su razón sale mayor. Lo que el ojo sigue de cerca es el
+     salto en niveles sRGB, y ahí los cuatro están en 13–16. Igualar las razones
+     habría dejado los oscuros sin hover perceptible otra vez.
+
+     ⚠️ **Y no vale medir el reposo con el ratón encima.** Recorriendo los cuatro
+     temas en bucle, el puntero se queda sobre el elemento entre iteración e
+     iteración y entonces «reposo» y «hover» son la misma lectura: sale un salto
+     de 1,000 y parece que el CSS no se aplica. Hay que apartar el ratón antes de
+     leer el reposo. */
+  --bg-hover: rgba(0, 0, 0, 0.05);
 
   // Text
   --text-primary: #000000;
@@ -311,7 +339,10 @@
   --bg-header: #22322F;
   --text-header: var(--text-muted);
   --icon-header: var(--accent-color);
-  --bg-hover: rgba(255, 255, 255, 0.04);
+  /* 7 %, no 4 %: ver la nota larga de `:root`. El porcentaje sube respecto al
+     claro para que el salto en NIVELES sRGB sea el mismo (Δ 16 contra Δ 13), que
+     es lo que el ojo sigue; por razón de contraste saldría al revés. */
+  --bg-hover: rgba(255, 255, 255, 0.07);
   /* Un escalón por encima de la tarjeta, no por debajo: el campo se lee
      como una caja y no como un hueco del mismo color que el fondo. */
   --bg-input: var(--gray-800);
@@ -364,7 +395,7 @@
   --border-strong: #3D4C48;
   --bg-input: #2E3B38;
   --border-input: #63726E; /* 3,04:1 sobre la tarjeta */
-  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.07);
   --text-primary: #F2F6F5;
   --text-secondary: #C2CFCB;
   --text-muted: #93A29E;
@@ -398,7 +429,7 @@
   --border-strong: #475569;
   --bg-input: #334155;
   --border-input: #64748B; /* 3,07:1 sobre la tarjeta */
-  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-hover: rgba(255, 255, 255, 0.07);
   --text-primary: #F1F5F9;
   --text-secondary: #CBD5E1;
   --text-muted: #94A3B8;

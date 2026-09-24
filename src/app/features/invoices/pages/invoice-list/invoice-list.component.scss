@@ -129,7 +129,19 @@
   padding: 0.25rem 0.625rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  background: var(--bg-hover);
+  /**
+   * ⚠️ **Aquí ponía `var(--bg-hover)`, y eso es el tinte del HOVER, no una
+   * superficie.** Es la chapa de la forma de pago y la de «rectificada»: un
+   * fondo permanente, que nada tiene que ver con pasar el ratón. Mientras el
+   * tinte valió el 2 % la confusión no se veía —la chapa salía casi invisible,
+   * que ya era un defecto—, pero ataba su aspecto a una variable que existe para
+   * otra cosa: al subir el hover al 5 % el 24 de septiembre de 2026, esta chapa
+   * se habría oscurecido sin que nadie lo decidiera.
+   *
+   * `--bg-main` es el hueco hundido dentro de una tarjeta, que es justo lo que
+   * una chapa neutra sobre una fila blanca quiere ser.
+   */
+  background: var(--bg-main);
   color: var(--text-secondary);
   white-space: nowrap;
 
