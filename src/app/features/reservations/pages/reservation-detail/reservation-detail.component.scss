@@ -166,17 +166,19 @@ app-reservation-timeline {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-main);
-  border-bottom: 1px solid var(--border-color);
+  // La banda de cabecera. Antes era `--bg-main`, el gris de las superficies
+  // **hundidas**: a un paso del blanco de la tarjeta, y lo único que la
+  // delimitaba era el filete. Ver `--bg-header` en styles.scss.
+  background: var(--bg-header);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-header);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 
   i {
     font-size: 1rem;
-    color: var(--accent-color);
+    color: var(--icon-header);
   }
 }
 
@@ -482,6 +484,24 @@ app-reservation-timeline {
 .badge.status-refunded { background: var(--info-bg); color: var(--info-color); }
 // Lo cancelado se ve, pero apagado: está para el rastro, no para actuar.
 .badge.status-cancelled { background: var(--bg-main); color: var(--text-muted); }
+
+/**
+ * ⚠️ **Y el MISMO fallo, en el mapa de al lado y en la propia cabecera.**
+ * `getPaymentStatusClass()` produce `payment-pending`, `payment-partial`,
+ * `payment-paid` y `payment-refunded`, y ninguna de las cuatro estaba declarada
+ * como chapa: las únicas copias vivían dentro de `.payment-status-badge`, que era
+ * la tarjeta «Pendiente» que ya no existe. Medido en la ficha: la pastilla de la
+ * cabecera salía con `background: rgba(0, 0, 0, 0)` y heredando el gris del
+ * rótulo, así que «DINERO **PARCIAL**» se leía como una sola frase gris — que es
+ * justo lo que Dorel señaló en la captura.
+ *
+ * Son los mismos colores que los estados de fila porque significan lo mismo; lo
+ * que cambia es de qué mapa vienen.
+ */
+.badge.payment-pending { background: var(--warning-bg); color: var(--warning-color); }
+.badge.payment-partial { background: var(--warning-bg); color: var(--warning-color); }
+.badge.payment-paid { background: var(--success-bg); color: var(--success-color); }
+.badge.payment-refunded { background: var(--info-bg); color: var(--info-color); }
 
 // Notes
 .notes-card {
@@ -881,6 +901,25 @@ app-reservation-timeline {
   border-bottom: 1px solid var(--border-light);
 }
 
+/**
+ * ⚠️ **El hover BORRABA el botón principal, y es el sitio número trece del mismo
+ * fallo.** Aquí había un `&:hover { background: var(--bg-hover) }` compartido por
+ * los dos botones. `--bg-hover` es un **tinte translúcido**, no una superficie:
+ * escrito como `background` a secas sustituye el relleno del elemento en vez de
+ * superponerse, así que «Registrar cobro» perdía su turquesa al pasar el ratón y
+ * se quedaba con **texto blanco sobre la tarjeta blanca** — ilegible. Lo encontró
+ * Dorel usándolo el 24 de septiembre de 2026.
+ *
+ * Lo tapaba además un `filter: brightness(1.1)` en la regla de debajo: como son
+ * propiedades distintas, se aplicaban **las dos**, y aclarar un fondo casi blanco
+ * no se nota. Parecía que el hover estaba resuelto.
+ *
+ * La regla, que ya está en CLAUDE.md y hay que aplicar una a una: **si el elemento
+ * tiene fondo propio, el tinte se superpone** con
+ * `background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`; y si lo
+ * que tiene es un color de marca, el hover es el color de marca oscuro
+ * (`--accent-hover`), no un tinte gris encima.
+ */
 .btn-primary,
 .btn-secondary {
   display: inline-flex;
@@ -893,20 +932,31 @@ app-reservation-timeline {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-
-  &:hover { background: var(--bg-hover); }
 }
 
 .btn-primary {
   background: var(--accent-color);
   color: white;
   border-color: var(--accent-color);
-  &:hover { filter: brightness(1.1); }
+
+  // El mismo hover que el `.btn-primary` global usa en el resto de la
+  // aplicación: el verde oscuro de marca. Así los dos se comportan igual.
+  &:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
 }
 
 .btn-secondary {
   background: var(--bg-card);
   color: var(--text-primary);
+
+  // Este SÍ lleva tinte, porque su relleno es la superficie de la tarjeta; pero
+  // superpuesto, no sustituyendo, o enseñaría la página a través del botón.
+  &:hover {
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
+    border-color: var(--border-strong);
+  }
 }
 
 .inline-form {

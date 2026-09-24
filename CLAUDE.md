@@ -3108,6 +3108,18 @@ declara el enumerado ENTERO bajo el selector que de verdad lo lleva.** Media
 tabla estilada no da error en ninguna parte, y el estado que falta es siempre el
 que nadie mira hasta que aparece.
 
+⚠️ **Y había un SEGUNDO mapa en la misma pantalla, con las cuatro clases sin
+declarar.** `getPaymentStatusClass()` produce `payment-pending`, `payment-partial`,
+`payment-paid` y `payment-refunded` para la chapa de la **cabecera**, y las únicas
+copias vivían dentro de `.payment-status-badge`, una tarjeta que ya no existe.
+Medido: la pastilla salía con `background: rgba(0, 0, 0, 0)` heredando el gris del
+rótulo, así que «DINERO **PARCIAL**» se leía como una sola frase gris. Lo señaló
+Dorel en la captura, no lo cazó ninguna auditoría.
+
+La lección práctica, más allá de la regla: **al borrar una tarjeta, comprueba qué
+clases se llevaba por delante.** Esas cuatro dejaron de estar declaradas cuando se
+retiró la tarjeta que las contenía, y el elemento que las usa vive en otro sitio.
+
 ⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
 2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,
 `section-hint`, `total-hint`…) en 44 sitios, y `.loading-state` usado 25 veces y
@@ -3246,6 +3258,45 @@ demasiado blanqueado». Corregido el 23 de septiembre de 2026.
 | `--bg-card` | `#FFFFFF` | la tarjeta, lo único blanco |
 | `--bg-main` | `--gray-100` | el **hueco hundido** dentro de una tarjeta |
 | `--bg-input` | `#EAF4F1` | el campo, con tinte |
+| `--bg-header` | `#CEDEE0` | la **banda de cabecera** de una ficha |
+
+⚠️ **Y una quinta, desde el 24 de septiembre de 2026: la cabecera no es un
+hueco.** Se pintaba con `--bg-main`, o sea con el gris de las superficies
+**hundidas**, y por eso no se leía como cabecera: a un paso del blanco de la
+tarjeta, delimitada solo por un filete. Lo dijo Dorel —«es gris delimitada por un
+border, ¿puedes poner otro color para que se vea como un header?»— y trajo el
+tono en una maqueta.
+
+⚠️ **El valor sale de su maqueta, MEDIDO píxel a píxel, y no de la rampa.** El
+gris de rampa más cercano, `--gray-300`, deja el rótulo en **3,62:1**, por debajo
+del 4,5:1 que pide un texto de 12,8 px; su tono, más claro y con más cian, lo
+sube. Es el mismo caso que `--bg-input`, que tampoco es un valor de rampa sino un
+tinte afinado a mano. La regla de «las rampas no se usan directamente» sigue
+valiendo: lo que se prohíbe es pintar con `--gray-300` **desde un componente**,
+no afinar un valor dentro de un bloque de tema.
+
+⚠️ **En los tres temas oscuros la banda va al revés: MÁS CLARA que la tarjeta.**
+En claro una cabecera se hunde respecto al blanco; en oscuro, un tono por debajo
+del panel se lee como un agujero. Lo que se conserva es el **salto** —entre 1,26
+y 1,39 de razón de luminancia contra la tarjeta—, no la dirección. Y `ocean`
+sigue a su azul en vez de al verde de marca, que es lo que lo hace `ocean`.
+
+⚠️ **El rótulo y el icono son variables propias** (`--text-header`,
+`--icon-header`), por la misma razón que existe `--warning-on`: cuando la
+superficie deja de ser el gris de siempre, su acompañante tiene que poder cambiar
+con ella. Medido sobre la banda clara, los valores de antes **no llegaban**: el
+`--text-muted` se quedaba en **4,12:1** y el turquesa del icono en **2,24:1**
+—cuando un icono pide 3:1—. Un escalón más oscuro en cada uno lo resuelve sin
+que se note el cambio: **6,23:1** y **4,24:1**. En los oscuros apuntan a los de
+siempre, que ahí ya pasan.
+
+⚠️ **La regla global lleva `.detail-card` delante a propósito.** El panel también
+usa `.card-header`, pero allí no es una banda: es una fila de icono y rótulo
+**dentro** de una tarjeta de estadística. El panel usa `.card` y las fichas
+`.detail-card`, así que el prefijo separa los dos casos sin que nadie tenga que
+acordarse. Y no gana a una copia de componente —**empata** en (0,2,0) y el orden
+pone al componente detrás—, así que los cuatro ficheros de detalle se cambiaron
+igualmente: la global es la red para la quinta pantalla, no el mecanismo.
 
 ⚠️ **`--bg-main` NO es la página, y creerlo costó una iteración entera.** Además
 del `body`, ese valor pinta **87 sitios** que son superficies hundidas dentro de
@@ -3280,6 +3331,29 @@ para componerse sobre lo que haya debajo; escrito como `background:` a secas
 el fondo, una tarjeta se volvía gris entera al pasar el ratón. Si el elemento
 tiene fondo propio, se superpone:
 `background-image: linear-gradient(var(--bg-hover), var(--bg-hover))`.
+
+⚠️ **Y apareció el sitio TRECE el 24 de septiembre de 2026, o sea que aquella
+pasada se quedó corta.** En la ficha de la reserva, un `&:hover` compartido por
+`.btn-primary, .btn-secondary` le ponía el tinte al botón **turquesa**: al pasar
+el ratón perdía su relleno de marca y se quedaba con **texto blanco sobre la
+tarjeta blanca**. Lo encontró Dorel usándolo.
+
+Dos cosas que lo hacían difícil de ver, y las dos se repetirán:
+
+- **Lo tapaba un `filter: brightness(1.1)`** escrito en la regla de al lado. Son
+  propiedades distintas, así que se aplicaban **las dos**, y aclarar un fondo casi
+  blanco no se nota: parecía que el hover estaba resuelto.
+- **Un selector compartido no comparte fondo.** Agrupar `.btn-primary` y
+  `.btn-secondary` para la geometría está bien; darles el mismo `:hover` no,
+  porque uno tiene un color de marca debajo y el otro la superficie de la tarjeta.
+
+La regla completa, que es la que hay que aplicar una a una: **si el elemento
+lleva un color de marca, el hover es ese color oscuro** (`--accent-hover`), no un
+tinte gris encima; **si lleva una superficie**, el tinte se superpone con el
+`linear-gradient`; y **si es transparente**, entonces sí vale `background` a
+secas. Los 28 `background: var(--bg-hover)` que quedan en `src/` son casi todos
+del tercer caso —celdas de calendario, filas de menú, botones del panel de
+fechas—, pero ahí es donde hay que mirar cuando un hover «no se ve».
 
 ⚠️ **Y el contorno de un control es `--border-input`, nunca `--border-color`.**
 Aquel es el de las **separaciones** y puede ser sutil; este tiene que llegar a

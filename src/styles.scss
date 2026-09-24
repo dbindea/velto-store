@@ -148,6 +148,48 @@
   --bg-page: var(--gray-200);
   --bg-main: var(--gray-100);
   --bg-card: #ffffff;
+  /**
+   * La banda de la cabecera de una tarjeta.
+   *
+   * ⚠️ **Es una superficie propia porque una cabecera no es un hueco.** Se
+   * pintaba con `--bg-main`, o sea con el mismo gris que las superficies
+   * **hundidas**, y por eso no se leía como cabecera: en el tema claro quedaba a
+   * un paso del blanco de la tarjeta y lo único que la delimitaba era el filete
+   * de abajo. Lo dijo Dorel el 24 de septiembre de 2026 y trajo el tono elegido.
+   *
+   * ⚠️ **El valor sale de su maqueta, medido píxel a píxel, y NO de la rampa a
+   * propósito.** El gris de rampa más parecido es `--gray-300` (#C9D0D2) y deja
+   * el rótulo en **3,62:1**, por debajo del 4,5:1 que pide el texto; este tono,
+   * más claro y con más cian, lo sube a **4,55:1**. Es el mismo caso que
+   * `--bg-input`, que tampoco es un valor de rampa sino un tinte afinado a mano.
+   *
+   * ⚠️ **En los tres temas oscuros va al revés: la banda es MÁS CLARA que la
+   * tarjeta.** En claro una cabecera se hunde respecto al blanco; en oscuro, un
+   * tono por debajo del panel se lee como un agujero. Lo que se conserva es el
+   * salto —entre 1,25 y 1,35 de razón de luminancia contra la tarjeta—, no la
+   * dirección.
+   */
+  --bg-header: #CEDEE0;
+  /**
+   * ⚠️ **El rótulo y el icono de la banda son variables PROPIAS, y no es
+   * ceremonia.** Es la regla que ya obligó a crear `--warning-on`: cuando un
+   * color deja de ser el fondo neutro de siempre, su acompañante tiene que poder
+   * cambiar con él.
+   *
+   * Medido en el navegador sobre la banda de este tema, que es lo único que
+   * vale: el `--text-muted` de hoy (#5F686B) se queda en **4,12:1**, por debajo
+   * del 4,5:1 que pide un texto de 12,8 px; y el turquesa de marca en el icono
+   * cae a **2,24:1**, cuando un icono pide 3:1. Un escalón más oscuro en cada
+   * uno lo resuelve sin tocar el aspecto: gris 700 da **6,23:1** y el teal 700
+   * da **4,24:1**, y los dos siguen siendo el mismo color a ojo.
+   *
+   * En los tres temas oscuros la banda es oscura, así que ahí los valores de
+   * siempre ya pasan (5,73 / 4,52 / 4,52 el rótulo) y estas variables apuntan a
+   * ellos. Se declaran igualmente en los cuatro bloques: un `var()` que no
+   * exista en uno no falla, **desaparece**.
+   */
+  --text-header: var(--gray-700);
+  --icon-header: var(--teal-700);
   /* ⚠️ **Es un TINTE, no una superficie**: translúcido a propósito, para
      componerse sobre lo que haya debajo. Escrito como `background:` a secas
      **borra** la superficie del elemento y deja ver la página a través — con la
@@ -263,6 +305,12 @@
   --bg-page: var(--gray-950);
   --bg-main: var(--gray-950);
   --bg-card: var(--gray-900);
+  /* Un paso POR ENCIMA de la tarjeta, con el mismo tinte teal que la banda
+     clara: en oscuro un tono más bajo que el panel se lee como un hueco, no
+     como una cabecera. Ver la nota larga en `:root`. */
+  --bg-header: #22322F;
+  --text-header: var(--text-muted);
+  --icon-header: var(--accent-color);
   --bg-hover: rgba(255, 255, 255, 0.04);
   /* Un escalón por encima de la tarjeta, no por debajo: el campo se lee
      como una caja y no como un hueco del mismo color que el fondo. */
@@ -307,6 +355,10 @@
   --bg-page: #151D1B;
   --bg-main: #151D1B;
   --bg-card: #1D2725;
+  /* Un paso por encima de la tarjeta, en el verde del tema. */
+  --bg-header: #283A36;
+  --text-header: var(--text-muted);
+  --icon-header: var(--accent-color);
   --border-color: #2E3B38;
   --border-light: #253330;
   --border-strong: #3D4C48;
@@ -336,6 +388,11 @@
   --bg-page: #0F172A;
   --bg-main: #0F172A;
   --bg-card: #1E293B;
+  /* Un paso por encima de la tarjeta, en el azul del tema: aquí la banda sigue
+     a la superficie y no al verde de marca, que es lo que hace `ocean` distinto. */
+  --bg-header: #2A3A4E;
+  --text-header: var(--text-muted);
+  --icon-header: var(--accent-color);
   --border-color: #334155;
   --border-light: #1E293B;
   --border-strong: #475569;
@@ -984,6 +1041,41 @@ h1, h2, h3, h4, h5, h6 {
 .card-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+/**
+ * LA BANDA DE CABECERA DE UNA FICHA DE DETALLE.
+ *
+ * ⚠️ **Va aquí para que la próxima pantalla de detalle no nazca gris.** El tono
+ * estaba copiado a mano en los cuatro ficheros de detalle —reserva, contrato,
+ * inspección y pago— y la quinta pantalla que se escribiera se habría quedado
+ * con `--bg-main` sin que nadie lo notara. Es la misma lección que ya obligó a
+ * subir `.form-control`, `.btn-*` y `.checkbox-item` a global.
+ *
+ * ⚠️ **El selector lleva `.detail-card` delante a propósito, y no es
+ * decoración.** El panel también usa `.card-header`, pero allí no es una banda:
+ * es una fila de icono y rótulo **dentro** de una tarjeta de estadística, y
+ * pintarla de color la convertiría en otra cosa. El panel usa `.card` y las
+ * fichas `.detail-card`, así que el prefijo separa los dos casos sin que nadie
+ * tenga que acordarse. (Medido: hoy esas cabeceras del panel ya heredan de la
+ * regla de arriba un `padding: 20px 24px` que nadie eligió para ellas.)
+ *
+ * ⚠️ **Y no gana a una copia de componente: empata.** `.detail-card .card-header`
+ * mide (0,2,0) y `.card-header[_ngcontent-xxx]` también, así que en el empate
+ * manda el orden y Angular pone los estilos del componente detrás. Por eso los
+ * cuatro ficheros se han cambiado igualmente: esto es la red, no el mecanismo.
+ *
+ * Sin filete: lo que separa la banda del contenido es el propio cambio de
+ * color, y una línea entre dos superficies que ya contrastan solo añade ruido.
+ */
+.detail-card .card-header {
+  background: var(--bg-header);
+  border-bottom: none;
+  color: var(--text-header);
+
+  i {
+    color: var(--icon-header);
+  }
 }
 
 .card-body {
