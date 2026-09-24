@@ -8,11 +8,11 @@ import { Client, QuickClientData } from '@shared/models/client.model';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import {
   calculateCalendarDays,
-  combineDateAndTime,
   getDefaultPickupDateTime,
   getDefaultReturnDateTime,
+  parseDateTimeInput,
   toDateString,
-  toTimeString,
+  toDateTimeInput,
 } from '@shared/utils/reservation-date.util';
 import {
   addVat,
@@ -69,11 +69,24 @@ export class ReservationCreateComponent implements OnInit {
   searching = false;
   saving = false;
 
-  // Date fields
-  pickupDate = toDateString(getDefaultPickupDateTime());
-  pickupTime = toTimeString(getDefaultPickupDateTime());
-  returnDate = toDateString(getDefaultReturnDateTime());
-  returnTime = toTimeString(getDefaultReturnDateTime());
+  /**
+   * Cuándo se recoge y cuándo se devuelve, **fecha y hora en un solo campo**.
+   *
+   * ⚠️ **Eran cuatro campos —dos fechas y dos horas— y ahora son dos.** Lo pidió
+   * Dorel el 24 de septiembre de 2026 al ver que la edición de reserva ya usaba
+   * un `datetime-local` y era mejor: una recogida es **un instante**, no una
+   * fecha y aparte una hora, y partirla en dos controles obliga a abrir dos
+   * selectores y a que alguien los cuadre. Era además el único sitio de la
+   * aplicación con un `input[type=time]`; con esto ya no queda ninguno.
+   *
+   * ⚠️ **Lo que llega a Firestore no cambia nada.** Estos dos campos son lo que
+   * se pinta —cadenas `yyyy-MM-ddTHH:mm`, que es lo que exige el control—; lo
+   * que se guarda sigue saliendo de `pickupDateTime` y `returnDateTime`, que
+   * siguen devolviendo un `Date` y pasando por `toTimestamp()`. Es el mismo
+   * reparto que ya hay entre `netPriceInput` y `netPrice` en este fichero.
+   */
+  pickupDateTimeInput = toDateTimeInput(getDefaultPickupDateTime());
+  returnDateTimeInput = toDateTimeInput(getDefaultReturnDateTime());
 
   /**
    * Dónde se entrega y dónde se devuelve.
@@ -237,8 +250,8 @@ export class ReservationCreateComponent implements OnInit {
 
   async searchAvailability(): Promise<void> {
     // Validate dates
-    const pickupDateTime = combineDateAndTime(this.pickupDate, this.pickupTime);
-    const returnDateTime = combineDateAndTime(this.returnDate, this.returnTime);
+    const pickupDateTime = this.pickupDateTime;
+    const returnDateTime = this.returnDateTime;
 
     if (returnDateTime <= pickupDateTime) {
       this.dateError = 'reservations.messages.invalidDates';
@@ -359,8 +372,8 @@ export class ReservationCreateComponent implements OnInit {
 
     this.saving = true;
     try {
-      const pickupDateTime = combineDateAndTime(this.pickupDate, this.pickupTime);
-      const returnDateTime = combineDateAndTime(this.returnDate, this.returnTime);
+      const pickupDateTime = this.pickupDateTime;
+      const returnDateTime = this.returnDateTime;
 
       const reservationId = await this.reservationService.createReservationWithClient(
         this.selectedVehicle.vehicle,
@@ -523,12 +536,21 @@ export class ReservationCreateComponent implements OnInit {
 
   // Computed values for summary
   get pickupDateTime(): Date {
-    return combineDateAndTime(this.pickupDate, this.pickupTime);
+    return parseDateTimeInput(this.pickupDateTimeInput);
   }
 
-  // Today's date as YYYY-MM-DD for HTML5 date min attribute
-  get todayString(): string {
-    return toDateString(new Date());
+  /**
+   * El suelo del campo de recogida: hoy a las 00:00.
+   *
+   * ⚠️ **Un `datetime-local` exige el `min` con hora**, `yyyy-MM-ddTHH:mm`. Con
+   * el `yyyy-MM-dd` de antes el navegador **ignora el atributo entero** —no
+   * avisa, simplemente no limita— y se podría crear una reserva con fecha de
+   * recogida pasada. A las 00:00 y no a la hora actual, porque una reserva que
+   * se crea a las 19:00 para recoger a las 18:00 del mismo día es una
+   * corrección normal de mostrador.
+   */
+  get minPickupDateTime(): string {
+    return `${toDateString(new Date())}T00:00`;
   }
 
   /**
@@ -580,18 +602,24 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   /**
-   * When pickup date changes, ensure return date is not before pickup.
+   * Al mover la recogida, la devolución no puede quedarse antes.
+   *
+   * ⚠️ **Se comparan las CADENAS, y es correcto.** `yyyy-MM-ddTHH:mm` ordena
+   * igual alfabéticamente que cronológicamente —por eso el formato es ese— así
+   * que no hace falta convertir a `Date` para saber cuál va primero. Antes se
+   * comparaban solo las fechas y la hora se quedaba fuera: recoger a las 18:00
+   * y devolver el mismo día a las 12:00 pasaba el guard de aquí y lo paraba
+   * después `searchAvailability()`. Ahora no llega a formarse.
    */
-  onPickupDateChange(value: string): void {
-    this.pickupDate = value;
-    // If return date is now invalid, push it to pickup date
-    if (this.returnDate < this.pickupDate) {
-      this.returnDate = this.pickupDate;
+  onPickupDateTimeChange(value: string): void {
+    this.pickupDateTimeInput = value;
+    if (this.returnDateTimeInput < this.pickupDateTimeInput) {
+      this.returnDateTimeInput = this.pickupDateTimeInput;
     }
   }
 
   get returnDateTime(): Date {
-    return combineDateAndTime(this.returnDate, this.returnTime);
+    return parseDateTimeInput(this.returnDateTimeInput);
   }
 
   get totalDays(): number {

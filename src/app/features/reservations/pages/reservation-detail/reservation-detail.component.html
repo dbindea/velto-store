@@ -495,275 +495,66 @@
     </div>
 
     <!--
-      The money, last and together: what is owed, what it adds up to, and the
-      ledger behind it. Everything above is the rental itself — who, which car,
-      when, signed or not — and it reads better without figures cutting through
-      it.
+      EL DINERO, EN UNA SOLA TARJETA.
+
+      ⚠️ **Eran tres, y contaban lo mismo de tres formas.** «Pendiente» leía la
+      copia desnormalizada de la reserva, «Precio total» leía el
+      `pricingSnapshot` y «Resumen» solo derivaba los cargos extra de las filas
+      vivas. Las tres se contradecían sin que nada fallara, ninguna contestaba
+      la pregunta del mostrador —cuánto tiene que darme el cliente— y «Precio
+      total» ni siquiera era el total: no llevaba ni la fianza, ni la entrega a
+      domicilio, ni los cargos de la devolución.
+
+      Ahora hay una, y su regla es que **toda cifra de la cabecera es la suma de
+      unas filas que están a la vista debajo**. Si no cuadra, se ve dónde.
     -->
-    <div class="detail-grid money-grid">
-      <!-- Amounts due -->
-      <div class="detail-card payments-card">
-        <div class="card-header">
-          <i class="pi pi-wallet"></i>
-          <span>{{ 'reservations.paymentStatus.pending' | translate }}</span>
-        </div>
-        <div class="card-content">
-          <div class="payment-status-badge" [ngClass]="getPaymentStatusClass(reservation.paymentStatus)">
-            {{ getPaymentLabel(reservation.paymentStatus) }}
-          </div>
-
-          <div class="payment-items">
-            <!-- Initial Payment -->
-            <div class="payment-item">
-              <span class="payment-label">{{ 'reservations.pricing.initialPayment' | translate }}</span>
-              <div class="payment-amounts">
-                <span class="required">{{ reservation.initialPayment.requiredAmount | number:'1.2-2' }} €</span>
-                @if (reservation.initialPayment.paidAmount > 0) {
-                  <span class="paid">{{ reservation.initialPayment.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
-                }
-              </div>
-              <span class="payment-status" [ngClass]="getInitialPaymentStatusClass(reservation.initialPayment.status)">
-                {{ getInitialPaymentStatusLabel(reservation.initialPayment.status) }}
-              </span>
-              <!-- Una señal exenta es una decisión, no un cobro que falta: se
-                   dice para que nadie la persiga. -->
-              @if (reservation.initialPayment.status === 'waived') {
-                <small class="hint">{{ 'reservations.initialPayment.waivedHint' | translate }}</small>
-              }
-            </div>
-
-            <!-- Remaining Payment -->
-            <div class="payment-item">
-              <span class="payment-label">{{ 'reservations.pricing.remainingPayment' | translate }}</span>
-              <div class="payment-amounts">
-                <span class="required">{{ reservation.remainingPayment.requiredAmount | number:'1.2-2' }} €</span>
-                @if (reservation.remainingPayment.paidAmount > 0) {
-                  <span class="paid">{{ reservation.remainingPayment.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
-                }
-              </div>
-              <span class="payment-status" [ngClass]="reservation.remainingPayment.status === 'paid' ? 'status-paid' : 'status-pending'">
-                {{ reservation.remainingPayment.status === 'paid' ? ('reservations.paymentStatus.paid' | translate) : ('reservations.paymentStatus.pending' | translate) }}
-              </span>
-            </div>
-
-            <!--
-              Entrega y recogida a domicilio. Solo aparece si se pactó: una fila
-              a «0,00 €» en todas las reservas se lee como un servicio que existe
-              y no se ha cobrado. Mismo criterio que la fianza exenta.
-
-              ⚠️ Los importes salen de `deliveryFees`, que es el NETO pactado; lo
-              que se enseña es el bruto, que es lo que hay que cobrarle.
-            -->
-            @if (deliveryFees.any) {
-              @if (deliveryFees.pickupGross > 0) {
-                <div class="payment-item">
-                  <span class="payment-label">{{ 'reservations.delivery.pickupFee' | translate }}</span>
-                  <div class="payment-amounts">
-                    <span class="required">{{ deliveryFees.pickupGross | number:'1.2-2' }} €</span>
-                  </div>
-                </div>
-              }
-              @if (deliveryFees.returnGross > 0) {
-                <div class="payment-item">
-                  <span class="payment-label">{{ 'reservations.delivery.returnFee' | translate }}</span>
-                  <div class="payment-amounts">
-                    <span class="required">{{ deliveryFees.returnGross | number:'1.2-2' }} €</span>
-                  </div>
-                </div>
-              }
-            }
-
-            <!-- Deposit -->
-            <div class="payment-item">
-              <span class="payment-label">{{ 'reservations.pricing.deposit' | translate }}</span>
-              <div class="payment-amounts">
-                <span class="required">{{ reservation.deposit.requiredAmount | number:'1.2-2' }} €</span>
-                @if (reservation.deposit.paidAmount > 0) {
-                  <span class="paid">{{ reservation.deposit.paidAmount | number:'1.2-2' }} € {{ 'reservations.paymentStatus.paid' | translate }}</span>
-                }
-              </div>
-              <span class="deposit-status" [ngClass]="getDepositStatusClass(reservation.deposit.status)">
-                {{ getDepositStatusLabel(reservation.deposit.status) }}
-              </span>
-              <!-- Why no deposit was taken. Without it the reservation cannot
-                   be closed, so it is worth showing rather than hiding. -->
-              @if (reservation.deposit.waivedReason) {
-                <small class="deposit-waived-reason">
-                  {{ 'reservations.deposit.waivedReason' | translate }}:
-                  {{ reservation.deposit.waivedReason }}
-                </small>
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Total price -->
-      <div class="detail-card pricing-card">
-        <div class="card-header">
-          <i class="pi pi-euro"></i>
-          <span>{{ 'reservations.pricing.finalPrice' | translate }}</span>
-        </div>
-        <div class="card-content">
-          <div class="pricing-breakdown">
-            <div class="price-row">
-              <span>{{ 'reservations.pricing.pricePerDay' | translate }}:</span>
-              <span>{{ reservation.pricingSnapshot.pricePerDay }} €</span>
-            </div>
-            <div class="price-row">
-              <span>{{ reservation.totalDays }} x {{ reservation.pricingSnapshot.pricePerDay }} €:</span>
-              <span>{{ reservation.pricingSnapshot.basePrice }} €</span>
-            </div>
-            @if (reservation.pricingSnapshot.loyaltyDiscount) {
-              <div class="price-row discount">
-                <span>
-                  {{ 'reservations.pricing.loyaltyDiscount' | translate }}
-                  ({{ reservation.pricingSnapshot.loyaltyDiscountPercent }} %):
-                </span>
-                <span class="discount-value">{{ reservation.pricingSnapshot.loyaltyDiscount | number:'1.2-2' }} €</span>
-              </div>
-            }
-            <!-- Signed, and to the cent: a discount has to read as a discount.
-                 The pipe writes its own minus sign, so only a surcharge needs
-                 the explicit "+". -->
-            @if (reservation.pricingSnapshot.manualAdjustment) {
-              <div class="price-row adjustment">
-                <span>{{ 'reservations.pricing.manualAdjustment' | translate }}:</span>
-                <span class="adjustment-value" [class.negative]="reservation.pricingSnapshot.manualAdjustment! < 0">
-                  {{ reservation.pricingSnapshot.manualAdjustment! > 0 ? '+' : '' }}{{ reservation.pricingSnapshot.manualAdjustment | number:'1.2-2' }} €
-                </span>
-              </div>
-            }
-            <!-- Sin IVA no hay base imponible ni cuota que enseñar: el total ES
-                 el precio pactado. Mismo dato que usa el contrato. -->
-            @if (hasVat) {
-              <div class="price-row">
-                <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
-                <span>{{ vat.base | number:'1.2-2' }} €</span>
-              </div>
-              <div class="price-row">
-                <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
-                <span>{{ vat.vat | number:'1.2-2' }} €</span>
-              </div>
-            } @else {
-              <div class="price-row">
-                <span class="hint">{{ 'reservations.pricing.vatExemptTag' | translate }}</span>
-              </div>
-            }
-            <div class="price-row total">
-              <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
-              <span class="total-value">{{ vat.total | number:'1.2-2' }} €</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!--
-        El reparto con el dueño del coche.
-
-        Solo si el coche es de un colaborador —la mayoría de la flota es de
-        Velto y entonces no hay nada que repartir— y solo con
-        `viewCollaborators`: a quién se le debe una parte del alquiler es
-        información de dueño, igual que los gastos y las comisiones.
-
-        ⚠️ La cifra es una PREVISIÓN hasta que se cierra la reserva, y el texto
-        lo dice. Un importe en euros sin ese aviso se lee como dinero ya
-        comprometido, y aquí todavía se mueve si se mueve el precio.
-      -->
-      @if (ownerShare && permissions.can('viewCollaborators')) {
-        <div class="detail-card owner-share-card">
-          <div class="card-header">
-            <i class="pi pi-users"></i>
-            <span>{{ 'reservations.ownerShare.title' | translate }}</span>
-          </div>
-          <div class="card-content">
-            <div class="pricing-breakdown">
-              <div class="price-row">
-                <span>{{ 'reservations.ownerShare.owner' | translate }}:</span>
-                <span>{{ ownerShare.collaboratorName }}</span>
-              </div>
-              <div class="price-row">
-                <span>{{ 'reservations.ownerShare.base' | translate }}:</span>
-                <span>{{ reservation.pricingSnapshot.netPrice | number:'1.2-2' }} €</span>
-              </div>
-              <div class="price-row total">
-                <span>
-                  {{ 'reservations.ownerShare.forOwner' | translate }}
-                  ({{ ownerShare.sharePercent }} %):
-                </span>
-                <span class="total-value">{{ ownerShareAmount | number:'1.2-2' }} €</span>
-              </div>
-              <div class="price-row">
-                <span>
-                  {{ 'reservations.ownerShare.forVelto' | translate }}
-                  ({{ veltoSharePercent }} %):
-                </span>
-                <span>{{ veltoShareAmount | number:'1.2-2' }} €</span>
-              </div>
-            </div>
-            <p class="hint">{{ 'reservations.ownerShare.hint' | translate }}</p>
-          </div>
-        </div>
-      }
-    </div>
-
-    <!-- Payments & Deposit Section -->
-    <div class="detail-card payments-section-card" style="grid-column: 1 / -1; margin-top: 1rem;">
+    <div class="detail-card money-card" style="grid-column: 1 / -1; margin-top: 1rem;">
       <div class="card-header">
         <i class="pi pi-wallet"></i>
-        <span>{{ 'payments.summary.title' | translate }}</span>
+        <span>{{ 'reservations.money.title' | translate }}</span>
         <span class="badge" [ngClass]="getPaymentStatusClass(reservation.paymentStatus)">
           {{ getPaymentLabel(reservation.paymentStatus) }}
         </span>
       </div>
       <div class="card-content">
-        <!-- Summary tiles -->
-        <div class="payments-summary">
-          <div class="summary-tile">
-            <div class="tile-label">{{ 'payments.summary.rentalTotal' | translate }}</div>
-            <div class="tile-value">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</div>
-            <div class="tile-progress">
-              <span>{{ 'payments.fields.paidAmount' | translate }}: <strong>{{ initialPayment.paid + remainingPayment.paid | number:'1.2-2' }} €</strong></span>
+        <!--
+          La pregunta del mostrador va primero y en grande: lo que falta por
+          cobrar. Lo demás la explica.
+        -->
+        <div class="money-head">
+          <div class="money-headline" [class.is-settled]="moneyPending === 0">
+            <span class="money-headline-label">{{ 'reservations.money.pending' | translate }}</span>
+            <span class="money-headline-value">{{ moneyPending | number:'1.2-2' }} €</span>
+          </div>
+
+          <!-- Una fianza pendiente no es lo mismo que un alquiler sin cobrar:
+               es dinero que el cliente deja y recupera. Se dice aquí para que
+               nadie lo persiga como si fuera precio. -->
+          @if (pendingIsDeposit > 0) {
+            <p class="field-hint">
+              {{ 'reservations.money.pendingIncludesDeposit' | translate }}
+              {{ pendingIsDeposit | number:'1.2-2' }} €
+            </p>
+          }
+
+          <div class="money-head-rows">
+            <div class="money-head-row">
+              <span>{{ 'reservations.money.collected' | translate }}</span>
+              <span>{{ moneyCollected | number:'1.2-2' }} €</span>
+            </div>
+            <div class="money-head-row is-total">
+              <span>{{ 'reservations.money.required' | translate }}</span>
+              <span>{{ moneyRequired | number:'1.2-2' }} €</span>
             </div>
           </div>
 
-          <div class="summary-tile">
-            <div class="tile-label">{{ 'payments.summary.depositHeld' | translate }}</div>
-            <div class="tile-value">{{ deposit.paid | number:'1.2-2' }} €</div>
-            <div class="tile-progress">
-              <span>
-                {{ 'reservations.deposit.returned' | translate }}:
-                <strong>{{ deposit.returned | number:'1.2-2' }} €</strong>
-                ·
-                {{ 'reservations.deposit.retained' | translate }}:
-                <strong>{{ deposit.retained | number:'1.2-2' }} €</strong>
-              </span>
-            </div>
-          </div>
-
-          <!--
-            El importe grande es lo **devengado**, no lo cobrado. Enseñar lo
-            cobrado aquí ponía «0,00 €» con 145 € en cargos pendientes tres
-            líneas más abajo, que se lee como «no hay cargos».
-          -->
-          <div class="summary-tile">
-            <div class="tile-label">{{ 'payments.summary.extraChargesTotal' | translate }}</div>
-            <div class="tile-value">{{ extraChargesRequired | number:'1.2-2' }} €</div>
-            @if (extraChargesPending > 0) {
-              <div class="tile-warning">
-                <i class="pi pi-exclamation-triangle"></i>
-                {{ 'payments.summary.extraChargesPending' | translate }}:
-                <strong>{{ extraChargesPending | number:'1.2-2' }} €</strong>
-              </div>
-            }
-            <!-- Rental + extras. The deposit and its movements are the tile to
-                 the left; adding them here made a refund look like income. -->
-            <div class="tile-progress">
-              <span>{{ 'payments.summary.incomeTotal' | translate }}: <strong>{{ totalPaid | number:'1.2-2' }} €</strong></span>
-            </div>
-          </div>
+          @if (depositHeld > 0) {
+            <p class="field-hint">
+              {{ 'reservations.money.depositHeldHint' | translate }}
+              {{ depositHeld | number:'1.2-2' }} €
+            </p>
+          }
         </div>
-
         <!-- Action buttons -->
         <div class="payment-actions">
           <button class="btn-primary" type="button" (click)="togglePaymentForm()">
@@ -890,71 +681,184 @@
           </div>
         }
 
-        <!-- Payments list -->
+        <!--
+          LAS FILAS, AGRUPADAS POR LO QUE SON.
+
+          Una lista plana de nueve cobros no dice de qué se compone el alquiler:
+          el operador tenía que leerlos uno a uno y sumar de cabeza. Agrupados,
+          cada bloque enseña su subtotal y la cabecera de arriba es la suma de
+          esos subtotales.
+
+          ⚠️ **Todo cobro cae en un bloque y ninguno se queda fuera**, incluidos
+          los que nadie clasificó: `groupKeyOf()` los manda a «otros» y se ven.
+          Lo comprueba `payment-groups.util.spec.ts` recorriendo el tipo entero.
+        -->
         @if (loadingPayments) {
           <div class="loading-mini">
             <i class="pi pi-spin pi-spinner"></i>
             <span>{{ 'common.loading' | translate }}</span>
           </div>
-        } @else if (payments.length > 0) {
-          <div class="payments-list">
-            @for (payment of payments; track payment.id) {
-              <div class="payment-row" (click)="viewPayment(payment.id)">
-                <div class="payment-icon" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
-                  <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
+        } @else if (paymentGroups.length > 0) {
+          <div class="money-groups">
+            @for (group of paymentGroups; track group.key) {
+              <div class="money-group">
+                <div class="money-group-head">
+                  <span class="money-group-title">{{ groupLabel(group.key) | translate }}</span>
+                  <span class="money-group-total">{{ group.required | number:'1.2-2' }} €</span>
                 </div>
-                <div class="payment-info">
-                  <span class="payment-concept">{{ payment | paymentConcept }}</span>
-                  <span class="payment-type">{{ PAYMENT_TYPE_LABELS[payment.type] | translate }}</span>
-                </div>
-                <div class="payment-amounts">
-                  <span class="amount-total">{{ payment.amount | number:'1.2-2' }} €</span>
-                  @if (payment.paidAmount > 0 && payment.status !== 'paid') {
-                    <span class="amount-paid">{{ payment.paidAmount | number:'1.2-2' }} €</span>
+
+                <div class="payments-list">
+                  @for (payment of group.payments; track payment.id) {
+                    <div class="payment-row" (click)="viewPayment(payment.id)">
+                      <div class="payment-icon" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+                        <i [class]="PAYMENT_METHOD_ICONS[payment.method]"></i>
+                      </div>
+                      <div class="payment-info">
+                        <span class="payment-concept">{{ payment | paymentConcept }}</span>
+                        <!-- Solo si dice algo que el concepto no diga ya: ver
+                             `paymentTypeIfUseful()`. -->
+                        @if (paymentTypeIfUseful(payment); as tipo) {
+                          <span class="payment-type">{{ tipo }}</span>
+                        }
+                      </div>
+                      <div class="payment-amounts">
+                        <span class="amount-total">{{ payment.amount | number:'1.2-2' }} €</span>
+                        <!--
+                          ⚠️ **Aquí había un menos, y era la pregunta que se hacía
+                          todo el que abría la ficha.** Una fila de 50 € con 20 €
+                          cobrados enseñaba «50,00 €» y debajo «-30,00 €», sin
+                          decir que eso era lo que faltaba: se lee como un
+                          descuento, como una devolución o como un error. Ahora
+                          lo pone con palabras, que ocupan lo mismo.
+                        -->
+                        @if (payment.status !== 'paid' && payment.status !== 'cancelled' && pendingOf(payment) > 0 && payment.paidAmount > 0) {
+                          <span class="amount-split">
+                            {{ payment.paidAmount | number:'1.2-2' }} € {{ 'payments.summary.collectedShort' | translate }}
+                            · {{ 'payments.summary.missingShort' | translate }} {{ pendingOf(payment) | number:'1.2-2' }} €
+                          </span>
+                        }
+                      </div>
+                      <div class="payment-status">
+                        <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
+                          {{ getPaymentStatusLabel(payment.status) }}
+                        </span>
+                      </div>
+                      @if ((payment.status !== 'paid' && payment.status !== 'cancelled' && pendingOf(payment) > 0) || canIssueReceipt(payment)) {
+                        <div class="payment-actions">
+                          @if (payment.status !== 'paid' && payment.status !== 'cancelled' && pendingOf(payment) > 0) {
+                            <button
+                              type="button"
+                              class="btn-charge-card"
+                              [disabled]="chargingPaymentId() === payment.id"
+                              (click)="chargeWithCard(payment, $event)">
+                              <i class="pi pi-credit-card"></i>
+                              {{ 'payments.actions.chargeCard' | translate }}
+                            </button>
+                            <!-- Para cobrar SIN el cliente delante: se le manda el
+                                 enlace y paga desde su móvil cuando pueda. -->
+                            <button
+                              type="button"
+                              class="btn-charge-card"
+                              (click)="copyPaymentLink(payment, $event)">
+                              <i class="pi pi-link"></i>
+                              {{ 'payments.actions.copyPaymentLink' | translate }}
+                            </button>
+                          }
+                          <!-- El justificante de lo YA cobrado. Convive con el cobro
+                               del resto en una fila parcial: son dos cosas distintas
+                               —lo que entró y lo que falta— y las dos hacen falta. -->
+                          @if (canIssueReceipt(payment)) {
+                            <button
+                              type="button"
+                              class="btn-charge-card"
+                              (click)="openReceiptDialog(payment, $event)">
+                              <i class="pi pi-receipt"></i>
+                              {{ 'payments.receipt.action' | translate }}
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
                   }
-                  @if (payment.pendingAmount > 0 && payment.status !== 'paid') {
-                    <span class="amount-pending">-{{ payment.pendingAmount | number:'1.2-2' }} €</span>
+                </div>
+
+                <!--
+                  EL PRECIO, DENTRO DEL BLOQUE QUE EXPLICA.
+
+                  Era una tarjeta aparte titulada «Precio total» que competía con
+                  la cifra de la cabecera y perdía: no llevaba fianza, ni entrega
+                  a domicilio, ni cargos. Plegado aquí dice lo que de verdad dice
+                  —de qué se compone el alquiler— sin fingir que es el total.
+                -->
+                @if (group.key === 'rental') {
+                  <button type="button" class="money-detail-toggle" (click)="showPriceDetail = !showPriceDetail">
+                    <i class="pi" [ngClass]="showPriceDetail ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                    {{ 'reservations.money.priceDetail' | translate }}
+                  </button>
+                  @if (showPriceDetail) {
+                    <div class="pricing-breakdown">
+                      <div class="price-row">
+                        <span>{{ 'reservations.pricing.pricePerDay' | translate }}:</span>
+                        <span>{{ reservation.pricingSnapshot.pricePerDay }} €</span>
+                      </div>
+                      <div class="price-row">
+                        <span>{{ reservation.totalDays }} x {{ reservation.pricingSnapshot.pricePerDay }} €:</span>
+                        <span>{{ reservation.pricingSnapshot.basePrice }} €</span>
+                      </div>
+                      @if (reservation.pricingSnapshot.loyaltyDiscount) {
+                        <div class="price-row discount">
+                          <span>
+                            {{ 'reservations.pricing.loyaltyDiscount' | translate }}
+                            ({{ reservation.pricingSnapshot.loyaltyDiscountPercent }} %):
+                          </span>
+                          <span class="discount-value">{{ reservation.pricingSnapshot.loyaltyDiscount | number:'1.2-2' }} €</span>
+                        </div>
+                      }
+                      <!-- Signed, and to the cent: a discount has to read as a discount.
+                           The pipe writes its own minus sign, so only a surcharge needs
+                           the explicit "+". -->
+                      @if (reservation.pricingSnapshot.manualAdjustment) {
+                        <div class="price-row adjustment">
+                          <span>{{ 'reservations.pricing.manualAdjustment' | translate }}:</span>
+                          <span class="adjustment-value" [class.negative]="reservation.pricingSnapshot.manualAdjustment! < 0">
+                            {{ reservation.pricingSnapshot.manualAdjustment! > 0 ? '+' : '' }}{{ reservation.pricingSnapshot.manualAdjustment | number:'1.2-2' }} €
+                          </span>
+                        </div>
+                      }
+                      <!-- Sin IVA no hay base imponible ni cuota que enseñar: el total ES
+                           el precio pactado. Mismo dato que usa el contrato. -->
+                      @if (hasVat) {
+                        <div class="price-row">
+                          <span>{{ 'reservations.pricing.vatBase' | translate }}:</span>
+                          <span>{{ vat.base | number:'1.2-2' }} €</span>
+                        </div>
+                        <div class="price-row">
+                          <span>{{ 'reservations.pricing.vat' | translate }} ({{ vatPercent }} %):</span>
+                          <span>{{ vat.vat | number:'1.2-2' }} €</span>
+                        </div>
+                      } @else {
+                        <div class="price-row">
+                          <span class="hint">{{ 'reservations.pricing.vatExemptTag' | translate }}</span>
+                        </div>
+                      }
+                      <div class="price-row total">
+                        <span>{{ 'reservations.pricing.finalPrice' | translate }}:</span>
+                        <span class="total-value">{{ vat.total | number:'1.2-2' }} €</span>
+                      </div>
+                    </div>
                   }
-                </div>
-                <div class="payment-status">
-                  <span class="badge" [ngClass]="PAYMENT_STATUS_COLORS[payment.status]">
-                    {{ getPaymentStatusLabel(payment.status) }}
-                  </span>
-                </div>
-                @if ((payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) || canIssueReceipt(payment)) {
-                  <div class="payment-actions">
-                    @if (payment.status !== 'paid' && payment.status !== 'cancelled' && payment.pendingAmount > 0) {
-                      <button
-                        type="button"
-                        class="btn-charge-card"
-                        [disabled]="chargingPaymentId() === payment.id"
-                        (click)="chargeWithCard(payment, $event)">
-                        <i class="pi pi-credit-card"></i>
-                        {{ 'payments.actions.chargeCard' | translate }}
-                      </button>
-                      <!-- Para cobrar SIN el cliente delante: se le manda el
-                           enlace y paga desde su móvil cuando pueda. -->
-                      <button
-                        type="button"
-                        class="btn-charge-card"
-                        (click)="copyPaymentLink(payment, $event)">
-                        <i class="pi pi-link"></i>
-                        {{ 'payments.actions.copyPaymentLink' | translate }}
-                      </button>
-                    }
-                    <!-- El justificante de lo YA cobrado. Convive con el cobro
-                         del resto en una fila parcial: son dos cosas distintas
-                         —lo que entró y lo que falta— y las dos hacen falta. -->
-                    @if (canIssueReceipt(payment)) {
-                      <button
-                        type="button"
-                        class="btn-charge-card"
-                        (click)="openReceiptDialog(payment, $event)">
-                        <i class="pi pi-receipt"></i>
-                        {{ 'payments.receipt.action' | translate }}
-                      </button>
-                    }
-                  </div>
+                }
+
+                <!-- Lo que se movió de la fianza, junto a sus filas: retenerla y
+                     devolverla son lo que decide si la reserva se puede cerrar. -->
+                @if (group.key === 'deposit' && (deposit.returned > 0 || deposit.retained > 0)) {
+                  <p class="field-hint">
+                    {{ 'reservations.deposit.returned' | translate }}:
+                    <strong>{{ deposit.returned | number:'1.2-2' }} €</strong>
+                    ·
+                    {{ 'reservations.deposit.retained' | translate }}:
+                    <strong>{{ deposit.retained | number:'1.2-2' }} €</strong>
+                  </p>
                 }
               </div>
             }
@@ -962,8 +866,83 @@
         } @else {
           <p class="empty-mini">{{ 'payments.list.empty' | translate }}</p>
         }
+
+        <!--
+          LO QUE NO TIENE FILA PORQUE SE DECIDIÓ NO COBRARLO.
+
+          Un concepto a 0 no siembra fila —una fianza exenta no es una fianza
+          pendiente de 0 €—, así que sin esto el bloque desaparecería y el
+          operador no sabría si se perdonó o si nadie lo pidió. Y el motivo de la
+          fianza es lo único que deja cerrar la reserva: tiene que verse.
+        -->
+        @if (reservation.initialPayment.status === 'waived') {
+          <p class="field-hint">{{ 'reservations.initialPayment.waivedHint' | translate }}</p>
+        }
+        @if (reservation.deposit.status === 'waived') {
+          <p class="field-hint">
+            {{ 'reservations.money.noDeposit' | translate }}
+            @if (reservation.deposit.waivedReason) {
+              — {{ reservation.deposit.waivedReason }}
+            }
+          </p>
+        }
       </div>
     </div>
+
+    <!--
+      El reparto con el dueño del coche va DESPUÉS del dinero del cliente, y
+      separado, porque es otra cosa: aquello es lo que el cliente entrega y esto
+      lo que Velto le debe al propietario del coche. Fundidos en la misma
+      tarjeta habría un cuarto significado de «total» en la misma pantalla, que
+      es justo lo que se acaba de quitar.
+    -->
+    <!--
+        El reparto con el dueño del coche.
+
+        Solo si el coche es de un colaborador —la mayoría de la flota es de
+        Velto y entonces no hay nada que repartir— y solo con
+        `viewCollaborators`: a quién se le debe una parte del alquiler es
+        información de dueño, igual que los gastos y las comisiones.
+
+        ⚠️ La cifra es una PREVISIÓN hasta que se cierra la reserva, y el texto
+        lo dice. Un importe en euros sin ese aviso se lee como dinero ya
+        comprometido, y aquí todavía se mueve si se mueve el precio.
+      -->
+    @if (ownerShare && permissions.can('viewCollaborators')) {
+        <div class="detail-card owner-share-card" style="margin-top: 1rem;">
+          <div class="card-header">
+            <i class="pi pi-users"></i>
+            <span>{{ 'reservations.ownerShare.title' | translate }}</span>
+          </div>
+          <div class="card-content">
+            <div class="pricing-breakdown">
+              <div class="price-row">
+                <span>{{ 'reservations.ownerShare.owner' | translate }}:</span>
+                <span>{{ ownerShare.collaboratorName }}</span>
+              </div>
+              <div class="price-row">
+                <span>{{ 'reservations.ownerShare.base' | translate }}:</span>
+                <span>{{ reservation.pricingSnapshot.netPrice | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row total">
+                <span>
+                  {{ 'reservations.ownerShare.forOwner' | translate }}
+                  ({{ ownerShare.sharePercent }} %):
+                </span>
+                <span class="total-value">{{ ownerShareAmount | number:'1.2-2' }} €</span>
+              </div>
+              <div class="price-row">
+                <span>
+                  {{ 'reservations.ownerShare.forVelto' | translate }}
+                  ({{ veltoSharePercent }} %):
+                </span>
+                <span>{{ veltoShareAmount | number:'1.2-2' }} €</span>
+              </div>
+            </div>
+            <p class="hint">{{ 'reservations.ownerShare.hint' | translate }}</p>
+          </div>
+        </div>
+    }
 
     <!-- Pasos saltados. Solo aparece si hay alguno: saltarse un paso es la
          excepción, y una tarjeta vacía sugeriría lo contrario. Va antes de las

@@ -1,9 +1,18 @@
 import { Directive, ElementRef, HostBinding, HostListener, NgZone, OnDestroy, inject } from '@angular/core';
 import { enZonaDelAspa } from '@shared/utils/clear-input.util';
-import { prefersNativePicker } from '@shared/directives/date-picker.directive';
 
-/** Los campos que llevan el icono de otra cosa pegado al borde derecho. */
-const CON_ICONO_PROPIO = new Set(['date', 'time', 'datetime-local']);
+/**
+ * ⚠️ **Los campos de fecha y hora se quedaron FUERA el 24 de septiembre de
+ * 2026, y es una decisión de Dorel usándolo con el pulgar:** «el aspa al lado
+ * de la flecha de despliegue no tiene mucho sentido porque uno con el dedo se
+ * confunde». Dos botones a pocos milímetros, uno que abre el calendario y otro
+ * que destruye lo que hay, es una trampa.
+ *
+ * Lo que los vacía ahora es el botón «Borrar» del panel —ver
+ * `DatePickerPanelComponent`—, que además está en el sitio donde ya se estaba
+ * eligiendo la fecha. Por eso el panel propio pasó a usarse también en el
+ * móvil: era el único que tiene ese botón.
+ */
 
 /**
  * El aspa que vacía un campo de un toque.
@@ -37,8 +46,7 @@ const CON_ICONO_PROPIO = new Set(['date', 'time', 'datetime-local']);
  */
 @Directive({
   selector:
-    'input[type=text], input[type=search], input[type=email], input[type=tel], input[type=url],' +
-    'input[type=date], input[type=time], input[type=datetime-local]',
+    'input[type=text], input[type=search], input[type=email], input[type=tel], input[type=url]',
   standalone: true
 })
 export class ClearInputDirective implements OnDestroy {
@@ -47,10 +55,6 @@ export class ClearInputDirective implements OnDestroy {
 
   private get input(): HTMLInputElement {
     return this.host.nativeElement;
-  }
-
-  private get tipo(): string {
-    return this.input.getAttribute('type') ?? 'text';
   }
 
   /**
@@ -64,38 +68,6 @@ export class ClearInputDirective implements OnDestroy {
   @HostBinding('class.has-clear')
   get visible(): boolean {
     return !!this.input.value && !this.input.disabled && !this.input.readOnly;
-  }
-
-  /**
-   * ¿Manda el selector del sistema? Se resuelve una vez, como en
-   * `DatePickerDirective`: un ratón no se convierte en un dedo a mitad de un
-   * formulario.
-   */
-  private readonly iconoNativo = prefersNativePicker();
-
-  /**
-   * El aspa se corre un hueco hacia dentro para dejarle el borde al calendario.
-   *
-   * ⚠️ **Depende de QUIÉN pinta el calendario, no del tipo del campo**, y
-   * confundirlo descolocaba el aspa en todo el móvil. La aplicación solo dibuja
-   * el suyo en escritorio (`picker-custom`); con el dedo manda el del
-   * navegador, que vive **al final de la caja de contenido** — o sea que el
-   * `padding-right` lo empuja hacia dentro en vez de dejarlo donde estaba. Con
-   * el desplazamiento puesto, los 3,5 rem de relleno metían el icono del
-   * sistema 56 px hacia dentro y el aspa acababa a su derecha, con la zona
-   * pulsable montada encima de él.
-   *
-   * Así que cada plataforma coloca los dos iconos como le toca: en escritorio
-   * el calendario pegado al borde y el aspa a su izquierda; en el móvil al
-   * revés, porque ahí el sitio del calendario no lo decidimos nosotros.
-   */
-  private get correrse(): boolean {
-    return CON_ICONO_PROPIO.has(this.tipo) && !this.iconoNativo;
-  }
-
-  @HostBinding('class.has-clear--offset')
-  get desplazada(): boolean {
-    return this.visible && this.correrse;
   }
 
   /**
@@ -203,7 +175,7 @@ export class ClearInputDirective implements OnDestroy {
    */
   private enLaZona(clientX: number): boolean {
     if (!this.visible) return false;
-    return enZonaDelAspa(this.input.getBoundingClientRect(), clientX, this.correrse);
+    return enZonaDelAspa(this.input.getBoundingClientRect(), clientX);
   }
 
   /**
@@ -217,19 +189,12 @@ export class ClearInputDirective implements OnDestroy {
    *
    * Y el foco se queda dentro: se vacía para escribir otra cosa, no para
    * dejarlo vacío y marcharse. En el móvil eso mantiene el teclado abierto.
-   *
-   * ⚠️ **Salvo en los campos de fecha y hora del móvil, donde enfocar ABRE el
-   * selector.** El argumento de arriba es el del teclado, y en un campo de
-   * fecha no hay teclado que mantener: hay una hoja a pantalla completa que en
-   * Safari se abre con el propio foco, así que cancelar el `click` no bastaría
-   * y volveríamos a pedir la fecha que se acaba de quitar.
+   * Aquí ya solo hay campos de texto, así que siempre hay teclado que mantener.
    */
   private vaciar(): void {
     this.input.value = '';
     this.input.dispatchEvent(new Event('input', { bubbles: true }));
     this.input.dispatchEvent(new Event('change', { bubbles: true }));
-    if (!(this.iconoNativo && CON_ICONO_PROPIO.has(this.tipo))) {
-      this.input.focus({ preventScroll: true });
-    }
+    this.input.focus({ preventScroll: true });
   }
 }

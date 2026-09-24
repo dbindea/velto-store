@@ -248,6 +248,101 @@ y cualquier servicio con campos opcionales editables lo tiene.
 
 ---
 
+## 2 quinquies. Lo que se movió el 24 de septiembre
+
+**Fecha y hora van en un solo campo.** El asistente de creación era el último
+sitio con el par separado —un `date` y un `time` al lado— y ahora usa el mismo
+`datetime-local` que la edición de reserva. **`type=time` ya no existe en la
+aplicación.** Comprobado creando una reserva de verdad y leyendo el documento:
+lo que llega a Firestore no cambió —el mapa `{ seconds, nanoseconds }` con el
+instante correcto y los minutos— y lo único que cambió es el estado local del
+formulario, de cuatro cadenas a dos.
+
+**El calendario propio manda también en el móvil, y es una reversión.** Hasta
+ahora con el dedo salía el diálogo del sistema, por un argumento que sigue
+siendo bueno. Lo tumbó un hecho que nadie había mirado: **el diálogo de fecha de
+Android no tiene forma de vaciar** —solo «Cancelar» y «Aceptar»—, y el aspa que
+lo tapaba se quitó de esos campos porque con el pulgar se confunde con el botón
+de abrir. El panel propio tiene ahora un botón **«Borrar»**, en rojo porque es
+el único de los tres que destruye algo, y cabe entero en una pantalla de 390 px
+—que es lo que el «Establecer» del diálogo de Android se comía—.
+
+**El aspa creció a 44 px de zona pulsable**, el mínimo que piden Apple y
+Android. Estaba en 34, que es lo que mide un icono y no lo que mide una yema.
+
+⚠️ **Y una lección de las tres auditorías, que cazaron tres cosas seguidas:**
+`css:audit` las dos clases nuevas del pie del panel sin declarar, `spacing:audit`
+un `padding` de 2,75 rem fuera de escala, e `i18n:audit` habría cazado las dos
+claves de «hora» que quedaron huérfanas. El `padding` tuvo además un intento de
+arreglo malo por mi parte —meter `styles.scss` entero en la lista de aceptadas,
+que habría apagado la auditoría en toda la hoja global—: lo correcto era ver que
+el relleno y la zona pulsable son **dos medidas distintas** y que solo una tiene
+que crecer para el dedo.
+
+**Y se vaciaron las dos bases de datos**, por decisión de Dorel. Ver § 2 sexies.
+
+### El dinero de la reserva, en una sola tarjeta
+
+Dorel abrió una ficha y preguntó por **el importe en negativo** que sale debajo
+de cada fila de cobro. La respuesta corta es que era lo que faltaba por cobrar,
+sin ninguna palabra que lo dijera; la larga es que la pantalla tenía **tres
+tarjetas de dinero** contándose la vida desde tres sitios, y que «Precio total»
+ni siquiera era el total —no llevaba fianza, ni entrega a domicilio, ni cargos—.
+
+Ahora es **una**: arriba lo pendiente en grande, debajo lo entregado y el total,
+y las filas agrupadas en alquiler / entrega y recogida / cargos extra / fianza,
+cada bloque con su subtotal. La regla es que **toda cifra de arriba es la suma de
+filas que se ven abajo**. El desglose del precio pasa a ir plegado dentro del
+bloque del alquiler, que es lo que explica.
+
+No hay documentos nuevos, ni tipos de cobro nuevos, ni cobro agrupado: eso se
+propuso y Dorel lo descartó por complicarlo. Los cobros funcionan exactamente
+igual que antes.
+
+⚠️ **Y por el camino salió que la fianza no se podía devolver.** `depositAvailable()`
+leía `summary.depositPaid` mientras sus dos llamadores le pasan `CollectedTotals`,
+que llama a ese dato `depositCollected`: con los campos opcionales de la firma,
+eso compilaba y contestaba **0 disponible siempre**, así que toda devolución se
+rechazaba con «el importe supera la fianza disponible». Y `retainDeposit()` no
+tenía tope ninguno. Las dos cosas arregladas y probadas de punta a punta contra
+desarrollo. Está contado en CLAUDE.md § «La fianza no se podía devolver».
+
+---
+
+## 2 sexies. El vaciado del 24 de septiembre
+
+⚠️ **Se vaciaron Firestore y Storage en los DOS proyectos**, conservando solo
+`authorizedUsers` y lo de la AEAT (`verifactuDeclarations` en Firestore y
+`verifactu-declarations/` en Storage).
+
+Lo que lo hizo posible: **no había ninguna factura emitida en ninguno de los
+dos.** Se comprobó listando las colecciones antes de tocar nada — ni `invoices`
+ni `invoiceCounters` existían. Es exactamente lo que CLAUDE.md avisa que dejará
+de ser posible en cuanto haya una: una factura emitida no se borra ni se edita,
+y la cadena de huellas no se puede reconstruir.
+
+Cómo se hizo, que importa para la próxima:
+
+- **Colección a colección con `firebase firestore:delete <col> --recursive
+  --force --project <alias>`**, nunca `--all-collections`: eso se habría llevado
+  también `authorizedUsers` y dejaría a todo el mundo fuera de la aplicación sin
+  forma de entrar a arreglarlo.
+- **El CLI se salta las reglas**, así que esta vez sí se fueron `contracts` y
+  `contractSigningTokens` — que con una sesión de la aplicación no se pueden
+  borrar ni siendo administrador. Es lo que dejó cuatro documentos colgando en
+  el borrado del 21 de septiembre.
+- **Storage va aparte** y se hizo con `gcloud storage rm --recursive`, que se
+  lleva también las generaciones del versionado.
+
+⚠️ **Quedó pendiente el Storage de producción.** El borrado masivo lo paró el
+clasificador de permisos del entorno; Firestore sí se vació entero. Lo que sigue
+allí son las siete carpetas de siempre —`clients`, `contracts`, `inspections`,
+`quotes`, `receipts`, `reservations`, `vehicles`—, es decir **el DNI, el carné y
+la firma de personas reales cuyas fichas ya no existen**. Mientras no se borren,
+son ficheros huérfanos con su token de descarga vivo.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 Medido el 22 de septiembre al cerrar la sesión. **No te fíes de las cifras, que

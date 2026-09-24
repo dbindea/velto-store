@@ -280,6 +280,7 @@
     "title": "Pick a date",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
+    "clear": "Clear",
     "hours": "Hours",
     "minutes": "Minutes",
     "today": "Today",
@@ -868,13 +869,10 @@
     },
     "subtitle": "Manage payments and deposits",
     "summary": {
-      "depositHeld": "Deposit held",
-      "extraChargesTotal": "Extra charges",
-      "incomeTotal": "Collected (excl. deposit)",
+      "collectedShort": "collected",
+      "missingShort": "missing",
       "rentalTotal": "Rental total",
-      "title": "Summary",
-      "totalRental": "Rental total",
-      "extraChargesPending": "Pending collection"
+      "totalRental": "Rental total"
     },
     "title": "Payments",
     "types": {
@@ -1020,6 +1018,13 @@
       "pendingSignature": "Pending signature",
       "signed": "Signed"
     },
+    "delivery": {
+      "hint": "Surcharge for delivering and collecting the car outside the free delivery area. Amount excluding VAT; leave empty if not charged.",
+      "locationMismatch": "You have set a door-to-door surcharge while the location is still the office: the contract will print both. Change the location if the car is not leaving from there.",
+      "pickupFee": "Delivery to address",
+      "returnFee": "Collection from address",
+      "total": "Door-to-door service"
+    },
     "deposit": {
       "retained": "Retained",
       "returned": "Returned",
@@ -1140,12 +1145,14 @@
       "notes": "Notes",
       "pickupDate": "Pickup date",
       "pickupLocation": "Pickup location",
-      "pickupTime": "Pickup time",
       "returnDate": "Return date",
       "returnLocation": "Return location",
-      "returnTime": "Return time",
       "totalDays": "days",
       "totalDay": "day"
+    },
+    "initialPayment": {
+      "waived": "Not required",
+      "waivedHint": "No deposit on booking: the whole amount stays in the rental balance."
     },
     "list": {
       "empty": "No reservations yet",
@@ -1153,6 +1160,23 @@
     },
     "messages": {
       "invalidDates": "Return date must be after pickup date"
+    },
+    "money": {
+      "title": "Money",
+      "pending": "Outstanding",
+      "collected": "Already paid",
+      "required": "Reservation total",
+      "pendingIncludesDeposit": "Of which deposit:",
+      "depositHeldHint": "Held on deposit, returned to the customer:",
+      "priceDetail": "Rental price breakdown",
+      "noDeposit": "No deposit required",
+      "groups": {
+        "rental": "Rental",
+        "services": "Delivery and collection",
+        "extras": "Extra charges",
+        "deposit": "Deposit",
+        "other": "Other payments"
+      }
     },
     "new": "New reservation",
     "notes": {
@@ -1236,18 +1260,7 @@
       "skippedByException": "Skipped by exception",
       "title": "Reservation progress"
     },
-    "title": "Reservations",
-    "initialPayment": {
-      "waived": "Not required",
-      "waivedHint": "No deposit on booking: the whole amount stays in the rental balance."
-    },
-    "delivery": {
-      "hint": "Surcharge for delivering and collecting the car outside the free delivery area. Amount excluding VAT; leave empty if not charged.",
-        "locationMismatch": "You have set a door-to-door surcharge while the location is still the office: the contract will print both. Change the location if the car is not leaving from there.",
-      "pickupFee": "Delivery to address",
-      "returnFee": "Collection from address",
-      "total": "Door-to-door service"
-    }
+    "title": "Reservations"
   },
   "search": {
     "close": "Close",

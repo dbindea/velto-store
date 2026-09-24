@@ -135,6 +135,9 @@ const DYNAMIC_KEY_SETS = {
   // calendar.component.ts › dayRole(): qué pasa ese día con la reserva. La
   // plantilla compone 'calendar.dayRole.' + dayRole(r).
   'calendar.dayRole.': ['pickup', 'return', 'ongoing'],
+  // payment-groups.util.ts › PaymentGroupKey. Los bloques en los que la ficha
+  // de la reserva reparte sus filas de cobro; `groupLabel()` compone la clave.
+  'reservations.money.groups.': ['rental', 'services', 'extras', 'deposit', 'other'],
   // reservation-edit.util.ts › EditableField. Son los nombres con los que la
   // nota interna dice qué se cambió: «Reserva modificada: precio, señal».
   'reservations.edit.fields.': [

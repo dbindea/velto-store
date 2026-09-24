@@ -280,6 +280,7 @@
     "title": "Elegir fecha",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
+    "clear": "Borrar",
     "hours": "Horas",
     "minutes": "Minutos",
     "today": "Hoy",
@@ -868,13 +869,10 @@
     },
     "subtitle": "Gestiona pagos y fianzas",
     "summary": {
-      "depositHeld": "Fianza depositada",
-      "extraChargesTotal": "Cargos extra",
-      "incomeTotal": "Cobrado (sin fianza)",
+      "collectedShort": "cobrados",
+      "missingShort": "faltan",
       "rentalTotal": "Total alquiler",
-      "title": "Resumen",
-      "totalRental": "Total alquiler",
-      "extraChargesPending": "Pendiente de cobro"
+      "totalRental": "Total alquiler"
     },
     "title": "Pagos",
     "types": {
@@ -1020,6 +1018,13 @@
       "pendingSignature": "Pendiente de firma",
       "signed": "Firmado"
     },
+    "delivery": {
+      "hint": "Suplemento por llevar y recoger el coche fuera de la zona de entrega gratuita. Importe sin IVA; déjalo vacío si no se cobra.",
+      "locationMismatch": "Has puesto suplemento por domicilio y el lugar sigue siendo el de la oficina: el contrato imprimirá las dos cosas. Cambia el lugar si el coche no sale de allí.",
+      "pickupFee": "Entrega a domicilio",
+      "returnFee": "Recogida a domicilio",
+      "total": "Servicio a domicilio"
+    },
     "deposit": {
       "retained": "Retenida",
       "returned": "Devuelta",
@@ -1140,12 +1145,14 @@
       "notes": "Notas",
       "pickupDate": "Fecha de recogida",
       "pickupLocation": "Lugar de recogida",
-      "pickupTime": "Hora de recogida",
       "returnDate": "Fecha de devolución",
       "returnLocation": "Lugar de devolución",
-      "returnTime": "Hora de devolución",
       "totalDays": "días",
       "totalDay": "día"
+    },
+    "initialPayment": {
+      "waived": "No se solicita",
+      "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
     },
     "list": {
       "empty": "No hay reservas todavía",
@@ -1153,6 +1160,23 @@
     },
     "messages": {
       "invalidDates": "La fecha de devolución debe ser posterior a la de recogida"
+    },
+    "money": {
+      "title": "Dinero",
+      "pending": "Pendiente de cobro",
+      "collected": "Ya entregado",
+      "required": "Total de la reserva",
+      "pendingIncludesDeposit": "De eso es fianza:",
+      "depositHeldHint": "En depósito, se le devuelve al cliente:",
+      "priceDetail": "Detalle del precio del alquiler",
+      "noDeposit": "No se pide fianza",
+      "groups": {
+        "rental": "Alquiler",
+        "services": "Entrega y recogida",
+        "extras": "Cargos extra",
+        "deposit": "Fianza",
+        "other": "Otros cobros"
+      }
     },
     "new": "Nueva reserva",
     "notes": {
@@ -1236,18 +1260,7 @@
       "skippedByException": "Omitido por excepción",
       "title": "Progreso de la reserva"
     },
-    "title": "Reservas",
-    "initialPayment": {
-      "waived": "No se solicita",
-      "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
-    },
-    "delivery": {
-      "hint": "Suplemento por llevar y recoger el coche fuera de la zona de entrega gratuita. Importe sin IVA; déjalo vacío si no se cobra.",
-        "locationMismatch": "Has puesto suplemento por domicilio y el lugar sigue siendo el de la oficina: el contrato imprimirá las dos cosas. Cambia el lugar si el coche no sale de allí.",
-      "pickupFee": "Entrega a domicilio",
-      "returnFee": "Recogida a domicilio",
-      "total": "Servicio a domicilio"
-    }
+    "title": "Reservas"
   },
   "search": {
     "close": "Cerrar",

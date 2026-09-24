@@ -229,6 +229,15 @@
   padding-top: 0.5rem;
 }
 
+// «Hoy» y «Cerrar» van juntos a la derecha; «Borrar» se queda solo a la
+// izquierda, separado de ellos por todo el ancho del pie.
+.picker-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.picker-clear,
 .picker-now,
 .picker-close {
   border: none;
@@ -236,7 +245,10 @@
   color: var(--accent-color);
   font-size: 0.8125rem;
   font-weight: 500;
-  padding: 0.25rem 0.5rem;
+  // 44 px de alto: es el pie de un panel que ahora también se usa con el dedo,
+  // y estos tres son los únicos botones que no son una celda del calendario.
+  min-height: 44px;
+  padding: 0.25rem 0.625rem;
   border-radius: 6px;
   cursor: pointer;
 
@@ -248,6 +260,17 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+}
+
+/**
+ * ⚠️ **En rojo, porque es el único de los tres que destruye algo.** «Hoy» y
+ * «Cerrar» son reversibles de un vistazo; este deja el campo vacío. Es la misma
+ * distinción que ya hace la ficha de reserva entre cancelar —ámbar— y borrar
+ * —rojo—, y el motivo por el que no basta con ponerlos los tres del color de
+ * acento y separarlos.
+ */
+.picker-clear {
+  color: var(--danger-color);
 }
 
 .picker-close {

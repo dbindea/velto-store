@@ -852,61 +852,37 @@ input[type='time'].picker-custom {
  * pulsa; aquí se teclea, y un campo de texto con cursor de mano dice que no se
  * puede escribir en él. La directiva enciende `--hover` solo sobre la zona.
  * ------------------------------------------------------------------------- */
+/* ⚠️ **Tres medidas distintas que es fácil confundir en una sola.**
+   - El **dibujo** son 1,125 rem (18 px). Una cruz de 44 px pintada gritaría en
+     una fila de formulario.
+   - La **zona pulsable** son 44 px, y vive en `ZONA_ASPA_PX`, no aquí: es el
+     mínimo que piden Apple y Android para algo que se toca. Estuvo en 34 —el
+     ancho del icono del calendario, copiado sin pensar— y Dorel la encontró
+     pequeña con el pulgar el 24 de septiembre de 2026.
+   - El **relleno** son 2,5 rem (40 px), y solo tiene que apartar el texto: el
+     icono acaba a 31 px del borde. No hace falta que empareje con la zona, y
+     de hecho no debe: 2,75 rem se sale de la escala de espaciado y el guion lo
+     caza con razón. Lo que crece para el dedo es dónde se acierta, no el hueco. */
 input.has-clear {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
-  background-position: right 0.75rem center !important;
-  background-size: 0.875rem !important;
-  padding-right: 2rem !important;
+  background-position: right 0.8125rem center !important;
+  background-size: 1.125rem !important;
+  padding-right: 2.5rem !important;
 }
 
 input.has-clear--hover {
   cursor: pointer;
 }
 
-/* En un campo de fecha u hora el borde derecho ya está ocupado, así que el
-   aspa se mete un hueco hacia dentro y el calendario se queda donde estaba —
-   moverlo descolocaría la fila respecto a los campos de al lado. La distancia
-   es la misma que `ZONA_ASPA_PX` en la directiva: las dos zonas van pegadas y
-   ninguna se come a la otra.
-
-   ⚠️ **Quien decide esto es la clase que pone la directiva, no el tipo del
-   campo.** Escrito como `input[type='date'].has-clear` funcionaba igual, pero
-   dejaba `has-clear--offset` sin declarar en ninguna parte: una clase muerta
-   que `css:audit` no puede cazar —solo lee plantillas, y esta la pone un
-   `HostBinding`— y que el día que alguien la mirara parecería un descuido.
-   Ahora el criterio vive en un solo sitio, la directiva, y el CSS lo obedece.
-
-   La clase se repite para llegar a (0,2,1) y ganarle sin depender del orden. */
-input.has-clear.has-clear--offset {
-  background-position: right 2.25rem center !important;
-  padding-right: 3.5rem !important;
-}
-
-/* ⚠️ **Y cuando el calendario también lo pinta la aplicación, los dos iconos
-   van en la MISMA declaración.** `background-image` es una sola propiedad: dos
-   reglas con `!important` no se suman, gana una y la otra desaparece — el aspa
-   borraría el calendario. Se declaran como dos capas, en orden, con su
-   posición cada una. En el móvil no hace falta: allí el indicador del
-   navegador es un pseudoelemento y no compite por el fondo. */
-input[type='date'].picker-custom.has-clear,
-input[type='datetime-local'].picker-custom.has-clear {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E") !important;
-  background-position: right 2.25rem center, right 0.75rem center !important;
-  background-size: 0.875rem, 0.875rem !important;
-  padding-right: 3.5rem !important;
-}
-
-input[type='time'].picker-custom.has-clear {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M15 9l-6 6M9 9l6 6'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") !important;
-  background-position: right 2.25rem center, right 0.75rem center !important;
-  background-size: 0.875rem, 0.875rem !important;
-  padding-right: 3.5rem !important;
-}
+/* ⚠️ **Los campos de fecha y hora NO llevan aspa desde el 24 de septiembre de
+   2026.** Aquí vivían tres reglas más: una para correr el aspa hacia dentro y
+   dos que componían el aspa y el calendario como dos capas de la misma
+   `background-image`, porque dos reglas con `!important` no se suman. Todo eso
+   se fue con la decisión de Dorel —«el aspa al lado de la flecha de despliegue
+   no tiene sentido, con el dedo se confunde»—: esos campos se vacían ahora con
+   el botón «Borrar» del panel. Queda anotado porque el problema de las dos
+   capas volverá el día que alguien quiera dos iconos en un mismo campo. */
 
 // A visible, consistent focus ring on every control — several components
 // removed the outline without putting anything in its place.

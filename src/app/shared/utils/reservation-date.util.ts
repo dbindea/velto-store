@@ -164,3 +164,38 @@ export function combineDateAndTime(dateStr: string, timeStr: string): Date {
   const [hours, minutes] = timeStr.split(':').map(Number);
   return new Date(year, month - 1, day, hours, minutes, 0, 0);
 }
+
+/**
+ * Una fecha con su hora → el valor que espera un `input[type=datetime-local]`,
+ * que es `yyyy-MM-ddTHH:mm`.
+ *
+ * ⚠️ **Nada de `toISOString()`, y no es un detalle.** Aquel pasa a UTC, así que
+ * una recogida a las 00:30 de Madrid saldría escrita como las 22:30 del día
+ * anterior y el operador vería otra hora en el campo. El navegador interpreta
+ * el valor de un `datetime-local` en **hora local**, así que hay que
+ * componerlo en local.
+ *
+ * Vivía copiada dentro de `reservation-edit.component.ts`; desde que el
+ * asistente usa el mismo tipo de campo, la aritmética es una sola.
+ */
+export function toDateTimeInput(date: Date): string {
+  return `${toDateString(date)}T${toTimeString(date)}`;
+}
+
+/**
+ * Lo contrario: lo que devuelve un `input[type=datetime-local]` → `Date`.
+ *
+ * ⚠️ **`new Date('2026-09-24T12:00')` ya lo interpreta en hora local** —es la
+ * forma sin zona— así que no hace falta trocear la cadena. Se hace igualmente
+ * a mano para que no dependa de esa sutileza del estándar, que es justo la que
+ * cambia entre `'2026-09-24'` (UTC) y `'2026-09-24T12:00'` (local) y ya costó
+ * un disgusto con las fechas del mantenimiento.
+ *
+ * Devuelve una fecha inválida si la cadena está vacía o a medias, que es lo que
+ * pasa mientras el operador teclea: quien llama decide qué hacer con eso.
+ */
+export function parseDateTimeInput(value: string): Date {
+  const [fecha, hora] = (value || '').split('T');
+  if (!fecha || !hora) return new Date(NaN);
+  return combineDateAndTime(fecha, hora);
+}

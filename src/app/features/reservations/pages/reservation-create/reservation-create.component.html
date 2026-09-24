@@ -38,28 +38,24 @@
       <div class="step-panel">
         <div class="section">
           <h2>{{ 'reservations.fields.pickupDate' | translate }}</h2>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="pickupDate">{{ 'reservations.fields.pickupDate' | translate }}</label>
-              <input
-                type="date"
-                id="pickupDate"
-                [ngModel]="pickupDate"
-                (ngModelChange)="onPickupDateChange($event)"
-                [min]="todayString"
-                name="pickupDate"
-                class="form-control">
-            </div>
-            <div class="form-group">
-              <label for="pickupTime">{{ 'reservations.fields.pickupTime' | translate }}</label>
-              <input
-                type="time"
-                id="pickupTime"
-                [ngModel]="pickupTime"
-                (ngModelChange)="pickupTime = $event"
-                name="pickupTime"
-                class="form-control">
-            </div>
+          <!--
+            ⚠️ **Un solo campo para la fecha y la hora.** Eran dos —un `date` y
+            un `time` uno al lado del otro— y ahora es el mismo
+            `datetime-local` que usa la edición de reserva. Una recogida es un
+            instante, no dos datos sueltos, y con dos controles había que abrir
+            dos selectores y cuadrarlos a mano. Era el último `input[type=time]`
+            de la aplicación.
+          -->
+          <div class="form-group">
+            <label for="pickupDateTime">{{ 'reservations.fields.pickupDate' | translate }}</label>
+            <input
+              type="datetime-local"
+              id="pickupDateTime"
+              [ngModel]="pickupDateTimeInput"
+              (ngModelChange)="onPickupDateTimeChange($event)"
+              [min]="minPickupDateTime"
+              name="pickupDateTime"
+              class="form-control">
           </div>
           <div class="form-group">
             <label for="pickupLocation">{{ 'reservations.fields.pickupLocation' | translate }}</label>
@@ -77,28 +73,19 @@
 
         <div class="section">
           <h2>{{ 'reservations.fields.returnDate' | translate }}</h2>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="returnDate">{{ 'reservations.fields.returnDate' | translate }}</label>
-              <input
-                type="date"
-                id="returnDate"
-                [ngModel]="returnDate"
-                (ngModelChange)="returnDate = $event"
-                [min]="pickupDate"
-                name="returnDate"
-                class="form-control">
-            </div>
-            <div class="form-group">
-              <label for="returnTime">{{ 'reservations.fields.returnTime' | translate }}</label>
-              <input
-                type="time"
-                id="returnTime"
-                [ngModel]="returnTime"
-                (ngModelChange)="returnTime = $event"
-                name="returnTime"
-                class="form-control">
-            </div>
+          <div class="form-group">
+            <label for="returnDateTime">{{ 'reservations.fields.returnDate' | translate }}</label>
+            <!-- El `min` es la recogida entera, hora incluida: antes era solo su
+                 fecha, así que devolver el mismo día a una hora anterior pasaba
+                 por aquí y lo paraba la comprobación de más adelante. -->
+            <input
+              type="datetime-local"
+              id="returnDateTime"
+              [ngModel]="returnDateTimeInput"
+              (ngModelChange)="returnDateTimeInput = $event"
+              [min]="pickupDateTimeInput"
+              name="returnDateTime"
+              class="form-control">
           </div>
           <div class="form-group">
             <label for="returnLocation">{{ 'reservations.fields.returnLocation' | translate }}</label>

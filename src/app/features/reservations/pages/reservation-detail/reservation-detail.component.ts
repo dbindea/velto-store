@@ -20,8 +20,6 @@ import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_PAYMENT_STATUS_LABELS,
   RESERVATION_CONTRACT_STATUS_LABELS,
-  RESERVATION_DEPOSIT_STATUS_LABELS,
-  RESERVATION_INITIAL_PAYMENT_STATUS_LABELS,
   ReservationPaymentSummary,
   AdditionalDriver
 } from '@shared/models/reservation.model';
@@ -56,8 +54,15 @@ import {
 } from '@shared/utils/pricing.util';
 import {
   collectedTotalsOf,
-  calculateReservationPaymentSummary
+  calculateReservationPaymentSummary,
+  calculatePendingAmount,
+  roundMoney
 } from '@shared/utils/payment-summary.util';
+import {
+  PaymentGroup,
+  PaymentGroupKey,
+  groupPaymentsForReservation
+} from '@shared/utils/payment-groups.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
@@ -873,35 +878,6 @@ export class ReservationDetailComponent implements OnInit {
     );
   }
 
-  getDepositStatusLabel(status: string): string {
-    return this.t(
-      RESERVATION_DEPOSIT_STATUS_LABELS[status as keyof typeof RESERVATION_DEPOSIT_STATUS_LABELS],
-      status
-    );
-  }
-
-  /**
-   * ⚠️ Lo pintaba la plantilla con un ternario `=== 'paid'`, así que una señal
-   * `waived` —la que no se pide— salía como «Pendiente»: el mismo cero que el
-   * operador acababa de decidir, presentado como una deuda.
-   */
-  getInitialPaymentStatusLabel(status: string): string {
-    return this.t(
-      RESERVATION_INITIAL_PAYMENT_STATUS_LABELS[
-        status as keyof typeof RESERVATION_INITIAL_PAYMENT_STATUS_LABELS
-      ],
-      status
-    );
-  }
-
-  getInitialPaymentStatusClass(status: string): string {
-    if (status === 'paid') return 'status-paid';
-    // Exenta no es cobrada ni pendiente: es un asunto cerrado sin dinero de por
-    // medio, igual que la fianza exenta.
-    if (status === 'waived') return 'status-waived';
-    return 'status-pending';
-  }
-
   getContractLabel(status: string): string {
     return this.t(
       RESERVATION_CONTRACT_STATUS_LABELS[status as keyof typeof RESERVATION_CONTRACT_STATUS_LABELS],
@@ -932,20 +908,6 @@ export class ReservationDetailComponent implements OnInit {
       partial: 'payment-partial',
       paid: 'payment-paid',
       refunded: 'payment-refunded'
-    };
-    return statusClasses[status] || '';
-  }
-
-  getDepositStatusClass(status: string): string {
-    const statusClasses: Record<string, string> = {
-      pending: 'deposit-pending',
-      paid: 'deposit-paid',
-      partial_returned: 'deposit-partial',
-      returned: 'deposit-returned',
-      retained: 'deposit-retained',
-      // Faltaba, así que la etiqueta de una fianza exenta salía sin caja: texto
-      // suelto entre badges. Es el mismo descuido que `.checkbox-label`.
-      waived: 'deposit-waived'
     };
     return statusClasses[status] || '';
   }
@@ -1242,12 +1204,6 @@ export class ReservationDetailComponent implements OnInit {
     return collectedTotalsOf(this.payments).income;
   }
 
-  get extraChargesTotal(): number {
-    // Always derived from the denormalized summary so we don't double-count
-    // when the inspection service also pushes extras to the collection.
-    return this.reservation?.paymentSummary?.extrasTotal || 0;
-  }
-
   /**
    * Cargos extra devengados y lo que falta por cobrar de ellos.
    *
@@ -1267,14 +1223,123 @@ export class ReservationDetailComponent implements OnInit {
     return calculateReservationPaymentSummary(this.payments, this.reservation);
   }
 
-  /** Lo que el cliente debe en cargos extra, cobrado o no. */
-  get extraChargesRequired(): number {
-    return this.liveSummary?.extrasRequired || 0;
-  }
-
-  /** Lo que falta por cobrar de esos cargos. Cero solo si no se debe nada. */
+  /**
+   * Lo que falta por cobrar de esos cargos. Cero solo si no se debe nada.
+   *
+   * ⚠️ **Lo usa el aviso previo al cierre**, no la pantalla: los cargos ya se
+   * ven en su bloque de la tarjeta del dinero, derivados de las mismas filas.
+   */
   get extraChargesPending(): number {
     return this.liveSummary?.extrasPending || 0;
+  }
+
+  // -------------------------------------------------------------------------
+  // El dinero, en una sola tarjeta
+  // -------------------------------------------------------------------------
+
+  /**
+   * Las filas de cobro repartidas en bloques: alquiler, servicios, cargos,
+   * fianza y otros.
+   *
+   * ⚠️ **La cabecera se suma de aquí, y ese es todo el cambio.** La ficha tenía
+   * **tres** tarjetas de dinero —«Pendiente», «Precio total» y «Resumen»— que
+   * contaban lo mismo de tres formas distintas y desde tres fuentes distintas:
+   * la primera leía la copia desnormalizada de la reserva, la segunda el
+   * `pricingSnapshot` y la tercera solo derivaba los cargos extra. Ninguna
+   * contestaba la pregunta del mostrador —cuánto tiene que darme el cliente— y
+   * las tres podían discrepar sin que nada fallara. Ahora hay una, y **cada
+   * cifra de arriba es la suma de unas filas que están a la vista debajo**: si
+   * no cuadra, se ve dónde.
+   */
+  get paymentGroups(): PaymentGroup[] {
+    return groupPaymentsForReservation(this.payments);
+  }
+
+  /** Lo que el cliente tiene que entregar en total, fianza incluida. */
+  get moneyRequired(): number {
+    return roundMoney(this.paymentGroups.reduce((t, g) => t + g.required, 0));
+  }
+
+  /** Lo que ya ha entregado. */
+  get moneyCollected(): number {
+    return roundMoney(this.paymentGroups.reduce((t, g) => t + g.paid, 0));
+  }
+
+  /**
+   * Lo que falta. Es la cifra grande de la tarjeta y la pregunta del mostrador.
+   *
+   * ⚠️ **Sale de las filas, no de `reservation.paymentSummary`.** Esa copia se
+   * queda vieja y **responde `0` en vez de fallar**, así que una reserva con
+   * cargos sin cobrar decía «0,00 €» tres líneas encima de los 145 € que se
+   * debían.
+   */
+  get moneyPending(): number {
+    return roundMoney(this.paymentGroups.reduce((t, g) => t + g.pending, 0));
+  }
+
+  /** El bloque de la fianza, que es el único que se explica aparte. */
+  get depositGroup(): PaymentGroup | undefined {
+    return this.paymentGroups.find((g) => g.key === 'deposit');
+  }
+
+  /**
+   * La fianza que todavía está en depósito.
+   *
+   * ⚠️ **Se deriva de `payments` con `collectedTotalsOf()`**, que es la misma
+   * cuenta que topa la devolución en el servicio. Enseñar aquí una cifra y
+   * toparlo allí con otra es cómo se acaba ofreciendo devolver un dinero que no
+   * se puede devolver.
+   */
+  get depositHeld(): number {
+    return collectedTotalsOf(this.payments).depositHeld;
+  }
+
+  /** Cuánto de lo pendiente es fianza: dinero que el cliente recupera. */
+  get pendingIsDeposit(): number {
+    return this.depositGroup?.pending || 0;
+  }
+
+  /** El rótulo i18n de cada bloque. */
+  groupLabel(key: PaymentGroupKey): string {
+    return `reservations.money.groups.${key}`;
+  }
+
+  /**
+   * El tipo de cobro, **solo si añade algo** al concepto que ya se lee encima.
+   *
+   * ⚠️ **Salía repetido en casi todas las filas**: «Entrega a domicilio /
+   * Entrega a domicilio», «Fianza / Fianza», «Resto alquiler / Resto alquiler».
+   * La aplicación siembra el concepto con el mismo texto que el rótulo del tipo,
+   * así que la segunda línea no decía nada y alargaba la tarjeta por seis. Es
+   * exactamente lo que ya pasó en el recibo en PDF, y se arregló igual:
+   * comparando el texto ya traducido, no el campo.
+   *
+   * Ahora además el bloque de arriba dice la categoría, así que la línea solo
+   * aporta cuando el operador escribió un concepto propio («Rueda pinchada»
+   * dentro de CARGOS EXTRA).
+   */
+  paymentTypeIfUseful(payment: Payment): string {
+    const tipo = this.t(PAYMENT_TYPE_LABELS[payment.type], payment.type);
+    const concepto = payment.concept
+      ? this.translateService.translate(payment.concept)
+      : tipo;
+    return concepto.trim().toLowerCase() === tipo.trim().toLowerCase() ? '' : tipo;
+  }
+
+  /** El detalle del precio del alquiler: plegado, porque no se mira a diario. */
+  showPriceDetail = false;
+
+  /**
+   * Lo que falta por cobrar de una fila.
+   *
+   * ⚠️ **Se calcula, no se lee de `payment.pendingAmount`.** El subtotal del
+   * bloque lo deriva con `calculatePendingAmount()`, así que leer aquí un campo
+   * guardado es abrir la puerta a que la fila diga «faltan 30 €» y su bloque
+   * sume 10: justo la contradicción entre cifras que esta tarjeta viene a
+   * quitar.
+   */
+  pendingOf(payment: Payment): number {
+    return calculatePendingAmount(payment.amount || 0, payment.paidAmount || 0);
   }
 
   getDueDate(payment: Payment): Date | null {

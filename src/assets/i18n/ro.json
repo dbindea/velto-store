@@ -280,6 +280,7 @@
     "title": "Alege data",
     "previousMonth": "Luna anterioară",
     "nextMonth": "Luna următoare",
+    "clear": "Golește",
     "hours": "Ore",
     "minutes": "Minute",
     "today": "Azi",
@@ -868,13 +869,10 @@
     },
     "subtitle": "Gestionează plăți și garanții",
     "summary": {
-      "depositHeld": "Garanție depusă",
-      "extraChargesTotal": "Taxe extra",
-      "incomeTotal": "Încasat (fără garanție)",
+      "collectedShort": "încasați",
+      "missingShort": "lipsesc",
       "rentalTotal": "Total închiriere",
-      "title": "Rezumat",
-      "totalRental": "Total închiriere",
-      "extraChargesPending": "De încasat"
+      "totalRental": "Total închiriere"
     },
     "title": "Plăți",
     "types": {
@@ -1020,6 +1018,13 @@
       "pendingSignature": "Așteaptă semnare",
       "signed": "Semnat"
     },
+    "delivery": {
+      "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
+      "locationMismatch": "Ai pus un supliment la domiciliu, iar locul este tot biroul: contractul le va tipări pe amândouă. Schimbă locul dacă mașina nu pleacă de acolo.",
+      "pickupFee": "Livrare la adresă",
+      "returnFee": "Ridicare de la adresă",
+      "total": "Serviciu la domiciliu"
+    },
     "deposit": {
       "retained": "Reținută",
       "returned": "Returnată",
@@ -1140,12 +1145,14 @@
       "notes": "Note",
       "pickupDate": "Data preluării",
       "pickupLocation": "Locație preluare",
-      "pickupTime": "Ora preluării",
       "returnDate": "Data returnării",
       "returnLocation": "Locație returnare",
-      "returnTime": "Ora returnării",
       "totalDays": "zile",
       "totalDay": "zi"
+    },
+    "initialPayment": {
+      "waived": "Nu se solicită",
+      "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
     },
     "list": {
       "empty": "Nu există rezervări",
@@ -1153,6 +1160,23 @@
     },
     "messages": {
       "invalidDates": "Data returnării trebuie să fie după data preluării"
+    },
+    "money": {
+      "title": "Bani",
+      "pending": "De încasat",
+      "collected": "Deja achitat",
+      "required": "Total rezervare",
+      "pendingIncludesDeposit": "Din care garanție:",
+      "depositHeldHint": "În depozit, se returnează clientului:",
+      "priceDetail": "Detalierea prețului închirierii",
+      "noDeposit": "Fără garanție",
+      "groups": {
+        "rental": "Închiriere",
+        "services": "Livrare și ridicare",
+        "extras": "Taxe suplimentare",
+        "deposit": "Garanție",
+        "other": "Alte încasări"
+      }
     },
     "new": "Rezervare nouă",
     "notes": {
@@ -1236,18 +1260,7 @@
       "skippedByException": "Omis prin excepție",
       "title": "Progresul rezervării"
     },
-    "title": "Rezervări",
-    "initialPayment": {
-      "waived": "Nu se solicită",
-      "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
-    },
-    "delivery": {
-      "hint": "Supliment pentru livrarea și ridicarea mașinii în afara zonei de livrare gratuită. Sumă fără TVA; lasă gol dacă nu se percepe.",
-        "locationMismatch": "Ai pus un supliment la domiciliu, iar locul este tot biroul: contractul le va tipări pe amândouă. Schimbă locul dacă mașina nu pleacă de acolo.",
-      "pickupFee": "Livrare la adresă",
-      "returnFee": "Ridicare de la adresă",
-      "total": "Serviciu la domiciliu"
-    }
+    "title": "Rezervări"
   },
   "search": {
     "close": "Închide",

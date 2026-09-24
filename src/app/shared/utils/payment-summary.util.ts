@@ -37,7 +37,7 @@ export function calculatePaymentStatus(amount: number, paidAmount: number): Paym
 }
 
 /** Rental money proper: the signal, the balance, or a single full payment. */
-const RENTAL_TYPES: PaymentType[] = ['initial_payment', 'remaining_payment', 'rental_payment'];
+export const RENTAL_TYPES: PaymentType[] = ['initial_payment', 'remaining_payment', 'rental_payment'];
 
 /**
  * Servicios pactados **al reservar** y facturados aparte del alquiler.
