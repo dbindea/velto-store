@@ -33,7 +33,8 @@ import { PAGINA } from '@shared/utils/pagination.util';
 import {
   WorkflowContext,
   canStartPickup as assertCanStartPickup,
-  canStartReturn as assertCanStartReturn
+  canStartReturn as assertCanStartReturn,
+  canWithException
 } from '@shared/utils/reservation-workflow.util';
 import { roundMoney, distributeRetentionAcrossCharges } from '@shared/utils/payment-summary.util';
 import {
@@ -211,11 +212,24 @@ export class InspectionService {
       this.contractService.getContractByReservation(reservationId).pipe(first())
     );
     const pickupInspection = existing || null;
-    const decision = assertCanStartPickup({
-      reservation,
-      pickupInspection,
-      contract
-    } as WorkflowContext);
+    const ctx = { reservation, pickupInspection, contract } as WorkflowContext;
+    /**
+     * ⚠️ **Pasa por `canWithException`, y sin eso «Saltar este paso» no servía
+     * de nada.** La pantalla resuelve el guard honrando las excepciones
+     * documentadas y habilita el botón; aquí se volvía a preguntar **a secas**,
+     * así que la operación fallaba igual. El resultado era el peor de los dos
+     * mundos: la excepción quedaba escrita en la reserva —con su motivo, su
+     * autor y su fecha, para siempre— y la entrega no se hacía.
+     *
+     * El propio util lo dice en su comentario: «Service-layer callers can use
+     * this to honour `workflowExceptions`». No lo hacía nadie.
+     *
+     * ⚠️ **Y solo vale para el guard del workflow.** La comprobación de ITV y
+     * seguro de más abajo sigue sin admitir excepción a propósito: saltarse un
+     * paso es un atajo operativo, y entregar un coche sin papeles es circular
+     * ilegalmente. El motivo largo está escrito ahí.
+     */
+    const decision = canWithException(assertCanStartPickup(ctx), ctx, 'startPickup');
     if (!decision.ok) {
       throw new Error(decision.reason);
     }
@@ -330,11 +344,15 @@ export class InspectionService {
     // Workflow guard: return only allowed after a completed pickup.
     const existing = await this.getInspectionByReservationAndType(reservationId, 'return');
     const pickup = await this.getInspectionByReservationAndType(reservationId, 'pickup');
-    const decision = assertCanStartReturn({
+    // Mismo caso que la entrega: la pantalla ofrece «Saltar este paso» para
+    // `startReturn`, así que aquí hay que honrar la excepción o el botón
+    // escribe el motivo en la reserva y la operación falla igual.
+    const ctx = {
       reservation,
       pickupInspection: pickup || null,
       returnInspection: existing || null
-    } as WorkflowContext);
+    } as WorkflowContext;
+    const decision = canWithException(assertCanStartReturn(ctx), ctx, 'startReturn');
     if (!decision.ok) {
       throw new Error(decision.reason);
     }
