@@ -849,7 +849,16 @@ export class PaymentService {
   }
 
   /**
-   * Retain part of the deposit.
+   * Retener parte de la fianza para cubrir cargos.
+   *
+   * ⚠️ **No tenía tope, y es la mitad que faltaba de la comprobación.**
+   * `depositAvailable()` se documenta como «el techo de las dos operaciones a la
+   * vez», pero solo lo preguntaba `refundDeposit`: aquí se escribía el importe
+   * que llegara, así que se podía retener más fianza de la que el cliente
+   * depositó —cobrarle algo que no dejó— o devolver el total y retener el total.
+   * El descuadre no sale por ningún informe: una retención no es ingreso nuevo,
+   * es cómo se pagaron los cargos. Añadido el 24 de septiembre de 2026, junto
+   * con el fallo que dejaba el disponible en 0 para todo el mundo.
    */
   async retainDeposit(
     reservationId: string,
@@ -858,6 +867,9 @@ export class PaymentService {
   ): Promise<string> {
     const reservation = await this.getReservationData(reservationId);
     if (!reservation) throw new Error('Reservation not found');
+
+    const problema = depositMovementProblem(amount, await this.depositAvailableFor(reservationId));
+    if (problema) throw new Error(problema);
 
     return this.createManualPayment({
       reservationId,
