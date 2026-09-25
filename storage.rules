@@ -1,87 +1,163 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to check if user is authenticated and authorized
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Check authorization via Firestore lookup (storage rules can read Firestore)
+    /**
+     * ⚠️ **AUTENTICADO NO ES AUTORIZADO, y aquí lo fue hasta el 24 de septiembre
+     * de 2026.** `isAuthorized()` devolvía literalmente `isAuthenticated()` —o
+     * sea `request.auth != null`— y ni siquiera se llamaba: las ocho carpetas
+     * comprobaban `isAuthenticated()` directamente, con el comentario «only
+     * authorized users» encima.
+     *
+     * Lo que eso significaba: la API key del proyecto viaja en el bundle y
+     * Google sign-in está abierto, así que **cualquier cuenta de Google del
+     * mundo** podía completar el login y leer, conociendo la ruta, el DNI y el
+     * carné de los clientes, los contratos firmados, las firmas manuscritas, los
+     * partes de inspección y las facturas. La aplicación le negaba la pantalla
+     * —el guard lee `authorizedUsers`—, pero el **token era válido** y Storage no
+     * miraba nada más.
+     *
+     * ⚠️ **Y NO se arregla consultando Firestore desde aquí, que es lo primero
+     * que uno intenta.** Las reglas de Storage **no pueden leer Firestore**. Lo
+     * traicionero es que `firestore.get()` **pasa el validador sin un solo
+     * error** y luego deniega siempre en ejecución: medido contra el bucket real
+     * aislando cada condición, `auth`, `token.email` y `.lower()` daban 404 —la
+     * regla pasa— y las tres que tocaban Firestore, 403. **Una regla que valida
+     * no es una regla que funciona**, y creerlo costó desplegar una versión que
+     * dejaba fuera a la propia aplicación.
+     *
+     * La solución es el **claim del token**, que sí se lee aquí: el backend
+     * comprueba `authorizedUsers` —que sigue siendo la única fuente de verdad— y
+     * sella el resultado. Lo ponen `syncAuthClaims` al entrar y
+     * `onAuthorizedUserChanged` cuando la ficha cambia; la nota larga está en
+     * `functions/src/auth-claims.ts`.
+     */
     function isAuthorized() {
-      return isAuthenticated();
+      return request.auth != null && request.auth.token.velto == true;
     }
 
-    // Vehicles photos - only authorized users
+    /**
+     * ⚠️ **El rol también viaja en el token, y por eso tiene su propia fecha de
+     * caducidad.** Un token dura una hora, así que degradar a alguien no surte
+     * efecto aquí hasta que el suyo caduca — `onAuthorizedUserChanged` revoca
+     * las sesiones precisamente para recortar esa ventana. Donde el rol tiene
+     * que ser exacto al instante es en `firestore.rules`, que sí lee la ficha
+     * viva en cada petición.
+     */
+    function isAdmin() {
+      return isAuthorized() && request.auth.token.role == 'admin';
+    }
+
+    /**
+     * ⚠️ **Y esto NO es la única puerta.** Los ficheros se sirven con
+     * `getDownloadURL()`, que devuelve una URL con `?token=` — y esa URL **se
+     * salta estas reglas**: quien la tenga entra sin autenticarse siquiera. Lo
+     * que se cierra aquí es la entrada «cuenta cualquiera + ruta conocida», que
+     * estaba abierta de par en par; lo que no se cierra es una URL filtrada, ni
+     * los tokens que quedaron vivos de ficheros cuyas fichas ya se borraron.
+     * Cerrar esa segunda vía es servir los privados con enlaces firmados de
+     * corta vida desde una function, y está sin hacer.
+     */
+
+    // ---- Lo que ve cualquiera que trabaje aquí -----------------------------
+
+    // Fotos de la flota, para uso interno.
     match /vehicles/{vehicleId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAuthorized();
     }
 
-    // Clients documents - only authorized users
+    // DNI y carné de conducir de los clientes.
     match /clients/{clientId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAuthorized();
     }
 
-    // Contracts - only authorized users.
-    // Path convention: contracts/{reservationId}/{file}
-    // The signing page does NOT access Storage directly; the backend
-    // generates short-lived signed URLs when needed.
+    /**
+     * Contratos. Ruta: `contracts/{reservationId}/{fichero}`.
+     *
+     * La pantalla de firma **no toca Storage**: el backend le sirve lo que
+     * necesita, así que aquí no hace falta ninguna excepción pública.
+     */
     match /contracts/{reservationId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAuthorized();
     }
 
-    // Inspections - only authorized users
+    // Partes de entrega y devolución, con sus fotografías — que son la prueba
+    // que sostiene un cargo por daños.
     match /inspections/{inspectionId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAuthorized();
     }
 
-    // Vehicle maintenance documents (invoices, photos) - only
-    // authorized users.  Path convention:
-    //   vehicle-maintenance/{vehicleId}/{maintenanceId}/{file}
+    // Facturas y fotos de mantenimiento.
+    // Ruta: `vehicle-maintenance/{vehicleId}/{maintenanceId}/{fichero}`.
     match /vehicle-maintenance/{vehicleId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAuthorized();
     }
+
+    // ---- Lo que solo ve un administrador ----------------------------------
 
     /**
      * Facturas y tickets de gastos. Ruta: `expenses/{expenseId}/{ts}-{fichero}`.
      *
-     * ⚠️ **Faltaba desde que se construyó el módulo** (4 de septiembre de 2026).
-     * Sin esta regla la ruta caía en el «default deny» del final y adjuntar una
-     * factura fallaba con `storage/unauthorized`. No se notó al construir Gastos
-     * porque la subida quedó como lo único sin probar; salió al recorrer el
-     * ciclo completo.
+     * ⚠️ **De administrador, igual que la colección en `firestore.rules`.** Los
+     * gastos son la mitad que falta para reconstruir la cuenta de resultados:
+     * sin ellos hay ingresos, no beneficio. Dejar el PDF abierto a un empleado
+     * contaría por la puerta de atrás lo que la regla de Firestore se cuida de
+     * no contar.
+     *
+     * ⚠️ La regla en sí faltó hasta el 4 de septiembre de 2026 y adjuntar una
+     * factura fallaba con `storage/unauthorized`, porque la ruta caía en el deny
+     * del final. La carpeta nueva hay que declararla: no basta con escribir el
+     * código que sube.
      */
     match /expenses/{expenseId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAdmin();
     }
 
     /**
      * Las facturas que manda el propietario de un coche cedido.
      *
-     * ⚠️ **Sin esta regla el fichero no sube**, y la pantalla no dice por qué:
-     * el `match` de abajo lo deniega todo. Es el mismo descuido que tuvo la
-     * factura de un gasto y que solo salió al recorrer el ciclo completo — la
-     * carpeta nueva hay que declararla, no basta con escribir el código que
-     * sube.
-     *
-     * ⚠️ Storage **no sabe qué rol tiene quien pide**: aquí no se puede repetir
-     * el `callerIsAdmin()` de Firestore, porque eso exige leer `authorizedUsers`
-     * y estas reglas no leen Firestore. Lo que de verdad protege el dato es que
-     * el documento de la factura —con el importe, el número y a quién— sea de
-     * administrador; el enlace al PDF solo lo tiene quien pueda leer ese
-     * documento.
+     * ⚠️ **Aquí ponía que Storage «no sabe qué rol tiene quien pide» y que por
+     * eso lo que protegía el dato era que el documento de Firestore fuese de
+     * administrador.** Acertaba en el diagnóstico —Firestore no se puede
+     * consultar desde aquí— y se quedaba corto en la conclusión: el rol sí se
+     * puede saber, viajando dentro del token.
      */
     match /collaborator-invoices/{invoiceId}/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read, write: if isAdmin();
     }
 
-    // Default deny
+    // ---- Lo único público -------------------------------------------------
+
+    /**
+     * Fotos de la flota para la web pública. Ruta:
+     * `public-vehicles/{vehicleId}/{fichero}`.
+     *
+     * ⚠️ **Carpeta aparte, y ese es todo el diseño.** Una foto que enseña la web
+     * es pública de verdad: no hay token que proteger ni enlace que se pueda
+     * filtrar, porque no hay nada que ocultar en ella. Lo que no puede pasar es
+     * que para enseñar un coche haya que abrir un resquicio en `vehicles/`,
+     * donde esas fotos conviven con las de un parte de daños.
+     *
+     * Por eso la separación es física y no una bandera dentro del documento:
+     * aquí **solo** entra lo que alguien ha decidido publicar, y todo lo demás
+     * sigue cerrado sin excepciones que recordar.
+     *
+     * ⚠️ **Escribe un administrador, no cualquiera que trabaje aquí.** Publicar
+     * una foto es sacarla a internet para siempre —queda en cachés y en
+     * buscadores—, y eso no es lo mismo que subir una foto a una ficha interna.
+     */
+    match /public-vehicles/{vehicleId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---- Y lo que no esté nombrado arriba, no existe ----------------------
+
+    /**
+     * ⚠️ **El deny final es lo que hace que una carpeta nueva nazca cerrada.**
+     * También es lo que hace que una carpeta nueva **no funcione** hasta que se
+     * declare, y el error que da no dice eso: la pantalla falla con
+     * `storage/unauthorized` y parece un problema de sesión.
+     */
     match /{allPaths=**} {
       allow read, write: if false;
     }

@@ -65,6 +65,56 @@ acreditar la representación de la sociedad ante la FNMT, y eso lleva días.
 
 ---
 
+## 0 bis. ⚠️ LAS FOTOS Y LOS DOCUMENTOS NO SE VEN
+
+Si la aplicación entra y funciona pero **los ficheros no cargan** —fotos de
+coches en blanco, el DNI de un cliente que no abre, un contrato que no se
+descarga— y el error es `storage/unauthorized`, lo que falla no es la sesión: es
+el **sello del token**.
+
+Desde el 24 de septiembre de 2026, las reglas de Storage no dejan pasar a quien
+«está autenticado» a secas: exigen un claim (`velto: true`) que el backend
+escribe dentro del token tras comprobar `authorizedUsers`. Lo ponen dos
+functions, en `functions/src/auth-claims.ts`:
+
+- `syncAuthClaims` — lo sella al entrar y al recargar.
+- `onAuthorizedUserChanged` — lo actualiza cuando cambia la ficha de alguien.
+
+**Lo primero que hay que probar es cerrar sesión y volver a entrar.** El sello se
+pide en cada arranque; si estaba sin poner, eso lo arregla.
+
+Si sigue sin verse nada para **todo el mundo**, lo más probable es que
+`syncAuthClaims` no esté desplegada o esté fallando. La salida, que se hace desde
+fuera y sin entrar en la aplicación:
+
+```bash
+firebase functions:list --project prod          # tiene que aparecer syncAuthClaims
+firebase functions:log --only syncAuthClaims --project prod
+```
+
+Y si hay que volver atrás del todo, se restauran las reglas de Storage
+anteriores, que solo pedían estar autenticado:
+
+```bash
+git show <commit-anterior>:storage.rules > storage.rules
+firebase deploy --only storage --project prod
+```
+
+⚠️ **Hay que saber lo que se reabre al hacerlo.** Con esas reglas viejas,
+cualquier cuenta de Google del mundo que complete el login —y puede, porque la
+API key va en el bundle— lee por la API REST el DNI y el carné de los clientes,
+los contratos firmados, las firmas manuscritas y los partes de inspección. No
+verá ninguna pantalla, pero su token vale. Es el estado en el que estuvo la
+aplicación hasta esa fecha: aceptable unas horas para poder trabajar, **no** como
+situación estable.
+
+⚠️ **Y lo contrario también:** si hay que **echar** a alguien ya, no basta con
+desactivarlo en Ajustes. Eso le quita el claim y revoca su sesión, pero un token
+ya emitido dura hasta una hora. Para cortar en seco, desde la consola de Firebase
+Authentication se deshabilita la cuenta.
+
+---
+
 ## 1. Si algo va mal: el orden
 
 1. **¿Se puede seguir alquilando?** → § 3. Eso primero: el coche está en la

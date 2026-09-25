@@ -1027,6 +1027,79 @@ motivo obligatorio y lo guarda con autor y fecha en `workflowExceptions[]`. **No
 se añadió una nota nueva a propósito**: sería un segundo mecanismo para la misma
 decisión, con su propio formato y su propia pantalla donde mirarlo.
 
+### Storage: autenticado NO es autorizado, y hubo que sellarlo en el token
+
+⚠️ **`storage.rules` protegía el DNI, el carné, los contratos firmados y las
+firmas con `request.auth != null`**, bajo un comentario que decía «only
+authorized users». La API key del proyecto viaja en el bundle y Google sign-in
+está abierto, así que **cualquier cuenta de Google del mundo** podía completar el
+login y leerlo todo por la API REST conociendo la ruta. La aplicación le negaba
+la pantalla —el guard lee `authorizedUsers`—, pero el token era válido. Corregido
+el 24 de septiembre de 2026.
+
+⚠️ **Y NO se arregla consultando Firestore desde las reglas, que es lo primero
+que uno intenta.** Las reglas de Storage **no pueden leer Firestore**. Lo
+traicionero es que `firestore.get()` **pasa el validador de Firebase sin un solo
+error** y luego deniega siempre en ejecución. Medido contra el bucket real
+aislando cada condición, con un objeto inexistente —404 significa que la regla
+pasa y 403 que deniega—:
+
+| condición | resultado |
+|---|---|
+| `request.auth != null` | 404 · pasa |
+| `request.auth.token.email != null` | 404 · pasa |
+| `email.lower() == '…'` | 404 · pasa |
+| `firestore.exists(…)` | **403 · falla** |
+| `firestore.exists(…)` con ruta literal | **403 · falla** |
+| `firestore.get(…).data.active` | **403 · falla** |
+
+**Una regla que valida no es una regla que funciona.** Creerlo costó desplegar
+una versión que dejaba fuera a la propia aplicación, y es el mismo patrón que ya
+enseñó la AEAT: un XML válido contra el esquema puede rechazarse por lo que
+significa.
+
+**La solución es el claim del token**, que las reglas sí leen. Lo escribe el
+backend en `functions/src/auth-claims.ts` tras comprobar `authorizedUsers`, que
+sigue siendo la única fuente de verdad:
+
+- `syncAuthClaims` — callable, sella al que llama. **No recibe ningún parámetro
+  a propósito**: aceptar un email lo convertiría en «ponle el sello a quien yo
+  diga», que es justo la llave que guarda. Lo llama `readAuthorization()` en el
+  frontend, que es el embudo por el que pasan **las dos entradas** —entrar con
+  Google y recargar con la sesión puesta—, así que una cuenta que ya estuviera
+  dentro se sella sola al recargar.
+- `onAuthorizedUserChanged` — trigger sobre `authorizedUsers`. Sin él, quitarle
+  el acceso a alguien no le quitaría nada: su claim seguiría puesto hasta que
+  volviera a entrar, que es justo lo que no va a hacer.
+
+⚠️ **El precio: el token dura una hora.** Degradar o echar a alguien no surte
+efecto en Storage hasta que el suyo caduca — por eso el trigger **revoca las
+sesiones** además de quitar el claim. Es el mismo problema que ya obligó a leer
+el rol de Firestore y no del token en las devoluciones a tarjeta. Donde el rol
+tiene que ser exacto al instante es en `firestore.rules`, que sí lee la ficha
+viva en cada petición.
+
+⚠️ **Esto NO es la única puerta, y conviene no creerlo.** Los ficheros se sirven
+con `getDownloadURL()`, que devuelve una URL con `?token=` — y esa URL **se salta
+las reglas**: quien la tenga entra sin autenticarse siquiera. Lo que se ha
+cerrado es «cuenta cualquiera + ruta conocida»; lo que sigue abierto es una URL
+filtrada, y los tokens que quedaron vivos de ficheros cuyas fichas ya se
+borraron. Cerrarlo es servir los privados con enlaces firmados de corta vida
+desde una function, y está sin hacer.
+
+⚠️ **Se descartó `beforeSignIn`, que sería mejor.** Cerraría la puerta antes de
+emitir el token y protegería también cualquier regla futura escrita mirando solo
+`auth != null`, pero exige activar **Identity Platform (GCIP)** en la consola: el
+despliegue falla con `OPERATION_NOT_ALLOWED: Blocking Functions may only be
+configured for GCIP projects`. Si algún día se activa, ese es el sitio al que
+volver.
+
+⚠️ **Y las reglas tardan en propagarse.** Medir justo después de
+`firebase deploy --only storage` devuelve el comportamiento **anterior** y parece
+un fallo del CSS de turno: en la misma sesión salió primero que
+`public-vehicles/` denegaba y, doce segundos después, que pasaba. Espera antes de
+creerte una medición de reglas recién desplegadas.
+
 ### `permissions.util.ts` es la única autoridad sobre quién puede qué
 
 Rol → permisos, en una tabla. El menú y los guards de ruta preguntan ahí; un
@@ -1724,12 +1797,16 @@ una — `firebase functions:list` no la da):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| desarrollo | 27 | — |
-| producción | **22** | `sendVerifactuRecords`, `sweepVerifactuRecords`, `getVerifactuStatus`, `retryVerifactuRecord` y `checkVerifactuConnection` |
+| desarrollo | **29** | — |
+| producción | **22** | las cinco de la AEAT, más `syncAuthClaims` y `onAuthorizedUserChanged` |
 
-⚠️ **Lo que falta en producción falta a propósito**: son las cinco que **hablan
-con la Agencia**, y van con el guion del 1 de enero
-([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis).
+⚠️ **Lo que falta en producción falta por dos motivos distintos, y no conviene
+mezclarlos.** Las cinco de la AEAT faltan **a propósito**, con el guion del 1 de
+enero ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis). Las dos de los
+claims faltan porque **están pendientes de desplegar**, y tienen un orden que hay
+que respetar: primero las functions, luego el frontend que llama a
+`syncAuthClaims`, y **las reglas de Storage al final**. Al revés, nadie tendría
+el sello todavía y la aplicación se quedaría sin poder leer un solo fichero.
 
 ⚠️ **`issueInvoice` e `issueComplianceDeclaration` YA están allí** desde el 17 de
 septiembre de 2026: producción emite facturas —y ya tiene su declaración
