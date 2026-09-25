@@ -309,7 +309,19 @@ img, svg { display: block; max-width: 100%; }
  * tres tiene que ser idéntica. El marcado lo compone `lib/tarjeta.ts`.
  */
 
-.coche__link { display: block; color: inherit; }
+/*
+ * ⚠️ **La tarjeta ocupa el alto de su celda y el botón se va al fondo.** Sin
+ * esto, cada tarjeta mide lo que mida su contenido —un nombre que parte en dos
+ * líneas, una lista de características que salta de línea— y los botones de una
+ * misma fila salen a alturas distintas. Se vio con los cuatro coches de
+ * desarrollo el 25 de septiembre de 2026: el 3008 y el Corolla bajaban su botón
+ * un renglón respecto a los vecinos.
+ *
+ * El empujón lo da `margin-top: auto` sobre el precio, que arrastra consigo el
+ * detalle y el botón: así el bloque de dinero queda pegado abajo en todas.
+ */
+.coche { height: 100%; }
+.coche__link { display: flex; flex-direction: column; height: 100%; color: inherit; }
 .coche__link:hover { text-decoration: none; }
 
 .coche__foto {
@@ -321,11 +333,21 @@ img, svg { display: block; max-width: 100%; }
 }
 
 /*
- * `contain`, no `cover`: las fotos salen del móvil en vertical y recortar deja
- * media carrocería fuera, que es lo único que hay que ver. Misma decisión que
- * en la ficha del backoffice (M-6).
+ * ⚠️ **`cover`, y aquí ponía `contain` hasta el 25 de septiembre de 2026.** Es
+ * una reversión y por eso se explica.
+ *
+ * El argumento de entonces era que una foto vertical de móvil, recortada, deja
+ * media carrocería fuera. Lo que no se miró es qué hace `contain` con esa misma
+ * foto: `publishVehiclePhoto` redimensiona a 1600 **por el lado largo**, así que
+ * una foto vertical sigue siendo vertical y en una caja 4/3 sale como una tira
+ * estrecha entre dos franjas grises enormes. Y una foto apaisada deja franjas
+ * arriba y abajo. O sea que el escaparate salía con cada coche de un tamaño.
+ *
+ * Recortar es seguro porque **la ficha del coche enseña la foto entera**, sin
+ * recorte y a su altura natural (`.ficha__fotos img`): lo que aquí se corta,
+ * allí se ve. Es la tarjeta la que necesita una rejilla uniforme.
  */
-.coche__foto img { width: 100%; height: 100%; object-fit: contain; }
+.coche__foto img { width: 100%; height: 100%; object-fit: cover; }
 
 .coche__sinfoto {
   display: grid;
@@ -335,7 +357,12 @@ img, svg { display: block; max-width: 100%; }
   font-size: var(--fs-caption);
 }
 
-.coche__cuerpo { padding: var(--sp-5) var(--sp-6) var(--sp-6); }
+.coche__cuerpo {
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
 .coche__nombre { margin: var(--sp-2) 0 var(--sp-4); }
 
 .coche__specs {
@@ -351,7 +378,8 @@ img, svg { display: block; max-width: 100%; }
 .coche__specs li { display: inline-flex; align-items: center; gap: var(--sp-2); }
 .coche__specs svg { color: var(--text-3); }
 
-.coche__precio { margin: 0; }
+/* El `auto` es lo que pega el bloque de dinero al fondo de la tarjeta. */
+.coche__precio { margin: auto 0 0; }
 .coche__precio strong { font-size: var(--fs-price); font-weight: var(--fw-bold); letter-spacing: var(--ls-tight); }
 .coche__precio span { color: var(--text-2); font-size: var(--fs-small); }
 .coche__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }

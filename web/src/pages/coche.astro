@@ -60,7 +60,7 @@ import { EMPRESA } from '../lib/empresa';
 
   function pinta(v: Awaited<ReturnType<typeof ficha>>['vehicle']): void {
     const nombre = nombreCoche(v);
-    document.title = `${nombre}${nombre} | Velto`;
+    document.title = `${nombre} | Velto`;
 
     const fotos = v.photos.length
       ? v.photos

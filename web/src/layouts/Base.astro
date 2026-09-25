@@ -238,11 +238,36 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
        * ⚠️ En móvil la navegación se RECOLOCA, no se esconde tras un botón.
        * «Flota» y «Contacto» son la mitad de las visitas que llegan con el
        * pulgar, y lo que no se ve no se pulsa.
+       *
+       * ⚠️ **Y eso exige que la cabecera quepa en DOS filas: marca + acciones
+       * arriba, navegación debajo.** Salía en tres y midiendo 191 px —casi un
+       * cuarto de la pantalla de un móvil antes de empezar a leer—, por dos
+       * motivos distintos que se medieron el 25 de septiembre de 2026 en un
+       * ancho de 375 px:
+       *
+       * 1. **Los enlaces partían en dos líneas.** `overflow-x: auto` pone una
+       *    tira deslizable, pero sin `white-space: nowrap` el navegador
+       *    prefiere partir la palabra antes que desbordar: «Entrega a
+       *    domicilio» medía 73 px —el ancho de «Entrega a»— y el nav ocupaba
+       *    60 px de alto. Con `nowrap` los cuatro suman 366 px, no caben en
+       *    320, y **entonces sí** aparece el deslizamiento que se pretendía.
+       * 2. **La marca y las acciones no cabían juntas por 19 px**: 132 + 12 +
+       *    203 = 347 para 328 de contenido. Se recuperan apretando el hueco
+       *    entre acciones y el relleno del botón, **sin tocar la altura**: los
+       *    44 px del botón de tema y los 48 del de reservar son zona táctil y
+       *    ahí no se recorta.
        */
       @media (max-width: 900px) {
         .cab__fila { flex-wrap: wrap; gap: var(--sp-3); padding-block: var(--sp-3); }
         .cab__nav { order: 3; width: 100%; margin: 0; overflow-x: auto; gap: var(--sp-5); }
-        .cab__acciones { margin-left: auto; }
+        /* Sin esto la tira deslizable no existe: los enlaces se parten. */
+        .cab__nav a { white-space: nowrap; flex: none; }
+        /* La barra de deslizamiento sobra: es una tira de cuatro enlaces. */
+        .cab__nav { scrollbar-width: none; }
+        .cab__nav::-webkit-scrollbar { display: none; }
+
+        .cab__acciones { margin-left: auto; gap: var(--sp-2); }
+        .cab__acciones .btn { padding-inline: var(--sp-4); }
         .cab__tel span { display: none; }
       }
 
