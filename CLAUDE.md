@@ -119,6 +119,18 @@ el contenedor:
 cd functions && node -e "require('./lib/index.js')"
 ```
 
+⚠️ **Ojo con lo que esa comprobación NO dice: cargar un módulo no es llamarlo.**
+Sirve para lo que sirve —descartar que el bundle esté roto— y da falsa confianza
+para todo lo demás. El 25 de septiembre de 2026, `import sharp from 'sharp'`
+pasó el typecheck, pasó el build, pasó los tests, **cargó sin un error con este
+mismo comando** y reventó en producción con `(0, sharp_1.default) is not a
+function`. El `package.json` de sharp declara como tipos la variante **ESM**
+(`export default`) mientras su `main` es la **CommonJS** (`export =`), y la
+resolución clásica de `functions/tsconfig.json` ignora el campo `exports` que
+las emparejaría: el compilador ve un módulo y Node carga otro. La salida fue un
+`require` tipado en el sitio, y **un test que LLAMA a la función** en vez de
+comprobar que se importa.
+
 Si eso imprime sin error, el código está bien y lo que falta es cuota: reintenta
 **por tandas de dos o tres** con `firebase deploy --only functions:a,functions:b`.
 Pasó el 7 de septiembre de 2026, y se perdió un rato buscando un error de
@@ -1142,6 +1154,63 @@ volver.
 un fallo del CSS de turno: en la misma sesión salió primero que
 `public-vehicles/` denegaba y, doce segundos después, que pasaba. Espera antes de
 creerte una medición de reglas recién desplegadas.
+
+### La web pública: Firestore no se abre, se pregunta a una function
+
+La web (`veltorent.com`, Astro, aún por construir) **no lee Firestore**. Pide a
+tres endpoints públicos —`/api/fleet`, `/api/vehicle`, `/api/availability`— que
+devuelven una **lista blanca** de campos. Abrir `allow read: if
+resource.data.publicEnabled` habría sido una línea y habría publicado la póliza
+del seguro, el bastidor y el porcentaje que se lleva el dueño de un coche cedido.
+
+⚠️ **`public/mapper.ts` es el único sitio por el que algo sale a internet, y
+está escrito para que salir cueste trabajo.** Cada campo se nombra uno a uno:
+nada de `{ ...vehicle }`, nada de `delete`, nada de `Omit`. Es verboso a
+propósito — con un `Omit`, un campo nuevo en el modelo del coche se publicaría
+solo. De los 37 campos salen 16, y cinco se excluyen aunque parezcan inocuos:
+`plateNumber` (clonado de placas, y en un coche cedido señala el vehículo de un
+particular), `status` (el estado es de hoy, la disponibilidad es de un rango),
+`currentKm` (raspado a diario da la rotación de la flota), `hasGpsTracker` (no se
+puede publicar **ni con valor `true`**: la ausencia en los demás sería la lista
+de la compra de un ladrón) e `images`.
+
+⚠️ **`images` es el caso que hay que entender, porque es el que vuelve.** Sus URL
+apuntan a la carpeta privada `vehicles/`, llevan un token que se salta
+`storage.rules`, **y el nombre del fichero empieza por la matrícula**
+(`4466LKK_mfk3n1.jpg`) porque `vehiclePhotoName()` la pone ahí a propósito. Así
+que publicar las fotos publicaría el campo que la lista blanca excluye, por una
+vía que nadie auditaría. Lo que sale es `publicPhotos`, que vive en
+`public-vehicles/{id}/` y se llama `1_ab12cd.jpg`.
+
+⚠️ **Y una foto se RECODIFICA al publicar; nunca se copia.** `isResizableImage()`
+deja **HEIC fuera a propósito** —Safari lo decodifica y Chrome no—, así que un
+original de iPhone se subió **intacto, con su EXIF y sus coordenadas GPS
+dentro**. En una carpeta privada eso era inocuo y está escrito así en su
+comentario; en una con `allow read: if true` publica dónde estaba el coche.
+`publishVehiclePhoto` lo pasa por `sharp`, que descarta los metadatos, y **lo que
+no puede leer lo rechaza** en vez de pasar el original — ese camino es justo el
+del HEIC. Comprobado de punta a punta: 226 bytes de EXIF con GPS a la entrada,
+ninguno a la salida.
+
+⚠️ **`publicPhotos` guarda el NOMBRE del fichero, no la URL.** Con una URL,
+escribir `publicPhotos: vehicle.images` **compila sin un solo error**
+—TypeScript solo comprueba propiedades de más en objetos literales— y publicaría
+la galería privada entera. Es el mismo agujero de tipos que dejó la fianza sin
+poder devolverse.
+
+⚠️ **Y la aritmética pública se aparta de la del backoffice en tres sitios, a
+propósito** (`public/core.ts`, con tests): `toDate()` devuelve **null** ante una
+fecha ilegible en vez de la de hoy —el respaldo de la app haría que una reserva
+dejara de bloquear y se ofreciera un coche alquilado—; un estado de reserva
+**desconocido bloquea**, porque la lista está invertida y una prórroga futura no
+puede colarse; y un coche **sin tarifa para esos días no se ofrece** en vez de
+salir a 0 €. Las tres siguen la misma regla: en una pantalla con un operador
+delante, pasarse de prudente se ve y se corrige; en una web, ofrecer de más es
+una reserva que alguien atenderá.
+
+⚠️ **La ventana de disponibilidad se ensancha a días completos.** Sin eso,
+estrechando la consulta hora a hora se puede averiguar el instante exacto en que
+un coche se libera, o sea a qué hora devuelve un cliente concreto.
 
 ### `permissions.util.ts` es la única autoridad sobre quién puede qué
 

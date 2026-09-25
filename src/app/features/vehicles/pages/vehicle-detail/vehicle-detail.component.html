@@ -259,6 +259,28 @@
               @for (image of vehicle.images; track image.path) {
                 <div class="photo-item" (click)="openGalleryByUrl(image.url)">
                   <img [src]="image.url" alt="Vehicle photo" loading="lazy" decoding="async" />
+                  <!--
+                    Publicar una foto es SACARLA A INTERNET, así que se decide
+                    una a una y solo un administrador. En estas galerías hay
+                    fotos de estado —un golpe, el interior sucio— que no son de
+                    escaparate, y lo que sale de aquí queda en cachés y en
+                    buscadores aunque después se retire.
+                  -->
+                  @if (canPublishPhotos()) {
+                    <button
+                      class="photo-publish"
+                      type="button"
+                      [disabled]="publishing() === image.path"
+                      [attr.title]="'vehicles.photos.publish' | translate"
+                      (click)="publishPhoto(image, $event)"
+                    >
+                      @if (publishing() === image.path) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      } @else {
+                        <i class="pi pi-globe"></i>
+                      }
+                    </button>
+                  }
                 </div>
               }
             </div>
@@ -266,6 +288,44 @@
             <div class="no-photos">
               <i class="pi pi-image"></i>
               <p>{{ 'vehicles.noPhotos' | translate }}</p>
+            </div>
+          }
+
+          <!--
+            Las publicadas van APARTE y no mezcladas con un distintivo: son
+            ficheros distintos, en otra carpeta, recodificados y con otro
+            nombre. Enseñarlas como «la misma foto con una marca» invitaría a
+            creer que retirar una de arriba retira la de abajo.
+          -->
+          @if (canPublishPhotos()) {
+            <div class="public-photos">
+              <h3 class="subsection-title">{{ 'vehicles.photos.publicTitle' | translate }}</h3>
+              <p class="hint">{{ 'vehicles.photos.publicHint' | translate }}</p>
+
+              @if (publicPhotoUrls().length) {
+                <div class="photos-grid">
+                  @for (p of publicPhotoUrls(); track p.file) {
+                    <div class="photo-item">
+                      <img [src]="p.url" alt="" loading="lazy" decoding="async" />
+                      <button
+                        class="photo-unpublish"
+                        type="button"
+                        [disabled]="publishing() === p.file"
+                        [attr.title]="'vehicles.photos.unpublish' | translate"
+                        (click)="unpublishPhoto(p.file)"
+                      >
+                        @if (publishing() === p.file) {
+                          <i class="pi pi-spin pi-spinner"></i>
+                        } @else {
+                          <i class="pi pi-times"></i>
+                        }
+                      </button>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="empty-state">{{ 'vehicles.photos.noPublic' | translate }}</p>
+              }
             </div>
           }
         </div>

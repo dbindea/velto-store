@@ -1439,7 +1439,13 @@
       "pricingGap": "Days {from} to {to} are missing: a rental of that length would come out at €0",
       "pricingOpenNotLast": "Band “{rule}” has no maximum days, so “{next}” and the ones after it would never apply",
       "pricingLastNotOpen": "The last band “{rule}” has a maximum: a rental of {days} days or more would come out at €0. Leave it open-ended",
-      "pricingGapSingle": "Day {day} is missing: a rental of that length would come out at €0"
+      "pricingGapSingle": "Day {day} is missing: a rental of that length would come out at €0",
+      "publishBadVehicle": "Invalid vehicle",
+      "publishBadSource": "That photo does not belong to this vehicle",
+      "publishSourceMissing": "The photo no longer exists",
+      "publishTooLarge": "The image is too large to publish",
+      "publishTooMany": "There are already twelve published photos. Remove one before adding another.",
+      "publishUnreadable": "The image could not be read. Try another one or upload it again."
     },
     "features": {
       "airConditioning": "Air conditioning",
@@ -1498,10 +1504,20 @@
       "empty": "No photos yet",
       "imageAlt": "Vehicle photo",
       "next": "Next",
+      "noPublic": "No photos published yet.",
       "openGallery": "View gallery",
       "previous": "Previous",
+      "publicHint": "Only these appear on the website. They are re-encoded when published, so they keep neither the location nor the date of the original photo.",
+      "publicTitle": "Photos on the public website",
+      "publish": "Publish to the website",
+      "publishConfirmMessage": "It will be visible on the public website, with no sign-in required. Published content may stay in search engines even after it is removed.",
+      "publishConfirmTitle": "Publish this photo?",
+      "published": "Photo published to the website",
+      "publishFailed": "The photo could not be published",
       "saveFirst": "Save the vehicle first to upload photos",
       "thumbnail": "Thumbnail",
+      "unpublish": "Remove from the website",
+      "unpublishFailed": "The photo could not be removed",
       "uploadError": "The photo could not be uploaded"
     },
     "pricing": {

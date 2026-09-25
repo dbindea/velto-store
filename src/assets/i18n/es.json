@@ -1439,7 +1439,13 @@
       "pricingGap": "Faltan los días {from} a {to}: un alquiler de esa duración saldría a 0 €",
       "pricingOpenNotLast": "El tramo «{rule}» no tiene días máximos, así que «{next}» y los siguientes no se aplicarían nunca",
       "pricingLastNotOpen": "El último tramo «{rule}» tiene días máximos: un alquiler de {days} días o más saldría a 0 €. Déjalo sin máximo",
-      "pricingGapSingle": "Falta el día {day}: un alquiler de esa duración saldría a 0 €"
+      "pricingGapSingle": "Falta el día {day}: un alquiler de esa duración saldría a 0 €",
+      "publishBadVehicle": "Vehículo no válido",
+      "publishBadSource": "La foto no pertenece a este vehículo",
+      "publishSourceMissing": "La foto ya no existe",
+      "publishTooLarge": "La imagen es demasiado grande para publicarla",
+      "publishTooMany": "Ya hay doce fotos publicadas. Retira alguna antes de añadir otra.",
+      "publishUnreadable": "No se pudo leer la imagen. Prueba con otra o vuelve a subirla."
     },
     "features": {
       "airConditioning": "Aire acondicionado",
@@ -1498,10 +1504,20 @@
       "empty": "No hay fotos todavía",
       "imageAlt": "Foto del vehículo",
       "next": "Siguiente",
+      "noPublic": "Ninguna foto publicada todavía.",
       "openGallery": "Ver galería",
       "previous": "Anterior",
+      "publicHint": "Solo estas se ven en la web. Se recomprimen al publicarlas, así que no conservan la ubicación ni la fecha de la foto original.",
+      "publicTitle": "Fotos en la web pública",
+      "publish": "Publicar en la web",
+      "publishConfirmMessage": "Se verá en la web pública, sin necesidad de entrar. Lo que se publica puede quedar en buscadores aunque después se retire.",
+      "publishConfirmTitle": "¿Publicar esta foto?",
+      "published": "Foto publicada en la web",
+      "publishFailed": "No se pudo publicar la foto",
       "saveFirst": "Guarda primero el vehículo para poder subir fotos",
       "thumbnail": "Miniatura",
+      "unpublish": "Retirar de la web",
+      "unpublishFailed": "No se pudo retirar la foto",
       "uploadError": "No se ha podido subir la foto"
     },
     "pricing": {

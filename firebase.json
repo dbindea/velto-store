@@ -46,6 +46,27 @@
         }
       },
       {
+        "source": "/api/fleet",
+        "function": {
+          "functionId": "publicVehicles",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/api/vehicle",
+        "function": {
+          "functionId": "publicVehicleDetail",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/api/availability",
+        "function": {
+          "functionId": "checkPublicAvailability",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

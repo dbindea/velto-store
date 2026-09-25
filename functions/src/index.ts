@@ -116,3 +116,17 @@ export { sendDailyDigest, previewDailyDigest } from './alerts/sendDailyDigest';
  * «autorizado» en el único sitio donde significaba eso.
  */
 export { syncAuthClaims, onAuthorizedUserChanged } from './auth-claims';
+
+/**
+ * La API de la web pública. Tres endpoints de LECTURA, sin autenticación, y dos
+ * callables de administrador para publicar fotos.
+ *
+ * ⚠️ **Firestore sigue cerrado a cal y canto.** La web no lee `vehicles` ni
+ * ninguna otra colección: pregunta aquí y estas functions devuelven una **lista
+ * blanca** de campos —`public/mapper.ts`, que es el único sitio por el que algo
+ * puede salir a internet—. Abrir `allow read: if resource.data.publicEnabled`
+ * habría sido una línea y habría publicado la póliza del seguro, el bastidor y
+ * el porcentaje que se lleva el dueño de un coche cedido.
+ */
+export { publicVehicles, publicVehicleDetail, checkPublicAvailability } from './public/api';
+export { publishVehiclePhoto, unpublishVehiclePhoto } from './public/publishVehiclePhoto';

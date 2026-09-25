@@ -369,6 +369,55 @@
     object-fit: cover;
   }
 
+  // Los dos botones de la esquina: publicar en la web y retirar de ella.
+  //
+  // ⚠️ 44 px de zona pulsable y 16 de dibujo, como el aspa de los campos: lo
+  // que crece para el dedo es dónde se acierta, no el icono. Y van en esquinas
+  // OPUESTAS a propósito — una foto publicada se retira desde su propia
+  // tarjeta, no desde la de arriba, y confundir las dos acciones aquí saca algo
+  // a internet o lo quita sin querer.
+  .photo-publish,
+  .photo-unpublish {
+    position: absolute;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.55);
+
+    i {
+      font-size: 1rem;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+  }
+
+  .photo-publish {
+    right: 0;
+    border-bottom-left-radius: 12px;
+
+    &:hover:not(:disabled) {
+      background: var(--accent-color);
+    }
+  }
+
+  .photo-unpublish {
+    left: 0;
+    border-bottom-right-radius: 12px;
+
+    &:hover:not(:disabled) {
+      background: var(--danger-color);
+    }
+  }
+
   .main-badge {
     position: absolute;
     bottom: 0.5rem;
@@ -942,5 +991,28 @@
 
   i {
     font-size: 0.9rem;
+  }
+}
+
+// Las fotos del escaparate, separadas de la galería interna.
+//
+// ⚠️ Aparte y no mezcladas con un distintivo: son ficheros distintos, en otra
+// carpeta, recodificados y con otro nombre. Enseñarlas como «la misma foto con
+// una marca» invitaría a creer que retirar una de arriba retira la de abajo.
+.public-photos {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+
+  // El mismo rótulo de sección que usa el formulario del vehículo. Se declara
+  // aquí porque la del formulario está encapsulada en su componente y no
+  // alcanza: es el fallo que `css:audit` existe para cazar, y lo cazó.
+  .subsection-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 }

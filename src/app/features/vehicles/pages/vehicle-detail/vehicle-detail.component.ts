@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, computed } from '@angular/core';
+import { Component, OnInit, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +14,9 @@ import {
   VehicleMaintenanceFormComponent
 } from '@features/vehicles/components/vehicle-maintenance-form/vehicle-maintenance-form.component';
 import {
+  PublicVehiclePhoto,
   Vehicle,
+  VehicleImage,
   VehicleStatus,
   VehiclePricingRule,
   BodyType,
@@ -435,6 +437,95 @@ export class VehicleDetailComponent implements OnInit {
     const images = this.galleryImages();
     const index = images.findIndex(img => img.url === url);
     this.openGallery(index >= 0 ? index : 0);
+  }
+
+  // ---- La web pública ----------------------------------------------------
+
+  /** Qué foto se está publicando o retirando ahora mismo. */
+  publishing = signal<string | null>(null);
+
+  canPublishPhotos(): boolean {
+    return this.permissions.can('publishPublicWeb');
+  }
+
+  /**
+   * Las publicadas, con su URL ya compuesta.
+   *
+   * ⚠️ Método y **no `computed()`**: `vehicle` es una propiedad normal, no una
+   * señal, así que un `computed` que la leyera se evaluaría una vez y se
+   * quedaría cacheado — publicar una foto no cambiaría la lista hasta recargar.
+   */
+  publicPhotoUrls(): Array<{ file: string; url: string }> {
+    const v = this.vehicle;
+    if (!v?.id || !v.publicPhotos?.length) return [];
+    const id = v.id;
+    return v.publicPhotos.map((p: PublicVehiclePhoto) => ({
+      file: p.file,
+      url: this.vehicleService.publicPhotoUrl(id, p.file)
+    }));
+  }
+
+  /**
+   * Sacar una foto a la web pública.
+   *
+   * ⚠️ **Se pregunta antes, y con el motivo delante.** Publicar no se deshace
+   * del todo: lo que sale queda en cachés y en buscadores aunque después se
+   * retire. Y estas galerías guardan fotos de estado —un golpe, un interior
+   * sucio— que nadie subió pensando en un escaparate.
+   */
+  async publishPhoto(image: VehicleImage, event: Event): Promise<void> {
+    // El contenedor abre la galería al pulsar; sin esto, publicar la abriría.
+    event.stopPropagation();
+    if (!this.vehicle?.id) return;
+
+    const ok = await this.confirm.ask({
+      title: 'vehicles.photos.publishConfirmTitle',
+      message: 'vehicles.photos.publishConfirmMessage'
+    });
+    if (!ok) return;
+
+    this.publishing.set(image.path);
+    try {
+      const foto = await this.vehicleService.publishPhoto(this.vehicle.id, image.path);
+      this.vehicle = {
+        ...this.vehicle,
+        publicPhotos: [...(this.vehicle.publicPhotos || []), foto]
+      };
+
+      this.notifications.success('vehicles.photos.published');
+    } catch (error) {
+      console.error('Error publicando la foto:', error);
+      /**
+       * El servicio lanza claves i18n —«no se pudo leer la imagen», «ya hay
+       * doce»—, así que se enseña la suya cuando la hay. Un `catch` mudo aquí
+       * dejaría al operador pulsando sin que pasara nada.
+       */
+      const clave = (error as { message?: string })?.message || '';
+      this.notifications.error(
+        clave.startsWith('vehicles.') ? clave : 'vehicles.photos.publishFailed'
+      );
+    } finally {
+      this.publishing.set(null);
+    }
+  }
+
+  /** Retirar una foto del escaparate. */
+  async unpublishPhoto(file: string): Promise<void> {
+    if (!this.vehicle?.id) return;
+    this.publishing.set(file);
+    try {
+      await this.vehicleService.unpublishPhoto(this.vehicle.id, file);
+      this.vehicle = {
+        ...this.vehicle,
+        publicPhotos: (this.vehicle.publicPhotos || []).filter(p => p.file !== file)
+      };
+
+    } catch (error) {
+      console.error('Error retirando la foto:', error);
+      this.notifications.error('vehicles.photos.unpublishFailed');
+    } finally {
+      this.publishing.set(null);
+    }
   }
 
   closeGallery(): void {

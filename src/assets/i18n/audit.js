@@ -331,7 +331,18 @@ const DESDE_LAS_FUNCTIONS = [
   'payments.refund.errors.rejected',
   // functions/src/contracts/generateContractPdf.ts
   'contracts.errors.alreadySigned',
-  'contracts.errors.supersedeReasonRequired'
+  'contracts.errors.supersedeReasonRequired',
+  // functions/src/public/publishVehiclePhoto.ts — publicar una foto en la web.
+  // Las seis salen de la function porque la comprobación que las produce solo
+  // se puede hacer allí: que el origen esté dentro de la carpeta de ESE coche,
+  // y que `sharp` sepa leer la imagen. Un HEIC de iPhone no se recodifica, y
+  // publicarlo tal cual sacaría a internet su EXIF con las coordenadas GPS.
+  'vehicles.errors.publishBadVehicle',
+  'vehicles.errors.publishBadSource',
+  'vehicles.errors.publishSourceMissing',
+  'vehicles.errors.publishTooLarge',
+  'vehicles.errors.publishTooMany',
+  'vehicles.errors.publishUnreadable'
 ];
 
 const orphans = Object.keys(flat[REFERENCE])
