@@ -3,5 +3,19 @@
     "default": "velto-store",
     "dev": "velto-store",
     "prod": "rentalcar-veltomobility"
+  },
+  "targets": {
+    "velto-store": {
+      "hosting": {
+        "backoffice": ["velto-store"],
+        "web": ["velto-web-dev"]
+      }
+    },
+    "rentalcar-veltomobility": {
+      "hosting": {
+        "backoffice": ["rentalcar-veltomobility"],
+        "web": ["velto-web"]
+      }
+    }
   }
 }

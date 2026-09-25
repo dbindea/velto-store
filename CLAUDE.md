@@ -1155,6 +1155,48 @@ un fallo del CSS de turno: en la misma sesión salió primero que
 `public-vehicles/` denegaba y, doce segundos después, que pasaba. Espera antes de
 creerte una medición de reglas recién desplegadas.
 
+### Dos sitios de hosting, un solo proyecto
+
+Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
+
+| target | Desarrollo | Producción |
+|---|---|---|
+| `backoffice` | `store.veltorent.com` | `rentalcar.veltomobility.com` |
+| `web` | `dev.veltorent.com` | `veltomobility.com` |
+
+⚠️ **El canónico es `veltomobility.com`; `veltorent.com` sirve lo mismo y
+redirige.** Dos dominios con el mismo contenido **no suman posicionamiento, lo
+reparten**, así que el `<link rel="canonical">` del layout no es decorativo: sin
+él, Google elige por su cuenta cuál enseñar.
+
+⚠️ **Cada despliegue lleva su `target` explícito, y es obligatorio.** Sin él,
+`action-hosting-deploy` no sabe cuál de los dos publicar — y el peor caso no es
+que falle, es que **suba el build de Angular al sitio de la web pública** y la
+deje sirviendo el backoffice a cualquiera que pase. Los tres workflows lo llevan;
+`firebase init hosting:github` los reescribe sin avisar, así que si vuelve a
+ejecutarse hay que revisarlos.
+
+⚠️ **La web se construye DESPUÉS del backoffice en el workflow, no antes.** Son
+dos productos en un repositorio: si el build de Astro falla, el backoffice ya
+está publicado. Que uno no salga no puede impedir que salga el otro.
+
+⚠️ **Y `web/` es una tercera build con su propio `package.json`**, como
+`functions/`. No comparte nada con la app: los colores de marca y los datos de
+empresa están **copiados a mano** en `web/src/styles/global.css` y
+`web/src/lib/empresa.ts`, por lo mismo que el IVA está duplicado en las
+functions. Si cambian en `styles.scss` o en `company-config.ts`, cambian ahí.
+
+⚠️ **La web es ESTÁTICA y pide los datos al cargar.** Nada de renderizado en
+servidor ni de generar las fichas en el build: así **publicar un coche se ve al
+momento**, sin redesplegar. Con las fichas generadas en build, añadir un coche no
+aparecería hasta el siguiente despliegue — y eso es una queja el primer día. Lo
+que sí posiciona (portada, condiciones, contacto) es HTML desde el primer byte.
+
+⚠️ **La ficha vive en `/coche/{id}` gracias a un REWRITE**, no a una ruta
+generada: `/coche/**` → `/coche.html`, y el JavaScript lee el id del path. Si ese
+rewrite falta, la página da 404 sin decir por qué — el mismo fallo silencioso que
+tuvo `/d/**`.
+
 ### La web pública: Firestore no se abre, se pregunta a una function
 
 La web (`veltorent.com`, Astro, aún por construir) **no lee Firestore**. Pide a

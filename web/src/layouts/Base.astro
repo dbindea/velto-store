@@ -1,0 +1,91 @@
+---
+import '../styles/global.css';
+import { EMPRESA, SITIO } from '../lib/empresa';
+
+interface Props {
+  titulo: string;
+  descripcion: string;
+  /** Ruta sin barra final: `/flota`. La portada es `''`. */
+  ruta?: string;
+}
+
+const { titulo, descripcion, ruta = '' } = Astro.props;
+const canonica = SITIO + ruta;
+const anio = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descripcion} />
+
+    <!--
+      ⚠️ La canónica es lo que impide que los DOS dominios compitan entre sí.
+      `veltorent.com` sirve el mismo sitio; sin esto, Google reparte el
+      posicionamiento entre ambos en vez de sumarlo, y puede acabar enseñando
+      el que no queremos.
+    -->
+    <link rel="canonical" href={canonica} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={EMPRESA.marca} />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:url" content={canonica} />
+    <meta name="theme-color" content="#20A48F" />
+  </head>
+
+  <body>
+    <header class="cabecera">
+      <div class="contenedor cabecera__fila">
+        <a class="cabecera__marca" href="/">VELTO <span>MOBILITY</span></a>
+        <nav class="cabecera__nav" aria-label="Principal">
+          <a href="/flota">Flota</a>
+          <a href="/reservar">Reservar</a>
+          <a href="/condiciones">Condiciones</a>
+          <a href="/contacto">Contacto</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="pie">
+      <div class="contenedor">
+        <div class="pie__rejilla">
+          <div>
+            <p class="pie__titulo">Alquiler de vehículos</p>
+            <p>Arganda del Rey y alrededores. Entrega a domicilio a convenir.</p>
+          </div>
+          <div>
+            <p class="pie__titulo">Oficina</p>
+            <p>{EMPRESA.oficina}</p>
+          </div>
+          <div>
+            <p class="pie__titulo">Contacto</p>
+            <p>
+              <a href={`tel:${EMPRESA.telefono.replace(/\s/g, '')}`}>{EMPRESA.telefono}</a><br />
+              <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a>
+            </p>
+          </div>
+        </div>
+
+        <!--
+          ⚠️ El ÚNICO sitio donde aparece la razón social, y va junto al NIF:
+          es donde la empresa comparece como persona jurídica. En todo lo demás
+          se usa la marca. Y `razonSocial` acaba en punto, así que la frase no
+          lleva otro detrás.
+        -->
+        <p class="pie__legal">
+          {EMPRESA.razonSocial} · NIF {EMPRESA.nif} · {EMPRESA.domicilioSocial} ·
+          © {anio}
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

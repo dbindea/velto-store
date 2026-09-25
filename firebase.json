@@ -22,54 +22,87 @@
       ]
     }
   ],
-  "hosting": {
-    "public": "dist/velto-store/browser",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "headers": [
-      {
-        "source": "/assets/i18n/**",
-        "headers": [
-          { "key": "Cache-Control", "value": "no-cache" }
-        ]
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "/d/**",
-        "function": {
-          "functionId": "documentLink",
-          "region": "europe-west1"
+  "hosting": [
+    {
+      "target": "backoffice",
+      "public": "dist/velto-store/browser",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "/assets/i18n/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" }
+          ]
         }
-      },
-      {
-        "source": "/api/fleet",
-        "function": {
-          "functionId": "publicVehicles",
-          "region": "europe-west1"
+      ],
+      "rewrites": [
+        {
+          "source": "/d/**",
+          "function": {
+            "functionId": "documentLink",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
         }
-      },
-      {
-        "source": "/api/vehicle",
-        "function": {
-          "functionId": "publicVehicleDetail",
-          "region": "europe-west1"
+      ]
+    },
+    {
+      "target": "web",
+      "public": "web/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "/_astro/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          ]
+        },
+        {
+          "source": "**/*.@(html)",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=300" }
+          ]
         }
-      },
-      {
-        "source": "/api/availability",
-        "function": {
-          "functionId": "checkPublicAvailability",
-          "region": "europe-west1"
+      ],
+      "rewrites": [
+        {
+          "source": "/api/fleet",
+          "function": {
+            "functionId": "publicVehicles",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/vehicle",
+          "function": {
+            "functionId": "publicVehicleDetail",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/availability",
+          "function": {
+            "functionId": "checkPublicAvailability",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/coche/**",
+          "destination": "/coche.html"
         }
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
+      ]
+    }
+  ]
 }

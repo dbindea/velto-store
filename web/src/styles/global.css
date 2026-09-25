@@ -1,0 +1,281 @@
+/*
+ * La identidad de Velto en la web pública.
+ *
+ * ⚠️ **Los colores son los MISMOS que los del backoffice, pero copiados a
+ * mano.** No se pueden importar: son dos aplicaciones con dos builds. Si el
+ * turquesa cambia en `src/styles.scss`, cambia aquí — es la misma regla que ya
+ * obliga a duplicar el IVA entre la app y las functions.
+ *
+ * ⚠️ **Y el turquesa de marca sobre blanco da 3,10:1**, por debajo del 4,5:1 que
+ * pide un texto normal. Es una concesión que la identidad ya tenía hecha y aquí
+ * se respeta igual: se usa en titulares grandes y en fondos, **nunca en texto
+ * pequeño sobre blanco**. Para eso está `--tinta-suave`.
+ */
+:root {
+  --marca: #20a48f;
+  --marca-oscuro: #17806f;
+  --marca-claro: #e8f5f2;
+
+  --tinta: #10201d;
+  --tinta-suave: #4a5b57;
+  --tinta-tenue: #6b7c78;
+
+  --papel: #ffffff;
+  --papel-hundido: #f4f7f6;
+  --linea: #dfe6e4;
+
+  --ancho: 1120px;
+  --radio: 14px;
+
+  /*
+   * Gotham es la fuente de marca y **no puede ser la del cuerpo**: no trae los
+   * diacríticos rumanos ni el símbolo del euro, y un precio compuesto en ella
+   * saldría con un hueco. Aquí el cuerpo es la fuente del sistema, igual que en
+   * el backoffice, y la marca la ponen el color y la composición.
+   */
+  --tipo: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--tipo);
+  color: var(--tinta);
+  background: var(--papel);
+  line-height: 1.6;
+  /* Una matrícula o un correo parten antes que desbordar la página. */
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  font-weight: 800;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 700;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+a {
+  color: var(--marca-oscuro);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.contenedor {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* ---- Botones ----------------------------------------------------------- */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  /* 48 px de alto: es una web que se usa con el pulgar. */
+  min-height: 48px;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.boton--principal {
+  background: var(--marca);
+  color: #ffffff;
+}
+
+.boton--principal:hover {
+  background: var(--marca-oscuro);
+}
+
+.boton--secundario {
+  background: transparent;
+  color: var(--tinta);
+  border-color: var(--linea);
+}
+
+.boton--secundario:hover {
+  border-color: var(--marca);
+  color: var(--marca-oscuro);
+}
+
+/* ---- Cabecera y pie ---------------------------------------------------- */
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--linea);
+}
+
+.cabecera__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 68px;
+}
+
+.cabecera__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.cabecera__marca span {
+  color: var(--marca);
+}
+
+.cabecera__nav {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.cabecera__nav a {
+  color: var(--tinta-suave);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.cabecera__nav a:hover {
+  color: var(--marca-oscuro);
+}
+
+/*
+ * ⚠️ En móvil la navegación se recoloca debajo, NO se esconde. Esconder
+ * «Flota» o «Contacto» en un menú detrás de un botón es perder la mitad de las
+ * visitas que llegan con el pulgar.
+ */
+@media (max-width: 640px) {
+  .cabecera__fila {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem 0;
+    gap: 0.5rem;
+  }
+
+  .cabecera__nav {
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+.pie {
+  margin-top: 4rem;
+  padding: 2.5rem 0 2rem;
+  background: var(--papel-hundido);
+  border-top: 1px solid var(--linea);
+  font-size: 0.9rem;
+  color: var(--tinta-suave);
+}
+
+.pie__rejilla {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.pie__titulo {
+  font-weight: 700;
+  color: var(--tinta);
+  margin-bottom: 0.5rem;
+}
+
+.pie__legal {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--linea);
+  font-size: 0.8rem;
+  color: var(--tinta-tenue);
+}
+
+/* ---- Piezas comunes ---------------------------------------------------- */
+
+.seccion {
+  padding: 3.5rem 0;
+}
+
+.seccion--hundida {
+  background: var(--papel-hundido);
+}
+
+.tarjeta {
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.rejilla-coches {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}
+
+/* Un estado que el visitante entiende: cargando, vacío o roto. */
+.aviso {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--tinta-suave);
+}
+
+.aviso--error {
+  color: #a3341f;
+}
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,228 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<!--
+  ⚠️ **Una sola página para todas las fichas, y el id se lee de la URL.**
+  El sitio es estático: no hay `getStaticPaths` porque eso obligaría a conocer
+  los coches en el build, y entonces publicar uno nuevo no se vería hasta el
+  siguiente despliegue — justo lo que esta web evita.
+
+  La URL bonita (`/coche/{id}`) la resuelve un **rewrite de Hosting** que manda
+  todo `/coche/**` a este fichero. ⚠️ Si ese rewrite falta, la página devuelve
+  404 y no hay ningún aviso: es el mismo fallo silencioso que tuvo `/d/**`, que
+  acababa sirviendo la SPA y mandando al cliente a la pantalla de login.
+-->
+<Base
+  titulo="Vehículo | VELTO MOBILITY"
+  descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos y precio por día."
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <p class="migas"><a href="/flota">← Volver a la flota</a></p>
+
+      <div id="ficha" hidden></div>
+      <p id="cargando" class="aviso">Cargando el vehículo…</p>
+      <p id="nohay" class="aviso" hidden>
+        Este vehículo ya no está disponible en la web.
+        <a href="/flota">Mira el resto de la flota</a>.
+      </p>
+      <p id="error" class="aviso aviso--error" hidden>
+        No hemos podido cargar el vehículo. Vuelve a intentarlo o escríbenos.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<script define:vars={{ WHATSAPP: EMPRESA.telefonoWhatsapp }}>
+  window.__VELTO_WHATSAPP = WHATSAPP;
+</script>
+
+<script>
+  import { ficha, euros, nombreCoche, combustible, cambio, categoria } from '../lib/api';
+
+  const contenedor = document.getElementById('ficha')!;
+  const cargando = document.getElementById('cargando')!;
+  const nohay = document.getElementById('nohay')!;
+  const error = document.getElementById('error')!;
+
+  /** `/coche/ABC123` → `ABC123`. */
+  const id = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() ?? '');
+
+  const EXTRAS: Array<[keyof Awaited<ReturnType<typeof ficha>>['vehicle']['features'], string]> = [
+    ['airConditioning', 'Aire acondicionado'],
+    ['navigation', 'Navegador'],
+    ['parkingSensors', 'Sensores de aparcamiento'],
+    ['rearCamera', 'Cámara trasera'],
+    ['cruiseControl', 'Control de crucero'],
+  ];
+
+  function pinta(v: Awaited<ReturnType<typeof ficha>>['vehicle']): void {
+    const nombre = nombreCoche(v);
+    document.title = `${nombre} | VELTO MOBILITY`;
+
+    const fotos = v.photos.length
+      ? v.photos
+          .map(
+            (f, i) =>
+              `<img src="${f.url}" alt="${nombre}${i ? ` (${i + 1})` : ''}"
+                    loading="${i ? 'lazy' : 'eager'}" decoding="async" />`
+          )
+          .join('')
+      : `<div class="coche__sinfoto" aria-hidden="true">🚗</div>`;
+
+    const extras = EXTRAS.filter(([k]) => v.features[k]).map(([, txt]) => `<li>${txt}</li>`).join('');
+
+    // ⚠️ Cada dato solo se pinta SI EXISTE. Una fila «Fianza: —» no informa de
+    // nada y hace dudar de lo que sí está.
+    const filas = [
+      ['Categoría', categoria(v.category)],
+      ['Plazas', String(v.seats)],
+      ['Maletas', String(v.luggageCapacity)],
+      ['Cambio', cambio(v.transmission)],
+      ['Combustible', combustible(v.fuelType)],
+      ['Año', String(v.year)],
+      v.color ? ['Color', v.color] : null,
+      v.includedKmPerDay ? ['Km incluidos por día', String(v.includedKmPerDay)] : null,
+      v.depositAmount !== undefined ? ['Fianza', euros(v.depositAmount)] : null,
+      v.minimumRentalDays && v.minimumRentalDays > 1
+        ? ['Alquiler mínimo', `${v.minimumRentalDays} días`]
+        : null,
+    ].filter(Boolean) as Array<[string, string]>;
+
+    const precio = v.priceFrom
+      ? `<p class="ficha__precio"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> por día, IVA incluido</p>`
+      : `<p class="ficha__precio">Consúltanos el precio para tus fechas.</p>`;
+
+    const wa = (window as unknown as { __VELTO_WHATSAPP: string }).__VELTO_WHATSAPP;
+    const mensaje = encodeURIComponent(`Hola, me interesa el ${nombre}.`);
+
+    contenedor.innerHTML = `
+      <h1>${nombre}</h1>
+      ${precio}
+      <div class="ficha">
+        <div class="ficha__fotos">${fotos}</div>
+        <div class="ficha__datos">
+          ${v.description ? `<p class="ficha__texto">${v.description}</p>` : ''}
+          <dl class="ficha__lista">
+            ${filas.map(([k, val]) => `<div><dt>${k}</dt><dd>${val}</dd></div>`).join('')}
+          </dl>
+          ${extras ? `<p class="ficha__subtitulo">Equipamiento</p><ul class="ficha__extras">${extras}</ul>` : ''}
+          <div class="ficha__acciones">
+            <a class="boton boton--principal" href="/reservar">Ver fechas libres</a>
+            <a class="boton boton--secundario" href="https://wa.me/${wa}?text=${mensaje}" rel="noopener">
+              Preguntar por WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>`;
+    contenedor.hidden = false;
+  }
+
+  if (!id) {
+    cargando.hidden = true;
+    nohay.hidden = false;
+  } else {
+    ficha(id)
+      .then(({ vehicle }) => {
+        cargando.hidden = true;
+        pinta(vehicle);
+      })
+      .catch((e: Error) => {
+        cargando.hidden = true;
+        // ⚠️ «No encontrado» y «algo ha fallado» son mensajes distintos: al
+        // visitante le importa saber si el coche ya no está o si somos nosotros.
+        if (e.message === 'not-found') nohay.hidden = false;
+        else error.hidden = false;
+      });
+  }
+</script>
+
+<style is:global>
+  .migas {
+    margin-bottom: 1.5rem;
+  }
+
+  .ficha {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: 1fr;
+    margin-top: 1.5rem;
+  }
+
+  @media (min-width: 860px) {
+    .ficha {
+      grid-template-columns: 1.1fr 1fr;
+      align-items: start;
+    }
+  }
+
+  .ficha__fotos {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .ficha__fotos img {
+    width: 100%;
+    border-radius: var(--radio);
+    border: 1px solid var(--linea);
+    background: var(--papel-hundido);
+  }
+
+  .ficha__precio {
+    font-size: 1rem;
+    color: var(--tinta-suave);
+    margin-bottom: 0;
+  }
+
+  .ficha__precio strong {
+    font-size: 1.6rem;
+    color: var(--tinta);
+  }
+
+  .ficha__texto {
+    color: var(--tinta-suave);
+  }
+
+  .ficha__lista {
+    margin: 0 0 1.5rem;
+    display: grid;
+    gap: 0;
+  }
+
+  .ficha__lista > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--linea);
+  }
+
+  .ficha__lista dt {
+    color: var(--tinta-suave);
+  }
+
+  .ficha__lista dd {
+    margin: 0;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .ficha__subtitulo {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .ficha__extras {
+    margin: 0 0 1.5rem;
+    padding-left: 1.25rem;
+    color: var(--tinta-suave);
+  }
+
+  .ficha__acciones {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+</style>

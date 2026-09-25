@@ -12,6 +12,13 @@
 # el 28 de agosto de 2026: dejó `npm ci && npm run build`, que compila contra
 # desarrollo, apuntando al hosting de producción. Si vuelves a ejecutarlo,
 # revisa este fichero después.
+#
+# ⚠️ **Desde el 25 de septiembre de 2026 el proyecto tiene DOS sitios** —el
+# backoffice y la web pública— y por eso cada despliegue lleva su `target`
+# explícito. Sin él, `action-hosting-deploy` no sabe cuál de los dos publicar:
+# o falla, o —peor— sube el build de Angular al sitio de la web pública y la
+# deja sirviendo el backoffice a cualquiera que pase. El `target` se resuelve
+# contra `.firebaserc`, donde está la correspondencia con el id de cada sitio.
 name: Deploy to Firebase Hosting on merge
 on:
   push:
@@ -30,9 +37,27 @@ jobs:
       - run: npm --prefix functions ci
       - run: npm --prefix functions test
       - run: npm run build:prod
+
+      # El backoffice: rentalcar.veltomobility.com
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTALCAR_VELTOMOBILITY }}
           channelId: live
           projectId: rentalcar-veltomobility
+          target: backoffice
+
+      # La web pública: veltomobility.com (y veltorent.com, que redirige).
+      #
+      # ⚠️ Su build es INDEPENDIENTE del de Angular y va después, no antes: si
+      # fallara, el backoffice ya está publicado. Son dos productos en un
+      # repositorio, y que uno no salga no puede impedir que salga el otro.
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RENTALCAR_VELTOMOBILITY }}
+          channelId: live
+          projectId: rentalcar-veltomobility
+          target: web

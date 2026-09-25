@@ -1,0 +1,164 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<Base
+  titulo="Alquiler de coches en Arganda del Rey | VELTO MOBILITY"
+  descripcion="Alquiler de vehículos en Arganda del Rey y alrededores. Precios claros, sin letra pequeña, y entrega a domicilio a convenir. Reserva por teléfono o WhatsApp."
+>
+  <section class="portada">
+    <div class="contenedor portada__caja">
+      <h1>Alquila un coche en Arganda<br />sin letra pequeña</h1>
+      <p class="portada__entrada">
+        Precios cerrados, kilómetros pactados por escrito y un teléfono al que
+        llama una persona. Entrega a domicilio a convenir.
+      </p>
+      <div class="portada__acciones">
+        <a class="boton boton--principal" href="/flota">Ver la flota</a>
+        <a class="boton boton--secundario" href="/reservar">Consultar fechas</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <div class="contenedor">
+      <h2>Cómo funciona</h2>
+      <ol class="pasos">
+        <li>
+          <span class="pasos__num">1</span>
+          <div>
+            <strong>Eliges coche y fechas</strong>
+            <p>Miras la flota o nos dices qué necesitas. Te decimos el precio cerrado.</p>
+          </div>
+        </li>
+        <li>
+          <span class="pasos__num">2</span>
+          <div>
+            <strong>Reservamos contigo</strong>
+            <p>Lo confirmamos por teléfono o WhatsApp. Sin registro ni formularios largos.</p>
+          </div>
+        </li>
+        <li>
+          <span class="pasos__num">3</span>
+          <div>
+            <strong>Recoges o te lo llevamos</strong>
+            <p>En la oficina o donde acordemos. El contrato se firma en el móvil.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="seccion seccion--hundida">
+    <div class="contenedor">
+      <h2>Lo que incluye siempre</h2>
+      <ul class="incluye">
+        <li>Seguro del vehículo y asistencia en carretera</li>
+        <li>Kilómetros incluidos pactados por escrito en el contrato</li>
+        <li>Precio cerrado antes de reservar, con el IVA incluido</li>
+        <li>Parte de entrega con fotos, para que no haya discusiones al devolver</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <div class="contenedor cierre">
+      <h2>¿Hablamos?</h2>
+      <p>
+        Estamos en {EMPRESA.oficina}. Si prefieres, escríbenos por WhatsApp y te
+        contestamos con el precio.
+      </p>
+      <div class="portada__acciones">
+        <a
+          class="boton boton--principal"
+          href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`}
+          rel="noopener">Escribir por WhatsApp</a
+        >
+        <a class="boton boton--secundario" href={`tel:${EMPRESA.telefono.replace(/\s/g, '')}`}>
+          Llamar al {EMPRESA.telefono}
+        </a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .portada {
+    padding: 4rem 0 3.5rem;
+    background: linear-gradient(160deg, var(--marca-claro), var(--papel) 70%);
+  }
+
+  .portada__entrada {
+    font-size: 1.15rem;
+    color: var(--tinta-suave);
+    max-width: 44ch;
+    margin-bottom: 2rem;
+  }
+
+  .portada__acciones {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .pasos {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+
+  .pasos li {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .pasos__num {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--marca);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+  }
+
+  .pasos p {
+    margin: 0.25rem 0 0;
+    color: var(--tinta-suave);
+  }
+
+  .incluye {
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+
+  .incluye li {
+    padding-left: 1.75rem;
+    position: relative;
+    color: var(--tinta-suave);
+  }
+
+  .incluye li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--marca);
+    font-weight: 700;
+  }
+
+  .cierre p {
+    max-width: 52ch;
+    color: var(--tinta-suave);
+  }
+</style>

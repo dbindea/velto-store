@@ -1,0 +1,81 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<Base
+  titulo="Contacto | VELTO MOBILITY"
+  descripcion="Dónde estamos y cómo llegar: oficina en Arganda del Rey, teléfono, WhatsApp y correo."
+  ruta="/contacto"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <h1>Hablamos cuando quieras</h1>
+      <p class="entrada">
+        Lo más rápido es WhatsApp: mándanos las fechas y el tipo de coche y te
+        contestamos con el precio cerrado.
+      </p>
+
+      <div class="contacto">
+        <div class="tarjeta contacto__bloque">
+          <h2>WhatsApp y teléfono</h2>
+          <p>
+            <a class="boton boton--principal" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+              Escribir por WhatsApp
+            </a>
+          </p>
+          <p>
+            También por teléfono:
+            <a href={`tel:${EMPRESA.telefono.replace(/\s/g, '')}`}>{EMPRESA.telefono}</a>
+          </p>
+        </div>
+
+        <div class="tarjeta contacto__bloque">
+          <h2>Correo</h2>
+          <p><a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></p>
+          <p class="contacto__nota">
+            Para presupuestos por escrito o facturas, mejor por aquí.
+          </p>
+        </div>
+
+        <div class="tarjeta contacto__bloque">
+          <h2>Oficina</h2>
+          <p>{EMPRESA.oficina}</p>
+          <p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(EMPRESA.oficina)}`}
+              rel="noopener">Ver cómo llegar</a
+            >
+          </p>
+          <p class="contacto__nota">
+            Si te viene mejor, llevamos el coche a donde acordemos. El
+            desplazamiento se pacta antes, nunca aparece después en la factura.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .contacto {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  }
+
+  .contacto__bloque {
+    padding: 1.5rem;
+  }
+
+  .contacto__bloque h2 {
+    font-size: 1.15rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .contacto__nota {
+    color: var(--tinta-suave);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+  }
+</style>

@@ -1,0 +1,200 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<Base
+  titulo="Consultar disponibilidad | VELTO MOBILITY"
+  descripcion="Dinos las fechas y te decimos qué coches quedan libres y cuánto cuesta el alquiler completo, con IVA incluido."
+  ruta="/reservar"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <h1>¿Qué fechas necesitas?</h1>
+      <p class="entrada">
+        Te decimos qué coches quedan libres y el precio del alquiler completo,
+        con IVA incluido. La reserva la cerramos por teléfono o WhatsApp.
+      </p>
+
+      <form id="form" class="buscador">
+        <div class="buscador__campo">
+          <label for="desde">Recogida</label>
+          <input type="date" id="desde" name="desde" required />
+        </div>
+        <div class="buscador__campo">
+          <label for="hasta">Devolución</label>
+          <input type="date" id="hasta" name="hasta" required />
+        </div>
+        <button class="boton boton--principal" type="submit">Ver disponibilidad</button>
+      </form>
+
+      <!--
+        ⚠️ El mensaje de error del formulario va ANTES de los resultados y con
+        `role="alert"`: si el aviso apareciera debajo de la lista, en un móvil
+        quedaría fuera de la pantalla y el visitante pulsaría otra vez creyendo
+        que el botón no funciona.
+      -->
+      <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
+
+      <div id="resultado" hidden>
+        <h2 id="resumen" class="resumen"></h2>
+        <div id="lista" class="rejilla-coches"></div>
+      </div>
+
+      <p id="cargando" class="aviso" hidden>Consultando…</p>
+      <p id="vacio" class="aviso" hidden>
+        No queda ningún coche libre en esas fechas. Prueba con otras o
+        <a href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">escríbenos</a>:
+        a veces podemos mover algo.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { disponibilidad, euros, nombreCoche, combustible, cambio, categoria } from '../lib/api';
+
+  const form = document.getElementById('form') as HTMLFormElement;
+  const desde = document.getElementById('desde') as HTMLInputElement;
+  const hasta = document.getElementById('hasta') as HTMLInputElement;
+  const problema = document.getElementById('problema')!;
+  const resultado = document.getElementById('resultado')!;
+  const resumen = document.getElementById('resumen')!;
+  const lista = document.getElementById('lista')!;
+  const cargando = document.getElementById('cargando')!;
+  const vacio = document.getElementById('vacio')!;
+
+  /** `yyyy-MM-dd` en hora local. `toISOString()` pasaría a UTC y restaría un día. */
+  function iso(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  // Ni recoger en el pasado ni devolver antes de recoger: lo dice el campo, no
+  // un mensaje después de pulsar.
+  const hoy = new Date();
+  desde.min = iso(hoy);
+  hasta.min = iso(hoy);
+  desde.addEventListener('change', () => {
+    hasta.min = desde.value || iso(hoy);
+    if (hasta.value && hasta.value < hasta.min) hasta.value = '';
+  });
+
+  /**
+   * ⚠️ Las claves que devuelve la function se traducen AQUÍ. Enseñar
+   * `range-too-long` es enseñarle al visitante el código de un error; y un
+   * genérico «algo ha fallado» le hace pulsar otra vez sin cambiar nada.
+   */
+  const MOTIVOS: Record<string, string> = {
+    'bad-dates': 'Revisa las fechas: no las hemos entendido.',
+    'bad-range': 'La devolución tiene que ser posterior a la recogida.',
+    'past-date': 'La recogida no puede ser en una fecha pasada.',
+    'range-too-long': 'Para alquileres de más de tres meses, llámanos y lo vemos.',
+  };
+
+  function tarjeta(c: Awaited<ReturnType<typeof disponibilidad>>['vehicles'][number]): string {
+    const nombre = nombreCoche(c);
+    const foto = c.photo
+      ? `<img src="${c.photo.url}" alt="${nombre}" loading="lazy" decoding="async" />`
+      : `<div class="coche__sinfoto" aria-hidden="true">🚗</div>`;
+    return `
+      <article class="tarjeta coche">
+        <a class="coche__enlace" href="/coche/${c.id}">
+          <div class="coche__foto">${foto}</div>
+          <div class="coche__cuerpo">
+            <p class="coche__categoria">${categoria(c.category)}</p>
+            <h3 class="coche__nombre">${nombre}</h3>
+            <p class="coche__datos">
+              ${c.seats} plazas · ${cambio(c.transmission)} · ${combustible(c.fuelType)}
+            </p>
+            <p class="coche__precio">
+              <strong>${euros(c.price.gross)}</strong> el alquiler completo
+            </p>
+          </div>
+        </a>
+      </article>`;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    problema.hidden = true;
+    resultado.hidden = true;
+    vacio.hidden = true;
+    cargando.hidden = false;
+
+    disponibilidad(desde.value, hasta.value)
+      .then((r) => {
+        cargando.hidden = true;
+        if (!r.vehicles.length) {
+          vacio.hidden = false;
+          return;
+        }
+        const dias = r.totalDays === 1 ? '1 día' : `${r.totalDays} días`;
+        resumen.textContent = `${r.vehicles.length === 1 ? '1 coche libre' : `${r.vehicles.length} coches libres`} · ${dias}`;
+        lista.innerHTML = r.vehicles.map(tarjeta).join('');
+        resultado.hidden = false;
+      })
+      .catch((err: Error) => {
+        cargando.hidden = true;
+        problema.textContent =
+          MOTIVOS[err.message] ?? 'No hemos podido consultar la disponibilidad. Inténtalo otra vez.';
+        problema.hidden = false;
+      });
+  });
+</script>
+
+<style>
+  .buscador {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding: 1.5rem;
+    background: var(--papel-hundido);
+    border: 1px solid var(--linea);
+    border-radius: var(--radio);
+    margin-bottom: 2rem;
+  }
+
+  .buscador__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1 1 180px;
+    /* Sin esto, un campo ancho estira la fila entera en pantallas estrechas. */
+    min-width: 0;
+  }
+
+  .buscador__campo label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tinta-suave);
+  }
+
+  .buscador input {
+    min-height: 48px;
+    padding: 0.6rem 0.75rem;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--papel);
+    border: 1px solid var(--linea);
+    border-radius: 10px;
+    /*
+     * ⚠️ El calendario de un `input[type=date]` lo pinta el sistema y ningún
+     * CSS lo alcanza: lo único que lo hace legible es `color-scheme`. Aquí el
+     * sitio es siempre claro, así que se declara y se acabó.
+     */
+    color-scheme: light;
+  }
+
+  .buscador input:focus-visible {
+    outline: 2px solid var(--marca);
+    outline-offset: 1px;
+  }
+
+  .resumen {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+</style>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://veltomobility.com/sitemap.xml

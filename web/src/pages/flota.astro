@@ -1,0 +1,167 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  titulo="Nuestra flota | VELTO MOBILITY"
+  descripcion="Los coches que alquilamos en Arganda del Rey: precio por día, plazas, cambio y combustible de cada uno."
+  ruta="/flota"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <h1>Nuestra flota</h1>
+      <p class="entrada">
+        El precio que ves es el total por día con IVA incluido, y baja cuantos
+        más días alquiles. Para unas fechas concretas,
+        <a href="/reservar">consulta la disponibilidad</a>.
+      </p>
+
+      <!--
+        ⚠️ TRES estados y no dos: cargando, vacío y roto. Enseñar «no hay
+        coches» cuando lo que ha pasado es que la petición falló manda al
+        visitante a otra web creyendo que no tenemos flota.
+      -->
+      <div id="lista" class="rejilla-coches" hidden></div>
+      <p id="cargando" class="aviso">Cargando la flota…</p>
+      <p id="vacio" class="aviso" hidden>
+        Ahora mismo no hay vehículos publicados. Llámanos y te decimos qué
+        tenemos disponible.
+      </p>
+      <p id="error" class="aviso aviso--error" hidden>
+        No hemos podido cargar la flota. Vuelve a intentarlo en un momento o
+        escríbenos por WhatsApp.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { flota, euros, nombreCoche, combustible, cambio, categoria } from '../lib/api';
+
+  const lista = document.getElementById('lista')!;
+  const cargando = document.getElementById('cargando')!;
+  const vacio = document.getElementById('vacio')!;
+  const error = document.getElementById('error')!;
+
+  function tarjeta(c: Awaited<ReturnType<typeof flota>>['vehicles'][number]): string {
+    const nombre = nombreCoche(c);
+    // `alt` con el nombre del coche: la foto ES el contenido de la tarjeta.
+    const foto = c.photo
+      ? `<img src="${c.photo.url}" alt="${nombre}" loading="lazy" decoding="async"
+             ${c.photo.width ? `width="${c.photo.width}"` : ''}
+             ${c.photo.height ? `height="${c.photo.height}"` : ''} />`
+      : `<div class="coche__sinfoto" aria-hidden="true">🚗</div>`;
+
+    const precio = c.priceFrom
+      ? `<p class="coche__precio"><span>desde</span> <strong>${euros(c.priceFrom.gross)}</strong> / día</p>`
+      : `<p class="coche__precio coche__precio--consultar">Consultar precio</p>`;
+
+    return `
+      <article class="tarjeta coche">
+        <a class="coche__enlace" href="/coche/${c.id}">
+          <div class="coche__foto">${foto}</div>
+          <div class="coche__cuerpo">
+            <p class="coche__categoria">${categoria(c.category)}</p>
+            <h2 class="coche__nombre">${nombre}</h2>
+            <p class="coche__datos">
+              ${c.seats} plazas · ${cambio(c.transmission)} · ${combustible(c.fuelType)}
+            </p>
+            ${precio}
+          </div>
+        </a>
+      </article>`;
+  }
+
+  flota()
+    .then(({ vehicles }) => {
+      cargando.hidden = true;
+      if (!vehicles.length) {
+        vacio.hidden = false;
+        return;
+      }
+      lista.innerHTML = vehicles.map(tarjeta).join('');
+      lista.hidden = false;
+    })
+    .catch(() => {
+      cargando.hidden = true;
+      error.hidden = false;
+    });
+</script>
+
+<style is:global>
+  .entrada {
+    color: var(--tinta-suave);
+    max-width: 60ch;
+    margin-bottom: 2rem;
+  }
+
+  .coche__enlace {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .coche__foto {
+    aspect-ratio: 4 / 3;
+    background: var(--papel-hundido);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  .coche__foto img {
+    width: 100%;
+    height: 100%;
+    /*
+     * `contain`, no `cover`: las fotos salen del móvil en vertical y recortar
+     * deja media carrocería fuera, que es lo único que hay que ver aquí. Es la
+     * misma decisión que ya se tomó en la ficha del backoffice (M-6).
+     */
+    object-fit: contain;
+  }
+
+  .coche__sinfoto {
+    font-size: 3rem;
+    opacity: 0.35;
+  }
+
+  .coche__cuerpo {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+
+  .coche__categoria {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--marca-oscuro);
+  }
+
+  .coche__nombre {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0.25rem 0 0.5rem;
+  }
+
+  .coche__datos {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: var(--tinta-suave);
+  }
+
+  .coche__precio {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--tinta-suave);
+  }
+
+  .coche__precio strong {
+    font-size: 1.35rem;
+    color: var(--tinta);
+  }
+
+  .coche__precio--consultar {
+    font-style: italic;
+  }
+</style>

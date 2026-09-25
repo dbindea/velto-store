@@ -1,0 +1,144 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<!--
+  ⚠️ **Esta página RESUME el contrato, no lo sustituye, y no puede decir nada
+  que el contrato no diga.** Cada punto de aquí sale de una cláusula real de
+  `functions/src/contracts/clauses.ts` — la edad mínima de 21 años, los treinta
+  minutos de cortesía, la fianza que se devuelve tras la inspección, la
+  autorización escrita para salir de España, los tribunales de Madrid—. Si esas
+  cláusulas cambian, **esto cambia con ellas**.
+
+  Es la misma regla que ya mordió cinco veces en los PDF: el texto y el hecho se
+  deciden juntos. Una web que promete algo que el contrato no recoge es una
+  discusión en el mostrador, y con razón del cliente.
+-->
+<Base
+  titulo="Condiciones de alquiler | VELTO MOBILITY"
+  descripcion="Lo importante antes de reservar: edad mínima, qué incluye el precio, fianza, kilómetros, combustible y dónde se puede circular."
+  ruta="/condiciones"
+>
+  <section class="seccion">
+    <div class="contenedor texto">
+      <h1>Condiciones de alquiler</h1>
+      <p class="entrada">
+        Un resumen en lenguaje normal de lo que firmarás. <strong>Lo que manda
+        es el contrato</strong>, que recibes íntegro antes de firmarlo y te
+        queda en el móvil.
+      </p>
+
+      <h2>Quién puede conducir</h2>
+      <p>
+        Hace falta tener al menos <strong>21 años</strong> y un permiso de
+        conducir en vigor. Solo pueden conducir las personas que aparecen
+        <strong>por su nombre en el contrato</strong>: si vais a turnaros, hay
+        que decirlo al reservar y se añaden como conductores autorizados. No
+        cuesta nada, pero tiene que constar.
+      </p>
+
+      <h2>Recogida y devolución</h2>
+      <p>
+        Se acuerdan por escrito el día, la hora y el lugar. Hay
+        <strong>treinta minutos de cortesía</strong>; a partir de ahí, un retraso
+        puede suponer un cargo. Al entregar y al devolver el coche hacemos un
+        parte con fotos: es lo que evita discusiones después sobre un golpe o el
+        nivel de combustible.
+      </p>
+
+      <h2>Precio, fianza y forma de pago</h2>
+      <p>
+        El precio se cierra antes de reservar y lo que ves en esta web
+        <strong>ya lleva el IVA</strong>. Aparte del alquiler se pide una
+        <strong>fianza</strong>, que es un depósito en garantía: no es parte del
+        precio y <strong>se devuelve tras la inspección de devolución</strong>,
+        salvo que haya que retener algo por daños, combustible o kilómetros de
+        más.
+      </p>
+      <p>
+        Si necesitas factura, dilo al reservar. Si el coche te lo llevamos o lo
+        recogemos nosotros, el desplazamiento se pacta antes y aparece en el
+        contrato: nunca es una sorpresa al final.
+      </p>
+
+      <h2>Kilómetros</h2>
+      <p>
+        Cada alquiler lleva sus kilómetros incluidos por día, escritos en el
+        contrato. Si te pasas, el kilómetro de más se cobra al precio que figura
+        ahí. <strong>Si no se pactó kilometraje, no se cobra</strong>.
+      </p>
+
+      <h2>Combustible y limpieza</h2>
+      <p>
+        El coche se devuelve con el mismo nivel de combustible con el que salió
+        —queda anotado y fotografiado en el parte de entrega— y en un estado de
+        limpieza razonable. Lo que exceda de eso puede suponer un cargo.
+      </p>
+
+      <h2>Dónde se puede circular</h2>
+      <p>
+        Dentro de España. Para salir del país hace falta
+        <strong>autorización nuestra por escrito</strong>, pedida antes del
+        viaje.
+      </p>
+
+      <h2>Multas y peajes</h2>
+      <p>
+        Las multas, sanciones y peajes durante el alquiler son del conductor.
+        Cuando llega una a nuestro nombre estamos obligados a identificar a quien
+        conducía, y se añaden los gastos de gestión que figuran en el contrato.
+      </p>
+
+      <h2>Averías y asistencia</h2>
+      <p>
+        El coche va asegurado y con asistencia en carretera; el teléfono viene
+        impreso en tu contrato. Si pasa algo, llama antes de tomar decisiones:
+        una reparación por tu cuenta puede no estar cubierta.
+      </p>
+
+      <h2>Tus datos</h2>
+      <p>
+        Tratamos tus datos conforme al RGPD y a la LOPDGDD, para gestionar el
+        alquiler y cumplir nuestras obligaciones legales. Puedes ejercer tus
+        derechos escribiendo a
+        <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a>.
+      </p>
+
+      <h2>Si hay desacuerdo</h2>
+      <p>
+        Lo hablamos primero, que suele bastar. El contrato somete cualquier
+        controversia a los Juzgados y Tribunales de Madrid (capital).
+      </p>
+
+      <p class="nota">
+        Este resumen es informativo y no sustituye al contrato de alquiler, que
+        es el documento con validez entre las partes. Ante cualquier diferencia
+        entre esta página y el contrato, manda el contrato.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .texto {
+    max-width: 68ch;
+  }
+
+  .texto h2 {
+    font-size: 1.3rem;
+    margin-top: 2.25rem;
+  }
+
+  .texto p {
+    color: var(--tinta-suave);
+  }
+
+  .nota {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--linea);
+    font-size: 0.875rem;
+    color: var(--tinta-tenue);
+  }
+</style>

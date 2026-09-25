@@ -21,8 +21,24 @@ jobs:
       - run: npm --prefix functions ci
       - run: npm --prefix functions test
       - run: npm run build
+
+      # Vista previa del backoffice.
+      #
+      # ⚠️ El `target` hace falta también aquí: un canal de vista previa cuelga
+      # de un sitio concreto, así que sin él no está claro de cuál.
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VELTO_STORE }}
           projectId: velto-store
+          target: backoffice
+
+      # Y de la web pública, que también se revisa antes de mezclar.
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VELTO_STORE }}
+          projectId: velto-store
+          target: web
