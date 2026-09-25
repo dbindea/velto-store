@@ -124,6 +124,32 @@ Si eso imprime sin error, el código está bien y lo que falta es cuota: reinten
 Pasó el 7 de septiembre de 2026, y se perdió un rato buscando un error de
 compilación que no existía.
 
+⚠️ **El PRIMER trigger de Eventarc de un proyecto falla, y hay que reintentar.**
+Pasó en los dos proyectos el mismo día —25 de septiembre de 2026, desplegando
+`onAuthorizedUserChanged`—, así que es sistemático y no mala suerte:
+
+```
+Validation failed for trigger …: Invalid resource state for "":
+Permission denied while using the Eventarc Service Agent.
+```
+
+El propio CLI lo explica a renglón seguido («we need a little bit longer to
+finish setting everything up. Retry the deployment in a few minutes») y tiene
+razón: los permisos del service agent tardan unos minutos en propagarse. **El
+reintento funciona a la primera**, sin tocar nada.
+
+Ojo con leerlo mal: producción llevaba meses con 22 functions de 2ª generación,
+así que lo de «tu primera vez» sorprende. Lo nuevo no es la 2ª generación, es el
+**trigger de Firestore** — ninguna function anterior usaba Eventarc.
+
+⚠️ **Y si el despliegue lleva varias functions, las demás SÍ se crean.** Aquí
+`syncAuthClaims` entró y solo falló el trigger, así que el reintento es por su
+nombre y no de la tanda entera:
+
+```bash
+firebase deploy --only functions:onAuthorizedUserChanged --project prod
+```
+
 ⚠️ **Y hay un segundo error que también acusa al código sin motivo:**
 
 ```
