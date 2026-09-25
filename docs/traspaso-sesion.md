@@ -425,6 +425,48 @@ son ficheros huérfanos con su token de descarga vivo.
 
 ---
 
+## 2 septies. La siembra del 25 de septiembre, y qué es de verdad
+
+⚠️ **Desarrollo tiene cuatro coches y una reserva que NO son datos reales.** Se
+sembraron para poder mirar la web pública con la rejilla llena, porque con la
+flota vacía no se ve ninguno de los fallos que sí se vieron con ella dentro. Van
+identificados por el id del documento, que empieza por `demo-`:
+
+| Id | Coche | Para qué |
+|---|---|---|
+| `demo-peugeot-3008` | Peugeot 3008 · SUV · diésel automático | categoría SUV y cinco tramos de tarifa |
+| `demo-citroen-berlingo` | Citroën Berlingo · furgoneta · manual | la categoría `van`, que no tenía ningún coche |
+| `demo-toyota-corolla` | Toyota Corolla · híbrido automático | el `fuelType: 'hybrid'`, que tampoco |
+| `demo-bloqueo-berlingo` | reserva `confirmed` del 9 al 14 de octubre | que un coche salga **ocupado** en la consulta de fechas |
+
+El quinto, el Renault Clio (`RuEYtRi9CvtwSjPoSRvd`), es el que ya estaba.
+
+Tres cosas que conviene saber antes de tocarlo:
+
+- **Las fotos son de Wikimedia Commons, CC BY-SA 4.0**, y están ahí porque hacía
+  falta ver coches de verdad en las tarjetas. ⚠️ **No sirven para producción**:
+  esa licencia obliga a atribuir al autor, y un escaparate de alquiler no lleva
+  créditos de foto. Las de producción son las que haga la agencia de su propia
+  flota.
+- **Se publicaron por el camino real**, llamando a `publishVehiclePhoto` con la
+  sesión de administrador, no copiando ficheros. Es lo que dejó comprobado que
+  la function hace lo que promete: dos de los originales traían EXIF y **el
+  publicado no lo tiene** —`grep -ac Exif` da 1 en el original y 0 en el de
+  `public-vehicles/`—, que es toda la razón de que esa function exista.
+- **El seguro está relleno con datos de prueba** (`PRUEBA-3008-0001`, Mapfre,
+  900 100 200). Sin ellos la ficha avisa de que el contrato promete una póliza
+  que no imprime, y la simulación se para antes de llegar al contrato.
+
+⚠️ **La reserva de bloqueo está escrita a mano y NO pasó por
+`commitReservationWithPayments()`**: lleva solo los cuatro campos que mira la
+API pública —coche, estado y las dos fechas— más una nota que lo dice. O sea
+que **no tiene filas de cobro ni snapshots**, y en el backoffice se verá
+incompleta. Sirve para lo que sirve: comprobar que un coche ocupado desaparece
+de la consulta de fechas, que es lo que se verificó —cuatro libres del 20 al 25,
+tres del 9 al 14.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 Medido el 22 de septiembre al cerrar la sesión. **No te fíes de las cifras, que
