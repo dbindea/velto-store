@@ -11,23 +11,68 @@ import { EMPRESA } from '../lib/empresa';
  */
 const PROMESAS = [
   {
+    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg>`,
     titulo: 'Precio final desde el primer clic',
     texto:
       'Lo que ves es lo que pagas: IVA incluido y sin cargos que aparezcan al devolver el coche.',
   },
   {
+    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>`,
     titulo: 'Te lo llevamos a casa',
     texto:
       'Entrega y recogida a domicilio en Arganda del Rey y alrededores. Se pacta antes y consta en el contrato.',
   },
   {
+    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-5A8 8 0 1 1 21 11.5Z"/></svg>`,
     titulo: 'Alguien responde',
     texto: `WhatsApp al ${EMPRESA.telefono}, también durante el alquiler. Contesta una persona.`,
   },
   {
+    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a3 3 0 0 1 3-3h6a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><path d="m17 16 3 3-3 3"/></svg>`,
     titulo: 'Kilómetros por escrito',
     texto:
       'Los kilómetros incluidos figuran en el contrato. Si no se pactó kilometraje, no se cobra.',
+  },
+];
+
+/**
+ * ⚠️ **Cada respuesta sale de una cláusula real de
+ * `functions/src/contracts/clauses.ts`**, como la página de condiciones: la
+ * edad mínima de 21 años, los treinta minutos de cortesía, la fianza que se
+ * devuelve tras la inspección y la autorización escrita para salir de España.
+ *
+ * Y las dos que salen del backoffice: la factura se emite **a petición** —así lo
+ * decide el recibo— y la entrega a domicilio se pacta antes con su importe
+ * propio. Si algo de esto deja de ser cierto, se cambia aquí el mismo día.
+ */
+const PREGUNTAS = [
+  {
+    q: '¿El precio que veo es el final?',
+    a: 'Sí. Lo que aparece en la web lleva el <strong>IVA incluido</strong> y es lo que se cierra en el contrato. La fianza va aparte y se devuelve; si pactamos entrega a domicilio, ese importe se acuerda antes y aparece en su propia línea.',
+  },
+  {
+    q: '¿Qué edad hay que tener y qué papeles hacen falta?',
+    a: 'Desde <strong>21 años</strong>, con permiso de conducir en vigor y DNI o pasaporte. Si vais a turnaros al volante, cada conductor tiene que ir nombrado en el contrato: no cuesta nada, pero tiene que constar.',
+  },
+  {
+    q: '¿Cuánto es la fianza y cuándo me la devolvéis?',
+    a: 'Es un <strong>depósito en garantía</strong>, no parte del precio. Se devuelve tras la inspección de devolución, salvo que haya que retener algo por daños, combustible o kilómetros de más. A clientes conocidos podemos no pedirla.',
+  },
+  {
+    q: '¿Puedo salir de España con el coche?',
+    a: 'Hace falta <strong>autorización nuestra por escrito</strong>, pedida antes del viaje. Dentro de España no hay restricción.',
+  },
+  {
+    q: '¿Me lo podéis llevar a casa?',
+    a: 'Sí. En Arganda del Rey y alrededores no cobramos el desplazamiento; más lejos se acuerda un suplemento antes de reservar. La ida y la vuelta se deciden por separado: hay quien recoge aquí y solo pide que vayamos a buscarlo.',
+  },
+  {
+    q: '¿Hacéis factura?',
+    a: 'Sí, <strong>a petición</strong>. Dilo al reservar y la emitimos a nombre de quien nos indiques.',
+  },
+  {
+    q: '¿Qué hago si el coche se avería?',
+    a: 'Llama al teléfono de asistencia que viene impreso en tu contrato <strong>antes de tomar decisiones</strong>: una reparación por tu cuenta puede no estar cubierta. El coche va asegurado y con asistencia en carretera.',
   },
 ];
 ---
@@ -73,10 +118,11 @@ const PROMESAS = [
   <!-- ---- Las cuatro promesas ------------------------------------------- -->
   <section class="seccion promesas-seccion">
     <div class="contenedor">
-      <div class="rejilla">
+      <div class="promesas">
         {
           PROMESAS.map((p) => (
             <article class="card promesa">
+              <div class="icono-circulo" set:html={p.icono} />
               <h2 class="promesa__titulo">{p.titulo}</h2>
               <p class="promesa__texto">{p.texto}</p>
             </article>
@@ -89,7 +135,7 @@ const PROMESAS = [
   <!-- ---- Flota (se carga de la API) ------------------------------------- -->
   <section class="seccion seccion--alt">
     <div class="contenedor">
-      <p class="overline">Flota</p>
+      <p class="chip">Flota</p>
       <div class="titulo-fila">
         <h2>Precio por día, todo incluido</h2>
         <a class="btn btn--ghost" href="/flota">Ver toda la flota</a>
@@ -110,7 +156,7 @@ const PROMESAS = [
   <section class="seccion" id="requisitos">
     <div class="contenedor requisitos">
       <div>
-        <p class="overline">Requisitos</p>
+        <p class="chip">Requisitos</p>
         <h2>Lo que necesitas para alquilar</h2>
         <ul class="lista-check">
           <li>Permiso de conducir en vigor</li>
@@ -133,6 +179,37 @@ const PROMESAS = [
           <a class="btn btn--ghost" href={`mailto:${EMPRESA.correo}`}>Escribir un email</a>
         </div>
       </aside>
+    </div>
+  </section>
+
+  <!-- ---- Preguntas frecuentes ------------------------------------------- -->
+  <section class="seccion seccion--alt">
+    <div class="contenedor dos-columnas">
+      <div>
+        <p class="chip">Preguntas frecuentes</p>
+        <h2>Lo que más nos preguntan</h2>
+        <p class="faq__intro">
+          Si falta la tuya, escríbenos por WhatsApp: contesta una persona.
+        </p>
+        <a class="btn btn--ghost" href="/condiciones">Ver todas las condiciones</a>
+      </div>
+
+      <!--
+        ⚠️ **Cada respuesta sale de una cláusula del contrato**, igual que la
+        página de condiciones. Si el articulado cambia, esto cambia con él: una
+        web que promete algo que el papel no dice es una discusión en el
+        mostrador, y con razón del cliente.
+      -->
+      <div class="faq">
+        {
+          PREGUNTAS.map((p, i) => (
+            <details open={i === 0}>
+              <summary>{p.q}</summary>
+              <div class="faq__cuerpo" set:html={p.a} />
+            </details>
+          ))
+        }
+      </div>
     </div>
   </section>
 </Base>
@@ -283,4 +360,22 @@ const PROMESAS = [
   .oficina h3 { margin: var(--sp-3) 0; }
   .oficina__nota { color: var(--text-2); font-size: var(--fs-small); margin-bottom: var(--sp-6); }
   .oficina__acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
+  .faq__intro { color: var(--text-2); margin: var(--sp-4) 0 var(--sp-6); }
+
+  /*
+   * Rejilla propia y no la genérica: con `auto-fill` y 300 px, las CUATRO
+   * promesas caían 3 + 1 y dejaban un hueco a la derecha que se lee como que
+   * falta algo. Aquí bajan a 2×2 y luego a una, que son repartos completos.
+   */
+  .promesas {
+    display: grid;
+    gap: var(--sp-5);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 620px) { .promesas { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1040px) { .promesas { grid-template-columns: repeat(4, 1fr); } }
+
+  .promesa { padding: var(--sp-8) var(--sp-6); }
 </style>

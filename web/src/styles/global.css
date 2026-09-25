@@ -45,6 +45,27 @@
   src: url('/fonts/GothamBold.ttf') format('truetype');
 }
 
+@font-face {
+  /*
+   * ⚠️ **Fuente VARIABLE: un fichero para todos los pesos.** Google sirve
+   * Montserrat así, y de hecho las URL de 400 y 600 devuelven el MISMO fichero
+   * —comprobado por hash—: descargar uno por peso era duplicar 38 KB sin ganar
+   * nada. Por eso el rango va en el propio `font-weight`.
+   *
+   * Autoalojada y no desde Google Fonts: servirla desde ahí manda la IP de cada
+   * visitante a un tercero, y es una web española que no tiene por qué hacerlo.
+   *
+   * Subconjunto `latin`, que cubre el español **y el símbolo del euro**
+   * (U+20AC). Comprobado con fontkit sobre el TTF completo — el `hasGlyph` de un
+   * `.woff2` miente, porque fontkit no lo descomprime y contesta que no a todo.
+   */
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/Montserrat-latin.woff2') format('woff2');
+}
+
 :root {
   /* Marca — de la BrandCard */
   --velto-teal: #20a48f;
@@ -62,11 +83,19 @@
   --red-600: #c8322b; --red-100: #fce8e6;
   --blue-600: #2457a8; --blue-100: #e4ecfa;
 
-  --font-sans: 'Gotham', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
   /*
-   * Para cifras y todo lo que lleve `€`. Ver la nota de Gotham arriba.
+   * **DOS fuentes, y el reparto no es estético: es por los glifos.**
+   *
+   * `--font-display` es Gotham y va en titulares, marca y botones. `--font-sans`
+   * es Montserrat y va en el cuerpo, en las cifras y en cualquier cosa que
+   * pueda llevar `€` — Gotham no tiene ese carácter y partiría «29,00 €» en dos
+   * fuentes a media cifra. Montserrat es además la que el propio design system
+   * declara como respaldo de Gotham, así que las dos ya estaban pensadas juntas.
    */
-  --font-num: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Gotham', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  /* Se conserva el nombre porque `.num` lo usa; hoy son la misma. */
+  --font-num: var(--font-sans);
   --fw-light: 300; --fw-book: 400; --fw-medium: 500; --fw-bold: 700; --fw-black: 900;
 
   --fs-display: clamp(2.75rem, 2rem + 3vw, 4.5rem);
@@ -157,6 +186,7 @@ body {
 }
 
 h1, h2, h3, h4, p { margin: 0; }
+h1, h2, h3, h4 { font-family: var(--font-display); }
 h1, h2 { font-weight: var(--fw-medium); letter-spacing: var(--ls-tight); line-height: var(--lh-tight); }
 h1 { font-size: var(--fs-h1); }
 h2 { font-size: var(--fs-h2); }
@@ -328,3 +358,112 @@ img, svg { display: block; max-width: 100%; }
 
 .coche__detalle { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
 .coche__btn { width: 100%; }
+
+/* ---- Traído de la referencia (demo.awaikenthemes.com/rentgo) -------------
+ *
+ * Tres patrones de ese tema que encajan aquí, adaptados a los tokens de Velto.
+ * Lo que NO se ha traído está dicho a propósito: estrellas, «2000 reseñas»,
+ * «4k clientes felices», testimonios con foto y el vídeo. **Velto no tiene nada
+ * de eso**, y una prueba social inventada es exactamente lo que esta casa evita
+ * — el texto y el hecho se deciden juntos.
+ */
+
+/*
+ * El chip de sección: la píldora con un punto delante del rótulo. Sustituye al
+ * `.overline` suelto donde hay sitio, y es lo que más cambia el aire de una
+ * sección sin tocar su contenido.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--bg-alt);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  margin-bottom: var(--sp-5);
+}
+
+.chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* El icono en círculo de las tarjetas de ventaja. */
+.icono-circulo {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  margin-bottom: var(--sp-5);
+}
+
+/*
+ * El acordeón de preguntas frecuentes.
+ *
+ * ⚠️ **`<details>` nativo, sin una línea de JavaScript.** Funciona sin que
+ * cargue nada, se puede abrir con el teclado, el buscador lee el contenido
+ * aunque esté cerrado y **se imprime abierto**. Un acordeón hecho a mano no da
+ * ninguna de las cuatro cosas gratis.
+ */
+.faq { display: grid; gap: var(--sp-3); }
+
+.faq details {
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+
+.faq summary::after {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--t-base) var(--ease);
+}
+
+.faq details[open] summary { background: var(--brand-soft); color: var(--brand-text); }
+.faq details[open] summary::after { transform: rotate(-135deg); }
+
+.faq .faq__cuerpo {
+  padding: 0 var(--sp-6) var(--sp-5);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+
+/* Bloque a dos columnas: titular a la izquierda, contenido a la derecha. */
+.dos-columnas {
+  display: grid;
+  gap: var(--sp-10);
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .dos-columnas { grid-template-columns: 1fr 1.2fr; gap: var(--sp-16); }
+}
