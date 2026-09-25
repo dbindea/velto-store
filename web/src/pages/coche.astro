@@ -17,6 +17,7 @@ import { EMPRESA } from '../lib/empresa';
 <Base
   titulo="Vehículo | Velto"
   descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos y precio por día."
+  ruta={null}
 >
   <section class="seccion">
     <div class="contenedor">
@@ -41,6 +42,7 @@ import { EMPRESA } from '../lib/empresa';
 
 <script>
   import { ficha, euros, nombreCoche, combustible, cambio, categoria } from '../lib/api';
+  import { SITIO } from '../lib/empresa';
 
   const contenedor = document.getElementById('ficha')!;
   const cargando = document.getElementById('cargando')!;
@@ -61,6 +63,51 @@ import { EMPRESA } from '../lib/empresa';
   function pinta(v: Awaited<ReturnType<typeof ficha>>['vehicle']): void {
     const nombre = nombreCoche(v);
     document.title = `${nombre} | Velto`;
+
+    /*
+     * ⚠️ **La canónica de la ficha se pone AQUÍ, no en el layout.** Esta página
+     * se sirve desde un solo fichero —`/coche/**` reescribe a `/coche.html`—,
+     * así que al compilar no existe «la ruta de esta página»: existen tantas
+     * como coches. Pasándole `ruta` al layout, todas las fichas salían
+     * declarando la misma URL, y hasta el 25 de septiembre de 2026 esa URL era
+     * la **portada**: cada coche le decía a Google que es una copia de la
+     * página principal.
+     *
+     * Por eso el layout no emite ninguna (`ruta={null}`) y se añade cuando ya
+     * se sabe de qué coche se trata. Se construye con el id de la reserva y no
+     * con `location.pathname` para que un parámetro pegado detrás —una
+     * campaña, un `?utm_...`— no produzca una canónica distinta por visita.
+     */
+    const url = `${SITIO}/coche/${encodeURIComponent(v.id)}`;
+
+    /*
+     * ⚠️ Las dos se CREAN si no están, no se actualizan a secas. Desde que el
+     * layout no emite ninguna para esta página, un
+     * `querySelector(...)?.setAttribute(...)` no encuentra nada y **no hace
+     * nada, sin error**: la ficha se quedó sin `og:url` —comprobado en el
+     * navegador— y lo que se pierde es la tarjeta del enlace al compartir un
+     * coche por WhatsApp, que es justo como se comparten.
+     */
+    const meta = (selector: string, crear: () => HTMLElement): HTMLElement => {
+      let el = document.head.querySelector<HTMLElement>(selector);
+      if (!el) {
+        el = crear();
+        document.head.appendChild(el);
+      }
+      return el;
+    };
+
+    meta('link[rel="canonical"]', () => {
+      const l = document.createElement('link');
+      l.rel = 'canonical';
+      return l;
+    }).setAttribute('href', url);
+
+    meta('meta[property="og:url"]', () => {
+      const m = document.createElement('meta');
+      m.setAttribute('property', 'og:url');
+      return m;
+    }).setAttribute('content', url);
 
     const fotos = v.photos.length
       ? v.photos

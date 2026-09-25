@@ -7,7 +7,7 @@ import { environment } from '@env/environment';
  *
  * These URLs are meant never to reach Angular: Firebase Hosting rewrites
  * `/d/**` to the `documentLink` function, which streams the PDF. But if that
- * rewrite is missing — it needs its own `firebase deploy --only hosting`, and
+ * rewrite is missing — it needs its own `npm run deploy:dev:hosting`, and
  * it has already been forgotten once — the catch-all rewrite serves the SPA
  * instead, the router finds no match, and the customer lands on the **login
  * screen**.

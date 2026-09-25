@@ -25,7 +25,8 @@ npm run build:prod        # build optimizada → rentalcar-veltomobility (config
 
 # Despliegues. El nombre del script dice a dónde va, y el destino viaja en
 # --project: nunca dependas del `firebase use` que quedara de la última vez.
-npm run deploy:dev:hosting     npm run deploy:prod:hosting
+npm run deploy:dev:hosting     npm run deploy:prod:hosting   # el BACKOFFICE
+npm run deploy:dev:web         npm run deploy:prod:web       # la WEB PÚBLICA
 npm run deploy:dev:functions   npm run deploy:prod:functions
 npm run deploy:dev:rules       npm run deploy:prod:rules   # reglas + índices + storage
 
@@ -1162,12 +1163,65 @@ Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
 | target | Desarrollo | Producción |
 |---|---|---|
 | `backoffice` | `store.veltorent.com` | `rentalcar.veltomobility.com` |
-| `web` | `dev.veltorent.com` | `veltomobility.com` |
+| `web` | `velto-web-dev.web.app` | *(sitio sin crear)* |
 
-⚠️ **El canónico es `veltomobility.com`; `veltorent.com` sirve lo mismo y
-redirige.** Dos dominios con el mismo contenido **no suman posicionamiento, lo
+⚠️ **Esa segunda fila es lo que hay HOY, no lo que se pretende.** Aquí ponía
+`dev.veltorent.com` y `veltomobility.com` como si ya sirvieran, y medido el 25
+de septiembre de 2026 **ninguno de los dos existe**: `dev.veltorent.com` da
+NXDOMAIN, y `veltomobility.com` sirve el aparcamiento del registrador —IONOS, en
+alemán— con un **525** por HTTPS, porque el TLS entre Cloudflare y ese origen
+falla. En producción el sitio de hosting de la web **ni siquiera está creado**:
+`.firebaserc` manda el target `web` a `velto-web`, y
+`firebase hosting:sites:get velto-web --project prod` contesta «could not find
+site». Un merge a `master` publicaría el backoffice —va primero— y se caería en
+el paso siguiente.
+
+Escrito como estaba, cualquiera que fuera a comprobar un despliegue miraba un
+dominio que no responde y concluía que el despliegue había fallado. **Esta tabla
+dice lo que sirve; los dominios entran cuando responden.**
+
+⚠️ **El canónico será `veltomobility.com`; `veltorent.com` servirá lo mismo y
+redirigirá.** Dos dominios con el mismo contenido **no suman posicionamiento, lo
 reparten**, así que el `<link rel="canonical">` del layout no es decorativo: sin
-él, Google elige por su cuenta cuál enseñar.
+él, Google elige por su cuenta cuál enseñar. ⚠️ Y esa redirección **no está en
+el repositorio**: `firebase.json` no tiene ningún bloque `redirects`, así que
+tiene que ser una regla de Cloudflare.
+
+### El sitio de verdad se distingue por el MODO de compilación
+
+⚠️ **La web se construye IGUAL para los dos entornos** —mismo `web/dist`, sin
+`fileReplacements` ni `.env`—, y hay dos cosas que no pueden salir iguales: el
+`robots.txt` y el `<meta name="robots">`. Sin distinguirlas,
+`velto-web-dev.web.app` se ofrece al índice de Google con una canónica que
+apunta a producción, o sea un duplicado del escaparate compitiendo con el
+original.
+
+| | Comando | Modo | `robots.txt` | `<meta robots>` |
+|---|---|---|---|---|
+| desarrollo y PR | `npm --prefix web run build` | `production` | `Allow: /` | `noindex, nofollow` |
+| **el sitio real** | `npm --prefix web run build:prod` | **`live`** | `Allow: /` + sitemap | *(ninguno)* |
+
+⚠️ **`astro build` usa el modo `production` POR DEFECTO**, así que el modo por
+defecto **no distingue nada**: lo que distingue es el `--mode live` que pasa
+`build:prod`, y que lee `ES_SITIO_REAL` en `web/src/lib/empresa.ts`. Quien lo
+llama es **solo** el workflow de `master`.
+
+⚠️ **Y los dos llevan `Allow: /`, que parece un error y no lo es.** Un
+`Disallow` prohíbe **descargar** la página, así que el rastreador nunca llega a
+leer el `noindex` del HTML: los dos mecanismos se taparían en vez de sumarse, y
+además una URL bloqueada por `robots.txt` **puede acabar indexada igualmente**
+si alguien la enlaza —sin título ni descripción, que es la peor forma de
+aparecer—. Para sacar algo del índice hay que dejar que lo lean y decirles que
+no lo indexen.
+
+⚠️ **Nada comprueba que el artefacto de producción salió en modo `live`**, y es
+una comparación de cadenas colgando de un solo `run` de un solo workflow. Se
+mira así, que es de lo poco que se puede comprobar sin desplegar:
+
+```bash
+cat web/dist/robots.txt      # con "Sitemap:" = sitio real; sin él = desarrollo
+grep -l 'name="robots"' web/dist/*.html   # si sale algo en el build real, va mal
+```
 
 ⚠️ **Cada despliegue lleva su `target` explícito, y es obligatorio.** Sin él,
 `action-hosting-deploy` no sabe cuál de los dos publicar — y el peor caso no es
@@ -1973,7 +2027,17 @@ fichero avisa que es fácil olvidar. Se comprueba con
 
 `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que desplegarla no basta: el
 rewrite `/d/**` viaja con el **hosting** y necesita su propio
-`firebase deploy --only hosting`.
+`npm run deploy:dev:hosting` (o `deploy:prod:hosting`).
+
+⚠️ **Y ahí ponía `firebase deploy --only hosting` a secas, que desde el 25 de
+septiembre de 2026 hace otra cosa**: con dos sitios declarados en `.firebaserc`,
+ese comando despliega **los dos** — el backoffice y el escaparate público. Los
+dos caminos son malos y ninguno avisa: en un clon limpio `web/dist` no existe
+—está en `.gitignore`— y el CLI aborta a media faena; y en una máquina donde sí
+exista, **publica el escaparate con lo que hubiera compilado ese día**, que
+puede ser de la semana pasada y del entorno que no toca. El target va siempre
+explícito. La misma frase estaba repetida en
+[document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts).
 
 ### Enlaces cortos para WhatsApp
 

@@ -1,15 +1,34 @@
 ---
 import '../styles/global.css';
-import { EMPRESA, SITIO } from '../lib/empresa';
+import { EMPRESA, SITIO, ES_SITIO_REAL } from '../lib/empresa';
 
 interface Props {
   titulo: string;
   descripcion: string;
-  ruta?: string;
+  /**
+   * La ruta de ESTA página, para componer su canónica. `''` es la portada.
+   *
+   * ⚠️ **Obligatoria y sin valor por defecto, y eso es el arreglo de un fallo
+   * real.** Era `ruta?: string` con defecto `''`, así que la página que se
+   * olvidara de pasarla se publicaba **declarando ser la portada**. Se
+   * olvidaban dos: la ficha de coche y el 404 — medido en el build,
+   * `dist/coche.html` traía `<link rel="canonical" href="https://veltomobility.com">`.
+   * O sea que las fichas de coche, que son el contenido que de verdad se
+   * buscaría, le decían a Google que todas son copias de la portada: ninguna
+   * podría posicionar nunca, y encima se declaraban duplicadas entre sí.
+   *
+   * No se veía porque la web de desarrollo va con `noindex` y producción aún no
+   * existe: habría salido a la luz el día de publicar y no antes.
+   *
+   * `null` significa **esta página no declara canónica**, que es distinto de
+   * «es la portada» y es lo que corresponde a una página cuyo path no se conoce
+   * al compilar. Sin defecto, el compilador obliga a contestar una de las dos.
+   */
+  ruta: string | null;
 }
 
-const { titulo, descripcion, ruta = '' } = Astro.props;
-const canonica = SITIO + ruta;
+const { titulo, descripcion, ruta } = Astro.props;
+const canonica = ruta === null ? null : SITIO + ruta;
 const anio = new Date().getFullYear();
 const tel = EMPRESA.telefono.replace(/\s/g, '');
 ---
@@ -29,12 +48,30 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       posicionamiento en vez de sumarlo y puede acabar enseñando el que no
       queremos.
     -->
-    <link rel="canonical" href={canonica} />
+    {canonica && <link rel="canonical" href={canonica} />}
+
+    {
+      /*
+       * ⚠️ **El sitio de desarrollo NO se indexa, y la canónica de arriba no
+       * basta para conseguirlo.** `velto-web-dev.web.app` se servía con
+       * `Allow: /` y con esa canónica apuntando a producción: o sea, un
+       * duplicado completo del escaparate ofrecido a Google. Una canónica es
+       * una **pista**, no una orden —Google puede ignorarla y elegir la copia
+       * que le parezca—, y encima hasta que el dominio de producción sirva de
+       * verdad, el único que existe es este. Eso lo deja compitiendo consigo
+       * mismo, que es justo lo que se quería evitar.
+       *
+       * La marca es del rastreador, no del navegador: `noindex` saca la página
+       * del índice y `nofollow` evita que los enlaces internos arrastren a las
+       * demás.
+       */
+      !ES_SITIO_REAL && <meta name="robots" content="noindex, nofollow" />
+    }
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Velto" />
     <meta property="og:title" content={titulo} />
     <meta property="og:description" content={descripcion} />
-    <meta property="og:url" content={canonica} />
+    {canonica && <meta property="og:url" content={canonica} />}
     <meta name="theme-color" content="#20A48F" />
 
     <!--

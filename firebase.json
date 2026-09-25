@@ -64,15 +64,45 @@
       "cleanUrls": true,
       "headers": [
         {
+          "source": "**",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=300" }
+          ]
+        },
+        {
           "source": "/_astro/**",
           "headers": [
             { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
           ]
         },
         {
-          "source": "**/*.@(html)",
+          "source": "/fonts/**",
           "headers": [
-            { "key": "Cache-Control", "value": "public, max-age=300" }
+            { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          ]
+        },
+        {
+          "source": "/brand/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=604800" }
+          ]
+        },
+        {
+          "source": "/api/fleet",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=600" }
+          ]
+        },
+        {
+          "source": "/api/vehicle",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=600" }
+          ]
+        },
+        {
+          "source": "/api/availability",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=120" }
           ]
         }
       ],

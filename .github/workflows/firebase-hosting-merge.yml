@@ -53,7 +53,45 @@ jobs:
       # fallara, el backoffice ya está publicado. Son dos productos en un
       # repositorio, y que uno no salga no puede impedir que salga el otro.
       - run: npm --prefix web ci
-      - run: npm --prefix web run build
+      #
+      # ⚠️ **`build:prod`, y aquí ponía `build`.** Es el ÚNICO sitio que compila
+      # el sitio de verdad, y esa diferencia es la que decide dos cosas que no
+      # pueden salir iguales en los dos entornos: el `robots.txt`
+      # (`Allow` aquí, `Disallow` en desarrollo) y el `<meta name="robots">`.
+      #
+      # Hasta el 25 de septiembre de 2026 los tres workflows corrían `build` a
+      # secas, así que la web salía **idéntica** para los dos sitios y
+      # `velto-web-dev.web.app` se ofrecía al índice de Google con una canónica
+      # apuntando a producción: un duplicado del escaparate compitiendo con el
+      # original. Es el mismo reparto que `--configuration production` hace en
+      # Angular con `fileReplacements`.
+      #
+      # ⚠️ Ojo: `astro build` usa el modo `production` POR DEFECTO, así que el
+      # modo por defecto no distingue nada. Lo que distingue es el `--mode live`
+      # que `build:prod` pasa, y que lee `ES_SITIO_REAL` en `web/src/lib/empresa.ts`.
+      - run: npm --prefix web run build:prod
+
+      # ⚠️ **Que el artefacto sea el de producción se COMPRUEBA, no se supone.**
+      # Toda la distinción entre los dos sitios cuelga de una comparación de
+      # cadenas (`MODE === 'live'`) y de que la línea de arriba diga `build:prod`
+      # y no `build`. Si alguien la cambia —o si un `astro build` futuro deja de
+      # respetar `--mode`—, no falla nada: se publica el escaparate real con el
+      # `noindex` de desarrollo puesto, y **Google lo retira del índice** sin que
+      # ningún test, ningún tipo y ningún despliegue se queje.
+      #
+      # Las dos comprobaciones son las dos caras del mismo hecho, a propósito:
+      # una mira lo que TIENE que estar y la otra lo que NO puede estar.
+      - name: El artefacto de la web es el del sitio real
+        run: |
+          set -e
+          grep -q '^Sitemap:' web/dist/robots.txt \
+            || { echo "::error::web/dist/robots.txt no anuncia sitemap: esto es un build de DESARROLLO"; exit 1; }
+          if grep -l 'name="robots"' web/dist/*.html; then
+            echo "::error::hay páginas con <meta name=robots> (noindex): esto es un build de DESARROLLO"
+            exit 1
+          fi
+          echo "OK: robots.txt con sitemap y ninguna página con noindex"
+
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
