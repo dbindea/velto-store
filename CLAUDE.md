@@ -159,6 +159,23 @@ El plazo se sube con `FUNCTIONS_DISCOVERY_TIMEOUT`, **en segundos**:
 FUNCTIONS_DISCOVERY_TIMEOUT=120 firebase deploy --only functions:x --project prod
 ```
 
+⚠️ **Y ese comando NO funciona en PowerShell**, que es donde Dorel lanza los
+despliegues. El prefijo `VAR=valor comando` es sintaxis de shell tipo Unix; en
+PowerShell la variable se pone aparte, y sin ella el despliegue vuelve a fallar
+con el mismo mensaje — pareciendo que el truco no sirve:
+
+```powershell
+$env:FUNCTIONS_DISCOVERY_TIMEOUT=120
+firebase deploy --only functions:x --project prod
+```
+
+⚠️ **Volvió a salir el 25 de septiembre de 2026**, desplegando las dos functions
+de los claims a producción, y la comprobación dio lo mismo que la primera vez:
+el manifiesto respondía **200 en 0,79 s** con las 29 functions mientras el
+despliegue abortaba a los 10. Había **26 procesos de node** — un `ng serve` con
+watch y una tanda de builds y tests de fondo. Es decir: el código nunca ha sido
+la causa, ninguna de las dos veces. Si la máquina está cargada, súbelo y ya.
+
 ## Dos entornos, dos proyectos de Firebase
 
 Una sola base de código. Lo único que cambia entre entornos es **qué fichero de
