@@ -106,3 +106,13 @@ export {
 // justo el día en que hace falta. Sale a las 9:00 para que quede jornada por
 // delante: a las 20:00 ya no se puede llamar a un cliente que no ha firmado.
 export { sendDailyDigest, previewDailyDigest } from './alerts/sendDailyDigest';
+
+/**
+ * Quién está autorizado, escrito DENTRO del token.
+ *
+ * ⚠️ **Existe porque las reglas de Storage no pueden leer Firestore**, así que
+ * no hay forma de que comprueben `authorizedUsers` por su cuenta. Ver la nota
+ * larga en `auth-claims.ts`: es lo que hace que «autenticado» deje de significar
+ * «autorizado» en el único sitio donde significaba eso.
+ */
+export { syncAuthClaims, onAuthorizedUserChanged } from './auth-claims';

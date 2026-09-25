@@ -12,6 +12,7 @@ import {
   doc,
   getDoc
 } from '@angular/fire/firestore';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Router } from '@angular/router';
 import { Observable, from, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -23,6 +24,7 @@ import { AuthorizedUser } from '@shared/models/authorized-user.model';
 export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
+  private functions = inject(Functions);
   private router = inject(Router);
 
   /**
@@ -180,10 +182,54 @@ export class AuthService {
       const userData = { ...(userDoc.data() as AuthorizedUser), email: userDoc.id };
       this._authorizedUser.set(userData);
 
+      if (userData.active === true) await this.ensureStorageClaim();
+
       return userData.active === true;
     } catch (error) {
       console.error('Error checking authorization:', error);
       return false;
+    }
+  }
+
+  /**
+   * Sella en el token que esta cuenta está autorizada, para que lo vean las
+   * reglas de **Storage**.
+   *
+   * ⚠️ **Hace falta porque las reglas de Storage no pueden leer Firestore.** Lo
+   * que esta pantalla acaba de comprobar —la ficha de `authorizedUsers`— es
+   * justo lo que aquellas no pueden consultar, así que el backend lo comprueba
+   * otra vez y lo escribe dentro del token, que sí leen. Sin esto, Storage
+   * tendría que conformarse con «está autenticado», y eso lo cumple cualquier
+   * cuenta de Google del mundo.
+   *
+   * ⚠️ **Va aquí, en la lectura cacheada por email, y no en el login.** Por aquí
+   * pasan las dos entradas —entrar con Google y recargar con la sesión puesta—,
+   * así que una cuenta que ya estuviera dentro antes de que esto existiera se
+   * sella sola al recargar. Colgándolo de `loginWithGoogle()` habría que volver
+   * a entrar a mano para que funcionara.
+   *
+   * ⚠️ **Y no se llama si el token ya lo trae.** El claim sobrevive a la
+   * renovación del token, así que sin esta comprobación cada recarga pagaría una
+   * llamada a una function para no cambiar nada.
+   *
+   * Un fallo aquí **no echa a nadie**: la aplicación sigue funcionando entera y
+   * lo único que falla es leer ficheros de Storage. Sacar al operador por esto
+   * sería peor que el problema.
+   */
+  private async ensureStorageClaim(): Promise<void> {
+    try {
+      const fbUser = this.auth.currentUser;
+      if (!fbUser) return;
+
+      const token = await fbUser.getIdTokenResult();
+      if (token.claims['velto'] === true) return;
+
+      await httpsCallable(this.functions, 'syncAuthClaims')();
+      // El claim nuevo no aparece en el token que ya está en la mano: hay que
+      // pedirlo otra vez a propósito.
+      await fbUser.getIdToken(true);
+    } catch (error) {
+      console.error('No se pudo sellar la autorización en el token:', error);
     }
   }
 
