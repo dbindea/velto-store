@@ -25,7 +25,7 @@ import { EMPRESA } from '../lib/empresa';
           <label for="hasta">Devolución</label>
           <input type="date" id="hasta" name="hasta" required />
         </div>
-        <button class="boton boton--principal" type="submit">Ver disponibilidad</button>
+        <button class="btn btn--brand" type="submit">Ver disponibilidad</button>
       </form>
 
       <!--
@@ -38,7 +38,7 @@ import { EMPRESA } from '../lib/empresa';
 
       <div id="resultado" hidden>
         <h2 id="resumen" class="resumen"></h2>
-        <div id="lista" class="rejilla-coches"></div>
+        <div id="lista" class="rejilla"></div>
       </div>
 
       <p id="cargando" class="aviso" hidden>Consultando…</p>
@@ -52,7 +52,8 @@ import { EMPRESA } from '../lib/empresa';
 </Base>
 
 <script>
-  import { disponibilidad, euros, nombreCoche, combustible, cambio, categoria } from '../lib/api';
+  import { disponibilidad } from '../lib/api';
+  import { tarjetaCoche } from '../lib/tarjeta';
 
   const form = document.getElementById('form') as HTMLFormElement;
   const desde = document.getElementById('desde') as HTMLInputElement;
@@ -81,6 +82,23 @@ import { EMPRESA } from '../lib/empresa';
   });
 
   /**
+   * Las fechas que venían del buscador de la portada.
+   *
+   * ⚠️ **Y se consulta sola.** Quien ya eligió fechas allí y pulsó «Ver
+   * precios» espera ver precios, no un formulario relleno y un botón más que
+   * pulsar: eso es hacerle repetir lo que ya hizo.
+   */
+  const params = new URLSearchParams(location.search);
+  const dFrom = params.get('from');
+  const dTo = params.get('to');
+  if (dFrom && dTo && /^\d{4}-\d{2}-\d{2}$/.test(dFrom) && /^\d{4}-\d{2}-\d{2}$/.test(dTo)) {
+    desde.value = dFrom;
+    hasta.min = dFrom;
+    hasta.value = dTo;
+    queueMicrotask(() => form.requestSubmit());
+  }
+
+  /**
    * ⚠️ Las claves que devuelve la function se traducen AQUÍ. Enseñar
    * `range-too-long` es enseñarle al visitante el código de un error; y un
    * genérico «algo ha fallado» le hace pulsar otra vez sin cambiar nada.
@@ -91,29 +109,6 @@ import { EMPRESA } from '../lib/empresa';
     'past-date': 'La recogida no puede ser en una fecha pasada.',
     'range-too-long': 'Para alquileres de más de tres meses, llámanos y lo vemos.',
   };
-
-  function tarjeta(c: Awaited<ReturnType<typeof disponibilidad>>['vehicles'][number]): string {
-    const nombre = nombreCoche(c);
-    const foto = c.photo
-      ? `<img src="${c.photo.url}" alt="${nombre}" loading="lazy" decoding="async" />`
-      : `<div class="coche__sinfoto" aria-hidden="true">🚗</div>`;
-    return `
-      <article class="tarjeta coche">
-        <a class="coche__enlace" href="/coche/${c.id}">
-          <div class="coche__foto">${foto}</div>
-          <div class="coche__cuerpo">
-            <p class="coche__categoria">${categoria(c.category)}</p>
-            <h3 class="coche__nombre">${nombre}</h3>
-            <p class="coche__datos">
-              ${c.seats} plazas · ${cambio(c.transmission)} · ${combustible(c.fuelType)}
-            </p>
-            <p class="coche__precio">
-              <strong>${euros(c.price.gross)}</strong> el alquiler completo
-            </p>
-          </div>
-        </a>
-      </article>`;
-  }
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -131,7 +126,7 @@ import { EMPRESA } from '../lib/empresa';
         }
         const dias = r.totalDays === 1 ? '1 día' : `${r.totalDays} días`;
         resumen.textContent = `${r.vehicles.length === 1 ? '1 coche libre' : `${r.vehicles.length} coches libres`} · ${dias}`;
-        lista.innerHTML = r.vehicles.map(tarjeta).join('');
+        lista.innerHTML = r.vehicles.map((v) => tarjetaCoche(v)).join('');
         resultado.hidden = false;
       })
       .catch((err: Error) => {
@@ -144,57 +139,54 @@ import { EMPRESA } from '../lib/empresa';
 </script>
 
 <style>
+  /*
+   * ⚠️ Los tokens son los del design system, y no es un detalle de estilo: aquí
+   * hubo un momento con `var(--papel-hundido)` y `var(--linea)`, que **no
+   * existen**. Un `var()` sin declarar no falla — la declaración entera
+   * desaparece —, así que el buscador se quedaba sin fondo, sin borde y sin
+   * radio, y el build no dice nada. Es la misma trampa que dejó los badges del
+   * backoffice sin color durante meses.
+   */
   .buscador {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    padding: 1.5rem;
-    background: var(--papel-hundido);
-    border: 1px solid var(--linea);
-    border-radius: var(--radio);
-    margin-bottom: 2rem;
+    display: grid;
+    gap: var(--sp-4);
+    grid-template-columns: 1fr;
+    align-items: end;
+    padding: var(--sp-6);
+    background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+    margin-bottom: var(--sp-10);
   }
 
-  .buscador__campo {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    flex: 1 1 180px;
-    /* Sin esto, un campo ancho estira la fila entera en pantallas estrechas. */
-    min-width: 0;
+  @media (min-width: 720px) {
+    .buscador { grid-template-columns: 1fr 1fr auto; }
   }
+
+  /* Sin `min-width: 0` un campo ancho estira la fila entera. */
+  .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
 
   .buscador__campo label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--tinta-suave);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-medium);
+    color: var(--text-2);
   }
 
   .buscador input {
-    min-height: 48px;
-    padding: 0.6rem 0.75rem;
-    font: inherit;
-    color: var(--tinta);
-    background: var(--papel);
-    border: 1px solid var(--linea);
-    border-radius: 10px;
+    min-height: var(--control-h);
+    padding: 0 var(--sp-4);
+    font-family: var(--font-num);
+    color: var(--text);
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border-strong);
+    border-radius: var(--r-md);
     /*
      * ⚠️ El calendario de un `input[type=date]` lo pinta el sistema y ningún
-     * CSS lo alcanza: lo único que lo hace legible es `color-scheme`. Aquí el
-     * sitio es siempre claro, así que se declara y se acabó.
+     * CSS lo alcanza: lo único que lo hace legible es `color-scheme`. Aquí se
+     * hereda del tema, que puede ser oscuro.
      */
-    color-scheme: light;
+    color-scheme: light dark;
   }
 
-  .buscador input:focus-visible {
-    outline: 2px solid var(--marca);
-    outline-offset: 1px;
-  }
-
-  .resumen {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-  }
+  .resumen { margin-bottom: var(--sp-6); }
 </style>

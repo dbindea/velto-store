@@ -1,281 +1,330 @@
 /*
- * La identidad de Velto en la web pública.
+ * La web pública de Velto, sobre el **Velto Design System**.
  *
- * ⚠️ **Los colores son los MISMOS que los del backoffice, pero copiados a
- * mano.** No se pueden importar: son dos aplicaciones con dos builds. Si el
- * turquesa cambia en `src/styles.scss`, cambia aquí — es la misma regla que ya
- * obliga a duplicar el IVA entre la app y las functions.
+ * ⚠️ **Los tokens de aquí son los de `docs/design/velto-design-system.css`**, que
+ * es el kit de marca entregado por Claude Design y la referencia de la maqueta
+ * `velto-web-publica.html`. No se importan: ese fichero **no se compila** —lo
+ * dice su propio README— y además está en `.gitignore`. Se copian, como el
+ * backoffice copia las rampas a `src/styles.scss`. Si cambia el kit, cambia
+ * esto.
  *
- * ⚠️ **Y el turquesa de marca sobre blanco da 3,10:1**, por debajo del 4,5:1 que
- * pide un texto normal. Es una concesión que la identidad ya tenía hecha y aquí
- * se respeta igual: se usa en titulares grandes y en fondos, **nunca en texto
- * pequeño sobre blanco**. Para eso está `--tinta-suave`.
+ * ⚠️ **Y aquí el sistema entra ENTERO, al revés que en el backoffice.** Allí se
+ * dejaron fuera la escala tipográfica fluida, Gotham y la escala de espaciado
+ * porque un backoffice son tablas densas y cambiarlas tocaba la geometría de
+ * todas las pantallas. Esto es justo para lo que el kit se diseñó: una web de
+ * marketing con una portada.
  */
+
+/* ---- Gotham -------------------------------------------------------------
+ *
+ * ⚠️ **Titulares y marca. NUNCA precios.** Comprobado con fontkit sobre el
+ * fichero real: `GothamBold.ttf` **no tiene el símbolo `€`** —sí tiene `ñ` y
+ * `á`—, así que un «29,00 €» compuesto en ella parte la cifra a media palabra:
+ * el número en Gotham y el euro en la fuente de respaldo. Es el mismo motivo
+ * por el que los PDF caen a DejaVu.
+ */
+@font-face {
+  font-family: 'Gotham';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/GothamBook.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Gotham';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/GothamMedium.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Gotham';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/GothamBold.ttf') format('truetype');
+}
+
 :root {
-  --marca: #20a48f;
-  --marca-oscuro: #17806f;
-  --marca-claro: #e8f5f2;
+  /* Marca — de la BrandCard */
+  --velto-teal: #20a48f;
+  --velto-black: #000000;
+  --velto-white: #ffffff;
+  /* Rampa teal (500 = color de marca) */
+  --teal-50: #e6f6f3; --teal-100: #c2ebe3; --teal-200: #8fd9cb; --teal-300: #5cc6b3; --teal-400: #33b39e;
+  --teal-500: #20a48f; --teal-600: #1b8b79; --teal-700: #167163; --teal-800: #11584d; --teal-900: #0b3b34;
+  /* Neutrales fríos (ligero tinte teal) */
+  --gray-950: #0b0f0e; --gray-900: #14181a; --gray-800: #2a3033; --gray-700: #454d50; --gray-600: #5f686b;
+  --gray-500: #7c868a; --gray-400: #a2abae; --gray-300: #c9d0d2; --gray-200: #e1e6e7; --gray-100: #eef1f2; --gray-50: #f6f8f8;
+  /* Estado */
+  --green-600: #1e7f4f; --green-100: #e1f4ea;
+  --amber-600: #9a6700; --amber-100: #fff3d6;
+  --red-600: #c8322b; --red-100: #fce8e6;
+  --blue-600: #2457a8; --blue-100: #e4ecfa;
 
-  --tinta: #10201d;
-  --tinta-suave: #4a5b57;
-  --tinta-tenue: #6b7c78;
-
-  --papel: #ffffff;
-  --papel-hundido: #f4f7f6;
-  --linea: #dfe6e4;
-
-  --ancho: 1120px;
-  --radio: 14px;
-
+  --font-sans: 'Gotham', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
   /*
-   * Gotham es la fuente de marca y **no puede ser la del cuerpo**: no trae los
-   * diacríticos rumanos ni el símbolo del euro, y un precio compuesto en ella
-   * saldría con un hueco. Aquí el cuerpo es la fuente del sistema, igual que en
-   * el backoffice, y la marca la ponen el color y la composición.
+   * Para cifras y todo lo que lleve `€`. Ver la nota de Gotham arriba.
    */
-  --tipo: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-num: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fw-light: 300; --fw-book: 400; --fw-medium: 500; --fw-bold: 700; --fw-black: 900;
+
+  --fs-display: clamp(2.75rem, 2rem + 3vw, 4.5rem);
+  --fs-h1: clamp(2.125rem, 1.6rem + 2vw, 3.25rem);
+  --fs-h2: clamp(1.625rem, 1.35rem + 1.1vw, 2.25rem);
+  --fs-h3: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --fs-h4: 1.125rem;
+  --fs-lead: 1.125rem;
+  --fs-body: 1rem;
+  --fs-small: 0.875rem;
+  --fs-caption: 0.75rem;
+  --fs-overline: 0.6875rem;
+  --fs-price: clamp(1.75rem, 1.5rem + 0.8vw, 2.25rem);
+  --lh-tight: 1.05; --lh-snug: 1.2; --lh-normal: 1.5; --lh-relaxed: 1.65;
+  /* `.28em` es el tracking de «CAR RENTAL» bajo el logotipo. */
+  --ls-tight: -0.02em; --ls-normal: 0; --ls-wide: 0.08em; --ls-brand: 0.28em;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
+  --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px; --sp-20: 80px; --sp-24: 96px; --sp-32: 128px;
+  --container-prose: 680px; --container-content: 1200px; --container-wide: 1366px;
+  --page-x: clamp(20px, 4vw, 64px);
+  --section-y: clamp(64px, 8vw, 96px);
+  --touch: 44px;
+  --control-h: 48px; --control-h-sm: 40px; --control-h-lg: 56px;
+
+  /* El radio crece con el tamaño. 12 = curva de la «O» del logotipo. */
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-2xl: 32px; --r-pill: 999px;
+  --bw: 1px; --bw-focus: 2px;
+  /* Inclinación de la «E» y la «V» del isotipo. */
+  --skew: -22deg;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1); --t-fast: 0.15s; --t-base: 0.2s; --t-slow: 0.4s;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff; --bg-alt: var(--gray-50); --bg-input: var(--gray-100); --bg-inverse: #000000;
+  --surface-card: #ffffff; --surface-raised: #ffffff; --surface-overlay: rgba(0, 0, 0, 0.56);
+  --text: #000000; --text-2: var(--gray-700); --text-3: var(--gray-500);
+  --text-inverse: #ffffff; --text-on-brand: #000000;
+  --brand: var(--teal-500); --brand-hover: var(--teal-600); --brand-active: var(--teal-700);
+  --brand-text: var(--teal-700); --brand-soft: var(--teal-50); --brand-soft-2: var(--teal-100);
+  --ink: #000000; --ink-hover: var(--gray-800); --text-on-ink: #ffffff;
+  --border: var(--gray-200); --border-strong: var(--gray-300); --divider: var(--gray-100);
+  --focus: var(--teal-600); --focus-ring: 0 0 0 3px rgba(32, 164, 143, 0.28);
+  --success: var(--green-600); --success-bg: var(--green-100);
+  --warning: var(--amber-600); --warning-bg: var(--amber-100);
+  --danger: var(--red-600); --danger-bg: var(--red-100);
+  --info: var(--blue-600); --info-bg: var(--blue-100);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --sh-2: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --sh-4: 0 24px 64px rgba(0, 0, 0, 0.18);
 }
 
-html {
-  scroll-behavior: smooth;
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #000000; --bg-alt: var(--gray-950); --bg-input: var(--gray-900); --bg-inverse: #ffffff;
+  --surface-card: var(--gray-900); --surface-raised: var(--gray-800); --surface-overlay: rgba(0, 0, 0, 0.72);
+  --text: #ffffff; --text-2: var(--gray-300); --text-3: var(--gray-400);
+  --text-inverse: #000000; --text-on-brand: #000000;
+  --brand: var(--teal-500); --brand-hover: var(--teal-400); --brand-active: var(--teal-300);
+  --brand-text: var(--teal-300); --brand-soft: rgba(32, 164, 143, 0.14); --brand-soft-2: rgba(32, 164, 143, 0.26);
+  --ink: #ffffff; --ink-hover: var(--gray-200); --text-on-ink: #000000;
+  --border: var(--gray-800); --border-strong: var(--gray-700); --divider: var(--gray-900);
+  --focus: var(--teal-300); --focus-ring: 0 0 0 3px rgba(92, 198, 179, 0.32);
+  --success: #4cc38a; --success-bg: rgba(76, 195, 138, 0.14);
+  --warning: #f0b429; --warning-bg: rgba(240, 180, 41, 0.14);
+  --danger: #f26b62; --danger-bg: rgba(242, 107, 98, 0.14);
+  --info: #7ba4ea; --info-bg: rgba(123, 164, 234, 0.14);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.5); --sh-2: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.6); --sh-4: 0 24px 64px rgba(0, 0, 0, 0.7);
 }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: var(--tipo);
-  color: var(--tinta);
-  background: var(--papel);
-  line-height: 1.6;
-  /* Una matrícula o un correo parten antes que desbordar la página. */
+  font-family: var(--font-sans);
+  font-weight: var(--fw-book);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
   overflow-wrap: break-word;
 }
 
-h1,
-h2,
-h3 {
-  line-height: 1.2;
-  margin: 0 0 0.5rem;
-  letter-spacing: -0.02em;
+h1, h2, h3, h4, p { margin: 0; }
+h1, h2 { font-weight: var(--fw-medium); letter-spacing: var(--ls-tight); line-height: var(--lh-tight); }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); font-weight: var(--fw-medium); line-height: var(--lh-snug); }
+h4 { font-size: var(--fs-h4); font-weight: var(--fw-medium); line-height: var(--lh-snug); }
+a { color: var(--brand-text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, input, select, textarea { font: inherit; color: inherit; }
+img, svg { display: block; max-width: 100%; }
+:focus-visible { outline: var(--bw-focus) solid var(--focus); outline-offset: 2px; }
+
+/* Cifras: tabulares y con la fuente que SÍ tiene el símbolo del euro. */
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/*
+ * El rótulo de sección: turquesa, versalitas y el tracking del logotipo. Es la
+ * pieza que más «Velto» hace parecer a una página.
+ */
+.overline {
+  font-size: var(--fs-overline);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-brand);
+  text-transform: uppercase;
+  color: var(--brand-text);
 }
 
-h1 {
-  font-size: clamp(2rem, 6vw, 3.25rem);
-  font-weight: 800;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-h2 {
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  font-weight: 700;
-}
-
-p {
-  margin: 0 0 1rem;
-}
-
-a {
-  color: var(--marca-oscuro);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
-img {
-  max-width: 100%;
-  display: block;
-}
+/* ---- Estructura --------------------------------------------------------- */
 
 .contenedor {
-  max-width: var(--ancho);
+  max-width: var(--container-content);
   margin: 0 auto;
-  padding: 0 1.25rem;
+  padding-inline: var(--page-x);
 }
 
-/* ---- Botones ----------------------------------------------------------- */
+.seccion { padding-block: var(--section-y); }
+.seccion--alt { background: var(--bg-alt); }
 
-.boton {
+/*
+ * Las tres barras inclinadas del isotipo, como marca de sección.
+ * `--skew` es la inclinación real de la «V» y la «E» del logotipo: es lo que
+ * hace que el adorno pertenezca a la marca y no sea una raya cualquiera.
+ */
+.barras {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+}
+.barras span {
+  width: 34px;
+  height: 7px;
+  background: var(--brand);
+  transform: skewX(var(--skew));
+}
+
+/* ---- Botones ------------------------------------------------------------ */
+
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  /* 48 px de alto: es una web que se usa con el pulgar. */
-  min-height: 48px;
-  padding: 0.75rem 1.5rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-size: 1rem;
-  font-weight: 600;
+  gap: var(--sp-2);
+  min-height: var(--control-h);
+  padding: 0 var(--sp-6);
+  border: var(--bw) solid transparent;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color var(--t-base) var(--ease), color var(--t-base) var(--ease);
+}
+.btn:hover { text-decoration: none; }
+
+.btn--brand { background: var(--brand); color: var(--velto-white); }
+.btn--brand:hover { background: var(--brand-hover); }
+
+/* Negro, el segundo color de la marca. Es el de «Ver precio final». */
+.btn--ink { background: var(--ink); color: var(--text-on-ink); }
+.btn--ink:hover { background: var(--ink-hover); }
+
+.btn--ghost { background: transparent; color: var(--text); border-color: var(--border-strong); }
+.btn--ghost:hover { border-color: var(--brand); color: var(--brand-text); }
+
+.btn--soft { background: var(--brand-soft); color: var(--brand-text); }
+.btn--soft:hover { background: var(--brand-soft-2); }
+
+/* ---- Tarjetas ----------------------------------------------------------- */
+
+.card {
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
 }
 
-.boton--principal {
-  background: var(--marca);
-  color: #ffffff;
+.rejilla {
+  display: grid;
+  gap: var(--sp-6);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
-.boton--principal:hover {
-  background: var(--marca-oscuro);
+.aviso { padding: var(--sp-10) var(--sp-4); text-align: center; color: var(--text-2); }
+.aviso--error { color: var(--danger); }
+
+.oculto-visual {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
-.boton--secundario {
-  background: transparent;
-  color: var(--tinta);
-  border-color: var(--linea);
-}
+/* ---- La tarjeta de coche ------------------------------------------------
+ *
+ * Global porque sale en tres páginas —portada, flota y disponibilidad— y en las
+ * tres tiene que ser idéntica. El marcado lo compone `lib/tarjeta.ts`.
+ */
 
-.boton--secundario:hover {
-  border-color: var(--marca);
-  color: var(--marca-oscuro);
-}
+.coche__link { display: block; color: inherit; }
+.coche__link:hover { text-decoration: none; }
 
-/* ---- Cabecera y pie ---------------------------------------------------- */
-
-.cabecera {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--linea);
-}
-
-.cabecera__fila {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 68px;
-}
-
-.cabecera__marca {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: -0.02em;
-  color: var(--tinta);
-  text-decoration: none;
-}
-
-.cabecera__marca span {
-  color: var(--marca);
-}
-
-.cabecera__nav {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-}
-
-.cabecera__nav a {
-  color: var(--tinta-suave);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
-.cabecera__nav a:hover {
-  color: var(--marca-oscuro);
+.coche__foto {
+  aspect-ratio: 4 / 3;
+  background: var(--bg-alt);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
 
 /*
- * ⚠️ En móvil la navegación se recoloca debajo, NO se esconde. Esconder
- * «Flota» o «Contacto» en un menú detrás de un botón es perder la mitad de las
- * visitas que llegan con el pulgar.
+ * `contain`, no `cover`: las fotos salen del móvil en vertical y recortar deja
+ * media carrocería fuera, que es lo único que hay que ver. Misma decisión que
+ * en la ficha del backoffice (M-6).
  */
-@media (max-width: 640px) {
-  .cabecera__fila {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.75rem 0;
-    gap: 0.5rem;
-  }
+.coche__foto img { width: 100%; height: 100%; object-fit: contain; }
 
-  .cabecera__nav {
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-}
-
-.pie {
-  margin-top: 4rem;
-  padding: 2.5rem 0 2rem;
-  background: var(--papel-hundido);
-  border-top: 1px solid var(--linea);
-  font-size: 0.9rem;
-  color: var(--tinta-suave);
-}
-
-.pie__rejilla {
+.coche__sinfoto {
   display: grid;
-  gap: 2rem;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  justify-items: center;
+  gap: var(--sp-2);
+  color: var(--text-3);
+  font-size: var(--fs-caption);
 }
 
-.pie__titulo {
-  font-weight: 700;
-  color: var(--tinta);
-  margin-bottom: 0.5rem;
-}
+.coche__cuerpo { padding: var(--sp-5) var(--sp-6) var(--sp-6); }
+.coche__nombre { margin: var(--sp-2) 0 var(--sp-4); }
 
-.pie__legal {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--linea);
-  font-size: 0.8rem;
-  color: var(--tinta-tenue);
-}
-
-/* ---- Piezas comunes ---------------------------------------------------- */
-
-.seccion {
-  padding: 3.5rem 0;
-}
-
-.seccion--hundida {
-  background: var(--papel-hundido);
-}
-
-.tarjeta {
-  background: var(--papel);
-  border: 1px solid var(--linea);
-  border-radius: var(--radio);
-  overflow: hidden;
-}
-
-.rejilla-coches {
-  display: grid;
-  gap: 1.25rem;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-}
-
-/* Un estado que el visitante entiende: cargando, vacío o roto. */
-.aviso {
-  padding: 2rem 1rem;
-  text-align: center;
-  color: var(--tinta-suave);
-}
-
-.aviso--error {
-  color: #a3341f;
-}
-
-.visualmente-oculto {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+.coche__specs {
+  list-style: none;
+  margin: 0 0 var(--sp-5);
   padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  color: var(--text-2);
+  font-size: var(--fs-small);
 }
+.coche__specs li { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.coche__specs svg { color: var(--text-3); }
+
+.coche__precio { margin: 0; }
+.coche__precio strong { font-size: var(--fs-price); font-weight: var(--fw-bold); letter-spacing: var(--ls-tight); }
+.coche__precio span { color: var(--text-2); font-size: var(--fs-small); }
+.coche__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
+
+.coche__detalle { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
+.coche__btn { width: 100%; }

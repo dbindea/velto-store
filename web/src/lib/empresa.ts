@@ -20,6 +20,9 @@ export const EMPRESA = {
   domicilioSocial: 'C/ Vereda del Melero, 3 · 28500 Arganda del Rey (Madrid)',
   /** La oficina: donde el cliente encuentra a alguien. Es la que se enseña. */
   oficina: 'C/ María Zambrano, 4 · 28500 Arganda del Rey (Madrid)',
+  /** Partida en dos, para poder titular con la calle y dejar la ciudad debajo. */
+  oficinaCalle: 'Calle María Zambrano, 4',
+  oficinaCiudad: '28500 Arganda del Rey (Madrid)',
   telefono: '+34 623 766 181',
   /** Sin espacios ni signos, para el enlace de WhatsApp. */
   telefonoWhatsapp: '34623766181',

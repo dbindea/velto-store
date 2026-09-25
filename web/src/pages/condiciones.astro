@@ -16,7 +16,7 @@ import { EMPRESA } from '../lib/empresa';
   discusión en el mostrador, y con razón del cliente.
 -->
 <Base
-  titulo="Condiciones de alquiler | VELTO MOBILITY"
+  titulo="Condiciones de alquiler | Velto"
   descripcion="Lo importante antes de reservar: edad mínima, qué incluye el precio, fianza, kilómetros, combustible y dónde se puede circular."
   ruta="/condiciones"
 >
@@ -29,7 +29,7 @@ import { EMPRESA } from '../lib/empresa';
         queda en el móvil.
       </p>
 
-      <h2>Quién puede conducir</h2>
+      <h2 id="requisitos">Quién puede conducir</h2>
       <p>
         Hace falta tener al menos <strong>21 años</strong> y un permiso de
         conducir en vigor. Solo pueden conducir las personas que aparecen
@@ -38,7 +38,7 @@ import { EMPRESA } from '../lib/empresa';
         cuesta nada, pero tiene que constar.
       </p>
 
-      <h2>Recogida y devolución</h2>
+      <h2 id="cancelar">Recogida, devolución y cancelación</h2>
       <p>
         Se acuerdan por escrito el día, la hora y el lugar. Hay
         <strong>treinta minutos de cortesía</strong>; a partir de ahí, un retraso
@@ -90,7 +90,7 @@ import { EMPRESA } from '../lib/empresa';
         conducía, y se añaden los gastos de gestión que figuran en el contrato.
       </p>
 
-      <h2>Averías y asistencia</h2>
+      <h2 id="averia">Averías y asistencia</h2>
       <p>
         El coche va asegurado y con asistencia en carretera; el teléfono viene
         impreso en tu contrato. Si pasa algo, llama antes de tomar decisiones:
@@ -126,19 +126,21 @@ import { EMPRESA } from '../lib/empresa';
   }
 
   .texto h2 {
-    font-size: 1.3rem;
-    margin-top: 2.25rem;
+    font-size: var(--fs-h3);
+    margin-top: var(--sp-10);
+    /* La cabecera es pegajosa: sin esto, un ancla deja el título debajo. */
+    scroll-margin-top: 90px;
   }
 
   .texto p {
-    color: var(--tinta-suave);
+    color: var(--text-2);
   }
 
   .nota {
     margin-top: 2.5rem;
     padding-top: 1.25rem;
-    border-top: 1px solid var(--linea);
-    font-size: 0.875rem;
-    color: var(--tinta-tenue);
+    border-top: var(--bw) solid var(--border);
+    font-size: var(--fs-small);
+    color: var(--text-3);
   }
 </style>

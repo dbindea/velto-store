@@ -4,7 +4,7 @@ import { EMPRESA } from '../lib/empresa';
 ---
 
 <Base
-  titulo="Contacto | VELTO MOBILITY"
+  titulo="Contacto | Velto"
   descripcion="Dónde estamos y cómo llegar: oficina en Arganda del Rey, teléfono, WhatsApp y correo."
   ruta="/contacto"
 >
@@ -17,10 +17,10 @@ import { EMPRESA } from '../lib/empresa';
       </p>
 
       <div class="contacto">
-        <div class="tarjeta contacto__bloque">
+        <div class="card contacto__bloque">
           <h2>WhatsApp y teléfono</h2>
           <p>
-            <a class="boton boton--principal" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+            <a class="btn btn--brand" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
               Escribir por WhatsApp
             </a>
           </p>
@@ -30,7 +30,7 @@ import { EMPRESA } from '../lib/empresa';
           </p>
         </div>
 
-        <div class="tarjeta contacto__bloque">
+        <div class="card contacto__bloque">
           <h2>Correo</h2>
           <p><a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></p>
           <p class="contacto__nota">
@@ -38,7 +38,7 @@ import { EMPRESA } from '../lib/empresa';
           </p>
         </div>
 
-        <div class="tarjeta contacto__bloque">
+        <div class="card contacto__bloque">
           <h2>Oficina</h2>
           <p>{EMPRESA.oficina}</p>
           <p>
@@ -74,7 +74,7 @@ import { EMPRESA } from '../lib/empresa';
   }
 
   .contacto__nota {
-    color: var(--tinta-suave);
+    color: var(--text-2);
     font-size: 0.9rem;
     margin-bottom: 0;
   }
