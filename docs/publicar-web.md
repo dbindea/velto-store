@@ -24,21 +24,49 @@ invertir, y las tres tienen detrás un fallo concreto:
 
 ---
 
+## Los comandos van en PowerShell
+
+⚠️ **Todo lo de aquí se lanza desde PowerShell**, que es donde se trabaja en
+esta máquina, y eso descarta tres cosas que uno escribe por inercia. La primera
+versión de este documento traía las tres y la primera falló al primer intento:
+
+| No funciona | Por qué | Lo que se usa |
+|---|---|---|
+| `… \| grep "algo"` | `grep` no existe en PowerShell | `Select-String`, o mejor `Resolve-DnsName`, que devuelve objetos |
+| `a && b` | El operador es de PowerShell **7**; aquí hay **5.1** | dos líneas, o `;` |
+| `curl -sI https://…` | ⚠️ `curl` es un **alias de `Invoke-WebRequest`**: acepta el nombre pero no las banderas | **`curl.exe`**, con el `.exe` |
+
+Es el mismo despiste que CLAUDE.md ya tenía anotado para
+`FUNCTIONS_DISCOVERY_TIMEOUT=120 firebase deploy`: ese prefijo `VAR=valor` es
+sintaxis de shell tipo Unix y en PowerShell la variable va aparte.
+
+---
+
 ## Bloque 0 · Congelar el envío antes de tocar nada
 
 ⚠️ **`veltomobility.com` es el dominio desde el que se manda el contrato firmado
 a los clientes.** Lo que viene toca su DNS, así que primero se guarda la foto de
 lo que hay. Es un minuto y es la red de seguridad de todo lo demás.
 
-```bash
-nslookup -type=TXT send.veltomobility.com 8.8.8.8 | grep '"'
-nslookup -type=MX  send.veltomobility.com 8.8.8.8 | grep "mail exchanger"
-nslookup -type=TXT resend._domainkey.veltomobility.com 8.8.8.8 | grep '"'
+```powershell
+powershell -ExecutionPolicy Bypass -File docs\comprobar-correo.ps1
 ```
 
-Tiene que devolver tres líneas: el SPF de Amazon SES, el MX `feedback-smtp…` y
-la clave DKIM de Resend. **Guárdalas.** Son las únicas tres que hay que
-proteger: si alguna cambia o desaparece después, el envío está roto.
+[`comprobar-correo.ps1`](comprobar-correo.ps1) imprime las cuatro cosas que
+importan: qué envía, qué recibe, el SPF del apex y el DMARC. **Guarda la
+salida**: los tres registros de la sección ENVIAR son los únicos que hay que
+proteger, y si alguno cambia después, el envío está roto.
+
+Para ver cómo queda cuando está bien, el mismo guion contra el dominio que ya
+tiene las dos cosas conviviendo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File docs\comprobar-correo.ps1 -Dominio veltorent.com
+```
+
+Medido el 26 de septiembre de 2026, ese control devuelve **«el envio esta
+SANO»** y **«RECIBE: Email Routing activo»** a la vez. Eso es exactamente lo que
+tiene que salir en `veltomobility.com` al terminar el bloque 1.
 
 ### ¿Activar el correo entrante puede romper el envío? No
 
@@ -88,9 +116,12 @@ montado en Resend es el **envío**, que es otra cosa — Resend no recibe correo
 
 **Comprobación del bloque:**
 
-```bash
-nslookup -type=MX veltomobility.com 8.8.8.8     # tres líneas routeN.mx.cloudflare.net
+```powershell
+powershell -ExecutionPolicy Bypass -File docs\comprobar-correo.ps1
 ```
+
+Tiene que decir **«RECIBE: Email Routing activo»** con los tres
+`routeN.mx.cloudflare.net`, y la sección ENVIAR **idéntica** a la del bloque 0.
 
 Y la de verdad: manda un correo a `reservas@veltomobility.com` **desde otra
 cuenta** (no desde ese Gmail) y espera verlo llegar. Mira también Spam.
@@ -157,10 +188,10 @@ cuenta de fuera y abre **Mostrar original**. Tiene que decir
 `spf=pass`, `dkim=pass header.d=veltomobility.com`, y **no** debe aparecer
 «via resend.com» junto al remitente — eso último se lee como phishing.
 
-⚠️ **Y ahora rehaz la comprobación del bloque 0:** las tres líneas de
-`send.` y `resend._domainkey` tienen que salir **idénticas**. Manda además un
-contrato firmado desde producción y mira su cabecera: `spf=pass` citando
-**`send.veltomobility.com`**, no el apex.
+⚠️ **Y ahora vuelve a pasar el guion:** la sección ENVIAR tiene que salir
+**idéntica** a la del bloque 0. Manda además un contrato firmado desde
+producción y mira su cabecera: `spf=pass` citando **`send.veltomobility.com`**,
+no el apex.
 
 ⚠️ **En el móvil el remitente no se cambia solo** en un correo nuevo: hay que
 abrir el campo «De». Las respuestas sí salen bien gracias al paso 6.
@@ -197,9 +228,18 @@ Es el mismo procedimiento que producción sobre un nombre que **hoy no existe**
 6. **Solo cuando esté Connected**, pasa el A a naranja si quieres el caché y las
    reglas de Cloudflare delante. Es opcional: en gris ya funciona.
 
-**Comprobación:** `curl -sI https://dev.veltorent.com` → 200. En gris trae
-`x-served-by` y **no** `cf-ray`; en naranja trae los dos, igual que hoy trae
-`store.veltorent.com`.
+**Comprobación:**
+
+```powershell
+curl.exe -sI https://dev.veltorent.com
+```
+
+Tiene que dar **200**. En gris trae `x-served-by` y **no** `cf-ray`; en naranja
+trae los dos, igual que hoy trae `store.veltorent.com`.
+
+⚠️ El `.exe` no es opcional: `curl` a secas es un alias de `Invoke-WebRequest`,
+que acepta el nombre y **no** las banderas — el error que da no menciona nada de
+esto.
 
 ---
 
@@ -222,11 +262,22 @@ no cambia el comportamiento de la aplicación.
    **nombrándolas una a una**:
 
    ```bash
-   cd functions && npm run build && node -e "require('./lib/index.js')"
+   # Descartar el código antes de subir nada: lo carga igual que el contenedor.
+   # ⚠️ Una línea cada uno: en PowerShell 5.1 el operador `&&` no existe.
+   cd functions
+   npm run build
+   node -e "require('./lib/index.js')"
+   cd ..
 
    firebase deploy --only functions:publicVehicles,functions:publicVehicleDetail --project prod
    firebase deploy --only functions:checkPublicAvailability,functions:publishVehiclePhoto,functions:unpublishVehiclePhoto --project prod
    ```
+
+   ⚠️ **Y que `node -e` no imprima error NO significa que la function
+   funcione**: cargar un módulo no es llamarlo. Es justo lo que dejó pasar el
+   `import sharp from 'sharp'` que reventó en producción el 25 de septiembre
+   —pasó el typecheck, el build, los tests y esta misma comprobación—. Sirve
+   para descartar que el bundle esté roto, y para nada más.
 
    ⚠️ **Nunca `--only functions` a secas en producción:** subiría también las
    cinco de la AEAT, que no deben ir hasta el 1 de enero — y una de ellas está

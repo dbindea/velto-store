@@ -215,6 +215,32 @@ despliegue abortaba a los 10. Había **26 procesos de node** — un `ng serve` c
 watch y una tanda de builds y tests de fondo. Es decir: el código nunca ha sido
 la causa, ninguna de las dos veces. Si la máquina está cargada, súbelo y ya.
 
+### Lo que hay que escribir distinto porque el shell es PowerShell
+
+⚠️ **Dorel trabaja en PowerShell 5.1, no en Bash**, y aquí se escriben comandos
+de shell tipo Unix por inercia. Ya ha fallado dos veces —el
+`FUNCTIONS_DISCOVERY_TIMEOUT` de arriba y, el 26 de septiembre de 2026, un
+procedimiento entero de comprobación de DNS—, así que va la tabla completa:
+
+| Escrito por inercia | Qué pasa | Lo que vale |
+|---|---|---|
+| `VAR=valor comando` | La variable no llega; el comando falla igual que antes | `$env:VAR=valor` en su propia línea |
+| `… \| grep "algo"` | `grep : no se reconoce el término` | `Select-String`, o la orden nativa que devuelva objetos |
+| `a && b` | El operador `&&` **es de PowerShell 7**; en 5.1 es error de sintaxis | dos líneas, o `;` |
+| `curl -sI https://…` | ⚠️ **`curl` es un alias de `Invoke-WebRequest`**: traga el nombre y no las banderas | **`curl.exe`** |
+| `nslookup -type=TXT x \| grep` | Lo anterior, dos veces | `Resolve-DnsName x -Type TXT -Server 8.8.8.8` |
+
+⚠️ **Y un `.ps1` se guarda con BOM UTF-8.** Sin él, PowerShell 5.1 lo lee como
+ANSI, los caracteres acentuados y los de caja se corrompen y el fichero
+**falla al parsear** con un error que habla de llaves sin cerrar — a cien líneas
+del carácter culpable. Además, la consola no es UTF-8: lo que se **imprime**
+conviene que sea ASCII (`->` y no `→`), o sale como basura aunque el fichero
+esté bien.
+
+El ejemplo vivo es [docs/comprobar-correo.ps1](docs/comprobar-correo.ps1), que
+comprueba de una pasada qué envía y qué recibe un dominio. Como los dos guiones
+de reglas, no es código de la aplicación y por eso vive en `docs/`.
+
 ## Dos entornos, dos proyectos de Firebase
 
 Una sola base de código. Lo único que cambia entre entornos es **qué fichero de
