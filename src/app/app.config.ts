@@ -17,6 +17,7 @@ import { getFunctions, provideFunctions } from '@angular/fire/functions';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { FUNCTIONS_REGION } from '@core/config/functions-region.config';
 
 /**
  * Numbers and dates are formatted Spanish-style.
@@ -84,6 +85,12 @@ export const appConfig: ApplicationConfig = {
     // Tiene que coincidir con `FUNCTIONS_REGION` de
     // functions/src/global-options.ts y con la región del rewrite /d/** de
     // firebase.json. Las tres se mueven juntas.
-    provideFunctions(() => getFunctions(getApp(), 'europe-west1'))
+    //
+    // ⚠️ Dentro de la app el valor sale de UNA constante
+    // (`@core/config/functions-region.config`) desde el 26 de septiembre de
+    // 2026: estaba escrito a mano aquí y otra vez —con la región VIEJA— en el
+    // respaldo de los enlaces cortos, que llevaba un mes apuntando a
+    // us-central1 sin que nadie se enterara. Eran cuatro sitios, no tres.
+    provideFunctions(() => getFunctions(getApp(), FUNCTIONS_REGION))
   ]
 };
