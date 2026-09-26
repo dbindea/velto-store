@@ -49,6 +49,21 @@ CREDENTIALS.md
 # Playwright MCP scratch output (snapshots, console logs, screenshots)
 .playwright-mcp/
 
+# ⚠️ Capturas de pantalla sueltas EN LA RAÍZ. Existe porque ya pasó: el 26 de
+# septiembre de 2026 siete capturas de una revisión de la web acabaron dentro de
+# un commit —1,4 MB— porque se hicieron en la raíz y un `git add -A` se las
+# llevó. Y el repositorio es público.
+#
+# Una herramienta que hace capturas las deja donde esté el directorio de
+# trabajo, no en `.playwright-mcp/`, así que ignorar esa carpeta no basta. El
+# patrón cubre los nombres que salen de una revisión (`mob-*`, `flota-*`,
+# `captura-*`) sin tocar los iconos de `src/assets/` ni los de `public/`, que
+# son del proyecto y sí van al repositorio.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+
 # Herramientas locales, no del proyecto
 .claude/
 .agents/
