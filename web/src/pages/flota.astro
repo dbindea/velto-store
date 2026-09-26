@@ -1,0 +1,71 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  titulo="Flota | Velto — alquiler de coches en Arganda del Rey"
+  descripcion="Los coches que alquilamos: precio por día con IVA incluido, plazas, cambio y maletas de cada uno."
+  ruta="/flota"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <p class="overline">Flota</p>
+      <h1>Precio por día, todo incluido</h1>
+      <p class="entrada">
+        El precio que ves es el total por día con IVA incluido, y baja cuantos
+        más días alquiles. Para unas fechas concretas,
+        <a href="/reservar">consulta la disponibilidad</a>.
+      </p>
+
+      <!--
+        ⚠️ TRES estados y no dos: cargando, vacío y roto. Enseñar «no hay
+        coches» cuando lo que ha fallado es la petición manda al visitante a
+        otra web creyendo que no tenemos flota.
+      -->
+      <div id="lista" class="rejilla" hidden></div>
+      <p id="cargando" class="aviso">Cargando la flota…</p>
+      <p id="vacio" class="aviso" hidden>
+        Ahora mismo no hay vehículos publicados. Llámanos y te decimos qué
+        tenemos disponible.
+      </p>
+      <p id="error" class="aviso aviso--error" hidden>
+        No hemos podido cargar la flota. Vuelve a intentarlo en un momento o
+        escríbenos por WhatsApp.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { flota } from '../lib/api';
+  import { tarjetaCoche } from '../lib/tarjeta';
+
+  const lista = document.getElementById('lista')!;
+  const cargando = document.getElementById('cargando')!;
+  const vacio = document.getElementById('vacio')!;
+  const error = document.getElementById('error')!;
+
+  flota()
+    .then(({ vehicles }) => {
+      cargando.hidden = true;
+      if (!vehicles.length) {
+        vacio.hidden = false;
+        return;
+      }
+      lista.innerHTML = vehicles.map((v) => tarjetaCoche(v)).join('');
+      lista.hidden = false;
+    })
+    .catch(() => {
+      cargando.hidden = true;
+      error.hidden = false;
+    });
+</script>
+
+<style is:global>
+  .entrada {
+    color: var(--text-2);
+    font-size: var(--fs-lead);
+    max-width: 58ch;
+    margin: var(--sp-5) 0 var(--sp-10);
+  }
+</style>

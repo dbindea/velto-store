@@ -1,0 +1,199 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<!--
+  ⚠️ **«Velto», no «VELTO MOBILITY».** El título ponía la razón social, y la
+  regla de la casa es que esa solo aparece **donde la empresa comparece como
+  persona jurídica, o sea junto al NIF** — en esta web, únicamente el bloque
+  legal del pie. Un título de pestaña le habla al cliente, y ahí manda la marca.
+  Era además la única de las ocho páginas que se salía.
+-->
+<Base
+  titulo="Consultar disponibilidad | Velto"
+  descripcion="Dinos las fechas y te decimos qué coches quedan libres y cuánto cuesta el alquiler completo, con IVA incluido."
+  ruta="/reservar"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <h1>¿Qué fechas necesitas?</h1>
+      <p class="entrada">
+        Te decimos qué coches quedan libres y el precio del alquiler completo,
+        con IVA incluido. La reserva la cerramos por teléfono o WhatsApp.
+      </p>
+
+      <form id="form" class="buscador">
+        <div class="buscador__campo">
+          <label for="desde">Recogida</label>
+          <input type="date" id="desde" name="desde" required />
+        </div>
+        <div class="buscador__campo">
+          <label for="hasta">Devolución</label>
+          <input type="date" id="hasta" name="hasta" required />
+        </div>
+        <button class="btn btn--brand" type="submit">Ver disponibilidad</button>
+      </form>
+
+      <!--
+        ⚠️ El mensaje de error del formulario va ANTES de los resultados y con
+        `role="alert"`: si el aviso apareciera debajo de la lista, en un móvil
+        quedaría fuera de la pantalla y el visitante pulsaría otra vez creyendo
+        que el botón no funciona.
+      -->
+      <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
+
+      <div id="resultado" hidden>
+        <h2 id="resumen" class="resumen"></h2>
+        <div id="lista" class="rejilla"></div>
+      </div>
+
+      <p id="cargando" class="aviso" hidden>Consultando…</p>
+      <p id="vacio" class="aviso" hidden>
+        No queda ningún coche libre en esas fechas. Prueba con otras o
+        <a href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">escríbenos</a>:
+        a veces podemos mover algo.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { disponibilidad } from '../lib/api';
+  import { tarjetaCoche } from '../lib/tarjeta';
+
+  const form = document.getElementById('form') as HTMLFormElement;
+  const desde = document.getElementById('desde') as HTMLInputElement;
+  const hasta = document.getElementById('hasta') as HTMLInputElement;
+  const problema = document.getElementById('problema')!;
+  const resultado = document.getElementById('resultado')!;
+  const resumen = document.getElementById('resumen')!;
+  const lista = document.getElementById('lista')!;
+  const cargando = document.getElementById('cargando')!;
+  const vacio = document.getElementById('vacio')!;
+
+  /** `yyyy-MM-dd` en hora local. `toISOString()` pasaría a UTC y restaría un día. */
+  function iso(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  // Ni recoger en el pasado ni devolver antes de recoger: lo dice el campo, no
+  // un mensaje después de pulsar.
+  const hoy = new Date();
+  desde.min = iso(hoy);
+  hasta.min = iso(hoy);
+  desde.addEventListener('change', () => {
+    hasta.min = desde.value || iso(hoy);
+    if (hasta.value && hasta.value < hasta.min) hasta.value = '';
+  });
+
+  /**
+   * Las fechas que venían del buscador de la portada.
+   *
+   * ⚠️ **Y se consulta sola.** Quien ya eligió fechas allí y pulsó «Ver
+   * precios» espera ver precios, no un formulario relleno y un botón más que
+   * pulsar: eso es hacerle repetir lo que ya hizo.
+   */
+  const params = new URLSearchParams(location.search);
+  const dFrom = params.get('from');
+  const dTo = params.get('to');
+  if (dFrom && dTo && /^\d{4}-\d{2}-\d{2}$/.test(dFrom) && /^\d{4}-\d{2}-\d{2}$/.test(dTo)) {
+    desde.value = dFrom;
+    hasta.min = dFrom;
+    hasta.value = dTo;
+    queueMicrotask(() => form.requestSubmit());
+  }
+
+  /**
+   * ⚠️ Las claves que devuelve la function se traducen AQUÍ. Enseñar
+   * `range-too-long` es enseñarle al visitante el código de un error; y un
+   * genérico «algo ha fallado» le hace pulsar otra vez sin cambiar nada.
+   */
+  const MOTIVOS: Record<string, string> = {
+    'bad-dates': 'Revisa las fechas: no las hemos entendido.',
+    'bad-range': 'La devolución tiene que ser posterior a la recogida.',
+    'past-date': 'La recogida no puede ser en una fecha pasada.',
+    'range-too-long': 'Para alquileres de más de tres meses, llámanos y lo vemos.',
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    problema.hidden = true;
+    resultado.hidden = true;
+    vacio.hidden = true;
+    cargando.hidden = false;
+
+    disponibilidad(desde.value, hasta.value)
+      .then((r) => {
+        cargando.hidden = true;
+        if (!r.vehicles.length) {
+          vacio.hidden = false;
+          return;
+        }
+        const dias = r.totalDays === 1 ? '1 día' : `${r.totalDays} días`;
+        resumen.textContent = `${r.vehicles.length === 1 ? '1 coche libre' : `${r.vehicles.length} coches libres`} · ${dias}`;
+        lista.innerHTML = r.vehicles.map((v) => tarjetaCoche(v)).join('');
+        resultado.hidden = false;
+      })
+      .catch((err: Error) => {
+        cargando.hidden = true;
+        problema.textContent =
+          MOTIVOS[err.message] ?? 'No hemos podido consultar la disponibilidad. Inténtalo otra vez.';
+        problema.hidden = false;
+      });
+  });
+</script>
+
+<style>
+  /*
+   * ⚠️ Los tokens son los del design system, y no es un detalle de estilo: aquí
+   * hubo un momento con `var(--papel-hundido)` y `var(--linea)`, que **no
+   * existen**. Un `var()` sin declarar no falla — la declaración entera
+   * desaparece —, así que el buscador se quedaba sin fondo, sin borde y sin
+   * radio, y el build no dice nada. Es la misma trampa que dejó los badges del
+   * backoffice sin color durante meses.
+   */
+  .buscador {
+    display: grid;
+    gap: var(--sp-4);
+    grid-template-columns: 1fr;
+    align-items: end;
+    padding: var(--sp-6);
+    background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+    margin-bottom: var(--sp-10);
+  }
+
+  @media (min-width: 720px) {
+    .buscador { grid-template-columns: 1fr 1fr auto; }
+  }
+
+  /* Sin `min-width: 0` un campo ancho estira la fila entera. */
+  .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
+
+  .buscador__campo label {
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-medium);
+    color: var(--text-2);
+  }
+
+  .buscador input {
+    min-height: var(--control-h);
+    padding: 0 var(--sp-4);
+    font-family: var(--font-num);
+    color: var(--text);
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border-strong);
+    border-radius: var(--r-md);
+    /*
+     * ⚠️ El calendario de un `input[type=date]` lo pinta el sistema y ningún
+     * CSS lo alcanza: lo único que lo hace legible es `color-scheme`. Aquí se
+     * hereda del tema, que puede ser oscuro.
+     */
+    color-scheme: light dark;
+  }
+
+  .resumen { margin-bottom: var(--sp-6); }
+</style>

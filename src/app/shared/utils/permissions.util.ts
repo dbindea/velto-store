@@ -64,6 +64,18 @@ export type Permission =
    */
   | 'viewPaymentHistory'
   | 'manageSettings'
+  /**
+   * Sacar una foto de un coche a la web pública.
+   *
+   * ⚠️ **Permiso propio, y no `manageSettings`.** Es el mismo criterio que
+   * separó `refundPayments` de `deleteRecords`: lo que distingue una acción no
+   * es qué pantalla la contiene, es qué pasa si sale mal. Configurar la
+   * aplicación se deshace cambiando el ajuste; **publicar una foto no se
+   * deshace**, porque lo que sale queda en cachés y en buscadores aunque
+   * después se retire. Y en estas galerías hay fotos de daños y de interiores
+   * sucios, que es lo que un parte de inspección guarda.
+   */
+  | 'publishPublicWeb'
   | 'manageUsers'
   // Dinero
   | 'editPricing'
@@ -121,6 +133,7 @@ const PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
     'viewCollaborators',
     'viewPaymentHistory',
     'manageSettings',
+    'publishPublicWeb',
     'manageUsers',
     'editPricing',
     'grantDiscounts',

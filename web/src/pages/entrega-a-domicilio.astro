@@ -1,0 +1,91 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<!--
+  ⚠️ **Esta página describe algo que el backoffice sabe hacer de verdad**, y por
+  eso puede estar aquí: la entrega y la recogida a domicilio son un concepto
+  propio del sistema (`deliveryFees`, con sus **dos trayectos separados**), se
+  teclean a mano al crear la reserva y **se imprimen en el contrato**, en el
+  presupuesto y en el justificante.
+
+  De ahí salen las dos afirmaciones que se hacen y que no se pueden aflojar:
+  que el importe **se pacta antes** y que **consta por escrito**. Si mañana
+  dejara de imprimirse, esta página sería una promesa que el papel no respalda.
+-->
+<Base
+  titulo="Entrega a domicilio | Velto"
+  descripcion="Te llevamos el coche donde estés y lo recogemos al terminar. El desplazamiento se pacta antes y consta en el contrato."
+  ruta="/entrega-a-domicilio"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <p class="overline">Entrega a domicilio</p>
+      <h1>Te llevamos el coche donde estés</h1>
+      <p class="entrada">
+        No hace falta que vengas a la oficina. Lo dejamos donde nos digas y lo
+        recogemos al terminar, a la hora que acordemos.
+      </p>
+
+      <div class="bloques">
+        <article class="card bloque">
+          <h2>Se pacta antes, nunca después</h2>
+          <p>
+            El importe del desplazamiento se acuerda al reservar y aparece en el
+            contrato, en su propia línea. <strong>No es un cargo que salga al
+            devolver el coche.</strong>
+          </p>
+        </article>
+
+        <article class="card bloque">
+          <h2>Ida y vuelta se deciden por separado</h2>
+          <p>
+            Hay quien recoge en la oficina y solo pide que se le vaya a buscar.
+            Son dos servicios distintos y cada uno se pacta —y se cobra— por su
+            cuenta.
+          </p>
+        </article>
+
+        <article class="card bloque">
+          <h2>Cerca de aquí, sin coste</h2>
+          <p>
+            En Arganda del Rey y alrededores no cobramos el desplazamiento. Más
+            lejos, se acuerda un suplemento por teléfono antes de reservar.
+          </p>
+        </article>
+      </div>
+
+      <div class="cierre">
+        <h2>¿Dónde lo necesitas?</h2>
+        <p>
+          Dinos la dirección y las fechas y te decimos el precio final,
+          desplazamiento incluido.
+        </p>
+        <div class="cierre__acciones">
+          <a class="btn btn--brand" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+            Preguntar por WhatsApp
+          </a>
+          <a class="btn btn--ghost" href="/reservar">Consultar fechas</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .bloques {
+    display: grid;
+    gap: var(--sp-6);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    margin-bottom: var(--sp-16);
+  }
+
+  .bloque { padding: var(--sp-8); }
+  .bloque h2 { font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
+  .bloque p { color: var(--text-2); font-size: var(--fs-small); }
+
+  .cierre { max-width: 52ch; }
+  .cierre p { color: var(--text-2); margin: var(--sp-4) 0 var(--sp-6); }
+  .cierre__acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+</style>

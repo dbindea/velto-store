@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  titulo="Página no encontrada | Velto"
+  descripcion="La página que buscas no existe."
+  ruta={null}
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <h1>Esta página no existe</h1>
+      <p class="entrada">
+        Puede que el enlace esté antiguo. Desde aquí llegas a todo:
+      </p>
+      <p>
+        <a class="btn btn--brand" href="/flota">Ver la flota</a>
+        <a class="btn btn--ghost" href="/">Ir a la portada</a>
+      </p>
+    </div>
+  </section>
+</Base>

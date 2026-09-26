@@ -1439,7 +1439,13 @@
       "pricingGap": "Lipsesc zilele {from} până la {to}: o închiriere de această durată ar ieși 0 €",
       "pricingOpenNotLast": "Intervalul „{rule}” nu are zile maxime, așa că „{next}” și următoarele nu s-ar aplica niciodată",
       "pricingLastNotOpen": "Ultimul interval „{rule}” are zile maxime: o închiriere de {days} zile sau mai mult ar ieși 0 €. Lasă-l fără maxim",
-      "pricingGapSingle": "Lipsește ziua {day}: o închiriere de această durată ar ieși 0 €"
+      "pricingGapSingle": "Lipsește ziua {day}: o închiriere de această durată ar ieși 0 €",
+      "publishBadVehicle": "Vehicul nevalid",
+      "publishBadSource": "Fotografia nu aparține acestui vehicul",
+      "publishSourceMissing": "Fotografia nu mai există",
+      "publishTooLarge": "Imaginea este prea mare pentru a fi publicată",
+      "publishTooMany": "Există deja douăsprezece fotografii publicate. Retrage una înainte de a adăuga alta.",
+      "publishUnreadable": "Imaginea nu a putut fi citită. Încearcă alta sau încarc-o din nou."
     },
     "features": {
       "airConditioning": "Aer condiționat",
@@ -1498,10 +1504,20 @@
       "empty": "Încă nu există fotografii",
       "imageAlt": "Fotografie vehicul",
       "next": "Următor",
+      "noPublic": "Nicio fotografie publicată încă.",
       "openGallery": "Vezi galeria",
       "previous": "Anterior",
+      "publicHint": "Doar acestea apar pe site. Sunt recomprimate la publicare, deci nu păstrează nici locația, nici data fotografiei originale.",
+      "publicTitle": "Fotografii pe site-ul public",
+      "publish": "Publică pe site",
+      "publishConfirmMessage": "Va fi vizibilă pe site-ul public, fără autentificare. Ce se publică poate rămâne în motoarele de căutare chiar și după retragere.",
+      "publishConfirmTitle": "Publici această fotografie?",
+      "published": "Fotografie publicată pe site",
+      "publishFailed": "Fotografia nu a putut fi publicată",
       "saveFirst": "Salvează întâi vehiculul pentru a încărca fotografii",
       "thumbnail": "Miniatură",
+      "unpublish": "Retrage de pe site",
+      "unpublishFailed": "Fotografia nu a putut fi retrasă",
       "uploadError": "Fotografia nu a putut fi încărcată"
     },
     "pricing": {

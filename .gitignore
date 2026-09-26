@@ -88,3 +88,4 @@ test-contract-*.pdf
 # Sin ellos, la sección «Tema y color» de CLAUDE.md apuntaría a una carpeta
 # vacía.
 docs/design/*.html
+.firebase/

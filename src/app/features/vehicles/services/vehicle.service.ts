@@ -21,13 +21,16 @@ import {
   MAX_THUMBNAIL_SIZE,
   resizeImage
 } from '@shared/utils/image-resize.util';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { vehiclePhotoName } from '@shared/utils/storage-name.util';
 import {
+  PublicVehiclePhoto,
   Vehicle,
   VehicleFormData,
   VehicleImage,
   VehicleStatus,
 } from '@shared/models/vehicle.model';
+import { environment } from '@env/environment';
 import { getDefaultPricingRules, sortPricingRules } from '@shared/utils/pricing.util';
 import { vehicleOwnershipProblem } from '@shared/utils/owner-share.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
@@ -41,6 +44,7 @@ export class VehicleService {
   private firestore = inject(Firestore);
   private permissions = inject(PermissionsService);
   private storage = inject(Storage);
+  private functions = inject(Functions);
   private storageService = inject(StorageService);
   private vehiclesRef: CollectionReference;
 
@@ -302,5 +306,53 @@ export class VehicleService {
     const images = (vehicle.images || []).filter((img) => img.path !== image.path);
 
     await updateDoc(docRef, { images, updatedAt: { seconds: Date.now() / 1000 } });
+  }
+
+  /**
+   * Publicar una foto de la galería interna en la web pública.
+   *
+   * ⚠️ **Lo hace el BACKEND y aquí solo se pide, y eso no es ceremonia.** La
+   * copia tiene que **recodificarse**: el frontend deja HEIC fuera del
+   * redimensionado a propósito —Safari lo decodifica y Chrome no— así que un
+   * original de iPhone se subió **intacto, con su EXIF y sus coordenadas GPS
+   * dentro**. En la carpeta privada eso no rompía nada; en una con
+   * `allow read: if true` publicaría dónde se hizo la foto. Y el nombre del
+   * fichero público hay que inventarlo: `vehiclePhotoName()` pone la matrícula
+   * primero, que es justo el campo que la web no publica.
+   *
+   * Un `copy()` de Storage desde aquí sería una línea y haría las dos cosas mal.
+   */
+  async publishPhoto(vehicleId: string, sourcePath: string): Promise<PublicVehiclePhoto> {
+    const call = httpsCallable<
+      { vehicleId: string; sourcePath: string },
+      { photo: PublicVehiclePhoto }
+    >(this.functions, 'publishVehiclePhoto');
+    const { data } = await call({ vehicleId, sourcePath });
+    return data.photo;
+  }
+
+  /** Retirar una foto del escaparate. */
+  async unpublishPhoto(vehicleId: string, file: string): Promise<void> {
+    const call = httpsCallable<{ vehicleId: string; file: string }, { ok: boolean }>(
+      this.functions,
+      'unpublishVehiclePhoto'
+    );
+    await call({ vehicleId, file });
+  }
+
+  /**
+   * La URL pública de una foto publicada.
+   *
+   * ⚠️ **Se compone, no se guarda.** El documento guarda solo el nombre del
+   * fichero: con una URL dentro, un `publicPhotos: vehicle.images` compilaría
+   * sin error y publicaría la galería privada entera.
+   *
+   * Sin token de descarga a propósito — esa carpeta es pública por regla, no por
+   * secreto.
+   */
+  publicPhotoUrl(vehicleId: string, file: string): string {
+    const bucket = environment.firebase.storageBucket;
+    const ruta = `public-vehicles/${vehicleId}/${file}`;
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(ruta)}?alt=media`;
   }
 }

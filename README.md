@@ -51,18 +51,27 @@ El proyecto ya está configurado para desplegar en Firebase Hosting:
 
 ### Desplegar
 
+> ⚠️ Hay **dos proyectos de Firebase** (desarrollo y producción) y **dos sitios
+> de hosting** en cada uno (el backoffice y la web pública), así que todo
+> despliegue lleva su destino dentro del nombre del script. Nunca
+> `firebase deploy --only hosting` a secas: con dos sitios, eso despliega los
+> dos. El detalle está en [CLAUDE.md](CLAUDE.md).
+
 ```bash
 # Login en Firebase
 firebase login
 
-# Deploy solo hosting (frontend)
-npm run deploy:hosting
+# El BACKOFFICE (la aplicación Angular)
+npm run deploy:dev:hosting        # → store.veltorent.com
+npm run deploy:prod:hosting       # → rentalcar.veltomobility.com
 
-# Deploy completo (hosting + firestore + storage)
-npm run deploy:all
+# La WEB PÚBLICA (el escaparate en Astro)
+npm run deploy:dev:web
+npm run deploy:prod:web
 
-# Deploy desde cero
-npm run deploy
+# Cloud Functions y reglas, que el CI NO despliega
+npm run deploy:dev:functions      npm run deploy:prod:functions
+npm run deploy:dev:rules          npm run deploy:prod:rules
 ```
 
 ### Probar localmente con emuladores
@@ -313,9 +322,10 @@ Las reglas están en `storage.rules`. Resumen:
 | `npm start` | Iniciar servidor de desarrollo |
 | `npm run build` | Build de desarrollo |
 | `npm run build:prod` | Build de producción |
-| `npm run deploy` | Build + deploy hosting |
-| `npm run deploy:hosting` | Build + deploy solo hosting |
-| `npm run deploy:all` | Build + deploy completo |
+| `npm run deploy:dev:hosting` · `:prod:` | Build + deploy del **backoffice** |
+| `npm run deploy:dev:web` · `:prod:` | Build + deploy de la **web pública** |
+| `npm run deploy:dev:functions` · `:prod:` | Cloud Functions (el CI no las despliega) |
+| `npm run deploy:dev:rules` · `:prod:` | Reglas e índices de Firestore + Storage |
 | `npm run serve:hosting` | Probar hosting local con build |
 | `npm run firebase:emulators` | Iniciar emuladores Firebase |
 

@@ -1,0 +1,497 @@
+/*
+ * La web pública de Velto, sobre el **Velto Design System**.
+ *
+ * ⚠️ **Los tokens de aquí son los de `docs/design/velto-design-system.css`**, que
+ * es el kit de marca entregado por Claude Design y la referencia de la maqueta
+ * `velto-web-publica.html`. No se importan: ese fichero **no se compila** —lo
+ * dice su propio README— y además está en `.gitignore`. Se copian, como el
+ * backoffice copia las rampas a `src/styles.scss`. Si cambia el kit, cambia
+ * esto.
+ *
+ * ⚠️ **Y aquí el sistema entra ENTERO, al revés que en el backoffice.** Allí se
+ * dejaron fuera la escala tipográfica fluida, Gotham y la escala de espaciado
+ * porque un backoffice son tablas densas y cambiarlas tocaba la geometría de
+ * todas las pantallas. Esto es justo para lo que el kit se diseñó: una web de
+ * marketing con una portada.
+ */
+
+/* ---- Gotham -------------------------------------------------------------
+ *
+ * ⚠️ **Titulares y marca. NUNCA precios.** Comprobado con fontkit sobre el
+ * fichero real: `GothamBold.ttf` **no tiene el símbolo `€`** —sí tiene `ñ` y
+ * `á`—, así que un «29,00 €» compuesto en ella parte la cifra a media palabra:
+ * el número en Gotham y el euro en la fuente de respaldo. Es el mismo motivo
+ * por el que los PDF caen a DejaVu.
+ */
+@font-face {
+  font-family: 'Gotham';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/GothamBook.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Gotham';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/GothamMedium.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Gotham';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/GothamBold.ttf') format('truetype');
+}
+
+@font-face {
+  /*
+   * ⚠️ **Fuente VARIABLE: un fichero para todos los pesos.** Google sirve
+   * Montserrat así, y de hecho las URL de 400 y 600 devuelven el MISMO fichero
+   * —comprobado por hash—: descargar uno por peso era duplicar 38 KB sin ganar
+   * nada. Por eso el rango va en el propio `font-weight`.
+   *
+   * Autoalojada y no desde Google Fonts: servirla desde ahí manda la IP de cada
+   * visitante a un tercero, y es una web española que no tiene por qué hacerlo.
+   *
+   * Subconjunto `latin`, que cubre el español **y el símbolo del euro**
+   * (U+20AC). Comprobado con fontkit sobre el TTF completo — el `hasGlyph` de un
+   * `.woff2` miente, porque fontkit no lo descomprime y contesta que no a todo.
+   */
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/Montserrat-latin.woff2') format('woff2');
+}
+
+:root {
+  /* Marca — de la BrandCard */
+  --velto-teal: #20a48f;
+  --velto-black: #000000;
+  --velto-white: #ffffff;
+  /* Rampa teal (500 = color de marca) */
+  --teal-50: #e6f6f3; --teal-100: #c2ebe3; --teal-200: #8fd9cb; --teal-300: #5cc6b3; --teal-400: #33b39e;
+  --teal-500: #20a48f; --teal-600: #1b8b79; --teal-700: #167163; --teal-800: #11584d; --teal-900: #0b3b34;
+  /* Neutrales fríos (ligero tinte teal) */
+  --gray-950: #0b0f0e; --gray-900: #14181a; --gray-800: #2a3033; --gray-700: #454d50; --gray-600: #5f686b;
+  --gray-500: #7c868a; --gray-400: #a2abae; --gray-300: #c9d0d2; --gray-200: #e1e6e7; --gray-100: #eef1f2; --gray-50: #f6f8f8;
+  /* Estado */
+  --green-600: #1e7f4f; --green-100: #e1f4ea;
+  --amber-600: #9a6700; --amber-100: #fff3d6;
+  --red-600: #c8322b; --red-100: #fce8e6;
+  --blue-600: #2457a8; --blue-100: #e4ecfa;
+
+  /*
+   * **DOS fuentes, y el reparto no es estético: es por los glifos.**
+   *
+   * `--font-display` es Gotham y va en titulares, marca y botones. `--font-sans`
+   * es Montserrat y va en el cuerpo, en las cifras y en cualquier cosa que
+   * pueda llevar `€` — Gotham no tiene ese carácter y partiría «29,00 €» en dos
+   * fuentes a media cifra. Montserrat es además la que el propio design system
+   * declara como respaldo de Gotham, así que las dos ya estaban pensadas juntas.
+   */
+  --font-display: 'Gotham', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  /* Se conserva el nombre porque `.num` lo usa; hoy son la misma. */
+  --font-num: var(--font-sans);
+  --fw-light: 300; --fw-book: 400; --fw-medium: 500; --fw-bold: 700; --fw-black: 900;
+
+  --fs-display: clamp(2.75rem, 2rem + 3vw, 4.5rem);
+  --fs-h1: clamp(2.125rem, 1.6rem + 2vw, 3.25rem);
+  --fs-h2: clamp(1.625rem, 1.35rem + 1.1vw, 2.25rem);
+  --fs-h3: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --fs-h4: 1.125rem;
+  --fs-lead: 1.125rem;
+  --fs-body: 1rem;
+  --fs-small: 0.875rem;
+  --fs-caption: 0.75rem;
+  --fs-overline: 0.6875rem;
+  --fs-price: clamp(1.75rem, 1.5rem + 0.8vw, 2.25rem);
+  --lh-tight: 1.05; --lh-snug: 1.2; --lh-normal: 1.5; --lh-relaxed: 1.65;
+  /* `.28em` es el tracking de «CAR RENTAL» bajo el logotipo. */
+  --ls-tight: -0.02em; --ls-normal: 0; --ls-wide: 0.08em; --ls-brand: 0.28em;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
+  --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px; --sp-20: 80px; --sp-24: 96px; --sp-32: 128px;
+  --container-prose: 680px; --container-content: 1200px; --container-wide: 1366px;
+  --page-x: clamp(20px, 4vw, 64px);
+  --section-y: clamp(64px, 8vw, 96px);
+  --touch: 44px;
+  --control-h: 48px; --control-h-sm: 40px; --control-h-lg: 56px;
+
+  /* El radio crece con el tamaño. 12 = curva de la «O» del logotipo. */
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px; --r-2xl: 32px; --r-pill: 999px;
+  --bw: 1px; --bw-focus: 2px;
+  /* Inclinación de la «E» y la «V» del isotipo. */
+  --skew: -22deg;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1); --t-fast: 0.15s; --t-base: 0.2s; --t-slow: 0.4s;
+}
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff; --bg-alt: var(--gray-50); --bg-input: var(--gray-100); --bg-inverse: #000000;
+  --surface-card: #ffffff; --surface-raised: #ffffff; --surface-overlay: rgba(0, 0, 0, 0.56);
+  --text: #000000; --text-2: var(--gray-700); --text-3: var(--gray-500);
+  --text-inverse: #ffffff; --text-on-brand: #000000;
+  --brand: var(--teal-500); --brand-hover: var(--teal-600); --brand-active: var(--teal-700);
+  --brand-text: var(--teal-700); --brand-soft: var(--teal-50); --brand-soft-2: var(--teal-100);
+  --ink: #000000; --ink-hover: var(--gray-800); --text-on-ink: #ffffff;
+  --border: var(--gray-200); --border-strong: var(--gray-300); --divider: var(--gray-100);
+  --focus: var(--teal-600); --focus-ring: 0 0 0 3px rgba(32, 164, 143, 0.28);
+  --success: var(--green-600); --success-bg: var(--green-100);
+  --warning: var(--amber-600); --warning-bg: var(--amber-100);
+  --danger: var(--red-600); --danger-bg: var(--red-100);
+  --info: var(--blue-600); --info-bg: var(--blue-100);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --sh-2: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --sh-4: 0 24px 64px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #000000; --bg-alt: var(--gray-950); --bg-input: var(--gray-900); --bg-inverse: #ffffff;
+  --surface-card: var(--gray-900); --surface-raised: var(--gray-800); --surface-overlay: rgba(0, 0, 0, 0.72);
+  --text: #ffffff; --text-2: var(--gray-300); --text-3: var(--gray-400);
+  --text-inverse: #000000; --text-on-brand: #000000;
+  --brand: var(--teal-500); --brand-hover: var(--teal-400); --brand-active: var(--teal-300);
+  --brand-text: var(--teal-300); --brand-soft: rgba(32, 164, 143, 0.14); --brand-soft-2: rgba(32, 164, 143, 0.26);
+  --ink: #ffffff; --ink-hover: var(--gray-200); --text-on-ink: #000000;
+  --border: var(--gray-800); --border-strong: var(--gray-700); --divider: var(--gray-900);
+  --focus: var(--teal-300); --focus-ring: 0 0 0 3px rgba(92, 198, 179, 0.32);
+  --success: #4cc38a; --success-bg: rgba(76, 195, 138, 0.14);
+  --warning: #f0b429; --warning-bg: rgba(240, 180, 41, 0.14);
+  --danger: #f26b62; --danger-bg: rgba(242, 107, 98, 0.14);
+  --info: #7ba4ea; --info-bg: rgba(123, 164, 234, 0.14);
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.5); --sh-2: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --sh-3: 0 12px 32px rgba(0, 0, 0, 0.6); --sh-4: 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: var(--fw-book);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+}
+
+h1, h2, h3, h4, p { margin: 0; }
+h1, h2, h3, h4 { font-family: var(--font-display); }
+h1, h2 { font-weight: var(--fw-medium); letter-spacing: var(--ls-tight); line-height: var(--lh-tight); }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); font-weight: var(--fw-medium); line-height: var(--lh-snug); }
+h4 { font-size: var(--fs-h4); font-weight: var(--fw-medium); line-height: var(--lh-snug); }
+a { color: var(--brand-text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button, input, select, textarea { font: inherit; color: inherit; }
+img, svg { display: block; max-width: 100%; }
+:focus-visible { outline: var(--bw-focus) solid var(--focus); outline-offset: 2px; }
+
+/* Cifras: tabulares y con la fuente que SÍ tiene el símbolo del euro. */
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/*
+ * El rótulo de sección: turquesa, versalitas y el tracking del logotipo. Es la
+ * pieza que más «Velto» hace parecer a una página.
+ */
+.overline {
+  font-size: var(--fs-overline);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-brand);
+  text-transform: uppercase;
+  color: var(--brand-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Estructura --------------------------------------------------------- */
+
+.contenedor {
+  max-width: var(--container-content);
+  margin: 0 auto;
+  padding-inline: var(--page-x);
+}
+
+.seccion { padding-block: var(--section-y); }
+.seccion--alt { background: var(--bg-alt); }
+
+/*
+ * Las tres barras inclinadas del isotipo, como marca de sección.
+ * `--skew` es la inclinación real de la «V» y la «E» del logotipo: es lo que
+ * hace que el adorno pertenezca a la marca y no sea una raya cualquiera.
+ */
+.barras {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+}
+.barras span {
+  width: 34px;
+  height: 7px;
+  background: var(--brand);
+  transform: skewX(var(--skew));
+}
+
+/* ---- Botones ------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--control-h);
+  padding: 0 var(--sp-6);
+  border: var(--bw) solid transparent;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--t-base) var(--ease), color var(--t-base) var(--ease);
+}
+.btn:hover { text-decoration: none; }
+
+.btn--brand { background: var(--brand); color: var(--velto-white); }
+.btn--brand:hover { background: var(--brand-hover); }
+
+/* Negro, el segundo color de la marca. Es el de «Ver precio final». */
+.btn--ink { background: var(--ink); color: var(--text-on-ink); }
+.btn--ink:hover { background: var(--ink-hover); }
+
+.btn--ghost { background: transparent; color: var(--text); border-color: var(--border-strong); }
+.btn--ghost:hover { border-color: var(--brand); color: var(--brand-text); }
+
+.btn--soft { background: var(--brand-soft); color: var(--brand-text); }
+.btn--soft:hover { background: var(--brand-soft-2); }
+
+/* ---- Tarjetas ----------------------------------------------------------- */
+
+.card {
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.rejilla {
+  display: grid;
+  gap: var(--sp-6);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.aviso { padding: var(--sp-10) var(--sp-4); text-align: center; color: var(--text-2); }
+.aviso--error { color: var(--danger); }
+
+.oculto-visual {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---- La tarjeta de coche ------------------------------------------------
+ *
+ * Global porque sale en tres páginas —portada, flota y disponibilidad— y en las
+ * tres tiene que ser idéntica. El marcado lo compone `lib/tarjeta.ts`.
+ */
+
+/*
+ * ⚠️ **La tarjeta ocupa el alto de su celda y el botón se va al fondo.** Sin
+ * esto, cada tarjeta mide lo que mida su contenido —un nombre que parte en dos
+ * líneas, una lista de características que salta de línea— y los botones de una
+ * misma fila salen a alturas distintas. Se vio con los cuatro coches de
+ * desarrollo el 25 de septiembre de 2026: el 3008 y el Corolla bajaban su botón
+ * un renglón respecto a los vecinos.
+ *
+ * El empujón lo da `margin-top: auto` sobre el precio, que arrastra consigo el
+ * detalle y el botón: así el bloque de dinero queda pegado abajo en todas.
+ */
+.coche { height: 100%; }
+.coche__link { display: flex; flex-direction: column; height: 100%; color: inherit; }
+.coche__link:hover { text-decoration: none; }
+
+.coche__foto {
+  aspect-ratio: 4 / 3;
+  background: var(--bg-alt);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/*
+ * ⚠️ **`cover`, y aquí ponía `contain` hasta el 25 de septiembre de 2026.** Es
+ * una reversión y por eso se explica.
+ *
+ * El argumento de entonces era que una foto vertical de móvil, recortada, deja
+ * media carrocería fuera. Lo que no se miró es qué hace `contain` con esa misma
+ * foto: `publishVehiclePhoto` redimensiona a 1600 **por el lado largo**, así que
+ * una foto vertical sigue siendo vertical y en una caja 4/3 sale como una tira
+ * estrecha entre dos franjas grises enormes. Y una foto apaisada deja franjas
+ * arriba y abajo. O sea que el escaparate salía con cada coche de un tamaño.
+ *
+ * Recortar es seguro porque **la ficha del coche enseña la foto entera**, sin
+ * recorte y a su altura natural (`.ficha__fotos img`): lo que aquí se corta,
+ * allí se ve. Es la tarjeta la que necesita una rejilla uniforme.
+ */
+.coche__foto img { width: 100%; height: 100%; object-fit: cover; }
+
+.coche__sinfoto {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  color: var(--text-3);
+  font-size: var(--fs-caption);
+}
+
+.coche__cuerpo {
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.coche__nombre { margin: var(--sp-2) 0 var(--sp-4); }
+
+.coche__specs {
+  list-style: none;
+  margin: 0 0 var(--sp-5);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+.coche__specs li { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.coche__specs svg { color: var(--text-3); }
+
+/* El `auto` es lo que pega el bloque de dinero al fondo de la tarjeta. */
+.coche__precio { margin: auto 0 0; }
+.coche__precio strong { font-size: var(--fs-price); font-weight: var(--fw-bold); letter-spacing: var(--ls-tight); }
+.coche__precio span { color: var(--text-2); font-size: var(--fs-small); }
+.coche__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
+
+.coche__detalle { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
+.coche__btn { width: 100%; }
+
+/* ---- Traído de la referencia (demo.awaikenthemes.com/rentgo) -------------
+ *
+ * Tres patrones de ese tema que encajan aquí, adaptados a los tokens de Velto.
+ * Lo que NO se ha traído está dicho a propósito: estrellas, «2000 reseñas»,
+ * «4k clientes felices», testimonios con foto y el vídeo. **Velto no tiene nada
+ * de eso**, y una prueba social inventada es exactamente lo que esta casa evita
+ * — el texto y el hecho se deciden juntos.
+ */
+
+/*
+ * El chip de sección: la píldora con un punto delante del rótulo. Sustituye al
+ * `.overline` suelto donde hay sitio, y es lo que más cambia el aire de una
+ * sección sin tocar su contenido.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--bg-alt);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  margin-bottom: var(--sp-5);
+}
+
+.chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* El icono en círculo de las tarjetas de ventaja. */
+.icono-circulo {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  margin-bottom: var(--sp-5);
+}
+
+/*
+ * El acordeón de preguntas frecuentes.
+ *
+ * ⚠️ **`<details>` nativo, sin una línea de JavaScript.** Funciona sin que
+ * cargue nada, se puede abrir con el teclado, el buscador lee el contenido
+ * aunque esté cerrado y **se imprime abierto**. Un acordeón hecho a mano no da
+ * ninguna de las cuatro cosas gratis.
+ */
+.faq { display: grid; gap: var(--sp-3); }
+
+.faq details {
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker { display: none; }
+
+.faq summary::after {
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--t-base) var(--ease);
+}
+
+.faq details[open] summary { background: var(--brand-soft); color: var(--brand-text); }
+.faq details[open] summary::after { transform: rotate(-135deg); }
+
+.faq .faq__cuerpo {
+  padding: 0 var(--sp-6) var(--sp-5);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+
+/* Bloque a dos columnas: titular a la izquierda, contenido a la derecha. */
+.dos-columnas {
+  display: grid;
+  gap: var(--sp-10);
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .dos-columnas { grid-template-columns: 1fr 1.2fr; gap: var(--sp-16); }
+}

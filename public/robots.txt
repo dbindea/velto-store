@@ -1,0 +1,13 @@
+# El backoffice de VELTO. No es una web pública y no se indexa.
+#
+# ⚠️ Sin este fichero, `/robots.txt` caía en el catch-all `** → /index.html` de
+# `firebase.json` y devolvía **200 con el shell de Angular dentro**. Un
+# `robots.txt` que responde 200 con HTML no prohíbe nada: el rastreador no
+# encuentra ninguna directiva y da por hecho que puede rastrearlo todo.
+# Comprobado el 25 de septiembre de 2026 en los dos dominios.
+#
+# Un fichero estático se sirve ANTES que los rewrites, así que esto basta para
+# sacarlo de en medio. La web que sí se indexa es la otra, el escaparate en
+# `web/`, que tiene su propio robots generado por entorno.
+User-agent: *
+Disallow: /

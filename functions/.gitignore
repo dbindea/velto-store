@@ -1,6 +1,15 @@
-# Compiled JavaScript files
-lib/**/*.js
-lib/**/*.js.map
+# La salida de `tsc`, ENTERA.
+#
+# ⚠️ Aquí ponía `lib/**/*.js` y `lib/**/*.js.map`, o sea solo el JavaScript. Pero
+# `scripts/copy-fonts.js` deja ahí también **activos**: las tres DejaVu, dos
+# Gotham y el logo. Como no encajaban en esos dos patrones, se subieron al
+# repositorio — 2,1 MB de copias de ficheros que ya están en
+# `functions/src/contracts/` y en `src/assets/`, y que el build regenera en cada
+# compilación (`npm run build` → `build:fonts`, que además es el `predeploy` de
+# `firebase.json`).
+#
+# Ignorar la carpeta entera es lo correcto: nada de `lib/` es fuente.
+lib/
 
 # TypeScript v1 declaration files
 typings/

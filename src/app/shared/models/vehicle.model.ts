@@ -151,8 +151,47 @@ export interface Vehicle {
   minimumRentalDays?: number;
   manualPriceAllowed?: boolean;
   publicEnabled: boolean;
+  /**
+   * Las fotos que se ven en la web pública.
+   *
+   * ⚠️ **No son las de `images`, y no es duplicación.** Aquellas viven en la
+   * carpeta **privada** `vehicles/{id}/gallery/`, su URL lleva un token que se
+   * salta `storage.rules`, y el nombre del fichero **empieza por la matrícula**
+   * (`4466LKK_mfk3n1.jpg`) porque `vehiclePhotoName()` lo pone ahí a propósito,
+   * para que una foto descargada diga de qué coche es. Publicarlas publicaría
+   * la matrícula —que la lista blanca excluye— en la URL, por una vía que nadie
+   * auditaría.
+   *
+   * Estas viven en `public-vehicles/{id}/`, las recodifica el servidor
+   * (`publishVehiclePhoto`) para descartar el EXIF —un HEIC de iPhone se sube
+   * intacto con sus coordenadas GPS dentro— y se llaman `1_ab12cd.jpg`, sin un
+   * solo dato del negocio.
+   *
+   * ⚠️ **Guarda el NOMBRE del fichero, nunca la URL.** Con una URL aquí,
+   * escribir `publicPhotos: vehicle.images` compilaría sin un solo error
+   * —TypeScript solo comprueba propiedades de más en objetos literales— y
+   * publicaría la galería privada entera. Es el mismo agujero de tipos que dejó
+   * la fianza sin poder devolverse. La URL la compone la function al servir.
+   */
+  publicPhotos?: PublicVehiclePhoto[];
+  /**
+   * La descripción que lee un CLIENTE.
+   *
+   * ⚠️ **`description` no vale**: esa es la nota interna que el operador escribe
+   * para sus compañeros —«el del golpe en la aleta», «no prestar a menores de
+   * 25»— y nunca se pensó para que saliera de la oficina.
+   */
+  publicDescription?: string;
   createdAt?: any;
   updatedAt?: any;
+}
+
+/** Una foto publicada. Ver `Vehicle.publicPhotos`. */
+export interface PublicVehiclePhoto {
+  /** Nombre del fichero dentro de `public-vehicles/{vehicleId}/`. Sin barras. */
+  file: string;
+  width?: number;
+  height?: number;
 }
 
 export interface VehicleFeatures {

@@ -22,12 +22,35 @@ import { firestore } from './admin-guard';
 export interface OperationSettings {
   quoteValidityDays: number;
   signingLinkExpiryDays: number;
+  /**
+   * El IVA general, en **FRACCIÓN** (`0.21`), como `pricingSnapshot.vatRate`.
+   *
+   * ⚠️ **Faltaba, y el día que se usara habría mentido.** Este fichero leía dos
+   * de los cinco ajustes porque los PDF solo necesitaban esos dos; en cuanto
+   * algo del backend calcula un precio —la web pública— el tipo tiene que salir
+   * de aquí, o se publicaría un 21 % fijo mientras Ajustes dice otra cosa. Es
+   * exactamente el fallo que ya tuvo `resolveRentalPrice()` llamada sin su
+   * cuarto argumento: se calculaba con un número y se guardaba con otro, y con
+   * el general los dos coincidían de casualidad.
+   *
+   * ⚠️ **Y el 0 es un valor legítimo**, no un hueco: una reserva se puede pactar
+   * sin IVA. Por eso el clamp admite desde 0.
+   */
+  vatRate: number;
 }
 
 const DEFAULTS: OperationSettings = {
   quoteValidityDays: 7,
-  signingLinkExpiryDays: 7
+  signingLinkExpiryDays: 7,
+  vatRate: 0.21
 };
+
+/** Una fracción de IVA creíble. El 0 entra; un 21 (porcentaje) no. */
+function clampVatRate(value: unknown, fallback: number): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!isFinite(n) || n < 0 || n > 1) return fallback;
+  return n;
+}
 
 function clampDays(value: unknown, min: number, max: number, fallback: number): number {
   const n = typeof value === 'number' ? value : Number(value);
@@ -53,7 +76,8 @@ export async function operationSettings(): Promise<OperationSettings> {
         1,
         90,
         DEFAULTS.signingLinkExpiryDays
-      )
+      ),
+      vatRate: clampVatRate(data.vatRate, DEFAULTS.vatRate)
     };
   } catch (err) {
     functions.logger.warn('No se pudieron leer los ajustes; se usan los valores por defecto', err);

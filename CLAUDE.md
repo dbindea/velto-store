@@ -25,7 +25,8 @@ npm run build:prod        # build optimizada → rentalcar-veltomobility (config
 
 # Despliegues. El nombre del script dice a dónde va, y el destino viaja en
 # --project: nunca dependas del `firebase use` que quedara de la última vez.
-npm run deploy:dev:hosting     npm run deploy:prod:hosting
+npm run deploy:dev:hosting     npm run deploy:prod:hosting   # el BACKOFFICE
+npm run deploy:dev:web         npm run deploy:prod:web       # la WEB PÚBLICA
 npm run deploy:dev:functions   npm run deploy:prod:functions
 npm run deploy:dev:rules       npm run deploy:prod:rules   # reglas + índices + storage
 
@@ -119,10 +120,48 @@ el contenedor:
 cd functions && node -e "require('./lib/index.js')"
 ```
 
+⚠️ **Ojo con lo que esa comprobación NO dice: cargar un módulo no es llamarlo.**
+Sirve para lo que sirve —descartar que el bundle esté roto— y da falsa confianza
+para todo lo demás. El 25 de septiembre de 2026, `import sharp from 'sharp'`
+pasó el typecheck, pasó el build, pasó los tests, **cargó sin un error con este
+mismo comando** y reventó en producción con `(0, sharp_1.default) is not a
+function`. El `package.json` de sharp declara como tipos la variante **ESM**
+(`export default`) mientras su `main` es la **CommonJS** (`export =`), y la
+resolución clásica de `functions/tsconfig.json` ignora el campo `exports` que
+las emparejaría: el compilador ve un módulo y Node carga otro. La salida fue un
+`require` tipado en el sitio, y **un test que LLAMA a la función** en vez de
+comprobar que se importa.
+
 Si eso imprime sin error, el código está bien y lo que falta es cuota: reintenta
 **por tandas de dos o tres** con `firebase deploy --only functions:a,functions:b`.
 Pasó el 7 de septiembre de 2026, y se perdió un rato buscando un error de
 compilación que no existía.
+
+⚠️ **El PRIMER trigger de Eventarc de un proyecto falla, y hay que reintentar.**
+Pasó en los dos proyectos el mismo día —25 de septiembre de 2026, desplegando
+`onAuthorizedUserChanged`—, así que es sistemático y no mala suerte:
+
+```
+Validation failed for trigger …: Invalid resource state for "":
+Permission denied while using the Eventarc Service Agent.
+```
+
+El propio CLI lo explica a renglón seguido («we need a little bit longer to
+finish setting everything up. Retry the deployment in a few minutes») y tiene
+razón: los permisos del service agent tardan unos minutos en propagarse. **El
+reintento funciona a la primera**, sin tocar nada.
+
+Ojo con leerlo mal: producción llevaba meses con 22 functions de 2ª generación,
+así que lo de «tu primera vez» sorprende. Lo nuevo no es la 2ª generación, es el
+**trigger de Firestore** — ninguna function anterior usaba Eventarc.
+
+⚠️ **Y si el despliegue lleva varias functions, las demás SÍ se crean.** Aquí
+`syncAuthClaims` entró y solo falló el trigger, así que el reintento es por su
+nombre y no de la tanda entera:
+
+```bash
+firebase deploy --only functions:onAuthorizedUserChanged --project prod
+```
 
 ⚠️ **Y hay un segundo error que también acusa al código sin motivo:**
 
@@ -158,6 +197,49 @@ El plazo se sube con `FUNCTIONS_DISCOVERY_TIMEOUT`, **en segundos**:
 ```bash
 FUNCTIONS_DISCOVERY_TIMEOUT=120 firebase deploy --only functions:x --project prod
 ```
+
+⚠️ **Y ese comando NO funciona en PowerShell**, que es donde Dorel lanza los
+despliegues. El prefijo `VAR=valor comando` es sintaxis de shell tipo Unix; en
+PowerShell la variable se pone aparte, y sin ella el despliegue vuelve a fallar
+con el mismo mensaje — pareciendo que el truco no sirve:
+
+```powershell
+$env:FUNCTIONS_DISCOVERY_TIMEOUT=120
+firebase deploy --only functions:x --project prod
+```
+
+⚠️ **Volvió a salir el 25 de septiembre de 2026**, desplegando las dos functions
+de los claims a producción, y la comprobación dio lo mismo que la primera vez:
+el manifiesto respondía **200 en 0,79 s** con las 29 functions mientras el
+despliegue abortaba a los 10. Había **26 procesos de node** — un `ng serve` con
+watch y una tanda de builds y tests de fondo. Es decir: el código nunca ha sido
+la causa, ninguna de las dos veces. Si la máquina está cargada, súbelo y ya.
+
+### Lo que hay que escribir distinto porque el shell es PowerShell
+
+⚠️ **Dorel trabaja en PowerShell 5.1, no en Bash**, y aquí se escriben comandos
+de shell tipo Unix por inercia. Ya ha fallado dos veces —el
+`FUNCTIONS_DISCOVERY_TIMEOUT` de arriba y, el 26 de septiembre de 2026, un
+procedimiento entero de comprobación de DNS—, así que va la tabla completa:
+
+| Escrito por inercia | Qué pasa | Lo que vale |
+|---|---|---|
+| `VAR=valor comando` | La variable no llega; el comando falla igual que antes | `$env:VAR=valor` en su propia línea |
+| `… \| grep "algo"` | `grep : no se reconoce el término` | `Select-String`, o la orden nativa que devuelva objetos |
+| `a && b` | El operador `&&` **es de PowerShell 7**; en 5.1 es error de sintaxis | dos líneas, o `;` |
+| `curl -sI https://…` | ⚠️ **`curl` es un alias de `Invoke-WebRequest`**: traga el nombre y no las banderas | **`curl.exe`** |
+| `nslookup -type=TXT x \| grep` | Lo anterior, dos veces | `Resolve-DnsName x -Type TXT -Server 8.8.8.8` |
+
+⚠️ **Y un `.ps1` se guarda con BOM UTF-8.** Sin él, PowerShell 5.1 lo lee como
+ANSI, los caracteres acentuados y los de caja se corrompen y el fichero
+**falla al parsear** con un error que habla de llaves sin cerrar — a cien líneas
+del carácter culpable. Además, la consola no es UTF-8: lo que se **imprime**
+conviene que sea ASCII (`->` y no `→`), o sale como basura aunque el fichero
+esté bien.
+
+El ejemplo vivo es [docs/comprobar-correo.ps1](docs/comprobar-correo.ps1), que
+comprueba de una pasada qué envía y qué recibe un dominio. Como los dos guiones
+de reglas, no es código de la aplicación y por eso vive en `docs/`.
 
 ## Dos entornos, dos proyectos de Firebase
 
@@ -1100,6 +1182,158 @@ un fallo del CSS de turno: en la misma sesión salió primero que
 `public-vehicles/` denegaba y, doce segundos después, que pasaba. Espera antes de
 creerte una medición de reglas recién desplegadas.
 
+### Dos sitios de hosting, un solo proyecto
+
+Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
+
+| target | Desarrollo | Producción |
+|---|---|---|
+| `backoffice` | `store.veltorent.com` | `rentalcar.veltomobility.com` |
+| `web` | `velto-web-dev.web.app` | *(sitio sin crear)* |
+
+⚠️ **Esa segunda fila es lo que hay HOY, no lo que se pretende.** Aquí ponía
+`dev.veltorent.com` y `veltomobility.com` como si ya sirvieran, y medido el 25
+de septiembre de 2026 **ninguno de los dos existe**: `dev.veltorent.com` da
+NXDOMAIN, y `veltomobility.com` sirve el aparcamiento del registrador —IONOS, en
+alemán— con un **525** por HTTPS, porque el TLS entre Cloudflare y ese origen
+falla. En producción el sitio de hosting de la web **ni siquiera está creado**:
+`.firebaserc` manda el target `web` a `velto-web`, y
+`firebase hosting:sites:get velto-web --project prod` contesta «could not find
+site». Un merge a `master` publicaría el backoffice —va primero— y se caería en
+el paso siguiente.
+
+Escrito como estaba, cualquiera que fuera a comprobar un despliegue miraba un
+dominio que no responde y concluía que el despliegue había fallado. **Esta tabla
+dice lo que sirve; los dominios entran cuando responden.**
+
+⚠️ **El canónico será `veltomobility.com`; `veltorent.com` servirá lo mismo y
+redirigirá.** Dos dominios con el mismo contenido **no suman posicionamiento, lo
+reparten**, así que el `<link rel="canonical">` del layout no es decorativo: sin
+él, Google elige por su cuenta cuál enseñar. ⚠️ Y esa redirección **no está en
+el repositorio**: `firebase.json` no tiene ningún bloque `redirects`, así que
+tiene que ser una regla de Cloudflare.
+
+### El sitio de verdad se distingue por el MODO de compilación
+
+⚠️ **La web se construye IGUAL para los dos entornos** —mismo `web/dist`, sin
+`fileReplacements` ni `.env`—, y hay dos cosas que no pueden salir iguales: el
+`robots.txt` y el `<meta name="robots">`. Sin distinguirlas,
+`velto-web-dev.web.app` se ofrece al índice de Google con una canónica que
+apunta a producción, o sea un duplicado del escaparate compitiendo con el
+original.
+
+| | Comando | Modo | `robots.txt` | `<meta robots>` |
+|---|---|---|---|---|
+| desarrollo y PR | `npm --prefix web run build` | `production` | `Allow: /` | `noindex, nofollow` |
+| **el sitio real** | `npm --prefix web run build:prod` | **`live`** | `Allow: /` + sitemap | *(ninguno)* |
+
+⚠️ **`astro build` usa el modo `production` POR DEFECTO**, así que el modo por
+defecto **no distingue nada**: lo que distingue es el `--mode live` que pasa
+`build:prod`, y que lee `ES_SITIO_REAL` en `web/src/lib/empresa.ts`. Quien lo
+llama es **solo** el workflow de `master`.
+
+⚠️ **Y los dos llevan `Allow: /`, que parece un error y no lo es.** Un
+`Disallow` prohíbe **descargar** la página, así que el rastreador nunca llega a
+leer el `noindex` del HTML: los dos mecanismos se taparían en vez de sumarse, y
+además una URL bloqueada por `robots.txt` **puede acabar indexada igualmente**
+si alguien la enlaza —sin título ni descripción, que es la peor forma de
+aparecer—. Para sacar algo del índice hay que dejar que lo lean y decirles que
+no lo indexen.
+
+⚠️ **Nada comprueba que el artefacto de producción salió en modo `live`**, y es
+una comparación de cadenas colgando de un solo `run` de un solo workflow. Se
+mira así, que es de lo poco que se puede comprobar sin desplegar:
+
+```bash
+cat web/dist/robots.txt      # con "Sitemap:" = sitio real; sin él = desarrollo
+grep -l 'name="robots"' web/dist/*.html   # si sale algo en el build real, va mal
+```
+
+⚠️ **Cada despliegue lleva su `target` explícito, y es obligatorio.** Sin él,
+`action-hosting-deploy` no sabe cuál de los dos publicar — y el peor caso no es
+que falle, es que **suba el build de Angular al sitio de la web pública** y la
+deje sirviendo el backoffice a cualquiera que pase. Los tres workflows lo llevan;
+`firebase init hosting:github` los reescribe sin avisar, así que si vuelve a
+ejecutarse hay que revisarlos.
+
+⚠️ **La web se construye DESPUÉS del backoffice en el workflow, no antes.** Son
+dos productos en un repositorio: si el build de Astro falla, el backoffice ya
+está publicado. Que uno no salga no puede impedir que salga el otro.
+
+⚠️ **Y `web/` es una tercera build con su propio `package.json`**, como
+`functions/`. No comparte nada con la app: los colores de marca y los datos de
+empresa están **copiados a mano** en `web/src/styles/global.css` y
+`web/src/lib/empresa.ts`, por lo mismo que el IVA está duplicado en las
+functions. Si cambian en `styles.scss` o en `company-config.ts`, cambian ahí.
+
+⚠️ **La web es ESTÁTICA y pide los datos al cargar.** Nada de renderizado en
+servidor ni de generar las fichas en el build: así **publicar un coche se ve al
+momento**, sin redesplegar. Con las fichas generadas en build, añadir un coche no
+aparecería hasta el siguiente despliegue — y eso es una queja el primer día. Lo
+que sí posiciona (portada, condiciones, contacto) es HTML desde el primer byte.
+
+⚠️ **La ficha vive en `/coche/{id}` gracias a un REWRITE**, no a una ruta
+generada: `/coche/**` → `/coche.html`, y el JavaScript lee el id del path. Si ese
+rewrite falta, la página da 404 sin decir por qué — el mismo fallo silencioso que
+tuvo `/d/**`.
+
+### La web pública: Firestore no se abre, se pregunta a una function
+
+La web (`veltorent.com`, Astro, aún por construir) **no lee Firestore**. Pide a
+tres endpoints públicos —`/api/fleet`, `/api/vehicle`, `/api/availability`— que
+devuelven una **lista blanca** de campos. Abrir `allow read: if
+resource.data.publicEnabled` habría sido una línea y habría publicado la póliza
+del seguro, el bastidor y el porcentaje que se lleva el dueño de un coche cedido.
+
+⚠️ **`public/mapper.ts` es el único sitio por el que algo sale a internet, y
+está escrito para que salir cueste trabajo.** Cada campo se nombra uno a uno:
+nada de `{ ...vehicle }`, nada de `delete`, nada de `Omit`. Es verboso a
+propósito — con un `Omit`, un campo nuevo en el modelo del coche se publicaría
+solo. De los 37 campos salen 16, y cinco se excluyen aunque parezcan inocuos:
+`plateNumber` (clonado de placas, y en un coche cedido señala el vehículo de un
+particular), `status` (el estado es de hoy, la disponibilidad es de un rango),
+`currentKm` (raspado a diario da la rotación de la flota), `hasGpsTracker` (no se
+puede publicar **ni con valor `true`**: la ausencia en los demás sería la lista
+de la compra de un ladrón) e `images`.
+
+⚠️ **`images` es el caso que hay que entender, porque es el que vuelve.** Sus URL
+apuntan a la carpeta privada `vehicles/`, llevan un token que se salta
+`storage.rules`, **y el nombre del fichero empieza por la matrícula**
+(`4466LKK_mfk3n1.jpg`) porque `vehiclePhotoName()` la pone ahí a propósito. Así
+que publicar las fotos publicaría el campo que la lista blanca excluye, por una
+vía que nadie auditaría. Lo que sale es `publicPhotos`, que vive en
+`public-vehicles/{id}/` y se llama `1_ab12cd.jpg`.
+
+⚠️ **Y una foto se RECODIFICA al publicar; nunca se copia.** `isResizableImage()`
+deja **HEIC fuera a propósito** —Safari lo decodifica y Chrome no—, así que un
+original de iPhone se subió **intacto, con su EXIF y sus coordenadas GPS
+dentro**. En una carpeta privada eso era inocuo y está escrito así en su
+comentario; en una con `allow read: if true` publica dónde estaba el coche.
+`publishVehiclePhoto` lo pasa por `sharp`, que descarta los metadatos, y **lo que
+no puede leer lo rechaza** en vez de pasar el original — ese camino es justo el
+del HEIC. Comprobado de punta a punta: 226 bytes de EXIF con GPS a la entrada,
+ninguno a la salida.
+
+⚠️ **`publicPhotos` guarda el NOMBRE del fichero, no la URL.** Con una URL,
+escribir `publicPhotos: vehicle.images` **compila sin un solo error**
+—TypeScript solo comprueba propiedades de más en objetos literales— y publicaría
+la galería privada entera. Es el mismo agujero de tipos que dejó la fianza sin
+poder devolverse.
+
+⚠️ **Y la aritmética pública se aparta de la del backoffice en tres sitios, a
+propósito** (`public/core.ts`, con tests): `toDate()` devuelve **null** ante una
+fecha ilegible en vez de la de hoy —el respaldo de la app haría que una reserva
+dejara de bloquear y se ofreciera un coche alquilado—; un estado de reserva
+**desconocido bloquea**, porque la lista está invertida y una prórroga futura no
+puede colarse; y un coche **sin tarifa para esos días no se ofrece** en vez de
+salir a 0 €. Las tres siguen la misma regla: en una pantalla con un operador
+delante, pasarse de prudente se ve y se corrige; en una web, ofrecer de más es
+una reserva que alguien atenderá.
+
+⚠️ **La ventana de disponibilidad se ensancha a días completos.** Sin eso,
+estrechando la consulta hora a hora se puede averiguar el instante exacto en que
+un coche se libera, o sea a qué hora devuelve un cliente concreto.
+
 ### `permissions.util.ts` es la única autoridad sobre quién puede qué
 
 Rol → permisos, en una tabla. El menú y los guards de ruta preguntan ahí; un
@@ -1819,7 +2053,17 @@ fichero avisa que es fácil olvidar. Se comprueba con
 
 `documentLink` estuvo un tiempo escrita sin desplegar; ojo con que desplegarla no basta: el
 rewrite `/d/**` viaja con el **hosting** y necesita su propio
-`firebase deploy --only hosting`.
+`npm run deploy:dev:hosting` (o `deploy:prod:hosting`).
+
+⚠️ **Y ahí ponía `firebase deploy --only hosting` a secas, que desde el 25 de
+septiembre de 2026 hace otra cosa**: con dos sitios declarados en `.firebaserc`,
+ese comando despliega **los dos** — el backoffice y el escaparate público. Los
+dos caminos son malos y ninguno avisa: en un clon limpio `web/dist` no existe
+—está en `.gitignore`— y el CLI aborta a media faena; y en una máquina donde sí
+exista, **publica el escaparate con lo que hubiera compilado ese día**, que
+puede ser de la semana pasada y del entorno que no toca. El target va siempre
+explícito. La misma frase estaba repetida en
+[document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts).
 
 ### Enlaces cortos para WhatsApp
 
