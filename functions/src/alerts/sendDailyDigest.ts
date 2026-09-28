@@ -15,7 +15,8 @@
  * cliente ni pasar por ningún sitio. A las 9:00, queda el día entero.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import { firestore } from '../admin-guard';
@@ -31,7 +32,8 @@ import {
 } from './daily-digest';
 import { renderDigestEmail } from './digest-email';
 import { avisosDelSistema, type AvisoSistema } from './system-alerts';
-import { certificadoDesdeSecreto, probarConexion } from '../invoices/verifactu-client';
+// ⚠️ `verifactu-client` se carga al mirar el certificado, no al arrancar: trae
+// `node-forge` (34 ms, 42 módulos). Ver la nota de `sendVerifactuRecords.ts`.
 import { verifactuEnabled, verifactuEndpoint } from '../invoices/verifactu';
 import type { Remision } from '../invoices/verifactu-submission';
 
@@ -93,16 +95,19 @@ export async function construirAvisos(
     const snap = await db.collection('verifactuSubmissions').get();
     remisiones = snap.docs.map((d) => d.data() as Remision);
   } catch (e) {
-    functions.logger.error('Resumen diario: no se pudo leer verifactuSubmissions', e);
+    logger.error('Resumen diario: no se pudo leer verifactuSubmissions', e);
   }
 
   let dias: number | undefined;
   try {
+    const { certificadoDesdeSecreto, probarConexion } = await import(
+      '../invoices/verifactu-client'
+    );
     const certificado = certificadoDesdeSecreto(p12Base64, passphrase);
     const prueba = await probarConexion(verifactuEndpoint(), certificado);
     dias = prueba.diasParaCaducar;
   } catch (e) {
-    functions.logger.error('Resumen diario: no se pudo leer el certificado', e);
+    logger.error('Resumen diario: no se pudo leer el certificado', e);
   }
 
   return avisosDelSistema(dias, remisiones);
@@ -241,7 +246,7 @@ export async function enviarResumen(
     return { enviado: false, motivo: 'sin novedades', resumen };
   }
   if (!apiKey) {
-    functions.logger.error('Resumen diario: falta RESEND_API_KEY');
+    logger.error('Resumen diario: falta RESEND_API_KEY');
     return { enviado: false, motivo: 'sin RESEND_API_KEY', resumen };
   }
 
@@ -265,11 +270,11 @@ export async function enviarResumen(
 
   if (!res.ok) {
     const body = await res.text();
-    functions.logger.error('Resumen diario: Resend rechazó el envío', { status: res.status, body });
+    logger.error('Resumen diario: Resend rechazó el envío', { status: res.status, body });
     return { enviado: false, motivo: `resend ${res.status}`, asunto, resumen };
   }
 
-  functions.logger.info('Resumen diario enviado', {
+  logger.info('Resumen diario enviado', {
     asunto,
     entregas: resumen.entregas.length,
     devoluciones: resumen.devoluciones.length,
@@ -302,7 +307,7 @@ export const sendDailyDigest = onSchedule(
       });
     } catch (err) {
       // Que falle una tarde no puede tumbar la siguiente.
-      functions.logger.error('Resumen diario: falló', { err });
+      logger.error('Resumen diario: falló', { err });
     }
   }
 );
@@ -314,11 +319,11 @@ export const sendDailyDigest = onSchedule(
  * que no se puede leer en un log: cómo se ve en el móvil. Por defecto solo
  * devuelve lo que habría mandado.
  */
-export const previewDailyDigest = functions.https.onCall(
+export const previewDailyDigest = onCall(
   { secrets: [RESEND_API_KEY, VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },
   async (request) => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
     // ⚠️ La vista previa monta los mismos secrets que el envío de verdad. Si no,
     // enseñaría un correo sin el aviso del certificado y el primero con aviso

@@ -17,8 +17,27 @@
  * closer to driving off with an unsigned contract.
  */
 
-import * as functions from 'firebase-functions';
-import { buildBookingConfirmationPdf } from './documents-pdf';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { reservationLocator } from './locator';
@@ -64,15 +83,15 @@ function asString(value: any, fallback = ''): string {
   return String(value);
 }
 
-export const generateBookingConfirmationPdf = functions.https.onCall(
+export const generateBookingConfirmationPdf = onCall(
   async (request): Promise<BookingConfirmationResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
 
     const data = request.data as BookingConfirmationRequest;
     if (!data?.reservationId) {
-      throw new functions.https.HttpsError('invalid-argument', 'reservationId es requerido');
+      throw new HttpsError('invalid-argument', 'reservationId es requerido');
     }
 
     const reservationId = data.reservationId;
@@ -80,14 +99,14 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
 
     const snap = await db.collection('reservations').doc(reservationId).get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Reserva no encontrada');
+      throw new HttpsError('not-found', 'Reserva no encontrada');
     }
     const reservation = snap.data() as any;
 
     // The field is `reservationStatus`, not `status` — the documents also carry
     // `paymentStatus` and `contractStatus`, so the name is qualified.
     if (!CONFIRMABLE_STATUSES.includes(reservation.reservationStatus)) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'La reserva aún no está confirmada: cobra la señal antes de emitir el justificante'
       );
@@ -105,7 +124,7 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
     // it too, which is why the formula lives in one place.
     const locator = reservationLocator(reservationId);
 
-    functions.logger.info(
+    logger.info(
       `generateBookingConfirmationPdf: reservation=${reservationId} locator=${locator}`
     );
 
@@ -113,6 +132,7 @@ export const generateBookingConfirmationPdf = functions.https.onCall(
     const depositRequired =
       reservation.deposit?.requiredAmount ?? reservation.paymentSummary?.depositRequired ?? 0;
 
+    const { buildBookingConfirmationPdf } = await import('./documents-pdf');
     const pdfBytes = await buildBookingConfirmationPdf({
       company: companyConfig(),
       client: {

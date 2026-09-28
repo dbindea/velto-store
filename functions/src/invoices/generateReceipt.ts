@@ -17,14 +17,33 @@
  * Lo único que queda es el PDF, que es lo que el enlace necesita.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { randomUUID } from 'crypto';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
 import { uploadPdf } from '../documents/storage';
 import { documentLinkUrl, shortIdFor } from '../documents/documentLink';
 import { reservationLocator } from '../documents/locator';
-import { buildReceiptPdf } from './receipt-pdf';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import { receiptProblem } from './receipt-core';
 import type { ContractLocale } from '../contracts/contract-types';
 
@@ -82,16 +101,16 @@ function receiptReference(): string {
   return `REC-${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 }
 
-export const generateReceipt = functions.https.onCall(
+export const generateReceipt = onCall(
   async (request): Promise<ReceiptResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
 
     const data = request.data as ReceiptRequest;
     const paymentId = (data?.paymentId || '').trim();
     if (!paymentId) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'payments.receipt.problems.paymentRequired'
       );
@@ -100,7 +119,7 @@ export const generateReceipt = functions.https.onCall(
     const db = firestore();
     const snap = await db.collection('payments').doc(paymentId).get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError('not-found', 'payments.receipt.problems.notFound');
+      throw new HttpsError('not-found', 'payments.receipt.problems.notFound');
     }
     // ⚠️ `data()` no incluye el id del documento. Olvidarlo es el despiste de
     // M-29 y M-41.
@@ -118,7 +137,7 @@ export const generateReceipt = functions.https.onCall(
      */
     const problema = receiptProblem(payment);
     if (problema) {
-      throw new functions.https.HttpsError('failed-precondition', problema);
+      throw new HttpsError('failed-precondition', problema);
     }
 
     const locale = resolveLocale(data?.locale);
@@ -162,10 +181,11 @@ export const generateReceipt = functions.https.onCall(
       } catch (err) {
         // Un recibo no se queda sin emitir porque la consulta de facturas
         // falle: se imprime sin esa línea, que es información de más.
-        functions.logger.warn('generateReceipt: no se pudo consultar la factura', { err });
+        logger.warn('generateReceipt: no se pudo consultar la factura', { err });
       }
     }
 
+    const { buildReceiptPdf } = await import('./receipt-pdf');
     const pdf = await buildReceiptPdf({
       locale,
       company: {
@@ -205,7 +225,7 @@ export const generateReceipt = functions.https.onCall(
     const shortId = shortIdFor('receipt', randomUUID().replace(/-/g, '').slice(0, 16));
     const subido = await uploadPdf(`receipts/${shortId.slice(1)}/receipt.pdf`, pdf);
 
-    functions.logger.info('Receipt generated', {
+    logger.info('Receipt generated', {
       paymentId,
       reference,
       amount: paidAmount

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   blockingMaintenance,
   fleetAvailability,
+  maintenanceDueSoon,
+  maintenanceOverdue,
   statusAfterReturn,
   type MaintenanceDue
 } from './vehicle-availability.util';
@@ -168,5 +170,137 @@ describe('statusAfterReturn', () => {
 
   it('sin estado guardado, disponible', () => {
     expect(statusAfterReturn(undefined)).toBe('available');
+  });
+});
+
+/**
+ * Vencido por fecha O por kilómetros.
+ *
+ * ⚠️ **El «o» es lo que fallaba, y no daba ningún error.** El panel comparaba
+ * solo la fecha y descartaba de entrada todo registro que no la llevara, así que
+ * un cambio de aceite con «Km del recordatorio» puesto y la fecha vacía no
+ * aparecía en ninguna de las dos tarjetas de mantenimiento: ni en vencidos ni en
+ * próximos. La cifra decía «Vencidos · 2 ítems» habiendo cinco.
+ */
+describe('maintenanceOverdue', () => {
+  const HOY = new Date('2026-09-28T12:00:00');
+
+  it('vence por fecha pasada', () => {
+    expect(
+      maintenanceOverdue({ status: 'scheduled', dueDate: new Date('2026-09-20') }, HOY)
+    ).toBe(true);
+  });
+
+  it('EL CASO DEL PANEL: vence por kilómetros aunque no lleve fecha', () => {
+    expect(
+      maintenanceOverdue({ status: 'scheduled', dueDate: null, dueKm: 100000, currentKm: 112000 }, HOY)
+    ).toBe(true);
+  });
+
+  it('y por kilómetros aunque su fecha sea futura', () => {
+    // Es el registro que salía «Vencido» en la ficha del coche y «Próximo a
+    // vencer» en el panel: el mismo dato con dos verdades opuestas.
+    const m = {
+      status: 'scheduled' as const,
+      dueDate: new Date('2026-10-18'),
+      dueKm: 100000,
+      currentKm: 112000
+    };
+    expect(maintenanceOverdue(m, HOY)).toBe(true);
+    expect(maintenanceDueSoon(m, HOY, 30)).toBe(false);
+  });
+
+  it('el día justo del umbral ya cuenta', () => {
+    expect(
+      maintenanceOverdue({ status: 'scheduled', dueDate: null, dueKm: 100000, currentKm: 100000 }, HOY)
+    ).toBe(true);
+  });
+
+  it('sin kilómetros del coche no se puede decidir por kilómetros', () => {
+    expect(
+      maintenanceOverdue({ status: 'scheduled', dueDate: null, dueKm: 100000 }, HOY)
+    ).toBe(false);
+  });
+
+  it.each(['completed', 'cancelled'] as const)('un registro %s no vence', (status) => {
+    expect(
+      maintenanceOverdue({ status, dueDate: new Date('2020-01-01'), dueKm: 1, currentKm: 999999 }, HOY)
+    ).toBe(false);
+  });
+
+  it('una fecha ilegible no lo da por vencido', () => {
+    expect(maintenanceOverdue({ status: 'scheduled', dueDate: new Date('vacío') }, HOY)).toBe(false);
+  });
+});
+
+describe('maintenanceDueSoon', () => {
+  const HOY = new Date('2026-09-28T12:00:00');
+
+  it('dentro del plazo', () => {
+    expect(
+      maintenanceDueSoon({ status: 'scheduled', dueDate: new Date('2026-10-18') }, HOY, 30)
+    ).toBe(true);
+  });
+
+  it('fuera del plazo, no', () => {
+    expect(
+      maintenanceDueSoon({ status: 'scheduled', dueDate: new Date('2026-12-01') }, HOY, 30)
+    ).toBe(false);
+  });
+
+  it('lo YA vencido no es «próximo a vencer»', () => {
+    expect(
+      maintenanceDueSoon({ status: 'scheduled', dueDate: new Date('2026-09-20') }, HOY, 30)
+    ).toBe(false);
+  });
+
+  it('sin fecha no hay nada que anunciar, aunque venza por kilómetros', () => {
+    // Ese entra en la tarjeta de vencidos, que es donde le toca.
+    expect(
+      maintenanceDueSoon({ status: 'scheduled', dueDate: null, dueKm: 1, currentKm: 9 }, HOY, 30)
+    ).toBe(false);
+  });
+});
+
+/**
+ * El día del vencimiento, y la ventana que se comía lo de hoy.
+ *
+ * ⚠️ Los dos casos salieron de una revisión adversarial del propio arreglo: con
+ * la comparación por instantes, un papel válido «hasta el 10» salía vencido el
+ * día 10 por la mañana —y Eventos habría prohibido alquilar un coche que el
+ * buscador sí ofrece, porque aquel cuenta días—; y al pasar a días, un registro
+ * que vence HOY se caía de las dos tarjetas a la vez.
+ */
+describe('el día del vencimiento', () => {
+  const HOY = new Date('2026-09-28T09:00:00');
+
+  it('el día en que vence todavía NO está vencido', () => {
+    expect(
+      maintenanceOverdue({ status: 'scheduled', dueDate: new Date('2026-09-28T00:00:00') }, HOY)
+    ).toBe(false);
+  });
+
+  it('el día siguiente sí', () => {
+    expect(
+      maintenanceOverdue({ status: 'scheduled', dueDate: new Date('2026-09-27T00:00:00') }, HOY)
+    ).toBe(true);
+  });
+
+  it('y lo que vence hoy entra en «próximos», no se cae de las dos', () => {
+    expect(
+      maintenanceDueSoon({ status: 'scheduled', dueDate: new Date('2026-09-28T00:00:00') }, HOY, 30)
+    ).toBe(true);
+  });
+
+  it('caduca el mismo día que para la regla de bloqueo', () => {
+    // `blockingMaintenance` ya contaba días: las dos tienen que coincidir, o el
+    // aviso y el bloqueo se contradicen durante 24 horas.
+    const dueDate = new Date('2026-09-28T00:00:00');
+    const bloquea = blockingMaintenance(
+      [{ type: 'itv', status: 'scheduled', dueDate }],
+      new Date('2026-09-28T23:00:00')
+    );
+    expect(bloquea).toBeUndefined();
+    expect(maintenanceOverdue({ status: 'scheduled', dueDate }, HOY)).toBe(false);
   });
 });

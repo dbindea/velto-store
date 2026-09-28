@@ -42,7 +42,7 @@
  *     is already `paid`.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { FUNCTIONS_REGION } from './global-options';
@@ -117,7 +117,7 @@ async function prepareRedsysCheckout(
   const TRANSACTION_TYPE = process.env.REDSYS_TRANSACTION_TYPE || '0';
 
   if (!MERCHANT_CODE || !TERMINAL || !secret) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'failed-precondition',
       'Redsys no está configurado. Configura las variables de entorno / secrets.'
     );
@@ -239,27 +239,27 @@ async function prepareRedsysCheckout(
   };
 }
 
-export const createRedsysPaymentLink = functions.https.onCall(
+export const createRedsysPaymentLink = onCall(
   {
     secrets: [REDSYS_SECRET_KEY]
   },
   async (request): Promise<CreateRedsysLinkResponse> => {
     const data = request.data as CreateRedsysLinkRequest;
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     // The frontend only ever calls this from authenticated pages;
     // the existing isAuthorized() check is enforced by Firestore
     // rules, which the admin SDK bypasses.  We trust the auth state.
 
     if (!data.paymentId) {
-      throw new functions.https.HttpsError('invalid-argument', 'paymentId es requerido');
+      throw new HttpsError('invalid-argument', 'paymentId es requerido');
     }
 
     const db = firestore();
     const paymentSnap = await db.collection('payments').doc(data.paymentId).get();
     if (!paymentSnap.exists || !paymentSnap.data()) {
-      throw new functions.https.HttpsError('not-found', 'Pago no encontrado');
+      throw new HttpsError('not-found', 'Pago no encontrado');
     }
 
     return prepareRedsysCheckout(paymentSnap, REDSYS_SECRET_KEY.value());
@@ -299,14 +299,14 @@ interface PublicCheckoutResponse {
  * Un pago ya cobrado **no genera formulario**: devuelve `paid` y la pantalla lo
  * dice. Sin eso, reenviar el enlace después de pagar cobraría dos veces.
  */
-export const getPaymentCheckout = functions.https.onCall(
+export const getPaymentCheckout = onCall(
   {
     secrets: [REDSYS_SECRET_KEY]
   },
   async (request): Promise<PublicCheckoutResponse> => {
     const data = request.data as { paymentId?: string };
     if (!data?.paymentId) {
-      throw new functions.https.HttpsError('invalid-argument', 'paymentId es requerido');
+      throw new HttpsError('invalid-argument', 'paymentId es requerido');
     }
 
     const db = firestore();
@@ -316,7 +316,7 @@ export const getPaymentCheckout = functions.https.onCall(
     // Un id que no existe y uno cancelado responden lo mismo: no se confirma
     // desde fuera si un identificador es real.
     if (!payment || payment.status === 'cancelled') {
-      throw new functions.https.HttpsError('not-found', 'Pago no encontrado');
+      throw new HttpsError('not-found', 'Pago no encontrado');
     }
 
     const company = companyConfig();
@@ -352,7 +352,7 @@ export const getPaymentCheckout = functions.https.onCall(
 // redsysNotificationWebhook — public HTTPS endpoint
 // ---------------------------------------------------------------------------
 
-export const redsysNotificationWebhook = functions.https.onRequest(
+export const redsysNotificationWebhook = onRequest(
   {
     secrets: [REDSYS_SECRET_KEY]
   },
@@ -588,7 +588,7 @@ function deriveOperationKey(order: string, secretKey: string): Buffer {
     key = Buffer.concat([key, key.subarray(0, 8)]);
   }
   if (key.length !== 24) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'failed-precondition',
       `REDSYS_SECRET_KEY debe decodificar a 16 o 24 bytes (son ${key.length})`
     );

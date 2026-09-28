@@ -306,7 +306,17 @@ export function canStartReturn(ctx: WorkflowContext): WorkflowDecision {
 export function canCloseReservation(ctx: WorkflowContext): WorkflowDecision {
   const r = ctx.reservation;
   if (!r) return deny('workflow.missingReservation');
-  if (r.reservationStatus !== 'returned') return deny('workflow.cannotClose');
+  /**
+   * ⚠️ **El motivo dice QUÉ falta, no que no se puede.** Denegaba con
+   * `workflow.cannotClose` —«No se puede cerrar la reserva»—, que como respuesta
+   * a «¿por qué está bloqueado el paso *Reserva cerrada*?» es una tautología: no
+   * añade nada a lo que el operador ya está mirando. Lo que de verdad falta
+   * cuando el estado no es `returned` es el coche.
+   *
+   * Aquel texto sigue existiendo y sigue estando bien **como error suelto** al
+   * fallar el cierre, que es el otro sitio donde se usa.
+   */
+  if (r.reservationStatus !== 'returned') return deny('workflow.missingReturn');
   if (ctx.returnInspection?.status !== 'completed') {
     return deny('workflow.missingReturnInspection');
   }
@@ -615,6 +625,27 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
   const depositSettled = depositSettledOf(ctx);
 
   /**
+   * Los dos hitos que se dan por cumplidos **sin que entre dinero**.
+   *
+   * ⚠️ **No es lo mismo «cobrado» que «no se pide», y el timeline los contaba
+   * igual.** Los dos guards contestan que sí —no queda nada por cobrar, que es
+   * cierto— pero el rótulo afirmaba un cobro que no existió. Se distinguen por
+   * lo que el modelo ya guarda: `status: 'waived'` en la señal, y en la fianza
+   * el `waivedReason`, que es **obligatorio** para una fianza a 0 precisamente
+   * porque sin él no se puede dar por resuelta.
+   */
+  const señalRenunciada = r.initialPayment?.status === 'waived';
+  const fianzaRenunciada = (r.deposit?.requiredAmount || 0) === 0 && !!r.deposit?.waivedReason;
+  /**
+   * ⚠️ **El tercer hito con el mismo defecto, y se dejó fuera en el primer
+   * intento.** Con la señal puesta al precio entero, `redistributeInitialPayment`
+   * deja el resto a 0, no se siembra fila que cobrar, y el timeline pintaba
+   * «Resto cobrado» sobre un concepto que no existe.
+   */
+  const sinResto =
+    (r.remainingPayment?.requiredAmount || 0) === 0 && (r.remainingPayment?.paidAmount || 0) === 0;
+
+  /**
    * ⚠️ **Un parte a medias NO es un paso dado.** Esto miraba la **existencia**
    * del documento (`!!ctx.pickupInspection`) y ahí está el fallo que costó
    * encontrar: la primera foto que se sube crea la inspección en Firestore con
@@ -654,6 +685,12 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
     let action: TimelineStep['action'];
     let blockedReasonKey: string | undefined;
     let skipped = false;
+    /**
+     * El rótulo del paso. Por defecto es la clave compuesta de siempre, y los
+     * pasos que pueden cumplirse por más de un motivo lo reemplazan: un hito
+     * verde tiene que decir **por qué** está verde.
+     */
+    let labelKey = `reservations.timeline.${key}`;
 
     // Step 1 — Reservation created (always completed by virtue of
     // the doc existing).
@@ -661,10 +698,21 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
       state = 'completed';
     }
 
-    // Step 2 — Initial payment paid.
+    /**
+     * Step 2 — Initial payment paid.
+     *
+     * ⚠️ **«Señal cobrada» es falso cuando se decidió no pedirla**, y ese es el
+     * caso NORMAL, no el raro: a un conocido no se le pide señal. `isInitialPaid()`
+     * compara `paidAmount 0 >= requiredAmount 0` y contesta que sí, así que el
+     * paso salía con su check verde y el rótulo «Señal cobrada» sin que hubiera
+     * entrado un céntimo. El hito se cumplió —no hay nada que cobrar— pero se
+     * cumplió por otro motivo, y el rótulo tiene que decir cuál.
+     */
     if (key === 'initialPaymentPaid') {
-      if (initialPaid) state = 'completed';
-      else if (nextActionKey === 'workflow.payInitial') {
+      if (initialPaid) {
+        state = 'completed';
+        if (señalRenunciada) labelKey = 'reservations.timeline.initialPaymentWaived';
+      } else if (nextActionKey === 'workflow.payInitial') {
         state = 'current';
         action = 'pay_initial';
       }
@@ -692,17 +740,30 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
 
     // Step 5 — Remaining payment paid.
     if (key === 'remainingPaymentPaid') {
-      if (remainingPaid) state = 'completed';
-      else if (nextActionKey === 'workflow.payRemaining') {
+      if (remainingPaid) {
+        state = 'completed';
+        // Ver `sinResto`: el hito se cumple, pero no por haber cobrado.
+        if (sinResto) labelKey = 'reservations.timeline.remainingPaymentNotDue';
+      } else if (nextActionKey === 'workflow.payRemaining') {
         state = 'current';
         action = 'pay_remaining';
       }
     }
 
-    // Step 6 — Deposit paid.
+    /**
+     * Step 6 — Deposit paid.
+     *
+     * ⚠️ **Lo mismo que la señal, y aquí la distinción YA EXISTE en el código:**
+     * el paso de al lado se llama «Fianza resuelta» y es cierto con la fianza
+     * exenta; este dice «Fianza cobrada» de un dinero que se decidió no pedir.
+     * La diferencia estaba en el modelo —`waivedReason` es obligatorio para una
+     * fianza a 0— y no en el texto.
+     */
     if (key === 'depositPaid') {
-      if (depositSettled) state = 'completed';
-      else if (nextActionKey === 'workflow.payDeposit') {
+      if (depositSettled) {
+        state = 'completed';
+        if (fianzaRenunciada) labelKey = 'reservations.timeline.depositWaived';
+      } else if (nextActionKey === 'workflow.payDeposit') {
         state = 'current';
         action = 'pay_deposit';
       }
@@ -719,8 +780,23 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
         // Ready but not started yet — pending.
         state = 'pending';
       } else {
-        state = 'blocked';
-        blockedReasonKey = 'workflow.blockedPickup';
+        /**
+         * ⚠️ **El motivo sale del GUARD, no de una enumeración escrita a mano.**
+         * Aquí había una clave fija —«Falta contrato firmado, resto pagado y
+         * fianza cobrada»— y la condición de arriba es un `&&`: basta
+         * con que falle **una** para caer aquí y afirmar las tres. El timeline
+         * llegaba a enseñar «Contrato firmado ✓» y «Fianza cobrada ✓» tres filas
+         * encima del texto que decía que faltaban las dos.
+         *
+         * `canStartPickup()` ya contesta la causa exacta y en orden
+         * —`workflow.missingSignature`, `workflow.missingRemainingPayment`…—, así
+         * que preguntarle es además tener una sola autoridad en vez de dos.
+         */
+        // Misma red que el paso de cierre: un guard que permite no es un paso
+        // bloqueado, y un bloqueo sin motivo es peor que uno con motivo malo.
+        const motivo = reasonOf(canStartPickup(ctx));
+        state = motivo ? 'blocked' : 'pending';
+        blockedReasonKey = motivo || undefined;
       }
     }
 
@@ -761,8 +837,31 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
         state = 'current';
         action = 'close_reservation';
       } else {
-        state = 'blocked';
-        blockedReasonKey = 'workflow.blockedClose';
+        /**
+         * ⚠️ **Mismo motivo que el paso de la entrega.** Aquí había otra clave
+         * fija —«Falta devolver el vehículo y resolver la fianza»— y en una
+         * entrega a crédito ya devuelta —coche de vuelta,
+         * parte completado, fianza resuelta y el alquiler sin cobrar— eso salía
+         * **dos filas debajo** de «Devolución realizada ✓» y «Fianza resuelta
+         * ✓». Lo único que faltaba era el dinero, que es justo lo que queda vivo
+         * en ese caso.
+         */
+        /**
+         * ⚠️ **Si el guard PERMITE, el paso no está bloqueado: está pendiente.**
+         * `reasonOf()` devuelve cadena vacía cuando la decisión es `ok`, y la
+         * plantilla pinta el motivo con un `@if` — así que el paso salía con su
+         * candado y **sin una palabra que lo explicara**, justo encima de un
+         * botón «Cerrar reserva» habilitado.
+         *
+         * Se alcanza de verdad: con el contrato firmado en papel (excepción de
+         * entrega registrada), la siguiente acción que propone el workflow es
+         * generar el enlace de firma, así que `nextActionKey` no es cerrar — y
+         * cerrar, sin embargo, ya se puede. Es la misma rama de respaldo que el
+         * paso de la entrega ya tenía y a este le faltaba.
+         */
+        const motivo = reasonOf(canCloseReservation(ctx));
+        state = motivo ? 'blocked' : 'pending';
+        blockedReasonKey = motivo || undefined;
       }
     }
 
@@ -777,8 +876,9 @@ export function getReservationTimelineSteps(ctx: WorkflowContext): TimelineStep[
     return {
       key,
       // Composed key: every TimelineStepKey must have a matching leaf under
-      // reservations.timeline.* in the three locale files.
-      labelKey: `reservations.timeline.${key}`,
+      // reservations.timeline.* in the three locale files. Los pasos que pueden
+      // cumplirse por más de un motivo la reemplazan arriba.
+      labelKey,
       state,
       action,
       blockedReasonKey,

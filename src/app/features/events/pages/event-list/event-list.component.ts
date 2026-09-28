@@ -2,7 +2,7 @@ import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import {
   Firestore,
   collection,
@@ -17,6 +17,7 @@ import { ConfirmService } from '@core/notifications/confirm.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ReminderService } from '@features/events/services/reminder.service';
 import { ReservationService } from '@features/reservations/services/reservation.service';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import {
   REMINDER_CATEGORIES,
   REMINDER_CATEGORY_ICONS,
@@ -37,6 +38,10 @@ import {
 import { can } from '@shared/utils/permissions.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { invoiceDeadlineFor } from '@shared/utils/invoice.util';
+import {
+  BLOCKING_MAINTENANCE_TYPES,
+  maintenanceOverdue
+} from '@shared/utils/vehicle-availability.util';
 import { ClearInputDirective } from '@shared/directives/clear-input.directive';
 
 /**
@@ -63,10 +68,12 @@ export class EventListComponent implements OnInit {
   private firestore = inject(Firestore);
   private reminders = inject(ReminderService);
   private reservations = inject(ReservationService);
+  private vehicles = inject(VehicleService);
   private notifications = inject(NotificationService);
   private confirm = inject(ConfirmService);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   readonly loading = signal(true);
   readonly horizon = signal<number>(DEFAULT_EVENT_HORIZON);
@@ -104,6 +111,30 @@ export class EventListComponent implements OnInit {
   form = this.emptyForm();
 
   async ngOnInit(): Promise<void> {
+    /**
+     * ⚠️ **El plazo se puede traer en la URL**, y existe por el panel: sus
+     * tarjetas de mantenimiento dicen «Ver todo» sobre una lista de 30 días, y
+     * sin esto aterrizaban aquí con el plazo por defecto de 7 — o sea que el
+     * operador veía **menos** de lo que la tarjeta le acababa de prometer. Es la
+     * misma clase de falsedad que se está corrigiendo en el panel.
+     *
+     * Solo se admiten los plazos que la pantalla ofrece: un valor inventado en
+     * la barra de direcciones deja el que ya había.
+     *
+     * ⚠️ **Se mira la cadena CRUDA antes de convertir, y no es quisquillosería:
+     * `Number(null)` es `0`, no `NaN`** — y `0` es un plazo válido, «Hoy». Con
+     * la conversión primero, **abrir Eventos desde el menú** ponía el plazo en
+     * hoy y desaparecían las entregas de mañana, las devoluciones de la semana
+     * y las ITV a siete días. La lista no salía vacía, que es lo peor: se lee
+     * como «no hay más». Es el mismo fallo que ya costó la fianza imposible de
+     * bajar a 0, y está escrito en CLAUDE.md.
+     */
+    const crudo = this.route.snapshot.queryParamMap.get('horizon');
+    if (crudo !== null && crudo !== '') {
+      const pedido = Number(crudo);
+      if ((EVENT_HORIZONS as readonly number[]).includes(pedido)) this.horizon.set(pedido);
+    }
+
     await this.load();
   }
 
@@ -181,18 +212,68 @@ export class EventListComponent implements OnInit {
         where('status', 'in', ['pending', 'scheduled', 'overdue'])
       )
     );
+    /**
+     * ⚠️ **Los kilómetros del coche, para poder contar lo vencido por
+     * kilometraje.** Sin esto, `if (!m.nextDueDate) continue` dejaba fuera
+     * **todo** registro sin fecha —un cambio de aceite con «Km del
+     * recordatorio» puesto y la fecha vacía es lo que sale del formulario sin
+     * tocar nada más—, así que esta pantalla, que es la única que enseña el
+     * mantenimiento de toda la flota junta, no los enseñaba nunca.
+     */
+    const kmPorVehiculo = new Map(
+      (await firstValueFrom(this.vehicles.getVehicles())).map((v) => [v.id, v.currentKm])
+    );
+
+    const ahora = new Date();
     for (const d of mantSnap.docs) {
       const m = { id: d.id, ...(d.data() as VehicleMaintenance) };
-      if (!m.nextDueDate) continue;
-      const cuando = toDate(m.nextDueDate);
-      if (isNaN(cuando.getTime())) continue;
+      const fecha = m.nextDueDate ? toDate(m.nextDueDate) : null;
+      const fechaValida = fecha && !isNaN(fecha.getTime()) ? fecha : null;
+      const plazo = {
+        status: m.status,
+        dueDate: fechaValida,
+        dueKm: m.nextDueKm,
+        currentKm: m.vehicleId ? kmPorVehiculo.get(m.vehicleId) : undefined
+      };
+      const vencido = maintenanceOverdue(plazo, ahora);
+
+      // Sin fecha y sin vencer por kilómetros no hay nada que anunciar: no se
+      // sabe cuándo toca.
+      if (!fechaValida && !vencido) continue;
+
+      /**
+       * ⚠️ **Un vencido por kilómetros toca AHORA, y por eso lleva la fecha de
+       * hoy.** La lista se ordena y se filtra por fecha, así que un registro sin
+       * ella no tendría sitio; y poner la suya —futura— lo mandaría al final
+       * anunciando como próximo algo que ya se pasó.
+       */
+      const cuando = vencido && !fechaValida ? ahora : (fechaValida as Date);
+
       eventos.push({
         key: `maintenance:${m.id}`,
         source: 'maintenance',
         date: cuando,
         title: m.title || '—',
         detail: this.vehicleOf(m.vehicleSnapshot),
-        alert: cuando < new Date() ? 'events.alerts.maintenanceOverdue' : undefined,
+        /**
+         * ⚠️ **El aviso depende del TIPO, porque no todo lo vencido impide
+         * alquilar.** Aquí salía siempre «Vencido: no alquiles este coche hasta
+         * pasarla» —en femenino, que delata que se escribió pensando en la
+         * ITV—, así que un cambio de aceite pasado ordenaba no alquilar un
+         * coche que la aplicación **sí alquila y sí entrega**: desde el 21 de
+         * septiembre de 2026 solo bloquean `itv` e `insurance`
+         * (`BLOCKING_MAINTENANCE_TYPES`).
+         *
+         * Y lo que se pierde con un aviso falso no es solo ese aviso: el
+         * operador aprende a no creérselos, y entonces tampoco se cree el de la
+         * ITV, que sí manda. Por eso el que no bloquea dice lo que de verdad
+         * pasa —conviene hacerlo— en vez de una prohibición que nadie aplica.
+         */
+        alert: vencido
+          ? (BLOCKING_MAINTENANCE_TYPES as readonly string[]).includes(m.type)
+            ? 'events.alerts.maintenanceBlocking'
+            : 'events.alerts.maintenanceOverdue'
+          : undefined,
         link: m.vehicleId ? ['/vehicles', m.vehicleId] : undefined
       });
     }

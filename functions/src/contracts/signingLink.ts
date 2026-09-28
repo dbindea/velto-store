@@ -15,7 +15,7 @@
  * Default expiry: 7 days.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import * as crypto from 'crypto';
 import { firestore } from '../admin-guard';
@@ -50,14 +50,14 @@ function generateToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString('base64url');
 }
 
-export const createContractSigningLink = functions.https.onCall(
+export const createContractSigningLink = onCall(
   async (request): Promise<CreateResponse> => {
     const data = request.data as CreateRequest;
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.contractId) {
-      throw new functions.https.HttpsError('invalid-argument', 'contractId es requerido');
+      throw new HttpsError('invalid-argument', 'contractId es requerido');
     }
     const db = firestore();
 
@@ -65,14 +65,14 @@ export const createContractSigningLink = functions.https.onCall(
     const contractRef = db.collection('contracts').doc(contractId);
     const snap = await contractRef.get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Contrato no encontrado');
+      throw new HttpsError('not-found', 'Contrato no encontrado');
     }
     const contract = snap.data() as any;
     if (contract.status === 'signed') {
-      throw new functions.https.HttpsError('failed-precondition', 'El contrato ya está firmado');
+      throw new HttpsError('failed-precondition', 'El contrato ya está firmado');
     }
     if (contract.status === 'cancelled') {
-      throw new functions.https.HttpsError('failed-precondition', 'El contrato está cancelado');
+      throw new HttpsError('failed-precondition', 'El contrato está cancelado');
     }
 
     // Cancel any previous active tokens for this contract
@@ -153,14 +153,14 @@ interface CancelRequest {
   contractId: string;
 }
 
-export const cancelContractSigningLink = functions.https.onCall(
+export const cancelContractSigningLink = onCall(
   async (request): Promise<{ ok: true }> => {
     const data = request.data as CancelRequest;
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.contractId) {
-      throw new functions.https.HttpsError('invalid-argument', 'contractId es requerido');
+      throw new HttpsError('invalid-argument', 'contractId es requerido');
     }
     const db = firestore();
 
@@ -168,11 +168,11 @@ export const cancelContractSigningLink = functions.https.onCall(
     const contractRef = db.collection('contracts').doc(contractId);
     const snap = await contractRef.get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Contrato no encontrado');
+      throw new HttpsError('not-found', 'Contrato no encontrado');
     }
     const contract = snap.data() as any;
     if (contract.status === 'signed') {
-      throw new functions.https.HttpsError('failed-precondition', 'El contrato ya está firmado');
+      throw new HttpsError('failed-precondition', 'El contrato ya está firmado');
     }
 
     const tokensQ = await db.collection('contractSigningTokens')

@@ -13,7 +13,8 @@
  * hay en vez de duplicarla o pisarla.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
@@ -40,9 +41,9 @@ interface DeclarationResponse {
  * constante repetida en la aplicación sería un cuarto sitio donde escribir la
  * versión, y el primero en quedarse viejo. Aquí solo hay una fuente.
  */
-export const getComplianceStatus = functions.https.onCall(async (request) => {
+export const getComplianceStatus = onCall(async (request) => {
   if (!request.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+    throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
   }
   const company = companyConfig();
   const sistema = sistemaInformatico(company.taxId, company.legalName);
@@ -119,10 +120,10 @@ export function euRegimesEnabled(): boolean {
   return process.env.VELTO_EU_REGIMES_ENABLED === 'true';
 }
 
-export const issueComplianceDeclaration = functions.https.onCall(
+export const issueComplianceDeclaration = onCall(
   async (request): Promise<DeclarationResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
 
     /**
@@ -134,7 +135,7 @@ export const issueComplianceDeclaration = functions.https.onCall(
      * revalidando lo que la pantalla ya validó.
      */
     if (!invoicingEnabled()) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'invoices.errors.invoicingDisabled'
       );
@@ -201,7 +202,7 @@ export const issueComplianceDeclaration = functions.https.onCall(
       createdAt: FieldValue.serverTimestamp()
     });
 
-    functions.logger.info('Compliance declaration issued', { version });
+    logger.info('Compliance declaration issued', { version });
     return { version, pdfUrl: subido.pdfUrl, alreadyIssued: false };
   }
 );

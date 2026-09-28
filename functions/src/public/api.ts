@@ -26,7 +26,7 @@
  */
 
 import { onRequest, Request } from 'firebase-functions/v2/https';
-import { logger } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
 import type { Response } from 'express';
 import { firestore, storageBucket } from '../admin-guard';
 import { operationSettings } from '../settings';
@@ -41,7 +41,7 @@ import {
   vehicleIsPublishable,
   widenToFullDays,
 } from './core';
-import { PublicAvailableVehicle } from './types';
+import type { PublicAvailableVehicle } from './types';
 
 /**
  * Cuántos coches se devuelven como mucho.

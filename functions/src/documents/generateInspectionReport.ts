@@ -17,13 +17,33 @@
  * es el PDF, que es lo que el enlace necesita.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { reservationLocator } from './locator';
-import { buildInspectionPdf, InspectionKind, InspectionPdfPhoto } from './inspection-pdf';
+import type { InspectionKind, InspectionPdfPhoto } from './inspection-pdf';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import type { ContractLocale } from '../contracts/contract-types';
 
 interface ReportRequest {
@@ -173,16 +193,16 @@ function toDate(value: unknown): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export const generateInspectionReport = functions.https.onCall(
+export const generateInspectionReport = onCall(
   async (request): Promise<ReportResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
 
     const data = request.data as ReportRequest;
     const inspectionId = (data?.inspectionId || '').trim();
     if (!inspectionId) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'inspections.report.problems.inspectionRequired'
       );
@@ -191,7 +211,7 @@ export const generateInspectionReport = functions.https.onCall(
     const db = firestore();
     const snap = await db.collection('inspections').doc(inspectionId).get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'inspections.report.problems.notFound'
       );
@@ -221,7 +241,7 @@ export const generateInspectionReport = functions.https.onCall(
         contractNumber = reserva?.['contractInfo']?.['contractNumber'];
       } catch (err) {
         // Sin la reserva el parte sigue valiendo: lleva el localizador.
-        functions.logger.warn('generateInspectionReport: reserva no legible', { err });
+        logger.warn('generateInspectionReport: reserva no legible', { err });
       }
     }
 
@@ -295,7 +315,7 @@ export const generateInspectionReport = functions.https.onCall(
         });
       } catch (err) {
         // Una foto que no se puede bajar no impide emitir el parte.
-        functions.logger.warn('generateInspectionReport: foto no descargada', { path, err });
+        logger.warn('generateInspectionReport: foto no descargada', { path, err });
       }
     }
 
@@ -305,6 +325,7 @@ export const generateInspectionReport = functions.https.onCall(
       .map(([key, table]) => ({ label: table[locale], amount: Number(extra[key]) || 0 }))
       .filter((c) => c.amount > 0);
 
+    const { buildInspectionPdf } = await import('./inspection-pdf');
     const pdf = await buildInspectionPdf({
       locale,
       kind,
@@ -350,7 +371,7 @@ export const generateInspectionReport = functions.https.onCall(
     const shortId = shortIdFor('inspection', inspectionId);
     const subido = await uploadPdf(`inspections/${inspectionId}/report.pdf`, pdf);
 
-    functions.logger.info('Inspection report generated', {
+    logger.info('Inspection report generated', {
       inspectionId,
       kind,
       photos: photos.length

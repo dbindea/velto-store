@@ -25,7 +25,7 @@
  * ofrecer un coche que está alquilado es una reserva que alguien atenderá.
  */
 
-import { VehiclePricingRule } from './types';
+import type { VehiclePricingRule } from './types';
 
 /** El tipo general. Duplicado de `pricing.util.ts`; si cambia allí, cambia aquí. */
 export const DEFAULT_VAT_RATE = 0.21;

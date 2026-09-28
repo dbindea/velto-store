@@ -1319,7 +1319,22 @@ export class ReservationDetailComponent implements OnInit {
    * allí significa «el alquiler está cobrado» y no tiene ninguna cifra al lado
    * que lo desmienta.
    */
-  get moneyStatus(): 'pending' | 'partial' | 'paid' {
+  get moneyStatus(): 'pending' | 'partial' | 'paid' | 'none' {
+    /**
+     * ⚠️ **Sin dinero de por medio no hay estado que chapar.** Una reserva
+     * cancelada sin haber cobrado nada deja todas sus filas en `cancelled`, así
+     * que los dos importes valen 0 — y `calculatePaymentStatus(0, 0)` contesta
+     * `pending` por su primera línea (`if (paidAmount <= 0)`), que para una
+     * **fila** de cobro es correcto y aquí no: la cabecera acababa pintando la
+     * chapa ámbar PENDIENTE justo encima de «Pendiente de cobro 0,00 €».
+     *
+     * Es la misma contradicción que esta tarjeta vino a quitar, con los papeles
+     * cambiados: antes afirmaba un cobro que faltaba, y ahora una deuda que no
+     * existe. La salida no es inventarle un estado —«Pagado» sobre ceros suena a
+     * que entró dinero— sino no enseñar la chapa.
+     */
+    if (this.moneyRequired <= 0 && this.moneyCollected <= 0) return 'none';
+
     // `calculatePaymentStatus` declara también `failed`, que aquí no se puede
     // dar: solo compara dos importes. Se estrecha para que la chapa no reciba
     // un estado que no sabe pintar.

@@ -39,7 +39,7 @@
 
 import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
-import { logger } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
 import { firestore } from './admin-guard';
 

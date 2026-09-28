@@ -18,7 +18,7 @@
  * a un error es reintentar: dinero fuera dos veces.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestore } from './admin-guard';
@@ -69,30 +69,30 @@ interface RefundResponse {
  */
 async function assertAdmin(email: string | undefined): Promise<void> {
   if (!email) {
-    throw new functions.https.HttpsError('unauthenticated', 'payments.refund.errors.unauthorized');
+    throw new HttpsError('unauthenticated', 'payments.refund.errors.unauthorized');
   }
   const snap = await firestore().collection('authorizedUsers').doc(email.toLowerCase()).get();
   const data = snap.data();
   if (!snap.exists || data?.['active'] !== true || data?.['role'] !== 'admin') {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'permission-denied',
       'payments.refund.errors.unauthorized'
     );
   }
 }
 
-export const refundRedsysPayment = functions.https.onCall(
+export const refundRedsysPayment = onCall(
   { secrets: [REDSYS_SECRET_KEY] },
   async (request): Promise<RefundResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'payments.refund.errors.unauthorized');
+      throw new HttpsError('unauthenticated', 'payments.refund.errors.unauthorized');
     }
     await assertAdmin(request.auth.token?.['email'] as string | undefined);
 
     const data = (request.data || {}) as RefundRequest;
     const paymentId = String(data.paymentId || '').trim();
     if (!paymentId) {
-      throw new functions.https.HttpsError('invalid-argument', 'payments.refund.errors.notFound');
+      throw new HttpsError('invalid-argument', 'payments.refund.errors.notFound');
     }
 
     const secret = REDSYS_SECRET_KEY.value();
@@ -100,7 +100,7 @@ export const refundRedsysPayment = functions.https.onCall(
     const terminal = process.env['REDSYS_TERMINAL'];
     const environment = process.env['REDSYS_ENVIRONMENT'] || 'test';
     if (!secret || !merchantCode || !terminal) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'payments.refund.errors.notConfigured'
       );
@@ -123,13 +123,13 @@ export const refundRedsysPayment = functions.https.onCall(
     const { importe, order } = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists) {
-        throw new functions.https.HttpsError('not-found', 'payments.refund.errors.notFound');
+        throw new HttpsError('not-found', 'payments.refund.errors.notFound');
       }
       const pago = snap.data() as RefundablePayment;
 
       const problema = refundProblem(pago, data.amount);
       if (problema) {
-        throw new functions.https.HttpsError('failed-precondition', problema);
+        throw new HttpsError('failed-precondition', problema);
       }
 
       const cantidad = roundMoney(Number(data.amount));
@@ -202,7 +202,7 @@ export const refundRedsysPayment = functions.https.onCall(
         'redsys.lastRefundError': fallo || `Ds_Response ${responseCode}`,
         updatedAt: FieldValue.serverTimestamp()
       });
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'aborted',
         'payments.refund.errors.rejected',
         { responseCode, error: fallo }

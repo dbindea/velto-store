@@ -20,7 +20,8 @@
  * donde una escritura suelta dejaba una reserva sin nada que cobrar.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
@@ -37,7 +38,25 @@ import {
   sistemaInformatico,
   verifactuEnabled
 } from './verifactu';
-import { buildInvoicePdf } from './invoice-pdf';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import { euRegimesEnabled } from './issueComplianceDeclaration';
 import { uploadPdf } from '../documents/storage';
 import type { ContractLocale } from '../contracts/contract-types';
@@ -259,10 +278,10 @@ function soloRebu(lines: InvoiceLineInput[] | undefined): boolean {
   return conContenido.length > 0 && conContenido.every((l) => l.taxRegime === 'rebu');
 }
 
-export const issueInvoice = functions.https.onCall(
+export const issueInvoice = onCall(
   async (request): Promise<IssueInvoiceResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
 
     /**
@@ -285,7 +304,7 @@ export const issueInvoice = functions.https.onCall(
      * `functions/.env.<proyecto>` y encenderla es un acto aparte y deliberado.
      */
     if (!invoicingEnabled()) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'invoices.errors.invoicingDisabled'
       );
@@ -324,7 +343,7 @@ export const issueInvoice = functions.https.onCall(
     if (primerProblema) {
       // Viaja como clave i18n, nunca como frase: la capa de avisos del
       // frontend la traduce y decide si ofrece reintentar.
-      throw new functions.https.HttpsError('invalid-argument', primerProblema);
+      throw new HttpsError('invalid-argument', primerProblema);
     }
 
     if (esRectificativa) {
@@ -332,25 +351,25 @@ export const issueInvoice = functions.https.onCall(
       // rectifica, cómo y por qué. Sin esto, el registro que iría a la AEAT
       // estaría incompleto.
       if (!data.rectifies?.invoiceId) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'invalid-argument',
           'invoices.problems.rectifiedInvoiceRequired'
         );
       }
       if (!data.rectifyingType) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'invalid-argument',
           'invoices.problems.rectifyingTypeRequired'
         );
       }
       if (!data.rectifyingReason) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'invalid-argument',
           'invoices.problems.rectifyingReasonRequired'
         );
       }
       if (!data.rectifyingNote?.trim()) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'invalid-argument',
           'invoices.problems.rectifyingNoteRequired'
         );
@@ -393,7 +412,7 @@ export const issueInvoice = functions.https.onCall(
       if (data.invoiceId) {
         const existente = await tx.get(invoiceRef);
         if (existente.exists && existente.data()?.status !== 'draft') {
-          throw new functions.https.HttpsError(
+          throw new HttpsError(
             'failed-precondition',
             'invoices.errors.alreadyIssued'
           );
@@ -687,7 +706,7 @@ export const issueInvoice = functions.https.onCall(
       return { number, fullNumber, hash };
     });
 
-    functions.logger.info('Invoice issued', {
+    logger.info('Invoice issued', {
       invoiceId: invoiceRef.id,
       fullNumber: resultado.fullNumber,
       total: totals.total
@@ -709,6 +728,7 @@ export const issueInvoice = functions.https.onCall(
      */
     let pdfUrl: string | undefined;
     try {
+      const { buildInvoicePdf } = await import('./invoice-pdf');
       const pdf = await buildInvoicePdf({
         locale: resolveLocale(data.locale),
         company: {
@@ -776,7 +796,7 @@ export const issueInvoice = functions.https.onCall(
       pdfUrl = subido.pdfUrl;
       await invoiceRef.set({ pdfUrl: subido.pdfUrl, pdfPath: subido.pdfPath }, { merge: true });
     } catch (err) {
-      functions.logger.error('Invoice issued but PDF failed', {
+      logger.error('Invoice issued but PDF failed', {
         invoiceId: invoiceRef.id,
         fullNumber: resultado.fullNumber,
         err

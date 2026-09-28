@@ -24,7 +24,8 @@
  * For multilingual support, switch on the customer's locale.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { firestore, storageBucket } from '../admin-guard';
@@ -74,24 +75,24 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-export const sendSignedContractEmail = functions.https.onCall(
+export const sendSignedContractEmail = onCall(
   {
     secrets: [RESEND_API_KEY]
   },
   async (request): Promise<SendResponse> => {
     const data = request.data as SendRequest;
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.contractId) {
-      throw new functions.https.HttpsError('invalid-argument', 'contractId es requerido');
+      throw new HttpsError('invalid-argument', 'contractId es requerido');
     }
 
     // Dentro del handler, no al cargar el módulo: el runtime resuelve los
     // secrets después de construir el grafo de módulos (F-12).
     const apiKey = RESEND_API_KEY.value();
     if (!apiKey) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'Resend no está configurado. Configura RESEND_API_KEY.'
       );
@@ -104,25 +105,25 @@ export const sendSignedContractEmail = functions.https.onCall(
     const contractRef = db.collection('contracts').doc(data.contractId);
     const snap = await contractRef.get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Contrato no encontrado');
+      throw new HttpsError('not-found', 'Contrato no encontrado');
     }
     const contract = snap.data() as any;
     if (contract.status !== 'signed') {
-      throw new functions.https.HttpsError('failed-precondition', 'El contrato no está firmado');
+      throw new HttpsError('failed-precondition', 'El contrato no está firmado');
     }
 
     const to = (data.email || contract.clientSnapshot?.email || '').trim();
     if (!to) {
-      throw new functions.https.HttpsError('failed-precondition', 'El cliente no tiene email');
+      throw new HttpsError('failed-precondition', 'El cliente no tiene email');
     }
     if (!/^\S+@\S+\.\S+$/.test(to)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Email no válido');
+      throw new HttpsError('invalid-argument', 'Email no válido');
     }
 
     // Download the signed PDF
     const signedPath: string = contract.signedPdfPath;
     if (!signedPath) {
-      throw new functions.https.HttpsError('failed-precondition', 'PDF firmado no disponible');
+      throw new HttpsError('failed-precondition', 'PDF firmado no disponible');
     }
     const file = storage.bucket().file(signedPath);
     const [buffer] = await file.download();
@@ -170,7 +171,7 @@ export const sendSignedContractEmail = functions.https.onCall(
       ]
     };
 
-    functions.logger.info(`Sending signed contract ${snap.id} to ${to}`);
+    logger.info(`Sending signed contract ${snap.id} to ${to}`);
     const res = await fetch(RESEND_API_URL, {
       method: 'POST',
       headers: {
@@ -182,8 +183,8 @@ export const sendSignedContractEmail = functions.https.onCall(
 
     if (!res.ok) {
       const body = await res.text();
-      functions.logger.error('Resend API error', res.status, body);
-      throw new functions.https.HttpsError(
+      logger.error('Resend API error', res.status, body);
+      throw new HttpsError(
         'internal',
         `Error al enviar el email (${res.status})`
       );

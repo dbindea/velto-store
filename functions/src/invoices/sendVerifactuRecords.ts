@@ -20,7 +20,8 @@
  * remisión inmediata. La callable es la comodidad; el barrido es la obligación.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -29,12 +30,16 @@ import { companyConfig } from '../company-config';
 import { verifactuEnabled, verifactuEndpoint, type RegistroAlta } from './verifactu';
 import { buildEnvioSoap } from './verifactu-xml';
 import { registroParaEnvio, RegistroInconsistenteError } from './verifactu-rebuild';
-import {
-  certificadoDesdeSecreto,
-  enviarRegistros,
-  probarConexion,
-  type PruebaConexion
-} from './verifactu-client';
+/**
+ * ⚠️ **`verifactu-client` se carga al hablar con la AEAT, no al arrancar.**
+ * Trae `node-forge` para abrir el certificado, que son 34 ms y 42 módulos
+ * evaluados en **cada arranque en frío de las 34 functions** — también en una
+ * petición de la web pública, que no tiene nada que ver con la Agencia.
+ * `index.ts` reexporta esta function como las demás, así que su cadena de
+ * imports la paga todo el contenedor. Solo el tipo entra estáticamente: los
+ * `import type` desaparecen al compilar y no emiten `require`.
+ */
+import type { PruebaConexion } from './verifactu-client';
 import { SoapFaultError } from './verifactu-respuesta';
 import {
   cabeceraPara,
@@ -140,7 +145,7 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
        * igual. Hace falta una persona: por eso sale como resultado propio y no
        * como «no había nada que enviar», que es lo que parecería desde fuera.
        */
-      functions.logger.error('VeriFactu: la cadena está bloqueada', {
+      logger.error('VeriFactu: la cadena está bloqueada', {
         invoiceId: bloqueada.invoiceId,
         fullNumber: bloqueada.fullNumber
       });
@@ -169,7 +174,7 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
        * sellado no tiene ni encadenamiento ni huella, y esos dos no se pueden
        * reconstruir. Es un incidente, no un caso a sortear.
        */
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'invoices.errors.verifactuRecordMissing'
       );
@@ -208,12 +213,12 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
        * documento que tiene el cliente.
        */
       if (err instanceof RegistroInconsistenteError) {
-        functions.logger.error('VeriFactu: la huella no se reproduce', {
+        logger.error('VeriFactu: la huella no se reproduce', {
           fullNumber: err.fullNumber,
           huellaGuardada: err.huellaGuardada,
           huellaRecalculada: err.huellaRecalculada
         });
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'invoices.errors.verifactuHashMismatch'
         );
@@ -227,6 +232,7 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
     registros
   );
 
+  const { certificadoDesdeSecreto, enviarRegistros } = await import('./verifactu-client');
   const certificado = certificadoDesdeSecreto(
     VELTO_SIGNING_CERT.value(),
     VELTO_SIGNING_CERT_PASSWORD.value()
@@ -247,7 +253,7 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
      * ya se sabe leer como aceptado.
      */
     const motivo = err instanceof SoapFaultError ? err.faultString : String(err);
-    functions.logger.error('VeriFactu: el envío no llegó a completarse', {
+    logger.error('VeriFactu: el envío no llegó a completarse', {
       motivo,
       facturas: lote.map((r) => r.fullNumber)
     });
@@ -271,7 +277,7 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
       { merge: true }
     );
     await batch.commit();
-    throw new functions.https.HttpsError('unavailable', 'invoices.errors.verifactuUnreachable');
+    throw new HttpsError('unavailable', 'invoices.errors.verifactuUnreachable');
   }
 
   const resultados = resultadosDelLote(lote, respuesta);
@@ -347,12 +353,12 @@ export async function procesarPendientes(ahora = new Date()): Promise<ResumenEnv
 
   // Un rechazo se registra como error, no como información: para la cadena.
   if (resumen.rechazados) {
-    functions.logger.error('VeriFactu: registros rechazados', {
+    logger.error('VeriFactu: registros rechazados', {
       resumen,
       rechazadas: resultados.filter((r) => r.estado === 'rechazado')
     });
   } else {
-    functions.logger.info('VeriFactu: envío completado', resumen);
+    logger.info('VeriFactu: envío completado', resumen);
   }
 
   return resumen;
@@ -380,10 +386,10 @@ export interface EstadoVerifactu {
  * en preproducción no está presentado ante nadie: enseñar «aceptado» a secas
  * haría creer que la obligación está cumplida cuando lo que hay es un ensayo.
  */
-export const getVerifactuStatus = functions.https.onCall(
+export const getVerifactuStatus = onCall(
   async (request): Promise<EstadoVerifactu> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
     const db = firestore();
 
@@ -442,18 +448,19 @@ export const getVerifactuStatus = functions.https.onCall(
  * es lo anterior — que el certificado se abre, no ha caducado y llega al otro
  * lado—, que es lo que falla primero.
  */
-export const checkVerifactuConnection = functions.https.onCall(
+export const checkVerifactuConnection = onCall(
   { secrets: [VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },
   async (request): Promise<PruebaConexion> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
+    const { certificadoDesdeSecreto, probarConexion } = await import('./verifactu-client');
     const certificado = certificadoDesdeSecreto(
       VELTO_SIGNING_CERT.value(),
       VELTO_SIGNING_CERT_PASSWORD.value()
     );
     const resultado = await probarConexion(verifactuEndpoint(), certificado);
-    functions.logger.info('VeriFactu: prueba de conexión', resultado);
+    logger.info('VeriFactu: prueba de conexión', resultado);
     return resultado;
   }
 );
@@ -476,25 +483,25 @@ export const checkVerifactuConnection = functions.https.onCall(
  * Queda anotado quién lo desbloqueó: un rechazo de la AEAT y su reanudación son
  * exactamente lo que habría que poder explicar después.
  */
-export const retryVerifactuRecord = functions.https.onCall(
+export const retryVerifactuRecord = onCall(
   async (request): Promise<{ fullNumber: string }> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
     const invoiceId = String((request.data as { invoiceId?: string })?.invoiceId || '');
     if (!invoiceId) {
-      throw new functions.https.HttpsError('invalid-argument', 'invoices.errors.invoiceRequired');
+      throw new HttpsError('invalid-argument', 'invoices.errors.invoiceRequired');
     }
 
     const ref = firestore().collection(SUBMISSIONS).doc(invoiceId);
     const snap = await ref.get();
     if (!snap.exists) {
-      throw new functions.https.HttpsError('not-found', 'invoices.errors.verifactuRecordMissing');
+      throw new HttpsError('not-found', 'invoices.errors.verifactuRecordMissing');
     }
     // Una aceptada no se reintenta: volvería como duplicado y sembraría la duda
     // de si de verdad estaba registrada.
     if (snap.data()?.estado === 'aceptado') {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'invoices.errors.verifactuAlreadyAccepted'
       );
@@ -518,7 +525,7 @@ export const retryVerifactuRecord = functions.https.onCall(
       { merge: true }
     );
 
-    functions.logger.info('VeriFactu: factura devuelta a la cola', {
+    logger.info('VeriFactu: factura devuelta a la cola', {
       invoiceId,
       fullNumber: snap.data()?.fullNumber,
       por: request.auth.token?.email
@@ -528,11 +535,11 @@ export const retryVerifactuRecord = functions.https.onCall(
 );
 
 /** Mandar ahora. La usa el botón de Facturas y el reintento manual. */
-export const sendVerifactuRecords = functions.https.onCall(
+export const sendVerifactuRecords = onCall(
   { secrets: [VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },
   async (request): Promise<ResumenEnvio> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
     return procesarPendientes();
   }
@@ -558,7 +565,7 @@ export const sweepVerifactuRecords = onSchedule(
     } catch (err) {
       // Un barrido que falla no puede tumbar el siguiente: se anota y se
       // reintenta dentro de cinco minutos.
-      functions.logger.error('VeriFactu: el barrido falló', { err });
+      logger.error('VeriFactu: el barrido falló', { err });
     }
   }
 );

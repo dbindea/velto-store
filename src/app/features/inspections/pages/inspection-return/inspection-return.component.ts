@@ -37,6 +37,7 @@ import { toDate } from '@shared/utils/reservation-date.util';
 import {
   canStartReturn,
   canCloseReservation,
+  canWithException,
   reasonOf,
   WorkflowContext,
   WorkflowDecision
@@ -178,12 +179,18 @@ export class InspectionReturnComponent implements OnInit {
 
       const existing = await this.inspectionService.getInspectionByReservationAndType(reservationId, 'return');
 
-      // Workflow guard.
-      const decision = canStartReturn({
+      /**
+       * ⚠️ **Con la excepción, igual que la ficha y que la entrega.** En crudo,
+       * una devolución cuya entrega se autorizó saltándose el paso volvía a
+       * salir bloqueada aquí: la aplicación acusaba una decisión que ella misma
+       * había aceptado, con su motivo y su autor guardados.
+       */
+      const ctx = {
         reservation: this.reservation,
         pickupInspection: this.pickupInspection || null,
         returnInspection: existing || null
-      } as WorkflowContext);
+      } as WorkflowContext;
+      const decision = canWithException(canStartReturn(ctx), ctx, 'startReturn');
       this.workflowBlockReason = decision.ok ? '' : decision.reason;
 
       if (existing) {

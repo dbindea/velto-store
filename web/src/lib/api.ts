@@ -21,9 +21,61 @@ export interface PrecioPublico {
 }
 
 export interface FotoPublica {
+  /** El JPEG. Siempre está: es el respaldo y lo único que tienen las antiguas. */
   url: string;
   width?: number;
   height?: number;
+  /** Variantes en WebP con su ancho, si la foto se publicó con ellas. */
+  srcset?: Array<{ w: number; url: string }>;
+}
+
+/**
+ * El marcado de una foto, eligiendo formato y tamaño.
+ *
+ * ⚠️ **Sirve una foto de 400 u 800 px donde antes iba una de 1600.** Medido el
+ * 28 de septiembre de 2026: las tarjetas pintan 349 px de ancho y se bajaban
+ * **328 KB** por foto, 1,9 s cada una — y eso pasa en *todas* las visitas, así
+ * que no lo arregla ninguna mejora del arranque.
+ *
+ * ⚠️ **`<picture>` y no un `srcset` suelto en el `<img>`.** Un `srcset` no sabe
+ * negociar FORMATO: un navegador que entienda `srcset` pero no WebP elegiría un
+ * WebP igualmente y se quedaría sin foto. Con `<source type="image/webp">` el
+ * que no lo entiende ignora esa línea y cae al `<img>` con el JPEG.
+ *
+ * ⚠️ **Y `sizes` no es opcional.** Sin él el navegador supone que la imagen
+ * ocupa todo el ancho de la ventana y elige la variante más grande, con lo que
+ * el `srcset` no ahorra nada. Quien llama dice cuánto va a medir de verdad.
+ *
+ * Las fotos publicadas **antes** de que existieran las variantes no traen
+ * `srcset`: para esas sale un `<img>` normal, exactamente como hasta ahora.
+ */
+export function marcadoFoto(
+  f: FotoPublica,
+  opciones: { alt: string; sizes: string; eager?: boolean }
+): string {
+  const esc = (s: string) =>
+    s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+
+  const dim =
+    `${f.width ? ` width="${f.width}"` : ''}${f.height ? ` height="${f.height}"` : ''}`;
+  const carga = opciones.eager ? 'eager' : 'lazy';
+  const img =
+    `<img src="${esc(f.url)}" alt="${esc(opciones.alt)}"${dim} loading="${carga}" decoding="async" />`;
+
+  if (!f.srcset?.length) return img;
+
+  const fuentes = f.srcset
+    .slice()
+    .sort((a, b) => a.w - b.w)
+    .map(v => `${esc(v.url)} ${v.w}w`)
+    .join(', ');
+
+  return (
+    `<picture>` +
+    `<source type="image/webp" srcset="${fuentes}" sizes="${esc(opciones.sizes)}" />` +
+    img +
+    `</picture>`
+  );
 }
 
 export interface CocheResumen {
@@ -84,12 +136,48 @@ async function pedir<T>(ruta: string): Promise<T> {
   return (await r.json()) as T;
 }
 
+/**
+ * La petición que el `<head>` dejó lanzada, si la hay.
+ *
+ * ⚠️ **Existe porque la petición de datos era el CUARTO eslabón de una cadena
+ * de cinco**, y no arrancaba hasta los **812 ms**. Medido en `/flota`, con la
+ * function ya caliente:
+ *
+ *     HTML          0 → 235 ms
+ *     módulo        294 → 454     (va al final del body: no se descubre antes)
+ *     api.js        584 → 805     (solo se descubre al PARSEAR el módulo)
+ *     /api/fleet    812 → 1002    ← aquí empezaba
+ *     las fotos     1148 → 5307   (no se conocen hasta que contesta la API)
+ *
+ * Cada eslabón cuesta una ida y vuelta entera porque el navegador **no puede
+ * saber que el siguiente existe** hasta terminar el anterior. Adelantando el
+ * `fetch` a un script del `<head>`, arranca a los ~240 ms: **−570 ms en toda
+ * visita**, fría o caliente, y las fotos se conocen antes en la misma medida.
+ *
+ * ⚠️ **La petición adelantada tiene que ser IDÉNTICA a la de `pedir()`** —misma
+ * ruta y misma cabecera `Accept`—, o el navegador no la reutiliza y se hacen
+ * dos: se pagaría el arranque en frío dos veces en vez de ninguna.
+ */
+function adelantada<T>(clave: string, respaldo: () => Promise<T>): Promise<T> {
+  const w = globalThis as unknown as Record<string, Promise<T> | undefined>;
+  const pendiente = w[clave];
+  if (!pendiente) return respaldo();
+  // Se consume una sola vez: si la página vuelve a pedir lo mismo —un botón de
+  // recargar—, tiene que ir a la red y no servir una respuesta de hace un rato.
+  w[clave] = undefined;
+  // Un fallo en la adelantada no puede dejar la página sin datos: se reintenta
+  // por el camino normal, que además sabe distinguir «roto» de «vacío».
+  return pendiente.catch(() => respaldo());
+}
+
 export function flota(): Promise<{ vehicles: CocheResumen[] }> {
-  return pedir('/api/fleet');
+  return adelantada('__veltoFleet', () => pedir('/api/fleet'));
 }
 
 export function ficha(id: string): Promise<{ vehicle: CocheFicha }> {
-  return pedir(`/api/vehicle?id=${encodeURIComponent(id)}`);
+  return adelantada(`__veltoVehicle:${id}`, () =>
+    pedir(`/api/vehicle?id=${encodeURIComponent(id)}`)
+  );
 }
 
 export function disponibilidad(

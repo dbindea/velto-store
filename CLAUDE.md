@@ -83,6 +83,7 @@ Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar d
 - `functions/src/redsys.spec.ts` — la firma `HMAC_SHA256_V1` contra un vector de referencia congelado
 - `functions/src/contracts/qr.spec.ts` — que el QR del contrato **se lee de verdad**: rasteriza los rectángulos que se dibujan y los descifra con `jsqr`. Un símbolo mal montado tiene la misma pinta que uno bueno
 - `clear-input.util.spec.ts` — dónde se puede pulsar para vaciar un campo, y sobre todo que esa zona **no invade la del calendario**. Misma razón que el QR: un aspa que no se puede pulsar tiene la misma pinta que una buena
+- `functions/src/arranque.spec.ts` — qué **no** se puede cargar al arrancar, y que cada import perezoso sigue resolviendo. Ver «El arranque en frío» más abajo
 
 El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
 
@@ -112,6 +113,20 @@ failed. Revision … is not ready and cannot serve traffic`, que parece un fallo
 de arranque del código; la causa real —`Quota exceeded for total allowable CPU
 per project per region`— sale una línea antes y solo en algunos intentos. Fallan
 cuatro o seis functions al azar, distintas cada vez.
+
+⚠️ **Y con las 29 de desarrollo a la vez fallan DIECINUEVE.** Medido el 28 de
+septiembre de 2026 desplegando el cambio de los imports, que tocaba 26 ficheros
+y por tanto todas: entraron 15 y se cayeron 19, todas con la misma cuota. O sea
+que «cuatro o seis al azar» es lo que pasa con trece; con veintinueve el
+despliegue completo **no es una opción**, y da igual cuántas veces se reintente
+entero. La forma es por tandas de dos o tres desde el principio, con una pausa
+entre tandas para que la cuota se libere.
+
+⚠️ **Y el mensaje sigue acusando al código.** Aquí el bundle estaba verificado
+—`node -e "require('./lib/index.js')"` antes de desplegar, y el manifiesto de
+descubrimiento idéntico al anterior—, así que el `Container Healthcheck failed`
+no podía ser del arranque. Sin esa comprobación previa, lo que se lee lleva
+derecho a buscar un fallo que no existe.
 
 Antes de tocar nada, **descarta el código** cargando el bundle igual que lo carga
 el contenedor:
@@ -2025,22 +2040,29 @@ cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
 necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
 conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
-⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 17 de
-septiembre de 2026 con `gcloud functions list`, que además da la fecha de cada
-una — `firebase functions:list` no la da):
+⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 28 de
+septiembre de 2026 con `firebase functions:list`, comparando los nombres contra
+los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| desarrollo | **29** | — |
-| producción | **22** | las cinco de la AEAT, más `syncAuthClaims` y `onAuthorizedUserChanged` |
+| el código define | **34** | — |
+| desarrollo | **34** | — |
+| producción | **29** | las cinco de la AEAT |
 
-⚠️ **Lo que falta en producción falta por dos motivos distintos, y no conviene
-mezclarlos.** Las cinco de la AEAT faltan **a propósito**, con el guion del 1 de
-enero ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis). Las dos de los
-claims faltan porque **están pendientes de desplegar**, y tienen un orden que hay
-que respetar: primero las functions, luego el frontend que llama a
-`syncAuthClaims`, y **las reglas de Storage al final**. Al revés, nadie tendría
-el sello todavía y la aplicación se quedaría sin poder leer un solo fichero.
+⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
+([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
+`sweepVerifactuRecords`, `getVerifactuStatus`, `retryVerifactuRecord` y
+`checkVerifactuConnection`.
+
+> Aquí ponía **29 y 22**, y que faltaban además `syncAuthClaims` y
+> `onAuthorizedUserChanged` «pendientes de desplegar». Las dos **ya están en
+> producción**, y las cinco públicas de la web —`publicVehicles`,
+> `publicVehicleDetail`, `checkPublicAvailability`, `publishVehiclePhoto`,
+> `unpublishVehiclePhoto`— nacieron después de que se escribiera esa tabla. Es
+> exactamente el desajuste que el párrafo de abajo avisa que es fácil olvidar:
+> **una tabla de inventario escrita a mano se queda vieja**, así que lo que vale
+> es la comparación, no la cifra.
 
 ⚠️ **`issueInvoice` e `issueComplianceDeclaration` YA están allí** desde el 17 de
 septiembre de 2026: producción emite facturas —y ya tiene su declaración
@@ -2064,6 +2086,83 @@ exista, **publica el escaparate con lo que hubiera compilado ese día**, que
 puede ser de la semana pasada y del entorno que no toca. El target va siempre
 explícito. La misma frase estaba repetida en
 [document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts).
+
+### El arranque en frío lo paga la function más ligera
+
+⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
+`index.ts` reexporta las 34 functions. Así que la cadena de imports de la más
+pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
+pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
+certificado de la AEAT **antes de devolver una lista de coches**.
+
+Medido el 28 de septiembre de 2026, cargando el bundle como lo carga el
+contenedor (`node -e "require('./lib/index.js')"`):
+
+| | antes | después |
+|---|---|---|
+| módulos | 921 | **432** |
+| memoria | 105 MB | **72 MB** |
+| carga | 886–1433 ms | **378–415 ms** |
+
+Dos cosas distintas, y las dos hacían falta:
+
+- **Lo que solo usa un camino concreto va en `await import()`** dentro de la
+  función que lo usa. Con este `tsconfig` eso compila a
+  `Promise.resolve().then(() => require(…))`: mismo `require`, pero cuando toca.
+  Son los siete generadores de PDF, el sellado del contrato, el QR, `sharp` y
+  el cliente de la AEAT.
+- **Y los barrels de `firebase-functions` se cambiaron por subpaths.**
+  `import * as functions from 'firebase-functions'` carga **407 módulos y
+  340 ms** —los proveedores de todos los tipos de trigger, incluida la base de
+  datos en tiempo real, que esta aplicación no usa— frente a 380 y 270 pidiendo
+  solo lo que se usa. Eran 21 ficheros con el barrel raíz, más `global-options.ts`
+  y cuatro con `import { logger } from 'firebase-functions/v2'`, que también lo es.
+
+⚠️ **`import type` no cuenta**: desaparece al compilar y no emite `require`. Es
+lo que permite seguir tipando `PruebaConexion` sin cargar `node-forge`.
+
+⚠️ **Un import que TypeScript ELIDE es peor que uno que carga.** Si todas las
+ligaduras de un `import { X } from 'dep'` quedan sin usar como valor, el
+compilador no emite nada — así que el fichero **parece** cargar la dependencia y
+no la carga, y volverá a cargarla en cuanto alguien use `X` arriba. Pasó aquí:
+`compliance-declaration.ts` se quedó con el `import` estático de `pdf-lib` y el
+`await import('pdf-lib')` dentro, y la medición decía lo contrario que el
+fuente. Se borra o se escribe `import type`.
+
+⚠️ **`fast-xml-parser` se queda a propósito.** Son 9 ms y un módulo, y vive en
+`verifactu-respuesta.ts` junto a `desenlaceDe()`, que sí hace falta al arrancar:
+sacarlo obligaría a partir en dos un módulo de la AEAT con sus tests. Por lo
+mismo se descartó tocar `parseRespuesta()`, que es **síncrona** y tiene once
+tests que la llaman con `expect(() => …).toThrow(…)`.
+
+⚠️ **Lo que NO se puede tocar: `jose`, `jwks-rsa` y `jsonwebtoken`** (~70 ms).
+Los mete `firebase-functions/v2/https` para verificar App Check, y hacen falta
+en cuanto haya un `onCall` o un `onRequest`.
+
+**Se verifica de tres formas, y las tres hacen falta:**
+
+1. `functions/src/arranque.spec.ts` recorre el grafo de imports **estáticos**
+   desde `index.ts` y falla si alguno alcanza una dependencia pesada o un
+   barrel. Mira el **fuente**, no el bundle: `npm test` es `vitest run` a secas
+   y no compila.
+2. Ese mismo spec comprueba que **cada import perezoso resuelve y entrega lo que
+   desestructura**. Es la otra mitad: al sacar algo del arranque, un
+   especificador mal escrito ya no falla al arrancar — falla la primera vez que
+   alguien genera un PDF. Es la lección de `sharp`.
+3. **El manifiesto tiene que salir idéntico.** Es la comprobación que convierte
+   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 34
+   functions con sus triggers, regiones y secrets, así que si no cambia, no
+   cambia nada de lo que se despliega.
+
+```bash
+cd functions
+FUNCTIONS_CONTROL_API=true PORT=8361 node node_modules/firebase-functions/lib/bin/firebase-functions.js . &
+curl -s http://127.0.0.1:8361/__/functions.yaml -o /tmp/manifiesto.json
+curl -s http://127.0.0.1:8361/__/quitquitquit
+```
+
+⚠️ **Esto no está desplegado todavía**: son functions, y el CI solo despliega
+hosting.
 
 ### Enlaces cortos para WhatsApp
 
@@ -2872,7 +2971,13 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **22**.
+siga dando **29**.
+
+⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
+**códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
+no cuenta nada, según el patrón. Lo que vale es quitar los escapes y comparar
+los **nombres** contra los del manifiesto de descubrimiento: ahí se ve qué falta,
+no solo cuántas hay — que es la pregunta buena.
 
 ### Secrets
 
@@ -4086,9 +4191,14 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay 19 desplegadas y el
-código define 26: las siete que faltan escriben facturas o hablan con la AEAT, y
-no están allí hasta el 1 de enero. Un despliegue completo las subiría.
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
+el código define **34**: las cinco que faltan hablan con la AEAT y no están allí
+hasta el 1 de enero. Un despliegue completo las subiría.
+
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 34 functions, un
+`--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
+medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
+cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.
 
 ## Deuda técnica conocida
 

@@ -84,18 +84,36 @@ export interface PublicPrice {
  * devolverse; con solo el nombre, esa asignación no compila.
  */
 export interface PublicVehiclePhoto {
-  /** Nombre del fichero dentro de `public-vehicles/{vehicleId}/`. Sin barras. */
+  /**
+   * Nombre del fichero dentro de `public-vehicles/{vehicleId}/`. Sin barras.
+   *
+   * Es el **JPEG de respaldo**, y sigue siendo obligatorio: es lo único que
+   * tienen las fotos publicadas antes de que existieran las variantes, y lo que
+   * recibe un navegador que no entienda WebP.
+   */
   file: string;
   /** Para reservar el hueco y que la página no salte al cargar. */
   width?: number;
   height?: number;
+  /**
+   * Las variantes en WebP, un fichero por ancho.
+   *
+   * ⚠️ **Opcional a propósito.** Las fotos publicadas antes del 28 de
+   * septiembre de 2026 no lo tienen, y tienen que seguir viéndose sin migrar
+   * nada — regla de producción desde que hay datos reales. Sin variantes, el
+   * mapeador sirve el JPEG como toda la vida.
+   */
+  srcset?: Array<{ w: number; file: string }>;
 }
 
 /** Lo mismo, ya resuelto para el cliente. */
 export interface PublicPhotoUrl {
+  /** El JPEG: lo que se sirve si no hay variantes o el navegador no las entiende. */
   url: string;
   width?: number;
   height?: number;
+  /** Las variantes en WebP con su ancho, para componer un `srcset`. */
+  srcset?: Array<{ w: number; url: string }>;
 }
 
 /** Lo que pinta una tarjeta del listado, y nada más. */

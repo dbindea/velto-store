@@ -579,3 +579,145 @@ describe('getReservationTimelineSteps — un borrador no es un paso dado', () =>
     expect(canStartReturn(ctx).ok).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Los TEXTOS del timeline, que es donde se leen los hitos de un vistazo.
+//
+// Los cuatro casos de abajo salieron de una revisión adversarial del propio
+// arreglo, y ninguno da error en ninguna parte: el paso se pinta, el estado es
+// el que toca, y lo único que falla es lo que el operador lee.
+// ---------------------------------------------------------------------------
+
+describe('getReservationTimelineSteps — los pasos bloqueados dicen QUÉ falta', () => {
+  const pasoDe = (ctx: WorkflowContext, key: string) =>
+    getReservationTimelineSteps(ctx).find((s) => s.key === key);
+
+  it('con solo el resto sin cobrar, no enumera el contrato ni la fianza', () => {
+    // Antes: «Falta contrato firmado, resto pagado y fianza cobrada» con el
+    // contrato firmado y la fianza cobrada tres filas encima.
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({
+        remainingPayment: { requiredAmount: 400, paidAmount: 0 }
+      } as Partial<Reservation>),
+      contract: signedContract
+    };
+    const paso = pasoDe(ctx, 'pickupCompleted');
+    expect(paso?.state).toBe('blocked');
+    expect(paso?.blockedReasonKey).toBe('workflow.missingRemainingPayment');
+  });
+
+  it('con solo el contrato sin firmar, no afirma que falte dinero', () => {
+    const ctx: WorkflowContext = { reservation: makeReservation(), contract: undefined };
+    const paso = pasoDe(ctx, 'pickupCompleted');
+    expect(paso?.state).toBe('blocked');
+    expect(paso?.blockedReasonKey).toBe('workflow.missingSignature');
+  });
+
+  /**
+   * ⚠️ **Un paso bloqueado SIN motivo es peor que uno con un motivo malo.**
+   * `reasonOf()` devuelve cadena vacía cuando el guard permite, y la plantilla
+   * pinta el motivo con un `@if`: el paso salía con su candado y sin una palabra
+   * que lo explicara, encima de un botón «Cerrar reserva» habilitado.
+   */
+  it('si cerrar YA se puede, el paso no sale bloqueado', () => {
+    const ctx: WorkflowContext = {
+      // Contrato firmado en papel: el workflow propone generar el enlace de
+      // firma, así que la siguiente acción no es cerrar — y cerrar ya se puede.
+      reservation: makeReservation({
+        reservationStatus: 'returned',
+        deposit: { requiredAmount: 300, paidAmount: 300, returnedAmount: 300, retainedAmount: 0 }
+      } as Partial<Reservation>),
+      contract: undefined,
+      pickupInspection: completedInspection,
+      returnInspection: completedInspection
+    };
+    const paso = pasoDe(ctx, 'reservationClosed');
+    expect(paso?.state).not.toBe('blocked');
+  });
+
+  it('y si de verdad está bloqueado, siempre lleva motivo', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({ reservationStatus: 'confirmed' }),
+      contract: signedContract
+    };
+    const paso = pasoDe(ctx, 'reservationClosed');
+    expect(paso?.state).toBe('blocked');
+    expect(paso?.blockedReasonKey).toBeTruthy();
+    // Y el motivo dice qué falta, no que no se puede: una tautología sobre el
+    // paso llamado «Reserva cerrada» no aporta nada.
+    expect(paso?.blockedReasonKey).toBe('workflow.missingReturn');
+  });
+
+  it('NINGÚN paso bloqueado se queda sin motivo, en ningún estado', () => {
+    // El control general: si algún día otra rama vuelve a preguntar a un guard
+    // que permite, este test lo caza sin que nadie escriba el caso.
+    const estados = ['reserved', 'confirmed', 'delivered', 'returned'] as const;
+    for (const estado of estados) {
+      for (const contract of [undefined, signedContract]) {
+        for (const ret of [undefined, completedInspection]) {
+          const ctx: WorkflowContext = {
+            reservation: makeReservation({ reservationStatus: estado }),
+            contract,
+            pickupInspection: completedInspection,
+            returnInspection: ret
+          };
+          for (const paso of getReservationTimelineSteps(ctx)) {
+            if (paso.state === 'blocked') {
+              expect(paso.blockedReasonKey, `${estado}/${paso.key} sin motivo`).toBeTruthy();
+            }
+          }
+        }
+      }
+    }
+  });
+});
+
+describe('getReservationTimelineSteps — un hito cumplido dice POR QUÉ lo está', () => {
+  const rotuloDe = (ctx: WorkflowContext, key: string) =>
+    getReservationTimelineSteps(ctx).find((s) => s.key === key)?.labelKey;
+
+  it('la señal RENUNCIADA no se rotula «cobrada»', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({
+        initialPayment: { requiredAmount: 0, paidAmount: 0, status: 'waived' }
+      } as Partial<Reservation>),
+      contract: signedContract
+    };
+    expect(rotuloDe(ctx, 'initialPaymentPaid')).toBe('reservations.timeline.initialPaymentWaived');
+  });
+
+  it('la señal COBRADA sí', () => {
+    expect(rotuloDe(readyForPickup(), 'initialPaymentPaid')).toBe(
+      'reservations.timeline.initialPaymentPaid'
+    );
+  });
+
+  it('la fianza EXENTA no se rotula «cobrada»', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({
+        deposit: {
+          requiredAmount: 0,
+          paidAmount: 0,
+          returnedAmount: 0,
+          retainedAmount: 0,
+          waivedReason: 'Cliente conocido'
+        }
+      } as Partial<Reservation>),
+      contract: signedContract
+    };
+    expect(rotuloDe(ctx, 'depositPaid')).toBe('reservations.timeline.depositWaived');
+  });
+
+  it('y un resto que nunca existió tampoco', () => {
+    const ctx: WorkflowContext = {
+      reservation: makeReservation({
+        initialPayment: { requiredAmount: 500, paidAmount: 500 },
+        remainingPayment: { requiredAmount: 0, paidAmount: 0 }
+      } as Partial<Reservation>),
+      contract: signedContract
+    };
+    expect(rotuloDe(ctx, 'remainingPaymentPaid')).toBe(
+      'reservations.timeline.remainingPaymentNotDue'
+    );
+  });
+});

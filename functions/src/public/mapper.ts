@@ -13,7 +13,7 @@
  * justamente lo que nadie hace una vez que funciona.
  */
 
-import { logger } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
 import {
   PublicPhotoUrl,
   PublicPrice,
@@ -70,10 +70,25 @@ export function photoUrls(
       logger.warn('Foto pública descartada: nombre no válido', { vehicleId, file });
       continue;
     }
+    /**
+     * ⚠️ **Las variantes pasan por el MISMO filtro de nombre que el fichero
+     * principal.** Es el único sitio por el que algo sale a internet, y una
+     * variante con una barra dentro apuntaría a otra carpeta del bucket. Da
+     * igual que las escriba `publishVehiclePhoto` con un nombre que compone
+     * ella: el día que alguien escriba ese campo a mano, esto es lo último que
+     * puede pararlo.
+     */
+    const srcset = Array.isArray(p.srcset)
+      ? p.srcset
+          .filter(v => typeof v?.w === 'number' && v.w > 0 && NOMBRE_VALIDO.test(String(v?.file)))
+          .map(v => ({ w: v.w, url: urlDeFoto(bucket, vehicleId, v.file) }))
+      : [];
+
     salida.push({
       url: urlDeFoto(bucket, vehicleId, file),
       ...(typeof p.width === 'number' ? { width: p.width } : {}),
       ...(typeof p.height === 'number' ? { height: p.height } : {}),
+      ...(srcset.length ? { srcset } : {}),
     });
   }
   return salida;

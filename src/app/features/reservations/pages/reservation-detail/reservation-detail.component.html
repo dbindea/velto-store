@@ -579,9 +579,11 @@
         <!-- La chapa habla de ESTA tarjeta, no de la reserva: ver `moneyStatus`.
              Con `reservation.paymentStatus` decía PAGADO tres líneas encima de
              «Pendiente de cobro 150,00 €», porque aquel deja la fianza fuera. -->
-        <span class="badge" [ngClass]="getPaymentStatusClass(moneyStatus)">
-          {{ getPaymentLabel(moneyStatus) }}
-        </span>
+        @if (moneyStatus !== 'none') {
+          <span class="badge" [ngClass]="getPaymentStatusClass(moneyStatus)">
+            {{ getPaymentLabel(moneyStatus) }}
+          </span>
+        }
       </div>
       <div class="card-content">
         <!--

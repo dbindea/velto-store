@@ -19,9 +19,28 @@
  * agree any price by hand.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { randomUUID } from 'crypto';
-import { buildQuotePdf } from './documents-pdf';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { companyConfig } from '../company-config';
@@ -105,24 +124,24 @@ function finiteOrUndefined(value: any): number | undefined {
   return typeof value === 'number' && isFinite(value) ? value : undefined;
 }
 
-export const generateQuotePdf = functions.https.onCall(
+export const generateQuotePdf = onCall(
   async (request): Promise<QuoteResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
 
     const data = request.data as QuoteRequest;
     if (!data?.vehicle?.plateNumber) {
-      throw new functions.https.HttpsError('invalid-argument', 'Falta el vehículo');
+      throw new HttpsError('invalid-argument', 'Falta el vehículo');
     }
     const pickupDateTime = toDate(data.rental?.pickupDateTime);
     const returnDateTime = toDate(data.rental?.returnDateTime);
     if (!pickupDateTime || !returnDateTime) {
-      throw new functions.https.HttpsError('invalid-argument', 'Fechas no válidas');
+      throw new HttpsError('invalid-argument', 'Fechas no válidas');
     }
     const finalPrice = finiteOrUndefined(data.pricing?.finalPrice);
     if (finalPrice === undefined || finalPrice < 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'Precio no válido');
+      throw new HttpsError('invalid-argument', 'Precio no válido');
     }
 
     const locale: ContractLocale =
@@ -138,10 +157,11 @@ export const generateQuotePdf = functions.https.onCall(
         : (await operationSettings()).quoteValidityDays;
     const validUntil = new Date(generatedAt.getTime() + validityDays * 24 * 60 * 60 * 1000);
 
-    functions.logger.info(
+    logger.info(
       `generateQuotePdf: plate=${data.vehicle.plateNumber} locale=${locale}`
     );
 
+    const { buildQuotePdf } = await import('./documents-pdf');
     const pdfBytes = await buildQuotePdf({
       company: companyConfig(),
       client: data.client?.fullName ? data.client : undefined,

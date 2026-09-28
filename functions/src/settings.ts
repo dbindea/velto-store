@@ -16,7 +16,7 @@
  * emitirlo, uno grande.
  */
 
-import * as functions from 'firebase-functions';
+import * as logger from 'firebase-functions/logger';
 import { firestore } from './admin-guard';
 
 export interface OperationSettings {
@@ -80,7 +80,7 @@ export async function operationSettings(): Promise<OperationSettings> {
       vatRate: clampVatRate(data.vatRate, DEFAULTS.vatRate)
     };
   } catch (err) {
-    functions.logger.warn('No se pudieron leer los ajustes; se usan los valores por defecto', err);
+    logger.warn('No se pudieron leer los ajustes; se usan los valores por defecto', err);
     return { ...DEFAULTS };
   }
 }
