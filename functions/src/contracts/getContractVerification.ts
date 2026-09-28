@@ -21,7 +21,7 @@
  * lo mismo: desde fuera no se puede averiguar qué códigos son reales.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall } from 'firebase-functions/v2/https';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
 import { formatFingerprint, normalizeVerificationCode } from './verification';
@@ -68,7 +68,7 @@ function toIso(value: any): string | undefined {
   return undefined;
 }
 
-export const getContractVerification = functions.https.onCall(
+export const getContractVerification = onCall(
   async (request): Promise<PublicVerificationView> => {
     const data = request.data as Request;
     const code = normalizeVerificationCode(data?.code || '');

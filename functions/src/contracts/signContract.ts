@@ -19,16 +19,28 @@
  * are safe because the token transition is performed with a transaction.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
-import { buildContractPdf } from './pdf';
+/**
+ * ⚠️ **Los dos pesados se cargan al usarse: `./pdf` y `./sign-pdf`.**
+ *
+ * `index.ts` reexporta las 34 functions y el contenedor las evalúa TODAS al
+ * arrancar, así que con estos imports arriba una petición de la web pública
+ * cargaba `pdf-lib` (156 ms), `fontkit` (162 ms) y el trío de `@signpdf`
+ * (179 ms) para listar cuatro coches.
+ *
+ * ⚠️ **`SIGNING_SECRETS` e `isSigningConfigured` SÍ se quedan arriba, y no es
+ * un descuido.** `SIGNING_SECRETS` es la declaración de los secretos que este
+ * callable monta —tiene que estar disponible cuando se declara la function, no
+ * cuando se ejecuta— y `isSigningConfigured()` se consulta antes de construir
+ * nada. Lo único que baja es el sellado de verdad.
+ *
+ * Lo vigila `arranque.spec.ts`.
+ */
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
-import {
-  SIGNING_SECRETS,
-  isSigningConfigured,
-  signPdfWithCompanyCertificate
-} from './sign-pdf';
+import { SIGNING_SECRETS, isSigningConfigured } from './sign-pdf';
 import {
   formatVerificationCode,
   generateVerificationCode,
@@ -70,7 +82,7 @@ function downloadToken(): string {
   return require('crypto').randomUUID();
 }
 
-export const signContract = functions.https.onCall(
+export const signContract = onCall(
   {
     // ⚠️ Declarar el secret no es opcional: uno que existe en Secret Manager
     // pero no aparece aquí **no se monta en el runtime**, así que `.value()`
@@ -81,11 +93,11 @@ export const signContract = functions.https.onCall(
   async (request): Promise<SignResponse> => {
     const data = request.data as SignRequest;
     if (!data?.token || !data?.signatureDataUrl) {
-      throw new functions.https.HttpsError('invalid-argument', 'Token y firma son requeridos');
+      throw new HttpsError('invalid-argument', 'Token y firma son requeridos');
     }
     const decoded = decodeDataUrl(data.signatureDataUrl);
     if (!decoded) {
-      throw new functions.https.HttpsError('invalid-argument', 'Firma no válida');
+      throw new HttpsError('invalid-argument', 'Firma no válida');
     }
 
     const db = firestore();
@@ -97,7 +109,7 @@ export const signContract = functions.https.onCall(
       .limit(1)
       .get();
     if (tokenQ.empty) {
-      throw new functions.https.HttpsError('not-found', 'Token no encontrado');
+      throw new HttpsError('not-found', 'Token no encontrado');
     }
     const tokenDoc = tokenQ.docs[0];
     const tokenData = tokenDoc.data() as any;
@@ -105,10 +117,10 @@ export const signContract = functions.https.onCall(
     // 2. Validate token state
     const now = new Date();
     if (tokenData.status === 'used') {
-      throw new functions.https.HttpsError('failed-precondition', 'El contrato ya está firmado');
+      throw new HttpsError('failed-precondition', 'El contrato ya está firmado');
     }
     if (tokenData.status === 'cancelled') {
-      throw new functions.https.HttpsError('failed-precondition', 'El link fue cancelado');
+      throw new HttpsError('failed-precondition', 'El link fue cancelado');
     }
     const expiresAt = toDate(tokenData.expiresAt);
     if (!expiresAt || expiresAt < now) {
@@ -117,18 +129,18 @@ export const signContract = functions.https.onCall(
         status: 'expired',
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
-      throw new functions.https.HttpsError('failed-precondition', 'El link ha caducado');
+      throw new HttpsError('failed-precondition', 'El link ha caducado');
     }
 
     // 3. Load contract
     const contractRef = db.collection('contracts').doc(tokenData.contractId);
     const contractSnap = await contractRef.get();
     if (!contractSnap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Contrato no encontrado');
+      throw new HttpsError('not-found', 'Contrato no encontrado');
     }
     const contract = contractSnap.data() as any;
     if (contract.status === 'signed') {
-      throw new functions.https.HttpsError('failed-precondition', 'El contrato ya está firmado');
+      throw new HttpsError('failed-precondition', 'El contrato ya está firmado');
     }
 
     const reservationId: string = contract.reservationId;
@@ -181,6 +193,13 @@ export const signContract = functions.https.onCall(
      * digital». Si el sellado acaba fallando, se vuelve a construir con `false`
      * y se guarda ese: el documento no puede afirmar una firma que no lleva.
      */
+    /*
+     * ⚠️ Se resuelve ANTES de la flecha y esta lo captura. El uso no es un
+     * `await` directo —es una función que se llama dos veces, una por si el
+     * sellado falla— así que no hay dónde meter el `await import()` dentro.
+     */
+    const { buildContractPdf } = await import('./pdf');
+
     const construirPdf = (anunciarFirma: boolean) => buildContractPdf(
       {
         contractNumber: contract.contractNumber,
@@ -256,6 +275,7 @@ export const signContract = functions.https.onCall(
      * juntas o no valen.
      */
     const anuncioPrevisto = isSigningConfigured();
+    const { signPdfWithCompanyCertificate } = await import('./sign-pdf');
     const sealed = await signPdfWithCompanyCertificate(
       await construirPdf(anuncioPrevisto),
       `Contrato de alquiler ${contract.contractNumber || ''}`.trim()
@@ -293,11 +313,11 @@ export const signContract = functions.https.onCall(
     await db.runTransaction(async (tx) => {
       const freshToken = await tx.get(tokenDoc.ref);
       if (!freshToken.exists) {
-        throw new functions.https.HttpsError('failed-precondition', 'Token no encontrado');
+        throw new HttpsError('failed-precondition', 'Token no encontrado');
       }
       const ft = freshToken.data() as any;
       if (ft.status === 'used') {
-        throw new functions.https.HttpsError('failed-precondition', 'El contrato ya está firmado');
+        throw new HttpsError('failed-precondition', 'El contrato ya está firmado');
       }
       tx.update(tokenDoc.ref, {
         status: 'used',
@@ -341,7 +361,7 @@ export const signContract = functions.https.onCall(
       );
     });
 
-    functions.logger.info(`Contract ${tokenData.contractId} signed by token ${tokenDoc.id}`);
+    logger.info(`Contract ${tokenData.contractId} signed by token ${tokenDoc.id}`);
 
     return {
       ok: true,

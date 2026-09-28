@@ -18,8 +18,11 @@
  * escriben aparte.
  */
 
-import { PDFDocument } from 'pdf-lib';
-import { PdfBuilder, companyFooterLines, companyHeaderLines, formatDate } from '../contracts/pdf';
+// ⚠️ `pdf-lib` y `../contracts/pdf` se piden DENTRO de `buildDeclarationPdf()`:
+// ver `arranque.spec.ts`. Aquí llegó a haber además un `import` estático de los
+// mismos nombres, y no daba error ni cargaba nada —TypeScript elide un import
+// cuyas ligaduras no se usan—, así que parecía el camino de arranque sin serlo.
+// Un import que se elide es peor que uno que carga: engaña al que lo lee.
 import { sistemaInformatico, VERIFACTU_SYSTEM_NAME, verifactuSystemVersion } from './verifactu';
 
 export interface DeclarationCompany {
@@ -148,6 +151,9 @@ export async function buildDeclarationPdf(
   const titulo = 'DECLARACIÓN RESPONSABLE';
   const referencia = `v${d.systemVersion}`;
 
+  const { PDFDocument } = await import('pdf-lib');
+  const { PdfBuilder, companyFooterLines, companyHeaderLines, formatDate } =
+    await import('../contracts/pdf');
   const doc = await PDFDocument.create();
   doc.setTitle(`${company.brandName} — ${titulo} ${referencia}`);
   doc.setAuthor(company.brandName);

@@ -28,7 +28,7 @@
  */
 
 import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
-import { logger } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
 /**
  * ⚠️ **`require`, y NO `import sharp from 'sharp'`.** Esa línea compila sin una
  * queja y revienta en producción con `(0, sharp_1.default) is not a function`.
@@ -51,12 +51,26 @@ import { logger } from 'firebase-functions/v2';
  * Se deja el `require` en vez de tocar `moduleResolution` en el tsconfig:
  * cambiarlo afectaría a la resolución de **las veintiséis functions ya
  * desplegadas** para arreglar un import.
+ *
+ * ⚠️ **Y desde el 28 de septiembre de 2026 el `require` está MEMOIZADO, no
+ * convertido en `await import()`.** Convertirlo reintroduciría el fallo de
+ * arriba palabra por palabra. Esto mantiene la misma resolución de módulo; lo
+ * único que cambia es **cuándo** ocurre.
+ *
+ * Y cambia bastante: `index.ts` reexporta las 34 functions y el contenedor las
+ * evalúa todas al arrancar, así que el `libvips` de sharp —59 ms y varios
+ * megas de memoria— se cargaba también cuando la petición era listar cuatro
+ * coches en la web pública. Esta function la llama un administrador al publicar
+ * una foto, y nadie más.
  */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const sharp = require('sharp') as typeof import('sharp').default;
+let _sharp: typeof import('sharp').default | undefined;
+function sharp(): typeof import('sharp').default {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (_sharp ??= require('sharp') as typeof import('sharp').default);
+}
 import { firestore, storageBucket } from '../admin-guard';
 import { PUBLIC_PHOTOS_FOLDER } from './mapper';
-import { PublicVehiclePhoto } from './types';
+import type { PublicVehiclePhoto } from './types';
 
 /**
  * Los anchos que se generan de cada foto, y el formato.
@@ -193,11 +207,11 @@ export const publishVehiclePhoto = onCall(
        * cuatro salidas costaría cuatro veces lo mismo. Se decodifica una y de
        * ahí salen todas.
        */
-      const base = sharp(bytes).rotate();
+      const base = sharp()(bytes).rotate();
       const normalizado = await base.toBuffer();
 
       // El JPEG de respaldo, y de paso el que da las medidas que se guardan.
-      const salida = await sharp(normalizado)
+      const salida = await sharp()(normalizado)
         .resize({ width: LADO_RESPALDO, height: LADO_RESPALDO, fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality: CALIDAD, mozjpeg: true })
         .toBuffer({ resolveWithObject: true });
@@ -206,7 +220,7 @@ export const publishVehiclePhoto = onCall(
       alto = salida.info.height;
 
       for (const w of ANCHOS) {
-        const v = await sharp(normalizado)
+        const v = await sharp()(normalizado)
           .resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true })
           .webp({ quality: CALIDAD_WEBP, effort: ESFUERZO_WEBP })
           .toBuffer();

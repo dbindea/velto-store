@@ -18,10 +18,29 @@
  *    crea una factura nueva; la proforma se queda como estaba.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { randomUUID } from 'crypto';
 import { companyConfig } from '../company-config';
-import { buildInvoicePdf } from './invoice-pdf';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import { calculateInvoiceTotals, InvoiceLineInput } from './invoice-core';
 import { uploadPdf } from '../documents/storage';
 import type { ContractLocale } from '../contracts/contract-types';
@@ -87,21 +106,21 @@ function proformaReference(): string {
   return `P-${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 }
 
-export const generateProforma = functions.https.onCall(
+export const generateProforma = onCall(
   async (request): Promise<ProformaResponse> => {
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
+      throw new HttpsError('unauthenticated', 'invoices.errors.unauthenticated');
     }
 
     const data = request.data as ProformaRequest;
     if (!data?.recipient?.name?.trim()) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'invoices.problems.recipientNameRequired'
       );
     }
     if (!data?.lines?.length) {
-      throw new functions.https.HttpsError('invalid-argument', 'invoices.problems.linesRequired');
+      throw new HttpsError('invalid-argument', 'invoices.problems.linesRequired');
     }
 
     /**
@@ -117,6 +136,7 @@ export const generateProforma = functions.https.onCall(
     const totals = calculateInvoiceTotals(data.lines);
     const issueDate = new Date();
 
+    const { buildInvoicePdf } = await import('./invoice-pdf');
     const pdf = await buildInvoicePdf({
       locale,
       company: {
@@ -151,7 +171,7 @@ export const generateProforma = functions.https.onCall(
 
     const subido = await uploadPdf(`proformas/${reference}/proforma.pdf`, pdf);
 
-    functions.logger.info('Proforma generated', { reference, total: totals.total });
+    logger.info('Proforma generated', { reference, total: totals.total });
     return { reference, pdfUrl: subido.pdfUrl };
   }
 );

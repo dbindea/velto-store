@@ -24,7 +24,7 @@ import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont, PDFImage, RGB } from
 import fontkit from 'fontkit';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as functions from 'firebase-functions';
+import * as logger from 'firebase-functions/logger';
 import type {
   ContractClauses,
   ContractClauseBundle,
@@ -683,9 +683,9 @@ export class PdfBuilder {
       this.registerCoverage(this.font, regular);
       this.registerCoverage(this.bold, bold);
       this.registerCoverage(this.italic, italic);
-      functions.logger.info('Embedded DejaVu Sans for multilingual support');
+      logger.info('Embedded DejaVu Sans for multilingual support');
     } catch (err) {
-      functions.logger.warn(
+      logger.warn(
         'Falling back to Helvetica (Latin-1 only — Romanian chars will fail): ' +
           (err as Error).message
       );
@@ -708,7 +708,7 @@ export class PdfBuilder {
         this.registerCoverage(this.displayMedium, mediumBytes);
       }
     } catch (err) {
-      functions.logger.warn('Gotham not embedded, headings use the body face: ' + (err as Error).message);
+      logger.warn('Gotham not embedded, headings use the body face: ' + (err as Error).message);
     }
 
     this.logo = loadLogo();
@@ -2901,7 +2901,7 @@ export async function buildContractPdf(
       const img = await doc.embedPng(input.signaturePng);
       renterPng = { img, w: img.width, h: img.height };
     } catch (err) {
-      functions.logger.warn('Failed to embed signature image:', err);
+      logger.warn('Failed to embed signature image:', err);
       renterPng = null;
     }
   }

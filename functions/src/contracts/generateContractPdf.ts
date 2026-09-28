@@ -14,9 +14,28 @@
  * overwrites the previous PDF and snapshot.
  */
 
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
-import { buildContractPdf } from './pdf';
+/**
+ * ⚠️ **El generador de PDF se carga al USARSE, no al arrancar.**
+ *
+ * Este fichero es uno de los treinta y cuatro que `index.ts` reexporta, y el
+ * contenedor los evalúa TODOS al arrancar. Con el import arriba, una petición
+ * para listar cuatro coches en la web pública cargaba `pdf-lib` y `fontkit`
+ * enteros: medido, 156 ms y 162 ms, dentro de 921 módulos y 105 MB de memoria
+ * que se pagan en cada arranque en frío de CUALQUIERA de las 34.
+ *
+ * El `await import()` compila a `Promise.resolve().then(() => require(...))`
+ * con este tsconfig —comprobado sobre la salida real—, o sea perezoso de verdad
+ * y con la misma semántica de `require` que antes. Y el especificador se sigue
+ * comprobando de tipos: una ruta mal escrita es un error de compilación, no un
+ * fallo en producción.
+ *
+ * ⚠️ Lo vigila `arranque.spec.ts`. Si alguien vuelve a subir este import
+ * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
+ * tests y despliega bien.
+ */
 import { CONTRACT_CLAUSES } from './clauses';
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
@@ -82,18 +101,18 @@ function asString(value: any, fallback = ''): string {
 // leaves sentinels, Timestamps and DocumentReferences untouched.
 // Do not reintroduce a generic deep-clean on Firestore payloads.
 
-export const generateContractPdf = functions.https.onCall(
+export const generateContractPdf = onCall(
   async (request): Promise<GenerateResponse> => {
     const data = request.data as GenerateRequest;
     if (!request.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Debes iniciar sesión');
+      throw new HttpsError('unauthenticated', 'Debes iniciar sesión');
     }
     if (!data?.reservationId) {
-      throw new functions.https.HttpsError('invalid-argument', 'reservationId es requerido');
+      throw new HttpsError('invalid-argument', 'reservationId es requerido');
     }
 
     const reservationId = data.reservationId;
-    functions.logger.info(`generateContractPdf: reservation=${reservationId}`);
+    logger.info(`generateContractPdf: reservation=${reservationId}`);
 
     const db = firestore();
     const storage = storageBucket();
@@ -101,7 +120,7 @@ export const generateContractPdf = functions.https.onCall(
     // 1. Load reservation
     const resSnap = await db.collection('reservations').doc(reservationId).get();
     if (!resSnap.exists) {
-      throw new functions.https.HttpsError('not-found', 'Reserva no encontrada');
+      throw new HttpsError('not-found', 'Reserva no encontrada');
     }
     const reservation = resSnap.data() as any;
 
@@ -117,13 +136,13 @@ export const generateContractPdf = functions.https.onCall(
     const previo = await contractRefEarly.get();
     const previoFirmado = previo.exists && (previo.data() as any)?.status === 'signed';
     if (previoFirmado && !data.supersede) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'failed-precondition',
         'contracts.errors.alreadySigned'
       );
     }
     if (previoFirmado && !String(data.supersedeReason || '').trim()) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'contracts.errors.supersedeReasonRequired'
       );
@@ -155,7 +174,7 @@ export const generateContractPdf = functions.https.onCall(
           clientSnapshot.drivingLicenseNumber = c.drivingLicenseNumber || clientSnapshot.drivingLicenseNumber;
         }
       } catch (err) {
-        functions.logger.warn('Failed to enrich client snapshot, using reservation snapshot', err);
+        logger.warn('Failed to enrich client snapshot, using reservation snapshot', err);
       }
     }
 
@@ -212,7 +231,7 @@ export const generateContractPdf = functions.https.onCall(
           vehicleSnapshot.roadsideAssistancePhone = v.roadsideAssistancePhone;
         }
       } catch (err) {
-        functions.logger.warn('Failed to load vehicle insurance details', err);
+        logger.warn('Failed to load vehicle insurance details', err);
       }
     }
 
@@ -228,7 +247,7 @@ export const generateContractPdf = functions.https.onCall(
         pickupInspection = inspQ.docs[0].data();
       }
     } catch (err) {
-      functions.logger.warn('Failed to load pickup inspection', err);
+      logger.warn('Failed to load pickup inspection', err);
     }
 
     // 5. Load payment summary (deposit)
@@ -277,6 +296,7 @@ export const generateContractPdf = functions.https.onCall(
     const company = companyConfig();
 
     // 7. Build the PDF
+    const { buildContractPdf } = await import('./pdf');
     const pdfBytes = await buildContractPdf(
       {
         contractNumber,

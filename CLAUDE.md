@@ -83,6 +83,7 @@ Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar d
 - `functions/src/redsys.spec.ts` — la firma `HMAC_SHA256_V1` contra un vector de referencia congelado
 - `functions/src/contracts/qr.spec.ts` — que el QR del contrato **se lee de verdad**: rasteriza los rectángulos que se dibujan y los descifra con `jsqr`. Un símbolo mal montado tiene la misma pinta que uno bueno
 - `clear-input.util.spec.ts` — dónde se puede pulsar para vaciar un campo, y sobre todo que esa zona **no invade la del calendario**. Misma razón que el QR: un aspa que no se puede pulsar tiene la misma pinta que una buena
+- `functions/src/arranque.spec.ts` — qué **no** se puede cargar al arrancar, y que cada import perezoso sigue resolviendo. Ver «El arranque en frío» más abajo
 
 El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
 
@@ -2064,6 +2065,83 @@ exista, **publica el escaparate con lo que hubiera compilado ese día**, que
 puede ser de la semana pasada y del entorno que no toca. El target va siempre
 explícito. La misma frase estaba repetida en
 [document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts).
+
+### El arranque en frío lo paga la function más ligera
+
+⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
+`index.ts` reexporta las 34 functions. Así que la cadena de imports de la más
+pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
+pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
+certificado de la AEAT **antes de devolver una lista de coches**.
+
+Medido el 28 de septiembre de 2026, cargando el bundle como lo carga el
+contenedor (`node -e "require('./lib/index.js')"`):
+
+| | antes | después |
+|---|---|---|
+| módulos | 921 | **432** |
+| memoria | 105 MB | **72 MB** |
+| carga | 886–1433 ms | **378–415 ms** |
+
+Dos cosas distintas, y las dos hacían falta:
+
+- **Lo que solo usa un camino concreto va en `await import()`** dentro de la
+  función que lo usa. Con este `tsconfig` eso compila a
+  `Promise.resolve().then(() => require(…))`: mismo `require`, pero cuando toca.
+  Son los siete generadores de PDF, el sellado del contrato, el QR, `sharp` y
+  el cliente de la AEAT.
+- **Y los barrels de `firebase-functions` se cambiaron por subpaths.**
+  `import * as functions from 'firebase-functions'` carga **407 módulos y
+  340 ms** —los proveedores de todos los tipos de trigger, incluida la base de
+  datos en tiempo real, que esta aplicación no usa— frente a 380 y 270 pidiendo
+  solo lo que se usa. Eran 21 ficheros con el barrel raíz, más `global-options.ts`
+  y cuatro con `import { logger } from 'firebase-functions/v2'`, que también lo es.
+
+⚠️ **`import type` no cuenta**: desaparece al compilar y no emite `require`. Es
+lo que permite seguir tipando `PruebaConexion` sin cargar `node-forge`.
+
+⚠️ **Un import que TypeScript ELIDE es peor que uno que carga.** Si todas las
+ligaduras de un `import { X } from 'dep'` quedan sin usar como valor, el
+compilador no emite nada — así que el fichero **parece** cargar la dependencia y
+no la carga, y volverá a cargarla en cuanto alguien use `X` arriba. Pasó aquí:
+`compliance-declaration.ts` se quedó con el `import` estático de `pdf-lib` y el
+`await import('pdf-lib')` dentro, y la medición decía lo contrario que el
+fuente. Se borra o se escribe `import type`.
+
+⚠️ **`fast-xml-parser` se queda a propósito.** Son 9 ms y un módulo, y vive en
+`verifactu-respuesta.ts` junto a `desenlaceDe()`, que sí hace falta al arrancar:
+sacarlo obligaría a partir en dos un módulo de la AEAT con sus tests. Por lo
+mismo se descartó tocar `parseRespuesta()`, que es **síncrona** y tiene once
+tests que la llaman con `expect(() => …).toThrow(…)`.
+
+⚠️ **Lo que NO se puede tocar: `jose`, `jwks-rsa` y `jsonwebtoken`** (~70 ms).
+Los mete `firebase-functions/v2/https` para verificar App Check, y hacen falta
+en cuanto haya un `onCall` o un `onRequest`.
+
+**Se verifica de tres formas, y las tres hacen falta:**
+
+1. `functions/src/arranque.spec.ts` recorre el grafo de imports **estáticos**
+   desde `index.ts` y falla si alguno alcanza una dependencia pesada o un
+   barrel. Mira el **fuente**, no el bundle: `npm test` es `vitest run` a secas
+   y no compila.
+2. Ese mismo spec comprueba que **cada import perezoso resuelve y entrega lo que
+   desestructura**. Es la otra mitad: al sacar algo del arranque, un
+   especificador mal escrito ya no falla al arrancar — falla la primera vez que
+   alguien genera un PDF. Es la lección de `sharp`.
+3. **El manifiesto tiene que salir idéntico.** Es la comprobación que convierte
+   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 34
+   functions con sus triggers, regiones y secrets, así que si no cambia, no
+   cambia nada de lo que se despliega.
+
+```bash
+cd functions
+FUNCTIONS_CONTROL_API=true PORT=8361 node node_modules/firebase-functions/lib/bin/firebase-functions.js . &
+curl -s http://127.0.0.1:8361/__/functions.yaml -o /tmp/manifiesto.json
+curl -s http://127.0.0.1:8361/__/quitquitquit
+```
+
+⚠️ **Esto no está desplegado todavía**: son functions, y el CI solo despliega
+hosting.
 
 ### Enlaces cortos para WhatsApp
 

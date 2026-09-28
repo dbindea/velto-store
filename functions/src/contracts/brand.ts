@@ -16,24 +16,44 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { rgb, RGB } from 'pdf-lib';
+/**
+ * ⚠️ **`import type`, y antes era un import normal por SEIS COLORES.**
+ *
+ * Este fichero era el único que cargaba `pdf-lib` fuera del subárbol de
+ * `pdf.ts`, y lo hacía solo para llamar a `rgb()` en seis constantes de nivel
+ * superior. El precio: **156 ms de arranque en cada una de las 34 functions**,
+ * porque `index.ts` las reexporta todas y basta que una cadena de imports
+ * alcance esto para que el contenedor cargue el generador de PDF entero —
+ * también cuando la petición es listar cuatro coches en la web pública.
+ *
+ * `rgb()` devuelve un **objeto plano**: comprobado, `{type, red, green, blue}`
+ * sin prototipo propio. Así que las seis se escriben tal cual y el tipo se
+ * importa con `import type`, que **desaparece al compilar**: el JavaScript
+ * resultante no menciona `pdf-lib` por ninguna parte.
+ *
+ * ⚠️ Si algún día hace falta un color nuevo, se escribe igual —el valor de
+ * `rgb(r,g,b)` es literalmente `{ type: 'RGB', red: r, green: g, blue: b }`— y
+ * **no** se vuelve a importar `rgb`: eso devolvería los 156 ms enteros sin que
+ * nada avise. Lo vigila `arranque.spec.ts`.
+ */
+import type { RGB } from 'pdf-lib';
 
 // ---------------------------------------------------------------------------
 // Palette — taken from the brand SVGs and the invoice
 // ---------------------------------------------------------------------------
 
 /** Velto teal, #20A48F. Section labels, totals, the logo mark. */
-export const BRAND: RGB = rgb(0x20 / 255, 0xa4 / 255, 0x8f / 255);
+export const BRAND: RGB = { type: 'RGB', red: 0x20 / 255, green: 0xa4 / 255, blue: 0x8f / 255 } as RGB;
 /** Headings and the company name. */
-export const INK: RGB = rgb(0, 0, 0);
+export const INK: RGB = { type: 'RGB', red: 0, green: 0, blue: 0 } as RGB;
 /** Body copy: not pure black, which prints harshly. */
-export const BODY: RGB = rgb(0.13, 0.13, 0.13);
+export const BODY: RGB = { type: 'RGB', red: 0.13, green: 0.13, blue: 0.13 } as RGB;
 /** Secondary data and the legal footer. */
-export const MUTED: RGB = rgb(0.45, 0.45, 0.45);
+export const MUTED: RGB = { type: 'RGB', red: 0.45, green: 0.45, blue: 0.45 } as RGB;
 /** Hairline rules between rows and blocks. */
-export const RULE: RGB = rgb(0.85, 0.85, 0.85);
+export const RULE: RGB = { type: 'RGB', red: 0.85, green: 0.85, blue: 0.85 } as RGB;
 /** Background of the highlight boxes. */
-export const TINT: RGB = rgb(0.955, 0.98, 0.972);
+export const TINT: RGB = { type: 'RGB', red: 0.955, green: 0.98, blue: 0.972 } as RGB;
 
 // ---------------------------------------------------------------------------
 // Metrics

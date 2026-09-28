@@ -17,7 +17,7 @@
  * personales de los contratos se procesaban en Estados Unidos aunque se
  * guardaran en Europa.
  */
-import { setGlobalOptions } from 'firebase-functions/v2';
+import { setGlobalOptions } from 'firebase-functions/v2/options';
 
 export const FUNCTIONS_REGION = 'europe-west1';
 

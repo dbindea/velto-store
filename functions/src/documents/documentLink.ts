@@ -32,7 +32,8 @@
  * `getPaymentCheckout` se cuida de no revelar.
  */
 
-import * as functions from 'firebase-functions';
+import { onRequest } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { storageBucket } from '../admin-guard';
 import { publicBaseUrl } from '../public-url';
 
@@ -87,7 +88,7 @@ export function documentLinkUrl(shortId: string): string {
   return `${publicBaseUrl()}/d/${shortId}`;
 }
 
-export const documentLink = functions.https.onRequest(async (req, res) => {
+export const documentLink = onRequest(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.status(405).send('Method Not Allowed');
     return;
@@ -135,12 +136,12 @@ export const documentLink = functions.https.onRequest(async (req, res) => {
     file
       .createReadStream()
       .on('error', (err) => {
-        functions.logger.error('documentLink: stream failed', { path, err });
+        logger.error('documentLink: stream failed', { path, err });
         if (!res.headersSent) res.status(500).send('No se pudo leer el documento');
       })
       .pipe(res);
   } catch (err) {
-    functions.logger.error('documentLink: unexpected failure', { path, err });
+    logger.error('documentLink: unexpected failure', { path, err });
     res.status(500).send('No se pudo leer el documento');
   }
 });

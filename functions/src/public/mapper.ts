@@ -13,7 +13,7 @@
  * justamente lo que nadie hace una vez que funciona.
  */
 
-import { logger } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
 import {
   PublicPhotoUrl,
   PublicPrice,

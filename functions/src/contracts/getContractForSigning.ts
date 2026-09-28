@@ -23,7 +23,8 @@
  * (basic enumeration defence).
  */
 
-import * as functions from 'firebase-functions';
+import { onCall } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
@@ -113,7 +114,7 @@ interface Request {
   token: string;
 }
 
-export const getContractForSigning = functions.https.onCall(
+export const getContractForSigning = onCall(
   async (request): Promise<PublicContractView> => {
     const data = request.data as Request;
     if (!data?.token) {
@@ -230,7 +231,7 @@ function buildHighlights(contract: any): string[] {
     const { bundle } = pickBundle(CONTRACT_CLAUSES, contract.locale);
     return bundle.highlights;
   } catch (err) {
-    functions.logger.warn('Failed to load contract highlights:', err);
+    logger.warn('Failed to load contract highlights:', err);
     return [];
   }
 }

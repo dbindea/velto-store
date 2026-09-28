@@ -19,9 +19,15 @@
  * puede añadir después sin rehacer nada.
  */
 
-import * as functions from 'firebase-functions';
+import * as logger from 'firebase-functions/logger';
 import { defineSecret } from 'firebase-functions/params';
-import { PDFDocument } from 'pdf-lib';
+/**
+ * ⚠️ pdf-lib se carga al usarse, junto a los tres de @signpdf que ya lo
+ * hacían. Este módulo lo alcanza `signContract.ts` para leer `SIGNING_SECRETS`
+ * —que tiene que estar disponible al DECLARAR la function, no al ejecutarla—
+ * así que se evalúa en cada arranque de las 34: con el import arriba, la web
+ * pública cargaba pdf-lib entero para listar cuatro coches.
+ */
 
 /** El `.p12` en base64. Ver README: se sube con `functions:secrets:set`. */
 export const SIGNING_CERT = defineSecret('VELTO_SIGNING_CERT');
@@ -74,6 +80,7 @@ export async function signPdfWithCompanyCertificate(
     // El hueco de la firma se abre sobre el PDF ya montado. `pdf-lib` porque es
     // con lo que se genera el contrato: el placeholder para pdfkit habría
     // arrastrado `crypto-js` con vulnerabilidades críticas sin usarlo siquiera.
+    const { PDFDocument } = await import('pdf-lib');
     const pdfDoc = await PDFDocument.load(pdfBytes);
     pdflibAddPlaceholder({
       pdfDoc,
@@ -104,7 +111,7 @@ export async function signPdfWithCompanyCertificate(
 
     return { bytes: new Uint8Array(signed), signed: true };
   } catch (err) {
-    functions.logger.error('No se pudo sellar el contrato; se guarda sin firma digital', err);
+    logger.error('No se pudo sellar el contrato; se guarda sin firma digital', err);
     return { bytes: pdfBytes, signed: false };
   }
 }
