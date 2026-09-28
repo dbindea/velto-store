@@ -27,6 +27,7 @@ import {
 } from '@angular/fire/firestore';
 
 import { Reservation } from '@shared/models/reservation.model';
+import { roundMoney } from '@shared/utils/payment-summary.util';
 import { Contract } from '@shared/models/contract.model';
 import { Vehicle } from '@shared/models/vehicle.model';
 import {
@@ -226,15 +227,40 @@ export class DashboardComponent implements OnInit {
      * renunciada y una cobrada dan lo mismo por casualidad, y el día que dejen
      * de darlo el panel vuelve a mentir.
      */
+    /**
+     * ⚠️ **Y mira el ALQUILER ENTERO, no solo la señal.** Aquí se filtraba por
+     * `initialPayment` a secas, y eso deja fuera el caso que más importa vigilar:
+     * una **entrega a crédito**. Cuando se entrega el coche a una empresa o a
+     * alguien de confianza saltándose el cobro —que es para lo que existe la
+     * excepción de workflow—, lo que queda vivo es el **resto del alquiler**, y
+     * el resto no se miraba nunca. La deuda desaparecía del panel justo el día
+     * en que empieza.
+     *
+     * Peor todavía con el caso normal de cobrarlo todo de una vez: ahí la señal
+     * es 0 y el filtro de la señal no entra, así que una reserva entregada sin
+     * cobrar un euro no salía por ninguna parte.
+     *
+     * ⚠️ **Lo cerrado y lo cancelado quedan fuera.** Una reserva cerrada con
+     * deuda es una decisión ya tomada —con su excepción escrita, su motivo y su
+     * autor—, no un aviso pendiente; y una cancelada no se cobra.
+     */
+    const deudaAlquiler = (r: Reservation): number => {
+      const señal = r.initialPayment?.status === 'pending'
+        ? Math.max(0, (r.initialPayment.requiredAmount || 0) - (r.initialPayment.paidAmount || 0))
+        : 0;
+      const resto = r.remainingPayment?.status === 'pending'
+        ? Math.max(0, (r.remainingPayment.requiredAmount || 0) - (r.remainingPayment.paidAmount || 0))
+        : 0;
+      return roundMoney(señal + resto);
+    };
+
     const pendingPayments: PendingPaymentCard[] = reservations
-      .filter((r) => r.initialPayment?.status === 'pending')
+      .filter((r) => r.reservationStatus !== 'closed' && r.reservationStatus !== 'cancelled')
+      .filter((r) => deudaAlquiler(r) > 0)
       .map((r) => ({
         type: 'pending_payment',
         reservation: r,
-        pendingAmount: Math.max(
-          0,
-          (r.initialPayment?.requiredAmount || 0) - (r.initialPayment?.paidAmount || 0)
-        )
+        pendingAmount: deudaAlquiler(r)
       }));
 
     // 2) Contracts awaiting signature.

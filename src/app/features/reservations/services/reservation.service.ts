@@ -56,6 +56,7 @@ import { AuthService } from '@core/auth/auth.service';
 import {
   WorkflowContext,
   canCloseReservation as assertCanClose,
+  canWithException,
   canCreateReservationForClient,
   buildWorkflowException,
   reservationStatusAfterInitialChange,
@@ -1530,11 +1531,28 @@ export class ReservationService {
     const ret = await this.inspectionService
       .getInspectionByReservationAndType(id, 'return');
 
-    const decision = assertCanClose({
+    /**
+     * ⚠️ **La excepción se HONRA aquí, y antes no.** El guard se preguntaba en
+     * crudo, así que «Saltar este paso» sobre el cierre escribía la excepción en
+     * `workflowExceptions[]` —con su motivo, su autor y su fecha— y el servicio
+     * la rechazaba igual: la reserva se quedaba atascada en `returned` **para
+     * siempre**, sin más salida que la consola de Firestore.
+     *
+     * Y no era un caso raro, era el final natural del caso que la excepción
+     * existe para cubrir: se entrega el coche a una empresa o a alguien de
+     * confianza que paga más tarde —saltándose `startPickup`, que sí honraba su
+     * excepción—, el coche vuelve, y entonces el cierre resulta imposible porque
+     * el dinero sigue sin entrar.
+     *
+     * Es exactamente el arreglo que la entrega ya tenía y que aquí se quedó sin
+     * hacer. Ahora los dos extremos del mismo camino se comportan igual.
+     */
+    const ctx = {
       reservation,
       pickupInspection: pickup || null,
       returnInspection: ret || null
-    } as WorkflowContext);
+    } as WorkflowContext;
+    const decision = canWithException(assertCanClose(ctx), ctx, 'closeReservation');
     if (!decision.ok) {
       throw new Error(decision.reason);
     }

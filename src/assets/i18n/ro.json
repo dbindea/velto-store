@@ -1649,7 +1649,7 @@
     "skipStep": "Sari peste acest pas",
     "skipStepConfirm": "Vei sări peste o verificare a fluxului:",
     "skipStepConfirmAction": "Sari peste pas",
-    "skipStepHint": "Se înregistrează cu numele tău, data și motivul. Folosește-l doar când pasul a fost îndeplinit altfel — de exemplu, un contract semnat pe hârtie.",
+    "skipStepHint": "Se înregistrează cu numele tău, data și motivul. Folosește-l când pasul a fost îndeplinit altfel —un contract semnat pe hârtie— sau când îți asumi riscul în cunoștință de cauză, de exemplu predând mașina unui client de încredere care va plăti mai târziu. Ce rămâne neîncasat rămâne datorat, iar panoul îți va aminti în continuare.",
     "startPickup": "Începe predarea",
     "startReturn": "Începe returnarea",
     "unsettledDeposit": "Garanție nerezolvată"

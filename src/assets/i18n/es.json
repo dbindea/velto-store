@@ -1649,7 +1649,7 @@
     "skipStep": "Saltar este paso",
     "skipStepConfirm": "Vas a saltarte un control del flujo:",
     "skipStepConfirmAction": "Saltar el paso",
-    "skipStepHint": "Queda registrado con tu nombre, la fecha y el motivo. Úsalo solo cuando el paso se haya cumplido por otra vía — por ejemplo, un contrato firmado en papel.",
+    "skipStepHint": "Queda registrado con tu nombre, la fecha y el motivo. Úsalo cuando el paso se haya cumplido por otra vía —un contrato firmado en papel— o cuando decidas asumir el riesgo a sabiendas, como entregar el coche a un cliente de confianza que pagará más tarde. Lo que quede sin cobrar sigue vivo y te lo seguirá recordando el panel.",
     "startPickup": "Iniciar entrega",
     "startReturn": "Iniciar devolución",
     "unsettledDeposit": "Fianza pendiente de resolver"

@@ -399,19 +399,32 @@ export function getReservationNextRequiredAction(ctx: WorkflowContext): string {
       decide: () => canGenerateSigningLink(ctx),
       action: 'workflow.generateSigningLink'
     },
+    /**
+     * ⚠️ **Los tres pasos exceptuables preguntan CON la excepción puesta.**
+     *
+     * Aquí se llamaba al guard en crudo, y eso dejaba la pantalla
+     * contradiciéndose: con la excepción de entrega registrada, la cabecera
+     * seguía rotulando «Falta cobrar el resto del alquiler» **justo encima de un
+     * botón de entrega ya encendido** —porque el botón sí pasa por
+     * `canWithException` y esto no—. Dos partes de la misma ficha contando cosas
+     * distintas es peor que cualquiera de las dos por separado: el operador no
+     * sabe cuál creer.
+     *
+     * Y arrastraba al timeline, que se alimenta de esta misma respuesta.
+     */
     {
       done: ctx.pickupInspection?.status === 'completed',
-      decide: () => canStartPickup(ctx),
+      decide: () => canWithException(canStartPickup(ctx), ctx, 'startPickup'),
       action: 'workflow.startPickup'
     },
     {
       done: ctx.returnInspection?.status === 'completed',
-      decide: () => canStartReturn(ctx),
+      decide: () => canWithException(canStartReturn(ctx), ctx, 'startReturn'),
       action: 'workflow.startReturn'
     },
     {
       done: r?.reservationStatus === 'closed',
-      decide: () => canCloseReservation(ctx),
+      decide: () => canWithException(canCloseReservation(ctx), ctx, 'closeReservation'),
       action: 'workflow.closeReservation'
     }
   ];
