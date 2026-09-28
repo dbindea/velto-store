@@ -13,8 +13,21 @@ const PROMESAS = [
   {
     icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg>`,
     titulo: 'Precio final desde el primer clic',
+    /*
+     * ⚠️ Aquí ponía «y sin cargos que aparezcan al devolver el coche», y es
+     * falso: TODOS los cargos extra de la aplicación nacen de la inspección de
+     * devolución —combustible, limpieza, kilómetros de más, daños, multas—.
+     * Lo decía además **la propia página cuatro líneas más abajo**, en la
+     * respuesta de la fianza: «salvo que haya que retener algo por daños,
+     * combustible o kilómetros de más».
+     *
+     * Lo que sí es cierto, y sigue siendo el argumento, es que el precio no
+     * crece por reservar: no hay gastos de gestión ni suplementos escondidos.
+     * Lo que se cobre al devolver es lo que se haya usado de más, y eso lo
+     * decide el cliente, no la tarifa.
+     */
     texto:
-      'Lo que ves es lo que pagas: IVA incluido y sin cargos que aparezcan al devolver el coche.',
+      'Lo que ves es lo que pagas, con IVA incluido y sin gastos de gestión. Al devolver solo se cobra lo que se haya usado de más.',
   },
   {
     icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>`,
@@ -90,9 +103,20 @@ const PREGUNTAS = [
       <div class="barras" aria-hidden="true"><span></span><span></span><span></span></div>
 
       <h1 class="hero__titular">Alquila un coche con el precio final desde el primer clic.</h1>
+      <!--
+        ⚠️ **«Seguro obligatorio», y la palabra sobra tan poco que decide un
+        pleito.** Aquí ponía «Seguro incluido», que un cliente lee como «si le
+        doy un golpe estoy cubierto» — y la cláusula 13 del contrato dice lo
+        contrario: el coche lleva la responsabilidad civil obligatoria frente a
+        terceros, y el todo riesgo «sólo será aplicable si ha sido expresamente
+        contratado y abonado por el ARRENDATARIO». Los daños al propio coche los
+        responde él, que es para lo que están la fianza y el cargo por daños.
+
+        Decisión de Dorel del 28 de septiembre de 2026: se dice lo que cubre.
+      -->
       <p class="hero__entrada">
-        Seguro incluido, kilómetros pactados por escrito y entrega a domicilio.
-        Recoges en {EMPRESA.oficinaCalle} o te lo llevamos a casa.
+        Seguro obligatorio incluido, kilómetros pactados por escrito y entrega a
+        domicilio. Recoges en {EMPRESA.oficinaCalle} o te lo llevamos a casa.
       </p>
     </div>
 

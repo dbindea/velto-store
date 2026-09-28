@@ -60,8 +60,19 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
     ? `<p class="coche__precio num"><strong>${euros(disponible.price.gross)}</strong></p>
        <p class="coche__detalle num">${disponible.totalDays} ${disponible.totalDays === 1 ? 'día' : 'días'} · todo incluido, IVA incluido</p>`
     : c.priceFrom
-      ? `<p class="coche__precio num"><strong>${euros(c.priceFrom.gross)}</strong> <span>/día</span></p>
-         <p class="coche__detalle">Todo incluido, IVA incluido</p>`
+      ? /*
+         * ⚠️ **El «desde» no es adorno: ese precio es el del tramo MÁS BARATO**,
+         * o sea el de un alquiler largo (`lowestPricePerDay` en `public/core.ts`).
+         * Sin él, la tarjeta prometía una cifra que casi ningún alquiler paga
+         * —dos días cuestan más— y el «Todo incluido» de debajo la remataba como
+         * si fuera final. La ficha del coche sí lo rotulaba bien, así que el
+         * listado y el detalle decían dos cosas distintas del mismo coche.
+         *
+         * Cuando hay fechas elegidas esto no aparece: ahí se enseña el precio
+         * de verdad del alquiler, que es exacto y no necesita «desde».
+         */
+        `<p class="coche__precio num"><span>desde</span> <strong>${euros(c.priceFrom.gross)}</strong> <span>/día</span></p>
+         <p class="coche__detalle">IVA incluido</p>`
       : `<p class="coche__precio coche__precio--consultar">Consultar precio</p>`;
 
   return `

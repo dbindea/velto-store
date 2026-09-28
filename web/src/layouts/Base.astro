@@ -370,7 +370,26 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
 
         .cab__acciones { margin-left: auto; gap: var(--sp-2); }
         .cab__acciones .btn { padding-inline: var(--sp-4); }
+
+        /*
+         * ⚠️ **Escondiendo el número, lo único que queda pulsable es el SVG de
+         * 16 px** — y eso es el botón de LLAMAR, que en este negocio es la
+         * acción principal: la portada promete «Alguien responde». El botón de
+         * tema que tiene al lado sí mide `--touch` (44 px), así que en un móvil
+         * cambiar el tema era tres veces más fácil que llamar.
+         *
+         * El número se sigue escondiendo —no cabe— pero el área no: se le da la
+         * misma caja de 44 px que a su vecino. Es la misma regla que el aspa del
+         * backoffice, donde lo que crece para el dedo es dónde se acierta y no
+         * el dibujo.
+         */
         .cab__tel span { display: none; }
+        .cab__tel {
+          display: grid;
+          place-items: center;
+          width: var(--touch);
+          height: var(--touch);
+        }
       }
 
       /* ---- Pie ---- */
