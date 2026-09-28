@@ -122,8 +122,11 @@ export interface CocheDisponible extends CocheResumen {
  * petición falló manda al visitante a otra web. Por eso cada llamada puede
  * lanzar y la página distingue los tres estados: cargando, vacío y roto.
  */
-async function pedir<T>(ruta: string): Promise<T> {
-  const r = await fetch(ruta, { headers: { Accept: 'application/json' } });
+async function pedir<T>(ruta: string, opciones?: RequestInit): Promise<T> {
+  const r = await fetch(ruta, {
+    ...opciones,
+    headers: { Accept: 'application/json', ...(opciones?.headers ?? {}) },
+  });
   if (!r.ok) {
     let clave = 'error';
     try {
@@ -187,6 +190,39 @@ export function disponibilidad(
   return pedir(
     `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}`
   );
+}
+
+export interface SolicitudEnviada {
+  reference: string;
+  /** Hasta cuándo se mantiene el precio. `null` solo en el camino del robot. */
+  priceGuaranteedUntil: string | null;
+}
+
+/**
+ * «Que me llamen»: el visitante deja su nombre y su teléfono.
+ *
+ * ⚠️ **NO manda el precio, y no es un olvido.** Lo recalcula la function con las
+ * tarifas del coche: si la cifra viajara desde aquí, cualquiera pediría un coche
+ * por un euro cambiándola en el navegador. Es la misma regla que el importe del
+ * recibo, que se lee del pago y no de la pantalla.
+ *
+ * ⚠️ **Y `trap` es el campo escondido.** Va siempre, vacío: lo rellenan los
+ * robots, no las personas.
+ */
+export function solicitar(datos: {
+  vehicleId: string;
+  from: string;
+  to: string;
+  name: string;
+  phone: string;
+  note: string;
+  trap: string;
+}): Promise<SolicitudEnviada> {
+  return pedir('/api/solicitud', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  });
 }
 
 /**

@@ -20,6 +20,10 @@ import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import { firestore } from '../admin-guard';
+// ⚠️ El `toDate()` de la web pública, que devuelve null ante una fecha ilegible
+// en vez de la de hoy. Aquí eso es lo correcto: una solicitud con la fecha rota
+// no se borra sola, se queda para que alguien la mire.
+import { toDate } from '../public/core';
 import { companyConfig } from '../company-config';
 import {
   asuntoDe,
@@ -309,8 +313,70 @@ export const sendDailyDigest = onSchedule(
       // Que falle una tarde no puede tumbar la siguiente.
       logger.error('Resumen diario: falló', { err });
     }
+
+    /**
+     * ⚠️ **La limpieza va AQUÍ y no en una function programada propia**, y es
+     * una decisión de coste: estrenar un `onSchedule` nuevo en producción
+     * activaría Cloud Scheduler allí —hoy no está: las cinco de la AEAT, que
+     * son las que lo usan, no están desplegadas— y sería un servicio más en la
+     * factura de Google. Esta ya corre a las nueve en los dos proyectos.
+     *
+     * Va **fuera del `try` del resumen**: que falle el correo no puede dejar
+     * datos personales sin borrar, ni al revés.
+     */
+    try {
+      const borradas = await limpiarSolicitudesAtendidas(new Date());
+      if (borradas) logger.info('Solicitudes atendidas borradas', { borradas });
+    } catch (err) {
+      logger.error('No se pudieron limpiar las solicitudes', { err });
+    }
   }
 );
+
+/**
+ * Borra las solicitudes de la web que el operador YA atendió.
+ *
+ * ⚠️ **Lo que sigue en `new` no se borra nunca, y esa es toda la regla.**
+ * Borrando por antigüedad a secas, una solicitud que entre un viernes a las
+ * 23:40 desaparecería el sábado a la misma hora sin dejar rastro — y no habría
+ * forma de distinguir «no escribió nadie» de «se me pasaron tres». Una
+ * solicitud sin atender es trabajo pendiente; perderla es perder un alquiler.
+ *
+ * ⚠️ **El plazo se lee de la PROPIA solicitud** (`keepHours`), congelado al
+ * crearla, no de Ajustes. Cambiar el ajuste no puede mover la caducidad de las
+ * que ya existen: es la misma regla que congela el IVA en `pricingSnapshot`.
+ */
+export async function limpiarSolicitudesAtendidas(ahora: Date): Promise<number> {
+  const db = firestore();
+  const snap = await db
+    .collection('bookingRequests')
+    .where('status', 'in', ['contacted', 'discarded', 'converted'])
+    .get();
+
+  let borradas = 0;
+  let lote = db.batch();
+  let enLote = 0;
+
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    const atendida = toDate(d['handledAt']) || toDate(d['createdAt']);
+    if (!atendida) continue;
+    const horas = Number(d['keepHours']);
+    if (!isFinite(horas) || horas <= 0) continue;
+    if (ahora.getTime() - atendida.getTime() < horas * 60 * 60 * 1000) continue;
+
+    lote.delete(doc.ref);
+    borradas++;
+    // Un `writeBatch` admite 500 operaciones.
+    if (++enLote === 400) {
+      await lote.commit();
+      lote = db.batch();
+      enLote = 0;
+    }
+  }
+  if (enLote) await lote.commit();
+  return borradas;
+}
 
 /**
  * Ver el resumen ahora, sin esperar a las ocho.

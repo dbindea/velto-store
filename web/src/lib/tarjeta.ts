@@ -75,6 +75,29 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
          <p class="coche__detalle">IVA incluido</p>`
       : `<p class="coche__precio coche__precio--consultar">Consultar precio</p>`;
 
+  /**
+   * «Que me llamen», y **solo con fechas elegidas**.
+   *
+   * ⚠️ Sin fechas no hay nada que pedir: el precio del catálogo es un «desde» y
+   * la disponibilidad no se ha mirado. Ofrecerlo ahí sería mandar al operador
+   * una solicitud sin fechas ni precio, que es justo lo que esto viene a evitar.
+   *
+   * ⚠️ **Va FUERA del `<a>` que envuelve la tarjeta**, no dentro. Un botón
+   * dentro de un enlace no es HTML válido y, peor, el clic haría las dos cosas:
+   * abrir la ficha y abrir el formulario. Es el mismo fallo que el menú «Más»
+   * del backoffice metido dentro de su propio botón.
+   */
+  const llamada = disponible
+    ? `<button type="button" class="btn btn--brand coche__llamada"
+         data-solicitar
+         data-id="${esc(c.id)}"
+         data-nombre="${esc(nombre)}"
+         data-dias="${disponible.totalDays}"
+         data-precio="${euros(disponible.price.gross)}">
+         Que me llamen
+       </button>`
+    : '';
+
   return `
     <article class="card coche">
       <a class="coche__link" href="/coche/${encodeURIComponent(c.id)}">
@@ -94,5 +117,6 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
           </span>
         </div>
       </a>
+      ${llamada}
     </article>`;
 }

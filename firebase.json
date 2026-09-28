@@ -129,6 +129,13 @@
           }
         },
         {
+          "source": "/api/solicitud",
+          "function": {
+            "functionId": "createBookingRequest",
+            "region": "europe-west1"
+          }
+        },
+        {
           "source": "/coche/**",
           "destination": "/coche.html"
         }

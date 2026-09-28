@@ -48,6 +48,70 @@ import { EMPRESA } from '../lib/empresa';
         <div id="lista" class="rejilla"></div>
       </div>
 
+      {/*
+        «Que me llamen»: el visitante no cierra nada aquí, solo deja el hilo
+        cogido. Por eso son tres campos y ninguno más — cada campo de más es
+        gente que abandona, y lo que hace falta para devolver la llamada es el
+        teléfono.
+
+        ⚠️ Va en un `<dialog>` nativo: bloquea el fondo, cierra con Escape y
+        atrapa el foco sin una línea de JavaScript. Lo mismo que el diálogo de
+        confirmación del backoffice hace a mano.
+      */}
+      <dialog id="dlg" class="dlg">
+        <form id="solicitud" class="dlg__caja" method="dialog">
+          <button type="button" class="dlg__cerrar" id="cerrar" aria-label="Cerrar">×</button>
+
+          <h2 id="dlg-titulo">Que me llamen</h2>
+          <p id="dlg-resumen" class="dlg__resumen"></p>
+
+          <label class="dlg__campo">
+            <span>Tu nombre</span>
+            <input type="text" name="name" required maxlength="80" autocomplete="name" />
+          </label>
+
+          <label class="dlg__campo">
+            <span>Teléfono</span>
+            <input type="tel" name="phone" required maxlength="24" autocomplete="tel"
+                   inputmode="tel" placeholder="612 345 678" />
+          </label>
+
+          <label class="dlg__campo">
+            <span>Algo que debamos saber <em>(opcional)</em></span>
+            <textarea name="note" rows="2" maxlength="400"
+                      placeholder="Lo necesito por la tarde…"></textarea>
+          </label>
+
+          {/*
+            ⚠️ El campo trampa. Lo esconde el CSS, no un `hidden`: un robot que
+            lee el HTML ve los dos igual, pero `hidden` también lo esconde de
+            los lectores de pantalla y aquí lo que hace falta es que ninguna
+            PERSONA lo rellene. `tabindex="-1"` lo saca del tabulador.
+          */}
+          <div class="dlg__trampa" aria-hidden="true">
+            <label>No rellenar
+              <input type="text" name="trap" tabindex="-1" autocomplete="off" />
+            </label>
+          </div>
+
+          <p id="dlg-error" class="aviso aviso--error" role="alert" hidden></p>
+
+          <button type="submit" class="btn btn--brand dlg__enviar">Enviar</button>
+
+          {/*
+            ⚠️ **Lo que de verdad pasa, antes de pulsar y no después.** El coche
+            NO se aparta: apartarlo sin pago ni identidad dejaría la flota
+            bloqueable por cualquiera. Lo que se garantiza es el precio, y eso
+            se dice aquí — después del día que llevamos quitando textos que no
+            eran ciertos, sería absurdo estrenar esto con una promesa falsa.
+          */}
+          <p class="dlg__letra">
+            Te llamamos para confirmar. El coche <strong>no queda reservado</strong>
+            hasta que hablemos; lo que te garantizamos es el precio.
+          </p>
+        </form>
+      </dialog>
+
       <p id="cargando" class="aviso" hidden>Consultando…</p>
       <p id="vacio" class="aviso" hidden>
         No queda ningún coche libre en esas fechas. Prueba con otras o
@@ -59,7 +123,7 @@ import { EMPRESA } from '../lib/empresa';
 </Base>
 
 <script>
-  import { disponibilidad } from '../lib/api';
+  import { disponibilidad, solicitar } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
 
   const form = document.getElementById('form') as HTMLFormElement;
@@ -143,6 +207,92 @@ import { EMPRESA } from '../lib/empresa';
         problema.hidden = false;
       });
   });
+
+  // --- «Que me llamen» -----------------------------------------------------
+
+  const dlg = document.getElementById('dlg') as HTMLDialogElement;
+  const solicitud = document.getElementById('solicitud') as HTMLFormElement;
+  const dlgResumen = document.getElementById('dlg-resumen')!;
+  const dlgError = document.getElementById('dlg-error')!;
+  const enviar = solicitud.querySelector('.dlg__enviar') as HTMLButtonElement;
+  let cocheElegido = '';
+
+  /**
+   * ⚠️ **Delegado en la lista, no un oyente por tarjeta.** Las tarjetas se
+   * repintan en cada búsqueda: los oyentes puestos uno a uno se quedarían
+   * colgando de nodos que ya no existen, y los de la búsqueda nueva no
+   * existirían.
+   */
+  lista.addEventListener('click', (e) => {
+    const boton = (e.target as HTMLElement).closest('[data-solicitar]') as HTMLElement | null;
+    if (!boton) return;
+    cocheElegido = boton.dataset.id || '';
+    dlgResumen.textContent =
+      `${boton.dataset.nombre} · ${boton.dataset.dias} días · ${boton.dataset.precio}`;
+    dlgError.hidden = true;
+    solicitud.reset();
+    dlg.showModal();
+  });
+
+  document.getElementById('cerrar')!.addEventListener('click', () => dlg.close());
+
+  /**
+   * ⚠️ Las claves de la function se traducen aquí, igual que las del buscador.
+   * `vehicle-unavailable` es el caso que hay que acertar: entre que se pintó la
+   * lista y se pulsó el botón, otro puede haberse llevado el coche — y decirlo
+   * es lo único honesto, porque la solicitud no se ha creado.
+   */
+  const MOTIVOS_SOLICITUD: Record<string, string> = {
+    'missing-name': 'Necesitamos tu nombre para saber a quién llamamos.',
+    'missing-phone': 'Necesitamos un teléfono para poder llamarte.',
+    'bad-phone': 'Ese teléfono no lo entendemos. Revísalo, por favor.',
+    'vehicle-unavailable': 'Ese coche acaba de ocuparse. Vuelve a buscar y elige otro.',
+    'too-many-requests': 'Ya tenemos tu solicitud. Te llamamos enseguida.',
+  };
+
+  solicitud.addEventListener('submit', (e) => {
+    e.preventDefault();
+    dlgError.hidden = true;
+    enviar.disabled = true;
+    enviar.textContent = 'Enviando…';
+
+    const datos = new FormData(solicitud);
+    solicitar({
+      vehicleId: cocheElegido,
+      from: desde.value,
+      to: hasta.value,
+      name: String(datos.get('name') || ''),
+      phone: String(datos.get('phone') || ''),
+      note: String(datos.get('note') || ''),
+      trap: String(datos.get('trap') || ''),
+    })
+      .then((r) => {
+        /**
+         * ⚠️ La referencia se enseña **grande y a solas**: es lo que el
+         * operador va a citar al llamar y lo que el visitante repetirá si
+         * escribe por WhatsApp. Si se pierde entre el resto del texto, no
+         * sirve para nada.
+         */
+        solicitud.innerHTML = `
+          <h2>Solicitud recibida</h2>
+          <p class="dlg__ref">${r.reference}</p>
+          <p class="dlg__resumen">Te llamamos al teléfono que nos has dejado.</p>
+          <p class="dlg__letra">
+            El coche <strong>no queda reservado</strong> hasta que hablemos.
+            Lo que te garantizamos es el precio.
+          </p>
+          <button type="button" class="btn btn--ink dlg__enviar" id="ok">Entendido</button>`;
+        document.getElementById('ok')!.addEventListener('click', () => dlg.close());
+      })
+      .catch((err: Error) => {
+        enviar.disabled = false;
+        enviar.textContent = 'Enviar';
+        dlgError.textContent =
+          MOTIVOS_SOLICITUD[err.message] ??
+          'No hemos podido enviarlo. Inténtalo otra vez o escríbenos por WhatsApp.';
+        dlgError.hidden = false;
+      });
+  });
 </script>
 
 <style>
@@ -196,4 +346,99 @@ import { EMPRESA } from '../lib/empresa';
   }
 
   .resumen { margin-bottom: var(--sp-6); }
+</style>
+
+<style>
+  /*
+   * ⚠️ Los tokens son los del design system —`--bg`, `--border`, `--sp-*`—,
+   * como el resto del fichero. Un `var()` sin declarar no falla: el navegador
+   * descarta la declaración entera y el diálogo saldría sin caja, sin borde y
+   * sin radio, sin que el build diga nada. Ya pasó aquí mismo con el buscador.
+   */
+  .dlg {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-width: min(440px, calc(100vw - var(--sp-8)));
+    color: var(--text);
+  }
+  .dlg::backdrop { background: rgb(0 0 0 / 0.55); }
+
+  .dlg__caja {
+    position: relative;
+    display: grid;
+    gap: var(--sp-4);
+    padding: var(--sp-6);
+    background: var(--bg);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  .dlg__caja h2 { margin: 0; font-size: var(--fs-h3); }
+
+  /* El coche, los días y el precio: lo que el visitante acaba de elegir. */
+  .dlg__resumen { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+
+  .dlg__campo { display: grid; gap: var(--sp-2); min-width: 0; }
+  .dlg__campo > span { font-size: var(--fs-small); font-weight: var(--fw-medium); }
+  .dlg__campo em { color: var(--text-3); font-style: normal; font-weight: 400; }
+
+  .dlg__campo input,
+  .dlg__campo textarea {
+    width: 100%;
+    padding: var(--sp-3);
+    font: inherit;
+    color: var(--text);
+    background: var(--bg-input);
+    border: var(--bw) solid var(--border-strong);
+    border-radius: var(--r-md);
+  }
+  .dlg__campo textarea { resize: vertical; }
+
+  /*
+   * ⚠️ El campo trampa se saca de la pantalla, no se pone `display: none`:
+   * algunos robots descartan lo que está oculto de la forma obvia.
+   */
+  .dlg__trampa {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .dlg__cerrar {
+    position: absolute;
+    top: var(--sp-2);
+    right: var(--sp-2);
+    /* 44 px, como el resto de lo que se pulsa con el dedo. */
+    width: var(--touch);
+    height: var(--touch);
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+  }
+
+  .dlg__enviar { justify-self: stretch; }
+
+  /* La referencia: lo que el operador cita al llamar. Grande y a solas. */
+  .dlg__ref {
+    margin: 0;
+    font-family: var(--font-num);
+    font-size: var(--fs-price);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-wide);
+    color: var(--brand);
+  }
+
+  .dlg__letra { margin: 0; font-size: var(--fs-caption); color: var(--text-2); }
+
+  /* El botón de la tarjeta, debajo del enlace que envuelve el resto. */
+  .coche__llamada { width: calc(100% - var(--sp-10)); margin: 0 var(--sp-5) var(--sp-5); }
 </style>

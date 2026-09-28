@@ -237,6 +237,29 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Solicitudes de la web pública: «que me llamen».
+    //
+    // La CREA la function `createBookingRequest`, que entra con el admin SDK y
+    // no pasa por aquí. Desde cliente **no se puede crear**: si se pudiera,
+    // cualquiera con la clave del bundle —que viaja en la web— llenaría la
+    // colección saltándose los topes de longitud, el campo trampa y el límite
+    // por teléfono que la function aplica.
+    //
+    // Leerlas y trabajarlas es de cualquier autorizado, no de administrador:
+    // llamar a quien ha pedido un coche es trabajo de la agencia, como la
+    // pantalla de Eventos. Lo que sí es de administrador es borrarlas, por lo
+    // mismo que en el resto: borrar es irreversible.
+    //
+    // ⚠️ El público no puede leerlas de ninguna manera. Llevan nombre y
+    // teléfono, y un identificador reenviado no puede devolver los datos de
+    // nadie — la misma razón por la que el id del recibo no es el del pago.
+    match /bookingRequests/{requestId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow create: if false;
+      allow update: if isAuthorized(request.auth.token.email);
+      allow delete: if callerIsAdmin();
+    }
+
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.
