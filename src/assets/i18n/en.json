@@ -1649,7 +1649,7 @@
     "skipStep": "Skip this step",
     "skipStepConfirm": "You are about to skip a workflow check:",
     "skipStepConfirmAction": "Skip the step",
-    "skipStepHint": "It is recorded with your name, the date and the reason. Use it only when the step was met another way — a contract signed on paper, for instance.",
+    "skipStepHint": "It is recorded with your name, the date and the reason. Use it when the step was met another way —a contract signed on paper— or when you knowingly accept the risk, such as handing the car to a trusted customer who will pay later. Anything left unpaid stays due, and the dashboard will keep reminding you.",
     "startPickup": "Start pickup",
     "startReturn": "Start return",
     "unsettledDeposit": "Deposit still pending settlement"

@@ -340,6 +340,54 @@ describe('buildWorkflowException', () => {
     };
     expect(canWithException(canStartPickup(ctx), ctx, 'startPickup').ok).toBe(false);
   });
+
+  /**
+   * ⚠️ **El final del camino de una entrega a crédito, que es donde se rompía.**
+   *
+   * El caso completo es este: se entrega el coche a alguien de confianza que
+   * pagará más tarde —excepción sobre `startPickup`, que sí se honraba—, el
+   * coche vuelve, y entonces la reserva **no se podía cerrar**: el servicio
+   * preguntaba a `canCloseReservation()` en crudo, así que la excepción de
+   * cierre se escribía en la reserva con su motivo y su autor y se ignoraba. La
+   * reserva se quedaba en `returned` para siempre, sin más salida que la consola
+   * de Firestore.
+   *
+   * No lo cazó nadie porque el test de la excepción solo cubría la entrega. Este
+   * cubre el otro extremo del mismo camino.
+   */
+  it('unblocks closing a reservation with money still owed', () => {
+    const returned = makeReservation({
+      reservationStatus: 'returned',
+      // La fianza resuelta a propósito: lo único que tiene que denegar el
+      // cierre en este test es el dinero del alquiler, no otra condición.
+      deposit: { requiredAmount: 0, waivedReason: 'Cliente conocido' }
+    } as unknown as Partial<Reservation>);
+
+    const denied: WorkflowContext = {
+      reservation: returned,
+      contract: { status: 'signed' } as unknown as Contract,
+      returnInspection: { status: 'completed' } as never,
+      // `remainingPaid` viaja explícito y derivado de `payments`: sin él el
+      // guard cae a la copia desnormalizada de la reserva, que responde `0`.
+      remainingPaid: false
+    } as WorkflowContext;
+
+    // La premisa: sin excepción el cierre se deniega. Si esto dejara de ser
+    // cierto, el test estaría comprobando otra cosa.
+    expect(canCloseReservation(denied).ok).toBe(false);
+
+    const conExcepcion: WorkflowContext = {
+      ...denied,
+      reservation: makeReservation({
+        ...returned,
+        workflowExceptions: [buildWorkflowException('closeReservation', 'Familiar, paga el viernes')]
+      } as unknown as Partial<Reservation>)
+    };
+
+    expect(
+      canWithException(canCloseReservation(conExcepcion), conExcepcion, 'closeReservation').ok
+    ).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
