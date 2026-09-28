@@ -7,7 +7,15 @@
  * a tener cuatro nombres para la misma casilla.
  */
 
-import { CocheResumen, CocheDisponible, euros, nombreCoche, cambio, categoria } from './api';
+import {
+  CocheResumen,
+  CocheDisponible,
+  euros,
+  nombreCoche,
+  cambio,
+  categoria,
+  marcadoFoto
+} from './api';
 
 /** Escapar lo que venga de la API: entra en `innerHTML`. */
 function esc(s: string): string {
@@ -35,13 +43,17 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
   const disponible = 'price' in c ? (c as CocheDisponible) : null;
 
   const foto = c.photo
-    ? // ⚠️ `width`/`height` con el dato que la API ya trae: reservan el hueco y
-      // evitan que la rejilla salte cuando llegan las fotos. La proporción la
-      // deriva el navegador de los dos atributos, aunque el CSS los recorte.
-      `<img src="${esc(c.photo.url)}" alt="${nombre}"` +
-      `${c.photo.width ? ` width="${c.photo.width}"` : ''}` +
-      `${c.photo.height ? ` height="${c.photo.height}"` : ''}` +
-      ` loading="lazy" decoding="async" />`
+    ? /*
+       * `sizes` describe el hueco REAL de la tarjeta, no el de la ventana: la
+       * rejilla es de `minmax(280px, 1fr)`, así que en móvil ocupa casi todo el
+       * ancho y en escritorio una de tres columnas de un contenedor de 1200.
+       * Sin esto el navegador supondría el ancho completo y bajaría siempre la
+       * variante más grande, con lo que el `srcset` no serviría de nada.
+       */
+      marcadoFoto(c.photo, {
+        alt: nombre,
+        sizes: '(min-width: 1000px) 380px, (min-width: 640px) 45vw, 92vw',
+      })
     : `<div class="coche__sinfoto">${ICONO.coche}<span>Foto del vehículo</span></div>`;
 
   const precio = disponible

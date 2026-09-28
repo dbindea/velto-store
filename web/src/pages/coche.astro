@@ -42,7 +42,7 @@ import { EMPRESA } from '../lib/empresa';
 </script>
 
 <script>
-  import { ficha, euros, nombreCoche, combustible, cambio, categoria } from '../lib/api';
+  import { ficha, euros, nombreCoche, combustible, cambio, categoria, marcadoFoto } from '../lib/api';
   import { SITIO } from '../lib/empresa';
 
   const contenedor = document.getElementById('ficha')!;
@@ -120,16 +120,20 @@ import { EMPRESA } from '../lib/empresa';
              * CLS de **0,742** en esta ficha, siete veces el umbral de «bueno».
              * El navegador deriva la proporción de los dos atributos aunque el
              * CSS ponga `width: 100%`, así que reserva el sitio desde el primer
-             * momento.
+             * momento. Lo pone `marcadoFoto()`.
              *
-             * Lo que lo hacía doloroso es que el dato estaba ahí: `publishVehiclePhoto`
-             * guarda el ancho y el alto de lo que recodifica, y el mapeador los
-             * publica. Solo había que escribirlos.
+             * ⚠️ Y la PRIMERA foto va con `eager`: es la que se ve al abrir, así
+             * que dejarla en `lazy` retrasa justo la que decide cómo de rápida
+             * parece la página. Las demás sí esperan a que se baje hasta ellas.
              */
             (f, i) =>
-              `<img src="${f.url}" alt="${nombre}${i ? ` (${i + 1})` : ''}"
-                    ${f.width ? `width="${f.width}"` : ''} ${f.height ? `height="${f.height}"` : ''}
-                    loading="${i ? 'lazy' : 'eager'}" decoding="async" />`
+              marcadoFoto(f, {
+                alt: `${nombre}${i ? ` (${i + 1})` : ''}`,
+                // La columna de fotos ocupa ~1,1/2,1 del contenedor en
+                // escritorio y todo el ancho en móvil.
+                sizes: '(min-width: 900px) 600px, 94vw',
+                eager: i === 0,
+              })
           )
           .join('')
       : `<div class="coche__sinfoto"><span>Foto del vehículo</span></div>`;

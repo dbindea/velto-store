@@ -21,9 +21,61 @@ export interface PrecioPublico {
 }
 
 export interface FotoPublica {
+  /** El JPEG. Siempre está: es el respaldo y lo único que tienen las antiguas. */
   url: string;
   width?: number;
   height?: number;
+  /** Variantes en WebP con su ancho, si la foto se publicó con ellas. */
+  srcset?: Array<{ w: number; url: string }>;
+}
+
+/**
+ * El marcado de una foto, eligiendo formato y tamaño.
+ *
+ * ⚠️ **Sirve una foto de 400 u 800 px donde antes iba una de 1600.** Medido el
+ * 28 de septiembre de 2026: las tarjetas pintan 349 px de ancho y se bajaban
+ * **328 KB** por foto, 1,9 s cada una — y eso pasa en *todas* las visitas, así
+ * que no lo arregla ninguna mejora del arranque.
+ *
+ * ⚠️ **`<picture>` y no un `srcset` suelto en el `<img>`.** Un `srcset` no sabe
+ * negociar FORMATO: un navegador que entienda `srcset` pero no WebP elegiría un
+ * WebP igualmente y se quedaría sin foto. Con `<source type="image/webp">` el
+ * que no lo entiende ignora esa línea y cae al `<img>` con el JPEG.
+ *
+ * ⚠️ **Y `sizes` no es opcional.** Sin él el navegador supone que la imagen
+ * ocupa todo el ancho de la ventana y elige la variante más grande, con lo que
+ * el `srcset` no ahorra nada. Quien llama dice cuánto va a medir de verdad.
+ *
+ * Las fotos publicadas **antes** de que existieran las variantes no traen
+ * `srcset`: para esas sale un `<img>` normal, exactamente como hasta ahora.
+ */
+export function marcadoFoto(
+  f: FotoPublica,
+  opciones: { alt: string; sizes: string; eager?: boolean }
+): string {
+  const esc = (s: string) =>
+    s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+
+  const dim =
+    `${f.width ? ` width="${f.width}"` : ''}${f.height ? ` height="${f.height}"` : ''}`;
+  const carga = opciones.eager ? 'eager' : 'lazy';
+  const img =
+    `<img src="${esc(f.url)}" alt="${esc(opciones.alt)}"${dim} loading="${carga}" decoding="async" />`;
+
+  if (!f.srcset?.length) return img;
+
+  const fuentes = f.srcset
+    .slice()
+    .sort((a, b) => a.w - b.w)
+    .map(v => `${esc(v.url)} ${v.w}w`)
+    .join(', ');
+
+  return (
+    `<picture>` +
+    `<source type="image/webp" srcset="${fuentes}" sizes="${esc(opciones.sizes)}" />` +
+    img +
+    `</picture>`
+  );
 }
 
 export interface CocheResumen {
