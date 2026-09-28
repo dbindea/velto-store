@@ -135,6 +135,15 @@
 
     <button type="button" class="mobile-nav-item" (click)="toggleMoreMenu()">
       <i class="pi pi-bars"></i>
+      <!--
+        ⚠️ **El punto dice que hay algo dentro.** Sin él, en un móvil el
+        contador de Solicitudes solo se ve abriendo «Más», o sea cuando ya has
+        ido a mirar — y quien pide que le llamen espera la llamada hoy. Ver
+        `hayAvisoEnMas()`.
+      -->
+      @if (hayAvisoEnMas()) {
+        <span class="nav-dot" aria-hidden="true"></span>
+      }
       <span>{{ 'layout.more' | translate }}</span>
     </button>
 
@@ -166,6 +175,10 @@
           >
             <i [class]="item.iconClass"></i>
             <span>{{ item.labelKey | translate }}</span>
+            <!-- El número sí va aquí: aquí ya se sabe de qué es. -->
+            @if (item.badge && badgeCounts()[item.badge]) {
+              <span class="nav-badge">{{ badgeCounts()[item.badge] }}</span>
+            }
           </a>
         }
       </div>

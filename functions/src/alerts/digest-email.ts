@@ -12,41 +12,11 @@
  */
 
 import type { Resumen } from './daily-digest';
-
-/** Escapa lo que romperia el HTML. Un cliente llamado «Pérez & Hijos» basta. */
-function esc(v: unknown): string {
-  return String(v ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-const GRIS = '#5b6b6f';
-const TINTA = '#14181a';
-const ROJO = '#b3261e';
-const TURQUESA = '#20a48f';
-
-function seccion(titulo: string, cuerpo: string): string {
-  if (!cuerpo) return '';
-  return (
-    `<tr><td style="padding:22px 0 6px 0;font:600 12px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;` +
-    `letter-spacing:.09em;text-transform:uppercase;color:${TURQUESA}">${esc(titulo)}</td></tr>` +
-    cuerpo
-  );
-}
-
-function fila(principal: string, secundario: string, alerta?: string): string {
-  return (
-    `<tr><td style="padding:9px 0;border-top:1px solid #e6eaea">` +
-    `<div style="font:600 15px/1.35 -apple-system,Segoe UI,Roboto,sans-serif;color:${TINTA}">${principal}</div>` +
-    `<div style="font:400 13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:${GRIS}">${secundario}</div>` +
-    (alerta
-      ? `<div style="margin-top:4px;font:700 13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:${ROJO}">${alerta}</div>`
-      : '') +
-    `</td></tr>`
-  );
-}
+/**
+ * ⚠️ La cáscara es común con el aviso de las solicitudes de la web: dos
+ * correos del mismo negocio al mismo buzón no pueden parecer de dos empresas.
+ */
+import { aviso, esc, fila, seccion, sobre } from './email-shell';
 
 export interface DigestCompany {
   brandName: string;
@@ -89,17 +59,7 @@ export function renderDigestEmail(
    * facturación parada no dan error en ninguna pantalla — el correo es el único
    * sitio donde aparecen, y detrás de tres entregas no aparecen.
    */
-  const avisos = r.avisos
-    .map(
-      (a) =>
-        `<tr><td style="padding:10px 12px;margin:0;border-radius:8px;` +
-        `background:${a.urgente ? '#fdeceb' : '#fbf3e2'};` +
-        `border-left:4px solid ${a.urgente ? ROJO : '#c98500'}">` +
-        `<div style="font:${a.urgente ? '700' : '600'} 13px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;` +
-        `color:${a.urgente ? ROJO : TINTA}">${esc(a.texto)}</div></td></tr>` +
-        `<tr><td style="height:6px"></td></tr>`
-    )
-    .join('');
+  const avisos = r.avisos.map((a) => aviso(a.texto, a.urgente)).join('');
 
   const vencimientos = r.vencimientos
     .map((v) =>
@@ -110,30 +70,34 @@ export function renderDigestEmail(
           : v.diasRestantes === 0
             ? `Vence hoy, ${esc(v.fecha)}`
             : `Vence el ${esc(v.fecha)} · en ${v.diasRestantes} día${v.diasRestantes === 1 ? '' : 's'}`,
-        v.diasRestantes < 0 ? 'VENCIDO · no alquiles este coche hasta pasarla' : undefined
+        /**
+         * ⚠️ **«No alquiles este coche» solo si es verdad.** Lo decía de
+         * cualquier vencimiento, y solo la ITV y el seguro impiden circular:
+         * un cambio de aceite vencido salía con la misma frase mientras la
+         * aplicación lo dejaba alquilar. Un aviso que el sistema no respalda se
+         * deja de creer, y arrastra a los que sí.
+         */
+        v.diasRestantes < 0
+          ? v.bloquea
+            ? 'VENCIDO · este coche no se puede alquilar hasta pasarla'
+            : 'VENCIDO · conviene hacerlo, el coche sigue alquilándose'
+          : undefined
       )
     )
     .join('');
 
-  const html =
-    `<!DOCTYPE html><html lang="es"><body style="margin:0;padding:0;background:#f4f6f6">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f6">` +
-    `<tr><td align="center" style="padding:24px 12px">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ` +
-    `style="max-width:560px;background:#fff;border-radius:12px;padding:24px">` +
-    `<tr><td style="font:700 20px/1.3 -apple-system,Segoe UI,Roboto,sans-serif;color:${TINTA}">` +
-    `Mañana, ${esc(r.fecha)}</td></tr>` +
-    `<tr><td style="padding-top:4px;font:400 13px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:${GRIS}">` +
-    `${esc(company.brandName)} · lo que hay que preparar</td></tr>` +
-    (avisos ? `<tr><td style="height:16px"></td></tr>${avisos}` : '') +
-    seccion('Entregas', entregas) +
-    seccion('Devoluciones', devoluciones) +
-    seccion('Vence en la flota', vencimientos) +
-    `<tr><td style="padding-top:24px;border-top:1px solid #e6eaea;` +
-    `font:400 11px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:${GRIS}">` +
-    `Este resumen sale cada mañana con lo del día siguiente. ` +
-    `Si no hay nada que preparar, no se envía.</td></tr>` +
-    `</table></td></tr></table></body></html>`;
+  const html = sobre({
+    titulo: `Mañana, ${r.fecha}`,
+    entradilla: `${company.brandName} · lo que hay que preparar`,
+    cuerpo:
+      (avisos ? `<tr><td style="height:16px"></td></tr>${avisos}` : '') +
+      seccion('Entregas', entregas) +
+      seccion('Devoluciones', devoluciones) +
+      seccion('Vence en la flota', vencimientos),
+    pie:
+      'Este resumen sale cada mañana con lo del día siguiente. ' +
+      'Si no hay nada que preparar, no se envía.'
+  });
 
   // ⚠️ La versión de texto no es un adorno: hay clientes que solo muestran esa,
   // y un correo cuyo texto plano está vacío acaba en spam.

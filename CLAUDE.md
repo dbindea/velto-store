@@ -2040,15 +2040,57 @@ cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
 necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
 conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
+### Los correos comparten cáscara, y su maquetación está FUERA del envío
+
+`functions/src/alerts/email-shell.ts` es la única autoridad sobre cómo se ve un
+correo de la casa: el sobre, el rótulo de sección, la fila, la caja de aviso y
+el botón. Lo usan el **resumen diario** (`digest-email.ts`) y el **aviso de una
+solicitud de la web** (`public/booking-request-email.ts`).
+
+⚠️ **Existe para que no diverjan.** Son dos correos del mismo negocio y llegan
+al mismo buzón: con cada uno maquetado por su cuenta —y así estaban—, el segundo
+que alguien toque acaba con otro gris, otro interlineado y otro ancho, y la
+cuenta parece de dos empresas. Es la misma razón por la que la marca de los PDF
+vive en un solo `brand.ts`.
+
+⚠️ **La maquetación va SEPARADA del envío, y eso es lo que deja mirarla.** El
+aviso de la solicitud se construía dentro de la función que llama a Resend, así
+que no había forma de verlo sin mandarlo — y el patrón de fallo que más se
+repite aquí es el código que se escribe y nunca se ejecuta. `renderDigestEmail()`
+ya lo hacía bien; `renderBookingRequestEmail()` sigue la misma forma. Se miran
+volcándolos a un `.html` y abriéndolos en el navegador a 390 px.
+
+⚠️ **Un correo sin versión de texto plano puntúa como spam**, y el de las
+solicitudes iba sin ella — justo el que no se puede perder. Hay clientes de
+correo que solo enseñan esa.
+
+⚠️ **Y los estilos van EN LÍNEA**, repitiendo la familia en cada elemento:
+Gmail borra el `<style>` del `<head>` en la vista móvil, y Outlook no hereda
+`font-family` dentro de una tabla —estos correos son casi todo tabla—, así que
+lo que no la lleve encima sale en Times New Roman.
+
+⚠️ **Al tocar la cáscara, la comprobación es un DIFF del render.** El resumen
+diario salió byte a byte idéntico al extraerla (4214 bytes de HTML y 519 de
+texto, con una muestra que pasa por todas las ramas), que es lo que permitió dar
+el cambio por bueno sin mandar un correo. Misma idea que el manifiesto de
+descubrimiento con las functions.
+
+⚠️ **«No alquiles este coche» solo si es verdad.** El resumen lo decía de
+**cualquier** vencimiento, y solo la ITV y el seguro impiden circular
+(`BLOCKING_MAINTENANCE_TYPES`): un cambio de aceite vencido salía con esa frase
+mientras el asistente ofrecía el coche sin rechistar. Por eso
+`VencimientoVehiculo` lleva `bloquea`, copia fiel de aquella lista. Un aviso que
+el sistema no respalda se deja de creer, y arrastra consigo a los que sí.
+
 ⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 28 de
 septiembre de 2026 con `firebase functions:list`, comparando los nombres contra
 los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| el código define | **34** | — |
-| desarrollo | **34** | — |
-| producción | **29** | las cinco de la AEAT |
+| el código define | **35** | — |
+| desarrollo | **35** | — |
+| producción | **29** | las cinco de la AEAT, y `createBookingRequest` |
 
 ⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
 ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
@@ -2090,7 +2132,7 @@ explícito. La misma frase estaba repetida en
 ### El arranque en frío lo paga la function más ligera
 
 ⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
-`index.ts` reexporta las 34 functions. Así que la cadena de imports de la más
+`index.ts` reexporta las 35 functions. Así que la cadena de imports de la más
 pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
 pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
 certificado de la AEAT **antes de devolver una lista de coches**.
@@ -2150,7 +2192,7 @@ en cuanto haya un `onCall` o un `onRequest`.
    especificador mal escrito ya no falla al arrancar — falla la primera vez que
    alguien genera un PDF. Es la lección de `sharp`.
 3. **El manifiesto tiene que salir idéntico.** Es la comprobación que convierte
-   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 34
+   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 35
    functions con sus triggers, regiones y secrets, así que si no cambia, no
    cambia nada de lo que se despliega.
 
@@ -3567,6 +3609,22 @@ porque su geometría no es esa.
 Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
 sin que se notara porque solo aparece cuando falta la declaración.
 
+⚠️ **Y con `.badge` van CINCO.** Quince pantallas declaran su propia chapa de
+estado repitiendo a mano el relleno, el radio y el tamaño de letra —con **cuatro
+radios distintos** entre ellas—, así que la dieciséis se escribió declarando
+solo los colores: la pantalla de Solicitudes tenía los cuatro estados con su
+color bien puesto y la chapa salía con `padding: 0`, `border-radius: 0` y
+`display: block`, o sea una franja de color detrás del texto. Desde el 28 de
+septiembre de 2026 la **forma** es global; el **color** no, porque depende del
+enumerado de cada módulo — y una chapa sin color se ve, lo que no se ve es una
+sin forma.
+
+⚠️ **Esto no lo caza `css:audit`**, y por eso se repite: la clase *está*
+declarada, y lo que falta es lo que esa declaración pone dentro. Es la variante
+hermana de la que ya está documentada —la clase declarada bajo un antepasado que
+no la envuelve—. Lo que vale es `getComputedStyle()` en la pantalla de verdad.
+Comprobado que las quince siguen mandando sobre lo suyo: la chapa de Facturas
+mide `999px` y 12 px después del cambio, igual que antes.
 
 ### `npm run spacing:audit` — la escala de espaciado
 
@@ -4107,6 +4165,32 @@ Los neutrales son **grises fríos con tinte teal** (`--gray-950` … `--gray-50`
 bloques de tema las mapeen a los nombres semánticos. Un componente que pinte con
 `--gray-700` se salta el tema y no cambiará al alternar claro y oscuro.
 
+⚠️ **Con UNA excepción, y es al revés de lo que parece: sobre una superficie de
+marca hay que usar la rampa.** `--velto-black` no es un token de tema —es negro
+en los cuatro—, así que el texto que se apoya en él tampoco puede cambiar: un
+`--text-2` encima se volvería texto oscuro sobre negro en el tema claro. En la
+web pública son el héroe y el pie, y sus trece usos directos de rampa están
+**bien**. La pregunta no es «¿usa una rampa?» sino «¿cambia su fondo con el
+tema?».
+
+### La web pública contra el kit: contrastado el 28 de septiembre de 2026
+
+Los **132** tokens del kit están los 132 en `web/src/styles/global.css`. De 24
+diferencias aparentes, **23 son de formato** —el kit está minificado (`.875rem`,
+`cubic-bezier(.4,0,.2,1)`) y la web formateada (`0.875rem`)—: mismo valor.
+
+⚠️ **La única diferencia real es `--font-sans`, y la web tiene razón.** El kit lo
+declara `"gotham","montserrat",…`, con Gotham **de cuerpo**; la web lo deja en
+Montserrat y pone Gotham en `--font-display`, que es donde va. Si algún día se
+regenera el kit, esta es la línea que no se copia tal cual.
+
+Medido en el navegador alternando el tema, que es lo que lo prueba:
+
+| | claro | oscuro | |
+|---|---|---|---|
+| héroe y pie | 13,44:1 sobre negro | 13,44:1 sobre negro | no cambian, y es correcto |
+| cuerpo | negro sobre blanco | blanco sobre negro | cambia, y es correcto |
+
 ⚠️ **'Inter' no existe en este proyecto.** Se pedía como fuente de cuerpo en tres sitios
 sin cargarla en ninguno —ni `@font-face` ni Google Fonts—, así que el cuerpo llevaba años
 componiéndose en la fuente del sistema mientras el CSS decía otra cosa. El cuerpo es la
@@ -4192,10 +4276,10 @@ restaurar ni desplegar. Está anotado como la primera acción pendiente del sobr
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
 ⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
-el código define **34**: las cinco que faltan hablan con la AEAT y no están allí
+el código define **35**: las cinco que faltan hablan con la AEAT y no están allí
 hasta el 1 de enero. Un despliegue completo las subiría.
 
-⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 34 functions, un
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 35 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
 medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
 cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.

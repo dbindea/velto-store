@@ -88,6 +88,30 @@ export function telLink(r: BookingRequest): string {
 }
 
 /**
+ * El teléfono como se lee, no como se guarda.
+ *
+ * ⚠️ **Guardado va sin espacios a propósito** —es lo que `wa.me` y `tel:`
+ * necesitan—, y así son doce dígitos seguidos: nadie los lee de un vistazo y
+ * quien los copie a mano se equivoca. Por eso la pantalla y el correo lo
+ * separan, y el enlace sigue llevando el número crudo.
+ *
+ * ⚠️ **Solo se agrupa lo español.** Cada país agrupa a su manera, y un número
+ * extranjero partido con la regla de aquí se lee como si estuviera mal. Lo que
+ * no se sabe, se deja entero.
+ *
+ * ⚠️ **Copia FIEL de `functions/src/public/booking-request-core.ts`**, como
+ * `capitalizeWords`: la app y las functions no pueden compartir módulo. Si
+ * cambia allí, cambia aquí.
+ */
+export function formatPhone(phone: string): string {
+  if (/^34[6789]\d{8}$/.test(phone)) {
+    const n = phone.slice(2);
+    return `+34 ${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}`;
+  }
+  return `+${phone}`;
+}
+
+/**
  * Cuántas están sin atender.
  *
  * Es el número del contador del menú y el de la tarjeta del panel: lo que hace

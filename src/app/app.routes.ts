@@ -236,6 +236,23 @@ export const routes: Routes = [
           )
       },
       {
+        /**
+         * ⚠️ **Es la dirección que lleva el correo de aviso, y sin esta ruta
+         * caía en el catch-all y acababa en el panel.** Un botón que dice «Abrir
+         * la solicitud» y deja al operador en otra pantalla, sin decir por qué,
+         * es el mismo fallo silencioso que tuvo el rewrite `/d/**`.
+         *
+         * No es un componente aparte: es la misma lista, abierta por esa ficha.
+         * Una solicitud son cuatro datos y cuatro acciones — una pantalla propia
+         * para eso obligaría a volver atrás para ver si hay más.
+         */
+        path: 'booking-requests/:id',
+        loadComponent: () =>
+          import('./features/booking-requests/booking-requests.component').then(
+            m => m.BookingRequestsComponent
+          )
+      },
+      {
         path: 'collaborators',
         // Comerciales y sus comisiones: es lo que la empresa PAGA, así que
         // mismo criterio que Gastos e Informes — información de dueño. El

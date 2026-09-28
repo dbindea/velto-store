@@ -129,6 +129,20 @@ export interface VencimientoVehiculo {
   fecha: string;
   /** Negativo si ya venció. */
   diasRestantes: number;
+  /**
+   * ¿Este concepto **impide circular**, o solo conviene hacerlo?
+   *
+   * ⚠️ **Solo la ITV y el seguro impiden**, y esa raya ya está tomada en la
+   * aplicación (`BLOCKING_MAINTENANCE_TYPES`): sin ellos el coche no puede
+   * estar en la vía pública. Un cambio de aceite vencido avisa y el coche
+   * circula.
+   *
+   * Está aquí porque el correo lo **afirmaba de todos**: un aceite vencido
+   * decía «no alquiles este coche hasta pasarla» mientras la aplicación lo
+   * dejaba alquilar sin rechistar. Un aviso que el sistema no respalda se deja
+   * de creer, y con él se dejan de creer los que sí.
+   */
+  bloquea: boolean;
 }
 
 export interface Resumen {

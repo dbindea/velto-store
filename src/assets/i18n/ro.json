@@ -334,7 +334,14 @@
     "viewAll": "Vezi toate",
     "viewContract": "Vezi contractul",
     "viewReservation": "Vezi rezervarea",
-    "viewVehicle": "Vezi vehiculul"
+    "viewVehicle": "Vezi vehiculul",
+    "bookingRequests": {
+      "label": "Apeluri de făcut",
+      "oneSingular": "cerere neprocesată",
+      "onePlural": "cereri neprocesate",
+      "priceExpired": "preț expirat",
+      "hint": "Au cerut să fie sunați de pe site"
+    }
   },
   "expenses": {
     "category": {

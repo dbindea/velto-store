@@ -218,7 +218,14 @@ export async function construirResumen(
         month: '2-digit',
         year: 'numeric'
       }).format(cuando),
-      diasRestantes: Math.round((cuando.getTime() - ahora.getTime()) / 86_400_000)
+      diasRestantes: Math.round((cuando.getTime() - ahora.getTime()) / 86_400_000),
+      /**
+       * ⚠️ **Copia FIEL de `BLOCKING_MAINTENANCE_TYPES`** (la app,
+       * `vehicle-availability.util.ts`), que es quien de verdad impide alquilar.
+       * Si allí se añade un concepto, aquí también — o el correo volverá a
+       * decir lo contrario que la aplicación.
+       */
+      bloquea: m['type'] === 'itv' || m['type'] === 'insurance'
     });
   }
   vencimientos.sort((a, b) => a.diasRestantes - b.diasRestantes);

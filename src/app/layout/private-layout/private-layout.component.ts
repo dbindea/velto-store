@@ -229,6 +229,25 @@ export class PrivateLayoutComponent {
     this.visibleMenuItems().filter((item) => !item.showInMobile)
   );
 
+  /**
+   * ¿Hay algo con contador **escondido dentro de «Más»**?
+   *
+   * ⚠️ **Sin esto, en un móvil un aviso no existe.** Solicitudes no cabe en la
+   * barra de abajo —son seis huecos y hay quince entradas—, así que su contador
+   * vivía donde solo se ve abriendo el menú: o sea, se ve cuando ya has ido a
+   * mirar. Justo lo contrario de para lo que está un contador.
+   *
+   * ⚠️ **Es un punto y no un número**, y la diferencia importa el día que haya
+   * un segundo contador: sumar dos cosas distintas —solicitudes y lo que
+   * venga— da una cifra que no significa nada. El punto dice «hay algo aquí
+   * dentro», que es todo lo que un botón de menú puede decir con honradez; el
+   * número está dentro, en su entrada.
+   */
+  readonly hayAvisoEnMas = computed(() => {
+    const cuentas = this.badgeCounts();
+    return this.remainingMenuItems().some((item) => !!item.badge && cuentas[item.badge] > 0);
+  });
+
   moreMenuOpen = signal(false);
   searchOpen = signal(false);
 

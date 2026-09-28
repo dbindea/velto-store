@@ -46,6 +46,8 @@ import {
   MAINTENANCE_DUE_SOON_DAYS,
   VehicleMaintenance
 } from '@shared/models/vehicle-maintenance.model';
+import type { BookingRequest } from '@shared/models/booking-request.model';
+import { priceStillGuaranteed, sortRequests } from '@shared/utils/booking-request.util';
 
 interface PendingPaymentCard {
   type: 'pending_payment';
@@ -88,6 +90,23 @@ interface FleetCard {
   total: number;
 }
 
+/**
+ * Las solicitudes de la web que nadie ha atendido.
+ *
+ * ⚠️ **Una sola tarjeta con la lista dentro, no una por solicitud.** Son la
+ * misma tarea —llamar— y cinco tarjetas iguales empujarían fuera de la primera
+ * pantalla las entregas del día. Es el mismo criterio que el mantenimiento
+ * vencido.
+ *
+ * ⚠️ **Y va la PRIMERA de todas.** Detrás hay una persona esperando una llamada
+ * y un precio que caduca; todo lo demás del panel es trabajo que sigue ahí
+ * mañana. Es lo único de esta pantalla que se enfría solo.
+ */
+interface BookingRequestsCard {
+  type: 'booking_requests';
+  items: BookingRequest[];
+}
+
 interface MaintenanceOverdueCard {
   type: 'maintenance_overdue';
   items: VehicleMaintenance[];
@@ -99,6 +118,7 @@ interface MaintenanceDueSoonCard {
 }
 
 type DashboardCard =
+  | BookingRequestsCard
   | PendingPaymentCard
   | ContractCard
   | CalendarCard
@@ -217,11 +237,38 @@ export class DashboardComponent implements OnInit {
         this.partialFailure = true;
       }
 
+      /**
+       * Las solicitudes de la web, con su fallo contenido igual que el
+       * mantenimiento: si esta colección no se puede leer, el panel sigue
+       * enseñando el día entero en vez de quedarse en blanco.
+       *
+       * ⚠️ **Se lee una vez, como todo lo demás de esta pantalla**, y la
+       * pantalla de Solicitudes sí escucha. Es deliberado: quien avisa de una
+       * que entra mientras el panel está abierto es el **contador del menú**,
+       * que va con una suscripción viva y se ve desde aquí —en la barra lateral
+       * y en la de abajo del móvil—. Meter un oyente en una pantalla que se
+       * construye de una vez obligaría a rehacer sus tarjetas por fuera del
+       * único sitio que hoy las construye.
+       */
+      let bookingRequests: BookingRequest[] = [];
+      try {
+        const solicitudesSnap = await getDocs(
+          query(collection(this.firestore, 'bookingRequests'), where('status', '==', 'new'))
+        );
+        bookingRequests = solicitudesSnap.docs.map(
+          (d) => ({ id: d.id, ...d.data() }) as BookingRequest
+        );
+      } catch (error) {
+        console.error('Dashboard: no se pudieron cargar las solicitudes', error);
+        this.partialFailure = true;
+      }
+
       this.cards = this.buildCards(
         reservations,
         pendingContracts,
         vehicles,
         maintenanceItems,
+        bookingRequests,
         todayStart,
         todayEnd
       );
@@ -239,10 +286,23 @@ export class DashboardComponent implements OnInit {
     pendingContracts: Contract[],
     vehicles: Vehicle[],
     maintenanceItems: VehicleMaintenance[],
+    bookingRequests: BookingRequest[],
     todayStart: Date,
     todayEnd: Date
   ): DashboardCard[] {
     const cards: DashboardCard[] = [];
+
+    /**
+     * 0) Las solicitudes de la web sin atender. **Antes que nada**: ver arriba.
+     *
+     * ⚠️ **Se ordenan con `sortRequests()`**, la misma del listado, y no por
+     * fecha a secas: el operador que ve aquí a «Andreea» arriba tiene que
+     * encontrarla arriba también al entrar. Dos órdenes distintos para la misma
+     * lista es cómo se deja de confiar en las dos.
+     */
+    if (bookingRequests.length) {
+      cards.push({ type: 'booking_requests', items: sortRequests(bookingRequests) });
+    }
 
     /**
      * 1) Reservas con la señal sin cobrar.
@@ -483,6 +543,28 @@ export class DashboardComponent implements OnInit {
    */
   openMaintenanceEvents(dias: number): void {
     void this.router.navigate(['/events'], { queryParams: { horizon: dias } });
+  }
+
+  /** La lista entera de solicitudes. */
+  openBookingRequests(): void {
+    void this.router.navigate(['/booking-requests']);
+  }
+
+  /** Una solicitud concreta, abierta por su ficha. */
+  openBookingRequest(id?: string): void {
+    if (!id) return;
+    void this.router.navigate(['/booking-requests', id]);
+  }
+
+  /**
+   * ¿Al precio que se le prometió le queda cuerda?
+   *
+   * ⚠️ **Es un dato, no una alarma**: caducar el precio no caduca la solicitud,
+   * y la llamada sigue mereciendo la pena. Lo único que ha dejado de sostenerse
+   * es la cifra. Lo decide `priceStillGuaranteed()`, la misma que el listado.
+   */
+  bookingPriceExpired(r: BookingRequest): boolean {
+    return !priceStillGuaranteed(r);
   }
 
   /**

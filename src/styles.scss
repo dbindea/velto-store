@@ -815,6 +815,39 @@ input[type='radio'] {
   color: var(--warning-color);
 }
 
+/* ---------------------------------------------------------------------------
+ * La FORMA de una chapa de estado, global.
+ *
+ * ⚠️ **Es la quinta vez que pasa lo mismo**, después de `.form-control`,
+ * `.btn-*`, `.checkbox-item` y `.page-header`: quince pantallas declaran su
+ * propia `.badge` con el relleno, el radio y el tamaño de letra repetidos a
+ * mano —con **cuatro radios distintos** entre ellas—, y la número dieciséis se
+ * escribe declarando solo los colores. Eso fue exactamente la pantalla de
+ * Solicitudes: los cuatro estados llegaban con su color bien puesto y la chapa
+ * salía con `padding: 0`, `border-radius: 0` y `display: block`, o sea una
+ * franja de color detrás del texto en vez de una pastilla.
+ *
+ * ⚠️ **Y no lo caza `css:audit`**, porque la clase *está* declarada: lo que
+ * falta es lo que esa declaración pone dentro. Solo se ve mirando la pantalla,
+ * que es donde lo vio Dorel las cuatro veces anteriores.
+ *
+ * ⚠️ **No pisa a quien ya la declara.** La regla del componente mide (0,2,0)
+ * con la encapsulación y esta (0,1,0), así que las quince siguen mandando sobre
+ * lo suyo y nada cambia de aspecto. Lo que cambia es que una pantalla nueva ya
+ * no sale desnuda.
+ *
+ * El color NO va aquí a propósito: depende del enumerado de cada módulo, y una
+ * chapa sin color se ve —lo que no se ve es una sin forma.
+ * ------------------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .field-hint.error,
 .section-hint.error {
   color: var(--error-color);

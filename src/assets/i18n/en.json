@@ -334,7 +334,14 @@
     "viewAll": "View all",
     "viewContract": "View contract",
     "viewReservation": "View reservation",
-    "viewVehicle": "View vehicle"
+    "viewVehicle": "View vehicle",
+    "bookingRequests": {
+      "label": "Calls to make",
+      "oneSingular": "request not handled yet",
+      "onePlural": "requests not handled yet",
+      "priceExpired": "price expired",
+      "hint": "They asked to be called back from the website"
+    }
   },
   "expenses": {
     "category": {

@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_NAME,
   MAX_NOTE,
+  formatPhone,
   generateReference,
   looksAutomated,
   normalizePhone,
@@ -194,5 +195,29 @@ describe('el nombre se capitaliza', () => {
     // Comprobado contra la copia de la app: las dos dan lo mismo en los doce
     // casos que se probaron, este incluido.
     expect(nombreDe("sean o'brien")).toBe("Sean O'Brien");
+  });
+});
+
+describe('formatPhone', () => {
+  it('separa el español en tres grupos, que es como se dicta', () => {
+    expect(formatPhone('34600111222')).toBe('+34 600 111 222');
+  });
+
+  it('también un fijo, que empieza por 9', () => {
+    expect(formatPhone('34911234567')).toBe('+34 911 234 567');
+  });
+
+  it('LO EXTRANJERO SE DEJA ENTERO', () => {
+    // Partirlo con la regla española haría que un número correcto se leyera
+    // como si estuviera mal escrito. Cada país agrupa a su manera.
+    expect(formatPhone('40721234567')).toBe('+40721234567');
+    expect(formatPhone('447700900123')).toBe('+447700900123');
+  });
+
+  it('DESHACE lo que hizo normalizePhone, que es para lo que está', () => {
+    // La ida y la vuelta tienen que cuadrar, o el correo enseñaría un número
+    // distinto del que marca el enlace.
+    expect(formatPhone(normalizePhone('600 111 222')!)).toBe('+34 600 111 222');
+    expect(formatPhone(normalizePhone('+34 600 111 222')!)).toBe('+34 600 111 222');
   });
 });

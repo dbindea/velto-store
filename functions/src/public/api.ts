@@ -45,6 +45,13 @@ import type { PublicAvailableVehicle } from './types';
 import { defineSecret } from 'firebase-functions/params';
 import { companyConfig } from '../company-config';
 import { publicBaseUrl } from '../public-url';
+/**
+ * ⚠️ **Estático y no perezoso a propósito.** La regla del arranque en frío es
+ * apartar lo que pesa, y esto son cinco funciones que devuelven cadenas, sin una
+ * sola dependencia: un módulo de 432, frente a los cientos que costaría un
+ * `pdf-lib`. Cargarlo perezosamente solo complicaría el único sitio que lo usa.
+ */
+import { renderBookingRequestEmail, type BookingRequestEmailData } from './booking-request-email';
 import {
   generateReference,
   looksAutomated,
@@ -499,6 +506,8 @@ export const createBookingRequest = onRequest(
  * aplicación para saber si merece la pena es un aviso que se mira más tarde, y
  * más tarde el cliente ya ha llamado a otro.
  *
+ * ⚠️ **Aquí solo se manda; cómo se ve está en `booking-request-email.ts`.**
+ *
  * ⚠️ **Y NO es un WhatsApp, aunque sería lo natural.** Mandarlo exigiría la
  * WhatsApp Business Cloud API: un número dedicado que no puede ser el del móvil
  * de la agencia, verificación de empresa con Meta, plantilla aprobada y pago por
@@ -507,7 +516,7 @@ export const createBookingRequest = onRequest(
  * el WhatsApp va en el otro sentido, desde la ficha del panel con un enlace
  * `wa.me`, que no cuesta nada y sale del número de siempre.
  */
-async function avisarSolicitud(id: string, s: Record<string, any>): Promise<void> {
+async function avisarSolicitud(id: string, s: BookingRequestEmailData): Promise<void> {
   const apiKey = RESEND_API_KEY.value();
   if (!apiKey) {
     logger.warn('Solicitud sin avisar: RESEND_API_KEY no está configurada', { id });
@@ -516,30 +525,10 @@ async function avisarSolicitud(id: string, s: Record<string, any>): Promise<void
 
   const empresa = companyConfig();
   const base = publicBaseUrl();
-  const enlace = base ? `${base}/booking-requests/${id}` : '';
-  const dia = (d: Date) =>
-    `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-  const euros = (n: number) =>
-    new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n);
-
-  const coche = `${s['vehicleSnapshot'].brand} ${s['vehicleSnapshot'].model}`.trim();
-  const fechas = `${dia(s['pickupDate'])} al ${dia(s['returnDate'])}`;
-  const asunto = `Solicitud ${s['reference']} · ${coche} · ${fechas}`;
-
-  const cuerpo = [
-    `<p style="margin:0 0 16px"><strong>${s['name']}</strong> quiere ${coche}.</p>`,
-    '<table style="border-collapse:collapse;font-size:15px">',
-    `<tr><td style="padding:2px 12px 2px 0;color:#667">Fechas</td><td>${fechas} · ${s['quoteSnapshot'].totalDays} días</td></tr>`,
-    `<tr><td style="padding:2px 12px 2px 0;color:#667">Precio</td><td><strong>${euros(s['quoteSnapshot'].gross)}</strong>, IVA incluido</td></tr>`,
-    `<tr><td style="padding:2px 12px 2px 0;color:#667">Teléfono</td><td><a href="tel:+${s['phone']}">+${s['phone']}</a></td></tr>`,
-    `<tr><td style="padding:2px 12px 2px 0;color:#667">Referencia</td><td>${s['reference']}</td></tr>`,
-    '</table>',
-    s['note'] ? `<p style="margin:16px 0 0;color:#445">«${s['note']}»</p>` : '',
-    enlace
-      ? `<p style="margin:24px 0 0"><a href="${enlace}" style="background:#20A48F;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none">Abrir en el panel</a></p>`
-      : '',
-    `<p style="margin:24px 0 0;color:#889;font-size:13px">El coche NO está reservado: solo se le ha garantizado el precio.</p>`
-  ].join('');
+  const { subject, html, text } = renderBookingRequestEmail(s, {
+    brandName: empresa.brandName,
+    enlace: base ? `${base}/booking-requests/${id}` : ''
+  });
 
   const r = await fetch(RESEND_API_URL, {
     method: 'POST',
@@ -547,8 +536,9 @@ async function avisarSolicitud(id: string, s: Record<string, any>): Promise<void
     body: JSON.stringify({
       from: `${empresa.brandName} <${empresa.email}>`,
       to: [empresa.email],
-      subject: asunto,
-      html: cuerpo
+      subject,
+      html,
+      text
     })
   });
   if (!r.ok) {

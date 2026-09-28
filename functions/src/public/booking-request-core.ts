@@ -95,6 +95,29 @@ export function normalizePhone(raw: string): string | null {
   return limpio;
 }
 
+/**
+ * El teléfono como se lee, no como se guarda: lo inverso de `normalizePhone()`,
+ * y por eso vive a su lado.
+ *
+ * ⚠️ **Guardado va sin espacios a propósito** —es lo que `wa.me` y `tel:`
+ * necesitan—, y así son doce dígitos seguidos: nadie los lee de un vistazo y
+ * quien los copie a mano se equivoca.
+ *
+ * ⚠️ **Solo se agrupa lo español.** Cada país agrupa a su manera, y un número
+ * extranjero partido con la regla de aquí se lee como si estuviera mal. Lo que
+ * no se sabe, se deja entero.
+ *
+ * ⚠️ **Copia FIEL de `src/app/shared/utils/booking-request.util.ts`**, igual
+ * que `capitalizeWords`. Si cambia allí, cambia aquí.
+ */
+export function formatPhone(phone: string): string {
+  if (/^34[6789]\d{8}$/.test(phone)) {
+    const n = phone.slice(2);
+    return `+34 ${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}`;
+  }
+  return `+${phone}`;
+}
+
 /** Colapsa espacios y recorta. Lo que el operador va a leer en una tarjeta. */
 function limpiarTexto(raw: string, max: number): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, max);

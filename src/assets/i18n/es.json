@@ -334,7 +334,14 @@
     "viewAll": "Ver todos",
     "viewContract": "Ver contrato",
     "viewReservation": "Ver reserva",
-    "viewVehicle": "Ver vehículo"
+    "viewVehicle": "Ver vehículo",
+    "bookingRequests": {
+      "label": "Llamadas pendientes",
+      "oneSingular": "solicitud sin atender",
+      "onePlural": "solicitudes sin atender",
+      "priceExpired": "precio caducado",
+      "hint": "Han pedido que se les llame desde la web"
+    }
   },
   "expenses": {
     "category": {

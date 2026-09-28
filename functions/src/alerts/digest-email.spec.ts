@@ -68,31 +68,41 @@ describe('el correo del resumen', () => {
    * caducada el coche no puede circular, así que no puede leerse como un
    * recordatorio más.
    *
-   * ⚠️ **Y la frase va en imperativo, no en indicativo.** Decía «el coche no se
-   * puede alquilar», que sugiere que la aplicación lo impide — y no lo impedía:
-   * el asistente ofrecía el coche sin decir nada. Desde el 11 de septiembre de
-   * 2026 avisa (`reservations.availability.maintenanceOverdue`) y **sigue sin
-   * bloquear**, así que lo honesto es decirle al operador qué hacer, no lo que
-   * el sistema hace por él.
+   * ⚠️ **La frase iba en imperativo porque el sistema no bloqueaba.** Desde el
+   * 21 de septiembre de 2026 la ITV y el seguro **sí bloquean**, así que el
+   * correo puede decir lo que de verdad pasa: el coche no se alquila. Lo que no
+   * puede es decirlo de todo — ver el test de abajo.
    */
   it('distingue lo vencido de lo que falta por vencer', () => {
     const vencido = renderDigestEmail(
       {
         ...base,
         vencimientos: [
-          { vehiculo: '0951LTL', concepto: 'ITV', fecha: '01/09/2026', diasRestantes: -9 }
+          {
+            vehiculo: '0951LTL',
+            concepto: 'ITV',
+            fecha: '01/09/2026',
+            diasRestantes: -9,
+            bloquea: true
+          }
         ]
       },
       EMPRESA
     );
     expect(vencido.html).toContain('VENCIDO');
-    expect(vencido.html).toContain('no alquiles este coche');
+    expect(vencido.html).toContain('no se puede alquilar');
 
     const porVencer = renderDigestEmail(
       {
         ...base,
         vencimientos: [
-          { vehiculo: '0951LTL', concepto: 'ITV', fecha: '17/09/2026', diasRestantes: 7 }
+          {
+            vehiculo: '0951LTL',
+            concepto: 'ITV',
+            fecha: '17/09/2026',
+            diasRestantes: 7,
+            bloquea: true
+          }
         ]
       },
       EMPRESA
@@ -101,11 +111,51 @@ describe('el correo del resumen', () => {
     expect(porVencer.html).toContain('en 7 días');
   });
 
+  /**
+   * ⚠️ **Lo que este test protege es que el correo no prometa lo que la
+   * aplicación no hace.** Decía «no alquiles este coche hasta pasarla» de
+   * **cualquier** vencimiento, y solo la ITV y el seguro impiden circular
+   * (`BLOCKING_MAINTENANCE_TYPES`): un cambio de aceite vencido salía con esa
+   * frase mientras el asistente ofrecía el coche sin rechistar.
+   *
+   * Un aviso que el sistema no respalda se deja de creer, y arrastra consigo a
+   * los que sí. Y **se comprueba el control**: si el que bloquea dejara de
+   * decirlo, el test de arriba cae.
+   */
+  it('NO dice «no se puede alquilar» de lo que no bloquea', () => {
+    const { html } = renderDigestEmail(
+      {
+        ...base,
+        vencimientos: [
+          {
+            vehiculo: '0951LTL',
+            concepto: 'Cambio de aceite',
+            fecha: '01/09/2026',
+            diasRestantes: -9,
+            bloquea: false
+          }
+        ]
+      },
+      EMPRESA
+    );
+    expect(html).toContain('VENCIDO');
+    expect(html).not.toContain('no se puede alquilar');
+    expect(html).toContain('el coche sigue alquilándose');
+  });
+
   it('«en 1 día», no «en 1 días»', () => {
     const { html } = renderDigestEmail(
       {
         ...base,
-        vencimientos: [{ vehiculo: '0951LTL', concepto: 'ITV', fecha: '11/09/2026', diasRestantes: 1 }]
+        vencimientos: [
+          {
+            vehiculo: '0951LTL',
+            concepto: 'ITV',
+            fecha: '11/09/2026',
+            diasRestantes: 1,
+            bloquea: true
+          }
+        ]
       },
       EMPRESA
     );

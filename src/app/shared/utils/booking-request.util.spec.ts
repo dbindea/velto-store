@@ -12,6 +12,7 @@ import type { BookingRequest } from '@shared/models/booking-request.model';
 import {
   canConvert,
   canDiscard,
+  formatPhone,
   newCount,
   priceStillGuaranteed,
   sortRequests,
@@ -162,5 +163,29 @@ describe('la lista', () => {
     const original = [solicitud({ reference: 'A', status: 'converted' }), solicitud({ reference: 'B' })];
     sortRequests(original);
     expect(original.map((r) => r.reference)).toEqual(['A', 'B']);
+  });
+});
+
+describe('formatPhone', () => {
+  it('separa el español en tres grupos, que es como se dicta', () => {
+    expect(formatPhone('34600111222')).toBe('+34 600 111 222');
+  });
+
+  it('también un fijo, que empieza por 9', () => {
+    expect(formatPhone('34911234567')).toBe('+34 911 234 567');
+  });
+
+  it('LO EXTRANJERO SE DEJA ENTERO', () => {
+    // Partirlo con la regla española haría que un número correcto se leyera
+    // como si estuviera mal escrito. Cada país agrupa a su manera.
+    expect(formatPhone('40721234567')).toBe('+40721234567');
+    expect(formatPhone('447700900123')).toBe('+447700900123');
+  });
+
+  it('y el número que guarda la web sigue siendo el que marca el enlace', () => {
+    // El formato es para leer; `tel:` y `wa.me` necesitan los dígitos pelados.
+    const r = solicitud({ phone: '34600111222' });
+    expect(telLink(r)).toBe('tel:+34600111222');
+    expect(formatPhone(r.phone)).toBe('+34 600 111 222');
   });
 });

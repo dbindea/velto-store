@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { NotificationService } from '@core/notifications/notification.service';
@@ -18,6 +18,7 @@ import {
 import {
   canConvert,
   canDiscard,
+  formatPhone,
   priceStillGuaranteed,
   sortRequests,
   telLink,
@@ -47,6 +48,7 @@ type Filtro = 'open' | 'all' | BookingRequestStatus;
 export class BookingRequestsComponent {
   private service = inject(BookingRequestService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private notifications = inject(NotificationService);
   private confirm = inject(ConfirmService);
   permissions = inject(PermissionsService);
@@ -82,6 +84,21 @@ export class BookingRequestsComponent {
           this.notifications.error('bookingRequests.errors.loadFailed');
         }
       });
+
+    /**
+     * ⚠️ **El correo de aviso lleva a `/booking-requests/:id`**, y abrir ahí la
+     * lista con el filtro de siempre no serviría de nada: la ficha que se venía
+     * a ver puede no estar en él —una ya convertida, por ejemplo—, y el
+     * operador vería una lista donde la suya no aparece.
+     *
+     * Por eso se pone «todas» **solo cuando se llega con id**. Sin él manda el
+     * filtro normal, que es la pregunta del día.
+     */
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.filtro.set('all');
+      this.abierta.set(id);
+    }
   }
 
   /**
@@ -133,6 +150,11 @@ export class BookingRequestsComponent {
 
   telefono(r: BookingRequest): string {
     return telLink(r);
+  }
+
+  /** El mismo número que el enlace, pero separado para leerlo y dictarlo. */
+  telefonoLegible(r: BookingRequest): string {
+    return formatPhone(r.phone);
   }
 
   whatsapp(r: BookingRequest): string {

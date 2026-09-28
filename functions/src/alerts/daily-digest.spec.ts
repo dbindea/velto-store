@@ -108,7 +108,7 @@ describe('cuándo se manda y cuándo se calla', () => {
       mereceEnvio({
         ...vacio,
         vencimientos: [
-          { vehiculo: '0951LTL', concepto: 'ITV', fecha: '17/09/2026', diasRestantes: 7 }
+          { vehiculo: '0951LTL', concepto: 'ITV', fecha: '17/09/2026', diasRestantes: 7, bloquea: true }
         ]
       })
     ).toBe(true);
@@ -157,7 +157,7 @@ describe('el asunto, que es lo único que se lee sin abrir', () => {
     const porVencer = asuntoDe(
       {
         ...vacio,
-        vencimientos: [{ vehiculo: '0951LTL', concepto: 'ITV', fecha: '17/09/2026', diasRestantes: 7 }]
+        vencimientos: [{ vehiculo: '0951LTL', concepto: 'ITV', fecha: '17/09/2026', diasRestantes: 7, bloquea: true }]
       },
       'VELTO'
     );
@@ -166,7 +166,7 @@ describe('el asunto, que es lo único que se lee sin abrir', () => {
     const vencido = asuntoDe(
       {
         ...vacio,
-        vencimientos: [{ vehiculo: '0951LTL', concepto: 'ITV', fecha: '01/09/2026', diasRestantes: -9 }]
+        vencimientos: [{ vehiculo: '0951LTL', concepto: 'ITV', fecha: '01/09/2026', diasRestantes: -9, bloquea: true }]
       },
       'VELTO'
     );

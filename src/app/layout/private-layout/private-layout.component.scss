@@ -408,6 +408,8 @@ app-brand-logo {
   background: transparent;
   border: none;
   font-size: 0.625rem;
+  // Para que el punto se pueda colocar contra el botón y no contra la barra.
+  position: relative;
 
   i {
     font-size: 1.1rem;
@@ -416,6 +418,23 @@ app-brand-logo {
   &.active {
     color: var(--accent-color);
   }
+}
+
+/*
+ * El punto de «Más»: hay algo con contador escondido ahí dentro.
+ *
+ * ⚠️ **Va sobre el icono, no al lado del rótulo.** Al lado empujaría el texto y
+ * la barra tiene seis huecos de 60 px: cualquier cosa que ensanche uno descoloca
+ * los otros cinco. Colocado encima no ocupa sitio.
+ */
+.nav-dot {
+  position: absolute;
+  top: 0.375rem;
+  left: calc(50% + 0.375rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--warning-color);
 }
 
 // El fondo que cierra el menú «Más» al tocar fuera. Sin color: lo único que
