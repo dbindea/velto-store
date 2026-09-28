@@ -27,7 +27,14 @@ import {
 } from '@angular/fire/firestore';
 
 import { Reservation } from '@shared/models/reservation.model';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+import {
+  rentalDebtOf,
+  DEBT_SCOPE_LABELS,
+  DEBT_MOMENT_HINTS,
+  type RentalDebt,
+  type DebtScope,
+  type DebtMoment
+} from '@shared/utils/rental-debt.util';
 import { Contract } from '@shared/models/contract.model';
 import { Vehicle } from '@shared/models/vehicle.model';
 import {
@@ -39,6 +46,14 @@ interface PendingPaymentCard {
   type: 'pending_payment';
   reservation: Reservation;
   pendingAmount: number;
+  /**
+   * ⚠️ **El importe no viaja solo: viene con el nombre de lo que es.** Los dos
+   * salen de `rentalDebtOf()` en la misma llamada, porque separarlos es
+   * exactamente cómo la tarjeta acabó diciendo «Señal pendiente» sobre una
+   * reserva sin señal — ver `rental-debt.util.ts`.
+   */
+  alcance: DebtScope;
+  momento: DebtMoment;
 }
 
 interface ContractCard {
@@ -244,23 +259,26 @@ export class DashboardComponent implements OnInit {
      * deuda es una decisión ya tomada —con su excepción escrita, su motivo y su
      * autor—, no un aviso pendiente; y una cancelada no se cobra.
      */
-    const deudaAlquiler = (r: Reservation): number => {
-      const señal = r.initialPayment?.status === 'pending'
-        ? Math.max(0, (r.initialPayment.requiredAmount || 0) - (r.initialPayment.paidAmount || 0))
-        : 0;
-      const resto = r.remainingPayment?.status === 'pending'
-        ? Math.max(0, (r.remainingPayment.requiredAmount || 0) - (r.remainingPayment.paidAmount || 0))
-        : 0;
-      return roundMoney(señal + resto);
-    };
-
+    /**
+     * ⚠️ **El importe y su nombre salen de la MISMA llamada**, y ese es todo el
+     * punto de `rentalDebtOf()`. Aquí vivía la aritmética a pelo y el rótulo lo
+     * ponía una clave fija en la plantilla, así que ampliar la cifra no obligó a
+     * nadie a revisar la palabra: la tarjeta acabó diciendo «Señal pendiente»
+     * sobre una reserva sin señal. Ahora quien pide el número se lleva obligado
+     * el rótulo que lo describe.
+     *
+     * El filtro de cerrado y cancelado también se fue dentro: no es un criterio
+     * del panel, es que una reserva cerrada no tiene deuda que avisar.
+     */
     const pendingPayments: PendingPaymentCard[] = reservations
-      .filter((r) => r.reservationStatus !== 'closed' && r.reservationStatus !== 'cancelled')
-      .filter((r) => deudaAlquiler(r) > 0)
-      .map((r) => ({
-        type: 'pending_payment',
+      .map((r) => ({ r, debt: rentalDebtOf(r) }))
+      .filter((x): x is { r: Reservation; debt: RentalDebt } => x.debt !== null)
+      .map(({ r, debt }) => ({
+        type: 'pending_payment' as const,
         reservation: r,
-        pendingAmount: deudaAlquiler(r)
+        pendingAmount: debt.amount,
+        alcance: debt.scope,
+        momento: debt.moment
       }));
 
     // 2) Contracts awaiting signature.
@@ -367,6 +385,24 @@ export class DashboardComponent implements OnInit {
     if (typeof value.toDate === 'function') return value.toDate();
     if (value.seconds) return new Date(value.seconds * 1000);
     return null;
+  }
+
+  /**
+   * El rótulo y el subtexto de la tarjeta de cobro pendiente.
+   *
+   * ⚠️ **Resuelven desde un `Record` tipado por la unión completa**, no con una
+   * cadena de `@if` en la plantilla. Es la misma razón por la que existen los
+   * mapas `*_LABELS` del proyecto: con los `@if` repartidos por el HTML, añadir
+   * un estado deja la rama nueva sin escribir y **nadie se entera** —el texto
+   * simplemente no sale—. Aquí el compilador obliga a que los tres casos
+   * existan antes de compilar.
+   */
+  pendingPaymentLabel(card: PendingPaymentCard): string {
+    return DEBT_SCOPE_LABELS[card.alcance];
+  }
+
+  pendingPaymentHint(card: PendingPaymentCard): string {
+    return DEBT_MOMENT_HINTS[card.momento];
   }
 
   // === Click navigation ===

@@ -299,8 +299,16 @@
     "loadFailedTitle": "Datele nu au putut fi încărcate",
     "partialFailure": "Unele date nu au putut fi încărcate, lista poate fi incompletă.",
     "pendingPayment": {
-      "hint": "Încasează înainte de a confirma predarea",
-      "label": "Avans neîncasat"
+      "scope": {
+        "signal": "Avans neîncasat",
+        "remaining": "Rest închiriere neîncasat",
+        "rental": "Închiriere neîncasată"
+      },
+      "moment": {
+        "beforePickup": "Încasează înainte de a confirma predarea",
+        "delivered": "Mașina este deja predată și neîncasată",
+        "returned": "Returnată și neîncasată: rezervarea nu se poate închide"
+      }
     },
     "pendingSignature": {
       "hint": "Clientul nu a semnat încă contractul",

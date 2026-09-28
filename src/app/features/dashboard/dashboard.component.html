@@ -79,7 +79,14 @@
           <div class="card warning-card" (click)="openReservation(card.reservation.id)">
             <div class="card-header">
               <i class="pi pi-wallet"></i>
-              <span class="card-label">{{ 'dashboard.pendingPayment.label' | translate }}</span>
+              <!--
+                ⚠️ **El rótulo lo elige la cifra, no una clave fija.** Aquí había
+                una sola clave, «Señal pendiente», mientras el número de debajo
+                era la señal MÁS el resto del alquiler, así que una reserva sin
+                señal —el caso normal de cobrarlo todo de una vez— salía como
+                «SEÑAL PENDIENTE — 650,00 €». Ver rental-debt.util.ts.
+              -->
+              <span class="card-label">{{ pendingPaymentLabel(card) | translate }}</span>
             </div>
             <div class="card-body">
               <div class="big-number">{{ card.pendingAmount | number:'1.2-2' }} €</div>
@@ -99,7 +106,15 @@
                   {{ toDateSafe(card.reservation.pickupDateTime) | date: 'dd/MM/yyyy HH:mm' }}
                 </div>
               }
-              <div class="card-subtext">{{ 'dashboard.pendingPayment.hint' | translate }}</div>
+              <!--
+                ⚠️ **Y el subtexto lo elige dónde está el coche.** Era fijo,
+                «Cobrar antes de confirmar la entrega», sobre una entrega a
+                crédito en la que el coche ya está en la calle: una instrucción
+                imposible que además rebajaba el aviso más grave —dinero fuera
+                con el vehículo entregado— al recordatorio rutinario de una
+                reserva sin empezar.
+              -->
+              <div class="card-subtext">{{ pendingPaymentHint(card) | translate }}</div>
             </div>
             <div class="card-action">
               {{ 'dashboard.viewReservation' | translate }}

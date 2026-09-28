@@ -299,8 +299,16 @@
     "loadFailedTitle": "No se pudieron cargar los datos",
     "partialFailure": "Algunos datos no se han podido cargar, la lista puede estar incompleta.",
     "pendingPayment": {
-      "hint": "Cobrar antes de confirmar la entrega",
-      "label": "Señal pendiente"
+      "scope": {
+        "signal": "Señal pendiente",
+        "remaining": "Resto del alquiler pendiente",
+        "rental": "Alquiler pendiente"
+      },
+      "moment": {
+        "beforePickup": "Cobrar antes de confirmar la entrega",
+        "delivered": "El coche ya está entregado y sin cobrar",
+        "returned": "Devuelto y sin cobrar: la reserva no se puede cerrar"
+      }
     },
     "pendingSignature": {
       "hint": "El cliente aún no ha firmado el contrato",

@@ -299,8 +299,16 @@
     "loadFailedTitle": "Could not load data",
     "partialFailure": "Some data could not be loaded, this list may be incomplete.",
     "pendingPayment": {
-      "hint": "Collect before confirming pickup",
-      "label": "Signal pending"
+      "scope": {
+        "signal": "Down payment due",
+        "remaining": "Remaining rental due",
+        "rental": "Rental unpaid"
+      },
+      "moment": {
+        "beforePickup": "Collect before confirming pickup",
+        "delivered": "Car already handed over and unpaid",
+        "returned": "Returned and unpaid: the booking cannot be closed"
+      }
     },
     "pendingSignature": {
       "hint": "Customer hasn't signed the contract yet",
@@ -888,7 +896,7 @@
       "extraKm": "Extra km",
       "extraOther": "Other",
       "freePayment": "Free payment",
-      "initialPayment": "Signal",
+      "initialPayment": "Down payment",
       "refuelPenalty": "Refuel penalty",
       "remainingPayment": "Remaining rental",
       "rentalPayment": "Full payment"
@@ -1210,7 +1218,7 @@
       "basePrice": "Base price",
       "deposit": "Deposit",
       "finalPrice": "Total price",
-      "initialPayment": "Signal",
+      "initialPayment": "Down payment",
       "loyaltyDiscount": "Loyalty discount",
       "loyaltyOverridden": "not applied: price agreed by hand",
       "manualAdjustment": "Manual adjustment",

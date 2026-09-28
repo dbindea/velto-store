@@ -26,7 +26,8 @@ import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { toDate } from '@shared/utils/reservation-date.util';
 import {
   WorkflowContext,
-  canStartPickup
+  canStartPickup,
+  canWithException
 } from '@shared/utils/reservation-workflow.util';
 import { ContractService } from '@features/contracts/services/contract.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
@@ -107,12 +108,25 @@ export class InspectionPickupComponent implements OnInit {
       const contract = await firstValueFrom(
         this.contractService.getContractByReservation(reservationId).pipe(first())
       );
-      const decision = canStartPickup({
+      /**
+       * ⚠️ **Se le pregunta al guard CON la excepción, igual que la ficha.**
+       * Aquí se llamaba a `canStartPickup()` en crudo, así que una entrega a
+       * crédito —el operador pulsa «Saltar este paso», escribe su motivo y
+       * queda con autor y fecha en `workflowExceptions[]`— encendía el botón de
+       * la ficha y acto seguido esta pantalla acusaba «Acción bloqueada · Falta
+       * cobrar el resto del alquiler». La aplicación regañaba por la decisión
+       * que ella misma acababa de aceptar.
+       *
+       * No impedía guardar —el aviso es un cartel, no un cierre— y por eso pasó
+       * desapercibido: la entrega salía bien con un bloqueo escrito encima.
+       */
+      const ctx = {
         reservation: this.reservation,
         pickupInspection: existing || null,
         returnInspection: null,
         contract
-      } as WorkflowContext);
+      } as WorkflowContext;
+      const decision = canWithException(canStartPickup(ctx), ctx, 'startPickup');
       this.workflowBlockReason = decision.ok ? '' : decision.reason;
 
       if (existing) {
