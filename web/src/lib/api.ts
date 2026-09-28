@@ -84,12 +84,48 @@ async function pedir<T>(ruta: string): Promise<T> {
   return (await r.json()) as T;
 }
 
+/**
+ * La petición que el `<head>` dejó lanzada, si la hay.
+ *
+ * ⚠️ **Existe porque la petición de datos era el CUARTO eslabón de una cadena
+ * de cinco**, y no arrancaba hasta los **812 ms**. Medido en `/flota`, con la
+ * function ya caliente:
+ *
+ *     HTML          0 → 235 ms
+ *     módulo        294 → 454     (va al final del body: no se descubre antes)
+ *     api.js        584 → 805     (solo se descubre al PARSEAR el módulo)
+ *     /api/fleet    812 → 1002    ← aquí empezaba
+ *     las fotos     1148 → 5307   (no se conocen hasta que contesta la API)
+ *
+ * Cada eslabón cuesta una ida y vuelta entera porque el navegador **no puede
+ * saber que el siguiente existe** hasta terminar el anterior. Adelantando el
+ * `fetch` a un script del `<head>`, arranca a los ~240 ms: **−570 ms en toda
+ * visita**, fría o caliente, y las fotos se conocen antes en la misma medida.
+ *
+ * ⚠️ **La petición adelantada tiene que ser IDÉNTICA a la de `pedir()`** —misma
+ * ruta y misma cabecera `Accept`—, o el navegador no la reutiliza y se hacen
+ * dos: se pagaría el arranque en frío dos veces en vez de ninguna.
+ */
+function adelantada<T>(clave: string, respaldo: () => Promise<T>): Promise<T> {
+  const w = globalThis as unknown as Record<string, Promise<T> | undefined>;
+  const pendiente = w[clave];
+  if (!pendiente) return respaldo();
+  // Se consume una sola vez: si la página vuelve a pedir lo mismo —un botón de
+  // recargar—, tiene que ir a la red y no servir una respuesta de hace un rato.
+  w[clave] = undefined;
+  // Un fallo en la adelantada no puede dejar la página sin datos: se reintenta
+  // por el camino normal, que además sabe distinguir «roto» de «vacío».
+  return pendiente.catch(() => respaldo());
+}
+
 export function flota(): Promise<{ vehicles: CocheResumen[] }> {
-  return pedir('/api/fleet');
+  return adelantada('__veltoFleet', () => pedir('/api/fleet'));
 }
 
 export function ficha(id: string): Promise<{ vehicle: CocheFicha }> {
-  return pedir(`/api/vehicle?id=${encodeURIComponent(id)}`);
+  return adelantada(`__veltoVehicle:${id}`, () =>
+    pedir(`/api/vehicle?id=${encodeURIComponent(id)}`)
+  );
 }
 
 export function disponibilidad(

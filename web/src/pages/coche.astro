@@ -18,6 +18,7 @@ import { EMPRESA } from '../lib/empresa';
   titulo="Vehículo | Velto"
   descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos y precio por día."
   ruta={null}
+  precarga="coche"
 >
   <section class="seccion">
     <div class="contenedor">
@@ -112,8 +113,22 @@ import { EMPRESA } from '../lib/empresa';
     const fotos = v.photos.length
       ? v.photos
           .map(
+            /*
+             * ⚠️ **`width` y `height`, con el dato que la API YA devolvía.**
+             * Sin ellos el hueco de la foto vale **0 px de alto** hasta que la
+             * imagen llega, y entonces la página entera da un salto: medido, un
+             * CLS de **0,742** en esta ficha, siete veces el umbral de «bueno».
+             * El navegador deriva la proporción de los dos atributos aunque el
+             * CSS ponga `width: 100%`, así que reserva el sitio desde el primer
+             * momento.
+             *
+             * Lo que lo hacía doloroso es que el dato estaba ahí: `publishVehiclePhoto`
+             * guarda el ancho y el alto de lo que recodifica, y el mapeador los
+             * publica. Solo había que escribirlos.
+             */
             (f, i) =>
               `<img src="${f.url}" alt="${nombre}${i ? ` (${i + 1})` : ''}"
+                    ${f.width ? `width="${f.width}"` : ''} ${f.height ? `height="${f.height}"` : ''}
                     loading="${i ? 'lazy' : 'eager'}" decoding="async" />`
           )
           .join('')

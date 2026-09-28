@@ -35,7 +35,13 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
   const disponible = 'price' in c ? (c as CocheDisponible) : null;
 
   const foto = c.photo
-    ? `<img src="${esc(c.photo.url)}" alt="${nombre}" loading="lazy" decoding="async" />`
+    ? // ⚠️ `width`/`height` con el dato que la API ya trae: reservan el hueco y
+      // evitan que la rejilla salte cuando llegan las fotos. La proporción la
+      // deriva el navegador de los dos atributos, aunque el CSS los recorte.
+      `<img src="${esc(c.photo.url)}" alt="${nombre}"` +
+      `${c.photo.width ? ` width="${c.photo.width}"` : ''}` +
+      `${c.photo.height ? ` height="${c.photo.height}"` : ''}` +
+      ` loading="lazy" decoding="async" />`
     : `<div class="coche__sinfoto">${ICONO.coche}<span>Foto del vehículo</span></div>`;
 
   const precio = disponible

@@ -25,9 +25,57 @@ interface Props {
    * al compilar. Sin defecto, el compilador obliga a contestar una de las dos.
    */
   ruta: string | null;
+  /**
+   * Qué datos adelantar desde el `<head>`, si esta página pide alguno.
+   *
+   * ⚠️ **Lo que ahorra es medio segundo en toda visita**, y no por ir más
+   * rápido: por dejar de esperar. La petición era el cuarto eslabón de una
+   * cadena en serie —HTML, módulo, `api.js`, `fetch`— y no arrancaba hasta los
+   * 812 ms, porque el navegador no puede saber que el siguiente eslabón existe
+   * hasta terminar el anterior. Desde el `<head>` arranca a los ~240 ms.
+   *
+   * `'flota'` para las páginas que enseñan la lista; `'coche'` para la ficha,
+   * que saca el id del path.
+   */
+  precarga?: 'flota' | 'coche';
 }
 
-const { titulo, descripcion, ruta } = Astro.props;
+const { titulo, descripcion, ruta, precarga } = Astro.props;
+
+/**
+ * El script que adelanta la petición de datos, como TEXTO.
+ *
+ * ⚠️ **Va por `set:html` y no escrito dentro del `<script>`, y eso es el
+ * arreglo de un fallo que no daba ningún error.** Escrito como
+ * `<script is:inline>{\`…\`}</script>`, Astro emite las llaves y el backtick
+ * **literales** en el HTML, así que al navegador le llega un bloque con una
+ * cadena suelta dentro: sintaxis perfectamente válida, sin error en consola, y
+ * que no hace nada. El script viajaba en la página, se desplegó, y
+ * `window.__veltoFleet` no existía — solo se vio midiendo si la petición
+ * arrancaba antes, que es para lo que existe.
+ *
+ * Es el patrón de fallo de esta casa en una línea: código escrito y nunca
+ * ejecutado.
+ *
+ * ⚠️ **Y la petición tiene que ser IDÉNTICA a la de `pedir()` en `api.ts`**
+ * —misma ruta y la misma cabecera `Accept`—, o el navegador no la reutiliza y
+ * se harían DOS. Con el arranque en frío de las functions, eso es pagarlo dos
+ * veces en vez de ninguna.
+ *
+ * No se maneja el error a propósito: si falla, la promesa queda rechazada y
+ * `adelantada()` reintenta por el camino normal, que sí sabe distinguir «roto»
+ * de «vacío» y decírselo al visitante.
+ */
+const CABECERA_JSON = `{ headers: { Accept: 'application/json' } }`;
+const A_JSON = `function (r) { if (!r.ok) throw new Error('error'); return r.json(); }`;
+
+const adelanto =
+  precarga === 'flota'
+    ? `window.__veltoFleet=fetch('/api/fleet',${CABECERA_JSON}).then(${A_JSON});`
+    : precarga === 'coche'
+      ? `(function(){var i=decodeURIComponent(location.pathname.split('/').filter(Boolean).pop()||'');` +
+        `if(!i)return;window['__veltoVehicle:'+i]=fetch('/api/vehicle?id='+encodeURIComponent(i),${CABECERA_JSON}).then(${A_JSON});})();`
+      : null;
 const canonica = ruta === null ? null : SITIO + ruta;
 const anio = new Date().getFullYear();
 const tel = EMPRESA.telefono.replace(/\s/g, '');
@@ -41,6 +89,23 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <title>{titulo}</title>
     <meta name="description" content={descripcion} />
     <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
+
+    <!--
+      ⚠️ **Las fotos viven en OTRO origen, y el saludo se paga dentro del camino
+      crítico.** Salen de `firebasestorage.googleapis.com`, así que la primera no
+      puede empezar a bajar hasta hacer DNS + TCP + TLS contra un servidor con el
+      que el navegador no ha hablado todavía — y eso cae en el peor momento: a
+      los ~1.150 ms, justo cuando la API acaba de contestar y las cuatro fotos
+      quieren salir a la vez.
+
+      Con `preconnect` ese saludo se hace **en paralelo** con el resto de la
+      carga, mucho antes de que se sepa qué fotos hay. `crossorigin` no es
+      opcional: sin él el navegador abre una conexión anónima distinta de la que
+      luego usará para las imágenes, y el saludo se paga igual.
+    -->
+    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin />
+
+    {adelanto && <script is:inline set:html={adelanto} />}
 
     <!--
       ⚠️ La canónica es lo que impide que los DOS dominios compitan entre sí.
