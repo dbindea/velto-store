@@ -103,7 +103,7 @@
       "rentalPaid": "Pagado alquiler",
       "reservationsWithDebt": "Reservas con deuda",
       "reservationsWithDebtHint": "tienen pagos pendientes",
-      "totalPaid": "Total pagado",
+      "totalPaid": "Cobrado (sin fianzas)",
       "totalPending": "Pendiente"
     },
     "reservations": {
@@ -307,7 +307,7 @@
       "moment": {
         "beforePickup": "Cobrar antes de confirmar la entrega",
         "delivered": "El coche ya está entregado y sin cobrar",
-        "returned": "Devuelto y sin cobrar: la reserva no se puede cerrar"
+        "returned": "Devuelto y sin cobrar: la reserva sigue abierta"
       }
     },
     "pendingSignature": {
@@ -1269,7 +1269,10 @@
       "reservationCreated": "Reserva creada",
       "returnCompleted": "Devolución realizada",
       "skippedByException": "Omitido por excepción",
-      "title": "Progreso de la reserva"
+      "title": "Progreso de la reserva",
+      "initialPaymentWaived": "Sin señal (no se pidió)",
+      "depositWaived": "Sin fianza (no se pidió)",
+      "remainingPaymentNotDue": "Sin resto (todo iba en la señal)"
     },
     "title": "Reservas"
   },
@@ -1617,8 +1620,6 @@
   },
   "workflow": {
     "blockedAction": "Acción bloqueada",
-    "blockedClose": "Falta devolver el vehículo y resolver la fianza.",
-    "blockedPickup": "Falta contrato firmado, resto pagado y fianza cobrada.",
     "blockedReturn": "Primero realiza la entrega.",
     "blockedSettleDeposit": "Espera a la devolución del vehículo.",
     "cancelled": "Reserva cancelada o cerrada",
@@ -1660,7 +1661,8 @@
     "skipStepHint": "Queda registrado con tu nombre, la fecha y el motivo. Úsalo cuando el paso se haya cumplido por otra vía —un contrato firmado en papel— o cuando decidas asumir el riesgo a sabiendas, como entregar el coche a un cliente de confianza que pagará más tarde. Lo que quede sin cobrar sigue vivo y te lo seguirá recordando el panel.",
     "startPickup": "Iniciar entrega",
     "startReturn": "Iniciar devolución",
-    "unsettledDeposit": "Fianza pendiente de resolver"
+    "unsettledDeposit": "Fianza pendiente de resolver",
+    "missingReturn": "Falta devolver el vehículo"
   },
   "invoices": {
     "reservationWithoutVat": "Esta reserva se pactó sin IVA. Una factura sí lo lleva, así que el total no coincidirá con lo que se cobró: revisa la base antes de emitir, porque una factura emitida no se edita ni se borra.",
@@ -1977,8 +1979,9 @@
   "events": {
     "alerts": {
       "contractNotSigned": "El contrato no está firmado: no se puede entregar el coche",
-      "maintenanceOverdue": "Vencido: no alquiles este coche hasta pasarla",
-      "invoiceDeadline": "Se acaba el plazo para emitirla"
+      "maintenanceOverdue": "Vencido: conviene hacerlo cuanto antes",
+      "invoiceDeadline": "Se acaba el plazo para emitirla",
+      "maintenanceBlocking": "Vencido: impide alquilar el coche"
     },
     "categories": {
       "payment": "Pagar",

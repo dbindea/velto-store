@@ -259,7 +259,7 @@
           más — es usar la que ya existe.
         -->
         @if (card.type === 'maintenance_overdue') {
-          <div class="card card-overdue">
+          <div class="card card-overdue" (click)="openMaintenanceEvents(0)">
             <div class="card-header">
               <i class="pi pi-exclamation-triangle"></i>
               <span class="card-label">{{ 'maintenance.overdue' | translate }}</span>
@@ -274,11 +274,20 @@
             </div>
             <ul class="card-list">
               @for (m of card.items.slice(0, 5); track m.id) {
-                <li class="card-list-item" (click)="openVehicleMaintenanceTab(m.vehicleId)">
+                <li class="card-list-item" (click)="$event.stopPropagation(); openVehicleMaintenanceTab(m.vehicleId)">
                   <span class="list-title">{{ m.title }}</span>
+                  <!--
+                    ⚠️ Desde que la tarjeta cuenta los kilómetros, la fecha de un
+                    vencido puede ser FUTURA —un cambio de aceite pasado de km con
+                    la revisión anual aún por llegar—, y salía bajo el rótulo
+                    «Vencidos» con una fecha del mes que viene al lado. Se enseña
+                    el dato que de verdad lo venció.
+                  -->
                   <span class="list-meta">
                     {{ m.vehicleSnapshot?.plateNumber }}
-                    @if (m.nextDueDate) {
+                    @if (maintenanceOverdueBy(m); as porKm) {
+                      · {{ porKm.km | number: '1.0-0' }} km
+                    } @else if (m.nextDueDate) {
                       · {{ toDateSafe(m.nextDueDate) | date: 'dd/MM/yyyy' }}
                     }
                   </span>
@@ -293,7 +302,7 @@
         }
 
         @if (card.type === 'maintenance_due_soon') {
-          <div class="card card-due-soon">
+          <div class="card card-due-soon" (click)="openMaintenanceEvents(MAINTENANCE_DUE_SOON_DAYS)">
             <div class="card-header">
               <i class="pi pi-clock"></i>
               <span class="card-label">{{ 'maintenance.dueSoon' | translate }}</span>
@@ -308,11 +317,20 @@
             </div>
             <ul class="card-list">
               @for (m of card.items.slice(0, 5); track m.id) {
-                <li class="card-list-item" (click)="openVehicleMaintenanceTab(m.vehicleId)">
+                <li class="card-list-item" (click)="$event.stopPropagation(); openVehicleMaintenanceTab(m.vehicleId)">
                   <span class="list-title">{{ m.title }}</span>
+                  <!--
+                    ⚠️ Desde que la tarjeta cuenta los kilómetros, la fecha de un
+                    vencido puede ser FUTURA —un cambio de aceite pasado de km con
+                    la revisión anual aún por llegar—, y salía bajo el rótulo
+                    «Vencidos» con una fecha del mes que viene al lado. Se enseña
+                    el dato que de verdad lo venció.
+                  -->
                   <span class="list-meta">
                     {{ m.vehicleSnapshot?.plateNumber }}
-                    @if (m.nextDueDate) {
+                    @if (maintenanceOverdueBy(m); as porKm) {
+                      · {{ porKm.km | number: '1.0-0' }} km
+                    } @else if (m.nextDueDate) {
                       · {{ toDateSafe(m.nextDueDate) | date: 'dd/MM/yyyy' }}
                     }
                   </span>

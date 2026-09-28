@@ -20,6 +20,7 @@ import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_PAYMENT_STATUS_LABELS
 } from '@shared/models/reservation.model';
+import { collectedTotalsOf } from '@shared/utils/payment-summary.util';
 import { Payment, PAYMENT_TYPE_LABELS, PAYMENT_STATUS_LABELS } from '@shared/models/payment.model';
 import { TranslateService } from '@core/i18n/translate.service';
 import { NotificationService } from '@core/notifications/notification.service';
@@ -123,10 +124,24 @@ export class ClientDetailComponent implements OnInit {
     if (paymentId) this.router.navigate(['/payments', paymentId]);
   }
 
+  /**
+   * Lo que este cliente ha dejado en la empresa.
+   *
+   * ⚠️ **Sumaba TODO `paidAmount` sin mirar el tipo**, que es literalmente el
+   * fallo que `collectedTotalsOf()` documenta y que la ficha de la reserva ya
+   * corrigió: una fianza de 150 € cobrada, 43 € retenidos y 107 € devueltos
+   * contaba **tres veces** —y la devolución, que es dinero saliendo, sumaba como
+   * si el cliente lo hubiera pagado—. Con un alquiler de 350 €, la tarjeta decía
+   * «Total pagado 650,00 €» de un cliente que entregó 500 y se dejó 393.
+   *
+   * ⚠️ **Y las fianzas no se pierden de vista al quitarlas de aquí**: están en
+   * sus tres tarjetas de al lado —cobradas, retenidas, devueltas—, que es donde
+   * significan algo. Por eso el rótulo dice ahora «sin fianzas»: con tres
+   * tarjetas de fianza pegadas, un «Total pagado» a secas se lee como el total
+   * de todas ellas.
+   */
   get totalPaid(): number {
-    return this.payments
-      .filter(p => p.status !== 'cancelled')
-      .reduce((sum, p) => sum + p.paidAmount, 0);
+    return collectedTotalsOf(this.payments).income;
   }
 
   get totalPending(): number {

@@ -103,7 +103,7 @@
       "rentalPaid": "Rental paid",
       "reservationsWithDebt": "Reservations with debt",
       "reservationsWithDebtHint": "have payments pending",
-      "totalPaid": "Total paid",
+      "totalPaid": "Collected (excl. deposits)",
       "totalPending": "Pending"
     },
     "reservations": {
@@ -307,7 +307,7 @@
       "moment": {
         "beforePickup": "Collect before confirming pickup",
         "delivered": "Car already handed over and unpaid",
-        "returned": "Returned and unpaid: the booking cannot be closed"
+        "returned": "Returned and unpaid: the booking is still open"
       }
     },
     "pendingSignature": {
@@ -1269,7 +1269,10 @@
       "reservationCreated": "Reservation created",
       "returnCompleted": "Return completed",
       "skippedByException": "Skipped by exception",
-      "title": "Reservation progress"
+      "title": "Reservation progress",
+      "initialPaymentWaived": "No down payment (not requested)",
+      "depositWaived": "No deposit (not requested)",
+      "remainingPaymentNotDue": "No remainder (all in the down payment)"
     },
     "title": "Reservations"
   },
@@ -1617,8 +1620,6 @@
   },
   "workflow": {
     "blockedAction": "Blocked action",
-    "blockedClose": "Return the vehicle and settle the deposit first.",
-    "blockedPickup": "Signed contract, remaining payment and deposit required first.",
     "blockedReturn": "Complete the pickup first.",
     "blockedSettleDeposit": "Wait for the vehicle return.",
     "cancelled": "Reservation cancelled or closed",
@@ -1660,7 +1661,8 @@
     "skipStepHint": "It is recorded with your name, the date and the reason. Use it when the step was met another way —a contract signed on paper— or when you knowingly accept the risk, such as handing the car to a trusted customer who will pay later. Anything left unpaid stays due, and the dashboard will keep reminding you.",
     "startPickup": "Start pickup",
     "startReturn": "Start return",
-    "unsettledDeposit": "Deposit still pending settlement"
+    "unsettledDeposit": "Deposit still pending settlement",
+    "missingReturn": "The vehicle has not been returned yet"
   },
   "invoices": {
     "reservationWithoutVat": "This booking was agreed without VAT. An invoice does carry it, so the total will not match what was collected: check the taxable base before issuing, because an issued invoice cannot be edited or deleted.",
@@ -1977,8 +1979,9 @@
   "events": {
     "alerts": {
       "contractNotSigned": "The contract is not signed: the car cannot be handed over",
-      "maintenanceOverdue": "Overdue: do not rent this car until it passes",
-      "invoiceDeadline": "The deadline to issue it is running out"
+      "maintenanceOverdue": "Overdue: should be done as soon as possible",
+      "invoiceDeadline": "The deadline to issue it is running out",
+      "maintenanceBlocking": "Expired: blocks renting this car"
     },
     "categories": {
       "payment": "Pay",

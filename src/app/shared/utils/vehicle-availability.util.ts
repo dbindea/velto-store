@@ -121,6 +121,88 @@ function startOfDay(d: Date): number {
 }
 
 /**
+ * Lo que hace falta para saber si un mantenimiento se ha pasado.
+ *
+ * ⚠️ **Los kilómetros van dentro porque un mantenimiento vence por DOS
+ * caminos**, y olvidar el segundo no da ningún error: el registro simplemente
+ * no sale en la lista de vencidos.
+ */
+export interface MaintenanceDeadline {
+  status: MaintenanceStatus;
+  /** `nextDueDate` ya convertida. `null` si el registro no lleva fecha. */
+  dueDate: Date | null;
+  /** `nextDueKm`, si se pactó un kilometraje. */
+  dueKm?: number;
+  /** Los kilómetros que marca el coche hoy. */
+  currentKm?: number;
+}
+
+/**
+ * ¿Está pasado este mantenimiento?
+ *
+ * ⚠️ **Por fecha O por kilómetros, y ese «o» es todo el motivo de que exista.**
+ * El panel comparaba solo `nextDueDate` y descartaba de entrada lo que no
+ * llevara fecha (`if (!m.nextDueDate) return false`), así que un cambio de
+ * aceite con «Km del recordatorio» puesto y la fecha vacía —lo que sale del
+ * formulario de la ficha del coche sin tocar nada más— **no aparecía en ninguna
+ * de las dos tarjetas de mantenimiento**: ni en vencidos ni en próximos.
+ *
+ * Peor aún, el mismo registro tenía dos verdades opuestas en dos pantallas: la
+ * pestaña de mantenimiento del coche lo pinta «Vencido» —usa los kilómetros— y
+ * el panel lo metía en «Próximos a vencer» porque su fecha todavía era futura.
+ *
+ * ⚠️ **Un registro ya hecho o anulado no vence.** Se comprueba antes que nada:
+ * un `completed` con fecha pasada no es una tarea pendiente.
+ *
+ * ⚠️ **Y se compara por DÍAS, igual que `blockingMaintenance()`.** Las fechas de
+ * vencimiento se guardan a medianoche: comparando instantes, una ITV que vale
+ * hasta el 10 de octubre salía «vencida» ese mismo día a las nueve de la mañana
+ * — y la pantalla de Eventos habría prohibido alquilar un coche que el buscador
+ * sí ofrece, porque aquel sí cuenta días. Dos reglas del mismo papel tienen que
+ * caducar el mismo día.
+ */
+export function maintenanceOverdue(m: MaintenanceDeadline, now: Date): boolean {
+  if (!OPEN_STATUSES.includes(m.status)) return false;
+
+  if (m.dueDate && !isNaN(m.dueDate.getTime()) && startOfDay(m.dueDate) < startOfDay(now)) {
+    return true;
+  }
+  if (m.dueKm !== undefined && m.currentKm !== undefined && m.currentKm >= m.dueKm) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * ¿Vence pronto, sin estar pasado todavía?
+ *
+ * ⚠️ **Lo ya vencido NO entra aquí**, y por eso pregunta primero por
+ * `maintenanceOverdue()` en vez de mirar solo la fecha. Un registro pasado por
+ * kilómetros con la fecha aún futura caía en «Próximos a vencer» — o sea que la
+ * pantalla lo anunciaba como algo que llegará cuando ya había llegado.
+ */
+export function maintenanceDueSoon(
+  m: MaintenanceDeadline,
+  now: Date,
+  withinDays: number
+): boolean {
+  if (!OPEN_STATUSES.includes(m.status)) return false;
+  if (maintenanceOverdue(m, now)) return false;
+  if (!m.dueDate || isNaN(m.dueDate.getTime())) return false;
+
+  /**
+   * ⚠️ **También por días, y no es simetría gratuita.** Con la ventana medida en
+   * instantes, un registro que vence **hoy** —fecha guardada a medianoche—
+   * dejaba de estar vencido (ya no lo está, se compara por días) y tampoco
+   * llegaba a «próximo», porque su medianoche es anterior a la hora actual. Se
+   * caía de las dos tarjetas el día que más falta hace verlo.
+   */
+  const hoy = startOfDay(now);
+  const horizonte = hoy + withinDays * 24 * 60 * 60 * 1000;
+  return startOfDay(m.dueDate) >= hoy && startOfDay(m.dueDate) <= horizonte;
+}
+
+/**
  * El papel caducado que impide este alquiler, si lo hay.
  *
  * ⚠️ **Se compara contra la fecha de DEVOLUCIÓN, no contra hoy.** Es lo que

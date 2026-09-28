@@ -35,6 +35,11 @@ import {
   type DebtScope,
   type DebtMoment
 } from '@shared/utils/rental-debt.util';
+import {
+  maintenanceOverdue,
+  maintenanceDueSoon,
+  type MaintenanceDeadline
+} from '@shared/utils/vehicle-availability.util';
 import { Contract } from '@shared/models/contract.model';
 import { Vehicle } from '@shared/models/vehicle.model';
 import {
@@ -139,6 +144,23 @@ export class DashboardComponent implements OnInit {
 
   private async loadDashboard(): Promise<void> {
     this.loading = true;
+
+    /**
+     * ⚠️ **Las dos banderas de fallo se limpian AQUÍ, y no hacerlo dejaba el
+     * panel mintiendo hasta que alguien recargase la página.** Solo se ponían a
+     * `true`; `retryLoad()` toca `loading` y nada más. Así que tras un fallo de
+     * carga —un despliegue de `firestore.rules` propagándose, una carrera en el
+     * refresco del token— el operador pulsaba «Reintentar», las tarjetas se
+     * cargaban bien… y la pantalla seguía enseñando «No se pudieron cargar los
+     * datos», porque esa rama va **antes** de la rejilla en la plantilla.
+     *
+     * Lo grave no es el cartel: es que **esconde las tareas que acaba de leer**,
+     * justo lo que su propio texto advierte —«No des por hecho que no hay tareas
+     * pendientes»—. El panel provocaba lo que avisaba.
+     */
+    this.loadFailed = false;
+    this.partialFailure = false;
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
@@ -281,11 +303,31 @@ export class DashboardComponent implements OnInit {
         momento: debt.moment
       }));
 
-    // 2) Contracts awaiting signature.
-    const contractCards: ContractCard[] = pendingContracts.map((c) => ({
-      type: 'pending_signature',
-      contract: c
-    }));
+    /**
+     * 2) Contratos esperando firma — **de reservas vivas**.
+     *
+     * ⚠️ **La consulta filtra por el estado del CONTRATO y no mira la reserva**,
+     * al revés que la deuda de alquiler. Y cancelar una reserva no toca su
+     * contrato: `cancelReservation()` cambia el estado y anula los cobros, pero
+     * lo único que devuelve un contrato a `generated` es
+     * `cancelContractSigningLink`, que es una acción aparte en otra pantalla.
+     *
+     * Así que el camino normal —enlace de firma enviado, el cliente se echa
+     * atrás, reserva cancelada— dejaba «Firma pendiente · El cliente aún no ha
+     * firmado el contrato» clavado en el panel **para siempre**, sin nadie que
+     * vaya a firmar y sin forma de quitarlo desde ahí.
+     *
+     * `reservations` ya viene filtrado a los cuatro estados vivos por la
+     * consulta, así que basta con cruzar: lo que no esté en esa lista es una
+     * reserva cerrada o cancelada.
+     */
+    const reservasVivas = new Set(reservations.map((r) => r.id));
+    const contractCards: ContractCard[] = pendingContracts
+      .filter((c) => reservasVivas.has(c.reservationId))
+      .map((c) => ({
+        type: 'pending_signature' as const,
+        contract: c
+      }));
 
     // 3) Pickups scheduled for today (status: reserved/confirmed).
     const pickupsToday: CalendarCard[] = reservations
@@ -334,24 +376,43 @@ export class DashboardComponent implements OnInit {
       total
     });
 
-    // 8) Maintenance overdue.
+    /**
+     * 8 y 9) Mantenimiento vencido y próximo a vencer.
+     *
+     * ⚠️ **Un mantenimiento vence por fecha O por kilómetros**, y aquí solo se
+     * miraba la fecha: `if (!m.nextDueDate) return false` descartaba de entrada
+     * todo registro sin fecha, así que un cambio de aceite con «Km del
+     * recordatorio» puesto y la fecha vacía —lo que sale del formulario de la
+     * ficha del coche sin tocar nada más— **no salía en ninguna de las dos
+     * tarjetas**. La cifra decía «Vencidos · 2 ítems» habiendo cinco.
+     *
+     * ⚠️ **Y los kilómetros hay que ir a buscarlos al COCHE**, que es donde
+     * viven: el registro guarda el umbral (`nextDueKm`) y el vehículo el
+     * cuentakilómetros, que reescribe cada parte de inspección. Sin cruzarlos,
+     * el mismo registro salía «Vencido» en la pestaña del coche y «Próximo a
+     * vencer» en el panel — dos verdades opuestas del mismo dato.
+     */
     const now = new Date();
-    const horizon = new Date(now.getTime() + MAINTENANCE_DUE_SOON_DAYS * 24 * 60 * 60 * 1000);
-    const overdueItems = maintenanceItems.filter((m) => {
-      if (!m.nextDueDate) return false;
-      const d = this.toDateSafe(m.nextDueDate);
-      return d ? d.getTime() < now.getTime() : false;
+    const kmPorVehiculo = new Map<string, number | undefined>(
+      vehicles.filter((v) => !!v.id).map((v) => [v.id as string, v.currentKm])
+    );
+    // La plantilla lo necesita para explicar POR QUÉ está vencido cada ítem.
+    this.vehicleKm = kmPorVehiculo;
+    const plazoDe = (m: VehicleMaintenance): MaintenanceDeadline => ({
+      status: m.status,
+      dueDate: m.nextDueDate ? this.toDateSafe(m.nextDueDate) : null,
+      dueKm: m.nextDueKm,
+      currentKm: kmPorVehiculo.get(m.vehicleId)
     });
+
+    const overdueItems = maintenanceItems.filter((m) => maintenanceOverdue(plazoDe(m), now));
     if (overdueItems.length) {
       cards.push({ type: 'maintenance_overdue', items: overdueItems });
     }
 
-    // 9) Maintenance due soon (next 30 days).
-    const dueSoonItems = maintenanceItems.filter((m) => {
-      if (!m.nextDueDate) return false;
-      const d = this.toDateSafe(m.nextDueDate);
-      return d ? d.getTime() >= now.getTime() && d.getTime() <= horizon.getTime() : false;
-    });
+    const dueSoonItems = maintenanceItems.filter((m) =>
+      maintenanceDueSoon(plazoDe(m), now, MAINTENANCE_DUE_SOON_DAYS)
+    );
     if (dueSoonItems.length) {
       cards.push({ type: 'maintenance_due_soon', items: dueSoonItems });
     }
@@ -404,6 +465,45 @@ export class DashboardComponent implements OnInit {
   pendingPaymentHint(card: PendingPaymentCard): string {
     return DEBT_MOMENT_HINTS[card.momento];
   }
+
+  /**
+   * «Ver todo» de las dos tarjetas de mantenimiento.
+   *
+   * ⚠️ **No llevaba a ninguna parte.** El contenedor de esas dos tarjetas no
+   * tenía `(click)` —solo lo tenían los `<li>`—, mientras el CSS le ponía la
+   * mano encima y el tinte al pasar el ratón: con ocho vencidos, la tarjeta
+   * decía «8 ítems», pintaba cinco y ofrecía «Ver todo →» que no hacía nada.
+   * Tres vencidos quedaban anunciados en la cifra y sin forma de abrirse.
+   *
+   * ⚠️ **Y el destino no es una pantalla de mantenimiento, porque no existe**:
+   * los registros viven en la pestaña de cada coche. La única pantalla que los
+   * enseña de toda la flota junta es Eventos, así que ahí va — **con el plazo
+   * de la tarjeta en la URL**, o el operador aterrizaría en los 7 días por
+   * defecto viendo menos de lo que se le acababa de prometer.
+   */
+  openMaintenanceEvents(dias: number): void {
+    void this.router.navigate(['/events'], { queryParams: { horizon: dias } });
+  }
+
+  /**
+   * Por qué está vencido este registro: los kilómetros o la fecha.
+   *
+   * ⚠️ **Desde que la tarjeta cuenta los kilómetros, su fecha puede ser
+   * FUTURA.** Un cambio de aceite a los 100.000 km con el coche en 112.000 y la
+   * revisión anual todavía por llegar salía bajo el rótulo «Vencidos» con una
+   * fecha del mes que viene al lado — que se lee como un error de la pantalla.
+   * Se enseña el dato que de verdad lo venció.
+   */
+  maintenanceOverdueBy(m: VehicleMaintenance, km?: number): { km: number } | null {
+    const actual = km ?? this.vehicleKm.get(m.vehicleId);
+    if (m.nextDueKm === undefined || actual === undefined) return null;
+    return actual >= m.nextDueKm ? { km: m.nextDueKm } : null;
+  }
+
+  /** Los kilómetros de cada coche, para la tarjeta de mantenimiento. */
+  vehicleKm = new Map<string, number | undefined>();
+
+  protected readonly MAINTENANCE_DUE_SOON_DAYS = MAINTENANCE_DUE_SOON_DAYS;
 
   // === Click navigation ===
 

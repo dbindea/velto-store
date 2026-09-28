@@ -103,7 +103,7 @@
       "rentalPaid": "Închiriere plătită",
       "reservationsWithDebt": "Rezervări cu datorii",
       "reservationsWithDebtHint": "au plăți restante",
-      "totalPaid": "Total plătit",
+      "totalPaid": "Încasat (fără garanții)",
       "totalPending": "Restant"
     },
     "reservations": {
@@ -307,7 +307,7 @@
       "moment": {
         "beforePickup": "Încasează înainte de a confirma predarea",
         "delivered": "Mașina este deja predată și neîncasată",
-        "returned": "Returnată și neîncasată: rezervarea nu se poate închide"
+        "returned": "Returnată și neîncasată: rezervarea este încă deschisă"
       }
     },
     "pendingSignature": {
@@ -1269,7 +1269,10 @@
       "reservationCreated": "Rezervare creată",
       "returnCompleted": "Returnare finalizată",
       "skippedByException": "Omis prin excepție",
-      "title": "Progresul rezervării"
+      "title": "Progresul rezervării",
+      "initialPaymentWaived": "Fără avans (nu s-a cerut)",
+      "depositWaived": "Fără garanție (nu s-a cerut)",
+      "remainingPaymentNotDue": "Fără rest (totul a intrat în avans)"
     },
     "title": "Rezervări"
   },
@@ -1617,8 +1620,6 @@
   },
   "workflow": {
     "blockedAction": "Acțiune blocată",
-    "blockedClose": "Returnează vehiculul și soluționează garanția mai întâi.",
-    "blockedPickup": "Contract semnat, rest plătit și garanție necesare mai întâi.",
     "blockedReturn": "Efectuează întâi predarea.",
     "blockedSettleDeposit": "Așteaptă returnarea vehiculului.",
     "cancelled": "Rezervare anulată sau închisă",
@@ -1660,7 +1661,8 @@
     "skipStepHint": "Se înregistrează cu numele tău, data și motivul. Folosește-l când pasul a fost îndeplinit altfel —un contract semnat pe hârtie— sau când îți asumi riscul în cunoștință de cauză, de exemplu predând mașina unui client de încredere care va plăti mai târziu. Ce rămâne neîncasat rămâne datorat, iar panoul îți va aminti în continuare.",
     "startPickup": "Începe predarea",
     "startReturn": "Începe returnarea",
-    "unsettledDeposit": "Garanție nerezolvată"
+    "unsettledDeposit": "Garanție nerezolvată",
+    "missingReturn": "Vehiculul nu a fost încă returnat"
   },
   "invoices": {
     "reservationWithoutVat": "Această rezervare a fost convenită fără TVA. O factură îl include, deci totalul nu va coincide cu suma încasată: verifică baza înainte de emitere, pentru că o factură emisă nu se poate edita sau șterge.",
@@ -1977,8 +1979,9 @@
   "events": {
     "alerts": {
       "contractNotSigned": "Contractul nu este semnat: mașina nu poate fi predată",
-      "maintenanceOverdue": "Expirat: nu închiria mașina până nu trece",
-      "invoiceDeadline": "Se apropie termenul de emitere"
+      "maintenanceOverdue": "Depășit: e bine de făcut cât mai curând",
+      "invoiceDeadline": "Se apropie termenul de emitere",
+      "maintenanceBlocking": "Expirat: împiedică închirierea mașinii"
     },
     "categories": {
       "payment": "De plătit",

@@ -28,6 +28,7 @@ import {
 } from '@shared/models/vehicle-maintenance.model';
 import {
   blockingMaintenance,
+  maintenanceOverdue,
   type MaintenanceBlock,
   type MaintenanceDue
 } from '@shared/utils/vehicle-availability.util';
@@ -417,16 +418,29 @@ export class VehicleMaintenanceService {
     if (m.status === 'completed' || m.status === 'cancelled') {
       return m.status;
     }
-    const now = new Date();
-    let overdue = false;
-    if (m.nextDueDate) {
-      const d = m.nextDueDate instanceof Timestamp ? m.nextDueDate.toDate() : new Date(m.nextDueDate);
-      if (d.getTime() < now.getTime()) overdue = true;
-    }
-    if (m.nextDueKm !== undefined && vehicleCurrentKm !== undefined) {
-      if (vehicleCurrentKm >= m.nextDueKm) overdue = true;
-    }
-    if (overdue) return 'overdue';
-    return m.status;
+    /**
+     * ⚠️ **La regla vive en `vehicle-availability.util.ts`, no aquí.** Este
+     * método tenía su propia copia de «vencido por fecha o por kilómetros»,
+     * y el panel —que no puede inyectar un servicio para pintar una tarjeta—
+     * tenía otra que solo miraba la fecha. Dos copias, y la segunda se quedó
+     * corta: el mismo registro salía «Vencido» en esta pestaña y «Próximo a
+     * vencer» en el panel.
+     *
+     * ⚠️ **Y la conversión de fecha era una copia a mano de las que ya vaciaron
+     * el calendario**: `m.nextDueDate instanceof Timestamp ? … : new Date(…)`
+     * solo entiende un `Timestamp` del SDK, y esta aplicación guarda un mapa
+     * `{ seconds, nanoseconds }` normal. `toDate()` cubre las cuatro formas.
+     */
+    return maintenanceOverdue(
+      {
+        status: m.status,
+        dueDate: m.nextDueDate ? toDate(m.nextDueDate) : null,
+        dueKm: m.nextDueKm,
+        currentKm: vehicleCurrentKm
+      },
+      new Date()
+    )
+      ? 'overdue'
+      : m.status;
   }
 }
