@@ -114,6 +114,20 @@ de arranque del código; la causa real —`Quota exceeded for total allowable CP
 per project per region`— sale una línea antes y solo en algunos intentos. Fallan
 cuatro o seis functions al azar, distintas cada vez.
 
+⚠️ **Y con las 29 de desarrollo a la vez fallan DIECINUEVE.** Medido el 28 de
+septiembre de 2026 desplegando el cambio de los imports, que tocaba 26 ficheros
+y por tanto todas: entraron 15 y se cayeron 19, todas con la misma cuota. O sea
+que «cuatro o seis al azar» es lo que pasa con trece; con veintinueve el
+despliegue completo **no es una opción**, y da igual cuántas veces se reintente
+entero. La forma es por tandas de dos o tres desde el principio, con una pausa
+entre tandas para que la cuota se libere.
+
+⚠️ **Y el mensaje sigue acusando al código.** Aquí el bundle estaba verificado
+—`node -e "require('./lib/index.js')"` antes de desplegar, y el manifiesto de
+descubrimiento idéntico al anterior—, así que el `Container Healthcheck failed`
+no podía ser del arranque. Sin esa comprobación previa, lo que se lee lleva
+derecho a buscar un fallo que no existe.
+
 Antes de tocar nada, **descarta el código** cargando el bundle igual que lo carga
 el contenedor:
 
@@ -2026,22 +2040,29 @@ cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
 necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
 conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
-⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 17 de
-septiembre de 2026 con `gcloud functions list`, que además da la fecha de cada
-una — `firebase functions:list` no la da):
+⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 28 de
+septiembre de 2026 con `firebase functions:list`, comparando los nombres contra
+los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| desarrollo | **29** | — |
-| producción | **22** | las cinco de la AEAT, más `syncAuthClaims` y `onAuthorizedUserChanged` |
+| el código define | **34** | — |
+| desarrollo | **34** | — |
+| producción | **29** | las cinco de la AEAT |
 
-⚠️ **Lo que falta en producción falta por dos motivos distintos, y no conviene
-mezclarlos.** Las cinco de la AEAT faltan **a propósito**, con el guion del 1 de
-enero ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis). Las dos de los
-claims faltan porque **están pendientes de desplegar**, y tienen un orden que hay
-que respetar: primero las functions, luego el frontend que llama a
-`syncAuthClaims`, y **las reglas de Storage al final**. Al revés, nadie tendría
-el sello todavía y la aplicación se quedaría sin poder leer un solo fichero.
+⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
+([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
+`sweepVerifactuRecords`, `getVerifactuStatus`, `retryVerifactuRecord` y
+`checkVerifactuConnection`.
+
+> Aquí ponía **29 y 22**, y que faltaban además `syncAuthClaims` y
+> `onAuthorizedUserChanged` «pendientes de desplegar». Las dos **ya están en
+> producción**, y las cinco públicas de la web —`publicVehicles`,
+> `publicVehicleDetail`, `checkPublicAvailability`, `publishVehiclePhoto`,
+> `unpublishVehiclePhoto`— nacieron después de que se escribiera esa tabla. Es
+> exactamente el desajuste que el párrafo de abajo avisa que es fácil olvidar:
+> **una tabla de inventario escrita a mano se queda vieja**, así que lo que vale
+> es la comparación, no la cifra.
 
 ⚠️ **`issueInvoice` e `issueComplianceDeclaration` YA están allí** desde el 17 de
 septiembre de 2026: producción emite facturas —y ya tiene su declaración
@@ -2950,7 +2971,13 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **22**.
+siga dando **29**.
+
+⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
+**códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
+no cuenta nada, según el patrón. Lo que vale es quitar los escapes y comparar
+los **nombres** contra los del manifiesto de descubrimiento: ahí se ve qué falta,
+no solo cuántas hay — que es la pregunta buena.
 
 ### Secrets
 
@@ -4164,9 +4191,14 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay 19 desplegadas y el
-código define 26: las siete que faltan escriben facturas o hablan con la AEAT, y
-no están allí hasta el 1 de enero. Un despliegue completo las subiría.
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
+el código define **34**: las cinco que faltan hablan con la AEAT y no están allí
+hasta el 1 de enero. Un despliegue completo las subiría.
+
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 34 functions, un
+`--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
+medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
+cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.
 
 ## Deuda técnica conocida
 
