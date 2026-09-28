@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
 ---
 
-<!--
+{/*
   ⚠️ **Esta página RESUME el contrato, no lo sustituye, y no puede decir nada
   que el contrato no diga.** Cada punto de aquí sale de una cláusula real de
   `functions/src/contracts/clauses.ts` — la edad mínima de 21 años, los treinta
@@ -14,7 +14,7 @@ import { EMPRESA } from '../lib/empresa';
   Es la misma regla que ya mordió cinco veces en los PDF: el texto y el hecho se
   deciden juntos. Una web que promete algo que el contrato no recoge es una
   discusión en el mostrador, y con razón del cliente.
--->
+*/}
 <Base
   titulo="Condiciones de alquiler | Velto"
   descripcion="Lo importante antes de reservar: edad mínima, qué incluye el precio, fianza, kilómetros, combustible y dónde se puede circular."
@@ -40,11 +40,19 @@ import { EMPRESA } from '../lib/empresa';
 
       <h2 id="cancelar">Recogida, devolución y cancelación</h2>
       <p>
+        {/*
+          ⚠️ Aquí ponía «un retraso puede suponer un cargo», y la cláusula 4 del
+          contrato dice otra cosa: pasados los treinta minutos se cobra **un día
+          entero** por cada fracción de 24 horas. No era falso, era vago — y esta
+          página existe justo para que nadie se entere en el mostrador. Quien
+          llega cuarenta minutos tarde esperaba un recargo proporcional.
+        */}
         Se acuerdan por escrito el día, la hora y el lugar. Hay
-        <strong>treinta minutos de cortesía</strong>; a partir de ahí, un retraso
-        puede suponer un cargo. Al entregar y al devolver el coche hacemos un
-        parte con fotos: es lo que evita discusiones después sobre un golpe o el
-        nivel de combustible.
+        <strong>treinta minutos de cortesía</strong>; a partir de ahí, la
+        devolución tardía se cobra como <strong>un día más de alquiler</strong>
+        por cada 24 horas empezadas. Al entregar y al devolver el coche hacemos
+        un parte con fotos: es lo que evita discusiones después sobre un golpe o
+        el nivel de combustible.
       </p>
 
       <h2>Precio, fianza y forma de pago</h2>

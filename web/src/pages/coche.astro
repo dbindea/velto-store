@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
 ---
 
-<!--
+{/*
   ⚠️ **Una sola página para todas las fichas, y el id se lee de la URL.**
   El sitio es estático: no hay `getStaticPaths` porque eso obligaría a conocer
   los coches en el build, y entonces publicar uno nuevo no se vería hasta el
@@ -13,7 +13,7 @@ import { EMPRESA } from '../lib/empresa';
   todo `/coche/**` a este fichero. ⚠️ Si ese rewrite falta, la página devuelve
   404 y no hay ningún aviso: es el mismo fallo silencioso que tuvo `/d/**`, que
   acababa sirviendo la SPA y mandando al cliente a la pantalla de login.
--->
+*/}
 <Base
   titulo="Vehículo | Velto"
   descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos y precio por día."

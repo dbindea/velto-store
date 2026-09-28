@@ -18,11 +18,11 @@ import Base from '../layouts/Base.astro';
         <a href="/reservar">consulta la disponibilidad</a>.
       </p>
 
-      <!--
+      {/*
         ⚠️ TRES estados y no dos: cargando, vacío y roto. Enseñar «no hay
         coches» cuando lo que ha fallado es la petición manda al visitante a
         otra web creyendo que no tenemos flota.
-      -->
+      */}
       <div id="lista" class="rejilla" hidden></div>
       <p id="cargando" class="aviso">Cargando la flota…</p>
       <p id="vacio" class="aviso" hidden>

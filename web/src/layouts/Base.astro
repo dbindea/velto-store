@@ -90,7 +90,7 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <meta name="description" content={descripcion} />
     <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
 
-    <!--
+    {/*
       ⚠️ **Las fotos viven en OTRO origen, y el saludo se paga dentro del camino
       crítico.** Salen de `firebasestorage.googleapis.com`, así que la primera no
       puede empezar a bajar hasta hacer DNS + TCP + TLS contra un servidor con el
@@ -102,17 +102,17 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       carga, mucho antes de que se sepa qué fotos hay. `crossorigin` no es
       opcional: sin él el navegador abre una conexión anónima distinta de la que
       luego usará para las imágenes, y el saludo se paga igual.
-    -->
+    */}
     <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin />
 
     {adelanto && <script is:inline set:html={adelanto} />}
 
-    <!--
+    {/*
       ⚠️ La canónica es lo que impide que los DOS dominios compitan entre sí.
       `veltorent.com` sirve el mismo sitio; sin esto, Google reparte el
       posicionamiento en vez de sumarlo y puede acabar enseñando el que no
       queremos.
-    -->
+    */}
     {canonica && <link rel="canonical" href={canonica} />}
 
     {
@@ -139,12 +139,12 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     {canonica && <meta property="og:url" content={canonica} />}
     <meta name="theme-color" content="#20A48F" />
 
-    <!--
+    {/*
       ⚠️ **El tema se aplica ANTES de pintar, y por eso va aquí en crudo.** Con
       el script al final, una recarga en tema oscuro enseña un fogonazo blanco
       antes de corregirse — es exactamente el parpadeo que el backoffice ya tuvo
       que resolver con su pantalla de arranque.
-    -->
+    */}
     <script is:inline>
       (function () {
         try {
@@ -245,12 +245,12 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
             <ul class="pie__enlaces">
               <li><a href="/condiciones">Condiciones de alquiler</a></li>
             </ul>
-            <!--
+            {/*
               ⚠️ El ÚNICO sitio donde aparece la razón social, y va junto al
               NIF: es donde la empresa comparece como persona jurídica. En todo
               lo demás, la marca. Y `razonSocial` acaba en punto, así que la
               frase no lleva otro detrás.
-            -->
+            */}
             <p class="pie__legal">
               {EMPRESA.razonSocial}<br />
               NIF {EMPRESA.nif}<br />

@@ -96,14 +96,14 @@ const PREGUNTAS = [
   ruta=""
   precarga="flota"
 >
-  <!-- ---- Héroe ---------------------------------------------------------- -->
+  {/* ---- Héroe ---------------------------------------------------------- */}
   <section class="hero">
     <div class="contenedor">
-      <!-- Las tres barras del isotipo, inclinadas con `--skew`. -->
+      {/* Las tres barras del isotipo, inclinadas con `--skew`. */}
       <div class="barras" aria-hidden="true"><span></span><span></span><span></span></div>
 
       <h1 class="hero__titular">Alquila un coche con el precio final desde el primer clic.</h1>
-      <!--
+      {/*
         ⚠️ **«Seguro obligatorio», y la palabra sobra tan poco que decide un
         pleito.** Aquí ponía «Seguro incluido», que un cliente lee como «si le
         doy un golpe estoy cubierto» — y la cláusula 13 del contrato dice lo
@@ -113,14 +113,14 @@ const PREGUNTAS = [
         responde él, que es para lo que están la fianza y el cargo por daños.
 
         Decisión de Dorel del 28 de septiembre de 2026: se dice lo que cubre.
-      -->
+      */}
       <p class="hero__entrada">
         Seguro obligatorio incluido, kilómetros pactados por escrito y entrega a
         domicilio. Recoges en {EMPRESA.oficinaCalle} o te lo llevamos a casa.
       </p>
     </div>
 
-    <!-- El buscador, montado sobre el corte entre el negro y el fondo. -->
+    {/* El buscador, montado sobre el corte entre el negro y el fondo. */}
     <div class="contenedor">
       <form class="buscador" action="/reservar" method="get">
         <div class="buscador__campo">
@@ -141,7 +141,7 @@ const PREGUNTAS = [
     </div>
   </section>
 
-  <!-- ---- Las cuatro promesas ------------------------------------------- -->
+  {/* ---- Las cuatro promesas ------------------------------------------- */}
   <section class="seccion promesas-seccion">
     <div class="contenedor">
       <div class="promesas">
@@ -158,7 +158,7 @@ const PREGUNTAS = [
     </div>
   </section>
 
-  <!-- ---- Flota (se carga de la API) ------------------------------------- -->
+  {/* ---- Flota (se carga de la API) ------------------------------------- */}
   <section class="seccion seccion--alt">
     <div class="contenedor">
       <p class="chip">Flota</p>
@@ -178,7 +178,7 @@ const PREGUNTAS = [
     </div>
   </section>
 
-  <!-- ---- Requisitos ----------------------------------------------------- -->
+  {/* ---- Requisitos ----------------------------------------------------- */}
   <section class="seccion" id="requisitos">
     <div class="contenedor requisitos">
       <div>
@@ -208,7 +208,7 @@ const PREGUNTAS = [
     </div>
   </section>
 
-  <!-- ---- Preguntas frecuentes ------------------------------------------- -->
+  {/* ---- Preguntas frecuentes ------------------------------------------- */}
   <section class="seccion seccion--alt">
     <div class="contenedor dos-columnas">
       <div>
@@ -220,12 +220,12 @@ const PREGUNTAS = [
         <a class="btn btn--ghost" href="/condiciones">Ver todas las condiciones</a>
       </div>
 
-      <!--
+      {/*
         ⚠️ **Cada respuesta sale de una cláusula del contrato**, igual que la
         página de condiciones. Si el articulado cambia, esto cambia con él: una
         web que promete algo que el papel no dice es una discusión en el
         mostrador, y con razón del cliente.
-      -->
+      */}
       <div class="faq">
         {
           PREGUNTAS.map((p, i) => (
