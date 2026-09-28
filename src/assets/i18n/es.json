@@ -678,7 +678,8 @@
     "vehicles": "Vehículos",
     "invoices": "Facturas",
     "collaborators": "Colaboradores",
-    "events": "Eventos"
+    "events": "Eventos",
+    "bookingRequests": "Solicitudes"
   },
   "payments": {
     "actions": {
@@ -2033,5 +2034,53 @@
     "subtitle": "Todo lo que hay que hacer, en un solo sitio",
     "title": "Eventos próximos",
     "today": "Hoy"
+  },
+  "bookingRequests": {
+    "title": "Solicitudes de la web",
+    "subtitle": "Quien ha pedido que le llamemos, con lo que eligió",
+    "day": "día",
+    "days": "días",
+    "call": "Llamar",
+    "whatsapp": "WhatsApp",
+    "markContacted": "Marcar contactada",
+    "convert": "Convertir en reserva",
+    "discardAction": "Descartar",
+    "openReservation": "Ver la reserva",
+    "priceExpired": "El precio ya no se garantiza",
+    "notePlaceholder": "Lo que hablasteis…",
+    "notHeld": "Al cliente se le dijo que el coche no queda reservado y que lo que se le garantiza es el precio.",
+    "status": {
+      "new": "Sin contestar",
+      "contacted": "Contactada",
+      "converted": "Convertida",
+      "discarded": "Descartada"
+    },
+    "filters": {
+      "open": "Sin cerrar",
+      "new": "Sin contestar",
+      "contacted": "Contactadas",
+      "converted": "Convertidas",
+      "discarded": "Descartadas",
+      "all": "Todas"
+    },
+    "fields": {
+      "dates": "Fechas",
+      "phone": "Teléfono",
+      "received": "Recibida",
+      "priceUntil": "Precio garantizado hasta",
+      "internalNote": "Nota interna"
+    },
+    "empty": {
+      "title": "Ninguna solicitud",
+      "hint": "Aquí aparecen las peticiones de «Que me llamen» de la web."
+    },
+    "discard": {
+      "title": "¿Descartar esta solicitud?",
+      "message": "Deja de aparecer entre las pendientes. Podrás recuperarla desde el filtro «Descartadas»."
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar las solicitudes.",
+      "saveFailed": "No se pudo guardar el cambio."
+    }
   }
 }

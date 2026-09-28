@@ -27,6 +27,14 @@
         >
           <i [class]="item.iconClass"></i>
           <span>{{ item.labelKey | translate }}</span>
+          <!--
+            ⚠️ El contador solo se pinta si hay algo que contar. Un «0» al lado
+            de una entrada de menú es ruido permanente: deja de mirarse, y el
+            día que ponga «2» tampoco se mirará.
+          -->
+          @if (item.badge && badgeCounts()[item.badge]) {
+            <span class="nav-badge">{{ badgeCounts()[item.badge] }}</span>
+          }
         </a>
       }
     </nav>

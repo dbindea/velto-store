@@ -678,7 +678,8 @@
     "vehicles": "Vehicule",
     "invoices": "Facturi",
     "collaborators": "Colaboratori",
-    "events": "Evenimente"
+    "events": "Evenimente",
+    "bookingRequests": "Solicitări"
   },
   "payments": {
     "actions": {
@@ -2033,5 +2034,53 @@
     "subtitle": "Tot ce trebuie făcut, într-un singur loc",
     "title": "Evenimente apropiate",
     "today": "Azi"
+  },
+  "bookingRequests": {
+    "title": "Solicitări de pe site",
+    "subtitle": "Cine a cerut să îl sunăm, cu ce a ales",
+    "day": "zi",
+    "days": "zile",
+    "call": "Sună",
+    "whatsapp": "WhatsApp",
+    "markContacted": "Marchează contactată",
+    "convert": "Transformă în rezervare",
+    "discardAction": "Renunță",
+    "openReservation": "Vezi rezervarea",
+    "priceExpired": "Prețul nu mai este garantat",
+    "notePlaceholder": "Ce ați vorbit…",
+    "notHeld": "Clientului i s-a spus că mașina nu este rezervată și că i se garantează prețul.",
+    "status": {
+      "new": "Fără răspuns",
+      "contacted": "Contactată",
+      "converted": "Transformată",
+      "discarded": "Respinsă"
+    },
+    "filters": {
+      "open": "În lucru",
+      "new": "Fără răspuns",
+      "contacted": "Contactate",
+      "converted": "Transformate",
+      "discarded": "Respinse",
+      "all": "Toate"
+    },
+    "fields": {
+      "dates": "Date",
+      "phone": "Telefon",
+      "received": "Primită",
+      "priceUntil": "Preț garantat până la",
+      "internalNote": "Notă internă"
+    },
+    "empty": {
+      "title": "Nicio solicitare",
+      "hint": "Aici apar cererile de tip «Sună-mă» de pe site."
+    },
+    "discard": {
+      "title": "Respingi această solicitare?",
+      "message": "Nu mai apare printre cele în așteptare. O poți recupera din filtrul «Respinse»."
+    },
+    "errors": {
+      "loadFailed": "Solicitările nu au putut fi încărcate.",
+      "saveFailed": "Modificarea nu a putut fi salvată."
+    }
   }
 }

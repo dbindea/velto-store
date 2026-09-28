@@ -224,6 +224,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/events/pages/event-list/event-list.component').then(m => m.EventListComponent)
       },
       {
+        // Solicitudes de la web: «que me llamen». Sin permiso propio —llamar a
+        // quien ha pedido un coche es trabajo de la agencia, como Eventos—, y
+        // en su propia pantalla porque una solicitud no es una reserva a
+        // medias: metida como estado habría empezado a bloquear el coche en la
+        // web pública, donde todo estado no enumerado bloquea.
+        path: 'booking-requests',
+        loadComponent: () =>
+          import('./features/booking-requests/booking-requests.component').then(
+            m => m.BookingRequestsComponent
+          )
+      },
+      {
         path: 'collaborators',
         // Comerciales y sus comisiones: es lo que la empresa PAGA, así que
         // mismo criterio que Gastos e Informes — información de dueño. El

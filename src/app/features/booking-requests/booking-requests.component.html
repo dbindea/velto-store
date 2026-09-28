@@ -1,0 +1,193 @@
+<div class="page">
+  <div class="page-header">
+    <h1>{{ 'bookingRequests.title' | translate }}</h1>
+    <p class="subtitle">{{ 'bookingRequests.subtitle' | translate }}</p>
+  </div>
+
+  <!--
+    El filtro lleva su recuento al lado. Es lo que hace que abrir en «sin
+    cerrar» no se lea como «no hay más»: la lista de Reservas se abría recortada
+    y parecía vacía, y aquí el número de las demás está a la vista.
+  -->
+  <div class="filtros">
+    @for (f of filtros; track f) {
+      <button
+        type="button"
+        class="filtro"
+        [class.is-active]="filtro() === f"
+        (click)="filtro.set(f)"
+      >
+        {{ 'bookingRequests.filters.' + f | translate }}
+        <span class="filtro__n">{{ cuentaDe(f) }}</span>
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>{{ 'common.loading' | translate }}</p>
+    </div>
+  } @else if (visibles().length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-inbox"></i>
+      <h2>{{ 'bookingRequests.empty.title' | translate }}</h2>
+      <p>{{ 'bookingRequests.empty.hint' | translate }}</p>
+    </div>
+  } @else {
+    <div class="lista">
+      @for (r of visibles(); track r.id) {
+        <div class="detail-card solicitud" [class.is-open]="abierta() === r.id">
+          <!-- La cabecera es la fila de la lista: pulsarla despliega la ficha. -->
+          <div class="card-header solicitud__fila" (click)="alternar(r.id)">
+            <div class="solicitud__quien">
+              <span class="solicitud__ref mono">{{ r.reference }}</span>
+              <strong>{{ r.name }}</strong>
+            </div>
+            <div class="solicitud__que">
+              {{ r.vehicleSnapshot.brand }} {{ r.vehicleSnapshot.model }}
+              <span class="solicitud__sep">·</span>
+              {{ r.quoteSnapshot.totalDays }}
+              {{
+                (r.quoteSnapshot.totalDays === 1
+                  ? 'bookingRequests.day'
+                  : 'bookingRequests.days'
+                ) | translate
+              }}
+            </div>
+            <div class="solicitud__precio num">
+              {{ r.quoteSnapshot.gross | number: '1.2-2' }} €
+            </div>
+            <span class="badge" [ngClass]="STATUS_COLORS[r.status]">
+              {{ STATUS_LABELS[r.status] | translate }}
+            </span>
+            <i class="pi" [class.pi-chevron-down]="abierta() !== r.id" [class.pi-chevron-up]="abierta() === r.id"></i>
+          </div>
+
+          @if (abierta() === r.id) {
+            <div class="card-content">
+              <div class="datos">
+                <div class="dato">
+                  <span class="dato__et">{{ 'bookingRequests.fields.dates' | translate }}</span>
+                  <span>
+                    {{ fecha(r.pickupDate) | date: 'dd/MM/yyyy' }} –
+                    {{ fecha(r.returnDate) | date: 'dd/MM/yyyy' }}
+                  </span>
+                </div>
+                <div class="dato">
+                  <span class="dato__et">{{ 'bookingRequests.fields.phone' | translate }}</span>
+                  <span class="mono">+{{ r.phone }}</span>
+                </div>
+                <div class="dato">
+                  <span class="dato__et">{{ 'bookingRequests.fields.received' | translate }}</span>
+                  <span>{{ fecha(r.createdAt) | date: 'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <!--
+                  ⚠️ **Caducar el precio NO caduca la solicitud**, y por eso esto
+                  es un dato y no un cartel de alarma: el teléfono sigue
+                  sirviendo y la llamada sigue mereciendo la pena. Lo único que
+                  ha dejado de sostenerse es la cifra de arriba.
+                -->
+                <div class="dato">
+                  <span class="dato__et">{{ 'bookingRequests.fields.priceUntil' | translate }}</span>
+                  @if (precioEnPie(r)) {
+                    <span>{{ fecha(r.priceGuaranteedUntil) | date: 'dd/MM/yyyy HH:mm' }}</span>
+                  } @else {
+                    <span class="caducado">
+                      {{ 'bookingRequests.priceExpired' | translate }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              @if (r.note) {
+                <p class="nota-cliente">«{{ r.note }}»</p>
+              }
+
+              @if (r.internalNote) {
+                <p class="nota-interna">
+                  <span class="dato__et">{{ 'bookingRequests.fields.internalNote' | translate }}</span>
+                  {{ r.internalNote }}
+                </p>
+              }
+
+              @if (r.status === 'converted' && r.reservationId) {
+                <button type="button" class="btn-secondary" (click)="abrirReserva(r)">
+                  <i class="pi pi-arrow-right"></i>
+                  {{ 'bookingRequests.openReservation' | translate }}
+                </button>
+              } @else {
+                <label class="form-group">
+                  <span>{{ 'bookingRequests.fields.internalNote' | translate }}</span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    maxlength="300"
+                    [(ngModel)]="notaInterna"
+                    [placeholder]="'bookingRequests.notePlaceholder' | translate"
+                  />
+                </label>
+
+                <!--
+                  Tres acciones, en el orden en que se usan: llamar, escribir y
+                  convertir. El WhatsApp y el teléfono son enlaces de verdad —
+                  se abren en la aplicación del móvil, que es donde se está.
+                -->
+                <div class="acciones">
+                  <a class="btn-secondary" [href]="telefono(r)">
+                    <i class="pi pi-phone"></i>
+                    {{ 'bookingRequests.call' | translate }}
+                  </a>
+
+                  <a class="btn-secondary" [href]="whatsapp(r)" target="_blank" rel="noopener">
+                    <i class="pi pi-whatsapp"></i>
+                    {{ 'bookingRequests.whatsapp' | translate }}
+                  </a>
+
+                  @if (r.status === 'new') {
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      [disabled]="guardando() === r.id"
+                      (click)="contactada(r)"
+                    >
+                      <i class="pi pi-check"></i>
+                      {{ 'bookingRequests.markContacted' | translate }}
+                    </button>
+                  }
+
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    [disabled]="!puedeConvertir(r) || guardando() === r.id"
+                    (click)="convertir(r)"
+                  >
+                    <i class="pi pi-calendar-plus"></i>
+                    {{ 'bookingRequests.convert' | translate }}
+                  </button>
+
+                  @if (puedeDescartar(r)) {
+                    <button
+                      type="button"
+                      class="btn-ghost"
+                      [disabled]="guardando() === r.id"
+                      (click)="descartar(r)"
+                    >
+                      {{ 'bookingRequests.discardAction' | translate }}
+                    </button>
+                  }
+                </div>
+              }
+
+              <!--
+                ⚠️ Lo que el cliente leyó al enviarlo, repetido aquí a propósito:
+                el operador tiene que saber qué se le prometió antes de llamar.
+              -->
+              <p class="hint">{{ 'bookingRequests.notHeld' | translate }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

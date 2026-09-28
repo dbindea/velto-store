@@ -678,7 +678,8 @@
     "vehicles": "Vehicles",
     "invoices": "Invoices",
     "collaborators": "Partners",
-    "events": "Events"
+    "events": "Events",
+    "bookingRequests": "Requests"
   },
   "payments": {
     "actions": {
@@ -2033,5 +2034,53 @@
     "subtitle": "Everything that needs doing, in one place",
     "title": "Upcoming events",
     "today": "Today"
+  },
+  "bookingRequests": {
+    "title": "Website requests",
+    "subtitle": "People who asked for a call back, with what they picked",
+    "day": "day",
+    "days": "days",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "markContacted": "Mark as contacted",
+    "convert": "Turn into a booking",
+    "discardAction": "Discard",
+    "openReservation": "Open the booking",
+    "priceExpired": "The price is no longer guaranteed",
+    "notePlaceholder": "What you agreed…",
+    "notHeld": "The customer was told the car is not held and that what is guaranteed is the price.",
+    "status": {
+      "new": "Not answered",
+      "contacted": "Contacted",
+      "converted": "Converted",
+      "discarded": "Discarded"
+    },
+    "filters": {
+      "open": "Open",
+      "new": "Not answered",
+      "contacted": "Contacted",
+      "converted": "Converted",
+      "discarded": "Discarded",
+      "all": "All"
+    },
+    "fields": {
+      "dates": "Dates",
+      "phone": "Phone",
+      "received": "Received",
+      "priceUntil": "Price guaranteed until",
+      "internalNote": "Internal note"
+    },
+    "empty": {
+      "title": "No requests",
+      "hint": "Call-back requests from the website show up here."
+    },
+    "discard": {
+      "title": "Discard this request?",
+      "message": "It stops showing among the pending ones. You can get it back from the «Discarded» filter."
+    },
+    "errors": {
+      "loadFailed": "The requests could not be loaded.",
+      "saveFailed": "The change could not be saved."
+    }
   }
 }

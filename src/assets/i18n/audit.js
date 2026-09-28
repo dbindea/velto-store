@@ -130,6 +130,17 @@ const DYNAMIC_KEY_SETS = {
   'settings.themes.': ['light', 'dark', 'forest', 'ocean'],
   // reservation.model.ts › ReservationStatus
   'reservations.status.': ['reserved', 'confirmed', 'delivered', 'returned', 'closed', 'cancelled'],
+  // booking-requests.component.ts › Filtro. Son los cuatro estados de
+  // BookingRequestStatus más los dos agregados de la pantalla: `open` —lo que
+  // sigue sin cerrar, que es como se abre— y `all`.
+  'bookingRequests.filters.': [
+    'open',
+    'new',
+    'contacted',
+    'converted',
+    'discarded',
+    'all'
+  ],
   // reservation-create.component.ts › Step
   'reservations.steps.': ['dates', 'vehicle', 'client', 'summary'],
   // calendar.component.ts › dayRole(): qué pasa ese día con la reserva. La

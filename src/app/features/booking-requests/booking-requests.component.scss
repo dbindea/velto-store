@@ -1,0 +1,193 @@
+/*
+ * ⚠️ **Los colores salen de las variables del tema, nunca de las rampas.** Un
+ * componente que pinte con `--gray-700` se salta el tema y no cambia al
+ * alternar claro y oscuro. Y un `var()` sin declarar no falla: el navegador
+ * descarta la declaración entera, que es como los badges de estado estuvieron
+ * meses sin fondo.
+ */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  cursor: pointer;
+
+  /* Transparente de base: aquí el tinte sí vale como `background` a secas. */
+  &:hover { background: var(--bg-hover); }
+
+  &.is-active {
+    color: var(--text-on-accent, #fff);
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+}
+
+.filtro__n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.lista {
+  display: grid;
+  gap: 12px;
+}
+
+/*
+ * La cabecera ES la fila de la lista, así que se pulsa entera. El resto de la
+ * tarjeta solo existe cuando está abierta.
+ */
+.solicitud__fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) auto auto auto;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+/*
+ * La abierta se distingue de las demás.
+ *
+ * ⚠️ Sin esto, con la ficha desplegada no se ve de cuál cuelga: en una lista de
+ * diez filas iguales, el bloque de botones parece del de arriba o del de abajo.
+ * El filete de marca a la izquierda es lo mismo que hacen las tarjetas de aviso
+ * del panel.
+ */
+.solicitud.is-open {
+  border-left: 3px solid var(--accent-color);
+}
+
+.solicitud__quien {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.solicitud__ref {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.solicitud__que {
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.solicitud__sep { opacity: 0.5; }
+
+.solicitud__precio {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/*
+ * ⚠️ **Las CUATRO clases del enumerado, bajo el selector que de verdad las
+ * lleva.** Media tabla estilada no da error en ninguna parte y el estado que
+ * falta es siempre el que nadie mira hasta que aparece — pasó dos veces en la
+ * ficha de la reserva, con «Pagado» saliendo como texto negro invisible.
+ */
+.badge {
+  &.status-new {
+    color: var(--warning-color);
+    background: var(--warning-bg);
+  }
+  &.status-contacted {
+    color: var(--info-color);
+    background: var(--info-bg);
+  }
+  &.status-converted {
+    color: var(--success-color);
+    background: var(--success-bg);
+  }
+  &.status-discarded {
+    color: var(--text-muted);
+    background: var(--bg-main);
+  }
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.dato {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dato__et {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.caducado { color: var(--text-muted); }
+
+.nota-cliente {
+  margin: 0 0 16px;
+  padding: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  border-radius: 8px;
+}
+
+.nota-interna {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/*
+ * ⚠️ Los dos enlaces de la barra son `<a>`, no `<button>`: hace falta forzar
+ * la caja, porque `.btn-secondary` global la trae pero un `<a>` sigue siendo
+ * en línea y quedaría desalineado con los botones de al lado.
+ */
+.acciones a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+/* Mobile-first: se recoloca, no se oculta. Un importe o un estado escondido
+   dentro de una media query es un fallo, no una adaptación. */
+@media (max-width: 720px) {
+  .solicitud__fila {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'quien estado'
+      'que   precio';
+    gap: 8px;
+  }
+  .solicitud__quien { grid-area: quien; }
+  .solicitud__que { grid-area: que; }
+  .solicitud__precio { grid-area: precio; }
+  .badge { grid-area: estado; justify-self: end; }
+  .solicitud__fila > .pi { display: none; }
+
+  .acciones > * { flex: 1 1 auto; justify-content: center; }
+}
