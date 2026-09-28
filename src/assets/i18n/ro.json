@@ -1302,7 +1302,9 @@
       "quoteValidity": "Oferta trebuie să fie valabilă cel puțin o zi",
       "saveFailed": "Nu s-a putut salva",
       "signingExpiry": "Linkul de semnare trebuie să dureze cel puțin o zi",
-      "vatRate": "TVA se scrie ca procent, între 0 și 100"
+      "vatRate": "TVA se scrie ca procent, între 0 și 100",
+      "requestPriceHours": "Prețul garantat trebuie să fie între 1 oră și 30 de zile.",
+      "requestKeepHours": "Termenul de ștergere trebuie să fie între 1 oră și un an."
     },
     "operation": {
       "days": "zile",
@@ -1316,7 +1318,13 @@
       "signingExpiry": "Expirarea linkului de semnare",
       "signingExpiryHint": "Linkurile deja trimise o păstrează pe a lor: ce are clientul pe telefon nu expiră mai devreme din cauza asta.",
       "vat": "Cotă TVA generală",
-      "vatHint": "Se aplică rezervărilor noi și se îngheață în fiecare. Se scrie ca procent: 21, nu 0,21."
+      "vatHint": "Se aplică rezervărilor noi și se îngheață în fiecare. Se scrie ca procent: 21, nu 0,21.",
+      "hours": "ore",
+      "requestPriceHours": "Preț garantat pentru o solicitare",
+      "requestPriceHoursHint": "Cât timp se menține prețul pe care site-ul l-a arătat celui care a cerut să îl sunăm. Mașina nu este rezervată: ceea ce se garantează este suma.",
+      "requestKeepHours": "Șterge solicitările rezolvate după",
+      "requestKeepHoursHint": "Cât timp se păstrează o solicitare contactată, transformată sau respinsă înainte de a-i șterge numele și telefonul. Cele fără răspuns nu se șterg niciodată.",
+      "requestFrozenHint": "Ambele termene se aplică solicitărilor care vin de acum înainte: fiecare îl fixează pe al său la creare, așa că schimbarea lor nu mută un preț deja promis și nici expirarea celor existente."
     },
     "saved": "Salvat",
     "subtitle": "Valori implicite și cine poate intra",

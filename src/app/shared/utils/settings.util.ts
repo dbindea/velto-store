@@ -137,6 +137,30 @@ export function validateSettings(settings: Partial<OperationSettings>): FieldPro
   ) {
     problems['defaultIncludedKmPerDay'] = 'settings.errors.includedKm';
   }
+  /**
+   * ⚠️ **Sin esto los dos plazos se recortarían EN SILENCIO.** `resolveSettings`
+   * ya los topa, pero recortar no es validar: quien teclee 0 horas guardaría y
+   * se quedaría convencido de haber puesto 0, mientras la aplicación usa 1. Es
+   * la razón por la que esta función existe al lado de aquella.
+   */
+  if (
+    outOfRange(
+      settings.bookingRequestPriceHours,
+      LIMITS.bookingRequestPriceHours.min,
+      LIMITS.bookingRequestPriceHours.max
+    )
+  ) {
+    problems['bookingRequestPriceHours'] = 'settings.errors.requestPriceHours';
+  }
+  if (
+    outOfRange(
+      settings.bookingRequestKeepHours,
+      LIMITS.bookingRequestKeepHours.min,
+      LIMITS.bookingRequestKeepHours.max
+    )
+  ) {
+    problems['bookingRequestKeepHours'] = 'settings.errors.requestKeepHours';
+  }
 
   return problems;
 }

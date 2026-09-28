@@ -1302,7 +1302,9 @@
       "quoteValidity": "La validez del presupuesto tiene que ser de al menos un día",
       "saveFailed": "No se ha podido guardar",
       "signingExpiry": "El enlace de firma tiene que durar al menos un día",
-      "vatRate": "El IVA se escribe en porcentaje, entre 0 y 100"
+      "vatRate": "El IVA se escribe en porcentaje, entre 0 y 100",
+      "requestPriceHours": "El precio garantizado va entre 1 hora y 30 días.",
+      "requestKeepHours": "El plazo de borrado va entre 1 hora y un año."
     },
     "operation": {
       "days": "días",
@@ -1316,7 +1318,13 @@
       "signingExpiry": "Caducidad del enlace de firma",
       "signingExpiryHint": "Los enlaces ya enviados conservan la suya: lo que el cliente tiene en su móvil no caduca antes por cambiar esto.",
       "vat": "IVA general",
-      "vatHint": "Se aplica a las reservas nuevas y se congela en cada una. Se escribe en porcentaje: 21, no 0,21."
+      "vatHint": "Se aplica a las reservas nuevas y se congela en cada una. Se escribe en porcentaje: 21, no 0,21.",
+      "hours": "horas",
+      "requestPriceHours": "Precio garantizado de una solicitud",
+      "requestPriceHoursHint": "Cuánto se mantiene el precio que la web le enseñó a quien pide que le llamemos. El coche no queda apartado: lo que se garantiza es la cifra.",
+      "requestKeepHours": "Borrar solicitudes atendidas",
+      "requestKeepHoursHint": "Cuánto se conserva una solicitud ya contactada, convertida o descartada antes de borrar su nombre y su teléfono. Las que siguen sin contestar no se borran nunca.",
+      "requestFrozenHint": "Los dos plazos rigen para las solicitudes que entren a partir de ahora: cada una se lleva el suyo al nacer, así que cambiarlos no mueve el precio ya prometido ni la caducidad de las que ya existen."
     },
     "saved": "Guardado",
     "subtitle": "Valores por defecto y quién puede entrar",

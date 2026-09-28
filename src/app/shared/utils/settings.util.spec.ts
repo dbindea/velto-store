@@ -104,3 +104,55 @@ describe('lo que impide guardar', () => {
     ).toBe('settings.errors.deposit');
   });
 });
+
+/**
+ * Los dos plazos de las solicitudes de la web.
+ *
+ * ⚠️ Son DOS y no uno aunque ambos valgan 24 por defecto: uno es una promesa
+ * comercial —cuánto se mantiene el precio— y el otro una decisión sobre datos
+ * personales —cuánto se guarda un nombre y un teléfono—. Juntarlos ataría el
+ * día que uno tenga que cambiar.
+ */
+describe('los plazos de las solicitudes', () => {
+  it('por defecto, veinticuatro horas cada uno', () => {
+    expect(DEFAULT_OPERATION_SETTINGS.bookingRequestPriceHours).toBe(24);
+    expect(DEFAULT_OPERATION_SETTINGS.bookingRequestKeepHours).toBe(24);
+  });
+
+  it('un documento sin ellos usa el valor del código, no cero', () => {
+    // Es lo normal al estrenar un ajuste: el documento guardado es anterior.
+    const r = resolveSettings({ quoteValidityDays: 10 });
+    expect(r.bookingRequestPriceHours).toBe(24);
+    expect(r.bookingRequestKeepHours).toBe(24);
+  });
+
+  it.each([
+    ['bookingRequestPriceHours', 'settings.errors.requestPriceHours'],
+    ['bookingRequestKeepHours', 'settings.errors.requestKeepHours']
+  ] as const)('%s a 0 AVISA, no se recorta en silencio', (campo, error) => {
+    // `resolveSettings` lo topa a 1, pero recortar no es validar: quien teclee
+    // 0 guardaría convencido de haber puesto 0 mientras la aplicación usa otra
+    // cosa. Por eso esta función existe al lado de aquella.
+    expect(validateSettings({ ...DEFAULT_OPERATION_SETTINGS, [campo]: 0 })[campo]).toBe(error);
+  });
+
+  it('y un plazo absurdamente largo también', () => {
+    // Treinta días es el tope del precio: más allá deja de ser una promesa y
+    // pasa a ser una tarifa que nadie revisa.
+    expect(
+      validateSettings({ ...DEFAULT_OPERATION_SETTINGS, bookingRequestPriceHours: 721 })[
+        'bookingRequestPriceHours'
+      ]
+    ).toBe('settings.errors.requestPriceHours');
+  });
+
+  it('lo que está dentro de rango no molesta', () => {
+    const p = validateSettings({
+      ...DEFAULT_OPERATION_SETTINGS,
+      bookingRequestPriceHours: 48,
+      bookingRequestKeepHours: 168
+    });
+    expect(p['bookingRequestPriceHours']).toBeUndefined();
+    expect(p['bookingRequestKeepHours']).toBeUndefined();
+  });
+});

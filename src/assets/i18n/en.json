@@ -1302,7 +1302,9 @@
       "quoteValidity": "The quote must be valid for at least one day",
       "saveFailed": "It could not be saved",
       "signingExpiry": "The signing link must last at least one day",
-      "vatRate": "VAT is written as a percentage, between 0 and 100"
+      "vatRate": "VAT is written as a percentage, between 0 and 100",
+      "requestPriceHours": "The guaranteed price must be between 1 hour and 30 days.",
+      "requestKeepHours": "The deletion window must be between 1 hour and one year."
     },
     "operation": {
       "days": "days",
@@ -1316,7 +1318,13 @@
       "signingExpiry": "Signing link expiry",
       "signingExpiryHint": "Links already sent keep their own: what the customer has on their phone does not expire sooner because of this.",
       "vat": "General VAT rate",
-      "vatHint": "Applied to new reservations and frozen into each one. Written as a percentage: 21, not 0.21."
+      "vatHint": "Applied to new reservations and frozen into each one. Written as a percentage: 21, not 0.21.",
+      "hours": "hours",
+      "requestPriceHours": "Guaranteed price of a request",
+      "requestPriceHoursHint": "How long the price shown on the website is held for someone who asked for a call back. The car is not held: what is guaranteed is the figure.",
+      "requestKeepHours": "Delete handled requests after",
+      "requestKeepHoursHint": "How long a contacted, converted or discarded request is kept before its name and phone are deleted. Requests still unanswered are never deleted.",
+      "requestFrozenHint": "Both windows apply to requests arriving from now on: each one freezes its own when created, so changing them does not move a price already promised nor the expiry of existing requests."
     },
     "saved": "Saved",
     "subtitle": "Default values and who can get in",
