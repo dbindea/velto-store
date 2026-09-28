@@ -206,19 +206,35 @@ export class DashboardComponent implements OnInit {
   ): DashboardCard[] {
     const cards: DashboardCard[] = [];
 
-    // 1) Reservations awaiting first payment (signal not paid).
+    /**
+     * 1) Reservas con la señal sin cobrar.
+     *
+     * ⚠️ **Sale de `r.initialPayment`, NO de `r.paymentSummary`.** Aquella es la
+     * copia desnormalizada que existe para pintar rápido y que **se queda
+     * vieja**; este es el campo que mantienen al día tanto la creación como la
+     * edición, en el mismo `writeBatch` que mueve el dinero.
+     *
+     * Medido en producción el 26 de septiembre de 2026: una reserva con la señal
+     * bajada a 0 tenía `initialPayment.requiredAmount = 0` con `status: waived`
+     * y `paymentSummary.initialPaymentRequired = 50`. El panel leía la copia y
+     * pedía cobrar una señal que el operador acababa de quitar.
+     *
+     * ⚠️ **Y se filtra por `status`, no por la resta de importes.** Quien decide
+     * si una señal se cobra es `initialPaymentStatus()`, que sabe distinguir
+     * tres casos donde una resta solo ve dos: `waived` —no se pide, y es una
+     * decisión del operador—, `paid` y `pending`. Con la resta, una señal
+     * renunciada y una cobrada dan lo mismo por casualidad, y el día que dejen
+     * de darlo el panel vuelve a mentir.
+     */
     const pendingPayments: PendingPaymentCard[] = reservations
-      .filter((r) => {
-        const initial = r.paymentSummary?.initialPaymentRequired || 0;
-        const paid = r.paymentSummary?.initialPaymentPaid || 0;
-        return initial > 0 && paid < initial;
-      })
+      .filter((r) => r.initialPayment?.status === 'pending')
       .map((r) => ({
         type: 'pending_payment',
         reservation: r,
-        pendingAmount:
-          (r.paymentSummary?.initialPaymentRequired || 0) -
-          (r.paymentSummary?.initialPaymentPaid || 0)
+        pendingAmount: Math.max(
+          0,
+          (r.initialPayment?.requiredAmount || 0) - (r.initialPayment?.paidAmount || 0)
+        )
       }));
 
     // 2) Contracts awaiting signature.

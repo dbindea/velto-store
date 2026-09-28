@@ -232,8 +232,26 @@ export const generateContractPdf = functions.https.onCall(
     }
 
     // 5. Load payment summary (deposit)
+    //
+    // ⚠️ **`??` y no `||`, y aquí eso decide lo que se imprime en un contrato.**
+    // Una fianza de **0 es un valor legítimo** —a los clientes conocidos no se
+    // les cobra, y nace `waived` con motivo obligatorio—, pero 0 es *falsy*: con
+    // `||`, una fianza bajada a 0 se saltaba el dato bueno y caía a la copia
+    // desnormalizada `paymentSummary.depositRequired`, que **se queda vieja**.
+    // El contrato habría impreso, y el cliente firmado, una fianza que el
+    // operador acababa de quitar.
+    //
+    // No había estallado porque hacía falta bajar una fianza a 0 en una reserva
+    // ya creada, pero estaba armado: es el mismo desfase de la copia que el 26
+    // de septiembre de 2026 hizo que el panel pidiera una señal inexistente.
+    // Tres ficheros más allá, el justificante de reserva ya usaba `??`
+    // (`documents-pdf.ts:628`): los dos discrepaban.
+    //
+    // Con `??`, un 0 explícito en la reserva manda, y la copia solo se usa
+    // cuando el campo de verdad **no existe** — que es lo único que un respaldo
+    // debe cubrir.
     const paymentSummary = reservation.paymentSummary || {};
-    const depositRequired = reservation.deposit?.requiredAmount || paymentSummary.depositRequired || 0;
+    const depositRequired = reservation.deposit?.requiredAmount ?? paymentSummary.depositRequired ?? 0;
 
     // 6. Determine contract number
     const contractNumber = `C-${reservationId.slice(0, 6).toUpperCase()}-${new Date().getFullYear()}`;

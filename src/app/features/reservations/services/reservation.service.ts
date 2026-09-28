@@ -1289,6 +1289,30 @@ export class ReservationService {
     });
     await batch.commit();
 
+    /**
+     * ⚠️ **Y la COPIA del resumen, que este método dejaba vieja.**
+     *
+     * El `writeBatch` de arriba hace bien lo que de verdad manda: reescribe
+     * `initialPayment`, `remainingPayment` y las filas de `payments`, que son la
+     * fuente de verdad del dinero. Lo que no tocaba es `reservation.paymentSummary`
+     * —la copia desnormalizada que existe para pintar rápido— y **el panel lee de
+     * ahí**. Resultado medido en producción el 26 de septiembre de 2026: una
+     * reserva con la señal bajada a 0 seguía avisando «Señal pendiente 50,00 €»,
+     * con `payments` diciendo 0 y 650, y la copia 50 y 600.
+     *
+     * ⚠️ **Va DESPUÉS del commit, y no dentro, por un motivo técnico:**
+     * `recalculateReservationPaymentSummary()` **relee** los pagos de Firestore, y
+     * los que este método tiene en memoria son los de **antes** de repreciar. Meter
+     * el recálculo en el lote escribiría el resumen viejo otra vez, que es
+     * exactamente el bug.
+     *
+     * Es el mismo sitio y el mismo motivo que la nota interna: si el commit falla,
+     * no se recalcula nada. Y si el commit sale y esto falla, lo que queda es el
+     * estado de antes de este arreglo —la copia vieja—, que el reconciliador de la
+     * ficha ya sabe detectar desde hoy.
+     */
+    await this.paymentService.recalculateReservationPaymentSummary(id);
+
     // La nota va después del commit y a propósito: si la escritura falla, no
     // queda anotado un cambio que no llegó a ocurrir.
     await this.addInternalNote(id, describeEdit(cambiados, this.translate));

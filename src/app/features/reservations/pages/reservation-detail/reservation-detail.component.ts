@@ -57,6 +57,7 @@ import {
   calculatePaymentStatus,
   roundMoney
 } from '@shared/utils/payment-summary.util';
+import { summaryNeedsSync } from '@shared/utils/summary-sync.util';
 import {
   PaymentGroup,
   PaymentGroupKey,
@@ -551,29 +552,30 @@ export class ReservationDetailComponent implements OnInit {
     const fresco = calculateReservationPaymentSummary(this.payments, this.reservation);
     const guardado = this.reservation.paymentSummary;
 
-    // Céntimo de tolerancia: el resumen redondea y no queremos reescribir en
-    // bucle por un error de coma flotante.
-    const difiere = (a?: number, b?: number) => Math.abs((a || 0) - (b || 0)) > 0.005;
+    /**
+     * ⚠️ **La comparación vive en un util con tests, y no aquí.**
+     *
+     * Era una lista de campos escrita a mano, y **le faltaban los tres
+     * `*Required`**. Eso dejaba ciego a este reconciliador justo ante el único
+     * cambio que de verdad tenía que arreglar: un reparto entre la señal y el
+     * resto **no mueve el total** —`redistributeInitialPayment()` lo mantiene
+     * así a propósito—, de modo que `totalPending` y `paymentStatus` salían
+     * idénticos antes y después y la copia no se corregía nunca.
+     *
+     * Medido en producción el 26 de septiembre de 2026: `payments` decía 0 de
+     * señal y 650 de resto, la copia decía 50 y 600, y el panel pedía cobrar una
+     * señal que el operador acababa de quitar. Abrir la ficha mil veces no lo
+     * arreglaba.
+     *
+     * El comentario que había aquí —«al añadir un campo al resumen hay que venir
+     * aquí, o la copia no se pone al día nunca»— describía exactamente el
+     * mecanismo que acabó fallando: **acordarse**. `summaryNeedsSync()` recorre
+     * el resumen entero, y su test mueve campo por campo, así que un campo nuevo
+     * entra solo.
+     */
     const desincronizada =
-      !guardado ||
       fresco.paymentStatus !== this.reservation.paymentStatus ||
-      difiere(fresco.initialPaymentPaid, guardado.initialPaymentPaid) ||
-      difiere(fresco.remainingPaymentPaid, guardado.remainingPaymentPaid) ||
-      difiere(fresco.depositPaid, guardado.depositPaid) ||
-      difiere(fresco.totalPending, guardado.totalPending) ||
-      // Los cargos extra entran por separado: son campos que se añadieron
-      // después, y una copia escrita antes los trae a cero mientras todo lo
-      // demás cuadra. Sin esta comprobación la copia nunca se pondría al día
-      // —el resto coincide— y cualquier pantalla que la lea seguiría diciendo
-      // que no se debe nada.
-      difiere(fresco.extrasRequired, guardado.extrasRequired) ||
-      difiere(fresco.extrasPending, guardado.extrasPending) ||
-      // Y lo mismo con la entrega a domicilio, por el mismo motivo: son campos
-      // nuevos, así que una copia escrita antes los trae a cero con todo lo
-      // demás cuadrando. Al añadir un campo al resumen hay que venir aquí, o la
-      // copia no se pone al día nunca.
-      difiere(fresco.servicesRequired, guardado.servicesRequired) ||
-      difiere(fresco.servicesPending, guardado.servicesPending);
+      summaryNeedsSync(fresco, guardado);
     if (!desincronizada) return;
 
     try {
