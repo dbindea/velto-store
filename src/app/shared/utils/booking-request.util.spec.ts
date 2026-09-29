@@ -116,7 +116,7 @@ describe('el mensaje de WhatsApp', () => {
      */
     expect(msg).toBe(
       'Hola Marius Ionescu, te contacto de Velto Mobility en relación a tu solicitud ' +
-        'del alquiler coche Renault Clio · 3 días · 188,76\u00a0€ (IVA incluido). ' +
+        'del alquiler del coche Renault Clio · 3 días · 188,76\u00a0€ (IVA incluido). ' +
         '¿Deseas finalizar la reserva?'
     );
   });

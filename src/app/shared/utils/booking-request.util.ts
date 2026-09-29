@@ -113,10 +113,15 @@ export function canDiscard(r: BookingRequest): boolean {
 /**
  * El mensaje de WhatsApp, ya redactado.
  *
- * ⚠️ **El texto es de Dorel, literal** (29 de septiembre de 2026). Lo escribió
- * él y se pone tal cual: quien conoce a sus clientes y sabe cómo se les habla es
- * el que llama, no esto. Lo único que aporta el código son los cuatro datos que
- * cambian —nombre, coche, días y precio— y la marca.
+ * ⚠️ **El texto es de Dorel** (29 de septiembre de 2026). Lo escribió él y se
+ * pone tal cual: quien conoce a sus clientes y sabe cómo se les habla es el que
+ * llama, no esto. Lo único que aporta el código son los cuatro datos que cambian
+ * —nombre, coche, días y precio— y la marca.
+ *
+ * La única corrección sobre su redacción es «del alquiler **del** coche», que
+ * él mismo aprobó: sin el artículo la frase no concuerda, y esto lo lee un
+ * cliente. Cualquier otro retoque es suyo — y ahora, además, el campo se edita
+ * antes de enviar.
  *
  * ⚠️ **Identifica el alquiler por el COCHE, los días y el precio, no por la
  * referencia.** Aquí llevó `P-4K7M9X` dentro con el argumento de que ataba la
@@ -146,7 +151,7 @@ export function whatsappMessage(r: BookingRequest, brandName: string): string {
 
   return (
     `Hola ${r.name}, te contacto de ${brandName} en relación a tu solicitud ` +
-    `del alquiler coche ${coche} · ${dias} ${dias === 1 ? 'día' : 'días'} · ` +
+    `del alquiler del coche ${coche} · ${dias} ${dias === 1 ? 'día' : 'días'} · ` +
     `${precio} (IVA incluido). ¿Deseas finalizar la reserva?`
   );
 }
