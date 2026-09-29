@@ -16,6 +16,20 @@ export const BRAND_CONFIG = {
   /** Short product name (sidebar / favicon title). */
   name: 'Velto',
   /**
+   * La marca completa, tal y como se le dice a un cliente.
+   *
+   * ⚠️ **NO es `name` ni es `legalName`.** `name` es el nombre corto que cabe
+   * en una barra lateral —«Velto»— y `legalName` es la razón social, que solo
+   * aparece junto al NIF. Cuando la empresa se presenta a un cliente por
+   * teléfono o por WhatsApp dice **«Velto Mobility»**: ni la abreviatura, que
+   * suena a apodo interno, ni la S.L., que suena a notaría.
+   *
+   * Es el mismo `brandName` que `functions/src/company-config.ts` usa en los
+   * documentos, aquí en capitalización normal porque esto se lee dentro de una
+   * frase y no como cabecera de un PDF.
+   */
+  brandName: 'Velto Mobility',
+  /**
    * Full legal name used in invoices, contracts and email footers.
    * Stored in capitals: that is how it is set on every document the company
    * issues, and uppercasing at each render is one template away from being

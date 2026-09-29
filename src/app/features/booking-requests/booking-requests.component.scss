@@ -176,12 +176,17 @@
 }
 
 /*
- * El botón de guardar, debajo del campo y alineado a la derecha: es la esquina
- * en la que acaba de escribir el operador.
+ * Los botones de un campo, debajo y alineados a la derecha: es la esquina en la
+ * que acaba de escribir el operador.
+ *
+ * ⚠️ `flex-wrap` porque en el mensaje son dos —Copiar y WhatsApp— y en un móvil
+ * estrecho no caben en una línea; sin él, el segundo se sale de la tarjeta.
  */
 .nota-editor__pie {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 8px;
 }
 

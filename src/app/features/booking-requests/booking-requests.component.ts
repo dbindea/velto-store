@@ -165,7 +165,12 @@ export class BookingRequestsComponent {
     const r = abre ? this.requests().find((x) => x.id === id) : undefined;
     this.notaInterna = r?.internalNote ?? '';
     // El borrador se recompone cada vez que se abre: es efímero a propósito.
-    this.mensajeWhatsapp = r ? whatsappMessage(r, BRAND_CONFIG.name) : '';
+    /**
+     * ⚠️ **`brandName`, no `name`.** Aquel es «Velto Mobility», que es como la
+     * empresa se presenta a un cliente; `name` es el nombre corto de la barra
+     * lateral y decir «te contacto de Velto» suena a apodo interno.
+     */
+    this.mensajeWhatsapp = r ? whatsappMessage(r, BRAND_CONFIG.brandName) : '';
     this.abierta.set(abre ? id : null);
   }
 

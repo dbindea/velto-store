@@ -113,13 +113,21 @@ export function canDiscard(r: BookingRequest): boolean {
 /**
  * El mensaje de WhatsApp, ya redactado.
  *
- * ⚠️ **Lleva la referencia dentro, y ese es su motivo de ser.** El operador
- * escribe desde su número de siempre y el cliente tiene que poder reconocer de
- * qué va: «tu solicitud P-4K7M9X» ata la conversación a lo que pidió.
+ * ⚠️ **El texto es de Dorel, literal** (29 de septiembre de 2026). Lo escribió
+ * él y se pone tal cual: quien conoce a sus clientes y sabe cómo se les habla es
+ * el que llama, no esto. Lo único que aporta el código son los cuatro datos que
+ * cambian —nombre, coche, días y precio— y la marca.
  *
- * ⚠️ **Y no promete el coche.** Dice lo mismo que vio al enviar el formulario:
- * que el precio se mantiene y que el coche no está apartado. Un WhatsApp que
- * diga «te lo guardo» convierte en falso lo que la web dejó claro.
+ * ⚠️ **Identifica el alquiler por el COCHE, los días y el precio, no por la
+ * referencia.** Aquí llevó `P-4K7M9X` dentro con el argumento de que ataba la
+ * conversación a lo que el cliente pidió, y es al revés: un código no le dice
+ * nada a quien recibe el mensaje —«Citroën Berlingo · 7 días · 440,44 €» sí, y
+ * es exactamente lo que vio en la web—. La referencia sigue en la ficha, que es
+ * donde sirve: para que el operador la cite si hace falta.
+ *
+ * ⚠️ **Y no promete el coche.** «¿Deseas finalizar la reserva?» dice justo lo
+ * que la web dejó claro: que todavía no hay reserva. Un WhatsApp que diga «te lo
+ * guardo» convierte en falso lo que el cliente leyó, y hay test de eso.
  *
  * ⚠️ **Es un BORRADOR, no el mensaje final.** Lo que se manda es lo que haya en
  * el campo de la ficha, que el operador puede reescribir entero antes de
@@ -136,14 +144,11 @@ export function whatsappMessage(r: BookingRequest, brandName: string): string {
     currency: r.quoteSnapshot?.currency || 'EUR'
   }).format(r.quoteSnapshot?.gross ?? 0);
 
-  return [
-    `Hola ${r.name}, soy de ${brandName}.`,
-    '',
-    `Tu solicitud ${r.reference}:`,
-    `${coche} · ${dias} ${dias === 1 ? 'día' : 'días'} · ${precio}, IVA incluido.`,
-    '',
-    'Te llamo para confirmar. El coche no está apartado, pero te mantenemos el precio.'
-  ].join('\n');
+  return (
+    `Hola ${r.name}, te contacto de ${brandName} en relación a tu solicitud ` +
+    `del alquiler coche ${coche} · ${dias} ${dias === 1 ? 'día' : 'días'} · ` +
+    `${precio} (IVA incluido). ¿Deseas finalizar la reserva?`
+  );
 }
 
 /**

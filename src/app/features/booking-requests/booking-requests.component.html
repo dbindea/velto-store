@@ -205,18 +205,31 @@
                     {{ 'bookingRequests.fields.message' | translate }}
                   </label>
                   <!--
-                    ⚠️ **Seis filas, que es lo que mide el borrador.** Con
-                    cuatro quedaba dentro con desplazamiento: medido, 150 px de
-                    texto en 106 de caja — la última línea, la que dice que el
-                    coche no está apartado, no se veía. Un mensaje que hay que
-                    poder revisar antes de mandar tiene que caber entero.
+                    ⚠️ **Las filas siguen al texto, y el texto cambió.** El
+                    borrador anterior eran seis líneas y este es un párrafo de
+                    dos: con `rows="6"` sobraban 71 px de caja vacía debajo,
+                    medidos. Cuatro dejan sitio para alargarlo un poco sin que
+                    el campo parezca un formulario a medio rellenar — y si se
+                    pasa, el `textarea` desplaza como cualquier otro.
                   -->
                   <textarea
                     [id]="'wa-' + r.id"
                     class="form-control"
-                    rows="6"
+                    rows="4"
                     [(ngModel)]="mensajeWhatsapp"
                   ></textarea>
+                  <!--
+                    ⚠️ **Los dos botones van AQUÍ, debajo del texto que mandan.**
+                    El de WhatsApp vivía en la fila de acciones de abajo, entre
+                    «Llamar» y «Descartar», a dos campos de distancia del
+                    mensaje que envía: lo pidió Dorel el 29 de septiembre de
+                    2026 y tiene razón —un botón que manda un texto tiene que
+                    estar donde se lee ese texto, o no hay forma de saber que lo
+                    que se va a enviar es lo que acabas de escribir—.
+
+                    Son las dos vías del mismo mensaje, y por eso están juntas:
+                    WhatsApp en el móvil y Copiar en el ordenador.
+                  -->
                   <div class="nota-editor__pie">
                     <button
                       type="button"
@@ -227,6 +240,11 @@
                       <i class="pi" [class.pi-copy]="mensajeCopiado() !== r.id" [class.pi-check]="mensajeCopiado() === r.id"></i>
                       {{ (mensajeCopiado() === r.id ? 'bookingRequests.copied' : 'common.copy') | translate }}
                     </button>
+
+                    <a class="btn-primary" [href]="whatsapp(r)" target="_blank" rel="noopener">
+                      <i class="pi pi-whatsapp"></i>
+                      {{ 'bookingRequests.whatsapp' | translate }}
+                    </a>
                   </div>
                 </div>
 
@@ -256,19 +274,17 @@
                 </div>
 
                 <!--
-                  Tres acciones, en el orden en que se usan: llamar, escribir y
-                  convertir. El WhatsApp y el teléfono son enlaces de verdad —
-                  se abren en la aplicación del móvil, que es donde se está.
+                  Lo que se hace con la solicitud, en el orden en que se usa.
+                  Escribir por WhatsApp NO está aquí: vive debajo de su mensaje,
+                  que es lo que manda.
+
+                  «Llamar» sí, porque no depende de ningún texto: es un enlace
+                  `tel:` de verdad y en el móvil marca sin más.
                 -->
                 <div class="acciones">
                   <a class="btn-secondary" [href]="telefono(r)">
                     <i class="pi pi-phone"></i>
                     {{ 'bookingRequests.call' | translate }}
-                  </a>
-
-                  <a class="btn-secondary" [href]="whatsapp(r)" target="_blank" rel="noopener">
-                    <i class="pi pi-whatsapp"></i>
-                    {{ 'bookingRequests.whatsapp' | translate }}
                   </a>
 
                   @if (r.status === 'new') {

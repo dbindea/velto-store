@@ -94,10 +94,31 @@ describe('canDiscard', () => {
 });
 
 describe('el mensaje de WhatsApp', () => {
-  const msg = whatsappMessage(solicitud(), 'VELTO MOBILITY');
+  const msg = whatsappMessage(solicitud(), 'Velto Mobility');
 
-  it('lleva la referencia, que es su motivo de ser', () => {
-    expect(msg).toContain('P-4K7M9X');
+  /**
+   * ⚠️ **El texto es de Dorel y se comprueba ENTERO, no por trozos.** Es lo que
+   * va a leer un cliente: si alguien lo reescribe «mejorándolo», este test lo
+   * para y obliga a que la decisión la tome él, que es de quien es la voz.
+   */
+  it('es exactamente el texto que Dorel escribió', () => {
+    /**
+     * ⚠️ **El espacio que va antes del € no es un capricho del test.** Es el espacio
+     * DURO que `Intl.NumberFormat('es-ES')` mete entre el importe y el símbolo,
+     * y es correcto: impide que «188,76» y «€» acaben en líneas distintas. Con
+     * un espacio normal aquí, el test falla enseñando dos cadenas que **se ven
+     * idénticas** — que es exactamente lo que pasó al escribirlo.
+     *
+     * ⚠️ **Y va como escape, no como el carácter.** Escrito tal cual es un
+     * espacio invisible dentro del código: el lint lo marca con razón
+     * (`no-irregular-whitespace`), porque quien lo lea después no tiene forma de
+     * saber que ahí hay algo distinto de un espacio normal.
+     */
+    expect(msg).toBe(
+      'Hola Marius Ionescu, te contacto de Velto Mobility en relación a tu solicitud ' +
+        'del alquiler coche Renault Clio · 3 días · 188,76\u00a0€ (IVA incluido). ' +
+        '¿Deseas finalizar la reserva?'
+    );
   });
 
   it('lleva el coche, los días y el precio que vio', () => {
@@ -106,11 +127,20 @@ describe('el mensaje de WhatsApp', () => {
     expect(msg).toContain('188,76');
   });
 
+  /**
+   * ⚠️ **La referencia NO va dentro, y es deliberado.** Un código no le dice
+   * nada a quien recibe el mensaje; el coche, los días y el precio sí, y son lo
+   * que vio en la web. La referencia vive en la ficha, para el operador.
+   */
+  it('no lleva la referencia, que no significa nada para el cliente', () => {
+    expect(msg).not.toContain('P-4K7M9X');
+  });
+
   it('NO promete el coche', () => {
-    // La web ya dijo que no está apartado. Contradecirlo por WhatsApp es peor
-    // que no escribir: el cliente se queda con lo último que leyó.
-    expect(msg).toContain('no está apartado');
-    expect(msg).not.toMatch(/te lo guardo|reservado para ti|apartado para ti/i);
+    // La web dijo que no queda reservado. «¿Deseas finalizar la reserva?» dice
+    // lo mismo: que todavía no la hay. Contradecirlo por WhatsApp es peor que
+    // no escribir, porque el cliente se queda con lo último que leyó.
+    expect(msg).not.toMatch(/te lo guardo|reservado para ti|apartado para ti|te lo reservo/i);
   });
 
   it('y el enlace lo lleva codificado', () => {
