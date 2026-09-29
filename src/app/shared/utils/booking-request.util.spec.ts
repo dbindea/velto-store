@@ -114,9 +114,22 @@ describe('el mensaje de WhatsApp', () => {
   });
 
   it('y el enlace lo lleva codificado', () => {
-    const enlace = whatsappLink(solicitud(), 'VELTO MOBILITY');
+    const enlace = whatsappLink(solicitud(), msg);
     expect(enlace.startsWith('https://wa.me/34612345678?text=')).toBe(true);
     expect(decodeURIComponent(enlace.split('text=')[1])).toBe(msg);
+  });
+
+  /**
+   * ⚠️ **Lo que se manda es lo EDITADO, no el borrador.** Es toda la razón de
+   * que `whatsappLink()` reciba el texto en vez de componerlo: componiéndolo,
+   * el operador reescribiría el mensaje y saldría el de siempre — y no se
+   * enteraría hasta verlo en el chat del cliente.
+   */
+  it('el enlace manda lo que el operador escribió, no el borrador', () => {
+    const suyo = 'Hola María, soy Dorel de VELTO. ¿Te viene bien que te llame ahora?';
+    const enlace = whatsappLink(solicitud(), suyo);
+    expect(decodeURIComponent(enlace.split('text=')[1])).toBe(suyo);
+    expect(enlace).not.toContain('P-4K7M9X');
   });
 
   it('un día no se escribe «1 días»', () => {

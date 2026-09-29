@@ -26,7 +26,8 @@ import {
   requestReturnAt,
   sortRequests,
   telLink,
-  whatsappLink
+  whatsappLink,
+  whatsappMessage
 } from '@shared/utils/booking-request.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { copyToClipboard } from '@shared/utils/clipboard.util';
@@ -66,6 +67,22 @@ export class BookingRequestsComponent {
   readonly guardando = signal<string | null>(null);
   /** Cuál acaba de copiarse, para enseñar el tic un momento. */
   readonly copiado = signal<string | null>(null);
+  readonly mensajeCopiado = signal<string | null>(null);
+
+  /**
+   * El mensaje que se le va a mandar al cliente.
+   *
+   * ⚠️ **Se redacta al abrir la ficha y el operador lo reescribe si quiere**:
+   * fue la decisión de Dorel —«redactado y editable antes de enviar»— y hasta
+   * hoy no estaba hecha, el texto viajaba fijo dentro del enlace sin que se
+   * pudiera ver ni tocar.
+   *
+   * ⚠️ **Y NO se guarda en Firestore.** Es lo que se le dice a una persona en
+   * una conversación, no un dato de la solicitud: guardarlo obligaría a decidir
+   * qué pasa cuando el coche o el precio cambian y el texto ya no cuadra. Lo
+   * que sí se guarda es la **nota interna**, que es otra cosa.
+   */
+  mensajeWhatsapp = '';
 
   notaInterna = '';
 
@@ -145,7 +162,10 @@ export class BookingRequestsComponent {
   alternar(id?: string): void {
     if (!id) return;
     const abre = this.abierta() !== id;
-    this.notaInterna = abre ? (this.requests().find((r) => r.id === id)?.internalNote ?? '') : '';
+    const r = abre ? this.requests().find((x) => x.id === id) : undefined;
+    this.notaInterna = r?.internalNote ?? '';
+    // El borrador se recompone cada vez que se abre: es efímero a propósito.
+    this.mensajeWhatsapp = r ? whatsappMessage(r, BRAND_CONFIG.name) : '';
     this.abierta.set(abre ? id : null);
   }
 
@@ -172,8 +192,37 @@ export class BookingRequestsComponent {
     return formatPhone(r.phone);
   }
 
+  /**
+   * El enlace lleva **lo que hay en el campo**, no el borrador.
+   *
+   * ⚠️ Componerlo aquí otra vez haría que el operador reescribiera el mensaje y
+   * saliera el de siempre, y no se enteraría hasta verlo en el chat del
+   * cliente. Ver `whatsappMessage()`.
+   */
   whatsapp(r: BookingRequest): string {
-    return whatsappLink(r, BRAND_CONFIG.name);
+    return whatsappLink(r, this.mensajeWhatsapp);
+  }
+
+  /**
+   * Copiar el mensaje, que es la vía de ESCRITORIO.
+   *
+   * ⚠️ **El enlace `wa.me` solo sirve de verdad en el móvil**, que es donde
+   * abre la aplicación con el chat puesto. En el ordenador Dorel no enlaza
+   * —escribe desde WhatsApp Web—, así que sin un botón de copiar tendría que
+   * seleccionar el texto a mano de un campo de varias líneas. Lo pidió el 29 de
+   * septiembre de 2026.
+   */
+  async copiarMensaje(r: BookingRequest): Promise<void> {
+    if (!r.id) return;
+    const ok = await copyToClipboard(this.mensajeWhatsapp);
+    if (!ok) {
+      this.notifications.error('common.copyFailed');
+      return;
+    }
+    this.mensajeCopiado.set(r.id);
+    setTimeout(() => {
+      if (this.mensajeCopiado() === r.id) this.mensajeCopiado.set(null);
+    }, 1500);
   }
 
   fecha(valor: any): Date | null {

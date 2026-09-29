@@ -1131,9 +1131,43 @@ asistente una recogida de madrugada y una devolución a las 23:59.
 de todos modos—. Decisión de Dorel del 29 de septiembre de 2026. **Lo usan la
 ficha y la conversión**, para que lo que se ve sea lo que se va a proponer.
 
+⚠️ **Es un RESPALDO, no la regla definitiva**, y la ficha no lo explica a
+propósito. Llegó a llevar una pista —«la web solo pide fechas»— y se quitó el
+mismo día: **la web va a pedir horas exactas**, así que una frase que describe
+un estado transitorio es una frase que hay que acordarse de borrar. El día que
+la web las mande, estas dos funciones se encuentran la hora puesta y el
+mediodía deja de aplicarse solo.
+
 ⚠️ **Se reconstruye el día, no se mueve la hora sobre el objeto.** Con
 `setHours(12)` sobre las 23:59:59.**999** el día no cambia pero los
 milisegundos se quedan dentro, y esa fecha viaja al campo del asistente.
+
+#### El WhatsApp: redactado, editable y copiable
+
+⚠️ **El mensaje es un BORRADOR, no el texto final.** `whatsappMessage()` lo
+redacta al abrir la ficha —con la referencia dentro, que es lo que ata la
+conversación a lo que el cliente pidió— y el operador lo reescribe entero si
+quiere. Fue la decisión de Dorel al diseñar esto («redactado y editable antes de
+enviar») y **no estaba implementada**: el texto viajaba fijo dentro del enlace,
+sin que se pudiera ver ni tocar. Hecho el 29 de septiembre de 2026.
+
+⚠️ **Por eso `whatsappLink()` RECIBE el texto y no lo compone.** Componiéndolo,
+el operador reescribiría el mensaje y saldría el de siempre — y no se enteraría
+hasta verlo en el chat del cliente. Hay test de que el enlace lleva lo editado.
+
+⚠️ **Y «Copiar» es la vía de ESCRITORIO, no un adorno.** El enlace `wa.me` solo
+sirve de verdad en el móvil, que es donde abre la aplicación con el chat puesto;
+en el ordenador se escribe desde WhatsApp Web y hay que **pegar**. Sin el botón,
+copiar un texto de seis líneas de un `textarea` es seleccionarlo a mano.
+
+⚠️ **El mensaje NO se guarda en Firestore.** Es lo que se le dice a una persona
+en una conversación, no un dato de la solicitud: guardarlo obligaría a decidir
+qué pasa cuando el coche o el precio cambian y el texto ya no cuadra. Lo que sí
+se guarda es la **nota interna**, que es otra cosa.
+
+⚠️ **Y no promete el coche**, que es su regla de fondo: dice lo mismo que el
+cliente vio al enviar el formulario. Un WhatsApp que diga «te lo guardo»
+convierte en falso lo que la web dejó claro, y hay test de eso.
 
 #### Ampliar el plazo, y la nota que no se podía guardar
 

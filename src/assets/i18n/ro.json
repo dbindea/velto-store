@@ -2090,7 +2090,8 @@
       "phone": "Telefon",
       "received": "Primită",
       "priceUntil": "Preț garantat până la",
-      "internalNote": "Notă internă"
+      "internalNote": "Notă internă",
+      "message": "Mesaj pentru client"
     },
     "empty": {
       "title": "Nicio solicitare",
@@ -2108,8 +2109,8 @@
     "noteSaved": "Notă salvată",
     "extend": "Prelungește 24 h",
     "extended": "Preț garantat încă 24 de ore",
-    "hoursProposed": "Ore propuse: site-ul cere doar datele",
     "pickup": "Ridicare",
-    "return": "Returnare"
+    "return": "Returnare",
+    "copied": "Copiat"
   }
 }

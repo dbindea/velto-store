@@ -120,6 +120,13 @@ export function canDiscard(r: BookingRequest): boolean {
  * ⚠️ **Y no promete el coche.** Dice lo mismo que vio al enviar el formulario:
  * que el precio se mantiene y que el coche no está apartado. Un WhatsApp que
  * diga «te lo guardo» convierte en falso lo que la web dejó claro.
+ *
+ * ⚠️ **Es un BORRADOR, no el mensaje final.** Lo que se manda es lo que haya en
+ * el campo de la ficha, que el operador puede reescribir entero antes de
+ * enviarlo: fue la decisión de Dorel —«redactado y editable antes de enviar»— y
+ * tiene su motivo, porque quien llama conoce al cliente y esto no. Por eso
+ * `whatsappLink()` recibe el texto y no lo compone: si lo compusiera, lo
+ * editado no saldría nunca por el enlace.
  */
 export function whatsappMessage(r: BookingRequest, brandName: string): string {
   const coche = `${r.vehicleSnapshot?.brand ?? ''} ${r.vehicleSnapshot?.model ?? ''}`.trim();
@@ -148,8 +155,8 @@ export function whatsappMessage(r: BookingRequest, brandName: string): string {
  * aprobada y pago por mensaje. Esto es un enlace, cuesta cero y sale del número
  * de siempre.
  */
-export function whatsappLink(r: BookingRequest, brandName: string): string {
-  return `https://wa.me/${r.phone}?text=${encodeURIComponent(whatsappMessage(r, brandName))}`;
+export function whatsappLink(r: BookingRequest, mensaje: string): string {
+  return `https://wa.me/${r.phone}?text=${encodeURIComponent(mensaje)}`;
 }
 
 /** Para el `tel:` del botón de llamar. */

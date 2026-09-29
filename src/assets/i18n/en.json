@@ -2090,7 +2090,8 @@
       "phone": "Phone",
       "received": "Received",
       "priceUntil": "Price guaranteed until",
-      "internalNote": "Internal note"
+      "internalNote": "Internal note",
+      "message": "Message for the customer"
     },
     "empty": {
       "title": "No requests",
@@ -2108,8 +2109,8 @@
     "noteSaved": "Note saved",
     "extend": "Extend 24 h",
     "extended": "Price held for another 24 hours",
-    "hoursProposed": "Suggested times: the website only asks for dates",
     "pickup": "Pick-up",
-    "return": "Return"
+    "return": "Return",
+    "copied": "Copied"
   }
 }

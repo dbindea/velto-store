@@ -83,6 +83,13 @@
                     dejaba «12:00» solo, que se lee como un dato suelto. Y son
                     dos cosas distintas —cuándo sale el coche y cuándo vuelve—,
                     así que el icono las nombra sin gastar una etiqueta.
+
+                    ⚠️ **Aquí iba una pista que decía que las horas las ponía la
+                    aplicación**, y se ha quitado: la web va a pedir horas
+                    exactas, así que explicar hoy de dónde salen es escribir una
+                    frase que hay que acordarse de borrar. El mediodía sigue
+                    siendo el respaldo de `DEFAULT_REQUEST_HOUR` para lo que
+                    llegue sin hora.
                   -->
                   <span class="hito">
                     <i class="pi pi-sign-out" [title]="'bookingRequests.pickup' | translate"></i>
@@ -92,7 +99,6 @@
                     <i class="pi pi-sign-in" [title]="'bookingRequests.return' | translate"></i>
                     <span class="nowrap">{{ devolucionPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span>
                   </span>
-                  <span class="field-hint">{{ 'bookingRequests.hoursProposed' | translate }}</span>
                 </div>
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.phone' | translate }}</span>
@@ -182,6 +188,48 @@
                   contactada se escribía y se perdía al cerrar la ficha. Y de
                   una línea no se lee lo que se acaba de escribir.
                 -->
+                <!--
+                  El mensaje que se le manda al cliente, redactado y editable.
+
+                  ⚠️ **Es la decisión de Dorel y hasta hoy no estaba hecha**: el
+                  texto viajaba fijo dentro del enlace, sin que se pudiera ver
+                  ni tocar. Quien llama conoce al cliente y esto no.
+
+                  ⚠️ **Y «Copiar» es la vía de ESCRITORIO.** El enlace `wa.me`
+                  solo sirve de verdad en el móvil; en el ordenador se escribe
+                  desde WhatsApp Web, y sin este botón habría que seleccionar a
+                  mano un texto de varias líneas.
+                -->
+                <div class="form-group nota-editor">
+                  <label [attr.for]="'wa-' + r.id">
+                    {{ 'bookingRequests.fields.message' | translate }}
+                  </label>
+                  <!--
+                    ⚠️ **Seis filas, que es lo que mide el borrador.** Con
+                    cuatro quedaba dentro con desplazamiento: medido, 150 px de
+                    texto en 106 de caja — la última línea, la que dice que el
+                    coche no está apartado, no se veía. Un mensaje que hay que
+                    poder revisar antes de mandar tiene que caber entero.
+                  -->
+                  <textarea
+                    [id]="'wa-' + r.id"
+                    class="form-control"
+                    rows="6"
+                    [(ngModel)]="mensajeWhatsapp"
+                  ></textarea>
+                  <div class="nota-editor__pie">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      [disabled]="!mensajeWhatsapp.trim()"
+                      (click)="copiarMensaje(r)"
+                    >
+                      <i class="pi" [class.pi-copy]="mensajeCopiado() !== r.id" [class.pi-check]="mensajeCopiado() === r.id"></i>
+                      {{ (mensajeCopiado() === r.id ? 'bookingRequests.copied' : 'common.copy') | translate }}
+                    </button>
+                  </div>
+                </div>
+
                 <div class="form-group nota-editor">
                   <label [attr.for]="'nota-' + r.id">
                     {{ 'bookingRequests.fields.internalNote' | translate }}

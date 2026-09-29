@@ -2090,7 +2090,8 @@
       "phone": "Teléfono",
       "received": "Recibida",
       "priceUntil": "Precio garantizado hasta",
-      "internalNote": "Nota interna"
+      "internalNote": "Nota interna",
+      "message": "Mensaje para el cliente"
     },
     "empty": {
       "title": "Ninguna solicitud",
@@ -2108,8 +2109,8 @@
     "noteSaved": "Nota guardada",
     "extend": "Ampliar 24 h",
     "extended": "Precio garantizado 24 horas más",
-    "hoursProposed": "Horas propuestas: la web solo pide fechas",
     "pickup": "Recogida",
-    "return": "Devolución"
+    "return": "Devolución",
+    "copied": "Copiado"
   }
 }
