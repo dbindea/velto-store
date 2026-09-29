@@ -7,15 +7,15 @@
  * a tener cuatro nombres para la misma casilla.
  */
 
-import {
-  CocheResumen,
-  CocheDisponible,
-  euros,
-  nombreCoche,
-  cambio,
-  categoria,
-  marcadoFoto
-} from './api';
+/*
+ * ⚠️ **Los tipos van con `import type`, y no es estilo.** Sin él sobreviven al
+ * compilado y arrastran el módulo entero al bundle que descarga el visitante.
+ * Lo exige `verbatimModuleSyntax`, que llevaba activo desde siempre y **no lo
+ * comprobaba nadie**: `astro check` typechequeaba la app de Angular porque
+ * `web/` no tenía `tsconfig.json` propio.
+ */
+import type { CocheResumen, CocheDisponible } from './api';
+import { euros, nombreCoche, cambio, categoria, marcadoFoto } from './api';
 
 /** Escapar lo que venga de la API: entra en `innerHTML`. */
 function esc(s: string): string {

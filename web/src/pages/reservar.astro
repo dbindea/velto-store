@@ -132,6 +132,7 @@ import { EMPRESA } from '../lib/empresa';
 <script>
   import { disponibilidad, solicitar } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
+  import { montarCalendarios } from '../lib/fecha-panel';
 
   const form = document.getElementById('form') as HTMLFormElement;
   const desde = document.getElementById('desde') as HTMLInputElement;
@@ -143,21 +144,50 @@ import { EMPRESA } from '../lib/empresa';
   const cargando = document.getElementById('cargando')!;
   const vacio = document.getElementById('vacio')!;
 
-  /** `yyyy-MM-dd` en hora local. `toISOString()` pasaría a UTC y restaría un día. */
-  function iso(d: Date): string {
+  /**
+   * `yyyy-MM-ddTHH:mm` en hora local, que es lo que lee un `datetime-local`.
+   *
+   * ⚠️ **`toISOString()` pasaría a UTC y restaría un día**: una recogida a las
+   * 00:30 de Madrid saldría escrita como las 22:30 del día anterior.
+   */
+  function comoCampo(d: Date): string {
     const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
-  // Ni recoger en el pasado ni devolver antes de recoger: lo dice el campo, no
-  // un mensaje después de pulsar.
-  const hoy = new Date();
-  desde.min = iso(hoy);
-  hasta.min = iso(hoy);
+  /*
+   * ⚠️ **Estos dos `min` llevaban rotos desde siempre, y nada lo decía.**
+   * Estaban en `yyyy-MM-dd` sobre un `datetime-local`, y ese formato **no lo
+   * entiende: ignora el atributo entero, en silencio**. Medido en la página el
+   * 29 de septiembre de 2026: una recogida de 2020 pasaba `checkValidity()`.
+   * O sea que «ni recoger en el pasado» era una frase de comentario, no una
+   * regla. La portada ya lo hacía bien; esta página se quedó atrás.
+   *
+   * ⚠️ **Y el `min` tiene que caer en la REJILLA del `step`.** Con `step="900"`
+   * el navegador cuenta los cuartos **desde `min`**, no desde la hora en punto:
+   * con `min` a las 16:19 los valores válidos son 16:19, 16:34, 16:49… y unas
+   * 10:00 propuestas **no están entre ellos**. El campo queda inválido, el
+   * formulario no se envía y el botón deja de hacer nada sin error en consola.
+   * Es exactamente lo que ya pasó en la portada.
+   */
+  const alCuarto = (d: Date) => {
+    const c = new Date(d);
+    c.setSeconds(0, 0);
+    c.setMinutes(Math.ceil(c.getMinutes() / 15) * 15);
+    return c;
+  };
+
+  const ahoraCampo = comoCampo(alCuarto(new Date()));
+  desde.min = ahoraCampo;
+  hasta.min = ahoraCampo;
   desde.addEventListener('change', () => {
-    hasta.min = desde.value || iso(hoy);
+    hasta.min = desde.value || ahoraCampo;
     if (hasta.value && hasta.value < hasta.min) hasta.value = '';
   });
+
+  // El calendario de Velto, después de poner los `min`: el panel los lee del
+  // campo al abrirse. Con el dedo no se monta y manda la hoja del sistema.
+  montarCalendarios();
 
   /**
    * Las fechas que venían del buscador de la portada.
@@ -353,20 +383,36 @@ import { EMPRESA } from '../lib/empresa';
     color: var(--text-2);
   }
 
-  .buscador input {
+  .buscador input,
+  .buscador select {
     min-height: var(--control-h);
     padding: 0 var(--sp-4);
     font-family: var(--font-num);
     color: var(--text);
-    background: var(--surface-card);
-    border: var(--bw) solid var(--border-strong);
+    /*
+     * ⚠️ **`background-color`, no la forma corta**, que borra
+     * `background-image` sin avisar — y con ella el icono del calendario que
+     * pinta `.picker-propio`, porque esta regla gana a la global.
+     *
+     * ⚠️ **Y `--bg-input`, no `--surface-card`.** Con el blanco de la tarjeta,
+     * el campo quedaba a **1,07:1** de su propio buscador: no se distinguía del
+     * fondo. Es la misma enfermedad que el backoffice curó el 23 de septiembre
+     * —«todo es demasiado blanqueado»— y además deja esta página contando lo
+     * mismo que los campos del diálogo de abajo, que ya usaban `--bg-input`.
+     */
+    background-color: var(--bg-input);
+    /* El contorno de un control es este, y llega al 3:1 de WCAG 1.4.11. */
+    border: var(--bw) solid var(--border-input);
     border-radius: var(--r-md);
     /*
-     * ⚠️ El calendario de un `input[type=date]` lo pinta el sistema y ningún
-     * CSS lo alcanza: lo único que lo hace legible es `color-scheme`. Aquí se
-     * hereda del tema, que puede ser oscuro.
+     * ⚠️ **`light dark` seguía al SISTEMA OPERATIVO, no al tema del sitio.**
+     * Un visitante con Windows en claro y la web en oscuro veía el calendario
+     * del navegador en blanco colgando de un campo oscuro. Con `inherit` sigue
+     * al `color-scheme` que declaran los dos bloques de tema en `global.css`,
+     * que es quien sabe en qué tema está la página. Es la misma lección que el
+     * backoffice aprendió con el `<meta name="color-scheme">`.
      */
-    color-scheme: light dark;
+    color-scheme: inherit;
   }
 
   .resumen { margin-bottom: var(--sp-6); }
@@ -413,8 +459,10 @@ import { EMPRESA } from '../lib/empresa';
     padding: var(--sp-3);
     font: inherit;
     color: var(--text);
-    background: var(--bg-input);
-    border: var(--bw) solid var(--border-strong);
+    background-color: var(--bg-input);
+    /* Era `--border-strong`, el de las separaciones, y dejaba estos campos en
+       1,38:1 sobre su relleno — el peor de la web. */
+    border: var(--bw) solid var(--border-input);
     border-radius: var(--r-md);
   }
   .dlg__campo textarea { resize: vertical; }

@@ -140,6 +140,20 @@
   --brand-text: var(--teal-700); --brand-soft: var(--teal-50); --brand-soft-2: var(--teal-100);
   --ink: #000000; --ink-hover: var(--gray-800); --text-on-ink: #ffffff;
   --border: var(--gray-200); --border-strong: var(--gray-300); --divider: var(--gray-100);
+  /*
+   * ⚠️ **El contorno de un CAMPO es este, nunca `--border` ni `--border-strong`.**
+   * Aquellos separan, y pueden ser sutiles; este tiene que llegar a 3:1, que es
+   * lo que WCAG 1.4.11 pide al contorno de un control. Medido el 29 de
+   * septiembre de 2026: los campos de la web iban con `--border-strong` y
+   * quedaban en **1,38:1 el peor** —el diálogo de «Que me llamen» en tema
+   * claro— y 1,56 los del buscador. O sea que el campo no se delimitaba: lo
+   * único que lo separaba de su tarjeta era una raya que no se ve.
+   * `--gray-500` da 3,73:1 sobre blanco y 3,50 sobre `--gray-50`.
+   *
+   * Es la misma corrección que el backoffice hizo el 23 de septiembre, con la
+   * misma rampa —son idénticas en los dos proyectos— y por el mismo motivo.
+   */
+  --border-input: var(--gray-500);
   --focus: var(--teal-600); --focus-ring: 0 0 0 3px rgba(32, 164, 143, 0.28);
   --success: var(--green-600); --success-bg: var(--green-100);
   --warning: var(--amber-600); --warning-bg: var(--amber-100);
@@ -161,6 +175,13 @@
   --brand-text: var(--teal-300); --brand-soft: rgba(32, 164, 143, 0.14); --brand-soft-2: rgba(32, 164, 143, 0.26);
   --ink: #ffffff; --ink-hover: var(--gray-200); --text-on-ink: #000000;
   --border: var(--gray-800); --border-strong: var(--gray-700); --divider: var(--gray-900);
+  /*
+   * En oscuro se mide contra la TARJETA y no contra el relleno, porque ahí el
+   * relleno del campo y su tarjeta están a un paso: 3,13:1 sobre `--gray-900`,
+   * 3,38 sobre `--gray-950` y 3,68 sobre negro, que son las tres superficies
+   * donde hay campos. Quien delimita es el borde.
+   */
+  --border-input: var(--gray-600);
   --focus: var(--teal-300); --focus-ring: 0 0 0 3px rgba(92, 198, 179, 0.32);
   --success: #4cc38a; --success-bg: rgba(76, 195, 138, 0.14);
   --warning: #f0b429; --warning-bg: rgba(240, 180, 41, 0.14);
@@ -200,6 +221,571 @@ img, svg { display: block; max-width: 100%; }
 
 /* Cifras: tabulares y con la fuente que SÍ tiene el símbolo del euro. */
 .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* ===========================================================================
+ * CONTROLES NATIVOS, VESTIDOS DE CONTROLES DE VELTO
+ *
+ * Portado del backoffice (`src/styles.scss`, «Native controls, dressed as app
+ * controls») el 29 de septiembre de 2026, a petición de Dorel: «aplicar estilo
+ * a los calendarios, select, options igual que en el backoffice».
+ *
+ * ⚠️ **Va GLOBAL, no en el `<style>` de una página**, y hay dos motivos
+ * distintos. El conocido: Astro le cuelga el `data-astro-cid` a **cada
+ * compuesto** del selector, así que `[data-theme='dark'] select` compila a
+ * `[data-theme=dark][cid] select[cid]` y no casa nunca, porque `[data-theme]`
+ * vive en el `<html>`. Y el nuevo, que es peor: el panel del calendario **lo
+ * crea JavaScript y se cuelga del `<body>`**, o sea que no lleva el `cid` de
+ * ninguna página y ninguna regla escopada lo alcanza ni escribiéndola bien.
+ *
+ * Qué alcanza el CSS y qué no, que conviene saberlo antes de intentarlo:
+ *   - el control cerrado           → nuestro del todo
+ *   - la lista de un `<select>`    → nuestra desde Chrome 135 (`::picker`)
+ *   - la lista de un `<datalist>`  → **de nadie**: `::picker()` solo acepta
+ *                                    `select`. Por eso el campo de zonas lleva
+ *                                    una lista construida a mano.
+ *   - el calendario del navegador  → de nadie, y por eso se pone otro delante
+ * ======================================================================== */
+
+/*
+ * El gris de los iconos que dibujamos: el chevron del `select` y el calendario.
+ *
+ * ⚠️ **Es un valor a mano y no un `var()`, porque un `data:` URI no puede leer
+ * una variable.** Por eso queda escrito aquí lo que hay que respetar al
+ * cambiarlo: `--gray-500` pasa el 3:1 de WCAG 1.4.11 en las cuatro superficies
+ * reales de la web — 3,28:1 sobre `--gray-100`, 3,59 sobre `--gray-800`, 3,73
+ * sobre blanco y 5,63 sobre negro.
+ *
+ * ⚠️ **El backoffice usa `#94a3b8` y ese NO vale aquí.** Es `slate-400` de
+ * Tailwind, un resto de la rampa vieja que el propio kit sustituyó por los
+ * grises con tinte teal: sobre campo claro se queda en **2,26:1**. Se ha
+ * portado la regla, no el número.
+ */
+
+select {
+  /* Fuera el chevron del sistema, o en Windows se apilan los dos. */
+  appearance: none;
+  -webkit-appearance: none;
+
+  /*
+   * ⚠️ **La CAJA va aquí, no solo el adorno.** En el backoffice este bloque
+   * trae únicamente el chevron porque allí la caja la pone `.form-control`,
+   * que es global. Esta web no tiene equivalente: la caja la ponen
+   * `.buscador input` y `.dlg__campo input`, que apuntan a `input` y **no
+   * alcanzan a un `select`**. Sin esto, el primer `<select>` que alguien
+   * escriba saldrá con su flecha, con su lista bonita y sin fondo, sin borde y
+   * más bajo que los campos de al lado.
+   */
+  min-height: var(--control-h);
+  padding: 0 var(--sp-8) 0 var(--sp-4);
+  color: var(--text);
+  background-color: var(--bg-input);
+  border: var(--bw) solid var(--border-input);
+  border-radius: var(--r-md);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%237c868a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sp-3) center;
+  background-size: 0.7rem;
+  cursor: pointer;
+}
+
+select:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/*
+ * Por si acaso: Firefox y Chrome en Linux hacen caso de esto en la lista del
+ * sistema; los demás la pintan ellos y solo `color-scheme` la alcanza.
+ *
+ * ⚠️ **`select option`, nunca `option` a secas.** Suelto alcanzaría también a
+ * los `<option>` de un `<datalist>`, cuya lista **no se puede ver ni medir**
+ * porque la pinta el navegador fuera de la página: se estaría cambiando a
+ * ciegas algo que no hay forma de comprobar.
+ */
+select option,
+select optgroup {
+  background: var(--surface-card);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+ * La lista desplegable, por fin nuestra
+ *
+ * Chrome 135+ trae el *customizable select*: con `appearance: base-select` la
+ * lista sale del sistema y entra en la página como un elemento más.
+ *
+ * ⚠️ **La media query NO sobra, y es el error que el backoffice ya pagó** (del
+ * 7 al 22 de septiembre de 2026). **Chrome para Android soporta
+ * `base-select`**, así que con el `@supports` a solas el móvil deja de abrir la
+ * hoja del sistema y abre un popover de página — y el síntoma no es estético:
+ * el desplegable **deja de cerrarse al volver a tocar el campo** y obliga a
+ * elegir una opción para salir.
+ *
+ * La regla, que vale para lo que venga: **`@supports` contesta si el navegador
+ * puede, nunca si conviene.** Cuando la respuesta depende del aparato, hay que
+ * preguntar por el aparato.
+ * ------------------------------------------------------------------------- */
+@media (hover: hover) and (pointer: fine) {
+  @supports (appearance: base-select) {
+    select {
+      appearance: base-select;
+      display: flex;
+      align-items: center;
+    }
+
+    /* El control cerrado no cambia: se esconde el triángulo del navegador y se
+       mantiene nuestro chevron. Lo que se venía a mejorar es la lista. */
+    select::picker-icon { display: none; }
+
+    ::picker(select) {
+      appearance: base-select;
+      background: var(--surface-card);
+      border: var(--bw) solid var(--border);
+      border-radius: var(--r-md);
+      box-shadow: var(--sh-3);
+      padding: var(--sp-1);
+      margin-top: var(--sp-1);
+      max-height: 18rem;
+      overflow-y: auto;
+    }
+
+    select option {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      background: transparent;
+      font-size: var(--fs-small);
+      cursor: pointer;
+    }
+
+    /* El check de la elegida lo dibuja el navegador y ocupa sitio aunque no se
+       vea; sin esto las etiquetas bailan al abrir. */
+    select option::checkmark { color: var(--brand); order: 1; margin-left: auto; }
+    select option:hover,
+    select option:focus { background: var(--bg-alt); color: var(--text); }
+    select option:checked { color: var(--brand-text); font-weight: var(--fw-medium); }
+    select option:disabled { color: var(--text-3); cursor: not-allowed; }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * El indicador de fecha del navegador
+ *
+ * ⚠️ **No se le toca el color.** Con `color-scheme` declarado —y lo está, en
+ * los dos bloques de tema— el navegador ya lo dibuja del tono que toca. El
+ * backoffice llegó a llevar un `filter: invert(0.75)` encima que durante meses
+ * lo **escondió**: invertir un icono ya claro da un gris oscuro sobre un campo
+ * oscuro. La regla general: si `color-scheme` ya lo resuelve, un filtro de
+ * color encima no lo mejora, lo rompe — y lo rompe solo en un tema.
+ *
+ * Lo único nuestro es la mano: el indicador se puede pulsar y el navegador no
+ * lo dice.
+ * ------------------------------------------------------------------------- */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+input[type='month']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Y cuando el calendario lo pone la web
+ *
+ * ⚠️ **Esta clase la pone `fecha-panel.ts`, y SOLO donde toma el mando.** Es
+ * la diferencia que hace que sea segura: esconde el indicador del navegador,
+ * así que puesta donde no hay panel propio dejaría el campo sin ninguna forma
+ * de abrir un calendario — un icono pintado que no hace nada. Por eso se añade
+ * desde JavaScript y no en la plantilla: si el módulo no llega a ejecutarse, el
+ * campo se queda con el icono nativo y sigue funcionando.
+ *
+ * El icono se dibuja igual que el chevron de los `select` y a la misma
+ * distancia del borde: dos iconos en la misma fila de un formulario que no se
+ * alinearan entre sí se notaría enseguida.
+ * ------------------------------------------------------------------------- */
+input.picker-propio::-webkit-calendar-picker-indicator { display: none; }
+
+input.picker-propio {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c868a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sp-3) center;
+  background-size: 1rem;
+  /*
+   * ⚠️ **El `!important` es de este hueco, y está medido.** `.buscador input`
+   * escrito dentro de un `.astro` compila a `.buscador[cid] input[cid]`, que
+   * mide **(0,3,1)** porque Astro le cuelga el atributo a **cada compuesto**;
+   * esta regla mide (0,1,1). Sin forzarlo, el padding se quedaba en los 16 px
+   * de la página —comprobado en pantalla— y la fecha corría por debajo del
+   * icono. Es el mismo motivo por el que lo lleva el backoffice, con la misma
+   * aritmética y el mismo alcance: **solo el hueco**, nunca los colores.
+   */
+  padding-right: var(--sp-8) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * EL CALENDARIO DE VELTO
+ *
+ * Lo dibuja `web/src/lib/fecha-panel.ts` y se cuelga del `<body>` como
+ * `popover`, así que **no hereda de ninguna tarjeta**: todos sus colores se
+ * declaran aquí.
+ *
+ * ⚠️ **Es un `popover`, y eso sustituye al `z-index`.** En la portada hay un
+ * `<dialog>` que se abre con `showModal()`, y contra el top layer ningún
+ * `z-index` sirve — ni el máximo. Un popover entra en ese mismo top layer.
+ * ------------------------------------------------------------------------- */
+.calendario {
+  position: fixed;
+  margin: 0;
+  inset: auto;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  font-size: var(--fs-small);
+  color: var(--text);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-4);
+  user-select: none;
+}
+
+/*
+ * ⚠️ **El `display` va AQUÍ, y esto es lo que hace que el panel desaparezca.**
+ *
+ * El navegador esconde un popover cerrado con
+ * `[popover]:not(:popover-open) { display: none }`, que es una regla suya —de
+ * la hoja del agente de usuario—. Y en la cascada **el ORIGEN manda antes que
+ * la especificidad**: cualquier declaración de autor le gana, por floja que
+ * sea. Con `display: flex` en `.calendario` a secas, cerrar el panel le quitaba
+ * el top layer y **lo dejaba dibujado**: medido, 275 × 553 px encima de la
+ * página y `elementFromPoint()` devolviendo sus botones, o sea tragándose los
+ * clics de lo que hubiera debajo. Sin un solo error en consola.
+ *
+ * Declarándolo solo mientras está abierto, el navegador recupera el mando.
+ * Esto se comprueba **cerrando el panel y midiendo**, nunca leyendo el fichero.
+ */
+.calendario:popover-open {
+  display: flex;
+  /*
+   * El tope real lo pone `colocar()` midiendo la pantalla; esto es lo que hace
+   * que el recorte se pueda recorrer en vez de esconder el pie del panel.
+   */
+  overflow-y: auto;
+}
+
+/*
+ * ⚠️ **La superficie la decide el CAMPO, no la página.** El buscador de la
+ * portada vive sobre una tarjeta que es oscura **en los dos temas**, así que
+ * sus campos llevan `color-scheme: dark`. Sin esto, en tema claro saldría un
+ * panel blanco colgando de un campo negro. Lo decide el montador leyendo el
+ * `color-scheme` del propio campo.
+ */
+.calendario--oscuro {
+  color: var(--velto-white);
+  background: var(--gray-900);
+  border-color: var(--gray-800);
+}
+
+.calendario__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.calendario__mes {
+  flex: 1;
+  text-align: center;
+  font-weight: var(--fw-medium);
+}
+
+.calendario__nav {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.calendario--oscuro .calendario__nav { color: var(--gray-300); }
+.calendario__nav:hover { background: var(--bg-alt); color: var(--text); }
+.calendario--oscuro .calendario__nav:hover { background: var(--gray-800); color: var(--velto-white); }
+
+.calendario__semana,
+.calendario__rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, 34px);
+  gap: 2px;
+}
+
+.calendario__semana span {
+  text-align: center;
+  font-size: var(--fs-overline);
+  /* `--text-3` es `--gray-500`, y a 11 px sobre blanco se queda en 4,1:1. */
+  color: var(--gray-600);
+  padding-bottom: var(--sp-1);
+}
+.calendario--oscuro .calendario__semana span { color: var(--gray-400); }
+
+.calendario__dia {
+  height: 34px;
+  padding: 0;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.calendario__dia:hover:not(:disabled) { background: var(--bg-alt); }
+.calendario--oscuro .calendario__dia:hover:not(:disabled) { background: var(--gray-800); }
+
+/*
+ * Los días del mes de al lado se ven —dan contexto— pero se apagan.
+ *
+ * ⚠️ **El apagado se hace con el COLOR, no apilando `opacity` encima.** Con
+ * `--text-3` y un `opacity: 0.55` sobre el panel claro salían a **1,91:1**:
+ * botones pulsables cuya fecha no se puede leer. Son días elegibles, no
+ * decoración — quien reserva a primeros de mes los usa.
+ */
+.calendario__dia.es-de-fuera { color: var(--gray-600); }
+.calendario--oscuro .calendario__dia.es-de-fuera { color: var(--gray-500); }
+
+/*
+ * Hoy se marca con un borde y lo elegido con relleno. Si los dos pintaran
+ * igual no se distinguiría cuál es cuál — y en la captura de Dorel se ven los
+ * dos a la vez, el 29 y el 30.
+ */
+.calendario__dia.es-hoy { box-shadow: inset 0 0 0 1px var(--brand); }
+
+.calendario__dia.es-elegido {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-weight: var(--fw-medium);
+}
+
+.calendario__dia:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.calendario__hora {
+  display: flex;
+  gap: var(--sp-2);
+  border-top: var(--bw) solid var(--border);
+  padding-top: var(--sp-2);
+}
+.calendario--oscuro .calendario__hora { border-top-color: var(--gray-800); }
+
+.calendario__columna {
+  /*
+   * ⚠️ **`position: relative` NO es decorativo: es lo que centra la hora.**
+   * `offsetTop` se mide contra el antepasado **posicionado**, y sin esto ese
+   * antepasado es el panel entero (`position: fixed`). Medido: con las 10:00
+   * elegidas la columna se desplazaba hasta las 18 y la hora elegida quedaba
+   * fuera de la vista — o sea que el panel se abría enseñando una hora que no
+   * era la del campo. Está documentado en el backoffice como una de las tres
+   * trampas del suyo, y aun así se repite en cuanto se olvida esta línea.
+   */
+  position: relative;
+  /* Alto fijo con desplazamiento: 24 horas no caben y una lista sin tope
+     estiraría el panel hasta salirse de la pantalla. */
+  max-height: 168px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 60px;
+
+  /*
+   * ⚠️ **La barra de desplazamiento también es parte del panel.** Por defecto
+   * sale la del sistema —ancha, con su carril— y dentro de un panel estrecho
+   * es lo primero que se ve. Van las dos formas: la estándar la entiende
+   * Firefox y los pseudo-elementos los aplica Chrome.
+   */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.calendario__columna::-webkit-scrollbar { width: 6px; }
+.calendario__columna::-webkit-scrollbar-track { background: transparent; }
+.calendario__columna::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-xs);
+}
+
+.calendario__item {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.calendario__item:hover { background: var(--bg-alt); }
+.calendario--oscuro .calendario__item:hover { background: var(--gray-800); }
+.calendario__item.es-elegido {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-weight: var(--fw-medium);
+}
+
+.calendario__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  border-top: var(--bw) solid var(--border);
+  padding-top: var(--sp-2);
+}
+.calendario--oscuro .calendario__pie { border-top-color: var(--gray-800); }
+
+.calendario__pie-derecha { display: flex; align-items: center; gap: var(--sp-1); }
+
+.calendario__borrar,
+.calendario__hoy,
+.calendario__cerrar {
+  /* 44 px, que es la medida del dedo: son los únicos botones del panel que no
+     son una celda del calendario. */
+  min-height: var(--touch);
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.calendario__borrar:hover:not(:disabled),
+.calendario__hoy:hover:not(:disabled),
+.calendario__cerrar:hover:not(:disabled) { background: var(--bg-alt); }
+.calendario--oscuro .calendario__borrar:hover:not(:disabled),
+.calendario--oscuro .calendario__hoy:hover:not(:disabled),
+.calendario--oscuro .calendario__cerrar:hover:not(:disabled) { background: var(--gray-800); }
+.calendario__borrar:disabled,
+.calendario__hoy:disabled,
+.calendario__cerrar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/*
+ * ⚠️ **En rojo porque es el único de los tres que destruye algo.** «Hoy» y
+ * «Cerrar» son reversibles de un vistazo; este deja el campo vacío.
+ */
+.calendario__borrar { color: var(--danger); }
+/*
+ * ⚠️ **Y su variante oscura, que faltaba.** El panel sale `--oscuro` siempre en
+ * el buscador de la portada —sus campos llevan `color-scheme: dark` en los dos
+ * temas—, así que en tema claro «Borrar» heredaba el `--danger` del bloque
+ * claro (#c8322b) sobre un panel casi negro: **3,36:1**. Los otros dos botones
+ * sí tenían su variante; este se quedó fuera.
+ */
+.calendario--oscuro .calendario__borrar { color: #f26b62; }
+.calendario__hoy { color: var(--brand-text); }
+.calendario--oscuro .calendario__hoy { color: var(--teal-300); }
+/* `--text-3` es `--gray-500` en claro y se queda en 4,1:1 sobre blanco. */
+.calendario__cerrar { color: var(--gray-600); }
+.calendario--oscuro .calendario__cerrar { color: var(--gray-400); }
+
+/* ---------------------------------------------------------------------------
+ * LA LISTA DE ZONAS DE RECOGIDA
+ *
+ * La dibuja `web/src/lib/zonas-combo.ts`. Mismo lenguaje que la lista de un
+ * `<select>` de arriba, porque para el visitante es la misma cosa.
+ *
+ * ⚠️ **Va DENTRO de `.campo-con-aspa`, no en el top layer**, al revés que el
+ * calendario. Así sigue al campo sin recalcular nada al desplazar, que con una
+ * lista de tres filas pegada a su campo es más robusto que colocarla a mano. Lo
+ * que hace que se vea es `.buscador { position: relative; z-index: 2 }`, en la
+ * portada: sin eso la tapa la sección siguiente.
+ * ------------------------------------------------------------------------- */
+.zonas {
+  position: absolute;
+  top: calc(100% + var(--sp-1));
+  left: 0;
+  right: 0;
+  bottom: auto;
+  z-index: 3;
+  margin: 0;
+  padding: var(--sp-1);
+  list-style: none;
+  background: var(--gray-900);
+  border: var(--bw) solid var(--gray-800);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-4);
+}
+
+/*
+ * ⚠️ **Vuelca hacia arriba cuando el teclado no deja sitio debajo.** Lo decide
+ * `zonas-combo.ts` midiendo contra `visualViewport`, que es lo único que sabe
+ * del teclado: `innerHeight` no cambia cuando sube.
+ */
+.zonas--arriba {
+  top: auto;
+  bottom: calc(100% + var(--sp-1));
+}
+
+/*
+ * ⚠️ **En una sola columna la lista EMPUJA, no flota.** Con el buscador en
+ * columna, una lista flotante de tres filas cae justo encima del campo
+ * «Recogida» que viene debajo — y un toque ahí aterriza en un `<li>` y cambia
+ * la zona en vez de abrir el calendario. Es el peor tipo de fallo táctil:
+ * hace algo, y algo distinto de lo que se quería.
+ *
+ * Ocupando sitio de verdad, el campo de fecha baja y ningún toque puede
+ * desviarse. El buscador crece 128 px mientras la lista está abierta, y eso es
+ * preferible a una zona de toque que miente. Es además lo que hacen los
+ * desplegables de móvil que se expanden en línea.
+ */
+@media (max-width: 719px) {
+  .zonas,
+  .zonas--arriba {
+    position: static;
+    top: auto;
+    bottom: auto;
+    margin-top: var(--sp-1);
+    box-shadow: none;
+  }
+}
+
+.zonas__opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-small);
+  color: var(--velto-white);
+  cursor: pointer;
+}
+
+.zonas__opcion.es-activa { background: var(--gray-800); }
+.zonas__opcion.es-elegida .zonas__nombre { color: var(--teal-300); font-weight: var(--fw-medium); }
+
+/*
+ * El precio, apagado y a la derecha. Es el dato que decide si se reserva, así
+ * que va en la propia fila y no en una línea aparte bajo el campo: aquella la
+ * quitó Dorel —«no tiene sentido, complica demasiado»— y tenía razón.
+ */
+.zonas__coste {
+  color: var(--gray-400);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
 
 /*
  * El rótulo de sección: turquesa, versalitas y el tracking del logotipo. Es la

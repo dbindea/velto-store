@@ -14,61 +14,58 @@
  * por reserva (`deliveryFees`, con sus dos trayectos independientes), y esta
  * lista es lo que el operador va a tener que respetar al crear esa reserva.
  * Añadir una zona aquí es comprometerse con su importe.
- *
- * ⚠️ **Son dos trayectos, no uno.** El backoffice cobra la entrega y la
- * recogida por separado —hay quien recoge en la oficina y solo pide que vayan a
- * buscarlo—, así que este importe es **por trayecto**. La portada lo dice.
  */
 
 export interface ZonaRecogida {
   /** Lo que se enseña y lo que viaja en la URL. */
   nombre: string;
   /**
-   * Suplemento por trayecto, en euros y con IVA incluido.
+   * Lo que cuesta llegar, ya redactado.
    *
-   * `0` es gratis y se dice así, con la palabra: un «0 €» en una lista de
-   * precios se lee como que falta el dato.
+   * ⚠️ **El texto va DENTRO de la opción, no en una línea aparte.** Hubo una
+   * pista debajo del campo que decía «entrega y recogida sin coste» y Dorel la
+   * quitó el 29 de septiembre de 2026: «no tiene sentido, complica demasiado».
+   * Tenía razón por partida doble — una línea que aparece y desaparece bajo el
+   * campo obliga a reservarle sitio para que el buscador no dé un salto, y
+   * repite a pie de campo lo que la propia opción podía decir al elegirla.
    *
-   * `null` es **a consultar**, y no es lo mismo que gratis ni que caro: es que
-   * ese importe todavía no está decidido. Mientras sea `null`, la web no
-   * inventa una cifra.
+   * ⚠️ **Y por eso es una cadena y no un número.** Con un importe suelto había
+   * que decidir en el sitio de pintar cómo se dice un 0 —«0 €» se lee como un
+   * dato que falta— y cómo se dice lo que no está decidido. Aquí se dice una
+   * vez y se lee tal cual.
    */
-  suplemento: number | null;
+  coste: string;
 }
 
 /**
  * ⚠️ **La primera es la que manda**: es la que el buscador trae puesta, porque
  * casi todos los alquileres salen de la oficina.
+ *
+ * ⚠️ **Son TRES, y antes fueron cinco.** Estaban además Mejorada del Campo y
+ * Coslada, las dos con el suplemento sin decidir, y Barajas figuraba con su
+ * nombre largo. La lista la fijó Dorel el 29 de septiembre de 2026 y el recorte
+ * es la mitad del arreglo: una lista de zonas en la que dos filas dicen «a
+ * consultar» no es un catálogo de precios, es una lista de dudas — y el
+ * visitante que ve dos precios sin resolver deja de fiarse también de los que
+ * sí están.
  */
 export const ZONAS: ZonaRecogida[] = [
-  { nombre: 'Arganda del Rey', suplemento: 0 },
-  { nombre: 'Mejorada del Campo', suplemento: 0 },
-  { nombre: 'Rivas-Vaciamadrid', suplemento: null },
-  { nombre: 'Coslada', suplemento: null },
-  { nombre: 'Aeropuerto de Barajas', suplemento: 30 },
+  { nombre: 'Arganda del Rey', coste: 'gratuito' },
+  { nombre: 'Rivas', coste: 'gratuito' },
+  { nombre: 'Aeropuerto', coste: '+30 €' },
 ];
 
 /** La que trae escrita el buscador. */
 export const ZONA_POR_DEFECTO = ZONAS[0].nombre;
 
 /**
- * Cómo se le cuenta al visitante lo que cuesta llegar a su zona.
+ * Busca una zona por su nombre exacto. `null` si es texto libre.
  *
- * ⚠️ **«Gratis» se dice con la palabra, no con un 0.** En una lista donde las
- * demás llevan cifra, un «0 €» se lee como un dato que falta o como un error de
- * la web; «sin coste» no se puede malinterpretar.
- *
- * ⚠️ **Y lo que no está decidido se dice «a consultar»**, que es cierto, en vez
- * de inventar un importe o de callarlo. Callarlo sería peor: el visitante
- * supondría que es gratis.
+ * ⚠️ **El texto libre NO se rechaza, y ese es el diseño entero del campo.** La
+ * empresa va más lejos de estas tres; lo que pasa es que el importe se acuerda
+ * por teléfono. Un campo que solo admitiera la lista perdería al cliente que
+ * vive un pueblo más allá, que es justo el que llama.
  */
-export function textoSuplemento(zona: ZonaRecogida): string {
-  if (zona.suplemento === null) return 'suplemento a consultar';
-  if (zona.suplemento === 0) return 'entrega y recogida sin coste';
-  return `${zona.suplemento} € por trayecto`;
-}
-
-/** Busca una zona por su nombre exacto. `null` si es texto libre. */
 export function zonaPorNombre(nombre: string): ZonaRecogida | null {
   const limpio = nombre.trim().toLowerCase();
   return ZONAS.find((z) => z.nombre.toLowerCase() === limpio) ?? null;

@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
-import { ZONAS, ZONA_POR_DEFECTO, textoSuplemento } from '../lib/zonas';
+import { ZONAS, ZONA_POR_DEFECTO } from '../lib/zonas';
 
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
@@ -170,16 +170,18 @@ const PREGUNTAS = [
           orden de tabulación y un lector de pantalla lo anuncia.
         */}
         {/*
-          ⚠️ **`<datalist>`, no un `<select>`, y ese es todo el diseño.** Un
-          desplegable obliga a elegir de la lista; aquí hace falta lo contrario:
-          las cinco zonas que la empresa sirve de verdad **y** poder escribir
-          cualquier otra cosa. Con `list` el campo sigue siendo un `input` de
-          texto normal —con su aspa, su `maxlength` y su teclado— y encima el
-          navegador pone la lista gratis, sin una línea de JavaScript.
+          ⚠️ **El `<datalist>` es el RESPALDO, no la lista que se ve.** Lo
+          sustituye `zonas-combo.ts` al arrancar, y sigue aquí escrito por lo
+          mismo que el calendario se monta desde JavaScript: si ese módulo no
+          llegara a ejecutarse, el campo se queda con la lista del navegador
+          —imperfecta pero viva— en vez de sin ninguna.
 
-          ⚠️ **Y cada opción lleva su precio dentro** (`label`), que es lo que el
-          visitante quiere saber: no si su pueblo está en la lista, sino si se lo
-          llevan y cuánto cuesta.
+          ⚠️ **Y la lista del navegador es imperfecta de verdad, no por
+          gusto.** El precio de cada zona solo se puede enseñar en el `label`, y
+          **solo Chrome enseña el valor y la etiqueta a la vez**: Firefox
+          sustituye el nombre del pueblo por la etiqueta y Safari se come el
+          precio. Por eso aquí el `label` lleva las dos cosas — así el respaldo
+          dice algo cierto en los tres.
         */}
         <div class="buscador__campo buscador__campo--lugar">
           <label for="lugar">Recogida en</label>
@@ -192,10 +194,9 @@ const PREGUNTAS = [
               value={ZONA_POR_DEFECTO}
               autocomplete="off"
               maxlength="80"
-              aria-describedby="pista-lugar"
             />
             <datalist id="zonas">
-              {ZONAS.map((z) => <option value={z.nombre} label={textoSuplemento(z)} />)}
+              {ZONAS.map((z) => <option value={z.nombre} label={`${z.nombre} · ${z.coste}`} />)}
             </datalist>
             <button type="button" id="limpiar-lugar" class="aspa" aria-label="Borrar el lugar de recogida">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
@@ -205,20 +206,13 @@ const PREGUNTAS = [
           </div>
         </div>
         {/*
-          ⚠️ **Lo que cuesta llegar ahí, en una línea propia bajo los campos.**
-          El `<datalist>` enseña el precio solo mientras la lista está
-          desplegada: en cuanto se elige, desaparece — y el precio es justo lo
-          que hay que seguir viendo, porque es lo que decide si se reserva.
-
-          ⚠️ **Y va FUERA del campo, no debajo de su input.** Dentro, la línea
-          hace al bloque del lugar más alto que los otros tres, y con
-          `align-items: end` los demás se descuelgan hasta su base: los dos
-          calendarios quedarían 20 px por debajo del campo de al lado. En su
-          propia fila no desalinea nada y cabe el caso largo —el de una
-          localidad que no está en la lista—, que en la columna del campo se
-          partiría en tres renglones.
+          ⚠️ **Aquí hubo una línea con el suplemento y la quitó Dorel** el 29 de
+          septiembre de 2026: «no tiene sentido, complica demasiado». Tenía
+          razón por partida doble — una línea que cambia bajo el campo obliga a
+          reservarle sitio para que el buscador no dé un salto al vaciarlo, y
+          repetía a pie de campo lo que la propia opción puede decir al
+          elegirla. El precio vive ahora dentro de cada fila de la lista.
         */}
-        <p class="buscador__pista" id="pista-lugar"></p>
         <div class="buscador__campo buscador__campo--desde">
           <label for="desde">Recogida</label>
           <input type="datetime-local" id="desde" name="from" step="900" required />
@@ -363,7 +357,8 @@ const PREGUNTAS = [
 <script>
   import { flota } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
-  import { textoSuplemento, zonaPorNombre } from '../lib/zonas';
+  import { montarComboZonas } from '../lib/zonas-combo';
+  import { montarCalendarios } from '../lib/fecha-panel';
 
   /* ---- El buscador ------------------------------------------------------
    *
@@ -407,36 +402,22 @@ const PREGUNTAS = [
   const lugar = document.getElementById('lugar') as HTMLInputElement | null;
   const aspa = document.getElementById('limpiar-lugar');
   const envoltorio = lugar?.closest('.campo-con-aspa');
-  const pista = document.getElementById('pista-lugar');
 
   if (lugar && aspa && envoltorio) {
     /*
-     * ⚠️ **Lo que cuesta llegar a esa zona, debajo del campo.**
+     * La lista de zonas, con su precio dentro de cada fila.
      *
-     * Una zona que no está en la lista NO se rechaza: se dice que se consulta.
-     * Es lo que pidió Dorel —cinco zonas y texto libre— y además es lo honesto:
-     * la empresa va más lejos, solo que el importe se acuerda por teléfono.
-     * Rechazar el texto libre sería perder al cliente que vive un pueblo más
-     * allá.
+     * ⚠️ **Sustituye al `<datalist>`, y no por estética.** La lista de un
+     * `<datalist>` la pinta el navegador fuera de la página y ningún CSS la
+     * alcanza; pero lo que obligó a cambiarla es que el precio solo cabía en el
+     * atributo `label`, y **solo Chrome enseña el valor y la etiqueta a la
+     * vez** — en Firefox la lista salía sin un nombre de pueblo y en Safari sin
+     * un precio. El texto libre se conserva, que es el diseño entero del campo.
      */
-    const contarSuplemento = () => {
-      if (!pista) return;
-      const escrito = lugar.value.trim();
-      if (!escrito) {
-        pista.textContent = '';
-        return;
-      }
-      const zona = zonaPorNombre(escrito);
-      pista.textContent = zona
-        ? textoSuplemento(zona)
-        : 'Fuera de las zonas habituales: te decimos el suplemento al llamarte.';
-    };
+    montarComboZonas(lugar);
 
     const refrescarAspa = () => envoltorio.classList.toggle('tiene-texto', lugar.value.length > 0);
-    const alEscribir = () => {
-      refrescarAspa();
-      contarSuplemento();
-    };
+    const alEscribir = () => refrescarAspa();
 
     lugar.addEventListener('input', alEscribir);
     /*
@@ -562,6 +543,21 @@ const PREGUNTAS = [
 
     hasta.addEventListener('change', ajustarDevolucion);
     ajustarDevolucion();
+
+    /*
+     * El calendario de Velto delante del del navegador.
+     *
+     * ⚠️ **Va DESPUÉS de poner `min` y `value`**, no antes: el panel los lee
+     * del campo al abrirse, así que montado primero se quedaría con unos
+     * límites que todavía no existían y ofrecería días que el campo rechaza.
+     *
+     * ⚠️ **Y con el dedo NO se monta**, que lo decide el propio módulo: la hoja
+     * del sistema está mejor hecha para el pulgar que cualquier cosa que
+     * dibujemos, y aquí no hay ningún motivo para sustituirla — el del
+     * backoffice, que su diálogo de Android no sabe vaciar, no aplica a dos
+     * campos `required` que siempre traen valor.
+     */
+    montarCalendarios();
   }
 
   const lista = document.getElementById('lista')!;
@@ -677,20 +673,30 @@ const PREGUNTAS = [
     border-radius: var(--r-xl);
     box-shadow: var(--sh-4);
     transform: translateY(50%);
+    /*
+     * ⚠️ **Sin estas dos líneas la lista de zonas sale TAPADA, y a medias.**
+     * `transform` crea contexto de apilado con `z-index: auto`, y la sección
+     * de las promesas crea otro con `isolation: isolate`; al ir después en el
+     * DOM, gana ella. Medido: el panel abría y `elementFromPoint` sobre su
+     * esquina devolvía la sección, así que las últimas filas quedaban debajo y
+     * no se podían pulsar — y un desplegable recortado no se lee como un
+     * fallo, se lee como que la lista tiene menos zonas.
+     *
+     * Y un `z-index` alto DENTRO del panel no sirve: solo ordena dentro del
+     * contexto del buscador, no contra el hermano de su antepasado. Lo que
+     * hace falta es que el contexto del buscador gane, que es esto.
+     */
+    position: relative;
+    z-index: 2;
   }
 
   /*
-   * ⚠️ **En escritorio hay que colocar los CUATRO campos a mano, no solo la
-   * pista.** La pista ocupa las cuatro columnas, así que no cabe en la primera
-   * fila y el colocador automático la baja a la segunda — hasta ahí bien. Lo
-   * que rompe es lo siguiente: los ítems con **fila explícita** se colocan
-   * ANTES que los automáticos, así que si solo se fijara la fila de los dos
-   * calendarios y el botón, esos tres se llevarían las columnas 1, 2 y 3 y el
-   * campo del lugar acabaría en la cuarta. O se fijan todos o no se fija
-   * ninguno.
+   * ⚠️ **Se colocan los CUATRO a mano, no tres.** Los ítems con **fila
+   * explícita** se colocan ANTES que los automáticos, así que fijando solo los
+   * dos calendarios y el botón, esos tres se llevarían las columnas 1, 2 y 3 y
+   * el campo del lugar acabaría en la cuarta.
    *
-   * En móvil no hace falta nada: una sola columna y el orden del código ya
-   * pone la pista justo debajo del campo que explica.
+   * En móvil no hace falta nada: una sola columna y el orden del código manda.
    */
   @media (min-width: 720px) {
     .buscador { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) auto; }
@@ -698,7 +704,6 @@ const PREGUNTAS = [
     .buscador__campo--desde,
     .buscador__campo--hasta,
     .buscador__btn { grid-row: 1; }
-    .buscador__pista { grid-column: 1 / -1; }
   }
 
   .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
@@ -709,18 +714,36 @@ const PREGUNTAS = [
     color: var(--gray-400);
   }
 
-  .buscador input {
+  .buscador input,
+  .buscador select {
     min-height: var(--control-h);
     padding: 0 var(--sp-4);
     font-family: var(--font-num);
     color: var(--velto-white);
-    background: var(--velto-black);
-    border: var(--bw) solid var(--gray-800);
+    /*
+     * ⚠️ **`background-color` y no `background`.** La forma corta **borra
+     * `background-image` sin avisar**, y esta regla gana por especificidad a la
+     * global: con ella, el icono del calendario que dibuja `.picker-propio` no
+     * llegaba — comprobado, `backgroundImage` se quedaba en `none`. El
+     * backoffice resuelve lo mismo a base de `!important` porque allí son once
+     * hojas de componente; aquí son tres sitios y se arregla en origen.
+     */
+    background-color: var(--velto-black);
+    /*
+     * ⚠️ **El contorno de un campo es `--border-input`, nunca el de las
+     * separaciones.** Con `--gray-800` el borde se quedaba en **1,57:1** sobre
+     * el relleno, la mitad del 3:1 que pide WCAG 1.4.11: el campo no se
+     * delimitaba. Es la misma corrección que el backoffice hizo el 23 de
+     * septiembre.
+     */
+    border: var(--bw) solid var(--border-input);
     border-radius: var(--r-md);
     /*
-     * ⚠️ El calendario de un `input[type=date]` lo pinta el sistema y ningún
-     * CSS lo alcanza: lo único que lo hace legible sobre fondo oscuro es
-     * `color-scheme`. Es la misma lección del backoffice.
+     * ⚠️ El calendario de un `datetime-local` lo pinta el sistema y ningún CSS
+     * lo alcanza: lo único que lo hace legible sobre fondo oscuro es
+     * `color-scheme`. Y aquí va fijo a `dark` **en los dos temas**, porque esta
+     * tarjeta es oscura siempre — lo lee además `fecha-panel.ts` para decidir
+     * de qué color sale el panel propio.
      */
     color-scheme: dark;
   }
@@ -739,25 +762,6 @@ const PREGUNTAS = [
   .campo-con-aspa {
     position: relative;
     display: grid;
-  }
-
-  /*
-   * Lo que cuesta llegar a la zona elegida.
-   *
-   * ⚠️ **La línea está RESERVADA aunque no diga nada.** Solo se queda vacía
-   * con el campo vacío, o sea al pulsar el aspa — y sin reservarla, el
-   * buscador encogería de golpe justo debajo del dedo que acaba de borrar. Es
-   * la misma razón por la que un esqueleto de carga ocupa el sitio del dato.
-   */
-  .buscador__pista {
-    /*
-     * Tira hacia arriba lo que sobra del hueco de la rejilla: la pista explica
-     * el campo de encima y a 16 px se lee como otra cosa.
-     */
-    margin: calc(var(--sp-2) - var(--sp-4)) 0 0;
-    min-height: 1.25rem;
-    font-size: var(--fs-caption);
-    color: var(--gray-400);
   }
 
   /*

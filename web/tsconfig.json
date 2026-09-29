@@ -1,0 +1,23 @@
+{
+  "//": [
+    "⚠️ Sin este fichero, `astro check` SUBE POR EL ÁRBOL y coge el tsconfig de",
+    "la raíz: typechequeaba la app de Angular —169 ficheros— y ni una línea de",
+    "la web, saliendo en verde sobre el proyecto equivocado. Con él son 22",
+    "ficheros, que son los de aquí. Es la misma razón por la que `functions/`",
+    "tiene el suyo: son tres builds independientes que no comparten módulo.",
+    "",
+    "`strict` y no `strictest`: el primero es `strict: true`, que es lo que ya",
+    "usan la app y las functions. `strictest` añade `noUncheckedIndexedAccess`,",
+    "una regla más dura que la del resto del repositorio — y una regla que marca",
+    "cien sitios correctos se apaga a la semana, que es justo el criterio con el",
+    "que se eligió lo que entra en `eslint.config.mjs`.",
+    "",
+    "Lo que sí viene del preset base y hay que respetar es `verbatimModuleSyntax`:",
+    "obliga a `import type` para lo que solo son tipos. No es cosmético — sin él",
+    "el import sobrevive al compilado y se lleva el módulo entero al bundle que",
+    "descarga el visitante."
+  ],
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}
