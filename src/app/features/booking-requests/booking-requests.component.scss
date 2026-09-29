@@ -127,8 +127,17 @@
   margin-bottom: 16px;
 }
 
+/*
+ * ⚠️ **`align-content: start`, o el valor se despega de su etiqueta.** La
+ * rejilla de arriba iguala la altura de las cuatro celdas, y la de las fechas
+ * mide el doble desde que lleva dos líneas: sin esto, las filas de las demás se
+ * estiran para rellenar y el teléfono acaba flotando a media altura, medido en
+ * 52 px de fila para un dato de 24. Se ve como si estuviera desalineado con su
+ * rótulo, y lo está.
+ */
 .dato {
   display: grid;
+  align-content: start;
   gap: 4px;
   min-width: 0;
 }
@@ -182,12 +191,82 @@
  * ⚠️ **Se encoge al contenido** (`justify-self: start`): en una celda de
  * rejilla un botón se estira a todo el ancho de la columna, y uno de 180 px
  * debajo de una fecha se lee como el botón principal de la ficha, que no lo es.
+ *
+ * ⚠️ **Y tiene caja, no es un `.btn-ghost`.** Sin ella no se leía como algo que
+ * se pulsa: era un icono y un texto sueltos bajo la fecha, indistinguibles de
+ * la pista gris que hay bajo las otras celdas. Lo pidió Dorel el 29 de
+ * septiembre de 2026 — «Ampliar 24 h en un botón».
  */
 .btn-ampliar {
   justify-self: start;
-  margin-top: 2px;
-  padding: 4px 8px;
+  margin-top: 4px;
+  padding: 4px 10px;
   font-size: 0.75rem;
+}
+
+/*
+ * Un hito con su icono: sale el coche, vuelve el coche.
+ *
+ * ⚠️ El icono va a `--text-muted` a propósito. Lo que se lee es la fecha; el
+ * icono solo dice cuál de las dos es, y al color del texto competiría con ella.
+ */
+.hito {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  i {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}
+
+/* El dato y su botón de copiar, en la misma línea. */
+.con-copia {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/*
+ * El botón de copiar, pegado al dato.
+ *
+ * ⚠️ **Y NO se llama `.btn-icon`, aunque lo parezca.** Esa clase existe en seis
+ * pantallas con una geometría concreta —32 px **con borde**—, que junto a un
+ * número de teléfono pesa más que el dato que acompaña. Reutilizar el nombre
+ * con otra forma sería la misma clase significando dos cosas, que es peor que
+ * tener dos nombres.
+ *
+ * ⚠️ **Y la primera versión SÍ la usaba, sin declararla.** Este componente no
+ * la declara y la encapsulación de Angular impide que llegue la de otro, así
+ * que el botón salía sin forma. `css:audit` lo dio por bueno —la clase está
+ * escrita en algún SCSS— y es una laguna suya que conviene conocer: comprueba
+ * que la clase existe, no que **alcance** al elemento.
+ */
+.btn-copiar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+
+  /* Transparente de base: aquí el tinte sí vale como `background` a secas. */
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  /* Copiado: el tic se queda un momento en verde, que es lo que se busca. */
+  .pi-check {
+    color: var(--success-color);
+  }
 }
 
 .acciones {

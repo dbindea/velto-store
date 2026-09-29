@@ -29,6 +29,7 @@ import {
   whatsappLink
 } from '@shared/utils/booking-request.util';
 import { toDate } from '@shared/utils/reservation-date.util';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 type Filtro = 'open' | 'all' | BookingRequestStatus;
 
@@ -63,6 +64,8 @@ export class BookingRequestsComponent {
   /** Cuál está abierta. Una ficha desplegable basta para cuatro acciones. */
   readonly abierta = signal<string | null>(null);
   readonly guardando = signal<string | null>(null);
+  /** Cuál acaba de copiarse, para enseñar el tic un momento. */
+  readonly copiado = signal<string | null>(null);
 
   notaInterna = '';
 
@@ -196,6 +199,29 @@ export class BookingRequestsComponent {
     return canExtendGuarantee(r);
   }
 
+  /**
+   * Copiar el teléfono.
+   *
+   * ⚠️ **Se copia el número CRUDO, no el separado.** Lo formateado es para
+   * leerlo y dictarlo; lo que se pega en una agenda o en un WhatsApp tiene que
+   * marcar, y `+34 699 887 766` con espacios no siempre lo hace. Es el mismo
+   * reparto que entre `telLink()` y `formatPhone()`.
+   */
+  async copiarTelefono(r: BookingRequest): Promise<void> {
+    if (!r.id) return;
+    const ok = await copyToClipboard(`+${r.phone}`);
+    if (!ok) {
+      this.notifications.error('common.copyFailed');
+      return;
+    }
+    // El aspa se convierte en un tic un momento: copiar no deja rastro en la
+    // pantalla, y sin esto no hay forma de saber si el botón hizo algo.
+    this.copiado.set(r.id);
+    setTimeout(() => {
+      if (this.copiado() === r.id) this.copiado.set(null);
+    }, 1500);
+  }
+
   /** ¿La nota que hay en el campo es distinta de la guardada? */
   notaCambiada(r: BookingRequest): boolean {
     return this.notaInterna.trim() !== (r.internalNote ?? '').trim();
@@ -304,6 +330,8 @@ export class BookingRequestsComponent {
     void this.router.navigate(['/reservations', 'new'], {
       queryParams: {
         fromRequest: r.id,
+        /** La referencia, para que el asistente pueda decir de dónde viene. */
+        requestRef: r.reference,
         vehicleId: r.vehicleId,
         pickup: iso(desde),
         return: iso(hasta),

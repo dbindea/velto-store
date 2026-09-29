@@ -162,7 +162,9 @@
     "search": "Search",
     "showingLatest": "Showing the most recent ones. To find an older one, use the search box.",
     "viewAll": "View all",
-    "emailPlaceholder": "customer@email.com"
+    "emailPlaceholder": "customer@email.com",
+    "copy": "Copy",
+    "copyFailed": "Could not copy"
   },
   "contracts": {
     "actions": {
@@ -1282,7 +1284,12 @@
       "depositWaived": "No deposit (not requested)",
       "remainingPaymentNotDue": "No remainder (all in the down payment)"
     },
-    "title": "Reservations"
+    "title": "Reservations",
+    "fromRequest": {
+      "vehicleGone": "The car from the request is no longer free on those dates. Pick another one or change the dates.",
+      "markFailed": "The reservation was created, but the request could not be marked as converted",
+      "banner": "From request"
+    }
   },
   "search": {
     "close": "Close",
@@ -2101,6 +2108,8 @@
     "noteSaved": "Note saved",
     "extend": "Extend 24 h",
     "extended": "Price held for another 24 hours",
-    "hoursProposed": "Suggested times: the website only asks for dates"
+    "hoursProposed": "Suggested times: the website only asks for dates",
+    "pickup": "Pick-up",
+    "return": "Return"
   }
 }

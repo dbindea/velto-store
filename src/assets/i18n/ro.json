@@ -162,7 +162,9 @@
     "search": "Caută",
     "showingLatest": "Se afișează cele mai recente. Pentru unul vechi anume, folosește căutarea.",
     "viewAll": "Vezi tot",
-    "emailPlaceholder": "client@email.com"
+    "emailPlaceholder": "client@email.com",
+    "copy": "Copiază",
+    "copyFailed": "Nu s-a putut copia"
   },
   "contracts": {
     "actions": {
@@ -1282,7 +1284,12 @@
       "depositWaived": "Fără garanție (nu s-a cerut)",
       "remainingPaymentNotDue": "Fără rest (totul a intrat în avans)"
     },
-    "title": "Rezervări"
+    "title": "Rezervări",
+    "fromRequest": {
+      "vehicleGone": "Mașina din cerere nu mai este liberă în acele date. Alege alta sau schimbă datele.",
+      "markFailed": "Rezervarea a fost creată, dar cererea nu a putut fi marcată ca transformată",
+      "banner": "Din cererea"
+    }
   },
   "search": {
     "close": "Închide",
@@ -2101,6 +2108,8 @@
     "noteSaved": "Notă salvată",
     "extend": "Prelungește 24 h",
     "extended": "Preț garantat încă 24 de ore",
-    "hoursProposed": "Ore propuse: site-ul cere doar datele"
+    "hoursProposed": "Ore propuse: site-ul cere doar datele",
+    "pickup": "Ridicare",
+    "return": "Returnare"
   }
 }

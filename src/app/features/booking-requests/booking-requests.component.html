@@ -78,20 +78,43 @@
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.dates' | translate }}</span>
                   <!--
-                    ⚠️ **Cada instante, entero.** Sin envolverlos, el rango
-                    parte por donde se acabe la columna y deja «12:00» solo en
-                    la línea de abajo, que se lee como un dato suelto. Con esto
-                    el salto cae en el guion, que es donde significa algo.
+                    ⚠️ **Una línea por hito, no un rango.** Con las dos fechas
+                    seguidas el salto caía por donde se acabara la columna y
+                    dejaba «12:00» solo, que se lee como un dato suelto. Y son
+                    dos cosas distintas —cuándo sale el coche y cuándo vuelve—,
+                    así que el icono las nombra sin gastar una etiqueta.
                   -->
-                  <span>
-                    <span class="nowrap">{{ recogidaPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span> –
+                  <span class="hito">
+                    <i class="pi pi-sign-out" [title]="'bookingRequests.pickup' | translate"></i>
+                    <span class="nowrap">{{ recogidaPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span>
+                  </span>
+                  <span class="hito">
+                    <i class="pi pi-sign-in" [title]="'bookingRequests.return' | translate"></i>
                     <span class="nowrap">{{ devolucionPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span>
                   </span>
                   <span class="field-hint">{{ 'bookingRequests.hoursProposed' | translate }}</span>
                 </div>
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.phone' | translate }}</span>
-                  <span class="mono">{{ telefonoLegible(r) }}</span>
+                  <!--
+                    ⚠️ **Copiar, porque el número se lleva a otro sitio.** Se
+                    pega en la agenda, en el WhatsApp del ordenador o en la
+                    ficha del cliente al darlo de alta, y seleccionar doce
+                    dígitos con el ratón sin llevarse los espacios es justo
+                    donde se equivoca uno.
+                  -->
+                  <span class="con-copia">
+                    <span class="mono">{{ telefonoLegible(r) }}</span>
+                    <button
+                      type="button"
+                      class="btn-copiar"
+                      [title]="'common.copy' | translate"
+                      [attr.aria-label]="'common.copy' | translate"
+                      (click)="copiarTelefono(r)"
+                    >
+                      <i class="pi" [class.pi-copy]="copiado() !== r.id" [class.pi-check]="copiado() === r.id"></i>
+                    </button>
+                  </span>
                 </div>
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.received' | translate }}</span>
@@ -121,7 +144,7 @@
                   @if (puedeAmpliar(r)) {
                     <button
                       type="button"
-                      class="btn-ghost btn-ampliar"
+                      class="btn-secondary btn-ampliar"
                       [disabled]="guardando() === r.id"
                       (click)="ampliar(r)"
                     >

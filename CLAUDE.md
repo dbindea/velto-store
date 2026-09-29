@@ -1090,6 +1090,32 @@ URL. Crear un alquiler es una sola escritura con sus filas de cobro, su
 disponibilidad y su cliente, y duplicar eso sería una segunda forma de crear
 reservas.
 
+⚠️ **Y durante un día esos parámetros NO LOS LEÍA NADIE.** «Convertir en
+reserva» navegaba con el coche, las fechas y el cliente en la URL y el asistente
+se abría en el paso 1 en blanco; y **nadie llamaba a `markConverted()`**, así que
+la solicitud se quedaba «sin contestar» para siempre, el filtro «Convertidas» no
+se alcanzaba nunca y la misma solicitud se podía convertir dos veces — justo lo
+que `canConvert()` existe para impedir. El patrón de siempre: escrito y nunca
+recorrido hasta el final. Corregido el 29 de septiembre de 2026.
+
+Lo que hace ahora, y por qué cada parte:
+
+- **Se para en el paso del CLIENTE**, que es lo único que la solicitud no trae:
+  la web pide un nombre y un teléfono, no una ficha con su DNI.
+- **El alta rápida nace escrita y el buscador NO.** Lo que llega es un nombre
+  tecleado por un desconocido: rellenando el buscador se daría por bueno el
+  primer cliente que se parezca.
+- ⚠️ **Si el coche ya no está libre, no se sigue.** Entre la solicitud y la
+  conversión pueden pasar días; saltar al cliente con otro coche haría que la
+  reserva saliera del que estuviera seleccionado.
+- ⚠️ **Hay una cinta que dice de dónde viene**, con la referencia, el coche y
+  las fechas. **Un asistente que se abre en el paso 3 sin explicar por qué es
+  peor que uno que se abre en el 1**: los dos primeros pasos salen en verde y
+  vacíos, y el operador se encuentra un «Nueva reserva» a medio hacer.
+- ⚠️ **Marcar la solicitud va DESPUÉS y su fallo no tumba nada.** La reserva ya
+  está creada; tirar ahí dejaría al operador viendo un error sobre un alquiler
+  que sí existe — y creándolo otra vez.
+
 #### La hora que nadie dijo son las 12:00
 
 ⚠️ **El formulario de la web pide FECHAS, y lo que se guarda es la ventana de
@@ -2334,6 +2360,33 @@ Por eso existe además la ruta pública `d/:id` en `app.routes.ts`
 ([document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts)),
 que reenvía directamente a la function. Es el paracaídas, no el plan: convierte un rewrite
 olvidado en un salto extra en vez de una pantalla de login.
+
+### Un enlace profundo sobrevive al login
+
+⚠️ **No sobrevivía, y se notó en cuanto los correos empezaron a llevar enlaces
+al backoffice.** `authGuard` mandaba a `/login` **sin guardar a dónde ibas** y el
+login navegaba siempre a `/dashboard`: abrir desde el correo el aviso de una
+solicitud —sin sesión, o en otro navegador— dejaba al operador en el panel, sin
+una pista de qué había pasado con el enlace que acababa de pulsar. Lo contó
+Dorel el 29 de septiembre de 2026 y **no es de Solicitudes**: le pasaba a
+cualquier enlace del backoffice que alguien reciba por correo o por WhatsApp.
+
+Hoy el guard pone `?returnUrl=` y `loginWithGoogle()` vuelve ahí. Va **en la
+URL** y no en un servicio, para que la intención sobreviva a la recarga del
+`signInWithPopup` y además se vea.
+
+⚠️ **Y todo lo que lo lea pasa por `safeReturnUrl()`**, que es lo que impide un
+*open redirect*: ese valor llega por la barra de direcciones, así que
+`…/login?returnUrl=https://otro-sitio` convertiría el login de la empresa en un
+trampolín —el usuario ve el dominio de siempre, entra con su cuenta y acaba en
+una página ajena—. La regla es **blanca**: solo pasa una ruta interna. Los dos
+casos que se cuelan si uno solo comprueba «empieza por barra» son `//otro-sitio`
+y `/\otro-sitio`, que el navegador resuelve como **absolutas**; hay test de los
+dos, y de que `/login` no se devuelve a sí mismo.
+
+⚠️ **`navigateByUrl` y no `navigate([…])`.** Aquella interpreta la cadena como
+una URL entera; esta la trataría como **un solo segmento**, así que
+`/reservations/1?tab=pagos` acabaría escapado y sin resolver.
 
 **El login es solo para la agencia.** Las cuatro rutas de cliente —`sign-contract/:token`,
 `d/:id`, `pay/:paymentId` y `v/:codigo`— van declaradas **antes** del bloque con
@@ -3774,6 +3827,16 @@ Lo que lo distingue es `getComputedStyle()` en la pantalla de verdad: ahí se ve
 un SCSS de componente, comprueba que el antepasado envuelve de verdad a la
 clase**, sobre todo en ficheros donde conviven varias tarjetas parecidas
 (`.detail-card`, `.refund-card`, `.pricing-card`).
+
+⚠️ **Y hay una TERCERA que tampoco caza, la más fácil de cometer: la clase que
+declara OTRO componente.** El auditor comprueba que la clase esté escrita en
+algún SCSS, no que ese SCSS **alcance** al elemento — y con la encapsulación de
+Angular no alcanza casi nunca. Pasó el 29 de septiembre de 2026 con un
+`class="btn-icon"` en Solicitudes: seis pantallas la declaran, esta no, el botón
+salió sin forma y `css:audit` lo dio por bueno. **Antes de usar una clase que
+hayas visto en otra pantalla, comprueba que la declara la tuya o `styles.scss`**
+— y si la geometría que te hace falta no es la de aquella, ponle otro nombre:
+la misma clase con dos formas es peor que dos nombres.
 
 ⚠️ **Y volvió a pasar el 24 de septiembre de 2026, con un mapa `*_COLORS`.**
 `PAYMENT_STATUS_COLORS` produce seis clases y la ficha de la reserva solo

@@ -17,6 +17,7 @@ import { Router } from '@angular/router';
 import { Observable, from, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { AuthorizedUser } from '@shared/models/authorized-user.model';
+import { safeReturnUrl } from '@shared/utils/return-url.util';
 
 @Injectable({
   providedIn: 'root'
@@ -128,8 +129,27 @@ export class AuthService {
         return;
       }
 
-      // Redirect to dashboard on success
-      this.router.navigate(['/dashboard']);
+      /**
+       * ⚠️ **Se vuelve a donde se iba, no siempre al panel.** Aquí ponía
+       * `/dashboard` fijo, así que el enlace del correo de una solicitud —o el
+       * de cualquier otra pantalla— se perdía al pasar por el login: el
+       * operador entraba y aparecía en el panel, sin ni una pista de qué había
+       * sido del enlace que acababa de pulsar.
+       *
+       * ⚠️ **Y pasa por `safeReturnUrl()` SIEMPRE.** Ese valor llega por la
+       * barra de direcciones: sin comprobarlo, un
+       * `…/login?returnUrl=https://otro-sitio` convierte el login de la empresa
+       * en un trampolín con su dominio de siempre delante.
+       */
+      const destino = safeReturnUrl(
+        this.router.parseUrl(this.router.url).queryParams['returnUrl']
+      );
+      /**
+       * ⚠️ **`navigateByUrl` y no `navigate([…])`.** Aquella interpreta la
+       * cadena como una URL entera; esta la trataría como **un solo segmento**,
+       * así que `/reservations/1?tab=pagos` acabaría escapado y sin resolver.
+       */
+      void this.router.navigateByUrl(destino);
     } catch (error: any) {
       console.error('Login error:', error);
       this._authError.set(this.getErrorMessage(error.code));

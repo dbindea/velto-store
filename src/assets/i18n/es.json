@@ -162,7 +162,9 @@
     "search": "Buscar",
     "showingLatest": "Se muestran los más recientes. Para uno antiguo concreto, usa el buscador.",
     "viewAll": "Ver todo",
-    "emailPlaceholder": "cliente@email.com"
+    "emailPlaceholder": "cliente@email.com",
+    "copy": "Copiar",
+    "copyFailed": "No se pudo copiar"
   },
   "contracts": {
     "actions": {
@@ -1282,7 +1284,12 @@
       "depositWaived": "Sin fianza (no se pidió)",
       "remainingPaymentNotDue": "Sin resto (todo iba en la señal)"
     },
-    "title": "Reservas"
+    "title": "Reservas",
+    "fromRequest": {
+      "vehicleGone": "El coche de la solicitud ya no está libre en esas fechas. Elige otro o cambia las fechas.",
+      "markFailed": "La reserva se creó, pero la solicitud no se pudo marcar como convertida",
+      "banner": "Viene de la solicitud"
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -2101,6 +2108,8 @@
     "noteSaved": "Nota guardada",
     "extend": "Ampliar 24 h",
     "extended": "Precio garantizado 24 horas más",
-    "hoursProposed": "Horas propuestas: la web solo pide fechas"
+    "hoursProposed": "Horas propuestas: la web solo pide fechas",
+    "pickup": "Recogida",
+    "return": "Devolución"
   }
 }
