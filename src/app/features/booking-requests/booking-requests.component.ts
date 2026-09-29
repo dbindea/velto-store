@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -123,6 +123,14 @@ export class BookingRequestsComponent {
       this.filtro.set('all');
       this.abierta.set(id);
     }
+
+    /**
+     * ⚠️ **Y los campos de la ficha se rellenan AQUÍ, no al pulsarla.** Por el
+     * enlace del correo nadie pulsa nada y la lista aún no ha llegado; este
+     * efecto reacciona a las dos cosas —qué ficha está abierta y cuándo llegan
+     * los datos— y por eso funciona por los dos caminos.
+     */
+    effect(() => this.cargarCamposDeLaFichaAbierta());
   }
 
   /**
@@ -153,25 +161,58 @@ export class BookingRequestsComponent {
   readonly filtros: Filtro[] = ['open', 'new', 'contacted', 'converted', 'discarded', 'all'];
 
   /**
-   * ⚠️ **La nota se CARGA al abrir, no se empieza en blanco.** Con un campo
-   * vacío delante de una solicitud que ya tenía nota, lo que el operador
-   * escribe no amplía lo anterior: lo sustituye sin que se vea qué había. El
-   * campo enseña lo guardado y se edita encima, que es lo que un campo de texto
-   * promete.
+   * Abrir y cerrar la ficha. **Los campos NO se rellenan aquí** — ver
+   * `cargarCamposDeLaFichaAbierta()`.
    */
   alternar(id?: string): void {
     if (!id) return;
-    const abre = this.abierta() !== id;
-    const r = abre ? this.requests().find((x) => x.id === id) : undefined;
-    this.notaInterna = r?.internalNote ?? '';
-    // El borrador se recompone cada vez que se abre: es efímero a propósito.
+    this.abierta.set(this.abierta() === id ? null : id);
+  }
+
+  /**
+   * Rellenar la nota y el borrador del mensaje cuando la ficha abierta ESTÁ.
+   *
+   * ⚠️ **Esto vivía dentro de `alternar()`, y por eso el enlace del correo
+   * llevaba a una ficha ROTA.** Entrando por `/booking-requests/:id` nadie
+   * pulsa nada: el constructor hace `abierta.set(id)` directamente, y encima lo
+   * hace **antes de que la suscripción haya emitido**, así que la solicitud
+   * todavía no existe en `requests()`. Resultado: el mensaje de WhatsApp salía
+   * **vacío** y la nota interna sin cargar — y entonces «Guardar nota» se
+   * encendía y **borraba** la que había, con un «Nota guardada» delante.
+   *
+   * Lo encontró una revisión adversaria el 29 de septiembre de 2026, sobre
+   * código que yo mismo había probado el día anterior: recorrí la ruta y
+   * comprobé que abría la ficha correcta, pero no miré los campos de dentro.
+   *
+   * ⚠️ **Y solo carga al CAMBIAR de ficha, no cada vez que llegan datos.** La
+   * lista escucha en vivo: sin `cargadaEn`, cualquier cambio en cualquier
+   * solicitud reemitiría y pisaría lo que el operador está escribiendo en ese
+   * momento.
+   */
+  private cargadaEn: string | null = null;
+
+  private cargarCamposDeLaFichaAbierta(): void {
+    const id = this.abierta();
+    if (!id) {
+      this.cargadaEn = null;
+      this.notaInterna = '';
+      this.mensajeWhatsapp = '';
+      return;
+    }
+    if (this.cargadaEn === id) return;
+    const r = this.requests().find((x) => x.id === id);
+    // Todavía no ha llegado la lista: se vuelve a intentar en la próxima
+    // emisión, que es justo lo que el enlace del correo necesita.
+    if (!r) return;
+
+    this.cargadaEn = id;
+    this.notaInterna = r.internalNote ?? '';
     /**
      * ⚠️ **`brandName`, no `name`.** Aquel es «Velto Mobility», que es como la
      * empresa se presenta a un cliente; `name` es el nombre corto de la barra
      * lateral y decir «te contacto de Velto» suena a apodo interno.
      */
-    this.mensajeWhatsapp = r ? whatsappMessage(r, BRAND_CONFIG.brandName) : '';
-    this.abierta.set(abre ? id : null);
+    this.mensajeWhatsapp = whatsappMessage(r, BRAND_CONFIG.brandName);
   }
 
   // --- Lo que la ficha pregunta -------------------------------------------
@@ -281,16 +322,41 @@ export class BookingRequestsComponent {
     return this.notaInterna.trim() !== (r.internalNote ?? '').trim();
   }
 
+  /**
+   * Qué se le enseña al operador cuando el servicio rechaza.
+   *
+   * ⚠️ **El servicio rechaza con una CLAVE i18n**, no con una frase, y por eso
+   * se puede pintar tal cual. Sin esto, «esa solicitud ya está atendida» —el
+   * caso de dos pestañas abiertas— saldría como un «No se pudo guardar el
+   * cambio» genérico, que no dice qué hacer.
+   */
+  private avisarDe(error: unknown): void {
+    const m = (error as { message?: unknown })?.message;
+    const clave =
+      typeof m === 'string' && m.startsWith('bookingRequests.')
+        ? m
+        : 'bookingRequests.errors.saveFailed';
+    this.notifications.error(clave);
+  }
+
   // --- Acciones ------------------------------------------------------------
 
   async contactada(r: BookingRequest): Promise<void> {
     if (!r.id) return;
     this.guardando.set(r.id);
     try {
+      /**
+       * ⚠️ **El campo NO se vacía después.** Aquí ponía `notaInterna = ''` y
+       * eso armaba una trampa: la ficha sigue abierta —`contacted` cae en la
+       * misma rama de la plantilla—, así que el operador veía el textarea en
+       * blanco con su nota ya guardada en Firestore, daba por hecho que se
+       * había perdido, pulsaba «Guardar nota»… y la **borraba**, porque el
+       * campo vacío viaja como `deleteField()`. Con un «Nota guardada» de
+       * confirmación delante.
+       */
       await this.service.markContacted(r.id, this.notaInterna.trim() || undefined);
-      this.notaInterna = '';
-    } catch {
-      this.notifications.error('bookingRequests.errors.saveFailed');
+    } catch (error) {
+      this.avisarDe(error);
     } finally {
       this.guardando.set(null);
     }
@@ -310,8 +376,8 @@ export class BookingRequestsComponent {
     try {
       await this.service.saveInternalNote(r.id, this.notaInterna);
       this.notifications.success('bookingRequests.noteSaved');
-    } catch {
-      this.notifications.error('bookingRequests.errors.saveFailed');
+    } catch (error) {
+      this.avisarDe(error);
     } finally {
       this.guardando.set(null);
     }
@@ -332,8 +398,8 @@ export class BookingRequestsComponent {
     try {
       await this.service.extendPriceGuarantee(r.id, hasta);
       this.notifications.success('bookingRequests.extended');
-    } catch {
-      this.notifications.error('bookingRequests.errors.saveFailed');
+    } catch (error) {
+      this.avisarDe(error);
     } finally {
       this.guardando.set(null);
     }
@@ -348,10 +414,10 @@ export class BookingRequestsComponent {
     if (!ok) return;
     this.guardando.set(r.id);
     try {
+      // El campo no se vacía, por lo mismo que en `contactada()`.
       await this.service.discard(r.id, this.notaInterna.trim() || undefined);
-      this.notaInterna = '';
-    } catch {
-      this.notifications.error('bookingRequests.errors.saveFailed');
+    } catch (error) {
+      this.avisarDe(error);
     } finally {
       this.guardando.set(null);
     }

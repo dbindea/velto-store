@@ -2099,11 +2099,13 @@
     },
     "discard": {
       "title": "Respingi această solicitare?",
-      "message": "Nu mai apare printre cele în așteptare. O poți recupera din filtrul «Respinse»."
+      "message": "Nu mai apare printre cele în așteptare. O vei vedea în filtrul «Respinse» până când se șterge."
     },
     "errors": {
       "loadFailed": "Solicitările nu au putut fi încărcate.",
-      "saveFailed": "Modificarea nu a putut fi salvată."
+      "saveFailed": "Modificarea nu a putut fi salvată.",
+      "gone": "Cererea nu mai există.",
+      "alreadyHandled": "Cererea a fost deja procesată: deschide-o din nou ca să vezi cum stă."
     },
     "saveNote": "Salvează nota",
     "noteSaved": "Notă salvată",

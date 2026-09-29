@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { asuntoDe, horaEn, mereceEnvio, rangoManana, type Resumen } from './daily-digest';
+import { ESTADOS_BORRABLES, solicitudCaducada } from './sendDailyDigest';
 
 const TZ = 'Europe/Madrid';
 
@@ -201,5 +202,93 @@ describe('el asunto, que es lo único que se lee sin abrir', () => {
       'VELTO'
     );
     expect(s).toBe('VELTO · Mañana 11/09/2026: 1 aviso');
+  });
+});
+
+/**
+ * ⚠️ **Lo que estos tests protegen es un BORRADO.** `limpiarSolicitudesAtendidas`
+ * corre a las nueve de la mañana, sin nadie delante, y se lleva el nombre y el
+ * teléfono de un cliente potencial para siempre. Hasta el 29 de septiembre de
+ * 2026 no tenía ni uno: lo único que impedía que arrasara con el trabajo
+ * pendiente era un `where('status','in',…)` que nadie comprobaba.
+ */
+describe('qué solicitudes se borran solas', () => {
+  const ahora = new Date('2026-09-29T09:00:00Z');
+  const hace = (horas: number) => new Date(ahora.getTime() - horas * 3_600_000);
+
+  /**
+   * ⚠️ **`new` NO está, y ese es el invariante de todo el barrido.** Una
+   * solicitud sin atender es trabajo pendiente: borrándola por antigüedad, la
+   * que entra un viernes a las 23:40 desaparece el sábado y no hay forma de
+   * distinguir «no escribió nadie» de «se me pasaron tres». Si alguien añade
+   * `'new'` a esa lista, este test cae.
+   */
+  it('SOLO se mira lo ya atendido: `new` no entra nunca', () => {
+    expect([...ESTADOS_BORRABLES]).toEqual(['contacted', 'discarded', 'converted']);
+    expect([...ESTADOS_BORRABLES]).not.toContain('new');
+  });
+
+  it('la atendida hace 25 h con un plazo de 24 se borra', () => {
+    expect(solicitudCaducada({ handledAt: hace(25), keepHours: 24 }, ahora)).toBe(true);
+  });
+
+  it('y la de hace 23 h se queda', () => {
+    expect(solicitudCaducada({ handledAt: hace(23), keepHours: 24 }, ahora)).toBe(false);
+  });
+
+  /**
+   * ⚠️ El reloj arranca cuando el operador la ATIENDE, no cuando entró: una
+   * solicitud que tarda dos días en contestarse conserva su plazo completo
+   * desde la llamada.
+   */
+  it('cuenta desde `handledAt`, no desde `createdAt`', () => {
+    const d = { createdAt: hace(200), handledAt: hace(2), keepHours: 24 };
+    expect(solicitudCaducada(d, ahora)).toBe(false);
+  });
+
+  it('sin `handledAt` cae a `createdAt`, que es el respaldo', () => {
+    expect(solicitudCaducada({ createdAt: hace(25), keepHours: 24 }, ahora)).toBe(true);
+    expect(solicitudCaducada({ createdAt: hace(10), keepHours: 24 }, ahora)).toBe(false);
+  });
+
+  /**
+   * ⚠️ **En la duda no se borra.** Un dato de más se puede borrar mañana; uno
+   * borrado no vuelve. `Number(null)` es **0** y `Number('')` también, así que
+   * la ausencia se comprueba con `isFinite` y el `<= 0` — es el mismo fallo que
+   * ya salió con `ownerSharePercent`.
+   */
+  it('sin fecha ninguna, NO se borra', () => {
+    expect(solicitudCaducada({ keepHours: 24 }, ahora)).toBe(false);
+  });
+
+  it('con un plazo ilegible o absurdo, NO se borra', () => {
+    expect(solicitudCaducada({ handledAt: hace(999), keepHours: undefined }, ahora)).toBe(false);
+    expect(solicitudCaducada({ handledAt: hace(999), keepHours: null }, ahora)).toBe(false);
+    expect(solicitudCaducada({ handledAt: hace(999), keepHours: 0 }, ahora)).toBe(false);
+    expect(solicitudCaducada({ handledAt: hace(999), keepHours: -5 }, ahora)).toBe(false);
+    expect(solicitudCaducada({ handledAt: hace(999), keepHours: 'pronto' }, ahora)).toBe(false);
+  });
+
+  /**
+   * ⚠️ **El caso que costaría un alquiler.** «Ampliar 24 h» alarga lo que se le
+   * promete al cliente y no movía este plazo: la solicitud se borraba con el
+   * precio todavía en pie, y quien llamaba citando su referencia no existía.
+   */
+  it('MIENTRAS EL PRECIO SIGA PROMETIDO no se borra, aunque el plazo haya pasado', () => {
+    const d = {
+      handledAt: hace(48),
+      keepHours: 24,
+      priceGuaranteedUntil: new Date(ahora.getTime() + 24 * 3_600_000)
+    };
+    expect(solicitudCaducada(d, ahora)).toBe(false);
+  });
+
+  it('y en cuanto el precio caduca, se borra', () => {
+    const d = { handledAt: hace(48), keepHours: 24, priceGuaranteedUntil: hace(1) };
+    expect(solicitudCaducada(d, ahora)).toBe(true);
+  });
+
+  it('una sin garantía guardada se decide solo por el plazo, como siempre', () => {
+    expect(solicitudCaducada({ handledAt: hace(48), keepHours: 24 }, ahora)).toBe(true);
   });
 });

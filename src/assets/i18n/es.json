@@ -2099,11 +2099,13 @@
     },
     "discard": {
       "title": "¿Descartar esta solicitud?",
-      "message": "Deja de aparecer entre las pendientes. Podrás recuperarla desde el filtro «Descartadas»."
+      "message": "Deja de aparecer entre las pendientes. Seguirás viéndola en el filtro «Descartadas» hasta que se borre."
     },
     "errors": {
       "loadFailed": "No se pudieron cargar las solicitudes.",
-      "saveFailed": "No se pudo guardar el cambio."
+      "saveFailed": "No se pudo guardar el cambio.",
+      "gone": "Esa solicitud ya no existe.",
+      "alreadyHandled": "Esa solicitud ya está atendida: vuelve a abrirla para ver cómo está."
     },
     "saveNote": "Guardar nota",
     "noteSaved": "Nota guardada",

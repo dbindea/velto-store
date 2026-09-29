@@ -7,6 +7,7 @@ import {
   deleteField,
   doc,
   docData,
+  getDoc,
   serverTimestamp,
   updateDoc
 } from '@angular/fire/firestore';
@@ -16,7 +17,11 @@ import type {
   BookingRequest,
   BookingRequestStatus
 } from '@shared/models/booking-request.model';
-import { canConvert, canDiscard } from '@shared/utils/booking-request.util';
+import {
+  canConvert,
+  canDiscard,
+  canMarkContacted
+} from '@shared/utils/booking-request.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 
 const COLECCION = 'bookingRequests';
@@ -62,11 +67,11 @@ export class BookingRequestService {
    * desde la llamada.
    */
   async markContacted(id: string, internalNote?: string): Promise<void> {
-    await this.marcar(id, 'contacted', { internalNote });
+    await this.marcarSiSePuede(id, 'contacted', canMarkContacted, { internalNote });
   }
 
   async discard(id: string, internalNote?: string): Promise<void> {
-    await this.marcar(id, 'discarded', { internalNote });
+    await this.marcarSiSePuede(id, 'discarded', canDiscard, { internalNote });
   }
 
   /**
@@ -120,15 +125,43 @@ export class BookingRequestService {
    * un mes se sepa que ese alquiler vino de la web.
    */
   async markConverted(id: string, reservationId: string): Promise<void> {
-    await this.marcar(id, 'converted', { reservationId });
+    await this.marcarSiSePuede(id, 'converted', canConvert, { reservationId });
   }
 
   /**
-   * ⚠️ **Se comprueba aquí ADEMÁS de en la pantalla.** La pantalla apaga el
-   * botón; esto rechaza la llamada venga por donde venga. Son las dos primeras
-   * de las tres capas que el proyecto usa para todo — la tercera es
-   * `firestore.rules`.
+   * La segunda capa: **el servicio pregunta al mismo guard que la pantalla.**
+   *
+   * ⚠️ **El docblock de abajo prometía esto y no lo hacía nadie.** Decía «se
+   * comprueba aquí ADEMÁS de en la pantalla» y `marcar()` escribía sin mirar
+   * nada: dos pestañas abiertas, o un doble clic mientras la lista se refresca,
+   * convertían dos veces la misma solicitud. Lo encontró una revisión
+   * adversaria el 29 de septiembre de 2026 — un comentario que describe una
+   * comprobación inexistente es peor que no tenerlo, porque el siguiente que
+   * lea el fichero da la capa por puesta.
+   *
+   * ⚠️ **Se relee el documento, no se usa el que tenga la pantalla.** El que
+   * está en pantalla puede llevar segundos ahí; lo que decide es el estado de
+   * Firestore en el momento de escribir.
+   *
+   * ⚠️ **Y lo que rechaza viaja como clave i18n**, no como frase: es la regla
+   * de la casa para que la capa de avisos pueda decirlo en el idioma del
+   * operador.
    */
+  private async marcarSiSePuede(
+    id: string,
+    status: BookingRequestStatus,
+    permite: (r: BookingRequest) => boolean,
+    extra: Partial<BookingRequest>
+  ): Promise<void> {
+    const snap = await getDoc(doc(this.firestore, COLECCION, id));
+    if (!snap.exists()) throw new Error('bookingRequests.errors.gone');
+    if (!permite({ ...(snap.data() as BookingRequest), id: snap.id })) {
+      throw new Error('bookingRequests.errors.alreadyHandled');
+    }
+    await this.marcar(id, status, extra);
+  }
+
+  /** La escritura, ya decidida. Quien decide es `marcarSiSePuede()`. */
   private async marcar(
     id: string,
     status: BookingRequestStatus,

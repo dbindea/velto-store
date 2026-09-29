@@ -2099,11 +2099,13 @@
     },
     "discard": {
       "title": "Discard this request?",
-      "message": "It stops showing among the pending ones. You can get it back from the «Discarded» filter."
+      "message": "It stops showing among the pending ones. You will still see it under the «Discarded» filter until it is deleted."
     },
     "errors": {
       "loadFailed": "The requests could not be loaded.",
-      "saveFailed": "The change could not be saved."
+      "saveFailed": "The change could not be saved.",
+      "gone": "That request no longer exists.",
+      "alreadyHandled": "That request has already been handled: open it again to see its state."
     },
     "saveNote": "Save note",
     "noteSaved": "Note saved",

@@ -13,6 +13,7 @@ import {
   canConvert,
   canDiscard,
   canExtendGuarantee,
+  canMarkContacted,
   extendedGuaranteeUntil,
   formatPhone,
   newCount,
@@ -64,32 +65,6 @@ describe('priceStillGuaranteed', () => {
 
   it('sin fecha guardada no se afirma que siga en pie', () => {
     expect(priceStillGuaranteed(solicitud(), AHORA)).toBe(false);
-  });
-});
-
-describe('canConvert', () => {
-  it.each(['new', 'contacted'] as const)('desde %s sí', (status) => {
-    expect(canConvert(solicitud({ status }))).toBe(true);
-  });
-
-  it('UNA CONVERTIDA NO SE CONVIERTE DOS VECES', () => {
-    // Sin esto, dos clics seguidos crearían dos reservas del mismo coche para
-    // las mismas fechas, y la segunda bloquearía un coche que nadie pidió.
-    expect(canConvert(solicitud({ status: 'converted' }))).toBe(false);
-  });
-
-  it('una descartada tampoco', () => {
-    expect(canConvert(solicitud({ status: 'discarded' }))).toBe(false);
-  });
-});
-
-describe('canDiscard', () => {
-  it('una descartada se puede recuperar y volver a descartar', () => {
-    expect(canDiscard(solicitud({ status: 'discarded' }))).toBe(true);
-  });
-
-  it('una convertida ya no: hay una reserva detrás', () => {
-    expect(canDiscard(solicitud({ status: 'converted' }))).toBe(false);
   });
 });
 
@@ -210,6 +185,41 @@ describe('la lista', () => {
     const original = [solicitud({ reference: 'A', status: 'converted' }), solicitud({ reference: 'B' })];
     sortRequests(original);
     expect(original.map((r) => r.reference)).toEqual(['A', 'B']);
+  });
+});
+
+describe('qué se puede hacer con cada solicitud', () => {
+  /**
+   * ⚠️ **UNA CONVERTIDA NO SE CONVIERTE DOS VECES.** Sin esto, dos clics
+   * seguidos —o dos pestañas abiertas— crearían dos reservas del mismo coche
+   * para las mismas fechas, y la segunda bloquearía un coche que nadie pidió.
+   */
+  it('convertir: todo menos lo ya convertido o descartado', () => {
+    expect(canConvert(solicitud({ status: 'new' }))).toBe(true);
+    expect(canConvert(solicitud({ status: 'contacted' }))).toBe(true);
+    expect(canConvert(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canConvert(solicitud({ status: 'discarded' }))).toBe(false);
+  });
+
+  /**
+   * ⚠️ **Volver a descartar una descartada APLAZA el borrado**, y por eso no se
+   * puede. `marcar()` reescribe `handledAt`, que es el sello desde el que
+   * cuenta `keepHours`: cada pulsación regala otras 24 h de conservación al
+   * nombre y al teléfono de alguien a quien ya se decidió no atender.
+   */
+  it('descartar: ni lo convertido ni lo YA descartado', () => {
+    expect(canDiscard(solicitud({ status: 'new' }))).toBe(true);
+    expect(canDiscard(solicitud({ status: 'contacted' }))).toBe(true);
+    expect(canDiscard(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canDiscard(solicitud({ status: 'discarded' }))).toBe(false);
+  });
+
+  /** Por lo mismo: marcar dos veces contactada movería el reloj otra vez. */
+  it('marcar contactada: solo lo que está sin contestar', () => {
+    expect(canMarkContacted(solicitud({ status: 'new' }))).toBe(true);
+    expect(canMarkContacted(solicitud({ status: 'contacted' }))).toBe(false);
+    expect(canMarkContacted(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canMarkContacted(solicitud({ status: 'discarded' }))).toBe(false);
   });
 });
 

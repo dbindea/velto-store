@@ -353,11 +353,52 @@ export const sendDailyDigest = onSchedule(
  * crearla, no de Ajustes. Cambiar el ajuste no puede mover la caducidad de las
  * que ya existen: es la misma regla que congela el IVA en `pricingSnapshot`.
  */
+export const ESTADOS_BORRABLES = ['contacted', 'discarded', 'converted'] as const;
+
+/**
+ * ¿Se puede borrar ya esta solicitud?
+ *
+ * ⚠️ **Pura y aparte, como `blockingMaintenance()`.** Esto decide un borrado
+ * definitivo de datos personales, corre una vez al día sin nadie delante y no
+ * tenía **ni un test**: lo único que impedía que se llevara trabajo pendiente
+ * era un `where` que nadie comprobaba. Con la regla fuera de la consulta se
+ * puede probar sin Firestore, que es la única forma de cubrir los casos raros.
+ *
+ * ⚠️ **En la duda NO se borra.** Sin fecha desde la que contar, o con un
+ * `keepHours` ilegible, se conserva: un dato de más se puede borrar mañana, y
+ * uno borrado no vuelve.
+ *
+ * ⚠️ **Y mientras el precio siga PROMETIDO, tampoco.** Este es el fallo que
+ * encontró la revisión del 29 de septiembre de 2026 y que costaría un alquiler:
+ * el botón «Ampliar 24 h» alarga lo que se le dice al cliente —«te mantengo el
+ * precio hasta el jueves»— y **no alargaba el registro que sostiene esa
+ * promesa**. Con los plazos por defecto, una solicitud contactada el lunes y
+ * ampliada hasta el jueves se borraba el miércoles: el cliente llamaba dentro
+ * de su plazo citando la referencia y aquí no había nada. Los dos plazos son
+ * ajustes independientes —`bookingRequestPriceHours` llega a 720 h y
+ * `bookingRequestKeepHours` baja a 1—, así que no basta con que «suelan»
+ * cuadrar: la aplicación no puede borrar aquello a lo que ella misma sigue
+ * comprometida.
+ */
+export function solicitudCaducada(d: Record<string, unknown>, ahora: Date): boolean {
+  const atendida = toDate(d['handledAt']) || toDate(d['createdAt']);
+  if (!atendida) return false;
+
+  const horas = Number(d['keepHours']);
+  if (!isFinite(horas) || horas <= 0) return false;
+  if (ahora.getTime() - atendida.getTime() < horas * 60 * 60 * 1000) return false;
+
+  const garantia = toDate(d['priceGuaranteedUntil']);
+  if (garantia && garantia.getTime() > ahora.getTime()) return false;
+
+  return true;
+}
+
 export async function limpiarSolicitudesAtendidas(ahora: Date): Promise<number> {
   const db = firestore();
   const snap = await db
     .collection('bookingRequests')
-    .where('status', 'in', ['contacted', 'discarded', 'converted'])
+    .where('status', 'in', [...ESTADOS_BORRABLES])
     .get();
 
   let borradas = 0;
@@ -365,12 +406,7 @@ export async function limpiarSolicitudesAtendidas(ahora: Date): Promise<number> 
   let enLote = 0;
 
   for (const doc of snap.docs) {
-    const d = doc.data();
-    const atendida = toDate(d['handledAt']) || toDate(d['createdAt']);
-    if (!atendida) continue;
-    const horas = Number(d['keepHours']);
-    if (!isFinite(horas) || horas <= 0) continue;
-    if (ahora.getTime() - atendida.getTime() < horas * 60 * 60 * 1000) continue;
+    if (!solicitudCaducada(doc.data(), ahora)) continue;
 
     lote.delete(doc.ref);
     borradas++;

@@ -105,9 +105,26 @@ export function canConvert(r: BookingRequest): boolean {
   return r.status !== 'converted' && r.status !== 'discarded';
 }
 
-/** Una descartada se puede recuperar; una convertida ya no. */
+/**
+ * ⚠️ **Una convertida no se descarta; una descartada tampoco se re-descarta.**
+ * Lo segundo parece inofensivo y no lo es: `marcar()` reescribe `handledAt`, y
+ * ese sello es el que arranca el plazo de borrado — volver a pulsar «Descartar»
+ * **aplaza 24 horas más** el borrado del nombre y el teléfono de alguien a quien
+ * ya se decidió no atender.
+ */
 export function canDiscard(r: BookingRequest): boolean {
-  return r.status !== 'converted';
+  return r.status !== 'converted' && r.status !== 'discarded';
+}
+
+/**
+ * ¿Se puede marcar como contactada?
+ *
+ * Solo lo que está **sin contestar**: una ya contactada no se vuelve a
+ * contactar —volvería a mover `handledAt` y con él el plazo de borrado— y una
+ * convertida o descartada ya salió de la lista de trabajo.
+ */
+export function canMarkContacted(r: BookingRequest): boolean {
+  return r.status === 'new';
 }
 
 /**
