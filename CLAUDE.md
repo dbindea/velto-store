@@ -1204,18 +1204,21 @@ Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
 | target | Desarrollo | Producción |
 |---|---|---|
 | `backoffice` | `store.veltorent.com` | `rentalcar.veltomobility.com` |
-| `web` | `velto-web-dev.web.app` | *(sitio sin crear)* |
+| `web` | `velto-web-dev.web.app` | `velto-web.web.app` |
 
 ⚠️ **Esa segunda fila es lo que hay HOY, no lo que se pretende.** Aquí ponía
 `dev.veltorent.com` y `veltomobility.com` como si ya sirvieran, y medido el 25
 de septiembre de 2026 **ninguno de los dos existe**: `dev.veltorent.com` da
 NXDOMAIN, y `veltomobility.com` sirve el aparcamiento del registrador —IONOS, en
 alemán— con un **525** por HTTPS, porque el TLS entre Cloudflare y ese origen
-falla. En producción el sitio de hosting de la web **ni siquiera está creado**:
-`.firebaserc` manda el target `web` a `velto-web`, y
-`firebase hosting:sites:get velto-web --project prod` contesta «could not find
-site». Un merge a `master` publicaría el backoffice —va primero— y se caería en
-el paso siguiente.
+falla.
+
+> Y aquí ponía además que el sitio de producción **ni siquiera estaba creado**
+> —`firebase hosting:sites:get velto-web --project prod` contestaba «could not
+> find site»— y que por eso un merge a `master` se caería después de publicar el
+> backoffice. **Ya está creado**: comprobado el 29 de septiembre de 2026 con
+> `firebase hosting:sites:list --project prod`, que lo devuelve junto a
+> `rentalcar-veltomobility`. Ese bloqueo del merge ya no existe.
 
 Escrito como estaba, cualquiera que fuera a comprobar un despliegue miraba un
 dominio que no responde y concluía que el despliegue había fallado. **Esta tabla
@@ -4276,8 +4279,11 @@ restaurar ni desplegar. Está anotado como la primera acción pendiente del sobr
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
 ⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
-el código define **35**: las cinco que faltan hablan con la AEAT y no están allí
-hasta el 1 de enero. Un despliegue completo las subiría.
+el código define **35**. Faltan **seis**, y no por el mismo motivo: las **cinco**
+de la AEAT no van allí hasta el 1 de enero —un despliegue completo las subiría—
+y `createBookingRequest` está **pendiente de desplegar** desde el 29 de
+septiembre de 2026, junto con la actualización de `sendDailyDigest`. Comprobado
+ese día comparando nombres contra el manifiesto.
 
 ⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 35 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
