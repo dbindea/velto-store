@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
+import { ZONAS, ZONA_POR_DEFECTO, textoSuplemento } from '../lib/zonas';
 
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
@@ -168,6 +169,18 @@ const PREGUNTAS = [
           descoloca nada. La ventaja de tenerlo como elemento es que entra en el
           orden de tabulación y un lector de pantalla lo anuncia.
         */}
+        {/*
+          ⚠️ **`<datalist>`, no un `<select>`, y ese es todo el diseño.** Un
+          desplegable obliga a elegir de la lista; aquí hace falta lo contrario:
+          las cinco zonas que la empresa sirve de verdad **y** poder escribir
+          cualquier otra cosa. Con `list` el campo sigue siendo un `input` de
+          texto normal —con su aspa, su `maxlength` y su teclado— y encima el
+          navegador pone la lista gratis, sin una línea de JavaScript.
+
+          ⚠️ **Y cada opción lleva su precio dentro** (`label`), que es lo que el
+          visitante quiere saber: no si su pueblo está en la lista, sino si se lo
+          llevan y cuánto cuesta.
+        */}
         <div class="buscador__campo buscador__campo--lugar">
           <label for="lugar">Recogida en</label>
           <div class="campo-con-aspa">
@@ -175,10 +188,15 @@ const PREGUNTAS = [
               type="text"
               id="lugar"
               name="place"
-              value="Arganda del Rey"
+              list="zonas"
+              value={ZONA_POR_DEFECTO}
               autocomplete="off"
               maxlength="80"
+              aria-describedby="pista-lugar"
             />
+            <datalist id="zonas">
+              {ZONAS.map((z) => <option value={z.nombre} label={textoSuplemento(z)} />)}
+            </datalist>
             <button type="button" id="limpiar-lugar" class="aspa" aria-label="Borrar el lugar de recogida">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -186,11 +204,26 @@ const PREGUNTAS = [
             </button>
           </div>
         </div>
-        <div class="buscador__campo">
+        {/*
+          ⚠️ **Lo que cuesta llegar ahí, en una línea propia bajo los campos.**
+          El `<datalist>` enseña el precio solo mientras la lista está
+          desplegada: en cuanto se elige, desaparece — y el precio es justo lo
+          que hay que seguir viendo, porque es lo que decide si se reserva.
+
+          ⚠️ **Y va FUERA del campo, no debajo de su input.** Dentro, la línea
+          hace al bloque del lugar más alto que los otros tres, y con
+          `align-items: end` los demás se descuelgan hasta su base: los dos
+          calendarios quedarían 20 px por debajo del campo de al lado. En su
+          propia fila no desalinea nada y cabe el caso largo —el de una
+          localidad que no está en la lista—, que en la columna del campo se
+          partiría en tres renglones.
+        */}
+        <p class="buscador__pista" id="pista-lugar"></p>
+        <div class="buscador__campo buscador__campo--desde">
           <label for="desde">Recogida</label>
           <input type="datetime-local" id="desde" name="from" step="900" required />
         </div>
-        <div class="buscador__campo">
+        <div class="buscador__campo buscador__campo--hasta">
           <label for="hasta">Devolución</label>
           <input type="datetime-local" id="hasta" name="to" step="900" required />
         </div>
@@ -330,6 +363,7 @@ const PREGUNTAS = [
 <script>
   import { flota } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
+  import { textoSuplemento, zonaPorNombre } from '../lib/zonas';
 
   /* ---- El buscador ------------------------------------------------------
    *
@@ -373,16 +407,52 @@ const PREGUNTAS = [
   const lugar = document.getElementById('lugar') as HTMLInputElement | null;
   const aspa = document.getElementById('limpiar-lugar');
   const envoltorio = lugar?.closest('.campo-con-aspa');
+  const pista = document.getElementById('pista-lugar');
 
   if (lugar && aspa && envoltorio) {
+    /*
+     * ⚠️ **Lo que cuesta llegar a esa zona, debajo del campo.**
+     *
+     * Una zona que no está en la lista NO se rechaza: se dice que se consulta.
+     * Es lo que pidió Dorel —cinco zonas y texto libre— y además es lo honesto:
+     * la empresa va más lejos, solo que el importe se acuerda por teléfono.
+     * Rechazar el texto libre sería perder al cliente que vive un pueblo más
+     * allá.
+     */
+    const contarSuplemento = () => {
+      if (!pista) return;
+      const escrito = lugar.value.trim();
+      if (!escrito) {
+        pista.textContent = '';
+        return;
+      }
+      const zona = zonaPorNombre(escrito);
+      pista.textContent = zona
+        ? textoSuplemento(zona)
+        : 'Fuera de las zonas habituales: te decimos el suplemento al llamarte.';
+    };
+
     const refrescarAspa = () => envoltorio.classList.toggle('tiene-texto', lugar.value.length > 0);
-    lugar.addEventListener('input', refrescarAspa);
+    const alEscribir = () => {
+      refrescarAspa();
+      contarSuplemento();
+    };
+
+    lugar.addEventListener('input', alEscribir);
+    /*
+     * ⚠️ **Y `change` además de `input`.** Elegir del `<datalist>` con el ratón
+     * dispara los dos en casi todos los navegadores, pero no en todos: sin
+     * `change`, en alguno la pista se quedaba con lo que hubiera antes de
+     * abrir la lista.
+     */
+    lugar.addEventListener('change', alEscribir);
+
     aspa.addEventListener('click', () => {
       lugar.value = '';
-      refrescarAspa();
+      alEscribir();
       lugar.focus();
     });
-    refrescarAspa();
+    alEscribir();
   }
 
   /* ---- El cierre animado de las preguntas -------------------------------
@@ -609,8 +679,26 @@ const PREGUNTAS = [
     transform: translateY(50%);
   }
 
+  /*
+   * ⚠️ **En escritorio hay que colocar los CUATRO campos a mano, no solo la
+   * pista.** La pista ocupa las cuatro columnas, así que no cabe en la primera
+   * fila y el colocador automático la baja a la segunda — hasta ahí bien. Lo
+   * que rompe es lo siguiente: los ítems con **fila explícita** se colocan
+   * ANTES que los automáticos, así que si solo se fijara la fila de los dos
+   * calendarios y el botón, esos tres se llevarían las columnas 1, 2 y 3 y el
+   * campo del lugar acabaría en la cuarta. O se fijan todos o no se fija
+   * ninguno.
+   *
+   * En móvil no hace falta nada: una sola columna y el orden del código ya
+   * pone la pista justo debajo del campo que explica.
+   */
   @media (min-width: 720px) {
     .buscador { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) auto; }
+    .buscador__campo--lugar { grid-area: 1 / 1; }
+    .buscador__campo--desde,
+    .buscador__campo--hasta,
+    .buscador__btn { grid-row: 1; }
+    .buscador__pista { grid-column: 1 / -1; }
   }
 
   .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
@@ -651,6 +739,25 @@ const PREGUNTAS = [
   .campo-con-aspa {
     position: relative;
     display: grid;
+  }
+
+  /*
+   * Lo que cuesta llegar a la zona elegida.
+   *
+   * ⚠️ **La línea está RESERVADA aunque no diga nada.** Solo se queda vacía
+   * con el campo vacío, o sea al pulsar el aspa — y sin reservarla, el
+   * buscador encogería de golpe justo debajo del dedo que acaba de borrar. Es
+   * la misma razón por la que un esqueleto de carga ocupa el sitio del dato.
+   */
+  .buscador__pista {
+    /*
+     * Tira hacia arriba lo que sobra del hueco de la rejilla: la pista explica
+     * el campo de encima y a 16 px se lee como otra cosa.
+     */
+    margin: calc(var(--sp-2) - var(--sp-4)) 0 0;
+    min-height: 1.25rem;
+    font-size: var(--fs-caption);
+    color: var(--gray-400);
   }
 
   /*

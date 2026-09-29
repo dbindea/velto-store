@@ -614,55 +614,67 @@ img, svg { display: block; max-width: 100%; }
 
 
 /* ===========================================================================
- * EL FONDO DE HUMO
+ * EL FONDO: MASAS DE GRIS QUE SE MUEVEN
  *
- * Lo pidió Dorel el 29 de septiembre de 2026: «un gradient que se mueve tipo
- * humo aleatorio en tonos grises blanco y negro para dar dinamismo».
+ * Lo pidió Dorel el 29 de septiembre de 2026 —«un gradient que se mueve tipo
+ * humo aleatorio en tonos grises blanco y negro»— y al ver la primera versión
+ * mandó una referencia: un degradado amplio y limpio, de gris claro a negro,
+ * sin grano.
  *
- * ⚠️ **El ruido se HORNEA una vez.** `feTurbulence` es caro —genera ruido
- * fractal píxel a píxel— pero se evalúa al rasterizar la imagen, no por
- * fotograma: metido en un `data:` de 595 bytes se calcula al cargar y ya. Lo
- * que se anima después es solo `transform`, que resuelve el compositor. Un PNG
- * equivalente pesaría entre 180 y 260 KB.
+ * ⚠️ **Por eso esto NO lleva ruido, y la primera versión sí.** Iba con una
+ * máscara de `feTurbulence`, que da volutas con textura: de cerca se ve el
+ * grano y el resultado es «niebla», no «degradado». La referencia es lo
+ * contrario —masas grandes fundidas entre sí—, así que son cuatro radiales muy
+ * difusos, sin máscara y sin un solo byte de ruido.
  *
- * ⚠️ **`fractalNoise`, no `turbulence`**: el primero da nube, el segundo vetas
- * duras. Y la frecuencia es ANISÓTROPA (0.009 en X, 0.016 en Y) para estirar
- * las volutas en horizontal — es lo que lo hace humo a la deriva y no manchas.
+ * ⚠️ **Y las masas van en capas separadas a propósito.** Un solo elemento con
+ * los cuatro degradados no se puede animar por partes: al moverlo, se mueven
+ * los cuatro juntos y el conjunto se lee como una imagen que se desliza. En dos
+ * capas con periodos distintos, las masas se cruzan entre sí y es ahí donde
+ * aparece la sensación de que algo se mueve despacio.
  *
- * ⚠️ **`stitchTiles='stitch'` es lo que permite repetir sin costura**: ajusta
- * la frecuencia para que quepa un número entero de baldosas.
+ * ⚠️ **El tema CLARO está en su techo, y el número sale de medirlo.** El humo
+ * oscurece el fondo, y hay texto que se apoya directamente en él —no dentro de
+ * una tarjeta—. Medido el 29 de septiembre de 2026 fotografiando la portada
+ * con el contenido oculto y muestreando el píxel más oscuro dentro de la caja
+ * de cada texto: once trozos, el peor es el aviso de «No hemos podido cargar
+ * la flota» a **4,92:1** sobre un mínimo de 4,5. Subir `--masa-1` lo tumba, y
+ * lo tumba justo en el mensaje que explica que algo ha fallado.
  *
- * ⚠️ **El escapado del `data:` no es opcional.** Un `#` sin escapar trunca la
- * URI en la primera referencia al filtro: fondo vacío y ningún error.
+ * En OSCURO sobra sitio —el peor sale a 6,34:1—, porque ahí las masas aclaran
+ * un fondo negro y el texto es claro. Si algún día se quiere más dramatismo,
+ * el que puede crecer es el oscuro; el claro no.
  * ======================================================================== */
-:root {
-  --humo-ruido: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480'%3E%3Cfilter id='h' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.009 0.016' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .45 .45 .45 0 -.28'/%3E%3C/filter%3E%3Crect width='480' height='480' filter='url(%23h)'/%3E%3C/svg%3E");
-}
-
 :root,
 [data-theme='light'] {
-  --humo-tinta: rgb(0 0 0 / 0.085);
-  --humo-campo: rgb(0 0 0 / 0.05);
-  /* La sección alterna, en degradado. Ver `.seccion--alt`. */
+  /*
+   * Tres tonos: el más oscuro da el peso, el medio el cuerpo y el claro
+   * levanta una zona. En claro son negros translúcidos sobre blanco.
+   */
+  --masa-1: rgb(0 0 0 / 0.26);
+  --masa-2: rgb(0 0 0 / 0.15);
+  --masa-3: rgb(0 0 0 / 0.08);
   --seccion-alt-1: rgb(0 0 0 / 0.05);
   --seccion-alt-2: rgb(0 0 0 / 0.02);
 }
 
 [data-theme='dark'] {
-  --humo-tinta: rgb(255 255 255 / 0.075);
-  --humo-campo: rgb(255 255 255 / 0.05);
   /*
-   * ⚠️ **En oscuro el salto es MAYOR, y no es un capricho.** Sobre negro, un
-   * 5 % de blanco apenas se ve; el mismo 5 % de negro sobre blanco sí. Se
-   * conserva el efecto —que la sección se separe del fondo— y no el número.
+   * ⚠️ **En oscuro NO es el mismo número con el color cambiado.** Un 16 % de
+   * blanco sobre negro pesa mucho más que un 16 % de negro sobre blanco: el
+   * ojo distingue mucho mejor lo que se aclara en la sombra. Se conserva el
+   * efecto, no el valor.
    */
+  --masa-1: rgb(255 255 255 / 0.16);
+  --masa-2: rgb(255 255 255 / 0.09);
+  --masa-3: rgb(255 255 255 / 0.05);
   --seccion-alt-1: rgb(255 255 255 / 0.1);
   --seccion-alt-2: rgb(255 255 255 / 0.04);
 }
 
 /*
- * ⚠️ **El humo va CONTENIDO en su sección, no fijo a la ventana.** Fijo tiene
- * dos problemas: en iOS la barra de direcciones cambia el alto del viewport y
+ * ⚠️ **Contenido en su sección, no fijo a la ventana.** Fijo tiene dos
+ * problemas: en iOS la barra de direcciones cambia el alto del viewport y
  * obliga a rerasterizar al desplazar, y hay que pelear el z-index con la
  * cabecera pegajosa. Contenido, ni una cosa ni la otra.
  */
@@ -676,36 +688,39 @@ img, svg { display: block; max-width: 100%; }
   overflow: hidden;
   pointer-events: none;
   contain: layout paint;
-  /* El campo tonal, ESTÁTICO: da las zonas densas y no cuesta nada. */
-  background:
-    radial-gradient(70% 55% at 20% 25%, var(--humo-campo), transparent 70%),
-    radial-gradient(60% 50% at 82% 70%, var(--humo-campo), transparent 72%);
 }
 
 /*
- * ⚠️ **Color PLANO en la capa que se mueve, y el degradado en el padre
- * quieto.** Si la capa llevara el degradado, al trasladarla se iría con ella y
- * al cerrar el bucle daría un salto. Con color plano y máscara en baldosa,
- * trasladar exactamente UNA baldosa devuelve el dibujo a su sitio: el bucle es
- * perfecto y no hace falta `alternate`, que se ve ir y venir.
+ * ⚠️ **`inset` negativo y grande, y no es margen de sobra.** Las capas se
+ * trasladan hasta 12 % de su tamaño; sin desbordar por los cuatro lados, al
+ * moverse asomaría el borde del degradado y se vería la costura. Y el
+ * `overflow: hidden` del padre es lo que impide que eso ensanche la página.
  */
 .humo__capa {
   position: absolute;
-  inset: -480px;
-  background-color: var(--humo-tinta);
-  mask-image: var(--humo-ruido);
-  mask-repeat: repeat;
-  mask-size: 480px 480px;
-  -webkit-mask-image: var(--humo-ruido);
-  -webkit-mask-repeat: repeat;
-  -webkit-mask-size: 480px 480px;
+  inset: -25%;
+  /*
+   * ⚠️ **El `blur` es lo que convierte cuatro manchas en una masa.** Sin él se
+   * distinguen los bordes de cada radial por muy difuso que sea su `transparent`,
+   * y se ve lo que es: cuatro círculos. Con 80 px se funden.
+   *
+   * Va en `filter` y no en `backdrop-filter`: aquí se difumina lo que la capa
+   * PINTA, no lo que hay detrás — difuminar el fondo emborronaría el texto de
+   * la sección.
+   */
+  filter: blur(80px);
+}
+
+.humo__capa--a {
+  background:
+    radial-gradient(38% 42% at 18% 22%, var(--masa-1), transparent 68%),
+    radial-gradient(45% 38% at 78% 68%, var(--masa-2), transparent 70%);
 }
 
 .humo__capa--b {
-  inset: -960px;
-  mask-size: 960px 960px;
-  -webkit-mask-size: 960px 960px;
-  opacity: 0.8;
+  background:
+    radial-gradient(52% 46% at 72% 18%, var(--masa-2), transparent 72%),
+    radial-gradient(40% 50% at 28% 82%, var(--masa-3), transparent 66%);
 }
 
 /*
@@ -714,27 +729,43 @@ img, svg { display: block; max-width: 100%; }
  * primos entre sí tardan casi tres horas en repetirse. Eso es lo «aleatorio»
  * que pedía Dorel, sin una línea de JavaScript.
  *
- * ⚠️ **Y las distancias son múltiplos EXACTOS de su `mask-size`**, o hay
- * costura al cerrar el bucle.
+ * ⚠️ **Y el recorrido es pequeño —un 12 %— con `alternate`.** Aquí sí conviene
+ * ir y volver, al revés que con una textura en baldosa: no hay patrón que
+ * repetir, así que un bucle de ida y vuelta muy lento se lee como respiración
+ * y no como un carrusel.
  */
-@keyframes humo-a { to { transform: translate3d(-480px, 480px, 0); } }
-@keyframes humo-b { to { transform: translate3d(960px, -960px, 0); } }
+@keyframes masa-a {
+  from { transform: translate3d(-6%, -4%, 0) scale(1.05); }
+  to   { transform: translate3d(7%, 5%, 0) scale(1.15); }
+}
+
+@keyframes masa-b {
+  from { transform: translate3d(5%, 6%, 0) scale(1.12); }
+  to   { transform: translate3d(-7%, -5%, 0) scale(1.02); }
+}
 
 /*
  * ⚠️ **El movimiento se AÑADE en `no-preference`, no se quita en `reduce`.**
- * Es el patrón bueno: quien pide menos movimiento se queda con el humo QUIETO
- * —que sigue siendo una textura, no un hueco— y si alguien refactoriza el
- * bloque de arriba, esto sigue parado.
- *
- * ⚠️ **Y el `@supports`**: sin `mask-image` la capa saldría como un rectángulo
- * gris opaco tapando la sección entera. Con él, no hay capa y no pasa nada.
+ * Es el patrón bueno: quien pide menos movimiento se queda con las masas
+ * QUIETAS —que siguen siendo un degradado, no un hueco— y si alguien
+ * refactoriza el bloque de reduced-motion, esto sigue parado.
  */
-@supports (mask-image: linear-gradient(#000, #000)) {
-  @media (prefers-reduced-motion: no-preference) {
-    .humo__capa--a { animation: humo-a 127s linear infinite; }
-    .humo__capa--b { animation: humo-b 89s linear infinite; }
-  }
+@media (prefers-reduced-motion: no-preference) {
+  .humo__capa--a { animation: masa-a 127s ease-in-out infinite alternate; }
+  .humo__capa--b { animation: masa-b 89s ease-in-out infinite alternate; }
 }
+
+/*
+ * ⚠️ **En móvil, la mitad de capas.** Un `blur` de 80 px sobre un elemento que
+ * ocupa la sección entera es lo más caro de todo esto, y un teléfono de gama
+ * media lo paga en cada fotograma. La capa que se queda es la que lleva las
+ * masas con más peso.
+ */
+@media (max-width: 719px) {
+  .humo__capa--b { display: none; }
+  .humo__capa { filter: blur(60px); }
+}
+
 
 /* Bloque a dos columnas: titular a la izquierda, contenido a la derecha. */
 .dos-columnas {
