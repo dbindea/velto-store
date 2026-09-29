@@ -181,9 +181,31 @@ export function tariffNetPrice(
  * cualquiera. El «desde» es lo único que el cliente necesita para comparar.
  */
 export function lowestPricePerDay(rules: VehiclePricingRule[] | undefined): number | null {
+  return cheapestRule(rules)?.pricePerDay ?? null;
+}
+
+/**
+ * El tramo más barato, entero.
+ *
+ * ⚠️ **Hace falta el tramo y no solo su precio**, porque el escaparate dice
+ * «desde X €/día» y ese X es el del alquiler **más largo**: con los tramos
+ * normales de la casa, el precio por día baja según se alarga el alquiler, así
+ * que el más barato es el del último tramo —el abierto, sin `maxDays`—. Sin
+ * decir desde cuántos días rige, «desde 25 €» es un precio que casi nadie va a
+ * pagar y el visitante lo descubre al elegir fechas.
+ *
+ * ⚠️ **Y se devuelve el tramo REAL de cada coche, no un número escrito a
+ * mano.** Las reglas se editan coche a coche en su ficha: dar por supuesto que
+ * el tramo largo empieza a los 31 días sería cierto hoy y falso el día que
+ * alguien configure otro.
+ */
+export function cheapestRule(
+  rules: VehiclePricingRule[] | undefined
+): VehiclePricingRule | null {
   if (!rules?.length) return null;
-  const precios = rules.map(r => r.pricePerDay).filter(p => typeof p === 'number' && p > 0);
-  return precios.length ? Math.min(...precios) : null;
+  const validas = rules.filter(r => typeof r.pricePerDay === 'number' && r.pricePerDay > 0);
+  if (!validas.length) return null;
+  return validas.reduce((a, b) => (b.pricePerDay < a.pricePerDay ? b : a));
 }
 
 /**

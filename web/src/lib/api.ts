@@ -18,6 +18,16 @@ export interface PrecioPublico {
   gross: number;
   vatRate: number;
   currency: 'EUR';
+  /**
+   * Desde cuántos días rige, cuando es un «desde».
+   *
+   * ⚠️ **Copia fiel de `PublicPrice` en `functions/src/public/types.ts`**, como
+   * el resto de esta interfaz: la web y las functions compilan por separado y no
+   * pueden compartir módulo. Si cambia allí, cambia aquí — y si se queda corta,
+   * el campo llega y TypeScript dice que no existe, que es lo que acaba de
+   * pasar al añadirlo.
+   */
+  fromDays?: number;
 }
 
 export interface FotoPublica {

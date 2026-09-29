@@ -4,6 +4,7 @@ import {
   blocksAvailability,
   calculateCalendarDays,
   findPricingRuleByDays,
+  cheapestRule,
   lowestPricePerDay,
   rangesOverlap,
   tariffNetPrice,
@@ -146,6 +147,38 @@ describe('el precio', () => {
   it('el «desde» es el tramo más barato', () => {
     expect(lowestPricePerDay(TRAMOS)).toBe(50);
     expect(lowestPricePerDay([])).toBeNull();
+  });
+
+  /**
+   * ⚠️ **El escaparate necesita el tramo ENTERO, no solo su precio.** «Desde
+   * 50 €/día» sale del tramo más barato, que con las tarifas normales es el del
+   * alquiler más largo: sin decir desde cuántos días rige, es un precio que
+   * casi nadie va a pagar y el visitante lo descubre al elegir fechas.
+   */
+  it('el tramo más barato viene con sus días', () => {
+    expect(cheapestRule(TRAMOS)).toEqual({ minDays: 4, maxDays: null, pricePerDay: 50 });
+  });
+
+  it('y NO es simplemente el último: es el más barato', () => {
+    // Una tarifa mal configurada puede tener el tramo largo más caro. Coger el
+    // último por posición anunciaría un «desde» que no es el mínimo.
+    const raras = [
+      { minDays: 1, maxDays: 6, pricePerDay: 40 },
+      { minDays: 7, maxDays: null, pricePerDay: 45 },
+    ];
+    expect(cheapestRule(raras)?.pricePerDay).toBe(40);
+    expect(cheapestRule(raras)?.minDays).toBe(1);
+  });
+
+  it('descarta los tramos sin precio, que no se pueden anunciar', () => {
+    const conHuecos = [
+      { minDays: 1, maxDays: 3, pricePerDay: 0 },
+      { minDays: 4, maxDays: null, pricePerDay: 48 },
+    ];
+    expect(cheapestRule(conHuecos)?.pricePerDay).toBe(48);
+    expect(cheapestRule([{ minDays: 1, maxDays: null, pricePerDay: 0 }])).toBeNull();
+    expect(cheapestRule([])).toBeNull();
+    expect(cheapestRule(undefined)).toBeNull();
   });
 
   /** ⚠️ La tarifa es NETA y el IVA se SUMA: 30 € son 36,30 €. */

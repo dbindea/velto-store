@@ -137,7 +137,20 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <meta property="og:title" content={titulo} />
     <meta property="og:description" content={descripcion} />
     {canonica && <meta property="og:url" content={canonica} />}
-    <meta name="theme-color" content="#20A48F" />
+    {/*
+      ⚠️ **Esto pinta la barra de direcciones de Chrome en Android, y estaba
+      en VERDE.** Es el tercer sitio donde un verde hacía de superficie —los
+      otros dos eran el círculo de los iconos y la cabecera de una pregunta
+      abierta—, y el más visible de los tres: ocupa el borde de la pantalla en
+      cada visita desde un móvil. El verde se queda para botones y acciones.
+
+      ⚠️ **Y va por `media`, uno por esquema.** Aquí no vale el tema que el
+      visitante haya elegido en la web: el navegador lee esta etiqueta antes de
+      que corra una sola línea nuestra, así que lo único que puede seguir es la
+      preferencia del sistema.
+    */}
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
 
     {/*
       ⚠️ **El tema se aplica ANTES de pintar, y por eso va aquí en crudo.** Con

@@ -213,10 +213,27 @@ img, svg { display: block; max-width: 100%; }
   color: var(--brand-text);
 }
 
+/*
+ * Lo que se apaga para quien pide menos movimiento.
+ *
+ * ⚠️ **`animation-iteration-count: 1` faltaba, y con el fondo animado deja de
+ * ser teórico.** Acortar la duración a 0,01 ms **no para** una animación
+ * `infinite`: la deja dando vueltas a decenas de miles de ciclos por segundo, o
+ * sea un parpadeo — peor que la animación original, y con riesgo real para
+ * alguien fotosensible o con problemas vestibulares. Hasta hoy no se notaba
+ * porque no había ninguna animación en bucle; el humo del fondo es la primera.
+ *
+ * ⚠️ **Y `scroll-behavior: auto`, que también faltaba.** La línea 174 pone
+ * `html { scroll-behavior: smooth }`, así que quien había pedido menos
+ * movimiento seguía teniendo el desplazamiento suave — de los movimientos que
+ * peor sientan, y activo desde antes de este cambio.
+ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -229,7 +246,21 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .seccion { padding-block: var(--section-y); }
-.seccion--alt { background: var(--bg-alt); }
+/*
+ * La sección alterna: un degradado gris, no un color plano.
+ *
+ * ⚠️ **En tema oscuro el plano era casi invisible.** `--bg-alt` sobre `--bg`
+ * es `#0B0F0E` sobre `#000000`: razón **1,05**, o sea que la sección que
+ * debería distinguirse del fondo no se distinguía de nada. Es justo lo que
+ * Dorel pidió —«en tono noche todo se vuelve negro y las secciones más claras
+ * hay que diferenciarlas en gris gradient»—.
+ *
+ * ⚠️ **Y es translúcido a propósito**, no un gris opaco: así el humo de la
+ * sección de al lado se ve a través del borde en vez de cortarse en seco.
+ */
+.seccion--alt {
+  background: linear-gradient(180deg, var(--seccion-alt-1), var(--seccion-alt-2));
+}
 
 /*
  * Las tres barras inclinadas del isotipo, como marca de sección.
@@ -320,7 +351,42 @@ img, svg { display: block; max-width: 100%; }
  * El empujón lo da `margin-top: auto` sobre el precio, que arrastra consigo el
  * detalle y el botón: así el bloque de dinero queda pegado abajo en todas.
  */
-.coche { height: 100%; }
+/*
+ * La tarjeta de coche, y lo que pasa al pasar el ratón.
+ *
+ * ⚠️ **Se anima la tarjeta ENTERA, no el enlace de dentro.** El `<a>` ocupa
+ * casi todo pero no todo —el botón «Que me llamen» va fuera, porque un botón
+ * dentro de un enlace no es HTML válido—, así que con el hover en el enlace la
+ * tarjeta se encendía a medias: el pie se quedaba con el fondo de antes.
+ *
+ * ⚠️ **Y solo donde hay ratón.** Con el dedo no existe el «pasar por encima»:
+ * lo que hay es un toque, y en muchos móviles el primer toque se queda en
+ * estado hover. Una tarjeta que se levanta y se queda levantada después de
+ * volver de la ficha se lee como que está seleccionada.
+ */
+.coche {
+  height: 100%;
+  transition:
+    border-color var(--t-base) var(--ease),
+    box-shadow var(--t-base) var(--ease),
+    background-color var(--t-base) var(--ease),
+    transform var(--t-base) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .coche:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--sh-3);
+    background-color: var(--bg-alt);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coche { transition: none; }
+  .coche:hover { transform: none; }
+}
+
 .coche__link { display: flex; flex-direction: column; height: 100%; color: inherit; }
 .coche__link:hover { text-decoration: none; }
 
@@ -430,7 +496,18 @@ img, svg { display: block; max-width: 100%; }
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--brand-soft);
+  /*
+   * ⚠️ **Gris, no verde, y el motivo es medible.** El círculo se pintaba con
+   * `--brand-soft` (#E6F6F3) sobre una tarjeta blanca (#F6F8F8): razón de
+   * luminancia **1,05**, o sea exactamente la misma claridad. Lo único que
+   * separaba el círculo de su tarjeta era el tono verde — no aportaba jerarquía,
+   * aportaba color. Y es uno de los dos sitios de toda la web donde un verde
+   * hacía de superficie, que es lo que Dorel pidió quitar: el verde se queda
+   * para botones y acciones.
+   *
+   * El ICONO de dentro sí sigue siendo de marca: eso es un trazo, no un fondo.
+   */
+  background: var(--bg-alt);
   color: var(--brand-text);
   margin-bottom: var(--sp-5);
 }
@@ -445,12 +522,23 @@ img, svg { display: block; max-width: 100%; }
  */
 .faq { display: grid; gap: var(--sp-3); }
 
+/*
+ * Las preguntas frecuentes.
+ *
+ * ⚠️ **Fondo GRIS, no verde.** La pregunta abierta se pintaba con
+ * `--brand-soft`, un verde clarito, y es justo lo que Dorel quitó de toda la
+ * página: el verde queda para botones y acciones, los fondos son blanco, negro
+ * y grises. Una pregunta desplegada no es una acción, es contenido.
+ */
 .faq details {
   background: var(--surface-card);
   border: var(--bw) solid var(--border);
   border-radius: var(--r-lg);
   overflow: hidden;
+  transition: border-color var(--t-base) var(--ease);
 }
+
+.faq details[open] { border-color: var(--border-strong); }
 
 .faq summary {
   display: flex;
@@ -461,8 +549,13 @@ img, svg { display: block; max-width: 100%; }
   font-weight: var(--fw-medium);
   cursor: pointer;
   list-style: none;
+  transition: background-color var(--t-fast) var(--ease);
 }
 .faq summary::-webkit-details-marker { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .faq summary:hover { background: var(--bg-alt); }
+}
 
 .faq summary::after {
   content: '';
@@ -475,13 +568,172 @@ img, svg { display: block; max-width: 100%; }
   transition: transform var(--t-base) var(--ease);
 }
 
-.faq details[open] summary { background: var(--brand-soft); color: var(--brand-text); }
+.faq details[open] summary { background: var(--bg-alt); }
 .faq details[open] summary::after { transform: rotate(-135deg); }
+
+/*
+ * La animación de abrir y cerrar.
+ *
+ * ⚠️ **`<details>` no anima por su cuenta**: el navegador enseña y esconde su
+ * contenido de golpe, y `height: auto` no es interpolable. El truco que sí
+ * funciona en todas partes es una rejilla de una fila que va de `0fr` a `1fr`:
+ * eso sí se interpola, y no hace falta saber cuánto mide el texto.
+ *
+ * ⚠️ **Y el hijo necesita `min-height: 0` y `overflow: hidden`.** Sin ellos, el
+ * contenido de una celda de rejilla no baja de su altura natural y la fila se
+ * queda abierta: la animación no se ve y el cuerpo aparece de golpe igual.
+ *
+ * El cierre lo acompaña un poco de JS en la página: sin él, el navegador quita
+ * el contenido en cuanto se suelta `open` y solo se animaría la apertura.
+ */
+.faq__animable {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-base) var(--ease);
+}
+
+.faq details[open] .faq__animable { grid-template-rows: 1fr; }
+/* Cerrándose: sigue `open` —para que el contenido exista— pero ya encoge. */
+.faq details[open].cerrandose .faq__animable { grid-template-rows: 0fr; }
+
+.faq__animable > * {
+  min-height: 0;
+  overflow: hidden;
+}
 
 .faq .faq__cuerpo {
   padding: 0 var(--sp-6) var(--sp-5);
   color: var(--text-2);
   font-size: var(--fs-small);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq__animable { transition: none; }
+  .faq summary::after { transition: none; }
+}
+
+
+/* ===========================================================================
+ * EL FONDO DE HUMO
+ *
+ * Lo pidió Dorel el 29 de septiembre de 2026: «un gradient que se mueve tipo
+ * humo aleatorio en tonos grises blanco y negro para dar dinamismo».
+ *
+ * ⚠️ **El ruido se HORNEA una vez.** `feTurbulence` es caro —genera ruido
+ * fractal píxel a píxel— pero se evalúa al rasterizar la imagen, no por
+ * fotograma: metido en un `data:` de 595 bytes se calcula al cargar y ya. Lo
+ * que se anima después es solo `transform`, que resuelve el compositor. Un PNG
+ * equivalente pesaría entre 180 y 260 KB.
+ *
+ * ⚠️ **`fractalNoise`, no `turbulence`**: el primero da nube, el segundo vetas
+ * duras. Y la frecuencia es ANISÓTROPA (0.009 en X, 0.016 en Y) para estirar
+ * las volutas en horizontal — es lo que lo hace humo a la deriva y no manchas.
+ *
+ * ⚠️ **`stitchTiles='stitch'` es lo que permite repetir sin costura**: ajusta
+ * la frecuencia para que quepa un número entero de baldosas.
+ *
+ * ⚠️ **El escapado del `data:` no es opcional.** Un `#` sin escapar trunca la
+ * URI en la primera referencia al filtro: fondo vacío y ningún error.
+ * ======================================================================== */
+:root {
+  --humo-ruido: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480'%3E%3Cfilter id='h' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.009 0.016' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .45 .45 .45 0 -.28'/%3E%3C/filter%3E%3Crect width='480' height='480' filter='url(%23h)'/%3E%3C/svg%3E");
+}
+
+:root,
+[data-theme='light'] {
+  --humo-tinta: rgb(0 0 0 / 0.085);
+  --humo-campo: rgb(0 0 0 / 0.05);
+  /* La sección alterna, en degradado. Ver `.seccion--alt`. */
+  --seccion-alt-1: rgb(0 0 0 / 0.05);
+  --seccion-alt-2: rgb(0 0 0 / 0.02);
+}
+
+[data-theme='dark'] {
+  --humo-tinta: rgb(255 255 255 / 0.075);
+  --humo-campo: rgb(255 255 255 / 0.05);
+  /*
+   * ⚠️ **En oscuro el salto es MAYOR, y no es un capricho.** Sobre negro, un
+   * 5 % de blanco apenas se ve; el mismo 5 % de negro sobre blanco sí. Se
+   * conserva el efecto —que la sección se separe del fondo— y no el número.
+   */
+  --seccion-alt-1: rgb(255 255 255 / 0.1);
+  --seccion-alt-2: rgb(255 255 255 / 0.04);
+}
+
+/*
+ * ⚠️ **El humo va CONTENIDO en su sección, no fijo a la ventana.** Fijo tiene
+ * dos problemas: en iOS la barra de direcciones cambia el alto del viewport y
+ * obliga a rerasterizar al desplazar, y hay que pelear el z-index con la
+ * cabecera pegajosa. Contenido, ni una cosa ni la otra.
+ */
+.con-humo { position: relative; isolation: isolate; }
+.con-humo > .contenedor { position: relative; z-index: 1; }
+
+.humo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+  /* El campo tonal, ESTÁTICO: da las zonas densas y no cuesta nada. */
+  background:
+    radial-gradient(70% 55% at 20% 25%, var(--humo-campo), transparent 70%),
+    radial-gradient(60% 50% at 82% 70%, var(--humo-campo), transparent 72%);
+}
+
+/*
+ * ⚠️ **Color PLANO en la capa que se mueve, y el degradado en el padre
+ * quieto.** Si la capa llevara el degradado, al trasladarla se iría con ella y
+ * al cerrar el bucle daría un salto. Con color plano y máscara en baldosa,
+ * trasladar exactamente UNA baldosa devuelve el dibujo a su sitio: el bucle es
+ * perfecto y no hace falta `alternate`, que se ve ir y venir.
+ */
+.humo__capa {
+  position: absolute;
+  inset: -480px;
+  background-color: var(--humo-tinta);
+  mask-image: var(--humo-ruido);
+  mask-repeat: repeat;
+  mask-size: 480px 480px;
+  -webkit-mask-image: var(--humo-ruido);
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 480px 480px;
+}
+
+.humo__capa--b {
+  inset: -960px;
+  mask-size: 960px 960px;
+  -webkit-mask-size: 960px 960px;
+  opacity: 0.8;
+}
+
+/*
+ * ⚠️ **Los periodos no son múltiplos entre sí (127 y 89 s).** Con 60 y 120 las
+ * dos capas se resincronizarían cada dos minutos y el ojo pilla el patrón;
+ * primos entre sí tardan casi tres horas en repetirse. Eso es lo «aleatorio»
+ * que pedía Dorel, sin una línea de JavaScript.
+ *
+ * ⚠️ **Y las distancias son múltiplos EXACTOS de su `mask-size`**, o hay
+ * costura al cerrar el bucle.
+ */
+@keyframes humo-a { to { transform: translate3d(-480px, 480px, 0); } }
+@keyframes humo-b { to { transform: translate3d(960px, -960px, 0); } }
+
+/*
+ * ⚠️ **El movimiento se AÑADE en `no-preference`, no se quita en `reduce`.**
+ * Es el patrón bueno: quien pide menos movimiento se queda con el humo QUIETO
+ * —que sigue siendo una textura, no un hueco— y si alguien refactoriza el
+ * bloque de arriba, esto sigue parado.
+ *
+ * ⚠️ **Y el `@supports`**: sin `mask-image` la capa saldría como un rectángulo
+ * gris opaco tapando la sección entera. Con él, no hay capa y no pasa nada.
+ */
+@supports (mask-image: linear-gradient(#000, #000)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .humo__capa--a { animation: humo-a 127s linear infinite; }
+    .humo__capa--b { animation: humo-b 89s linear infinite; }
+  }
 }
 
 /* Bloque a dos columnas: titular a la izquierda, contenido a la derecha. */

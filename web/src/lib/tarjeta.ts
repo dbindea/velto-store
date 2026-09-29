@@ -71,8 +71,24 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
          * Cuando hay fechas elegidas esto no aparece: ahí se enseña el precio
          * de verdad del alquiler, que es exacto y no necesita «desde».
          */
+        /*
+         * ⚠️ **El «desde» dice DESDE CUÁNTOS DÍAS, y sin eso engaña.** Ese
+         * precio sale del tramo más barato, que con las tarifas normales de la
+         * casa es el del alquiler más largo: quien leía «desde 25 €/día» y
+         * pedía tres días se encontraba otra cifra al elegir fechas. El número
+         * es el del tramo real de ESE coche, no un 31 escrito a mano: las
+         * reglas se editan coche a coche.
+         *
+         * ⚠️ **Y ya no pone «IVA incluido»**, que lo pidió Dorel porque se ve
+         * después, al calcular el precio con fechas. El importe **sigue siendo
+         * el bruto**: lo que se quita es la coletilla, no el impuesto.
+         */
         `<p class="coche__precio num"><span>desde</span> <strong>${euros(c.priceFrom.gross)}</strong> <span>/día</span></p>
-         <p class="coche__detalle">IVA incluido</p>`
+         ${
+           c.priceFrom.fromDays
+             ? `<p class="coche__detalle">en alquileres de ${c.priceFrom.fromDays} días o más</p>`
+             : ''
+         }`
       : `<p class="coche__precio coche__precio--consultar">Consultar precio</p>`;
 
   /**
@@ -112,8 +128,8 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
           </ul>
           ${precio}
           <span class="btn btn--ink coche__btn">
-            Ver precio final
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            Calcular precio
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
           </span>
         </div>
       </a>

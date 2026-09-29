@@ -155,16 +155,36 @@ const PREGUNTAS = [
         vaciar el campo lo repusiera solo—.
       */}
       <form class="buscador" action="/reservar" method="get">
+        {/*
+          ⚠️ **El aspa es un `<button>` de verdad, no el nativo del navegador.**
+          `type="search"` trae una en Chrome y no en Firefox, no se puede
+          estilar, y no existe en el móvil. Un botón propio se comporta igual en
+          todas partes.
+
+          ⚠️ **Y va DENTRO de un envoltorio posicionado**, no como fondo del
+          campo. En el backoffice se dibuja como `background-image` porque allí
+          son decenas de campos en rejillas donde un elemento nuevo rompería la
+          maquetación de unos cuantos; aquí es **un** campo y el envoltorio no
+          descoloca nada. La ventaja de tenerlo como elemento es que entra en el
+          orden de tabulación y un lector de pantalla lo anuncia.
+        */}
         <div class="buscador__campo buscador__campo--lugar">
           <label for="lugar">Recogida en</label>
-          <input
-            type="text"
-            id="lugar"
-            name="place"
-            value="Arganda del Rey"
-            autocomplete="off"
-            maxlength="80"
-          />
+          <div class="campo-con-aspa">
+            <input
+              type="text"
+              id="lugar"
+              name="place"
+              value="Arganda del Rey"
+              autocomplete="off"
+              maxlength="80"
+            />
+            <button type="button" id="limpiar-lugar" class="aspa" aria-label="Borrar el lugar de recogida">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="buscador__campo">
           <label for="desde">Recogida</label>
@@ -185,7 +205,18 @@ const PREGUNTAS = [
   </section>
 
   {/* ---- Las cuatro promesas ------------------------------------------- */}
-  <section class="seccion promesas-seccion">
+  {/*
+    ⚠️ **El humo va en las secciones BLANCAS, no en las grises.** Las `--alt`
+    ya se separan con su propio fondo; superponer ahí la textura es ruido sobre
+    ruido. El marcado es el que exige la receta: las dos capas dentro de
+    `.humo`, y el contenido en un `.contenedor` que el CSS sube a `z-index: 1`
+    para que quede por encima.
+  */}
+  <section class="seccion promesas-seccion con-humo">
+    <div class="humo" aria-hidden="true">
+      <div class="humo__capa humo__capa--a"></div>
+      <div class="humo__capa humo__capa--b"></div>
+    </div>
     <div class="contenedor">
       <div class="promesas">
         {
@@ -222,7 +253,11 @@ const PREGUNTAS = [
   </section>
 
   {/* ---- Requisitos ----------------------------------------------------- */}
-  <section class="seccion" id="requisitos">
+  <section class="seccion con-humo" id="requisitos">
+    <div class="humo" aria-hidden="true">
+      <div class="humo__capa humo__capa--a"></div>
+      <div class="humo__capa humo__capa--b"></div>
+    </div>
     <div class="contenedor requisitos">
       <div>
         <p class="chip">Requisitos</p>
@@ -241,10 +276,14 @@ const PREGUNTAS = [
         <p class="oficina__nota">
           {EMPRESA.oficinaCiudad}. Si te viene mejor, llevamos el coche a donde acordemos.
         </p>
+        {/*
+          ⚠️ **«Contactar» lleva al formulario, no al WhatsApp.** Aquí había un
+          botón con el número escrito, y publicar el teléfono en la portada es
+          justo lo que Dorel quitó de las tarjetas: la cabecera ya lo lleva para
+          quien quiera llamar. Lo pidió el 29 de septiembre de 2026.
+        */}
         <div class="oficina__acciones">
-          <a class="btn btn--soft" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
-            {EMPRESA.telefono}
-          </a>
+          <a class="btn btn--brand" href="/contacto">Contactar</a>
           <a class="btn btn--ghost" href={`mailto:${EMPRESA.correo}`}>Escribir un email</a>
         </div>
       </aside>
@@ -254,7 +293,7 @@ const PREGUNTAS = [
   {/* ---- Preguntas frecuentes ------------------------------------------- */}
   <section class="seccion seccion--alt">
     <div class="contenedor dos-columnas">
-      <div>
+      <div class="faq-intro-col">
         <p class="chip">Preguntas frecuentes</p>
         <h2>Lo que más nos preguntan</h2>
         <p class="faq__intro">
@@ -274,7 +313,12 @@ const PREGUNTAS = [
           PREGUNTAS.map((p, i) => (
             <details open={i === 0}>
               <summary>{p.q}</summary>
-              <div class="faq__cuerpo" set:html={p.a} />
+              {/* El envoltorio es lo que anima; ver `.faq__animable`. */}
+              <div class="faq__animable">
+                <div>
+                  <div class="faq__cuerpo" set:html={p.a} />
+                </div>
+              </div>
             </details>
           ))
         }
@@ -314,6 +358,67 @@ const PREGUNTAS = [
     d.setDate(d.getDate() + dias);
     return comoCampo(d);
   };
+
+  /*
+   * El aspa del lugar de recogida.
+   *
+   * ⚠️ **Al vaciar, el foco vuelve al campo.** Quien borra es porque va a
+   * escribir otra cosa: sin esto hay que volver a tocar el campo, y en un móvil
+   * eso es cerrar el teclado y abrirlo otra vez.
+   *
+   * ⚠️ **Y se escucha `input`, no `change`.** `change` solo salta al salir del
+   * campo, así que el aspa no aparecería hasta entonces — justo cuando ya no
+   * hace falta.
+   */
+  const lugar = document.getElementById('lugar') as HTMLInputElement | null;
+  const aspa = document.getElementById('limpiar-lugar');
+  const envoltorio = lugar?.closest('.campo-con-aspa');
+
+  if (lugar && aspa && envoltorio) {
+    const refrescarAspa = () => envoltorio.classList.toggle('tiene-texto', lugar.value.length > 0);
+    lugar.addEventListener('input', refrescarAspa);
+    aspa.addEventListener('click', () => {
+      lugar.value = '';
+      refrescarAspa();
+      lugar.focus();
+    });
+    refrescarAspa();
+  }
+
+  /* ---- El cierre animado de las preguntas -------------------------------
+   *
+   * ⚠️ **Solo hace falta para CERRAR.** Al abrir, el navegador pone `open`, el
+   * contenido entra en el DOM y el CSS lo anima de `0fr` a `1fr`. Al cerrar
+   * quita `open` **de golpe** y con él el contenido: no queda nada que animar.
+   * Esto retrasa ese `open = false` lo que dura la transición.
+   *
+   * ⚠️ **Y respeta a quien pide menos movimiento**: ahí se deja el
+   * comportamiento nativo, que es instantáneo y correcto.
+   */
+  const animaciones = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll<HTMLDetailsElement>('.faq details').forEach((det) => {
+    const resumen = det.querySelector('summary');
+    resumen?.addEventListener('click', (e) => {
+      if (!det.open || !animaciones) return;
+      e.preventDefault();
+      det.classList.add('cerrandose');
+      const caja = det.querySelector('.faq__animable');
+      const fin = () => {
+        det.classList.remove('cerrandose');
+        det.open = false;
+        caja?.removeEventListener('transitionend', fin);
+      };
+      caja?.addEventListener('transitionend', fin);
+      /*
+       * ⚠️ **Y un plazo de seguridad.** `transitionend` no llega si la
+       * transición no arranca —una pestaña de fondo, un `display: none` de por
+       * medio—, y sin esto la pregunta se quedaría abierta para siempre con la
+       * clase puesta. Vale más cerrarla sin animar que no cerrarla.
+       */
+      setTimeout(fin, 400);
+    });
+  });
 
   const desde = document.getElementById('desde') as HTMLInputElement | null;
   const hasta = document.getElementById('hasta') as HTMLInputElement | null;
@@ -427,6 +532,59 @@ const PREGUNTAS = [
     margin-bottom: var(--sp-6);
   }
 
+  /*
+   * En un móvil, lo primero que hay que ver es el BUSCADOR.
+   *
+   * ⚠️ **Medido: el buscador empezaba a 1.050 px del principio** en una
+   * pantalla de 844 — o sea, a página y media de desplazamiento. Quien entra
+   * desde el móvil viene a mirar precios y se encontraba tres pantallazos de
+   * titular. Lo pidió Dorel el 29 de septiembre de 2026.
+   *
+   * ⚠️ **Se recorta el titular, no se esconde nada.** La regla de la casa es
+   * recolocar y nunca ocultar: el titular sigue entero, con su entradilla y sus
+   * barras; lo que baja es el tamaño de letra y el aire de alrededor. Con
+   * `2rem` caben tres líneas en vez de cinco.
+   *
+   * `--fs-display` es un `clamp()` que ya encoge con la ventana, pero su suelo
+   * son 2,75 rem: pensado para que un titular corto luzca, no para éste, que
+   * tiene sesenta caracteres.
+   */
+  @media (max-width: 719px) {
+    .hero { padding-top: var(--sp-10); }
+
+    .hero__titular {
+      font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.5rem);
+      max-width: 20ch;
+      margin-bottom: var(--sp-4);
+    }
+
+    .hero__entrada { font-size: var(--fs-small); margin-bottom: var(--sp-8); }
+
+    /*
+     * ⚠️ **Y el buscador deja de colgar medio cuerpo.** El `translateY(50%)`
+     * que lo monta sobre el corte vale en escritorio, donde el buscador es una
+     * fila baja; en móvil son cuatro campos apilados —367 px— así que ese 50 %
+     * son **184 px de hueco negro vacío** entre la entradilla y el buscador.
+     * Medido: el buscador empezaba a 1.050 px del principio, y con esto y el
+     * titular más pequeño se queda en 664 de los 844 de pantalla, o sea a la
+     * vista al cargar.
+     *
+     * 24 px fijos conservan el efecto de que la tarjeta monta sobre el corte
+     * sin que dependa de lo alto que sea el buscador.
+     *
+     * ⚠️ **Y lleva `.hero` delante a propósito.** Escrito como `.buscador` a
+     * secas empata en especificidad con la regla base y **gana la última del
+     * fichero**, que es aquella: la media query estaba escrita más arriba y no
+     * hacía nada. Medido con `getComputedStyle()`, que daba los 183,667 px del
+     * 50 % con mi regla perfectamente escrita unas líneas antes. Con el
+     * antepasado delante, (0,2,0) contra (0,1,0), el orden deja de importar.
+     */
+    .hero .buscador { transform: translateY(24px); }
+
+    /* Y la sección de abajo recupera el hueco que ya no hace falta reservar. */
+    .promesas-seccion { padding-top: var(--section-y); }
+  }
+
   .hero__entrada {
     font-size: var(--fs-lead);
     color: var(--gray-300);
@@ -486,7 +644,46 @@ const PREGUNTAS = [
    */
   .buscador__campo--lugar input {
     font-family: inherit;
+    /* Sitio para el aspa, que va encima del extremo derecho. */
+    padding-right: var(--sp-10);
   }
+
+  .campo-con-aspa {
+    position: relative;
+    display: grid;
+  }
+
+  /*
+   * El aspa que vacía el campo.
+   *
+   * ⚠️ **44 px de zona pulsable y 16 de dibujo, y no es una incoherencia.** Es
+   * la misma medida que el backoffice acabó necesitando: lo que crece para el
+   * dedo es dónde se acierta, no el dibujo — una cruz de 44 px pintada gritaría
+   * dentro de un campo de formulario.
+   *
+   * ⚠️ **Solo aparece si hay algo que borrar.** Un aspa permanente sobre un
+   * campo vacío es un botón que no hace nada.
+   */
+  .aspa {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    display: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--gray-400);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease);
+  }
+
+  .campo-con-aspa.tiene-texto .aspa { display: grid; }
+  .aspa:hover { color: var(--velto-white); }
 
   /*
    * El botón, con su animación al pasar el ratón.
@@ -568,7 +765,30 @@ const PREGUNTAS = [
   .oficina__nota { color: var(--text-2); font-size: var(--fs-small); margin-bottom: var(--sp-6); }
   .oficina__acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
 
-  .faq__intro { color: var(--text-2); margin: var(--sp-4) 0 var(--sp-6); }
+  /*
+   * ⚠️ **Más aire entre el titular y el párrafo**, que es lo que pidió Dorel:
+   * estaban a 16 px y el bloque se leía como un solo pegote de texto. A 24 px
+   * el titular manda y la frase de debajo es lo que es, una nota.
+   */
+  .faq__intro { color: var(--text-2); margin: var(--sp-6) 0 var(--sp-8); }
+
+  /*
+   * ⚠️ **La columna del titular ACOMPAÑA a las preguntas.** Pegada arriba
+   * dejaba medio metro de hueco vacío a su derecha en cuanto se desplegaba una
+   * respuesta larga —se ve en la captura—, y el botón de «Ver todas las
+   * condiciones» quedaba huérfano lejos de donde mira el ojo. Con `sticky` se
+   * queda a la vista mientras se leen las preguntas.
+   *
+   * Solo en escritorio: en móvil las dos columnas se apilan y un bloque
+   * pegajoso taparía el contenido.
+   */
+  @media (min-width: 900px) {
+    .faq-intro-col {
+      position: sticky;
+      top: var(--sp-20);
+      align-self: start;
+    }
+  }
 
   /*
    * Rejilla propia y no la genérica: con `auto-fill` y 300 px, las CUATRO

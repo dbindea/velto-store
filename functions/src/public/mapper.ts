@@ -22,7 +22,7 @@ import {
   PublicVehicleSummary,
   VehiclePricingRule,
 } from './types';
-import { addVat, lowestPricePerDay } from './core';
+import { addVat, cheapestRule } from './core';
 
 /** La carpeta pública. Un solo sitio, para que nadie escriba la ruta a mano. */
 export const PUBLIC_PHOTOS_FOLDER = 'public-vehicles';
@@ -96,9 +96,15 @@ export function photoUrls(
 
 /** El «desde X €/día», con los dos lados del impuesto. */
 function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): PublicPrice | undefined {
-  const min = lowestPricePerDay(rules);
-  if (min === null) return undefined;
-  return { ...addVat(min, vatRate), currency: 'EUR' };
+  const tramo = cheapestRule(rules);
+  if (!tramo) return undefined;
+  const dias = Number(tramo.minDays);
+  return {
+    ...addVat(tramo.pricePerDay, vatRate),
+    currency: 'EUR',
+    // El primer tramo empieza en 1 y ahí el matiz no aporta nada.
+    ...(Number.isFinite(dias) && dias > 1 ? { fromDays: dias } : {}),
+  };
 }
 
 /**

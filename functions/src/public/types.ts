@@ -71,6 +71,20 @@ export interface PublicPrice {
   /** FRACCIÓN, no porcentaje: `0.21`. Misma convención que `pricingSnapshot`. */
   vatRate: number;
   currency: 'EUR';
+  /**
+   * Desde cuántos días rige este precio, cuando es un «desde».
+   *
+   * ⚠️ **Sin esto, «desde 25 €/día» es un precio que casi nadie paga.** El
+   * «desde» sale del tramo más barato y, con los tramos normales de la casa, el
+   * precio por día baja según se alarga el alquiler: o sea que el más barato es
+   * el del último tramo, el abierto. Quien lee «desde 25 €» y alquila tres días
+   * se encuentra otra cifra al elegir fechas.
+   *
+   * ⚠️ **Solo lo lleva `priceFrom`.** El precio de un alquiler con fechas
+   * elegidas es exacto y no necesita matiz. Opcional y aditivo, como manda la
+   * casa para todo campo nuevo.
+   */
+  fromDays?: number;
 }
 
 /**
