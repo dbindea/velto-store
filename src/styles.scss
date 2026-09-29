@@ -1275,6 +1275,29 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--border-color);
 }
 
+/* ---------------------------------------------------------------------------
+ * La tarjeta de ficha, global.
+ *
+ * ⚠️ **Y con esta van SEIS**, después de `.form-control`, `.btn-*`,
+ * `.checkbox-item`, `.page-header` y `.badge`. La usaban cinco pantallas y la
+ * declaraban cuatro —con las mismas cuatro líneas copiadas—, así que la quinta,
+ * Solicitudes, salía **con las esquinas en pico** mientras el resto de la
+ * aplicación las lleva redondeadas. Lo vio Dorel comparándola con una reserva.
+ *
+ * ⚠️ **`overflow: hidden` no es cosmético**: es lo que recorta la banda de
+ * `.card-header` contra el radio. Sin él la cabecera de color se sale por las
+ * esquinas y la tarjeta parece rota justo arriba, que es donde se mira.
+ *
+ * No pisa a las cuatro que ya la declaran —(0,2,0) contra (0,1,0)— y además
+ * dicen exactamente esto mismo, así que nada cambia de aspecto donde ya estaba.
+ * ------------------------------------------------------------------------- */
+.detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .card-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-color);

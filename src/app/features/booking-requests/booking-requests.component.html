@@ -67,12 +67,27 @@
           @if (abierta() === r.id) {
             <div class="card-content">
               <div class="datos">
+                <!--
+                  ⚠️ **Con hora, y la hora es PROPUESTA.** El formulario de la
+                  web pide fechas, así que lo guardado son días completos —00:00
+                  y 23:59:59— y eso no es una hora a la que se entregue un
+                  coche. Se enseña el mediodía que se va a proponer, que es
+                  además el que se lleva el asistente al convertir. Sin esto, la
+                  reserva nacía con una recogida de madrugada.
+                -->
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.dates' | translate }}</span>
+                  <!--
+                    ⚠️ **Cada instante, entero.** Sin envolverlos, el rango
+                    parte por donde se acabe la columna y deja «12:00» solo en
+                    la línea de abajo, que se lee como un dato suelto. Con esto
+                    el salto cae en el guion, que es donde significa algo.
+                  -->
                   <span>
-                    {{ fecha(r.pickupDate) | date: 'dd/MM/yyyy' }} –
-                    {{ fecha(r.returnDate) | date: 'dd/MM/yyyy' }}
+                    <span class="nowrap">{{ recogidaPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span> –
+                    <span class="nowrap">{{ devolucionPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span>
                   </span>
+                  <span class="field-hint">{{ 'bookingRequests.hoursProposed' | translate }}</span>
                 </div>
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.phone' | translate }}</span>
@@ -97,6 +112,23 @@
                       {{ 'bookingRequests.priceExpired' | translate }}
                     </span>
                   }
+                  <!--
+                    ⚠️ **El botón va pegado al dato que cambia**, no en la fila
+                    de acciones: ahí abajo serían seis botones y ninguno diría
+                    sobre qué actúa. Es la misma idea que el «Saltar este paso»
+                    al lado del paso bloqueado.
+                  -->
+                  @if (puedeAmpliar(r)) {
+                    <button
+                      type="button"
+                      class="btn-ghost btn-ampliar"
+                      [disabled]="guardando() === r.id"
+                      (click)="ampliar(r)"
+                    >
+                      <i class="pi pi-clock"></i>
+                      {{ 'bookingRequests.extend' | translate }}
+                    </button>
+                  }
                 </div>
               </div>
 
@@ -104,29 +136,53 @@
                 <p class="nota-cliente">«{{ r.note }}»</p>
               }
 
-              @if (r.internalNote) {
-                <p class="nota-interna">
-                  <span class="dato__et">{{ 'bookingRequests.fields.internalNote' | translate }}</span>
-                  {{ r.internalNote }}
-                </p>
-              }
-
               @if (r.status === 'converted' && r.reservationId) {
+                <!--
+                  Aquí la nota solo se lee: una solicitud ya convertida no se
+                  anota más, lo que pase después pasa en la reserva.
+                -->
+                @if (r.internalNote) {
+                  <p class="nota-interna">
+                    <span class="dato__et">{{ 'bookingRequests.fields.internalNote' | translate }}</span>
+                    {{ r.internalNote }}
+                  </p>
+                }
                 <button type="button" class="btn-secondary" (click)="abrirReserva(r)">
                   <i class="pi pi-arrow-right"></i>
                   {{ 'bookingRequests.openReservation' | translate }}
                 </button>
               } @else {
-                <label class="form-group">
-                  <span>{{ 'bookingRequests.fields.internalNote' | translate }}</span>
-                  <input
-                    type="text"
+                <!--
+                  ⚠️ **Textarea y con su propio botón.** Era un `input` de una
+                  línea sin forma de guardar: la nota solo viajaba de rebote al
+                  marcar contactada o al descartar, así que en una solicitud ya
+                  contactada se escribía y se perdía al cerrar la ficha. Y de
+                  una línea no se lee lo que se acaba de escribir.
+                -->
+                <div class="form-group nota-editor">
+                  <label [attr.for]="'nota-' + r.id">
+                    {{ 'bookingRequests.fields.internalNote' | translate }}
+                  </label>
+                  <textarea
+                    [id]="'nota-' + r.id"
                     class="form-control"
+                    rows="2"
                     maxlength="300"
                     [(ngModel)]="notaInterna"
                     [placeholder]="'bookingRequests.notePlaceholder' | translate"
-                  />
-                </label>
+                  ></textarea>
+                  <div class="nota-editor__pie">
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      [disabled]="!notaCambiada(r) || guardando() === r.id"
+                      (click)="guardarNota(r)"
+                    >
+                      <i class="pi pi-save"></i>
+                      {{ 'bookingRequests.saveNote' | translate }}
+                    </button>
+                  </div>
+                </div>
 
                 <!--
                   Tres acciones, en el orden en que se usan: llamar, escribir y

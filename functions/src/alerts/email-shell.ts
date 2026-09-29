@@ -106,6 +106,20 @@ export interface SobreOpciones {
   cuerpo: string;
   /** El pie gris, que explica por qué llega este correo. */
   pie: string;
+  /**
+   * ¿El pie va sin su filete de separación?
+   *
+   * ⚠️ **Se pone cuando el cuerpo termina en un BOTÓN.** El filete existe para
+   * cerrar una lista de filas —en el resumen diario cada `fila()` lleva el
+   * suyo, y este remata la última—, pero debajo de una pastilla turquesa lo que
+   * se ve es una raya suelta a todo lo ancho que parece una sección vacía. Lo
+   * señaló Dorel el 29 de septiembre de 2026 mirando el aviso de una solicitud.
+   *
+   * Va como opción explícita y no adivinando si el cuerpo acaba en botón:
+   * mirar el final de una cadena de HTML es la clase de regla que se rompe el
+   * día que alguien añada un espacio.
+   */
+  pieSinFilete?: boolean;
 }
 
 /**
@@ -126,7 +140,8 @@ export function sobre(o: SobreOpciones): string {
     `<tr><td style="padding-top:4px;font:400 13px/1.5 ${TIPO};color:${GRIS}">` +
     `${esc(o.entradilla)}</td></tr>` +
     o.cuerpo +
-    `<tr><td style="padding-top:24px;border-top:1px solid #e6eaea;` +
+    `<tr><td style="padding-top:24px;` +
+    (o.pieSinFilete ? '' : 'border-top:1px solid #e6eaea;') +
     `font:400 11px/1.5 ${TIPO};color:${GRIS}">${esc(o.pie)}</td></tr>` +
     `</table></td></tr></table></body></html>`
   );

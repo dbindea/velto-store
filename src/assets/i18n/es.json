@@ -2096,6 +2096,11 @@
     "errors": {
       "loadFailed": "No se pudieron cargar las solicitudes.",
       "saveFailed": "No se pudo guardar el cambio."
-    }
+    },
+    "saveNote": "Guardar nota",
+    "noteSaved": "Nota guardada",
+    "extend": "Ampliar 24 h",
+    "extended": "Precio garantizado 24 horas más",
+    "hoursProposed": "Horas propuestas: la web solo pide fechas"
   }
 }

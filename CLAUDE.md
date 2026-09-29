@@ -1066,6 +1066,80 @@ discute con razón: lo comprueba `layout.spec.ts` sobre los PDF reales, en los
 tres idiomas y los tres documentos, **y también que no aparezca** cuando no se
 pactó.
 
+### Las solicitudes de la web: «que me llamen», y el coche NO se aparta
+
+Un visitante elige coche y fechas en la web pública, deja nombre y teléfono, y
+la agencia le llama. Lo que se le promete es **el precio**, no el coche.
+
+⚠️ **Colección propia (`bookingRequests`), no un estado más de `Reservation`.**
+Una solicitud no tiene contrato, ni pagos, ni fianza, ni inspecciones, y su
+ciclo —nueva, contactada, convertida, descartada— no se parece al del alquiler.
+Y metida como estado habría empezado a **bloquear el coche en la web el mismo
+día**: `blocksAvailability()` es una **lista invertida** donde solo `returned`,
+`closed` y `cancelled` dejan libre y **todo lo demás bloquea**, así que un
+estado nuevo apartaría el coche sin que nadie escribiera una línea — justo lo
+contrario de lo que esto promete.
+
+⚠️ **La escribe SOLO la Cloud Function.** `firestore.rules` deniega `create`
+desde cliente: la clave del proyecto viaja en el bundle de la web, así que con
+`create` abierto cualquiera se saltaría los topes de longitud, el campo trampa y
+el límite por teléfono. La pantalla del backoffice solo lee y marca.
+
+⚠️ **Convertir NO crea la reserva aquí**: lleva los datos al asistente por la
+URL. Crear un alquiler es una sola escritura con sus filas de cobro, su
+disponibilidad y su cliente, y duplicar eso sería una segunda forma de crear
+reservas.
+
+#### La hora que nadie dijo son las 12:00
+
+⚠️ **El formulario de la web pide FECHAS, y lo que se guarda es la ventana de
+disponibilidad.** `widenToFullDays()` la ensancha a días completos, así que
+`pickupDate` son las **00:00** y `returnDate` las **23:59:59.999**. Eso es
+correcto para cruzarla con las reservas y **mentira como hora de entrega**: la
+ficha enseñaba «02/11/2026 – 09/11/2026» sin más, y al convertir llevaba al
+asistente una recogida de madrugada y una devolución a las 23:59.
+
+`DEFAULT_REQUEST_HOUR = 12` en `booking-request.util.ts`, con
+`requestPickupAt()` y `requestReturnAt()`: mediodía es la respuesta honesta a
+«no se dijo» —cae en horario de oficina y es lo que se va a pactar por teléfono
+de todos modos—. Decisión de Dorel del 29 de septiembre de 2026. **Lo usan la
+ficha y la conversión**, para que lo que se ve sea lo que se va a proponer.
+
+⚠️ **Se reconstruye el día, no se mueve la hora sobre el objeto.** Con
+`setHours(12)` sobre las 23:59:59.**999** el día no cambia pero los
+milisegundos se quedan dentro, y esa fecha viaja al campo del asistente.
+
+#### Ampliar el plazo, y la nota que no se podía guardar
+
+⚠️ **Lo caducado se amplía desde AHORA; lo vigente, desde lo prometido**
+(`extendedGuaranteeUntil`). El caso normal es justo el primero —«se le pasó el
+plazo y se lo amplío mientras se lo piensa»— y sumando sobre una fecha vencida
+las 24 h podrían dejar la promesa **todavía en el pasado**: el operador pulsa,
+el aviso sigue diciendo «caducado» y parece que el botón no hace nada. Y si aún
+está en pie se suma a lo prometido, porque al cliente se le dijo una fecha y
+ampliar no puede recortarla.
+
+⚠️ **Un botón de 24 h que se pulsa dos veces, no un desplegable de días.** El
+plazo resultante está en la línea de encima, así que pasarse se ve al momento.
+Va **dentro de la celda del plazo**, no en la fila de acciones: allí serían seis
+botones y ninguno diría sobre qué actúa.
+
+⚠️ **Guardar la nota NO marca la solicitud como contactada.** Apuntar «intentado,
+no coge» es justo lo contrario de haber hablado con alguien, y cambiar el estado
+la sacaría de la lista de trabajo pendiente con el cliente sin atender. Por eso
+`saveInternalNote()` no pasa por `marcar()`.
+
+⚠️ **Y vaciarla tiene que BORRAR de verdad** (`deleteField()`): es el mismo fallo
+de los diez campos del mantenimiento —el limpiador quita la clave y un
+`updateDoc` sin la clave deja intacto lo que hubiera—. Comprobado de punta a
+punta: se guarda, se recarga, se vacía, se recarga y sigue vacía.
+
+> Hasta el 29 de septiembre de 2026 la nota **solo viajaba de rebote** con
+> «Marcar contactada» y con «Descartar»: en una solicitud ya contactada se
+> escribía, no había botón que la guardara y se perdía al cerrar la ficha. Y el
+> campo nacía **en blanco** teniendo nota, así que lo que se escribiera
+> sustituía lo anterior sin que se viera qué había.
+
 ### Eventos próximos: se derivan, no se guardan
 
 ⚠️ **Una entrega ya está en su reserva y una ITV en su mantenimiento.** Copiarlas
@@ -2077,6 +2151,14 @@ diario salió byte a byte idéntico al extraerla (4214 bytes de HTML y 519 de
 texto, con una muestra que pasa por todas las ramas), que es lo que permitió dar
 el cambio por bueno sin mandar un correo. Misma idea que el manifiesto de
 descubrimiento con las functions.
+
+⚠️ **`pieSinFilete` se pone cuando el cuerpo termina en un BOTÓN.** El filete del
+pie existe para cerrar una lista de filas —en el resumen cada `fila()` lleva el
+suyo y este remata la última—, pero debajo de una pastilla turquesa lo que se ve
+es una raya suelta a todo lo ancho que parece una sección vacía. Va como opción
+explícita y no adivinando si el cuerpo acaba en botón: mirar el final de una
+cadena de HTML es la clase de regla que se rompe el día que alguien meta un
+espacio.
 
 ⚠️ **«No alquiles este coche» solo si es verdad.** El resumen lo decía de
 **cualquier** vencimiento, y solo la ITV y el seguro impiden circular
@@ -3101,6 +3183,7 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
 collaborators  collaboratorSales  collaboratorInvoices  reminders
+bookingRequests
 invoices  invoiceCounters  billingProfiles  verifactuDeclarations
 verifactuSubmissions
 ```
@@ -3611,6 +3694,13 @@ porque su geometría no es esa.
 
 Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
 sin que se notara porque solo aparece cuando falta la declaración.
+
+⚠️ **Y con `.detail-card` van SEIS.** La usaban cinco pantallas y la declaraban
+cuatro —con las mismas cuatro líneas copiadas—, así que la quinta, Solicitudes,
+salía **con las esquinas en pico** mientras el resto de la aplicación las lleva
+redondeadas. Lo vio Dorel el 29 de septiembre de 2026 comparándola con una
+reserva. Su `overflow: hidden` tampoco es cosmético: es lo que recorta la banda
+de `.card-header` contra el radio.
 
 ⚠️ **Y con `.badge` van CINCO.** Quince pantallas declaran su propia chapa de
 estado repitiendo a mano el relleno, el radio y el tamaño de letra —con **cuatro

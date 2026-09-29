@@ -104,6 +104,18 @@ export interface BookingRequest {
    */
   priceGuaranteedUntil?: any;
 
+  /**
+   * Quién y cuándo amplió el plazo, si se amplió.
+   *
+   * ⚠️ **Ampliar es una decisión comercial, no un ajuste.** Se le está diciendo
+   * a un cliente que su precio sigue en pie más días, y eso hay que poder
+   * explicarlo dentro de un mes — igual que el descuento de fidelidad anota
+   * autor y fecha en cada cambio. Son opcionales y aditivos: las solicitudes
+   * anteriores no los llevan, y su ausencia significa «no se amplió».
+   */
+  priceExtendedAt?: any;
+  priceExtendedBy?: string;
+
   /** El plazo de borrado, también congelado. */
   keepHours: number;
 

@@ -12,8 +12,12 @@ import type { BookingRequest } from '@shared/models/booking-request.model';
 import {
   canConvert,
   canDiscard,
+  canExtendGuarantee,
+  extendedGuaranteeUntil,
   formatPhone,
   newCount,
+  requestPickupAt,
+  requestReturnAt,
   priceStillGuaranteed,
   sortRequests,
   telLink,
@@ -163,6 +167,93 @@ describe('la lista', () => {
     const original = [solicitud({ reference: 'A', status: 'converted' }), solicitud({ reference: 'B' })];
     sortRequests(original);
     expect(original.map((r) => r.reference)).toEqual(['A', 'B']);
+  });
+});
+
+describe('la hora que nadie dijo', () => {
+  /**
+   * ⚠️ **Este es el test que importa.** Lo guardado es la ventana de
+   * disponibilidad —00:00 y 23:59:59.999—, y llevarla tal cual al asistente
+   * daba una recogida a medianoche y una devolución a las 23:59. Ninguna de las
+   * dos es una hora a la que se entregue un coche.
+   */
+  it('convierte la ventana de días completos en dos mediodías', () => {
+    const r = solicitud({
+      pickupDate: new Date(2026, 10, 2, 0, 0, 0, 0),
+      returnDate: new Date(2026, 10, 9, 23, 59, 59, 999)
+    });
+    const recogida = requestPickupAt(r)!;
+    const devolucion = requestReturnAt(r)!;
+
+    expect(recogida.getDate()).toBe(2);
+    expect(recogida.getHours()).toBe(12);
+    expect(devolucion.getDate()).toBe(9);
+    expect(devolucion.getHours()).toBe(12);
+  });
+
+  it('y NO arrastra los milisegundos del final del día', () => {
+    // 23:59:59.999 con `setHours(12)` deja el `.999` dentro, y eso viaja al
+    // campo del asistente.
+    const r = solicitud({ returnDate: new Date(2026, 10, 9, 23, 59, 59, 999) });
+    const d = requestReturnAt(r)!;
+    expect(d.getMinutes()).toBe(0);
+    expect(d.getSeconds()).toBe(0);
+    expect(d.getMilliseconds()).toBe(0);
+  });
+
+  it('el día no se mueve, que es lo que una conversión a UTC sí haría', () => {
+    const r = solicitud({ pickupDate: new Date(2026, 0, 1, 0, 0, 0, 0) });
+    const d = requestPickupAt(r)!;
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(0);
+    expect(d.getDate()).toBe(1);
+  });
+
+  it('sin fecha guardada contesta null, no la de hoy', () => {
+    expect(requestPickupAt(solicitud({ pickupDate: undefined }))).toBeNull();
+    expect(requestReturnAt(solicitud({ returnDate: undefined }))).toBeNull();
+  });
+});
+
+describe('ampliar el precio garantizado', () => {
+  const ahora = new Date('2026-09-29T10:00:00');
+
+  it('lo que sigue en pie se amplía desde la fecha PROMETIDA', () => {
+    // Al cliente se le dijo una fecha: ampliar no puede recortarla.
+    const vigente = new Date('2026-09-30T18:00:00');
+    expect(extendedGuaranteeUntil(vigente, 24, ahora).toISOString()).toBe(
+      new Date('2026-10-01T18:00:00').toISOString()
+    );
+  });
+
+  it('LO CADUCADO SE AMPLÍA DESDE AHORA, o el botón no haría nada', () => {
+    // Sumando sobre lo vencido, 24 h dejarían la promesa todavía en el pasado:
+    // el operador pulsa, el aviso sigue diciendo «caducado» y parece roto.
+    const vencido = new Date('2026-09-25T10:00:00');
+    const resultado = extendedGuaranteeUntil(vencido, 24, ahora);
+    expect(resultado.getTime()).toBeGreaterThan(ahora.getTime());
+    expect(resultado.toISOString()).toBe(new Date('2026-09-30T10:00:00').toISOString());
+  });
+
+  it('sin fecha ninguna, también desde ahora', () => {
+    expect(extendedGuaranteeUntil(null, 24, ahora).toISOString()).toBe(
+      new Date('2026-09-30T10:00:00').toISOString()
+    );
+  });
+
+  it('dos ampliaciones seguidas suman, que es cómo se llega a los dos días', () => {
+    const una = extendedGuaranteeUntil(new Date('2026-09-30T10:00:00'), 24, ahora);
+    const dos = extendedGuaranteeUntil(una, 24, ahora);
+    expect(dos.toISOString()).toBe(new Date('2026-10-02T10:00:00').toISOString());
+  });
+
+  it('solo se amplía lo que espera respuesta', () => {
+    expect(canExtendGuarantee(solicitud({ status: 'new' }))).toBe(true);
+    expect(canExtendGuarantee(solicitud({ status: 'contacted' }))).toBe(true);
+    // Una convertida ya tiene su precio congelado en la reserva, y una
+    // descartada no espera nada: prometerles algo es prometer al vacío.
+    expect(canExtendGuarantee(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canExtendGuarantee(solicitud({ status: 'discarded' }))).toBe(false);
   });
 });
 

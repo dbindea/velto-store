@@ -4,6 +4,7 @@ import {
   collection,
   collectionData,
   deleteDoc,
+  deleteField,
   doc,
   docData,
   serverTimestamp,
@@ -66,6 +67,48 @@ export class BookingRequestService {
 
   async discard(id: string, internalNote?: string): Promise<void> {
     await this.marcar(id, 'discarded', { internalNote });
+  }
+
+  /**
+   * Guardar la nota interna, y nada más.
+   *
+   * ⚠️ **NO toca el estado.** Apuntar lo que se habló no es haber llamado: una
+   * solicitud en la que se anota «intentado, no coge» sigue **sin contestar**, y
+   * pasarla a `contacted` la sacaría de la lista de trabajo pendiente con el
+   * cliente todavía sin hablar. Por eso no pasa por `marcar()`.
+   *
+   * ⚠️ **Y vaciarla tiene que BORRAR de verdad.** `cleanForFirestore()` quita la
+   * clave de un valor vacío, y un `updateDoc` sin la clave **deja intacto** lo
+   * que hubiera: el operador borraría la nota, guardaría, y al recargar volvería.
+   * Es el mismo fallo de los diez campos del mantenimiento. `deleteField()` es
+   * lo único que Firestore entiende como «quita esto», y se añade **después** de
+   * limpiar: es un centinela, y un limpiador que lo recorriera lo dejaría en un
+   * mapa vacío.
+   */
+  async saveInternalNote(id: string, internalNote: string): Promise<void> {
+    const limpia = internalNote.trim();
+    await updateDoc(doc(this.firestore, COLECCION, id), {
+      internalNote: limpia ? limpia : deleteField()
+    });
+  }
+
+  /**
+   * Ampliar el precio garantizado.
+   *
+   * ⚠️ **La fecha se calcula fuera** (`extendedGuaranteeUntil`), con sus tests:
+   * lo caducado se amplía desde ahora y lo vigente desde lo prometido, y esa
+   * distinción es la que hace que el botón sirva para el caso normal — que es
+   * justo el de un plazo ya vencido.
+   *
+   * ⚠️ **Se guarda una `Date`, no un centinela.** `serverTimestamp()` pondría la
+   * hora del servidor, que es el momento de escribir y no el de caducar.
+   */
+  async extendPriceGuarantee(id: string, until: Date): Promise<void> {
+    await updateDoc(doc(this.firestore, COLECCION, id), {
+      priceGuaranteedUntil: until,
+      priceExtendedBy: this.auth.authorizedUser()?.email || '',
+      priceExtendedAt: serverTimestamp()
+    });
   }
 
   /**

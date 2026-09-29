@@ -2096,6 +2096,11 @@
     "errors": {
       "loadFailed": "Solicitările nu au putut fi încărcate.",
       "saveFailed": "Modificarea nu a putut fi salvată."
-    }
+    },
+    "saveNote": "Salvează nota",
+    "noteSaved": "Notă salvată",
+    "extend": "Prelungește 24 h",
+    "extended": "Preț garantat încă 24 de ore",
+    "hoursProposed": "Ore propuse: site-ul cere doar datele"
   }
 }

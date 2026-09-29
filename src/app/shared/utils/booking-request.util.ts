@@ -24,6 +24,76 @@ export function priceStillGuaranteed(r: BookingRequest, now: Date = new Date()):
 }
 
 /**
+ * La hora que se supone cuando el cliente no dijo ninguna.
+ *
+ * ⚠️ **El formulario de la web pide FECHAS, no horas**, y lo que se guarda es
+ * la **ventana de disponibilidad**: `widenToFullDays()` la ensancha a días
+ * completos, así que `pickupDate` son las 00:00 y `returnDate` las 23:59:59.
+ * Eso es correcto para cruzarla con las reservas y **mentira** como hora de
+ * entrega: la ficha decía «02/11/2026 – 09/11/2026» sin más, y al convertir
+ * llevaba al asistente una recogida a las 00:00 y una devolución a las 23:59.
+ *
+ * Mediodía es la respuesta honesta a «no se dijo»: cae dentro del horario de la
+ * oficina, no da la madrugada por buena y es lo que el operador va a pactar por
+ * teléfono de todos modos. Decisión de Dorel del 29 de septiembre de 2026.
+ */
+export const DEFAULT_REQUEST_HOUR = 12;
+
+function alMediodia(valor: unknown): Date | null {
+  if (!valor) return null;
+  const d = toDate(valor);
+  if (isNaN(d.getTime())) return null;
+  /**
+   * ⚠️ Se reconstruye el día en hora local, no se mueve la hora sobre el mismo
+   * objeto. `returnDate` son las 23:59:59.999: poniéndole las 12:00 con
+   * `setHours()` el día no cambia, pero los milisegundos sí quedarían dentro —
+   * y una fecha con `.999` viaja al asistente y se ve en el campo.
+   */
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), DEFAULT_REQUEST_HOUR, 0, 0, 0);
+}
+
+/** Cuándo recogería, si no se pacta otra cosa. */
+export function requestPickupAt(r: BookingRequest): Date | null {
+  return alMediodia(r.pickupDate);
+}
+
+/** Cuándo devolvería, si no se pacta otra cosa. */
+export function requestReturnAt(r: BookingRequest): Date | null {
+  return alMediodia(r.returnDate);
+}
+
+/**
+ * Hasta cuándo quedaría el precio garantizado al ampliarlo.
+ *
+ * ⚠️ **Se cuenta desde AHORA cuando ya caducó**, no desde la fecha vieja. El
+ * caso normal es justo ese —«se le pasó el plazo y lo amplío mientras se lo
+ * piensa»—, y sumando sobre lo vencido una ampliación de 24 h podría dejar la
+ * promesa **todavía en el pasado**: el operador pulsaría, el aviso seguiría
+ * diciendo «caducado» y parecería que el botón no hace nada.
+ *
+ * ⚠️ **Y si aún está en pie se suma a lo prometido**, no a hoy: al cliente se
+ * le dijo una fecha y ampliar no puede recortarla.
+ */
+export function extendedGuaranteeUntil(
+  current: Date | null,
+  hours: number,
+  now: Date = new Date()
+): Date {
+  const desde = current && current.getTime() > now.getTime() ? current : now;
+  return new Date(desde.getTime() + hours * 3_600_000);
+}
+
+/**
+ * ¿Tiene sentido ampliarle el plazo?
+ *
+ * Una convertida ya es una reserva con su precio congelado, y una descartada no
+ * espera respuesta: prometerle nada a ninguna de las dos es prometer al vacío.
+ */
+export function canExtendGuarantee(r: BookingRequest): boolean {
+  return r.status === 'new' || r.status === 'contacted';
+}
+
+/**
  * ¿Se puede convertir en reserva?
  *
  * ⚠️ **Una ya convertida no se convierte dos veces.** Sin esto, dos clics

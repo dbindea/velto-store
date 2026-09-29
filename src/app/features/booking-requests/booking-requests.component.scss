@@ -138,6 +138,18 @@
   color: var(--text-muted);
 }
 
+/*
+ * Una fecha con su hora no se parte por la mitad.
+ *
+ * ⚠️ Es lo contrario de la regla general de la casa —la prosa larga parte en
+ * dos líneas antes que desbordar—, y aquí vale porque no es prosa: son dos
+ * instantes, y «12:00» solo en una línea no es media fecha, es un dato que
+ * parece de otra cosa.
+ */
+.nowrap {
+  white-space: nowrap;
+}
+
 .caducado { color: var(--text-muted); }
 
 .nota-cliente {
@@ -152,6 +164,30 @@
   margin: 0 0 16px;
   font-size: 0.875rem;
   color: var(--text-secondary);
+}
+
+/*
+ * El botón de guardar, debajo del campo y alineado a la derecha: es la esquina
+ * en la que acaba de escribir el operador.
+ */
+.nota-editor__pie {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/*
+ * El «Ampliar 24 h», dentro de la celda del plazo que amplía.
+ *
+ * ⚠️ **Se encoge al contenido** (`justify-self: start`): en una celda de
+ * rejilla un botón se estira a todo el ancho de la columna, y uno de 180 px
+ * debajo de una fecha se lee como el botón principal de la ficha, que no lo es.
+ */
+.btn-ampliar {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
 }
 
 .acciones {

@@ -18,8 +18,12 @@ import {
 import {
   canConvert,
   canDiscard,
+  canExtendGuarantee,
+  extendedGuaranteeUntil,
   formatPhone,
   priceStillGuaranteed,
+  requestPickupAt,
+  requestReturnAt,
   sortRequests,
   telLink,
   whatsappLink
@@ -128,10 +132,18 @@ export class BookingRequestsComponent {
 
   readonly filtros: Filtro[] = ['open', 'new', 'contacted', 'converted', 'discarded', 'all'];
 
+  /**
+   * ⚠️ **La nota se CARGA al abrir, no se empieza en blanco.** Con un campo
+   * vacío delante de una solicitud que ya tenía nota, lo que el operador
+   * escribe no amplía lo anterior: lo sustituye sin que se vea qué había. El
+   * campo enseña lo guardado y se edita encima, que es lo que un campo de texto
+   * promete.
+   */
   alternar(id?: string): void {
     if (!id) return;
-    this.notaInterna = '';
-    this.abierta.set(this.abierta() === id ? null : id);
+    const abre = this.abierta() !== id;
+    this.notaInterna = abre ? (this.requests().find((r) => r.id === id)?.internalNote ?? '') : '';
+    this.abierta.set(abre ? id : null);
   }
 
   // --- Lo que la ficha pregunta -------------------------------------------
@@ -167,6 +179,28 @@ export class BookingRequestsComponent {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  /**
+   * ⚠️ **La ficha enseña MEDIODÍA, no la ventana guardada.** Lo almacenado son
+   * días completos —00:00 y 23:59:59— porque así se cruza con las reservas, y
+   * esas no son horas a las que se entregue un coche. Ver `DEFAULT_REQUEST_HOUR`.
+   */
+  recogidaPropuesta(r: BookingRequest): Date | null {
+    return requestPickupAt(r);
+  }
+
+  devolucionPropuesta(r: BookingRequest): Date | null {
+    return requestReturnAt(r);
+  }
+
+  puedeAmpliar(r: BookingRequest): boolean {
+    return canExtendGuarantee(r);
+  }
+
+  /** ¿La nota que hay en el campo es distinta de la guardada? */
+  notaCambiada(r: BookingRequest): boolean {
+    return this.notaInterna.trim() !== (r.internalNote ?? '').trim();
+  }
+
   // --- Acciones ------------------------------------------------------------
 
   async contactada(r: BookingRequest): Promise<void> {
@@ -175,6 +209,49 @@ export class BookingRequestsComponent {
     try {
       await this.service.markContacted(r.id, this.notaInterna.trim() || undefined);
       this.notaInterna = '';
+    } catch {
+      this.notifications.error('bookingRequests.errors.saveFailed');
+    } finally {
+      this.guardando.set(null);
+    }
+  }
+
+  /**
+   * Guardar la nota, y nada más.
+   *
+   * ⚠️ **Hasta hoy no había forma de guardarla sola.** Solo viajaba de rebote
+   * con «Marcar contactada» y con «Descartar», así que una solicitud ya
+   * contactada no admitía una segunda nota: se escribía, no había botón, y al
+   * cerrar la ficha se perdía. Lo señaló Dorel el 29 de septiembre de 2026.
+   */
+  async guardarNota(r: BookingRequest): Promise<void> {
+    if (!r.id || !this.notaCambiada(r)) return;
+    this.guardando.set(r.id);
+    try {
+      await this.service.saveInternalNote(r.id, this.notaInterna);
+      this.notifications.success('bookingRequests.noteSaved');
+    } catch {
+      this.notifications.error('bookingRequests.errors.saveFailed');
+    } finally {
+      this.guardando.set(null);
+    }
+  }
+
+  /**
+   * Ampliar 24 h el precio garantizado.
+   *
+   * ⚠️ **Un botón por cada 24 h, y no un desplegable de días.** El caso es «se
+   * lo está pensando, dale un día más»: pulsarlo dos veces son dos días, que es
+   * lo que Dorel pidió, y el plazo que queda se ve en la línea de encima —así
+   * que ampliar de más se ve al momento en vez de decidirse a ciegas.
+   */
+  async ampliar(r: BookingRequest): Promise<void> {
+    if (!r.id || !canExtendGuarantee(r)) return;
+    const hasta = extendedGuaranteeUntil(this.fecha(r.priceGuaranteedUntil), 24);
+    this.guardando.set(r.id);
+    try {
+      await this.service.extendPriceGuarantee(r.id, hasta);
+      this.notifications.success('bookingRequests.extended');
     } catch {
       this.notifications.error('bookingRequests.errors.saveFailed');
     } finally {
@@ -211,8 +288,14 @@ export class BookingRequestsComponent {
    */
   convertir(r: BookingRequest): void {
     if (!r.id || !canConvert(r)) return;
-    const desde = this.fecha(r.pickupDate);
-    const hasta = this.fecha(r.returnDate);
+    /**
+     * ⚠️ **Las horas son las PROPUESTAS, no las de la ventana guardada.** Aquí
+     * se pasaba `pickupDate` y `returnDate` tal cual, o sea la recogida a las
+     * 00:00 y la devolución a las 23:59:59, y el asistente nacía con ellas: una
+     * entrega de madrugada que nadie había pactado. Ver `DEFAULT_REQUEST_HOUR`.
+     */
+    const desde = requestPickupAt(r);
+    const hasta = requestReturnAt(r);
     const iso = (d: Date | null) => {
       if (!d) return '';
       const p = (n: number) => String(n).padStart(2, '0');

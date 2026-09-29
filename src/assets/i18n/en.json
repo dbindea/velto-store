@@ -2096,6 +2096,11 @@
     "errors": {
       "loadFailed": "The requests could not be loaded.",
       "saveFailed": "The change could not be saved."
-    }
+    },
+    "saveNote": "Save note",
+    "noteSaved": "Note saved",
+    "extend": "Extend 24 h",
+    "extended": "Price held for another 24 hours",
+    "hoursProposed": "Suggested times: the website only asks for dates"
   }
 }

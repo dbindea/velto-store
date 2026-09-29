@@ -75,7 +75,9 @@ export function renderBookingRequestEmail(
       (opciones.enlace ? boton('Abrir la solicitud', opciones.enlace) : ''),
     pie:
       'El coche NO está reservado: solo se le ha garantizado el precio. ' +
-      'Este aviso sale al instante, en cuanto alguien pide que le llamen desde la web.'
+      'Este aviso sale al instante, en cuanto alguien pide que le llamen desde la web.',
+    /** Debajo del botón, el filete se lee como una sección vacía. */
+    pieSinFilete: true
   });
 
   /**
