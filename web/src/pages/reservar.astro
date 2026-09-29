@@ -23,14 +23,21 @@ import { EMPRESA } from '../lib/empresa';
         con IVA incluido. La reserva la cerramos por teléfono o WhatsApp.
       </p>
 
+      {/*
+        ⚠️ **`datetime-local`, igual que el de la portada.** Si aquí siguiera
+        siendo `type="date"`, asignarle `2026-10-07T10:00` lo dejaría **vacío
+        sin dar error**: un `input[type=date]` descarta el valor que no entiende
+        en silencio. O sea que el visitante que llega desde la portada con sus
+        fechas elegidas vería dos campos en blanco.
+      */}
       <form id="form" class="buscador">
         <div class="buscador__campo">
           <label for="desde">Recogida</label>
-          <input type="date" id="desde" name="desde" required />
+          <input type="datetime-local" id="desde" name="desde" step="900" required />
         </div>
         <div class="buscador__campo">
           <label for="hasta">Devolución</label>
-          <input type="date" id="hasta" name="hasta" required />
+          <input type="datetime-local" id="hasta" name="hasta" step="900" required />
         </div>
         <button class="btn btn--brand" type="submit">Ver disponibilidad</button>
       </form>
@@ -159,10 +166,27 @@ import { EMPRESA } from '../lib/empresa';
    * precios» espera ver precios, no un formulario relleno y un botón más que
    * pulsar: eso es hacerle repetir lo que ya hizo.
    */
+  /**
+   * ⚠️ **Acepta las dos formas, y eso NO es un parche de compatibilidad.** El
+   * buscador de la portada manda ahora `yyyy-MM-ddTHH:mm` —una recogida es un
+   * instante—, pero por ahí fuera hay enlaces compartidos con el formato
+   * anterior, de solo fecha, y este es el único sitio que los recibe. Con la
+   * expresión estricta de antes, el formulario **dejaba de autoconsultarse en
+   * silencio**: el visitante que ya había elegido fechas aterrizaba en un
+   * formulario vacío y tenía que repetirlas.
+   *
+   * ⚠️ **Y la hora que se supone son las 10:00**, la de apertura, no las 00:00
+   * que pondría el navegador: nadie recoge un coche a medianoche.
+   */
+  const CON_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+  const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+  const instante = (v: string | null) =>
+    v && CON_HORA.test(v) ? v : v && SOLO_FECHA.test(v) ? `${v}T10:00` : null;
+
   const params = new URLSearchParams(location.search);
-  const dFrom = params.get('from');
-  const dTo = params.get('to');
-  if (dFrom && dTo && /^\d{4}-\d{2}-\d{2}$/.test(dFrom) && /^\d{4}-\d{2}-\d{2}$/.test(dTo)) {
+  const dFrom = instante(params.get('from'));
+  const dTo = instante(params.get('to'));
+  if (dFrom && dTo) {
     desde.value = dFrom;
     hasta.min = dFrom;
     hasta.value = dTo;

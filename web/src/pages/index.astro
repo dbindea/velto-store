@@ -5,46 +5,52 @@ import { EMPRESA } from '../lib/empresa';
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
  * La entrega a domicilio existe como concepto propio (`deliveryFees`, con sus
- * dos trayectos), el seguro va en el coche y se imprime en el contrato, y los
- * kilómetros se pactan por escrito. Si una de estas cuatro deja de ser cierta,
- * se quita de aquí — es la regla que ya mordió cinco veces en los PDF.
+ * dos trayectos y gratis cerca de Arganda) y la ficha pública enseña el coche
+ * concreto con sus fotos, no una categoría. Si una de estas cuatro deja de ser
+ * cierta, se quita de aquí: es la regla que ya mordió cinco veces en los PDF.
+ *
+ * ⚠️ **Reescritas el 29 de septiembre de 2026, y el motivo importa.** Las de
+ * antes decían el IVA, publicaban el número de WhatsApp y remataban con «consta
+ * en el contrato». Dorel lo resumió así: «parece que soy un novato que quiero
+ * decir al mundo entero que cobro el IVA cuando esto está claro… y que estoy
+ * pactando cosas por contrato cuando esto es evidente».
+ *
+ * De ahí salen las tres reglas de este bloque:
+ *
+ * - **Nada de mecánica interna.** Que el trato se documente por contrato es lo
+ *   normal, no un argumento de venta; anunciarlo planta la duda de si en otro
+ *   sitio no se documenta.
+ * - **Nada que el cliente ya dé por supuesto**, empezando por el IVA: a un
+ *   particular hay que anunciarle el precio con impuestos incluidos.
+ * - **Cada tarjeta responde a una fricción concreta** de alquilar en una
+ *   multinacional —el mostrador que reajusta el precio, el viaje a la oficina,
+ *   la centralita que no puede decidir y el «grupo B o similar»— con un hecho
+ *   comprobable, no con un adjetivo.
  */
 const PROMESAS = [
   {
-    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg>`,
-    titulo: 'Precio final desde el primer clic',
-    /*
-     * ⚠️ Aquí ponía «y sin cargos que aparezcan al devolver el coche», y es
-     * falso: TODOS los cargos extra de la aplicación nacen de la inspección de
-     * devolución —combustible, limpieza, kilómetros de más, daños, multas—.
-     * Lo decía además **la propia página cuatro líneas más abajo**, en la
-     * respuesta de la fianza: «salvo que haya que retener algo por daños,
-     * combustible o kilómetros de más».
-     *
-     * Lo que sí es cierto, y sigue siendo el argumento, es que el precio no
-     * crece por reservar: no hay gastos de gestión ni suplementos escondidos.
-     * Lo que se cobre al devolver es lo que se haya usado de más, y eso lo
-     * decide el cliente, no la tarifa.
-     */
+    icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg>`,
+    titulo: 'Precio cerrado al reservar',
     texto:
-      'Lo que ves es lo que pagas, con IVA incluido y sin gastos de gestión. Al devolver solo se cobra lo que se haya usado de más.',
+      'El importe que ves al reservar es lo que cuesta el alquiler. Sin gastos de gestión ni cargos por reservar desde la web.',
   },
   {
-    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>`,
-    titulo: 'Te lo llevamos a casa',
+    icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>`,
+    titulo: 'Sin pasar por la oficina',
     texto:
-      'Entrega y recogida a domicilio en Arganda del Rey y alrededores. Se pacta antes y consta en el contrato.',
+      'Llevamos y recogemos el coche en Arganda del Rey y alrededores sin coste. Más lejos, el importe se acuerda antes de reservar.',
   },
   {
-    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-5A8 8 0 1 1 21 11.5Z"/></svg>`,
-    titulo: 'Alguien responde',
-    texto: `WhatsApp al ${EMPRESA.telefono}, también durante el alquiler. Contesta una persona.`,
+    icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-5A8 8 0 1 1 21 11.5Z"/></svg>`,
+    titulo: 'Quien contesta, decide',
+    texto:
+      'Hablas con la misma persona antes, durante y después del alquiler. Sin centralita ni número de incidencia.',
   },
   {
-    icono: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a3 3 0 0 1 3-3h6a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h11"/><path d="m17 16 3 3-3 3"/></svg>`,
-    titulo: 'Kilómetros por escrito',
-    texto:
-      'Los kilómetros incluidos figuran en el contrato. Si no se pactó kilometraje, no se cobra.',
+    /* La llave del kit: esta tarjeta habla del coche concreto, no de un grupo. */
+    icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 8.5-8.5M15.5 7.5 18 10l3-3-2.5-2.5"/></svg>`,
+    titulo: 'Eliges coche, no categoría',
+    texto: 'Reservas el vehículo que has visto, con sus fotos y su ficha. Aquí no existe el «o similar».',
   },
 ];
 
@@ -104,36 +110,73 @@ const PREGUNTAS = [
 
       <h1 class="hero__titular">Alquila un coche con el precio final desde el primer clic.</h1>
       {/*
-        ⚠️ **«Seguro obligatorio», y la palabra sobra tan poco que decide un
-        pleito.** Aquí ponía «Seguro incluido», que un cliente lee como «si le
-        doy un golpe estoy cubierto» — y la cláusula 13 del contrato dice lo
-        contrario: el coche lleva la responsabilidad civil obligatoria frente a
-        terceros, y el todo riesgo «sólo será aplicable si ha sido expresamente
-        contratado y abonado por el ARRENDATARIO». Los daños al propio coche los
-        responde él, que es para lo que están la fianza y el cargo por daños.
+        ⚠️ **«Todo riesgo OPCIONAL», y esas dos palabras deciden un pleito.**
+        La cláusula 13 dice que el coche lleva la responsabilidad civil
+        obligatoria frente a terceros y que el todo riesgo «sólo será aplicable
+        si ha sido expresamente contratado y abonado por el ARRENDATARIO». Una
+        portada que anuncie «con seguro a todo riesgo» le dice al cliente que si
+        da un golpe está cubierto, y luego se le retiene la fianza por el daño
+        con el contrato diciendo lo contrario.
 
-        Decisión de Dorel del 28 de septiembre de 2026: se dice lo que cubre.
+        Redacción de Dorel del 29 de septiembre de 2026; la palabra «opcional»
+        la confirmó él al enseñarle la cláusula. Misma historia que el 28, con
+        «Seguro incluido» → «Seguro obligatorio incluido».
+
+        ⚠️ **Y «fianza mínima» se queda ahí, sin decir de qué responde.** Su
+        primera redacción decía «fianza mínima para combustible», y la fianza
+        responde de SIETE conceptos —daños no cubiertos, combustible, limpieza
+        extraordinaria, llaves y documentos, multas y peajes, días de más, y
+        cualquier otra cantidad adeudada—. Estrecharlo en la portada es
+        regalarle al cliente la frase con la que discutir una retención por
+        daños. El argumento comercial —que es baja— se conserva entero.
       */}
       <p class="hero__entrada">
-        Seguro obligatorio incluido, kilómetros pactados por escrito y entrega a
-        domicilio. Recoges en {EMPRESA.oficinaCalle} o te lo llevamos a casa.
+        Alquila por muy poco, con todo riesgo opcional, fianza mínima y
+        posibilidad de entrega gratuita a domicilio en Arganda y alrededores.
       </p>
     </div>
 
     {/* El buscador, montado sobre el corte entre el negro y el fondo. */}
     <div class="contenedor">
+      {/*
+        ⚠️ **`datetime-local` y no `date`, que es lo que manda la casa.** Una
+        recogida es **un instante**, no una fecha: partida en dos controles hay
+        que abrir dos selectores y cuadrarlos a mano, y en un móvil se abren dos
+        diálogos del sistema distintos. El backoffice ya lo unificó el 24 de
+        septiembre de 2026 y esta web se había quedado con el par suelto — y
+        peor, sin hora ninguna: se preguntaba el día y se daba por supuesta la
+        hora.
+
+        ⚠️ **El lugar de recogida nace ESCRITO y se puede cambiar.** Casi todos
+        los alquileres salen de la oficina, así que el campo trae «Arganda del
+        Rey» puesto; quien quiera otra cosa lo reescribe. Es el mismo criterio
+        que `APP_DEFAULTS.DEFAULT_RENTAL_LOCATION` en el backoffice: el defecto
+        se pone una vez, no se resuelve al leer —resolverlo al leer haría que
+        vaciar el campo lo repusiera solo—.
+      */}
       <form class="buscador" action="/reservar" method="get">
+        <div class="buscador__campo buscador__campo--lugar">
+          <label for="lugar">Recogida en</label>
+          <input
+            type="text"
+            id="lugar"
+            name="place"
+            value="Arganda del Rey"
+            autocomplete="off"
+            maxlength="80"
+          />
+        </div>
         <div class="buscador__campo">
           <label for="desde">Recogida</label>
-          <input type="date" id="desde" name="from" required />
+          <input type="datetime-local" id="desde" name="from" step="900" required />
         </div>
         <div class="buscador__campo">
           <label for="hasta">Devolución</label>
-          <input type="date" id="hasta" name="to" required />
+          <input type="datetime-local" id="hasta" name="to" step="900" required />
         </div>
         <button class="btn btn--brand buscador__btn" type="submit">
           Ver precios
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
           </svg>
         </button>
@@ -244,6 +287,108 @@ const PREGUNTAS = [
   import { flota } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
 
+  /* ---- El buscador ------------------------------------------------------
+   *
+   * ⚠️ **Todo en hora LOCAL, y nada de `toISOString()`.** Un
+   * `datetime-local` habla `yyyy-MM-ddTHH:mm` en la hora del que mira; pasar
+   * por UTC convierte una recogida a las 00:30 de Madrid en las 22:30 del día
+   * anterior. Es la misma nota que lleva `reservation-date.util.ts` en el
+   * backoffice, y aquí no se puede compartir módulo: la web es Astro y no ve el
+   * código de Angular.
+   *
+   * ⚠️ **Y las comparaciones son de CADENAS.** `yyyy-MM-ddTHH:mm` ordena igual
+   * alfabéticamente que cronológicamente —para eso es ese formato—, así que
+   * comparar textos evita construir `Date` para decidir si una fecha va antes
+   * que otra. El backoffice hace exactamente lo mismo en su guard.
+   */
+  const RECOGIDA_POR_DEFECTO = 10; // las 10:00, cuando abre la oficina
+  const DIAS_POR_DEFECTO = 3;
+
+  const comoCampo = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  const sumarDias = (valor: string, dias: number) => {
+    const d = new Date(valor);
+    d.setDate(d.getDate() + dias);
+    return comoCampo(d);
+  };
+
+  const desde = document.getElementById('desde') as HTMLInputElement | null;
+  const hasta = document.getElementById('hasta') as HTMLInputElement | null;
+
+  if (desde && hasta) {
+    /*
+     * ⚠️ **El `min` de un `datetime-local` NECESITA la hora.** Con
+     * `yyyy-MM-dd` a secas **ignora el atributo entero y sin avisar**, así que
+     * se podrían elegir fechas pasadas y nada fallaría. Le pasó al asistente
+     * del backoffice al unificar los campos.
+     */
+    /*
+     * ⚠️ **Y el `min` tiene que caer en la REJILLA del `step`.** Esto costó un
+     * botón que no hacía nada: con `step="900"` el navegador cuenta los cuartos
+     * de hora **desde `min`**, no desde la hora en punto. Con `min` a las 16:19
+     * —la hora a la que se abrió la página— los valores válidos eran 16:19,
+     * 16:34, 16:49… y las 10:00 propuestas **no estaban entre ellos**: el campo
+     * quedaba inválido, el formulario no se enviaba y pulsar «Ver precios» no
+     * pasaba nada. Sin error en consola y sin nada que mirar.
+     *
+     * Redondeando `min` hacia arriba al cuarto en punto, cualquier hora con los
+     * minutos en 00, 15, 30 o 45 vale — que son las que alguien elige.
+     */
+    const alCuarto = (d: Date) => {
+      const c = new Date(d);
+      c.setSeconds(0, 0);
+      c.setMinutes(Math.ceil(c.getMinutes() / 15) * 15);
+      return c;
+    };
+
+    const ahoraCampo = comoCampo(alCuarto(new Date()));
+    desde.min = ahoraCampo;
+    hasta.min = ahoraCampo;
+
+    // Mañana a las diez, y tres días. Quien mira ya tiene algo que corregir en
+    // vez de dos campos vacíos que hay que rellenar antes de ver un precio.
+    const propuesta = new Date();
+    propuesta.setDate(propuesta.getDate() + 1);
+    propuesta.setHours(RECOGIDA_POR_DEFECTO, 0, 0, 0);
+    desde.value = comoCampo(propuesta);
+    hasta.value = sumarDias(desde.value, DIAS_POR_DEFECTO);
+
+    /*
+     * ⚠️ **La devolución SIGUE a la recogida, y por eso la mueve.** Sin esto se
+     * puede pedir un alquiler que termina antes de empezar: el navegador no
+     * relaciona dos campos por su cuenta. Y `min` por sí solo no basta —marca
+     * el campo como inválido y deja el valor puesto—, así que además se
+     * recoloca conservando los días que el visitante hubiera elegido: mover la
+     * recogida al día siguiente no puede recortarle el alquiler.
+     */
+    const ajustarDevolucion = () => {
+      if (!desde.value) return;
+      hasta.min = desde.value;
+      if (!hasta.value || hasta.value <= desde.value) {
+        hasta.value = sumarDias(desde.value, DIAS_POR_DEFECTO);
+      }
+    };
+
+    let anterior = desde.value;
+    desde.addEventListener('change', () => {
+      if (desde.value && hasta.value && anterior && hasta.value > anterior) {
+        // Los días que había elegido, conservados.
+        const dias = Math.round(
+          (new Date(hasta.value).getTime() - new Date(anterior).getTime()) / 86_400_000
+        );
+        if (dias > 0) hasta.value = sumarDias(desde.value, dias);
+      }
+      anterior = desde.value;
+      ajustarDevolucion();
+    });
+
+    hasta.addEventListener('change', ajustarDevolucion);
+    ajustarDevolucion();
+  }
+
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
   const vacio = document.getElementById('vacio')!;
@@ -307,7 +452,7 @@ const PREGUNTAS = [
   }
 
   @media (min-width: 720px) {
-    .buscador { grid-template-columns: 1fr 1fr auto; }
+    .buscador { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) auto; }
   }
 
   .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
@@ -334,7 +479,43 @@ const PREGUNTAS = [
     color-scheme: dark;
   }
 
-  .buscador__btn { min-height: var(--control-h); }
+  /*
+   * ⚠️ **El campo del lugar NO va en `--font-num`.** Esa es la tipografía de
+   * cifras tabulares: bien para una fecha, mal para «Arganda del Rey», que sale
+   * con los espacios de los dígitos y parece una matrícula.
+   */
+  .buscador__campo--lugar input {
+    font-family: inherit;
+  }
+
+  /*
+   * El botón, con su animación al pasar el ratón.
+   *
+   * ⚠️ **La lupa se mueve, el botón no.** Agrandar el botón entero desplazaría
+   * los tres campos de al lado en cada pasada —está en una rejilla— y el
+   * buscador daría un respingo. Lo que se anima es la lupa, que es lo que
+   * significa «buscar».
+   *
+   * ⚠️ **Y se anima `transform`, no `margin`.** Lo resuelve el compositor sin
+   * recalcular la disposición; con un margen, cada fotograma recoloca la fila.
+   */
+  .buscador__btn {
+    min-height: var(--control-h);
+    transition: background-color var(--t-fast) var(--ease);
+  }
+
+  .buscador__btn svg {
+    transition: transform var(--t-base) var(--ease);
+  }
+
+  .buscador__btn:hover svg {
+    transform: translateX(3px) scale(1.12);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .buscador__btn svg { transition: none; }
+    .buscador__btn:hover svg { transform: none; }
+  }
 
   /* El hueco que deja el buscador al montar sobre el corte. */
   .promesas-seccion { padding-top: calc(var(--section-y) + 60px); }
@@ -403,5 +584,48 @@ const PREGUNTAS = [
   @media (min-width: 620px) { .promesas { grid-template-columns: repeat(2, 1fr); } }
   @media (min-width: 1040px) { .promesas { grid-template-columns: repeat(4, 1fr); } }
 
-  .promesa { padding: var(--sp-8) var(--sp-6); }
+  /*
+   * Las cuatro tarjetas: centradas y con fondo en degradado.
+   *
+   * ⚠️ **El degradado NO es un token del kit: el kit no tiene ninguno de
+   * superficie.** Su único `linear-gradient` es `--skeleton`, el brillo que
+   * recorre un esqueleto de carga, y usarlo aquí sería pintar una tarjeta con
+   * una animación de «esto todavía no ha llegado». Así que se compone con los
+   * grises del kit —los mismos que ya mapean `--surface` y `--surface-2`— y por
+   * eso vive aquí, en la página, y no en `global.css`: es de esta sección, no
+   * del sistema.
+   *
+   * ⚠️ **Y se declara por tema.** Un degradado de grises claros sobre el fondo
+   * casi negro del tema oscuro es un rectángulo blanco: lo que se conserva es
+   * el sentido —un descenso suave desde la superficie de la tarjeta— y no los
+   * valores.
+   *
+   * ⚠️ **El icono se centra con `margin-inline: auto`, no con `text-align`.**
+   * El círculo es un bloque con ancho propio: `text-align: center` alinea lo de
+   * dentro y lo deja a la izquierda igual.
+   */
+  .promesa {
+    padding: var(--sp-8) var(--sp-6);
+    text-align: center;
+    background-image: linear-gradient(180deg, var(--gray-50) 0%, var(--gray-100) 100%);
+  }
+
+  /*
+   * ⚠️ **`:global()` alrededor del `[data-theme]`, y sin él NO FUNCIONA.**
+   * Astro encapsula los estilos de un componente colgándole un atributo a
+   * **cada** compuesto del selector, igual que hace Angular. Escrito
+   * `[data-theme='dark'] .promesa`, compila a
+   * `[data-astro-cid-x][data-theme="dark"] .promesa[data-astro-cid-x]` — y ese
+   * `[data-theme]` vive en el `<html>`, que no es parte de este componente y
+   * nunca lleva el atributo. El selector no casa jamás.
+   *
+   * No da ningún error: el CSS está escrito, el build pasa, y la tarjeta se
+   * queda con el degradado claro sobre el fondo casi negro. Medido con
+   * `getComputedStyle()` en la página, que es lo único que lo delata.
+   */
+  :global([data-theme='dark']) .promesa {
+    background-image: linear-gradient(180deg, var(--gray-800) 0%, var(--gray-900) 100%);
+  }
+
+  .promesa .icono-circulo { margin-inline: auto; }
 </style>

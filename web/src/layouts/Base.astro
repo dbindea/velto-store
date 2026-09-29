@@ -161,9 +161,15 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
   <body>
     <header class="cab">
       <div class="contenedor cab__fila">
+        {/*
+          ⚠️ **Un 40% más grande: 132×34 → 185×48.** Lo pidió Dorel porque la
+          marca no resaltaba. Los atributos `width`/`height` no son decorativos:
+          reservan el hueco antes de que el SVG cargue, y sin ellos la cabecera
+          pega un salto al pintar.
+        */}
         <a class="cab__logo" href="/" aria-label="Velto, inicio">
-          <img src="/brand/logo-on-light.svg" alt="Velto" class="cab__logo--claro" width="132" height="34" />
-          <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="132" height="34" />
+          <img src="/brand/logo-on-light.svg" alt="Velto" class="cab__logo--claro" width="185" height="48" />
+          <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="185" height="48" />
         </a>
 
         <nav class="cab__nav" aria-label="Principal">
@@ -175,19 +181,56 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
 
         <div class="cab__acciones">
           <a class="cab__tel" href={`tel:${tel}`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M9 10.5c.5 2 2 3.5 4.5 4.5l1-1.2a.8.8 0 0 1 .9-.2l1.8.8a1 1 0 0 1 .6.9v1.8a1 1 0 0 1-1.1 1A13 13 0 0 1 5 7.3 1 1 0 0 1 6 6.2h1.8a1 1 0 0 1 .9.6l.8 1.8a.8.8 0 0 1-.2.9Z"/>
+            {/*
+              ⚠️ **Esto es el icono DEL KIT, y antes no lo era.** El kit define
+              un `Icon` canónico —caja 24, `fill: none`, trazo `1.75`, remates y
+              uniones redondeados— y su cabecera lo pide a `18`. Aquí había 16 px
+              con trazo `2`, sin `stroke-linejoin`, y **un path propio**: un
+              recorte del auricular, no el auricular. A ese grosor y ese tamaño
+              se empastaba y quedaba como una mancha al lado de un número que sí
+              se lee.
+
+              El path es el del kit (`phone`), completo.
+            */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
             </svg>
             <span>{EMPRESA.telefono}</span>
           </a>
 
+          {/*
+            ⚠️ **Los DOS iconos van en el HTML y los cambia el CSS.** Pintar uno
+            y sustituirlo con JavaScript haría que en la primera pintura saliera
+            el que no toca: el tema se resuelve en el `<head>` —antes de pintar,
+            para que no haya fogonazo— pero el icono se decidiría al final. Un
+            parpadeo de luna a sol en cada carga, justo lo que ese script evita.
+
+            ⚠️ **Y el icono dice A QUÉ SE VA, no dónde se está.** En claro la
+            luna —«ponlo oscuro»—, en oscuro el sol. Un botón dice lo que hace
+            al pulsarlo.
+
+            El tema ya arrancaba siguiendo al sistema (`prefers-color-scheme`);
+            lo que faltaba era que el botón lo contara.
+          */}
           <button id="tema" class="cab__tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="cab__tema-luna" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+            <svg class="cab__tema-sol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
             </svg>
           </button>
 
-          <a class="btn btn--brand" href="/reservar">Reservar</a>
+          {/*
+            ⚠️ **Aquí había un botón «Reservar» y sobraba.** Llevaba a
+            `/reservar`, que es el mismo buscador que está unos píxeles más abajo
+            en la propia portada: un botón que lleva a donde ya estás. Lo señaló
+            Dorel el 29 de septiembre de 2026.
+
+            La página `/reservar` sigue existiendo y el menú no la enseña a
+            propósito: es el destino del buscador, no un sitio al que se navega.
+          */}
         </div>
       </div>
     </header>
@@ -201,9 +244,22 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         <div class="pie__rejilla">
           <div class="pie__marca">
             <img src="/brand/logo-on-dark.svg" alt="Velto" width="120" height="31" />
+            {/*
+              ⚠️ **Aquí ponía «seguro a todo riesgo», y va en TODAS las
+              páginas.** La cláusula 13 dice que el coche lleva la
+              responsabilidad civil obligatoria y que el todo riesgo «sólo será
+              aplicable si ha sido expresamente contratado y abonado por el
+              ARRENDATARIO». O sea que el pie de cada página prometía una
+              cobertura que el contrato niega — y sobrevivió al repaso del 28 de
+              septiembre de 2026, que solo miró la portada.
+
+              La lección es la de siempre en esta casa: al cambiar una
+              afirmación, **búscala en todo el sitio**, no en la pantalla desde
+              la que te la señalaron.
+            */}
             <p>
-              Alquiler de coches con precio final: seguro a todo riesgo,
-              kilómetros pactados por escrito y entrega en tu casa.
+              Alquiler de coches en Arganda del Rey con el precio cerrado al
+              reservar y entrega a domicilio.
             </p>
             <ul class="pie__datos">
               <li>
@@ -302,14 +358,66 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         margin-right: auto;
       }
 
+      /*
+       * El subrayado del menú: grueso, cortado en oblicuo y animado.
+       *
+       * ⚠️ **No puede ser un `border-bottom`, que es lo que era.** Un borde no
+       * se inclina ni crece: o está o no está, y aparecía de golpe con los
+       * extremos rectos. Con un pseudoelemento se pueden hacer las tres cosas
+       * que pidió Dorel.
+       *
+       * ⚠️ **Y el corte oblicuo no es un adorno: es `--skew`, la inclinación
+       * real de la «V» y la «E» del logotipo.** El kit ya subraya así su enlace
+       * activo —3 px, `var(--brand)`, `skewX(var(--skew))`—, o sea que esto no
+       * se inventa nada: adopta lo que el kit ya hacía y que esta web no había
+       * copiado. Aquí va a 4 px porque Dorel pidió que resaltara, y porque lo
+       * del kit marca «dónde estoy» mientras esto marca además el hover.
+       *
+       * ⚠️ **Crece con `scaleX`, no con `width`.** El ancho lo anima el hilo
+       * principal, recalculando la disposición de la cabecera en cada
+       * fotograma; una transformación la resuelve el compositor. Es la
+       * diferencia entre un subrayado que se desliza y uno que se arrastra.
+       *
+       * ⚠️ **Y el skew y la escala van en la MISMA declaración.** `transform`
+       * es una sola propiedad: escritos en dos reglas, la segunda borra la
+       * primera y el subrayado sale recto sin que nada falle.
+       */
       .cab__nav a {
+        position: relative;
         color: var(--text);
         font-size: var(--fs-small);
         font-weight: var(--fw-medium);
         padding: var(--sp-2) 0;
-        border-bottom: 2px solid transparent;
       }
-      .cab__nav a:hover { color: var(--brand-text); border-bottom-color: var(--brand); text-decoration: none; }
+
+      .cab__nav a::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 4px;
+        background: var(--brand);
+        transform: skewX(var(--skew)) scaleX(0);
+        /* Nace del centro: es donde está el ojo al pasar por encima. */
+        transform-origin: center;
+        transition: transform var(--t-fast) var(--ease);
+      }
+
+      .cab__nav a:hover,
+      .cab__nav a[aria-current='page'] { color: var(--brand-text); text-decoration: none; }
+
+      .cab__nav a:hover::after,
+      .cab__nav a[aria-current='page']::after { transform: skewX(var(--skew)) scaleX(1); }
+
+      /*
+       * ⚠️ **Quien pide menos movimiento lo tiene.** El subrayado sigue
+       * apareciendo —es la señal de dónde está el puntero, y quitarla dejaría
+       * el menú sin respuesta— pero llega sin recorrido.
+       */
+      @media (prefers-reduced-motion: reduce) {
+        .cab__nav a::after { transition: none; }
+      }
 
       .cab__acciones { display: flex; align-items: center; gap: var(--sp-4); }
 
@@ -335,6 +443,15 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         cursor: pointer;
       }
       .cab__tema:hover { color: var(--brand-text); }
+
+      /*
+       * El icono dice a dónde se VA, no dónde se está: en claro la luna, en
+       * oscuro el sol. Lo decide el CSS con el mismo `data-theme` que el
+       * script del `<head>` ya dejó puesto antes de la primera pintura, así
+       * que no hay parpadeo.
+       */
+      [data-theme='light'] .cab__tema-sol,
+      [data-theme='dark'] .cab__tema-luna { display: none; }
 
       /*
        * ⚠️ En móvil la navegación se RECOLOCA, no se esconde tras un botón.
