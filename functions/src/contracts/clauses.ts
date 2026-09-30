@@ -428,12 +428,35 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     }
   },
+  /**
+   * ⚠️ **Aquí NO hay sumisión expresa, y quitarla fue el arreglo del 30 de
+   * septiembre de 2026.** El contrato sometía toda controversia «a los Juzgados
+   * y Tribunales de la ciudad de Madrid (capital), con renuncia expresa a
+   * cualquier otro fuero», con una salvedad para el consumidor detrás. Esa
+   * cláusula **no vale**: el artículo 54.2 de la Ley de Enjuiciamiento Civil
+   * anula la sumisión expresa en los contratos de adhesión y en los que
+   * contienen condiciones generales, que es exactamente lo que es este papel, y
+   * frente a un consumidor es además candidata a abusiva (art. 90.2 TRLGDCU).
+   * Un cliente de Arganda pertenece a su propio partido judicial.
+   *
+   * ⚠️ **Y no bastaba con la salvedad que ya había.** Una cláusula que empieza
+   * renunciando a todo fuero y termina exceptuando al consumidor es, para quien
+   * la lee en el mostrador, una renuncia: el efecto práctico de una cláusula
+   * nula es que el cliente se la cree. Por eso la regla legal es ahora la
+   * principal y no la excepción.
+   *
+   * ⚠️ **Se cambió en los DOS sitios.** El resumen de `HIGHLIGHTS` decía lo
+   * mismo en una línea y **sin la salvedad** —«Toda controversia se somete a los
+   * Juzgados y Tribunales de Madrid (capital)»—, que es justo la que el cliente
+   * lee. Y la web lo repetía en `/condiciones`: el texto y el hecho se deciden
+   * juntos, así que las tres cosas se tocaron el mismo día.
+   */
   jurisdiction: {
     es: {
       title: '15. JURISDICCIÓN, LEY APLICABLE Y RESOLUCIÓN',
       body: [
         'El presente contrato se rige por la legislación común y civil española, y en particular por las disposiciones del Código Civil, la Ley de Arrendamientos Urbanos en lo que resulte de aplicación supletoria, el Código de Comercio, la Ley sobre Responsabilidad Civil y Seguro en la Circulación de Vehículos a Motor (Real Decreto Legislativo 8/2004), el Código Penal en lo que resulte de aplicación, y cualesquiera otras normas que resulten aplicables al alquiler de vehículos sin conductor.',
-        'Para la resolución de cualquier controversia, discrepancia o reclamación derivada del presente contrato o relacionada con él, las partes se someten expresamente a los Juzgados y Tribunales de la ciudad de Madrid (capital), con renuncia expresa a cualquier otro fuero que pudiera corresponderles. No obstante, en el caso de que el ARRENDATARIO tenga la condición de consumidor o usuario, será competente el Juez del domicilio del consumidor.',
+        'Para la resolución de cualquier controversia, discrepancia o reclamación derivada del presente contrato o relacionada con él, será competente el Juzgado o Tribunal que determinen las normas legales aplicables, sin que las partes pacten sumisión expresa a ningún fuero, por tratarse de un contrato con condiciones generales (artículo 54.2 de la Ley de Enjuiciamiento Civil). Cuando el ARRENDATARIO tenga la condición de consumidor o usuario, será competente el Juzgado correspondiente a su domicilio.',
         'De conformidad con el artículo 103.l) del texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios, el arrendamiento de vehículos para una fecha o período determinados está excluido del derecho de desistimiento, sin perjuicio de las condiciones de cancelación pactadas con el ARRENDADOR.',
         'El ARRENDADOR dispone de hojas oficiales de reclamación a disposición del ARRENDATARIO, que puede solicitar en el domicilio indicado en la cabecera o por correo electrónico. El ARRENDATARIO puede dirigir cualquier reclamación a la dirección de contacto del ARRENDADOR, que la atenderá en el plazo legalmente previsto.',
         'Si alguna de las cláusulas del presente contrato fuese declarada nula, anulable o ineficaz, total o parcialmente, por cualquier Tribunal, Autoridad u Organismo, el resto de las cláusulas conservarán su plena validez y eficacia, sustituyéndose la cláusula afectada por otra que, siendo lícita, produzca los mismos efectos económicos y jurídicos.'
@@ -443,7 +466,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       title: '15. JURISDICTION, GOVERNING LAW AND SEVERABILITY',
       body: [
         'This contract is governed by the common and civil Spanish legislation, and in particular by the provisions of the Civil Code, the Urban Leases Act in so far as it applies suppletively, the Code of Commerce, the Act on Civil Liability and Insurance in Motor Vehicle Traffic (Royal Legislative Decree 8/2004), the Criminal Code in so far as it is applicable, and any other rules applicable to the rental of vehicles without driver.',
-        'For the resolution of any dispute, discrepancy or claim derived from this contract or related to it, the parties expressly submit to the Courts and Tribunals of the city of Madrid (capital), expressly waiving any other jurisdiction to which they may be entitled. However, in the event that the RENTER has the status of consumer or user, the Judge of the consumer\'s domicile will be competent.',
+        'For the resolution of any dispute, discrepancy or claim derived from this contract or related to it, the competent Court shall be the one designated by the applicable legal rules, with no express submission to any jurisdiction agreed by the parties, as this is a contract containing general conditions (article 54.2 of the Spanish Civil Procedure Act). Where the RENTER has the status of consumer or user, the Court of their domicile shall be competent.',
         'In accordance with article 103.l) of the Spanish consolidated text of the General Law for the Defence of Consumers and Users, the rental of vehicles for a specific date or period is excluded from the right of withdrawal, without prejudice to the cancellation terms agreed with the LESSOR.',
         'The LESSOR keeps official complaint forms available to the RENTER, who may request them at the address shown in the header or by email. The RENTER may address any complaint to the LESSOR contact address, which will be handled within the legally established period.',
         'If any of the clauses of this contract were declared null, voidable or ineffective, in whole or in part, by any Court, Authority or Body, the rest of the clauses shall retain their full validity and effectiveness, with the affected clause being replaced by another which, being lawful, produces the same economic and legal effects.'
@@ -453,7 +476,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       title: '15. JURISDICȚIE, LEGEA APLICABILĂ ȘI SEPARABILITATE',
       body: [
         'Prezentul contract este guvernat de legislația comună și civilă spaniolă, și în special de dispozițiile Codului Civil, Legea Închirierilor Urbane în măsura în care se aplică în mod supletor, Codul Comercial, Legea privind Răspunderea Civilă și Asigurarea în Circulația Vehiculelor cu Motor (Decretul legislativ regal 8/2004), Codul Penal în măsura în care este aplicabil și orice alte norme aplicabile închirierii de vehicule fără șofer.',
-        'Pentru soluționarea oricărei dispute, discrepanțe sau reclamații derivate din prezentul contract sau legate de acesta, părțile se supun în mod expres Instanțelor Judecătorești din orașul Madrid (capitală), renunțând în mod expres la orice altă jurisdicție care le-ar putea reveni. Cu toate acestea, în cazul în care LOCATARUL are calitatea de consumator sau utilizator, va fi competent Judecătorul de la domiciliul consumatorului.',
+        'Pentru soluționarea oricărei dispute, discrepanțe sau reclamații derivate din prezentul contract sau legate de acesta, va fi competentă instanța stabilită de normele legale aplicabile, fără ca părțile să convină o supunere expresă la vreo jurisdicție, fiind vorba de un contract cu condiții generale (articolul 54.2 din Legea spaniolă de procedură civilă). Când LOCATARUL are calitatea de consumator sau utilizator, va fi competentă instanța de la domiciliul său.',
         'În conformitate cu articolul 103.l) din textul consolidat al Legii Generale pentru Apărarea Consumatorilor și Utilizatorilor din Spania, închirierea de vehicule pentru o dată sau o perioadă determinată este exclusă de la dreptul de retragere, fără a aduce atingere condițiilor de anulare convenite cu LOCATORUL.',
         'LOCATORUL pune la dispoziția LOCATARULUI formulare oficiale de reclamație, care pot fi solicitate la adresa indicată în antet sau prin e-mail. LOCATARUL poate adresa orice reclamație la adresa de contact a LOCATORULUI, care o va soluționa în termenul prevăzut de lege.',
         'Dacă oricare dintre clauzele prezentului contract este declarată nulă, anulabilă sau ineficace, în tot sau în parte, de către orice Instanță, Autoritate sau Organism, restul clauzelor își vor păstra pe deplin valabilitatea și eficacitatea, înlocuindu-se clauza afectată cu alta care, fiind legală, produce aceleași efecte economice și juridice.'
@@ -471,7 +494,7 @@ const HIGHLIGHTS: Record<ContractLocale, string[]> = {
     'El vehículo se devuelve con las llaves, documentos y accesorios en el mismo estado de la entrega.',
     'La salida del vehículo fuera de España requiere autorización escrita previa del arrendador.',
     'La suscripción del contrato implica el tratamiento de datos según la LOPDGDD y el RGPD.',
-    'Toda controversia se somete a los Juzgados y Tribunales de Madrid (capital).',
+    'Las controversias van a los juzgados que señala la ley; si el arrendatario es consumidor, a los de su domicilio.',
     'El arrendatario declara haber leído, comprendido y aceptado todas las cláusulas de este contrato.'
   ],
   en: [
@@ -482,7 +505,7 @@ const HIGHLIGHTS: Record<ContractLocale, string[]> = {
     'The vehicle must be returned with the keys, documents and accessories in the same state as delivered.',
     'Taking the vehicle outside Spain requires prior written authorisation from the lessor.',
     'Signing this contract implies data processing in accordance with the GDPR and the Spanish LOPDGDD.',
-    'Any dispute shall be submitted to the Courts of Madrid (capital).',
+    'Disputes go to the courts designated by law; if the renter is a consumer, those of their domicile.',
     'The renter acknowledges having read, understood and accepted all clauses of this contract.'
   ],
   ro: [
@@ -493,7 +516,7 @@ const HIGHLIGHTS: Record<ContractLocale, string[]> = {
     'Vehiculul se returnează cu cheile, documentele și accesoriile în aceeași stare ca la predare.',
     'Ieșirea vehiculului din Spania necesită autorizație scrisă prealabilă a locatorului.',
     'Semnarea acestui contract implică prelucrarea datelor conform RGPD și LOPDGDD spaniol.',
-    'Orice litigiu se supune instanțelor judecătorești din Madrid (capitală).',
+    'Litigiile merg la instanțele stabilite de lege; dacă locatarul este consumator, la cele de la domiciliul său.',
     'Locatarul declară că a citit, a înțeles și a acceptat toate clauzele acestui contract.'
   ]
 };

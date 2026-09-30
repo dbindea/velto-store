@@ -8,7 +8,7 @@ import { EMPRESA } from '../lib/empresa';
   que el contrato no diga.** Cada punto de aquí sale de una cláusula real de
   `functions/src/contracts/clauses.ts` — la edad mínima de 21 años, los treinta
   minutos de cortesía, la fianza que se devuelve tras la inspección, la
-  autorización escrita para salir de España, los tribunales de Madrid—. Si esas
+  autorización escrita para salir de España, el juzgado competente—. Si esas
   cláusulas cambian, **esto cambia con ellas**.
 
   Es la misma regla que ya mordió cinco veces en los PDF: el texto y el hecho se
@@ -113,10 +113,21 @@ import { EMPRESA } from '../lib/empresa';
         <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a>.
       </p>
 
+      {/*
+        ⚠️ **Aquí ponía que el contrato somete las controversias a los juzgados
+        de Madrid capital, y se corrigió el 30 de septiembre de 2026 en los dos
+        sitios a la vez.** Esa sumisión es nula en un contrato con condiciones
+        generales (art. 54.2 LEC) y abusiva frente a un consumidor (art. 90.2
+        TRLGDCU), así que arreglar solo la página habría dejado el papel
+        diciéndolo: lo que se cambió primero fue la cláusula 15 de
+        `functions/src/contracts/clauses.ts`, y esta frase la sigue. Si alguien
+        vuelve a tocar allí, aquí.
+      */}
       <h2>Si hay desacuerdo</h2>
       <p>
-        Lo hablamos primero, que suele bastar. El contrato somete cualquier
-        controversia a los Juzgados y Tribunales de Madrid (capital).
+        Lo hablamos primero, que suele bastar. Si no, decide el juzgado que
+        señala la ley: <strong>si eres un particular, el de tu domicilio</strong>.
+        El contrato no te obliga a pleitear en otra ciudad.
       </p>
 
       <p class="nota">
