@@ -1123,6 +1123,22 @@ input.picker-propio {
  * recorte y a su altura natural (`.ficha__fotos img`): lo que aquí se corta,
  * allí se ve. Es la tarjeta la que necesita una rejilla uniforme.
  */
+/*
+ * ⚠️ **El `<picture>` tiene que estirarse, y sin esta línea la foto salía
+ * enmarcada.** `marcadoFoto()` envuelve la imagen en un `<picture>` para poder
+ * ofrecer WebP, así que el `height: 100%` del `img` **no se resolvía contra la
+ * caja 4/3 sino contra el `<picture>`, que es de alto automático**: la imagen
+ * se quedaba en su proporción natural, centrada, con dos franjas de `--bg-alt`
+ * arriba y abajo. Medido el 30 de septiembre de 2026 en una tarjeta de 349 px:
+ * caja de 261 px de alto, imagen de 185 y **38 px de gris por lado**. Se veía
+ * como un recorte con marco —«bordes tan visibles que parecen recortados», lo
+ * dijo Dorel— y llevaba así desde que existen las tarjetas, en las tres
+ * páginas.
+ *
+ * ⚠️ **Y no vale con quitar el `aspect-ratio`.** La caja uniforme es lo que
+ * hace que la rejilla no baile: sin ella, cada coche mide lo que mida su foto.
+ */
+.coche__foto picture { display: block; width: 100%; height: 100%; }
 .coche__foto img { width: 100%; height: 100%; object-fit: cover; }
 
 .coche__sinfoto {
@@ -1155,13 +1171,145 @@ input.picker-propio {
 .coche__specs svg { color: var(--text-3); }
 
 /* El `auto` es lo que pega el bloque de dinero al fondo de la tarjeta. */
-.coche__precio { margin: auto 0 0; }
+.coche__dinero { margin-top: auto; }
+.coche__precio { margin: 0; }
 .coche__precio strong { font-size: var(--fs-price); font-weight: var(--fw-bold); letter-spacing: var(--ls-tight); }
 .coche__precio span { color: var(--text-2); font-size: var(--fs-small); }
 .coche__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
 
-.coche__detalle { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
-.coche__btn { width: 100%; }
+.coche__detalle { margin: var(--sp-1) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
+.coche__btn { width: 100%; margin-top: var(--sp-5); }
+
+/*
+ * El botón de la tarjeta con fechas elegidas: «Seleccionar».
+ *
+ * ⚠️ **Vive AQUÍ y no en la página de resultados, y eso arregla un fallo que
+ * llevaba desde que existe.** Estaba escrito en el `<style>` de
+ * `reservar.astro` como `.coche__llamada`, y esa hoja está **encapsulada por
+ * Astro**: compila a `.coche__llamada:where([data-astro-cid-…])` y la tarjeta
+ * la inyecta `tarjeta.ts` con `innerHTML`, así que **no lleva ese atributo y la
+ * regla no se aplicaba nunca**. Medido el 30 de septiembre de 2026: el botón
+ * salía con `margin: 0px`, pegado al borde inferior izquierdo de la tarjeta y
+ * a media anchura. Es la tercera vez que muerde lo mismo —una clase declarada
+ * que no alcanza— y la razón por la que todo lo de `.coche` es global.
+ */
+.coche__cta {
+  width: calc(100% - var(--sp-10));
+  margin: 0 var(--sp-5) var(--sp-5);
+}
+
+/* ---- Las chapas de filtro -------------------------------------------------
+ *
+ * La tira de «Todos · SUV · Económico» de la página de resultados.
+ *
+ * ⚠️ **Están AQUÍ y no en la hoja de la página porque las crea el
+ * JavaScript**, desde los coches que ha devuelto la búsqueda. Una hoja de
+ * página está encapsulada por Astro y sus reglas llevan un atributo que esos
+ * nodos no tienen: la chapa saldría sin forma, como ya pasó con el botón de la
+ * tarjeta y como pasó en el backoffice con `.badge`.
+ *
+ * ⚠️ **Y el estado activo usa `--ink`, no negro escrito a mano.** Ese par se
+ * invierte con el tema —negro sobre claro, blanco sobre oscuro—, así que la
+ * chapa elegida se distingue en los dos. Con `--velto-black` fijo, en el tema
+ * oscuro la chapa activa sería casi el fondo de la página.
+ */
+.chapas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+}
+
+.chapa {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border-strong);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition:
+    color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chapa:hover { color: var(--text); border-color: var(--brand); }
+}
+
+.chapa.es-activa {
+  color: var(--text-on-ink);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* La cuenta pesa menos que el rótulo, o la chapa se lee como una cifra. */
+.chapa__n { color: var(--text-3); font-size: var(--fs-caption); }
+.chapa.es-activa .chapa__n { color: inherit; opacity: 0.7; }
+
+/* ---- La misma tarjeta, en fila --------------------------------------------
+ *
+ * La vista de lista de la página de resultados. **Es la misma tarjeta**: el
+ * marcado no cambia, solo se recoloca. Dos marcados para el mismo coche serían
+ * dos sitios donde arreglar el día que cambie un dato.
+ *
+ * ⚠️ **Solo desde 720 px, y no es un olvido.** Por debajo, la rejilla ya es de
+ * una columna: las dos vistas saldrían **idénticas**, así que el interruptor
+ * sería un mando que no hace nada. Por eso la página tampoco lo enseña en
+ * móvil — lo esconde el propio interruptor, no esta hoja.
+ */
+.rejilla--filas { grid-template-columns: 1fr; gap: var(--sp-4); }
+
+@media (min-width: 720px) {
+  .rejilla--filas .coche { display: flex; flex-direction: row; align-items: stretch; }
+
+  /* `min-width: 0` o un nombre largo estira la fila entera y se lleva por
+     delante la columna del precio. */
+  .rejilla--filas .coche__link { flex: 1; flex-direction: row; min-width: 0; }
+
+  .rejilla--filas .coche__foto { flex: none; width: 240px; }
+
+  /*
+   * El cuerpo pasa a dos columnas: los datos a la izquierda y el dinero a la
+   * derecha, alineado con el botón. El `span 3` es lo que lo mantiene
+   * centrado contra las tres líneas de la izquierda.
+   */
+  .rejilla--filas .coche__cuerpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--sp-6);
+    padding: var(--sp-5) var(--sp-6);
+  }
+
+  .rejilla--filas .overline,
+  .rejilla--filas .coche__nombre,
+  .rejilla--filas .coche__specs { grid-column: 1; }
+
+  .rejilla--filas .coche__nombre { margin: var(--sp-1) 0 var(--sp-3); }
+  .rejilla--filas .coche__specs { margin: 0; }
+
+  .rejilla--filas .coche__dinero {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin: 0;
+    text-align: right;
+  }
+
+  .rejilla--filas .coche__cta {
+    flex: none;
+    align-self: center;
+    width: auto;
+    margin: var(--sp-5);
+  }
+}
 
 /* ---- Traído de la referencia (demo.awaikenthemes.com/rentgo) -------------
  *

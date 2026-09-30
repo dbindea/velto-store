@@ -91,28 +91,46 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
          }`
       : `<p class="coche__precio coche__precio--consultar">Consultar precio</p>`;
 
+  const FLECHA =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
+
   /**
-   * «Que me llamen», y **solo con fechas elegidas**.
+   * El botón, y **cambia según haya fechas elegidas o no**.
    *
-   * ⚠️ Sin fechas no hay nada que pedir: el precio del catálogo es un «desde» y
-   * la disponibilidad no se ha mirado. Ofrecerlo ahí sería mandar al operador
-   * una solicitud sin fechas ni precio, que es justo lo que esto viene a evitar.
+   * ⚠️ **Con fechas dice «Seleccionar», y antes decía «Calcular precio».** Lo
+   * cortó Dorel el 30 de septiembre de 2026 mirando la página de resultados:
+   * «el texto del botón es Seleccionar, no Calcular, porque ya está calculado».
+   * Tenía razón y el fallo era más gordo que el rótulo — en esa página la
+   * tarjeta enseñaba **dos** llamadas a la acción, un «Calcular precio» que
+   * llevaba a la ficha y un «Que me llamen» debajo, o sea dos botones para un
+   * coche ya calculado. Ahora es uno.
    *
-   * ⚠️ **Va FUERA del `<a>` que envuelve la tarjeta**, no dentro. Un botón
-   * dentro de un enlace no es HTML válido y, peor, el clic haría las dos cosas:
-   * abrir la ficha y abrir el formulario. Es el mismo fallo que el menú «Más»
-   * del backoffice metido dentro de su propio botón.
+   * ⚠️ **Sin fechas sigue diciendo «Calcular precio», y es lo correcto**: en la
+   * portada y en la flota el precio es un «desde» y la disponibilidad no se ha
+   * mirado, así que lo que toca es ir a la ficha a elegir fechas. Ofrecer ahí
+   * «Seleccionar» mandaría al operador una solicitud sin fechas ni precio.
+   *
+   * ⚠️ **Y con fechas el botón va FUERA del `<a>`**, no dentro. Un botón dentro
+   * de un enlace no es HTML válido y, peor, el clic haría las dos cosas: abrir
+   * la ficha y abrir el formulario. Es el mismo fallo que el menú «Más» del
+   * backoffice metido dentro de su propio botón. Por eso la tarjeta con precio
+   * **no lleva `.coche__btn`** dentro del enlace: el enlace sigue siendo toda
+   * la tarjeta, que es como se llega a la ficha.
    */
-  const llamada = disponible
-    ? `<button type="button" class="btn btn--brand coche__llamada"
+  const cta = disponible
+    ? `<button type="button" class="btn btn--ink coche__cta"
          data-solicitar
          data-id="${esc(c.id)}"
          data-nombre="${esc(nombre)}"
          data-dias="${disponible.totalDays}"
          data-precio="${euros(disponible.price.gross)}">
-         Que me llamen
+         Seleccionar ${FLECHA}
        </button>`
     : '';
+
+  const btnFicha = disponible
+    ? ''
+    : `<span class="btn btn--ink coche__btn">Calcular precio ${FLECHA}</span>`;
 
   return `
     <article class="card coche">
@@ -126,13 +144,19 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
             <li>${ICONO.maletas}<span>${c.luggageCapacity} maletas</span></li>
             <li>${ICONO.cambio}<span>${esc(cambio(c.transmission))}</span></li>
           </ul>
-          ${precio}
-          <span class="btn btn--ink coche__btn">
-            Calcular precio
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
-          </span>
+          ${/*
+             * ⚠️ **El precio y su letra pequeña van en un envoltorio.** Sueltos
+             * funcionaban en la rejilla —`margin-top: auto` sobre el precio
+             * arrastraba al resto—, pero en la **vista de lista** el cuerpo es
+             * una fila de dos columnas y hacen falta juntos en la de la
+             * derecha. Con dos elementos sueltos habría que colocarlos uno a
+             * uno con áreas de rejilla, que es la clase de regla que se rompe
+             * en cuanto alguien añade una línea.
+             */ ''}
+          <div class="coche__dinero">${precio}</div>
+          ${btnFicha}
         </div>
       </a>
-      ${llamada}
+      ${cta}
     </article>`;
 }

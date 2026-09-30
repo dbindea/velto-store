@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
+import Buscador from '../components/Buscador.astro';
 import { EMPRESA } from '../lib/empresa';
-import { ZONAS, ZONA_POR_DEFECTO } from '../lib/zonas';
 import { PREGUNTAS_PORTADA } from '../lib/preguntas';
 
 /**
@@ -103,104 +103,20 @@ const PROMESAS = [
     {/* El buscador, montado sobre el corte entre el negro y el fondo. */}
     <div class="contenedor">
       {/*
-        ⚠️ **`datetime-local` y no `date`, que es lo que manda la casa.** Una
-        recogida es **un instante**, no una fecha: partida en dos controles hay
-        que abrir dos selectores y cuadrarlos a mano, y en un móvil se abren dos
-        diálogos del sistema distintos. El backoffice ya lo unificó el 24 de
-        septiembre de 2026 y esta web se había quedado con el par suelto — y
-        peor, sin hora ninguna: se preguntaba el día y se daba por supuesta la
-        hora.
+        ⚠️ **El buscador es un COMPONENTE desde el 30 de septiembre de 2026**,
+        porque sale también en la página de resultados y tiene que ser el mismo.
+        Su marcado, sus estilos y el porqué de cada decisión —el `datetime-local`
+        en vez de dos campos sueltos, el lugar de recogida que nace escrito, el
+        aspa y el `<datalist>` de respaldo— viven en
+        `src/components/Buscador.astro`; la lógica de las fechas, en
+        `src/lib/buscador.ts`.
 
-        ⚠️ **El lugar de recogida nace ESCRITO y se puede cambiar.** Casi todos
-        los alquileres salen de la oficina, así que el campo trae «Arganda del
-        Rey» puesto; quien quiera otra cosa lo reescribe. Es el mismo criterio
-        que `APP_DEFAULTS.DEFAULT_RENTAL_LOCATION` en el backoffice: el defecto
-        se pone una vez, no se resuelve al leer —resolverlo al leer haría que
-        vaciar el campo lo repusiera solo—.
+        ⚠️ **`flotante` es lo que lo monta sobre el corte** entre el negro del
+        héroe y el fondo claro. En la página de resultados no lleva esa clase:
+        allí no hay ningún corte sobre el que montar y colgaría encima del
+        contenido de debajo.
       */}
-      <form class="buscador" action="/reservar" method="get">
-        {/*
-          ⚠️ **El aspa es un `<button>` de verdad, no el nativo del navegador.**
-          `type="search"` trae una en Chrome y no en Firefox, no se puede
-          estilar, y no existe en el móvil. Un botón propio se comporta igual en
-          todas partes.
-
-          ⚠️ **Y va DENTRO de un envoltorio posicionado**, no como fondo del
-          campo. En el backoffice se dibuja como `background-image` porque allí
-          son decenas de campos en rejillas donde un elemento nuevo rompería la
-          maquetación de unos cuantos; aquí es **un** campo y el envoltorio no
-          descoloca nada. La ventaja de tenerlo como elemento es que entra en el
-          orden de tabulación y un lector de pantalla lo anuncia.
-        */}
-        {/*
-          ⚠️ **El `<datalist>` es el RESPALDO, no la lista que se ve.** Lo
-          sustituye `zonas-combo.ts` al arrancar, y sigue aquí escrito por lo
-          mismo que el calendario se monta desde JavaScript: si ese módulo no
-          llegara a ejecutarse, el campo se queda con la lista del navegador
-          —imperfecta pero viva— en vez de sin ninguna.
-
-          ⚠️ **Y la lista del navegador es imperfecta de verdad, no por
-          gusto.** El precio de cada zona solo se puede enseñar en el `label`, y
-          **solo Chrome enseña el valor y la etiqueta a la vez**: Firefox
-          sustituye el nombre del pueblo por la etiqueta y Safari se come el
-          precio. Por eso aquí el `label` lleva las dos cosas — así el respaldo
-          dice algo cierto en los tres.
-        */}
-        <div class="buscador__campo buscador__campo--lugar">
-          <label for="lugar">Recogida en</label>
-          <div class="campo-con-aspa">
-            <input
-              type="text"
-              id="lugar"
-              name="place"
-              list="zonas"
-              value={ZONA_POR_DEFECTO}
-              placeholder="Tu localidad"
-              autocomplete="off"
-              maxlength="80"
-            />
-            {/*
-              ⚠️ **La fila `libre` se queda FUERA del respaldo.** Aquí no hay
-              JavaScript que pueda vaciar el campo —es la lista del navegador—,
-              así que elegir «Prefiero especificar…» escribiría ese rótulo como
-              si fuera el nombre de un pueblo. Sin ella, el respaldo sigue
-              diciendo lo único que puede decir: las tres zonas con precio.
-            */}
-            <datalist id="zonas">
-              {ZONAS.filter((z) => !z.libre).map((z) => (
-                <option value={z.nombre} label={`${z.nombre} · ${z.coste}`} />
-              ))}
-            </datalist>
-            <button type="button" id="limpiar-lugar" class="aspa" aria-label="Borrar el lugar de recogida">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/*
-          ⚠️ **Aquí hubo una línea con el suplemento y la quitó Dorel** el 29 de
-          septiembre de 2026: «no tiene sentido, complica demasiado». Tenía
-          razón por partida doble — una línea que cambia bajo el campo obliga a
-          reservarle sitio para que el buscador no dé un salto al vaciarlo, y
-          repetía a pie de campo lo que la propia opción puede decir al
-          elegirla. El precio vive ahora dentro de cada fila de la lista.
-        */}
-        <div class="buscador__campo buscador__campo--desde">
-          <label for="desde">Recogida</label>
-          <input type="datetime-local" id="desde" name="from" step="900" required />
-        </div>
-        <div class="buscador__campo buscador__campo--hasta">
-          <label for="hasta">Devolución</label>
-          <input type="datetime-local" id="hasta" name="to" step="900" required />
-        </div>
-        <button class="btn btn--brand buscador__btn" type="submit">
-          Ver precios
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-          </svg>
-        </button>
-      </form>
+      <Buscador flotante accion="/reservar" />
     </div>
   </section>
 
@@ -330,84 +246,25 @@ const PROMESAS = [
 <script>
   import { flota } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
-  import { montarComboZonas } from '../lib/zonas-combo';
-  import { montarCalendarios } from '../lib/fecha-panel';
-
-  /* ---- El buscador ------------------------------------------------------
-   *
-   * ⚠️ **Todo en hora LOCAL, y nada de `toISOString()`.** Un
-   * `datetime-local` habla `yyyy-MM-ddTHH:mm` en la hora del que mira; pasar
-   * por UTC convierte una recogida a las 00:30 de Madrid en las 22:30 del día
-   * anterior. Es la misma nota que lleva `reservation-date.util.ts` en el
-   * backoffice, y aquí no se puede compartir módulo: la web es Astro y no ve el
-   * código de Angular.
-   *
-   * ⚠️ **Y las comparaciones son de CADENAS.** `yyyy-MM-ddTHH:mm` ordena igual
-   * alfabéticamente que cronológicamente —para eso es ese formato—, así que
-   * comparar textos evita construir `Date` para decidir si una fecha va antes
-   * que otra. El backoffice hace exactamente lo mismo en su guard.
-   */
-  const RECOGIDA_POR_DEFECTO = 10; // las 10:00, cuando abre la oficina
-  const DIAS_POR_DEFECTO = 3;
-
-  const comoCampo = (d: Date) => {
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
-  };
-
-  const sumarDias = (valor: string, dias: number) => {
-    const d = new Date(valor);
-    d.setDate(d.getDate() + dias);
-    return comoCampo(d);
-  };
+  import { montarBuscador } from '../lib/buscador';
 
   /*
-   * El aspa del lugar de recogida.
+   * El buscador: los límites de las fechas, la propuesta inicial, el lugar de
+   * recogida y los calendarios propios.
    *
-   * ⚠️ **Al vaciar, el foco vuelve al campo.** Quien borra es porque va a
-   * escribir otra cosa: sin esto hay que volver a tocar el campo, y en un móvil
-   * eso es cerrar el teclado y abrirlo otra vez.
+   * ⚠️ **Todo eso vive en `lib/buscador.ts` desde el 30 de septiembre de
+   * 2026**, porque el mismo formulario sale ahora en la página de resultados.
+   * Aquí estaban las ochenta líneas originales y allí había otras, más
+   * cortas y distintas: el `min` en un formato que el campo ignora en
+   * silencio, sin propuesta de fechas y sin la regla de que la devolución
+   * siga a la recogida conservando los días. O sea que el mismo gesto se
+   * comportaba de dos maneras según en qué página estuvieras.
    *
-   * ⚠️ **Y se escucha `input`, no `change`.** `change` solo salta al salir del
-   * campo, así que el aspa no aparecería hasta entonces — justo cuando ya no
-   * hace falta.
+   * ⚠️ **Sin `alBuscar`, el formulario NAVEGA**, que es lo que tiene que
+   * hacer aquí: envía por GET a `/reservar` con el lugar y las dos fechas.
+   * La página de resultados sí pasa `alBuscar` y consulta sin recargar.
    */
-  const lugar = document.getElementById('lugar') as HTMLInputElement | null;
-  const aspa = document.getElementById('limpiar-lugar');
-  const envoltorio = lugar?.closest('.campo-con-aspa');
-
-  if (lugar && aspa && envoltorio) {
-    /*
-     * La lista de zonas, con su precio dentro de cada fila.
-     *
-     * ⚠️ **Sustituye al `<datalist>`, y no por estética.** La lista de un
-     * `<datalist>` la pinta el navegador fuera de la página y ningún CSS la
-     * alcanza; pero lo que obligó a cambiarla es que el precio solo cabía en el
-     * atributo `label`, y **solo Chrome enseña el valor y la etiqueta a la
-     * vez** — en Firefox la lista salía sin un nombre de pueblo y en Safari sin
-     * un precio. El texto libre se conserva, que es el diseño entero del campo.
-     */
-    montarComboZonas(lugar);
-
-    const refrescarAspa = () => envoltorio.classList.toggle('tiene-texto', lugar.value.length > 0);
-    const alEscribir = () => refrescarAspa();
-
-    lugar.addEventListener('input', alEscribir);
-    /*
-     * ⚠️ **Y `change` además de `input`.** Elegir del `<datalist>` con el ratón
-     * dispara los dos en casi todos los navegadores, pero no en todos: sin
-     * `change`, en alguno la pista se quedaba con lo que hubiera antes de
-     * abrir la lista.
-     */
-    lugar.addEventListener('change', alEscribir);
-
-    aspa.addEventListener('click', () => {
-      lugar.value = '';
-      alEscribir();
-      lugar.focus();
-    });
-    alEscribir();
-  }
+  montarBuscador();
 
   /* ---- El cierre animado de las preguntas -------------------------------
    *
@@ -443,95 +300,6 @@ const PROMESAS = [
       setTimeout(fin, 400);
     });
   });
-
-  const desde = document.getElementById('desde') as HTMLInputElement | null;
-  const hasta = document.getElementById('hasta') as HTMLInputElement | null;
-
-  if (desde && hasta) {
-    /*
-     * ⚠️ **El `min` de un `datetime-local` NECESITA la hora.** Con
-     * `yyyy-MM-dd` a secas **ignora el atributo entero y sin avisar**, así que
-     * se podrían elegir fechas pasadas y nada fallaría. Le pasó al asistente
-     * del backoffice al unificar los campos.
-     */
-    /*
-     * ⚠️ **Y el `min` tiene que caer en la REJILLA del `step`.** Esto costó un
-     * botón que no hacía nada: con `step="900"` el navegador cuenta los cuartos
-     * de hora **desde `min`**, no desde la hora en punto. Con `min` a las 16:19
-     * —la hora a la que se abrió la página— los valores válidos eran 16:19,
-     * 16:34, 16:49… y las 10:00 propuestas **no estaban entre ellos**: el campo
-     * quedaba inválido, el formulario no se enviaba y pulsar «Ver precios» no
-     * pasaba nada. Sin error en consola y sin nada que mirar.
-     *
-     * Redondeando `min` hacia arriba al cuarto en punto, cualquier hora con los
-     * minutos en 00, 15, 30 o 45 vale — que son las que alguien elige.
-     */
-    const alCuarto = (d: Date) => {
-      const c = new Date(d);
-      c.setSeconds(0, 0);
-      c.setMinutes(Math.ceil(c.getMinutes() / 15) * 15);
-      return c;
-    };
-
-    const ahoraCampo = comoCampo(alCuarto(new Date()));
-    desde.min = ahoraCampo;
-    hasta.min = ahoraCampo;
-
-    // Mañana a las diez, y tres días. Quien mira ya tiene algo que corregir en
-    // vez de dos campos vacíos que hay que rellenar antes de ver un precio.
-    const propuesta = new Date();
-    propuesta.setDate(propuesta.getDate() + 1);
-    propuesta.setHours(RECOGIDA_POR_DEFECTO, 0, 0, 0);
-    desde.value = comoCampo(propuesta);
-    hasta.value = sumarDias(desde.value, DIAS_POR_DEFECTO);
-
-    /*
-     * ⚠️ **La devolución SIGUE a la recogida, y por eso la mueve.** Sin esto se
-     * puede pedir un alquiler que termina antes de empezar: el navegador no
-     * relaciona dos campos por su cuenta. Y `min` por sí solo no basta —marca
-     * el campo como inválido y deja el valor puesto—, así que además se
-     * recoloca conservando los días que el visitante hubiera elegido: mover la
-     * recogida al día siguiente no puede recortarle el alquiler.
-     */
-    const ajustarDevolucion = () => {
-      if (!desde.value) return;
-      hasta.min = desde.value;
-      if (!hasta.value || hasta.value <= desde.value) {
-        hasta.value = sumarDias(desde.value, DIAS_POR_DEFECTO);
-      }
-    };
-
-    let anterior = desde.value;
-    desde.addEventListener('change', () => {
-      if (desde.value && hasta.value && anterior && hasta.value > anterior) {
-        // Los días que había elegido, conservados.
-        const dias = Math.round(
-          (new Date(hasta.value).getTime() - new Date(anterior).getTime()) / 86_400_000
-        );
-        if (dias > 0) hasta.value = sumarDias(desde.value, dias);
-      }
-      anterior = desde.value;
-      ajustarDevolucion();
-    });
-
-    hasta.addEventListener('change', ajustarDevolucion);
-    ajustarDevolucion();
-
-    /*
-     * El calendario de Velto delante del del navegador.
-     *
-     * ⚠️ **Va DESPUÉS de poner `min` y `value`**, no antes: el panel los lee
-     * del campo al abrirse, así que montado primero se quedaría con unos
-     * límites que todavía no existían y ofrecería días que el campo rechaza.
-     *
-     * ⚠️ **Y con el dedo NO se monta**, que lo decide el propio módulo: la hoja
-     * del sistema está mejor hecha para el pulgar que cualquier cosa que
-     * dibujemos, y aquí no hay ningún motivo para sustituirla — el del
-     * backoffice, que su diálogo de Android no sabe vaciar, no aplica a dos
-     * campos `required` que siempre traen valor.
-     */
-    montarCalendarios();
-  }
 
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
@@ -612,29 +380,15 @@ const PROMESAS = [
     .hero__entrada { font-size: var(--fs-small); margin-bottom: var(--sp-5); }
 
     /*
-     * ⚠️ **Y el buscador deja de colgar medio cuerpo.** El `translateY(50%)`
-     * que lo monta sobre el corte vale en escritorio, donde el buscador es una
-     * fila baja; en móvil son cuatro campos apilados —367 px— así que ese 50 %
-     * son **184 px de hueco negro vacío** entre la entradilla y el buscador.
-     * Medido: el buscador empezaba a 1.050 px del principio, y con esto y el
-     * titular más pequeño se queda en 664 de los 844 de pantalla, o sea a la
-     * vista al cargar.
-     *
-     * 24 px fijos conservan el efecto de que la tarjeta monta sobre el corte
-     * sin que dependa de lo alto que sea el buscador.
-     *
-     * ⚠️ **Y lleva `.hero` delante a propósito.** Escrito como `.buscador` a
-     * secas empata en especificidad con la regla base y **gana la última del
-     * fichero**, que es aquella: la media query estaba escrita más arriba y no
-     * hacía nada. Medido con `getComputedStyle()`, que daba los 183,667 px del
-     * 50 % con mi regla perfectamente escrita unas líneas antes. Con el
-     * antepasado delante, (0,2,0) contra (0,1,0), el orden deja de importar.
+     * ⚠️ **Lo que en móvil impide que el buscador cuelgue medio cuerpo se fue
+     * con él al componente.** Aquí había dos reglas `.hero .buscador` —el
+     * `translateY(8px)` en vez del 50 %, y el hueco y el relleno más
+     * apretados— y desde el componente son `.buscador--flotante` y la media
+     * query de su propia hoja. El motivo sigue valiendo y está escrito allí:
+     * apilado son cuatro campos, así que el 50 % dejaba **184 px de hueco
+     * negro vacío** y el buscador empezaba a 1.050 px del principio de la
+     * página, o sea a página y media de desplazamiento.
      */
-    .hero .buscador { transform: translateY(8px); }
-
-    /* El hueco entre campos y el relleno de la tarjeta: 4 px por hueco y 8 de
-       relleno, que en una tarjeta de cuatro filas son los últimos 20 px. */
-    .hero .buscador { gap: var(--sp-3); padding: var(--sp-5); }
 
     /* Y la sección de abajo recupera el hueco que ya no hace falta reservar. */
     .promesas-seccion { padding-top: var(--section-y); }
@@ -648,188 +402,13 @@ const PROMESAS = [
   }
 
   /*
-   * El buscador monta sobre el corte: mitad sobre el negro, mitad fuera. Es lo
-   * que hace que la portada se lea como una sola pieza.
+   * ⚠️ **Los estilos del buscador se fueron a `components/Buscador.astro`** el
+   * 30 de septiembre de 2026, con el marcado. Tenían que irse con él: una regla
+   * `.buscador` escrita aquí compila a `.buscador[data-astro-cid-de-esta-pagina]`
+   * y **no alcanza** al formulario de un componente, que lleva el suyo. Lo que
+   * montaba la tarjeta sobre el corte del héroe es ahora la clase
+   * `.buscador--flotante`, que pone la prop `flotante`.
    */
-  .buscador {
-    display: grid;
-    gap: var(--sp-4);
-    grid-template-columns: 1fr;
-    align-items: end;
-    padding: var(--sp-6);
-    background: var(--gray-900);
-    border: var(--bw) solid var(--gray-800);
-    border-radius: var(--r-xl);
-    box-shadow: var(--sh-4);
-    transform: translateY(50%);
-    /*
-     * ⚠️ **Sin estas dos líneas la lista de zonas sale TAPADA, y a medias.**
-     * `transform` crea contexto de apilado con `z-index: auto`, y la sección
-     * de las promesas crea otro con `isolation: isolate`; al ir después en el
-     * DOM, gana ella. Medido: el panel abría y `elementFromPoint` sobre su
-     * esquina devolvía la sección, así que las últimas filas quedaban debajo y
-     * no se podían pulsar — y un desplegable recortado no se lee como un
-     * fallo, se lee como que la lista tiene menos zonas.
-     *
-     * Y un `z-index` alto DENTRO del panel no sirve: solo ordena dentro del
-     * contexto del buscador, no contra el hermano de su antepasado. Lo que
-     * hace falta es que el contexto del buscador gane, que es esto.
-     */
-    position: relative;
-    z-index: 2;
-  }
-
-  /*
-   * ⚠️ **Se colocan los CUATRO a mano, no tres.** Los ítems con **fila
-   * explícita** se colocan ANTES que los automáticos, así que fijando solo los
-   * dos calendarios y el botón, esos tres se llevarían las columnas 1, 2 y 3 y
-   * el campo del lugar acabaría en la cuarta.
-   *
-   * En móvil no hace falta nada: una sola columna y el orden del código manda.
-   */
-  @media (min-width: 720px) {
-    .buscador { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) auto; }
-    .buscador__campo--lugar { grid-area: 1 / 1; }
-    .buscador__campo--desde,
-    .buscador__campo--hasta,
-    .buscador__btn { grid-row: 1; }
-  }
-
-  .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
-
-  .buscador__campo label {
-    font-size: var(--fs-caption);
-    font-weight: var(--fw-medium);
-    color: var(--gray-400);
-  }
-
-  .buscador input,
-  .buscador select {
-    min-height: var(--control-h);
-    padding: 0 var(--sp-4);
-    font-family: var(--font-num);
-    color: var(--velto-white);
-    /*
-     * ⚠️ **`background-color` y no `background`.** La forma corta **borra
-     * `background-image` sin avisar**, y esta regla gana por especificidad a la
-     * global: con ella, el icono del calendario que dibuja `.picker-propio` no
-     * llegaba — comprobado, `backgroundImage` se quedaba en `none`. El
-     * backoffice resuelve lo mismo a base de `!important` porque allí son once
-     * hojas de componente; aquí son tres sitios y se arregla en origen.
-     */
-    background-color: var(--velto-black);
-    /*
-     * ⚠️ **El contorno de un campo es `--border-input`, nunca el de las
-     * separaciones.** Con `--gray-800` el borde se quedaba en **1,57:1** sobre
-     * el relleno, la mitad del 3:1 que pide WCAG 1.4.11: el campo no se
-     * delimitaba. Es la misma corrección que el backoffice hizo el 23 de
-     * septiembre.
-     */
-    border: var(--bw) solid var(--border-input);
-    border-radius: var(--r-md);
-    /*
-     * ⚠️ El calendario de un `datetime-local` lo pinta el sistema y ningún CSS
-     * lo alcanza: lo único que lo hace legible sobre fondo oscuro es
-     * `color-scheme`. Y aquí va fijo a `dark` **en los dos temas**, porque esta
-     * tarjeta es oscura siempre — lo lee además `fecha-panel.ts` para decidir
-     * de qué color sale el panel propio.
-     */
-    color-scheme: dark;
-  }
-
-  /*
-   * ⚠️ **El campo del lugar NO va en `--font-num`.** Esa es la tipografía de
-   * cifras tabulares: bien para una fecha, mal para «Arganda del Rey», que sale
-   * con los espacios de los dígitos y parece una matrícula.
-   */
-  .buscador__campo--lugar input {
-    font-family: inherit;
-    /* Sitio para el aspa, que va encima del extremo derecho. */
-    padding-right: var(--sp-10);
-  }
-
-  .campo-con-aspa {
-    position: relative;
-    display: grid;
-  }
-
-  /*
-   * El aspa que vacía el campo.
-   *
-   * ⚠️ **44 px de zona pulsable y 16 de dibujo, y no es una incoherencia.** Es
-   * la misma medida que el backoffice acabó necesitando: lo que crece para el
-   * dedo es dónde se acierta, no el dibujo — una cruz de 44 px pintada gritaría
-   * dentro de un campo de formulario.
-   *
-   * ⚠️ **Solo aparece si hay algo que borrar.** Un aspa permanente sobre un
-   * campo vacío es un botón que no hace nada.
-   *
-   * ⚠️ **Se ancla al CAMPO, no al envoltorio, y ahí estaba el fallo.** Con
-   * `top: 50%` el centro se calcula sobre `.campo-con-aspa`, que en escritorio
-   * mide lo mismo que el campo —la lista flota— pero **en móvil no**: por
-   * debajo de 720 px la lista es `position: static` y empuja a propósito
-   * (`global.css`, «en una sola columna la lista EMPUJA»), así que el
-   * envoltorio pasa de 48 a 209 px y el aspa se iba al centro de esos 209.
-   * Medido a 390 px con la lista abierta: caía **fuera del campo y encima de
-   * una fila de la lista** —`elementFromPoint` devolvía `.zonas__coste`—, y
-   * como está posicionada gana el toque: quien apuntaba a una zona vaciaba el
-   * campo. Es justo el fallo táctil contra el que avisa el comentario de la
-   * lista: hace algo, y algo distinto de lo que se quería.
-   *
-   * Medio `--control-h` es el centro del campo en las dos disposiciones,
-   * porque el campo mide exactamente eso y es el primer hijo del envoltorio.
-   * Encontrado el 30 de septiembre de 2026 al añadir la cuarta zona, que movía
-   * el aspa media fila más abajo.
-   */
-  .aspa {
-    position: absolute;
-    top: calc(var(--control-h) / 2);
-    right: 0;
-    transform: translateY(-50%);
-    display: none;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    color: var(--gray-400);
-    background: transparent;
-    border: none;
-    border-radius: var(--r-pill);
-    cursor: pointer;
-    transition: color var(--t-fast) var(--ease);
-  }
-
-  .campo-con-aspa.tiene-texto .aspa { display: grid; }
-  .aspa:hover { color: var(--velto-white); }
-
-  /*
-   * El botón, con su animación al pasar el ratón.
-   *
-   * ⚠️ **La lupa se mueve, el botón no.** Agrandar el botón entero desplazaría
-   * los tres campos de al lado en cada pasada —está en una rejilla— y el
-   * buscador daría un respingo. Lo que se anima es la lupa, que es lo que
-   * significa «buscar».
-   *
-   * ⚠️ **Y se anima `transform`, no `margin`.** Lo resuelve el compositor sin
-   * recalcular la disposición; con un margen, cada fotograma recoloca la fila.
-   */
-  .buscador__btn {
-    min-height: var(--control-h);
-    transition: background-color var(--t-fast) var(--ease);
-  }
-
-  .buscador__btn svg {
-    transition: transform var(--t-base) var(--ease);
-  }
-
-  .buscador__btn:hover svg {
-    transform: translateX(3px) scale(1.12);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .buscador__btn svg { transition: none; }
-    .buscador__btn:hover svg { transform: none; }
-  }
 
   /* El hueco que deja el buscador al montar sobre el corte. */
   .promesas-seccion { padding-top: calc(var(--section-y) + 60px); }
