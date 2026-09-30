@@ -223,6 +223,79 @@ export function addVat(net: number, vatRate: number): { net: number; gross: numb
 }
 
 /**
+ * Lo que termina un precio de escaparate.
+ *
+ * Decisión de Dorel del 30 de septiembre de 2026: «tengo que mostrar precio de
+ * tipo desde 24,95 € al día o desde 49,95 €, redondeando a la baja con lo que
+ * viene de backend».
+ */
+const TERMINACION = 0.95;
+
+/**
+ * Baja un importe hasta la terminación de escaparate más cercana.
+ *
+ * ⚠️ **Siempre HACIA ABAJO, y esa es la parte que no se puede tocar.** El
+ * precio que la web anuncia es el que el cliente va a pagar: hacia arriba sería
+ * cobrar más de lo anunciado, que es justo lo que la ley de consumo prohíbe.
+ * Hacia abajo, lo peor que pasa es que la empresa cobre un poco menos de lo que
+ * marca su tarifa — como mucho **0,99 € por cifra**, y es una decisión
+ * comercial suya.
+ *
+ * ⚠️ **Y el importe pequeño se deja en paz.** Con menos de 1 €, bajar a la
+ * terminación daría un número negativo o ridículo. No pasa hoy —ninguna tarifa
+ * de alquiler baja de ahí— pero una función de dinero no puede devolver un
+ * negativo porque nadie previera el caso.
+ */
+export function aTerminacion(bruto: number): number {
+  if (!Number.isFinite(bruto) || bruto < 1) return roundMoney(bruto);
+
+  /*
+   * ⚠️ **La cuenta va en CÉNTIMOS ENTEROS, y no es purismo.** Escrita con
+   * decimales, `24.95 - 24` da `0.9499999999999993` en coma flotante, que es
+   * menor que `0.95`: un precio que ya terminaba en `,95` bajaba **un euro
+   * entero** hasta `23,95`. Lo cazó su propio test, y en producción habría sido
+   * dinero regalado en silencio, solo en los precios ya redondos.
+   */
+  const centimos = Math.round(roundMoney(bruto) * 100);
+  const terminacion = Math.round(TERMINACION * 100);
+  const enteros = Math.floor(centimos / 100) * 100;
+  // Con los céntimos ya por encima de la terminación, se baja a la de ESTE
+  // entero; si no, a la del anterior. 25,00 → 24,95 y 24,99 → 24,95.
+  const objetivo = centimos - enteros >= terminacion ? enteros + terminacion : enteros - 100 + terminacion;
+  return objetivo / 100;
+}
+
+/**
+ * El precio tal y como se publica: con IVA, y terminado en `,95`.
+ *
+ * ⚠️ **El neto se RECALCULA desde el bruto redondeado, no se conserva.** Si se
+ * dejara el neto de la tarifa, `neto + IVA` dejaría de dar el bruto que se
+ * anuncia y cualquier desglose que alguien imprima estaría descuadrado por
+ * céntimos. Es la misma regla que el backoffice aplica al revés en
+ * `vatBreakdownOf()`: los dos lados del impuesto tienen que cuadrar contra la
+ * cifra que se enseña, no contra la que se calculó primero.
+ *
+ * ⚠️ **Y esto vive en el BACKEND a propósito**, no en la web que lo pinta. La
+ * misma cifra viaja a tres sitios: la tarjeta del listado, la disponibilidad de
+ * un rango y el `quoteSnapshot` que se congela en una solicitud y que Dorel lee
+ * **en el correo para cobrarlo a mano**. Redondeando solo al pintar, la web
+ * diría 24,95 y el correo 26,43 — y se cobraría más de lo prometido.
+ */
+export function publicPrice(
+  net: number,
+  vatRate: number
+): { net: number; gross: number; vatRate: number } {
+  const conIva = addVat(net, vatRate);
+  const bruto = aTerminacion(conIva.gross);
+  const rate = conIva.vatRate;
+  return {
+    net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),
+    gross: bruto,
+    vatRate: rate,
+  };
+}
+
+/**
  * Ensancha la ventana pedida a **días completos**.
  *
  * ⚠️ **Es lo que impide reconstruir el calendario de ocupación al minuto.** Sin

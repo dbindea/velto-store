@@ -55,6 +55,23 @@ export const ZONAS: ZonaRecogida[] = [
   { nombre: 'Aeropuerto', coste: '+30 €' },
 ];
 
+/**
+ * ⚠️ **Los 30 € del aeropuerto son POR TRAYECTO y CON IVA INCLUIDO.** Lo fijó
+ * Dorel el 30 de septiembre de 2026, y hay que saberlo al crear la reserva
+ * porque el backoffice trabaja al revés: `deliveryFees` se teclea **NETO** y el
+ * IVA se suma encima.
+ *
+ * O sea que para que el contrato imprima **30,00 €** hay que teclear
+ * **24,79** — no 30, que imprimiría 36,30 y cobraría seis euros de más de lo
+ * que la web prometió. Es la misma trampa de los dos sentidos del IVA que
+ * CLAUDE.md documenta: en un alquiler se suma, en un gasto se extrae, y
+ * confundirlas no da un error sino una cifra creíble y equivocada.
+ *
+ * Y **son dos trayectos**: llevarlo y traerlo se cobran por separado, así que
+ * ida y vuelta al aeropuerto son 60 € para el cliente (24,79 × 2 tecleados).
+ */
+export const AEROPUERTO_NETO_A_TECLEAR = 24.79;
+
 /** La que trae escrita el buscador. */
 export const ZONA_POR_DEFECTO = ZONAS[0].nombre;
 

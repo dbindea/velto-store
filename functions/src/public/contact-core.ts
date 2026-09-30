@@ -209,3 +209,25 @@ export function looksAutomated(input: ContactInput): boolean {
 export function generateContactReference(): string {
   return generateReference('C');
 }
+
+/**
+ * Cuánto se guarda un mensaje del formulario de contacto.
+ *
+ * Decisión de Dorel del 30 de septiembre de 2026: «el borrado de los mensajes
+ * es a las 24 h con posibilidad de ampliar; ya me quedo con el email si hace
+ * falta más tiempo».
+ *
+ * ⚠️ **Este número está PUBLICADO en `/privacidad`**, y eso lo cambia todo: un
+ * plazo escrito en una política de privacidad es una afirmación que cualquiera
+ * puede contrastar contra lo que de verdad haya en Firestore. Si la política
+ * dice 24 horas y ahí hay mensajes de hace tres días, la propia política es la
+ * prueba del incumplimiento. Si se toca este valor, se toca esa página el mismo
+ * día.
+ *
+ * ⚠️ **Y vive AQUÍ y no en `sendDailyDigest.ts`, que es quien barre.** Lo usan
+ * los dos —el endpoint público al crear y el barrido al borrar—, y este módulo
+ * es puro: importarlo desde el resumen diario no arrastra nada. Al revés sí:
+ * `api.ts` tirando de `sendDailyDigest` metería el resumen entero en la cadena
+ * de arranque del API público, que es justo lo que `arranque.spec.ts` impide.
+ */
+export const CONSULTA_HORAS_POR_DEFECTO = 24;

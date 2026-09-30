@@ -178,11 +178,50 @@ export function montarComboZonas(campo: HTMLInputElement): void {
    */
   lista.addEventListener('mousedown', (e) => e.preventDefault());
 
-  campo.addEventListener('focus', abrir);
-  campo.addEventListener('click', abrir);
+  /**
+   * Al vaciar el campo con el aspa, la lista se cierra.
+   *
+   * ⚠️ **Lo pidió Dorel el 30 de septiembre de 2026 y tiene su razón de uso:**
+   * «al borrar el texto de recogida, bórrame también las sugerencias para que
+   * me indique visualmente que puedo escribir». Con la lista abierta encima, el
+   * campo vacío no se lee como una invitación a teclear — se lee como que hay
+   * que elegir una de las tres.
+   *
+   * ⚠️ **Y el foco se queda en el campo**, que es lo que hace que esto funcione
+   * en un móvil: sin foco se cierra el teclado y hay que volver a tocar. El
+   * problema es que `focus` abre la lista, así que hace falta una bandera para
+   * saltarse **esa** apertura y solo esa — reentrando después, vuelve a salir,
+   * que es lo que él también pidió.
+   */
+  let saltarLaSiguienteApertura = false;
+
+  /*
+   * El aspa la monta `index.astro`, que es quien la tiene en su plantilla; aquí
+   * solo se escucha. Se busca dentro del envoltorio y no por `id` para que el
+   * día que este campo se repita en otra página siga funcionando.
+   */
+  envoltorio.querySelector('.aspa')?.addEventListener('click', () => {
+    saltarLaSiguienteApertura = true;
+    cerrar();
+  });
+
+  campo.addEventListener('focus', () => {
+    if (saltarLaSiguienteApertura) {
+      saltarLaSiguienteApertura = false;
+      return;
+    }
+    abrir();
+  });
+  campo.addEventListener('click', () => {
+    // Un clic DESPUÉS de vaciar sí abre: la bandera solo vale para el foco que
+    // el propio aspa devuelve.
+    saltarLaSiguienteApertura = false;
+    abrir();
+  });
   campo.addEventListener('input', () => {
     // Escribir desarma la navegación: a partir de aquí, Enter envía.
     navegando = false;
+    saltarLaSiguienteApertura = false;
     abrir();
     pintar();
   });

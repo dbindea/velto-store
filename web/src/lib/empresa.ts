@@ -18,6 +18,21 @@ export const EMPRESA = {
   nif: 'B88866900',
   /** El domicilio social, del Registro Mercantil. Solo junto al NIF. */
   domicilioSocial: 'C/ Vereda del Melero, 3 · 28500 Arganda del Rey (Madrid)',
+  /**
+   * Los datos registrales, **contenido obligatorio del aviso legal** (art.
+   * 10.1.b de la LSSI).
+   *
+   * ⚠️ **Copiados de `functions/src/company-config.ts`**, como el resto de este
+   * fichero, y allí llevan a su vez una advertencia que hay que respetar: esta
+   * línea sale del **pie de la factura** y sustituyó a la que el código traía
+   * antes —«Tomo 45067, Folio 44, Hoja M-793170»—, que **no coincide**. Ganó la
+   * factura porque es el documento que de verdad llega al cliente, pero sigue
+   * mereciendo una segunda mirada con la gestoría. Si se corrige allí, se
+   * corrige aquí.
+   */
+  registro:
+    'Sociedad Limitada inscrita en el Registro Mercantil de Madrid · Hoja M-893718 · ' +
+    'IRUS: 1000477431057 · Folio electrónico inscripción: 1',
   /** La oficina: donde el cliente encuentra a alguien. Es la que se enseña. */
   oficina: 'C/ María Zambrano, 4 · 28500 Arganda del Rey (Madrid)',
   /** Partida en dos, para poder titular con la calle y dejar la ciudad debajo. */

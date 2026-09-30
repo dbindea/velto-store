@@ -4,7 +4,9 @@ import {
   blocksAvailability,
   calculateCalendarDays,
   findPricingRuleByDays,
+  aTerminacion,
   cheapestRule,
+  publicPrice,
   lowestPricePerDay,
   rangesOverlap,
   tariffNetPrice,
@@ -237,5 +239,79 @@ describe('widenToFullDays — lo que impide reconstruir el calendario al minuto'
     const { from, to } = widenToFullDays(new Date('2026-10-01T00:00'), new Date('2026-10-03T00:00'));
     expect(from.getDate()).toBe(1);
     expect(to.getDate()).toBe(3);
+  });
+});
+
+describe('el precio de escaparate: terminado en ,95 y siempre HACIA ABAJO', () => {
+  it('baja al ,95 del entero anterior cuando los céntimos no llegan', () => {
+    expect(aTerminacion(26.43)).toBe(25.95);
+    expect(aTerminacion(50.2)).toBe(49.95);
+    expect(aTerminacion(25)).toBe(24.95);
+    expect(aTerminacion(30.01)).toBe(29.95);
+  });
+
+  it('con los céntimos ya por encima, se queda en el ,95 de ese entero', () => {
+    expect(aTerminacion(24.99)).toBe(24.95);
+    expect(aTerminacion(24.95)).toBe(24.95);
+    expect(aTerminacion(24.96)).toBe(24.95);
+  });
+
+  /**
+   * ⚠️ Lo que NUNCA puede pasar: que el precio suba. Anunciar menos de lo que
+   * se cobra es lo que prohíbe la ley de consumo, y es el único sentido en el
+   * que este redondeo sería peligroso.
+   */
+  it('NUNCA sube, para ninguna entrada', () => {
+    for (let c = 100; c <= 30000; c += 7) {
+      const bruto = c / 100;
+      expect(aTerminacion(bruto)).toBeLessThanOrEqual(bruto);
+    }
+  });
+
+  it('y nunca regala más de 0,99 €', () => {
+    for (let c = 100; c <= 30000; c += 7) {
+      const bruto = c / 100;
+      expect(bruto - aTerminacion(bruto)).toBeLessThan(1);
+    }
+  });
+
+  it('un importe por debajo de 1 € se deja en paz, no sale negativo', () => {
+    expect(aTerminacion(0.5)).toBe(0.5);
+    expect(aTerminacion(0)).toBe(0);
+    expect(aTerminacion(NaN)).toBeNaN();
+  });
+
+  it('siempre acaba en ,95 de verdad', () => {
+    for (let c = 100; c <= 30000; c += 13) {
+      expect(Math.round(aTerminacion(c / 100) * 100) % 100).toBe(95);
+    }
+  });
+});
+
+describe('publicPrice — los dos lados del impuesto cuadran contra lo que se ENSEÑA', () => {
+  it('el bruto es el terminado en ,95', () => {
+    // 25 netos al 21 % son 30,25; de escaparate, 29,95.
+    expect(publicPrice(25, 0.21).gross).toBe(29.95);
+  });
+
+  it('el neto se recalcula desde el bruto: neto + IVA da el bruto anunciado', () => {
+    for (const neto of [12, 25, 33.5, 47.9, 120]) {
+      const p = publicPrice(neto, 0.21);
+      const iva = Math.round((p.gross - p.net) * 100) / 100;
+      expect(Math.round((p.net + iva) * 100) / 100).toBe(p.gross);
+    }
+  });
+
+  it('el neto publicado es MENOR que el de la tarifa: la rebaja sale de la empresa', () => {
+    const p = publicPrice(25, 0.21);
+    expect(p.net).toBeLessThan(25);
+  });
+
+  /** Una reserva pactada sin IVA: el 0 se respeta y no cae al general. */
+  it('con IVA al 0 el bruto es el neto, y también termina en ,95', () => {
+    const p = publicPrice(25, 0);
+    expect(p.vatRate).toBe(0);
+    expect(p.gross).toBe(24.95);
+    expect(p.net).toBe(24.95);
   });
 });

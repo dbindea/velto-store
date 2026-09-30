@@ -17,11 +17,12 @@ import { EMPRESA, SITIO } from '../lib/empresa';
   ⚠️ **Y por eso el enlace del pie no se puede quitar.** El día que desaparezca,
   vuelve a hacer falta el bloque en el pie.
 
-  ⚠️ **Lo marcado como PENDIENTE hay que rellenarlo**: los datos del Registro
-  Mercantil son contenido obligatorio del art. 10.1.b y no constan en ninguna
-  parte del código. Están en la escritura de constitución o en una nota simple.
-  Publicar la página sin ellos es mejor que no publicarla —hoy no hay aviso
-  legal ninguno, que es lo grave— pero es un hueco abierto.
+  ⚠️ **Los datos registrales salen del PIE DE LA FACTURA**, copiados de
+  `functions/src/company-config.ts`. Allí llevan una advertencia que conviene
+  respetar: sustituyeron a unos anteriores —«Tomo 45067, Folio 44, Hoja
+  M-793170»— que no coinciden con los de la factura. Ganó la factura porque es
+  el documento que de verdad llega al cliente, pero merece una segunda mirada
+  con la gestoría; y si se corrigen allí, se corrigen en `empresa.ts`.
 
   ⚠️ **Y esto lo ha escrito un programador, no un abogado.** El contenido es
   honesto y sigue la norma que se cita, pero antes de publicar conviene que lo
@@ -55,7 +56,7 @@ import { EMPRESA, SITIO } from '../lib/empresa';
         <li><strong>Oficina de atención al público:</strong> {EMPRESA.oficina}</li>
         <li><strong>Teléfono:</strong> {EMPRESA.telefono}</li>
         <li><strong>Correo:</strong> <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></li>
-        <li><strong>Datos registrales:</strong> <em>[PENDIENTE: registro, tomo, folio, hoja e inscripción]</em></li>
+        <li><strong>Datos registrales:</strong> {EMPRESA.registro}</li>
       </ul>
       <p class="nota">
         El domicilio social es el inscrito en el Registro Mercantil. La oficina

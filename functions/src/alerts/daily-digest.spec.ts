@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { asuntoDe, horaEn, mereceEnvio, rangoManana, type Resumen } from './daily-digest';
-import { ESTADOS_BORRABLES, solicitudCaducada } from './sendDailyDigest';
+import { ESTADOS_BORRABLES, consultaCaducada, solicitudCaducada } from './sendDailyDigest';
 
 const TZ = 'Europe/Madrid';
 
@@ -290,5 +290,59 @@ describe('qué solicitudes se borran solas', () => {
 
   it('una sin garantía guardada se decide solo por el plazo, como siempre', () => {
     expect(solicitudCaducada({ handledAt: hace(48), keepHours: 24 }, ahora)).toBe(true);
+  });
+});
+
+/**
+ * ⚠️ **Esto decide un borrado DEFINITIVO de datos personales**, corre una vez
+ * al día sin nadie delante, y el plazo está **publicado** en `/privacidad`. Las
+ * dos direcciones tienen coste: borrar antes de tiempo deja a Dorel sin un
+ * mensaje que quizá no había leído, y borrar tarde convierte la propia política
+ * de privacidad en la prueba del incumplimiento.
+ */
+describe('cuándo se borra un mensaje de contacto', () => {
+  const ahora = new Date('2026-10-02T09:00:00');
+  const hace = (horas: number) => new Date(ahora.getTime() - horas * 3600_000);
+
+  it('a las 24 horas de haberse escrito', () => {
+    expect(consultaCaducada({ createdAt: hace(25) }, ahora)).toBe(true);
+    expect(consultaCaducada({ createdAt: hace(24) }, ahora)).toBe(true);
+  });
+
+  it('y ni un minuto antes', () => {
+    expect(consultaCaducada({ createdAt: hace(23) }, ahora)).toBe(false);
+    expect(consultaCaducada({ createdAt: hace(1) }, ahora)).toBe(false);
+  });
+
+  /** Lo que permite ampliarle el plazo a uno sin mover los demás. */
+  it('respeta el plazo congelado en el propio mensaje', () => {
+    expect(consultaCaducada({ createdAt: hace(30), keepHours: 72 }, ahora)).toBe(false);
+    expect(consultaCaducada({ createdAt: hace(80), keepHours: 72 }, ahora)).toBe(true);
+  });
+
+  /**
+   * ⚠️ En la duda NO se borra: un dato de más se puede borrar mañana, y uno
+   * borrado no vuelve.
+   */
+  it('sin fecha desde la que contar, se conserva', () => {
+    expect(consultaCaducada({}, ahora)).toBe(false);
+    expect(consultaCaducada({ createdAt: null }, ahora)).toBe(false);
+    expect(consultaCaducada({ createdAt: 'el martes' }, ahora)).toBe(false);
+  });
+
+  it('con un plazo ilegible, se conserva', () => {
+    expect(consultaCaducada({ createdAt: hace(99), keepHours: 'muchas' }, ahora)).toBe(false);
+    expect(consultaCaducada({ createdAt: hace(99), keepHours: 0 }, ahora)).toBe(false);
+    expect(consultaCaducada({ createdAt: hace(99), keepHours: -5 }, ahora)).toBe(false);
+  });
+
+  /**
+   * ⚠️ **Al revés que una solicitud de reserva, el estado NO importa.** De un
+   * mensaje de contacto ya salió un correo en el instante de enviarlo: lo que
+   * se borra aquí es la copia, no el original. Una solicitud sin atender sí es
+   * trabajo pendiente y por eso aquella no se borra nunca en `new`.
+   */
+  it('se borra aunque siga sin contestar, porque el correo ya salió', () => {
+    expect(consultaCaducada({ createdAt: hace(25), status: 'new' }, ahora)).toBe(true);
   });
 });

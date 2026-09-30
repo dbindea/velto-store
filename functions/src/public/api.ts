@@ -32,7 +32,7 @@ import { firestore, storageBucket } from '../admin-guard';
 import { operationSettings } from '../settings';
 import { toDetail, toSummary } from './mapper';
 import {
-  addVat,
+  publicPrice,
   blocksAvailability,
   calculateCalendarDays,
   rangesOverlap,
@@ -57,6 +57,7 @@ import {
   generateContactReference,
   looksAutomated as contactoAutomatizado,
   validateContact,
+  CONSULTA_HORAS_POR_DEFECTO,
   type ContactInput
 } from './contact-core';
 import {
@@ -303,7 +304,7 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
       libres.push({
         ...toSummary(coche.id, coche.raw, bucket, ajustes.vatRate),
         totalDays: dias,
-        price: { ...addVat(neto, ajustes.vatRate), currency: 'EUR' },
+        price: { ...publicPrice(neto, ajustes.vatRate), currency: 'EUR' },
       });
     }
 
@@ -446,7 +447,7 @@ export const createBookingRequest = onRequest(
         }
       }
 
-      const precio = addVat(neto, ajustes.vatRate);
+      const precio = publicPrice(neto, ajustes.vatRate);
       const ahora = new Date();
       const garantia = priceGuaranteedUntil(ahora, ajustes.bookingRequestPriceHours);
       const reference = generateReference();
@@ -636,7 +637,23 @@ export const createContactRequest = onRequest(
       }
 
       const reference = generateContactReference();
-      const consulta = { reference, status: 'new', createdAt: new Date(), ...campos };
+      const consulta = {
+        reference,
+        status: 'new',
+        createdAt: new Date(),
+        /**
+         * ⚠️ **El plazo de borrado se congela AQUÍ, en el propio documento.**
+         * Leído al barrer, cambiar la constante movería la caducidad de todo lo
+         * que ya existe; guardado, se puede ampliar el de un mensaje concreto
+         * sin tocar los demás. Es la misma regla que congela el IVA en
+         * `pricingSnapshot` y el plazo en una solicitud de reserva.
+         *
+         * Y el número está **publicado** en `/privacidad`: si se cambia, se
+         * cambia esa página el mismo día.
+         */
+        keepHours: CONSULTA_HORAS_POR_DEFECTO,
+        ...campos
+      };
 
       const ref = await firestore().collection(CONSULTAS).add(consulta);
 

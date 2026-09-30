@@ -22,7 +22,7 @@ import {
   PublicVehicleSummary,
   VehiclePricingRule,
 } from './types';
-import { addVat, cheapestRule } from './core';
+import { cheapestRule, publicPrice } from './core';
 
 /** La carpeta pública. Un solo sitio, para que nadie escriba la ruta a mano. */
 export const PUBLIC_PHOTOS_FOLDER = 'public-vehicles';
@@ -94,13 +94,21 @@ export function photoUrls(
   return salida;
 }
 
-/** El «desde X €/día», con los dos lados del impuesto. */
+/**
+ * El «desde X €/día», con los dos lados del impuesto.
+ *
+ * ⚠️ **Va por `publicPrice()` y no por `addVat()`**: lo que se anuncia termina
+ * en `,95` y sale **hacia abajo** de lo que dice la tarifa. Decisión de Dorel
+ * del 30 de septiembre de 2026. Lo importante es que el redondeo viva aquí y no
+ * en la web que lo pinta: la misma cifra viaja también al `quoteSnapshot` de
+ * una solicitud, que es lo que él lee en el correo para cobrarlo a mano.
+ */
 function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): PublicPrice | undefined {
   const tramo = cheapestRule(rules);
   if (!tramo) return undefined;
   const dias = Number(tramo.minDays);
   return {
-    ...addVat(tramo.pricePerDay, vatRate),
+    ...publicPrice(tramo.pricePerDay, vatRate),
     currency: 'EUR',
     // El primer tramo empieza en 1 y ahí el matiz no aporta nada.
     ...(Number.isFinite(dias) && dias > 1 ? { fromDays: dias } : {}),

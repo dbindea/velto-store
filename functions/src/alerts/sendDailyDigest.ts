@@ -16,6 +16,7 @@
  */
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { CONSULTA_HORAS_POR_DEFECTO } from '../public/contact-core';
 import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
@@ -337,6 +338,20 @@ export const sendDailyDigest = onSchedule(
     } catch (err) {
       logger.error('No se pudieron limpiar las solicitudes', { err });
     }
+
+    /*
+     * ⚠️ **En su propio `try`, no dentro del de arriba.** Si el barrido de las
+     * solicitudes fallara, el de las consultas tiene que correr igualmente: lo
+     * contrario dejaría datos personales sin borrar **y** con un plazo
+     * publicado en `/privacidad` diciendo que se borran. Es la misma razón por
+     * la que la limpieza entera va fuera del `try` del resumen.
+     */
+    try {
+      const borradas = await limpiarConsultasCaducadas(new Date());
+      if (borradas) logger.info('Consultas de contacto borradas', { borradas });
+    } catch (err) {
+      logger.error('No se pudieron limpiar las consultas', { err });
+    }
   }
 );
 
@@ -411,6 +426,74 @@ export async function limpiarSolicitudesAtendidas(ahora: Date): Promise<number> 
     lote.delete(doc.ref);
     borradas++;
     // Un `writeBatch` admite 500 operaciones.
+    if (++enLote === 400) {
+      await lote.commit();
+      lote = db.batch();
+      enLote = 0;
+    }
+  }
+  if (enLote) await lote.commit();
+  return borradas;
+}
+
+/**
+ * ¿Se puede borrar ya este mensaje de contacto?
+ *
+ * ⚠️ **Al revés que una solicitud de reserva, aquí SÍ se borra por antigüedad
+ * a secas**, sin mirar el estado. Y es deliberado: una solicitud sin atender es
+ * trabajo pendiente y perderla es perder un alquiler, pero de un mensaje de
+ * contacto **ya salió un correo** en el instante en que se envió — Dorel lo
+ * tiene en su bandeja, y él mismo dijo que si hace falta más tiempo se queda
+ * con el correo. Lo que se borra aquí es la copia, no el original.
+ *
+ * ⚠️ **El plazo se lee del PROPIO mensaje** (`keepHours`), congelado al
+ * crearlo, no de una constante leída al barrer. Es lo que permite ampliarlo
+ * para uno concreto sin mover los demás, y la misma regla que congela el IVA en
+ * `pricingSnapshot`: cambiar el ajuste no puede mover lo que ya existe.
+ *
+ * ⚠️ **Y en la duda NO se borra.** Sin fecha desde la que contar, o con un
+ * `keepHours` ilegible, se conserva: un dato de más se puede borrar mañana, y
+ * uno borrado no vuelve.
+ */
+export function consultaCaducada(d: Record<string, unknown>, ahora: Date): boolean {
+  const creada = toDate(d['createdAt']);
+  if (!creada) return false;
+
+  const horas = Number(d['keepHours'] ?? CONSULTA_HORAS_POR_DEFECTO);
+  if (!isFinite(horas) || horas <= 0) return false;
+
+  return ahora.getTime() - creada.getTime() >= horas * 60 * 60 * 1000;
+}
+
+/**
+ * Borra los mensajes de contacto que ya han cumplido su plazo.
+ *
+ * ⚠️ **Sin esto, la política de privacidad sería falsa desde el primer día.**
+ * El barrido de arriba mira SOLO `bookingRequests`; una colección nueva no la
+ * limpia nadie, y eso no falla en ninguna parte — simplemente los datos se
+ * quedan ahí para siempre.
+ *
+ * ⚠️ **Corre una vez al día, a las nueve**, así que entre que se cumplen las 24
+ * horas y el mensaje desaparece pueden pasar unas horas más. La página de
+ * privacidad lo dice con esas palabras: publicar «24 horas» a secas sería
+ * publicar algo que no se cumple exactamente.
+ */
+export async function limpiarConsultasCaducadas(ahora: Date): Promise<number> {
+  const db = firestore();
+  // Sin `where`: son pocos documentos por definición —se borran a diario— y
+  // filtrar por fecha en la consulta exigiría un índice que ataría el barrido a
+  // que esté construido. Es la misma decisión que el límite por teléfono.
+  const snap = await db.collection('contactRequests').get();
+
+  let borradas = 0;
+  let lote = db.batch();
+  let enLote = 0;
+
+  for (const doc of snap.docs) {
+    if (!consultaCaducada(doc.data(), ahora)) continue;
+
+    lote.delete(doc.ref);
+    borradas++;
     if (++enLote === 400) {
       await lote.commit();
       lote = db.batch();
