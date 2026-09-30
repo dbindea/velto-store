@@ -132,6 +132,7 @@ export {
   publicVehicles,
   publicVehicleDetail,
   checkPublicAvailability,
-  createBookingRequest
+  createBookingRequest,
+  createContactRequest
 } from './public/api';
 export { publishVehiclePhoto, unpublishVehiclePhoto } from './public/publishVehiclePhoto';

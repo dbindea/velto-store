@@ -52,6 +52,13 @@ import { publicBaseUrl } from '../public-url';
  * `pdf-lib`. Cargarlo perezosamente solo complicaría el único sitio que lo usa.
  */
 import { renderBookingRequestEmail, type BookingRequestEmailData } from './booking-request-email';
+import { renderContactEmail } from './contact-email';
+import {
+  generateContactReference,
+  looksAutomated as contactoAutomatizado,
+  validateContact,
+  type ContactInput
+} from './contact-core';
 import {
   generateReference,
   looksAutomated,
@@ -530,6 +537,149 @@ async function avisarSolicitud(id: string, s: BookingRequestEmailData): Promise<
     enlace: base ? `${base}/booking-requests/${id}` : ''
   });
 
+  const r = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `${empresa.brandName} <${empresa.email}>`,
+      to: [empresa.email],
+      subject,
+      html,
+      text
+    })
+  });
+  if (!r.ok) {
+    throw new Error(`Resend respondió ${r.status}: ${await r.text()}`);
+  }
+}
+
+/* ===========================================================================
+ * EL FORMULARIO DE CONTACTO
+ * ======================================================================== */
+
+/** Las consultas del formulario, separadas de las solicitudes de reserva. */
+const CONSULTAS = 'contactRequests';
+
+/**
+ * ⚠️ **Más holgado que el de las solicitudes (3 en 30 minutos), y a propósito.**
+ * Una solicitud es siempre la misma acción —pedir precio de un coche—, pero por
+ * aquí alguien puede escribir, darse cuenta de que se dejó un dato y volver a
+ * enviar. Dos de más no llenan una bandeja; cinco seguidos sí son un robot que
+ * ha pasado la trampa.
+ */
+const LIMITE_CONSULTAS = 5;
+const LIMITE_CONSULTAS_MINUTOS = 30;
+
+/**
+ * «Escríbenos»: el formulario guiado de `/contacto`.
+ *
+ * ⚠️ **Es el SEGUNDO endpoint público que escribe**, y por eso lleva lo mismo
+ * que el primero: topes de longitud, campo trampa y límite por teléfono. Los de
+ * lectura no necesitan nada de esto; aquí cualquiera del mundo deja un
+ * documento en Firestore.
+ *
+ * ⚠️ **No crea cliente, ni reserva, ni solicitud de reserva.** Es una consulta:
+ * queda un documento y sale un correo. Quien decide si eso se convierte en algo
+ * es Dorel, llamando — igual que con las solicitudes de la web, y por la misma
+ * razón: un fichero lleno de gente que nunca alquiló es un fichero que hay que
+ * justificar ante la AEPD.
+ *
+ * ⚠️ **Y no se guarda nada que no se haya pedido.** Ni la IP, ni el navegador,
+ * ni de qué página venía. Lo que no se guarda no hay que protegerlo, ni
+ * declararlo en la política de privacidad, ni borrarlo cuando alguien lo pida.
+ */
+export const createContactRequest = onRequest(
+  { cors: false, secrets: [RESEND_API_KEY] },
+  async (req: Request, res: Response) => {
+    cors(res, 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { fallo(res, 405, 'method-not-allowed'); return; }
+
+    const cuerpo = (req.body ?? {}) as ContactInput;
+
+    /**
+     * ⚠️ **Al robot se le contesta que sí.** Devolviendo un error aprende a no
+     * rellenar el campo escondido y la trampa deja de servir para siempre. La
+     * referencia que se lleva no existe en ninguna parte.
+     */
+    if (contactoAutomatizado(cuerpo)) {
+      logger.info('Consulta descartada por el campo trampa');
+      res.json({ reference: generateContactReference() });
+      return;
+    }
+
+    const validado = validateContact(cuerpo);
+    if (!validado.ok) { fallo(res, 400, validado.error); return; }
+    const campos = validado.fields;
+
+    try {
+      /**
+       * ⚠️ **Un solo `where` y el resto en memoria**, igual que en las
+       * solicitudes y por el mismo motivo: cruzar `phone` con un rango de
+       * `createdAt` exige un índice compuesto, y eso ataría un endpoint público
+       * a que un índice esté construido. Mientras se crea, la function devuelve
+       * 500 y el visitante ve «no hemos podido enviarlo».
+       */
+      const desdeVentana = Date.now() - LIMITE_CONSULTAS_MINUTOS * 60 * 1000;
+      const mismoTelefono = await firestore()
+        .collection(CONSULTAS)
+        .where('phone', '==', campos.phone)
+        .limit(50)
+        .get();
+      const recientes = mismoTelefono.docs.filter((d) => {
+        const cuando = toDate(d.data()['createdAt']);
+        return cuando !== null && cuando.getTime() >= desdeVentana;
+      });
+      if (recientes.length >= LIMITE_CONSULTAS) {
+        fallo(res, 429, 'too-many-requests', { phone: campos.phone });
+        return;
+      }
+
+      const reference = generateContactReference();
+      const consulta = { reference, status: 'new', createdAt: new Date(), ...campos };
+
+      const ref = await firestore().collection(CONSULTAS).add(consulta);
+
+      /**
+       * ⚠️ **El aviso NUNCA tumba la consulta.** Se escribe primero y se avisa
+       * después: perder el correo es un problema, perder lo que la persona
+       * acaba de escribir es uno mucho mayor. Misma regla que el sellado del
+       * contrato, que se guarda sin sellar antes que perder la firma.
+       */
+      try {
+        const empresa = companyConfig();
+        const { subject, html, text } = renderContactEmail(
+          { reference, ...campos },
+          { brandName: empresa.brandName }
+        );
+        await enviarCorreo(subject, html, text);
+      } catch (error) {
+        logger.error('No se pudo avisar de la consulta', { id: ref.id, error });
+      }
+
+      res.json({ reference });
+    } catch (error) {
+      logger.error('Fallo creando la consulta', error);
+      fallo(res, 500, 'internal');
+    }
+  }
+);
+
+/**
+ * Manda un correo a la propia empresa.
+ *
+ * ⚠️ **El remitente y el destinatario son el mismo**, que es lo que hace que
+ * Resend lo acepte: solo admite remitentes de un dominio verificado. Si el
+ * dominio de `companyConfig().email` no lo está, esto falla con un 403 que
+ * **no dice «dominio sin verificar»** — dice «Error al enviar el email (403)».
+ */
+async function enviarCorreo(subject: string, html: string, text: string): Promise<void> {
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) {
+    logger.warn('Consulta sin avisar: RESEND_API_KEY no está configurada');
+    return;
+  }
+  const empresa = companyConfig();
   const r = await fetch(RESEND_API_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },

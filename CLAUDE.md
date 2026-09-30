@@ -2277,7 +2277,7 @@ explícito. La misma frase estaba repetida en
 ### El arranque en frío lo paga la function más ligera
 
 ⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
-`index.ts` reexporta las 35 functions. Así que la cadena de imports de la más
+`index.ts` reexporta las 36 functions. Así que la cadena de imports de la más
 pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
 pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
 certificado de la AEAT **antes de devolver una lista de coches**.
@@ -2337,7 +2337,7 @@ en cuanto haya un `onCall` o un `onRequest`.
    especificador mal escrito ya no falla al arrancar — falla la primera vez que
    alguien genera un PDF. Es la lección de `sharp`.
 3. **El manifiesto tiene que salir idéntico.** Es la comprobación que convierte
-   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 35
+   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 36
    functions con sus triggers, regiones y secrets, así que si no cambia, no
    cambia nada de lo que se despliega.
 
@@ -4466,13 +4466,19 @@ restaurar ni desplegar. Está anotado como la primera acción pendiente del sobr
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
 ⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
-el código define **35**. Faltan **seis**, y no por el mismo motivo: las **cinco**
-de la AEAT no van allí hasta el 1 de enero —un despliegue completo las subiría—
-y `createBookingRequest` está **pendiente de desplegar** desde el 29 de
-septiembre de 2026, junto con la actualización de `sendDailyDigest`. Comprobado
-ese día comparando nombres contra el manifiesto.
+el código define **36**. Faltan **siete**, y no por el mismo motivo: las
+**cinco** de la AEAT no van allí hasta el 1 de enero —un despliegue completo las
+subiría—, y `createBookingRequest` y `createContactRequest` están **pendientes
+de desplegar**, la primera desde el 29 de septiembre de 2026 y la segunda desde
+el 30, junto con la actualización de `sendDailyDigest`.
 
-⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 35 functions, un
+⚠️ **Y las dos públicas que escriben necesitan HOSTING además de la function.**
+Sus rewrites —`/api/solicitud` y `/api/contacto`— viajan con el hosting, no con
+las functions: sin ellos la petición cae en el catch-all de la web y devuelve
+HTML donde se esperaba JSON, así que el visitante escribe seis líneas y ve un
+fallo de red. Es la lección de `/d/**`, que estuvo escrita sin desplegar.
+
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 36 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
 medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
 cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.

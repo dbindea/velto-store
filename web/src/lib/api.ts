@@ -236,6 +236,42 @@ export function solicitar(datos: {
 }
 
 /**
+ * Lo que manda el formulario de contacto.
+ *
+ * ⚠️ **Copia fiel de `ContactInput` en `functions/src/public/contact-core.ts`**,
+ * como el resto de este fichero: la web y las functions compilan por separado y
+ * no pueden compartir módulo. Si cambia allí, cambia aquí.
+ *
+ * ⚠️ **Y `trap` va siempre, vacío**: es el campo escondido que rellenan los
+ * robots y no las personas. Al robot se le contesta que sí, para que no
+ * aprenda a dejarlo en blanco.
+ */
+export interface ConsultaContacto {
+  motivo: string;
+  name: string;
+  phone: string;
+  email: string;
+  mensaje: string;
+  duracion?: string;
+  queCoche?: string;
+  domicilio?: string;
+  lugar?: string;
+  coche?: string;
+  anio?: string;
+  poblacion?: string;
+  parado?: string;
+  trap: string;
+}
+
+export function contactar(datos: ConsultaContacto): Promise<{ reference: string }> {
+  return pedir('/api/contacto', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  });
+}
+
+/**
  * El precio, tal y como lo lee un particular: **el total con IVA**.
  *
  * ⚠️ En el backoffice se negocia el NETO —el número redondo— y el impuesto se

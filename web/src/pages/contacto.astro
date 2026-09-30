@@ -3,79 +3,394 @@ import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
 ---
 
+{/*
+  ⚠️ **El formulario funciona SIN JavaScript, y eso decide cómo está montado.**
+  Las tres ramas son `<fieldset>` del mismo formulario, no pasos que pinta un
+  script: sin JS salen las tres a la vista y el formulario se envía igual —el
+  backend descarta los campos de la rama que no se eligió—. Lo que añade el
+  script es esconder las que no tocan, que es comodidad, no requisito.
+
+  ⚠️ **Y esconder una rama es `hidden` MÁS `disabled`, las dos cosas.** Con solo
+  `hidden`, un `required` dentro de algo escondido **no se salta la
+  validación**: el navegador intenta enfocar el campo para señalarlo, no puede,
+  y aborta el envío con «An invalid form control is not focusable» en consola —
+  el botón deja de hacer nada y la pantalla no dice por qué. `disabled` además
+  saca los campos del `FormData`, que es lo que impide mandar los de las tres.
+
+  ⚠️ **El mapa es un ENLACE, no un incrustado.** Un `<iframe>` de Google Maps
+  mete cookies de terceros y tumba entera la página de privacidad, que hoy
+  puede decir que esta web no usa ninguna.
+*/}
 <Base
   titulo="Contacto | Velto"
-  descripcion="Dónde estamos y cómo llegar: oficina en Arganda del Rey, teléfono, WhatsApp y correo."
+  descripcion="Cuéntanos qué necesitas y te contestamos. Alquilar un coche, poner el tuyo en alquiler o cualquier otra cosa."
   ruta="/contacto"
 >
   <section class="seccion">
     <div class="contenedor">
-      <h1>Hablamos cuando quieras</h1>
+      <p class="chip">Contacto</p>
+      <h1>Cuéntanos qué necesitas</h1>
       <p class="entrada">
-        Lo más rápido es WhatsApp: mándanos las fechas y el tipo de coche y te
-        contestamos con el precio cerrado.
+        Tres preguntas y el teléfono. Te contestamos nosotros, no una centralita.
+        Si tienes prisa, WhatsApp es lo más rápido.
       </p>
 
       <div class="contacto">
-        <div class="card contacto__bloque">
-          <h2>WhatsApp y teléfono</h2>
-          <p>
-            <a class="btn btn--brand" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
-              Escribir por WhatsApp
+        <form id="form" class="formulario" novalidate>
+          <fieldset class="grupo">
+            <legend class="grupo__titulo">¿En qué podemos ayudarte?</legend>
+            <div class="opciones">
+              <label class="opcion">
+                <input type="radio" name="motivo" value="alquilar" required />
+                <span>
+                  <strong>Quiero alquilar un coche</strong>
+                  <em>Para unos días, unas semanas o más</em>
+                </span>
+              </label>
+              <label class="opcion">
+                <input type="radio" name="motivo" value="poner-en-alquiler" />
+                <span>
+                  <strong>Quiero poner mi coche en alquiler</strong>
+                  <em>Tengo un coche parado y quiero que produzca</em>
+                </span>
+              </label>
+              <label class="opcion">
+                <input type="radio" name="motivo" value="otra" />
+                <span>
+                  <strong>Otra cosa</strong>
+                  <em>Una factura, una duda, una reclamación</em>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          {/* ---- Rama: alquilar -------------------------------------------- */}
+          <fieldset class="grupo" id="rama-alquilar" data-rama="alquilar" hidden disabled>
+            <legend class="grupo__titulo">Sobre el alquiler</legend>
+
+            <label class="campo">
+              <span>¿Cuánto tiempo lo necesitas?</span>
+              <select name="duracion">
+                <option value="">Elige una opción</option>
+                <option value="1-3">De 1 a 3 días</option>
+                <option value="4-7">De 4 a 7 días</option>
+                <option value="8-15">De 8 a 15 días</option>
+                <option value="mas-15">Más de 15 días</option>
+                <option value="no-lo-se">Todavía no lo sé</option>
+              </select>
+            </label>
+
+            <label class="campo">
+              <span>¿Qué tipo de coche buscas? <em>Opcional</em></span>
+              <input type="text" name="queCoche" maxlength="120" placeholder="Un familiar, algo pequeño, una furgoneta…" />
+            </label>
+
+            <label class="campo">
+              <span>¿Quieres que te lo llevemos?</span>
+              <select name="domicilio" id="domicilio">
+                <option value="no">No, lo recojo en la oficina</option>
+                <option value="si">Sí, a domicilio</option>
+              </select>
+            </label>
+
+            <label class="campo" id="campo-lugar" hidden>
+              <span>¿A qué población?</span>
+              <input type="text" name="lugar" maxlength="120" placeholder="Arganda del Rey, Rivas, Barajas…" />
+            </label>
+          </fieldset>
+
+          {/* ---- Rama: poner en alquiler ----------------------------------- */}
+          <fieldset class="grupo" id="rama-poner" data-rama="poner-en-alquiler" hidden disabled>
+            <legend class="grupo__titulo">Sobre tu coche</legend>
+
+            <div class="fila">
+              <label class="campo">
+                <span>Marca y modelo</span>
+                <input type="text" name="coche" maxlength="120" placeholder="Seat Ibiza" />
+              </label>
+              <label class="campo campo--corto">
+                <span>Año</span>
+                <input type="text" name="anio" maxlength="4" inputmode="numeric" placeholder="2019" />
+              </label>
+            </div>
+
+            <label class="campo">
+              <span>¿Dónde está?</span>
+              <input type="text" name="poblacion" maxlength="120" placeholder="Arganda del Rey" />
+            </label>
+
+            <label class="campo">
+              <span>¿Cuánto tiempo lleva parado? <em>Opcional</em></span>
+              <input type="text" name="parado" maxlength="120" placeholder="Casi todo el mes, solo lo uso los findes…" />
+            </label>
+          </fieldset>
+
+          {/* ---- Siempre --------------------------------------------------- */}
+          <fieldset class="grupo">
+            <legend class="grupo__titulo">Cómo te localizamos</legend>
+
+            <div class="fila">
+              <label class="campo">
+                <span class="obligatorio">Tu nombre</span>
+                <input type="text" name="name" maxlength="80" required autocomplete="name" />
+              </label>
+              <label class="campo">
+                <span class="obligatorio">Teléfono</span>
+                <input type="tel" name="phone" maxlength="24" required autocomplete="tel" inputmode="tel" />
+              </label>
+            </div>
+
+            <label class="campo">
+              <span>Correo <em>Opcional</em></span>
+              <input type="email" name="email" maxlength="120" autocomplete="email" />
+            </label>
+
+            <label class="campo">
+              <span>Cuéntanos lo que quieras <em>Opcional</em></span>
+              <textarea name="mensaje" rows="4" maxlength="1200"></textarea>
+            </label>
+
+            {/*
+              ⚠️ El campo trampa se saca de la pantalla, no se pone
+              `display: none`: algunos robots descartan lo que está oculto de la
+              forma obvia. Y `tabindex="-1"` para que el teclado no pase por él.
+            */}
+            <label class="trampa" aria-hidden="true">
+              No rellenes esto
+              <input type="text" name="trap" tabindex="-1" autocomplete="off" />
+            </label>
+          </fieldset>
+
+          <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
+
+          <div class="acciones">
+            <button class="btn btn--brand" type="submit" id="enviar">Enviar</button>
+            <a class="btn btn--ghost" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+              Mejor por WhatsApp
             </a>
+          </div>
+
+          <p class="nota legal">
+            Usamos tu nombre y tu teléfono solo para contestarte. Puedes pedirnos
+            que los borremos cuando quieras. Más en
+            <a href="/privacidad">Privacidad</a>.
           </p>
+        </form>
+
+        <div id="enviado" class="card exito" hidden>
+          <h2>Recibido</h2>
           <p>
-            También por teléfono:
-            <a href={`tel:${EMPRESA.telefono.replace(/\s/g, '')}`}>{EMPRESA.telefono}</a>
+            Te contestamos lo antes posible, normalmente el mismo día. Tu
+            referencia es <strong id="referencia" class="num"></strong> — si nos
+            llamas, dila y lo encontramos al momento.
           </p>
+          <a class="btn btn--ghost" href="/">Volver al buscador</a>
         </div>
 
-        <div class="card contacto__bloque">
-          <h2>Correo</h2>
-          <p><a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></p>
-          <p class="contacto__nota">
-            Para presupuestos por escrito o facturas, mejor por aquí.
-          </p>
-        </div>
+        <aside class="lado">
+          <div class="card lado__bloque">
+            <h2>Más rápido todavía</h2>
+            <p>
+              <a class="btn btn--brand" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+                Escribir por WhatsApp
+              </a>
+            </p>
+            <p class="nota">
+              También por teléfono:
+              <a href={`tel:${EMPRESA.telefono.replace(/\s/g, '')}`}>{EMPRESA.telefono}</a>
+            </p>
+          </div>
 
-        <div class="card contacto__bloque">
-          <h2>Oficina</h2>
-          <p>{EMPRESA.oficina}</p>
-          <p>
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(EMPRESA.oficina)}`}
-              rel="noopener">Ver cómo llegar</a
-            >
-          </p>
-          <p class="contacto__nota">
-            Si te viene mejor, llevamos el coche a donde acordemos. El
-            desplazamiento se pacta antes, nunca aparece después en la factura.
-          </p>
-        </div>
+          <div class="card lado__bloque">
+            <h2>La oficina</h2>
+            <p>{EMPRESA.oficinaCalle}<br />{EMPRESA.oficinaCiudad}</p>
+            <p>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(EMPRESA.oficina)}`}
+                rel="noopener">Ver cómo llegar</a
+              >
+            </p>
+            <p class="nota">
+              Si te viene mejor, llevamos el coche a donde acordemos. El
+              desplazamiento se pacta antes, nunca aparece después en la factura.
+            </p>
+          </div>
+
+          <div class="card lado__bloque">
+            <h2>Correo</h2>
+            <p><a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></p>
+            <p class="nota">Para presupuestos por escrito o facturas, mejor por aquí.</p>
+          </div>
+        </aside>
       </div>
     </div>
   </section>
 </Base>
 
+<script>
+  import { contactar, type ConsultaContacto } from '../lib/api';
+
+  const form = document.getElementById('form') as HTMLFormElement | null;
+  const enviado = document.getElementById('enviado');
+  const problema = document.getElementById('problema');
+  const boton = document.getElementById('enviar') as HTMLButtonElement | null;
+
+  if (form && enviado && problema && boton) {
+    const ramas = [...form.querySelectorAll<HTMLFieldSetElement>('[data-rama]')];
+    const campoLugar = document.getElementById('campo-lugar');
+    const domicilio = document.getElementById('domicilio') as HTMLSelectElement | null;
+
+    /**
+     * ⚠️ **`hidden` Y `disabled`, siempre las dos.** `hidden` lo saca de la
+     * vista; `disabled` lo saca del `FormData` **y de la validación**. Sin lo
+     * segundo, un `required` dentro de una rama escondida aborta el envío con
+     * «An invalid form control is not focusable» y el botón deja de hacer nada
+     * sin decir por qué.
+     */
+    const mostrar = (el: HTMLElement | null, visible: boolean) => {
+      if (!el) return;
+      el.hidden = !visible;
+      if (el instanceof HTMLFieldSetElement) el.disabled = !visible;
+    };
+
+    const elegido = () =>
+      (form.querySelector('input[name="motivo"]:checked') as HTMLInputElement | null)?.value ?? '';
+
+    function refrescar() {
+      const motivo = elegido();
+      for (const r of ramas) mostrar(r, r.dataset.rama === motivo);
+      mostrar(campoLugar, motivo === 'alquilar' && domicilio?.value === 'si');
+    }
+
+    form.addEventListener('change', refrescar);
+    refrescar();
+
+    /**
+     * ⚠️ **Los errores se dicen en español y se marcan en el campo.** El
+     * formulario lleva `novalidate` para que los globos del navegador no salgan
+     * en el idioma del sistema operativo, así que la validación se enseña aquí
+     * — es la misma decisión que el backoffice tomó al retirar los `alert()`.
+     */
+    const MENSAJES: Record<string, string> = {
+      'bad-motivo': 'Dinos primero en qué podemos ayudarte.',
+      'bad-name': 'Nos falta tu nombre.',
+      'bad-phone': 'Necesitamos un teléfono para poder contestarte.',
+      'bad-email': 'Ese correo no parece válido. Puedes dejarlo en blanco.',
+      'too-many-requests': 'Ya nos has escrito hace un momento. Te contestamos enseguida.',
+      error: 'No hemos podido enviarlo. Inténtalo otra vez o escríbenos por WhatsApp.',
+    };
+
+    const fallar = (clave: string) => {
+      problema.textContent = MENSAJES[clave] ?? MENSAJES['error']!;
+      problema.hidden = false;
+      problema.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      problema.hidden = true;
+
+      const datos = Object.fromEntries(new FormData(form)) as unknown as ConsultaContacto;
+      // Lo que el backend exige, comprobado aquí para no hacer un viaje en balde.
+      if (!datos.motivo) return fallar('bad-motivo');
+      if (!datos.name?.trim()) return fallar('bad-name');
+      if (!datos.phone?.trim()) return fallar('bad-phone');
+
+      boton.disabled = true;
+      boton.textContent = 'Enviando…';
+      try {
+        const { reference } = await contactar({ ...datos, trap: datos.trap ?? '' });
+        const ref = document.getElementById('referencia');
+        if (ref) ref.textContent = reference;
+        form.hidden = true;
+        enviado.hidden = false;
+        enviado.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } catch (err) {
+        fallar(err instanceof Error ? err.message : 'error');
+        boton.disabled = false;
+        boton.textContent = 'Enviar';
+      }
+    });
+  }
+</script>
+
 <style>
-  .contacto {
+  .contacto { display: grid; gap: var(--sp-10); align-items: start; }
+  @media (min-width: 900px) { .contacto { grid-template-columns: 1.6fr 1fr; } }
+
+  .formulario { display: grid; gap: var(--sp-8); }
+
+  .grupo {
     display: grid;
-    gap: 1.25rem;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: var(--sp-5);
+    margin: 0;
+    padding: var(--sp-6);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface-card);
   }
 
-  .contacto__bloque {
-    padding: 1.5rem;
+  .grupo__titulo {
+    padding: 0 var(--sp-2);
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    font-weight: var(--fw-medium);
   }
 
-  .contacto__bloque h2 {
-    font-size: 1.15rem;
-    margin-bottom: 0.75rem;
-  }
+  .opciones { display: grid; gap: var(--sp-3); }
 
-  .contacto__nota {
-    color: var(--text-2);
-    font-size: 0.9rem;
-    margin-bottom: 0;
+  .opcion {
+    display: flex;
+    gap: var(--sp-3);
+    align-items: flex-start;
+    padding: var(--sp-4);
+    border: var(--bw) solid var(--border-input);
+    border-radius: var(--r-md);
+    cursor: pointer;
   }
+  .opcion:hover { border-color: var(--brand); }
+  /* La elegida se marca con el borde y el fondo, no solo con el punto del
+     radio: con el dedo, ese punto mide 20 px en una fila de 60. */
+  .opcion:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+  .opcion input { margin-top: 3px; accent-color: var(--brand); }
+  .opcion span { display: grid; gap: var(--sp-1); }
+  .opcion em { font-style: normal; color: var(--text-2); font-size: var(--fs-small); }
+
+  .campo { display: grid; gap: var(--sp-2); min-width: 0; }
+  .campo > span { font-size: var(--fs-small); font-weight: var(--fw-medium); }
+  .campo em { font-style: normal; color: var(--text-3); font-weight: 400; }
+  .obligatorio::after { content: ' *'; color: var(--brand-text); }
+
+  .campo input,
+  .campo select,
+  .campo textarea {
+    width: 100%;
+    min-height: var(--control-h);
+    padding: var(--sp-3);
+    font: inherit;
+    color: var(--text);
+    background-color: var(--bg-input);
+    border: var(--bw) solid var(--border-input);
+    border-radius: var(--r-md);
+  }
+  .campo textarea { min-height: auto; resize: vertical; }
+
+  .fila { display: grid; gap: var(--sp-4); }
+  @media (min-width: 560px) { .fila { grid-template-columns: 1fr auto; } }
+  .campo--corto input { width: 8ch; }
+
+  .trampa { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  .acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+  .legal { max-width: 52ch; }
+
+  .exito { padding: var(--sp-8); }
+  .exito h2 { margin-bottom: var(--sp-3); }
+  .exito p { color: var(--text-2); margin-bottom: var(--sp-6); }
+
+  .lado { display: grid; gap: var(--sp-4); }
+  .lado__bloque { padding: var(--sp-6); }
+  .lado__bloque h2 { font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
+  .lado__bloque p { margin-bottom: var(--sp-3); }
+  .lado__bloque p:last-child { margin-bottom: 0; }
 </style>

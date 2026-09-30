@@ -30,8 +30,16 @@ const REFERENCE_PREFIX = 'P';
  *
  * Muestreo con rechazo, no `byte % 30`: 256 no es múltiplo de 30 y el resto
  * favorecería a los seis primeros símbolos. Cuesta nada hacerlo bien.
+ *
+ * ⚠️ **El prefijo es un PARÁMETRO desde el 30 de septiembre de 2026**, cuando
+ * nació el formulario de contacto con su `C-`. Lo fácil habría sido copiar la
+ * función y cambiar la letra, y se habrían perdido las dos cosas que tiene
+ * dentro y que no se ven: el muestreo con rechazo y el alfabeto sin `I`, `L`,
+ * `O`, `U`, `0` ni `1`, que existe porque la referencia **se dicta por
+ * teléfono**. Una copia mal hecha da referencias que se confunden al leerlas
+ * en voz alta, y eso no falla en ningún test: falla en una llamada.
  */
-export function generateReference(): string {
+export function generateReference(prefix: string = REFERENCE_PREFIX): string {
   const limit = Math.floor(256 / ALPHABET.length) * ALPHABET.length; // 240
   let out = '';
   while (out.length < REFERENCE_LENGTH) {
@@ -41,7 +49,7 @@ export function generateReference(): string {
       if (out.length === REFERENCE_LENGTH) break;
     }
   }
-  return `${REFERENCE_PREFIX}-${out}`;
+  return `${prefix}-${out}`;
 }
 
 /** Lo que el formulario manda. Nada de esto se cree sin mirarlo. */

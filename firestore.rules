@@ -260,6 +260,21 @@ service cloud.firestore {
       allow delete: if callerIsAdmin();
     }
 
+    // Las consultas del formulario de contacto, con exactamente las mismas
+    // reglas y por los mismos motivos: las escribe SOLO la Cloud Function
+    // (`createContactRequest`), que es donde viven los topes de longitud, el
+    // campo trampa y el límite por teléfono. Con `create` abierto, la clave del
+    // bundle —que viaja en la web pública— dejaría llenar la colección.
+    //
+    // ⚠️ Y el público no puede leerlas de ninguna manera: llevan nombre,
+    // teléfono, a veces correo, y el texto que la persona escribió.
+    match /contactRequests/{requestId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow create: if false;
+      allow update: if isAuthorized(request.auth.token.email);
+      allow delete: if callerIsAdmin();
+    }
+
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.

@@ -136,6 +136,13 @@
           }
         },
         {
+          "source": "/api/contacto",
+          "function": {
+            "functionId": "createContactRequest",
+            "region": "europe-west1"
+          }
+        },
+        {
           "source": "/coche/**",
           "destination": "/coche.html"
         }

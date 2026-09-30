@@ -222,6 +222,21 @@ img, svg { display: block; max-width: 100%; }
 /* Cifras: tabulares y con la fuente que SÍ tiene el símbolo del euro. */
 .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 
+/*
+ * ⚠️ **`hidden` tiene que GANAR, y por defecto pierde.** El navegador esconde
+ * un elemento con `[hidden]` desde su propia hoja, y en la cascada **el origen
+ * manda antes que la especificidad**: cualquier `display` nuestro le gana. Un
+ * `<fieldset hidden>` al que le hayamos puesto `display: grid` **se sigue
+ * viendo**, y entonces el formulario de contacto enseña sus tres ramas a la vez
+ * y manda los campos de las tres.
+ *
+ * Es exactamente lo que dejó el panel del calendario dibujado con el popover
+ * cerrado, tragándose los clics. La misma lección, otra propiedad.
+ */
+[hidden] {
+  display: none !important;
+}
+
 /* ===========================================================================
  * CONTROLES NATIVOS, VESTIDOS DE CONTROLES DE VELTO
  *
