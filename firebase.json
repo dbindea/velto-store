@@ -96,7 +96,7 @@
         {
           "source": "/api/vehicle",
           "headers": [
-            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=600" }
+            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=120" }
           ]
         },
         {

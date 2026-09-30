@@ -119,6 +119,19 @@ export interface CocheFicha extends CocheResumen {
   depositAmount?: number;
   includedKmPerDay?: number;
   minimumRentalDays?: number;
+  /**
+   * Los días `yyyy-MM-dd` que este coche **no** se puede coger.
+   *
+   * ⚠️ **Llevan dentro el día de preparación.** Un coche devuelto ayer sale
+   * ocupado hoy: hay que revisarlo, limpiarlo y repostarlo antes de volver a
+   * entregarlo. Lo calcula el backend (`disponibleDesde()` en
+   * `functions/src/public/core.ts`) con la **misma cuenta** que hace el
+   * buscador, porque un calendario que enseñe libre un día que la búsqueda
+   * después rechaza es peor que no tener calendario.
+   */
+  busyDays?: string[];
+  /** El último día que el backend ha mirado. Más allá no se afirma nada. */
+  availableUntil?: string;
 }
 
 export interface CocheDisponible extends CocheResumen {
@@ -199,6 +212,32 @@ export function disponibilidad(
 ): Promise<{ from: string; to: string; totalDays: number; vehicles: CocheDisponible[] }> {
   return pedir(
     `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}`
+  );
+}
+
+/**
+ * Lo mismo, pero de UN coche: el precio de unas fechas en su propia ficha.
+ *
+ * ⚠️ **Se pide al backend en vez de calcularlo aquí**, aunque la ficha ya
+ * tenga el «desde». Ese «desde» es el tramo más barato —el de un alquiler
+ * largo— y la tabla de tramos **no se publica**: es la curva de descuento del
+ * negocio. Así que el precio de tres días solo lo sabe el backend, que además
+ * lo redondea a la terminación de escaparate y lo congela igual en la
+ * solicitud. Calcularlo en el navegador sería inventárselo.
+ *
+ * ⚠️ **Y devuelve la lista, no el coche.** Si el coche está ocupado en esas
+ * fechas, `vehicles` viene **vacío** — que es la respuesta correcta y hay que
+ * tratarla: es lo que pasa cuando alguien reserva entre que se pintó el
+ * calendario y se eligieron las fechas.
+ */
+export function disponibilidadCoche(
+  desde: string,
+  hasta: string,
+  vehicleId: string
+): Promise<{ from: string; to: string; totalDays: number; vehicles: CocheDisponible[] }> {
+  return pedir(
+    `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}` +
+      `&vehicleId=${encodeURIComponent(vehicleId)}`
   );
 }
 

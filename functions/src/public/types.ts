@@ -165,6 +165,21 @@ export interface PublicVehicleDetail extends PublicVehicleSummary {
   depositAmount?: number;
   includedKmPerDay?: number;
   minimumRentalDays?: number;
+  /**
+   * Los días que este coche **no** se puede coger, en `yyyy-MM-dd` local.
+   *
+   * ⚠️ **Días y no rangos, a propósito.** Con los instantes exactos se podría
+   * saber a qué hora devuelve el coche un cliente concreto; es la misma razón
+   * por la que el buscador ensancha su ventana a días completos.
+   *
+   * ⚠️ **Y llevan dentro el día de preparación**: un coche devuelto ayer sale
+   * ocupado hoy, porque hay que revisarlo, limpiarlo y repostarlo. Lo calcula
+   * `disponibleDesde()` y lo comparten los tres sitios que cruzan reservas, o
+   * la web ofrecería lo que después rechaza.
+   */
+  busyDays?: string[];
+  /** El último día mirado. Más allá, el calendario no puede afirmar nada. */
+  availableUntil?: string;
 }
 
 /** Un coche libre para las fechas pedidas, con su precio orientativo. */

@@ -296,6 +296,109 @@ export function publicPrice(
 }
 
 /**
+ * La hora a la que un coche devuelto vuelve a estar disponible, **al día
+ * siguiente**.
+ *
+ * Regla de negocio de Dorel del 30 de septiembre de 2026, dicha así: «si una
+ * persona entrega el coche hoy a las 12:00 o 14:00 no se puede alquilar hasta
+ * el día siguiente a las 12:00, para revisar, limpiar y rellenar combustible».
+ */
+export const HORA_DISPONIBLE_TRAS_DEVOLVER = 12;
+
+/**
+ * Cuándo vuelve a estar libre un coche después de una devolución.
+ *
+ * ⚠️ **Esto NO existe en el backoffice, y es a propósito.** Allí hay un
+ * operador delante que sabe si el coche está listo —puede haberlo limpiado en
+ * media hora, o el cliente siguiente puede ser de confianza—; aquí no hay
+ * nadie, y ofrecer un coche que está sin repostar es una entrega que sale mal.
+ * Es la misma regla que ya separa las dos disponibilidades: en una pantalla,
+ * pasarse de prudente se ve y se corrige; en una web, ofrecer de más es una
+ * reserva que alguien atenderá.
+ *
+ * ⚠️ **Y por eso la web puede decir que NO a algo que el backoffice acepta.**
+ * No es una discrepancia: es que el mostrador tiene una información que la web
+ * no tiene. Lo que no puede pasar es lo contrario.
+ */
+export function disponibleDesde(devolucion: Date): Date {
+  const d = new Date(devolucion);
+  d.setDate(d.getDate() + 1);
+  d.setHours(HORA_DISPONIBLE_TRAS_DEVOLVER, 0, 0, 0);
+  return d;
+}
+
+/**
+ * La ventana que bloquea una reserva, **con el día de preparación dentro**.
+ *
+ * ⚠️ **Existe para que los TRES sitios que cruzan reservas cuenten lo mismo.**
+ * Son el buscador, la solicitud de «que me llamen» y el calendario de la ficha,
+ * y cada uno lo hacía por su cuenta: el día que uno aplique la preparación y
+ * otro no, la web ofrece un coche y después rechaza la solicitud con
+ * «vehicle-unavailable» — el visitante rellena sus datos y se lleva un error
+ * por algo que la página acababa de ofrecerle.
+ *
+ * Devuelve `null` cuando las fechas no se pueden leer, y quien llama lo trata
+ * como **ocupado**: es la regla de toda esta carpeta, ante la duda no publicar.
+ */
+export function ventanaOcupada(pickup: unknown, devolucion: unknown): VentanaOcupada | null {
+  const inicio = toDate(pickup);
+  const fin = toDate(devolucion);
+  if (!inicio || !fin) return null;
+  return { inicio, fin: disponibleDesde(fin) };
+}
+
+/** Un día en `yyyy-MM-dd`, **en hora local**. */
+export function diaIso(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Una ventana de ocupación ya resuelta: cuándo sale el coche y cuándo vuelve a estar listo. */
+export interface VentanaOcupada {
+  inicio: Date;
+  /** El instante en que vuelve a estar disponible, **con la preparación dentro**. */
+  fin: Date;
+}
+
+/**
+ * Los días que un coche **no** se puede coger, para pintar el calendario.
+ *
+ * ⚠️ **Se calcula con la MISMA cuenta que hace el buscador, y eso es lo único
+ * que importa aquí.** Un calendario que enseñe libre un día que la búsqueda
+ * después rechaza es peor que no tener calendario: el visitante elige ese día,
+ * pulsa, y la web le dice que no hay coches. Por eso un día se marca ocupado
+ * cuando **el día entero** —de 00:00 a 00:00 del siguiente— se pisa con la
+ * ventana de la reserva, que es exactamente lo que comprueba
+ * `checkPublicAvailability` después de `widenToFullDays()`.
+ *
+ * ⚠️ **Y la ventana lleva dentro el día de preparación** (`disponibleDesde`),
+ * así que el día en que un coche vuelve sale ocupado aunque la reserva
+ * terminara a mediodía. Es lo que hace que el calendario explique por qué un
+ * coche «que ya ha vuelto» no se puede coger.
+ *
+ * ⚠️ **Días y no rangos**, por lo mismo que `widenToFullDays()` existe: con
+ * instantes se podría reconstruir a qué hora devuelve el coche un cliente
+ * concreto.
+ */
+export function diasOcupados(
+  ventanas: VentanaOcupada[],
+  desde: Date,
+  cuantosDias: number
+): string[] {
+  const salida: string[] = [];
+  const dia = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+
+  for (let i = 0; i < cuantosDias; i++) {
+    const inicioDia = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + i);
+    const finDia = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + i + 1);
+    if (ventanas.some(v => rangesOverlap(inicioDia, finDia, v.inicio, v.fin))) {
+      salida.push(diaIso(inicioDia));
+    }
+  }
+  return salida;
+}
+
+/**
  * Ensancha la ventana pedida a **días completos**.
  *
  * ⚠️ **Es lo que impide reconstruir el calendario de ocupación al minuto.** Sin

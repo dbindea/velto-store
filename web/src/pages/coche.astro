@@ -13,10 +13,16 @@ import { EMPRESA } from '../lib/empresa';
   todo `/coche/**` a este fichero. ⚠️ Si ese rewrite falta, la página devuelve
   404 y no hay ningún aviso: es el mismo fallo silencioso que tuvo `/d/**`, que
   acababa sirviendo la SPA y mandando al cliente a la pantalla de login.
+
+  ⚠️ **Los estilos van en `is:global` y no es un descuido.** Toda la ficha la
+  inyecta el script con `innerHTML`, así que esos nodos no llevan el atributo
+  de encapsulación de Astro y una hoja normal **no los alcanzaría** — es el
+  mismo fallo que dejó el botón de la tarjeta sin forma en la página de
+  resultados. Astro empaqueta el CSS por página, así que esto solo viaja aquí.
 */}
 <Base
   titulo="Vehículo | Velto"
-  descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos y precio por día."
+  descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos, disponibilidad real y precio por día."
   ruta={null}
   precarga="coche"
 >
@@ -42,8 +48,26 @@ import { EMPRESA } from '../lib/empresa';
 </script>
 
 <script>
-  import { ficha, euros, nombreCoche, combustible, cambio, categoria, marcadoFoto } from '../lib/api';
+  import {
+    ficha,
+    disponibilidadCoche,
+    euros,
+    nombreCoche,
+    combustible,
+    cambio,
+    categoria,
+    marcadoFoto,
+    type CocheFicha,
+    type FotoPublica,
+  } from '../lib/api';
   import { SITIO } from '../lib/empresa';
+  import { montarCalendario } from '../lib/calendario-vista';
+  import {
+    comoCampo,
+    diasDelRango,
+    parseDiaIso,
+    type Rango,
+  } from '../lib/calendario-coche';
 
   const contenedor = document.getElementById('ficha')!;
   const cargando = document.getElementById('cargando')!;
@@ -53,7 +77,7 @@ import { EMPRESA } from '../lib/empresa';
   /** `/coche/ABC123` → `ABC123`. */
   const id = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() ?? '');
 
-  const EXTRAS: Array<[keyof Awaited<ReturnType<typeof ficha>>['vehicle']['features'], string]> = [
+  const EXTRAS: Array<[keyof CocheFicha['features'], string]> = [
     ['airConditioning', 'Aire acondicionado'],
     ['navigation', 'Navegador'],
     ['parkingSensors', 'Sensores de aparcamiento'],
@@ -61,7 +85,115 @@ import { EMPRESA } from '../lib/empresa';
     ['cruiseControl', 'Control de crucero'],
   ];
 
-  function pinta(v: Awaited<ReturnType<typeof ficha>>['vehicle']): void {
+  const MESES = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+  ];
+
+  /** «Del 1 al 4 de octubre», sin repetir el mes cuando es el mismo. */
+  function rotuloRango(desde: Date, hasta: Date): string {
+    const mismoMes = desde.getMonth() === hasta.getMonth() && desde.getFullYear() === hasta.getFullYear();
+    const ini = mismoMes ? `${desde.getDate()}` : `${desde.getDate()} de ${MESES[desde.getMonth()]}`;
+    return `Del ${ini} al ${hasta.getDate()} de ${MESES[hasta.getMonth()]}`;
+  }
+
+  const esc = (s: string) =>
+    s.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+    );
+
+  const ICONO = {
+    plazas: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+    maletas: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    cambio: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 4v16M12 4v16M19 4v16M5 10h14"/></svg>',
+    combustible: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 21h10V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v17Z"/><path d="M13 9h3a2 2 0 0 1 2 2v6a2 2 0 0 0 3 1.7"/></svg>',
+  };
+
+  // ---- La galería -------------------------------------------------------
+
+  /**
+   * ⚠️ **Antes eran las fotos una debajo de otra, a todo el ancho de la
+   * columna.** Con dos fotos la ficha medía dos pantallas de imágenes y la
+   * segunda no la veía nadie; y como cada foto conserva su proporción, el
+   * bloque cambiaba de alto según el coche. Lo dijo Dorel: «la galería hay que
+   * revisarla porque se ve fatal».
+   *
+   * Ahora hay una principal con proporción fija y una tira de miniaturas
+   * debajo, que es lo que espera cualquiera que haya mirado un coche en
+   * internet.
+   */
+  function galeria(v: CocheFicha, nombre: string): string {
+    if (!v.photos.length) {
+      return `<div class="galeria"><div class="galeria__grande galeria__sinfoto">
+        <span>Sin fotos todavía</span></div></div>`;
+    }
+
+    const principal = marcadoFoto(v.photos[0], {
+      alt: nombre,
+      // La galería ocupa ~1,3/2,1 del contenedor en escritorio.
+      sizes: '(min-width: 900px) 700px, 94vw',
+      eager: true,
+    });
+
+    /*
+     * ⚠️ **Con una sola foto no hay miniaturas.** Una tira de una miniatura
+     * que ya está arriba es un mando que no hace nada.
+     */
+    const tira =
+      v.photos.length > 1
+        ? `<div class="galeria__tira" role="group" aria-label="Fotos del vehículo">
+            ${v.photos
+              .map(
+                (f, i) => `
+              <button type="button" class="galeria__mini${i === 0 ? ' es-activa' : ''}"
+                      data-foto="${i}" aria-pressed="${i === 0}"
+                      aria-label="Ver la foto ${i + 1} de ${v.photos.length}">
+                ${marcadoFoto(f, { alt: '', sizes: '96px' })}
+              </button>`
+              )
+              .join('')}
+          </div>`
+        : '';
+
+    return `<div class="galeria">
+      <div class="galeria__grande" id="foto-grande">${principal}</div>
+      ${tira}
+    </div>`;
+  }
+
+  function conectarGaleria(v: CocheFicha, nombre: string): void {
+    const grande = document.getElementById('foto-grande');
+    const tira = contenedor.querySelector('.galeria__tira');
+    if (!grande || !tira) return;
+
+    tira.addEventListener('click', (e) => {
+      const boton = (e.target as HTMLElement).closest<HTMLElement>('[data-foto]');
+      if (!boton) return;
+      const i = Number(boton.dataset.foto);
+      const foto: FotoPublica | undefined = v.photos[i];
+      if (!foto) return;
+
+      /*
+       * ⚠️ La principal se repinta con `eager`: ya se está mirando, así que
+       * dejarla en `lazy` la pediría igual pero con menos prioridad.
+       */
+      grande.innerHTML = marcadoFoto(foto, {
+        alt: `${nombre} (${i + 1})`,
+        sizes: '(min-width: 900px) 700px, 94vw',
+        eager: true,
+      });
+
+      tira.querySelectorAll<HTMLElement>('[data-foto]').forEach((b) => {
+        const activa = b === boton;
+        b.classList.toggle('es-activa', activa);
+        b.setAttribute('aria-pressed', String(activa));
+      });
+    });
+  }
+
+  // ---- La ficha ---------------------------------------------------------
+
+  function pinta(v: CocheFicha): void {
     const nombre = nombreCoche(v);
     document.title = `${nombre} | Velto`;
 
@@ -73,11 +205,6 @@ import { EMPRESA } from '../lib/empresa';
      * declarando la misma URL, y hasta el 25 de septiembre de 2026 esa URL era
      * la **portada**: cada coche le decía a Google que es una copia de la
      * página principal.
-     *
-     * Por eso el layout no emite ninguna (`ruta={null}`) y se añade cuando ya
-     * se sabe de qué coche se trata. Se construye con el id de la reserva y no
-     * con `location.pathname` para que un parámetro pegado detrás —una
-     * campaña, un `?utm_...`— no produzca una canónica distinta por visita.
      */
     const url = `${SITIO}/coche/${encodeURIComponent(v.id)}`;
 
@@ -110,34 +237,6 @@ import { EMPRESA } from '../lib/empresa';
       return m;
     }).setAttribute('content', url);
 
-    const fotos = v.photos.length
-      ? v.photos
-          .map(
-            /*
-             * ⚠️ **`width` y `height`, con el dato que la API YA devolvía.**
-             * Sin ellos el hueco de la foto vale **0 px de alto** hasta que la
-             * imagen llega, y entonces la página entera da un salto: medido, un
-             * CLS de **0,742** en esta ficha, siete veces el umbral de «bueno».
-             * El navegador deriva la proporción de los dos atributos aunque el
-             * CSS ponga `width: 100%`, así que reserva el sitio desde el primer
-             * momento. Lo pone `marcadoFoto()`.
-             *
-             * ⚠️ Y la PRIMERA foto va con `eager`: es la que se ve al abrir, así
-             * que dejarla en `lazy` retrasa justo la que decide cómo de rápida
-             * parece la página. Las demás sí esperan a que se baje hasta ellas.
-             */
-            (f, i) =>
-              marcadoFoto(f, {
-                alt: `${nombre}${i ? ` (${i + 1})` : ''}`,
-                // La columna de fotos ocupa ~1,1/2,1 del contenedor en
-                // escritorio y todo el ancho en móvil.
-                sizes: '(min-width: 900px) 600px, 94vw',
-                eager: i === 0,
-              })
-          )
-          .join('')
-      : `<div class="coche__sinfoto"><span>Foto del vehículo</span></div>`;
-
     const extras = EXTRAS.filter(([k]) => v.features[k]).map(([, txt]) => `<li>${txt}</li>`).join('');
 
     // ⚠️ Cada dato solo se pinta SI EXISTE. Una fila «Fianza: —» no informa de
@@ -157,36 +256,230 @@ import { EMPRESA } from '../lib/empresa';
         : null,
     ].filter(Boolean) as Array<[string, string]>;
 
-    const precio = v.priceFrom
-      // El «, IVA incluido» se fue el 30 de septiembre de 2026 con los otros
-      // cinco: el precio sigue siendo el bruto, y dónde se dice está decidido
-      // —el pie, la pregunta frecuente y la entradilla de los resultados—.
-      ? `<p class="ficha__precio num"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> por día</p>`
-      : `<p class="ficha__precio">Consúltanos el precio para tus fechas.</p>`;
-
     const wa = (window as unknown as { __VELTO_WHATSAPP: string }).__VELTO_WHATSAPP;
     const mensaje = encodeURIComponent(`Hola, me interesa el ${nombre}.`);
 
+    /*
+     * ⚠️ **Lo que va en la tarjeta de la derecha es lo que decide una
+     * reserva**, no todo lo que se sabe del coche: el precio, las tres cifras
+     * que se comparan entre coches y los dos botones. La ficha técnica entera
+     * está debajo, en la columna ancha, para quien la quiera leer.
+     */
+    const claves = `
+      <ul class="reserva__claves">
+        <li>${ICONO.plazas}<span>${v.seats} plazas</span></li>
+        <li>${ICONO.maletas}<span>${v.luggageCapacity} maletas</span></li>
+        <li>${ICONO.cambio}<span>${esc(cambio(v.transmission))}</span></li>
+        <li>${ICONO.combustible}<span>${esc(combustible(v.fuelType))}</span></li>
+      </ul>`;
+
+    const precio = v.priceFrom
+      ? `<p class="reserva__precio num"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> <span>/día</span></p>
+         ${v.priceFrom.fromDays ? `<p class="reserva__desde">en alquileres de ${v.priceFrom.fromDays} días o más</p>` : ''}`
+      : `<p class="reserva__precio reserva__precio--consultar">Consúltanos el precio</p>`;
+
+    /*
+     * ⚠️ **Lo que incluye el alquiler, y solo lo que el sistema respalda.** El
+     * kilometraje y la fianza salen del coche; el seguro obligatorio y la
+     * asistencia, de la cláusula 13 del contrato — que dice además que el todo
+     * riesgo es **opcional**, así que aquí no se promete.
+     */
+    const incluye = [
+      v.includedKmPerDay ? `${v.includedKmPerDay} km al día incluidos` : null,
+      'Seguro obligatorio y asistencia en carretera',
+      'Entrega a domicilio gratis en Arganda y alrededores',
+      v.depositAmount !== undefined ? `Fianza de ${euros(v.depositAmount)}, que se devuelve` : null,
+    ].filter(Boolean) as string[];
+
     contenedor.innerHTML = `
-      <h1>${nombre}</h1>
-      ${precio}
+      <p class="overline">${esc(categoria(v.category))}</p>
+      <h1 class="ficha__titulo">${esc(nombre)}</h1>
+
+      ${/*
+         * ⚠️ **Tres piezas y no dos, para que en MÓVIL el orden sea otro.** En
+         * escritorio la tarjeta de reserva va a la derecha y la ficha técnica
+         * debajo de la galería; apilado, con la galería y el texto en un solo
+         * bloque, la tarjeta caía **detrás de todo**: medido a 390 px, el
+         * precio empezaba a 1.578 px y el botón de ver fechas más abajo
+         * todavía. Separando la galería del resto, la rejilla las recoloca por
+         * áreas en escritorio y el móvil se queda con el orden del código:
+         * foto, precio y botones, y después la letra pequeña.
+         */ ''}
       <div class="ficha">
-        <div class="ficha__fotos">${fotos}</div>
-        <div class="ficha__datos">
-          ${v.description ? `<p class="ficha__texto">${v.description}</p>` : ''}
-          <dl class="ficha__lista">
-            ${filas.map(([k, val]) => `<div><dt>${k}</dt><dd>${val}</dd></div>`).join('')}
-          </dl>
-          ${extras ? `<p class="ficha__subtitulo">Equipamiento</p><ul class="ficha__extras">${extras}</ul>` : ''}
-          <div class="ficha__acciones">
-            <a class="btn btn--brand" href="/reservar">Ver fechas libres</a>
-            <a class="btn btn--ghost" href="https://wa.me/${wa}?text=${mensaje}" rel="noopener">
-              Preguntar por WhatsApp
-            </a>
-          </div>
+        <div class="ficha__galeria">
+          ${galeria(v, nombre)}
         </div>
-      </div>`;
+
+        <aside class="reserva">
+          ${precio}
+          ${claves}
+          <a class="btn btn--brand reserva__btn" href="#disponibilidad">Ver fechas libres</a>
+          <a class="btn btn--ghost reserva__btn" href="https://wa.me/${wa}?text=${mensaje}" rel="noopener">
+            Preguntar por WhatsApp
+          </a>
+          <ul class="reserva__incluye">
+            ${incluye.map((t) => `<li>${t}</li>`).join('')}
+          </ul>
+        </aside>
+
+        <div class="ficha__resto">
+          ${v.description ? `<p class="ficha__texto">${esc(v.description)}</p>` : ''}
+
+          <h2 class="ficha__h2">Ficha técnica</h2>
+          <dl class="ficha__lista">
+            ${filas.map(([k, val]) => `<div><dt>${k}</dt><dd>${esc(val)}</dd></div>`).join('')}
+          </dl>
+
+          ${
+            extras
+              ? `<h2 class="ficha__h2">Equipamiento</h2><ul class="ficha__extras">${extras}</ul>`
+              : ''
+          }
+        </div>
+      </div>
+
+      <section class="dispo" id="disponibilidad">
+        <h2 class="ficha__h2">Disponibilidad</h2>
+        <p class="dispo__entrada">
+          Elige el día de recogida y el de devolución. Lo que está en gris ya
+          está cogido.
+        </p>
+        <div class="dispo__cuerpo">
+          <div class="cal" id="cal"></div>
+          <div class="dispo__lado" id="dispo-lado"></div>
+        </div>
+        <p class="dispo__letra">
+          ⓘ El día siguiente a cada devolución también sale ocupado: es el que
+          dedicamos a revisar el coche, limpiarlo y dejarlo con combustible.
+        </p>
+        ${/*
+           * ⚠️ **Aquí NO va una lista de preguntas frecuentes, y lo valoré.**
+           * Dorel lo dejó a criterio —«en la plantilla pongo una FAQ pero
+           * valóralo tú»—, y las respuestas que irían aquí ya están escritas
+           * en `/preguntas-frecuentes`: repetirlas sería una segunda copia de
+           * la edad mínima, la fianza y los kilómetros, que es exactamente la
+           * clase de duplicado que en este proyecto acaba diciendo dos cosas
+           * distintas. Y en una ficha, un acordeón de seis preguntas empuja el
+           * calendario —lo que se viene a ver— media pantalla hacia abajo.
+           *
+           * Lo que sí se ha traído a la ficha es lo que se necesita **en el
+           * momento de decidir**: qué incluye el alquiler, en la tarjeta de la
+           * derecha. El resto, a un clic.
+           */ ''}
+        <p class="dispo__letra">
+          ¿Dudas con la fianza, los kilómetros o la edad mínima?
+          <a href="/preguntas-frecuentes">Preguntas frecuentes</a> ·
+          <a href="/condiciones">Condiciones de alquiler</a>
+        </p>
+      </section>`;
+
     contenedor.hidden = false;
+    conectarGaleria(v, nombre);
+    conectarCalendario(v);
+  }
+
+  // ---- El calendario ----------------------------------------------------
+
+  function conectarCalendario(v: CocheFicha): void {
+    const caja = document.getElementById('cal');
+    const encontrado = document.getElementById('dispo-lado');
+    if (!caja || !encontrado) return;
+    /*
+     * Una constante ya estrechada: TypeScript no conserva el estrechamiento
+     * dentro de las funciones de abajo, y ahí se usa media docena de veces.
+     * Es el mismo apaño que lleva el combo de zonas.
+     */
+    const lado: HTMLElement = encontrado;
+
+    const ocupados = new Set(v.busyDays ?? []);
+    const horizonte = parseDiaIso(v.availableUntil);
+
+    /** El número de la petición en curso: lo que descarta las respuestas viejas. */
+    let peticion = 0;
+
+    const cal = montarCalendario({
+      contenedor: caja,
+      ocupados,
+      horizonte,
+      alCambiar: (rango) => pintarLado(rango),
+    });
+
+    function pintarLado(rango: Rango): void {
+      if (!rango.desde) {
+        lado.innerHTML = `<p class="dispo__pista">Pulsa el día en que quieres recoger el coche.</p>`;
+        return;
+      }
+      if (!rango.hasta) {
+        lado.innerHTML = `<p class="dispo__pista">Ahora el día de la devolución.</p>`;
+        return;
+      }
+
+      const dias = diasDelRango(rango.desde, rango.hasta);
+      const cabecera = `
+        <p class="dispo__fechas">${rotuloRango(rango.desde, rango.hasta)}</p>
+        <p class="dispo__dias">${dias === 1 ? '1 día' : `${dias} días`}</p>`;
+
+      lado.innerHTML = `${cabecera}<p class="dispo__pista">Calculando el precio…</p>`;
+
+      const desde = comoCampo(rango.desde);
+      const hasta = comoCampo(rango.hasta);
+      const mia = ++peticion;
+
+      /*
+       * ⚠️ **El precio lo da el backend, no la ficha.** El «desde» de arriba es
+       * el tramo más barato —el de un alquiler largo— y la tabla de tramos no
+       * se publica a propósito: es la curva de descuento del negocio. Calcular
+       * aquí el precio de tres días sería inventárselo.
+       */
+      disponibilidadCoche(desde, hasta, v.id)
+        .then((r) => {
+          /*
+           * ⚠️ **Se descartan las respuestas de una selección anterior.** Dos
+           * clics seguidos lanzan dos peticiones y no tienen por qué volver en
+           * orden: sin esto, el precio de las fechas viejas puede pintarse
+           * encima del de las nuevas y quedarse ahí. Es dinero en pantalla.
+           */
+          if (mia !== peticion) return;
+
+          const coche = r.vehicles[0];
+          if (!coche) {
+            /*
+             * ⚠️ Puede pasar de verdad: entre que se pintó el calendario y se
+             * eligieron las fechas, alguien ha reservado. Se dice, y se ofrece
+             * volver a empezar.
+             */
+            lado.innerHTML = `${cabecera}
+              <p class="dispo__aviso">Esas fechas acaban de ocuparse. Elige otras.</p>
+              <button type="button" class="btn btn--ghost dispo__btn" id="limpiar">Quitar fechas</button>`;
+            return;
+          }
+
+          lado.innerHTML = `${cabecera}
+            <p class="dispo__precio num">${euros(coche.price.gross)}</p>
+            <p class="dispo__nota">Precio final del alquiler completo.</p>
+            <a class="btn btn--brand dispo__btn"
+               href="/reservar?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}">
+              Reservar estas fechas
+            </a>
+            <button type="button" class="btn btn--ghost dispo__btn" id="limpiar">Quitar fechas</button>`;
+        })
+        .catch(() => {
+          if (mia !== peticion) return;
+          lado.innerHTML = `${cabecera}
+            <p class="dispo__aviso">No hemos podido calcular el precio. Inténtalo otra vez.</p>
+            <button type="button" class="btn btn--ghost dispo__btn" id="limpiar">Quitar fechas</button>`;
+        });
+    }
+
+    /*
+     * Delegado, porque el botón se repinta con cada selección: un oyente
+     * puesto sobre el nodo de ahora se quedaría colgando del siguiente.
+     */
+    lado.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).id === 'limpiar') cal.limpiar();
+    });
+
+    pintarLado({ desde: null, hasta: null });
   }
 
   if (!id) {
@@ -209,89 +502,381 @@ import { EMPRESA } from '../lib/empresa';
 </script>
 
 <style is:global>
-  .migas {
-    margin-bottom: 1.5rem;
-  }
+  .migas { margin-bottom: var(--sp-5); }
 
+  .ficha__titulo { margin: var(--sp-2) 0 var(--sp-8); }
+
+  /*
+   * ⚠️ **En móvil manda el ORDEN DEL CÓDIGO: foto, precio, ficha.** Por eso el
+   * `<aside>` va escrito en medio y no al final. En escritorio lo recolocan
+   * las áreas: la tarjeta a la derecha, ocupando las dos filas.
+   */
   .ficha {
     display: grid;
-    gap: 2rem;
+    gap: var(--sp-8);
     grid-template-columns: 1fr;
-    margin-top: 1.5rem;
   }
 
-  @media (min-width: 860px) {
+  @media (min-width: 900px) {
     .ficha {
-      grid-template-columns: 1.1fr 1fr;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      grid-template-areas:
+        'galeria reserva'
+        'resto   reserva';
       align-items: start;
+      column-gap: var(--sp-10);
+      row-gap: var(--sp-6);
     }
+    .ficha__galeria { grid-area: galeria; }
+    .reserva { grid-area: reserva; }
+    .ficha__resto { grid-area: resto; }
   }
 
-  .ficha__fotos {
-    display: grid;
-    gap: 0.75rem;
-  }
+  .ficha__galeria,
+  .ficha__resto { min-width: 0; }
 
-  .ficha__fotos img {
-    width: 100%;
-    border-radius: var(--r-lg);
-    border: 1px solid var(--border);
+  /* ---- La galería ------------------------------------------------------ */
+
+  .galeria { display: grid; gap: var(--sp-3); }
+
+  /*
+   * ⚠️ **Proporción fija y `cover`, como las tarjetas.** Antes cada foto salía
+   * a su alto natural: una vertical de móvil ocupaba una pantalla entera y la
+   * ficha cambiaba de forma según el coche. Recortar es seguro porque las
+   * miniaturas enseñan todas, y quien quiera ver una entera la abre.
+   */
+  .galeria__grande {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
     background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-lg);
   }
 
-  .ficha__precio {
-    font-size: 1rem;
-    color: var(--text-2);
-    margin-bottom: 0;
-  }
+  .galeria__grande picture { display: block; width: 100%; height: 100%; }
+  .galeria__grande img { width: 100%; height: 100%; object-fit: cover; }
 
-  .ficha__precio strong {
-    font-size: 1.6rem;
-    color: var(--text);
-  }
-
-  .ficha__texto {
-    color: var(--text-2);
-  }
-
-  .ficha__lista {
-    margin: 0 0 1.5rem;
+  .galeria__sinfoto {
     display: grid;
-    gap: 0;
+    place-items: center;
+    color: var(--text-3);
+    font-size: var(--fs-small);
   }
+
+  /*
+   * ⚠️ **La tira de miniaturas SÍ se desplaza en horizontal**, y es la
+   * excepción a «recolocar, nunca ocultar»: aquí no hay ninguna opción que
+   * desaparezca —son fotos del mismo coche, y la que importa está arriba— y
+   * envolver seis miniaturas en dos filas come el alto de la galería.
+   */
+  .galeria__tira {
+    display: flex;
+    gap: var(--sp-2);
+    overflow-x: auto;
+    padding-bottom: var(--sp-1);
+    scrollbar-width: thin;
+  }
+
+  .galeria__mini {
+    flex: none;
+    width: 96px;
+    aspect-ratio: 4 / 3;
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    opacity: 0.65;
+    transition: opacity var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+  }
+
+  .galeria__mini picture { display: block; width: 100%; height: 100%; }
+  .galeria__mini img { width: 100%; height: 100%; object-fit: cover; }
+  .galeria__mini:hover { opacity: 1; }
+  .galeria__mini.es-activa { opacity: 1; border-color: var(--brand); }
+
+  /* ---- El texto y la ficha técnica ------------------------------------- */
+
+  .ficha__texto { margin: var(--sp-6) 0 0; color: var(--text-2); }
+
+  .ficha__h2 { font-size: var(--fs-h4); margin: var(--sp-8) 0 var(--sp-4); }
+
+  .ficha__lista { margin: 0; }
 
   .ficha__lista > div {
     display: flex;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.6rem 0;
-    border-bottom: 1px solid var(--border);
+    gap: var(--sp-4);
+    padding: var(--sp-3) 0;
+    border-bottom: var(--bw) solid var(--border);
   }
 
-  .ficha__lista dt {
-    color: var(--text-2);
-  }
-
-  .ficha__lista dd {
-    margin: 0;
-    font-weight: 600;
-    text-align: right;
-  }
-
-  .ficha__subtitulo {
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
+  .ficha__lista dt { color: var(--text-2); }
+  .ficha__lista dd { margin: 0; font-weight: var(--fw-medium); text-align: right; }
 
   .ficha__extras {
-    margin: 0 0 1.5rem;
-    padding-left: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: var(--sp-2) var(--sp-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
     color: var(--text-2);
+    font-size: var(--fs-small);
   }
 
-  .ficha__acciones {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+  /* El punto de la lista, dibujado: un `list-style` no se puede colorear. */
+  .ficha__extras li { display: flex; align-items: center; gap: var(--sp-2); }
+  .ficha__extras li::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brand);
   }
+
+  /* ---- La tarjeta de reserva ------------------------------------------- */
+
+  .reserva {
+    padding: var(--sp-6);
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  /*
+   * ⚠️ **Pegajosa solo en escritorio y solo si cabe.** En móvil ocuparía media
+   * pantalla mientras se lee la ficha; y `top` cuenta con la cabecera, que es
+   * pegajosa también.
+   */
+  @media (min-width: 900px) {
+    .reserva { position: sticky; top: var(--sp-8); }
+  }
+
+  .reserva__precio { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+  .reserva__precio strong {
+    font-size: var(--fs-price);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-tight);
+    color: var(--text);
+  }
+  .reserva__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
+  .reserva__desde { margin: var(--sp-1) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
+
+  .reserva__claves {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-3);
+    margin: var(--sp-5) 0;
+    padding: var(--sp-5) 0;
+    border-top: var(--bw) solid var(--border);
+    border-bottom: var(--bw) solid var(--border);
+    list-style: none;
+    color: var(--text-2);
+    font-size: var(--fs-small);
+  }
+  .reserva__claves li { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+  .reserva__claves svg { flex: none; color: var(--text-3); }
+
+  .reserva__btn { width: 100%; margin-bottom: var(--sp-3); }
+
+  .reserva__incluye {
+    margin: var(--sp-4) 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--text-2);
+    font-size: var(--fs-caption);
+  }
+  .reserva__incluye li { display: flex; gap: var(--sp-2); padding: var(--sp-1) 0; }
+  .reserva__incluye li::before { content: '✓'; color: var(--brand); flex: none; }
+
+  /* ---- Disponibilidad --------------------------------------------------- */
+
+  .dispo { margin-top: var(--sp-12); scroll-margin-top: var(--sp-16); }
+  .dispo__entrada { margin: 0 0 var(--sp-5); color: var(--text-2); }
+
+  .dispo__cuerpo {
+    display: grid;
+    gap: var(--sp-6);
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  @media (min-width: 900px) {
+    .dispo__cuerpo { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--sp-10); }
+  }
+
+  .dispo__letra { margin: var(--sp-5) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
+
+  .dispo__lado {
+    padding: var(--sp-6);
+    background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  .dispo__pista { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+  .dispo__fechas { margin: 0; font-weight: var(--fw-medium); }
+  .dispo__dias { margin: var(--sp-1) 0 var(--sp-4); color: var(--text-3); font-size: var(--fs-caption); }
+  .dispo__precio {
+    margin: 0;
+    font-size: var(--fs-price);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-tight);
+  }
+  .dispo__nota { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
+  .dispo__aviso { margin: 0 0 var(--sp-4); color: var(--danger); font-size: var(--fs-small); }
+  .dispo__btn { width: 100%; margin-bottom: var(--sp-2); }
+
+  /* ---- El calendario ---------------------------------------------------- */
+
+  .cal {
+    position: relative;
+    padding: var(--sp-5);
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  /*
+   * Las flechas van sobre los rótulos de los meses, una a cada extremo: así el
+   * nombre del mes queda centrado en su propia columna y no baila al cambiar
+   * de «mayo» a «septiembre».
+   */
+  .cal__cabecera {
+    position: absolute;
+    top: var(--sp-5);
+    left: var(--sp-5);
+    right: var(--sp-5);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .cal__nav {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    pointer-events: auto;
+    color: var(--text);
+    background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-pill);
+    cursor: pointer;
+  }
+  .cal__nav:disabled { opacity: 0.35; cursor: default; }
+
+  .cal__meses { display: grid; gap: var(--sp-8); }
+
+  @media (min-width: 720px) {
+    .cal__meses { grid-template-columns: 1fr 1fr; gap: var(--sp-6); }
+  }
+
+  /*
+   * ⚠️ **En móvil solo se pinta un mes.** Dos rejillas de siete columnas en
+   * 390 px dejan los números a 9 px. El segundo mes no se pierde: está a una
+   * flecha.
+   */
+  @media (max-width: 719px) {
+    .cal__mes:nth-child(2) { display: none; }
+  }
+
+  .cal__rotulo {
+    margin: 0 0 var(--sp-4);
+    text-align: center;
+    font-weight: var(--fw-medium);
+    /* El nombre del mes en minúscula queda raro en un rótulo; la primera, no. */
+    text-transform: capitalize;
+  }
+  .cal__rotulo span { color: var(--text-3); font-weight: 400; }
+
+  .cal__semana,
+  .cal__rejilla {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .cal__semana {
+    margin-bottom: var(--sp-2);
+    color: var(--text-3);
+    font-size: var(--fs-caption);
+    text-align: center;
+  }
+
+  .cal__hueco { aspect-ratio: 1; }
+
+  .cal__dia {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font: inherit;
+    font-size: var(--fs-small);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .cal__dia--libre:hover { background: var(--bg-hover); }
+  }
+
+  /*
+   * ⚠️ **Ocupado se ve tachado Y en gris, no solo en gris.** Con el color
+   * solo, en un tema oscuro y en una pantalla al sol un día ocupado y uno
+   * libre se parecen demasiado — y aquí equivocarse es presentarse a por un
+   * coche que no está.
+   */
+  .cal__dia--ocupado {
+    color: var(--text-3);
+    text-decoration: line-through;
+    cursor: not-allowed;
+    background: var(--bg-alt);
+  }
+
+  .cal__dia--pasado,
+  .cal__dia--fuera-de-horizonte { color: var(--text-3); opacity: 0.45; cursor: default; }
+
+  .cal__dia--medio { background: var(--brand-soft); border-radius: 0; }
+  .cal__dia--inicio,
+  .cal__dia--fin,
+  .cal__dia--unico {
+    color: var(--velto-white);
+    background: var(--brand);
+    font-weight: var(--fw-medium);
+  }
+  .cal__dia--inicio { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+  .cal__dia--fin { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+
+  .cal__dia--hoy { outline: var(--bw) solid var(--border-strong); outline-offset: -2px; }
+
+  .cal__leyenda {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: var(--sp-5) 0 0;
+    color: var(--text-3);
+    font-size: var(--fs-caption);
+  }
+
+  /*
+   * La muestra es un día de verdad, con su mismo aspecto. Va con medida fija
+   * porque dentro de la rejilla el ancho lo pone la columna, y aquí no hay
+   * columna que lo ponga.
+   */
+  .cal__leyenda .cal__dia {
+    width: 28px;
+    aspect-ratio: auto;
+    height: 28px;
+    cursor: default;
+    border: var(--bw) solid var(--border);
+  }
+  .cal__leyenda .cal__dia:not(:first-child) { margin-left: var(--sp-4); }
 </style>

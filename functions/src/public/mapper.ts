@@ -148,16 +148,34 @@ export function toSummary(
   };
 }
 
+/**
+ * Lo que el calendario de la ficha necesita saber, ya calculado.
+ *
+ * ⚠️ **Entra como parámetro y no se lee del documento del coche**, porque no
+ * está ahí: sale de cruzar sus reservas. Se pasa entero y explícito para que
+ * esta función siga siendo el único sitio por el que un dato sale a internet.
+ */
+export interface DisponibilidadPublica {
+  /** Días `yyyy-MM-dd` que NO se pueden coger, con la preparación dentro. */
+  busyDays: string[];
+  /** El último día que se ha mirado. Más allá, el calendario no afirma nada. */
+  availableUntil: string;
+}
+
 /** La ficha completa. */
 export function toDetail(
   id: string,
   raw: Record<string, unknown>,
   bucket: string,
-  vatRate: number
+  vatRate: number,
+  disponibilidad?: DisponibilidadPublica
 ): PublicVehicleDetail {
   const f = (raw['features'] ?? {}) as Record<string, unknown>;
   return {
     ...toSummary(id, raw, bucket, vatRate),
+    ...(disponibilidad
+      ? { busyDays: disponibilidad.busyDays, availableUntil: disponibilidad.availableUntil }
+      : {}),
     acrissCode: String(raw['acrissCode'] ?? ''),
     features: {
       airConditioning: f['airConditioning'] === true,

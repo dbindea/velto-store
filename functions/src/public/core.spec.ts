@@ -13,6 +13,10 @@ import {
   toDate,
   vehicleIsPublishable,
   widenToFullDays,
+  disponibleDesde,
+  ventanaOcupada,
+  diasOcupados,
+  diaIso,
 } from './core';
 
 // ---------------------------------------------------------------------------
@@ -313,5 +317,123 @@ describe('publicPrice — los dos lados del impuesto cuadran contra lo que se EN
     expect(p.vatRate).toBe(0);
     expect(p.gross).toBe(24.95);
     expect(p.net).toBe(24.95);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El día de preparación, y el calendario que sale de él.
+//
+// ⚠️ Regla de negocio de Dorel del 30 de septiembre de 2026: «si una persona
+// entrega el coche hoy a las 12:00 o 14:00 no se puede alquilar hasta el día
+// siguiente a las 12:00, para revisar, limpiar y rellenar combustible».
+// ---------------------------------------------------------------------------
+
+const d = (iso: string) => new Date(iso);
+
+describe('disponibleDesde — el coche no sale el mismo día que vuelve', () => {
+  it('devuelto a las 12:00, libre al día siguiente a las 12:00', () => {
+    expect(disponibleDesde(d('2026-10-10T12:00:00')).toISOString()).toBe(
+      d('2026-10-11T12:00:00').toISOString()
+    );
+  });
+
+  it('devuelto a las 14:00, libre al día siguiente a las 12:00 igualmente', () => {
+    // Los dos ejemplos que dio Dorel dan el mismo instante: lo que manda es el
+    // día siguiente, no las 24 horas exactas.
+    expect(disponibleDesde(d('2026-10-10T14:00:00')).toISOString()).toBe(
+      d('2026-10-11T12:00:00').toISOString()
+    );
+  });
+
+  it('devuelto de madrugada, TAMPOCO sale ese día', () => {
+    // Un coche que vuelve a las 8:00 podría limpiarse por la mañana, pero eso
+    // lo decide el mostrador. La web no ofrece lo que no sabe.
+    expect(disponibleDesde(d('2026-10-10T08:00:00')).toISOString()).toBe(
+      d('2026-10-11T12:00:00').toISOString()
+    );
+  });
+
+  it('cruza el fin de mes sin inventarse un día 32', () => {
+    expect(diaIso(disponibleDesde(d('2026-10-31T18:00:00')))).toBe('2026-11-01');
+  });
+
+  it('no toca la fecha que recibe', () => {
+    const fin = d('2026-10-10T12:00:00');
+    disponibleDesde(fin);
+    expect(fin.toISOString()).toBe(d('2026-10-10T12:00:00').toISOString());
+  });
+});
+
+describe('ventanaOcupada', () => {
+  it('estira la reserva hasta que el coche está listo', () => {
+    const v = ventanaOcupada(d('2026-10-05T10:00:00'), d('2026-10-08T10:00:00'))!;
+    expect(diaIso(v.inicio)).toBe('2026-10-05');
+    expect(v.fin.toISOString()).toBe(d('2026-10-09T12:00:00').toISOString());
+  });
+
+  it('con una fecha ilegible devuelve null, y quien llama lo trata como ocupado', () => {
+    expect(ventanaOcupada(null, d('2026-10-08T10:00:00'))).toBeNull();
+    expect(ventanaOcupada(d('2026-10-05T10:00:00'), 'lo que sea')).toBeNull();
+  });
+
+  it('lee las cuatro formas de fecha de Firestore', () => {
+    const v = ventanaOcupada(
+      { seconds: Math.floor(d('2026-10-05T10:00:00').getTime() / 1000) },
+      { _seconds: Math.floor(d('2026-10-08T10:00:00').getTime() / 1000) }
+    );
+    expect(v).not.toBeNull();
+    expect(diaIso(v!.inicio)).toBe('2026-10-05');
+  });
+});
+
+describe('diasOcupados — lo que pinta el calendario de la ficha', () => {
+  const desde = d('2026-10-01T09:30:00');
+
+  it('marca los días del alquiler MÁS el de preparación', () => {
+    const v = ventanaOcupada(d('2026-10-05T10:00:00'), d('2026-10-07T10:00:00'))!;
+    // Sale el 5, vuelve el 7 y está listo el 8 a las 12: el 8 no se puede coger.
+    expect(diasOcupados([v], desde, 12)).toEqual([
+      '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08',
+    ]);
+  });
+
+  it('un alquiler de un solo día ocupa dos: el suyo y el de después', () => {
+    const v = ventanaOcupada(d('2026-10-05T10:00:00'), d('2026-10-05T20:00:00'))!;
+    expect(diasOcupados([v], desde, 12)).toEqual(['2026-10-05', '2026-10-06']);
+  });
+
+  it('cuenta la MISMA ventana que el buscador, o el calendario mentiría', () => {
+    /*
+     * Es la comprobación que de verdad importa: el buscador ensancha a días
+     * completos y cruza con `rangesOverlap`. Si un día sale libre aquí y
+     * ocupado allí, el visitante lo elige, pulsa y la web le dice que no hay
+     * coches — que es peor que no tener calendario.
+     */
+    const v = ventanaOcupada(d('2026-10-05T10:00:00'), d('2026-10-07T10:00:00'))!;
+    const ocupados = diasOcupados([v], desde, 12);
+
+    for (let dia = 1; dia <= 12; dia++) {
+      const iso = `2026-10-${String(dia).padStart(2, '0')}`;
+      const ventana = widenToFullDays(d(`${iso}T10:00:00`), d(`${iso}T18:00:00`));
+      const buscadorDiceOcupado = rangesOverlap(ventana.from, ventana.to, v.inicio, v.fin);
+      expect(ocupados.includes(iso)).toBe(buscadorDiceOcupado);
+    }
+  });
+
+  it('varias reservas se acumulan sin repetir días', () => {
+    const a = ventanaOcupada(d('2026-10-02T10:00:00'), d('2026-10-03T10:00:00'))!;
+    const b = ventanaOcupada(d('2026-10-04T10:00:00'), d('2026-10-05T10:00:00'))!;
+    const dias = diasOcupados([a, b], desde, 10);
+    expect(dias).toEqual(['2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06']);
+    expect(new Set(dias).size).toBe(dias.length);
+  });
+
+  it('sin reservas no hay ningún día ocupado', () => {
+    expect(diasOcupados([], desde, 30)).toEqual([]);
+  });
+
+  it('no mira más allá del horizonte que se le pide', () => {
+    const v = ventanaOcupada(d('2026-11-20T10:00:00'), d('2026-11-22T10:00:00'))!;
+    expect(diasOcupados([v], desde, 10)).toEqual([]);
   });
 });

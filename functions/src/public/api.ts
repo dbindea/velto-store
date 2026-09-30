@@ -35,12 +35,16 @@ import {
   publicPrice,
   blocksAvailability,
   calculateCalendarDays,
+  diaIso,
+  diasOcupados,
   rangesOverlap,
   tariffNetPrice,
   toDate,
   vehicleIsPublishable,
+  ventanaOcupada,
   widenToFullDays,
 } from './core';
+import type { VentanaOcupada } from './core';
 import type { PublicAvailableVehicle } from './types';
 import { defineSecret } from 'firebase-functions/params';
 import { companyConfig } from '../company-config';
@@ -97,6 +101,21 @@ const MAX_VEHICULOS = 60;
 
 /** El alquiler más largo que la web cotiza. Más que eso, se habla por teléfono. */
 const MAX_DIAS = 90;
+
+/**
+ * Hasta dónde mira el calendario de la ficha.
+ *
+ * ⚠️ **Tiene que ir con `MAX_DIAS`, y por eso son 90 + 90.** El calendario deja
+ * elegir una recogida dentro del horizonte y un alquiler de hasta 90 días, así
+ * que mirando solo 90 el final de un alquiler largo caería en terreno que no
+ * se ha comprobado — y la web enseñaría libre lo que no sabe. Con el doble,
+ * cualquier rango que el calendario permita está dentro de lo mirado.
+ *
+ * ⚠️ **Y lo que hay más allá NO se pinta como libre**: el calendario corta ahí
+ * (`availableUntil`). Un día en blanco se lee como disponible, y eso es
+ * exactamente lo que no se puede afirmar.
+ */
+const HORIZONTE_DIAS = 180;
 
 /**
  * Se acepta cualquier origen porque esto **es** público: la web de Velto, un
@@ -211,8 +230,64 @@ export const publicVehicleDetail = onRequest({ cors: false }, async (req: Reques
       return;
     }
     const ajustes = await operationSettings();
-    cache(res, 600);
-    res.json({ vehicle: toDetail(id, raw, storageBucket().bucket().name, ajustes.vatRate) });
+
+    /*
+     * ⚠️ **El calendario de la ficha se sirve AQUÍ y no en un endpoint
+     * aparte.** La página ya pide esta llamada, así que un segundo endpoint
+     * serían dos viajes, dos cachés que se desincronizan y un rewrite más que
+     * desplegar — y ya sabemos lo que cuesta un rewrite olvidado.
+     *
+     * ⚠️ **Y son DÍAS, no rangos.** Con los instantes exactos se puede saber a
+     * qué hora devuelve el coche un cliente concreto; es la misma razón por la
+     * que el buscador ensancha su ventana a días completos.
+     */
+    const reservas = await firestore()
+      .collection('reservations')
+      .where('vehicleId', '==', id)
+      .get();
+
+    const ventanas: VentanaOcupada[] = [];
+    for (const r of reservas.docs) {
+      const data = r.data();
+      if (!blocksAvailability(data['reservationStatus'])) continue;
+      const v = ventanaOcupada(data['pickupDateTime'], data['returnDateTime']);
+      /*
+       * ⚠️ **Una reserva con la fecha ilegible bloquea el horizonte entero.**
+       * Es duro y es lo correcto: no se sabe cuándo ocupa, así que ofrecer
+       * cualquier día sería adivinar. Sale además en el log, que es donde
+       * alguien puede verlo y arreglar el documento.
+       */
+      if (!v) {
+        logger.warn('Reserva con fechas ilegibles: se bloquea el calendario del coche', {
+          id,
+          reserva: r.id,
+        });
+        ventanas.push({ inicio: new Date(0), fin: new Date(8.64e15) });
+        continue;
+      }
+      ventanas.push(v);
+    }
+
+    const hoy = new Date();
+    const ocupados = diasOcupados(ventanas, hoy, HORIZONTE_DIAS);
+
+    /*
+     * ⚠️ **La caché baja de 600 s a 120**, la misma que la disponibilidad.
+     * Desde que la ficha lleva dentro los días ocupados, diez minutos de caché
+     * son diez minutos enseñando libre un día que alguien acaba de reservar. Y
+     * la cabecera de `firebase.json` para `/api/vehicle` va a juego: la del CDN
+     * manda sobre esta.
+     */
+    cache(res, 120);
+    res.json({
+      vehicle: toDetail(id, raw, storageBucket().bucket().name, ajustes.vatRate, {
+        busyDays: ocupados,
+        /** Hasta dónde se ha mirado. Más allá, el calendario no puede afirmar nada. */
+        availableUntil: diaIso(
+          new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + HORIZONTE_DIAS - 1)
+        ),
+      }),
+    });
   } catch (error) {
     logger.error('Fallo sirviendo la ficha pública', error);
     fallo(res, 500, 'internal');
@@ -289,15 +364,19 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
       for (const r of reservas.docs) {
         const data = r.data();
         if (!blocksAvailability(data['reservationStatus'])) continue;
-        const inicio = toDate(data['pickupDateTime']);
-        const fin = toDate(data['returnDateTime']);
         /**
          * ⚠️ **Una fecha ilegible cuenta como OCUPADO.** `toDate()` de la app
          * devolvería hoy y la reserva dejaría de solapar: el coche saldría
          * libre estando alquilado. Ante la duda, no se publica.
+         *
+         * ⚠️ **Y la ventana lleva dentro el día de preparación**
+         * (`ventanaOcupada`), así que un coche devuelto hoy no se ofrece para
+         * mañana antes de las 12. Los tres sitios que cruzan reservas usan la
+         * misma función, o la web ofrecería lo que luego rechaza.
          */
-        if (!inicio || !fin) { ocupado = true; break; }
-        if (rangesOverlap(ventana.from, ventana.to, inicio, fin)) { ocupado = true; break; }
+        const v = ventanaOcupada(data['pickupDateTime'], data['returnDateTime']);
+        if (!v) { ocupado = true; break; }
+        if (rangesOverlap(ventana.from, ventana.to, v.inicio, v.fin)) { ocupado = true; break; }
       }
       if (ocupado) continue;
 
@@ -438,10 +517,12 @@ export const createBookingRequest = onRequest(
       for (const r of reservas.docs) {
         const data = r.data();
         if (!blocksAvailability(data['reservationStatus'])) continue;
-        const inicio = toDate(data['pickupDateTime']);
-        const fin = toDate(data['returnDateTime']);
-        // Una fecha ilegible cuenta como ocupado, como en la disponibilidad.
-        if (!inicio || !fin || rangesOverlap(ventana.from, ventana.to, inicio, fin)) {
+        // Una fecha ilegible cuenta como ocupado, y la ventana lleva dentro el
+        // día de preparación: la misma cuenta que hizo el buscador para
+        // ofrecer este coche, o aceptaríamos lo que la web dijo que no había
+        // —y al revés, que es peor—.
+        const v = ventanaOcupada(data['pickupDateTime'], data['returnDateTime']);
+        if (!v || rangesOverlap(ventana.from, ventana.to, v.inicio, v.fin)) {
           fallo(res, 409, 'vehicle-unavailable');
           return;
         }
