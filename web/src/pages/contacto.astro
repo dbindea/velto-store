@@ -1,6 +1,52 @@
 ---
 import Base from '../layouts/Base.astro';
-import { EMPRESA } from '../lib/empresa';
+import { EMPRESA, ENTREGA_FUERA_DE_HORARIO, HORARIO, SITIO } from '../lib/empresa';
+
+/**
+ * El negocio, para las máquinas.
+ *
+ * ⚠️ **Se construye desde el MISMO `HORARIO` que pinta la tarjeta de al lado**,
+ * por lo mismo que el `FAQPage` sale del array de preguntas: marcado que no se
+ * corresponde con lo que se ve es lo que Google penaliza, y de las dos copias
+ * la que se queda vieja siempre es la que no mira nadie.
+ *
+ * ⚠️ **`AutoRental` y no `LocalBusiness` a secas**: es el tipo que describe
+ * exactamente esto y hereda todo lo del negocio local.
+ *
+ * ⚠️ **La dirección es la de la OFICINA, no el domicilio social.** Es la regla
+ * de los dos domicilios que ya gobierna los PDF: aquí se está diciendo dónde
+ * encontrar a alguien, no quién comparece ante notario. El domicilio social
+ * vive en el aviso legal, junto al NIF.
+ *
+ * ⚠️ **Y los días cerrados no se declaran.** Un `openingHoursSpecification` sin
+ * tramos no significa nada para schema.org; lo que dice que un día está cerrado
+ * es su ausencia. Escribirlo con horas a cero es la forma corriente de acabar
+ * saliendo como abierto de madrugada.
+ */
+const datosEstructurados = {
+  '@context': 'https://schema.org',
+  '@type': 'AutoRental',
+  name: EMPRESA.marca,
+  url: SITIO,
+  telephone: EMPRESA.telefono,
+  email: EMPRESA.correo,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: EMPRESA.oficinaCalle,
+    postalCode: '28500',
+    addressLocality: 'Arganda del Rey',
+    addressRegion: 'Madrid',
+    addressCountry: 'ES',
+  },
+  openingHoursSpecification: HORARIO.flatMap((d) =>
+    d.tramos.map((t) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: [...d.dias],
+      opens: t[0],
+      closes: t[1],
+    }))
+  ),
+};
 ---
 
 {/*
@@ -26,6 +72,13 @@ import { EMPRESA } from '../lib/empresa';
   descripcion="Cuéntanos qué necesitas y te contestamos. Alquilar un coche, poner el tuyo en alquiler o cualquier otra cosa."
   ruta="/contacto"
 >
+  {/*
+    ⚠️ `set:html` con un objeto nuestro, sin un solo dato de fuera — igual que
+    en las preguntas frecuentes. El día que algo de aquí venga de una API, se
+    escapa.
+  */}
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(datosEstructurados)} />
+
   <section class="seccion">
     <div class="contenedor">
       <p class="chip">Contacto</p>
@@ -210,6 +263,36 @@ import { EMPRESA } from '../lib/empresa';
                 rel="noopener">Ver cómo llegar</a
               >
             </p>
+            {/*
+              ⚠️ **El horario sale de `HORARIO`, el mismo array del que sale el
+              JSON-LD de arriba.** Y el domingo se enseña aunque no se declare:
+              «cerrado» es una respuesta, y no ponerlo obliga al visitante a
+              deducirlo de una ausencia.
+            */}
+            <ul class="horario">
+              {HORARIO.map((d) => (
+                <li>
+                  <span class="horario__dias">{d.rotulo}</span>
+                  {/*
+                    ⚠️ **Cada tramo en su propia línea, no separados por un
+                    punto.** Encadenados, a 390 px la línea se partía DENTRO de
+                    una hora —«… · 17:00–» y «20:00» debajo—, que es lo peor que
+                    le puede pasar a un horario: se lee como si hubiera un tramo
+                    que empieza a las 17:00 y otro que acaba a las 20:00.
+                    Apilados no hay nada que partir, y además es como se imprime
+                    un horario de toda la vida.
+                  */}
+                  <span class="horario__horas">
+                    {d.tramos.length ? (
+                      d.tramos.map((t) => <span>{t[0]}–{t[1]}</span>)
+                    ) : (
+                      <span>Cerrado</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p class="nota">{ENTREGA_FUERA_DE_HORARIO}</p>
             <p class="nota">
               Si te viene mejor, llevamos el coche a donde acordemos. El
               desplazamiento se pacta antes, nunca aparece después en la factura.
@@ -393,4 +476,33 @@ import { EMPRESA } from '../lib/empresa';
   .lado__bloque h2 { font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
   .lado__bloque p { margin-bottom: var(--sp-3); }
   .lado__bloque p:last-child { margin-bottom: 0; }
+
+  /*
+   * El horario.
+   *
+   * ⚠️ **Dos columnas de ancho propio, no una tabla ni un `space-between`.**
+   * Con `justify-content: space-between` las horas quedan alineadas a la
+   * derecha unas con otras solo por casualidad —dependen de lo que mida el
+   * rótulo del día—, y «10:00–14:00 · 17:00–20:00» al lado de «Cerrado»
+   * desalinea la columna entera. Con una rejilla, las horas empiezan en el
+   * mismo sitio en las tres filas.
+   *
+   * ⚠️ **Y la primera columna es `auto`**, no una medida escrita: «Lunes a
+   * viernes» cambia de ancho con el tipo de letra, y una medida fija lo
+   * cortaría justo en el idioma en que nadie mira.
+   */
+  .horario {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--sp-1) var(--sp-4);
+    margin: 0 0 var(--sp-3);
+    padding: 0;
+    list-style: none;
+    font-size: var(--fs-small);
+  }
+
+  .horario li { display: contents; }
+  .horario__dias { color: var(--text-2); }
+  /* Rejilla implícita: un tramo por fila, y las cifras alineadas entre sí. */
+  .horario__horas { display: grid; font-variant-numeric: tabular-nums; }
 </style>

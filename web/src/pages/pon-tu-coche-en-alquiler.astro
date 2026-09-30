@@ -20,10 +20,26 @@ import { EMPRESA } from '../lib/empresa';
   porcentaje se congela y no se recalcula hacia atrás; y Velto es quien alquila
   y quien factura al cliente, así que el propietario no aparece de cara a él.
 
-  ⚠️ **Y lo que no está modelado se dice que se acuerda.** Quién paga el seguro,
-  la ITV o una reparación **no existe en el sistema** —`expenses` no tiene
-  dimensión de propiedad—, así que la página dice que se acuerda por escrito.
-  Eso es cierto hoy; inventar una respuesta sería prometer por Dorel.
+  ⚠️ **Y quién paga el seguro, la ITV y el mantenimiento ya está decidido: el
+  propietario, en exclusiva.** Lo dijo Dorel el 30 de septiembre de 2026 y cierra
+  el hueco que esta página llevaba abierto desde que se escribió —aquí ponía que
+  «se acuerda por escrito», que era lo único honesto mientras no hubiera
+  respuesta—. Sigue sin estar **modelado** en el sistema (`expenses` no tiene
+  dimensión de propiedad), pero eso es otra cosa: es un acuerdo entre dos
+  personas, no un dato que la aplicación tenga que llevar.
+
+  ⚠️ **Lo que NO se publica es una exoneración general.** Dorel lo dijo así —«no
+  nos responsabilizamos de fallos técnicos, de accidentes, de nada
+  absolutamente»— y la parte que se sostiene está escrita: Velto no paga esos
+  gastos ni responde del estado mecánico del coche. Lo que no puede ir es el «de
+  nada absolutamente», por dos motivos que además juegan en contra de quien la
+  escribe: frente a un particular una exoneración total es nula (arts. 82 y 86
+  TRLGDCU, y art. 1102 del Código Civil para el dolo), así que **no protege** y
+  solo da la sensación de que sí; y contradice lo que esta misma página promete
+  cuatro secciones más arriba —el contrato con el cliente, la fianza y los partes
+  con fotos—, que es precisamente lo que responde de los daños. Un párrafo que
+  se contradice con otro de la misma página no tranquiliza a nadie: lo que hace
+  es que el propietario pregunte por teléfono cuál de los dos vale.
 */}
 <Base
   titulo="Pon tu coche en alquiler en Arganda del Rey | Velto"
@@ -186,16 +202,45 @@ import { EMPRESA } from '../lib/empresa';
         <article class="card">
           <h3>Lo pones tú</h3>
           <ul class="lista-check">
-            <li>El coche, con sus papeles en orden.</li>
+            <li>El coche, con sus papeles en orden y a tu nombre.</li>
+            <li>
+              <strong>El seguro</strong>, contratado por ti y en vigor. La
+              póliza que se imprime en el contrato del cliente es la del coche,
+              es decir la tuya.
+            </li>
+            <li><strong>La ITV</strong>, pasada y al día.</li>
+            <li>
+              <strong>El mantenimiento</strong>: revisiones, neumáticos, aceite
+              y cualquier avería o reparación que necesite el coche.
+            </li>
             <li>Decirnos cuándo lo tienes libre.</li>
           </ul>
           <p class="nota reparto__nota">
-            Lo que no está en estas dos listas —quién paga el seguro, la ITV o
-            una reparación— se acuerda por escrito antes de empezar, contigo
-            delante. No lo damos por supuesto en una página web.
+            Esos tres son tuyos porque el coche es tuyo: nosotros lo alquilamos,
+            no lo poseemos. Velto no paga el seguro, la ITV ni el mantenimiento,
+            y no responde del estado mecánico del vehículo.
           </p>
         </article>
       </div>
+
+      {/*
+        ⚠️ **Esta pregunta hay que contestarla aquí o se contesta sola, y mal.**
+        La lista de al lado acaba de decir que Velto no responde del estado del
+        coche, así que lo siguiente que piensa cualquiera es «¿y si me lo
+        destrozan?». Dejarlo en el aire después de esa frase se lee como que no
+        responde nadie — y no es verdad: responde el cliente, que es quien firma
+        el alquiler. Lo que se afirma aquí está respaldado por el contrato (los
+        daños son del arrendatario), por la fianza y por los dos partes con
+        fotos, que es justo para lo que existen.
+      */}
+      <p class="nota reparto__pie">
+        <strong>¿Y si un cliente lo daña?</strong> El alquiler lo firma él: el
+        contrato le hace responsable de los daños, se le cobra una fianza y el
+        coche se fotografía al salir y al volver, así que hay con qué
+        reclamarle. Lo que cubra o no cubra un siniestro depende de la póliza
+        del coche, que es la tuya. Eso y el reparto se firman por escrito antes
+        de empezar.
+      </p>
     </div>
   </section>
 
@@ -342,6 +387,8 @@ import { EMPRESA } from '../lib/empresa';
   .reparto .card { padding: var(--sp-8); }
   .reparto h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-2); }
   .reparto__nota { margin-top: var(--sp-6); }
+  /* Cuelga de las dos tarjetas, no de una: por eso va fuera de la rejilla. */
+  .reparto__pie { margin-top: var(--sp-6); }
 
   .cierre { margin-top: var(--sp-16); }
 </style>

@@ -73,6 +73,57 @@ export const EMPRESA = {
   correo: 'reservas@veltomobility.com',
 } as const;
 
+/**
+ * El horario de la oficina, decidido por Dorel el 30 de septiembre de 2026.
+ *
+ * ⚠️ **Estaba sin decidir y no se podía inventar**, que es distinto de que
+ * faltara: un horario inventado en los datos estructurados hace que Google
+ * enseñe la ficha con «abierto ahora» a una hora en la que no hay nadie, y el
+ * cliente que se planta en la puerta no vuelve. Por eso la página no lo decía
+ * hasta hoy.
+ *
+ * ⚠️ **Es UNA sola fuente para dos formatos.** De aquí salen la tarjeta que lee
+ * una persona y el `openingHoursSpecification` que lee Google. Escritos por
+ * separado —un rótulo en la plantilla y un JSON-LD debajo— divergen a la
+ * primera vez que alguien cambie una hora y solo se entera de uno; y el que se
+ * queda viejo es el que nadie ve, que es justo el que Google lee.
+ */
+export const HORARIO = [
+  {
+    rotulo: 'Lunes a viernes',
+    dias: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    /** Mañana y tarde. Dos tramos, que es lo que parte el mediodía. */
+    tramos: [
+      ['10:00', '14:00'],
+      ['17:00', '20:00'],
+    ],
+  },
+  { rotulo: 'Sábado', dias: ['Saturday'], tramos: [['10:00', '14:00']] },
+  /**
+   * ⚠️ **El domingo se enseña y NO se declara.** En la tarjeta tiene que salir
+   * —«cerrado» es la respuesta a la pregunta que trae al visitante—, pero en
+   * `schema.org` un día sin tramos no se declara: la especificación entiende
+   * que lo que no está declarado está cerrado, y meterlo con horas a cero es la
+   * forma habitual de acabar apareciendo como abierto de madrugada.
+   */
+  { rotulo: 'Domingo', dias: ['Sunday'], tramos: [] as string[][] },
+] as const;
+
+/**
+ * ⚠️ **Fuera de horario SÍ se entrega, y hay que decirlo.** Es de Dorel, el
+ * mismo día: la oficina cierra, el negocio no. Un horario a secas le dice al
+ * que aterriza a las once de la noche que no hay coche para él, y es justo el
+ * cliente de la entrega a domicilio.
+ *
+ * ⚠️ **Y no lleva precio, a propósito.** No está tarifado —se acuerda por
+ * teléfono, como el resto de los desplazamientos—, y publicar una cifra aquí
+ * sería comprometerse con ella igual que en `zonas.ts`. Lo que se dice es que
+ * existe y que se habla, que es lo que de verdad pasa.
+ */
+export const ENTREGA_FUERA_DE_HORARIO =
+  'Fuera de ese horario también entregamos y recogemos, incluido el domingo: ' +
+  'se acuerda antes por teléfono o por WhatsApp.';
+
 /** El dominio canónico. `veltorent.com` sirve lo mismo y redirige aquí. */
 export const SITIO = 'https://veltomobility.com';
 
