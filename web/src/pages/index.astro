@@ -155,11 +155,21 @@ const PROMESAS = [
               name="place"
               list="zonas"
               value={ZONA_POR_DEFECTO}
+              placeholder="Tu localidad"
               autocomplete="off"
               maxlength="80"
             />
+            {/*
+              ⚠️ **La fila `libre` se queda FUERA del respaldo.** Aquí no hay
+              JavaScript que pueda vaciar el campo —es la lista del navegador—,
+              así que elegir «Prefiero especificar…» escribiría ese rótulo como
+              si fuera el nombre de un pueblo. Sin ella, el respaldo sigue
+              diciendo lo único que puede decir: las tres zonas con precio.
+            */}
             <datalist id="zonas">
-              {ZONAS.map((z) => <option value={z.nombre} label={`${z.nombre} · ${z.coste}`} />)}
+              {ZONAS.filter((z) => !z.libre).map((z) => (
+                <option value={z.nombre} label={`${z.nombre} · ${z.coste}`} />
+              ))}
             </datalist>
             <button type="button" id="limpiar-lugar" class="aspa" aria-label="Borrar el lugar de recogida">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">

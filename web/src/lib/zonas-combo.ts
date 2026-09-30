@@ -24,6 +24,7 @@
  * hace falta.
  */
 
+import { capitalizarNombre, transformarCampo } from './texto';
 import { ZONAS, type ZonaRecogida } from './zonas';
 
 const ABIERTO = 'esta-abierto';
@@ -161,8 +162,32 @@ export function montarComboZonas(campo: HTMLInputElement): void {
     pintar();
   }
 
+  /**
+   * Mientras el visitante escribe su propia localidad, la lista **no vuelve a
+   * salir**.
+   *
+   * ⚠️ **Es la misma razón por la que el aspa la cierra**, dicha por Dorel el
+   * 30 de septiembre de 2026: «bórrame también las sugerencias para que me
+   * indique visualmente que puedo escribir». Quien acaba de elegir «Prefiero
+   * especificar…» ya ha dicho que lo suyo no está en la lista; devolvérsela
+   * encima en la primera tecla —y en un móvil, empujando el formulario hacia
+   * abajo, porque ahí la lista ocupa sitio de verdad— es contestarle que no le
+   * hemos entendido.
+   *
+   * ⚠️ **Y se desarma al volver a entrar en el campo**, no para siempre: esa
+   * también es su regla, «reentrando después, vuelve a salir».
+   */
+  let escribiendoLibre = false;
+
   function elegir(i: number) {
-    campo.value = ZONAS[i].nombre;
+    const zona = ZONAS[i];
+    /*
+     * ⚠️ **La fila `libre` vacía el campo en vez de escribirse en él.** Con su
+     * nombre dentro, el formulario acabaría diciendo «Prefiero especificar…»
+     * donde tiene que decir un pueblo.
+     */
+    escribiendoLibre = !!zona.libre;
+    campo.value = zona.libre ? '' : zona.nombre;
     campo.dispatchEvent(new Event('input', { bubbles: true }));
     campo.dispatchEvent(new Event('change', { bubbles: true }));
     cerrar();
@@ -214,18 +239,38 @@ export function montarComboZonas(campo: HTMLInputElement): void {
   });
   campo.addEventListener('click', () => {
     // Un clic DESPUÉS de vaciar sí abre: la bandera solo vale para el foco que
-    // el propio aspa devuelve.
+    // el propio aspa devuelve. Y volver a entrar al campo devuelve la lista,
+    // aunque se estuviera escribiendo una localidad propia.
     saltarLaSiguienteApertura = false;
+    escribiendoLibre = false;
     abrir();
   });
   campo.addEventListener('input', () => {
     // Escribir desarma la navegación: a partir de aquí, Enter envía.
     navegando = false;
     saltarLaSiguienteApertura = false;
+
+    /*
+     * ⚠️ **La localidad se escribe capitalizada, y con el cursor donde estaba.**
+     * Es un nombre propio —«rivas» es un pueblo, no una palabra— y lo que se
+     * teclea en un móvil llega casi siempre en minúsculas. La regla es la misma
+     * del backoffice y de las functions, copiada en `texto.ts` con su motivo.
+     *
+     * ⚠️ **Nunca `campo.value = …` a secas**: eso manda el cursor al final en
+     * cada tecla y corregir una letra en medio se vuelve imposible. Y asignar
+     * el valor desde aquí **no** vuelve a disparar `input`, así que esto no se
+     * llama a sí mismo.
+     */
+    transformarCampo(campo, capitalizarNombre);
+
+    if (escribiendoLibre) return;
     abrir();
     pintar();
   });
-  campo.addEventListener('blur', cerrar);
+  campo.addEventListener('blur', () => {
+    escribiendoLibre = false;
+    cerrar();
+  });
 
   campo.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

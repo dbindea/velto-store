@@ -35,6 +35,22 @@ export interface ZonaRecogida {
    * vez y se lee tal cual.
    */
   coste: string;
+  /**
+   * La fila que **no es una zona**: vacía el campo y deja escribir.
+   *
+   * ⚠️ **Existe porque elegir «Otra» y que el campo se quedara escrito con la
+   * palabra «Otra» no servía de nada.** Lo dijo Dorel el 30 de septiembre de
+   * 2026 —«prefiero que al hacer clic en ella me deje escribir»—: lo que hace
+   * falta saber es la localidad, y una opción que se limita a poner una
+   * etiqueta genérica en el campo la esconde en vez de pedirla.
+   *
+   * ⚠️ **Y por eso también se excluye del `<datalist>` de respaldo**, en
+   * `index.astro`. Ese respaldo es la lista del navegador para cuando el
+   * JavaScript no llega a ejecutarse, y ahí no hay nada que pueda vaciar el
+   * campo: elegirla escribiría «Prefiero especificar…» como si fuera el nombre
+   * de un pueblo, que es exactamente lo que esto viene a quitar.
+   */
+  libre?: boolean;
 }
 
 /**
@@ -49,19 +65,24 @@ export interface ZonaRecogida {
  * visitante que ve dos precios sin resolver deja de fiarse también de los que
  * sí están.
  *
- * ⚠️ **La cuarta, «Otra», es la puerta de salida y la puso Dorel el 30 de
- * septiembre de 2026**: «ponemos la última opción como Otra y luego la veo yo
- * con el cliente por WhatsApp». No es una duda disfrazada de precio, que es lo
- * que se recortó el día anterior: las tres de arriba dicen exactamente lo que
- * cuestan y esta dice que hay conversación. La diferencia importa porque lo que
- * se lee es la fila entera — «Mejorada del Campo · a consultar» promete una
- * tarifa que no existe, y «Otra · lo acordamos al llamarte» no promete ninguna.
+ * ⚠️ **La cuarta es la puerta de salida y la puso Dorel el 30 de septiembre de
+ * 2026.** No es una duda disfrazada de precio, que es lo que se recortó el día
+ * anterior: las tres de arriba dicen exactamente lo que cuestan y esta dice que
+ * hay conversación. La diferencia importa porque lo que se lee es la fila
+ * entera — «Mejorada del Campo · a consultar» promete una tarifa que no existe,
+ * y esta no promete ninguna.
+ *
+ * ⚠️ **Y se llama «Prefiero especificar…» y no «Otra» porque tiene que decir lo
+ * que hace.** Nació como «Otra» esa misma mañana y duró unas horas: al elegirla
+ * dejaba la palabra «Otra» escrita en el campo, o sea que el visitante que vive
+ * en Cuenca acababa con un formulario que no nombra Cuenca. Ahora vacía el
+ * campo y le pone el cursor dentro (`libre`), y el rótulo es la instrucción.
  */
 export const ZONAS: ZonaRecogida[] = [
   { nombre: 'Arganda del Rey', coste: 'gratuito' },
   { nombre: 'Rivas', coste: 'gratuito' },
   { nombre: 'Aeropuerto', coste: '+30 €' },
-  { nombre: 'Otra', coste: 'lo acordamos al llamarte' },
+  { nombre: 'Prefiero especificar…', coste: 'lo acordamos', libre: true },
 ];
 
 /**
@@ -137,5 +158,7 @@ export const ZONAS_CERCANAS: string[] = [
  */
 export function zonaPorNombre(nombre: string): ZonaRecogida | null {
   const limpio = nombre.trim().toLowerCase();
-  return ZONAS.find((z) => z.nombre.toLowerCase() === limpio) ?? null;
+  // La fila `libre` no es una zona: no tiene tarifa que devolver, y darla por
+  // buena aquí convertiría un rótulo de instrucción en un nombre de pueblo.
+  return ZONAS.find((z) => !z.libre && z.nombre.toLowerCase() === limpio) ?? null;
 }
