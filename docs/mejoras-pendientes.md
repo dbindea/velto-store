@@ -15,6 +15,40 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 30 de septiembre de 2026 — la web pública, y lo que deja abierto
+
+Del 25 al 30 de septiembre el trabajo se fue a `web/`, que pasó de esqueleto a
+diez páginas. Lo hecho está en [traspaso-sesion.md](traspaso-sesion.md)
+**§ 2 octies**; aquí va solo lo que **queda abierto**, que es para lo que sirve
+este documento.
+
+### ⬜ N-37 · Publicar la web — y no es un despliegue, son tres cosas
+
+- [ ] **Dos Cloud Functions sin subir**, `createBookingRequest` y
+  `createContactRequest`, más la actualización de `sendDailyDigest`. El
+  procedimiento, ya corregido, en [publicar-web.md](publicar-web.md) bloque 4.
+  ⚠️ **Necesitan hosting además de la function**: los rewrites `/api/solicitud` y
+  `/api/contacto` viajan con el hosting, y sin ellos los dos formularios de la
+  web enseñan un fallo de red — llega HTML donde se espera JSON.
+- [ ] **Nueve datos de negocio sin decidir**, en [traspaso-sesion.md](traspaso-sesion.md)
+  § 5. No son código: son las localidades que entran en los 10 km gratis, el
+  horario, el punto de encuentro del aeropuerto, quién paga seguro/ITV/
+  reparaciones en un coche cedido, la política de cancelación, la adhesión a una
+  entidad de resolución alternativa, la ficha de Google Business, los MX de
+  `veltomobility.com` y una revisión de abogado.
+- [ ] **La cláusula de jurisdicción.** `/condiciones` fija Madrid capital, que es
+  **nulo frente a un consumidor**, y no es solo la página: **describe una
+  cláusula real del contrato**. Arreglarlo obliga a tocar
+  `functions/src/contracts/clauses.ts`, y eso cambia los contratos que se firmen
+  a partir de ese día — así que se decide, no se parchea.
+
+⚠️ **Y lo que la web afirma queda atado al código.** Un precio, un plazo de
+borrado o una cobertura escritos en una página son afirmaciones contrastables: si
+se toca `publicPrice()`, `CONSULTA_HORAS_POR_DEFECTO` o una cláusula, la página
+que lo cuenta se toca **el mismo día**.
+
+---
+
 ## Estado a 24 de septiembre de 2026 — doce commits y un repaso del flujo
 
 Sesión larga que tocó **el camino del dinero**. Lo hecho está en

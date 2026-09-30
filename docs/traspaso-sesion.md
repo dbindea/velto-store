@@ -1,13 +1,17 @@
-# Traspaso de sesión — 24 de septiembre de 2026
+# Traspaso de sesión — 30 de septiembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> Lo primero que hay que mirar es **§ 2 quinquies**, que son los doce commits del
-> día 24 y tocan el camino del dinero, y **§ 2 ter**, que dice qué hay sin subir y
-> qué falta por desplegar. Las secciones anteriores (§ 2, § 2 bis, § 2 quater)
-> son historia: se leen si algo no cuadra.
+> Lo primero que hay que mirar es **§ 2 octies**, que es la etapa de la web
+> pública (28 al 30 de septiembre, veinticinco commits), y **§ 2 ter**, que dice
+> qué hay sin subir y qué falta por desplegar — y esta vez **no basta con el
+> merge**: hay dos Cloud Functions nuevas y dos rewrites de hosting. Después,
+> **§ 5**, con los nueve huecos que solo puede cerrar Dorel antes de publicar.
+>
+> Las secciones anteriores (§ 2 a § 2 septies) son historia: se leen si algo no
+> cuadra.
 >
 > Si lo que buscas es **el mensaje con el que abrir la sesión**, está aparte en
 > [prompt-nueva-sesion.md](prompt-nueva-sesion.md): aquel dice *cómo se trabaja*
@@ -467,10 +471,180 @@ tres del 9 al 14.
 
 ---
 
+---
+
+## 2 octies. Del 28 al 30 de septiembre — la web pública deja de ser un esqueleto
+
+Veinticinco commits en tres días, y casi todos en `web/`. Hasta aquí la web
+existía pero era un escaparate sin puerta; ahora tiene menú, contenido, dos
+formularios que escriben y páginas legales. **Es el cambio de peso de esta
+etapa**, y la parte del backoffice que lo acompaña —las solicitudes— toca el
+camino por el que entra un cliente.
+
+### Lo que hay que saber antes de tocar la web
+
+⚠️ **`web/` es una TERCERA build, y desde el 29 de septiembre tiene tests y
+tsconfig propios.** Antes no tenía ninguna de las dos cosas:
+
+- `web/package.json` estrena **vitest** (28 tests en 2 ficheros) y declara
+  `@astrojs/check` y `typescript`, que estaban instalados a mano y sin guardar.
+- `web/tsconfig.json` **no existía**, así que `astro check` subía por el árbol y
+  typechequeaba **la app de Angular** —169 ficheros— sin mirar ni una línea de la
+  web, saliendo en verde sobre el proyecto equivocado. Con el suyo son **28**
+  ficheros, y salieron a la luz dos imports de tipo sin `import type` que
+  `verbatimModuleSyntax` prohíbe desde siempre — más, el 30, un `SITIO` importado
+  y nunca usado en la página de preguntas, que es exactamente para lo que sirve.
+
+⚠️ **Astro empaqueta el CSS POR PÁGINA, y eso rompió cinco entradillas sin que
+nada avisara.** `.entrada` la declaraba un `<style is:global>` dentro de
+`flota.astro`: un `is:global` de una página es global **dentro de esa página** y
+no viaja a las demás. Medido en `/contacto` a 1280 px, la entradilla salía a
+**16 px, en blanco puro y con 1098 px de ancho de línea** en vez de 18 px
+atenuados a 58 caracteres. Es la **tercera variante** del fallo que `css:audit`
+no caza: la clase está declarada, y lo que falla es que su fichero no alcanza.
+Hoy `.entrada`, `.texto`, `.nota` y `.lista-check` viven en `global.css`.
+
+⚠️ **Y una clase reutilizada por su nombre volvió a costar.** Se llamó `.zonas` a
+una rejilla de tarjetas, y `.zonas` ya era el desplegable del buscador
+—`position: absolute`—: las tarjetas salieron flotando encima de la sección
+anterior. Se vio en una captura, no leyendo el código.
+
+### El calendario propio, portado a JavaScript vanilla
+
+Dorel lo pidió con dos capturas —el selector de Chrome y el panel del
+backoffice— y es un **port de la regla, no del resultado**. Vive en
+`web/src/lib/fecha-picker.ts` (aritmética pura, 24 tests) y `fecha-panel.ts`
+(el panel). Dos diferencias, y las dos son **correcciones de fallos que en el
+backoffice siguen vivos**:
+
+1. **`parseValue('date', min)` no sabe leer el `min` de un `datetime-local`** —la
+   regex va anclada—, así que devuelve `null` y el panel **no deshabilita ni un
+   día**. Los cuatro campos de la web son `datetime-local` con `min`.
+   `parseLimite()` acepta las dos formas.
+2. **Los minutos salen del `step` del campo**, no fijos de cinco en cinco. Con
+   `step="900"` una lista de cinco minutos deja el campo en `stepMismatch`: el
+   formulario no se envía y el botón deja de hacer nada **sin error en consola**.
+
+⚠️ **Con el dedo manda la hoja del sistema**, a propósito. El backoffice fuerza
+el suyo en móvil por un motivo que aquí no existe —el diálogo de Android no sabe
+vaciar— y estos campos son `required` y siempre traen valor.
+
+### Tres fallos de esta etapa que conviene no repetir
+
+⚠️ **`display: flex` en un popover lo deja PINTADO al cerrarse.** La regla que
+esconde un `[popover]` cerrado la pone el navegador, y **en la cascada el origen
+manda antes que la especificidad**: cualquier declaración de autor le gana.
+Medido: 275 × 553 px encima de la página tragándose los clics, sin un error. El
+`display` va en `.calendario:popover-open`. Lo mismo vale para `[hidden]`, que
+ahora lleva `!important` en `global.css` por esa razón exacta.
+
+⚠️ **Abrir un popover desde `mousedown` no funciona con un ratón de verdad.** El
+descarte automático corre en `pointerdown`/`pointerup`, así que el `pointerup`
+del mismo clic lo cierra. Y `preventDefault()` sobre `mousedown` no lo evita:
+solo suprime los eventos de compatibilidad de ratón. **La comprobación decía que
+funcionaba** porque la herramienta se colgó entre los dos eventos y dejó el clic
+a medias — y un clic sintético no dispara el descarte. Se abre en `click`.
+
+⚠️ **`24.95 - 24` da `0.9499999999999993`.** Al redondear precios a la
+terminación `,95`, un importe que **ya** terminaba en `,95` bajaba un euro
+entero. Solo pasaba en los precios redondos, que es donde nadie mira. Lo cazó su
+propio test. La cuenta va en **céntimos enteros**.
+
+### Los precios públicos, y por qué el redondeo vive en el backend
+
+Decisión de Dorel del 30 de septiembre: la web anuncia precios terminados en
+**`,95`** y **siempre hacia abajo** (`publicPrice()` en
+`functions/src/public/core.ts`). Hacia arriba sería cobrar más de lo anunciado;
+hacia abajo se regalan como mucho **0,99 € por cifra**.
+
+⚠️ **Está en el BACKEND y no en la web que lo pinta**, y ese es el punto: la
+misma cifra viaja a la tarjeta del listado, a la disponibilidad de un rango y al
+`quoteSnapshot` que se congela en una solicitud — **que es lo que Dorel lee en
+el correo para cobrarlo a mano**. Redondeando solo al pintar, la web diría 24,95
+y el correo 26,43.
+
+⚠️ **Y el neto se recalcula desde el bruto ya redondeado.** Conservando el de la
+tarifa, `neto + IVA` dejaría de dar el bruto anunciado.
+
+⚠️ **El aeropuerto son 30 € por trayecto CON IVA**, y en el backoffice hay que
+teclear **24,79 NETO** para que el contrato imprima 30,00: `deliveryFees` se
+teclea neto y el IVA se suma. Tecleando 30 imprimiría 36,30. Está escrito en
+`web/src/lib/zonas.ts`.
+
+### Lo legal, que nació en esta etapa
+
+- **`/aviso-legal`** existe porque el NIF salió del pie. El art. 10 de la LSSI
+  exige esos datos accesibles «de forma permanente, fácil, directa y gratuita»;
+  una página enlazada desde el pie de **todas** las páginas cumple. ⚠️ **Si ese
+  enlace desaparece, vuelve a hacer falta el bloque en el pie.**
+- **`/privacidad`** y su ancla `#cookies`. ⚠️ **No hay página de cookies porque
+  no hay cookies**: cero analítica, cero píxeles, tipografías propias y el mapa
+  de Contacto es un **enlace**, no un incrustado. Lo único que se guarda es
+  `velto-tema` en `localStorage`. **Eso se rompe con una línea**: analítica, un
+  mapa incrustado, un vídeo de YouTube o tipografías de `fonts.googleapis.com`, y
+  esa página pasa a ser falsa el mismo día y hace falta banner.
+- **Los datos registrales** salen de `company-config.ts`, y allí llevan una
+  advertencia que ahora está publicada: vienen del **pie de la factura** y **no
+  coinciden** con los que el código traía antes («Tomo 45067, Folio 44, Hoja
+  M-793170»). Merece una pregunta a la gestoría.
+- **El plazo de borrado de los mensajes de contacto son 24 h**, y ese número
+  está **publicado** en `/privacidad`. ⚠️ Un plazo escrito en una política es una
+  afirmación contrastable contra Firestore: si se toca
+  `CONSULTA_HORAS_POR_DEFECTO`, se toca esa página el mismo día.
+
+### Lo que NO se pudo prometer, y por qué
+
+De las tres cosas que Dorel quería afirmar en la entrega a domicilio, **una se
+sostiene y dos hubo que reescribirlas**:
+
+| Lo que pidió | Lo que dice la web | Por qué |
+|---|---|---|
+| «limpio» | igual | el parte fotografía el estado, y ese es el de devolución |
+| «con el depósito lleno» | «con combustible, y anotado» | la cláusula 6 dice que se devuelve con el nivel con el que salió — prometer lleno obliga al cliente a devolverlo lleno |
+| «asegurado» | «responsabilidad civil obligatoria y asistencia; el todo riesgo es opcional» | la cláusula 13. Esa frase suelta ya estuvo en el pie de todas las páginas y hubo que quitarla el 29 |
+
+Y **«Pon tu coche en alquiler» no lleva ni una cifra**: el porcentaje vive en el
+**coche** (`Vehicle.ownerSharePercent`) y la reserva lo congela; el valor del
+código es el defecto de un campo de formulario, no una tarifa. Publicarlo lo
+convertiría en la oferta de la empresa.
+
+### El sitemap se comprueba en los DOS sentidos
+
+Son **doce** páginas construidas y **diez** en el sitemap: fuera quedan el `404`
+—una página de error no se indexa nunca— y `coche`, que vive en `/coche/{id}` y
+la pinta JavaScript, así que no hay una URL que listar.
+
+⚠️ **Y eso está en un test, no en la cabeza de nadie.** `sitemap.spec.ts`
+recorre `src/pages/` y falla en las dos direcciones: una página nueva que nadie
+añada al sitemap, y una ruta del sitemap que ya no exista. `FUERA_DEL_SITEMAP`
+guarda el motivo de cada exclusión, que es lo que permite distinguir «se ha
+decidido» de «se ha olvidado» — sin eso, la lista se lee como completa.
+
+⚠️ **El spec vive en `src/lib/`, no en `src/pages/`.** Astro trata **todo** lo
+que hay en `pages/` como una ruta y trató de compilar vitest: el build se cayó
+con un error que no menciona nada de esto.
+
+### El menú, y una medida que decide el diseño
+
+El menú es **Buscar · Entrega a domicilio · Pon tu coche en alquiler ·
+Contacto**. ⚠️ **No cabe en un móvil**: a 390 px hay **288 px** útiles y los
+cuatro rótulos miden **499**. La tira deslizable de antes escondía «Contacto»
+entero, así que ahora **envuelve en dos filas** —la regla de la casa es
+recolocar, nunca ocultar— y los 45 px que crece la cabecera se recuperaron
+apretando el héroe. Acortar el rótulo **no lo evita**: con «Pon tu coche» siguen
+saliendo dos filas.
+
+### Qué falta para que la web funcione de verdad
+
+⚠️ **Los dos endpoints públicos que ESCRIBEN necesitan function Y hosting.** Sus
+rewrites —`/api/solicitud` y `/api/contacto`— viajan con el **hosting**, no con
+las functions: sin ellos la petición cae en el catch-all y devuelve HTML donde
+se espera JSON, así que el visitante rellena el formulario y ve un fallo de red.
+Es la lección de `/d/**`.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-Medido el 22 de septiembre al cerrar la sesión. **No te fíes de las cifras, que
-envejecen — vuelve a preguntarlo:**
+**No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
 
 ```bash
 git log --oneline origin/master..HEAD     # lo que develop tiene y produccion no
@@ -478,20 +652,48 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 24 de septiembre al cerrar**: `develop` en `3220cab` y
-**`origin/develop` en el mismo commit** —Dorel fue subiendo en paralelo—, con
-**12 commits que NO están en producción** (los de § 2 quinquies). `origin/master`
-en `12ea9f0`.
+**Medido el 30 de septiembre al cerrar**: `origin/develop` en `aefbee4`, con
+**21 commits que NO están en producción**. Y esta vez **no basta con el merge**,
+al revés que el día 24:
 
-⚠️ **NO hace falta desplegar Cloud Functions, ni reglas, ni índices.**
-Comprobado: entre `origin/master` y `develop` **no cambia un solo fichero de
-`functions/`**, ni `firestore.rules`, ni `firestore.indexes.json`, ni
-`storage.rules`, ni `firebase.json`. Todo el trabajo del día 24 es frontend. Un
-merge a `master` despliega hosting por CI y con eso está todo. Es la excepción,
-no la regla: normalmente hay que mirarlo.
+| Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
+|---|---|---|
+| `functions/` | 20 | **a mano**, por tandas de dos o tres |
+| `web/` | 27 | CI, al hacer merge a `master` |
+| `firebase.json` y `firestore.rules` | 2 | **a mano** (`deploy:prod:rules`) y hosting |
 
-⚠️ **Pero SÍ hay claves i18n nuevas** —41 líneas añadidas en `es.json`, y los
-tres idiomas—, así que aplica la nota de la caché: `assets/i18n/*.json` no lleva
+⚠️ **Hay DOS Cloud Functions nuevas sin desplegar**, y las dos son el camino por
+el que entra un cliente desde la web:
+
+- **`createBookingRequest`** (el «que me llamen»), desde el 28 de septiembre.
+- **`createContactRequest`** (el formulario de contacto), desde el 30.
+
+Más la actualización de **`sendDailyDigest`**, que ahora barre también los
+mensajes de contacto a las 24 h — y ese plazo **está publicado en
+`/privacidad`**, así que sin desplegarla la política dice algo que no se cumple.
+
+⚠️ **Y las dos necesitan HOSTING además de la function.** Sus rewrites
+—`/api/solicitud` y `/api/contacto`— viajan con el hosting: sin ellos la
+petición cae en el catch-all y devuelve HTML donde se espera JSON. El visitante
+rellena el formulario y ve un fallo de red.
+
+⚠️ **En producción, nunca `--only functions` a secas.** El código define **36** y
+allí hay **29**: faltan las cinco de la AEAT —a propósito, hasta el 1 de enero—
+y estas dos. Un despliegue completo subiría las cinco. Y con 36 functions a la
+vez se agota la cuota de CPU de Cloud Run: medido el 28 de septiembre con 35,
+entraron 15 y fallaron 19.
+
+⚠️ **Antes de desplegar, descarta el código** y compara el manifiesto:
+
+```bash
+cd functions && node -e "require('./lib/index.js')"   # el bundle carga
+FUNCTIONS_CONTROL_API=true PORT=8361 node node_modules/firebase-functions/lib/bin/firebase-functions.js . &
+curl -s http://127.0.0.1:8361/__/functions.yaml -o /tmp/manifiesto.json
+curl -s http://127.0.0.1:8361/__/quitquitquit
+```
+
+⚠️ **Y hay claves i18n nuevas** —87 líneas añadidas en `es.json` y las mismas en
+los otros dos—, así que aplica la nota de la caché: `assets/i18n/*.json` no lleva
 huella, y aunque `firebase.json` ya declara `no-cache` para esa ruta, el dominio
 propio va detrás de Cloudflare. **Quien dice la verdad sobre lo publicado es
 `rentalcar-veltomobility.web.app`**, no el dominio propio.
@@ -556,6 +758,36 @@ Cuando llegue uno de esos, el orden que ha funcionado:
 
 La lista viva está en [mejoras-pendientes.md](mejoras-pendientes.md). Lo que hay
 que tener en la cabeza al retomar:
+
+### Lo que bloquea publicar la web (30 de septiembre de 2026)
+
+**Lo primero son los dos despliegues** de § 2 ter: functions y hosting. Sin
+ellos los dos formularios de la web devuelven un fallo de red.
+
+**Y nueve huecos que solo puede cerrar Dorel.** Están marcados en el código o en
+las páginas y ninguno se puede inventar:
+
+| Qué falta | Dónde muerde |
+|---|---|
+| Qué pueblos son gratuitos dentro de los 10 km | `zonas.ts` — Mejorada está a ~9 km y figura en «con suplemento» |
+| Si está adherido a alguna entidad de resolución de litigios | `/aviso-legal` lleva un `[PENDIENTE]`; la Ley 7/2017 no deja callarse |
+| El horario de la oficina | `/contacto` y los datos estructurados. Inventarlo es peor: Google lo enseña con «abierto ahora» |
+| En el aeropuerto, dónde se queda con el cliente | terminal y punto de encuentro; hoy la página solo puede decir «te lo llevamos» |
+| En un coche cedido, quién paga seguro, ITV y reparaciones | `/pon-tu-coche-en-alquiler` dice «se acuerda por escrito». Es la primera pregunta que hará el vecino |
+| Una política de cancelación | no consta en ninguna parte; el contrato solo regula el retraso en la devolución |
+| Si hay ficha de Google Business Profile | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
+| Que `veltomobility.com` RECIBA correo | hoy **no tiene ni un registro MX**: las dos páginas legales nombran esa dirección como canal de derechos RGPD |
+| Que lo legal lo mire un abogado | está escrito y es honesto, pero lo firma una empresa real |
+
+⚠️ **Y una que ya está publicada mal, en `/condiciones`:** la web dice que el
+contrato somete las controversias a los juzgados de **Madrid capital**, y frente
+a un consumidor esa sumisión es **nula** (art. 54.2 LEC) y candidata a abusiva
+(art. 90.2 TRLGDCU) — un cliente de Arganda pertenece a su propio partido
+judicial. Lo grave es que **la frase describe una cláusula real del contrato**,
+así que arreglar la página deja el papel diciendo lo mismo: hay que tocar
+`functions/src/contracts/clauses.ts`.
+
+### Lo de siempre
 
 **Con fecha, y es lo único con fecha:** el guion del 1 de enero de 2027
 ([verifactu-alta.md](verifactu-alta.md) § 5 bis). Incluye un paso nuevo —el 3
@@ -641,10 +873,16 @@ Tres cosas que hay que retomar, y ninguna es código a medias:
    ⚠️ Añadir un dominio es reversible; **retirar el viejo no**: los contratos
    firmados llevan impreso un QR que apunta a `/v/…` del dominio con el que se
    generaron.
-3. **Los 283 avisos del lint.** Son deuda reconocida, no ruido: 107 promesas sin
-   esperar —la mayoría a propósito— y 172 de accesibilidad en plantillas (47
-   `<div (click)>` que no se alcanzan con el teclado). Se repasan por tandas y
-   **entonces** se suben a `error`.
+3. **Los avisos del lint**, que a 30 de septiembre de 2026 son **290** —eran 283
+   el día 22—. Son deuda reconocida, no ruido: promesas sin esperar —la mayoría a
+   propósito— y accesibilidad en plantillas (`<div (click)>` que no se alcanzan
+   con el teclado). Se repasan por tandas y **entonces** se suben a `error`.
+   ⚠️ **Lo que importa es que sigan siendo 0 errores**: si sale un error, es de
+   lo que acabas de tocar.
+4. ⚠️ **El Storage de producción sigue sin vaciar.** Está contado en § 2 sexies:
+   el borrado masivo lo paró el clasificador de permisos y Firestore sí se vació,
+   así que allí siguen **el DNI, el carné y la firma de personas reales cuyas
+   fichas ya no existen**, con su token de descarga vivo. No es deuda estética.
 
 Y dos cosas menores que quedaron sin ejercitar en su pantalla real, por no haber
 datos en desarrollo: el panel de **fecha y hora juntas** (solo existe en editar

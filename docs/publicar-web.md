@@ -8,6 +8,16 @@ bloques y cada bloque acaba con una comprobación**: si la comprobación no sale
 no se pasa al siguiente. Los bloques 1 y 2 son de correo, el 3 es el ensayo en
 desarrollo y los bloques 4 y 5 son producción.
 
+⚠️ **Revisado el 30 de septiembre de 2026, y el bloque 4 cambió entero.** El
+sitio de hosting **ya está creado** y las cinco functions públicas **ya están en
+producción**; lo que falta son las dos de los formularios, que llegaron después.
+Y falta algo que el 25 de septiembre no existía: **lo que la web promete ahora**.
+Tiene diez páginas con precios, plazos y coberturas, y nueve datos de negocio sin
+decidir —qué localidades entran en los 10 km gratis, el horario, el punto de
+encuentro del aeropuerto…—. La lista está en
+[traspaso-sesion.md](traspaso-sesion.md) § 5, y **no es un bloque técnico**: se
+cierra hablando, no desplegando.
+
 ⚠️ **Lo que decide todo es el orden.** Tres dependencias que no se pueden
 invertir, y las tres tienen detrás un fallo concreto:
 
@@ -249,17 +259,24 @@ Tres cosas que hay que tener **antes** del merge a `master`. Ninguna se ve desde
 fuera: crear un sitio no publica nada y desplegar una function que nadie llama
 no cambia el comportamiento de la aplicación.
 
-1. **Crear el sitio de hosting.** Hoy no existe, y `.firebaserc` ya manda ahí el
-   target `web`: sin esto, un merge a `master` publica el backoffice —va
-   primero— y **se cae en el paso siguiente**, dejando producción a medias.
-   El id `velto-web` estaba libre el 25 de septiembre.
+1. ~~**Crear el sitio de hosting.**~~ **Hecho.** Aquí ponía que `velto-web` no
+   existía y que por eso un merge a `master` se caería después de publicar el
+   backoffice. **Ya está creado**: comprobado el 29 de septiembre de 2026 con
+   `firebase hosting:sites:list --project prod`, que lo devuelve junto a
+   `rentalcar-veltomobility`. Ese bloqueo del merge ya no existe.
 
    ```bash
-   firebase hosting:sites:create velto-web --project prod
+   firebase hosting:sites:list --project prod   # tienen que salir los dos
    ```
 
-2. **Desplegar las cinco functions de la web pública**, en dos tandas y
-   **nombrándolas una a una**:
+2. **Desplegar las functions de la web pública que falten**, en tandas y
+   **nombrándolas una a una**.
+
+   ⚠️ **Las cinco primeras YA están en producción** desde el 25 de septiembre de
+   2026 —`publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability`,
+   `publishVehiclePhoto`, `unpublishVehiclePhoto`—. Lo que falta a 30 de
+   septiembre son **las dos de los formularios** y la **actualización** de
+   `sendDailyDigest`, que ahora además borra las consultas caducadas:
 
    ```bash
    # Descartar el código antes de subir nada: lo carga igual que el contenedor.
@@ -269,9 +286,22 @@ no cambia el comportamiento de la aplicación.
    node -e "require('./lib/index.js')"
    cd ..
 
-   firebase deploy --only functions:publicVehicles,functions:publicVehicleDetail --project prod
-   firebase deploy --only functions:checkPublicAvailability,functions:publishVehiclePhoto,functions:unpublishVehiclePhoto --project prod
+   firebase deploy --only functions:createBookingRequest,functions:createContactRequest --project prod
+   firebase deploy --only functions:sendDailyDigest --project prod
    ```
+
+   ⚠️ **`createContactRequest` necesita `RESEND_API_KEY`**, que ya está en
+   producción; si algún día no estuviera, el despliegue **se cae** en vez de
+   avisar. Se comprueba sin imprimir el valor:
+   `firebase functions:secrets:access RESEND_API_KEY --project prod >/dev/null 2>&1; echo $?`
+
+   ⚠️ **Y estas dos no bastan con desplegarlas: sus rewrites viajan con el
+   HOSTING.** `/api/solicitud` y `/api/contacto` están en `firebase.json`, así
+   que hasta que salga el hosting de producción los formularios de la web
+   reciben **HTML** donde esperan JSON y enseñan un fallo de red. Es el mismo
+   fallo silencioso que tuvo `/d/**`. El merge del bloque 5 los lleva; si se
+   despliegan las functions y se retrasa el merge, la web queda con los dos
+   formularios rotos.
 
    ⚠️ **Y que `node -e` no imprima error NO significa que la function
    funcione**: cargar un módulo no es llamarlo. Es justo lo que dejó pasar el
@@ -289,14 +319,22 @@ no cambia el comportamiento de la aplicación.
    cargada, no el código — en PowerShell:
    `$env:FUNCTIONS_DISCOVERY_TIMEOUT=120` y repetir.
 
-3. **Comprobar que salieron 29 y ninguna es de la AEAT:**
+3. **Comprobar que salieron 31 y ninguna es de la AEAT:**
 
    ```bash
    firebase functions:list --project prod
    ```
 
-   Si salen 34 y aparece `sweepVerifactuRecords`, se han colado las cinco de la
-   Agencia y hay que borrarlas.
+   El código define **36** y producción tenía **29** el 30 de septiembre de
+   2026; con las dos de los formularios son **31**, y las cinco que siguen
+   faltando son las de la Agencia. Si salen 36 y aparece
+   `sweepVerifactuRecords`, se han colado y hay que borrarlas — esa además está
+   **programada cada cinco minutos**.
+
+   ⚠️ **No cuentes a ojo esa lista**: la imprime con caracteres de tabla y
+   códigos de color ANSI. Lo que vale es comparar **nombres** contra el
+   manifiesto de descubrimiento, que es la pregunta buena —qué falta, no cuántas
+   hay—. El procedimiento está en CLAUDE.md § «El arranque en frío».
 
 ---
 
