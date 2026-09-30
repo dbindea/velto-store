@@ -41,18 +41,27 @@ export interface ZonaRecogida {
  * ⚠️ **La primera es la que manda**: es la que el buscador trae puesta, porque
  * casi todos los alquileres salen de la oficina.
  *
- * ⚠️ **Son TRES, y antes fueron cinco.** Estaban además Mejorada del Campo y
- * Coslada, las dos con el suplemento sin decidir, y Barajas figuraba con su
- * nombre largo. La lista la fijó Dorel el 29 de septiembre de 2026 y el recorte
- * es la mitad del arreglo: una lista de zonas en la que dos filas dicen «a
- * consultar» no es un catálogo de precios, es una lista de dudas — y el
+ * ⚠️ **Son CUATRO, y antes fueron cinco y luego tres.** Estaban además Mejorada
+ * del Campo y Coslada, las dos con el suplemento sin decidir, y Barajas figuraba
+ * con su nombre largo. La lista la fijó Dorel el 29 de septiembre de 2026 y el
+ * recorte es la mitad del arreglo: una lista de zonas en la que dos filas dicen
+ * «a consultar» no es un catálogo de precios, es una lista de dudas — y el
  * visitante que ve dos precios sin resolver deja de fiarse también de los que
  * sí están.
+ *
+ * ⚠️ **La cuarta, «Otra», es la puerta de salida y la puso Dorel el 30 de
+ * septiembre de 2026**: «ponemos la última opción como Otra y luego la veo yo
+ * con el cliente por WhatsApp». No es una duda disfrazada de precio, que es lo
+ * que se recortó el día anterior: las tres de arriba dicen exactamente lo que
+ * cuestan y esta dice que hay conversación. La diferencia importa porque lo que
+ * se lee es la fila entera — «Mejorada del Campo · a consultar» promete una
+ * tarifa que no existe, y «Otra · lo acordamos al llamarte» no promete ninguna.
  */
 export const ZONAS: ZonaRecogida[] = [
   { nombre: 'Arganda del Rey', coste: 'gratuito' },
   { nombre: 'Rivas', coste: 'gratuito' },
   { nombre: 'Aeropuerto', coste: '+30 €' },
+  { nombre: 'Otra', coste: 'lo acordamos al llamarte' },
 ];
 
 /**
@@ -98,6 +107,15 @@ export const RADIO_SIN_COSTE_KM = 10;
  * ⚠️ **Y están FUERA de los 10 km**, que es lo que los separa de los gratuitos.
  * Si alguno resulta estar dentro, no va aquí: va gratis, y entonces la página
  * diría dos cosas distintas sobre el mismo sitio.
+ *
+ * ⚠️ **La última no es un pueblo, y es deliberado.** Aquí ponía «Madrid
+ * capital» y Dorel lo cortó el 30 de septiembre de 2026 —«lo de Madrid capital
+ * no lo entiendo, pon Comunidad de Madrid y listo»—: singularizar la capital en
+ * una lista de pueblos del corredor se lee como que la empresa llega a Madrid y
+ * **no** a Alcalá o a Getafe, que es lo contrario de lo que pasa. Puesta como
+ * región, la fila cierra la lista en vez de abrir una duda: los seis nombres de
+ * arriba siguen trayendo las búsquedas de cada pueblo y este dice hasta dónde
+ * se llega. Va la última a propósito, porque las contiene a todas.
  */
 export const ZONAS_CERCANAS: string[] = [
   'Coslada',
@@ -106,7 +124,7 @@ export const ZONAS_CERCANAS: string[] = [
   'Loeches',
   'Morata de Tajuña',
   'Perales de Tajuña',
-  'Madrid capital',
+  'Comunidad de Madrid',
 ];
 
 /**

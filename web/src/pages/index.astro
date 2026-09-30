@@ -753,10 +753,27 @@ const PROMESAS = [
    *
    * ⚠️ **Solo aparece si hay algo que borrar.** Un aspa permanente sobre un
    * campo vacío es un botón que no hace nada.
+   *
+   * ⚠️ **Se ancla al CAMPO, no al envoltorio, y ahí estaba el fallo.** Con
+   * `top: 50%` el centro se calcula sobre `.campo-con-aspa`, que en escritorio
+   * mide lo mismo que el campo —la lista flota— pero **en móvil no**: por
+   * debajo de 720 px la lista es `position: static` y empuja a propósito
+   * (`global.css`, «en una sola columna la lista EMPUJA»), así que el
+   * envoltorio pasa de 48 a 209 px y el aspa se iba al centro de esos 209.
+   * Medido a 390 px con la lista abierta: caía **fuera del campo y encima de
+   * una fila de la lista** —`elementFromPoint` devolvía `.zonas__coste`—, y
+   * como está posicionada gana el toque: quien apuntaba a una zona vaciaba el
+   * campo. Es justo el fallo táctil contra el que avisa el comentario de la
+   * lista: hace algo, y algo distinto de lo que se quería.
+   *
+   * Medio `--control-h` es el centro del campo en las dos disposiciones,
+   * porque el campo mide exactamente eso y es el primer hijo del envoltorio.
+   * Encontrado el 30 de septiembre de 2026 al añadir la cuarta zona, que movía
+   * el aspa media fila más abajo.
    */
   .aspa {
     position: absolute;
-    top: 50%;
+    top: calc(var(--control-h) / 2);
     right: 0;
     transform: translateY(-50%);
     display: none;
