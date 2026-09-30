@@ -47,10 +47,24 @@ const datosEstructurados = {
         folleto. Si falta la tuya, escríbenos por WhatsApp: contesta una persona.
       </p>
 
+      {/*
+        ⚠️ **Sin `name`, al revés que un acordeón exclusivo.** El atributo
+        `name` agrupa los `<details>` y solo deja uno abierto a la vez; aquí eso
+        es un estorbo. Esta página existe para leerla entera o para comparar dos
+        respuestas —la de la fianza con la del combustible—, y cerrar la
+        anterior al abrir la siguiente obliga a ir y volver. En la portada sí
+        tiene sentido: allí el bloque es un aperitivo dentro de una página que
+        va de otra cosa.
+
+        ⚠️ Y ese comentario estuvo DENTRO del `.map()`, donde rompe el build:
+        una expresión de ese tipo devuelve **un** elemento, y un comentario más
+        una etiqueta son dos. El error que da —«Expected ")" but found
+        "$$render"»— no menciona el comentario por ninguna parte.
+      */}
       <div class="faq">
         {
           PREGUNTAS.map((p, i) => (
-            <details name="faq-todas" open={i === 0}>
+            <details open={i === 0}>
               <summary>{p.q}</summary>
               {/* El envoltorio es lo que anima; ver `.faq__animable` en global.css. */}
               <div class="faq__animable">

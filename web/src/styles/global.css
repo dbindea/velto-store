@@ -1312,6 +1312,18 @@ input.picker-propio {
 }
 
 .faq .faq__cuerpo {
+  /*
+   * ⚠️ **El aire entre la pregunta y la respuesta lo puso Dorel** el 30 de
+   * septiembre de 2026, probándolo en el navegador. Sin él la respuesta arranca
+   * pegada al filete de la cabecera y las dos se leen como un solo bloque:
+   * cuesta ver dónde acaba la pregunta y empieza lo que contesta.
+   *
+   * Va en `global.css` y no en la portada, así que lo recogen **las dos**
+   * páginas que tienen acordeón —la portada y `/preguntas-frecuentes`— sin que
+   * nadie tenga que acordarse. Es la lección de `.entrada`, que vivió declarada
+   * en una página y usada en seis.
+   */
+  margin-top: 1rem;
   padding: 0 var(--sp-6) var(--sp-5);
   color: var(--text-2);
   font-size: var(--fs-small);
