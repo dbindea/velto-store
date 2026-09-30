@@ -764,28 +764,51 @@ que tener en la cabeza al retomar:
 **Lo primero son los dos despliegues** de § 2 ter: functions y hosting. Sin
 ellos los dos formularios de la web devuelven un fallo de red.
 
-**Y nueve huecos que solo puede cerrar Dorel.** Están marcados en el código o en
-las páginas y ninguno se puede inventar:
+**Y seis huecos que solo puede cerrar Dorel** —eran nueve, y el 30 de
+septiembre de 2026 cerró tres—. Están marcados en el código o en las páginas y
+ninguno se puede inventar:
 
 | Qué falta | Dónde muerde |
 |---|---|
-| Qué pueblos son gratuitos dentro de los 10 km | `zonas.ts` — Mejorada está a ~9 km y figura en «con suplemento» |
 | Si está adherido a alguna entidad de resolución de litigios | `/aviso-legal` lleva un `[PENDIENTE]`; la Ley 7/2017 no deja callarse |
-| El horario de la oficina | `/contacto` y los datos estructurados. Inventarlo es peor: Google lo enseña con «abierto ahora» |
 | En el aeropuerto, dónde se queda con el cliente | terminal y punto de encuentro; hoy la página solo puede decir «te lo llevamos» |
-| En un coche cedido, quién paga seguro, ITV y reparaciones | `/pon-tu-coche-en-alquiler` dice «se acuerda por escrito». Es la primera pregunta que hará el vecino |
 | Una política de cancelación | no consta en ninguna parte; el contrato solo regula el retraso en la devolución |
 | Si hay ficha de Google Business Profile | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
 | Que `veltomobility.com` RECIBA correo | hoy **no tiene ni un registro MX**: las dos páginas legales nombran esa dirección como canal de derechos RGPD |
 | Que lo legal lo mire un abogado | está escrito y es honesto, pero lo firma una empresa real |
 
-⚠️ **Y una que ya está publicada mal, en `/condiciones`:** la web dice que el
-contrato somete las controversias a los juzgados de **Madrid capital**, y frente
-a un consumidor esa sumisión es **nula** (art. 54.2 LEC) y candidata a abusiva
-(art. 90.2 TRLGDCU) — un cliente de Arganda pertenece a su propio partido
-judicial. Lo grave es que **la frase describe una cláusula real del contrato**,
-así que arreglar la página deja el papel diciendo lo mismo: hay que tocar
-`functions/src/contracts/clauses.ts`.
+**Los tres que se cerraron**, con lo que hay que saber de cada uno:
+
+- **Las localidades.** Gratis **Arganda y Rivas**; el aeropuerto a su tarifa; y
+  para todo lo demás una cuarta opción, **«Prefiero especificar…»**, que vacía
+  el campo y deja escribir —con la localidad capitalizándose sola, porque es un
+  nombre propio—. Nació como «Otra» y duró unas horas: dejaba la palabra «Otra»
+  escrita en el campo, o sea que quien vive en Cuenca acababa con un formulario
+  que no nombra Cuenca.
+  ⚠️ **Y «Madrid capital» pasó a «Comunidad de Madrid»** en la lista de la
+  página de entrega: singularizar la capital entre pueblos del corredor se lee
+  como que la empresa llega a Madrid y **no** a Alcalá.
+- **El horario:** L-V 10-14 y 17-20, sábado 10-14, domingo cerrado, **con
+  entrega fuera de horario y sin precio publicado**. Vive una sola vez en
+  `empresa.ts` y de ahí salen la tarjeta y el `openingHoursSpecification`.
+- **El coche cedido:** seguro, ITV y mantenimiento son del propietario, en
+  exclusiva.
+  ⚠️ **Lo que NO se publicó fue la exoneración general** que pedía la misma
+  frase —«no nos responsabilizamos de nada absolutamente»—: frente a un
+  particular es nula (arts. 82 y 86 TRLGDCU, y 1102 CC), así que **no protege**,
+  y contradice lo que la propia página promete cuatro secciones más arriba.
+  Está contado en el comentario de cabecera de `/pon-tu-coche-en-alquiler`.
+
+⚠️ **Y la que estaba publicada mal en `/condiciones` ya está arreglada**
+(`7e33201`, 30 de septiembre de 2026). La sumisión a los juzgados de **Madrid
+capital** era nula —art. 54.2 LEC en un contrato con condiciones generales— y
+abusiva frente a un consumidor (art. 90.2 TRLGDCU). Estaba en **tres** sitios y
+no en uno: la cláusula 15 en los tres idiomas, el resumen de `HIGHLIGHTS` —que
+lo decía **sin** la salvedad del consumidor y es el que se enseña en la pantalla
+pública de firma— y la página. Ahora manda la regla legal: si el arrendatario es
+consumidor, el juzgado de su domicilio.
+⚠️ **Falta desplegarlo a producción**: lo imprimen `generateContractPdf`,
+`getContractForSigning` y `signContract`, y las functions van a mano.
 
 ### Lo de siempre
 

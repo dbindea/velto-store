@@ -24,23 +24,37 @@ este documento.
 
 ### ⬜ N-37 · Publicar la web — y no es un despliegue, son tres cosas
 
-- [ ] **Dos Cloud Functions sin subir**, `createBookingRequest` y
-  `createContactRequest`, más la actualización de `sendDailyDigest`. El
-  procedimiento, ya corregido, en [publicar-web.md](publicar-web.md) bloque 4.
-  ⚠️ **Necesitan hosting además de la function**: los rewrites `/api/solicitud` y
-  `/api/contacto` viajan con el hosting, y sin ellos los dos formularios de la
-  web enseñan un fallo de red — llega HTML donde se espera JSON.
-- [ ] **Nueve datos de negocio sin decidir**, en [traspaso-sesion.md](traspaso-sesion.md)
-  § 5. No son código: son las localidades que entran en los 10 km gratis, el
-  horario, el punto de encuentro del aeropuerto, quién paga seguro/ITV/
-  reparaciones en un coche cedido, la política de cancelación, la adhesión a una
-  entidad de resolución alternativa, la ficha de Google Business, los MX de
+- [x] **Las dos Cloud Functions, subidas** el 30 de septiembre de 2026:
+  `createContactRequest` a desarrollo (yo) y a producción (Dorel), más
+  `createBookingRequest`, las tres públicas de lectura —que llevan el redondeo a
+  `,95`— y `sendDailyDigest` con el barrido de 24 h. Medido por **nombres contra
+  el manifiesto**, no a ojo: desarrollo **36 de 36**, producción **31**, y las
+  cinco que le faltan son las de la AEAT, que no van hasta el 1 de enero.
+  Probados de punta a punta por el rewrite de desarrollo: `/api/contacto`
+  devuelve `200` con su referencia y `/api/solicitud` un `400` en JSON.
+- [ ] **Los dos rewrites, en producción.** `/api/solicitud` y `/api/contacto`
+  viajan con el **hosting del target `web`**, que publica el CI al hacer merge a
+  `master`. Hasta ese merge, los formularios de la web de producción darían un
+  fallo de red — llega HTML donde se espera JSON. En desarrollo ya están.
+- [ ] **Seis datos de negocio sin decidir** —eran nueve—, en
+  [traspaso-sesion.md](traspaso-sesion.md) § 5: el punto de encuentro del
+  aeropuerto, la política de cancelación, la adhesión a una entidad de
+  resolución alternativa, la ficha de Google Business, los MX de
   `veltomobility.com` y una revisión de abogado.
-- [ ] **La cláusula de jurisdicción.** `/condiciones` fija Madrid capital, que es
-  **nulo frente a un consumidor**, y no es solo la página: **describe una
-  cláusula real del contrato**. Arreglarlo obliga a tocar
-  `functions/src/contracts/clauses.ts`, y eso cambia los contratos que se firmen
-  a partir de ese día — así que se decide, no se parchea.
+  ⚠️ **Cerrados el 30 de septiembre de 2026 por Dorel:** las localidades
+  gratuitas (Arganda y Rivas, con el aeropuerto a tarifa y «Prefiero
+  especificar…» para todo lo demás), el **horario de la oficina** —con entrega
+  fuera de horario, sin precio— y **quién paga en un coche cedido**: el seguro,
+  la ITV y el mantenimiento son del propietario, en exclusiva.
+- [x] **La cláusula de jurisdicción, arreglada** el 30 de septiembre de 2026
+  (`7e33201`). Era **nula** por partida doble —art. 54.2 LEC en un contrato con
+  condiciones generales, y abusiva frente a un consumidor (art. 90.2 TRLGDCU)—
+  y estaba en **tres** sitios, no en uno: la cláusula 15 en los tres idiomas, el
+  resumen de `HIGHLIGHTS` —que lo decía **sin** la salvedad del consumidor, y es
+  el que se enseña en la pantalla pública de firma— y `/condiciones`.
+  ⚠️ **Escrito no es desplegado.** El contrato lo imprimen `generateContractPdf`,
+  `getContractForSigning` y `signContract`: desplegadas a **desarrollo** ese
+  mismo día, y **a producción van a mano**, en una tanda de tres.
 
 ⚠️ **Y lo que la web afirma queda atado al código.** Un precio, un plazo de
 borrado o una cobertura escritos en una página son afirmaciones contrastables: si
