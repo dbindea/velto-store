@@ -1,0 +1,161 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+{/*
+  ⚠️ **La sección de cookies dice que no hay cookies, y eso está COMPROBADO**,
+  no supuesto: un `grep` sobre todo `web/src` el 30 de septiembre de 2026 no
+  encontró ni analítica, ni `gtag`, ni píxeles, ni tipografías servidas desde
+  fuera, ni mapas incrustados. Lo único que se guarda es `velto-tema` en
+  `localStorage`, la preferencia de tema que elige el visitante.
+
+  El art. 22.2 de la LSSI y la Guía de cookies de la AEPD dejan exento de
+  consentimiento lo que sirve exclusivamente para recordar una preferencia
+  elegida por el usuario. O sea que **no hace falta banner**.
+
+  ⚠️ **Y eso se rompe con una línea.** Cuatro cosas lo tumban el mismo día que
+  se añadan: analítica de cualquier tipo, un mapa de Google incrustado, un vídeo
+  de YouTube, o tipografías desde `fonts.googleapis.com`. Si alguna entra, esta
+  página pasa a ser falsa y hace falta banner de verdad. Por eso el mapa de
+  Contacto es un ENLACE y no un `<iframe>`.
+
+  ⚠️ **Y esto lo ha escrito un programador, no un abogado.**
+*/}
+<Base
+  titulo="Privacidad y cookies | Velto"
+  descripcion="Qué datos pedimos, para qué, cuánto los guardamos y cómo ejercer tus derechos. Y por qué esta web no usa cookies."
+  ruta="/privacidad"
+>
+  <section class="seccion">
+    <div class="contenedor texto">
+      <p class="overline">Privacidad</p>
+      <h1>Qué hacemos con tus datos</h1>
+      <p class="entrada">
+        Lo corto: pedimos lo justo para poder llamarte y para poder alquilarte un
+        coche. No vendemos datos a nadie y esta web no lleva cookies.
+      </p>
+
+      <h2 id="responsable">Quién trata tus datos</h2>
+      <p>
+        {EMPRESA.razonSocial} NIF {EMPRESA.nif}, con domicilio en
+        {' '}{EMPRESA.domicilioSocial}. Puedes escribirnos a
+        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> para
+        cualquier cosa relacionada con esta página.
+      </p>
+
+      <h2 id="que-pedimos">Qué pedimos y para qué</h2>
+
+      <h3>Si dejas una solicitud o escribes por el formulario</h3>
+      <p>
+        Tu nombre, tu teléfono y lo que nos cuentes. Lo usamos para llamarte y
+        contestarte, y para nada más. La base legal es tu propia petición: nos
+        escribes para que te contestemos (art. 6.1.b del RGPD, medidas
+        precontractuales).
+      </p>
+
+      <h3>Si acabas alquilando</h3>
+      <p>
+        Entonces hacen falta más datos, porque el alquiler lo exige: nombre y
+        apellidos, documento de identidad, permiso de conducir y domicilio. Van
+        al contrato, que es lo que permite entregar un coche a una persona
+        identificada, y a la factura si la pides. La base legal es el contrato y,
+        en lo fiscal, nuestras obligaciones legales.
+      </p>
+
+      <h2 id="cuanto">Cuánto tiempo los guardamos</h2>
+      <ul>
+        <li>
+          <strong>Solicitudes y mensajes que no acaban en alquiler:</strong>
+          {' '}<em>[PENDIENTE: el plazo lo decide Dorel. Propuesta: un año.]</em>
+          {' '}Después se borran solos.
+        </li>
+        <li>
+          <strong>Contratos y facturas:</strong> el tiempo que obliga la ley
+          —seis años en lo mercantil y cuatro en lo fiscal, contados desde el
+          último apunte—, porque son documentos que hay que poder enseñar.
+        </li>
+      </ul>
+      <p class="nota">
+        ⚠️ Un plazo publicado es un plazo que se puede comprobar. El borrado
+        automático de las solicitudes tiene que estar escrito antes de que esta
+        línea diga una cifra.
+      </p>
+
+      <h2 id="quien-mas">Quién más los ve</h2>
+      <p>
+        Nadie que no haga falta. Los datos se guardan en los servidores de
+        <strong> Google Cloud (Firebase)</strong> en la Unión Europea, y los
+        correos que te enviamos salen por <strong>Resend</strong>. Los dos son
+        proveedores nuestros y tratan los datos siguiendo nuestras instrucciones.
+      </p>
+      <p>
+        Fuera de eso, solo se ceden datos cuando la ley obliga: a la Agencia
+        Tributaria en las facturas, o a las autoridades si lo piden en un
+        procedimiento.
+      </p>
+
+      <h2 id="derechos">Tus derechos</h2>
+      <p>
+        Puedes pedirnos acceder a tus datos, corregirlos, borrarlos, limitarlos,
+        oponerte a que los tratemos o llevártelos. Se pide escribiendo a
+        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> desde la
+        dirección que nos diste, o presentándote en la oficina con tu documento
+        de identidad. Contestamos en un mes.
+      </p>
+      <p>
+        Si crees que no lo hemos hecho bien, puedes reclamar ante la
+        {' '}<a href="https://www.aepd.es" rel="noopener">Agencia Española de
+        Protección de Datos</a>.
+      </p>
+
+      {/*
+        ⚠️ Esta sección es el destino del enlace «Cookies» del pie. La URL
+        `/privacidad#cookies` está enlazada desde todas las páginas: si se
+        renombra el `id`, el pie apunta al vacío y nadie se entera.
+      */}
+      <h2 id="cookies">Cookies</h2>
+      <p>
+        <strong>Esta web no usa cookies.</strong> Ni propias ni de terceros: no
+        hay analítica, ni píxeles de publicidad, ni botones de redes sociales,
+        ni mapas ni vídeos incrustados. Las tipografías se sirven desde este
+        mismo dominio.
+      </p>
+      <p>
+        Lo único que se guarda en tu navegador es una preferencia:
+        {' '}<code>velto-tema</code>, con el valor <code>claro</code> u
+        {' '}<code>oscuro</code>, para que la web se abra como la dejaste. Se
+        guarda en el almacenamiento local de tu propio navegador, no viaja a
+        ningún servidor y no sirve para identificarte ni para seguirte. La
+        eliminas borrando los datos del sitio desde tu navegador.
+      </p>
+      <p>
+        Por eso <strong>no verás un aviso de cookies aquí</strong>: recordar una
+        preferencia que has elegido tú está exento de consentimiento según el
+        art. 22.2 de la LSSI y la Guía de cookies de la Agencia Española de
+        Protección de Datos. El día que esta web incorpore analítica o cualquier
+        contenido incrustado de terceros, esta página cambiará y habrá aviso.
+      </p>
+
+      <h2 id="menores">Menores</h2>
+      <p>
+        Esta web no va dirigida a menores de edad, y para alquilar hace falta
+        tener 21 años cumplidos y carné en vigor.
+      </p>
+
+      <p class="nota">
+        Última actualización: 30 de septiembre de 2026.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .texto code {
+    font-family: var(--font-num);
+    font-size: 0.9em;
+    padding: 0.1em 0.35em;
+    background: var(--bg-input);
+    border-radius: var(--r-xs);
+  }
+</style>

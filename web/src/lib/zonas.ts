@@ -59,6 +59,40 @@ export const ZONAS: ZonaRecogida[] = [
 export const ZONA_POR_DEFECTO = ZONAS[0].nombre;
 
 /**
+ * Hasta dónde llega la entrega **sin coste**, dicho como lo dijo Dorel el 30 de
+ * septiembre de 2026: «es gratuita en Arganda y las localidades de alrededor de
+ * los 10 km».
+ *
+ * ⚠️ **Es una promesa por DISTANCIA, y el sistema no mide distancias.** El
+ * buscador trabaja con un catálogo de zonas por nombre; esto es una frase
+ * comercial que cubre lo que el catálogo no nombra. Las dos tienen que decir lo
+ * mismo, así que la página de entrega renderiza `ZONAS` para lo que ya tiene
+ * precio decidido y usa este radio para el resto.
+ */
+export const RADIO_SIN_COSTE_KM = 10;
+
+/**
+ * Pueblos que se nombran en la página de entrega **sin precio**.
+ *
+ * ⚠️ **Sin cifra a propósito.** Nombrarlos trae las búsquedas de cada pueblo
+ * —«alquiler de coches en Coslada»— y no ata a Velto a siete importes. El día
+ * que uno tenga precio decidido, sube a `ZONAS` y sale del buscador con él.
+ *
+ * ⚠️ **Y están FUERA de los 10 km**, que es lo que los separa de los gratuitos.
+ * Si alguno resulta estar dentro, no va aquí: va gratis, y entonces la página
+ * diría dos cosas distintas sobre el mismo sitio.
+ */
+export const ZONAS_CERCANAS: string[] = [
+  'Coslada',
+  'San Fernando de Henares',
+  'Torrejón de Ardoz',
+  'Loeches',
+  'Morata de Tajuña',
+  'Perales de Tajuña',
+  'Madrid capital',
+];
+
+/**
  * Busca una zona por su nombre exacto. `null` si es texto libre.
  *
  * ⚠️ **El texto libre NO se rechaza, y ese es el diseño entero del campo.** La

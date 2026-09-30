@@ -43,6 +43,27 @@ interface Props {
 const { titulo, descripcion, ruta, precarga } = Astro.props;
 
 /**
+ * El menú principal, decidido por Dorel el 30 de septiembre de 2026.
+ *
+ * ⚠️ **`href` y `ruta` son dos campos distintos a propósito.** La portada se
+ * enlaza como `/` y declara su canónica como `''`; comparando contra `href`,
+ * ninguna página casaría nunca y comparando solo contra `ruta`, la portada no
+ * tendría enlace. Con los dos, `aria-current="page"` marca exactamente una.
+ *
+ * ⚠️ **El rótulo puede ser más corto que el título de la página**, y aquí lo
+ * es: la página se titula «Pon tu coche en alquiler» y el menú dice lo mismo
+ * porque cabe —se comprobó midiendo—, pero si algún día no cupiera, lo que se
+ * acorta es esta cadena y no la URL: aquella la teclea Google, este lo lee una
+ * persona en una barra de 288 px.
+ */
+const MENU = [
+  { rotulo: 'Buscar', href: '/', ruta: '' },
+  { rotulo: 'Entrega a domicilio', href: '/entrega-a-domicilio', ruta: '/entrega-a-domicilio' },
+  { rotulo: 'Pon tu coche en alquiler', href: '/pon-tu-coche-en-alquiler', ruta: '/pon-tu-coche-en-alquiler' },
+  { rotulo: 'Contacto', href: '/contacto', ruta: '/contacto' },
+];
+
+/**
  * El script que adelanta la petición de datos, como TEXTO.
  *
  * ⚠️ **Va por `set:html` y no escrito dentro del `<script>`, y eso es el
@@ -185,11 +206,16 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
           <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="185" height="48" />
         </a>
 
+        {/*
+          ⚠️ **El menú vive en un array y no escrito a mano**, porque hay que
+          marcar cuál es la página actual y eso se decide comparando con `ruta`.
+          Y `ruta` de la portada vale `''` mientras su enlace vale `/`: sin los
+          dos campos, «Buscar» saldría marcada en todo el sitio.
+        */}
         <nav class="cab__nav" aria-label="Principal">
-          <a href="/flota">Flota</a>
-          <a href="/entrega-a-domicilio">Entrega a domicilio</a>
-          <a href="/condiciones">Condiciones</a>
-          <a href="/contacto">Contacto</a>
+          {MENU.map((m) => (
+            <a href={m.href} aria-current={ruta === m.ruta ? 'page' : undefined}>{m.rotulo}</a>
+          ))}
         </nav>
 
         <div class="cab__acciones">
@@ -291,17 +317,33 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
           </div>
 
           <div>
-            <p class="overline">Alquiler</p>
+            <p class="overline">Alquilar</p>
             <ul class="pie__enlaces">
-              <li><a href="/flota">Flota</a></li>
-              <li><a href="/entrega-a-domicilio">Entrega a domicilio</a></li>
+              <li><a href="/">Buscar coche</a></li>
+              <li><a href="/flota">Toda la flota</a></li>
               <li><a href="/reservar">Consultar fechas</a></li>
+              <li><a href="/entrega-a-domicilio">Entrega a domicilio</a></li>
+            </ul>
+          </div>
+
+          {/*
+            La columna del otro lado del negocio. Va aquí y no dentro de
+            «Alquilar» porque le habla a otra persona: el que tiene un coche
+            parado, no el que busca uno.
+          */}
+          <div>
+            <p class="overline">Tu coche</p>
+            <ul class="pie__enlaces">
+              <li><a href="/pon-tu-coche-en-alquiler">Pon tu coche en alquiler</a></li>
+              <li><a href="/pon-tu-coche-en-alquiler#tu-parte">Cómo se calcula tu parte</a></li>
+              <li><a href="/contacto?motivo=poner-en-alquiler">Contarnos qué coche tienes</a></li>
             </ul>
           </div>
 
           <div>
             <p class="overline">Ayuda</p>
             <ul class="pie__enlaces">
+              <li><a href="/preguntas-frecuentes">Preguntas frecuentes</a></li>
               <li><a href="/condiciones#requisitos">Requisitos para alquilar</a></li>
               <li><a href="/condiciones#cancelar">Modificar o cancelar</a></li>
               <li><a href="/condiciones#averia">Qué hacer en caso de avería</a></li>
@@ -309,22 +351,35 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
             </ul>
           </div>
 
+          {/*
+            ⚠️ **El bloque con la razón social, el NIF y el domicilio SOCIAL
+            salió de aquí el 30 de septiembre de 2026, y se fue a
+            `/aviso-legal` — no a las condiciones.** Lo pidió Dorel («quitamos
+            el NIF porque esto va en condiciones»), y el sitio al que va importa:
+
+            El art. 10 de la LSSI obliga a tener esos datos accesibles «de forma
+            permanente, fácil, directa y gratuita». Una página propia enlazada
+            desde el pie de **todas** las páginas lo cumple; metidos en las
+            condiciones de alquiler, no — esas regulan el contrato y se leen
+            antes de reservar, no son la identificación del prestador. O sea que
+            el enlace de aquí abajo es lo que hace legal haber quitado el
+            bloque: si algún día desaparece, vuelve a hacer falta el bloque.
+          */}
           <div>
             <p class="overline">Legal</p>
             <ul class="pie__enlaces">
               <li><a href="/condiciones">Condiciones de alquiler</a></li>
+              <li><a href="/aviso-legal">Aviso legal</a></li>
+              <li><a href="/privacidad">Privacidad</a></li>
+              {/*
+                Dice «Cookies» porque es lo que la gente busca en un pie, y
+                lleva a la sección donde se explica que esta web no pone
+                ninguna. Una página titulada «Política de cookies» en un sitio
+                sin cookies sería el mismo error que el contrato que anunciaba
+                una firma digital que no llevaba.
+              */}
+              <li><a href="/privacidad#cookies">Cookies</a></li>
             </ul>
-            {/*
-              ⚠️ El ÚNICO sitio donde aparece la razón social, y va junto al
-              NIF: es donde la empresa comparece como persona jurídica. En todo
-              lo demás, la marca. Y `razonSocial` acaba en punto, así que la
-              frase no lleva otro detrás.
-            */}
-            <p class="pie__legal">
-              {EMPRESA.razonSocial}<br />
-              NIF {EMPRESA.nif}<br />
-              {EMPRESA.domicilioSocial}
-            </p>
           </div>
         </div>
 
@@ -489,14 +544,41 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
        *    44 px del botón de tema y los 48 del de reservar son zona táctil y
        *    ahí no se recorta.
        */
-      @media (max-width: 900px) {
+      /*
+       * ⚠️ **El corte sube de 900 a 1039 px, y lo decide el menú nuevo.**
+       * Medido con los rótulos puestos: a 1024 px «Entrega a domicilio» y «Pon
+       * tu coche en alquiler» se parten en dos líneas, y el teléfono también,
+       * así que el menú se lee como SEIS opciones en un portátil corriente.
+       * Con las etiquetas de antes ese defecto existía en una banda de 1 px;
+       * con estas, en una franja que usa mucha gente.
+       */
+      @media (max-width: 1039px) {
         .cab__fila { flex-wrap: wrap; gap: var(--sp-3); padding-block: var(--sp-3); }
-        .cab__nav { order: 3; width: 100%; margin: 0; overflow-x: auto; gap: var(--sp-5); }
-        /* Sin esto la tira deslizable no existe: los enlaces se parten. */
-        .cab__nav a { white-space: nowrap; flex: none; }
-        /* La barra de deslizamiento sobra: es una tira de cuatro enlaces. */
-        .cab__nav { scrollbar-width: none; }
-        .cab__nav::-webkit-scrollbar { display: none; }
+
+        /*
+         * ⚠️ **ENVUELVE, no se desliza.** Era una tira con `overflow-x: auto` y
+         * la barra escondida, y con los rótulos nuevos se salían 150 px: a
+         * 390 px quedaban a la vista DOS de los cuatro enlaces, «Pon tu coche
+         * en alquiler» cortado a media palabra y «Contacto» directamente no
+         * aparecía — sin barra, sin sombra y sin nada que dijera que había más.
+         *
+         * Choca con la regla que este mismo fichero declara tres secciones más
+         * arriba: en móvil la navegación **se recoloca, no se esconde**. Lo que
+         * no se ve no se pulsa.
+         *
+         * Cuesta 41 px de cabecera, y se recuperan apretando el héroe —que
+         * tenía 64 px de margen bajo la entradilla—, porque lo otro que pidió
+         * Dorel es que el buscador se vea sin bajar. Acortar el rótulo NO lo
+         * evita: con «Pon tu coche» siguen saliendo dos filas.
+         */
+        .cab__nav {
+          order: 3;
+          width: 100%;
+          margin: 0;
+          flex-wrap: wrap;
+          gap: var(--sp-2) var(--sp-5);
+        }
+        .cab__nav a { flex: none; }
 
         .cab__acciones { margin-left: auto; gap: var(--sp-2); }
         .cab__acciones .btn { padding-inline: var(--sp-4); }
@@ -537,8 +619,27 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
       }
 
-      .pie__marca { grid-column: span 1; max-width: 34ch; }
-      @media (min-width: 900px) { .pie__marca { grid-column: span 1; } }
+      /*
+       * ⚠️ **Con CINCO columnas hay que declarar la rejilla, no dejar
+       * `auto-fit`.** El contenedor mide 1200 px menos `--page-x`, o sea unos
+       * 1072 útiles; cinco columnas de 200 más cuatro huecos de 40 piden 1160.
+       * `auto-fit` mete cuatro y manda la quinta a una segunda fila ella sola,
+       * que no se lee como una decisión sino como un fallo de maquetación.
+       *
+       * La de marca lleva 1,4fr porque dentro van la dirección y el correo, que
+       * son líneas largas; las otras cuatro son listas de enlaces cortos.
+       */
+      @media (min-width: 1000px) {
+        .pie__rejilla {
+          grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
+          column-gap: var(--sp-8);
+        }
+        /* ⚠️ Y fuera el `max-width`, o la columna sale más estrecha que su
+           carril y el hueco de al lado parece un error. */
+        .pie__marca { max-width: none; }
+      }
+
+      .pie__marca { max-width: 34ch; }
       .pie__marca img { margin-bottom: var(--sp-5); }
       .pie__marca p { color: var(--gray-400); margin-bottom: var(--sp-5); }
 
@@ -552,7 +653,8 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       .pie a { color: var(--gray-300); }
       .pie a:hover { color: var(--velto-white); }
 
-      .pie__legal { color: var(--gray-500); font-size: var(--fs-caption); line-height: var(--lh-relaxed); }
+      /* `.pie__legal` se fue con el bloque del NIF: ahora eso vive en
+         `/aviso-legal`, que declara lo suyo. */
 
       .pie__cierre {
         margin-top: var(--sp-12);

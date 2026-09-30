@@ -25,15 +25,37 @@ import { SITIO } from '../lib/empresa';
  * indexa nunca.
  */
 
-/** `changefreq` y `priority` se omiten a propósito: Google los ignora desde 2023. */
-const RUTAS = [
+/**
+ * `changefreq` y `priority` se omiten a propósito: Google los ignora desde 2023.
+ *
+ * ⚠️ **Esta lista está escrita a mano, y olvidarse de una página NO FALLA
+ * NADA**: ni el build, ni `astro check`, ni los tests. La página simplemente no
+ * se ofrece a Google, y eso solo se ve abriendo `dist/sitemap.xml` y contando
+ * — que es lo que nadie hace. Por eso hay un test al lado
+ * (`sitemap.spec.ts`) que recorre `src/pages/` y exige que cada página
+ * indexable esté aquí: si añades una y no la apuntas, el test lo dice.
+ */
+export const RUTAS = [
   '', // la portada
   '/flota',
   '/reservar',
   '/entrega-a-domicilio',
+  '/pon-tu-coche-en-alquiler',
+  '/preguntas-frecuentes',
   '/condiciones',
   '/contacto',
+  '/aviso-legal',
+  '/privacidad',
 ] as const;
+
+/**
+ * Las que NO entran, cada una con su motivo. Existe para que el test pueda
+ * distinguir «se ha olvidado» de «se ha decidido».
+ */
+export const FUERA_DEL_SITEMAP: Record<string, string> = {
+  '404': 'una página de error no se indexa nunca',
+  coche: 'la ficha vive en /coche/{id} y la pinta JavaScript: no hay una URL que listar',
+};
 
 export const GET: APIRoute = () => {
   const urls = RUTAS.map(r => `  <url><loc>${SITIO}${r}</loc></url>`).join('\n');

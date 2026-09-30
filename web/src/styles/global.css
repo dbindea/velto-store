@@ -429,6 +429,115 @@ input.picker-propio {
   padding-right: var(--sp-8) !important;
 }
 
+/* ===========================================================================
+ * LA PROSA: ENTRADILLA, COLUMNA DE TEXTO, NOTA Y LISTA CON MARCA
+ *
+ * ⚠️ **`.entrada` estaba ROTA en cinco páginas, y no lo decía nadie.** La
+ * declaraba un `<style is:global>` dentro de `flota.astro`, y Astro **empaqueta
+ * el CSS por página**: un `is:global` de una página es global dentro de ESA
+ * página y no viaja a las demás. Comprobado sobre el build — `.entrada{`
+ * aparece en `dist/flota.html` y en ninguno de condiciones, contacto,
+ * entrega-a-domicilio, reservar y 404.
+ *
+ * La consecuencia, medida en `/contacto` a 1280 px: la entradilla salía a
+ * **16 px, en blanco puro y con 1098 px de ancho** —sin límite de línea— en vez
+ * de 18 px atenuados a 58 caracteres. Un renglón de 1098 px está muy por encima
+ * de lo que se puede leer sin perder la línea.
+ *
+ * Es la TERCERA variante del fallo que `css:audit` no caza, y la más
+ * traicionera: para el auditor la clase está declarada —y lo está—, lo que
+ * falla es que el fichero que la declara **no alcanza** a quien la usa. Las
+ * otras dos ya están documentadas en CLAUDE.md: la clase escrita bajo un
+ * antepasado que no la envuelve, y la que declara otro componente.
+ *
+ * ⚠️ **`.texto`, `.nota` y `.lista-check` NO estaban rotas**, y conviene no
+ * confundirlo: cada una se usa hoy en la misma página que la declara. Suben
+ * aquí porque las páginas nuevas las necesitan, y dejarlas abajo repetiría el
+ * caso de `.entrada` a la primera.
+ * ======================================================================== */
+
+.entrada {
+  color: var(--text-2);
+  font-size: var(--fs-lead);
+  max-width: 58ch;
+  margin: var(--sp-5) 0 var(--sp-10);
+}
+
+/* La columna de prosa larga: condiciones, aviso legal, privacidad. */
+.texto {
+  max-width: 68ch;
+}
+
+.texto h2 {
+  margin-top: var(--sp-12);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-h3);
+  /*
+   * ⚠️ La cabecera es pegajosa: sin esto, llegar por un ancla —`/condiciones#requisitos`,
+   * y el pie está lleno de ellos— deja el título debajo de la cabecera y lo que
+   * se lee es el párrafo de en medio.
+   */
+  scroll-margin-top: 90px;
+}
+
+.texto h3 {
+  margin-top: var(--sp-8);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-h4);
+}
+
+.texto p,
+.texto li {
+  color: var(--text-2);
+  margin-bottom: var(--sp-4);
+}
+
+.texto ul,
+.texto ol {
+  margin: 0 0 var(--sp-4);
+  padding-left: var(--sp-5);
+}
+
+/* Un dato secundario al pie de una sección: la fecha de actualización, una
+   aclaración. Más pequeño y más apagado que el cuerpo. */
+.nota {
+  color: var(--text-3);
+  font-size: var(--fs-small);
+}
+
+/* La lista con la marca de verificación delante, sin viñeta del navegador. */
+.lista-check {
+  list-style: none;
+  margin: var(--sp-6) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.lista-check li {
+  position: relative;
+  padding-left: var(--sp-8);
+  color: var(--text-2);
+}
+
+/*
+ * ⚠️ **La marca es `content` con `aria-hidden` implícito**, no un carácter
+ * dentro del texto: un lector de pantalla leería «marca de verificación» antes
+ * de cada línea. El contenido generado por CSS no entra en el árbol de
+ * accesibilidad en los lectores actuales, que es justo lo que se quiere aquí.
+ */
+.lista-check li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 14px;
+  height: 8px;
+  border-left: 2px solid var(--brand);
+  border-bottom: 2px solid var(--brand);
+  transform: rotate(-45deg);
+}
+
 /* ---------------------------------------------------------------------------
  * EL CALENDARIO DE VELTO
  *

@@ -62,11 +62,11 @@ import Base from '../layouts/Base.astro';
     });
 </script>
 
-<style is:global>
-  .entrada {
-    color: var(--text-2);
-    font-size: var(--fs-lead);
-    max-width: 58ch;
-    margin: var(--sp-5) 0 var(--sp-10);
-  }
-</style>
+{/*
+  ⚠️ **Aquí había un `<style is:global>` con `.entrada`, y era global de
+  mentira.** Astro empaqueta el CSS **por página**: un `is:global` escrito en
+  una página vale dentro de ella y no viaja a las demás. Las otras cinco
+  páginas que usan esa clase se pintaban sin estilo — 16 px en blanco puro y
+  1098 px de ancho de línea. Ahora vive en `global.css`, que sí lo es porque lo
+  importa el layout.
+*/}

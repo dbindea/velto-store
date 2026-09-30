@@ -129,26 +129,15 @@ import { EMPRESA } from '../lib/empresa';
 </Base>
 
 <style>
-  .texto {
-    max-width: 68ch;
-  }
-
-  .texto h2 {
-    font-size: var(--fs-h3);
-    margin-top: var(--sp-10);
-    /* La cabecera es pegajosa: sin esto, un ancla deja el título debajo. */
-    scroll-margin-top: 90px;
-  }
-
-  .texto p {
-    color: var(--text-2);
-  }
-
+  /*
+   * ⚠️ `.texto` y `.nota` viven ahora en `global.css`, con las demás clases de
+   * prosa: las usan también el aviso legal y la privacidad, y dejarlas aquí
+   * habría repetido el caso de `.entrada` —declarada en una página y usada en
+   * seis— a la primera. Lo que queda aquí es solo lo propio de esta página.
+   */
   .nota {
-    margin-top: 2.5rem;
-    padding-top: 1.25rem;
+    margin-top: var(--sp-10);
+    padding-top: var(--sp-5);
     border-top: var(--bw) solid var(--border);
-    font-size: var(--fs-small);
-    color: var(--text-3);
   }
 </style>

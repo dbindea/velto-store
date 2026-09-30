@@ -1,0 +1,88 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA, SITIO } from '../lib/empresa';
+import { PREGUNTAS } from '../lib/preguntas';
+
+/**
+ * ⚠️ **Los datos estructurados se construyen desde el MISMO array que pinta la
+ * página.** Escritos aparte, lo que Google lee y lo que el visitante lee
+ * pueden divergir sin que nada falle — y eso es exactamente lo que Google
+ * penaliza: marcado que no se corresponde con el contenido visible.
+ *
+ * ⚠️ **Y hay que quitar el HTML de las respuestas.** El campo `text` de un
+ * `FAQPage` admite marcado, pero los `<strong>` sobran para un lector de
+ * máquina y complican el escapado del JSON. Se quitan con una expresión
+ * regular sencilla porque el HTML de origen es nuestro y son solo `<strong>`.
+ */
+const sinHtml = (s: string) => s.replace(/<[^>]+>/g, '');
+
+const datosEstructurados = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: PREGUNTAS.map((p) => ({
+    '@type': 'Question',
+    name: p.q,
+    acceptedAnswer: { '@type': 'Answer', text: sinHtml(p.a) },
+  })),
+};
+---
+
+<Base
+  titulo="Preguntas frecuentes sobre el alquiler | Velto"
+  descripcion="Precio, fianza, kilómetros, combustible, entrega a domicilio y qué hacer si algo pasa. Las respuestas salen del contrato que se firma."
+  ruta="/preguntas-frecuentes"
+>
+  {/*
+    ⚠️ `set:html` con un objeto que construimos nosotros y que no lleva ni un
+    dato de fuera. El día que una respuesta venga de una API, esto se escapa.
+  */}
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(datosEstructurados)} />
+
+  <section class="seccion">
+    <div class="contenedor">
+      <p class="chip">Preguntas frecuentes</p>
+      <h1>Lo que más nos preguntan</h1>
+      <p class="entrada">
+        Cada respuesta sale de una cláusula del contrato que se firma, no de un
+        folleto. Si falta la tuya, escríbenos por WhatsApp: contesta una persona.
+      </p>
+
+      <div class="faq">
+        {
+          PREGUNTAS.map((p, i) => (
+            <details name="faq-todas" open={i === 0}>
+              <summary>{p.q}</summary>
+              {/* El envoltorio es lo que anima; ver `.faq__animable` en global.css. */}
+              <div class="faq__animable">
+                <div class="faq__interior">
+                  <div class="faq__cuerpo" set:html={p.a} />
+                </div>
+              </div>
+            </details>
+          ))
+        }
+      </div>
+
+      <div class="cierre">
+        <h2>¿No está la tuya?</h2>
+        <p>
+          Pregúntanoslo y te contestamos. Si la pregunta se repite, acaba en
+          esta página.
+        </p>
+        <div class="acciones">
+          <a class="btn btn--brand" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+            Preguntar por WhatsApp
+          </a>
+          <a class="btn btn--ghost" href="/condiciones">Ver todas las condiciones</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .faq { max-width: 72ch; margin-top: var(--sp-8); }
+  .cierre { max-width: 52ch; margin-top: var(--sp-16); }
+  .cierre p { color: var(--text-2); margin: var(--sp-4) 0 var(--sp-6); }
+  .acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+</style>

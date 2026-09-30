@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
 import { ZONAS, ZONA_POR_DEFECTO } from '../lib/zonas';
+import { PREGUNTAS_PORTADA } from '../lib/preguntas';
 
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
@@ -55,46 +56,8 @@ const PROMESAS = [
   },
 ];
 
-/**
- * ⚠️ **Cada respuesta sale de una cláusula real de
- * `functions/src/contracts/clauses.ts`**, como la página de condiciones: la
- * edad mínima de 21 años, los treinta minutos de cortesía, la fianza que se
- * devuelve tras la inspección y la autorización escrita para salir de España.
- *
- * Y las dos que salen del backoffice: la factura se emite **a petición** —así lo
- * decide el recibo— y la entrega a domicilio se pacta antes con su importe
- * propio. Si algo de esto deja de ser cierto, se cambia aquí el mismo día.
- */
-const PREGUNTAS = [
-  {
-    q: '¿El precio que veo es el final?',
-    a: 'Sí. Lo que aparece en la web lleva el <strong>IVA incluido</strong> y es lo que se cierra en el contrato. La fianza va aparte y se devuelve; si pactamos entrega a domicilio, ese importe se acuerda antes y aparece en su propia línea.',
-  },
-  {
-    q: '¿Qué edad hay que tener y qué papeles hacen falta?',
-    a: 'Desde <strong>21 años</strong>, con permiso de conducir en vigor y DNI o pasaporte. Si vais a turnaros al volante, cada conductor tiene que ir nombrado en el contrato: no cuesta nada, pero tiene que constar.',
-  },
-  {
-    q: '¿Cuánto es la fianza y cuándo me la devolvéis?',
-    a: 'Es un <strong>depósito en garantía</strong>, no parte del precio. Se devuelve tras la inspección de devolución, salvo que haya que retener algo por daños, combustible o kilómetros de más. A clientes conocidos podemos no pedirla.',
-  },
-  {
-    q: '¿Puedo salir de España con el coche?',
-    a: 'Hace falta <strong>autorización nuestra por escrito</strong>, pedida antes del viaje. Dentro de España no hay restricción.',
-  },
-  {
-    q: '¿Me lo podéis llevar a casa?',
-    a: 'Sí. En Arganda del Rey y alrededores no cobramos el desplazamiento; más lejos se acuerda un suplemento antes de reservar. La ida y la vuelta se deciden por separado: hay quien recoge aquí y solo pide que vayamos a buscarlo.',
-  },
-  {
-    q: '¿Hacéis factura?',
-    a: 'Sí, <strong>a petición</strong>. Dilo al reservar y la emitimos a nombre de quien nos indiques.',
-  },
-  {
-    q: '¿Qué hago si el coche se avería?',
-    a: 'Llama al teléfono de asistencia que viene impreso en tu contrato <strong>antes de tomar decisiones</strong>: una reparación por tu cuenta puede no estar cubierta. El coche va asegurado y con asistencia en carretera.',
-  },
-];
+/* Las preguntas viven en `../lib/preguntas`: las leen esta página y
+   `/preguntas-frecuentes`, y dos copias acabarían diciendo cosas distintas. */
 ---
 
 <Base
@@ -337,7 +300,7 @@ const PREGUNTAS = [
       */}
       <div class="faq">
         {
-          PREGUNTAS.map((p, i) => (
+          PREGUNTAS_PORTADA.map((p, i) => (
             <details open={i === 0}>
               <summary>{p.q}</summary>
               {/* El envoltorio es lo que anima; ver `.faq__animable`. */}
@@ -615,16 +578,28 @@ const PREGUNTAS = [
    * son 2,75 rem: pensado para que un titular corto luzca, no para éste, que
    * tiene sesenta caracteres.
    */
+  /*
+   * ⚠️ **Y el héroe se aprieta 45 px más desde el 30 de septiembre de 2026**,
+   * que es exactamente lo que creció la cabecera al pasar el menú a dos filas.
+   * Con cuatro opciones —una de ellas «Pon tu coche en alquiler»— la tira
+   * deslizable escondía 150 px y «Contacto» no aparecía; envolver lo arregla y
+   * cuesta altura. Lo que Dorel pidió son las DOS cosas: el menú entero y el
+   * buscador a la vista sin bajar.
+   *
+   * El sitio salió de donde sobraba: 40 px de aire arriba y 32 de margen bajo
+   * la entradilla. Medido después: el botón «Ver precios» queda dentro de los
+   * 844 px de un móvil corriente, que es lo que había que conservar.
+   */
   @media (max-width: 719px) {
-    .hero { padding-top: var(--sp-10); }
+    .hero { padding-top: var(--sp-5); }
 
     .hero__titular {
       font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.5rem);
       max-width: 20ch;
-      margin-bottom: var(--sp-4);
+      margin-bottom: var(--sp-3);
     }
 
-    .hero__entrada { font-size: var(--fs-small); margin-bottom: var(--sp-8); }
+    .hero__entrada { font-size: var(--fs-small); margin-bottom: var(--sp-5); }
 
     /*
      * ⚠️ **Y el buscador deja de colgar medio cuerpo.** El `translateY(50%)`
@@ -645,7 +620,11 @@ const PREGUNTAS = [
      * 50 % con mi regla perfectamente escrita unas líneas antes. Con el
      * antepasado delante, (0,2,0) contra (0,1,0), el orden deja de importar.
      */
-    .hero .buscador { transform: translateY(24px); }
+    .hero .buscador { transform: translateY(8px); }
+
+    /* El hueco entre campos y el relleno de la tarjeta: 4 px por hueco y 8 de
+       relleno, que en una tarjeta de cuatro filas son los últimos 20 px. */
+    .hero .buscador { gap: var(--sp-3); padding: var(--sp-5); }
 
     /* Y la sección de abajo recupera el hueco que ya no hace falta reservar. */
     .promesas-seccion { padding-top: var(--section-y); }
@@ -851,25 +830,8 @@ const PREGUNTAS = [
     .requisitos { grid-template-columns: 1.1fr 1fr; align-items: start; }
   }
 
-  .lista-check { list-style: none; margin: var(--sp-6) 0 0; padding: 0; display: grid; gap: var(--sp-4); }
-
-  .lista-check li {
-    position: relative;
-    padding-left: var(--sp-8);
-    color: var(--text-2);
-  }
-
-  .lista-check li::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0.45em;
-    width: 14px;
-    height: 8px;
-    border-left: 2px solid var(--brand);
-    border-bottom: 2px solid var(--brand);
-    transform: rotate(-45deg);
-  }
+  /* `.lista-check` vive en `global.css`: la usan también la página de entrega
+     y la de «Pon tu coche en alquiler». */
 
   .oficina { padding: var(--sp-8); }
   .oficina h3 { margin: var(--sp-3) 0; }
