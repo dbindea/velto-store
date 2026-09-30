@@ -12,9 +12,25 @@ import Base from '../layouts/Base.astro';
     <div class="contenedor">
       <p class="overline">Flota</p>
       <h1>Precio por día, todo incluido</h1>
+      {/*
+        ⚠️ **Aquí ponía «con IVA incluido» y se quitó el 30 de septiembre de
+        2026.** No es que deje de ser cierto —el precio sigue siendo el bruto—:
+        es que se decía en **seis** sitios distintos, y Dorel lo cortó con un
+        argumento que vale para toda la web: «poner tantas veces parece que
+        estás haciendo mucho hincapié en algo para ocultar alguna ilegalidad».
+        Tenía razón; repetir una garantía la convierte en sospecha.
+
+        ⚠️ **Y quitar las palabras NO incumple nada.** Lo que obliga la ley
+        —art. 60 del TRLGDCU y el Real Decreto de precios— es que **el precio
+        que se le enseña a un particular lleve los impuestos dentro**, no que
+        se escriba la coletilla al lado. El precio sigue siendo el bruto en
+        todas partes (`publicPrice()`), y dónde se dice está decidido: el pie
+        de todas las páginas, la pregunta frecuente que lo pregunta, y la
+        entradilla de los resultados. Ahí y en ningún sitio más.
+      */}
       <p class="entrada">
-        El precio que ves es el total por día con IVA incluido, y baja cuantos
-        más días alquiles. Para unas fechas concretas,
+        El precio que ves es el total por día, y baja cuantos más días
+        alquiles. Para unas fechas concretas,
         <a href="/reservar">consulta la disponibilidad</a>.
       </p>
 

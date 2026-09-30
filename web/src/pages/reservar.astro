@@ -24,7 +24,7 @@ import { ORDENES } from '../lib/resultados';
 */}
 <Base
   titulo="Coches libres y precio del alquiler | Velto"
-  descripcion="Los coches que quedan libres en tus fechas, con el precio del alquiler completo e IVA incluido. Eliges uno y te llamamos para cerrarlo."
+  descripcion="Los coches que quedan libres en tus fechas, con el precio final del alquiler. Eliges uno y lo reservamos."
   ruta="/reservar"
 >
   <section class="seccion">
@@ -36,10 +36,38 @@ import { ORDENES } from '../lib/resultados';
         que el visitante está a punto de ver debajo, y en un móvil eso son
         120 px que empujan los coches fuera de la pantalla. En una página de
         resultados la prosa compite con el contenido; en la portada, no.
+
+        ⚠️ **Y NO dice «te llamamos», que es lo que decía.** Lo cortó Dorel el
+        30 de septiembre de 2026 con dos motivos, y los dos mandan sobre la
+        redacción de aquí en adelante:
+
+        1. **El canal no está decidido y no tiene por qué estarlo.** Puede ser
+           una llamada, un WhatsApp, o que él reserve el coche directamente sin
+           preguntar nada. Anunciar una llamada compromete el único canal que
+           igual no se usa.
+        2. **«Te llamamos» se lee como una espera.** Sus palabras: «la gente
+           tiene la impresión de que esto va pa largo… ¿quién sabe cuándo me
+           van a llamar?». En una página de resultados, eso es lo último que se
+           lee antes de decidir.
+
+        ⚠️ **Y tiene que seguir valiendo cuando la reserva sea online.** Por eso
+        «para reservarlo» y no «para pedirlo»: describe **para qué** sirve
+        elegir, que es lo mismo hoy —una pre-reserva que confirmamos— y el día
+        que se cierre sola desde la web. Lo que NO puede decir es que el coche
+        queda reservado al pulsar: eso lo dice el diálogo, con su letra, porque
+        es donde deja de ser cierto.
+
+        ⚠️ **«Tasas» se quedó fuera a propósito.** Dorel escribió «impuesto y
+        tasas ya incluidas» y en este precio **no hay ninguna tasa**: lo que
+        lleva dentro es el IVA. Y el que llegue en avión paga **+30 € por
+        llevárselo a Barajas** (`zonas.ts`), así que prometer «tasas incluidas»
+        es perder esa discusión en el mostrador. «Sin gastos de gestión» dice
+        lo que él quería decir —que no hay sorpresas— y además es verdad: está
+        prometido igual en la portada.
       */}
       <p class="entrada">
-        Precio del alquiler completo, <strong>IVA incluido</strong>. Eliges uno
-        y te llamamos.
+        Precio final del alquiler: impuestos incluidos y sin gastos de gestión.
+        Elige uno para reservarlo.
       </p>
 
       {/*
@@ -162,7 +190,16 @@ import { ORDENES } from '../lib/resultados';
         <form id="solicitud" class="dlg__caja" method="dialog">
           <button type="button" class="dlg__cerrar" id="cerrar" aria-label="Cerrar">×</button>
 
-          <h2 id="dlg-titulo">Que me llamen</h2>
+          {/*
+            ⚠️ **Se llamaba «Que me llamen», y es la misma frase que Dorel
+            quitó de la entradilla.** El concepto interno sigue siendo ese
+            —`bookingRequests`, «que me llamen»— pero lo que lee el cliente es
+            lo que va a pasar: una **pre-reserva**, que es la palabra que usó
+            él. Aguanta además el día que la reserva se cierre sola desde la
+            web: ese día esto pasa a ser «Reserva» y lo de debajo desaparece,
+            sin tener que reescribir la página entera.
+          */}
+          <h2 id="dlg-titulo">Pre-reserva</h2>
           <p id="dlg-resumen" class="dlg__resumen"></p>
 
           <label class="dlg__campo">
@@ -201,11 +238,18 @@ import { ORDENES } from '../lib/resultados';
           {/*
             ⚠️ **Lo que de verdad pasa, antes de pulsar y no después.** El coche
             NO se aparta: apartarlo sin pago ni identidad dejaría la flota
-            bloqueable por cualquiera. Lo que se garantiza es el precio.
+            bloqueable por cualquiera. Lo que se garantiza es el precio, y eso
+            sí se puede prometer porque lo congela `quoteSnapshot`.
+
+            ⚠️ **«Te confirmamos», no «te llamamos», y sin decir el canal.** El
+            formulario pide un teléfono y ese teléfono vale para las dos cosas;
+            cuál se use lo decide Dorel en cada caso. Prometer la llamada ata a
+            un canal que igual no se usa, y encima suena a espera.
           */}
           <p class="dlg__letra">
-            Te llamamos para confirmar. El coche <strong>no queda reservado</strong>
-            hasta que hablemos; lo que te garantizamos es el precio.
+            Te confirmamos enseguida por teléfono o WhatsApp. Hasta entonces el
+            coche <strong>no queda reservado</strong>; lo que te garantizamos es
+            el precio.
           </p>
         </form>
       </dialog>
@@ -476,11 +520,11 @@ import { ORDENES } from '../lib/resultados';
    * es lo único honesto, porque la solicitud no se ha creado.
    */
   const MOTIVOS_SOLICITUD: Record<string, string> = {
-    'missing-name': 'Necesitamos tu nombre para saber a quién llamamos.',
+    'missing-name': 'Necesitamos tu nombre para saber con quién hablamos.',
     'missing-phone': 'Necesitamos un teléfono para poder llamarte.',
     'bad-phone': 'Ese teléfono no lo entendemos. Revísalo, por favor.',
     'vehicle-unavailable': 'Ese coche acaba de ocuparse. Vuelve a buscar y elige otro.',
-    'too-many-requests': 'Ya tenemos tu solicitud. Te llamamos enseguida.',
+    'too-many-requests': 'Ya tenemos tu solicitud. Te contestamos enseguida.',
   };
 
   solicitud.addEventListener('submit', (e) => {
@@ -507,11 +551,11 @@ import { ORDENES } from '../lib/resultados';
          * sirve para nada.
          */
         solicitud.innerHTML = `
-          <h2>Solicitud recibida</h2>
+          <h2>Pre-reserva hecha</h2>
           <p class="dlg__ref">${r.reference}</p>
-          <p class="dlg__resumen">Te llamamos al teléfono que nos has dejado.</p>
+          <p class="dlg__resumen">Te confirmamos enseguida al teléfono que nos has dejado.</p>
           <p class="dlg__letra">
-            El coche <strong>no queda reservado</strong> hasta que hablemos.
+            Hasta entonces el coche <strong>no queda reservado</strong>.
             Lo que te garantizamos es el precio.
           </p>
           <button type="button" class="btn btn--ink dlg__enviar" id="ok">Entendido</button>`;

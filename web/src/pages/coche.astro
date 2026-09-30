@@ -158,7 +158,10 @@ import { EMPRESA } from '../lib/empresa';
     ].filter(Boolean) as Array<[string, string]>;
 
     const precio = v.priceFrom
-      ? `<p class="ficha__precio num"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> por día, IVA incluido</p>`
+      // El «, IVA incluido» se fue el 30 de septiembre de 2026 con los otros
+      // cinco: el precio sigue siendo el bruto, y dónde se dice está decidido
+      // —el pie, la pregunta frecuente y la entradilla de los resultados—.
+      ? `<p class="ficha__precio num"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> por día</p>`
       : `<p class="ficha__precio">Consúltanos el precio para tus fechas.</p>`;
 
     const wa = (window as unknown as { __VELTO_WHATSAPP: string }).__VELTO_WHATSAPP;

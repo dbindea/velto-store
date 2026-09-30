@@ -56,9 +56,27 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
       })
     : `<div class="coche__sinfoto">${ICONO.coche}<span>Foto del vehículo</span></div>`;
 
+  /*
+   * ⚠️ **La letra de debajo decía «todo incluido, IVA incluido» y ahora dice
+   * lo que es: el total por esos días.** Eso salía en CADA tarjeta —cuatro
+   * coches, cuatro veces la misma coletilla en la misma pantalla—, y es el
+   * sitio donde más cansaba. Lo cortó Dorel el 30 de septiembre de 2026:
+   * «poner tantas veces parece que estás haciendo mucho hincapié en algo para
+   * ocultar alguna ilegalidad».
+   *
+   * ⚠️ **El precio NO cambia: sigue siendo el bruto.** Lo que obliga la ley es
+   * que el importe que ve un particular lleve los impuestos dentro, no que se
+   * escriba la coletilla al lado. Dónde se dice está decidido y son tres
+   * sitios: el pie de todas las páginas, la pregunta frecuente que lo
+   * pregunta, y la entradilla de la página de resultados.
+   *
+   * ⚠️ **Y «total» es más útil que «todo incluido»**, porque contesta la duda
+   * real de una tarjeta de alquiler: si esos 241,95 € son por día o por los
+   * cuatro días.
+   */
   const precio = disponible
     ? `<p class="coche__precio num"><strong>${euros(disponible.price.gross)}</strong></p>
-       <p class="coche__detalle num">${disponible.totalDays} ${disponible.totalDays === 1 ? 'día' : 'días'} · todo incluido, IVA incluido</p>`
+       <p class="coche__detalle num">Total por ${disponible.totalDays} ${disponible.totalDays === 1 ? 'día' : 'días'}</p>`
     : c.priceFrom
       ? /*
          * ⚠️ **El «desde» no es adorno: ese precio es el del tramo MÁS BARATO**,
