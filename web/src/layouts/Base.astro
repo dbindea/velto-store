@@ -212,7 +212,34 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
           Y `ruta` de la portada vale `''` mientras su enlace vale `/`: sin los
           dos campos, «Buscar» saldría marcada en todo el sitio.
         */}
-        <nav class="cab__nav" aria-label="Principal">
+        {/*
+          ⚠️ **El botón del menú son las TRES BARRAS del isotipo, no un
+          sándwich cualquiera.** Lo pidió Dorel así —«que el sándwich no sea el
+          típico sino uno hecho a medida con las líneas oblicuas cortadas de
+          Velto»— y la inclinación no se inventa: es `--skew`, la misma de la
+          «V» y la «E» del logotipo y la de las barras del héroe. Al abrirse se
+          convierte en aspa, que es lo que dice cómo se cierra.
+
+          ⚠️ **Son `<span>` y no un SVG**: así heredan `--skew` y el color de
+          marca del tema, y el aspa se hace con dos transformaciones en vez de
+          con dos dibujos.
+
+          ⚠️ **Y lleva `aria-expanded`, que es lo que lo convierte en un mando
+          y no en un adorno**: sin él, un lector de pantalla anuncia un botón
+          que no dice si lo que controla está abierto.
+        */}
+        <button
+          id="cab-menu"
+          class="cab__hamb"
+          type="button"
+          aria-expanded="false"
+          aria-controls="menu-principal"
+          aria-label="Abrir el menú"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav id="menu-principal" class="cab__nav" aria-label="Principal">
           {MENU.map((m) => (
             <a href={m.href} aria-current={ruta === m.ruta ? 'page' : undefined}>{m.rotulo}</a>
           ))}
@@ -397,6 +424,59 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         d.dataset.theme = nuevo;
         try { localStorage.setItem('velto-tema', nuevo); } catch (e) { /* modo privado */ }
       });
+
+      /*
+       * El menú plegable del móvil.
+       *
+       * ⚠️ **El estado vive en `aria-expanded`, no en una variable aparte.**
+       * Son el mismo hecho: con dos, el día que una se quede sin actualizar el
+       * botón diría una cosa a la vista y otra a un lector de pantalla — y el
+       * que se queda viejo es siempre el que no se mira. Es la misma decisión
+       * que el interruptor de vista de la página de resultados.
+       */
+      (function () {
+        var boton = document.getElementById('cab-menu');
+        var menu = document.getElementById('menu-principal');
+        if (!boton || !menu) return;
+
+        function poner(abierto) {
+          boton.setAttribute('aria-expanded', String(abierto));
+          boton.setAttribute('aria-label', abierto ? 'Cerrar el menú' : 'Abrir el menú');
+          menu.classList.toggle('esta-abierto', abierto);
+        }
+
+        boton.addEventListener('click', function () {
+          poner(boton.getAttribute('aria-expanded') !== 'true');
+        });
+
+        /*
+         * ⚠️ **Se cierra al tocar fuera y con Escape.** Un panel que solo se
+         * cierra con su propio botón obliga a volver a buscarlo, y en un móvil
+         * tapa media pantalla. Es lo mismo que el backoffice tuvo que
+         * aprender con su menú «Más», que se quedaba abierto encima de la
+         * pantalla siguiente.
+         */
+        document.addEventListener('click', function (e) {
+          if (boton.getAttribute('aria-expanded') !== 'true') return;
+          if (boton.contains(e.target) || menu.contains(e.target)) return;
+          poner(false);
+        });
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') poner(false);
+        });
+
+        /*
+         * ⚠️ **Y al pasar a escritorio.** Cruzando los 1040 px el CSS vuelve a
+         * enseñar el menú entero y esconde el botón: sin esto, el `aria-expanded`
+         * se quedaría en `true` para siempre, y al volver a móvil el menú
+         * saldría abierto sin que nadie lo hubiera pedido.
+         */
+        var ancho = matchMedia('(min-width: 1040px)');
+        ancho.addEventListener('change', function (e) {
+          if (e.matches) poner(false);
+        });
+      })();
     </script>
 
     <style is:global>
@@ -487,6 +567,57 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         .cab__nav a::after { transition: none; }
       }
 
+      /*
+       * El botón del menú: las tres barras del isotipo, en pequeño.
+       *
+       * ⚠️ **En escritorio no existe** —el menú está a la vista— y por eso
+       * nace en `display: none`: la media query de móvil lo enciende. Al revés
+       * —nacer visible y esconderlo— deja un parpadeo en la primera pintura de
+       * cada carga, que es justo lo que el script del tema se cuida de evitar.
+       */
+      .cab__hamb {
+        display: none;
+        place-content: center;
+        gap: 4px;
+        order: 2;
+        /* 44 px, la medida de lo que se pulsa con el dedo. */
+        width: var(--touch);
+        height: var(--touch);
+        padding: 0;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+      }
+
+      .cab__hamb span {
+        display: block;
+        width: 22px;
+        height: 3px;
+        background: var(--brand);
+        /* La misma inclinación que la «V» del logotipo y las barras del héroe. */
+        transform: skewX(var(--skew));
+        transition:
+          transform var(--t-base) var(--ease),
+          opacity var(--t-fast) var(--ease);
+      }
+
+      /*
+       * Abierto es un aspa: la de arriba y la de abajo se cruzan y la de en
+       * medio se va. El desplazamiento de 7 px es el alto de una barra más su
+       * hueco, o sea lo que hay que recorrer hasta el centro.
+       */
+      .cab__hamb[aria-expanded='true'] span:first-child {
+        transform: translateY(7px) rotate(45deg);
+      }
+      .cab__hamb[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+      .cab__hamb[aria-expanded='true'] span:last-child {
+        transform: translateY(-7px) rotate(-45deg);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cab__hamb span { transition: none; }
+      }
+
       .cab__acciones { display: flex; align-items: center; gap: var(--sp-4); }
 
       .cab__tel {
@@ -571,14 +702,63 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
          * Dorel es que el buscador se vea sin bajar. Acortar el rótulo NO lo
          * evita: con «Pon tu coche» siguen saliendo dos filas.
          */
+        /*
+         * ⚠️ **Y desde el 1 de octubre de 2026 tampoco envuelve: se pliega
+         * detrás del botón.** Envolver respetaba la regla —nada se esconde—
+         * pero costaba 41 px de cabecera en TODAS las páginas, y Dorel lo
+         * cortó: «el menú en el móvil no me gusta mucho, convendría poner un
+         * panel con un icono tipo sándwich».
+         *
+         * ⚠️ **Y esto NO incumple la regla de recolocar y nunca ocultar.** Lo
+         * que aquella prohíbe es que una opción desaparezca sin que nadie
+         * sepa que está —la tira deslizable, que se comía «Contacto» sin
+         * ninguna señal—. Aquí hay un mando a la vista que dice que hay un
+         * menú, y al abrirlo salen las cuatro enteras.
+         */
         .cab__nav {
           order: 3;
           width: 100%;
           margin: 0;
-          flex-wrap: wrap;
-          gap: var(--sp-2) var(--sp-5);
+          /* Una debajo de otra: en un panel se leen mejor que en dos filas. */
+          flex-direction: column;
+          gap: var(--sp-1);
+          padding: var(--sp-2) 0 var(--sp-3);
+          border-top: var(--bw) solid var(--border);
         }
-        .cab__nav a { flex: none; }
+        .cab__nav a { flex: none; padding-block: var(--sp-3); }
+
+        /*
+         * ⚠️ **Cerrado se quita del flujo con `display: none`, no con una
+         * altura 0.** Un menú de altura cero sigue siendo alcanzable con el
+         * tabulador: el visitante tabula y el foco se va a enlaces que no se
+         * ven. Es el mismo motivo por el que el campo trampa del formulario se
+         * saca de la pantalla en vez de esconderse.
+         */
+        .cab__nav:not(.esta-abierto) { display: none; }
+
+        .cab__hamb { display: grid; }
+      }
+
+      /*
+       * ⚠️ **El logotipo baja a 160 px en pantallas estrechas, y la cuenta es
+       * exacta.** Medido a 390 px: la fila tiene **335 px** de contenido y la
+       * primera línea necesitaba **349** —logo 185, acciones 96, botón 44 y
+       * dos huecos de 12—. Catorce de más, así que el botón del menú se caía a
+       * una segunda fila él solo y la cabecera volvía a medir 129 px, que es
+       * justo lo que este menú venía a ahorrar.
+       *
+       * ⚠️ **Se encoge el logo y no el botón.** Los 44 px del botón son zona
+       * táctil y ahí no se recorta —es la misma regla que ya salvó el botón de
+       * llamar—; el logotipo sigue siendo el grande que pidió Dorel en
+       * escritorio, que es donde se le miraba.
+       *
+       * ⚠️ **Y solo el ancho: la altura va `auto`.** Los atributos
+       * `width`/`height` del HTML son los que reservan el hueco antes de que
+       * cargue el SVG; tocando los dos a mano se pierde esa proporción y la
+       * cabecera pega un salto al pintar.
+       */
+      @media (max-width: 479px) {
+        .cab__logo img { width: 160px; height: auto; }
 
         .cab__acciones { margin-left: auto; gap: var(--sp-2); }
         .cab__acciones .btn { padding-inline: var(--sp-4); }

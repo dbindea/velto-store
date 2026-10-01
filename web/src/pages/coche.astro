@@ -296,14 +296,32 @@ import { EMPRESA } from '../lib/empresa';
       : `<p class="reserva__precio reserva__precio--consultar">Consúltanos el precio</p>`;
 
     /*
-     * ⚠️ **Lo que incluye el alquiler, y solo lo que el sistema respalda.** El
-     * kilometraje y la fianza salen del coche; el seguro obligatorio y la
-     * asistencia, de la cláusula 13 del contrato — que dice además que el todo
-     * riesgo es **opcional**, así que aquí no se promete.
+     * ⚠️ **Lo que incluye el alquiler, y SOLO lo que el sistema o el contrato
+     * respaldan.** El kilometraje y la fianza salen del coche; el seguro
+     * obligatorio y la asistencia, de la cláusula 13; el contrato digital, de
+     * que `signContract` existe y sella con el certificado de la FNMT; y el
+     * precio cerrado, de que la portada ya lo promete.
+     *
+     * ⚠️ **Lo que NO está, y Dorel lo pidió: «cobertura completa» y «sin
+     * franquicia».** Las dos contradicen el papel que el cliente firma: la
+     * cláusula 13 dice que el coche lleva la responsabilidad civil
+     * **obligatoria** y que el todo riesgo «sólo será aplicable si ha sido
+     * expresamente contratado y abonado por el ARRENDATARIO», y la fianza
+     * existe precisamente porque responde de los daños. Anunciarlas aquí sería
+     * decirle al cliente que si da un golpe está cubierto, y luego retenerle
+     * la fianza con el contrato diciendo lo contrario. Es la misma frase que
+     * ya se corrigió en la portada el 29 de septiembre («con todo riesgo
+     * **opcional**») y en el pie el día 28.
+     *
+     * El día que Velto contrate de verdad una póliza a todo riesgo sin
+     * franquicia, esto se escribe aquí y se cambia la cláusula 13 el mismo
+     * día: el texto y el hecho se deciden juntos.
      */
     const incluye = [
       v.includedKmPerDay ? `${v.includedKmPerDay} km al día incluidos` : null,
       'Seguro obligatorio y asistencia en carretera',
+      'Contrato digital: lo firmas desde el móvil',
+      'Precio cerrado, sin gastos de gestión',
       'Entrega a domicilio gratis en Arganda y alrededores',
       v.depositAmount !== undefined ? `Fianza de ${euros(v.depositAmount)}, que se devuelve` : null,
     ].filter(Boolean) as string[];
@@ -334,6 +352,7 @@ import { EMPRESA } from '../lib/empresa';
           <a class="btn btn--ghost reserva__btn" href="https://wa.me/${wa}?text=${mensaje}" rel="noopener">
             Preguntar por WhatsApp
           </a>
+          <p class="reserva__rotulo">Incluido en el alquiler</p>
           <ul class="reserva__incluye">
             ${incluye.map((t) => `<li>${t}</li>`).join('')}
           </ul>
@@ -357,11 +376,15 @@ import { EMPRESA } from '../lib/empresa';
             <div class="cal" id="cal"></div>
             <div class="dispo__lado" id="dispo-lado"></div>
           </div>
-          <p class="dispo__letra">
-            ⓘ El día siguiente a cada devolución también sale ocupado: es el
-            que dedicamos a revisar el coche, limpiarlo y dejarlo con
-            combustible.
-          </p>
+          ${/*
+             * ⚠️ **Aquí había una nota explicando el día de preparación y la
+             * quitó Dorel el 1 de octubre de 2026:** «el cliente no debe saber
+             * los trucos de la empresa, es irrelevante para él». Tiene razón
+             * —lo que necesita saber es qué días puede coger el coche, y eso
+             * se lo dice el calendario— y además contarlo invita a pedir una
+             * excepción. La regla sigue aplicándose en el backend, con su
+             * explicación en `disponibleDesde()`.
+             */ ''}
         </section>
 
         ${/*
@@ -530,6 +553,9 @@ import { EMPRESA } from '../lib/empresa';
             resumen: `${nombreCoche(v)} · ${dias === 1 ? '1 día' : `${dias} días`} · ${euros(coche.price.gross)}`,
             desde,
             hasta,
+            // Lo dice el backend con cada consulta: es un ajuste, no un número
+            // escrito en la web.
+            horasGarantia: r.priceGuaranteedHours,
           };
         })
         .catch(() => {
@@ -788,13 +814,18 @@ import { EMPRESA } from '../lib/empresa';
   }
 
   /*
-   * ⚠️ **Pegajosa solo en escritorio y solo si cabe.** En móvil ocuparía media
-   * pantalla mientras se lee la ficha; y `top` cuenta con la cabecera, que es
-   * pegajosa también.
+   * ⚠️ **La tarjeta YA NO es pegajosa, y es la corrección de un fallo que se
+   * vio en pantalla.** Lo era, y la sección de disponibilidad ocupa **las dos
+   * columnas**: al desplazar, el calendario y la ficha técnica pasaban **por
+   * debajo** de una tarjeta que se quedaba clavada en la mitad superior de la
+   * columna derecha. Lo dijo Dorel: «la card de precio tapa las demás, creo
+   * que deberían tener una barrera y no solaparse».
+   *
+   * ⚠️ **Y la salida no es un `z-index` ni un hueco:** es que ya no hace
+   * falta. Desde que el calendario subió justo debajo, la tarjeta ha hecho su
+   * trabajo cuando el visitante llega a elegir fechas — y el precio vuelve a
+   * salir, con el de esas fechas, en el panel de al lado del calendario.
    */
-  @media (min-width: 900px) {
-    .reserva { position: sticky; top: var(--sp-8); }
-  }
 
   .reserva__precio { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
   .reserva__precio strong {
@@ -823,8 +854,19 @@ import { EMPRESA } from '../lib/empresa';
 
   .reserva__btn { width: 100%; margin-bottom: var(--sp-3); }
 
+  .reserva__rotulo {
+    margin: var(--sp-5) 0 var(--sp-2);
+    padding-top: var(--sp-5);
+    border-top: var(--bw) solid var(--border);
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-medium);
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-wide);
+  }
+
   .reserva__incluye {
-    margin: var(--sp-4) 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
     color: var(--text-2);

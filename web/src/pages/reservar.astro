@@ -261,6 +261,8 @@ import { ORDENES } from '../lib/resultados';
   };
 
   let dias = 0;
+  /** Lo que el backend dice que dura la garantía del precio. */
+  let horasGarantia: number | undefined;
 
   function buscar(desde: string, hasta: string, lugar: string) {
     /*
@@ -291,6 +293,7 @@ import { ORDENES } from '../lib/resultados';
         }
         libres = r.vehicles;
         dias = r.totalDays;
+        horasGarantia = r.priceGuaranteedHours;
         // Una búsqueda nueva empieza sin filtro: el tipo de coche que se eligió
         // para las fechas de antes puede no existir en estas.
         categoria = null;
@@ -438,6 +441,7 @@ import { ORDENES } from '../lib/resultados';
       resumen: `${boton.dataset.nombre} · ${boton.dataset.dias} días · ${boton.dataset.precio}`,
       desde: campos.desde.value,
       hasta: campos.hasta.value,
+      horasGarantia,
     });
   });
 </script>

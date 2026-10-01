@@ -209,7 +209,7 @@ export function ficha(id: string): Promise<{ vehicle: CocheFicha }> {
 export function disponibilidad(
   desde: string,
   hasta: string
-): Promise<{ from: string; to: string; totalDays: number; vehicles: CocheDisponible[] }> {
+): Promise<RespuestaDisponibilidad> {
   return pedir(
     `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}`
   );
@@ -234,11 +234,31 @@ export function disponibilidadCoche(
   desde: string,
   hasta: string,
   vehicleId: string
-): Promise<{ from: string; to: string; totalDays: number; vehicles: CocheDisponible[] }> {
+): Promise<RespuestaDisponibilidad> {
   return pedir(
     `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}` +
       `&vehicleId=${encodeURIComponent(vehicleId)}`
   );
+}
+
+export interface RespuestaDisponibilidad {
+  from: string;
+  to: string;
+  totalDays: number;
+  /**
+   * Cuántas horas se garantiza el precio de una pre-reserva.
+   *
+   * ⚠️ **Viene del backend y no está escrito en la web**, porque es un ajuste
+   * (`settings/operation`): escrito a mano aquí, el día que Dorel lo cambie la
+   * página seguiría prometiendo lo de antes. Es la misma regla que el plazo de
+   * borrado publicado en `/privacidad`.
+   *
+   * ⚠️ **Y es opcional a propósito**: es un campo nuevo, y un navegador con la
+   * respuesta todavía cacheada puede no traerlo. Quien lo pinte tiene que
+   * saber qué hacer sin él.
+   */
+  priceGuaranteedHours?: number;
+  vehicles: CocheDisponible[];
 }
 
 export interface SolicitudEnviada {

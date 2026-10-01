@@ -71,14 +71,27 @@
         por cualquiera. Lo que se garantiza es el precio, y eso sí se puede
         prometer porque lo congela `quoteSnapshot`.
 
-        ⚠️ **«Te confirmamos», sin decir el canal.** El formulario pide un
+        ⚠️ **Las horas las pone el script, no están escritas aquí.** Salen de
+        `settings/operation` (`bookingRequestPriceHours`) y hoy son 24, pero es
+        un ajuste: escribiéndolo a mano, el día que Dorel lo cambie la web
+        seguiría prometiendo lo de antes. Es la misma regla que el plazo de
+        borrado publicado en `/privacidad`.
+
+        ⚠️ **Y se dice lo que falta para que sea una reserva de verdad**: la
+        señal. Es lo que pidió Dorel y además es cierto —`reservationStatus`
+        pasa a `confirmed` al cobrarla—, así que el visitante sabe que esto no
+        es el final del camino.
+
+        ⚠️ **«Te contactamos», sin decir el canal.** El formulario pide un
         teléfono y ese teléfono vale para una llamada y para un WhatsApp; cuál
-        se use lo decide Dorel en cada caso.
+        se use se decide en cada caso.
       */}
       <p class="dlg__letra">
-        Te confirmamos enseguida por teléfono o WhatsApp. Hasta entonces el
-        coche <strong>no queda reservado</strong>; lo que te garantizamos es el
-        precio.
+        Estás haciendo una <strong>pre-reserva</strong> con el
+        <strong>precio garantizado <span id="dlg-horas">24 horas</span></strong>.
+        Dentro de ese plazo te contactamos por teléfono o WhatsApp para dejarla
+        en firme con el pago de la señal. Hasta entonces el coche
+        <strong>no queda reservado</strong>.
       </p>
     </form>
 
@@ -91,10 +104,16 @@
         WhatsApp. Perdida entre el resto del texto no sirve para nada.
       */}
       <p id="dlg-ref" class="dlg__ref"></p>
-      <p class="dlg__resumen">Te confirmamos enseguida al teléfono que nos has dejado.</p>
+      <p class="dlg__resumen">Te contactamos al teléfono que nos has dejado.</p>
+      {/*
+        ⚠️ **Aquí la fecha es la de VERDAD, no «24 horas».** La devuelve la
+        function (`priceGuaranteedUntil`) con el plazo ya calculado, así que
+        esto no repite una cuenta que ya está hecha ni puede discrepar de ella.
+      */}
+      <p id="dlg-garantia" class="dlg__letra"></p>
       <p class="dlg__letra">
-        Hasta entonces el coche <strong>no queda reservado</strong>. Lo que te
-        garantizamos es el precio.
+        La reserva queda en firme con el pago de la señal. Hasta entonces el
+        coche <strong>no queda reservado</strong>.
       </p>
       <button type="button" class="btn btn--ink dlg__enviar" id="dlg-ok">Entendido</button>
     </div>

@@ -431,6 +431,15 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
       from: ventana.from.toISOString(),
       to: ventana.to.toISOString(),
       totalDays: dias,
+      /*
+       * ⚠️ **Las horas que se garantiza el precio viajan con la
+       * disponibilidad, y no es un capricho.** La web lo tiene que decir
+       * **antes** de que el visitante envíe la pre-reserva, y el plazo vive en
+       * `settings/operation`: escrito a mano en la página, el día que Dorel lo
+       * cambie seguiría prometiendo lo de antes. Es la misma regla que el
+       * plazo de borrado publicado en `/privacidad`.
+       */
+      priceGuaranteedHours: ajustes.bookingRequestPriceHours,
       vehicles: libres,
     });
   } catch (error) {
