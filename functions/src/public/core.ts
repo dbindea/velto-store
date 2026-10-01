@@ -347,6 +347,51 @@ export function ventanaOcupada(pickup: unknown, devolucion: unknown): VentanaOcu
   return { inicio, fin: disponibleDesde(fin) };
 }
 
+/**
+ * Las prioridades de mantenimiento que dejan el coche sin alquilar.
+ *
+ * ⚠️ **Manda la PRIORIDAD, no el tipo, y lo decidió Dorel el 1 de octubre de
+ * 2026:** «que el coche no esté disponible solo para aquel día en concreto y
+ * cuando la prioridad sea alta, porque si hay un cambio de aceite esto puede
+ * esperar». Un aceite se aplaza; una ITV, no.
+ *
+ * ⚠️ **Y bloquea SOLO ESE DÍA**, no todo lo que venga después. Es distinto de
+ * lo que hace el backoffice con una ITV **caducada** —allí el coche no sale a
+ * la calle hasta pasarla, porque circular sin ella es ilegal—: esto es la cita
+ * del taller, un día que el coche no está.
+ */
+export const PRIORIDADES_BLOQUEANTES = ['high', 'critical'] as const;
+
+/** Los estados en los que un mantenimiento ya no ocupa nada. */
+const MANTENIMIENTO_RESUELTO = ['completed', 'cancelled'] as const;
+
+/**
+ * El día que ocupa un mantenimiento, o `null` si no ocupa ninguno.
+ *
+ * ⚠️ **Sin fecha no bloquea, y aquí sí es lo correcto** —al revés que en una
+ * reserva, donde la fecha ilegible bloquea—. Un mantenimiento sin
+ * `nextDueDate` es un recordatorio sin día: no se sabe cuándo, así que no hay
+ * ningún día concreto que apartar. Bloquear «por si acaso» dejaría el coche
+ * inalquilable para siempre por una nota que alguien escribió sin fecha.
+ */
+export function ventanaDeMantenimiento(raw: Record<string, unknown>): VentanaOcupada | null {
+  const prioridad = raw['priority'];
+  if (typeof prioridad !== 'string') return null;
+  if (!(PRIORIDADES_BLOQUEANTES as readonly string[]).includes(prioridad)) return null;
+
+  const estado = raw['status'];
+  if (typeof estado === 'string' && (MANTENIMIENTO_RESUELTO as readonly string[]).includes(estado)) {
+    return null;
+  }
+
+  const dia = toDate(raw['nextDueDate']);
+  if (!dia) return null;
+
+  const inicio = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate());
+  const fin = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + 1);
+  return { inicio, fin };
+}
+
 /** Un día en `yyyy-MM-dd`, **en hora local**. */
 export function diaIso(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');

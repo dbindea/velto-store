@@ -37,15 +37,19 @@ describe('diaIso', () => {
 });
 
 describe('diasDelRango — la cuenta del buscador, no la de un hotel', () => {
-  it('del 1 al 4 son CUATRO días', () => {
-    // El coche está fuera los días 1, 2, 3 y 4. Es lo que contesta
+  it('del 1 al 4 son TRES días: 72 horas', () => {
+    // Recoger el 1 a las 12:00 y devolver el 4 a las 12:00 son 72 horas. Es
     // /api/availability tras ensanchar la ventana a días completos: si aquí se
-    // contara 3, la ficha diría un número y los resultados otro.
-    expect(diasDelRango(dia('2026-10-01'), dia('2026-10-04'))).toBe(4);
+    // 1 de octubre de 2026: antes cotizaba 4 y era un día de más.
+    expect(diasDelRango(dia('2026-10-01'), dia('2026-10-04'))).toBe(3);
   });
 
-  it('un solo día es un día', () => {
-    expect(diasDelRango(dia('2026-10-01'), dia('2026-10-01'))).toBe(1);
+  it('un alquiler de un día son DOS casillas: recogida y devolución', () => {
+    expect(diasDelRango(dia('2026-10-18'), dia('2026-10-19'))).toBe(1);
+  });
+
+  it('la misma casilla dos veces son CERO días, no uno', () => {
+    expect(diasDelRango(dia('2026-10-01'), dia('2026-10-01'))).toBe(0);
   });
 
   it('al revés da 0 en vez de un negativo', () => {
@@ -53,8 +57,8 @@ describe('diasDelRango — la cuenta del buscador, no la de un hotel', () => {
   });
 
   it('cruza el cambio de mes y el de año', () => {
-    expect(diasDelRango(dia('2026-10-30'), dia('2026-11-02'))).toBe(4);
-    expect(diasDelRango(dia('2026-12-31'), dia('2027-01-01'))).toBe(2);
+    expect(diasDelRango(dia('2026-10-30'), dia('2026-11-02'))).toBe(3);
+    expect(diasDelRango(dia('2026-12-31'), dia('2027-01-01'))).toBe(1);
   });
 });
 
@@ -115,9 +119,11 @@ describe('elegirDia', () => {
     expect(r.hasta).toBeNull();
   });
 
-  it('el mismo día dos veces deja un alquiler de un día', () => {
-    const r = elegirDia({ desde: dia('2026-10-01'), hasta: null }, dia('2026-10-01'), OCUPADOS);
-    expect(diasDelRango(r.desde!, r.hasta!)).toBe(1);
+  it('el mismo día dos veces NO cierra el rango: serían cero días', () => {
+    const abierto = { desde: dia('2026-10-01'), hasta: null };
+    const r = elegirDia(abierto, dia('2026-10-01'), OCUPADOS);
+    expect(r.hasta).toBeNull();
+    expect(diaIso(r.desde!)).toBe('2026-10-01');
   });
 });
 

@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Buscador from '../components/Buscador.astro';
+import PreReserva from '../components/PreReserva.astro';
 import { EMPRESA } from '../lib/empresa';
 import { ORDENES } from '../lib/resultados';
 ---
@@ -179,86 +180,20 @@ import { ORDENES } from '../lib/resultados';
       </div>
 
       {/*
-        «Que me llamen»: el visitante no cierra nada aquí, solo deja el hilo
-        cogido. Tres campos y ninguno más — cada campo de más es gente que
-        abandona, y lo que hace falta para devolver la llamada es el teléfono.
-
-        ⚠️ Va en un `<dialog>` nativo: bloquea el fondo, cierra con Escape y
-        atrapa el foco sin una línea de JavaScript.
+        La pre-reserva vive en su propio componente desde el 1 de octubre de
+        2026, porque sale también en la ficha de cada coche: marcado y estilos
+        en `components/PreReserva.astro`, y lo que pasa al enviar en
+        `lib/pre-reserva.ts`. Aquí estaba entera, y copiarla a la ficha habría
+        dado dos formularios que crean la misma solicitud.
       */}
-      <dialog id="dlg" class="dlg">
-        <form id="solicitud" class="dlg__caja" method="dialog">
-          <button type="button" class="dlg__cerrar" id="cerrar" aria-label="Cerrar">×</button>
-
-          {/*
-            ⚠️ **Se llamaba «Que me llamen», y es la misma frase que Dorel
-            quitó de la entradilla.** El concepto interno sigue siendo ese
-            —`bookingRequests`, «que me llamen»— pero lo que lee el cliente es
-            lo que va a pasar: una **pre-reserva**, que es la palabra que usó
-            él. Aguanta además el día que la reserva se cierre sola desde la
-            web: ese día esto pasa a ser «Reserva» y lo de debajo desaparece,
-            sin tener que reescribir la página entera.
-          */}
-          <h2 id="dlg-titulo">Pre-reserva</h2>
-          <p id="dlg-resumen" class="dlg__resumen"></p>
-
-          <label class="dlg__campo">
-            <span>Tu nombre</span>
-            <input type="text" name="name" required maxlength="80" autocomplete="name" />
-          </label>
-
-          <label class="dlg__campo">
-            <span>Teléfono</span>
-            <input type="tel" name="phone" required maxlength="24" autocomplete="tel"
-                   inputmode="tel" placeholder="612 345 678" />
-          </label>
-
-          <label class="dlg__campo">
-            <span>Algo que debamos saber <em>(opcional)</em></span>
-            <textarea name="note" rows="2" maxlength="400"
-                      placeholder="Lo necesito por la tarde…"></textarea>
-          </label>
-
-          {/*
-            ⚠️ El campo trampa. Lo esconde el CSS, no un `hidden`: un robot que
-            lee el HTML ve los dos igual, pero `hidden` también lo esconde de
-            los lectores de pantalla y aquí lo que hace falta es que ninguna
-            PERSONA lo rellene. `tabindex="-1"` lo saca del tabulador.
-          */}
-          <div class="dlg__trampa" aria-hidden="true">
-            <label>No rellenar
-              <input type="text" name="trap" tabindex="-1" autocomplete="off" />
-            </label>
-          </div>
-
-          <p id="dlg-error" class="aviso aviso--error" role="alert" hidden></p>
-
-          <button type="submit" class="btn btn--brand dlg__enviar">Enviar</button>
-
-          {/*
-            ⚠️ **Lo que de verdad pasa, antes de pulsar y no después.** El coche
-            NO se aparta: apartarlo sin pago ni identidad dejaría la flota
-            bloqueable por cualquiera. Lo que se garantiza es el precio, y eso
-            sí se puede prometer porque lo congela `quoteSnapshot`.
-
-            ⚠️ **«Te confirmamos», no «te llamamos», y sin decir el canal.** El
-            formulario pide un teléfono y ese teléfono vale para las dos cosas;
-            cuál se use lo decide Dorel en cada caso. Prometer la llamada ata a
-            un canal que igual no se usa, y encima suena a espera.
-          */}
-          <p class="dlg__letra">
-            Te confirmamos enseguida por teléfono o WhatsApp. Hasta entonces el
-            coche <strong>no queda reservado</strong>; lo que te garantizamos es
-            el precio.
-          </p>
-        </form>
-      </dialog>
+      <PreReserva />
     </div>
   </section>
 </Base>
 
 <script>
-  import { disponibilidad, solicitar, type CocheDisponible } from '../lib/api';
+  import { disponibilidad, type CocheDisponible } from '../lib/api';
+  import { montarPreReserva } from '../lib/pre-reserva';
   import { tarjetaCoche } from '../lib/tarjeta';
   import { instanteDeLaUrl, montarBuscador } from '../lib/buscador';
   import {
@@ -485,14 +420,9 @@ import { ORDENES } from '../lib/resultados';
   // Y se busca al entrar, con lo que traiga la URL o con la propuesta.
   if (campos) buscar(campos.desde.value, campos.hasta.value, campos.lugar?.value ?? '');
 
-  // --- «Que me llamen» -----------------------------------------------------
+  // --- La pre-reserva ------------------------------------------------------
 
-  const dlg = document.getElementById('dlg') as HTMLDialogElement;
-  const solicitud = document.getElementById('solicitud') as HTMLFormElement;
-  const dlgResumen = document.getElementById('dlg-resumen')!;
-  const dlgError = document.getElementById('dlg-error')!;
-  const enviar = solicitud.querySelector('.dlg__enviar') as HTMLButtonElement;
-  let cocheElegido = '';
+  const preReserva = montarPreReserva();
 
   /**
    * ⚠️ **Delegado en la lista, no un oyente por tarjeta.** Las tarjetas se
@@ -502,73 +432,13 @@ import { ORDENES } from '../lib/resultados';
    */
   lista.addEventListener('click', (e) => {
     const boton = (e.target as HTMLElement).closest('[data-solicitar]') as HTMLElement | null;
-    if (!boton) return;
-    cocheElegido = boton.dataset.id || '';
-    dlgResumen.textContent =
-      `${boton.dataset.nombre} · ${boton.dataset.dias} días · ${boton.dataset.precio}`;
-    dlgError.hidden = true;
-    solicitud.reset();
-    dlg.showModal();
-  });
-
-  document.getElementById('cerrar')!.addEventListener('click', () => dlg.close());
-
-  /**
-   * ⚠️ Las claves de la function se traducen aquí, igual que las del buscador.
-   * `vehicle-unavailable` es el caso que hay que acertar: entre que se pintó la
-   * lista y se pulsó el botón, otro puede haberse llevado el coche — y decirlo
-   * es lo único honesto, porque la solicitud no se ha creado.
-   */
-  const MOTIVOS_SOLICITUD: Record<string, string> = {
-    'missing-name': 'Necesitamos tu nombre para saber con quién hablamos.',
-    'missing-phone': 'Necesitamos un teléfono para poder llamarte.',
-    'bad-phone': 'Ese teléfono no lo entendemos. Revísalo, por favor.',
-    'vehicle-unavailable': 'Ese coche acaba de ocuparse. Vuelve a buscar y elige otro.',
-    'too-many-requests': 'Ya tenemos tu solicitud. Te contestamos enseguida.',
-  };
-
-  solicitud.addEventListener('submit', (e) => {
-    e.preventDefault();
-    dlgError.hidden = true;
-    enviar.disabled = true;
-    enviar.textContent = 'Enviando…';
-
-    const datos = new FormData(solicitud);
-    solicitar({
-      vehicleId: cocheElegido,
-      from: campos?.desde.value ?? '',
-      to: campos?.hasta.value ?? '',
-      name: String(datos.get('name') || ''),
-      phone: String(datos.get('phone') || ''),
-      note: String(datos.get('note') || ''),
-      trap: String(datos.get('trap') || ''),
-    })
-      .then((r) => {
-        /**
-         * ⚠️ La referencia se enseña **grande y a solas**: es lo que el
-         * operador va a citar al llamar y lo que el visitante repetirá si
-         * escribe por WhatsApp. Si se pierde entre el resto del texto, no
-         * sirve para nada.
-         */
-        solicitud.innerHTML = `
-          <h2>Pre-reserva hecha</h2>
-          <p class="dlg__ref">${r.reference}</p>
-          <p class="dlg__resumen">Te confirmamos enseguida al teléfono que nos has dejado.</p>
-          <p class="dlg__letra">
-            Hasta entonces el coche <strong>no queda reservado</strong>.
-            Lo que te garantizamos es el precio.
-          </p>
-          <button type="button" class="btn btn--ink dlg__enviar" id="ok">Entendido</button>`;
-        document.getElementById('ok')!.addEventListener('click', () => dlg.close());
-      })
-      .catch((err: Error) => {
-        enviar.disabled = false;
-        enviar.textContent = 'Enviar';
-        dlgError.textContent =
-          MOTIVOS_SOLICITUD[err.message] ??
-          'No hemos podido enviarlo. Inténtalo otra vez o escríbenos por WhatsApp.';
-        dlgError.hidden = false;
-      });
+    if (!boton || !campos) return;
+    preReserva?.abrir({
+      vehicleId: boton.dataset.id || '',
+      resumen: `${boton.dataset.nombre} · ${boton.dataset.dias} días · ${boton.dataset.precio}`,
+      desde: campos.desde.value,
+      hasta: campos.hasta.value,
+    });
   });
 </script>
 

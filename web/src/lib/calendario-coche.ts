@@ -45,20 +45,41 @@ export interface Rango {
 
 export const RANGO_VACIO: Rango = { desde: null, hasta: null };
 
-/** Días de alquiler de una selección de calendario: del 1 al 4 son cuatro. */
+/**
+ * Días de alquiler de una selección: **del 1 al 4 son TRES**.
+ *
+ * ⚠️ **Son bloques de 24 horas, no casillas pintadas.** Recoger el 1 a las
+ * 12:00 y devolver el 4 a las 12:00 son 72 horas, o sea tres días; pasarse dos
+ * horas de ahí ya es un día más. Es la regla de Dorel y la que aplica
+ * `calculateCalendarDays()` en el backoffice y en la API pública: el contrato
+ * y la web tienen que cobrar lo mismo.
+ *
+ * ⚠️ **Por eso un alquiler de un día son DOS casillas**, la de recogida y la
+ * de devolución — como las noches de un hotel. Una sola casilla son cero días
+ * y no es un alquiler: `elegirDia()` no deja cerrar ese rango.
+ */
 export function diasDelRango(desde: Date, hasta: Date): number {
   const a = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate()).getTime();
   const b = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate()).getTime();
-  if (b < a) return 0;
-  return Math.round((b - a) / 86_400_000) + 1;
+  if (b <= a) return 0;
+  return Math.round((b - a) / 86_400_000);
 }
 
-/** ¿Hay algún día ocupado entre estos dos, ambos incluidos? */
+/**
+ * ¿Hay algún día ocupado entre estos dos, **ambos incluidos**?
+ *
+ * ⚠️ **Cuenta las casillas, no los días que se cobran, y la diferencia
+ * importa.** Un alquiler del 18 al 19 se cobra como **un** día, pero necesita
+ * las **dos** casillas libres: el coche está fuera el 18 y vuelve el 19. Por
+ * eso esto recorre de extremo a extremo en vez de reusar `diasDelRango()`,
+ * que desde que los días son bloques de 24 horas devuelve uno menos — y con
+ * él, un rango de una sola casilla no miraba ningún día.
+ */
 export function hayOcupadoEntre(desde: Date, hasta: Date, ocupados: Set<string>): boolean {
-  const total = diasDelRango(desde, hasta);
-  for (let i = 0; i < total; i++) {
-    const dia = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() + i);
-    if (ocupados.has(diaIso(dia))) return true;
+  const a = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+  const b = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate());
+  for (const d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) {
+    if (ocupados.has(diaIso(d))) return true;
   }
   return false;
 }
@@ -88,6 +109,14 @@ export function elegirDia(rango: Rango, dia: Date, ocupados: Set<string>): Rango
   const empezar = { desde: dia, hasta: null };
   if (!rango.desde || rango.hasta) return empezar;
   if (dia < rango.desde) return empezar;
+  /*
+   * ⚠️ **El mismo día dos veces NO cierra el rango.** Serían cero días: un
+   * alquiler que empieza y termina a la misma hora. El más corto posible son
+   * dos casillas —recojo el 18, devuelvo el 19— porque lo que se cobra son
+   * bloques de 24 horas. Antes esto cerraba un «alquiler de un día» que el
+   * backend habría rechazado con `bad-range`.
+   */
+  if (diaIso(dia) === diaIso(rango.desde)) return rango;
   if (hayOcupadoEntre(rango.desde, dia, ocupados)) return empezar;
   return { desde: rango.desde, hasta: dia };
 }

@@ -17,6 +17,7 @@ import {
   ventanaOcupada,
   diasOcupados,
   diaIso,
+  ventanaDeMantenimiento,
 } from './core';
 
 // ---------------------------------------------------------------------------
@@ -435,5 +436,73 @@ describe('diasOcupados — lo que pinta el calendario de la ficha', () => {
   it('no mira más allá del horizonte que se le pide', () => {
     const v = ventanaOcupada(d('2026-11-20T10:00:00'), d('2026-11-22T10:00:00'))!;
     expect(diasOcupados([v], desde, 10)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El taller: qué cita deja el coche sin alquilar y cuánto tiempo.
+//
+// ⚠️ Decisión de Dorel del 1 de octubre de 2026: «que el coche no esté
+// disponible solo para aquel día en concreto y cuando la prioridad sea alta,
+// porque si hay un cambio de aceite esto puede esperar».
+// ---------------------------------------------------------------------------
+
+describe('ventanaDeMantenimiento', () => {
+  const cita = (extra: Record<string, unknown> = {}) => ({
+    priority: 'high',
+    status: 'scheduled',
+    type: 'itv',
+    nextDueDate: d('2026-10-20T00:00:00'),
+    ...extra,
+  });
+
+  it('una ITV de prioridad alta ocupa SU día, y solo ese', () => {
+    const v = ventanaDeMantenimiento(cita())!;
+    expect(diaIso(v.inicio)).toBe('2026-10-20');
+    expect(diasOcupados([v], d('2026-10-18T09:00:00'), 6)).toEqual(['2026-10-20']);
+  });
+
+  it('⚠️ el día siguiente NO se ocupa: la preparación es de las devoluciones', () => {
+    // Un coche que vuelve del taller está listo; uno que vuelve de un alquiler
+    // hay que revisarlo, limpiarlo y repostarlo.
+    const v = ventanaDeMantenimiento(cita())!;
+    expect(diasOcupados([v], d('2026-10-18T09:00:00'), 6)).not.toContain('2026-10-21');
+  });
+
+  it('un cambio de aceite NO ocupa nada: puede esperar', () => {
+    expect(ventanaDeMantenimiento(cita({ priority: 'medium', type: 'oil_change' }))).toBeNull();
+    expect(ventanaDeMantenimiento(cita({ priority: 'low' }))).toBeNull();
+  });
+
+  it('«crítica» ocupa igual que «alta»', () => {
+    expect(ventanaDeMantenimiento(cita({ priority: 'critical' }))).not.toBeNull();
+  });
+
+  it('lo ya hecho o cancelado no ocupa', () => {
+    expect(ventanaDeMantenimiento(cita({ status: 'completed' }))).toBeNull();
+    expect(ventanaDeMantenimiento(cita({ status: 'cancelled' }))).toBeNull();
+  });
+
+  it('lo vencido sí ocupa: `overdue` es que no se ha hecho', () => {
+    expect(ventanaDeMantenimiento(cita({ status: 'overdue' }))).not.toBeNull();
+  });
+
+  it('⚠️ sin fecha no ocupa NADA, y aquí es lo correcto', () => {
+    // Al revés que una reserva con la fecha ilegible, que bloquea. Un
+    // mantenimiento sin día es un recordatorio: bloquear «por si acaso»
+    // dejaría el coche inalquilable para siempre por una nota sin fecha.
+    expect(ventanaDeMantenimiento(cita({ nextDueDate: null }))).toBeNull();
+    expect(ventanaDeMantenimiento(cita({ nextDueDate: 'lo que sea' }))).toBeNull();
+  });
+
+  it('sin prioridad no ocupa: no se da por alta lo que no lo dice', () => {
+    expect(ventanaDeMantenimiento(cita({ priority: undefined }))).toBeNull();
+  });
+
+  it('lee la fecha en las formas de Firestore', () => {
+    const v = ventanaDeMantenimiento(
+      cita({ nextDueDate: { seconds: Math.floor(d('2026-10-20T11:00:00').getTime() / 1000) } })
+    );
+    expect(v && diaIso(v.inicio)).toBe('2026-10-20');
   });
 });

@@ -1,0 +1,198 @@
+---
+/**
+ * La pre-reserva: el visitante elige un coche y unas fechas, deja su teléfono
+ * y Velto se lo confirma.
+ *
+ * ⚠️ **Es un componente porque sale en DOS sitios**: la página de resultados y
+ * la ficha de cada coche. Lo pidió Dorel el 1 de octubre de 2026 —«desde aquí
+ * se tiene que poder hacer la pre-reserva sin tener que volver a buscar y
+ * volver a seleccionar»—, y la alternativa era copiar sesenta líneas de
+ * marcado y otras tantas de script. Dos copias de un formulario que crea
+ * solicitudes acaban pidiendo campos distintos.
+ *
+ * ⚠️ **El `<dialog>` es nativo**: bloquea el fondo, cierra con Escape y atrapa
+ * el foco sin una línea de JavaScript. El diálogo de confirmación del
+ * backoffice hace eso mismo a mano.
+ *
+ * ⚠️ **Y la pantalla de «hecho» es MARCADO, no `innerHTML`.** Antes se
+ * inyectaba al recibir la respuesta, y esos nodos no llevan el atributo de
+ * encapsulación de Astro: la referencia —lo único que el visitante tiene que
+ * apuntar— salía **sin estilo ninguno**. Es el mismo fallo que dejó el botón
+ * de la tarjeta sin forma. Aquí las dos caras están en la plantilla y el
+ * script solo las enseña.
+ */
+---
+
+<dialog id="dlg" class="dlg">
+  <div class="dlg__caja">
+    <button type="button" class="dlg__cerrar" id="dlg-cerrar" aria-label="Cerrar">×</button>
+
+    {/* ---- Pedirlo ---------------------------------------------------- */}
+    <form id="dlg-form" method="dialog">
+      <h2 class="dlg__titulo">Pre-reserva</h2>
+      <p id="dlg-resumen" class="dlg__resumen"></p>
+
+      <label class="dlg__campo">
+        <span>Tu nombre</span>
+        <input type="text" name="name" required maxlength="80" autocomplete="name" />
+      </label>
+
+      <label class="dlg__campo">
+        <span>Teléfono</span>
+        <input type="tel" name="phone" required maxlength="24" autocomplete="tel"
+               inputmode="tel" placeholder="612 345 678" />
+      </label>
+
+      <label class="dlg__campo">
+        <span>Algo que debamos saber <em>(opcional)</em></span>
+        <textarea name="note" rows="2" maxlength="400"
+                  placeholder="Lo necesito por la tarde…"></textarea>
+      </label>
+
+      {/*
+        ⚠️ El campo trampa. Lo esconde el CSS, no un `hidden`: un robot que lee
+        el HTML ve los dos igual, pero `hidden` también lo esconde de los
+        lectores de pantalla y aquí lo que hace falta es que ninguna PERSONA lo
+        rellene. `tabindex="-1"` lo saca del tabulador.
+      */}
+      <div class="dlg__trampa" aria-hidden="true">
+        <label>No rellenar
+          <input type="text" name="trap" tabindex="-1" autocomplete="off" />
+        </label>
+      </div>
+
+      <p id="dlg-error" class="dlg__aviso" role="alert" hidden></p>
+
+      <button type="submit" class="btn btn--brand dlg__enviar" id="dlg-enviar">Enviar</button>
+
+      {/*
+        ⚠️ **Lo que de verdad pasa, antes de pulsar y no después.** El coche NO
+        se aparta: apartarlo sin pago ni identidad dejaría la flota bloqueable
+        por cualquiera. Lo que se garantiza es el precio, y eso sí se puede
+        prometer porque lo congela `quoteSnapshot`.
+
+        ⚠️ **«Te confirmamos», sin decir el canal.** El formulario pide un
+        teléfono y ese teléfono vale para una llamada y para un WhatsApp; cuál
+        se use lo decide Dorel en cada caso.
+      */}
+      <p class="dlg__letra">
+        Te confirmamos enseguida por teléfono o WhatsApp. Hasta entonces el
+        coche <strong>no queda reservado</strong>; lo que te garantizamos es el
+        precio.
+      </p>
+    </form>
+
+    {/* ---- Hecho ------------------------------------------------------- */}
+    <div id="dlg-hecho" hidden>
+      <h2 class="dlg__titulo">Pre-reserva hecha</h2>
+      {/*
+        ⚠️ La referencia se enseña **grande y a solas**: es lo que Velto va a
+        citar al confirmar y lo que el visitante repetirá si escribe por
+        WhatsApp. Perdida entre el resto del texto no sirve para nada.
+      */}
+      <p id="dlg-ref" class="dlg__ref"></p>
+      <p class="dlg__resumen">Te confirmamos enseguida al teléfono que nos has dejado.</p>
+      <p class="dlg__letra">
+        Hasta entonces el coche <strong>no queda reservado</strong>. Lo que te
+        garantizamos es el precio.
+      </p>
+      <button type="button" class="btn btn--ink dlg__enviar" id="dlg-ok">Entendido</button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  /*
+   * ⚠️ Los tokens son los del design system —`--bg`, `--border`, `--sp-*`—. Un
+   * `var()` sin declarar es peor que no escribir nada: la propiedad pasa a
+   * valer `unset`, así que **gana la cascada y borra lo que hubiera**. Es lo
+   * que dejó un día del calendario en blanco sobre blanco.
+   */
+  .dlg {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-width: min(440px, calc(100vw - var(--sp-8)));
+    color: var(--text);
+  }
+  .dlg::backdrop { background: rgb(0 0 0 / 0.55); }
+
+  .dlg__caja {
+    position: relative;
+    padding: var(--sp-6);
+    background: var(--bg);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  .dlg__caja form,
+  .dlg__caja > div[id] { display: grid; gap: var(--sp-4); }
+
+  .dlg__titulo { margin: 0; font-size: var(--fs-h3); }
+
+  /* El coche, los días y el precio: lo que el visitante acaba de elegir. */
+  .dlg__resumen { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+
+  .dlg__campo { display: grid; gap: var(--sp-2); min-width: 0; }
+  .dlg__campo > span { font-size: var(--fs-small); font-weight: var(--fw-medium); }
+  .dlg__campo em { color: var(--text-3); font-style: normal; font-weight: 400; }
+
+  .dlg__campo input,
+  .dlg__campo textarea {
+    width: 100%;
+    padding: var(--sp-3);
+    font: inherit;
+    color: var(--text);
+    background-color: var(--bg-input);
+    /* El contorno de un control es este: llega al 3:1 que pide WCAG 1.4.11. */
+    border: var(--bw) solid var(--border-input);
+    border-radius: var(--r-md);
+  }
+  .dlg__campo textarea { resize: vertical; }
+
+  .dlg__aviso { margin: 0; color: var(--danger); font-size: var(--fs-small); }
+
+  /*
+   * ⚠️ El campo trampa se saca de la pantalla, no se pone `display: none`:
+   * algunos robots descartan lo que está oculto de la forma obvia.
+   */
+  .dlg__trampa {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .dlg__cerrar {
+    position: absolute;
+    top: var(--sp-2);
+    right: var(--sp-2);
+    /* 44 px, como el resto de lo que se pulsa con el dedo. */
+    width: var(--touch);
+    height: var(--touch);
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .dlg__enviar { justify-self: stretch; }
+
+  .dlg__ref {
+    margin: 0;
+    font-family: var(--font-num);
+    font-size: var(--fs-price);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-wide);
+    color: var(--brand-text);
+  }
+
+  .dlg__letra { margin: 0; font-size: var(--fs-caption); color: var(--text-2); }
+</style>
