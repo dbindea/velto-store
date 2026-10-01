@@ -74,6 +74,8 @@ export function montarPreReserva(): PreReserva | null {
   const ref = document.getElementById('dlg-ref');
   const horas = document.getElementById('dlg-horas');
   const garantia = document.getElementById('dlg-garantia');
+  const presupuesto = document.getElementById('dlg-presupuesto');
+  const correo = document.getElementById('dlg-correo');
   if (!dlg || !form || !hecho || !resumen || !error || !enviar || !ref) return null;
 
   let elegido: DatosPreReserva | null = null;
@@ -133,11 +135,36 @@ export function montarPreReserva(): PreReserva | null {
       name: String(datos.get('name') || ''),
       phone: String(datos.get('phone') || ''),
       note: String(datos.get('note') || ''),
+      email: String(datos.get('email') || ''),
       trap: String(datos.get('trap') || ''),
     })
       .then((r) => {
         ref.textContent = r.reference;
         if (garantia) garantia.textContent = hastaCuando(r.priceGuaranteedUntil);
+
+        /*
+         * ⚠️ **El botón del presupuesto solo si hay presupuesto.** El PDF se
+         * genera después de escribir la solicitud y no puede tumbarla: si
+         * falla, la pre-reserva existe igual y lo que falta es el papel. Un
+         * botón que no lleva a ninguna parte es peor que no ofrecerlo.
+         */
+        if (presupuesto) {
+          const url = r.quoteUrl ?? '';
+          presupuesto.hidden = !url;
+          if (url) presupuesto.setAttribute('href', url);
+        }
+
+        /*
+         * ⚠️ **Y solo se dice «te lo hemos mandado» si de verdad se mandó.**
+         * El correo es opcional: anunciarlo siempre dejaría a quien no lo
+         * puso esperando un mensaje que no llega.
+         */
+        if (correo) {
+          const dicho = String(datos.get('email') || '').trim();
+          correo.hidden = !(r.emailed && dicho);
+          if (!correo.hidden) correo.textContent = `También te lo hemos mandado a ${dicho}.`;
+        }
+
         form.hidden = true;
         hecho.hidden = false;
       })

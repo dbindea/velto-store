@@ -78,6 +78,7 @@ import { EMPRESA } from '../lib/empresa';
     parseDiaIso,
     type Rango,
   } from '../lib/calendario-coche';
+  import { instanteDeLaUrl } from '../lib/buscador';
 
   const contenedor = document.getElementById('ficha')!;
   const cargando = document.getElementById('cargando')!;
@@ -475,10 +476,23 @@ import { EMPRESA } from '../lib/empresa';
     /** Lo último que se ha cotizado, que es lo que se manda al pedirlo. */
     let pedido: DatosPreReserva | null = null;
 
+    /*
+     * ⚠️ **Las fechas que traía el enlace, ya marcadas.** Quien llega desde
+     * los resultados ya eligió sus días: pedírselos otra vez es hacerle
+     * repetir lo que acaba de hacer, y era lo primero que Dorel notó al usar
+     * el flujo entero. Se leen con el mismo lector que el buscador
+     * (`instanteDeLaUrl`), que acepta también los enlaces antiguos de solo
+     * fecha.
+     */
+    const params = new URLSearchParams(location.search);
+    const desdeUrl = parseDiaIso((instanteDeLaUrl(params.get('from')) ?? '').slice(0, 10));
+    const hastaUrl = parseDiaIso((instanteDeLaUrl(params.get('to')) ?? '').slice(0, 10));
+
     const cal = montarCalendario({
       contenedor: caja,
       ocupados,
       horizonte,
+      rangoInicial: desdeUrl && hastaUrl ? { desde: desdeUrl, hasta: hastaUrl } : null,
       alCambiar: (rango) => pintarLado(rango),
     });
 

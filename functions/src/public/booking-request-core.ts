@@ -60,6 +60,8 @@ export interface BookingRequestInput {
   name?: unknown;
   phone?: unknown;
   note?: unknown;
+  /** Opcional: si lo deja, se le manda el presupuesto. */
+  email?: unknown;
   /** El campo trampa: si viene relleno, lo ha rellenado un robot. */
   trap?: unknown;
 }
@@ -69,6 +71,8 @@ export interface BookingRequestFields {
   name: string;
   phone: string;
   note: string;
+  /** Vacío si no lo dejó: es opcional a propósito. */
+  email: string;
 }
 
 /**
@@ -80,6 +84,7 @@ export interface BookingRequestFields {
 export const MAX_NAME = 80;
 export const MAX_PHONE = 24;
 export const MAX_NOTE = 400;
+export const MAX_EMAIL = 120;
 
 /**
  * El teléfono, normalizado a lo que `wa.me` necesita: solo dígitos, con prefijo
@@ -197,7 +202,27 @@ export type ValidationError =
   | 'missing-name'
   | 'missing-phone'
   | 'bad-phone'
+  | 'bad-email'
   | 'note-too-long';
+
+/**
+ * El correo, **opcional**.
+ *
+ * ⚠️ **Opcional y no obligatorio, y eso decide el formulario entero.** Lo que
+ * hace falta para atender una pre-reserva es el teléfono; cada campo exigido
+ * de más es gente que abandona. Quien lo deje recibe el presupuesto en su
+ * correo, y quien no, lo descarga ahí mismo.
+ *
+ * ⚠️ **Y distingue VACÍO de MAL ESCRITO**, que son dos cosas: el vacío es una
+ * decisión del visitante y pasa; «dorel@gmail» es un error suyo y hay que
+ * decírselo, porque si no el presupuesto se va a un buzón que no existe y
+ * nadie se entera. Copiado de `contact-core.ts`, que ya resolvía esto igual.
+ */
+export function normalizeEmail(raw: unknown): string | null {
+  const limpio = limpiarTexto(typeof raw === 'string' ? raw : '', MAX_EMAIL).toLowerCase();
+  if (!limpio) return '';
+  return /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(limpio) ? limpio : null;
+}
 
 /**
  * Valida y normaliza lo que llegó.
@@ -228,7 +253,10 @@ export function validateBookingRequest(
   if (noteRaw.length > MAX_NOTE * 2) return { ok: false, error: 'note-too-long' };
   const note = limpiarTexto(noteRaw, MAX_NOTE);
 
-  return { ok: true, fields: { vehicleId, name, phone, note } };
+  const email = normalizeEmail(input.email);
+  if (email === null) return { ok: false, error: 'bad-email' };
+
+  return { ok: true, fields: { vehicleId, name, phone, note, email } };
 }
 
 /**

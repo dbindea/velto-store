@@ -49,6 +49,17 @@ export interface OpcionesCalendario {
   ocupados: Set<string>;
   /** El último día que el backend ha mirado. */
   horizonte: Date | null;
+  /**
+   * Un rango ya elegido, el que traía la URL.
+   *
+   * ⚠️ **Pasa por las MISMAS comprobaciones que un clic** (`elegirDia`), y eso
+   * no es ceremonia: ese rango llega por la barra de direcciones. Puede ser un
+   * enlace compartido de hace una semana, con el coche ya alquilado esos días
+   * o con fechas pasadas. Si no se puede elegir a mano, tampoco se da por
+   * elegido aquí — y el visitante ve el calendario limpio en vez de una
+   * selección que el backend va a rechazar.
+   */
+  rangoInicial?: { desde: Date; hasta: Date } | null;
   alCambiar: (rango: Rango) => void;
 }
 
@@ -232,7 +243,23 @@ export function montarCalendario(opciones: OpcionesCalendario): Calendario {
     });
   }
 
+  /*
+   * El rango que traía la URL, aplicado como si fueran dos clics. Si el
+   * primero no deja marcar el día —ocupado, pasado, fuera del horizonte— el
+   * rango se queda a medias o vacío, que es exactamente lo que tiene que pasar.
+   *
+   * ⚠️ **Y el mes visible salta al de la recogida**, o la selección quedaría
+   * hecha en un mes que no se está mirando: el visitante vería el calendario
+   * en octubre con unas fechas de diciembre ya elegidas y el precio puesto.
+   */
+  if (opciones.rangoInicial) {
+    const { desde, hasta } = opciones.rangoInicial;
+    rango = elegirDia(elegirDia(RANGO_VACIO, desde, ocupados), hasta, ocupados);
+    if (rango.desde) mes = new Date(rango.desde.getFullYear(), rango.desde.getMonth(), 1);
+  }
+
   construir();
+  if (rango.desde && rango.hasta) alCambiar(rango);
 
   return {
     limpiar() {

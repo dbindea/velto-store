@@ -38,7 +38,26 @@ const ICONO = {
  * fuente del sistema: **Gotham no tiene el símbolo `€`** y compondría la cifra
  * con dos fuentes distintas.
  */
-export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
+/**
+ * Las fechas que se están mirando, para que viajen con el enlace.
+ *
+ * ⚠️ **Sin esto, entrar en un coche desde los resultados PIERDE la búsqueda.**
+ * El visitante elegía fechas en la portada, veía los coches libres, pulsaba
+ * uno… y la ficha se abría con el calendario vacío, obligándole a marcar otra
+ * vez los mismos días para ver el mismo precio. Lo dijo Dorel el 1 de octubre
+ * de 2026: «este paso habría que saltarlo para que me dé la opción de apretar
+ * solo al botón de reservar estas fechas».
+ */
+export interface FechasElegidas {
+  /** `yyyy-MM-ddTHH:mm`, en hora local. */
+  desde: string;
+  hasta: string;
+}
+
+export function tarjetaCoche(
+  c: CocheResumen | CocheDisponible,
+  fechas?: FechasElegidas
+): string {
   const nombre = esc(nombreCoche(c));
   const disponible = 'price' in c ? (c as CocheDisponible) : null;
 
@@ -150,9 +169,19 @@ export function tarjetaCoche(c: CocheResumen | CocheDisponible): string {
     ? ''
     : `<span class="btn btn--ink coche__btn">Calcular precio ${FLECHA}</span>`;
 
+  /*
+   * ⚠️ **Las fechas van en el enlace, no en `sessionStorage`.** Así el enlace
+   * que alguien comparta lleva dentro lo que estaba mirando, el botón de atrás
+   * funciona, y la ficha no depende de que el visitante venga de los
+   * resultados. Es la misma razón por la que la búsqueda vive en la URL.
+   */
+  const conFechas = fechas
+    ? `?from=${encodeURIComponent(fechas.desde)}&to=${encodeURIComponent(fechas.hasta)}`
+    : '';
+
   return `
     <article class="card coche">
-      <a class="coche__link" href="/coche/${encodeURIComponent(c.id)}">
+      <a class="coche__link" href="/coche/${encodeURIComponent(c.id)}${conFechas}">
         <div class="coche__foto">${foto}</div>
         <div class="coche__cuerpo">
           <p class="overline">${esc(categoria(c.category))}</p>

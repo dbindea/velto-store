@@ -265,6 +265,17 @@ export interface SolicitudEnviada {
   reference: string;
   /** Hasta cuándo se mantiene el precio. `null` solo en el camino del robot. */
   priceGuaranteedUntil: string | null;
+  /**
+   * El enlace corto al presupuesto en PDF.
+   *
+   * ⚠️ **Puede venir `null`, y hay que tratarlo.** El PDF se genera después de
+   * escribir la solicitud y **no puede tumbarla**: si falla, la pre-reserva
+   * existe igual y lo único que falta es el papel. Un botón que lleve a
+   * ninguna parte es peor que no ofrecerlo.
+   */
+  quoteUrl?: string | null;
+  /** Si se ha mandado por correo, para poder decirlo. */
+  emailed?: boolean;
 }
 
 /**
@@ -285,6 +296,8 @@ export function solicitar(datos: {
   name: string;
   phone: string;
   note: string;
+  /** Opcional: si lo deja, se le manda el presupuesto. */
+  email: string;
   trap: string;
 }): Promise<SolicitudEnviada> {
   return pedir('/api/solicitud', {

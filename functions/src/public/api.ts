@@ -57,6 +57,8 @@ import { publicBaseUrl } from '../public-url';
  * `pdf-lib`. Cargarlo perezosamente solo complicaría el único sitio que lo usa.
  */
 import { renderBookingRequestEmail, type BookingRequestEmailData } from './booking-request-email';
+import { renderBookingRequestClienteEmail } from './booking-request-cliente-email';
+import { presupuestoDeSolicitud } from './booking-request-quote';
 import { renderContactEmail } from './contact-email';
 import {
   generateContactReference,
@@ -489,7 +491,7 @@ export const createBookingRequest = onRequest(
 
     const validado = validateBookingRequest(cuerpo);
     if (!validado.ok) { fallo(res, 400, validado.error); return; }
-    const { vehicleId, name, phone, note } = validado.fields;
+    const { vehicleId, name, phone, note, email } = validado.fields;
 
     const desde = parseFecha(cuerpo.from);
     const hasta = parseFecha(cuerpo.to);
@@ -580,6 +582,13 @@ export const createBookingRequest = onRequest(
         createdAt: ahora,
         name,
         phone,
+        /**
+         * ⚠️ **Vacío si no lo dejó, y es opcional a propósito.** Lo que hace
+         * falta para atender una pre-reserva es el teléfono; cada campo
+         * exigido de más es gente que abandona. Quien lo deja recibe el
+         * presupuesto por correo, y quien no, lo descarga en la pantalla.
+         */
+        email,
         note,
         vehicleId,
         /**
@@ -609,10 +618,11 @@ export const createBookingRequest = onRequest(
       const ref = await firestore().collection(SOLICITUDES).add(solicitud);
 
       /**
-       * ⚠️ **El aviso NUNCA tumba la solicitud.** Se escribe primero y se avisa
-       * después: perder el correo es un problema, perder la solicitud que el
-       * cliente acaba de mandar es uno mucho mayor. Misma regla que el sellado
-       * del contrato, que se guarda sin sellar antes que perder la firma.
+       * ⚠️ **Nada de lo que viene ahora puede tumbar la solicitud.** Se escribe
+       * primero y se adorna después: perder el correo o el presupuesto es un
+       * problema, perder la pre-reserva que el cliente acaba de mandar es uno
+       * mucho mayor. Misma regla que el sellado del contrato, que se guarda sin
+       * sellar antes que perder la firma.
        */
       try {
         await avisarSolicitud(ref.id, solicitud);
@@ -620,7 +630,64 @@ export const createBookingRequest = onRequest(
         logger.error('No se pudo avisar de la solicitud', { id: ref.id, error });
       }
 
-      res.json({ reference, priceGuaranteedUntil: garantia.toISOString() });
+      /*
+       * El presupuesto en PDF, con la misma validez que el precio garantizado.
+       *
+       * ⚠️ **Se genera AQUÍ y no cuando alguien lo pida.** Un endpoint que
+       * generase el PDF a demanda tendría que aceptar la referencia como
+       * llave, y esa referencia es corta y se dicta por teléfono: cualquiera
+       * probando combinaciones se bajaría presupuestos con el nombre y el
+       * teléfono de otro. Generado ahora, el secreto es el id de la carpeta
+       * (~95 bits), como en el resto de los enlaces `/d/…`.
+       */
+      const presupuesto = await presupuestoDeSolicitud({
+        nombre: name,
+        telefono: phone,
+        email,
+        coche: raw,
+        recogida: desde,
+        devolucion: hasta,
+        dias,
+        precio,
+        validoHasta: garantia,
+        ...(typeof raw['defaultDepositAmount'] === 'number'
+          ? { fianza: raw['defaultDepositAmount'] as number }
+          : {}),
+      });
+
+      /*
+       * ⚠️ **El enlace se guarda en la solicitud.** Así el operador puede
+       * reenviar el MISMO papel que recibió el cliente, en vez de hacer otro
+       * con otra fecha y otro importe — que es como se acaba discutiendo cuál
+       * de los dos vale.
+       */
+      if (presupuesto) {
+        await ref.update({ quoteUrl: presupuesto }).catch((error) => {
+          logger.error('No se pudo guardar el enlace del presupuesto', { id: ref.id, error });
+        });
+      }
+
+      /*
+       * ⚠️ **El correo al cliente, solo si lo ha dejado.** Es opcional en el
+       * formulario a propósito: lo que hace falta para atender una pre-reserva
+       * es el teléfono, y cada campo exigido de más es gente que abandona.
+       */
+      if (email) {
+        try {
+          await avisarCliente(solicitud, presupuesto ?? '');
+        } catch (error) {
+          logger.error('No se pudo mandar el correo al cliente', { id: ref.id, error });
+        }
+      }
+
+      res.json({
+        reference,
+        priceGuaranteedUntil: garantia.toISOString(),
+        /** El presupuesto para descargar. `null` si no se pudo generar. */
+        quoteUrl: presupuesto,
+        /** Para que la pantalla pueda decir «te lo hemos mandado a…». */
+        emailed: !!email,
+      });
     } catch (error) {
       logger.error('Fallo creando la solicitud', error);
       fallo(res, 500, 'internal');
@@ -646,6 +713,81 @@ export const createBookingRequest = onRequest(
  * el WhatsApp va en el otro sentido, desde la ficha del panel con un enlace
  * `wa.me`, que no cuesta nada y sale del número de siempre.
  */
+/**
+ * El correo que recibe **el cliente** con su pre-reserva.
+ *
+ * ⚠️ **No sustituye al aviso a la agencia: son dos correos distintos.** Aquel
+ * le dice a Dorel que hay alguien esperando; este le dice al cliente qué ha
+ * pedido y hasta cuándo le vale el precio. Mezclarlos daría un correo que no
+ * sirve del todo a ninguno de los dos.
+ *
+ * ⚠️ **Y dice LO MISMO que la pantalla.** El coche no queda reservado, lo que
+ * se garantiza es el precio, y el plazo es el que devuelve la function. Si el
+ * correo lo contara distinto, el cliente se quedaría con la versión que más le
+ * conviene — y con razón, porque se la hemos dado por escrito.
+ */
+async function avisarCliente(
+  s: {
+    reference: string;
+    name: string;
+    email: string;
+    vehicleSnapshot: { brand: string; model: string };
+    quoteSnapshot: { totalDays: number; gross: number };
+    pickupDate: Date;
+    returnDate: Date;
+    priceGuaranteedUntil: Date;
+  },
+  presupuesto: string
+): Promise<void> {
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) {
+    logger.warn('Cliente sin avisar: RESEND_API_KEY no está configurada', {
+      referencia: s.reference,
+    });
+    return;
+  }
+
+  const empresa = companyConfig();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const cuando = (d: Date) =>
+    `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} a las ${p(d.getHours())}:${p(d.getMinutes())}`;
+
+  const { subject, html, text } = renderBookingRequestClienteEmail({
+    nombre: s.name,
+    referencia: s.reference,
+    coche: `${s.vehicleSnapshot.brand} ${s.vehicleSnapshot.model}`.trim(),
+    dias: s.quoteSnapshot.totalDays,
+    importe: `${s.quoteSnapshot.gross.toFixed(2).replace('.', ',')} €`,
+    recogida: cuando(s.pickupDate),
+    devolucion: cuando(s.returnDate),
+    garantia: `hasta el ${cuando(s.priceGuaranteedUntil)}`,
+    presupuesto,
+    marca: empresa.brandName,
+    telefonoEmpresa: empresa.phone,
+  });
+
+  const r = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `${empresa.brandName} <${empresa.email}>`,
+      to: [s.email],
+      /*
+       * ⚠️ **El `reply-to` es el correo de la empresa**, que es el mismo
+       * remitente: así una respuesta del cliente llega a alguien. Sin esto,
+       * contestar a un correo transaccional se pierde.
+       */
+      reply_to: empresa.email,
+      subject,
+      html,
+      text,
+    }),
+  });
+  if (!r.ok) {
+    throw new Error(`Resend respondió ${r.status}: ${await r.text()}`);
+  }
+}
+
 async function avisarSolicitud(id: string, s: BookingRequestEmailData): Promise<void> {
   const apiKey = RESEND_API_KEY.value();
   if (!apiKey) {

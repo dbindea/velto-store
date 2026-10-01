@@ -110,7 +110,43 @@ describe('validateBookingRequest', () => {
     const r = validateBookingRequest({ ...BASE, price: 1, total: 1 } as never);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(Object.keys(r.fields).sort()).toEqual(['name', 'note', 'phone', 'vehicleId']);
+    /*
+     * ⚠️ **La lista es CERRADA y por eso está escrita entera.** Enumerando
+     * solo lo que no debe salir, un campo nuevo que se cuele no lo coge nadie
+     * —porque nadie escribe el test de un campo que no sabe que existe—. Al
+     * añadir `email` el 1 de octubre de 2026, este test falló y hubo que venir
+     * a declararlo, que es exactamente su trabajo.
+     */
+    expect(Object.keys(r.fields).sort()).toEqual(['email', 'name', 'note', 'phone', 'vehicleId']);
+  });
+
+  /*
+   * El correo, que es opcional desde el 1 de octubre de 2026: quien lo deja
+   * recibe el presupuesto en su buzón y quien no, lo descarga en la pantalla.
+   */
+  it('sin correo pasa, y queda vacío', () => {
+    const r = validateBookingRequest({ ...BASE } as never);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields.email).toBe('');
+  });
+
+  it('un correo bueno se guarda en minúsculas', () => {
+    const r = validateBookingRequest({ ...BASE, email: '  Dorel@Gmail.COM ' } as never);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields.email).toBe('dorel@gmail.com');
+  });
+
+  it('⚠️ uno mal escrito se RECHAZA, no se ignora', () => {
+    // Vacío es una decisión del visitante; «dorel@gmail» es un error suyo, y
+    // callárselo manda el presupuesto a un buzón que no existe sin que nadie
+    // se entere.
+    for (const malo of ['dorel@gmail', 'dorel.gmail.com', 'dorel@', '@gmail.com', 'a b@c.com']) {
+      const r = validateBookingRequest({ ...BASE, email: malo } as never);
+      expect(r.ok, malo).toBe(false);
+      if (!r.ok) expect(r.error).toBe('bad-email');
+    }
   });
 });
 

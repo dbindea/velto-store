@@ -350,7 +350,13 @@ import { ORDENES } from '../lib/resultados';
       : '';
     pintarChapas();
     lista.classList.toggle('rejilla--filas', vista === 'filas');
-    lista.innerHTML = mostrados.map((v) => tarjetaCoche(v)).join('');
+    /*
+     * ⚠️ **Las fechas viajan con cada tarjeta.** Es lo que hace que entrar en
+     * un coche desde aquí no pierda la búsqueda: la ficha se abre con el
+     * calendario ya marcado y el precio hecho.
+     */
+    const fechas = campos ? { desde: campos.desde.value, hasta: campos.hasta.value } : undefined;
+    lista.innerHTML = mostrados.map((v) => tarjetaCoche(v, fechas)).join('');
   }
 
   ordenEl.addEventListener('change', () => {

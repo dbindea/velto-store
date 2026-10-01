@@ -43,6 +43,23 @@
                inputmode="tel" placeholder="612 345 678" />
       </label>
 
+      {/*
+        ⚠️ **El correo es OPCIONAL, y esa es la decisión.** Lo que hace falta
+        para atender una pre-reserva es el teléfono; cada campo exigido de más
+        es gente que abandona. Quien lo deje recibe el presupuesto en su
+        correo, y quien no, lo descarga en la pantalla siguiente — así nadie
+        se queda sin el papel por no querer dar un dato.
+
+        ⚠️ **Y la etiqueta dice PARA QUÉ sirve.** «Correo (opcional)» a secas
+        se lee como un dato que pedimos porque sí, y lo que hace es decidir si
+        el presupuesto llega al buzón o hay que guardarlo a mano.
+      */}
+      <label class="dlg__campo">
+        <span>Correo <em>(opcional, para mandarte el presupuesto)</em></span>
+        <input type="email" name="email" maxlength="120" autocomplete="email"
+               inputmode="email" placeholder="tu@correo.com" />
+      </label>
+
       <label class="dlg__campo">
         <span>Algo que debamos saber <em>(opcional)</em></span>
         <textarea name="note" rows="2" maxlength="400"
@@ -111,6 +128,26 @@
         esto no repite una cuenta que ya está hecha ni puede discrepar de ella.
       */}
       <p id="dlg-garantia" class="dlg__letra"></p>
+
+      {/*
+        ⚠️ **El presupuesto se ofrece aquí y no se da por mandado.** Lo pidió
+        Dorel —«no le podemos dar la opción de descargar el pdf de presupuesto,
+        y con el código de pre-reserva»— y el motivo de que sea un enlace y no
+        solo un correo es que **el correo es opcional**: quien no lo deje se
+        iría de la pantalla sin nada por escrito.
+
+        ⚠️ **Y el enlace es el corto de la casa** (`/d/q…`), el mismo que se
+        manda por WhatsApp: la URL de Storage mide ~160 caracteres y parece un
+        intento de phishing.
+
+        Nace oculto: si el PDF no se pudo generar, lo que no puede salir es un
+        botón que lleve a ninguna parte.
+      */}
+      <a id="dlg-presupuesto" class="btn btn--ghost dlg__enviar" hidden rel="noopener">
+        Descargar el presupuesto
+      </a>
+      <p id="dlg-correo" class="dlg__letra" hidden></p>
+
       <p class="dlg__letra">
         La reserva queda en firme con el pago de la señal. Hasta entonces el
         coche <strong>no queda reservado</strong>.
