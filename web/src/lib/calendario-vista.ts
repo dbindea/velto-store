@@ -63,12 +63,15 @@ export interface OpcionesCalendario {
   alCambiar: (rango: Rango) => void;
 }
 
-export interface Calendario {
-  /** Vuelve a pintar con el rango vacío. Lo usa el botón de «Quitar fechas». */
-  limpiar: () => void;
-}
-
-export function montarCalendario(opciones: OpcionesCalendario): Calendario {
+/*
+ * ⚠️ **No devuelve nada, y antes devolvía un `limpiar()`.** Lo usaba un botón
+ * de «Quitar fechas» que Dorel mandó quitar el 2 de octubre de 2026: «una
+ * persona, si quiere cambiar de fechas, va al calendario». Un método que nadie
+ * llama es una promesa de API que alguien mantendrá sin saber para qué — y
+ * volver a vaciar la selección es marcar otro día de recogida, que es lo que
+ * `elegirDia()` ya hace.
+ */
+export function montarCalendario(opciones: OpcionesCalendario): void {
   const { contenedor, ocupados, horizonte, alCambiar } = opciones;
   const hoy = new Date();
 
@@ -260,13 +263,4 @@ export function montarCalendario(opciones: OpcionesCalendario): Calendario {
 
   construir();
   if (rango.desde && rango.hasta) alCambiar(rango);
-
-  return {
-    limpiar() {
-      rango = RANGO_VACIO;
-      señalado = null;
-      refrescarEstados();
-      alCambiar(rango);
-    },
-  };
 }

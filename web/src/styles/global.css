@@ -1178,10 +1178,10 @@ input.picker-propio {
 .coche__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
 
 .coche__detalle { margin: var(--sp-1) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
-.coche__btn { width: 100%; margin-top: var(--sp-5); }
 
 /*
- * El botón de la tarjeta con fechas elegidas: «Seleccionar».
+ * El botón de la tarjeta: «Reservar» cuando hay fechas y precio, «Calcular
+ * precio» cuando solo hay un «desde».
  *
  * ⚠️ **Vive AQUÍ y no en la página de resultados, y eso arregla un fallo que
  * llevaba desde que existe.** Estaba escrito en el `<style>` de
@@ -1193,9 +1193,28 @@ input.picker-propio {
  * a media anchura. Es la tercera vez que muerde lo mismo —una clase declarada
  * que no alcanza— y la razón por la que todo lo de `.coche` es global.
  */
-.coche__cta {
-  width: calc(100% - var(--sp-10));
-  margin: 0 var(--sp-5) var(--sp-5);
+.coche__btn { width: 100%; margin-top: var(--sp-5); }
+
+/*
+ * ⚠️ **La flecha se mueve, el botón no.** Lo pidió Dorel el 2 de octubre de
+ * 2026 —«un botón reservar con una flecha y que tenga animación»—, y lo que se
+ * anima es solo la flecha: agrandar el botón recolocaría el contenido de la
+ * tarjeta en cada pasada del ratón, y una `transform` la resuelve el
+ * compositor sin recalcular nada.
+ *
+ * ⚠️ **El disparador es la TARJETA, no el botón.** Toda la tarjeta es el
+ * enlace, así que el ratón casi nunca está encima del botón: con
+ * `.coche__btn:hover` la flecha solo se movía en la última fila de la tarjeta
+ * y parecía que la animación no estaba puesta.
+ */
+.coche__btn svg { transition: transform var(--t-base) var(--ease); }
+.coche__link:hover .coche__btn svg,
+.coche__link:focus-visible .coche__btn svg { transform: translateX(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .coche__btn svg { transition: none; }
+  .coche__link:hover .coche__btn svg,
+  .coche__link:focus-visible .coche__btn svg { transform: none; }
 }
 
 /* ---- Las chapas de filtro -------------------------------------------------
@@ -1283,7 +1302,7 @@ input.picker-propio {
    */
   .rejilla--filas .coche__cuerpo {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
     column-gap: var(--sp-6);
     padding: var(--sp-5) var(--sp-6);
@@ -1303,11 +1322,19 @@ input.picker-propio {
     text-align: right;
   }
 
-  .rejilla--filas .coche__cta {
-    flex: none;
+  /*
+   * ⚠️ **El botón es una TERCERA columna, no una fila debajo del precio.** En
+   * la vista de lista la tarjeta mide 180 px de alto: puesto debajo, el botón
+   * se lleva el aire que separa el precio de su letra pequeña y las dos cifras
+   * se leen como una. A la derecha y centrado contra las tres líneas de la
+   * izquierda queda donde estaba antes de que el botón entrara en el enlace.
+   */
+  .rejilla--filas .coche__btn {
+    grid-column: 3;
+    grid-row: 1 / span 3;
     align-self: center;
     width: auto;
-    margin: var(--sp-5);
+    margin: 0;
   }
 }
 

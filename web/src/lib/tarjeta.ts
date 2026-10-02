@@ -134,40 +134,26 @@ export function tarjetaCoche(
   /**
    * El botón, y **cambia según haya fechas elegidas o no**.
    *
-   * ⚠️ **Con fechas dice «Seleccionar», y antes decía «Calcular precio».** Lo
-   * cortó Dorel el 30 de septiembre de 2026 mirando la página de resultados:
-   * «el texto del botón es Seleccionar, no Calcular, porque ya está calculado».
-   * Tenía razón y el fallo era más gordo que el rótulo — en esa página la
-   * tarjeta enseñaba **dos** llamadas a la acción, un «Calcular precio» que
-   * llevaba a la ficha y un «Que me llamen» debajo, o sea dos botones para un
-   * coche ya calculado. Ahora es uno.
+   * ⚠️ **Con fechas dice «Reservar», y es un ENLACE a la ficha, no un botón que
+   * abra el formulario.** Lo pidió Dorel el 2 de octubre de 2026 —«no es muy
+   * intuitivo tener que dar click a la card»—, y el fallo que arregla es el
+   * mismo que acabó con las dos tarjetas verdes de la ficha: la tarjeta
+   * llevaba a un sitio al pulsar su cuerpo y a otro al pulsar su botón, y el
+   * botón es lo que más se ve. Ahora toda la tarjeta hace una sola cosa, que
+   * es la que él describe: resultados → ficha del coche → acción.
    *
-   * ⚠️ **Sin fechas sigue diciendo «Calcular precio», y es lo correcto**: en la
-   * portada y en la flota el precio es un «desde» y la disponibilidad no se ha
-   * mirado, así que lo que toca es ir a la ficha a elegir fechas. Ofrecer ahí
-   * «Seleccionar» mandaría al operador una solicitud sin fechas ni precio.
+   * ⚠️ **Sin fechas dice «Calcular precio», y es lo correcto**: en la portada y
+   * en la flota el precio es un «desde» y la disponibilidad no se ha mirado,
+   * así que lo que toca es ir a la ficha a elegir fechas.
    *
-   * ⚠️ **Y con fechas el botón va FUERA del `<a>`**, no dentro. Un botón dentro
-   * de un enlace no es HTML válido y, peor, el clic haría las dos cosas: abrir
-   * la ficha y abrir el formulario. Es el mismo fallo que el menú «Más» del
-   * backoffice metido dentro de su propio botón. Por eso la tarjeta con precio
-   * **no lleva `.coche__btn`** dentro del enlace: el enlace sigue siendo toda
-   * la tarjeta, que es como se llega a la ficha.
+   * ⚠️ **Y es un `<span>` con pinta de botón, DENTRO del `<a>`.** Un `<button>`
+   * dentro de un enlace no es HTML válido y el clic haría las dos cosas — el
+   * mismo fallo que el menú «Más» del backoffice metido dentro de su propio
+   * botón.
    */
-  const cta = disponible
-    ? `<button type="button" class="btn btn--ink coche__cta"
-         data-solicitar
-         data-id="${esc(c.id)}"
-         data-nombre="${esc(nombre)}"
-         data-dias="${disponible.totalDays}"
-         data-precio="${euros(disponible.price.gross)}">
-         Seleccionar ${FLECHA}
-       </button>`
-    : '';
-
-  const btnFicha = disponible
-    ? ''
-    : `<span class="btn btn--ink coche__btn">Calcular precio ${FLECHA}</span>`;
+  const btnFicha = `<span class="btn btn--ink coche__btn">${
+    disponible ? 'Reservar' : 'Calcular precio'
+  } ${FLECHA}</span>`;
 
   /*
    * ⚠️ **Las fechas van en el enlace, no en `sessionStorage`.** Así el enlace
@@ -204,6 +190,5 @@ export function tarjetaCoche(
           ${btnFicha}
         </div>
       </a>
-      ${cta}
     </article>`;
 }

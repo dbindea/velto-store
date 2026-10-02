@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import PreReserva from '../components/PreReserva.astro';
-import { EMPRESA } from '../lib/empresa';
 ---
 
 {/*
@@ -51,10 +50,6 @@ import { EMPRESA } from '../lib/empresa';
     </div>
   </section>
 </Base>
-
-<script define:vars={{ WHATSAPP: EMPRESA.telefonoWhatsapp }}>
-  window.__VELTO_WHATSAPP = WHATSAPP;
-</script>
 
 <script>
   import {
@@ -120,12 +115,6 @@ import { EMPRESA } from '../lib/empresa';
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
     );
 
-  const ICONO = {
-    plazas: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
-    maletas: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
-    cambio: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 4v16M12 4v16M19 4v16M5 10h14"/></svg>',
-    combustible: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 21h10V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v17Z"/><path d="M13 9h3a2 2 0 0 1 2 2v6a2 2 0 0 0 3 1.7"/></svg>',
-  };
 
   // ---- La galería -------------------------------------------------------
 
@@ -274,27 +263,17 @@ import { EMPRESA } from '../lib/empresa';
         : null,
     ].filter(Boolean) as Array<[string, string]>;
 
-    const wa = (window as unknown as { __VELTO_WHATSAPP: string }).__VELTO_WHATSAPP;
-    const mensaje = encodeURIComponent(`Hola, me interesa el ${nombre}.`);
-
     /*
-     * ⚠️ **Lo que va en la tarjeta de la derecha es lo que decide una
-     * reserva**, no todo lo que se sabe del coche: el precio, las tres cifras
-     * que se comparan entre coches y los dos botones. La ficha técnica entera
-     * está debajo, en la columna ancha, para quien la quiera leer.
+     * ⚠️ **Aquí vivían el botón de WhatsApp y la cabecera de precio de la
+     * tarjeta de la derecha, y las dos se fueron el 2 de octubre de 2026.**
+     * El botón lo quitó Dorel «para no distorsionar el flujo»: en una página
+     * cuyo trabajo es que se elijan fechas, una salida a otro canal al lado
+     * del botón de reservar compite con él —y el teléfono sigue en la
+     * cabecera y el WhatsApp en el pie, que es donde se busca una salida—.
+     * El «desde X €/día» se mudó a la tarjeta de acciones, que es la que
+     * ahora enseña el precio: mientras no hay fechas dice el «desde», y en
+     * cuanto las hay, el total.
      */
-    const claves = `
-      <ul class="reserva__claves">
-        <li>${ICONO.plazas}<span>${v.seats} plazas</span></li>
-        <li>${ICONO.maletas}<span>${v.luggageCapacity} maletas</span></li>
-        <li>${ICONO.cambio}<span>${esc(cambio(v.transmission))}</span></li>
-        <li>${ICONO.combustible}<span>${esc(combustible(v.fuelType))}</span></li>
-      </ul>`;
-
-    const precio = v.priceFrom
-      ? `<p class="reserva__precio num"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> <span>/día</span></p>
-         ${v.priceFrom.fromDays ? `<p class="reserva__desde">en alquileres de ${v.priceFrom.fromDays} días o más</p>` : ''}`
-      : `<p class="reserva__precio reserva__precio--consultar">Consúltanos el precio</p>`;
 
     /*
      * ⚠️ **Lo que incluye el alquiler, y SOLO lo que el sistema o el contrato
@@ -341,67 +320,34 @@ import { EMPRESA } from '../lib/empresa';
          * áreas en escritorio y el móvil se queda con el orden del código:
          * foto, precio y botones, y después la letra pequeña.
          */ ''}
+      ${/*
+         * ⚠️ **Cuatro cuadrantes, y el orden lo decidió Dorel el 2 de octubre
+         * de 2026 mirando la página:** «en escritorio pondría arriba a la
+         * izquierda la galería, a la derecha la ficha técnica, abajo a la
+         * izquierda el calendario y a la derecha la card de acciones».
+         *
+         * ⚠️ **Y había DOS botones verdes.** Uno decía «Ver fechas libres» y
+         * bajaba al calendario; el otro, «Reservar estas fechas», al lado del
+         * calendario. Con las fechas ya puestas desde el buscador los dos
+         * salían a la vez y ninguno era claramente el siguiente paso: «es muy
+         * confuso, debería unir los dos botones en uno solo». Ahora la tarjeta
+         * de acciones es **una**, está pegada al calendario y cambia sola con
+         * lo que se marque.
+         */ ''}
       <div class="ficha">
         <div class="ficha__galeria">
           ${galeria(v, nombre)}
+          ${v.description ? `<p class="ficha__texto">${esc(v.description)}</p>` : ''}
         </div>
 
-        <aside class="reserva">
-          ${precio}
-          ${claves}
-          <a class="btn btn--brand reserva__btn" href="#disponibilidad">Ver fechas libres</a>
-          <a class="btn btn--ghost reserva__btn" href="https://wa.me/${wa}?text=${mensaje}" rel="noopener">
-            Preguntar por WhatsApp
-          </a>
-          <p class="reserva__rotulo">Incluido en el alquiler</p>
-          <ul class="reserva__incluye">
-            ${incluye.map((t) => `<li>${t}</li>`).join('')}
-          </ul>
-        </aside>
-
         ${/*
-           * ⚠️ **El calendario va AQUÍ, dentro de la rejilla y justo debajo de
-           * la galería.** Estaba al final de la página —a 2.292 px en un
-           * móvil— y es lo que se viene a hacer. Lo dijo Dorel: «esto para que
-           * el calendario suba y que no sea tan abajo; de hecho [la ficha
-           * técnica] es algo muy secundario». El orden es el de la decisión:
-           * veo el coche, veo el precio, elijo fechas, reservo.
-           */ ''}
-        <section class="dispo" id="disponibilidad">
-          <h2 class="ficha__h2">Elige tus fechas</h2>
-          <p class="dispo__entrada">
-            Lo tachado ya está cogido. Marca el día de recogida y el de
-            devolución.
-          </p>
-          <div class="dispo__cuerpo">
-            <div class="cal" id="cal"></div>
-            <div class="dispo__lado" id="dispo-lado"></div>
-          </div>
-          ${/*
-             * ⚠️ **Aquí había una nota explicando el día de preparación y la
-             * quitó Dorel el 1 de octubre de 2026:** «el cliente no debe saber
-             * los trucos de la empresa, es irrelevante para él». Tiene razón
-             * —lo que necesita saber es qué días puede coger el coche, y eso
-             * se lo dice el calendario— y además contarlo invita a pedir una
-             * excepción. La regla sigue aplicándose en el backend, con su
-             * explicación en `disponibleDesde()`.
-             */ ''}
-        </section>
-
-        ${/*
-           * ⚠️ **La ficha técnica va PLEGADA, con cuatro datos a la vista.**
-           * Es secundaria —se mira después de decidir, no antes— y desplegada
-           * empujaba el calendario media pantalla. Lo pidió Dorel así: «una
-           * card con bordes redondeados, que esté plegada, que se vean 2-4
-           * propiedades y abajo algo como ver más».
-           *
-           * ⚠️ **Y es un `<details>` nativo**: se abre sin una línea de
-           * JavaScript, con el teclado, y el navegador lo encuentra al buscar
-           * dentro de la página. Lo mismo que las preguntas de la portada.
+           * ⚠️ **La ficha técnica sigue PLEGADA aunque ahora esté arriba.** Es
+           * secundaria —se mira después de decidir, no antes— y con los diez
+           * datos desplegados la columna crecía más que la galería de al lado.
+           * Es un `<details>` nativo: se abre sin JavaScript, con el teclado, y
+           * el navegador lo encuentra al buscar dentro de la página.
            */ ''}
         <div class="ficha__resto">
-          ${v.description ? `<p class="ficha__texto">${esc(v.description)}</p>` : ''}
-
           <div class="tecnica">
             <h2 class="tecnica__titulo">Ficha técnica</h2>
             <dl class="ficha__lista">
@@ -434,6 +380,59 @@ import { EMPRESA } from '../lib/empresa';
             }
           </div>
         </div>
+
+        ${/*
+             * ⚠️ **«Incluido en el alquiler» va AQUÍ y no al pie de la tarjeta
+             * de acciones, y es por una medida.** Con los cuatro cuadrantes, la
+             * ficha técnica plegada mide 315 px contra los 608 de la galería:
+             * quedaban **290 px de hueco blanco** arriba a la derecha, visibles
+             * en la primera pantalla de un escritorio. Esta lista los llena con
+             * lo único que faltaba por decir del coche, y de paso deja la
+             * tarjeta de abajo con lo suyo —fechas, precio y botón— en vez de
+             * una lista de seis puntos entre el importe y el calendario.
+             *
+           * ⚠️ **Y es marcado fijo, no se repinta.** La tarjeta de acciones
+           * se reescribe entera con cada selección; esto no depende de las
+           * fechas, así que colgarlo de allí obligaba a volver a imprimirlo
+           * en cada clic del calendario.
+           *
+           * ⚠️ **Es hermana de las otras cuatro, no va dentro de
+           * `.ficha__resto`.** En escritorio da igual —ocupa su área—, pero en
+           * móvil la rejilla es una columna y el orden lo decide el `order`:
+           * metida dentro, estos 316 px quedaban **entre el coche y el
+           * calendario** y empujaban el precio a 1.982 px del principio. Suelta
+           * se puede mandar al final, que es donde una lista de tranquilidad
+           * molesta menos.
+           */ ''}
+        <div class="incluye">
+          <p class="incluye__rotulo">Incluido en el alquiler</p>
+          <ul class="incluye__lista">
+            ${incluye.map((t) => `<li>${esc(t)}</li>`).join('')}
+          </ul>
+        </div>
+
+        <section class="dispo" id="disponibilidad">
+          <h2 class="ficha__h2">Elige tus fechas</h2>
+          <p class="dispo__entrada">
+            Lo tachado ya está cogido. Marca el día de recogida y el de
+            devolución.
+          </p>
+          <div class="cal" id="cal"></div>
+        </section>
+
+        ${/*
+           * ⚠️ **UNA sola tarjeta de acciones, y cambia sola.** Sin fechas
+           * enseña el «desde» y dice qué hacer; con fechas, los días, el total
+           * y el botón de reservar. Antes eran dos tarjetas con un botón verde
+           * cada una y el visitante tenía que adivinar cuál era el siguiente
+           * paso.
+           *
+           * ⚠️ **El precio se recalcula solo al cambiar el calendario**, sin
+           * ningún botón de por medio: lo pidió así Dorel, y además un botón
+           * de «calcular» obliga a pulsarlo para enterarse de que una fecha ya
+           * no vale.
+           */ ''}
+        <aside class="accion" id="accion"></aside>
       </div>
 
       ${/*
@@ -458,14 +457,14 @@ import { EMPRESA } from '../lib/empresa';
 
   function conectarCalendario(v: CocheFicha): void {
     const caja = document.getElementById('cal');
-    const encontrado = document.getElementById('dispo-lado');
+    const encontrado = document.getElementById('accion');
     if (!caja || !encontrado) return;
     /*
      * Una constante ya estrechada: TypeScript no conserva el estrechamiento
      * dentro de las funciones de abajo, y ahí se usa media docena de veces.
      * Es el mismo apaño que lleva el combo de zonas.
      */
-    const lado: HTMLElement = encontrado;
+    const accion: HTMLElement = encontrado;
 
     const ocupados = new Set(v.busyDays ?? []);
     const horizonte = parseDiaIso(v.availableUntil);
@@ -479,48 +478,65 @@ import { EMPRESA } from '../lib/empresa';
     /*
      * ⚠️ **Las fechas que traía el enlace, ya marcadas.** Quien llega desde
      * los resultados ya eligió sus días: pedírselos otra vez es hacerle
-     * repetir lo que acaba de hacer, y era lo primero que Dorel notó al usar
-     * el flujo entero. Se leen con el mismo lector que el buscador
-     * (`instanteDeLaUrl`), que acepta también los enlaces antiguos de solo
-     * fecha.
+     * repetir lo que acaba de hacer. Se leen con el mismo lector que el
+     * buscador (`instanteDeLaUrl`), que acepta también los enlaces antiguos
+     * de solo fecha.
      */
     const params = new URLSearchParams(location.search);
     const desdeUrl = parseDiaIso((instanteDeLaUrl(params.get('from')) ?? '').slice(0, 10));
     const hastaUrl = parseDiaIso((instanteDeLaUrl(params.get('to')) ?? '').slice(0, 10));
 
-    const cal = montarCalendario({
+    montarCalendario({
       contenedor: caja,
       ocupados,
       horizonte,
       rangoInicial: desdeUrl && hastaUrl ? { desde: desdeUrl, hasta: hastaUrl } : null,
-      alCambiar: (rango) => pintarLado(rango),
+      alCambiar: (rango) => pintarAccion(rango),
     });
 
-    function pintarLado(rango: Rango): void {
-      if (!rango.desde) {
-        lado.innerHTML = `<p class="dispo__pista">Pulsa el día en que quieres recoger el coche.</p>`;
-        return;
+    /** El «desde X €/día», que es lo que se enseña mientras no haya fechas. */
+    function cabeceraSinFechas(): string {
+      if (!v.priceFrom) {
+        return `<p class="accion__precio accion__precio--consultar">Consúltanos el precio</p>`;
       }
-      if (!rango.hasta) {
-        lado.innerHTML = `<p class="dispo__pista">Ahora el día de la devolución.</p>`;
+      return `
+        <p class="accion__desde num"><span>desde</span> <strong>${euros(v.priceFrom.gross)}</strong> <span>/día</span></p>
+        ${v.priceFrom.fromDays ? `<p class="accion__letra">en alquileres de ${v.priceFrom.fromDays} días o más</p>` : ''}`;
+    }
+
+    function pintarAccion(rango: Rango): void {
+      if (!rango.desde || !rango.hasta) {
+        /*
+         * ⚠️ **Sin fechas NO hay botón, y eso es deliberado.** Un «Reservar»
+         * que no puede reservar nada es un botón que no hace nada, que en
+         * esta casa es un fallo; y uno apagado sin explicación deja al
+         * visitante pulsando. Lo que hay es la instrucción.
+         */
+        accion.innerHTML = `
+          ${cabeceraSinFechas()}
+          <p class="accion__pista">
+            ${rango.desde
+              ? 'Ahora marca el día de la devolución.'
+              : 'Marca en el calendario el día de recogida y el de devolución y te decimos el precio final.'}
+          </p>`;
         return;
       }
 
       const dias = diasDelRango(rango.desde, rango.hasta);
       const cabecera = `
-        <p class="dispo__fechas">${rotuloRango(rango.desde, rango.hasta)}</p>
-        <p class="dispo__dias">${dias === 1 ? '1 día' : `${dias} días`}</p>`;
+        <p class="accion__fechas">${rotuloRango(rango.desde, rango.hasta)}</p>
+        <p class="accion__dias">${dias === 1 ? '1 día' : `${dias} días`}</p>`;
 
-      lado.innerHTML = `${cabecera}<p class="dispo__pista">Calculando el precio…</p>`;
+      accion.innerHTML = `${cabecera}<p class="accion__pista">Calculando el precio…</p>`;
 
       const desde = comoCampo(rango.desde);
       const hasta = comoCampo(rango.hasta);
       const mia = ++peticion;
 
       /*
-       * ⚠️ **El precio lo da el backend, no la ficha.** El «desde» de arriba es
-       * el tramo más barato —el de un alquiler largo— y la tabla de tramos no
-       * se publica a propósito: es la curva de descuento del negocio. Calcular
+       * ⚠️ **El precio lo da el backend, no la ficha.** El «desde» es el tramo
+       * más barato —el de un alquiler largo— y la tabla de tramos no se
+       * publica a propósito: es la curva de descuento del negocio. Calcular
        * aquí el precio de tres días sería inventárselo.
        */
       disponibilidadCoche(desde, hasta, v.id)
@@ -537,30 +553,22 @@ import { EMPRESA } from '../lib/empresa';
           if (!coche) {
             /*
              * ⚠️ Puede pasar de verdad: entre que se pintó el calendario y se
-             * eligieron las fechas, alguien ha reservado. Se dice, y se ofrece
-             * volver a empezar.
+             * eligieron las fechas, alguien ha reservado. Se dice, y se deja
+             * el calendario tal cual para elegir otras — que es lo que se
+             * hace para cambiarlas desde que no hay botón de quitar.
              */
-            lado.innerHTML = `${cabecera}
-              <p class="dispo__aviso">Esas fechas acaban de ocuparse. Elige otras.</p>
-              <button type="button" class="btn btn--ghost dispo__btn" id="limpiar">Quitar fechas</button>`;
+            accion.innerHTML = `${cabecera}
+              <p class="accion__aviso">Esas fechas acaban de ocuparse. Marca otras en el calendario.</p>`;
             return;
           }
 
-          /*
-           * ⚠️ **Se cierra aquí, sin volver al buscador.** Antes este botón
-           * llevaba a `/reservar` con las fechas puestas, y eso es hacerle
-           * repetir al visitante una selección que acaba de hacer: elige el
-           * coche, elige las fechas, y la web le devuelve a una lista para que
-           * vuelva a elegir el mismo coche. El diálogo es el mismo componente
-           * que usa la página de resultados.
-           */
-          lado.innerHTML = `${cabecera}
-            <p class="dispo__precio num">${euros(coche.price.gross)}</p>
-            <p class="dispo__nota">Precio final del alquiler completo.</p>
-            <button type="button" class="btn btn--brand dispo__btn" id="pedir">
+          accion.innerHTML = `${cabecera}
+            <p class="accion__precio num">${euros(coche.price.gross)}</p>
+            <p class="accion__letra">Precio final del alquiler completo.</p>
+            <button type="button" class="btn btn--brand accion__btn" id="pedir">
               Reservar estas fechas
-            </button>
-            <button type="button" class="btn btn--ghost dispo__btn" id="limpiar">Quitar fechas</button>`;
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </button>`;
 
           pedido = {
             vehicleId: v.id,
@@ -574,9 +582,8 @@ import { EMPRESA } from '../lib/empresa';
         })
         .catch(() => {
           if (mia !== peticion) return;
-          lado.innerHTML = `${cabecera}
-            <p class="dispo__aviso">No hemos podido calcular el precio. Inténtalo otra vez.</p>
-            <button type="button" class="btn btn--ghost dispo__btn" id="limpiar">Quitar fechas</button>`;
+          accion.innerHTML = `${cabecera}
+            <p class="accion__aviso">No hemos podido calcular el precio. Inténtalo otra vez.</p>`;
         });
     }
 
@@ -584,13 +591,12 @@ import { EMPRESA } from '../lib/empresa';
      * Delegado, porque el botón se repinta con cada selección: un oyente
      * puesto sobre el nodo de ahora se quedaría colgando del siguiente.
      */
-    lado.addEventListener('click', (e) => {
-      const id = (e.target as HTMLElement).id;
-      if (id === 'limpiar') cal.limpiar();
-      if (id === 'pedir' && pedido) preReserva?.abrir(pedido);
+    accion.addEventListener('click', (e) => {
+      const boton = (e.target as HTMLElement).closest('#pedir');
+      if (boton && pedido) preReserva?.abrir(pedido);
     });
 
-    pintarLado({ desde: null, hasta: null });
+    pintarAccion({ desde: null, hasta: null });
   }
 
   if (!id) {
@@ -618,9 +624,10 @@ import { EMPRESA } from '../lib/empresa';
   .ficha__titulo { margin: var(--sp-2) 0 var(--sp-8); }
 
   /*
-   * ⚠️ **En móvil manda el ORDEN DEL CÓDIGO: foto, precio, ficha.** Por eso el
-   * `<aside>` va escrito en medio y no al final. En escritorio lo recolocan
-   * las áreas: la tarjeta a la derecha, ocupando las dos filas.
+   * ⚠️ **En móvil manda el ORDEN DEL CÓDIGO**, y es el del flujo: galería,
+   * datos del coche, calendario y por último la tarjeta de acciones. Sin
+   * `grid-template-areas` no hay nada que recoloque, así que el marcado se
+   * escribe ya en el orden en que se lee con el pulgar.
    */
   .ficha {
     display: grid;
@@ -628,28 +635,47 @@ import { EMPRESA } from '../lib/empresa';
     grid-template-columns: 1fr;
   }
 
+  /*
+   * ⚠️ **Cuatro cuadrantes, y el orden es el de la decisión.** Arriba el
+   * coche —la foto a la izquierda y sus datos a la derecha—, abajo la acción
+   * —el calendario a la izquierda y lo que se paga a la derecha—. Lo pidió
+   * así Dorel el 2 de octubre de 2026.
+   *
+   * ⚠️ **La tarjeta de acciones está PEGADA al calendario, no arriba.** Es lo
+   * que arregla los dos botones verdes: el precio cambia al marcar un día y se
+   * ve cambiar sin desplazar la página. Puesta arriba, el visitante marcaba
+   * fechas abajo y el número se actualizaba fuera de la pantalla.
+   */
   @media (min-width: 900px) {
     .ficha {
       grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-      /*
-       * ⚠️ **La disponibilidad ocupa las DOS columnas.** El calendario son dos
-       * meses y una columna de 600 px los deja en 280 cada uno: los números
-       * bajarían a 9 px, que es el mismo fallo que ya obligó a enseñar un solo
-       * mes en el móvil. A todo lo ancho caben con holgura y además deja sitio
-       * al panel del precio al lado.
-       */
       grid-template-areas:
-        'galeria reserva'
-        'dispo   dispo'
-        'resto   resto';
+        'galeria resto'
+        'galeria incluye'
+        'dispo   accion';
       align-items: start;
       column-gap: var(--sp-10);
-      row-gap: var(--sp-10);
+      row-gap: var(--sp-5);
     }
     .ficha__galeria { grid-area: galeria; }
-    .reserva { grid-area: reserva; }
-    .dispo { grid-area: dispo; }
     .ficha__resto { grid-area: resto; }
+    .incluye { grid-area: incluye; margin-top: 0; }
+    .dispo { grid-area: dispo; }
+    .accion { grid-area: accion; }
+
+    /* El aire entre el coche y la zona de decidir sí es el grande. */
+    .dispo,
+    .accion { margin-top: var(--sp-6); }
+  }
+
+  /*
+   * ⚠️ **En móvil «Incluido en el alquiler» va AL FINAL**, detrás del precio y
+   * del botón. Es tranquilidad, no un dato para decidir: puesta en su sitio del
+   * código —justo debajo de la ficha técnica— metía 316 px entre el coche y el
+   * calendario y dejaba el precio a 1.982 px del principio de la página.
+   */
+  @media (max-width: 899px) {
+    .incluye { order: 1; }
   }
 
   .ficha__galeria,
@@ -818,60 +844,75 @@ import { EMPRESA } from '../lib/empresa';
     background: var(--brand);
   }
 
-  /* ---- La tarjeta de reserva ------------------------------------------- */
-
-  .reserva {
+  /* ---- La tarjeta de acciones ------------------------------------------
+   *
+   * ⚠️ **Es UNA, y antes eran dos.** Había una tarjeta arriba con el «desde» y
+   * un botón «Ver fechas libres», y otra al lado del calendario con el total y
+   * «Reservar estas fechas»: dos botones verdes a la vez y ninguno
+   * claramente el siguiente paso. Esta enseña el «desde» mientras no hay
+   * fechas y el total en cuanto las hay.
+   */
+  .accion {
     padding: var(--sp-6);
     background: var(--surface-card);
     border: var(--bw) solid var(--border);
     border-radius: var(--r-xl);
   }
 
-  /*
-   * ⚠️ **La tarjeta YA NO es pegajosa, y es la corrección de un fallo que se
-   * vio en pantalla.** Lo era, y la sección de disponibilidad ocupa **las dos
-   * columnas**: al desplazar, el calendario y la ficha técnica pasaban **por
-   * debajo** de una tarjeta que se quedaba clavada en la mitad superior de la
-   * columna derecha. Lo dijo Dorel: «la card de precio tapa las demás, creo
-   * que deberían tener una barrera y no solaparse».
-   *
-   * ⚠️ **Y la salida no es un `z-index` ni un hueco:** es que ya no hace
-   * falta. Desde que el calendario subió justo debajo, la tarjeta ha hecho su
-   * trabajo cuando el visitante llega a elegir fechas — y el precio vuelve a
-   * salir, con el de esas fechas, en el panel de al lado del calendario.
-   */
-
-  .reserva__precio { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
-  .reserva__precio strong {
+  .accion__desde { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+  .accion__desde strong {
     font-size: var(--fs-price);
     font-weight: var(--fw-bold);
     letter-spacing: var(--ls-tight);
     color: var(--text);
   }
-  .reserva__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
-  .reserva__desde { margin: var(--sp-1) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
 
-  .reserva__claves {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--sp-3);
-    margin: var(--sp-5) 0;
-    padding: var(--sp-5) 0;
-    border-top: var(--bw) solid var(--border);
-    border-bottom: var(--bw) solid var(--border);
-    list-style: none;
-    color: var(--text-2);
-    font-size: var(--fs-small);
+  .accion__fechas { margin: 0; font-weight: var(--fw-medium); }
+  .accion__dias { margin: var(--sp-1) 0 var(--sp-4); color: var(--text-3); font-size: var(--fs-caption); }
+
+  .accion__precio {
+    margin: 0;
+    font-size: var(--fs-price);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-tight);
   }
-  .reserva__claves li { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
-  .reserva__claves svg { flex: none; color: var(--text-3); }
+  .accion__precio--consultar { font-size: var(--fs-h4); font-weight: 400; color: var(--text-2); }
 
-  .reserva__btn { width: 100%; margin-bottom: var(--sp-3); }
+  .accion__letra { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
+  .accion__pista { margin: var(--sp-4) 0 0; color: var(--text-2); font-size: var(--fs-small); }
+  .accion__aviso { margin: 0 0 var(--sp-2); color: var(--danger); font-size: var(--fs-small); }
 
-  .reserva__rotulo {
-    margin: var(--sp-5) 0 var(--sp-2);
-    padding-top: var(--sp-5);
-    border-top: var(--bw) solid var(--border);
+  .accion__btn { width: 100%; }
+
+  /*
+   * ⚠️ **La flecha se mueve, el botón no.** Agrandar el botón entero
+   * recolocaría la tarjeta en cada pasada del ratón; una transformación la
+   * resuelve el compositor. Es lo mismo que hace la lupa del buscador.
+   */
+  .accion__btn svg { transition: transform var(--t-base) var(--ease); }
+  .accion__btn:hover svg { transform: translateX(3px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .accion__btn svg { transition: none; }
+    .accion__btn:hover svg { transform: none; }
+  }
+
+  /* ---- Lo que incluye el alquiler ---------------------------------------
+   *
+   * Su propia tarjeta, debajo de la ficha técnica. Ver el comentario del
+   * marcado: está ahí porque el cuadrante de arriba a la derecha se quedaba
+   * con 290 px en blanco.
+   */
+  .incluye {
+    margin-top: var(--sp-5);
+    padding: var(--sp-6);
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  .incluye__rotulo {
+    margin: 0 0 var(--sp-3);
     font-size: var(--fs-caption);
     font-weight: var(--fw-medium);
     color: var(--text-2);
@@ -879,55 +920,23 @@ import { EMPRESA } from '../lib/empresa';
     letter-spacing: var(--ls-wide);
   }
 
-  .reserva__incluye {
+  .incluye__lista {
     margin: 0;
     padding: 0;
     list-style: none;
     color: var(--text-2);
-    font-size: var(--fs-caption);
+    font-size: var(--fs-small);
   }
-  .reserva__incluye li { display: flex; gap: var(--sp-2); padding: var(--sp-1) 0; }
-  .reserva__incluye li::before { content: '✓'; color: var(--brand); flex: none; }
-
-  /* ---- Disponibilidad --------------------------------------------------- */
-
-  .dispo { margin-top: var(--sp-12); scroll-margin-top: var(--sp-16); }
-  .dispo__entrada { margin: 0 0 var(--sp-5); color: var(--text-2); }
-
-  .dispo__cuerpo {
-    display: grid;
-    gap: var(--sp-6);
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-
-  @media (min-width: 900px) {
-    .dispo__cuerpo { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--sp-10); }
-  }
-
-  .dispo__letra { margin: var(--sp-5) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
-
-  .dispo__lado {
-    padding: var(--sp-6);
-    background: var(--bg-alt);
-    border: var(--bw) solid var(--border);
-    border-radius: var(--r-xl);
-  }
-
-  .dispo__pista { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
-  .dispo__fechas { margin: 0; font-weight: var(--fw-medium); }
-  .dispo__dias { margin: var(--sp-1) 0 var(--sp-4); color: var(--text-3); font-size: var(--fs-caption); }
-  .dispo__precio {
-    margin: 0;
-    font-size: var(--fs-price);
-    font-weight: var(--fw-bold);
-    letter-spacing: var(--ls-tight);
-  }
-  .dispo__nota { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
-  .dispo__aviso { margin: 0 0 var(--sp-4); color: var(--danger); font-size: var(--fs-small); }
-  .dispo__btn { width: 100%; margin-bottom: var(--sp-2); }
+  .incluye__lista li { display: flex; gap: var(--sp-2); padding: var(--sp-1) 0; }
+  .incluye__lista li::before { content: '✓'; color: var(--brand); flex: none; }
 
   /* ---- El calendario ---------------------------------------------------- */
+
+  .dispo__entrada {
+    margin: calc(var(--sp-2) * -1) 0 var(--sp-5);
+    color: var(--text-2);
+    font-size: var(--fs-small);
+  }
 
   .cal {
     position: relative;
