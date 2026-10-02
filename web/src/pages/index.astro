@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import Buscador from '../components/Buscador.astro';
 import { EMPRESA } from '../lib/empresa';
 import { PREGUNTAS_PORTADA } from '../lib/preguntas';
+import { negocio } from '../lib/schema';
 
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
@@ -66,6 +67,18 @@ const PROMESAS = [
   ruta=""
   precarga="flota"
 >
+  {/*
+    ⚠️ **La portada NO declaraba nada, y es la que posiciona en local.** El
+    único JSON-LD de negocio vivía en `/contacto`, o sea en la página que menos
+    se enlaza desde fuera. Para «alquiler de coches Arganda», lo que un
+    buscador necesita saber —a qué se dedica, dónde está, cuándo abre y hasta
+    dónde llega— tiene que estar aquí.
+
+    ⚠️ **Y lleva el mismo `@id` que el de `/contacto`**, así que no son dos
+    negocios: son dos páginas describiendo el mismo. Sin el `@id`, compiten.
+  */}
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(negocio())} />
+
   {/* ---- Héroe ---------------------------------------------------------- */}
   <section class="hero">
     <div class="contenedor">

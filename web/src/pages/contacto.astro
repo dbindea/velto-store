@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
-import { EMPRESA, ENTREGA_FUERA_DE_HORARIO, HORARIO, SITIO } from '../lib/empresa';
+import { EMPRESA, ENTREGA_FUERA_DE_HORARIO, HORARIO } from '../lib/empresa';
+import { negocio } from '../lib/schema';
 
 /**
  * El negocio, para las máquinas.
@@ -23,48 +24,7 @@ import { EMPRESA, ENTREGA_FUERA_DE_HORARIO, HORARIO, SITIO } from '../lib/empres
  * es su ausencia. Escribirlo con horas a cero es la forma corriente de acabar
  * saliendo como abierto de madrugada.
  */
-const datosEstructurados = {
-  '@context': 'https://schema.org',
-  '@type': 'AutoRental',
-  name: EMPRESA.marca,
-  url: SITIO,
-  telephone: EMPRESA.telefono,
-  email: EMPRESA.correo,
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: EMPRESA.oficinaCalle,
-    postalCode: '28500',
-    addressLocality: 'Arganda del Rey',
-    addressRegion: 'Madrid',
-    addressCountry: 'ES',
-  },
-  openingHoursSpecification: HORARIO.flatMap((d) =>
-    d.tramos.map((t) => ({
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: [...d.dias],
-      opens: t[0],
-      closes: t[1],
-    }))
-  ),
-  /**
-   * ⚠️ **La ficha de Google Business Profile, y esto es lo que de verdad
-   * posiciona en local.** Para «alquiler de coches Arganda», la ficha pesa más
-   * que todo este JSON-LD junto: es lo que sale en el mapa, con las reseñas y
-   * el botón de cómo llegar.
-   *
-   * `sameAs` es lo que le dice a Google que **esta web y esa ficha son el
-   * mismo negocio**. Sin él las trata como dos entidades que casualmente
-   * comparten nombre y dirección, y el nombre, el teléfono y el horario de los
-   * dos sitios compiten en vez de confirmarse.
-   *
-   * ⚠️ **Y por eso los datos de aquí tienen que coincidir EXACTAMENTE con los
-   * de la ficha** —nombre, teléfono, dirección y horario—. Una discrepancia no
-   * da error en ninguna parte: simplemente Google se fía menos de los dos.
-   * Dorel creó la ficha el 2 de octubre de 2026; si cambia el horario en
-   * `empresa.ts`, hay que cambiarlo también allí.
-   */
-  sameAs: ['https://maps.app.goo.gl/cAwZQU2H8s8vxUtv7'],
-};
+const datosEstructurados = negocio();
 ---
 
 {/*

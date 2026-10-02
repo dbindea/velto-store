@@ -70,6 +70,22 @@ export const EMPRESA = {
    * desaparecen, la web vuelve a prometer algo que no cumple.
    */
   correo: 'reservas@veltomobility.com',
+  /**
+   * La ficha de Google Business Profile.
+   *
+   * ⚠️ **Para «alquiler de coches Arganda» esto pesa más que toda la web.** Es
+   * lo que sale en el mapa, con las reseñas y el botón de cómo llegar, y la
+   * mayoría de las búsquedas locales se resuelven ahí sin que nadie entre en
+   * ninguna página.
+   *
+   * ⚠️ **Vive aquí porque lo usa el JSON-LD como `sameAs`**, que es lo que le
+   * dice al buscador que la web y esa ficha son el **mismo** negocio. Sin eso
+   * las trata como dos entidades que casualmente comparten nombre y dirección,
+   * y los datos de las dos compiten en vez de confirmarse.
+   *
+   * Creada por Dorel el 2 de octubre de 2026.
+   */
+  fichaGoogle: 'https://maps.app.goo.gl/cAwZQU2H8s8vxUtv7',
 } as const;
 
 /**

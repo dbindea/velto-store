@@ -26,6 +26,23 @@ interface Props {
    */
   ruta: string | null;
   /**
+   * La imagen con la que se comparte ESTA página, si tiene una propia.
+   *
+   * ⚠️ **Existe para que un coche compartido enseñe el coche.** Sin ella todas
+   * las páginas comparten el logotipo, que es lo correcto para `/condiciones`
+   * y lo peor posible para la ficha de un Corolla: un enlace de WhatsApp sin
+   * la foto del coche del que se está hablando. Lo pidió Dorel el 2 de octubre
+   * de 2026.
+   *
+   * ⚠️ **Y tiene que ser ABSOLUTA.** Las de los coches vienen de Storage y ya
+   * lo son; si algún día se pasa una ruta relativa, los rastreadores de
+   * WhatsApp y LinkedIn no la resuelven —leen el HTML fuera de contexto— y la
+   * tarjeta sale sin imagen. Es el fallo clásico de esta etiqueta.
+   */
+  imagen?: string;
+  /** Qué se ve en esa imagen. Con una foto de coche, el coche. */
+  imagenAlt?: string;
+  /**
    * Qué datos adelantar desde el `<head>`, si esta página pide alguno.
    *
    * ⚠️ **Lo que ahorra es medio segundo en toda visita**, y no por ir más
@@ -40,7 +57,11 @@ interface Props {
   precarga?: 'flota' | 'coche';
 }
 
-const { titulo, descripcion, ruta, precarga } = Astro.props;
+const { titulo, descripcion, ruta, precarga, imagen, imagenAlt: alt } = Astro.props;
+
+/** La de la página si la trae; si no, la de la marca. Siempre absoluta. */
+const imagenAlt = alt || "Velto Mobility — alquiler de coches en Arganda del Rey";
+const imagenCompartir = imagen || `${SITIO}/brand/og.png`;
 
 /**
  * El menú principal, decidido por Dorel el 30 de septiembre de 2026.
@@ -124,6 +145,27 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
 
     {/*
+      ⚠️ **El manifiesto es lo que deja instalar la web como aplicación**, que
+      es lo que pidió Dorel el 2 de octubre de 2026. Sin él, Android ofrece
+      «Añadir a pantalla de inicio» y lo que crea es un **acceso directo al
+      navegador**: se abre con barra de direcciones, pestañas y todo. Con él se
+      abre en su propia ventana, con el icono y el color de la marca.
+
+      ⚠️ **Y NO lleva service worker, a propósito.** Un `display: standalone`
+      no lo exige; lo que exige un service worker es el modo sin conexión, y
+      aquí **sería mentira**: esta web no sirve de nada sin red —la flota, la
+      disponibilidad y el precio los da una API en cada visita—. Una aplicación
+      que se abre sin conexión y no puede enseñar un solo coche es peor que un
+      error de red honesto. Si algún día hay algo que de verdad funcione sin
+      red, entonces se añade.
+
+      ⚠️ **`start_url` lleva `?origen=pwa`** para poder distinguir las visitas
+      desde el icono en el futuro; no lo lee nadie todavía, y no hace falta que
+      lo lea para que sirva: queda en el histórico.
+    */}
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    {/*
       ⚠️ **Las fotos viven en OTRO origen, y el saludo se paga dentro del camino
       crítico.** Salen de `firebasestorage.googleapis.com`, así que la primera no
       puede empezar a bajar hasta hacer DNS + TCP + TLS contra un servidor con el
@@ -196,11 +238,20 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       miniatura — y si tarda, la enseña pequeña. Con `og:image:width` lo sabe
       antes de bajarla.
     */}
-    <meta property="og:image" content={`${SITIO}/brand/og.png`} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:alt" content="Velto Mobility — alquiler de coches en Arganda del Rey" />
+    {/*
+      ⚠️ **Las medidas y el tipo solo se declaran para la imagen de la MARCA.**
+      Esa sí se sabe que es un PNG de 1200×630 porque la genera
+      `scripts/generar-og.js`; la foto de un coche viene de Storage con la
+      proporción que tenga y es JPEG o WebP. Declarar 1200×630 de una foto que
+      no lo es hace que el rastreador reserve un hueco que no encaja y recorte
+      donde no debe — y es peor que no decir nada, porque con la etiqueta se fía
+      y sin ella mide.
+    */}
+    <meta property="og:image" content={imagenCompartir} />
+    {!imagen && <meta property="og:image:width" content="1200" />}
+    {!imagen && <meta property="og:image:height" content="630" />}
+    {!imagen && <meta property="og:image:type" content="image/png" />}
+    <meta property="og:image:alt" content={imagenAlt} />
 
     {/*
       ⚠️ **`summary_large_image` o la tarjeta sale en miniatura.** Por defecto X
@@ -209,7 +260,7 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       entre ellos—, y no estorban a Open Graph.
     */}
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content={`${SITIO}/brand/og.png`} />
+    <meta name="twitter:image" content={imagenCompartir} />
     {/*
       ⚠️ **Esto pinta la barra de direcciones de Chrome en Android, y estaba
       en VERDE.** Es el tercer sitio donde un verde hacía de superficie —los

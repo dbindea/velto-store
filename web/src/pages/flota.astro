@@ -1,5 +1,26 @@
 ---
 import Base from '../layouts/Base.astro';
+import { flotaEnBuild } from '../lib/flota-build';
+import { tarjetaCoche } from '../lib/tarjeta';
+import { migas } from '../lib/schema';
+
+/**
+ * ⚠️ **La flota, pintada ya en el HTML.** Hasta el 2 de octubre de 2026 esta
+ * página servía 61 palabras y la última era «Cargando la flota…»: para un
+ * rastreador que no ejecute JavaScript —y los de los buscadores con IA no lo
+ * ejecutan— el catálogo de esta empresa estaba vacío.
+ *
+ * ⚠️ **Se usa la MISMA función que el navegador** (`tarjetaCoche`), no una
+ * plantilla parecida. Dos formas de pintar la misma tarjeta divergen a la
+ * primera, y aquí la divergencia sería invisible: nadie compara a ojo el HTML
+ * del servidor con el que repinta el script.
+ *
+ * ⚠️ **Y el script sigue repintando al cargar.** Lo de aquí es el estado del
+ * último despliegue; lo que el visitante ve es lo de ahora. Por eso esto no
+ * rompe «publicar un coche se ve al momento».
+ */
+const coches = await flotaEnBuild();
+const tarjetas = coches.map((c) => tarjetaCoche(c)).join('');
 ---
 
 <Base
@@ -8,6 +29,11 @@ import Base from '../layouts/Base.astro';
   ruta="/flota"
   precarga="flota"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(migas([{ nombre: 'Inicio', ruta: '' }, { nombre: 'Flota', ruta: '/flota' }]))}
+  />
   <section class="seccion">
     <div class="contenedor">
       <p class="overline">Flota</p>
@@ -39,8 +65,18 @@ import Base from '../layouts/Base.astro';
         coches» cuando lo que ha fallado es la petición manda al visitante a
         otra web creyendo que no tenemos flota.
       */}
-      <div id="lista" class="rejilla" hidden></div>
-      <p id="cargando" class="aviso">Cargando la flota…</p>
+      {/*
+        ⚠️ **Nace con los coches del build y VISIBLE si los hay.** Oculto y
+        vacío, el HTML previo no serviría de nada: un rastreador lee el
+        marcado, y `hidden` le dice que eso no se enseña.
+
+        ⚠️ **Y «Cargando la flota…» solo sale si no hay nada que enseñar.** Con
+        tarjetas ya pintadas, ese aviso sería falso desde el primer byte — y
+        encima el visitante vería los coches **y** un cartel diciendo que se
+        están cargando.
+      */}
+      <div id="lista" class="rejilla" hidden={!tarjetas} set:html={tarjetas} />
+      <p id="cargando" class="aviso" hidden={!!tarjetas}>Cargando la flota…</p>
       <p id="vacio" class="aviso" hidden>
         Ahora mismo no hay vehículos publicados. Llámanos y te decimos qué
         tenemos disponible.
