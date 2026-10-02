@@ -75,6 +75,20 @@ npm test                      # app (src/**/*.spec.ts) vía @angular/build:unit-
 npm --prefix functions test   # Cloud Functions (functions/src/**/*.spec.ts)
 ```
 
+⚠️ **`npm test` deja basura en `dist/test-out`, y por eso lleva un `pretest`.**
+El builder compila la aplicación para poder pasar los tests y escribe el
+resultado en `dist/test-out/<fecha>-<hash>` — **una carpeta por ejecución, y no
+borra ninguna**. Medido el 2 de octubre de 2026: **308 carpetas y 3,6 GB**
+acumulados desde el 21 de agosto, con el disco de la máquina al 100 % y
+comandos sueltos fallando con «No space left on device», que es un error que no
+dice de dónde viene. Para comparar, la build de verdad ocupa 3,7 MB: el 99,9 %
+de `dist/` era esto.
+
+Lo limpia `scripts/limpiar-salida-tests.js`, colgado de `pretest` y **no** de
+`posttest`: npm solo ejecuta el `post…` si el script termina bien, así que una
+tanda que falla —justo la que se repite más veces— dejaría su carpeta para
+siempre.
+
 Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar dinero:
 
 - `reservation-workflow.util.spec.ts` — los guards `can*`, los overrides de `WorkflowContext`, y las excepciones de workflow
@@ -412,12 +426,11 @@ src/app/
 ├── core/
 │   ├── auth/auth.service.ts          # Firebase Auth + autorización vía Firestore
 │   ├── config/brand.config.ts
-│   ├── firebase/                     # firestore.service.ts, storage.service.ts
+│   ├── firebase/storage.service.ts
 │   ├── guards/                       # auth.guard.ts, public.guard.ts
 │   ├── i18n/translate.service.ts
 │   ├── reports/reports.service.ts
 │   ├── search/global-search.service.ts
-│   ├── services/firebase-status.service.ts
 │   └── theme/theme.service.ts
 ├── features/                         # cada uno con pages/ + services/ + components/
 │   ├── calendar/  clients/  contracts/  dashboard/  expenses/
@@ -453,6 +466,16 @@ functions/src/
 ```
 
 **Ya no queda ningún placeholder**: Gastos y Ajustes se construyeron el 4 de septiembre de 2026.
+
+⚠️ **Y ya no queda andamio tampoco.** El 2 de octubre de 2026 se borraron tres
+piezas de los primeros días que **no llamaba nadie**: `home/home.component.ts`
+—una pantalla de «estado de Firebase» con colores de Tailwind que no estaba ni
+enrutada—, el `FirebaseStatusService` que la alimentaba, y
+`core/firebase/firestore.service.ts`, un envoltorio genérico de Firestore que
+quedó huérfano en cuanto cada feature se hizo su propio servicio. Esta misma
+lista los nombraba, así que **la estructura escrita aquí describía ficheros que
+ya no servían para nada**: si borras algo de `src/app`, mira si está en este
+árbol.
 
 ## Lógica de negocio
 
@@ -4510,7 +4533,9 @@ cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en u
   `calculateReservationPaymentSummary(payments, reservation)` en vez de leer la copia. Y al
   añadir un campo al resumen, mételo también en la comparación de
   `reconcileAfterExternalPayment()`, o la copia no se pondrá al día nunca: el resto cuadra.
-- Sin lint.
+- ~~Sin lint.~~ **Existe desde el 22 de septiembre de 2026** y está documentado
+  arriba (`npm run lint`). La línea se quedó aquí tres semanas contradiciendo a
+  su propio fichero: una lista de deuda técnica que no se tacha deja de leerse.
 - `deploy.log` y `test-contract-{en,es,ro}.pdf` están en `.gitignore` y **ya no están en el
   índice** (comprobado con `git ls-files` el 7 de septiembre de 2026). La trampa que los
   puso aquí sigue siendo cierta para el siguiente: ignorar un fichero no deja de seguir uno

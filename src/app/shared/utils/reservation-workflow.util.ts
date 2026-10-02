@@ -348,34 +348,20 @@ export function canCancelReservation(ctx: WorkflowContext): WorkflowDecision {
   return ALLOW;
 }
 
-// ---------------------------------------------------------------------------
-// Computed helpers used by both UI and services.
-// ---------------------------------------------------------------------------
-
-/** Convenience: status used by the UI to decide whether to highlight "danger". */
-export function isReserved(status: ReservationStatus): boolean {
-  return status === 'reserved';
-}
-
-/** Convenience: status used to confirm the booking financially. */
-export function isConfirmed(status: ReservationStatus): boolean {
-  return status === 'confirmed';
-}
-
-/** Convenience: status used to track live rentals. */
-export function isDelivered(status: ReservationStatus): boolean {
-  return status === 'delivered';
-}
-
-/** Convenience: status used to track post-return pending close. */
-export function isReturned(status: ReservationStatus): boolean {
-  return status === 'returned';
-}
-
-/** Convenience: terminal status. */
-export function isClosed(status: ReservationStatus): boolean {
-  return status === 'closed' || status === 'cancelled';
-}
+/*
+ * ⚠️ **Aquí vivían cinco atajos —`isReserved`, `isConfirmed`, `isDelivered`,
+ * `isReturned` e `isClosed`— y no los llamaba NADIE.** Cada uno envolvía un
+ * `status === '…'` en una función, y el decorado decía «used by both UI and
+ * services» cuando llevaban desde siempre sin un solo uso: ni en una
+ * plantilla, ni en un servicio, ni en un test. Se fueron el 2 de octubre de
+ * 2026.
+ *
+ * ⚠️ **Y el peor era `isClosed()`, que devolvía `true` también para
+ * `cancelled`.** Un nombre que dice una cosa y contesta dos es exactamente la
+ * clase de atajo que alguien habría usado un día para decidir si una reserva
+ * está cerrada, contando como cerradas las canceladas. Lo que vale es
+ * preguntar por el estado, que no admite esa confusión.
+ */
 
 /**
  * Return the first blocking reason found in the workflow chain, or 'completed'

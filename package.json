@@ -7,6 +7,7 @@
     "build": "node scripts/write-build-info.js && ng build --configuration dev",
     "build:prod": "node scripts/write-build-info.js && ng build --configuration production",
     "watch": "ng build --watch --configuration development",
+    "pretest": "node scripts/limpiar-salida-tests.js",
     "test": "ng test",
     "serve:hosting": "npm run build && firebase emulators:start --only hosting",
     "firebase:emulators": "firebase emulators:start",
