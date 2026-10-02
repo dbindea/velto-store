@@ -38,27 +38,28 @@ export const BRAND_CONFIG = {
   legalName: 'VELTO MOBILITY, S.L.',
   /** Public tax id shown in contracts and footer. */
   taxId: 'B88866900',
-  /**
-   * ⚠️ **Datos de contacto: NO los uses para nada que vea el cliente.**
+  /*
+   * ⚠️ **Aquí vivían `email`, `phone` y `website`, y se fueron el 2 de octubre
+   * de 2026.** Su propio comentario decía «NO los uses para nada que vea el
+   * cliente» y **no los usaba nadie**: eran tres literales esperando a que
+   * alguien los pintara.
    *
-   * Este fichero se compila dentro del bundle, y la app se construye igual para
-   * los dos entornos: lo que pongas aquí sale idéntico en desarrollo y en
-   * producción. El correo y el dominio **sí** cambian entre entornos, y viven en
-   * `functions/.env.<proyecto>` (`VELTO_COMPANY_EMAIL`, `VELTO_PUBLIC_BASE_URL`).
+   * El motivo de la prohibición sigue en pie: este fichero se compila dentro
+   * del bundle y la aplicación se construye **igual** para los dos entornos,
+   * así que un correo escrito aquí sale idéntico en desarrollo y en
+   * producción. Pasó de verdad (F-33): el pie de la pantalla pública de firma
+   * llevaba `reservas@veltorent.com` a mano y el cliente de producción veía el
+   * correo de desarrollo justo debajo del botón de firmar.
    *
-   * Pasó de verdad: el pie de la pantalla pública de firma llevaba
-   * `reservas@veltorent.com` escrito a mano, así que en producción el cliente
-   * veía el correo de desarrollo justo debajo del botón de firmar —mientras el
-   * contrato adjunto traía el bueno—. Ahora ese dato lo sirve
-   * `getContractForSigning`.
+   * Un dato que no se puede usar es mejor que no exista: mientras estuvo,
+   * cualquiera podía escribir `BRAND_CONFIG.email` sin leer el aviso. Dónde
+   * viven ahora:
    *
-   * Se quedan aquí porque son la referencia de la marca, no porque se pinten.
+   * - el correo y el dominio público → `functions/.env.<proyecto>`
+   *   (`VELTO_COMPANY_EMAIL`, `VELTO_PUBLIC_BASE_URL`), y los sirve la function
+   *   a quien los necesite — como hace `getContractForSigning`;
+   * - lo que imprimen los PDF → `functions/src/company-config.ts`.
    */
-  email: 'reservas@veltorent.com',
-  /** Public phone shown on contracts and sign-contract page. */
-  phone: '+34 623 766 181',
-  /** Public website shown on contract and email. */
-  website: 'https://www.veltorent.com',
 
   /** Primary brand colour (Pantone-inspired Velto green). */
   primaryColor: '#20A48F',

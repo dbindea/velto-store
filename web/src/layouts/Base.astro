@@ -141,10 +141,13 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     {adelanto && <script is:inline set:html={adelanto} />}
 
     {/*
-      ⚠️ La canónica es lo que impide que los DOS dominios compitan entre sí.
-      `veltorent.com` sirve el mismo sitio; sin esto, Google reparte el
-      posicionamiento en vez de sumarlo y puede acabar enseñando el que no
-      queremos.
+      ⚠️ **La canónica sigue haciendo falta aunque ya solo se nombre un
+      dominio.** Desde el 2 de octubre de 2026 la web no menciona
+      `veltorent.com` —está sin decidir si acabará siendo una landing o se
+      suelta—, pero mientras ese dominio exista y resuelva a algo, una
+      canónica explícita es lo que impide que Google elija por su cuenta qué
+      versión enseñar. Y vale igual para el sitio de desarrollo, que sirve el
+      mismo HTML.
     */}
     {canonica && <link rel="canonical" href={canonica} />}
 
@@ -468,8 +471,16 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
           </div>
         </div>
 
+        {/*
+          ⚠️ **Un solo dominio, `veltomobility.com`.** Aquí se nombraban los
+          dos, y Dorel lo cortó el 2 de octubre de 2026: qué se hace con
+          `veltorent.com` —una landing, o soltar el dominio— está sin decidir,
+          y mientras tanto nombrarlo solo reparte la marca. Si algún día vuelve
+          a servir contenido, lo que hay que mirar primero es la canónica de
+          arriba, no esta línea.
+        */}
         <div class="pie__cierre">
-          <span>© {anio} Velto Mobility · veltorent.com · veltomobility.com</span>
+          <span>© {anio} Velto Mobility · veltomobility.com</span>
           <span>Precios en euros, IVA incluido</span>
         </div>
       </div>

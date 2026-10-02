@@ -124,7 +124,15 @@ export const ENTREGA_FUERA_DE_HORARIO =
   'Fuera de ese horario también entregamos y recogemos, incluido el domingo: ' +
   'se acuerda antes por teléfono o por WhatsApp.';
 
-/** El dominio canónico. `veltorent.com` sirve lo mismo y redirige aquí. */
+/**
+ * El dominio canónico, y desde el 2 de octubre de 2026 **el único que la web
+ * nombra**.
+ *
+ * ⚠️ Aquí ponía que `veltorent.com` sirve lo mismo y redirige. Ya no se
+ * promete eso: Dorel dejó en el aire qué hacer con ese dominio —una landing
+ * aparte, o soltarlo— y lo que la web no puede hacer es nombrar un sitio cuyo
+ * contenido no está decidido.
+ */
 export const SITIO = 'https://veltomobility.com';
 
 /**

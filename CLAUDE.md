@@ -1381,12 +1381,26 @@ Escrito como estaba, cualquiera que fuera a comprobar un despliegue miraba un
 dominio que no responde y concluía que el despliegue había fallado. **Esta tabla
 dice lo que sirve; los dominios entran cuando responden.**
 
-⚠️ **El canónico será `veltomobility.com`; `veltorent.com` servirá lo mismo y
-redirigirá.** Dos dominios con el mismo contenido **no suman posicionamiento, lo
-reparten**, así que el `<link rel="canonical">` del layout no es decorativo: sin
-él, Google elige por su cuenta cuál enseñar. ⚠️ Y esa redirección **no está en
-el repositorio**: `firebase.json` no tiene ningún bloque `redirects`, así que
-tiene que ser una regla de Cloudflare.
+⚠️ **El canónico es `veltomobility.com`, y desde el 2 de octubre de 2026 es el
+ÚNICO que la web nombra.** Aquí ponía que `veltorent.com` serviría lo mismo y
+redirigiría; Dorel lo dejó en el aire ese día —«más adelante ya veremos qué
+hacemos con veltorent, quizás otra página tipo landing, o renuncio al
+dominio»—, así que la web dejó de nombrarlo: el pie decía los dos y ahora dice
+uno.
+
+Dos dominios con el mismo contenido **no suman posicionamiento, lo reparten**,
+así que el `<link rel="canonical">` del layout sigue haciendo falta mientras
+`veltorent.com` resuelva a algo — y también por el sitio de desarrollo, que
+sirve el mismo HTML. ⚠️ Lo que **no** hay es ninguna redirección en el
+repositorio: `firebase.json` no tiene bloque `redirects`, así que el día que se
+decida qué hace ese dominio, se hace en Cloudflare.
+
+⚠️ **Y lo que ya está impreso no se arregla.** `VELTO_COMPANY_WEBSITE` no está
+puesta en ningún `.env`, así que el dominio que sale en las **facturas** era el
+literal por defecto de `company-config.ts` — `www.veltorent.com` hasta ese día.
+Las facturas emitidas en producción desde el 17 de septiembre lo llevan dentro y
+**no se pueden corregir**: una factura emitida no se edita ni se borra. Las
+siguientes salen con el bueno.
 
 ### El sitio de verdad se distingue por el MODO de compilación
 

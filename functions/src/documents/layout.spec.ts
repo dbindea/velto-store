@@ -40,8 +40,8 @@ const company = {
   address: COMPANY_ADDRESS,
   officeAddress: COMPANY_OFFICE_ADDRESS,
   phone: '+34 623 766 181',
-  email: 'reservas@veltorent.com',
-  website: 'www.veltorent.com'
+  email: 'reservas@veltomobility.com',
+  website: 'veltomobility.com'
 };
 
 // Deliberately awkward: a long legal name and a long address are exactly what
