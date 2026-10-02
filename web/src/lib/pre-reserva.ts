@@ -8,6 +8,7 @@
  */
 
 import { solicitar } from './api';
+import { ocupar, ocuparUnRato, type Ocupado } from './boton-ocupado';
 import { capitalizarNombre, transformarCampo } from './texto';
 
 export interface DatosPreReserva {
@@ -80,6 +81,9 @@ export function montarPreReserva(): PreReserva | null {
 
   let elegido: DatosPreReserva | null = null;
 
+  /** El estado «ocupado» del botón de enviar, mientras hay petición en vuelo. */
+  let ocupado: Ocupado | null = null;
+
   /*
    * ⚠️ **El nombre se capitaliza al escribir, con el cursor donde estaba.**
    * Es un nombre propio y lo que se teclea en un móvil llega casi siempre en
@@ -97,6 +101,29 @@ export function montarPreReserva(): PreReserva | null {
 
   document.getElementById('dlg-cerrar')?.addEventListener('click', () => dlg.close());
   document.getElementById('dlg-ok')?.addEventListener('click', () => dlg.close());
+
+  /*
+   * ⚠️ **El presupuesto se abre en OTRA pestaña, y el `target` solo no basta.**
+   * Sin él, pulsar se llevaba al visitante fuera de la web —a la URL de
+   * Storage— y perdía el diálogo con su referencia: para volver a descargarlo
+   * había que rehacer la pre-reserva. Lo contó Dorel el 2 de octubre de 2026.
+   * Con pestaña aparte, esta se queda intacta y se puede bajar las veces que
+   * haga falta, que es lo que él pidió.
+   *
+   * ⚠️ **Y el acuse de recibo va en un `setTimeout(…, 0)`.** Apagar el enlace
+   * dentro del propio manejador le pone `pointer-events: none` antes de que el
+   * navegador haya resuelto la navegación, y el riesgo es que no abra nada.
+   * Cediendo un tick, la pestaña ya está en marcha.
+   *
+   * ⚠️ **Dice «Abriendo…» y dura un rato fijo, porque no hay nada que
+   * esperar.** La descarga se la lleva otra pestaña y esta página no se entera
+   * de cuándo termina: fingir una barra de progreso sería inventarse un dato.
+   * Lo que resuelve es lo otro —que pulsar no cambiaba nada aquí y lo que se
+   * hace entonces es volver a pulsar—.
+   */
+  presupuesto?.addEventListener('click', () => {
+    setTimeout(() => ocuparUnRato(presupuesto, 1500, 'Abriendo…'), 0);
+  });
 
   /**
    * ⚠️ **Cerrar con la pre-reserva ya hecha devuelve a la portada.** Quedándose
@@ -141,8 +168,10 @@ export function montarPreReserva(): PreReserva | null {
     form!.hidden = false;
     hecho!.hidden = true;
     form!.reset();
-    enviar!.disabled = false;
-    enviar!.textContent = 'Reservar';
+    // Por si se reabre con una petición a medias: no puede pasar —el diálogo
+    // es modal y el botón está apagado—, pero el estado se repone igual.
+    ocupado?.libre();
+    ocupado = null;
     dlg!.showModal();
   }
 
@@ -151,8 +180,14 @@ export function montarPreReserva(): PreReserva | null {
     if (!elegido) return;
 
     error.hidden = true;
-    enviar.disabled = true;
-    enviar.textContent = 'Reservando…';
+    /*
+     * ⚠️ **Apagado, con rueda y diciendo qué hace.** El botón ya se apagaba
+     * —tres clics seguidos dan una sola petición, medido— pero no lo parecía:
+     * sin regla `:disabled` en `.btn` seguía con su turquesa y su cursor de
+     * mano. Y entre pulsar y la respuesta pasan segundos: la function escribe
+     * la solicitud, genera el presupuesto y manda dos correos.
+     */
+    ocupado = ocupar(enviar, 'Reservando…');
 
     const datos = new FormData(form);
     solicitar({
@@ -166,6 +201,8 @@ export function montarPreReserva(): PreReserva | null {
       trap: String(datos.get('trap') || ''),
     })
       .then((r) => {
+        ocupado?.libre();
+        ocupado = null;
         ref.textContent = r.reference;
         if (garantia) garantia.textContent = hastaCuando(r.priceGuaranteedUntil);
 
@@ -196,8 +233,8 @@ export function montarPreReserva(): PreReserva | null {
         hecho.hidden = false;
       })
       .catch((err: Error) => {
-        enviar.disabled = false;
-        enviar.textContent = 'Reservar';
+        ocupado?.libre();
+        ocupado = null;
         error.textContent =
           MOTIVOS[err.message] ??
           'No hemos podido enviarlo. Inténtalo otra vez o escríbenos por WhatsApp.';

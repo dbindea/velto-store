@@ -285,7 +285,12 @@ import { ORDENES } from '../lib/resultados';
     vacio.hidden = true;
     cargando.hidden = false;
 
-    disponibilidad(desde, hasta)
+    /*
+     * ⚠️ **Se DEVUELVE la promesa, y no es cosmético.** Es lo que deja al
+     * buscador apagar su botón mientras dura la consulta: sin esto,
+     * `montarBuscador` lo soltaría en el mismo instante en que lo apaga.
+     */
+    return disponibilidad(desde, hasta)
       .then((r) => {
         cargando.hidden = true;
         if (!r.vehicles.length) {

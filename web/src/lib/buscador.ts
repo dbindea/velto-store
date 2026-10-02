@@ -21,6 +21,7 @@
 
 import { montarComboZonas } from './zonas-combo';
 import { montarCalendarios } from './fecha-panel';
+import { ocupar } from './boton-ocupado';
 
 /** Las 10:00, cuando abre la oficina. Nadie recoge un coche a medianoche. */
 export const RECOGIDA_POR_DEFECTO = 10;
@@ -98,7 +99,13 @@ export interface OpcionesBuscador {
    * que separa la portada —que salta a `/reservar`— de la página de
    * resultados, que vuelve a consultar sin recargar.
    */
-  alBuscar?: (v: { desde: string; hasta: string; lugar: string }) => void;
+  /**
+   * ⚠️ **Devuelve una promesa para que el botón sepa cuándo soltarse.** En la
+   * portada esto no existe —el formulario navega y lo apaga el navegador—,
+   * pero en los resultados la búsqueda es una llamada a la API y el botón se
+   * quedaba vivo: pulsar tres veces lanzaba tres consultas.
+   */
+  alBuscar?: (v: { desde: string; hasta: string; lugar: string }) => void | Promise<unknown>;
 }
 
 /**
@@ -215,9 +222,19 @@ export function montarBuscador(opciones: OpcionesBuscador = {}): CamposBuscador 
 
   if (opciones.alBuscar) {
     const alBuscar = opciones.alBuscar;
+    const boton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      alBuscar({ desde: desde.value, hasta: hasta.value, lugar: lugar?.value ?? '' });
+      /*
+       * ⚠️ **El botón se apaga mientras dura la consulta.** Aquí el
+       * formulario no navega —lo atiende este manejador—, así que nada lo
+       * apagaba: tres clics eran tres llamadas a la API, y la última en
+       * volver no tiene por qué ser la última que se pidió. Mismo mecanismo
+       * que la pre-reserva, en `boton-ocupado.ts`.
+       */
+      const o = boton ? ocupar(boton, 'Buscando…') : null;
+      Promise.resolve(alBuscar({ desde: desde.value, hasta: hasta.value, lugar: lugar?.value ?? '' }))
+        .finally(() => o?.libre());
     });
   }
 

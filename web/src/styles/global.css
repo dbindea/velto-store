@@ -1021,6 +1021,47 @@ input.picker-propio {
 .btn--soft { background: var(--brand-soft); color: var(--brand-text); }
 .btn--soft:hover { background: var(--brand-soft-2); }
 
+/* ---- Un botón apagado tiene que PARECERLO ---------------------------------
+ *
+ * ⚠️ **No había ninguna regla, y esto es el M-46 del backoffice otra vez.**
+ * `.btn:disabled` no existía, así que un botón deshabilitado medía
+ * `opacity: 1`, `cursor: pointer` y su color de marca entero: igual que uno
+ * pulsable. El de la pre-reserva sí se apagaba de verdad —medido el 2 de
+ * octubre de 2026, tres clics seguidos dan **una** petición—, pero nada de eso
+ * se veía, así que lo que el visitante hace es volver a pulsar.
+ *
+ * ⚠️ **`pointer-events: none` y no `cursor: not-allowed`.** Hace falta para el
+ * `<a>` de descargar —un enlace no entiende `disabled`— y de paso apaga el
+ * `:hover` del color de marca, que si no seguiría encendiéndose bajo el ratón
+ * y contaría lo contrario. El cursor se queda en flecha, que ya dice que ahí
+ * no se pulsa.
+ */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/*
+ * La rueda del estado ocupado. Ver `lib/boton-ocupado.ts`: entre pulsar
+ * «Reservar» y la respuesta pasan segundos, y una espera sin nada que se mueva
+ * se lee como una aplicación colgada.
+ */
+.btn__rueda {
+  flex: none;
+  animation: btn-girar 0.7s linear infinite;
+}
+
+@keyframes btn-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* Quien pida menos movimiento se queda con la rueda quieta, que sigue
+   distinguiendo el botón ocupado del normal. */
+@media (prefers-reduced-motion: reduce) {
+  .btn__rueda { animation: none; }
+}
+
 /* ---- Tarjetas ----------------------------------------------------------- */
 
 .card {

@@ -312,6 +312,7 @@ const datosEstructurados = {
 
 <script>
   import { contactar, type ConsultaContacto } from '../lib/api';
+  import { ocupar } from '../lib/boton-ocupado';
 
   const form = document.getElementById('form') as HTMLFormElement | null;
   const enviado = document.getElementById('enviado');
@@ -379,8 +380,9 @@ const datosEstructurados = {
       if (!datos.name?.trim()) return fallar('bad-name');
       if (!datos.phone?.trim()) return fallar('bad-phone');
 
-      boton.disabled = true;
-      boton.textContent = 'Enviando…';
+      // Apagado, con rueda y diciendo qué hace. Mismo mecanismo que la
+      // pre-reserva: ver `lib/boton-ocupado.ts`.
+      const ocupado = ocupar(boton, 'Enviando…');
       try {
         const { reference } = await contactar({ ...datos, trap: datos.trap ?? '' });
         const ref = document.getElementById('referencia');
@@ -390,8 +392,7 @@ const datosEstructurados = {
         enviado.scrollIntoView({ block: 'center', behavior: 'smooth' });
       } catch (err) {
         fallar(err instanceof Error ? err.message : 'error');
-        boton.disabled = false;
-        boton.textContent = 'Enviar';
+        ocupado.libre();
       }
     });
   }
