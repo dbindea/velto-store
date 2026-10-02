@@ -411,12 +411,29 @@ import PreReserva from '../components/PreReserva.astro';
           </ul>
         </div>
 
-        <section class="dispo" id="disponibilidad">
+        ${/*
+           * ⚠️ **El rótulo es un HERMANO del calendario, no su cabecera.** Lo
+           * pidió Dorel el 2 de octubre de 2026: «la card del calendario debe
+           * estar alineada en horizontal con la card de Reservar, y el texto
+           * encima, más pegado a la galería». Metido dentro de la sección, sus
+           * 90 px empujaban el calendario hacia abajo mientras la tarjeta de
+           * la derecha arrancaba arriba del todo: dos tarjetas de la misma
+           * fila que no empezaban a la misma altura. Suelto ocupa su propia
+           * fila de la rejilla y las dos tarjetas quedan a ras.
+           *
+           * ⚠️ **Y ocupa SOLO la columna del calendario.** «Lo tachado ya está
+           * cogido» describe el calendario; a lo ancho de las dos columnas
+           * quedaría también sobre el precio, que no tiene nada tachado.
+           */ ''}
+        <header class="dispo__titulo">
           <h2 class="ficha__h2">Elige tus fechas</h2>
           <p class="dispo__entrada">
             Lo tachado ya está cogido. Marca el día de recogida y el de
             devolución.
           </p>
+        </header>
+
+        <section class="dispo" id="disponibilidad">
           <div class="cal" id="cal"></div>
         </section>
 
@@ -646,12 +663,21 @@ import PreReserva from '../components/PreReserva.astro';
    * ve cambiar sin desplazar la página. Puesta arriba, el visitante marcaba
    * fechas abajo y el número se actualizaba fuera de la pantalla.
    */
+  /*
+   * ⚠️ **El rótulo «Elige tus fechas» tiene su propia FILA.** Dentro de la
+   * sección del calendario, sus 90 px empujaban la tarjeta hacia abajo
+   * mientras la de la derecha arrancaba a ras de la fila: las dos tarjetas de
+   * la misma banda no empezaban a la misma altura, que es lo que señaló Dorel
+   * el 2 de octubre de 2026. En su propia fila, el rótulo queda pegado a la
+   * galería y el calendario y el precio arrancan juntos.
+   */
   @media (min-width: 900px) {
     .ficha {
       grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
       grid-template-areas:
         'galeria resto'
         'galeria incluye'
+        'titulo  .'
         'dispo   accion';
       align-items: start;
       column-gap: var(--sp-10);
@@ -659,13 +685,10 @@ import PreReserva from '../components/PreReserva.astro';
     }
     .ficha__galeria { grid-area: galeria; }
     .ficha__resto { grid-area: resto; }
-    .incluye { grid-area: incluye; margin-top: 0; }
+    .incluye { grid-area: incluye; }
+    .dispo__titulo { grid-area: titulo; }
     .dispo { grid-area: dispo; }
     .accion { grid-area: accion; }
-
-    /* El aire entre el coche y la zona de decidir sí es el grande. */
-    .dispo,
-    .accion { margin-top: var(--sp-6); }
   }
 
   /*
@@ -673,9 +696,15 @@ import PreReserva from '../components/PreReserva.astro';
    * del botón. Es tranquilidad, no un dato para decidir: puesta en su sitio del
    * código —justo debajo de la ficha técnica— metía 316 px entre el coche y el
    * calendario y dejaba el precio a 1.982 px del principio de la página.
+   *
+   * ⚠️ **Y el rótulo lleva MÁS aire arriba que abajo.** Con el hueco de la
+   * rejilla a los dos lados quedaba a la misma distancia de la tarjeta de
+   * encima y de la de debajo, o sea flotando entre las dos sin decir a cuál
+   * pertenece.
    */
   @media (max-width: 899px) {
     .incluye { order: 1; }
+    .dispo__titulo { margin-top: var(--sp-4); }
   }
 
   .ficha__galeria,
@@ -903,8 +932,13 @@ import PreReserva from '../components/PreReserva.astro';
    * marcado: está ahí porque el cuadrante de arriba a la derecha se quedaba
    * con 290 px en blanco.
    */
+  /*
+   * ⚠️ **Sin `margin-top`: el aire lo pone el hueco de la rejilla.** Lo tuvo,
+   * anulado solo en escritorio, y en móvil se sumaba al hueco: esta tarjeta
+   * quedaba 20 px más separada que todas las demás. Lo vio Dorel en una
+   * captura del 2 de octubre de 2026. Una sola fuente para la separación.
+   */
   .incluye {
-    margin-top: var(--sp-5);
     padding: var(--sp-6);
     background: var(--surface-card);
     border: var(--bw) solid var(--border);
@@ -932,8 +966,11 @@ import PreReserva from '../components/PreReserva.astro';
 
   /* ---- El calendario ---------------------------------------------------- */
 
+  /* El rótulo y su línea de instrucciones, en su propia fila de la rejilla. */
+  .dispo__titulo .ficha__h2 { margin: 0; }
+
   .dispo__entrada {
-    margin: calc(var(--sp-2) * -1) 0 var(--sp-5);
+    margin: var(--sp-1) 0 0;
     color: var(--text-2);
     font-size: var(--fs-small);
   }
