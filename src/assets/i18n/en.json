@@ -713,7 +713,8 @@
       "secureNote": "Payment processed by Redsys. We never store your card details.",
       "subtitle": "Secure payment",
       "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us.",
-      "unavailableTitle": "Payment unavailable"
+      "unavailableTitle": "Payment unavailable",
+      "signalTerms": "This deposit is deducted from the rental price. Once paid, we confirm your booking and hold the car for those dates; if you cancel afterwards, the deposit is not refunded. If we are the ones unable to provide the car, you get it back in full."
     },
     "confirm": {
       "cancelMessage": "The payment will be cancelled and will no longer count as outstanding.",
@@ -2114,6 +2115,16 @@
     "extended": "Price held for another 24 hours",
     "pickup": "Pick-up",
     "return": "Return",
-    "copied": "Copied"
+    "copied": "Copied",
+    "signal": {
+      "title": "Deposit",
+      "help": "Create the charge and send the link to the customer. The car is NOT held: the booking is made when you convert it.",
+      "create": "Charge the deposit",
+      "open": "Open the charge",
+      "created": "Charge created. Copy the link and send it.",
+      "failed": "The charge could not be created.",
+      "noAmount": "This request has no price: the deposit cannot be calculated.",
+      "concept": "Deposit for pre-booking {reference}"
+    }
   }
 }

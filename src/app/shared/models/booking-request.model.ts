@@ -75,6 +75,15 @@ export interface BookingRequest {
   name: string;
   /** Solo dígitos con prefijo y sin `+`: lo que `wa.me` necesita. */
   phone: string;
+  /**
+   * Opcional: solo si lo dejó para recibir el presupuesto.
+   *
+   * ⚠️ **Lo guardaba la function desde el 1 de octubre de 2026 y este modelo
+   * no lo declaraba**, así que para el backoffice el campo no existía aunque
+   * estuviera en el documento. Es el descuido de siempre con una forma que se
+   * decide en dos repositorios que no comparten módulo.
+   */
+  email?: string;
   note: string;
 
   vehicleId: string;
@@ -142,4 +151,23 @@ export interface BookingRequest {
   internalNote?: string;
   /** La reserva que salió de aquí, si se convirtió. */
   reservationId?: string;
+
+  /**
+   * El cobro de la señal, si se ha emitido su enlace de pago.
+   *
+   * ⚠️ **Es un cobro LIBRE, sin reserva detrás.** Cuando el operador manda el
+   * enlace todavía no hay reserva ni cliente dado de alta: lo que hay es un
+   * teléfono y un coche elegido. El cobro nace suelto y se asigna después, al
+   * crear la reserva.
+   *
+   * ⚠️ **Se guarda el id para no tener que buscarlo.** El cobro ya apunta a la
+   * solicitud (`Payment.bookingRequestId`), así que esto es la vuelta del
+   * mismo enlace; existe porque la lista enseña el estado de la señal en cada
+   * tarjeta, y sin él haría una consulta por tarjeta para pintar una pastilla.
+   *
+   * ⚠️ **Y NO guarda si está pagada.** Eso lo dice el cobro, que es la única
+   * fuente del dinero que entra; copiarlo aquí sería la segunda copia que se
+   * queda vieja — el mismo error que `reservation.paymentSummary` ya enseñó.
+   */
+  signalPaymentId?: string;
 }

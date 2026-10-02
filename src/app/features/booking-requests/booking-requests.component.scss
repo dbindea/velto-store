@@ -118,6 +118,38 @@
     color: var(--text-muted);
     background: var(--bg-main);
   }
+
+  /*
+   * El estado del cobro de la señal.
+   *
+   * ⚠️ **Los SEIS, y no solo los dos que se ven el primer día.** `PaymentStatus`
+   * tiene seis valores y la pastilla los pinta todos; dejando fuera `failed`,
+   * `refunded`, `partial` o `cancelled`, el día que uno aparezca sale sin
+   * fondo y en negro — que es invisible en los tres temas oscuros. Es
+   * literalmente lo que avisa el comentario de aquí arriba, y ha pasado dos
+   * veces en la ficha de la reserva.
+   */
+  &.senal-pending {
+    color: var(--warning-color);
+    background: var(--warning-bg);
+  }
+  &.senal-partial {
+    color: var(--info-color);
+    background: var(--info-bg);
+  }
+  &.senal-paid {
+    color: var(--success-color);
+    background: var(--success-bg);
+  }
+  &.senal-failed {
+    color: var(--error-color);
+    background: var(--error-bg);
+  }
+  &.senal-refunded,
+  &.senal-cancelled {
+    color: var(--text-muted);
+    background: var(--bg-main);
+  }
 }
 
 .datos {
@@ -310,4 +342,39 @@
   .solicitud__fila > .pi { display: none; }
 
   .acciones > * { flex: 1 1 auto; justify-content: center; }
+}
+
+/*
+ * La señal y su enlace de pago.
+ *
+ * ⚠️ **El enlace se parte por donde sea** (`anywhere`). Es una URL sin espacios
+ * de unos 60 caracteres dentro de una tarjeta estrecha: sin esto estira la
+ * columna y se lleva por delante la ficha entera en el móvil, que es la trampa
+ * que CLAUDE.md documenta con `min-width: 0`.
+ */
+/*
+ * ⚠️ **En píxeles y `rem`, como el resto de este fichero.** Los `--sp-*` y
+ * `--fs-*` son tokens de `web/`, no del backoffice: aquí no existen, y un
+ * `var()` sin declarar no se ignora —deja la propiedad en `unset` y **gana la
+ * cascada**, borrando lo que hubiera debajo—. Escribirlos por inercia es el
+ * fallo que dejó un día del calendario en blanco sobre blanco.
+ */
+/*
+ * ⚠️ **Escrita entera y no con `&__estado`**, como el resto del fichero. La
+ * anidación compila bien, pero `css:audit` busca la clase **literal** en el
+ * SCSS y da por desnudo lo que no encuentra: con `&__` la daba por rota sin
+ * estarlo. Un auditor que grita en falso se deja de leer, y entonces deja de
+ * cazar las de verdad.
+ */
+.senal__estado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.enlace-pago {
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
 }

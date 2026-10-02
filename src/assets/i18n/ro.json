@@ -713,7 +713,8 @@
       "secureNote": "Plată procesată de Redsys. Nu păstrăm datele cardului tău.",
       "subtitle": "Plată securizată",
       "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
-      "unavailableTitle": "Plată indisponibilă"
+      "unavailableTitle": "Plată indisponibilă",
+      "signalTerms": "Acest avans se scade din prețul închirierii. După plată, confirmăm rezervarea și blocăm mașina pentru acele date; dacă anulezi ulterior, avansul nu se restituie. Dacă noi suntem cei care nu îți putem da mașina, îl primești înapoi integral."
     },
     "confirm": {
       "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
@@ -2114,6 +2115,16 @@
     "extended": "Preț garantat încă 24 de ore",
     "pickup": "Ridicare",
     "return": "Returnare",
-    "copied": "Copiat"
+    "copied": "Copiat",
+    "signal": {
+      "title": "Avans",
+      "help": "Creează plata și trimite linkul clientului. Mașina NU se blochează: rezervarea se face la conversie.",
+      "create": "Încasează avansul",
+      "open": "Vezi plata",
+      "created": "Plată creată. Copiază linkul și trimite-l.",
+      "failed": "Plata nu a putut fi creată.",
+      "noAmount": "Această cerere nu are preț: avansul nu se poate calcula.",
+      "concept": "Avans pentru pre-rezervarea {reference}"
+    }
   }
 }

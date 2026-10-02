@@ -133,6 +133,25 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * La letra pequeña de la señal, encima del botón de pagar.
+ *
+ * ⚠️ **Pequeña pero LEGIBLE: 0,8 rem y el color del texto secundario**, no el
+ * apagado. Es una condición económica que el cliente acepta al pulsar; puesta
+ * en gris claro a 0,7 rem sería de las que no se leen, y una condición que no
+ * se puede leer no se ha aceptado.
+ */
+.signal-terms {
+  margin: 0;
+  padding: 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  border-radius: 8px;
+}
+
 .btn-pay {
   width: 100%;
   display: inline-flex;

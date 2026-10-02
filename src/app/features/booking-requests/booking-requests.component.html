@@ -266,6 +266,75 @@
                   </div>
                 </div>
 
+                <!--
+                  ⚠️ **La señal, con su enlace de pago.** Va DESPUÉS del
+                  mensaje de WhatsApp y antes de la nota: es el paso siguiente
+                  a haber hablado con el cliente, y el enlace se manda por el
+                  mismo sitio. Decisión de Dorel del 2 de octubre de 2026 —
+                  primer paso hacia el cobro automático.
+
+                  ⚠️ **El coche NO se bloquea al generar el enlace, ni al
+                  pagarlo.** Esto crea un cobro suelto, nada más; la reserva
+                  sigue haciéndose a mano con «Convertir». Por eso el aviso de
+                  abajo lo dice: si el coche se va, hay que devolver el dinero.
+                -->
+                <div class="form-group senal">
+                  <label>{{ 'bookingRequests.signal.title' | translate }}</label>
+
+                  @if (!r.signalPaymentId) {
+                    <p class="hint">
+                      {{ 'bookingRequests.signal.help' | translate }}
+                    </p>
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      [disabled]="senalPropuesta(r) <= 0 || cobrando() === r.id"
+                      (click)="cobrarSenal(r)"
+                    >
+                      <i class="pi pi-credit-card"></i>
+                      {{ 'bookingRequests.signal.create' | translate }}
+                      · {{ senalPropuesta(r) | number: '1.2-2' }} €
+                    </button>
+                  } @else {
+                    <!--
+                      ⚠️ **El estado sale del COBRO, que se escucha en vivo.**
+                      Quien lo confirma es el webhook de Redsys, minutos
+                      después de mandar el enlace y con esta pantalla abierta:
+                      leído una sola vez, el operador vería «pendiente»
+                      mientras el cliente le dice por teléfono que ya ha
+                      pagado.
+                    -->
+                    <p class="senal__estado">
+                      <span class="badge" [ngClass]="'senal-' + (pagoSenal()?.status ?? 'pending')">
+                        {{ 'payments.status.' + (pagoSenal()?.status ?? 'pending') | translate }}
+                      </span>
+                      @if (pagoSenal(); as p) {
+                        <span class="num">{{ p.amount | number: '1.2-2' }} €</span>
+                      }
+                    </p>
+
+                    <div class="con-copia">
+                      <span class="mono enlace-pago">{{ enlacePago(r) }}</span>
+                      <button
+                        type="button"
+                        class="btn-copiar"
+                        [title]="'common.copy' | translate"
+                        [attr.aria-label]="'common.copy' | translate"
+                        (click)="copiarEnlacePago(r)"
+                      >
+                        <i class="pi" [class.pi-copy]="enlaceCopiado() !== r.id" [class.pi-check]="enlaceCopiado() === r.id"></i>
+                      </button>
+                    </div>
+
+                    <div class="nota-editor__pie">
+                      <button type="button" class="btn-secondary" (click)="verPago(r)">
+                        <i class="pi pi-arrow-right"></i>
+                        {{ 'bookingRequests.signal.open' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+
                 <div class="form-group nota-editor">
                   <label [attr.for]="'nota-' + r.id">
                     {{ 'bookingRequests.fields.internalNote' | translate }}

@@ -22,6 +22,22 @@ export const APP_DEFAULTS = {
   DEFAULT_INITIAL_PAYMENT: 50,
 
   /**
+   * La señal de un alquiler barato.
+   *
+   * ⚠️ **Dos cifras y ningún porcentaje, y es deliberado.** Lo fijó Dorel el 2
+   * de octubre de 2026 con sus palabras: «50 €, y si el alquiler es menos de
+   * 50 € entonces 25 €; para no complicarme con porcentajes ni cálculos
+   * complejos». Una señal que se dice en una frase es una señal que el
+   * operador puede repetir por teléfono sin mirar la pantalla.
+   *
+   * ⚠️ **Y arregla algo que estaba mal.** La regla anterior era
+   * `min(50, precio)`: un alquiler de 40 € pedía **40 € de señal**, o sea el
+   * alquiler entero por adelantado. Eso no es una señal, es cobrar la reserva
+   * — y dejaba el «resto» a cero en un alquiler que aún no había empezado.
+   */
+  REDUCED_INITIAL_PAYMENT: 25,
+
+  /**
    * Lugar con el que nacen la recogida y la devolución de una reserva.
    *
    * Casi todos los alquileres salen y vuelven a la oficina, así que el campo se

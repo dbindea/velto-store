@@ -28,7 +28,7 @@ import { SettingsService } from '@features/settings/services/settings.service';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+import { roundMoney, suggestInitialPayment } from '@shared/utils/payment-summary.util';
 import {
   canCreateReservationForClient,
   clientTrustWarning as trustWarningOf
@@ -1042,11 +1042,14 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   /**
-   * The signal never exceeds the agreed price: a 50 € signal on a 30 € rental
-   * would leave the reservation impossible to settle.
+   * ⚠️ **La regla vive en `payment-summary.util.ts`, no aquí.** Estaba escrita
+   * en este getter —`min(50, precio)`— y era el único sitio que sabía cuánta
+   * señal se pide; en cuanto hubo que cobrarla también desde la ficha de una
+   * solicitud de la web, eso se habría copiado. Y de paso cambia: por debajo
+   * de 50 € la señal son 25 y no el alquiler entero.
    */
   get initialPayment(): number {
-    return roundMoney(Math.min(APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT, this.finalPrice));
+    return suggestInitialPayment(this.finalPrice);
   }
 
   /**

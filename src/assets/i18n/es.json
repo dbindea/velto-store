@@ -713,7 +713,8 @@
       "secureNote": "Pago procesado por Redsys. No guardamos los datos de tu tarjeta.",
       "subtitle": "Pago seguro",
       "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
-      "unavailableTitle": "Pago no disponible"
+      "unavailableTitle": "Pago no disponible",
+      "signalTerms": "Esta señal se descuenta del precio del alquiler. Al pagarla, confirmamos tu reserva y bloqueamos el coche para esas fechas; si después anulas la reserva, la señal no se devuelve. Si somos nosotros los que no podemos darte el coche, te la devolvemos entera."
     },
     "confirm": {
       "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
@@ -2114,6 +2115,16 @@
     "extended": "Precio garantizado 24 horas más",
     "pickup": "Recogida",
     "return": "Devolución",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "signal": {
+      "title": "Señal",
+      "help": "Crea el cobro y manda el enlace al cliente. El coche NO se bloquea: la reserva se hace al convertir.",
+      "create": "Cobrar la señal",
+      "open": "Ver el cobro",
+      "created": "Cobro creado. Copia el enlace y mándaselo.",
+      "failed": "No se pudo crear el cobro.",
+      "noAmount": "Esta solicitud no tiene precio: no se puede calcular la señal.",
+      "concept": "Señal de la pre-reserva {reference}"
+    }
   }
 }

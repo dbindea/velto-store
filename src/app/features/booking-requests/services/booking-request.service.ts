@@ -129,6 +129,23 @@ export class BookingRequestService {
   }
 
   /**
+   * Apunta en la solicitud qué cobro es su señal.
+   *
+   * ⚠️ **No toca el estado.** Mandar el enlace de pago no es haber hablado con
+   * el cliente ni haber convertido nada: es exactamente lo mismo que guardar
+   * la nota interna, que tampoco marca «contactada». Cambiar el estado aquí
+   * sacaría la solicitud de la lista de trabajo pendiente con el cliente sin
+   * atender, que es justo lo contrario de lo que pasa — a partir de ahora hay
+   * que estar MÁS pendiente, porque hay dinero en camino.
+   *
+   * ⚠️ **Y no guarda el importe ni si está pagada.** Las dos cosas las dice el
+   * cobro, que es la única fuente del dinero que entra.
+   */
+  async attachSignalPayment(id: string, paymentId: string): Promise<void> {
+    await updateDoc(doc(this.firestore, COLECCION, id), { signalPaymentId: paymentId });
+  }
+
+  /**
    * La segunda capa: **el servicio pregunta al mismo guard que la pantalla.**
    *
    * ⚠️ **El docblock de abajo prometía esto y no lo hacía nadie.** Decía «se

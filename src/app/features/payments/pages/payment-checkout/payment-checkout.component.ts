@@ -12,6 +12,8 @@ interface CheckoutView {
   currency: string;
   concept: string;
   brandName: string;
+  /** Si es la señal de una pre-reserva: decide si se enseña su letra pequeña. */
+  isBookingSignal?: boolean;
   paymentUrl?: string;
   formData?: { [key: string]: string };
 }

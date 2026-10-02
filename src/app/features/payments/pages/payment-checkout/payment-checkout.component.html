@@ -48,6 +48,28 @@
           <p class="concept">{{ view()!.concept }}</p>
         }
 
+        <!--
+          ⚠️ **Qué es este dinero, ANTES de pagarlo y no después.** Una señal
+          se descuenta del alquiler y no se devuelve si el cliente anula la
+          reserva; eso hay que decirlo donde se decide, no en una página de
+          condiciones que nadie abre con la tarjeta en la mano.
+
+          ⚠️ **Y solo en una señal.** Esta pantalla sirve también para el resto
+          del alquiler, la fianza y los cargos extra: enseñar «no se devuelve»
+          encima de una FIANZA —que es justo el dinero que sí se devuelve—
+          sería falso y además asustaría al cliente en el peor momento.
+
+          ⚠️ **Las dos direcciones, no solo la que nos conviene.** Si Velto no
+          puede dar el coche, la señal vuelve entera. Decir solo la mitad que
+          perjudica al cliente es lo que convierte una cláusula en abusiva —y
+          además aquí es cierto: el coche no se bloquea al pagar.
+        -->
+        @if (view()!.isBookingSignal) {
+          <p class="signal-terms">
+            {{ 'payments.checkout.signalTerms' | translate }}
+          </p>
+        }
+
         <button class="btn-pay" type="button" [disabled]="paying()" (click)="pay()">
           @if (paying()) { <i class="pi pi-spin pi-spinner"></i> }
           @else { <i class="pi pi-credit-card"></i> }

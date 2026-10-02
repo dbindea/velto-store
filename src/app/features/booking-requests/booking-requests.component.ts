@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -9,6 +9,11 @@ import { ConfirmService } from '@core/notifications/confirm.service';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { BRAND_CONFIG } from '@core/config/brand.config';
 import { BookingRequestService } from './services/booking-request.service';
+import { PaymentService } from '@features/payments/services/payment.service';
+import { TranslateService } from '@core/i18n/translate.service';
+import type { Payment } from '@shared/models/payment.model';
+import { suggestInitialPayment } from '@shared/utils/payment-summary.util';
+import { interpolate } from '@shared/utils/i18n-params.util';
 import {
   BOOKING_REQUEST_STATUS_COLORS,
   BOOKING_REQUEST_STATUS_LABELS,
@@ -57,6 +62,14 @@ export class BookingRequestsComponent {
   private route = inject(ActivatedRoute);
   private notifications = inject(NotificationService);
   private confirm = inject(ConfirmService);
+  private payments = inject(PaymentService);
+  private translate = inject(TranslateService);
+  /**
+   * ⚠️ **Hace falta explícito**: este `takeUntilDestroyed` corre dentro de un
+   * efecto, fuera del contexto de inyección, y sin el `DestroyRef` delante
+   * revienta en tiempo de ejecución. Misma trampa que `FormDraftService`.
+   */
+  private destroyRef = inject(DestroyRef);
   permissions = inject(PermissionsService);
 
   readonly loading = signal(true);
@@ -207,6 +220,32 @@ export class BookingRequestsComponent {
 
     this.cargadaEn = id;
     this.notaInterna = r.internalNote ?? '';
+
+    /*
+     * ⚠️ **El estado de la señal se LEE del cobro, no de la solicitud.** La
+     * solicitud solo guarda el id; si guardara además «pagada», sería la
+     * segunda copia del mismo hecho y la que se queda vieja — el error que
+     * `reservation.paymentSummary` ya enseñó, que responde `0` en vez de
+     * fallar.
+     *
+     * ⚠️ **Y se escucha en vivo** (`watchPaymentById`), no se lee una vez: lo
+     * que confirma este cobro es el webhook de Redsys, minutos después de que
+     * el operador mande el enlace y con la pantalla abierta delante. Con un
+     * `getDocs`, el operador ve «pendiente» mientras el cliente le dice por
+     * teléfono que acaba de pagar. Es la regla de la casa para lo que cambia
+     * desde fuera.
+     */
+    this.pagoSenal.set(null);
+    if (r.signalPaymentId) {
+      this.payments
+        .watchPaymentById(r.signalPaymentId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((p) => {
+          // La ficha pudo cambiar mientras llegaba: sin esto, el cobro de una
+          // solicitud se pintaría en otra.
+          if (this.abierta() === id) this.pagoSenal.set(p);
+        });
+    }
     /**
      * ⚠️ **`brandName`, no `name`.** Aquel es «Velto Mobility», que es como la
      * empresa se presenta a un cliente; `name` es el nombre corto de la barra
@@ -216,6 +255,123 @@ export class BookingRequestsComponent {
   }
 
   // --- Lo que la ficha pregunta -------------------------------------------
+
+  // --- La señal ------------------------------------------------------------
+
+  /**
+   * Cuánta señal se pide por este alquiler.
+   *
+   * ⚠️ **Sale de `quoteSnapshot.gross`, el precio que se le ENSEÑÓ.** No del
+   * coche ni de la tarifa de hoy: al cliente se le garantizó una cifra y la
+   * señal es una parte de esa cifra. Las tarifas pueden haber cambiado desde
+   * que pidió, y cobrarle una señal calculada sobre otro precio sería empezar
+   * la relación discutiendo.
+   *
+   * ⚠️ **Y la regla es la misma que la del asistente**, que vive en
+   * `payment-summary.util.ts`: dos sitios que cobran la misma señal no pueden
+   * tener dos reglas.
+   */
+  senalPropuesta(r: BookingRequest): number {
+    return suggestInitialPayment(r.quoteSnapshot?.gross ?? 0);
+  }
+
+  /** El cobro de la señal de la ficha abierta, si lo hay. Lo carga el efecto. */
+  readonly pagoSenal = signal<Payment | null>(null);
+  readonly cobrando = signal<string | null>(null);
+
+  /**
+   * El enlace que se le manda al cliente para pagar.
+   *
+   * ⚠️ **Es la ruta pública `/pay/:id`, y el id del cobro ES el secreto** —la
+   * misma regla que los enlaces `/d/…` de los presupuestos—. Por eso la
+   * pantalla que hay detrás devuelve lo mínimo: importe, concepto y marca, y
+   * nunca el nombre del pagador.
+   *
+   * ⚠️ **Y el dominio sale de `BRAND_CONFIG`… no.** Sale de `location.origin`,
+   * que es el único que no puede equivocarse de entorno: `brand.config.ts` se
+   * compila dentro del bundle y vale lo mismo en desarrollo y en producción,
+   * que es exactamente lo que hizo que la pantalla de firma enseñara el correo
+   * de desarrollo a un cliente real (F-33).
+   */
+  enlacePago(r: BookingRequest): string {
+    return r.signalPaymentId ? `${location.origin}/pay/${r.signalPaymentId}` : '';
+  }
+
+  /**
+   * Crea el cobro de la señal y deja su enlace listo para mandarlo.
+   *
+   * ⚠️ **Es un cobro LIBRE, y no puede ser otra cosa.** Aquí todavía no hay
+   * reserva: hay un teléfono, un coche elegido y un precio garantizado. Un
+   * `initial_payment` necesita una reserva a la que pertenecer, y además
+   * `isGovernedByReservation()` impediría corregirlo desde la pantalla de
+   * pagos remitiendo a una reserva que no existe — un callejón sin salida para
+   * el operador.
+   *
+   * ⚠️ **Nace PENDIENTE, con `paidAmount: 0`.** Lo que se crea es la petición
+   * de cobro, no el cobro: quien dice que el dinero entró es el webhook de
+   * Redsys. Sembrarlo pagado sería escribir en los libros un dinero que nadie
+   * ha visto.
+   *
+   * ⚠️ **Y el concepto nombra la referencia.** Ese cobro va a vivir suelto en
+   * la lista de Pagos hasta que se asigne a una reserva; sin la referencia
+   * dentro, dentro de una semana es un apunte de 50 € sin dueño.
+   */
+  async cobrarSenal(r: BookingRequest): Promise<void> {
+    if (!r.id || r.signalPaymentId || this.cobrando()) return;
+    const importe = this.senalPropuesta(r);
+    if (importe <= 0) {
+      this.notifications.error('bookingRequests.signal.noAmount');
+      return;
+    }
+
+    this.cobrando.set(r.id);
+    try {
+      const coche = `${r.vehicleSnapshot?.brand ?? ''} ${r.vehicleSnapshot?.model ?? ''}`.trim();
+      const paymentId = await this.payments.createManualPayment({
+        isFreePayment: true,
+        bookingRequestId: r.id,
+        type: 'free_payment',
+        /*
+         * ⚠️ **`redsys` y no `manual_card`.** El cliente va a pagar él mismo
+         * desde el enlace: `manual_card` es el datáfono del mostrador, y
+         * confundirlos deja el histórico contando cobros presenciales que
+         * nunca ocurrieron.
+         */
+        method: 'redsys',
+        amount: importe,
+        paidAmount: 0,
+        concept: interpolate(this.translate.translate('bookingRequests.signal.concept'), {
+          reference: r.reference
+        }),
+        payerName: r.name,
+        payerPhone: r.phone,
+        ...(r.email ? { payerEmail: r.email } : {}),
+        vehicleId: r.vehicleId,
+        notes: coche
+      });
+      await this.service.attachSignalPayment(r.id, paymentId);
+      this.notifications.success('bookingRequests.signal.created');
+    } catch {
+      this.notifications.error('bookingRequests.signal.failed');
+    } finally {
+      this.cobrando.set(null);
+    }
+  }
+
+  async copiarEnlacePago(r: BookingRequest): Promise<void> {
+    const enlace = this.enlacePago(r);
+    if (!enlace || !r.id) return;
+    if (await copyToClipboard(enlace)) {
+      this.enlaceCopiado.set(r.id);
+      setTimeout(() => this.enlaceCopiado.set(null), 2000);
+    }
+  }
+
+  readonly enlaceCopiado = signal<string | null>(null);
+
+  verPago(r: BookingRequest): void {
+    if (r.signalPaymentId) void this.router.navigate(['/payments', r.signalPaymentId]);
+  }
 
   precioEnPie(r: BookingRequest): boolean {
     return priceStillGuaranteed(r);

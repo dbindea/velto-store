@@ -278,6 +278,21 @@ interface PublicCheckoutResponse {
   concept: string;
   /** Marca de la empresa, para que el cliente sepa a quién paga. */
   brandName: string;
+  /**
+   * Si este cobro es la **señal** de una pre-reserva de la web.
+   *
+   * ⚠️ **La pantalla tiene que decir qué pasa con ese dinero, y solo aquí.**
+   * Una señal se descuenta del alquiler y no se devuelve si el cliente anula
+   * la reserva después; una fianza, un resto o un cargo extra **no** funcionan
+   * así. Enseñar esa letra en todos los cobros sería falso en la mayoría —y
+   * alarmante en una fianza, que es justo el dinero que sí se devuelve—.
+   *
+   * ⚠️ **Es un booleano y no el `bookingRequestId`.** El id de una solicitud no
+   * se publica: la referencia se dicta por teléfono y esta respuesta la lee
+   * cualquiera que tenga el enlace. Lo que la pantalla necesita saber es qué
+   * clase de dinero es, no de qué documento salió.
+   */
+  isBookingSignal: boolean;
   /** Solo cuando `state` es `pending`. */
   paymentUrl?: string;
   formData?: { [key: string]: string };
@@ -328,7 +343,9 @@ export const getPaymentCheckout = onCall(
       amount: outstandingAmount(payment),
       currency: payment.currency || 'EUR',
       concept: String(payment.concept || ''),
-      brandName: company.brandName
+      brandName: company.brandName,
+      // Lo es si salió de una solicitud de la web. No se publica cuál.
+      isBookingSignal: Boolean(payment.bookingRequestId)
     };
 
     if (payment.status === 'paid') {
