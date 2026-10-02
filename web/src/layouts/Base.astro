@@ -110,6 +110,18 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <title>{titulo}</title>
     <meta name="description" content={descripcion} />
     <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
+    {/*
+      ⚠️ **PNG, porque iOS NO acepta SVG en `apple-touch-icon`.** Lo ignora y
+      pone una **captura de la página** como icono, que es lo que se veía al
+      añadir la web a la pantalla de inicio de un iPhone: la portada en
+      miniatura, ilegible. El backoffice ya lo tenía resuelto y su propio
+      comentario lo explicaba; aquí faltaba la etiqueta y el fichero.
+
+      ⚠️ **Y el PNG está COPIADO de `src/assets/brand/`**, como los colores de
+      marca y los datos de empresa: `web/` es una build aparte y no comparte
+      nada con la aplicación. Si se rediseña el icono, se copia aquí también.
+    */}
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
 
     {/*
       ⚠️ **Las fotos viven en OTRO origen, y el saludo se paga dentro del camino
@@ -157,7 +169,44 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <meta property="og:site_name" content="Velto" />
     <meta property="og:title" content={titulo} />
     <meta property="og:description" content={descripcion} />
+    <meta property="og:locale" content="es_ES" />
     {canonica && <meta property="og:url" content={canonica} />}
+
+    {/*
+      ⚠️ **La imagen al compartir, que NO existía — y el canal principal de
+      esta empresa es WhatsApp.** Cada enlace que manda Velto, o que un cliente
+      reenvía a un amigo, salía como una tarjeta de texto sin foto: la forma
+      más pobre de aparecer y la que menos se pulsa. Medido el 2 de octubre de
+      2026: cero `og:image` en las once páginas.
+
+      ⚠️ **Es PNG porque WhatsApp y Facebook NO aceptan SVG**, que es lo único
+      que había en `brand/`. La genera `scripts/generar-og.js` a partir del
+      logo de verdad, así que rediseñarlo y volver a ejecutarlo la actualiza.
+
+      ⚠️ **Y la URL es ABSOLUTA, siempre.** Una ruta relativa funciona en el
+      navegador y **no** en los rastreadores de WhatsApp o LinkedIn, que leen
+      el HTML fuera de contexto: el `og:image` se queda sin resolver y la
+      tarjeta vuelve a salir sin imagen. Es el fallo clásico de esta etiqueta.
+
+      ⚠️ **Las medidas se declaran a propósito.** Sin ellas, el rastreador
+      tiene que descargar la imagen para saber si la enseña grande o como
+      miniatura — y si tarda, la enseña pequeña. Con `og:image:width` lo sabe
+      antes de bajarla.
+    */}
+    <meta property="og:image" content={`${SITIO}/brand/og.png`} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="Velto Mobility — alquiler de coches en Arganda del Rey" />
+
+    {/*
+      ⚠️ **`summary_large_image` o la tarjeta sale en miniatura.** Por defecto X
+      enseña un cuadrado pequeño al lado del texto; con esto, la imagen ocupa
+      el ancho. Las dos etiquetas son de X pero las leen más sitios —Slack
+      entre ellos—, y no estorban a Open Graph.
+    */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={`${SITIO}/brand/og.png`} />
     {/*
       ⚠️ **Esto pinta la barra de direcciones de Chrome en Android, y estaba
       en VERDE.** Es el tercer sitio donde un verde hacía de superficie —los

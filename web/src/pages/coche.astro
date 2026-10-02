@@ -20,9 +20,23 @@ import PreReserva from '../components/PreReserva.astro';
   mismo fallo que dejó el botón de la tarjeta sin forma en la página de
   resultados. Astro empaqueta el CSS por página, así que esto solo viaja aquí.
 */}
+{/*
+  ⚠️ **Este título es el que ve QUIEN COMPARTE EL ENLACE, no el que ve el
+  visitante.** El de la pestaña lo reescribe el script con el coche de verdad
+  —«Toyota Corolla 125H Active Tech | Velto»—, pero WhatsApp, Telegram y
+  LinkedIn leen el HTML **sin ejecutar JavaScript**: la tarjeta sale con lo que
+  ponga aquí. Decía «Vehículo | Velto», o sea que cada coche compartido se
+  anunciaba con la misma palabra genérica.
+
+  ⚠️ **No se puede arreglar del todo sin renderizar en servidor**, y eso está
+  decidido que no (ver `sitemap.xml.ts`: las fichas se pintan al cargar para
+  que publicar un coche se vea al momento). Lo que sí se puede es que el texto
+  de respaldo diga algo útil y cierto de **cualquier** coche de la flota, en
+  vez de nombrar un campo de la base de datos.
+*/}
 <Base
-  titulo="Vehículo | Velto"
-  descripcion="Detalle del vehículo: plazas, cambio, combustible, kilómetros incluidos, disponibilidad real y precio por día."
+  titulo="Alquila este coche en Arganda del Rey | Velto"
+  descripcion="Mira la disponibilidad real día a día, elige tus fechas y te damos el precio final del alquiler, con los impuestos incluidos y sin gastos de gestión."
   ruta={null}
   precarga="coche"
 >
