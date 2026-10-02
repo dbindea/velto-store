@@ -80,7 +80,14 @@
 
       <p id="dlg-error" class="dlg__aviso" role="alert" hidden></p>
 
-      <button type="submit" class="btn btn--brand dlg__enviar" id="dlg-enviar">Enviar</button>
+      {/*
+        ⚠️ **Pone «Reservar», no «Enviar».** Lo cambió Dorel el 2 de octubre de
+        2026: «es más optimista, aun siendo una pre-reserva». Y no miente
+        —justo debajo está escrito qué es y qué falta—: lo que describe es lo
+        que el visitante cree que está haciendo, que es reservar un coche.
+        «Enviar» describe lo que hace el formulario, que no le importa a nadie.
+      */}
+      <button type="submit" class="btn btn--brand dlg__enviar" id="dlg-enviar">Reservar</button>
 
       {/*
         ⚠️ **Lo que de verdad pasa, antes de pulsar y no después.** El coche NO
@@ -109,13 +116,19 @@
         de toda la web—, así que entre la pre-reserva y la llamada puede
         haberse ido; prometer solo «lo dejamos en firme» daba por hecho que
         seguiría ahí.
+
+        ⚠️ **«Al abonarse la señal», no «únicamente cuando abones la señal».**
+        Mismo hecho y dos tonos muy distintos: el segundo señala al visitante
+        con el dedo justo en el momento en que acaba de decidirse. Lo corrigió
+        Dorel el mismo día —«parece muy rudo, muy agresivo»—. La condición no
+        se suaviza, se despersonaliza.
       */}
       <p class="dlg__letra">
         Estás realizando una <strong>pre-reserva</strong> con
         <strong>precio garantizado durante <span id="dlg-horas">24 horas</span></strong>.
         En ese plazo te contactaremos por teléfono o WhatsApp para confirmar la
         disponibilidad y gestionar el pago de la señal. El coche quedará
-        reservado <strong>únicamente cuando abones la señal</strong>.
+        reservado <strong>al abonarse la señal</strong>.
       </p>
     </form>
 
@@ -128,7 +141,16 @@
         WhatsApp. Perdida entre el resto del texto no sirve para nada.
       */}
       <p id="dlg-ref" class="dlg__ref"></p>
-      <p class="dlg__resumen">Te contactamos al teléfono que nos has dejado.</p>
+      {/*
+        ⚠️ **Da las gracias, y el verbo va en futuro.** «Te contactamos al
+        teléfono que nos has dejado» era correcto y sonaba a acuse de recibo de
+        una administración. Es la pantalla en la que alguien acaba de dejar su
+        teléfono a un desconocido; cuesta una palabra y es la que pidió Dorel
+        el 2 de octubre de 2026: «más tacto, más humanidad».
+      */}
+      <p class="dlg__resumen">
+        Gracias. Te contactaremos al teléfono que nos has dejado.
+      </p>
       {/*
         ⚠️ **Aquí la fecha es la de VERDAD, no «24 horas».** La devuelve la
         function (`priceGuaranteedUntil`) con el plazo ya calculado, así que
@@ -149,8 +171,17 @@
 
         Nace oculto: si el PDF no se pudo generar, lo que no puede salir es un
         botón que lleve a ninguna parte.
+
+        ⚠️ **Es el botón PRINCIPAL de esta pantalla, no el de cerrar.** Iba en
+        `--ghost` y «Entendido» en negro macizo, o sea que lo que más pesaba
+        era irse. Lo único que queda por hacer aquí es llevarse el papel
+        —sobre todo quien no dejó correo, que si no se va sin nada escrito—,
+        así que lleva el color de marca y el icono de descarga, y cerrar pasa
+        a ser el secundario. Lo pidió Dorel: «más visible y con el simbolito
+        de descargar».
       */}
-      <a id="dlg-presupuesto" class="btn btn--ghost dlg__enviar" hidden rel="noopener">
+      <a id="dlg-presupuesto" class="btn btn--brand dlg__enviar" hidden rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
         Descargar el presupuesto
       </a>
       <p id="dlg-correo" class="dlg__letra" hidden></p>
@@ -161,10 +192,23 @@
         se pregunta si son dos cosas distintas.
       */}
       <p class="dlg__letra">
-        El coche quedará reservado <strong>únicamente cuando abones la
-        señal</strong>.
+        El coche quedará reservado <strong>al abonarse la señal</strong>.
       </p>
-      <button type="button" class="btn btn--ink dlg__enviar" id="dlg-ok">Entendido</button>
+
+      {/*
+        ⚠️ **Dice «Cerrar» y lleva a la portada, y las dos cosas van juntas.**
+        «Entendido» cerraba el diálogo y dejaba al visitante en la misma ficha,
+        con el calendario marcado y el botón de reservar intacto: la salida
+        más natural desde ahí es volver a pulsarlo y mandar una segunda
+        solicitud del mismo coche. Lo vio Dorel el 2 de octubre de 2026 —«si me
+        quedo aquí el cliente puede volver a intentarlo»—.
+
+        ⚠️ **Lo gobierna el evento `close` del `<dialog>`, no este botón.** La
+        × de arriba y la tecla Escape cierran igual, y por tres puertas
+        distintas había dos que dejaban al visitante donde no debe estar. Ver
+        `pre-reserva.ts`.
+      */}
+      <button type="button" class="btn btn--ghost dlg__enviar" id="dlg-ok">Cerrar</button>
     </div>
   </div>
 </dialog>

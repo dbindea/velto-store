@@ -98,6 +98,33 @@ export function montarPreReserva(): PreReserva | null {
   document.getElementById('dlg-cerrar')?.addEventListener('click', () => dlg.close());
   document.getElementById('dlg-ok')?.addEventListener('click', () => dlg.close());
 
+  /**
+   * ⚠️ **Cerrar con la pre-reserva ya hecha devuelve a la portada.** Quedándose
+   * en la ficha, lo que el visitante tiene delante es el mismo calendario
+   * marcado y el mismo botón de reservar: la salida más natural es pulsarlo
+   * otra vez y mandar una segunda solicitud del mismo coche, que es trabajo
+   * para el operador y una llamada incómoda. Lo pidió Dorel el 2 de octubre de
+   * 2026: «si me quedo aquí, el cliente puede volver a intentarlo».
+   *
+   * ⚠️ **Cuelga del evento `close` y no del botón, y ese es el punto.** Un
+   * `<dialog>` se cierra por tres sitios —el botón, la × de la cabecera y la
+   * tecla Escape—, así que atándolo al botón quedaban dos puertas por las que
+   * salir a la misma ficha. El evento es el único sitio por el que pasan las
+   * tres.
+   *
+   * ⚠️ **Y solo desde la cara de «hecho».** Cerrando el formulario sin enviarlo
+   * no ha pasado nada: echar de la ficha a quien se lo está pensando sería
+   * perder la venta por un diálogo que abrió por curiosidad. Lo distingue
+   * `hecho.hidden`, que es el mismo estado que pinta la pantalla.
+   *
+   * ⚠️ **Va a la portada SIN búsqueda** (`/`, sin `?from=`). Volver a los
+   * resultados con las mismas fechas es volver a ofrecer el coche que acaba de
+   * pedir.
+   */
+  dlg.addEventListener('close', () => {
+    if (!hecho!.hidden) location.assign('/');
+  });
+
   function abrir(datos: DatosPreReserva): void {
     elegido = datos;
     resumen!.textContent = datos.resumen;
@@ -115,7 +142,7 @@ export function montarPreReserva(): PreReserva | null {
     hecho!.hidden = true;
     form!.reset();
     enviar!.disabled = false;
-    enviar!.textContent = 'Enviar';
+    enviar!.textContent = 'Reservar';
     dlg!.showModal();
   }
 
@@ -125,7 +152,7 @@ export function montarPreReserva(): PreReserva | null {
 
     error.hidden = true;
     enviar.disabled = true;
-    enviar.textContent = 'Enviando…';
+    enviar.textContent = 'Reservando…';
 
     const datos = new FormData(form);
     solicitar({
@@ -170,7 +197,7 @@ export function montarPreReserva(): PreReserva | null {
       })
       .catch((err: Error) => {
         enviar.disabled = false;
-        enviar.textContent = 'Enviar';
+        enviar.textContent = 'Reservar';
         error.textContent =
           MOTIVOS[err.message] ??
           'No hemos podido enviarlo. Inténtalo otra vez o escríbenos por WhatsApp.';
