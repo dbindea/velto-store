@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_NAME,
   MAX_NOTE,
+  MAX_PLACE,
   formatPhone,
   generateReference,
   looksAutomated,
@@ -115,9 +116,12 @@ describe('validateBookingRequest', () => {
      * solo lo que no debe salir, un campo nuevo que se cuele no lo coge nadie
      * —porque nadie escribe el test de un campo que no sabe que existe—. Al
      * añadir `email` el 1 de octubre de 2026, este test falló y hubo que venir
-     * a declararlo, que es exactamente su trabajo.
+     * a declararlo, que es exactamente su trabajo. Y volvió a fallar con
+     * `place` el día 2, igual.
      */
-    expect(Object.keys(r.fields).sort()).toEqual(['email', 'name', 'note', 'phone', 'vehicleId']);
+    expect(Object.keys(r.fields).sort()).toEqual([
+      'email', 'name', 'note', 'phone', 'place', 'vehicleId'
+    ]);
   });
 
   /*
@@ -136,6 +140,44 @@ describe('validateBookingRequest', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.fields.email).toBe('dorel@gmail.com');
+  });
+
+  /*
+   * El lugar de recogida, que desde el 2 de octubre de 2026 **viaja**. Hasta
+   * ese día el buscador lo pedía y el dato moría en la URL: a Velto le llegaba
+   * una pre-reserva del aeropuerto indistinguible de una de oficina.
+   */
+  it('sin lugar pasa, y queda vacío', () => {
+    const r = validateBookingRequest({ ...BASE } as never);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields.place).toBe('');
+  });
+
+  it('el lugar se capitaliza, que es un nombre propio', () => {
+    // Acaba en el aviso que lee el operador y, al convertir, impreso en el
+    // contrato. Misma regla que el nombre.
+    const r = validateBookingRequest({ ...BASE, place: '  arganda   del rey ' } as never);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields.place).toBe('Arganda del Rey');
+  });
+
+  it('⚠️ un lugar que NO está en el catálogo se acepta igual', () => {
+    // La lista de zonas de la web tiene cuatro filas y la empresa va más
+    // lejos: rechazar lo que no esté en ella tiraría la solicitud del cliente
+    // que vive un pueblo más allá, que es justo el que llama.
+    const r = validateBookingRequest({ ...BASE, place: 'Cuenca' } as never);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields.place).toBe('Cuenca');
+  });
+
+  it('un lugar larguísimo se RECORTA, no tumba la pre-reserva', () => {
+    const r = validateBookingRequest({ ...BASE, place: 'x'.repeat(300) } as never);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.fields.place.length).toBe(MAX_PLACE);
   });
 
   it('⚠️ uno mal escrito se RECHAZA, no se ignora', () => {

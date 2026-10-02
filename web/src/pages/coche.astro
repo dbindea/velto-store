@@ -74,6 +74,7 @@ import PreReserva from '../components/PreReserva.astro';
     type Rango,
   } from '../lib/calendario-coche';
   import { instanteDeLaUrl } from '../lib/buscador';
+  import { zonaPorNombre } from '../lib/zonas';
 
   const contenedor = document.getElementById('ficha')!;
   const cargando = document.getElementById('cargando')!;
@@ -503,6 +504,49 @@ import PreReserva from '../components/PreReserva.astro';
     const desdeUrl = parseDiaIso((instanteDeLaUrl(params.get('from')) ?? '').slice(0, 10));
     const hastaUrl = parseDiaIso((instanteDeLaUrl(params.get('to')) ?? '').slice(0, 10));
 
+    /*
+     * ⚠️ **Y el LUGAR, que hasta el 2 de octubre de 2026 no llegaba hasta
+     * aquí.** El buscador lo pide, la página de resultados lo lleva en su URL
+     * y el salto a la ficha lo perdía: el visitante que había elegido
+     * «Aeropuerto» mandaba una pre-reserva que no lo mencionaba, y a Velto le
+     * llegaba igual que una de oficina — el caso que cuesta 30 € y una
+     * furgoneta.
+     *
+     * ⚠️ **Se recorta al mismo tope que el backend** (80), por lo de siempre
+     * con lo que llega por la barra de direcciones: aquí no hay más validación
+     * que la del servidor, y lo que se pinta sale de `textContent`, nunca de
+     * `innerHTML`.
+     */
+    const lugar = (params.get('place') ?? '').trim().slice(0, 80);
+    const zona = lugar ? zonaPorNombre(lugar) : null;
+
+    /**
+     * El lugar de recogida, en la tarjeta del precio.
+     *
+     * ⚠️ **Se enseña, y su suplemento NO se suma.** El total de arriba es el
+     * del **alquiler**: la entrega a domicilio es un servicio aparte que el
+     * operador teclea por reserva (`deliveryFees`, fuera del
+     * `pricingSnapshot`), y sumarla aquí sería inventarse una cifra que el
+     * backoffice no va a poner sola. Lo que no puede pasar es callarla: quien
+     * eligió «Aeropuerto · +30 €» tiene que ver que lo hemos entendido y que
+     * eso va aparte del número grande.
+     *
+     * ⚠️ **El coste sale del catálogo, no del texto de la URL.** `lugar` llega
+     * por la barra de direcciones y puede decir cualquier cosa; el importe
+     * solo se imprime si el nombre casa con una zona de verdad. Para lo que no
+     * está en el catálogo —un pueblo escrito a mano— no se promete ningún
+     * precio, que es justo lo que `zonaPorNombre()` devuelve con `null`.
+     */
+    const lineaLugar = lugar
+      ? `<p class="accion__lugar">Recogida en <strong>${esc(lugar)}</strong>${
+          zona && zona.coste !== 'gratuito'
+            ? ` · entrega ${esc(zona.coste)}, aparte`
+            : zona
+              ? ' · entrega gratuita'
+              : ' · el desplazamiento lo acordamos'
+        }</p>`
+      : '';
+
     montarCalendario({
       contenedor: caja,
       ocupados,
@@ -542,7 +586,8 @@ import PreReserva from '../components/PreReserva.astro';
       const dias = diasDelRango(rango.desde, rango.hasta);
       const cabecera = `
         <p class="accion__fechas">${rotuloRango(rango.desde, rango.hasta)}</p>
-        <p class="accion__dias">${dias === 1 ? '1 día' : `${dias} días`}</p>`;
+        <p class="accion__dias">${dias === 1 ? '1 día' : `${dias} días`}</p>
+        ${lineaLugar}`;
 
       accion.innerHTML = `${cabecera}<p class="accion__pista">Calculando el precio…</p>`;
 
@@ -589,9 +634,15 @@ import PreReserva from '../components/PreReserva.astro';
 
           pedido = {
             vehicleId: v.id,
-            resumen: `${nombreCoche(v)} · ${dias === 1 ? '1 día' : `${dias} días`} · ${euros(coche.price.gross)}`,
+            resumen:
+              `${nombreCoche(v)} · ${dias === 1 ? '1 día' : `${dias} días`} · ${euros(coche.price.gross)}` +
+              // El lugar entra en el resumen del diálogo: es lo último que el
+              // visitante lee antes de dar su teléfono, y si lo hemos
+              // entendido mal este es el momento de que lo vea.
+              (lugar ? ` · ${lugar}` : ''),
             desde,
             hasta,
+            ...(lugar ? { lugar } : {}),
             // Lo dice el backend con cada consulta: es un ajuste, no un número
             // escrito en la web.
             horasGarantia: r.priceGuaranteedHours,
@@ -897,7 +948,19 @@ import PreReserva from '../components/PreReserva.astro';
   }
 
   .accion__fechas { margin: 0; font-weight: var(--fw-medium); }
-  .accion__dias { margin: var(--sp-1) 0 var(--sp-4); color: var(--text-3); font-size: var(--fs-caption); }
+  .accion__dias { margin: var(--sp-1) 0; color: var(--text-3); font-size: var(--fs-caption); }
+
+  /*
+   * El lugar de recogida. Va arriba, con las fechas, porque es parte de lo
+   * pedido — y su suplemento **no** entra en el total de abajo: la entrega la
+   * teclea el operador por reserva.
+   */
+  .accion__lugar {
+    margin: 0 0 var(--sp-4);
+    color: var(--text-2);
+    font-size: var(--fs-caption);
+  }
+  .accion__lugar strong { color: var(--text); font-weight: var(--fw-medium); }
 
   .accion__precio {
     margin: 0;

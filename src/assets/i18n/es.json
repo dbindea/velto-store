@@ -2091,7 +2091,8 @@
       "received": "Recibida",
       "priceUntil": "Precio garantizado hasta",
       "internalNote": "Nota interna",
-      "message": "Mensaje para el cliente"
+      "message": "Mensaje para el cliente",
+      "place": "Recogida en"
     },
     "empty": {
       "title": "Ninguna solicitud",

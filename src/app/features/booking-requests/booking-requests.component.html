@@ -100,6 +100,24 @@
                     <span class="nowrap">{{ devolucionPropuesta(r) | date: 'dd/MM/yyyy HH:mm' }}</span>
                   </span>
                 </div>
+                <!--
+                  ⚠️ **Dónde lo recoge, y solo si lo dijo.** Hasta el 2 de
+                  octubre de 2026 este dato no llegaba: el buscador de la web lo
+                  pedía y se quedaba en la URL, así que una pre-reserva del
+                  aeropuerto —la que cuesta 30 € y una furgoneta— entraba aquí
+                  idéntica a una de oficina.
+
+                  ⚠️ **Sin fila cuando no consta**, en vez de un «—». Las
+                  solicitudes anteriores no lo llevan, y una etiqueta vacía en
+                  todas enseña a saltarse la fila justo antes del día en que sí
+                  pone algo.
+                -->
+                @if (r.pickupPlace) {
+                  <div class="dato">
+                    <span class="dato__et">{{ 'bookingRequests.fields.place' | translate }}</span>
+                    <span>{{ r.pickupPlace }}</span>
+                  </div>
+                }
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.phone' | translate }}</span>
                   <!--

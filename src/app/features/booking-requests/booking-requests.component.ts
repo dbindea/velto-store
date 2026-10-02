@@ -456,7 +456,15 @@ export class BookingRequestsComponent {
         pickup: iso(desde),
         return: iso(hasta),
         clientName: r.name,
-        clientPhone: r.phone
+        clientPhone: r.phone,
+        /**
+         * ⚠️ **El lugar que pidió, para que no haya que volver a leerlo.** Es
+         * el campo que más se olvida al teclear una reserva a partir de una
+         * llamada, y el que decide si hay que mover una furgoneta. Va vacío
+         * cuando la solicitud no lo trae —las anteriores al 2 de octubre de
+         * 2026—, y entonces el asistente usa su valor por defecto.
+         */
+        ...(r.pickupPlace ? { pickupPlace: r.pickupPlace } : {})
       }
     });
   }

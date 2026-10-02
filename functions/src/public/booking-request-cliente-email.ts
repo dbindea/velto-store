@@ -26,6 +26,15 @@ export interface CorreoClienteDatos {
   importe: string;
   recogida: string;
   devolucion: string;
+  /**
+   * Dónde pidió recogerlo, si lo dijo.
+   *
+   * ⚠️ **Al cliente se le devuelve lo que él eligió.** Es la única forma que
+   * tiene de ver que lo hemos entendido: quien marcó «Aeropuerto» y recibe un
+   * correo que no lo menciona no sabe si lo sabemos, y lo que hace es llamar
+   * para preguntarlo.
+   */
+  lugar?: string;
   /** Hasta cuándo se le garantiza el precio, ya escrito. */
   garantia: string;
   /** El enlace corto al presupuesto. Vacío si no se pudo generar. */
@@ -55,21 +64,28 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
       'Lo que has pedido',
       fila(esc(d.coche), `${d.dias} ${d.dias === 1 ? 'día' : 'días'} · ${esc(d.importe)}`) +
         fila('Recogida', esc(d.recogida)) +
-        fila('Devolución', esc(d.devolucion))
+        fila('Devolución', esc(d.devolucion)) +
+        (d.lugar ? fila('Dónde', esc(d.lugar)) : '')
     ) +
     /*
      * ⚠️ **Lo mismo que dice la pantalla, palabra por palabra.** El coche NO
      * queda reservado y lo que se garantiza es el precio: si el correo lo
      * contara distinto, el cliente se quedaría con la versión que más le
      * conviene — y con razón, porque se la hemos dado por escrito.
+     *
+     * ⚠️ **Y es la redacción del 2 de octubre de 2026, no la de antes.** Dorel
+     * reescribió este párrafo en el diálogo por dos motivos que valen igual
+     * aquí: que en ese plazo se **confirma la disponibilidad** —el coche no se
+     * aparta, así que puede haberse ido— y que «cuando abones la señal» señala
+     * al cliente con el dedo. Este correo se quedó con la versión vieja hasta
+     * que alguien los puso uno al lado del otro.
      */
     p(
-      `Te garantizamos este precio <strong>${esc(d.garantia)}</strong>. Dentro de ese plazo ` +
-        `te contactamos por teléfono o WhatsApp para dejarla en firme con el pago de la señal.`
+      `Te garantizamos este precio <strong>${esc(d.garantia)}</strong>. En ese plazo ` +
+        `te contactaremos por teléfono o WhatsApp para confirmar la disponibilidad ` +
+        `y gestionar el pago de la señal.`
     ) +
-    p(
-      `Hasta entonces el coche <strong>no queda reservado</strong>: lo que te guardamos es el precio.`
-    ) +
+    p(`El coche quedará reservado <strong>al abonarse la señal</strong>.`) +
     (d.presupuesto ? boton('Ver el presupuesto', d.presupuesto) : '') +
     p(
       `<span style="font-family:${TIPO};font-size:13px;color:${GRIS}">` +
@@ -106,10 +122,11 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
     `${d.coche} · ${d.dias} ${d.dias === 1 ? 'día' : 'días'} · ${d.importe}`,
     `Recogida: ${d.recogida}`,
     `Devolución: ${d.devolucion}`,
+    ...(d.lugar ? [`Dónde: ${d.lugar}`] : []),
     '',
-    `Te garantizamos este precio ${d.garantia}. Dentro de ese plazo te contactamos`,
-    'por teléfono o WhatsApp para dejarla en firme con el pago de la señal.',
-    'Hasta entonces el coche no queda reservado: lo que te guardamos es el precio.',
+    `Te garantizamos este precio ${d.garantia}. En ese plazo te contactaremos por`,
+    'teléfono o WhatsApp para confirmar la disponibilidad y gestionar el pago de la señal.',
+    'El coche quedará reservado al abonarse la señal.',
     ...(d.presupuesto ? ['', `Presupuesto: ${d.presupuesto}`] : []),
     '',
     `${d.marca} · ${d.telefonoEmpresa}`,

@@ -22,6 +22,8 @@ export interface BookingRequestEmailData {
   name: string;
   phone: string;
   note?: string;
+  /** Dónde quiere recogerlo, si lo dijo. Ver la nota de abajo. */
+  pickupPlace?: string;
   vehicleSnapshot: { brand: string; model: string };
   quoteSnapshot: { totalDays: number; gross: number };
   pickupDate: Date;
@@ -70,6 +72,17 @@ export function renderBookingRequestEmail(
       seccion(
         'Lo que ha pedido',
         fila(esc(coche), `${esc(fechas)} · ${dias} día${plural}`) +
+          /*
+           * ⚠️ **El lugar va junto al coche y las fechas, no en la letra
+           * pequeña.** Decide si hay que mover una furgoneta y si el alquiler
+           * lleva suplemento: es parte de lo que hay que saber antes de
+           * llamar, no un detalle que se mira después.
+           *
+           * ⚠️ **Y solo si se dijo.** Una fila «Recogida: —» en el aviso de
+           * cada solicitud enseña a saltársela, y entonces no se lee el día
+           * que sí pone «Aeropuerto».
+           */
+          (s.pickupPlace ? fila(esc(s.pickupPlace), 'Lo recoge en') : '') +
           fila(`${esc(precio)}, IVA incluido`, `Precio garantizado hasta el ${esc(garantia)}`)
       ) +
       (opciones.enlace ? boton('Abrir la solicitud', opciones.enlace) : ''),
@@ -95,6 +108,7 @@ export function renderBookingRequestEmail(
     '',
     `Coche       ${coche}`,
     `Fechas      ${fechas} (${dias} día${plural})`,
+    ...(s.pickupPlace ? [`Recoge en   ${s.pickupPlace}`] : []),
     `Precio      ${precio}, IVA incluido`,
     `Garantizado hasta el ${garantia}`,
     ...(opciones.enlace ? ['', opciones.enlace] : []),

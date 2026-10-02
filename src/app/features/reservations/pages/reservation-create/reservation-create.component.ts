@@ -249,6 +249,25 @@ export class ReservationCreateComponent implements OnInit {
     this.quickClient.fullName = q.get('clientName') ?? '';
     this.quickClient.phone = q.get('clientPhone') ? `+${q.get('clientPhone')}` : '';
 
+    /**
+     * ⚠️ **El lugar que pidió en la web, puesto como lugar de recogida.** Es
+     * el campo que más fácil se olvida al convertir y el que decide si hay que
+     * mover una furgoneta — y además se **imprime** en el presupuesto, el
+     * justificante y el contrato, así que dejarlo en el valor por defecto
+     * manda al cliente a una dirección que él no eligió.
+     *
+     * ⚠️ **Solo la recogida, no la devolución.** Son dos trayectos que se
+     * pactan por separado —hay quien pide que se lo lleven y devuelve en
+     * oficina—, y la web solo pregunta por uno: rellenar los dos con lo mismo
+     * sería inventarse la mitad.
+     *
+     * ⚠️ **Y no toca `deliveryPickupFee`.** El suplemento lo teclea el
+     * operador: la web no cobra nada y el catálogo de zonas es una promesa
+     * comercial, no una tarifa que esta pantalla pueda aplicar sola.
+     */
+    const lugar = q.get('pickupPlace');
+    if (lugar) this.pickupLocation = lugar;
+
     await this.searchAvailability();
 
     const elegido = this.availabilityResults.find((v) => v.vehicleId === vehicleId);

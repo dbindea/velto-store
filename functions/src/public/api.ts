@@ -491,7 +491,7 @@ export const createBookingRequest = onRequest(
 
     const validado = validateBookingRequest(cuerpo);
     if (!validado.ok) { fallo(res, 400, validado.error); return; }
-    const { vehicleId, name, phone, note, email } = validado.fields;
+    const { vehicleId, name, phone, note, email, place } = validado.fields;
 
     const desde = parseFecha(cuerpo.from);
     const hasta = parseFecha(cuerpo.to);
@@ -590,6 +590,20 @@ export const createBookingRequest = onRequest(
          */
         email,
         note,
+        /**
+         * ⚠️ **Dónde recoge el coche, y hasta el 2 de octubre de 2026 NO se
+         * guardaba.** El buscador lo pide desde que existe y el dato moría en
+         * la URL: una pre-reserva del aeropuerto —la que cuesta 30 € y una
+         * furgoneta— llegaba aquí indistinguible de una de oficina.
+         *
+         * ⚠️ **Es el lugar PEDIDO, no un importe.** El suplemento no viaja ni
+         * se suma al precio: la entrega a domicilio se teclea a mano por
+         * reserva en el backoffice (`deliveryFees`, fuera del
+         * `pricingSnapshot`), así que meterlo aquí sería una segunda fuente de
+         * verdad para el mismo euro. Lo que hace falta es que el operador sepa
+         * dónde hay que llevarlo.
+         */
+        pickupPlace: place,
         vehicleId,
         /**
          * Lo que el cliente VIO, congelado. No es comodidad: el operador va a
@@ -650,6 +664,9 @@ export const createBookingRequest = onRequest(
         dias,
         precio,
         validoHasta: garantia,
+        // El presupuesto imprime el lugar de recogida si se dijo: es el mismo
+        // `pickupLocation` que lleva el del operador y el contrato.
+        ...(place ? { lugar: place } : {}),
         ...(typeof raw['defaultDepositAmount'] === 'number'
           ? { fianza: raw['defaultDepositAmount'] as number }
           : {}),
@@ -731,6 +748,7 @@ async function avisarCliente(
     reference: string;
     name: string;
     email: string;
+    pickupPlace?: string;
     vehicleSnapshot: { brand: string; model: string };
     quoteSnapshot: { totalDays: number; gross: number };
     pickupDate: Date;
@@ -760,6 +778,7 @@ async function avisarCliente(
     importe: `${s.quoteSnapshot.gross.toFixed(2).replace('.', ',')} €`,
     recogida: cuando(s.pickupDate),
     devolucion: cuando(s.returnDate),
+    ...(s.pickupPlace ? { lugar: s.pickupPlace } : {}),
     garantia: `hasta el ${cuando(s.priceGuaranteedUntil)}`,
     presupuesto,
     marca: empresa.brandName,

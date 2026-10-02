@@ -52,6 +52,16 @@ export interface FechasElegidas {
   /** `yyyy-MM-ddTHH:mm`, en hora local. */
   desde: string;
   hasta: string;
+  /**
+   * El lugar de recogida elegido en el buscador.
+   *
+   * ⚠️ **Viaja por el mismo sitio que las fechas, y por el mismo motivo.** Sin
+   * él, elegir «Aeropuerto» en el buscador y entrar en un coche perdía el dato
+   * en el salto: la ficha se abría sin lugar y la pre-reserva llegaba a Velto
+   * sin decir dónde hay que llevar el coche. El parámetro se llama `place`
+   * porque es el que ya usa la página de resultados en su URL.
+   */
+  lugar?: string;
 }
 
 export function tarjetaCoche(
@@ -162,7 +172,8 @@ export function tarjetaCoche(
    * resultados. Es la misma razón por la que la búsqueda vive en la URL.
    */
   const conFechas = fechas
-    ? `?from=${encodeURIComponent(fechas.desde)}&to=${encodeURIComponent(fechas.hasta)}`
+    ? `?from=${encodeURIComponent(fechas.desde)}&to=${encodeURIComponent(fechas.hasta)}` +
+      (fechas.lugar ? `&place=${encodeURIComponent(fechas.lugar)}` : '')
     : '';
 
   return `

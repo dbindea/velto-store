@@ -39,6 +39,15 @@ export interface DatosPresupuesto {
   /** Hasta cuándo vale, que es lo mismo que dura el precio garantizado. */
   validoHasta: Date;
   fianza?: number;
+  /**
+   * Dónde recoge el coche, si lo dijo.
+   *
+   * ⚠️ **Va al mismo sitio que el del operador** (`rental.pickupLocation`), no
+   * a una línea nueva: el presupuesto ya sabe imprimir el lugar de recogida y
+   * es el mismo dato. Un segundo campo para lo mismo son dos sitios donde
+   * mirarlo y uno que se queda viejo.
+   */
+  lugar?: string;
 }
 
 /**
@@ -79,6 +88,7 @@ export async function presupuestoDeSolicitud(d: DatosPresupuesto): Promise<strin
         pickupDateTime: d.recogida,
         returnDateTime: d.devolucion,
         totalDays: d.dias,
+        ...(d.lugar ? { pickupLocation: d.lugar } : {}),
       },
       pricing: {
         finalPrice: d.precio.gross,

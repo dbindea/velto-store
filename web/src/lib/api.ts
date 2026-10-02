@@ -298,6 +298,17 @@ export function solicitar(datos: {
   note: string;
   /** Opcional: si lo deja, se le manda el presupuesto. */
   email: string;
+  /**
+   * Dónde quiere recoger el coche: lo que eligió en el buscador.
+   *
+   * ⚠️ **Hasta el 2 de octubre de 2026 esto NO viajaba, y era el agujero del
+   * aeropuerto.** El buscador pide el lugar desde que existe y el dato se
+   * quedaba en la URL: alguien elegía «Aeropuerto · +30 €» y a Velto le
+   * llegaba una solicitud idéntica a una de oficina. El suplemento sigue sin
+   * sumarse al precio —la entrega se teclea a mano por reserva en el
+   * backoffice— pero ahora al menos consta dónde hay que llevar el coche.
+   */
+  place: string;
   trap: string;
 }): Promise<SolicitudEnviada> {
   return pedir('/api/solicitud', {

@@ -2091,7 +2091,8 @@
       "received": "Received",
       "priceUntil": "Price guaranteed until",
       "internalNote": "Internal note",
-      "message": "Message for the customer"
+      "message": "Message for the customer",
+      "place": "Pick-up at"
     },
     "empty": {
       "title": "No requests",

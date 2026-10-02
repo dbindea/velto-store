@@ -2091,7 +2091,8 @@
       "received": "Primită",
       "priceUntil": "Preț garantat până la",
       "internalNote": "Notă internă",
-      "message": "Mesaj pentru client"
+      "message": "Mesaj pentru client",
+      "place": "Ridicare la"
     },
     "empty": {
       "title": "Nicio solicitare",

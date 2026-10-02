@@ -62,6 +62,8 @@ export interface BookingRequestInput {
   note?: unknown;
   /** Opcional: si lo deja, se le manda el presupuesto. */
   email?: unknown;
+  /** Dónde quiere recoger el coche. Ver `normalizePlace`. */
+  place?: unknown;
   /** El campo trampa: si viene relleno, lo ha rellenado un robot. */
   trap?: unknown;
 }
@@ -73,6 +75,17 @@ export interface BookingRequestFields {
   note: string;
   /** Vacío si no lo dejó: es opcional a propósito. */
   email: string;
+  /**
+   * Dónde recoge el coche, vacío si no se dijo.
+   *
+   * ⚠️ **Esto NO llegaba, y era el agujero del aeropuerto.** El buscador de la
+   * web pide el lugar de recogida desde que existe y ese dato **moría en la
+   * URL**: no viajaba a la ficha, no viajaba en la solicitud y no se guardaba.
+   * O sea que alguien elegía «Aeropuerto · +30 €», mandaba su pre-reserva, y a
+   * Velto le llegaba un alquiler indistinguible de uno de oficina —el caso que
+   * cuesta treinta euros y una furgoneta—. Corregido el 2 de octubre de 2026.
+   */
+  place: string;
 }
 
 /**
@@ -85,6 +98,7 @@ export const MAX_NAME = 80;
 export const MAX_PHONE = 24;
 export const MAX_NOTE = 400;
 export const MAX_EMAIL = 120;
+export const MAX_PLACE = 80;
 
 /**
  * El teléfono, normalizado a lo que `wa.me` necesita: solo dígitos, con prefijo
@@ -225,6 +239,30 @@ export function normalizeEmail(raw: unknown): string | null {
 }
 
 /**
+ * El lugar de recogida, **opcional y sin lista cerrada**.
+ *
+ * ⚠️ **No se valida contra el catálogo de zonas, y es deliberado.** El catálogo
+ * vive en la web (`web/src/lib/zonas.ts`) y tiene cuatro filas; la empresa va
+ * más lejos de esas cuatro y la cuarta es literalmente «Prefiero
+ * especificar…», que vacía el campo para que el visitante escriba su pueblo.
+ * Rechazar aquí lo que no esté en la lista tiraría justo la solicitud del
+ * cliente que vive un pueblo más allá — que es el que llama.
+ *
+ * ⚠️ **Se capitaliza como un nombre propio**, porque lo es: «arganda del rey»
+ * tecleado desde un móvil acaba en el aviso que lee el operador y, al
+ * convertir, en el `pickupLocation` que imprime el contrato. Es el fallo que
+ * CLAUDE.md dice que se repite —el campo que nace fuera del formulario— y este
+ * nace en una web pública.
+ *
+ * ⚠️ **Nunca rechaza: lo largo se recorta.** Un lugar de 300 caracteres es
+ * raro, no es un ataque, y perder una pre-reserva entera por eso es peor que
+ * guardar los primeros ochenta.
+ */
+export function normalizePlace(raw: unknown): string {
+  return capitalizeWords(limpiarTexto(typeof raw === 'string' ? raw : '', MAX_PLACE));
+}
+
+/**
  * Valida y normaliza lo que llegó.
  *
  * ⚠️ **Lo que NO valida: el precio.** No viaja en la petición a propósito. Si
@@ -256,7 +294,9 @@ export function validateBookingRequest(
   const email = normalizeEmail(input.email);
   if (email === null) return { ok: false, error: 'bad-email' };
 
-  return { ok: true, fields: { vehicleId, name, phone, note, email } };
+  const place = normalizePlace(input.place);
+
+  return { ok: true, fields: { vehicleId, name, phone, note, email, place } };
 }
 
 /**

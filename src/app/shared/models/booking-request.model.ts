@@ -96,6 +96,22 @@ export interface BookingRequest {
   returnDate?: any;
 
   /**
+   * Dónde pidió recoger el coche.
+   *
+   * ⚠️ **Opcional y aditivo**: las solicitudes anteriores al 2 de octubre de
+   * 2026 no lo llevan, y su ausencia significa «no se dijo», no «la oficina».
+   * Hasta ese día el buscador de la web lo pedía y el dato **moría en la URL**:
+   * una pre-reserva del aeropuerto llegaba aquí indistinguible de una de
+   * oficina, que es el caso que cuesta 30 € y una furgoneta.
+   *
+   * ⚠️ **Es el lugar PEDIDO, no un importe.** El suplemento no viaja: la
+   * entrega se teclea por reserva en `deliveryFees`, y guardarlo aquí sería una
+   * segunda fuente de verdad para el mismo euro. Al convertir viaja al
+   * asistente como lugar de recogida, que es donde sí decide lo que se imprime.
+   */
+  pickupPlace?: string;
+
+  /**
    * Hasta cuándo se mantiene el precio.
    *
    * ⚠️ **Se congeló al crearla, no se lee de Ajustes.** Cambiar el plazo no

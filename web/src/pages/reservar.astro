@@ -360,7 +360,14 @@ import { ORDENES } from '../lib/resultados';
      * un coche desde aquí no pierda la búsqueda: la ficha se abre con el
      * calendario ya marcado y el precio hecho.
      */
-    const fechas = campos ? { desde: campos.desde.value, hasta: campos.hasta.value } : undefined;
+    const fechas = campos
+      ? {
+          desde: campos.desde.value,
+          hasta: campos.hasta.value,
+          // Y el lugar, que hasta el 2 de octubre de 2026 se quedaba aquí.
+          lugar: campos.lugar?.value.trim() ?? '',
+        }
+      : undefined;
     lista.innerHTML = mostrados.map((v) => tarjetaCoche(v, fechas)).join('');
   }
 

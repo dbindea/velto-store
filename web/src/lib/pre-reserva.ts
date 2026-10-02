@@ -19,6 +19,14 @@ export interface DatosPreReserva {
   desde: string;
   hasta: string;
   /**
+   * Dónde lo recoge, tal y como lo eligió en el buscador. Vacío si llegó a la
+   * ficha sin pasar por él.
+   *
+   * ⚠️ **Viaja hasta la solicitud, que es lo que no pasaba.** Ver la nota de
+   * `solicitar()` en `api.ts`: el aeropuerto llegaba a Velto sin nombrarse.
+   */
+  lugar?: string;
+  /**
    * Cuántas horas se garantiza el precio, tal y como lo ha dicho el backend.
    *
    * ⚠️ **Sin él se deja la frase que trae la plantilla** —24 horas, el valor
@@ -198,6 +206,7 @@ export function montarPreReserva(): PreReserva | null {
       phone: String(datos.get('phone') || ''),
       note: String(datos.get('note') || ''),
       email: String(datos.get('email') || ''),
+      place: elegido.lugar ?? '',
       trap: String(datos.get('trap') || ''),
     })
       .then((r) => {
