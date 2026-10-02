@@ -279,6 +279,37 @@ interface PublicCheckoutResponse {
   /** Marca de la empresa, para que el cliente sepa a quién paga. */
   brandName: string;
   /**
+   * Razón social y NIF de quien cobra.
+   *
+   * ⚠️ **Lo exige el BANCO, y es la excepción a la regla de la marca.** El
+   * manual del TPV Virtual pide que «el nombre del comercio y el de la persona
+   * propietaria, física o jurídica, aparezcan en la página principal **y en la
+   * página de pago**». Esta es la página de pago.
+   *
+   * ⚠️ **Y no contradice la regla de la casa, la cumple.** `brandName` manda
+   * en todo lo que le habla al cliente y la razón social solo aparece «donde
+   * la empresa comparece como persona jurídica, es decir acompañada del NIF»:
+   * cobrar dinero es exactamente eso. Por eso van los dos juntos y nunca el
+   * `legalName` suelto.
+   */
+  legalName: string;
+  taxId: string;
+  /**
+   * La política de cancelaciones y devoluciones, en la web pública.
+   *
+   * ⚠️ **Vacía mientras el dominio no sirva, y entonces no se pinta el
+   * enlace.** Un enlace muerto en la pantalla donde alguien va a meter su
+   * tarjeta es peor que no ofrecerlo: se lee como que la empresa no tiene esa
+   * política. Se enciende poniendo `VELTO_WEB_BASE_URL` en
+   * `functions/.env.<proyecto>` el día que `veltomobility.com` responda.
+   *
+   * ⚠️ **Y la sirve la FUNCTION, no `brand.config.ts`.** Aquel se compila
+   * dentro del bundle y vale lo mismo en los dos entornos — es exactamente lo
+   * que hizo que la pantalla de firma enseñara el correo de desarrollo a un
+   * cliente real (F-33).
+   */
+  termsUrl: string;
+  /**
    * Si este cobro es la **señal** de una pre-reserva de la web.
    *
    * ⚠️ **La pantalla tiene que decir qué pasa con ese dinero, y solo aquí.**
@@ -344,6 +375,11 @@ export const getPaymentCheckout = onCall(
       currency: payment.currency || 'EUR',
       concept: String(payment.concept || ''),
       brandName: company.brandName,
+      legalName: company.legalName,
+      taxId: company.taxId,
+      termsUrl: (process.env.VELTO_WEB_BASE_URL || '').replace(/\/$/, '')
+        ? `${(process.env.VELTO_WEB_BASE_URL || '').replace(/\/$/, '')}/devoluciones`
+        : '',
       // Lo es si salió de una solicitud de la web. No se publica cuál.
       isBookingSignal: Boolean(payment.bookingRequestId)
     };

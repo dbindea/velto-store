@@ -44,6 +44,7 @@ export const RUTAS = [
   '/preguntas-frecuentes',
   '/condiciones',
   '/contacto',
+  '/devoluciones',
   '/aviso-legal',
   '/privacidad',
 ] as const;

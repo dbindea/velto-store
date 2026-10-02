@@ -92,7 +92,34 @@
     }
   </main>
 
+  <!--
+    ⚠️ **La razón social y el NIF van AQUÍ porque los exige el banco.** El
+    manual del TPV Virtual pide que «el nombre del comercio y el de la persona
+    propietaria, física o jurídica, aparezcan en la página principal y en la
+    página de pago», y esta es la página de pago. Sin ellos, el alta del TPV
+    se queda parada en la revisión del comercio.
+
+    ⚠️ **Y no rompe la regla de la marca, la cumple.** `brandName` es lo que le
+    habla al cliente y la razón social solo sale «acompañada del NIF», donde la
+    empresa comparece como persona jurídica. Cobrar dinero es exactamente eso,
+    así que van juntos y nunca el `legalName` suelto.
+
+    ⚠️ **Y las condiciones se enlazan, no se resumen.** Quien está a punto de
+    pagar tiene derecho a leer qué pasa si cancela antes de pulsar, no después
+    — y el art. 97.1.l del TRLGDCU obliga a informar de que no hay
+    desistimiento ANTES de contratar.
+  -->
   <footer class="public-footer">
     <span>{{ view()?.brandName || '' }}</span>
+    @if (view()?.legalName) {
+      <span class="public-footer__legal">
+        {{ view()!.legalName }}@if (view()?.taxId) { · NIF {{ view()!.taxId }} }
+      </span>
+    }
+    @if (view()?.termsUrl) {
+      <a class="public-footer__enlace" [href]="view()!.termsUrl" target="_blank" rel="noopener">
+        {{ 'payments.checkout.terms' | translate }}
+      </a>
+    }
   </footer>
 </div>

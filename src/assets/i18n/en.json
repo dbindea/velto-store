@@ -714,7 +714,8 @@
       "subtitle": "Secure payment",
       "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us.",
       "unavailableTitle": "Payment unavailable",
-      "signalTerms": "This deposit is deducted from the rental price. Once paid, we confirm your booking and hold the car for those dates; if you cancel afterwards, the deposit is not refunded. If we are the ones unable to provide the car, you get it back in full."
+      "signalTerms": "This deposit is deducted from the rental price. Once paid, we confirm your booking and hold the car for those dates; if you cancel afterwards, the deposit is not refunded. If we are the ones unable to provide the car, you get it back in full.",
+      "terms": "Cancellations and refunds"
     },
     "confirm": {
       "cancelMessage": "The payment will be cancelled and will no longer count as outstanding.",

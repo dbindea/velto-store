@@ -212,10 +212,37 @@
   &:hover { color: var(--accent-color); }
 }
 
+/*
+ * El pie de la pantalla de pago: marca, razón social con NIF y la política.
+ *
+ * ⚠️ **En columna y no en una línea.** La razón social con el NIF mide unos
+ * 35 caracteres y la marca otros 14: en un móvil de 390 px, en fila, se parten
+ * por donde caiga y el NIF acaba suelto en su propio renglón, que es como se
+ * lee un dato que no cuadra.
+ */
 .public-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding: 1rem;
   text-align: center;
   font-size: 0.75rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border-color);
+}
+
+/*
+ * ⚠️ **Escritas enteras y no con `&__legal`.** `css:audit` busca la clase
+ * literal en el SCSS: anidadas las daba por desnudas sin estarlo, y un
+ * auditor que grita en falso se deja de leer. Mismo motivo que `.senal__estado`.
+ */
+.public-footer__legal {
+  /* Es el dato registral: se lee si se busca, no compite con el importe. */
+  opacity: 0.85;
+}
+
+.public-footer__enlace {
+  color: var(--text-secondary);
+  text-decoration: underline;
 }

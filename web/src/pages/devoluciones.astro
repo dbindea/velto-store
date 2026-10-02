@@ -1,0 +1,170 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+{/*
+  ⚠️ **Esta página existe porque la pide el BANCO, además de la ley.** Para dar
+  de alta un TPV Virtual, BBVA/Redsys remite una carta pidiendo expresamente dos
+  documentos publicados en la web: la **política de devoluciones** —
+  cancelaciones, devoluciones y reembolsos— y la de privacidad. Sin ellas el
+  alta no sigue adelante. Hasta el 2 de octubre de 2026 esta no existía y la
+  parte de cancelación estaba a medias en `/condiciones`.
+
+  ⚠️ **Y lo más importante de toda la página es la sección de DESISTIMIENTO, que
+  dice que NO lo hay.** Esto no es una licencia que se toma Velto: el art. 103.l
+  del TRLGDCU (RDL 1/2007) excluye del derecho de desistimiento «el suministro
+  de servicios de … alquiler de vehículos … si los contratos prevén una fecha o
+  un periodo de ejecución específicos», que es exactamente lo que es un
+  alquiler reservado del 10 al 14.
+
+  ⚠️ **Pero el art. 97.1.l OBLIGA a decírselo al consumidor**, y la sanción por
+  callarlo es brutal: si no se informa correctamente, el plazo de 14 días **se
+  extiende a doce meses**. O sea que no publicar esto no es quedarse neutro —
+  es regalar un año de derecho de devolución a cada cliente. Por eso la sección
+  está escrita en afirmativo y con su artículo delante, no escondida en una
+  línea.
+
+  ⚠️ **Los plazos de abono son los REALES de la pasarela, no «unos días».** Una
+  devolución por TPV la ejecuta Velto al momento, pero cuándo aparece en la
+  tarjeta lo decide el banco emisor del cliente y va de 2 a 31 días. Prometer
+  «48 horas» sería prometer algo que no depende de nosotros, y es la clase de
+  frase por la que se recibe una reclamación teniendo razón.
+
+  ⚠️ **Y esto lo ha escrito un programador, no un abogado**, igual que el resto
+  de lo legal de esta web. Está anotado como pendiente de revisión.
+*/}
+<Base
+  titulo="Cancelaciones, devoluciones y reembolsos | Velto"
+  descripcion="Qué pasa si cancelas, cuándo se devuelve el dinero y en cuánto tiempo llega a tu tarjeta. Y por qué en un alquiler con fechas no hay derecho de desistimiento."
+  ruta="/devoluciones"
+>
+  <section class="seccion">
+    <div class="contenedor texto">
+      <p class="overline">Devoluciones</p>
+      <h1>Cancelaciones, devoluciones y reembolsos</h1>
+      <p class="entrada">
+        Lo corto: pedir precio no cuesta nada, la señal es lo único que no se
+        devuelve si cancelas tú, y todo lo demás vuelve al mismo sitio desde el
+        que pagaste.
+      </p>
+
+      <h2 id="pre-reserva">Antes de pagar nada</h2>
+      <p>
+        Pedir precio o dejar una <strong>pre-reserva</strong> en esta web
+        <strong>no cuesta nada y no te compromete</strong>. Mientras no hayas
+        pagado, no hay nada que cancelar ni que devolver: puedes dejarlo sin
+        avisar y no se te cobra nada. El coche tampoco queda apartado.
+      </p>
+
+      <h2 id="senal">La señal</h2>
+      <p>
+        La reserva queda en firme cuando abonas la <strong>señal</strong>:
+        <strong>50 €</strong>, o <strong>25 €</strong> si el alquiler cuesta
+        menos de 50 €. Esa señal <strong>se descuenta del precio del
+        alquiler</strong> — no es un cargo aparte.
+      </p>
+      <p>
+        Desde ese momento el coche queda apartado para tus fechas y deja de
+        ofrecerse a nadie más. Por eso, <strong>si cancelas tú, la señal no se
+        devuelve</strong>: es lo único que compensa tener un coche parado unos
+        días sin alquilar. El resto del alquiler, si ya lo hubieras pagado, sí
+        se devuelve entero.
+      </p>
+      <p>
+        <strong>Y al revés.</strong> Si somos nosotros los que no podemos darte
+        el coche —una avería, un siniestro, cualquier cosa—, te devolvemos
+        <strong>todo lo pagado, señal incluida</strong>, sin que tengas que
+        reclamarlo. Si te va bien, te ofrecemos antes otro coche equivalente;
+        la elección es tuya.
+      </p>
+
+      {/*
+        ⚠️ Esta sección es contenido OBLIGATORIO por el art. 97.1.l TRLGDCU
+        cuando no procede el desistimiento. Si se borra, el plazo de 14 días
+        pasa a ser de doce meses. No se toca sin leer el comentario de arriba.
+      */}
+      <h2 id="desistimiento">Derecho de desistimiento</h2>
+      <p>
+        En la mayoría de las compras por internet existen 14 días naturales para
+        desistir sin dar explicaciones. <strong>En el alquiler de un vehículo
+        con fechas concretas, no.</strong> Te lo decimos claro porque la ley nos
+        obliga a decírtelo: el <strong>artículo 103.l</strong> del texto
+        refundido de la Ley General para la Defensa de los Consumidores y
+        Usuarios deja fuera del derecho de desistimiento el alquiler de
+        vehículos «si los contratos prevén una fecha o un periodo de ejecución
+        específicos», que es justo lo que haces al reservar del día 10 al 14.
+      </p>
+      <p>
+        Lo que sí tienes es lo de arriba: cancelar cuando quieras perdiendo
+        únicamente la señal, y recuperarlo todo si el que falla es Velto.
+      </p>
+
+      <h2 id="fianza">La fianza no es parte de esto</h2>
+      <p>
+        La <strong>fianza</strong> es un depósito en garantía, no un pago del
+        alquiler: se devuelve siempre tras la inspección de devolución del
+        coche, salvo lo que haya que retener por daños, combustible o
+        kilómetros de más, que se te justifica con el parte y sus fotos. Si la
+        reserva se cancela antes de entregar el coche, la fianza vuelve entera
+        aunque la señal no.
+      </p>
+
+      <h2 id="como">Cómo se devuelve el dinero</h2>
+      <p>
+        Siempre <strong>al mismo medio de pago</strong> con el que pagaste. Si
+        pagaste con tarjeta, el abono va a esa misma tarjeta; no se devuelve en
+        efectivo ni a otra cuenta.
+      </p>
+      <p>
+        Nosotros ordenamos la devolución en cuanto está decidida, normalmente el
+        mismo día. <strong>Cuándo lo ves en tu tarjeta ya no depende de
+        nosotros</strong>: lo decide el banco que la emitió, y según la propia
+        documentación de la pasarela puede tardar <strong>entre 2 y 31
+        días</strong>. No te preocupes si no aparece al día siguiente.
+      </p>
+      <p class="nota">
+        Una limitación técnica que conviene saber: una devolución a tarjeta solo
+        se puede hacer sobre un cobro de los <strong>últimos 120 días</strong>.
+        Pasado ese plazo seguimos devolviendo lo que corresponda, pero por
+        transferencia, y necesitaremos que nos des un IBAN.
+      </p>
+
+      <h2 id="pedirlo">Cómo pedirlo</h2>
+      <p>
+        Escribiendo a
+        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> o
+        llamando al <a href={`tel:${EMPRESA.telefono}`}>{EMPRESA.telefono}</a>,
+        con tu <strong>referencia de reserva</strong> delante. Te contestamos en
+        un plazo máximo de <strong>72 horas</strong> diciéndote qué se devuelve
+        y cuándo se ordena.
+      </p>
+      <p>
+        Si no estás de acuerdo con lo que se te retiene, dilo por escrito a esa
+        misma dirección: te respondemos con el parte de devolución y las fotos
+        en las que nos apoyamos.
+      </p>
+
+      <h2 id="pagos">Formas de pago que aceptamos</h2>
+      <p>
+        Tarjeta de crédito o débito <strong>Visa</strong> y
+        <strong> Mastercard</strong>, <strong>Bizum</strong>, transferencia
+        bancaria y efectivo en oficina. Todos los importes de esta web están en
+        <strong> euros (EUR)</strong> e incluyen los impuestos.
+      </p>
+      <p>
+        Los pagos con tarjeta se hacen en la pasarela segura de nuestro banco,
+        con <strong>autenticación reforzada</strong> del titular (3-D Secure).
+        {' '}<strong>{EMPRESA.razonSocial}</strong> no ve ni guarda en ningún
+        momento el número de tu tarjeta.
+      </p>
+
+      <p class="nota">
+        Última actualización: 2 de octubre de 2026. Los datos fiscales completos
+        del titular están en el <a href="/aviso-legal">aviso legal</a>, y el
+        detalle del alquiler en las
+        {' '}<a href="/condiciones">condiciones de alquiler</a>.
+      </p>
+    </div>
+  </section>
+</Base>

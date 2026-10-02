@@ -714,7 +714,8 @@
       "subtitle": "Plată securizată",
       "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
       "unavailableTitle": "Plată indisponibilă",
-      "signalTerms": "Acest avans se scade din prețul închirierii. După plată, confirmăm rezervarea și blocăm mașina pentru acele date; dacă anulezi ulterior, avansul nu se restituie. Dacă noi suntem cei care nu îți putem da mașina, îl primești înapoi integral."
+      "signalTerms": "Acest avans se scade din prețul închirierii. După plată, confirmăm rezervarea și blocăm mașina pentru acele date; dacă anulezi ulterior, avansul nu se restituie. Dacă noi suntem cei care nu îți putem da mașina, îl primești înapoi integral.",
+      "terms": "Anulări și rambursări"
     },
     "confirm": {
       "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",

@@ -445,6 +445,15 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
             <p class="overline">Legal</p>
             <ul class="pie__enlaces">
               <li><a href="/condiciones">Condiciones de alquiler</a></li>
+              {/*
+                ⚠️ **Tiene que estar en el pie de TODAS las páginas, y no solo
+                porque quede bien.** Para dar de alta el TPV Virtual, el banco
+                comprueba que la política de devoluciones esté publicada y
+                accesible; y el art. 97.1.l del TRLGDCU obliga a informar de
+                que no hay desistimiento **antes** de contratar, no en una
+                página que haya que buscar.
+              */}
+              <li><a href="/devoluciones">Cancelaciones y devoluciones</a></li>
               <li><a href="/aviso-legal">Aviso legal</a></li>
               <li><a href="/privacidad">Privacidad</a></li>
               {/*
