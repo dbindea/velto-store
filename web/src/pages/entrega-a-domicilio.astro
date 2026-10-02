@@ -138,6 +138,29 @@ const aeropuerto = ZONAS.find((z) => z.nombre === 'Aeropuerto');
                 caso de quien aterriza tarde: sales del aeropuerto con el coche
                 puesto y sin pasar por ningún mostrador.
               </p>
+              {/*
+                ⚠️ **Dónde se queda con el cliente, que era uno de los huecos
+                abiertos de la web.** Lo decidió Dorel el 2 de octubre de 2026:
+                en la zona de **Salidas** de la terminal.
+
+                ⚠️ **Y NO se nombra una terminal concreta a propósito.** Barajas
+                tiene cuatro y la que toca depende del vuelo de cada uno; poner
+                un número aquí sería mandar a alguien a la T1 cuando aterriza en
+                la T4, que a esas horas es media hora de tren. El cliente dice
+                su terminal al reservar y el punto exacto se confirma por
+                WhatsApp.
+
+                ⚠️ **Salidas y no Llegadas, aunque el cliente llegue.** En
+                Llegadas no se puede parar un coche: la acera es de parada
+                prohibida y la vigilan. La planta de Salidas es donde se deja a
+                alguien, y es donde se puede entregar un coche sin multa.
+              */}
+              <p class="nota cobertura__nota">
+                <strong>Dónde nos vemos:</strong> en la planta de
+                <strong> Salidas</strong> de tu terminal. Dinos cuál es al
+                reservar y te confirmamos el punto exacto por WhatsApp antes de
+                que vueles.
+              </p>
             </article>
           )
         }

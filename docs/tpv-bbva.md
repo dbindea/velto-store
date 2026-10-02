@@ -71,20 +71,28 @@ en el contrato es el **domicilio social**, que es el que publica
 
 ## 3. Lo que hay que decirle al banco, y que no es obvio
 
-### 3.1 Son DOS dominios, y los dos procesan
+### 3.1 Se declara solo `veltomobility.com`, y hay que saber qué asume eso
 
 El contrato del TPV registra la o las páginas web desde las que se podrán
 originar transacciones: **el comercio solo puede procesar pagos originados
-desde las webs registradas**. Aquí hay dos:
+desde las webs registradas**. Aquí hay dos sitios:
 
-| Dominio | Qué es | ¿Procesa pagos? |
+| Dominio | Qué es | ¿De ahí salen pagos? |
 |---|---|---|
 | `veltomobility.com` | el escaparate público | no, pero es donde están las políticas |
 | `rentalcar.veltomobility.com` | el backoffice, y donde vive `/pay/:id` | **sí** |
 
-⚠️ **Hay que declarar los dos.** Declarando solo el escaparate, el banco
-rechazaría las operaciones que salen del que de verdad cobra; declarando solo
-el backoffice, el revisor no encuentra las políticas.
+**Decisión de Dorel (2 de octubre de 2026): declarar solo el principal.** Lo
+habitual es que el alta cubra el dominio y sus subdominios, y
+`rentalcar.veltomobility.com` lo es.
+
+⚠️ **Pero conviene tenerlo escrito, porque si algo se tuerce será por aquí.**
+Quien de verdad publica el formulario contra `sis.redsys.es` es el
+**subdominio**, no el escaparate. Si en la revisión el banco pregunta de dónde
+sale el pago, la respuesta es `rentalcar.veltomobility.com`, y las dos salidas
+son: añadirlo al contrato —un trámite— o mover `/pay/:id` al escaparate, que es
+rehacer esa pantalla en Astro. **No se adelanta trabajo por si acaso**; se deja
+dicho para no tener que averiguarlo con el alta parada.
 
 ### 3.2 Qué se cobra, y cuándo
 
@@ -131,17 +139,18 @@ transferencia. Las dos cosas están publicadas en `/devoluciones#como`.
 
 ## 4. Lo que falta, y es de Dorel
 
-| Qué | Por qué bloquea |
+| Qué | Estado el 2 de octubre de 2026 |
 |---|---|
-| Que **`veltomobility.com` sirva de verdad** | hoy da el aparcamiento del registrador; el banco entra a mirar las políticas y no las encuentra |
-| Que ese dominio **reciba correo** | no tiene registros MX, y las políticas dan `reservas@veltomobility.com` como canal de reclamación |
-| **Entidad de resolución de litigios** | `/aviso-legal` lleva un `[PENDIENTE]`; la Ley 7/2017 no deja callarse |
-| **Revisión por un abogado** | lo legal está escrito y es honesto, pero lo firma una empresa real |
-| **Cuenta de empresa en BBVA** | requisito de contratación del TPV |
+| Que **`veltomobility.com` sirva de verdad** | ⛔ **pendiente** — hoy da el aparcamiento del registrador; el banco entra a mirar las políticas y no las encuentra |
+| Que ese dominio **reciba correo** | ✅ **resuelto** — Email Routing de Cloudflare activo, comprobado con `Resolve-DnsName … -Type MX` |
+| **Entidad de resolución de litigios** | 🟡 escrito como «no adherido»; falta que Dorel lo confirme |
+| **Revisión por un abogado** | 🟡 en marcha, con un abogado y otra IA |
+| **Cuenta de empresa en BBVA** | ✅ ya la tiene |
+| **Ficha de Google Business Profile** | ✅ creada, enlazada desde el JSON-LD |
 
-⚠️ **Los dos primeros son el camino crítico.** El resto de la web está listo:
-mientras el dominio no responda, la solicitud se cae en la revisión del comercio
-por un motivo que no tiene nada que ver con el código.
+⚠️ **El único camino crítico que queda es el dominio.** Todo lo demás de la web
+está listo: mientras `veltomobility.com` no responda, la solicitud se cae en la
+revisión del comercio por un motivo que no tiene nada que ver con el código.
 
 ---
 

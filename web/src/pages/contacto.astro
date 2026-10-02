@@ -46,6 +46,24 @@ const datosEstructurados = {
       closes: t[1],
     }))
   ),
+  /**
+   * ⚠️ **La ficha de Google Business Profile, y esto es lo que de verdad
+   * posiciona en local.** Para «alquiler de coches Arganda», la ficha pesa más
+   * que todo este JSON-LD junto: es lo que sale en el mapa, con las reseñas y
+   * el botón de cómo llegar.
+   *
+   * `sameAs` es lo que le dice a Google que **esta web y esa ficha son el
+   * mismo negocio**. Sin él las trata como dos entidades que casualmente
+   * comparten nombre y dirección, y el nombre, el teléfono y el horario de los
+   * dos sitios compiten en vez de confirmarse.
+   *
+   * ⚠️ **Y por eso los datos de aquí tienen que coincidir EXACTAMENTE con los
+   * de la ficha** —nombre, teléfono, dirección y horario—. Una discrepancia no
+   * da error en ninguna parte: simplemente Google se fía menos de los dos.
+   * Dorel creó la ficha el 2 de octubre de 2026; si cambia el horario en
+   * `empresa.ts`, hay que cambiarlo también allí.
+   */
+  sameAs: ['https://maps.app.goo.gl/cAwZQU2H8s8vxUtv7'],
 };
 ---
 

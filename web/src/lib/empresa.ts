@@ -50,25 +50,24 @@ export const EMPRESA = {
    * `import.meta.env` de dominio ni ningún `.env`). Es exactamente F-33, el
    * correo de desarrollo impreso bajo el botón de firmar de producción.
    *
-   * ⚠️ **Y escribir el bueno NO basta: esta dirección todavía NO RECIBE.**
-   * Medido el 25 de septiembre de 2026 contra 8.8.8.8 y 1.1.1.1:
-   * `veltomobility.com` **no tiene ni un registro MX** —solo SOA—, mientras
-   * `veltorent.com` sí tiene los tres `routeN.mx.cloudflare.net` de Cloudflare
-   * Email Routing. O sea que hoy esta dirección **envía** —el remitente de
-   * Resend de producción ya es esta, con su SPF y su DKIM colgando de
-   * `send.veltomobility.com`— y **se traga en silencio** lo que le escriban.
+   * ⚠️ **Y ya RECIBE, desde el 2 de octubre de 2026.** Hasta ese día esta
+   * dirección solo **enviaba** —el remitente de Resend de producción, con su
+   * SPF y su DKIM colgando de `send.veltomobility.com`— y **se tragaba en
+   * silencio** lo que le escribieran: medido el 25 de septiembre contra 8.8.8.8
+   * y 1.1.1.1, el dominio no tenía ni un registro MX. Dorel activó Email
+   * Routing en Cloudflare y lo confirmó recibiendo un correo de prueba.
    *
-   * ⚠️ **Por eso es una CONDICIÓN DE PUBLICACIÓN, no una tarea suelta:** antes
-   * de que la web se sirva en `veltomobility.com` hay que activar Email Routing
-   * en Cloudflare para ese dominio. Se comprueba así, y tiene que devolver tres
-   * líneas:
+   * Comprobado de primera mano el mismo día, que es lo que convierte esto en
+   * un hecho y no en un «me han dicho que ya va»:
    *
-   *     nslookup -type=MX veltomobility.com 8.8.8.8
+   *     Resolve-DnsName veltomobility.com -Type MX -Server 8.8.8.8
+   *     → route1/2/3.mx.cloudflare.net
    *
-   * Si el día de publicar siguen sin aparecer, la salida es volver a
-   * `reservas@veltorent.com` —que sí recibe— antes de conectar el dominio. Un
-   * correo impreso que nadie lee es peor que no poner ninguno: el cliente cree
-   * que ha contactado.
+   * ⚠️ **Era una CONDICIÓN DE PUBLICACIÓN y ha dejado de serlo.** Un correo
+   * impreso que nadie lee es peor que no poner ninguno —el cliente cree que ha
+   * contactado— y esta dirección sale impresa en las dos páginas legales como
+   * canal de derechos RGPD y de reclamaciones. Si algún día esos MX
+   * desaparecen, la web vuelve a prometer algo que no cumple.
    */
   correo: 'reservas@veltomobility.com',
 } as const;

@@ -112,11 +112,53 @@ import { EMPRESA, SITIO } from '../lib/empresa';
         escribiéndonos a <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a>
         o llamando al {EMPRESA.telefono}, y te contestamos por el mismo medio.
       </p>
+      {/*
+        ⚠️ **Aquí había un `[PENDIENTE]` publicado**, y eso ya era peor que
+        cualquiera de las dos respuestas: una página legal con un corchete
+        dentro dice que nadie la ha terminado de leer.
+
+        ⚠️ **La Ley 7/2017 obliga a informar AUNQUE NO se esté adherido.** Su
+        título III impone a *todos* los empresarios informar de la existencia
+        de entidades acreditadas de resolución alternativa, estén adheridos o
+        no, y el incumplimiento es infracción sancionable en materia de
+        consumo. Callarse no es neutro.
+
+        ⚠️ **Y NO se enlaza la plataforma europea de ODR.** Dejó de operar el
+        **20 de julio de 2025** (Reglamento (UE) 2024/3228, que deroga el
+        524/2013): el enlace que durante años fue obligatorio es hoy un enlace
+        muerto en una página legal, que es exactamente lo que se revisa cuando
+        alguien busca un defecto. Si lo ves en una plantilla copiada de
+        internet, está desactualizada.
+
+        ⚠️ **Está escrito como NO adherido, que es el estado por defecto**: la
+        adhesión al Sistema Arbitral de Consumo es voluntaria y exige una
+        solicitud expresa. Si Velto se adhiere algún día, esto pasa a nombrar
+        la entidad **y su página web**, que es lo que la ley pide en ese caso —
+        y entonces también hay que decirlo en las condiciones generales, no
+        solo aquí.
+      */}
       <p>
-        <em>[PENDIENTE: decir si la empresa está adherida a alguna entidad de
-        resolución alternativa de litigios —Junta Arbitral de Consumo de la
-        Comunidad de Madrid, por ejemplo—. La Ley 7/2017 obliga a decir una de
-        las dos cosas, y callarse no es una opción.]</em>
+        <strong>Resolución alternativa de litigios.</strong>
+        {/*
+          ⚠️ **El `{' '}` de después NO sobra.** Astro se come el espacio entre
+          una expresión y la etiqueta siguiente cuando hay un salto de línea
+          entre ellas: salía «VELTO MOBILITY, S.L.no está adherida», pegado. Es
+          primo del aviso de CLAUDE.md sobre que `legalName` acaba en punto —
+          esa razón social es un campo de minas en cuanto toca otro texto.
+        */}
+        {' '}{EMPRESA.razonSocial}{' '}<strong>no está adherida</strong> a ninguna
+        entidad de resolución alternativa de litigios en materia de consumo ni a
+        ningún código de conducta que obligue a ello. Te informamos de todos
+        modos, porque la ley nos obliga a hacerlo, de que existen entidades
+        acreditadas para resolver este tipo de conflictos sin ir a juicio: la
+        {' '}<a href="https://www.comunidad.madrid/servicios/consumo" rel="noopener">
+        Junta Arbitral de Consumo de la Comunidad de Madrid</a> y la oficina
+        municipal de información al consumidor (OMIC) de tu localidad.
+      </p>
+      <p class="nota">
+        Como no estamos adheridos, esas entidades solo pueden intervenir si
+        aceptamos su arbitraje en cada caso concreto. Antes de llegar ahí,
+        escríbenos: lo normal es que se resuelva en el mismo día.
       </p>
 
       <h2 id="ley">Ley aplicable</h2>
