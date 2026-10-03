@@ -48,6 +48,30 @@ export function seccion(titulo: string, cuerpo: string): string {
   );
 }
 
+/**
+ * Un párrafo de prosa dentro del sobre.
+ *
+ * ⚠️ **Existe porque TODO lo que entra en `cuerpo` tiene que ser un `<tr>`.**
+ * `sobre()` empalma el cuerpo entre las filas de la tabla de la tarjeta, así
+ * que un `<p>` suelto no es HTML válido ahí: el navegador lo **expulsa de la
+ * tabla** —*foster parenting*— y lo deja ANTES de ella. El correo del cliente
+ * montaba sus párrafos con un `<p>` propio, y por eso el saludo, la frase de la
+ * garantía y la de la referencia salían **fuera de la tarjeta blanca y encima
+ * del titular**, mientras el botón se quedaba dentro pegado al pie. Visto el 3
+ * de octubre de 2026 volcando el correo a un `.html` y abriéndolo a 390 px, que
+ * es la única forma de verlo: el código parecía correcto.
+ *
+ * ⚠️ **Y el espaciado es de la fila, no del `<p>`.** Un `margin` en un párrafo
+ * lo respetan unos clientes de correo y otros no; el relleno de la celda sí
+ * llega a todos, que es la misma razón por la que el botón es una tabla.
+ */
+export function parrafo(html: string): string {
+  return (
+    `<tr><td style="padding:14px 0 0 0;font:400 14px/1.5 ${TIPO};color:${TINTA}">` +
+    `${html}</td></tr>`
+  );
+}
+
 /** Una fila: lo principal, lo que lo explica y, si hay, lo que grita. */
 export function fila(principal: string, secundario: string, alerta?: string): string {
   return (

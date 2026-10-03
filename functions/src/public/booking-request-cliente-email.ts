@@ -16,7 +16,7 @@
  * `font-family` dentro de una tabla.
  */
 
-import { esc, GRIS, TINTA, TIPO, boton, fila, seccion, sobre } from '../alerts/email-shell';
+import { esc, GRIS, TIPO, boton, fila, parrafo, seccion, sobre } from '../alerts/email-shell';
 
 export interface CorreoClienteDatos {
   nombre: string;
@@ -55,8 +55,16 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
    */
   const subject = `Tu pre-reserva ${d.referencia} · ${d.coche}`;
 
-  const p = (texto: string) =>
-    `<p style="margin:0 0 12px;font-family:${TIPO};font-size:14px;line-height:1.5;color:${TINTA}">${texto}</p>`;
+  /**
+   * ⚠️ **Esto era un `<p>` suelto, y por eso el correo salía descompuesto.**
+   * El cuerpo se empalma entre las filas de la tabla del sobre, así que un
+   * párrafo que no sea `<tr>` lo expulsa el navegador fuera de la tabla: el
+   * saludo, la garantía y la referencia aparecían **encima de la tarjeta** y el
+   * botón quedaba dentro pegado al pie. Ahora usa `parrafo()`, de la cáscara
+   * común, que es lo que hace que este correo y el que recibe Velto midan
+   * igual.
+   */
+  const p = parrafo;
 
   const cuerpo =
     p(`Hola ${esc(d.nombre)}, hemos recibido tu pre-reserva.`) +
@@ -102,12 +110,17 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
       `${d.marca}. Si no has sido tú, puedes ignorarlo: no hay nada reservado ` +
       `a tu nombre.`,
     /*
-     * ⚠️ **Sin filete en el pie**: el cuerpo termina en un botón, y debajo de
-     * una pastilla turquesa una raya a todo lo ancho se lee como una sección
-     * vacía. Va como opción explícita y no adivinando si el cuerpo acaba en
-     * botón.
+     * ⚠️ **El filete SE QUEDA, y antes se quitaba por un motivo que ya no es
+     * cierto.** La regla de la cáscara es que el filete sobra cuando el cuerpo
+     * **termina en un botón**: debajo de una pastilla turquesa una raya a todo
+     * lo ancho se lee como una sección vacía. Pero aquí el cuerpo ya no acaba
+     * en el botón — detrás va el párrafo de la referencia —, así que sin filete
+     * el pie legal se confundía con una frase más del mensaje.
+     *
+     * Se quedó mal al añadir ese párrafo después: la condición siguió mirando
+     * si hay presupuesto, que no es la pregunta.
      */
-    pieSinFilete: !!d.presupuesto,
+    pieSinFilete: false,
   });
 
   /*
