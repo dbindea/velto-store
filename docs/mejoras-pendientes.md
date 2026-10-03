@@ -15,6 +15,86 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 3 de octubre de 2026 — el repaso del ciclo entero con el navegador
+
+Recorrido completo de las dos caras —web pública y backoffice— simulando el
+viaje del cliente de principio a fin: buscar, elegir coche, pre-reservar,
+recibir el presupuesto, y por el otro lado atender la solicitud y convertirla
+en reserva. Lo corregido va en cuatro commits (`037485d`, `6f8d6a4`, `7dac85e`,
+`dfe2de2`); aquí queda **lo que no se tocó y por qué**.
+
+### ⬜ M-51 · Un cobro DENEGADO deja el enlace de pago muerto
+
+`getPaymentCheckout` manda a `state: 'unavailable'` todo pago con
+`status === 'failed'`, así que al cliente al que le deniegan la tarjeta le sale
+«Pago no disponible. Ponte en contacto con nosotros» y **el enlace de WhatsApp
+ya no le sirve**. No puede reintentar con otra tarjeta: tiene que llamar.
+
+⚠️ **La maquinaria para reintentar ya existe**: `resolveOrder()` sabe emitir un
+pedido nuevo cuando el anterior ya recibió aviso —justo el caso de una
+denegación, que si no la pasarela rechaza con `SIS0051`—, y el webhook ya
+distingue que *«una denegación de un pedido superado no marca el pago como
+fallido, porque el cliente pudo ser rechazado con una tarjeta y estar pagando
+con otra»*. Es decir: el sistema ya entiende que una denegación no es el final,
+y esta pantalla no.
+
+**No se ha tocado a propósito**: mueve dinero y la decisión es de negocio. Lo
+que llama la atención es que esa rama **no lleva comentario** explicando el
+porqué, cosa rara en este repositorio — puede ser deliberado («que me llamen y
+lo veo») o un descuido. Lo decide Dorel.
+
+### ⬜ M-52 · La pestaña activa es el texto menos legible de la pantalla
+
+En **Pagos y tema claro**, la pestaña de filtro seleccionada mide **2,53:1**:
+turquesa de marca sobre un tinte del mismo turquesa al 8 %, que oscurece el
+fondo y empeora el contraste en vez de mejorarlo. Está por debajo incluso de la
+concesión de marca ya aceptada (3,10 del turquesa sobre blanco). En tema oscuro
+la misma pestaña mide **4,92** y está bien.
+
+Es al revés de lo que debería: la pestaña activa es la que dice qué estás
+mirando. **No se ha tocado** porque cambiar la tinta de marca es decisión de
+Dorel; el precedente de cómo se resuelve está en `--warning-on`, que existe
+exactamente para esto —cuando un color de marca y su acompañante tienen que
+cambiar juntos según el tema—.
+
+### ⬜ M-53 · El tamaño del logo lo decide cada pantalla
+
+Corregido el síntoma —las tres pantallas de cliente ya miden 160×44 como la web
+pública— pero no la causa: `<app-brand-logo>` centraliza el dibujo y la tinta, y
+**deja el tamaño al que lo usa**, así que hay cinco declaraciones sueltas (tres
+iguales, dos distintas). Es el mismo patrón que ya obligó a hacer globales
+`.form-control`, `.btn-*`, `.checkbox-item`, `.detail-card` y `.badge`: la sexta
+pantalla inventará un sexto tamaño. La forma en idioma de la casa sería un
+`size` en el componente.
+
+### ⬜ M-54 · El campo trampa del formulario no está oculto para un lector de pantalla
+
+El *honeypot* de la pre-reserva está bien resuelto —fuera de pantalla,
+`tabindex="-1"`, `autocomplete="off"` y con el rótulo «No rellenar»— pero le
+falta `aria-hidden="true"`. Un lector de pantalla en modo lectura lo encuentra;
+si alguien lo rellena, su solicitud se descarta **en silencio**. El rótulo lo
+mitiga, por eso es menor.
+
+### Lo que se comprobó y estaba bien
+
+Conviene decirlo para no volver a mirarlo:
+
+- **La web pública no desborda** a 390 ni a 1280 px en sus 13 páginas, sin
+  imágenes rotas, sin `alt` ausentes, un solo `h1` por página y todas con título
+  y descripción.
+- **El «IVA incluido» de la web es cierto.** El API devuelve `net` y `gross` y
+  la web pinta el bruto — que además es lo que la ley exige en precio al
+  consumidor. No es el caso de F-36.
+- **Las fotos de coche se sirven bien**, con `<picture>`, `srcset` de 400/800/
+  1600 y `object-fit: cover`. El `0x0` que aparece al medir es carga perezosa
+  sin disparar, no una imagen rota.
+- **El ciclo público entero funciona**: pre-reserva → `200` con referencia,
+  precio garantizado 24 h, PDF servido por el enlace corto y correo enviado.
+- **El calendario y Solicitudes no se rompen** con la reserva sin snapshot que
+  sí tumbaba la lista de Reservas: resuelven el hueco con «—».
+
+---
+
 ## Estado a 30 de septiembre de 2026 — la web pública, y lo que deja abierto
 
 Del 25 al 30 de septiembre el trabajo se fue a `web/`, que pasó de esqueleto a
