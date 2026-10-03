@@ -68,20 +68,46 @@
             <div class="vehicle-image placeholder">
               <i class="pi pi-car"></i>
             </div>
+            <!--
+              ⚠️ **Una reserva sin `vehicleSnapshot` tiraba la lista entera a
+              partir de ella.** El modelo lo declara obligatorio, pero Firestore
+              no comprueba tipos: basta un documento sembrado o escrito por un
+              creador antiguo para que `.brand` reviente, y una excepción aquí
+              **aborta el resto del `@for`**. Medido el 3 de octubre de 2026 en
+              desarrollo: 5 reservas, un solo documento malo (el tercero) y
+              **dos tarjetas en blanco** — la suya y la de la reserva siguiente,
+              que estaba perfecta. Con una lista de verdad esconde todo lo que
+              venga detrás, y en silencio: no hay error en pantalla, solo
+              reservas que no están.
+
+              Y por eso se DICE en vez de dejarlo en blanco: una tarjeta muda
+              se lee como que no hay nada, que es justo lo que pasaba. Así el
+              operador ve cuál es la reserva a la que le faltan datos.
+            -->
             <div class="vehicle-info">
-              <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
-              <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>
+              @if (reservation.vehicleSnapshot) {
+                <h3>{{ reservation.vehicleSnapshot.brand }} {{ reservation.vehicleSnapshot.model }}</h3>
+                <p class="plate">{{ reservation.vehicleSnapshot.plateNumber }}</p>
+              } @else {
+                <h3>{{ 'reservations.list.vehicleMissing' | translate }}</h3>
+                <p class="plate">—</p>
+              }
             </div>
           </div>
 
           <!-- Client Info -->
           <div class="card-client">
+            <!-- Mismo motivo que el vehículo: `createReservation()`, el creador
+                 que se borró el 24 de septiembre, escribía el snapshot del
+                 cliente VACÍO, así que este campo tampoco está garantizado. -->
             <div class="client-avatar">
-              {{ reservation.clientSnapshot.fullName.charAt(0).toUpperCase() }}
+              {{ (reservation.clientSnapshot?.fullName || '?').charAt(0).toUpperCase() }}
             </div>
             <div class="client-info">
-              <span class="client-name">{{ reservation.clientSnapshot.fullName }}</span>
-              @if (reservation.clientSnapshot.phone) {
+              <span class="client-name">{{
+                reservation.clientSnapshot?.fullName || ('reservations.list.clientMissing' | translate)
+              }}</span>
+              @if (reservation.clientSnapshot?.phone) {
                 <span class="client-phone">{{ reservation.clientSnapshot.phone }}</span>
               }
             </div>
@@ -102,7 +128,15 @@
 
           <!-- Pricing -->
           <div class="card-pricing">
-            <span class="total-price">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+            <!-- El tercer snapshot que puede faltar. Aquí NO se inventa un 0:
+                 un precio de «0,00 €» se lee como un alquiler gratis, que es
+                 justo la cifra creíble y equivocada que esta casa evita. Sin
+                 dato, raya. -->
+            @if (reservation.pricingSnapshot) {
+              <span class="total-price">{{ reservation.pricingSnapshot.finalPrice | number:'1.2-2' }} €</span>
+            } @else {
+              <span class="total-price">—</span>
+            }
             <!--
               En una reserva cancelada el saldo no es exigible: enseñarlo en
               rojo invita a perseguir un cobro que ya no toca (M-11).

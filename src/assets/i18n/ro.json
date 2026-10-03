@@ -1176,8 +1176,10 @@
       "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
     },
     "list": {
+      "clientMissing": "Client fără date",
       "empty": "Nu există rezervări",
-      "emptyFiltered": "Nicio rezervare cu acest filtru"
+      "emptyFiltered": "Nicio rezervare cu acest filtru",
+      "vehicleMissing": "Vehicul fără date"
     },
     "messages": {
       "invalidDates": "Data returnării trebuie să fie după data preluării",

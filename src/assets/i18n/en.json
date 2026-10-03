@@ -1176,8 +1176,10 @@
       "waivedHint": "No deposit on booking: the whole amount stays in the rental balance."
     },
     "list": {
+      "clientMissing": "Client data missing",
       "empty": "No reservations yet",
-      "emptyFiltered": "No reservations match this filter"
+      "emptyFiltered": "No reservations match this filter",
+      "vehicleMissing": "Vehicle data missing"
     },
     "messages": {
       "invalidDates": "Return date must be after pickup date",

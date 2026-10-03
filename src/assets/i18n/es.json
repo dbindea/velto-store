@@ -1176,8 +1176,10 @@
       "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
     },
     "list": {
+      "clientMissing": "Cliente sin datos",
       "empty": "No hay reservas todavía",
-      "emptyFiltered": "Ninguna reserva con este filtro"
+      "emptyFiltered": "Ninguna reserva con este filtro",
+      "vehicleMissing": "Vehículo sin datos"
     },
     "messages": {
       "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
