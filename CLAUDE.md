@@ -2270,9 +2270,19 @@ los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| el código define | **35** | — |
-| desarrollo | **35** | — |
-| producción | **29** | las cinco de la AEAT, y `createBookingRequest` |
+| el código define | **36** | — |
+| desarrollo | **36** | — |
+| producción | **31** | **solo** las cinco de la AEAT |
+
+⚠️ **Vuelto a medir el 3 de octubre de 2026, y la fila de producción había
+envejecido**: ponía **29** y que faltaba además `createBookingRequest`. Las dos
+públicas de la web —`createBookingRequest` y `createContactRequest`— **ya están
+desplegadas**. Es justo lo que el párrafo de abajo avisa: la cifra escrita a
+mano se queda vieja, y lo que vale es comparar los **nombres**.
+
+⚠️ **Y estar desplegada no es estar alcanzable.** Esas dos siguen sin sus
+rewrites `/api/solicitud` y `/api/contacto`, que viajan con el **hosting**: la
+petición cae en el catch-all y devuelve HTML donde se espera JSON.
 
 ⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
 ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
@@ -3222,7 +3232,7 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **29**.
+siga dando **31** (medido el 3 de octubre de 2026).
 
 ⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
 **códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
@@ -4502,12 +4512,16 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
-el código define **36**. Faltan **siete**, y no por el mismo motivo: las
-**cinco** de la AEAT no van allí hasta el 1 de enero —un despliegue completo las
-subiría—, y `createBookingRequest` y `createContactRequest` están **pendientes
-de desplegar**, la primera desde el 29 de septiembre de 2026 y la segunda desde
-el 30, junto con la actualización de `sendDailyDigest`.
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **31** desplegadas y
+el código define **36**: faltan **las cinco** de la AEAT, que no van allí hasta
+el 1 de enero y que un despliegue completo subiría. Medido el 3 de octubre de
+2026 comparando los nombres, no la cifra.
+
+⚠️ **Lo que falta no son functions, es CÓDIGO NUEVO dentro de las que ya están.**
+De las 31, **28 corren código viejo** —27 ficheros cambiados en `functions/src`,
+y uno es `company-config.ts`, que lo importa casi todo—. El guion por tandas y
+en orden de daño está en
+[docs/despliegue-produccion.md](docs/despliegue-produccion.md).
 
 ⚠️ **Y las dos públicas que escriben necesitan HOSTING además de la function.**
 Sus rewrites —`/api/solicitud` y `/api/contacto`— viajan con el hosting, no con

@@ -1,16 +1,22 @@
-# Traspaso de sesión — 30 de septiembre de 2026
+# Traspaso de sesión — 3 de octubre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> Lo primero que hay que mirar es **§ 2 octies**, que es la etapa de la web
-> pública (28 al 30 de septiembre, veinticinco commits), y **§ 2 ter**, que dice
-> qué hay sin subir y qué falta por desplegar — y esta vez **no basta con el
-> merge**: hay dos Cloud Functions nuevas y dos rewrites de hosting. Después,
-> **§ 5**, con los nueve huecos que solo puede cerrar Dorel antes de publicar.
+> Lo primero que hay que mirar es **§ 2 nonies**, que es lo último que pasó (2 y
+> 3 de octubre), y después **§ 2 ter**, que dice qué falta por desplegar — y esta
+> vez **no basta con el merge**: hay dos Cloud Functions nuevas y dos rewrites de
+> hosting. El guion completo, por tandas y en orden de daño, está escrito aparte
+> en [despliegue-produccion.md](despliegue-produccion.md), que es el documento
+> que hay que seguir cuando se decida subir. Luego **§ 5**, con los huecos que
+> solo puede cerrar Dorel.
 >
-> Las secciones anteriores (§ 2 a § 2 septies) son historia: se leen si algo no
+> ⚠️ **Y si algo no compila nada más abrir, lee § 2 nonies antes de buscar el
+> fallo en el código.** El 3 de octubre desaparecieron ficheros del espacio de
+> trabajo al azar, `node_modules` incluido, y el síntoma parecía código roto.
+>
+> Las secciones anteriores (§ 2 a § 2 octies) son historia: se leen si algo no
 > cuadra.
 >
 > Si lo que buscas es **el mensaje con el que abrir la sesión**, está aparte en
@@ -642,6 +648,99 @@ las functions: sin ellos la petición cae en el catch-all y devuelve HTML donde
 se espera JSON, así que el visitante rellena el formulario y ve un fallo de red.
 Es la lección de `/d/**`.
 
+## 2 nonies. El 1 y el 2 de octubre, y el incidente del 3
+
+**Catorce commits**, todos de la última milla de la web antes de producción. Lo
+que conviene llevarse, porque son decisiones de Dorel y no detalles:
+
+- **La señal es 50 €, y 25 € si el alquiler vale menos de 50 €.** A propósito
+  sin porcentajes ni cálculos: un número que se dice por teléfono sin pensarlo.
+  Y **no es reembolsable una vez firmado el contrato** —no se pueden tener
+  coches bloqueados sin ganar nada—, pero **la pre-reserva sigue siendo
+  gratuita**. Son dos momentos distintos y el texto los separa.
+- **La política de devoluciones y desistimiento**, que no es un adorno legal:
+  es lo que **BBVA exige** para conceder la pasarela nueva. El análisis de lo
+  que pide PayGold está en [tpv-bbva.md](tpv-bbva.md).
+- **`veltorent.com` deja de nombrarse en la web.** Solo `veltomobility.com`.
+  Dorel dejó en el aire qué hacer con el dominio viejo —«quizás otra página
+  tipo landing, o renuncio»—, así que la web no lo menciona hasta que se decida.
+- **SEO completo**: prerender de las fichas, datos estructurados, PWA e imágenes
+  al compartir. Era el encargo explícito antes de subir.
+- **El botón ocupado se ve ocupado**, y el presupuesto se abre en otra pestaña
+  en vez de sacarte de la web. Lo pidió Dorel llamándolo «vital»: un botón que
+  se puede pulsar dos veces duplica la reserva.
+
+**Y el guion de despliegue**, que es el entregable que hay que seguir cuando se
+decida subir: [despliegue-produccion.md](despliegue-produccion.md). **28
+functions en 15 órdenes**, por tandas de dos o tres y **en orden de daño** —los
+contratos primero, porque hoy producción imprime una cláusula de sumisión a los
+juzgados de Madrid que es nula frente a un consumidor—. Está calculado del
+**grafo de imports**, no a ojo: 27 ficheros cambiados en `functions/src` dejan
+33 functions con código viejo, porque `company-config.ts` lo importa casi todo.
+
+**Los tres correos de Google** (GKE/Filestore, Hosting on-demand y Cloud Build)
+quedaron analizados y **ninguno pide hacer nada**. El de GKE es el que más
+alarma y el que menos toca: aquí no hay Kubernetes. Queda un solo comando por
+confirmar, y es de Dorel porque `gcloud` pide reautenticación:
+`gcloud container clusters list --project velto-store`.
+
+### ⚠️ El 3 de octubre desaparecieron ficheros del espacio de trabajo
+
+**Esto no es historia: es lo primero que hay que descartar si algo no compila.**
+Entre las 13:50 y las 14:05 desaparecieron ficheros **al azar**, sin ninguna
+regla que los una —ni carpeta, ni extensión, ni tamaño—. Uno de ellos
+desapareció **mientras la sesión trabajaba**.
+
+| Qué se perdió | Lo cubre git |
+|---|---|
+| `src/assets/i18n/ro.json` | ✅ |
+| `reservation-detail.component.html` | ✅ |
+| `functions/src/contracts/clauses.ts` | ✅ |
+| `@types/node/buffer.d.ts` (en la raíz **y** en `functions/`) | ❌ |
+| `primeicons/fonts/` — 2 de 5 ficheros | ❌ |
+| `web/node_modules/js-yaml/dist/js-yaml.mjs` | ❌ |
+
+⚠️ **Y el síntoma no se parecía a la causa**, que es lo caro de esto: el
+typecheck de functions daba **183 errores de `Buffer`** y la build de la app no
+resolvía las fuentes de PrimeIcons. Los dos parecen código roto y no había una
+línea mal — faltaban ficheros **dentro de `node_modules`**, que git no cubre.
+
+**El procedimiento que funcionó**, en este orden:
+
+1. `git status` y `git diff HEAD`. **Si el árbol es idéntico a HEAD, el código
+   no es.** Eso descarta la mitad del espacio de búsqueda en diez segundos.
+2. `git restore` lo commiteado.
+3. `npm ci` en **las tres** instalaciones —raíz, `functions/` y `web/`—, que son
+   independientes y se rompieron las tres.
+
+⚠️ **Tras un `npm ci`, la primera tanda de tests de functions puede dar dos
+fallos falsos.** `arranque.spec.ts` importa `pdf.ts` (114 KB) y `clauses.ts`
+(88 KB) con la caché fría y se pasa del **timeout de 5 s**. En caliente pasan
+los 683. No es código, pero asusta justo cuando uno ya desconfía de todo.
+
+⚠️ **Y una trampa de medición que costó una vuelta: `comando | tail` devuelve el
+código de salida del `tail`.** La primera build de la app informó `exited with
+code 0` **habiendo fallado**. Es el mismo error que CLAUDE.md ya avisa al contar
+la lista de functions con `grep -c`: al verificar algo, el código de salida se
+captura del comando, no de la tubería.
+
+**La causa no está probada, pero hay un sospechoso con nombre: CCleaner 7.** Su
+servicio de fondo (`CCleaner_service`) corre permanentemente en la máquina. Su
+tarea programada no se ha ejecutado nunca, así que si fue él fue por Limpieza
+inteligente o a mano. Descartado midiendo: Defender (limpio), salud de los
+discos (`Healthy`), `git fsck` (limpio) y `chkdsk` (sin carpetas `found.*`). Que
+los ficheros se pudieran **recuperar** apunta a un borrado normal a la papelera
+y no a corrupción del disco. Lo pendiente es de Dorel: excluir
+`C:\Users\dorel\workspace` en CCleaner.
+
+**Estado al cerrar el 3 de octubre, verificado entero:** build de app, functions
+y web; 856 tests de app y 683 de functions; lint en **0 errores** (291 avisos,
+la deuda de siempre); las cuatro auditorías en verde; las tres instalaciones de
+dependencias sin `missing` ni `invalid`; y `git diff HEAD` vacío contra
+`7a3d8d3`. **No se perdió nada.**
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
@@ -652,36 +751,43 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 30 de septiembre al cerrar**: `origin/develop` en `aefbee4`, con
-**21 commits que NO están en producción**. Y esta vez **no basta con el merge**,
-al revés que el día 24:
+**Medido el 3 de octubre al cerrar**: `origin/develop` en `7a3d8d3`, nada sin
+subir, y **47 commits que NO están en producción**. Y esta vez **no basta con el
+merge**, al revés que el día 24:
 
 | Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
 |---|---|---|
-| `functions/` | 20 | **a mano**, por tandas de dos o tres |
-| `web/` | 27 | CI, al hacer merge a `master` |
-| `firebase.json` y `firestore.rules` | 2 | **a mano** (`deploy:prod:rules`) y hosting |
+| `functions/src/` | 27 | **a mano**, por tandas de dos o tres |
+| `src/` (backoffice) | 43 | CI, al hacer merge a `master` |
+| `web/` | 52 | CI, al hacer merge a `master` |
+| `firebase.json`, `firestore.rules`, `firestore.indexes.json` | 3 | **a mano** (`deploy:prod:rules`) y hosting |
 
-⚠️ **Hay DOS Cloud Functions nuevas sin desplegar**, y las dos son el camino por
-el que entra un cliente desde la web:
+⚠️ **El guion está escrito aparte**:
+[despliegue-produccion.md](despliegue-produccion.md), con las 28 functions en 15
+órdenes y en orden de daño. Lo de aquí abajo es el porqué; aquel es el qué
+teclear.
 
-- **`createBookingRequest`** (el «que me llamen»), desde el 28 de septiembre.
-- **`createContactRequest`** (el formulario de contacto), desde el 30.
+⚠️ **Aquí ponía que `createBookingRequest` y `createContactRequest` estaban sin
+desplegar, y YA NO ES CIERTO.** Medido el 3 de octubre con
+`firebase functions:list --project prod`, comparando los **nombres** contra los
+exports de `index.ts`: producción tiene **31** y el código define **36**, y lo
+único que falta son **las cinco de la AEAT** —a propósito, hasta el 1 de enero—.
+Las dos de la web están allí.
 
-Más la actualización de **`sendDailyDigest`**, que ahora barre también los
-mensajes de contacto a las 24 h — y ese plazo **está publicado en
-`/privacidad`**, así que sin desplegarla la política dice algo que no se cumple.
+⚠️ **Lo que SÍ sigue faltando son sus rewrites, y eso las deja inalcanzables.**
+`/api/solicitud` y `/api/contacto` no están en el `firebase.json` de `master` y
+viajan con el **hosting**, no con las functions: la petición cae en el catch-all
+y devuelve HTML donde se espera JSON. El visitante rellena el formulario y ve un
+fallo de red. Es la lección de `/d/**`, otra vez. **Estar desplegada no es estar
+alcanzable.**
 
-⚠️ **Y las dos necesitan HOSTING además de la function.** Sus rewrites
-—`/api/solicitud` y `/api/contacto`— viajan con el hosting: sin ellos la
-petición cae en el catch-all y devuelve HTML donde se espera JSON. El visitante
-rellena el formulario y ve un fallo de red.
+Y la actualización de **`sendDailyDigest`**, que ahora barre también los
+mensajes de contacto a las 24 h — ese plazo **está publicado en `/privacidad`**,
+así que hasta que se despliegue la política dice algo que no se cumple.
 
-⚠️ **En producción, nunca `--only functions` a secas.** El código define **36** y
-allí hay **29**: faltan las cinco de la AEAT —a propósito, hasta el 1 de enero—
-y estas dos. Un despliegue completo subiría las cinco. Y con 36 functions a la
-vez se agota la cuota de CPU de Cloud Run: medido el 28 de septiembre con 35,
-entraron 15 y fallaron 19.
+⚠️ **En producción, nunca `--only functions` a secas.** Subiría las cinco de la
+AEAT. Y con 36 functions a la vez se agota la cuota de CPU de Cloud Run: medido
+el 28 de septiembre con 35, entraron 15 y fallaron 19.
 
 ⚠️ **Antes de desplegar, descarta el código** y compara el manifiesto:
 
