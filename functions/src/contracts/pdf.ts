@@ -677,9 +677,30 @@ export class PdfBuilder {
       const regular = fs.readFileSync(resolveFontPath(FONT_FILES.body));
       const bold = fs.readFileSync(resolveFontPath(FONT_FILES.bodyBold));
       const italic = fs.readFileSync(resolveFontPath(FONT_FILES.bodyItalic));
-      this.font = await this.doc.embedFont(regular);
-      this.bold = await this.doc.embedFont(bold);
-      this.italic = await this.doc.embedFont(italic);
+      /**
+       * ⚠️ **`subset: true` o cada PDF pesa 1,2 MB.** Sin él, pdf-lib incrusta
+       * la fuente **entera**, y aquí hay cinco: las tres DejaVu suman 2 MB de
+       * TTF. Medido el 3 de octubre de 2026 con estas mismas cinco fuentes y
+       * una línea de texto: **1.188 KB sin subconjunto y 31 KB con él**. El
+       * presupuesto que de verdad sirve `documentLink` pesaba 1.194 KB, así
+       * que el documento no era el peso: eran las fuentes.
+       *
+       * Importa porque estos PDF **se los mandamos al cliente por WhatsApp y
+       * por correo**, y un presupuesto de una página que ocupa más que una
+       * foto se descarga mal con datos móviles.
+       *
+       * Lo que lo hace seguro es que el subconjunto solo conserva los glifos
+       * usados, y `layout.spec.ts` comprueba en los tres idiomas que **no
+       * falta ningún glifo** en la fuente con la que se compuso — que es
+       * justo lo que rompería un subconjunto mal hecho.
+       *
+       * ⚠️ Y `registerCoverage()` sigue recibiendo los **bytes originales**,
+       * no la fuente incrustada: la cobertura decide si una cadena cae a
+       * DejaVu, y preguntársela al subconjunto sería circular.
+       */
+      this.font = await this.doc.embedFont(regular, { subset: true });
+      this.bold = await this.doc.embedFont(bold, { subset: true });
+      this.italic = await this.doc.embedFont(italic, { subset: true });
       this.registerCoverage(this.font, regular);
       this.registerCoverage(this.bold, bold);
       this.registerCoverage(this.italic, italic);
@@ -700,11 +721,11 @@ export class PdfBuilder {
       const displayBytes = readAsset(FONT_FILES.display);
       const mediumBytes = readAsset(FONT_FILES.displayMedium);
       if (displayBytes) {
-        this.display = await this.doc.embedFont(displayBytes);
+        this.display = await this.doc.embedFont(displayBytes, { subset: true });
         this.registerCoverage(this.display, displayBytes);
       }
       if (mediumBytes) {
-        this.displayMedium = await this.doc.embedFont(mediumBytes);
+        this.displayMedium = await this.doc.embedFont(mediumBytes, { subset: true });
         this.registerCoverage(this.displayMedium, mediumBytes);
       }
     } catch (err) {
