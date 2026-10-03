@@ -34,7 +34,20 @@
 
   app-brand-logo {
     display: block;
-    height: 36px;
+    /**
+     * ⚠️ **44 px, que es lo que mide el logo en la cabecera de la web
+     * pública.** Estuvo en 36 y el razonamiento de arriba —que el cliente
+     * puede recibir dos cosas el mismo día y deben parecer de la misma
+     * empresa— se quedaba corto: paraba en las tres pantallas de Angular.
+     * El cliente llega aquí **desde `veltomobility.com`**, así que el salto
+     * que se veía era de 44 a 36 en mitad de su viaje. Medido el 3 de
+     * octubre de 2026 a 390 px: web 160×44, aquí 131×36.
+     *
+     * Si se cambia, se cambia también en `sign-contract` y en
+     * `contract-verify`, que son las otras dos que ve el cliente, y en
+     * `web/src/layouts/Base.astro`, que es la que manda.
+     */
+    height: 44px;
     max-width: 200px;
   }
 }

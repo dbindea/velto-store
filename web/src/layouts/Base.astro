@@ -349,7 +349,15 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         </nav>
 
         <div class="cab__acciones">
-          <a class="cab__tel" href={`tel:${tel}`}>
+          {/*
+            ⚠️ **El `aria-label` es obligatorio aquí, y no es celo.** En móvil el
+            `<span>` del número se esconde por sitio (ver `.cab__tel span` abajo)
+            y el SVG va `aria-hidden`, así que sin esto el enlace se queda **sin
+            nombre accesible ninguno** justo donde más se usa: un botón de llamar
+            en un teléfono. En escritorio el número lo nombraba y por eso no se
+            veía venir.
+          */}
+          <a class="cab__tel" href={`tel:${tel}`} aria-label={`Llamar al ${EMPRESA.telefono}`}>
             {/*
               ⚠️ **Esto es el icono DEL KIT, y antes no lo era.** El kit define
               un `Icon` canónico —caja 24, `fill: none`, trazo `1.75`, remates y

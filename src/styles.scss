@@ -1256,6 +1256,44 @@ h1, h2, h3, h4, h5, h6 {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
+
+  /**
+   * ⚠️ **Sin esto la cabecera se sale de la pantalla en el móvil.** Es un flex
+   * en fila, y un hijo que no puede encoger por debajo de su contenido
+   * —`min-width: auto`, la trampa de flex que este fichero ya documenta— no
+   * baja de línea: se desborda. Medido el 3 de octubre de 2026 en Vehículos a
+   * 390 px: `.filters` acababa en **388 px** con la página en 384, y **28 px
+   * por fuera de su propio padre**, que medía 360.
+   *
+   * `wrap` es la corrección mínima y es la regla de la casa: **recolocar,
+   * nunca ocultar**. En pantalla ancha no cambia nada, porque solo actúa
+   * cuando el contenido no cabe.
+   *
+   * La usan **29 plantillas y 28 la redeclaran**, pero ninguna declara
+   * `flex-wrap`: la cascada va por propiedad, así que esta llega a todas sin
+   * pelear especificidad.
+   */
+  flex-wrap: wrap;
+
+  /**
+   * ⚠️ **Un subtítulo suelto salía disparado al borde derecho.** La cabecera
+   * reparte con `space-between`, así que un `.subtitle` que cuelga directamente
+   * de ella se lee como «la otra punta de la fila»: en el panel, «Ajustes» a la
+   * izquierda y su descripción pegada al margen derecho, a media pantalla de
+   * distancia del título que describe.
+   *
+   * Pasa en **cuatro pantallas** —panel, Solicitudes, Contratos y Ajustes—;
+   * las demás envuelven el título y el subtítulo en un `<div>`, que es la
+   * forma buena. Esta regla las deja a todas igual sin tocar cuatro
+   * plantillas, y **no alcanza** a las que ya lo anidan, porque es `>`.
+   *
+   * `flex-basis: 100%` lo baja a su propia línea, debajo del título, que es
+   * donde se lee. Solo funciona con el `flex-wrap: wrap` de arriba.
+   */
+  > .subtitle {
+    flex-basis: 100%;
+    margin-top: 0.25rem;
+  }
 }
 
 .subtitle {
