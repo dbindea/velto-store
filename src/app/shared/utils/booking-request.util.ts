@@ -39,17 +39,44 @@ export function priceStillGuaranteed(r: BookingRequest, now: Date = new Date()):
  */
 export const DEFAULT_REQUEST_HOUR = 12;
 
-function alMediodia(valor: unknown): Date | null {
+/**
+ * ¿Lo escribió `widenToFullDays()` en el backend?
+ *
+ * ⚠️ **Esa función corre en una Cloud Function, y una Cloud Function corre en
+ * UTC**, así que su `setHours(0,0,0,0)` da medianoche **UTC** — que en Madrid
+ * son las 02:00 del mismo día. Por eso la comprobación es en UTC y no en local:
+ * preguntando `getHours()` desde el navegador, una fecha del backend contesta
+ * `2` y no `0`, y la rama buena no entraría nunca.
+ */
+function esMedianocheUtc(d: Date): boolean {
+  return (
+    d.getUTCHours() === 0 &&
+    d.getUTCMinutes() === 0 &&
+    d.getUTCSeconds() === 0 &&
+    d.getUTCMilliseconds() === 0
+  );
+}
+
+/**
+ * Pasa un extremo de la ventana al mediodía del día que de verdad representa.
+ *
+ * ⚠️ Se reconstruye el día, no se mueve la hora sobre el mismo objeto: una
+ * fecha de las 23:59:59.**999** con `setHours(12)` conserva los milisegundos
+ * dentro, y eso viaja al campo del asistente.
+ */
+function alMediodia(valor: unknown, restarUnDia = false): Date | null {
   if (!valor) return null;
   const d = toDate(valor);
   if (isNaN(d.getTime())) return null;
-  /**
-   * ⚠️ Se reconstruye el día en hora local, no se mueve la hora sobre el mismo
-   * objeto. `returnDate` son las 23:59:59.999: poniéndole las 12:00 con
-   * `setHours()` el día no cambia, pero los milisegundos sí quedarían dentro —
-   * y una fecha con `.999` viaja al asistente y se ve en el campo.
-   */
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), DEFAULT_REQUEST_HOUR, 0, 0, 0);
+
+  // Del backend viene en UTC; cualquier otra cosa (un `Date` construido en
+  // local) se lee en local, que es como se escribió.
+  const utc = esMedianocheUtc(d);
+  const [anno, mes, dia] = utc
+    ? [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()]
+    : [d.getFullYear(), d.getMonth(), d.getDate()];
+
+  return new Date(anno, mes, dia - (restarUnDia && utc ? 1 : 0), DEFAULT_REQUEST_HOUR, 0, 0, 0);
 }
 
 /** Cuándo recogería, si no se pacta otra cosa. */
@@ -57,9 +84,29 @@ export function requestPickupAt(r: BookingRequest): Date | null {
   return alMediodia(r.pickupDate);
 }
 
-/** Cuándo devolvería, si no se pacta otra cosa. */
+/**
+ * Cuándo devolvería, si no se pacta otra cosa.
+ *
+ * ⚠️ **El fin de la ventana guardada es EXCLUSIVO, y leerlo como inclusivo
+ * costaba un día de alquiler.** `widenToFullDays()` hace
+ * `fin.setDate(fin.getDate() + 1)` y luego lo lleva a medianoche, así que una
+ * solicitud del 4 al 7 se guarda como `returnDate = día 8 a las 00:00`: eso es
+ * correcto para cruzar disponibilidad —cubre el día 7 entero— y **mentira**
+ * como fecha de devolución.
+ *
+ * Medido de punta a punta el 3 de octubre de 2026: se pidió del 4 al 7 por
+ * 187,95 € y «Convertir en reserva» abría el asistente con
+ * `return=2026-10-08T12:00`, o sea **cuatro días**, mientras la propia ficha
+ * seguía diciendo «3 días · 187,95 €» dos líneas más arriba. Las 18 solicitudes
+ * guardadas en desarrollo tenían esa forma: no era un caso raro, eran todas.
+ *
+ * ⚠️ Y esto **no lo cazó el test** porque su fixture daba por buena la forma
+ * que describía el comentario de arriba —las 23:59:59.999— y no la que el
+ * backend escribe de verdad. Por eso ahora el test usa el valor tal y como
+ * sale de Firestore.
+ */
 export function requestReturnAt(r: BookingRequest): Date | null {
-  return alMediodia(r.returnDate);
+  return alMediodia(r.returnDate, true);
 }
 
 /**

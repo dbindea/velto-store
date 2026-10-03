@@ -244,6 +244,46 @@ describe('la hora que nadie dijo', () => {
     expect(devolucion.getHours()).toBe(12);
   });
 
+  /**
+   * ⚠️ **El test que faltaba, y el que de verdad importa.** El de arriba usa
+   * las 23:59:59.999, que es lo que decía el comentario del util — pero NO es
+   * lo que escribe el backend. `widenToFullDays()` corre en una Cloud Function
+   * (UTC), suma un día y lo deja a medianoche, así que lo que hay en Firestore
+   * es el **inicio del día siguiente**: una solicitud del 4 al 7 se guarda con
+   * `returnDate = 2026-10-08T00:00:00Z`.
+   *
+   * Leerlo como inclusivo abría el asistente con cuatro días en vez de tres,
+   * contradiciendo el «3 días · 187,95 €» de la misma ficha. Comprobado contra
+   * las 18 solicitudes reales de desarrollo: las 18 tenían esta forma.
+   */
+  it('el fin de la ventana es EXCLUSIVO: medianoche UTC del día siguiente es el día anterior', () => {
+    const r = solicitud({
+      pickupDate: new Date('2026-10-04T00:00:00Z'),
+      returnDate: new Date('2026-10-08T00:00:00Z')
+    });
+
+    const recogida = requestPickupAt(r)!;
+    const devolucion = requestReturnAt(r)!;
+
+    expect(recogida.getDate()).toBe(4);
+    expect(recogida.getHours()).toBe(12);
+    // El 7, no el 8: el cliente pidió del 4 al 7.
+    expect(devolucion.getDate()).toBe(7);
+    expect(devolucion.getHours()).toBe(12);
+    expect(devolucion.getMinutes()).toBe(0);
+  });
+
+  it('y así la duración propuesta es la que se le cobró', () => {
+    const r = solicitud({
+      pickupDate: new Date('2026-10-04T00:00:00Z'),
+      returnDate: new Date('2026-10-08T00:00:00Z')
+    });
+    const dias = Math.round(
+      (requestReturnAt(r)!.getTime() - requestPickupAt(r)!.getTime()) / 86400000
+    );
+    expect(dias).toBe(3);
+  });
+
   it('y NO arrastra los milisegundos del final del día', () => {
     // 23:59:59.999 con `setHours(12)` deja el `.999` dentro, y eso viaja al
     // campo del asistente.
