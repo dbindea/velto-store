@@ -1716,3 +1716,74 @@ input.picker-propio {
 @media (min-width: 900px) {
   .dos-columnas { grid-template-columns: 1fr 1.2fr; gap: var(--sp-16); }
 }
+
+/* ---- Esqueleto de carga ------------------------------------------------- */
+/*
+ * ⚠️ **Ocupa el sitio de las tarjetas que van a llegar, no un hueco cualquiera.**
+ * Una tarjeta de resultados mide 335×586 en un móvil de 390 px, así que el
+ * esqueleto reserva esa altura: si fuera más bajo, al llegar los coches la
+ * página pegaría un salto — que es el defecto que un esqueleto viene a quitar,
+ * no a causar.
+ *
+ * ⚠️ **Y el brillo es `transform` sobre una capa, no `background-position`.**
+ * Animar la posición de un degradado repinta en cada fotograma; una capa que
+ * se traslada la mueve el compositor. Importa porque esto corre justo mientras
+ * el móvil está ocupado descargando y parseando el JavaScript de la pantalla.
+ *
+ * Vive en `global.css` y no en la hoja de la página porque una hoja de página
+ * va encapsulada por Astro, y aquí hay markup que comparte estilos con lo que
+ * inyecta el script — la misma razón que las chapas de filtro.
+ */
+.esq {
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  min-height: 586px;
+  display: grid;
+  align-content: start;
+  gap: var(--sp-4);
+}
+
+.esq__foto { height: 250px; border-radius: var(--r-md); }
+
+.esq__linea { height: 14px; border-radius: var(--r-pill); }
+.esq__linea--corta { width: 38%; }
+.esq__linea--media { width: 64%; }
+
+.esq__foto,
+.esq__linea {
+  position: relative;
+  overflow: hidden;
+  /*
+   * ⚠️ **`--border` y no `--divider`.** En tema oscuro `--divider` vale
+   * `--gray-900`, que es EXACTAMENTE el fondo de la tarjeta: los bloques del
+   * esqueleto salían invisibles y la pantalla enseñaba tres cajas vacías. En
+   * claro sí se veía, que es como pasan estas cosas. `--border` es gris 200 en
+   * claro y gris 800 en oscuro, así que contrasta con su tarjeta en los dos.
+   */
+  background: var(--border);
+}
+
+.esq__foto::after,
+.esq__linea::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  animation: esq-brillo 1.4s ease-in-out infinite;
+}
+
+@keyframes esq-brillo {
+  to { transform: translateX(100%); }
+}
+
+/*
+ * Sin movimiento, el esqueleto sigue siendo útil: lo que informa es que el
+ * hueco está reservado, no el brillo.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .esq__foto::after,
+  .esq__linea::after { display: none; }
+}

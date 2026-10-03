@@ -305,8 +305,8 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
           pega un salto al pintar.
         */}
         <a class="cab__logo" href="/" aria-label="Velto, inicio">
-          <img src="/brand/logo-on-light.svg" alt="Velto" class="cab__logo--claro" width="185" height="48" />
-          <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="185" height="48" />
+          <img src="/brand/logo-on-light.svg" alt="Velto" class="cab__logo--claro" width="185" height="51" />
+          <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="185" height="51" />
         </a>
 
         {/*
@@ -420,7 +420,15 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       <div class="contenedor">
         <div class="pie__rejilla">
           <div class="pie__marca">
-            <img src="/brand/logo-on-dark.svg" alt="Velto" width="120" height="31" />
+            {/*
+              ⚠️ **Los atributos valen lo mismo que los de la cabecera.** Son
+              los que reservan el hueco antes de que cargue el SVG; si no
+              cuadran con lo que luego pone el CSS, el pie pega un salto al
+              pintar. Medido el 3 de octubre de 2026: aquí el logo salía a
+              120×31 y en la cabecera a 160×44, o sea tres cuartos de tamaño en
+              la misma pantalla.
+            */}
+            <img src="/brand/logo-on-dark.svg" alt="Velto" width="185" height="51" />
             {/*
               ⚠️ **Aquí ponía «seguro a todo riesgo», y va en TODAS las
               páginas.** La cláusula 13 dice que el coche lleva la
@@ -624,6 +632,22 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       }
 
       .cab__logo { flex: none; }
+
+      /*
+       * ⚠️ **La marca mide lo mismo arriba y abajo, y se declara UNA vez.**
+       * El logo del pie salía a 120 px contra los 185 de la cabecera, así que
+       * al recorrer la página la marca se encogía a dos tercios al llegar
+       * abajo. Medido el 3 de octubre de 2026.
+       *
+       * ⚠️ **Y solo el ancho: la altura va `auto`.** El SVG mide 300×82, o sea
+       * una proporción de 3,66; los atributos de la cabecera decían 185×48,
+       * que es 3,85, así que el navegador lo **achataba un 5 %** en escritorio
+       * —en móvil no se veía porque ahí ya había un `height: auto`—. Los
+       * atributos siguen haciendo falta para reservar el hueco antes de que
+       * cargue el SVG, pero ahora cuadran con la proporción de verdad.
+       */
+      .cab__logo img,
+      .pie__marca img { width: 185px; height: auto; }
       /* Un logo por tema: el isotipo va en negativo sobre fondo oscuro. */
       [data-theme='light'] .cab__logo--oscuro,
       [data-theme='dark'] .cab__logo--claro { display: none; }
@@ -886,7 +910,8 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
        * cabecera pega un salto al pintar.
        */
       @media (max-width: 479px) {
-        .cab__logo img { width: 160px; height: auto; }
+        .cab__logo img,
+        .pie__marca img { width: 160px; height: auto; }
 
         .cab__acciones { margin-left: auto; gap: var(--sp-2); }
         .cab__acciones .btn { padding-inline: var(--sp-4); }
@@ -948,6 +973,13 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       }
 
       .pie__marca { max-width: 34ch; }
+      /*
+       * ⚠️ **El mismo ancho que la cabecera, y por el mismo camino.** El logo
+       * del pie medía 120 px contra los 185 de arriba: en una página que se
+       * recorre de un tirón, la marca se encogía a la mitad al llegar abajo.
+       * Solo el ancho —la altura va `auto`— por lo mismo que arriba: tocando
+       * los dos a mano se pierde la proporción del SVG.
+       */
       .pie__marca img { margin-bottom: var(--sp-5); }
       .pie__marca p { color: var(--gray-400); margin-bottom: var(--sp-5); }
 

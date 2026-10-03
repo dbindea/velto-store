@@ -176,7 +176,47 @@ import { ORDENES } from '../lib/resultados';
         <div id="chapas" class="chapas" role="group" aria-label="Filtrar por tipo de coche"></div>
 
         <div id="lista" class="rejilla"></div>
+
+        {/*
+          ⚠️ **El esqueleto, y por qué hace falta aunque ya hubiera un aviso.**
+          Medido el 3 de octubre de 2026 contra el sitio desplegado en 3G lento:
+          esta pantalla enseña «Elige tu coche» con **la lista vacía durante 3,1
+          segundos** y sin una sola señal de que esté trabajando. El aviso
+          «Buscando coches libres…» existía, pero nace `hidden` y **lo destapa
+          el módulo de JavaScript** — o sea que no puede cubrir justo el rato
+          que se tarda en descargar ese módulo, que es casi todo el rato. Un
+          indicador que solo aparece cuando ya ha llegado lo que esperabas no
+          indica nada.
+
+          ⚠️ **Por eso lo destapa un script EN LÍNEA**, que corre al parsear:
+          es la única forma de que se vea antes que el módulo. Y solo si la URL
+          trae fechas, porque `/reservar` a secas no busca nada y anunciar una
+          búsqueda que no existe es peor que no decir nada.
+
+          `aria-hidden` porque no aporta nada a quien no lo ve: el estado ya lo
+          cuenta el aviso, que es texto de verdad.
+        */}
+        <div id="esqueleto" class="rejilla" hidden aria-hidden="true">
+          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
+          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
+          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
+        </div>
       </div>
+
+      <script is:inline>
+        /*
+         * Corre al parsear, antes que el módulo: si la URL pide unas fechas,
+         * esta pantalla va a buscar, y hay que decirlo ya.
+         */
+        (function () {
+          var p = new URLSearchParams(location.search);
+          if (!p.get('from') || !p.get('to')) return;
+          var c = document.getElementById('cargando');
+          var e = document.getElementById('esqueleto');
+          if (c) c.hidden = false;
+          if (e) e.hidden = false;
+        })();
+      </script>
 
       {/*
         ⚠️ **Aquí ya NO hay diálogo de pre-reserva, y es la decisión del 2 de
@@ -217,6 +257,8 @@ import { ORDENES } from '../lib/resultados';
   const chapasEl = document.getElementById('chapas')!;
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
+  /* El esqueleto se enciende y se apaga con el aviso: son el mismo estado. */
+  const esqueleto = document.getElementById('esqueleto')!;
   const vacio = document.getElementById('vacio')!;
   const ordenEl = document.getElementById('orden') as HTMLSelectElement;
 
@@ -284,6 +326,7 @@ import { ORDENES } from '../lib/resultados';
     resultado.hidden = true;
     vacio.hidden = true;
     cargando.hidden = false;
+    esqueleto.hidden = false;
 
     /*
      * ⚠️ **Se DEVUELVE la promesa, y no es cosmético.** Es lo que deja al
@@ -293,6 +336,7 @@ import { ORDENES } from '../lib/resultados';
     return disponibilidad(desde, hasta)
       .then((r) => {
         cargando.hidden = true;
+        esqueleto.hidden = true;
         if (!r.vehicles.length) {
           vacio.hidden = false;
           return;
@@ -315,6 +359,7 @@ import { ORDENES } from '../lib/resultados';
       })
       .catch((err: Error) => {
         cargando.hidden = true;
+        esqueleto.hidden = true;
         problema.textContent =
           MOTIVOS[err.message] ?? 'No hemos podido consultar la disponibilidad. Inténtalo otra vez.';
         problema.hidden = false;
