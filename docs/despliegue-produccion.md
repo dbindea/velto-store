@@ -1,5 +1,28 @@
 # Guion de despliegue a producción
 
+> ## ✅ Ejecutado a medias el 3 de octubre de 2026
+>
+> **Hecho ya, y no hay que repetirlo:**
+>
+> - **Las reglas** (`npm run deploy:prod:rules`). Con ellas, `bookingRequests` y
+>   `contactRequests` ya existen en producción: la pantalla de Solicitudes no
+>   dará el error de permisos que daba.
+> - **Las 28 functions**, en las seis tandas y los 15 comandos de abajo.
+>   **28 de 28 correctas, cero fallos de cuota** — con la máquina despejada y el
+>   manifiesto respondiendo en 0,4 s. Producción sigue en **31**, y ninguna de
+>   las cinco de la AEAT se ha colado.
+>
+> **Lo que FALTA es el § 4, el hosting**, y va con el merge a `master`.
+> Aplazado al **lunes 5 de octubre** por decisión de Dorel: ese merge publica
+> **los dos sitios**, y la web pública quería más rodaje en desarrollo antes de
+> salir.
+>
+> ⚠️ **Mientras tanto, producción está en un estado mixto a propósito**:
+> functions y reglas al día, frontend del 2 de octubre (`06d751a`). Comprobado
+> ese mismo día en cinco pantallas —panel, Reservas, Contratos, Facturas y
+> Ajustes—: **cero errores de consola**. El menú todavía no enseña Solicitudes
+> porque esa pantalla llega con el merge.
+
 Preparado el 2 de octubre de 2026, con el estado medido ese día. **Léelo entero
 antes de lanzar nada**: el orden importa en dos sitios y hay una comprobación
 previa que ahorra una hora de buscar un fallo que no existe.
@@ -168,6 +191,18 @@ git checkout master
 git merge develop
 git push
 ```
+
+⚠️ **«Los dos sitios» no es una forma de hablar: ese merge PUBLICA LA WEB
+PÚBLICA.** El workflow de `master` despliega el target `backoffice` **y** el
+target `web` con `build:prod`, o sea en modo `live` —con sitemap y sin
+`noindex`—. No hay forma de hacer un merge «solo del backoffice».
+
+Es lo que llevó a partir el despliegue el 3 de octubre de 2026: las functions y
+las reglas se podían subir ya —y arreglaban daño real, como la cláusula de
+sumisión nula de los contratos— mientras la web esperaba. Si algún día hace
+falta lo contrario —backoffice sí, web no—, la única vía limpia es mandar
+temporalmente el target `web` a un canal de vista previa en el workflow, y
+acordarse de revertirlo.
 
 ⚠️ **El backoffice se publica antes que la web en el workflow**, a propósito:
 son dos productos en un repositorio y que falle el build de Astro no puede
