@@ -387,7 +387,33 @@ export const getPaymentCheckout = onCall(
     if (payment.status === 'paid') {
       return { ...base, state: 'paid' };
     }
-    if (payment.status === 'failed' || (Number(payment.amount) || 0) <= 0) {
+
+    /**
+     * ⚠️ **Una denegación NO cierra el enlace, y antes sí lo cerraba.** Un
+     * `status: 'failed'` devolvía `unavailable`, así que al cliente al que el
+     * banco le rechazaba la tarjeta le salía «Pago no disponible, ponte en
+     * contacto con nosotros» y el enlace que tenía en el WhatsApp **se moría
+     * ahí**: no podía probar con otra tarjeta, tenía que llamar. Y lo normal
+     * tras una denegación es justo eso, probar con otra.
+     *
+     * Decisión de Dorel del 3 de octubre de 2026: «se debe poder reintentar
+     * realizar el pago, claro que sí».
+     *
+     * ⚠️ **Y no hay que tocar nada más para que funcione**, porque el resto ya
+     * lo contemplaba: `resolveOrder()` emite un pedido NUEVO en cuanto el
+     * anterior recibió aviso —si se reutilizara, la pasarela lo rechazaría con
+     * `SIS0051`—, y el webhook ya sabe que «una denegación de un pedido
+     * superado no marca el pago como fallido, porque el cliente pudo ser
+     * rechazado con una tarjeta y estar pagando con otra». Era esta pantalla la
+     * única pieza que daba la denegación por definitiva.
+     *
+     * ⚠️ **El tope es lo PENDIENTE, no el importe del concepto.** Con
+     * `payment.amount` un cobro de 50 € con 20 € ya entrados en efectivo
+     * volvería a ofrecer 50. `base.amount` ya es `outstandingAmount()`, así que
+     * esto cierra además el caso de un pago cubierto por otra vía al que le
+     * quedaba el estado sin actualizar: sin nada que cobrar, no hay formulario.
+     */
+    if (base.amount <= 0) {
       return { ...base, state: 'unavailable' };
     }
 
