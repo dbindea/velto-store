@@ -23,7 +23,47 @@ recibir el presupuesto, y por el otro lado atender la solicitud y convertirla
 en reserva. Lo corregido va en cuatro commits (`037485d`, `6f8d6a4`, `7dac85e`,
 `dfe2de2`); aquí queda **lo que no se tocó y por qué**.
 
-### ⬜ M-51 · Un cobro DENEGADO deja el enlace de pago muerto
+### ⬜ N-38 · Asignar un cobro libre a una reserva — HOY NO SE PUEDE
+
+Dorel preguntó el 3 de octubre de 2026 si un cobro libre de un importe
+cualquiera se puede asignar después a una reserva con su concepto. **No existe.**
+No hay pantalla, ni servicio, ni método: `createManualPayment()` escribe el
+`reservationId` al crear y nadie lo cambia nunca.
+
+⚠️ **Y no es un hueco teórico: lo necesita un flujo que ya está en marcha.** El
+código lo da por hecho **en dos sitios**, con estas palabras:
+
+- `booking-requests.component.ts`: «Ese cobro va a vivir suelto en la lista de
+  Pagos **hasta que se asigne a una reserva**».
+- `booking-request.model.ts`: «El cobro nace suelto y **se asigna después, al
+  crear la reserva**».
+
+Pero el asistente de creación lee `fromRequest`, llama a `markConverted()` y
+**no toca `signalPaymentId`**; el servicio de reservas no sabe nada de
+`bookingRequestId`. O sea que es el patrón de la casa: escrito y nunca recorrido
+hasta el final.
+
+**La consecuencia, en el caso real:** el cliente paga 50 € de señal desde el
+enlace de la pre-reserva, el operador convierte la solicitud en reserva, y
+`commitReservationWithPayments()` siembra su propia fila de señal **pendiente**.
+Resultado: el cliente ha pagado y la reserva dice que debe 50 €. El dinero queda
+en un cobro libre que no cuenta para `remainingPaid`, así que la reserva no se
+puede cerrar bien.
+
+Qué hay que decidir antes de construirlo:
+
+- **¿Se asigna sola al convertir, o a mano?** Automática resuelve el caso real
+  sin que nadie se acuerde; a mano cubre además el cobro libre que no venía de
+  una solicitud.
+- **Qué pasa con la fila sembrada.** Lo coherente es que la señal de la reserva
+  nazca ya cobrada con ese dinero, no que convivan dos apuntes de 50 €.
+- **El concepto se reescribe o se conserva.** Hoy dice «Señal de la pre-reserva
+  P-XXXX», que es informativo y conviene no perder.
+- ⚠️ **Y mueve dinero entre libros**: un cobro que pasa de libre a una reserva
+  cambia lo que esa reserva dice deber. Va con la misma prudencia que las
+  devoluciones.
+
+### ✅ M-51 · Un cobro DENEGADO deja el enlace de pago muerto *(hecho el 3 oct 2026)*
 
 `getPaymentCheckout` manda a `state: 'unavailable'` todo pago con
 `status === 'failed'`, así que al cliente al que le deniegan la tarjeta le sale
@@ -38,10 +78,11 @@ fallido, porque el cliente pudo ser rechazado con una tarjeta y estar pagando
 con otra»*. Es decir: el sistema ya entiende que una denegación no es el final,
 y esta pantalla no.
 
-**No se ha tocado a propósito**: mueve dinero y la decisión es de negocio. Lo
-que llama la atención es que esa rama **no lleva comentario** explicando el
-porqué, cosa rara en este repositorio — puede ser deliberado («que me llamen y
-lo veo») o un descuido. Lo decide Dorel.
+**Corregido el 3 de octubre de 2026** con el visto bueno de Dorel —«se debe
+poder reintentar realizar el pago, claro que sí»—. No hizo falta tocar nada más
+que esta pantalla: el resto ya lo contemplaba. Probado de punta a punta
+desplegando la function a desarrollo: el cobro que decía «Pago no disponible»
+ofrece ahora «Pagar con tarjeta · 50,00 €».
 
 ### ⬜ M-52 · La pestaña activa es el texto menos legible de la pantalla
 
