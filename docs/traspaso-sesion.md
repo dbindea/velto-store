@@ -879,6 +879,40 @@ sirviendo la web real con `robots.txt` con sitemap y sin `noindex`;
   no hay ningún coche marcado para publicar, y producción tiene uno solo.
   Publicar la web no publica la flota.
 
+### ⚠️ Y lo peor del día: producción anunciaba tres coches de DESARROLLO
+
+Lo vio Dorel al abrir `veltomobility.com/flota` nada más desplegar: un Renault
+Clio, un Peugeot 3008 y un Toyota Corolla —dos de ellos llamados `demo-…`— con
+sus precios por día, su ficha completa en `/coche/…` y **los tres metidos en el
+sitemap**, o sea ofrecidos a Google. Un cliente podía llamar pidiendo un 3008
+que la empresa no tiene.
+
+La causa, en `web/src/lib/flota-build.ts`: la constante del prerender apuntaba
+**siempre** a `velto-web-dev`, bajo un comentario que decía *«se lee del sitio
+REAL aunque se esté compilando el de desarrollo»*. Decía una cosa y hacía la
+otra, y el razonamiento que lo sostenía —«los datos públicos son los mismos»—
+es falso: son dos proyectos con dos flotas.
+
+Tres cosas que llevarse:
+
+- **El riesgo de un prerender es asimétrico.** En desarrollo prerrenderizar de
+  más es inocuo porque la web es `noindex`; en producción es publicidad falsa.
+  Cuando algo se compila una vez por entorno, la pregunta es siempre **de qué
+  entorno lee**.
+- **Y lo hacía visible un segundo fallo**: al repintar con la flota viva vacía,
+  `flota.astro` enseñaba «no hay vehículos publicados» pero **no escondía** las
+  tarjetas del build, así que la página decía las dos cosas a la vez. No es solo
+  el caso de la flota vacía — un coche despublicado entre el build y la visita
+  se quedaba anunciado.
+- **Ningún test lo habría cogido.** Los 84 de la web pasaban, las builds
+  pasaban, el CI comprobaba que el artefacto fuera el del sitio real… y lo era:
+  lo que estaba mal eran los **datos** que metió dentro. Se vio mirando la
+  página publicada, que es como se ven estas cosas aquí.
+
+Corregido el mismo día (PR #65). Las tres URL estuvieron unas horas en el
+sitemap; hoy sirven la página genérica sin datos, así que caerán solas del
+índice si Google llegó a pasar.
+
 ---
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
