@@ -102,6 +102,20 @@ const tarjetas = coches.map((c) => tarjetaCoche(c)).join('');
     .then(({ vehicles }) => {
       cargando.hidden = true;
       if (!vehicles.length) {
+        /*
+         * ⚠️ **Hay que ESCONDER la lista, no solo enseñar el aviso.** Faltaba
+         * esta línea, y con ella la página decía las dos cosas a la vez: las
+         * tarjetas que se prerrenderizaron en el build seguían ahí, con sus
+         * precios, debajo de un «ahora mismo no hay vehículos publicados».
+         *
+         * No es solo el caso de la flota vacía: un coche que se despublica
+         * entre el build y la visita se queda anunciado hasta el siguiente
+         * despliegue. **Lo que manda es lo que contesta la API**, y el
+         * prerender solo existe para que haya algo que leer antes del
+         * JavaScript.
+         */
+        lista.hidden = true;
+        lista.innerHTML = '';
         vacio.hidden = false;
         return;
       }
