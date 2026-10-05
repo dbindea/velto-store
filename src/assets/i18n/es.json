@@ -584,6 +584,8 @@
     },
     "report": {
       "action": "Parte PDF",
+      "copyFailed": "No se ha podido copiar el enlace. Ábrelo y copia la dirección.",
+      "copyLink": "Copiar enlace",
       "error": "No se pudo generar el parte",
       "problems": {
         "inspectionRequired": "Falta la inspección de la que emitir el parte",

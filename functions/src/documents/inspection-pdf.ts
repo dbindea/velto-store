@@ -137,11 +137,50 @@ function labels(loc: ContractLocale) {
 }
 
 /**
+ * `sharp`, cargado solo si de verdad hace falta.
+ *
+ * ⚠️ **`require`, y NO `import sharp from 'sharp'`.** Es la misma trampa que
+ * documenta `publishVehiclePhoto`: esa línea compila sin una queja y revienta
+ * en producción con `(0, sharp_1.default) is not a function`, porque los tipos
+ * que declara sharp son los **ESM** y su `main` es el **CommonJS**.
+ *
+ * ⚠️ Y perezoso porque `index.ts` reexporta las 36 functions y el contenedor
+ * las evalúa todas al arrancar: el `libvips` de sharp no puede cargarse cuando
+ * la petición era listar coches en la web pública.
+ */
+let _sharp: typeof import('sharp').default | undefined;
+function sharp(): typeof import('sharp').default {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (_sharp ??= require('sharp') as typeof import('sharp').default);
+}
+
+/**
+ * Lo más grande que se incrusta de una foto, y con qué calidad.
+ *
+ * ⚠️ **El parte las dibuja al ancho de la página** —unos 515 pt, que a 150 ppp
+ * son ~1.070 px—, así que meter los 4.000 px que saca un móvil es cargar
+ * dieciséis veces más píxeles de los que se van a ver. Un parte con ocho fotos
+ * de cámara se iba a decenas de megas, y es un documento que se manda por
+ * WhatsApp.
+ *
+ * ⚠️ **Y esto NO toca la prueba.** La foto original sigue intacta en Storage,
+ * que es el archivo; el PDF es la copia que se enseña. 1.400 px de lado mayor
+ * siguen estando muy por encima de lo que la página imprime, así que un roce
+ * se ve igual.
+ */
+const LADO_MAXIMO_FOTO = 1400;
+const CALIDAD_FOTO = 76;
+
+/**
  * Incrusta las fotos, saltándose las que no se puedan leer.
  *
  * ⚠️ **Una foto rota no se lleva por delante el parte.** Si una imagen falla
  * —formato raro, descarga a medias—, el documento sale con las demás: quedarse
  * sin parte por una foto sería perder también las que sí valían.
+ *
+ * ⚠️ **Y si `sharp` no puede con una, se incrusta el original.** Es el caso del
+ * HEIC de un iPhone, que sharp no decodifica en este montaje: antes que perder
+ * la foto, pesa. El mismo criterio que la línea de arriba.
  */
 async function embedPhotos(
   doc: PDFDocument,
@@ -150,12 +189,32 @@ async function embedPhotos(
   const out: { img: PDFImage; width: number; height: number; label?: string }[] = [];
   for (const photo of photos) {
     try {
-      const esPng =
+      let bytes = photo.bytes;
+      let esPng =
         photo.contentType === 'image/png' ||
         // Firma PNG: los ocho primeros bytes. El `contentType` de Storage no
         // siempre llega, y pdf-lib no adivina.
         (photo.bytes[0] === 0x89 && photo.bytes[1] === 0x50);
-      const img = esPng ? await doc.embedPng(photo.bytes) : await doc.embedJpg(photo.bytes);
+
+      try {
+        // `rotate()` sin argumentos aplica la orientación del EXIF: sin eso,
+        // una foto hecha en vertical entra tumbada.
+        bytes = await sharp()(Buffer.from(photo.bytes))
+          .rotate()
+          .resize({
+            width: LADO_MAXIMO_FOTO,
+            height: LADO_MAXIMO_FOTO,
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .jpeg({ quality: CALIDAD_FOTO, mozjpeg: true })
+          .toBuffer();
+        esPng = false;
+      } catch {
+        // Se queda el original: ver la nota de arriba.
+      }
+
+      const img = esPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
       out.push({ img, width: img.width, height: img.height, label: photo.label });
     } catch {
       // Se ignora esta foto y sigue el resto.

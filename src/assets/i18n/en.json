@@ -584,6 +584,8 @@
     },
     "report": {
       "action": "Report PDF",
+      "copyFailed": "The link could not be copied. Open it and copy the address.",
+      "copyLink": "Copy link",
       "error": "The report could not be generated",
       "problems": {
         "inspectionRequired": "No inspection to issue the report for",

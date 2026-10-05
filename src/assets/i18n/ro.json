@@ -584,6 +584,8 @@
     },
     "report": {
       "action": "Proces-verbal PDF",
+      "copyFailed": "Linkul nu s-a putut copia. Deschide-l și copiază adresa.",
+      "copyLink": "Copiază linkul",
       "error": "Procesul-verbal nu a putut fi generat",
       "problems": {
         "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",

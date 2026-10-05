@@ -1520,7 +1520,69 @@ export class ReservationDetailComponent implements OnInit {
    * pide. Lo que el contrato promete es que el parte se conserva y se pone a su
    * disposición, no que llegue sin pedirlo.
    */
-  async shareInspectionReport(inspection: Inspection): Promise<void> {
+  /**
+   * Abre el parte.
+   *
+   * ⚠️ **La pestaña se abre AHORA, en el mismo clic, y no después del
+   * `await`.** Generar el parte tarda varios segundos, y para cuando vuelve la
+   * promesa el navegador ya ha dado por caducado el gesto del usuario: un
+   * `window.open()` ahí lo come el bloqueador de emergentes **sin decir nada**.
+   * Por eso se abre una pestaña en blanco con el clic todavía vivo y se le pone
+   * la dirección cuando llega.
+   *
+   * ⚠️ **Y sin `noopener` en esa primera llamada**, que es lo que parece de
+   * cajón y rompe el arreglo: con `noopener` el navegador corta la referencia y
+   * `window.open()` devuelve **null**, así que no habría pestaña a la que
+   * ponerle la dirección. Se consigue lo mismo anulando `opener` después.
+   *
+   * ⚠️ **Antes esto no abría nada: copiaba un enlace.** El botón se llama
+   * «Parte PDF» y lo que hacía era meter la URL en el portapapeles, y solo
+   * abría el PDF *si la copia fallaba*. Las dos vías dependen del mismo gesto
+   * caducado, así que en un móvil podían fallar las dos a la vez y la pantalla
+   * se quedaba muda — que es lo que vio Dorel en producción el 5 de octubre de
+   * 2026: «al pulsar el botón no hace nada». Medido en desarrollo:
+   * `clipboard → NotAllowedError` y `window.open` ni se llegaba a llamar.
+   *
+   * Copiar el enlace sigue estando, en su propio botón, como ya hacen los
+   * cobros de esta misma pantalla —«Cobrar con tarjeta» y «Copiar enlace de
+   * pago» son dos—: son dos intenciones distintas y una no puede ser el
+   * respaldo silencioso de la otra.
+   */
+  async openInspectionReport(inspection: Inspection): Promise<void> {
+    if (!inspection?.id || this.generatingReport()) return;
+
+    const pestana = window.open('', '_blank');
+    if (pestana) pestana.opener = null;
+
+    this.generatingReport.set(inspection.id);
+    try {
+      const res = await this.inspectionService.generateReport(inspection.id);
+      if (pestana) pestana.location.href = res.shortUrl;
+      else window.open(res.shortUrl, '_blank', 'noopener');
+    } catch (err: any) {
+      // La pestaña en blanco no se deja abierta: diría que algo se está
+      // cargando cuando lo que ha pasado es que ha fallado.
+      pestana?.close();
+      this.notifications.error(this.reportErrorKeyOf(err), {
+        retry: () => void this.openInspectionReport(inspection)
+      });
+    } finally {
+      this.generatingReport.set(null);
+    }
+  }
+
+  /**
+   * Genera el parte y copia su enlace, listo para pegar en WhatsApp.
+   *
+   * ⚠️ No se manda solo, y es decisión de Dorel: el cliente lo recibe cuando lo
+   * pide. Lo que el contrato promete es que el parte se conserva y se pone a su
+   * disposición, no que llegue sin pedirlo.
+   *
+   * ⚠️ **Si la copia falla, se DICE.** Es el mismo gesto caducado de arriba, y
+   * aquí no hay nada que abrir como respaldo: un botón de copiar que no copia y
+   * no avisa deja al operador pegando un enlace viejo en el chat del cliente.
+   */
+  async copyInspectionReportLink(inspection: Inspection): Promise<void> {
     if (!inspection?.id || this.generatingReport()) return;
 
     this.generatingReport.set(inspection.id);
@@ -1528,10 +1590,10 @@ export class ReservationDetailComponent implements OnInit {
       const res = await this.inspectionService.generateReport(inspection.id);
       const copiado = await this.documentService.copyToClipboard(res.shortUrl);
       if (copiado) this.showCopyToast();
-      else window.open(res.pdfUrl, '_blank', 'noopener');
+      else this.notifications.error('inspections.report.copyFailed');
     } catch (err: any) {
       this.notifications.error(this.reportErrorKeyOf(err), {
-        retry: () => void this.shareInspectionReport(inspection)
+        retry: () => void this.copyInspectionReportLink(inspection)
       });
     } finally {
       this.generatingReport.set(null);

@@ -49,14 +49,30 @@ import { EMPRESA, SITIO } from '../lib/empresa';
         todo lo demás manda la marca. Y `razonSocial` acaba en punto, así que
         nunca se pone al final de una frase.
       */}
+      {/*
+        ⚠️ **El `{' '}` no sobra: sin él el espacio DESAPARECE.** Astro trae
+        `compressHTML` activado por defecto y colapsa el espacio en blanco de la
+        plantilla; el que va entre una etiqueta y una **expresión** —o entre una
+        etiqueta y otra etiqueta— se lo lleva entero. Resultado en la página
+        publicada: «Oficina de atención al público:C/ María Zambrano, 4». Lo vio
+        Dorel el 5 de octubre de 2026 leyendo el aviso legal.
+        ⚠️ Un espacio escrito a secas (`</strong> {valor}`) es exactamente lo
+        que había aquí y NO funciona: hay que escribirlo como expresión, que es
+        lo único que el compresor no toca.
+        ⚠️ Y es un espacio normal, no `&nbsp;`: el domicilio es largo y tiene
+        que poder partir de línea en un móvil.
+        Pasa solo en esta página porque es la única donde una etiqueta va
+        seguida de un valor dinámico; donde el texto es estático, el compresor
+        sí deja un espacio.
+      */}
       <ul>
-        <li><strong>Denominación social:</strong> {EMPRESA.razonSocial}</li>
-        <li><strong>NIF:</strong> {EMPRESA.nif}</li>
-        <li><strong>Domicilio social:</strong> {EMPRESA.domicilioSocial}</li>
-        <li><strong>Oficina de atención al público:</strong> {EMPRESA.oficina}</li>
-        <li><strong>Teléfono:</strong> {EMPRESA.telefono}</li>
-        <li><strong>Correo:</strong> <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></li>
-        <li><strong>Datos registrales:</strong> {EMPRESA.registro}</li>
+        <li><strong>Denominación social:</strong>{' '}{EMPRESA.razonSocial}</li>
+        <li><strong>NIF:</strong>{' '}{EMPRESA.nif}</li>
+        <li><strong>Domicilio social:</strong>{' '}{EMPRESA.domicilioSocial}</li>
+        <li><strong>Oficina de atención al público:</strong>{' '}{EMPRESA.oficina}</li>
+        <li><strong>Teléfono:</strong>{' '}{EMPRESA.telefono}</li>
+        <li><strong>Correo:</strong>{' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></li>
+        <li><strong>Datos registrales:</strong>{' '}{EMPRESA.registro}</li>
       </ul>
       <p class="nota">
         El domicilio social es el inscrito en el Registro Mercantil. La oficina
