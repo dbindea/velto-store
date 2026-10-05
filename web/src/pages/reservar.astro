@@ -109,7 +109,32 @@ import { ORDENES } from '../lib/resultados';
         pulsaría otra vez creyendo que el botón no funciona.
       */}
       <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
-      <p id="cargando" class="aviso" hidden>Buscando coches libres…</p>
+      {/*
+        BUSCANDO.
+
+        ⚠️ **Era una línea de texto suelta y no la veía nadie.** Dorel lo dijo
+        mirando la pantalla: en una página casi vacía, un gris centrado a media
+        altura no se distingue de un pie de foto. Ahora es la misma tarjeta que
+        el «no hay nada» —son los dos estados de la misma pregunta— y lleva
+        movimiento, que es lo único que de verdad dice «estoy trabajando».
+
+        ⚠️ **La ilustración son las barras de la marca**, las mismas de
+        `.barras`, corriendo. No es un adorno genérico: es el isotipo de Velto
+        en movimiento, y por eso la inclinación sale de `--skew`, que es la
+        real de la «V» del logotipo.
+
+        ⚠️ **Y `role="status"`, que ya lo tenía el `<p>`:** quien no ve la
+        animación necesita que le lean el texto.
+      */}
+      <div id="cargando" class="buscando" role="status" hidden>
+        <div class="panel-estado">
+          <div class="buscando__via" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <p class="buscando__titulo">Buscando coches libres…</p>
+          <p class="buscando__texto">Estamos mirando el calendario de cada coche para esas fechas.</p>
+        </div>
+      </div>
       {/*
         No haber encontrado nada es un RESULTADO, no un error, y por eso tiene
         tarjeta propia en vez de una línea de texto gris.
@@ -119,7 +144,7 @@ import { ORDENES } from '../lib/resultados';
         pantalla como si algo se hubiera roto.
       */}
       <div id="vacio" class="sin-nada" role="status" hidden>
-        <div class="sin-nada__caja">
+        <div class="panel-estado">
           <span class="sin-nada__icono" aria-hidden="true">
             {/*
               Un calendario tachado, no un coche tachado: lo que no encaja son
@@ -233,29 +258,21 @@ import { ORDENES } from '../lib/resultados';
         <div id="lista" class="rejilla"></div>
 
         {/*
-          ⚠️ **El esqueleto, y por qué hace falta aunque ya hubiera un aviso.**
-          Medido el 3 de octubre de 2026 contra el sitio desplegado en 3G lento:
-          esta pantalla enseña «Elige tu coche» con **la lista vacía durante 3,1
-          segundos** y sin una sola señal de que esté trabajando. El aviso
-          «Buscando coches libres…» existía, pero nace `hidden` y **lo destapa
-          el módulo de JavaScript** — o sea que no puede cubrir justo el rato
-          que se tarda en descargar ese módulo, que es casi todo el rato. Un
-          indicador que solo aparece cuando ya ha llegado lo que esperabas no
-          indica nada.
+          ⚠️ **Aquí había un esqueleto de tres tarjetas grises que NO SE VEÍA
+          NUNCA.** Se añadió el 3 de octubre de 2026 con un argumento correcto
+          —la pantalla pasaba 3,1 segundos en blanco en 3G lento— y se escribió
+          **dentro de `#resultado`**, que está `hidden` justo mientras se busca.
+          Destaparlo no servía de nada: su antepasado seguía oculto. Por eso lo
+          que Dorel ve al buscar es solo la línea de texto, y por eso pidió algo
+          que se note.
 
-          ⚠️ **Por eso lo destapa un script EN LÍNEA**, que corre al parsear:
-          es la única forma de que se vea antes que el módulo. Y solo si la URL
-          trae fechas, porque `/reservar` a secas no busca nada y anunciar una
-          búsqueda que no existe es peor que no decir nada.
+          El patrón de siempre en esta casa: **escrito, desplegado y nunca
+          recorrido hasta el final**. Lo cubre ahora la tarjeta de «Buscando»,
+          que vive FUERA de `#resultado` y por eso sí se ve.
 
-          `aria-hidden` porque no aporta nada a quien no lo ve: el estado ya lo
-          cuenta el aviso, que es texto de verdad.
+          Las clases `.esq*` se quedan en `global.css`: las usa la ficha de
+          coche, donde sí funcionan.
         */}
-        <div id="esqueleto" class="rejilla" hidden aria-hidden="true">
-          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
-          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
-          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
-        </div>
       </div>
 
       <script is:inline>
@@ -267,9 +284,7 @@ import { ORDENES } from '../lib/resultados';
           var p = new URLSearchParams(location.search);
           if (!p.get('from') || !p.get('to')) return;
           var c = document.getElementById('cargando');
-          var e = document.getElementById('esqueleto');
           if (c) c.hidden = false;
-          if (e) e.hidden = false;
         })();
       </script>
 
@@ -313,8 +328,6 @@ import { ORDENES } from '../lib/resultados';
   const chapasEl = document.getElementById('chapas')!;
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
-  /* El esqueleto se enciende y se apaga con el aviso: son el mismo estado. */
-  const esqueleto = document.getElementById('esqueleto')!;
   const vacio = document.getElementById('vacio')!;
   const otros = document.getElementById('otros')!;
   const otrosLista = document.getElementById('otros-lista')!;
@@ -415,7 +428,6 @@ import { ORDENES } from '../lib/resultados';
     resultado.hidden = true;
     vacio.hidden = true;
     cargando.hidden = false;
-    esqueleto.hidden = false;
 
     /*
      * ⚠️ **Se DEVUELVE la promesa, y no es cosmético.** Es lo que deja al
@@ -425,7 +437,6 @@ import { ORDENES } from '../lib/resultados';
     return disponibilidad(desde, hasta)
       .then((r) => {
         cargando.hidden = true;
-        esqueleto.hidden = true;
         if (!r.vehicles.length) {
           vacio.hidden = false;
           enseñarFlota();
@@ -451,7 +462,6 @@ import { ORDENES } from '../lib/resultados';
       })
       .catch((err: Error) => {
         cargando.hidden = true;
-        esqueleto.hidden = true;
         problema.textContent =
           MOTIVOS[err.message] ?? 'No hemos podido consultar la disponibilidad. Inténtalo otra vez.';
         problema.hidden = false;
@@ -595,8 +605,17 @@ import { ORDENES } from '../lib/resultados';
    * un pie de foto, y a 500 px por debajo del formulario en móvil.
    */
   .sin-nada { margin: var(--sp-10) 0 var(--sp-6); }
+  .buscando { margin: var(--sp-10) 0; }
 
-  .sin-nada__caja {
+  /*
+   * ⚠️ **La caja la comparten «buscando» y «no hay nada», y es deliberado.**
+   * Son los dos estados de la misma pregunta —la que el visitante acaba de
+   * hacer— y uno sustituye al otro en el mismo sitio. Con dos cajas distintas,
+   * la página da un salto al terminar la búsqueda; y la segunda que alguien
+   * retoque se queda con otro radio y otro relleno, que es como esta web acabó
+   * con cuatro nombres para la misma casilla.
+   */
+  .panel-estado {
     max-width: 560px;
     margin-inline: auto;
     padding: var(--sp-8) var(--sp-6);
@@ -604,6 +623,82 @@ import { ORDENES } from '../lib/resultados';
     background: var(--surface-card);
     border: var(--bw) solid var(--border);
     border-radius: var(--r-xl);
+  }
+
+  /*
+   * LA CARRETERA: las tres barras del isotipo, corriendo.
+   *
+   * ⚠️ **`overflow: hidden` es lo que las convierte en un tramo de vía.** Sin
+   * él, las barras se salen de la caja y cruzan el texto.
+   */
+  .buscando__via {
+    position: relative;
+    width: 220px;
+    height: 10px;
+    margin: 0 auto var(--sp-5);
+    overflow: hidden;
+  }
+
+  /*
+   * El asfalto: es lo que hace que las barras se lean como marcas de una vía y
+   * no como tres rectángulos sueltos.
+   *
+   * ⚠️ **Va en `--border` y NO en `--divider`.** Aquel es el filete de las
+   * separaciones y en los temas oscuros vale `--gray-900`, o sea el mismo tono
+   * que la tarjeta: la vía existía y no se veía — medido en pantalla, no leído
+   * del fichero. Es la misma trampa que ya obligó a cambiarlo en el esqueleto.
+   */
+  .buscando__via::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .buscando__via span {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 40px;
+    height: 10px;
+    background: var(--brand);
+    /*
+     * ⚠️ **Se mueve con `transform`, no con `left`.** Aquello recalcula la
+     * maquetación en cada fotograma; esto lo compone la GPU. En un móvil de
+     * gama baja —que es donde se usa esto— la diferencia se ve.
+     */
+    animation: viaVelto 1.5s linear infinite;
+  }
+
+  /* Repartidas por la vía con retardos negativos: arrancan ya separadas, sin
+     el primer segundo en que las tres irían pegadas. */
+  .buscando__via span:nth-child(2) { animation-delay: -0.5s; }
+  .buscando__via span:nth-child(3) { animation-delay: -1s; }
+
+  @keyframes viaVelto {
+    from { transform: translateX(-50px) skewX(var(--skew)); }
+    to { transform: translateX(220px) skewX(var(--skew)); }
+  }
+
+  .buscando__titulo {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-h3);
+    font-weight: var(--fw-medium);
+    line-height: var(--lh-snug);
+  }
+
+  .buscando__texto { margin: 0; color: var(--text-2); }
+
+  /*
+   * ⚠️ **Sin movimiento, las barras se quedan QUIETAS y repartidas** — no
+   * desaparecen. Son la ilustración de la tarjeta, y quitarlas dejaría un
+   * hueco; lo que molesta a quien pide menos movimiento es el bucle, no el
+   * dibujo. El texto ya dice lo que está pasando.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .buscando__via span { animation: none; transform: skewX(var(--skew)); }
+    .buscando__via span:nth-child(2) { left: 70px; }
+    .buscando__via span:nth-child(3) { left: 140px; }
   }
 
   /*
