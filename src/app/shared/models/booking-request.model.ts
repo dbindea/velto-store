@@ -107,8 +107,28 @@ export interface BookingRequest {
    */
   quoteSnapshot: BookingRequestQuote;
 
+  /**
+   * La **ventana de disponibilidad**, ensanchada a días completos: es lo que la
+   * function cruza contra las reservas.
+   *
+   * ⚠️ **`returnDate` es EXCLUSIVO** —la medianoche del día siguiente— y por
+   * eso no sirve como fecha de devolución. Para enseñar o proponer horas están
+   * `requestPickupAt()` y `requestReturnAt()`.
+   */
   pickupDate?: any;
   returnDate?: any;
+
+  /**
+   * La recogida y la devolución que el visitante pidió **de verdad**, con su
+   * hora.
+   *
+   * ⚠️ **Opcionales porque son del 5 de octubre de 2026**, y las solicitudes
+   * anteriores no los traen: ahí sigue mandando el respaldo del mediodía. La
+   * web pedía la hora desde antes y la tiraba al escribir, así que el
+   * backoffice proponía las 12:00 para una pre-reserva hecha a las 10:00.
+   */
+  pickupDateTime?: any;
+  returnDateTime?: any;
 
   /**
    * Dónde pidió recoger el coche.

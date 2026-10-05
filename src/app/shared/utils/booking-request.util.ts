@@ -80,8 +80,49 @@ function alMediodia(valor: unknown, restarUnDia = false): Date | null {
 }
 
 /** Cuándo recogería, si no se pacta otra cosa. */
+/**
+ * ⚠️ **Si la solicitud trae la hora puesta, MANDA ella.** Es el día que esta
+ * misma sección anunciaba: «el día que la web las mande, estas dos funciones se
+ * encuentran la hora puesta y el mediodía deja de aplicarse solo». Llegó el 5 de
+ * octubre de 2026, cuando se vio que la web ya pedía la hora —las 10:00— y la
+ * tiraba al escribir la solicitud.
+ *
+ * El mediodía sigue ahí para las solicitudes **anteriores**, que no la guardan.
+ * No es un parche de compatibilidad: es el respaldo honesto a «no se dijo».
+ */
+function horaPedida(valor: unknown): Date | null {
+  /*
+   * ⚠️ **NO pasa por `toDate()`, y eso es el punto.** Aquel, ante algo que no
+   * sabe leer, **devuelve la fecha de hoy** —está escrito así a propósito, para
+   * que un `createdAt` corrupto no tumbe una vista entera con el pipe `date`—.
+   * Aquí ese respaldo sería peor que el fallo: una solicitud con el campo
+   * ilegible propondría **hoy** como día de recogida, y el operador lo llevaría
+   * al asistente sin que nada chirriara. Lo que se quiere es caer al mediodía
+   * del día que de verdad pidió el cliente.
+   *
+   * Es la misma regla que la web pública ya aplica en `public/core.ts`: ante
+   * una fecha que no se entiende, `null` y no la de hoy.
+   */
+  if (valor === null || valor === undefined) return null;
+
+  const d =
+    valor instanceof Date
+      ? valor
+      : typeof (valor as { toDate?: unknown })?.toDate === 'function'
+        ? (valor as { toDate: () => Date }).toDate()
+        : typeof (valor as { seconds?: unknown })?.seconds === 'number'
+          ? new Date((valor as { seconds: number }).seconds * 1000)
+          : typeof (valor as { _seconds?: unknown })?._seconds === 'number'
+            ? new Date((valor as { _seconds: number })._seconds * 1000)
+            : typeof valor === 'string'
+              ? new Date(valor)
+              : null;
+
+  return d && !isNaN(d.getTime()) ? d : null;
+}
+
 export function requestPickupAt(r: BookingRequest): Date | null {
-  return alMediodia(r.pickupDate);
+  return horaPedida(r.pickupDateTime) ?? alMediodia(r.pickupDate);
 }
 
 /**
@@ -106,7 +147,7 @@ export function requestPickupAt(r: BookingRequest): Date | null {
  * sale de Firestore.
  */
 export function requestReturnAt(r: BookingRequest): Date | null {
-  return alMediodia(r.returnDate, true);
+  return horaPedida(r.returnDateTime) ?? alMediodia(r.returnDate, true);
 }
 
 /**

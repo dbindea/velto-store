@@ -16,22 +16,18 @@ import type { AvisoSistema } from './system-alerts';
 /** La zona en la que opera el negocio, igual que en las facturas. */
 export const DIGEST_TIME_ZONE = process.env.VELTO_TIME_ZONE || 'Europe/Madrid';
 
-/**
- * El desfase de una zona respecto a UTC, en minutos, **en un instante dado**.
+/*
+ * ⚠️ **Aquí vivía una copia de `offsetMinutos` y de la vuelta doble del cambio
+ * de hora.** Se sacó a `../zona` el 5 de octubre de 2026, cuando la misma
+ * aritmética hizo falta en la web pública: una pre-reserva entró con dos horas
+ * de desfase porque allí se construía la fecha con `new Date(y, m, d, h)`, que
+ * usa la zona del proceso —UTC en el contenedor—.
  *
- * Hace falta el instante porque el desfase cambia: Madrid es `+01:00` en
- * invierno y `+02:00` en verano.
+ * Dos copias de un cálculo de horario de verano es exactamente cómo nace el
+ * siguiente fallo: se arregla una y la otra sigue contando los dos domingos del
+ * año a su manera.
  */
-function offsetMinutos(instante: Date, timeZone: string): number {
-  const partes = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    timeZoneName: 'longOffset'
-  }).formatToParts(instante);
-  const nombre = partes.find((p) => p.type === 'timeZoneName')?.value ?? 'GMT+00:00';
-  const m = /GMT([+-])(\d{2}):(\d{2})/.exec(nombre);
-  if (!m) return 0;
-  return (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
-}
+import { instanteEnZona } from '../zona';
 
 /** El año, mes y día que son en esa zona en ese instante. */
 function civil(instante: Date, timeZone: string): { y: number; m: number; d: number } {
@@ -56,9 +52,7 @@ function civil(instante: Date, timeZone: string): { y: number; m: number; d: num
  * antes o después dos veces al año.
  */
 function inicioDelDia(y: number, m: number, d: number, timeZone: string): Date {
-  const utcMedianoche = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
-  const primera = new Date(utcMedianoche - offsetMinutos(new Date(utcMedianoche), timeZone) * 60000);
-  return new Date(utcMedianoche - offsetMinutos(primera, timeZone) * 60000);
+  return instanteEnZona(y, m, d, 0, 0, timeZone);
 }
 
 export interface RangoDia {

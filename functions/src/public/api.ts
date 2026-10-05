@@ -60,6 +60,11 @@ import { renderBookingRequestEmail, type BookingRequestEmailData } from './booki
 import { renderBookingRequestClienteEmail } from './booking-request-cliente-email';
 import { presupuestoDeSolicitud } from './booking-request-quote';
 import { renderContactEmail } from './contact-email';
+/*
+ * ⚠️ Módulo puro y sin dependencias: no pesa en el arranque en frío, que es lo
+ * que `arranque.spec.ts` vigila para todo lo que cuelgue de `index.ts`.
+ */
+import { fechaHoraEnZona, instanteEnZona } from '../zona';
 import {
   generateContactReference,
   looksAutomated as contactoAutomatizado,
@@ -221,13 +226,25 @@ function fallo(res: Response, code: number, key: string, detalle?: unknown): voi
 }
 
 /** Una fecha `YYYY-MM-DD` o `YYYY-MM-DDTHH:mm`, en hora local. */
+/**
+ * ⚠️ **Lo que llega es una hora de MADRID, no del servidor.** Esto lo escribe
+ * un visitante en un campo del navegador: «10:00» son las diez de la mañana en
+ * Arganda, no en UTC. Y el contenedor corre en UTC, así que el
+ * `new Date(y, m, d, h, min)` que había aquí las metía dos horas más tarde —
+ * el 5 de octubre de 2026 una pre-reserva real pidió las 10:00 y el
+ * presupuesto imprimió las 12:00.
+ *
+ * El descuadre no se quedaba en la hora impresa: la ventana de disponibilidad
+ * sale de esta misma fecha, así que una recogida de madrugada podía caer en el
+ * día que no era y cruzarse contra las reservas equivocadas.
+ */
 function parseFecha(valor: unknown): Date | null {
   if (typeof valor !== 'string' || valor.length > 16) return null;
   const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(valor);
   if (!m) return null;
-  const d = new Date(
-    Number(m[1]), Number(m[2]) - 1, Number(m[3]),
-    m[4] ? Number(m[4]) : 0, m[5] ? Number(m[5]) : 0, 0, 0
+  const d = instanteEnZona(
+    Number(m[1]), Number(m[2]), Number(m[3]),
+    m[4] ? Number(m[4]) : 0, m[5] ? Number(m[5]) : 0
   );
   return isNaN(d.getTime()) ? null : d;
 }
@@ -622,8 +639,29 @@ export const createBookingRequest = onRequest(
           vatRate: precio.vatRate,
           currency: 'EUR'
         },
+        /**
+         * La **ventana de disponibilidad**, en días completos: es lo que se
+         * cruza contra las reservas. `to` es **exclusivo** —el día siguiente a
+         * medianoche—, así que no vale como fecha de devolución.
+         */
         pickupDate: ventana.from,
         returnDate: ventana.to,
+        /**
+         * Y lo que el visitante pidió de verdad, con su hora.
+         *
+         * ⚠️ **Campos nuevos del 5 de octubre de 2026, y nacen opcionales**
+         * porque hay solicitudes anteriores sin ellos: la regla de producción
+         * es que un campo se añade, no se renombra ni se rellena en masa. Para
+         * las viejas sigue valiendo el respaldo del mediodía
+         * (`DEFAULT_REQUEST_HOUR`) en el backoffice.
+         *
+         * Hasta hoy **no se guardaban**, y eso hacía que el backoffice
+         * propusiera las 12:00 para una pre-reserva pedida a las 10:00: la
+         * hora existía en la petición, se usaba para cotizar, y se tiraba al
+         * escribir.
+         */
+        pickupDateTime: desde,
+        returnDateTime: hasta,
         priceGuaranteedUntil: garantia,
         /** El plazo de borrado, congelado: ver `bookingRequestKeepHours`. */
         keepHours: ajustes.bookingRequestKeepHours
@@ -691,7 +729,7 @@ export const createBookingRequest = onRequest(
        */
       if (email) {
         try {
-          await avisarCliente(solicitud, presupuesto ?? '');
+          await avisarCliente(solicitud, { recogida: desde, devolucion: hasta }, presupuesto ?? '');
         } catch (error) {
           logger.error('No se pudo mandar el correo al cliente', { id: ref.id, error });
         }
@@ -751,10 +789,18 @@ async function avisarCliente(
     pickupPlace?: string;
     vehicleSnapshot: { brand: string; model: string };
     quoteSnapshot: { totalDays: number; gross: number };
-    pickupDate: Date;
-    returnDate: Date;
     priceGuaranteedUntil: Date;
   },
+  /*
+   * ⚠️ **La recogida y la devolución de VERDAD, no `pickupDate`/`returnDate`.**
+   * Aquellos son la **ventana de disponibilidad**: `widenToFullDays()` los
+   * ensancha a días completos, así que valen 00:00 y el final es **exclusivo**
+   * —el día siguiente—. Imprimiéndolos, el correo del 5 de octubre de 2026 le
+   * dijo a un cliente que recogía «a las 00:00» y devolvía **el 26** un coche
+   * que devolvía el 25. Son correctos para cruzar contra las reservas y
+   * mentira como hora de entrega.
+   */
+  horas: { recogida: Date; devolucion: Date },
   presupuesto: string
 ): Promise<void> {
   const apiKey = RESEND_API_KEY.value();
@@ -766,9 +812,13 @@ async function avisarCliente(
   }
 
   const empresa = companyConfig();
-  const p = (n: number) => String(n).padStart(2, '0');
-  const cuando = (d: Date) =>
-    `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} a las ${p(d.getHours())}:${p(d.getMinutes())}`;
+  /*
+   * ⚠️ **En la zona del negocio, no en la del proceso.** Aquí había un
+   * `getDate()`/`getHours()`, que leen la zona del contenedor —UTC—, mientras
+   * el presupuesto en PDF fija `Europe/Madrid`: el mismo alquiler salía con una
+   * hora en el correo y otra en el papel adjunto a ese mismo correo.
+   */
+  const cuando = (d: Date) => fechaHoraEnZona(d);
 
   const { subject, html, text } = renderBookingRequestClienteEmail({
     nombre: s.name,
@@ -776,8 +826,8 @@ async function avisarCliente(
     coche: `${s.vehicleSnapshot.brand} ${s.vehicleSnapshot.model}`.trim(),
     dias: s.quoteSnapshot.totalDays,
     importe: `${s.quoteSnapshot.gross.toFixed(2).replace('.', ',')} €`,
-    recogida: cuando(s.pickupDate),
-    devolucion: cuando(s.returnDate),
+    recogida: cuando(horas.recogida),
+    devolucion: cuando(horas.devolucion),
     ...(s.pickupPlace ? { lugar: s.pickupPlace } : {}),
     garantia: `hasta el ${cuando(s.priceGuaranteedUntil)}`,
     presupuesto,
