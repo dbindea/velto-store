@@ -219,5 +219,89 @@
         }
       }
     </section>
+
+    <!--
+      Las visitas de la web pública.
+      ⚠️ Va en Informes y no en el panel porque se mira con el mismo rango de
+      fechas que todo lo demás, y porque es dato de negocio: lo gobierna
+      `viewReports`, igual que el beneficio.
+    -->
+    <section class="fleet web-visits">
+      <h2 class="chart-title">{{ 'reports.web.title' | translate }}</h2>
+
+      @if (visitas(); as v) {
+        <div class="tiles web-visits__tiles">
+          <article class="tile">
+            <p class="tile-label">{{ 'reports.web.visitors' | translate }}</p>
+            <p class="tile-value">{{ v.visitantesSumados }}</p>
+            <!--
+              ⚠️ **Esta nota NO es opcional.** La suma de los únicos de cada día
+              no son personas distintas: quien vuelve el martes cuenta otra vez.
+              Sin decirlo, el número se lee como «personas» y es una cifra
+              creíble y equivocada — y no se puede arreglar midiendo mejor,
+              porque la sal rota a propósito para no poder seguir a nadie.
+            -->
+            <p class="tile-note">{{ 'reports.web.visitorsNote' | translate }}</p>
+          </article>
+          <article class="tile">
+            <p class="tile-label">{{ 'reports.web.pageViews' | translate }}</p>
+            <p class="tile-value">{{ v.paginasVistas }}</p>
+          </article>
+          <article class="tile">
+            <p class="tile-label">{{ 'reports.web.quotes' | translate }}</p>
+            <p class="tile-value">{{ v.embudo.cotizacion }}</p>
+            <p class="tile-note">{{ 'reports.web.quotesNote' | translate }}</p>
+          </article>
+          <article class="tile">
+            <p class="tile-label">{{ 'reports.web.bots' | translate }}</p>
+            <p class="tile-value">{{ v.botsDescartados }}</p>
+            <p class="tile-note">{{ 'reports.web.botsNote' | translate }}</p>
+          </article>
+        </div>
+
+        @if (v.paginasVistas === 0) {
+          <p class="empty-state">{{ 'reports.web.empty' | translate }}</p>
+        } @else {
+          <!-- El embudo, en el orden en que ocurre. -->
+          <h3 class="subcard-title">{{ 'reports.web.funnel' | translate }}</h3>
+          <table class="client-table">
+            <tbody>
+              <tr>
+                <td>{{ 'reports.web.step.prices' | translate }}</td>
+                <td class="num">{{ v.embudo.precios }}</td>
+              </tr>
+              <tr>
+                <td>{{ 'reports.web.step.detail' | translate }}</td>
+                <td class="num">{{ v.embudo.ficha }}</td>
+              </tr>
+              <tr>
+                <td>{{ 'reports.web.step.quote' | translate }}</td>
+                <td class="num">{{ v.embudo.cotizacion }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h3 class="subcard-title">{{ 'reports.web.routes' | translate }}</h3>
+          <table class="client-table">
+            <thead>
+              <tr>
+                <th>{{ 'reports.web.route' | translate }}</th>
+                <th class="num">{{ 'reports.web.views' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of v.rutas; track r.ruta) {
+                <tr>
+                  <td class="mono">{{ rutaLegible(r.ruta) }}</td>
+                  <td class="num">{{ r.visitas }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      } @else {
+        <p class="loading-state">{{ 'common.loading' | translate }}</p>
+      }
+    </section>
   }
 </div>

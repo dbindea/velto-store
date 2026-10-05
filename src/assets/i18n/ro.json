@@ -979,7 +979,28 @@
     "outExpenses": "Cheltuieli",
     "outMaintenance": "Service",
     "outCommissions": "Comisioane",
-    "outOwnerShares": "Proprietari"
+    "outOwnerShares": "Proprietari",
+    "web": {
+      "title": "Vizite pe site",
+      "visitors": "Vizitatori",
+      "visitorsNote": "Suma vizitatorilor unici din fiecare zi. Cine revine în altă zi se numără din nou: nu se poate ști că e aceeași persoană, și asta e intenționat.",
+      "pageViews": "Pagini vizualizate",
+      "quotes": "Au ajuns la ofertă",
+      "quotesNote": "Au deschis formularul cu prețul în față",
+      "bots": "Boți excluși",
+      "botsNote": "Nu se numără ca vizitatori",
+      "funnel": "Parcursul",
+      "routes": "Pe pagină",
+      "route": "Pagină",
+      "views": "Vizite",
+      "step": {
+        "prices": "Au văzut prețuri pentru niște date",
+        "detail": "Au deschis fișa unei mașini",
+        "quote": "Au ajuns la ofertă"
+      },
+      "empty": "Încă nu sunt vizite în această perioadă.",
+      "loadFailed": "Vizitele site-ului nu au putut fi citite"
+    }
   },
   "reservations": {
     "actions": {

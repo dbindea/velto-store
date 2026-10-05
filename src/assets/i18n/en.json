@@ -979,7 +979,28 @@
     "outExpenses": "Expenses",
     "outMaintenance": "Workshop",
     "outCommissions": "Commissions",
-    "outOwnerShares": "Owners"
+    "outOwnerShares": "Owners",
+    "web": {
+      "title": "Website visits",
+      "visitors": "Visitors",
+      "visitorsNote": "Sum of each day’s unique visitors. Someone returning on another day counts again: we cannot tell it is the same person, and that is deliberate.",
+      "pageViews": "Page views",
+      "quotes": "Reached the quote",
+      "quotesNote": "Opened the form with the price in front of them",
+      "bots": "Bots discarded",
+      "botsNote": "Not counted as visitors",
+      "funnel": "The journey",
+      "routes": "By page",
+      "route": "Page",
+      "views": "Views",
+      "step": {
+        "prices": "Saw prices for some dates",
+        "detail": "Opened a car page",
+        "quote": "Reached the quote"
+      },
+      "empty": "No visits in this period yet.",
+      "loadFailed": "Website visits could not be read"
+    }
   },
   "reservations": {
     "actions": {

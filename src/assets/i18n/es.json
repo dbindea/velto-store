@@ -979,7 +979,28 @@
     "outExpenses": "Gastos",
     "outMaintenance": "Taller",
     "outCommissions": "Incentivos",
-    "outOwnerShares": "Propietarios"
+    "outOwnerShares": "Propietarios",
+    "web": {
+      "title": "Visitas de la web",
+      "visitors": "Visitantes",
+      "visitorsNote": "Suma de los únicos de cada día. Quien vuelve otro día cuenta otra vez: no se puede saber que es la misma persona, y eso es a propósito.",
+      "pageViews": "Páginas vistas",
+      "quotes": "Llegaron a la cotización",
+      "quotesNote": "Abrieron el formulario con el precio delante",
+      "bots": "Bots descartados",
+      "botsNote": "No cuentan como visitantes",
+      "funnel": "El recorrido",
+      "routes": "Por página",
+      "route": "Página",
+      "views": "Visitas",
+      "step": {
+        "prices": "Vieron precios de unas fechas",
+        "detail": "Abrieron la ficha de un coche",
+        "quote": "Llegaron a la cotización"
+      },
+      "empty": "Todavía no hay visitas en estas fechas.",
+      "loadFailed": "No se han podido leer las visitas de la web"
+    }
   },
   "reservations": {
     "actions": {
