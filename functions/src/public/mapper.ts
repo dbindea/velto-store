@@ -121,6 +121,16 @@ function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): 
  * `raw` es el documento tal cual sale de Firestore: sin tipar a propósito, para
  * que nadie pueda escribir `...raw` y que compile.
  */
+/**
+ * Las cuatro etiquetas de la DGT que se pueden publicar.
+ *
+ * ⚠️ **Escritas aquí y no importadas del modelo de la app**: las functions y la
+ * app compilan con tsconfigs separados y no pueden compartir módulo, igual que
+ * la aritmética del IVA. Si se añade una quinta categoría, se añade en los dos
+ * sitios.
+ */
+const ETIQUETAS_VALIDAS = ['B', 'C', 'ECO', 'ZERO'] as const;
+
 export function toSummary(
   id: string,
   raw: Record<string, unknown>,
@@ -141,6 +151,26 @@ export function toSummary(
     seats: Number(raw['seats'] ?? 0),
     luggageCapacity: Number(raw['luggageCapacity'] ?? 0),
     ...(raw['color'] ? { color: String(raw['color']) } : {}),
+    /**
+     * ⚠️ **La etiqueta se publica por LISTA BLANCA, no tal cual.** Lo que hay
+     * en Firestore lo escribe un `<select>` de la ficha, pero este fichero es
+     * el único sitio por el que algo sale a internet y no puede fiarse de lo
+     * que le llegue: un valor raro —un documento sembrado a mano, un campo
+     * renombrado a medias— se publicaría tal cual y la web pintaría un
+     * distintivo que no existe. Si no es una de las cuatro, no sale.
+     */
+    ...(ETIQUETAS_VALIDAS.includes(String(raw['environmentalLabel']) as never)
+      ? { environmentalLabel: String(raw['environmentalLabel']) as 'B' | 'C' | 'ECO' | 'ZERO' }
+      : {}),
+    /**
+     * ⚠️ `publicHighlight`, **nunca `description`**: la misma regla que la
+     * descripción pública de la ficha. Y recortado, porque es una línea
+     * destacada: lo que no quepa no se corta solo en la web, se cuela y
+     * descuadra la tarjeta.
+     */
+    ...(raw['publicHighlight']
+      ? { highlight: String(raw['publicHighlight']).trim().slice(0, 120) }
+      : {}),
     ...(fotos.length ? { photo: fotos[0] } : {}),
     ...(precioDesde(raw['pricingRules'] as VehiclePricingRule[], vatRate)
       ? { priceFrom: precioDesde(raw['pricingRules'] as VehiclePricingRule[], vatRate) }

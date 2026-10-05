@@ -182,9 +182,71 @@ export interface Vehicle {
    * 25»— y nunca se pensó para que saliera de la oficina.
    */
   publicDescription?: string;
+  /**
+   * Lo que este coche tiene y los demás no, en una línea.
+   *
+   * ⚠️ **No es la descripción, y por eso es un campo aparte.**
+   * `publicDescription` es la prosa que explica el coche —«híbrido automático,
+   * muy poco consumo en ciudad»— y se lee entera. Esto es un gancho suelto que
+   * va destacado: «Incluye bono anual de parking gratuito en Madrid». Metido
+   * dentro de la prosa se pierde, que es justo lo contrario de lo que se quiere.
+   * Lo pidió Dorel el 5 de octubre de 2026.
+   *
+   * ⚠️ **Y se escribe para un cliente**, como `publicDescription`: sale en la
+   * web. La nota interna sigue siendo `description`.
+   */
+  publicHighlight?: string;
+  /**
+   * La etiqueta ambiental de la DGT, que decide si el coche puede entrar en
+   * Madrid.
+   *
+   * ⚠️ **Es un dato del cliente, no de inventario.** Quien alquila para ir al
+   * centro necesita saberlo ANTES de reservar: un coche sin etiqueta no entra
+   * en la ZBE, y enterarse en la entrega es un alquiler devuelto. Por eso sale
+   * a la web y no se queda en la ficha.
+   *
+   * ⚠️ **Opcional a propósito, y sin valor por defecto.** Hay coches sin
+   * etiqueta —los más antiguos—, y «sin etiqueta» y «todavía no lo he
+   * rellenado» no son lo mismo: inventar una `B` para los que falten sería
+   * afirmar que pueden circular por sitios donde no pueden. Vacío significa que
+   * no consta, y la web entonces no dice nada.
+   */
+  environmentalLabel?: EnvironmentalLabel;
   createdAt?: any;
   updatedAt?: any;
 }
+
+/**
+ * Las cuatro etiquetas de la DGT, con la grafía del enumerado y no la del
+ * dibujo: la de cero emisiones se rotula «0» y aquí se llama `ZERO`, porque un
+ * `'0'` como clave de enumerado se confunde con un número a la primera.
+ */
+export type EnvironmentalLabel = 'B' | 'C' | 'ECO' | 'ZERO';
+
+/** El orden es el de la DGT, de menos a más limpia. */
+export const ENVIRONMENTAL_LABELS: EnvironmentalLabel[] = ['B', 'C', 'ECO', 'ZERO'];
+
+/**
+ * Lo que se escribe dentro del distintivo.
+ *
+ * ⚠️ **Texto literal y no clave i18n, a propósito.** Es el rótulo oficial del
+ * distintivo, igual en los tres idiomas: una «B» es una «B» en rumano. Lo que
+ * sí se traduce es la explicación de al lado.
+ */
+export const ENVIRONMENTAL_LABEL_TEXT: Record<EnvironmentalLabel, string> = {
+  B: 'B',
+  C: 'C',
+  ECO: 'ECO',
+  ZERO: '0'
+};
+
+/** Clave i18n con lo que cada distintivo significa. */
+export const ENVIRONMENTAL_LABEL_HINTS: Record<EnvironmentalLabel, string> = {
+  B: 'vehicles.environmentalLabel.hints.B',
+  C: 'vehicles.environmentalLabel.hints.C',
+  ECO: 'vehicles.environmentalLabel.hints.ECO',
+  ZERO: 'vehicles.environmentalLabel.hints.ZERO'
+};
 
 /** Una foto publicada. Ver `Vehicle.publicPhotos`. */
 export interface PublicVehiclePhoto {
@@ -247,6 +309,18 @@ export interface VehicleFormData {
   roadsideAssistancePhone?: string;
   minimumRentalDays?: number;
   manualPriceAllowed?: boolean;
+  /**
+   * Los tres que ve el cliente en la web. Ver sus notas en `Vehicle`.
+   *
+   * ⚠️ **`publicDescription` llevaba desde siempre en el modelo y publicándose,
+   * y NO se podía escribir desde ninguna pantalla.** Solo entraba sembrando el
+   * documento a mano en Firestore. Se vio el 5 de octubre de 2026 al añadir el
+   * destacado: es el patrón de la casa —escrito y nunca recorrido hasta el
+   * final—, solo que aquí lo que faltaba era la mitad de la ida.
+   */
+  publicDescription?: string;
+  publicHighlight?: string;
+  environmentalLabel?: EnvironmentalLabel;
 }
 
 // Every *_LABELS map holds i18n KEYS, never display text. A map that holds

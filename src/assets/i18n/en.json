@@ -1518,7 +1518,10 @@
       "roadsideAssistancePhone": "Roadside assistance phone",
       "ownership": "Ownership",
       "owner": "Owner",
-      "ownerSharePercent": "Owner share"
+      "ownerSharePercent": "Owner share",
+      "environmentalLabel": "Environmental label (DGT)",
+      "publicHighlight": "Highlight",
+      "publicDescription": "Public description"
     },
     "filterAllCategories": "All categories",
     "filterAllStatus": "All statuses",
@@ -1595,7 +1598,8 @@
       "rentalClassification": "Rental classification",
       "reservations": "Reservations",
       "insurance": "Insurance and roadside assistance",
-      "ownership": "Who owns the car"
+      "ownership": "Who owns the car",
+      "publicInfo": "What the customer sees"
     },
     "status": {
       "available": "Available",
@@ -1645,6 +1649,22 @@
       "veltoKeeps": "Velto keeps",
       "loadError": "Could not load the partners. Without the list there is no owner to choose.",
       "createError": "Could not create the partner."
+    },
+    "publicInfo": {
+      "hint": "This appears on the public website. The internal note is the «Description» under Basic data, and never leaves the office.",
+      "highlightPlaceholder": "Includes a free annual Madrid parking pass",
+      "highlightHint": "One line with what this car has and the others do not. Shown highlighted on the page.",
+      "descriptionPlaceholder": "Automatic hybrid, very low city consumption and an ECO label.",
+      "descriptionHint": "The paragraph that describes the car on the website."
+    },
+    "environmentalLabel": {
+      "none": "Not recorded",
+      "hints": {
+        "B": "Enters Madrid with restrictions: check the low-emission zone first.",
+        "C": "Enters Madrid and may park in the SER zone.",
+        "ECO": "Enters Madrid and parks free in the SER zone (time limited).",
+        "ZERO": "Enters Madrid with no restrictions and parks free in the SER zone."
+      }
     }
   },
   "workflow": {

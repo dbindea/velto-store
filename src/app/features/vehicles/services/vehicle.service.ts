@@ -167,6 +167,27 @@ export class VehicleService {
       payload['ownerSharePercent'] = deleteField();
     }
 
+    /**
+     * Los tres que ve el cliente, **vaciables de verdad**.
+     *
+     * ⚠️ **Sin esto no se pueden quitar.** `cleanData()` descarta `undefined` y
+     * `null`, así que la clave desaparece del payload y un `updateDoc` sin la
+     * clave **deja intacto lo que hubiera** en Firestore. Devolver la etiqueta
+     * a «No consta» parecería funcionar en pantalla y al recargar volvería la
+     * de antes — que es el mismo fallo de los diez campos del mantenimiento, y
+     * aquí además publicaría en la web una etiqueta ambiental que el coche ya
+     * no tiene.
+     *
+     * ⚠️ **Presente y vacío se borra; ausente se deja en paz.** Es lo que un
+     * `Partial<…>` significa: quien manda media ficha no está pidiendo borrar
+     * la otra media.
+     *
+     * ⚠️ Y el centinela se añade DESPUÉS de limpiar, por lo mismo que arriba.
+     */
+    for (const campo of ['environmentalLabel', 'publicHighlight', 'publicDescription'] as const) {
+      if (campo in data && !data[campo]) payload[campo] = deleteField();
+    }
+
     await updateDoc(docRef, payload);
   }
 

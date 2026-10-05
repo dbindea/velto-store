@@ -103,6 +103,17 @@ export interface CocheResumen {
   color?: string;
   photo?: FotoPublica;
   priceFrom?: PrecioPublico;
+  /**
+   * La etiqueta ambiental de la DGT.
+   *
+   * ⚠️ **Su ausencia NO significa «sin etiqueta»**, significa que no consta. La
+   * web no dice nada cuando falta: afirmar que un coche no tiene distintivo
+   * cuando sí lo tiene es tan falso como lo contrario, y de esto depende si el
+   * cliente puede entrar en Madrid.
+   */
+  environmentalLabel?: 'B' | 'C' | 'ECO' | 'ZERO';
+  /** Una línea con lo que este coche tiene y los demás no. */
+  highlight?: string;
 }
 
 export interface CocheFicha extends CocheResumen {

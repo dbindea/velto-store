@@ -1518,7 +1518,10 @@
       "roadsideAssistancePhone": "Teléfono de asistencia en carretera",
       "ownership": "Propiedad",
       "owner": "Propietario",
-      "ownerSharePercent": "Reparto del propietario"
+      "ownerSharePercent": "Reparto del propietario",
+      "environmentalLabel": "Etiqueta ambiental (DGT)",
+      "publicHighlight": "Destacado",
+      "publicDescription": "Descripción pública"
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
@@ -1595,7 +1598,8 @@
       "rentalClassification": "Clasificación de alquiler",
       "reservations": "Reservas",
       "insurance": "Seguro y asistencia",
-      "ownership": "De quién es el coche"
+      "ownership": "De quién es el coche",
+      "publicInfo": "Lo que ve el cliente"
     },
     "status": {
       "available": "Disponible",
@@ -1645,6 +1649,22 @@
       "veltoKeeps": "Velto se queda el",
       "loadError": "No se han podido cargar los colaboradores. Sin la lista no se puede elegir propietario.",
       "createError": "No se ha podido crear el colaborador."
+    },
+    "publicInfo": {
+      "hint": "Esto sale en la web pública. La nota interna es la «Descripción» de Datos básicos, y no sale nunca.",
+      "highlightPlaceholder": "Incluye bono anual de parking gratuito en Madrid",
+      "highlightHint": "Una línea con lo que este coche tiene y los demás no. Sale resaltada en la ficha.",
+      "descriptionPlaceholder": "Híbrido automático, muy poco consumo en ciudad y etiqueta ECO.",
+      "descriptionHint": "El párrafo que explica el coche en la web."
+    },
+    "environmentalLabel": {
+      "none": "No consta",
+      "hints": {
+        "B": "Entra en Madrid con limitaciones: consulta la ZBE antes de circular.",
+        "C": "Entra en Madrid y puede aparcar en zona SER.",
+        "ECO": "Entra en Madrid y aparca gratis en zona SER (con límite de tiempo).",
+        "ZERO": "Entra en Madrid sin restricciones y aparca gratis en zona SER."
+      }
     }
   },
   "workflow": {

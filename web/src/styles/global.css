@@ -1787,3 +1787,61 @@ input.picker-propio {
   .esq__foto::after,
   .esq__linea::after { display: none; }
 }
+
+/* ---- Destacados de la ficha: etiqueta DGT y gancho ---------------------- */
+/*
+ * ⚠️ **Van juntos y arriba**, pegados al título: son las dos cosas que deciden
+ * si este coche sirve —si entra en Madrid y qué trae que no traen los demás— y
+ * se miran antes que la ficha técnica.
+ *
+ * Viven en `global.css` y no en la hoja del componente porque este markup lo
+ * **inyecta el script**, y una hoja de componente va encapsulada por Astro y no
+ * lo alcanza. Es la misma razón que las chapas de filtro.
+ */
+.ficha__destacados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+
+.etiqueta-dgt {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.etiqueta-dgt svg { flex: none; }
+
+.etiqueta-dgt__texto { display: grid; }
+.etiqueta-dgt__texto strong { font-size: 0.9rem; }
+/*
+ * ⚠️ El matiz de la «B» es largo a propósito y aquí NO se recorta: decirle a
+ * medias a alguien que puede entrar en Madrid es peor que no decírselo.
+ */
+.etiqueta-dgt__texto small { font-size: 0.8rem; color: var(--text-2); line-height: 1.35; }
+
+/*
+ * El gancho. Con fondo de marca tenue y filete a la izquierda, que es como se
+ * lee «esto es distinto» sin gritar — el mismo recurso que el aviso de los
+ * correos.
+ */
+.ficha__gancho {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* La misma pegatina, pequeña, en las tarjetas del listado. */
+.coche__etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 0.78rem;
+  color: var(--text-2);
+}

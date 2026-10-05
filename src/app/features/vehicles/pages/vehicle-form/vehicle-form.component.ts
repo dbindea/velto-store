@@ -14,6 +14,10 @@ import {
   VEHICLE_STATUS_LABELS,
   VehicleCategory,
   VehicleFormData,
+  ENVIRONMENTAL_LABELS,
+  ENVIRONMENTAL_LABEL_HINTS,
+  ENVIRONMENTAL_LABEL_TEXT,
+  type EnvironmentalLabel,
   VehicleImage,
   VehicleOwnership,
   VehiclePricingRule,
@@ -21,6 +25,7 @@ import {
 } from '@shared/models/vehicle.model';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-buttons/photo-upload-buttons.component';
+import { DgtLabelComponent } from '@shared/components/dgt-label/dgt-label.component';
 import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
 import { TranslatableMessage, interpolate } from '@shared/utils/i18n-params.util';
@@ -56,7 +61,8 @@ import { ClearInputDirective } from '@shared/directives/clear-input.directive';
     TranslatePipe,
     PhotoUploadButtonsComponent,
     FormErrorComponent,
-    ClearInputDirective
+    ClearInputDirective,
+    DgtLabelComponent
   ],
   templateUrl: './vehicle-form.component.html',
   styleUrl: './vehicle-form.component.scss',
@@ -703,6 +709,22 @@ export class VehicleFormComponent implements OnInit {
 
   getFuelLabel(fuel: FuelType): string {
     return this.translateService.translate(FUEL_TYPE_LABELS[fuel]);
+  }
+
+  /** Las cuatro etiquetas de la DGT, en el orden de la DGT. */
+  readonly environmentalLabels = ENVIRONMENTAL_LABELS;
+
+  /**
+   * ⚠️ **Lo que va DENTRO del distintivo no se traduce**: una «B» es una «B» en
+   * los tres idiomas. Lo que se traduce es la explicación de al lado.
+   */
+  environmentalLabelText(et: EnvironmentalLabel): string {
+    return ENVIRONMENTAL_LABEL_TEXT[et];
+  }
+
+  /** La clave i18n con lo que ese distintivo permite. */
+  environmentalLabelHint(et: EnvironmentalLabel): string {
+    return ENVIRONMENTAL_LABEL_HINTS[et];
   }
 
   getTransmissionLabel(trans: TransmissionType): string {

@@ -1518,7 +1518,10 @@
       "roadsideAssistancePhone": "Telefon asistență rutieră",
       "ownership": "Proprietate",
       "owner": "Proprietar",
-      "ownerSharePercent": "Partea proprietarului"
+      "ownerSharePercent": "Partea proprietarului",
+      "environmentalLabel": "Etichetă de mediu (DGT)",
+      "publicHighlight": "Evidențiat",
+      "publicDescription": "Descriere publică"
     },
     "filterAllCategories": "Toate categoriile",
     "filterAllStatus": "Toate statusurile",
@@ -1595,7 +1598,8 @@
       "rentalClassification": "Clasificare de închiriere",
       "reservations": "Rezervări",
       "insurance": "Asigurare și asistență rutieră",
-      "ownership": "Al cui este vehiculul"
+      "ownership": "Al cui este vehiculul",
+      "publicInfo": "Ce vede clientul"
     },
     "status": {
       "available": "Disponibil",
@@ -1645,6 +1649,22 @@
       "veltoKeeps": "Velto păstrează",
       "loadError": "Colaboratorii nu au putut fi încărcați. Fără listă nu se poate alege un proprietar.",
       "createError": "Colaboratorul nu a putut fi creat."
+    },
+    "publicInfo": {
+      "hint": "Acestea apar pe site-ul public. Nota internă este «Descrierea» de la Date de bază și nu iese niciodată.",
+      "highlightPlaceholder": "Include abonament anual gratuit de parcare în Madrid",
+      "highlightHint": "Un rând cu ce are mașina asta și nu au celelalte. Apare evidențiat în fișă.",
+      "descriptionPlaceholder": "Hibrid automat, consum foarte mic în oraș și etichetă ECO.",
+      "descriptionHint": "Paragraful care descrie mașina pe site."
+    },
+    "environmentalLabel": {
+      "none": "Nu este consemnată",
+      "hints": {
+        "B": "Intră în Madrid cu restricții: verifică zona cu emisii reduse.",
+        "C": "Intră în Madrid și poate parca în zona SER.",
+        "ECO": "Intră în Madrid și parchează gratuit în zona SER (limitat în timp).",
+        "ZERO": "Intră în Madrid fără restricții și parchează gratuit în zona SER."
+      }
     }
   },
   "workflow": {

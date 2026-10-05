@@ -148,6 +148,25 @@ export interface PublicVehicleSummary {
   photo?: PublicPhotoUrl;
   /** «Desde X €/día», del tramo más barato de la tabla. */
   priceFrom?: PublicPrice;
+  /**
+   * La etiqueta ambiental de la DGT: `B`, `C`, `ECO` o `0`.
+   *
+   * ⚠️ **Va en el RESUMEN y no solo en la ficha**, porque es un criterio para
+   * elegir: quien alquila para entrar en Madrid descarta coches desde la lista,
+   * y obligarle a abrir uno por uno para saberlo es hacerle perder el tiempo.
+   *
+   * ⚠️ **Opcional, y su ausencia no significa «sin etiqueta»**: significa que
+   * no consta. La web no afirma nada cuando falta — decir «sin etiqueta» de un
+   * coche que sí la tiene es tan falso como lo contrario.
+   */
+  environmentalLabel?: 'B' | 'C' | 'ECO' | 'ZERO';
+  /**
+   * Una línea con lo que este coche tiene y los demás no.
+   *
+   * ⚠️ **Es el `publicHighlight` del coche, nunca su `description`.** Aquella
+   * es la nota interna del operador. Esta se escribe para el cliente.
+   */
+  highlight?: string;
 }
 
 /** La ficha. Lo del listado, más lo que hace falta para decidir. */
