@@ -741,6 +741,108 @@ dependencias sin `missing` ni `invalid`; y `git diff HEAD` vacío contra
 
 ---
 
+## 2 decies. El 4 y el 5 de octubre — seis encargos, y lo que salió por el camino
+
+Esta tanda vino de Dorel usando la aplicación, que es como entra el trabajo desde
+que producción es real. Los seis encargos están hechos; lo que conviene leer es
+**lo que apareció al hacerlos**, que no estaba pedido y es lo que muerde.
+
+### Las visitas de la web, sin cookies y sin banner
+
+Informes tiene ahora visitantes únicos por día, las rutas que pisan y cuántos
+llegan al presupuesto. La function es `trackWebVisit` y la aritmética está
+aparte, con tests, en `functions/src/public/analitica-core.ts`.
+
+⚠️ **No se guarda nada en el aparato del visitante, y de ahí cuelga todo lo
+demás.** La huella es un SHA-256 de IP + navegador con una **sal que cambia cada
+día** (`VELTO_ANALYTICS_SALT`): sin almacenamiento no hace falta banner (art.
+22.2 LSSI) y el dato deja de ser reidentificable al día siguiente. Hay un test
+que afirma justo eso —la misma persona en otro día da otra huella—, porque es la
+propiedad **legal**, no un detalle de implementación: el día que alguien fije la
+sal «para poder seguir al usuario entre días», ese test cae y debe caer.
+
+⚠️ **Y por eso «usuarios únicos acumulados» NO se puede dar, que es lo que Dorel
+pidió.** Con la sal rotando, sumar los días cuenta a la misma persona tantas
+veces como vuelva. La pantalla **lo dice** en vez de enseñar un número que
+parecería esa cifra y no lo sería. Es la regla de la casa: una cifra creíble y
+equivocada es peor que un hueco.
+
+⚠️ **Un cliente de consola cuenta como persona si nadie lo mira.** Una sonda
+hecha con PowerShell entró como visitante humano: su `User-Agent` empieza por
+`Mozilla/5.0`, así que la lista de bots por nombre no la veía. Están añadidos
+`powershell`, `postman`, `guzzle` y `apache-httpclient`, con un test que usa esa
+cadena exacta. Y el beacon se calla ante `navigator.webdriver` y DNT, así que
+Playwright no ensucia la medición.
+
+### Lo que salió al mirar, y no estaba pedido
+
+- ⚠️ **Los PDF pesaban 1,2 MB por no subconjuntar la fuente.** `embedFont` sin
+  `{ subset: true }` mete la Gotham entera en cada documento. Medido sobre un
+  presupuesto real: **1194,2 KB → 40,9 KB**. Son los cinco `embedFont` de
+  `contracts/pdf.ts`; si se añade uno nuevo, lleva la opción o el documento
+  vuelve a engordar un megabyte sin que nada falle.
+- ⚠️ **Una reserva con un snapshot incompleto borraba de la lista a TODAS las de
+  debajo.** Un `@for` de Angular que revienta a mitad no pinta un hueco: aborta
+  el bucle. Medido: cinco reservas, tres pintadas. Lo arreglan los `@if` sobre
+  `vehicleSnapshot`, `clientSnapshot` y `pricingSnapshot`. **Lo que se ve es una
+  lista más corta, que se lee como «no hay más», no como un error.**
+- ⚠️ **La solicitud proponía un día de más.** `widenToFullDays()` guarda el final
+  de la ventana **exclusivo** —la medianoche UTC del día siguiente— y
+  `requestReturnAt()` lo leía como inclusivo. El test que lo cubría usaba un
+  valor **imaginado** (23:59:59.999) en vez del que de verdad se guarda, así que
+  pasaba en verde sobre una forma que no existe. Al escribir una prueba sobre
+  datos guardados, **saca el valor de Firestore, no de la cabeza**.
+- ⚠️ **`window.open()` después de un `await` lo bloquea el navegador**, y el
+  parte de entrega no se abría en producción por eso. La pestaña se abre
+  **síncrona**, antes de esperar nada, y luego se le pone el `href`. Y **sin
+  `noopener`**: con él, `window.open` devuelve `null` y no hay a quién asignarle
+  la URL.
+- ⚠️ **`set({ merge: true })` NO interpreta las claves con punto como ruta
+  anidada**; solo `update()` lo hace. `{'routes.flota': increment(1)}` habría
+  creado un campo llamado literalmente `routes.flota`. Van objetos anidados.
+
+### Lo del 5 de octubre: las solicitudes sin contestar se borran
+
+Decisión de Dorel: **a las 72 h**, aunque nadie las haya tocado. Hasta ese día
+`new` era el único estado que no se borraba nunca, y el argumento contrario está
+escrito en `ESTADOS_BORRABLES` porque sigue siendo bueno: una solicitud sin
+atender es trabajo pendiente, y la que entra un viernes a las 23:40 no puede
+desaparecer el sábado.
+
+Lo que lo sustituye son **dos** cosas, y las dos tienen que seguir siendo
+ciertas o esto vuelve a ser un borrado silencioso:
+
+1. **El plazo es más largo que el de las atendidas** —72 h frente a las 24 de
+   `bookingRequestKeepHours`— y se cuenta desde que **llegó**, no desde que se
+   tocó el documento. Con `handledAt` mandando, teclear una nota le reseteaba el
+   plazo a algo que sigue sin contestarse.
+2. **El resumen diario las nombra**, una por una, con las horas que les quedan, y
+   las del último día salen en el **asunto**. Esa sección no existía: el
+   comentario con el que justifiqué las 72 h decía «son TRES avisos antes de
+   borrar» y era falso —el resumen tenía tres secciones y ninguna las
+   mencionaba—. Antes que dejar un comentario que miente, se construye el aviso.
+
+⚠️ **Y por eso el barrido va DESPUÉS del envío en `sendDailyDigest`.** Los dos
+bloques parecen independientes y ya no lo son: barriendo primero, la última
+vuelta desaparecería antes de que el correo la nombrara.
+
+⚠️ **Tres frases pasaron a ser falsas el mismo día**, y se arreglaron en la misma
+pasada porque el texto y el hecho se deciden juntos: el `hint` de Ajustes decía
+en los tres idiomas que las sin contestar «no se borran nunca»,
+`booking-request.model.ts` lo repetía, y `/privacidad` solo contaba el caso de
+las atendidas. Esa última es la que importa: es un plazo **publicado**.
+
+Y `limpiarSolicitudesAtendidas` pasó a llamarse `limpiarSolicitudesCaducadas`.
+El nombre viejo decía menos de lo que la función hace, que es justo lo que deja
+tranquilo a quien lee la llamada.
+
+**Estado al cerrar el 5 de octubre:** 715 tests de functions y 858 de app, las
+tres builds en verde, el bundle carga como lo carga el contenedor, auditoría i18n
+OK, y `sendDailyDigest` **desplegada en desarrollo**. El correo se miró
+renderizado a 390 px, no solo en el test.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
@@ -751,16 +853,30 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 3 de octubre al cerrar**: `origin/develop` en `7a3d8d3`, nada sin
-subir, y **47 commits que NO están en producción**. Y esta vez **no basta con el
-merge**, al revés que el día 24:
+**Medido el 5 de octubre al cerrar**: nada sin subir, y **65 commits que NO están
+en producción**. Y esta vez **no basta con el merge**, al revés que el día 24:
 
 | Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
 |---|---|---|
-| `functions/src/` | 27 | **a mano**, por tandas de dos o tres |
-| `src/` (backoffice) | 43 | CI, al hacer merge a `master` |
-| `web/` | 52 | CI, al hacer merge a `master` |
-| `firebase.json`, `firestore.rules`, `firestore.indexes.json` | 3 | **a mano** (`deploy:prod:rules`) y hosting |
+| `functions/src/` | 34 | **a mano**, por tandas de dos o tres |
+| `src/` (backoffice) | 57 | CI, al hacer merge a `master` |
+| `web/` | 54 | CI, al hacer merge a `master` |
+| `firebase.json`, `firestore.rules` | 2 | **a mano** (`deploy:prod:rules`) y hosting |
+
+⚠️ **Y hay una function NUEVA que el guion del día 3 no nombra: `trackWebVisit`.**
+Medido ese mismo día comparando los **nombres** —no las cifras—, desplegadas:
+
+| | Cuántas | Cuáles faltan |
+|---|---|---|
+| el código define | **37** | — |
+| desarrollo | **37** | — |
+| producción | **31** | las cinco de la AEAT **y `trackWebVisit`** |
+
+Las cinco de la AEAT faltan **a propósito** hasta el 1 de enero. `trackWebVisit`
+no: sin ella, la web publicada mide contra una function que allí no existe. Va
+con su rewrite `/api/visita`, que viaja con el **hosting** — el mismo caso que
+`/api/solicitud` y `/api/contacto`. `VELTO_ANALYTICS_SALT` ya está puesta en los
+dos proyectos.
 
 ⚠️ **El guion está escrito aparte**:
 [despliegue-produccion.md](despliegue-produccion.md), con las 28 functions en 15

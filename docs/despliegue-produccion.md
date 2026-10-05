@@ -12,7 +12,26 @@
 >   manifiesto respondiendo en 0,4 s. Producción sigue en **31**, y ninguna de
 >   las cinco de la AEAT se ha colado.
 >
-> **Lo que FALTA es el § 4, el hosting**, y va con el merge a `master`.
+> ⚠️ **Y ese ✅ ya no vale entero: hay que volver a pasar por las functions.**
+> Entre el 4 y el 5 de octubre se tocó código que alcanza a **24** de las
+> desplegadas —medido el 5 recorriendo el grafo de imports desde `index.ts`
+> contra `git diff 7a3d8d3..HEAD`, no a ojo—. Lo que cambia, por qué importa, y
+> a quién alcanza:
+>
+> | Fichero | Qué trae | A cuántas alcanza |
+> |---|---|---|
+> | `contracts/pdf.ts` | el subconjunto de fuente: **1194 KB → 41 KB** por PDF | 16 |
+> | `public/mapper.ts`, `types.ts` | etiqueta DGT y frase destacada en la web | 9 |
+> | `alerts/*` | las solicitudes sin contestar en el resumen, y su borrado | 2 |
+> | `redsys.ts` | — | 4 |
+> | `public/trackWebVisit.ts` + `analitica-core.ts` | **se CREA, no existe allí** | 1 |
+>
+> O sea: las seis tandas de abajo se vuelven a lanzar tal cual, más la orden
+> nueva de `trackWebVisit` en la tanda 2. Nada de esto es urgente salvo que se
+> quiera el ahorro de los PDF, pero **la web publicada va a medir contra
+> `trackWebVisit`**, así que esa sí entra con el merge.
+>
+> **Y sigue faltando el § 4, el hosting**, que va con el merge a `master`.
 > Aplazado al **lunes 5 de octubre** por decisión de Dorel: ese merge publica
 > **los dos sitios**, y la web pública quería más rodaje en desarrollo antes de
 > salir.
@@ -118,7 +137,19 @@ firebase deploy --only functions:signContract --project prod
 firebase deploy --only functions:createBookingRequest,functions:createContactRequest --project prod
 firebase deploy --only functions:publicVehicles,functions:publicVehicleDetail --project prod
 firebase deploy --only functions:checkPublicAvailability --project prod
+firebase deploy --only functions:trackWebVisit --project prod
 ```
+
+⚠️ **`trackWebVisit` es la única que se CREA, no se actualiza** (5 de octubre de
+2026): producción tiene 31 y el código define 37, y lo que falta son las cinco de
+la AEAT —a propósito— **y esta**. Va sola en su orden por eso. Es `onRequest`, no
+un trigger de Eventarc, así que no aplica lo del primer trigger que falla.
+
+⚠️ **Y sin su rewrite no mide nada.** `/api/visita` viaja con el **hosting**,
+igual que `/api/solicitud` y `/api/contacto`: los tres están en el
+`firebase.json` de `develop` y **ninguno** en el de `master`. Su secret
+`VELTO_ANALYTICS_SALT` sí está ya puesta en los dos proyectos (comprobado el 5 de
+octubre), así que no hay que crearla.
 
 ### Tanda 3 — el dinero
 
@@ -151,7 +182,7 @@ firebase deploy --only functions:sendDailyDigest,functions:previewDailyDigest --
 firebase deploy --only functions:publishVehiclePhoto,functions:unpublishVehiclePhoto --project prod
 ```
 
-**Total: 28 functions en 15 órdenes.**
+**Total: 29 functions en 16 órdenes.**
 
 ### Las que NO se despliegan
 
