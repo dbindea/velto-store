@@ -47,6 +47,26 @@ const { resumen = '' } = Astro.props;
       */}
       <PreReserva />
       <p id="cargando" class="aviso" hidden={!!resumen}>Cargando el vehículo…</p>
+      {/*
+        El esqueleto de la ficha, para que el hueco esté reservado mientras
+        llega el coche.
+        ⚠️ **Solo aparece cuando la ficha NO viene prerenderizada**, que es el
+        caso de un coche publicado después de la última build — y es justo el
+        que el diseño de esta web persigue: «publicar un coche se ve al
+        momento, sin redesplegar». Con `resumen` ya montado no hay nada que
+        esperar y un esqueleto sería un parpadeo gratis.
+        ⚠️ Y va en el HTML con su `hidden` resuelto en el servidor, no
+        destapado por el script: aquí no se puede repetir el fallo de
+        `/reservar`, donde el aviso lo encendía el módulo y por eso no cubría
+        el rato que se tardaba en descargar ese módulo.
+      */}
+      <div id="esqueleto-ficha" class="esq esq--ficha" hidden={!!resumen} aria-hidden="true">
+        <div class="esq__linea esq__linea--corta"></div>
+        <div class="esq__linea esq__linea--media"></div>
+        <div class="esq__foto"></div>
+        <div class="esq__linea"></div>
+        <div class="esq__linea esq__linea--media"></div>
+      </div>
       <p id="nohay" class="aviso" hidden>
         Este vehículo ya no está disponible en la web.
         <a href="/flota">Mira el resto de la flota</a>.
@@ -86,6 +106,8 @@ const { resumen = '' } = Astro.props;
 
   const contenedor = document.getElementById('ficha')!;
   const cargando = document.getElementById('cargando')!;
+  // El esqueleto se apaga con el aviso: son el mismo estado.
+  const esqueletoFicha = document.getElementById('esqueleto-ficha');
   const nohay = document.getElementById('nohay')!;
   const error = document.getElementById('error')!;
 
@@ -707,15 +729,18 @@ const { resumen = '' } = Astro.props;
 
   if (!id) {
     cargando.hidden = true;
+    if (esqueletoFicha) esqueletoFicha.hidden = true;
     nohay.hidden = false;
   } else {
     ficha(id)
       .then(({ vehicle }) => {
         cargando.hidden = true;
+        if (esqueletoFicha) esqueletoFicha.hidden = true;
         pinta(vehicle);
       })
       .catch((e: Error) => {
         cargando.hidden = true;
+        if (esqueletoFicha) esqueletoFicha.hidden = true;
         // ⚠️ «No encontrado» y «algo ha fallado» son mensajes distintos: al
         // visitante le importa saber si el coche ya no está o si somos nosotros.
         if (e.message === 'not-found') nohay.hidden = false;

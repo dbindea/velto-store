@@ -1845,3 +1845,16 @@ input.picker-propio {
   font-size: 0.78rem;
   color: var(--text-2);
 }
+
+/*
+ * El esqueleto de la FICHA no reserva 586 px como el de una tarjeta de
+ * resultados: aquí lo que viene detrás es una página entera, y un bloque tan
+ * alto antes de la foto sería un agujero. Reserva lo justo para que el salto al
+ * llegar el coche no se note.
+ */
+.esq--ficha {
+  min-height: 0;
+  margin-top: var(--sp-4);
+}
+
+.esq--ficha .esq__foto { height: 200px; }
