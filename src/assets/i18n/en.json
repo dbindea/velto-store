@@ -1579,6 +1579,7 @@
       "published": "Photo published to the website",
       "publishFailed": "The photo could not be published",
       "saveFirst": "Save the vehicle first to upload photos",
+      "sizeHint": "For the public site: landscape 4:3, at least 1600 px wide. iPhone HEIC is uploaded unoptimised — convert it to JPG first.",
       "thumbnail": "Thumbnail",
       "unpublish": "Remove from the website",
       "unpublishFailed": "The photo could not be removed",

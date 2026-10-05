@@ -99,3 +99,42 @@ jobs:
           channelId: live
           projectId: rentalcar-veltomobility
           target: web
+
+      # ⚠️ **La purga va DESPUÉS de publicar, y es lo que hace seguro cachear
+      # el HTML en el borde.** El HTML de Astro no lleva huella en el nombre
+      # —`/flota`, no `/flota.A1B2C3.html`—, así que una copia cacheada en
+      # Cloudflare sobrevive al despliegue: sin este paso, lo que se acaba de
+      # publicar no se vería hasta vencer el TTL, y el síntoma sería «he
+      # desplegado y no cambia nada», que es de los que llevan a buscar el
+      # fallo en el sitio equivocado.
+      #
+      # ⚠️ **Y NO rompe el despliegue si falla** (`continue-on-error`). Lo que
+      # se publica ya está publicado; que la purga no entre es un retraso de
+      # minutos, y tumbar el workflow por eso daría un rojo que no se
+      # corresponde con lo que pasó. Lo que sí hace es avisar.
+      #
+      # El token es de permiso único —Zone → Cache Purge— y está limitado a la
+      # zona de `veltomobility.com`: no puede tocar DNS ni reglas.
+      - name: Vaciar la caché de Cloudflare
+        continue-on-error: true
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ZONE: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: |
+          set -u
+          if [ -z "${CF_TOKEN}" ] || [ -z "${CF_ZONE}" ]; then
+            echo "::warning::Sin CLOUDFLARE_API_TOKEN o CLOUDFLARE_ZONE_ID: no se purga nada"
+            exit 0
+          fi
+          respuesta=$(curl -sS -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${CF_ZONE}/purge_cache" \
+            -H "Authorization: Bearer ${CF_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}')
+          echo "${respuesta}"
+          # ⚠️ La API de Cloudflare contesta 200 con `"success": false` cuando
+          # el token no vale: mirar solo el código HTTP daría por buena una
+          # purga que no ocurrió.
+          echo "${respuesta}" | grep -q '"success":true' \
+            || { echo "::warning::Cloudflare no confirmó la purga"; exit 1; }
+          echo "Caché de Cloudflare vaciada"

@@ -1579,6 +1579,7 @@
       "published": "Foto publicada en la web",
       "publishFailed": "No se pudo publicar la foto",
       "saveFirst": "Guarda primero el vehículo para poder subir fotos",
+      "sizeHint": "Para la web pública: horizontal en 4:3 y al menos 1600 px de ancho. El HEIC del iPhone se sube sin optimizar, conviértelo a JPG antes.",
       "thumbnail": "Miniatura",
       "unpublish": "Retirar de la web",
       "unpublishFailed": "No se pudo retirar la foto",
