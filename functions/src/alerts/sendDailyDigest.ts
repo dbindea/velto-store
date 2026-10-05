@@ -33,6 +33,7 @@ import {
   rangoManana,
   type MovimientoReserva,
   type Resumen,
+  type SolicitudSinContestar,
   type VencimientoVehiculo
 } from './daily-digest';
 import { renderDigestEmail } from './digest-email';
@@ -231,6 +232,41 @@ export async function construirResumen(
   }
   vencimientos.sort((a, b) => a.diasRestantes - b.diasRestantes);
 
+  /**
+   * Las solicitudes que nadie ha contestado.
+   *
+   * ⚠️ **Entran en el resumen porque ahora se BORRAN**, y un borrado sin aviso
+   * convierte una posible venta en una pérdida silenciosa. Con 72 horas de
+   * plazo, una solicitud sale en tres resúmenes antes de desaparecer: eso es lo
+   * que hace que borrarlas sea razonable.
+   *
+   * ⚠️ **Y se ordenan por lo que les QUEDA, no por cuándo llegaron.** Lo que
+   * hay que llamar hoy es lo que se va mañana, no lo más reciente.
+   */
+  const solicitudesSnap = await db
+    .collection('bookingRequests')
+    .where('status', '==', 'new')
+    .get();
+
+  const sinContestar: SolicitudSinContestar[] = [];
+  for (const doc of solicitudesSnap.docs) {
+    const s = doc.data();
+    const creada = aFecha(s['createdAt']);
+    if (!creada) continue;
+    const horasRestantes = Math.round(
+      HORAS_SIN_CONTESTAR - (ahora.getTime() - creada.getTime()) / 3_600_000
+    );
+    const v = (s['vehicleSnapshot'] ?? {}) as Record<string, unknown>;
+    sinContestar.push({
+      referencia: String(s['reference'] || '—'),
+      cliente: String(s['name'] || '—'),
+      telefono: String(s['phone'] || '—'),
+      coche: `${v['brand'] ?? ''} ${v['model'] ?? ''}`.trim() || '—',
+      horasRestantes
+    });
+  }
+  sinContestar.sort((a, b) => a.horasRestantes - b.horasRestantes);
+
   entregas.sort((a, b) => a.hora.localeCompare(b.hora));
   devoluciones.sort((a, b) => a.hora.localeCompare(b.hora));
 
@@ -239,6 +275,7 @@ export async function construirResumen(
     entregas,
     devoluciones,
     vencimientos,
+    sinContestar,
     sinFirmar: entregas.filter((e) => e.contratoSinFirmar).length,
     avisos
   };
@@ -331,10 +368,18 @@ export const sendDailyDigest = onSchedule(
      *
      * Va **fuera del `try` del resumen**: que falle el correo no puede dejar
      * datos personales sin borrar, ni al revés.
+     *
+     * ⚠️ **Y va DESPUÉS, que desde el 5 de octubre de 2026 no es indiferente.**
+     * El resumen nombra las solicitudes sin contestar con lo que les queda, y
+     * con 72 horas de plazo y un correo al día eso son **tres** avisos antes de
+     * que el barrido se las lleve. Barriendo primero, la última —la que sale
+     * como «ÚLTIMO DÍA»— desaparecería antes de que el correo la nombrara, y el
+     * aviso que justifica el borrado se perdería justo en la vuelta que
+     * importa. Los dos bloques parecen independientes y no lo son del todo.
      */
     try {
-      const borradas = await limpiarSolicitudesAtendidas(new Date());
-      if (borradas) logger.info('Solicitudes atendidas borradas', { borradas });
+      const borradas = await limpiarSolicitudesCaducadas(new Date());
+      if (borradas) logger.info('Solicitudes caducadas borradas', { borradas });
     } catch (err) {
       logger.error('No se pudieron limpiar las solicitudes', { err });
     }
@@ -356,19 +401,56 @@ export const sendDailyDigest = onSchedule(
 );
 
 /**
- * Borra las solicitudes de la web que el operador YA atendió.
+ * Los cuatro estados que el barrido puede borrar — o sea, todos.
  *
- * ⚠️ **Lo que sigue en `new` no se borra nunca, y esa es toda la regla.**
- * Borrando por antigüedad a secas, una solicitud que entre un viernes a las
- * 23:40 desaparecería el sábado a la misma hora sin dejar rastro — y no habría
- * forma de distinguir «no escribió nadie» de «se me pasaron tres». Una
- * solicitud sin atender es trabajo pendiente; perderla es perder un alquiler.
+ * ⚠️ **`new` entró el 5 de octubre de 2026, y hasta ese día la regla era la
+ * contraria.** Aquí ponía que lo que sigue en `new` no se borra nunca: una
+ * solicitud sin atender es trabajo pendiente, y la que entra un viernes a las
+ * 23:40 no puede desaparecer el sábado sin que se distinga «no escribió nadie»
+ * de «se me pasaron tres». Decisión de Dorel ese día: se borran igual a las 72
+ * h. Lo que hace que el argumento viejo ya no aplique son **dos** cosas, y las
+ * dos tienen que seguir siendo ciertas: el plazo es más largo que el de las
+ * atendidas (72 h frente a 24) y el resumen de las 9:00 las **nombra** cada
+ * mañana con lo que les queda. Quitando cualquiera de las dos, esto vuelve a
+ * ser un borrado silencioso de trabajo pendiente.
  *
- * ⚠️ **El plazo se lee de la PROPIA solicitud** (`keepHours`), congelado al
- * crearla, no de Ajustes. Cambiar el ajuste no puede mover la caducidad de las
- * que ya existen: es la misma regla que congela el IVA en `pricingSnapshot`.
+ * ⚠️ **La lista se queda aunque hoy estén los cuatro estados.** Es lo que hace
+ * que un estado nuevo —uno que signifique «en negociación», por ejemplo— no
+ * empiece a borrarse solo por existir: entrar aquí hay que escribirlo.
+ *
+ * ⚠️ **El plazo de las atendidas se lee de la PROPIA solicitud** (`keepHours`),
+ * congelado al crearla, no de Ajustes. Cambiar el ajuste no puede mover la
+ * caducidad de las que ya existen: es la misma regla que congela el IVA en
+ * `pricingSnapshot`. El de las sin contestar es una constante — ver
+ * `HORAS_SIN_CONTESTAR`.
  */
-export const ESTADOS_BORRABLES = ['contacted', 'discarded', 'converted'] as const;
+export const ESTADOS_BORRABLES = ['new', 'contacted', 'discarded', 'converted'] as const;
+
+/**
+ * Lo que se espera a una solicitud que **nadie ha contestado**, antes de
+ * borrarla.
+ *
+ * ⚠️ **Hasta el 5 de octubre de 2026 no se borraban NUNCA.** El argumento era
+ * bueno —una solicitud sin atender es trabajo pendiente, y perderla es perder
+ * un alquiler— y se quedaba corto por el otro lado: lo que no se contesta nunca
+ * acaba siendo un nombre y un teléfono de alguien guardados para siempre, y la
+ * política de privacidad no lo cubría. Decisión de Dorel ese día: 72 horas.
+ *
+ * ⚠️ **Y 72 h son TRES avisos antes de borrar**, no uno. El resumen de las 9:00
+ * las lista cada mañana, así que una solicitud sin contestar sale en tres
+ * correos antes de desaparecer. Eso es lo que hace que borrarlas sea razonable
+ * y no una pérdida silenciosa: con 24 h habría casos de llegar un viernes por
+ * la noche y no verse nunca.
+ *
+ * ⚠️ **Es una constante y no un ajuste, a propósito.** Un plazo de borrado de
+ * datos personales editable desde una pantalla es un número que se puede bajar
+ * a 1 por error y llevarse el trabajo de la semana; cambiarlo aquí pide un
+ * despliegue, que es exactamente la fricción que conviene. El de las atendidas
+ * sí es ajuste porque va **congelado en cada solicitud** al crearla, así que
+ * tocarlo no afecta a las que ya existen; esto se lee al barrer y sí las
+ * afectaría a todas.
+ */
+export const HORAS_SIN_CONTESTAR = 72;
 
 /**
  * ¿Se puede borrar ya esta solicitud?
@@ -396,12 +478,21 @@ export const ESTADOS_BORRABLES = ['contacted', 'discarded', 'converted'] as cons
  * comprometida.
  */
 export function solicitudCaducada(d: Record<string, unknown>, ahora: Date): boolean {
-  const atendida = toDate(d['handledAt']) || toDate(d['createdAt']);
-  if (!atendida) return false;
+  /**
+   * ⚠️ **Las sin contestar cuentan desde que LLEGARON, no desde que se
+   * atendieron**, que es lo obvio en cuanto se dice: no las ha atendido nadie.
+   * Y con su propio plazo, que es más largo — ver `HORAS_SIN_CONTESTAR`.
+   */
+  const sinContestar = d['status'] === 'new';
 
-  const horas = Number(d['keepHours']);
+  const desde = sinContestar
+    ? toDate(d['createdAt'])
+    : toDate(d['handledAt']) || toDate(d['createdAt']);
+  if (!desde) return false;
+
+  const horas = sinContestar ? HORAS_SIN_CONTESTAR : Number(d['keepHours']);
   if (!isFinite(horas) || horas <= 0) return false;
-  if (ahora.getTime() - atendida.getTime() < horas * 60 * 60 * 1000) return false;
+  if (ahora.getTime() - desde.getTime() < horas * 60 * 60 * 1000) return false;
 
   const garantia = toDate(d['priceGuaranteedUntil']);
   if (garantia && garantia.getTime() > ahora.getTime()) return false;
@@ -409,7 +500,16 @@ export function solicitudCaducada(d: Record<string, unknown>, ahora: Date): bool
   return true;
 }
 
-export async function limpiarSolicitudesAtendidas(ahora: Date): Promise<number> {
+/**
+ * Borra las solicitudes de la web que ya cumplieron su plazo.
+ *
+ * ⚠️ **Se llamaba `limpiarSolicitudesAtendidas` y el nombre pasó a mentir** el
+ * día que `new` entró en `ESTADOS_BORRABLES`: desde entonces también se lleva
+ * las que no ha atendido nadie, que son justo las que más duele perder. Un
+ * nombre que dice menos de lo que la función hace es el que deja a alguien
+ * tranquilo al leer la llamada.
+ */
+export async function limpiarSolicitudesCaducadas(ahora: Date): Promise<number> {
   const db = firestore();
   const snap = await db
     .collection('bookingRequests')

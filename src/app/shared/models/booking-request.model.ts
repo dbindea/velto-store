@@ -22,9 +22,15 @@
 /**
  * Dónde está la solicitud.
  *
- * ⚠️ **`new` es la única que no se borra sola.** El barrido diario solo alcanza
- * lo ya atendido: una solicitud sin tocar es trabajo pendiente, y perderla es
- * perder un alquiler. Ver `bookingRequestKeepHours` en los ajustes.
+ * ⚠️ **Las cuatro se borran solas, y `new` con su propio plazo.** El barrido
+ * diario alcanza lo atendido a las `bookingRequestKeepHours` de los ajustes
+ * —24 h por defecto— y lo que nadie ha contestado a las **72**, contadas desde
+ * que llegó. Hasta el 5 de octubre de 2026 `new` no se borraba nunca, con el
+ * argumento de que una solicitud sin tocar es trabajo pendiente y perderla es
+ * perder un alquiler; lo que lo sustituye es que el resumen diario la nombra
+ * cada mañana con lo que le queda, así que no desaparece sin avisar. El plazo
+ * de las sin contestar es una constante del backend (`HORAS_SIN_CONTESTAR`),
+ * no un ajuste.
  */
 export type BookingRequestStatus = 'new' | 'contacted' | 'converted' | 'discarded';
 

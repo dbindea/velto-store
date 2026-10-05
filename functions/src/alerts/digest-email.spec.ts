@@ -9,6 +9,7 @@ const base: Resumen = {
   entregas: [],
   devoluciones: [],
   vencimientos: [],
+  sinContestar: [],
   sinFirmar: 0,
   avisos: []
 };
@@ -225,5 +226,71 @@ describe('los avisos del sistema', () => {
     const { html, text } = renderDigestEmail({ ...base, entregas: [entrega()] }, EMPRESA);
     expect(html).not.toContain('border-left:4px solid');
     expect(text.split('\n')[1]).toBe('');
+  });
+});
+
+/**
+ * ⚠️ **Estos tests son la contrapartida del borrado a las 72 h.** Desde el 5 de
+ * octubre de 2026 una solicitud que nadie contesta se borra sola, y lo único
+ * que lo hace defendible es que antes se avise — en un correo que llega sin
+ * abrir la aplicación, que es justo el caso del que no ha contestado.
+ *
+ * Y el patrón de fallo de esta casa es el código escrito y nunca ejecutado: la
+ * sección existiría en el objeto, el correo saldría, y la solicitud se borraría
+ * igual. Por eso se comprueba lo PINTADO, en las dos versiones.
+ */
+describe('las solicitudes sin contestar', () => {
+  const pendiente = (horasRestantes: number) => ({
+    referencia: 'SOL-2026-0007',
+    cliente: 'Cliente Pruebas',
+    telefono: '600 11 22 33',
+    coche: 'Kia Ceed',
+    horasRestantes
+  });
+
+  it('se pintan en el HTML y en el texto plano', () => {
+    const { html, text } = renderDigestEmail({ ...base, sinContestar: [pendiente(48)] }, EMPRESA);
+    expect(html).toContain('Sin contestar');
+    expect(html).toContain('SOL-2026-0007');
+    expect(html).toContain('600 11 22 33');
+    expect(text).toContain('SIN CONTESTAR');
+    expect(text).toContain('SOL-2026-0007');
+  });
+
+  /**
+   * ⚠️ **Se dice lo que LE QUEDA, no cuándo llegó.** «Llegó hace dos días» hay
+   * que restarlo mentalmente; «se borra en 12 h» se entiende de un vistazo, que
+   * es lo que hace que alguien coja el teléfono hoy.
+   */
+  it('la última vuelta avisa del borrado, en las dos versiones', () => {
+    const { html, text } = renderDigestEmail({ ...base, sinContestar: [pendiente(12)] }, EMPRESA);
+    expect(html).toContain('Se borra en 12 h si nadie contesta');
+    expect(text).toContain('se borra en 12 h si nadie contesta');
+  });
+
+  /** Ya pasada de plazo: el próximo barrido se la lleva, y hoy es el último día. */
+  it('y la que ya cumplió el plazo lo dice sin inventarse un número', () => {
+    const { html, text } = renderDigestEmail({ ...base, sinContestar: [pendiente(0)] }, EMPRESA);
+    expect(html).toContain('en el próximo barrido');
+    expect(text).toContain('en el próximo barrido');
+    expect(html).not.toContain('en 0 h');
+  });
+
+  /**
+   * Lo contrario también importa: con tres días por delante no hay nada que
+   * gritar. Un aviso que suena igual el primer día que el último se deja de
+   * leer, y arrastra consigo al que sí urgía.
+   */
+  it('la que tiene margen NO avisa de ningún borrado', () => {
+    const { html, text } = renderDigestEmail({ ...base, sinContestar: [pendiente(60)] }, EMPRESA);
+    expect(html).not.toContain('si nadie contesta');
+    expect(text).not.toContain('***');
+    expect(text).toContain('(quedan 60 h)');
+  });
+
+  it('sin ninguna, la sección no se pinta', () => {
+    const { html, text } = renderDigestEmail({ ...base, entregas: [entrega()] }, EMPRESA);
+    expect(html).not.toContain('Sin contestar');
+    expect(text).not.toContain('SIN CONTESTAR');
   });
 });

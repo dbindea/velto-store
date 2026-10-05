@@ -1364,7 +1364,7 @@
       "requestPriceHours": "Guaranteed price of a request",
       "requestPriceHoursHint": "How long the price shown on the website is held for someone who asked for a call back. The car is not held: what is guaranteed is the figure.",
       "requestKeepHours": "Delete handled requests after",
-      "requestKeepHoursHint": "How long a contacted, converted or discarded request is kept before its name and phone are deleted. Requests still unanswered are never deleted.",
+      "requestKeepHoursHint": "How long a contacted, converted or discarded request is kept before its name and phone are deleted. Requests still unanswered are deleted after 72 hours, and the daily summary warns you first.",
       "requestFrozenHint": "Both windows apply to requests arriving from now on: each one freezes its own when created, so changing them does not move a price already promised nor the expiry of existing requests."
     },
     "saved": "Saved",

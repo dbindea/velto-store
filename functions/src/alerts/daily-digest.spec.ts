@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { asuntoDe, horaEn, mereceEnvio, rangoManana, type Resumen } from './daily-digest';
-import { ESTADOS_BORRABLES, consultaCaducada, solicitudCaducada } from './sendDailyDigest';
+import {
+  ESTADOS_BORRABLES,
+  HORAS_SIN_CONTESTAR,
+  consultaCaducada,
+  solicitudCaducada
+} from './sendDailyDigest';
 
 const TZ = 'Europe/Madrid';
 
@@ -79,6 +84,7 @@ const vacio: Resumen = {
   entregas: [],
   devoluciones: [],
   vencimientos: [],
+  sinContestar: [],
   sinFirmar: 0,
   avisos: []
 };
@@ -89,6 +95,14 @@ const entrega = (contratoSinFirmar = false) => ({
   cliente: 'Cliente Pruebas',
   vehiculo: 'Kia Ceed · 7777ATM',
   contratoSinFirmar
+});
+
+const sinContestar = (horasRestantes = 48) => ({
+  referencia: 'SOL-2026-0007',
+  cliente: 'Cliente Pruebas',
+  telefono: '600 11 22 33',
+  coche: 'Kia Ceed',
+  horasRestantes
 });
 
 describe('cuándo se manda y cuándo se calla', () => {
@@ -129,6 +143,17 @@ describe('cuándo se manda y cuándo se calla', () => {
         avisos: [{ clase: 'certificado', texto: 'Caduca en 30 días', urgente: false }]
       })
     ).toBe(true);
+  });
+
+  /**
+   * ⚠️ **Esta línea es lo que hace defendible borrar una solicitud sin
+   * contestar.** Detrás de ella viene un borrado a las 72 h: si un día sin
+   * entregas ni devoluciones se callara, las tres oportunidades de avisar se
+   * gastarían en silencio y la solicitud se iría sin que nadie la hubiera
+   * visto. Es el mismo motivo por el que un aviso de sistema obliga a mandarlo.
+   */
+  it('una solicitud sin contestar manda el correo aunque mañana no haya nada', () => {
+    expect(mereceEnvio({ ...vacio, sinContestar: [sinContestar()] })).toBe(true);
   });
 });
 
@@ -196,6 +221,27 @@ describe('el asunto, que es lo único que se lee sin abrir', () => {
    * terminado en dos puntos —«Mañana 11/09/2026: »—: el correo llegaba y el
    * asunto no decía de qué, que es lo único que se lee sin abrirlo.
    */
+  /**
+   * ⚠️ **La última vuelta sale en el ASUNTO, no solo dentro.** Es la última
+   * oportunidad de llamar antes de que el barrido se la lleve: metida solo en
+   * el cuerpo, quien no abra el correo esa mañana la pierde — y justo ese es el
+   * lector al que este aviso tiene que alcanzar.
+   */
+  it('las que se van hoy salen en el asunto', () => {
+    const s = asuntoDe({ ...vacio, sinContestar: [sinContestar(12), sinContestar(60)] }, 'VELTO');
+    expect(s).toContain('1 sin contestar · ÚLTIMO DÍA');
+  });
+
+  /**
+   * Y las que todavía tienen margen no gritan: con tres días por delante, un
+   * «ÚLTIMO DÍA» en el asunto es la clase de aviso que se deja de creer.
+   */
+  it('las que aún tienen margen se cuentan, sin alarma', () => {
+    const s = asuntoDe({ ...vacio, sinContestar: [sinContestar(60)] }, 'VELTO');
+    expect(s).toBe('VELTO · Mañana 11/09/2026: 1 sin contestar');
+    expect(s).not.toContain('ÚLTIMO DÍA');
+  });
+
   it('un aviso tranquilo y un día vacío no dejan el asunto cojo', () => {
     const s = asuntoDe(
       { ...vacio, avisos: [{ clase: 'certificado', texto: 'Caduca en 30 días', urgente: false }] },
@@ -206,7 +252,7 @@ describe('el asunto, que es lo único que se lee sin abrir', () => {
 });
 
 /**
- * ⚠️ **Lo que estos tests protegen es un BORRADO.** `limpiarSolicitudesAtendidas`
+ * ⚠️ **Lo que estos tests protegen es un BORRADO.** `limpiarSolicitudesCaducadas`
  * corre a las nueve de la mañana, sin nadie delante, y se lleva el nombre y el
  * teléfono de un cliente potencial para siempre. Hasta el 29 de septiembre de
  * 2026 no tenía ni uno: lo único que impedía que arrasara con el trabajo
@@ -217,15 +263,61 @@ describe('qué solicitudes se borran solas', () => {
   const hace = (horas: number) => new Date(ahora.getTime() - horas * 3_600_000);
 
   /**
-   * ⚠️ **`new` NO está, y ese es el invariante de todo el barrido.** Una
-   * solicitud sin atender es trabajo pendiente: borrándola por antigüedad, la
-   * que entra un viernes a las 23:40 desaparece el sábado y no hay forma de
-   * distinguir «no escribió nadie» de «se me pasaron tres». Si alguien añade
-   * `'new'` a esa lista, este test cae.
+   * ⚠️ **`new` SÍ entra desde el 5 de octubre de 2026, y es una REVERSIÓN — por
+   * eso está escrita.** Hasta ese día el invariante era el contrario: una
+   * solicitud sin atender es trabajo pendiente, así que borrarla por antigüedad
+   * hacía desaparecer el viernes a las 23:40 lo que nadie había podido leer.
+   *
+   * Lo revocó Dorel: *«Para las pre-reservas que no han sido respondido de
+   * ninguna manera en los 3 días (72h) se borran igual con el barrido del día
+   * que le toque»*. Y lo que lo hace sostenible es que el plazo es **otro** —72
+   * h, no las 24 del resto— y que ahora **se avisa**: el resumen diario las
+   * nombra una por una con lo que les queda, y las del último día salen hasta en
+   * el asunto. Sin ese aviso esto volvería a ser un borrado silencioso.
    */
-  it('SOLO se mira lo ya atendido: `new` no entra nunca', () => {
-    expect([...ESTADOS_BORRABLES]).toEqual(['contacted', 'discarded', 'converted']);
-    expect([...ESTADOS_BORRABLES]).not.toContain('new');
+  it('`new` entra, con su plazo propio de 72 h', () => {
+    expect([...ESTADOS_BORRABLES]).toEqual(['new', 'contacted', 'discarded', 'converted']);
+    expect(HORAS_SIN_CONTESTAR).toBe(72);
+  });
+
+  /**
+   * ⚠️ **Una sin contestar NO mira `keepHours`**, y eso es lo que separa los dos
+   * plazos. Ese campo lo congela el operador **al atender** y vale 24 h; si una
+   * `new` lo tuviera puesto —por un ajuste futuro, o por un documento viejo—,
+   * leerlo le recortaría el plazo a un día justo a la que nadie ha visto.
+   */
+  it('sin contestar se cuenta desde `createdAt` y a las 72 h, pase lo que pase en `keepHours`', () => {
+    expect(solicitudCaducada({ status: 'new', createdAt: hace(73) }, ahora)).toBe(true);
+    expect(solicitudCaducada({ status: 'new', createdAt: hace(71) }, ahora)).toBe(false);
+    // Con 24 h puestas seguiría aguantando hasta las 72.
+    expect(solicitudCaducada({ status: 'new', createdAt: hace(30), keepHours: 24 }, ahora)).toBe(
+      false
+    );
+  });
+
+  /**
+   * ⚠️ **Y una `new` con `handledAt` se cuenta igual desde `createdAt`.** Suena
+   * imposible y no lo es: «Ampliar 24 h» y guardar una nota tocan el documento
+   * sin cambiar el estado. Mandando el reloj sobre lo manipulado, bastaría
+   * teclear una nota para resetear el plazo de algo que sigue sin contestarse.
+   */
+  it('lo que manda es el ESTADO, no que el documento se haya tocado', () => {
+    const d = { status: 'new', createdAt: hace(80), handledAt: hace(1) };
+    expect(solicitudCaducada(d, ahora)).toBe(true);
+  });
+
+  /**
+   * ⚠️ **La garantía de precio protege también a las sin contestar.** Es el
+   * mismo caso que abajo y aquí duele más: se le prometió un precio a alguien a
+   * quien encima no se ha llamado.
+   */
+  it('una sin contestar con el precio todavía prometido no se borra', () => {
+    const d = {
+      status: 'new',
+      createdAt: hace(100),
+      priceGuaranteedUntil: new Date(ahora.getTime() + 3_600_000)
+    };
+    expect(solicitudCaducada(d, ahora)).toBe(false);
   });
 
   it('la atendida hace 25 h con un plazo de 24 se borra', () => {

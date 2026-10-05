@@ -145,11 +145,31 @@ export interface VencimientoVehiculo {
   bloquea: boolean;
 }
 
+/**
+ * Una solicitud de la web a la que **nadie ha contestado todavía**.
+ *
+ * ⚠️ **Está aquí porque desde el 5 de octubre de 2026 se BORRAN a las 72 h**, y
+ * hasta ese día no se borraban nunca. Un plazo de borrado sin aviso convierte
+ * una posible venta en una pérdida silenciosa: el resumen es lo único que llega
+ * sin abrir la aplicación, así que si no las nombra, alguien que no entre en
+ * tres días las pierde sin enterarse.
+ */
+export interface SolicitudSinContestar {
+  referencia: string;
+  cliente: string;
+  telefono: string;
+  coche: string;
+  /** Horas que le quedan antes de que el barrido se la lleve. */
+  horasRestantes: number;
+}
+
 export interface Resumen {
   fecha: string;
   entregas: MovimientoReserva[];
   devoluciones: MovimientoReserva[];
   vencimientos: VencimientoVehiculo[];
+  /** Las que nadie ha contestado, con lo que les queda. */
+  sinContestar: SolicitudSinContestar[];
   /** Cuántas entregas van sin contrato firmado. Es lo que más urge. */
   sinFirmar: number;
   /**
@@ -178,7 +198,15 @@ export function mereceEnvio(r: Resumen): boolean {
     r.entregas.length > 0 ||
     r.devoluciones.length > 0 ||
     r.vencimientos.length > 0 ||
-    r.avisos.length > 0
+    r.avisos.length > 0 ||
+    /**
+     * ⚠️ **Una solicitud sin contestar SÍ obliga a mandarlo**, por lo mismo que
+     * un aviso de sistema: detrás viene un borrado. Sin esta línea, un día sin
+     * entregas ni devoluciones no mandaría correo y las solicitudes se irían a
+     * las 72 h sin que nadie las hubiera visto — justo lo que esta sección
+     * existe para impedir.
+     */
+    r.sinContestar.length > 0
   );
 }
 
@@ -220,6 +248,18 @@ export function asuntoDe(r: Resumen, marca: string): string {
    * que contar— pero el asunto no decía qué, que es justo lo único que se lee
    * sin abrirlo.
    */
+  /**
+   * ⚠️ **Las que se van HOY salen en el asunto**, no solo dentro. El asunto es
+   * lo único que se lee sin abrir, y esta es la última oportunidad de llamar
+   * antes de que el barrido se las lleve: dentro del correo ya es un día tarde
+   * para quien no lo abre.
+   */
+  const seVanHoy = r.sinContestar.filter((s) => s.horasRestantes <= 24).length;
+  if (seVanHoy) partes.push(`${seVanHoy} sin contestar · ÚLTIMO DÍA`);
+
+  if (!partes.length && r.sinContestar.length) {
+    partes.push(plural(r.sinContestar.length, 'sin contestar', 'sin contestar'));
+  }
   if (!partes.length && r.avisos.length) {
     partes.push(plural(r.avisos.length, 'aviso', 'avisos'));
   }

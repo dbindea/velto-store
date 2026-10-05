@@ -1364,7 +1364,7 @@
       "requestPriceHours": "Preț garantat pentru o solicitare",
       "requestPriceHoursHint": "Cât timp se menține prețul pe care site-ul l-a arătat celui care a cerut să îl sunăm. Mașina nu este rezervată: ceea ce se garantează este suma.",
       "requestKeepHours": "Șterge solicitările rezolvate după",
-      "requestKeepHoursHint": "Cât timp se păstrează o solicitare contactată, transformată sau respinsă înainte de a-i șterge numele și telefonul. Cele fără răspuns nu se șterg niciodată.",
+      "requestKeepHoursHint": "Cât timp se păstrează o solicitare contactată, transformată sau respinsă înainte de a-i șterge numele și telefonul. Cele fără răspuns se șterg după 72 de ore, iar rezumatul zilnic te anunță înainte.",
       "requestFrozenHint": "Ambele termene se aplică solicitărilor care vin de acum înainte: fiecare îl fixează pe al său la creare, așa că schimbarea lor nu mută un preț deja promis și nici expirarea celor existente."
     },
     "saved": "Salvat",

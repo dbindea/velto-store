@@ -86,6 +86,30 @@ export function renderDigestEmail(
     )
     .join('');
 
+  /**
+   * Las que nadie ha contestado, con el plazo delante.
+   *
+   * ⚠️ **Se dice lo que LE QUEDA, no cuándo llegó.** «Llegó hace dos días» hay
+   * que restarlo mentalmente; «se borra mañana» se entiende de un vistazo, que
+   * es lo que hace que alguien coja el teléfono hoy.
+   *
+   * ⚠️ **Y la última vuelta va en rojo**, porque es la última: con menos de un
+   * día por delante, si no se llama hoy no se llama. Es la misma regla que el
+   * «VENCIDO» de los mantenimientos — lo que grita tiene que ser lo que de
+   * verdad se pierde.
+   */
+  const sinContestar = r.sinContestar
+    .map((s) =>
+      fila(
+        `${esc(s.cliente)} · ${esc(s.telefono)}`,
+        `${esc(s.referencia)} · ${esc(s.coche)}`,
+        s.horasRestantes <= 24
+          ? `Se borra ${s.horasRestantes <= 0 ? 'en el próximo barrido' : `en ${s.horasRestantes} h`} si nadie contesta`
+          : undefined
+      )
+    )
+    .join('');
+
   const html = sobre({
     titulo: `Mañana, ${r.fecha}`,
     entradilla: `${company.brandName} · lo que hay que preparar`,
@@ -93,7 +117,8 @@ export function renderDigestEmail(
       (avisos ? `<tr><td style="height:16px"></td></tr>${avisos}` : '') +
       seccion('Entregas', entregas) +
       seccion('Devoluciones', devoluciones) +
-      seccion('Vence en la flota', vencimientos),
+      seccion('Vence en la flota', vencimientos) +
+      seccion('Sin contestar', sinContestar),
     pie:
       'Este resumen sale cada mañana con lo del día siguiente. ' +
       'Si no hay nada que preparar, no se envía.'
@@ -134,6 +159,23 @@ export function renderDigestEmail(
         `  ${v.concepto}  ${v.vehiculo}  ${
           v.diasRestantes < 0 ? `VENCIDO el ${v.fecha}` : `${v.fecha} (${v.diasRestantes} d)`
         }`
+      );
+    }
+    lineas.push('');
+  }
+  // ⚠️ También en texto plano: hay clientes de correo que solo enseñan esta
+  // versión, y este es justo el aviso que no se puede perder — detrás viene un
+  // borrado.
+  if (r.sinContestar.length) {
+    lineas.push('SIN CONTESTAR');
+    for (const s of r.sinContestar) {
+      lineas.push(
+        `  ${s.referencia}  ${s.cliente}  ${s.telefono}  ${s.coche}` +
+          (s.horasRestantes <= 24
+            ? `\n         *** se borra ${
+                s.horasRestantes <= 0 ? 'en el próximo barrido' : `en ${s.horasRestantes} h`
+              } si nadie contesta ***`
+            : `  (quedan ${s.horasRestantes} h)`)
       );
     }
   }

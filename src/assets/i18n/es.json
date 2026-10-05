@@ -1364,7 +1364,7 @@
       "requestPriceHours": "Precio garantizado de una solicitud",
       "requestPriceHoursHint": "Cuánto se mantiene el precio que la web le enseñó a quien pide que le llamemos. El coche no queda apartado: lo que se garantiza es la cifra.",
       "requestKeepHours": "Borrar solicitudes atendidas",
-      "requestKeepHoursHint": "Cuánto se conserva una solicitud ya contactada, convertida o descartada antes de borrar su nombre y su teléfono. Las que siguen sin contestar no se borran nunca.",
+      "requestKeepHoursHint": "Cuánto se conserva una solicitud ya contactada, convertida o descartada antes de borrar su nombre y su teléfono. Las que siguen sin contestar se borran a las 72 horas, y el resumen diario las avisa antes.",
       "requestFrozenHint": "Los dos plazos rigen para las solicitudes que entren a partir de ahora: cada una se lleva el suyo al nacer, así que cambiarlos no mueve el precio ya prometido ni la caducidad de las que ya existen."
     },
     "saved": "Guardado",
