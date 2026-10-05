@@ -390,3 +390,82 @@ no cambia el comportamiento de la aplicación.
   `p=none` con `rua=`.
 - **`index.html` del backoffice sigue a `max-age=3600`**, el mismo retraso de
   una hora que la web pública ya tiene corregido. Es un cambio aparte.
+
+---
+
+## Cloudflare: qué se cachea y qué NO puede cachearse nunca
+
+Añadido el 5 de octubre de 2026, con el estado **medido** ese día contra
+producción (`cf-cache-status` en la respuesta real, no leído de la configuración):
+
+| | Estado |
+|---|---|
+| HTML (`/`, `/flota`) | `DYNAMIC` — no se cachea en el borde |
+| `/_astro/*`, `/brand/*` | `HIT` — correcto, un año `immutable` |
+| `/api/fleet` | `DYNAMIC` |
+| Compresión | ya activa (`br` / `zstd`) |
+
+⚠️ **`/api/fleet` bajó de `s-maxage=600` a `s-maxage=60`.** Aquel valor
+contradecía la regla que sostiene el diseño de toda la web —«publicar un coche
+se ve al momento, sin redesplegar»—: el día que Cloudflare empezara a respetarlo,
+un coche recién publicado habría tardado **diez minutos** en aparecer, y nadie
+habría relacionado una cosa con la otra. Hoy no se nota porque Cloudflare lo
+ignora: por defecto solo cachea por extensión de fichero y `/api/fleet` no tiene.
+O sea que era una trampa **armada y sin disparar**.
+
+### Las tres reglas que tiene que haber si se activa el cacheo
+
+⚠️ **`/api/solicitud`, `/api/contacto` y `/api/visita` van en BYPASS, siempre.**
+Las dos primeras escriben; la tercera cuenta visitas y cacheada dejaría de
+contarlas — y un contador que no cuenta no se nota, simplemente da un número más
+bajo que nadie cuestiona.
+
+`/api/fleet` y `/api/vehicle` sí pueden cachearse respetando el origen, ahora que
+el plazo es de 60 s. El HTML solo si se añade **purga al desplegar**: no lleva
+huella en el nombre, así que sin purgar, un despliegue no se vería hasta vencer
+el TTL.
+
+### Lo que NO se activa
+
+- **Rocket Loader** — difiere los scripts y rompería el script en línea que fija
+  el tema: parpadeo blanco en cada carga.
+- **«Cache Everything» sin el bypass de `/api`** — congela la flota y mata la
+  analítica.
+- **Auto Minify** — retirado por Cloudflare, y sobre el HTML de Astro puede
+  romper los scripts en línea.
+
+⚠️ **Y la advertencia que evita gastar esfuerzo donde no toca:** con el tráfico
+de hoy, el cacheo en el borde apenas ayuda —cada centro de datos cachea por su
+cuenta—. Medido en caliente, la API contesta en **26–134 ms**. El riesgo real de
+lentitud es el **arranque en frío** de la Cloud Function, y eso no lo arregla
+ninguna opción de Cloudflare: se arregla con `minInstances`, que cuesta dinero
+cada mes.
+
+## El `www`, y por qué redirige en vez de servir
+
+El canónico es el **apex** (`https://veltomobility.com`), y no es una preferencia
+suelta: es lo que ya declaran `SITIO` en `web/src/lib/empresa.ts`, el
+`<link rel="canonical">` y el sitemap. Lo que Google pide no es un host concreto,
+sino que **solo uno sirva** y el otro mande un **301**, con todas las señales
+apuntando al mismo.
+
+⚠️ **`www` NO se añade como dominio personalizado en Firebase Hosting.** Eso
+serviría el mismo sitio en dos hosts —contenido duplicado— en vez de redirigir.
+Lo que hay es un registro DNS proxied y una **Redirect Rule** de Cloudflare, que
+contesta en el borde sin llegar al origen:
+
+```
+Request URL:  https://www.veltomobility.com/*
+Target URL:   https://veltomobility.com/${1}
+Código:       301
+Preserve query string: sí
+```
+
+⚠️ **La plantilla de Cloudflare trae `https://www.*` y dice «funciona sin
+cambios». Aquí no.** Con ese patrón `${1}` captura `veltomobility.com/flota`
+entero y el destino sale `https://veltomobility.com/veltomobility.com/flota`. La
+pareja coherente con el comodín genérico sería `https://www.*` → `https://${1}`.
+
+⚠️ Y **la ruta tiene que conservarse**. Una redirección que lo manda todo a la
+portada pierde la página que el visitante pedía, y Google lo trata como un
+*soft 404* en vez de como un traslado.

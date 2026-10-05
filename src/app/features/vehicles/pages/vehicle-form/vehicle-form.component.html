@@ -827,6 +827,12 @@
               />
             </div>
             <p class="upload-hint">{{ 'common.photos.hint' | translate }}</p>
+            <!--
+              La medida va donde se SUBE, no donde se publica: al publicar ya es
+              tarde —lo que no tenga 1600 px de ancho sale blando en la foto
+              grande, y lo que no sea 4:3 lo recorta la web por los lados—.
+            -->
+            <p class="upload-hint">{{ 'vehicles.photos.sizeHint' | translate }}</p>
 
             <!-- Photo thumbnails -->
             @if (existingImages.length > 0) {

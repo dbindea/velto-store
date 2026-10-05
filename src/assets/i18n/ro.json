@@ -1579,6 +1579,7 @@
       "published": "Fotografie publicată pe site",
       "publishFailed": "Fotografia nu a putut fi publicată",
       "saveFirst": "Salvează întâi vehiculul pentru a încărca fotografii",
+      "sizeHint": "Pentru site-ul public: orizontal 4:3, minimum 1600 px lățime. HEIC-ul de pe iPhone se încarcă neoptimizat, convertește-l în JPG înainte.",
       "thumbnail": "Miniatură",
       "unpublish": "Retrage de pe site",
       "unpublishFailed": "Fotografia nu a putut fi retrasă",
