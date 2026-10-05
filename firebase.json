@@ -143,6 +143,13 @@
           }
         },
         {
+          "source": "/api/visita",
+          "function": {
+            "functionId": "trackWebVisit",
+            "region": "europe-west1"
+          }
+        },
+        {
           "source": "/coche/**",
           "destination": "/coche.html"
         }

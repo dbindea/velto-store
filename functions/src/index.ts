@@ -136,3 +136,4 @@ export {
   createContactRequest
 } from './public/api';
 export { publishVehiclePhoto, unpublishVehiclePhoto } from './public/publishVehiclePhoto';
+export { trackWebVisit } from './public/trackWebVisit';

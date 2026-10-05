@@ -249,6 +249,7 @@ import { ORDENES } from '../lib/resultados';
     rotuloFechas,
     type Orden,
   } from '../lib/resultados';
+  import { medirHito } from '../lib/medir';
 
   const problema = document.getElementById('problema')!;
   const resultado = document.getElementById('resultado')!;
@@ -343,6 +344,8 @@ import { ORDENES } from '../lib/resultados';
         }
         libres = r.vehicles;
         dias = r.totalDays;
+        // Ha visto precios de verdad, no solo la pagina.
+        medirHito('precios');
         // Una búsqueda nueva empieza sin filtro: el tipo de coche que se eligió
         // para las fechas de antes puede no existir en estas.
         categoria = null;

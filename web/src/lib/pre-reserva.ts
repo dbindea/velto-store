@@ -10,6 +10,7 @@
 import { solicitar } from './api';
 import { ocupar, ocuparUnRato, type Ocupado } from './boton-ocupado';
 import { capitalizarNombre, transformarCampo } from './texto';
+import { medirHito } from './medir';
 
 export interface DatosPreReserva {
   vehicleId: string;
@@ -181,6 +182,8 @@ export function montarPreReserva(): PreReserva | null {
     ocupado?.libre();
     ocupado = null;
     dlg!.showModal();
+    // El escalon donde se pierde gente: ya tiene el precio delante.
+    medirHito('cotizacion');
   }
 
   form.addEventListener('submit', (e) => {

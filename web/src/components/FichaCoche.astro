@@ -81,6 +81,7 @@ const { resumen = '' } = Astro.props;
   } from '../lib/calendario-coche';
   import { instanteDeLaUrl } from '../lib/buscador';
   import { svgEtiqueta, esEtiquetaDgt, NOMBRE, QUE_PERMITE } from '../lib/etiqueta-dgt';
+  import { medirHito } from '../lib/medir';
   import { zonaPorNombre } from '../lib/zonas';
 
   const contenedor = document.getElementById('ficha')!;
@@ -313,6 +314,9 @@ const { resumen = '' } = Astro.props;
       'Entrega a domicilio gratis en Arganda y alrededores',
       v.depositAmount !== undefined ? `Fianza de ${euros(v.depositAmount)}, que se devuelve` : null,
     ].filter(Boolean) as string[];
+
+    // Ha abierto la ficha de un coche concreto, no solo el listado.
+    medirHito('ficha');
 
     contenedor.innerHTML = `
       <p class="overline">${esc(categoria(v.category))}</p>

@@ -1008,5 +1008,18 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         font-size: var(--fs-caption);
       }
     </style>
+
+    {/*
+      La señal de visita.
+      ⚠️ **Va en el layout y no página por página**, para que una página nueva
+      se mida sola: acordarse de añadirla en cada `.astro` es exactamente como
+      se acaba con media web sin medir y un informe que miente por abajo.
+      ⚠️ Y va **al final del `<body>`**: medir no puede retrasar lo que el
+      visitante ha venido a leer.
+    */}
+    <script>
+      import { medirVista } from '../lib/medir';
+      medirVista();
+    </script>
   </body>
 </html>

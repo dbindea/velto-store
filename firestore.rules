@@ -275,6 +275,31 @@ service cloud.firestore {
       allow delete: if callerIsAdmin();
     }
 
+    // Las visitas de la web pública, agregadas por día.
+    //
+    // Las escribe SOLO la Cloud Function `trackWebVisit`, que entra con el
+    // admin SDK y no pasa por aquí. Desde cliente **no se puede escribir**: con
+    // `create` o `update` abiertos, cualquiera con la clave del bundle —que
+    // viaja en la web— inflaría los contadores a mano, y un número de visitas
+    // que cualquiera puede mover no vale para decidir nada.
+    //
+    // ⚠️ **Y leerlas es de quien ve informes, no de cualquier autorizado.** Es
+    // la misma raya que `viewReports`: cuánta gente entra en la web es dato de
+    // negocio, no de la operación diaria.
+    //
+    // ⚠️ La subcolección `visitors` lleva las huellas del día, que son
+    // seudónimos. No se leen desde la aplicación —el contador ya está en el
+    // documento del día— así que aquí no se abren: lo que no hace falta leer,
+    // no se deja leer.
+    match /webAnalytics/{dia} {
+      allow read: if callerIsAdmin();
+      allow write: if false;
+
+      match /visitors/{huella} {
+        allow read, write: if false;
+      }
+    }
+
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.
