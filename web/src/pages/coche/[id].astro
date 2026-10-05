@@ -83,13 +83,49 @@ const esc = (s: string) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
   );
 
+/**
+ * Lo que se sirve ya escrito, antes de que llegue el JavaScript.
+ *
+ * ⚠️ **Lleva las clases REALES, y hasta el 5 de octubre de 2026 no llevaba
+ * ninguna.** Se escribió pensando solo en los rastreadores —que leen el texto y
+ * se van— y lo que veía una persona era HTML en crudo: un `<h1>` del navegador,
+ * párrafos sin estilo y **la foto a su tamaño natural**, 800 px de lado
+ * ocupando casi toda la pantalla. Lo encontró Dorel entrando en un coche desde
+ * la flota, y duraba lo que tardara en descargarse el módulo — que en una
+ * conexión mala son segundos.
+ *
+ * Y no había esqueleto que lo tapara: `hidden={!!resumen}` lo apaga justo
+ * cuando hay resumen, con el argumento —correcto— de que con contenido ya
+ * montado un esqueleto es un parpadeo gratis. El argumento sigue siendo bueno;
+ * lo que fallaba es que ese contenido **no parecía contenido**.
+ *
+ * ⚠️ **La estructura es la misma que pinta `FichaCoche` al hidratar**
+ * —`.overline`, `.ficha__titulo`, `.ficha`, `.ficha__galeria`,
+ * `.galeria__grande`—, para que el relevo no se note. Si allí cambia la
+ * envoltura de la foto, aquí también: son dos sitios que pintan lo mismo y es
+ * el precio de servir HTML antes del JavaScript.
+ */
 const resumen = `
-  <h1>${esc(nombre)}</h1>
-  <p>${esc(categoria(coche.category))} · ${coche.seats} plazas · ${esc(cambio(coche.transmission))} ·
-     ${esc(combustible(coche.fuelType))} · ${coche.luggageCapacity} maletas</p>
-  ${coche.priceFrom ? `<p>Desde <strong>${esc(euros(coche.priceFrom.gross))}</strong> al día.</p>` : ''}
-  ${coche.photo ? `<img src="${esc(coche.photo.url)}" alt="${esc(nombre)}" width="${coche.photo.width ?? 800}" height="${coche.photo.height ?? 600}" />` : ''}
-  <p>Alquiler en Arganda del Rey con precio final, impuestos incluidos y entrega a domicilio.</p>`;
+  <p class="overline">${esc(categoria(coche.category))}</p>
+  <h1 class="ficha__titulo">${esc(nombre)}</h1>
+  <div class="ficha">
+    <div class="ficha__galeria">
+      <div class="galeria">
+        <div class="galeria__grande">
+          ${
+            coche.photo
+              ? `<img src="${esc(coche.photo.url)}" alt="${esc(nombre)}" width="${coche.photo.width ?? 800}" height="${coche.photo.height ?? 600}" />`
+              : ''
+          }
+        </div>
+      </div>
+      <p class="ficha__texto">${coche.seats} plazas · ${esc(cambio(coche.transmission))} ·
+         ${esc(combustible(coche.fuelType))} · ${coche.luggageCapacity} maletas${
+           coche.priceFrom ? ` · desde ${esc(euros(coche.priceFrom.gross))} al día` : ''
+         }</p>
+      <p class="ficha__texto">Alquiler en Arganda del Rey con precio final, impuestos incluidos y entrega a domicilio.</p>
+    </div>
+  </div>`;
 
 /**
  * ⚠️ **`Car` y no `Product`.** Es un tipo real de schema.org y le dice al

@@ -1858,3 +1858,107 @@ input.picker-propio {
 }
 
 .esq--ficha .esq__foto { height: 200px; }
+
+/* ---------------------------------------------------------------------------
+ * ESTADOS DE UNA PETICIÓN: buscando, y no hay nada
+ *
+ * ⚠️ **Vive aquí y no en la página porque lo usan DOS**: el buscador de
+ * /reservar y la ficha de coche, que calcula el precio al marcar fechas. Las
+ * `<style>` de una página de Astro son encapsuladas —y además no alcanzan al
+ * HTML que se inyecta por `innerHTML`—, así que una clase compartida escrita
+ * allí solo pinta en una de las dos. Es la misma lección que `.form-control`
+ * en el backoffice.
+ * ------------------------------------------------------------------------- */
+/*
+ * ⚠️ **La caja la comparten «buscando» y «no hay nada», y es deliberado.**
+ * Son los dos estados de la misma pregunta —la que el visitante acaba de
+ * hacer— y uno sustituye al otro en el mismo sitio. Con dos cajas distintas,
+ * la página da un salto al terminar la búsqueda; y la segunda que alguien
+ * retoque se queda con otro radio y otro relleno, que es como esta web acabó
+ * con cuatro nombres para la misma casilla.
+ */
+.panel-estado {
+  max-width: 560px;
+  margin-inline: auto;
+  padding: var(--sp-8) var(--sp-6);
+  text-align: center;
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-xl);
+}
+
+/*
+ * LA CARRETERA: las tres barras del isotipo, corriendo.
+ *
+ * ⚠️ **`overflow: hidden` es lo que las convierte en un tramo de vía.** Sin
+ * él, las barras se salen de la caja y cruzan el texto.
+ */
+.buscando__via {
+  position: relative;
+  width: 220px;
+  height: 10px;
+  margin: 0 auto var(--sp-5);
+  overflow: hidden;
+}
+
+/*
+ * El asfalto: es lo que hace que las barras se lean como marcas de una vía y
+ * no como tres rectángulos sueltos.
+ *
+ * ⚠️ **Va en `--border` y NO en `--divider`.** Aquel es el filete de las
+ * separaciones y en los temas oscuros vale `--gray-900`, o sea el mismo tono
+ * que la tarjeta: la vía existía y no se veía — medido en pantalla, no leído
+ * del fichero. Es la misma trampa que ya obligó a cambiarlo en el esqueleto.
+ */
+.buscando__via::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--border);
+}
+
+.buscando__via span {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 40px;
+  height: 10px;
+  background: var(--brand);
+  /*
+   * ⚠️ **Se mueve con `transform`, no con `left`.** Aquello recalcula la
+   * maquetación en cada fotograma; esto lo compone la GPU. En un móvil de
+   * gama baja —que es donde se usa esto— la diferencia se ve.
+   */
+  animation: viaVelto 1.5s linear infinite;
+}
+
+/* Repartidas por la vía con retardos negativos: arrancan ya separadas, sin
+   el primer segundo en que las tres irían pegadas. */
+.buscando__via span:nth-child(2) { animation-delay: -0.5s; }
+.buscando__via span:nth-child(3) { animation-delay: -1s; }
+
+@keyframes viaVelto {
+  from { transform: translateX(-50px) skewX(var(--skew)); }
+  to { transform: translateX(220px) skewX(var(--skew)); }
+}
+
+.buscando__titulo {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+}
+
+.buscando__texto { margin: 0; color: var(--text-2); }
+
+/*
+ * ⚠️ **Sin movimiento, las barras se quedan QUIETAS y repartidas** — no
+ * desaparecen. Son la ilustración de la tarjeta, y quitarlas dejaría un
+ * hueco; lo que molesta a quien pide menos movimiento es el bucle, no el
+ * dibujo. El texto ya dice lo que está pasando.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .buscando__via span { animation: none; transform: skewX(var(--skew)); }
+  .buscando__via span:nth-child(2) { left: 70px; }
+  .buscando__via span:nth-child(3) { left: 140px; }
+}

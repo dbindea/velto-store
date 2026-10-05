@@ -306,6 +306,85 @@ describe('la hora que nadie dijo', () => {
     expect(requestPickupAt(solicitud({ pickupDate: undefined }))).toBeNull();
     expect(requestReturnAt(solicitud({ returnDate: undefined }))).toBeNull();
   });
+
+  /**
+   * ⚠️ **Lo que estos tres protegen es el descuadre del 5 de octubre de 2026.**
+   * Un cliente pidió las 10:00 en la web; el correo le dijo 00:00, el
+   * presupuesto 12:00 y el backoffice proponía 12:00 también — porque la hora
+   * se usaba para cotizar y se tiraba al escribir la solicitud. Desde que la
+   * function la guarda, **manda ella**; el mediodía se queda solo para las
+   * solicitudes anteriores, que no la traen.
+   */
+  it('si la solicitud trae la hora pedida, manda ella y no el mediodía', () => {
+    const r = solicitud({
+      pickupDate: new Date(2026, 9, 24, 0, 0, 0, 0),
+      returnDate: new Date(2026, 9, 26, 0, 0, 0, 0),
+      pickupDateTime: new Date(2026, 9, 24, 10, 0, 0, 0),
+      returnDateTime: new Date(2026, 9, 25, 10, 0, 0, 0)
+    });
+    expect(requestPickupAt(r)!.getHours()).toBe(10);
+    expect(requestReturnAt(r)!.getHours()).toBe(10);
+    // Y el día de devolución es el 25, no el 26 exclusivo de la ventana.
+    expect(requestReturnAt(r)!.getDate()).toBe(25);
+  });
+
+  /**
+   * ⚠️ **El final de la ventana es medianoche UTC, no local.** Lo escribe
+   * `widenToFullDays()` y es lo que `alMediodia(…, true)` reconoce para restar
+   * el día de más. Con un `new Date(2026, 9, 26)` —medianoche **local**— el
+   * test pasaba a mano y describía una forma que Firestore no guarda nunca; es
+   * el mismo despiste que ya tuvo la primera versión de estas pruebas.
+   */
+  it('sin la hora pedida sigue valiendo el mediodía, que es el caso antiguo', () => {
+    const r = solicitud({
+      pickupDate: new Date(Date.UTC(2026, 9, 24)),
+      returnDate: new Date(Date.UTC(2026, 9, 26))
+    });
+    expect(requestPickupAt(r)!.getHours()).toBe(12);
+    expect(requestReturnAt(r)!.getHours()).toBe(12);
+    expect(requestReturnAt(r)!.getDate()).toBe(25);
+  });
+
+  /**
+   * ⚠️ **Una hora ilegible NO tumba la ficha: cae al respaldo.** Es la regla de
+   * la casa con los datos guardados —en la duda, lo que no se puede interpretar
+   * no manda— y aquí evita que un documento raro deje la pantalla sin fechas.
+   */
+  it('una hora guardada ilegible cae al mediodía en vez de romper', () => {
+    const r = solicitud({
+      pickupDate: new Date(Date.UTC(2026, 9, 24)),
+      pickupDateTime: 'cuando sea'
+    });
+    const d = requestPickupAt(r)!;
+    expect(d.getHours()).toBe(12);
+    // Y el DÍA es el que pidió el cliente, no el de hoy.
+    expect(d.getDate()).toBe(24);
+  });
+
+  /**
+   * ⚠️ **El caso que `toDate()` convertiría en «hoy».** Ese util cae a la fecha
+   * actual ante cualquier cosa que no sepa leer —a propósito, para que un
+   * documento corrupto no tumbe una vista con el pipe `date`—, y aquí eso
+   * sería peor que el fallo: la solicitud propondría hoy como día de recogida y
+   * el operador lo llevaría al asistente sin que nada chirriara.
+   */
+  it('un mapa vacío tampoco se cuela como la fecha de hoy', () => {
+    const r = solicitud({
+      pickupDate: new Date(Date.UTC(2026, 9, 24)),
+      pickupDateTime: {}
+    });
+    expect(requestPickupAt(r)!.getDate()).toBe(24);
+  });
+
+  /** Y la forma que sí guarda Firestore se lee tal cual. */
+  it('lee el Timestamp de Firestore, que es lo que de verdad llega', () => {
+    const instante = new Date(2026, 9, 24, 10, 0, 0, 0);
+    const r = solicitud({
+      pickupDate: new Date(Date.UTC(2026, 9, 24)),
+      pickupDateTime: { seconds: Math.floor(instante.getTime() / 1000), nanoseconds: 0 }
+    });
+    expect(requestPickupAt(r)!.getHours()).toBe(10);
+  });
 });
 
 describe('ampliar el precio garantizado', () => {

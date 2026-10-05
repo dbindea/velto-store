@@ -649,7 +649,23 @@ const { resumen = '' } = Astro.props;
         <p class="accion__dias">${dias === 1 ? '1 día' : `${dias} días`}</p>
         ${lineaLugar}`;
 
-      accion.innerHTML = `${cabecera}<p class="accion__pista">Calculando el precio…</p>`;
+      /*
+       * ⚠️ **La misma carretera que el buscador, no otro texto suelto.** Aquí
+       * ponía «Calculando el precio…» en una línea gris, y es el mismo defecto
+       * que Dorel señaló en `/reservar`: sin movimiento no se distingue de una
+       * descripción, y lo que hay detrás es una llamada al backend que puede
+       * tardar.
+       *
+       * Las clases viven en `global.css` **porque esto se inyecta con
+       * `innerHTML`**: los estilos encapsulados de una página no alcanzan al
+       * HTML creado en tiempo de ejecución, así que escribirlas en el
+       * `<style>` de `/reservar` las dejaría sin pintar justo aquí.
+       */
+      accion.innerHTML =
+        `${cabecera}` +
+        `<div class="buscando__via accion__via" aria-hidden="true">` +
+        `<span></span><span></span><span></span></div>` +
+        `<p class="accion__pista">Calculando el precio…</p>`;
 
       const desde = comoCampo(rango.desde);
       const hasta = comoCampo(rango.hasta);
@@ -887,7 +903,15 @@ const { resumen = '' } = Astro.props;
 
   /* ---- El texto y la ficha técnica ------------------------------------- */
 
-  .ficha__texto { margin: 0 0 var(--sp-6); color: var(--text-2); }
+  /*
+   * ⚠️ **El margen de ARRIBA no es cosmético: separa dos cosas distintas.**
+   * Este párrafo va justo debajo de la tira de miniaturas, y con `margin-top: 0`
+   * quedaba pegado a ellas —lo señaló Dorel el 5 de octubre de 2026—: la
+   * descripción se leía como el pie de la última foto en vez de como el texto
+   * del coche. La galería tiene su propio `gap` interno de `--sp-3`, que es el
+   * aire ENTRE fotos; esto es el aire entre la galería y lo que viene después.
+   */
+  .ficha__texto { margin: var(--sp-5) 0 var(--sp-6); color: var(--text-2); }
 
   .ficha__h2 { font-size: var(--fs-h4); margin: 0 0 var(--sp-3); }
 
@@ -1035,6 +1059,12 @@ const { resumen = '' } = Astro.props;
 
   .accion__letra { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
   .accion__pista { margin: var(--sp-4) 0 0; color: var(--text-2); font-size: var(--fs-small); }
+
+  /*
+   * La carretera dentro de la tarjeta de acciones: más estrecha que la de
+   * `/reservar` —aquí la columna mide la mitad— y con su aire propio arriba.
+   */
+  .accion__via { width: 140px; margin-top: var(--sp-5); margin-bottom: 0; }
   .accion__aviso { margin: 0 0 var(--sp-2); color: var(--danger); font-size: var(--fs-small); }
 
   .accion__btn { width: 100%; }

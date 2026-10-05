@@ -913,6 +913,29 @@ Corregido el mismo día (PR #65). Las tres URL estuvieron unas horas en el
 sitemap; hoy sirven la página genérica sin datos, así que caerán solas del
 índice si Google llegó a pasar.
 
+### Y un segundo «escrito y nunca recorrido», el mismo día (PR #66)
+
+El esqueleto de carga de `/reservar` —tres tarjetas grises, añadidas el 3 de
+octubre con un argumento correcto: la pantalla pasaba 3,1 s en blanco en 3G
+lento— se escribió **dentro de `#resultado`**, que está `hidden` justo mientras
+se busca. Destaparlo no hacía nada porque su antepasado seguía oculto, así que
+lo único que veía el visitante era la línea de texto «Buscando coches libres…».
+
+Nadie lo detectó en un mes: compila, despliega y el código que lo destapa se
+ejecuta. **Se vio cuando Dorel pidió que ese texto se notara más** y hubo que ir
+a mirar por qué estaba tan solo en la página.
+
+Lo sustituye una tarjeta con las tres barras del isotipo corriendo por una vía,
+que vive **fuera** de `#resultado`. Y de paso salió **otra vez** la trampa de
+`--divider`: el asfalto de esa vía iba con esa variable, que en los temas
+oscuros vale lo mismo que la tarjeta — la carretera existía y no se veía. Es
+exactamente lo que ya había pasado con el esqueleto, y volvió a cazarlo mirar la
+pantalla, no leer el fichero.
+
+Ese mismo PR mete **«Nuestra flota» en el menú**, que obligó a mover el corte de
+plegado de 1039 a 1199 px. El número está medido y razonado en `Base.astro`: si
+alguien añade o alarga un rótulo, **hay que volver a medirlo**.
+
 ---
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
