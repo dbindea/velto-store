@@ -52,6 +52,8 @@ import { TranslateService } from '@core/i18n/translate.service';
 export interface CreateManualPaymentData {
   /** Required for reservation-linked payments. Optional for free payments. */
   reservationId?: string;
+  /** La solicitud de la web de la que sale este cobro. Ver `Payment`. */
+  bookingRequestId?: string;
   clientId?: string;
   vehicleId?: string;
   /** True when this is a "cobro libre". */
@@ -278,6 +280,7 @@ export class PaymentService {
 
     const payment: Payment = {
       reservationId: data.reservationId,
+      bookingRequestId: data.bookingRequestId,
       clientId: data.clientId,
       vehicleId: data.vehicleId,
       isFreePayment: data.isFreePayment || false,

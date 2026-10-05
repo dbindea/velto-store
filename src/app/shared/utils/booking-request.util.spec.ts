@@ -1,0 +1,375 @@
+/**
+ * Lo que se puede hacer con una solicitud, y lo que se le dice al cliente.
+ *
+ * ⚠️ Lo que se prueba aquí no es el camino feliz: es que **caducar el precio no
+ * caduque al cliente**, que no se pueda convertir dos veces, y que el mensaje
+ * de WhatsApp no prometa el coche — porque la web ya dijo que no está apartado
+ * y contradecirse por WhatsApp es peor que no escribir.
+ */
+
+import { describe, expect, it } from 'vitest';
+import type { BookingRequest } from '@shared/models/booking-request.model';
+import {
+  canConvert,
+  canDiscard,
+  canExtendGuarantee,
+  canMarkContacted,
+  extendedGuaranteeUntil,
+  formatPhone,
+  newCount,
+  requestPickupAt,
+  requestReturnAt,
+  priceStillGuaranteed,
+  sortRequests,
+  telLink,
+  whatsappLink,
+  whatsappMessage
+} from './booking-request.util';
+
+function solicitud(p: Partial<BookingRequest> = {}): BookingRequest {
+  return {
+    reference: 'P-4K7M9X',
+    status: 'new',
+    name: 'Marius Ionescu',
+    phone: '34612345678',
+    note: '',
+    vehicleId: 'v1',
+    vehicleSnapshot: { brand: 'Renault', model: 'Clio', category: 'compact' },
+    quoteSnapshot: { totalDays: 3, net: 156, gross: 188.76, vatRate: 0.21, currency: 'EUR' },
+    keepHours: 24,
+    ...p
+  } as BookingRequest;
+}
+
+describe('priceStillGuaranteed', () => {
+  const AHORA = new Date('2026-09-28T18:00:00');
+
+  it('dentro del plazo, sí', () => {
+    const r = solicitud({ priceGuaranteedUntil: new Date('2026-09-29T18:00:00') });
+    expect(priceStillGuaranteed(r, AHORA)).toBe(true);
+  });
+
+  it('pasado el plazo, no', () => {
+    const r = solicitud({ priceGuaranteedUntil: new Date('2026-09-28T17:59:00') });
+    expect(priceStillGuaranteed(r, AHORA)).toBe(false);
+  });
+
+  it('CADUCAR EL PRECIO NO CADUCA LA SOLICITUD', () => {
+    // Lo único que deja de sostenerse es la cifra: el teléfono sigue sirviendo
+    // y la llamada sigue mereciendo la pena.
+    const r = solicitud({ priceGuaranteedUntil: new Date('2020-01-01') });
+    expect(priceStillGuaranteed(r, AHORA)).toBe(false);
+    expect(canConvert(r)).toBe(true);
+    expect(canDiscard(r)).toBe(true);
+  });
+
+  it('sin fecha guardada no se afirma que siga en pie', () => {
+    expect(priceStillGuaranteed(solicitud(), AHORA)).toBe(false);
+  });
+});
+
+describe('el mensaje de WhatsApp', () => {
+  const msg = whatsappMessage(solicitud(), 'Velto Mobility');
+
+  /**
+   * ⚠️ **El texto es de Dorel y se comprueba ENTERO, no por trozos.** Es lo que
+   * va a leer un cliente: si alguien lo reescribe «mejorándolo», este test lo
+   * para y obliga a que la decisión la tome él, que es de quien es la voz.
+   */
+  it('es exactamente el texto que Dorel escribió', () => {
+    /**
+     * ⚠️ **El espacio que va antes del € no es un capricho del test.** Es el espacio
+     * DURO que `Intl.NumberFormat('es-ES')` mete entre el importe y el símbolo,
+     * y es correcto: impide que «188,76» y «€» acaben en líneas distintas. Con
+     * un espacio normal aquí, el test falla enseñando dos cadenas que **se ven
+     * idénticas** — que es exactamente lo que pasó al escribirlo.
+     *
+     * ⚠️ **Y va como escape, no como el carácter.** Escrito tal cual es un
+     * espacio invisible dentro del código: el lint lo marca con razón
+     * (`no-irregular-whitespace`), porque quien lo lea después no tiene forma de
+     * saber que ahí hay algo distinto de un espacio normal.
+     */
+    expect(msg).toBe(
+      'Hola Marius Ionescu, te contacto de Velto Mobility en relación a tu solicitud ' +
+        'del alquiler del coche Renault Clio · 3 días · 188,76\u00a0€ (IVA incluido). ' +
+        '¿Deseas finalizar la reserva?'
+    );
+  });
+
+  it('lleva el coche, los días y el precio que vio', () => {
+    expect(msg).toContain('Renault Clio');
+    expect(msg).toContain('3 días');
+    expect(msg).toContain('188,76');
+  });
+
+  /**
+   * ⚠️ **La referencia NO va dentro, y es deliberado.** Un código no le dice
+   * nada a quien recibe el mensaje; el coche, los días y el precio sí, y son lo
+   * que vio en la web. La referencia vive en la ficha, para el operador.
+   */
+  it('no lleva la referencia, que no significa nada para el cliente', () => {
+    expect(msg).not.toContain('P-4K7M9X');
+  });
+
+  it('NO promete el coche', () => {
+    // La web dijo que no queda reservado. «¿Deseas finalizar la reserva?» dice
+    // lo mismo: que todavía no la hay. Contradecirlo por WhatsApp es peor que
+    // no escribir, porque el cliente se queda con lo último que leyó.
+    expect(msg).not.toMatch(/te lo guardo|reservado para ti|apartado para ti|te lo reservo/i);
+  });
+
+  it('y el enlace lo lleva codificado', () => {
+    const enlace = whatsappLink(solicitud(), msg);
+    expect(enlace.startsWith('https://wa.me/34612345678?text=')).toBe(true);
+    expect(decodeURIComponent(enlace.split('text=')[1])).toBe(msg);
+  });
+
+  /**
+   * ⚠️ **Lo que se manda es lo EDITADO, no el borrador.** Es toda la razón de
+   * que `whatsappLink()` reciba el texto en vez de componerlo: componiéndolo,
+   * el operador reescribiría el mensaje y saldría el de siempre — y no se
+   * enteraría hasta verlo en el chat del cliente.
+   */
+  it('el enlace manda lo que el operador escribió, no el borrador', () => {
+    const suyo = 'Hola María, soy Dorel de VELTO. ¿Te viene bien que te llame ahora?';
+    const enlace = whatsappLink(solicitud(), suyo);
+    expect(decodeURIComponent(enlace.split('text=')[1])).toBe(suyo);
+    expect(enlace).not.toContain('P-4K7M9X');
+  });
+
+  it('un día no se escribe «1 días»', () => {
+    const uno = whatsappMessage(
+      solicitud({ quoteSnapshot: { totalDays: 1, net: 52, gross: 62.92, vatRate: 0.21, currency: 'EUR' } }),
+      'VELTO MOBILITY'
+    );
+    expect(uno).toContain('1 día ');
+    expect(uno).not.toContain('1 días');
+  });
+});
+
+describe('telLink', () => {
+  it('lleva el + que el teléfono guardado no tiene', () => {
+    // Se guarda sin `+` porque es lo que `wa.me` necesita; un `tel:` sin él
+    // marca un número nacional equivocado desde el extranjero.
+    expect(telLink(solicitud())).toBe('tel:+34612345678');
+  });
+});
+
+describe('la lista', () => {
+  it('cuenta las que están sin atender', () => {
+    expect(
+      newCount([
+        solicitud({ status: 'new' }),
+        solicitud({ status: 'new' }),
+        solicitud({ status: 'contacted' }),
+        solicitud({ status: 'converted' })
+      ])
+    ).toBe(2);
+  });
+
+  it('LO SIN ATENDER VA PRIMERO, aunque sea más viejo', () => {
+    // Ordenando solo por fecha, la que lleva dos días sin contestar queda
+    // debajo de las convertidas de hoy, que ya no son trabajo.
+    const vieja = solicitud({ reference: 'VIEJA', status: 'new', createdAt: new Date('2026-09-26') });
+    const nueva = solicitud({ reference: 'HECHA', status: 'converted', createdAt: new Date('2026-09-28') });
+    expect(sortRequests([nueva, vieja]).map((r) => r.reference)).toEqual(['VIEJA', 'HECHA']);
+  });
+
+  it('y dentro del mismo estado, lo más reciente primero', () => {
+    const a = solicitud({ reference: 'A', createdAt: new Date('2026-09-27') });
+    const b = solicitud({ reference: 'B', createdAt: new Date('2026-09-28') });
+    expect(sortRequests([a, b]).map((r) => r.reference)).toEqual(['B', 'A']);
+  });
+
+  it('no muta la lista que recibe', () => {
+    const original = [solicitud({ reference: 'A', status: 'converted' }), solicitud({ reference: 'B' })];
+    sortRequests(original);
+    expect(original.map((r) => r.reference)).toEqual(['A', 'B']);
+  });
+});
+
+describe('qué se puede hacer con cada solicitud', () => {
+  /**
+   * ⚠️ **UNA CONVERTIDA NO SE CONVIERTE DOS VECES.** Sin esto, dos clics
+   * seguidos —o dos pestañas abiertas— crearían dos reservas del mismo coche
+   * para las mismas fechas, y la segunda bloquearía un coche que nadie pidió.
+   */
+  it('convertir: todo menos lo ya convertido o descartado', () => {
+    expect(canConvert(solicitud({ status: 'new' }))).toBe(true);
+    expect(canConvert(solicitud({ status: 'contacted' }))).toBe(true);
+    expect(canConvert(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canConvert(solicitud({ status: 'discarded' }))).toBe(false);
+  });
+
+  /**
+   * ⚠️ **Volver a descartar una descartada APLAZA el borrado**, y por eso no se
+   * puede. `marcar()` reescribe `handledAt`, que es el sello desde el que
+   * cuenta `keepHours`: cada pulsación regala otras 24 h de conservación al
+   * nombre y al teléfono de alguien a quien ya se decidió no atender.
+   */
+  it('descartar: ni lo convertido ni lo YA descartado', () => {
+    expect(canDiscard(solicitud({ status: 'new' }))).toBe(true);
+    expect(canDiscard(solicitud({ status: 'contacted' }))).toBe(true);
+    expect(canDiscard(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canDiscard(solicitud({ status: 'discarded' }))).toBe(false);
+  });
+
+  /** Por lo mismo: marcar dos veces contactada movería el reloj otra vez. */
+  it('marcar contactada: solo lo que está sin contestar', () => {
+    expect(canMarkContacted(solicitud({ status: 'new' }))).toBe(true);
+    expect(canMarkContacted(solicitud({ status: 'contacted' }))).toBe(false);
+    expect(canMarkContacted(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canMarkContacted(solicitud({ status: 'discarded' }))).toBe(false);
+  });
+});
+
+describe('la hora que nadie dijo', () => {
+  /**
+   * ⚠️ **Este es el test que importa.** Lo guardado es la ventana de
+   * disponibilidad —00:00 y 23:59:59.999—, y llevarla tal cual al asistente
+   * daba una recogida a medianoche y una devolución a las 23:59. Ninguna de las
+   * dos es una hora a la que se entregue un coche.
+   */
+  it('convierte la ventana de días completos en dos mediodías', () => {
+    const r = solicitud({
+      pickupDate: new Date(2026, 10, 2, 0, 0, 0, 0),
+      returnDate: new Date(2026, 10, 9, 23, 59, 59, 999)
+    });
+    const recogida = requestPickupAt(r)!;
+    const devolucion = requestReturnAt(r)!;
+
+    expect(recogida.getDate()).toBe(2);
+    expect(recogida.getHours()).toBe(12);
+    expect(devolucion.getDate()).toBe(9);
+    expect(devolucion.getHours()).toBe(12);
+  });
+
+  /**
+   * ⚠️ **El test que faltaba, y el que de verdad importa.** El de arriba usa
+   * las 23:59:59.999, que es lo que decía el comentario del util — pero NO es
+   * lo que escribe el backend. `widenToFullDays()` corre en una Cloud Function
+   * (UTC), suma un día y lo deja a medianoche, así que lo que hay en Firestore
+   * es el **inicio del día siguiente**: una solicitud del 4 al 7 se guarda con
+   * `returnDate = 2026-10-08T00:00:00Z`.
+   *
+   * Leerlo como inclusivo abría el asistente con cuatro días en vez de tres,
+   * contradiciendo el «3 días · 187,95 €» de la misma ficha. Comprobado contra
+   * las 18 solicitudes reales de desarrollo: las 18 tenían esta forma.
+   */
+  it('el fin de la ventana es EXCLUSIVO: medianoche UTC del día siguiente es el día anterior', () => {
+    const r = solicitud({
+      pickupDate: new Date('2026-10-04T00:00:00Z'),
+      returnDate: new Date('2026-10-08T00:00:00Z')
+    });
+
+    const recogida = requestPickupAt(r)!;
+    const devolucion = requestReturnAt(r)!;
+
+    expect(recogida.getDate()).toBe(4);
+    expect(recogida.getHours()).toBe(12);
+    // El 7, no el 8: el cliente pidió del 4 al 7.
+    expect(devolucion.getDate()).toBe(7);
+    expect(devolucion.getHours()).toBe(12);
+    expect(devolucion.getMinutes()).toBe(0);
+  });
+
+  it('y así la duración propuesta es la que se le cobró', () => {
+    const r = solicitud({
+      pickupDate: new Date('2026-10-04T00:00:00Z'),
+      returnDate: new Date('2026-10-08T00:00:00Z')
+    });
+    const dias = Math.round(
+      (requestReturnAt(r)!.getTime() - requestPickupAt(r)!.getTime()) / 86400000
+    );
+    expect(dias).toBe(3);
+  });
+
+  it('y NO arrastra los milisegundos del final del día', () => {
+    // 23:59:59.999 con `setHours(12)` deja el `.999` dentro, y eso viaja al
+    // campo del asistente.
+    const r = solicitud({ returnDate: new Date(2026, 10, 9, 23, 59, 59, 999) });
+    const d = requestReturnAt(r)!;
+    expect(d.getMinutes()).toBe(0);
+    expect(d.getSeconds()).toBe(0);
+    expect(d.getMilliseconds()).toBe(0);
+  });
+
+  it('el día no se mueve, que es lo que una conversión a UTC sí haría', () => {
+    const r = solicitud({ pickupDate: new Date(2026, 0, 1, 0, 0, 0, 0) });
+    const d = requestPickupAt(r)!;
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(0);
+    expect(d.getDate()).toBe(1);
+  });
+
+  it('sin fecha guardada contesta null, no la de hoy', () => {
+    expect(requestPickupAt(solicitud({ pickupDate: undefined }))).toBeNull();
+    expect(requestReturnAt(solicitud({ returnDate: undefined }))).toBeNull();
+  });
+});
+
+describe('ampliar el precio garantizado', () => {
+  const ahora = new Date('2026-09-29T10:00:00');
+
+  it('lo que sigue en pie se amplía desde la fecha PROMETIDA', () => {
+    // Al cliente se le dijo una fecha: ampliar no puede recortarla.
+    const vigente = new Date('2026-09-30T18:00:00');
+    expect(extendedGuaranteeUntil(vigente, 24, ahora).toISOString()).toBe(
+      new Date('2026-10-01T18:00:00').toISOString()
+    );
+  });
+
+  it('LO CADUCADO SE AMPLÍA DESDE AHORA, o el botón no haría nada', () => {
+    // Sumando sobre lo vencido, 24 h dejarían la promesa todavía en el pasado:
+    // el operador pulsa, el aviso sigue diciendo «caducado» y parece roto.
+    const vencido = new Date('2026-09-25T10:00:00');
+    const resultado = extendedGuaranteeUntil(vencido, 24, ahora);
+    expect(resultado.getTime()).toBeGreaterThan(ahora.getTime());
+    expect(resultado.toISOString()).toBe(new Date('2026-09-30T10:00:00').toISOString());
+  });
+
+  it('sin fecha ninguna, también desde ahora', () => {
+    expect(extendedGuaranteeUntil(null, 24, ahora).toISOString()).toBe(
+      new Date('2026-09-30T10:00:00').toISOString()
+    );
+  });
+
+  it('dos ampliaciones seguidas suman, que es cómo se llega a los dos días', () => {
+    const una = extendedGuaranteeUntil(new Date('2026-09-30T10:00:00'), 24, ahora);
+    const dos = extendedGuaranteeUntil(una, 24, ahora);
+    expect(dos.toISOString()).toBe(new Date('2026-10-02T10:00:00').toISOString());
+  });
+
+  it('solo se amplía lo que espera respuesta', () => {
+    expect(canExtendGuarantee(solicitud({ status: 'new' }))).toBe(true);
+    expect(canExtendGuarantee(solicitud({ status: 'contacted' }))).toBe(true);
+    // Una convertida ya tiene su precio congelado en la reserva, y una
+    // descartada no espera nada: prometerles algo es prometer al vacío.
+    expect(canExtendGuarantee(solicitud({ status: 'converted' }))).toBe(false);
+    expect(canExtendGuarantee(solicitud({ status: 'discarded' }))).toBe(false);
+  });
+});
+
+describe('formatPhone', () => {
+  it('separa el español en tres grupos, que es como se dicta', () => {
+    expect(formatPhone('34600111222')).toBe('+34 600 111 222');
+  });
+
+  it('también un fijo, que empieza por 9', () => {
+    expect(formatPhone('34911234567')).toBe('+34 911 234 567');
+  });
+
+  it('LO EXTRANJERO SE DEJA ENTERO', () => {
+    // Partirlo con la regla española haría que un número correcto se leyera
+    // como si estuviera mal escrito. Cada país agrupa a su manera.
+    expect(formatPhone('40721234567')).toBe('+40721234567');
+    expect(formatPhone('447700900123')).toBe('+447700900123');
+  });
+
+  it('y el número que guarda la web sigue siendo el que marca el enlace', () => {
+    // El formato es para leer; `tel:` y `wa.me` necesitan los dígitos pelados.
+    const r = solicitud({ phone: '34600111222' });
+    expect(telLink(r)).toBe('tel:+34600111222');
+    expect(formatPhone(r.phone)).toBe('+34 600 111 222');
+  });
+});

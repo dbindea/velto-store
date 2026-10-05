@@ -734,6 +734,81 @@
           </div>
         </div>
 
+        <!--
+          Lo que ve el cliente en la web.
+          ⚠️ Va en su propia sección y no mezclado con el equipamiento porque
+          **estos tres campos salen de la oficina**: lo que se escriba aquí lo
+          lee quien está decidiendo si alquila. La nota interna sigue siendo
+          «Descripción», en Datos básicos, y no sale nunca.
+        -->
+        <div class="form-section">
+          <h2 class="section-title">{{ 'vehicles.sections.publicInfo' | translate }}</h2>
+          <p class="section-hint">{{ 'vehicles.publicInfo.hint' | translate }}</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="environmentalLabel">
+                {{ 'vehicles.fields.environmentalLabel' | translate }}
+              </label>
+              <select
+                id="environmentalLabel"
+                [(ngModel)]="formData.environmentalLabel"
+                name="environmentalLabel"
+                (change)="onFieldChange()"
+                class="form-control"
+              >
+                <!-- Vacío es «no consta», y no es lo mismo que «sin etiqueta»:
+                     ver la nota del modelo. -->
+                <option [ngValue]="undefined">
+                  {{ 'vehicles.environmentalLabel.none' | translate }}
+                </option>
+                @for (et of environmentalLabels; track et) {
+                  <option [ngValue]="et">{{ environmentalLabelText(et) }}</option>
+                }
+              </select>
+              @if (formData.environmentalLabel) {
+                <p class="field-hint dgt-hint">
+                  <app-dgt-label [label]="formData.environmentalLabel" [size]="26" />
+                  {{ environmentalLabelHint(formData.environmentalLabel) | translate }}
+                </p>
+              }
+            </div>
+            <div class="form-group">
+              <label for="publicHighlight">
+                {{ 'vehicles.fields.publicHighlight' | translate }}
+              </label>
+              <input
+                id="publicHighlight"
+                type="text"
+                [(ngModel)]="formData.publicHighlight"
+                name="publicHighlight"
+                (change)="onFieldChange()"
+                maxlength="90"
+                class="form-control"
+                [placeholder]="'vehicles.publicInfo.highlightPlaceholder' | translate"
+              />
+              <p class="field-hint">{{ 'vehicles.publicInfo.highlightHint' | translate }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="publicDescription">
+              {{ 'vehicles.fields.publicDescription' | translate }}
+            </label>
+            <textarea
+              id="publicDescription"
+              [(ngModel)]="formData.publicDescription"
+              name="publicDescription"
+              (change)="onFieldChange()"
+              rows="3"
+              maxlength="400"
+              class="form-control"
+              [placeholder]="'vehicles.publicInfo.descriptionPlaceholder' | translate"
+            ></textarea>
+            <p class="field-hint">{{ 'vehicles.publicInfo.descriptionHint' | translate }}</p>
+          </div>
+        </div>
+
         <!-- Section E: Photos (Edit mode only) -->
         @if (isEditMode && vehicleId) {
           <div class="form-section">

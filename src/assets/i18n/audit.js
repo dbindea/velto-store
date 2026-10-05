@@ -130,11 +130,30 @@ const DYNAMIC_KEY_SETS = {
   'settings.themes.': ['light', 'dark', 'forest', 'ocean'],
   // reservation.model.ts › ReservationStatus
   'reservations.status.': ['reserved', 'confirmed', 'delivered', 'returned', 'closed', 'cancelled'],
+  // booking-requests.component.ts › Filtro. Son los cuatro estados de
+  // BookingRequestStatus más los dos agregados de la pantalla: `open` —lo que
+  // sigue sin cerrar, que es como se abre— y `all`.
+  'bookingRequests.filters.': [
+    'open',
+    'new',
+    'contacted',
+    'converted',
+    'discarded',
+    'all'
+  ],
   // reservation-create.component.ts › Step
   'reservations.steps.': ['dates', 'vehicle', 'client', 'summary'],
   // calendar.component.ts › dayRole(): qué pasa ese día con la reserva. La
   // plantilla compone 'calendar.dayRole.' + dayRole(r).
   'calendar.dayRole.': ['pickup', 'return', 'ongoing'],
+  // payment.model.ts › PaymentStatus. Lo compone la ficha de una solicitud de
+  // la web para pintar el estado del cobro de la señal.
+  //
+  // ⚠️ **Los SEIS, no los dos que se ven el primer día.** Si un día aparece un
+  // `refunded` y su clave no existe, el operador lee «payments.status.refunded»
+  // en crudo — `translate()` devuelve la clave cuando no la encuentra y no hay
+  // respaldo a español.
+  'payments.status.': ['pending', 'paid', 'partial', 'failed', 'cancelled', 'refunded'],
   // payment-groups.util.ts › PaymentGroupKey. Los bloques en los que la ficha
   // de la reserva reparte sus filas de cobro; `groupLabel()` compone la clave.
   'reservations.money.groups.': ['rental', 'services', 'extras', 'deposit', 'other'],

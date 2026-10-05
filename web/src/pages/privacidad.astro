@@ -1,0 +1,213 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+{/*
+  ⚠️ **La sección de cookies dice que no hay cookies, y eso está COMPROBADO**,
+  no supuesto: un `grep` sobre todo `web/src` el 30 de septiembre de 2026 no
+  encontró ni analítica, ni `gtag`, ni píxeles, ni tipografías servidas desde
+  fuera, ni mapas incrustados. Lo único que se guarda es `velto-tema` en
+  `localStorage`, la preferencia de tema que elige el visitante.
+
+  El art. 22.2 de la LSSI y la Guía de cookies de la AEPD dejan exento de
+  consentimiento lo que sirve exclusivamente para recordar una preferencia
+  elegida por el usuario. O sea que **no hace falta banner**.
+
+  ⚠️ **Y eso se rompe con una línea.** Tres cosas lo tumban el mismo día que se
+  añadan: un mapa de Google incrustado, un vídeo de YouTube, o tipografías desde
+  `fonts.googleapis.com`. Si alguna entra, esta página pasa a ser falsa y hace
+  falta banner de verdad. Por eso el mapa de Contacto es un ENLACE y no un
+  `<iframe>`.
+
+  ⚠️ **El 5 de octubre de 2026 entró MEDICIÓN DE VISITAS, y por eso la lista de
+  arriba ya no la nombra.** Aquí decía «analítica de cualquier tipo» como cuarta
+  cosa que obliga a poner banner, y ese «de cualquier tipo» era demasiado
+  grueso: lo que obliga a pedir consentimiento es **almacenar o leer algo en el
+  terminal** (art. 22.2 LSSI). La medición que se añadió no guarda nada en el
+  navegador —la identidad del visitante la calcula el servidor con una huella de
+  IP y agente, y la sal rota cada día—, así que sigue sin hacer falta banner.
+  Ver `functions/src/public/analitica-core.ts`.
+
+  ⚠️ **Lo que sí cambió es que ahora hay tratamiento de la IP**, y eso tiene que
+  estar declarado: la sección «Cuántas visitas tiene esta web» es obligatoria, no
+  cortesía. Si algún día la medición pasa a usar una cookie o cualquier
+  identificador persistente, vuelve a hacer falta banner y esta página vuelve a
+  cambiar.
+
+  ⚠️ **Y esto lo ha escrito un programador, no un abogado.**
+*/}
+<Base
+  titulo="Privacidad y cookies | Velto"
+  descripcion="Qué datos pedimos, para qué, cuánto los guardamos y cómo ejercer tus derechos. Y por qué esta web no usa cookies."
+  ruta="/privacidad"
+>
+  <section class="seccion">
+    <div class="contenedor texto">
+      <p class="overline">Privacidad</p>
+      <h1>Qué hacemos con tus datos</h1>
+      <p class="entrada">
+        Lo corto: pedimos lo justo para poder llamarte y para poder alquilarte un
+        coche. No vendemos datos a nadie y esta web no lleva cookies.
+      </p>
+
+      <h2 id="responsable">Quién trata tus datos</h2>
+      <p>
+        {EMPRESA.razonSocial} NIF {EMPRESA.nif}, con domicilio en
+        {' '}{EMPRESA.domicilioSocial}. Puedes escribirnos a
+        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> para
+        cualquier cosa relacionada con esta página.
+      </p>
+
+      <h2 id="que-pedimos">Qué pedimos y para qué</h2>
+
+      {/*
+        ⚠️ **Esta frase se toca el mismo día que el formulario.** Decía «tu
+        nombre, tu teléfono y lo que nos cuentes», y el 1 de octubre de 2026 la
+        pre-reserva pasó a aceptar un correo opcional para mandar el
+        presupuesto: una política que enumera datos es una afirmación
+        contrastable contra lo que de verdad se guarda en `bookingRequests`.
+      */}
+      <h3>Si dejas una solicitud o escribes por el formulario</h3>
+      <p>
+        Tu nombre, tu teléfono y lo que nos cuentes. Si haces una pre-reserva
+        puedes dejarnos además un <strong>correo</strong>, que es opcional y
+        solo sirve para mandarte el presupuesto. Lo usamos para contestarte, y
+        para nada más. La base legal es tu propia petición: nos escribes para
+        que te contestemos (art. 6.1.b del RGPD, medidas precontractuales).
+      </p>
+
+      <h3>Si acabas alquilando</h3>
+      <p>
+        Entonces hacen falta más datos, porque el alquiler lo exige: nombre y
+        apellidos, documento de identidad, permiso de conducir y domicilio. Van
+        al contrato, que es lo que permite entregar un coche a una persona
+        identificada, y a la factura si la pides. La base legal es el contrato y,
+        en lo fiscal, nuestras obligaciones legales.
+      </p>
+
+      <h2 id="cuanto">Cuánto tiempo los guardamos</h2>
+      <ul>
+        <li>
+          <strong>Mensajes del formulario de contacto:</strong> se borran solos
+          a las <strong>24 horas</strong>. Lo que hacemos mientras tanto es
+          llamarte; si hace falta seguir hablando después, lo que se conserva es
+          el correo que nos hayamos cruzado, no el formulario.
+        </li>
+        <li>
+          <strong>Solicitudes de reserva que no acaban en alquiler:</strong> se
+          borran solas poco después de atenderlas, en el barrido de la mañana
+          siguiente. Y si no llegamos a atenderla, se borra igual a los
+          <strong>tres días</strong> de haberla dejado.
+        </li>
+        <li>
+          <strong>Contratos y facturas:</strong> el tiempo que obliga la ley
+          —seis años en lo mercantil y cuatro en lo fiscal, contados desde el
+          último apunte—, porque son documentos que hay que poder enseñar.
+        </li>
+      </ul>
+      <p class="nota">
+        El borrado es automático y corre una vez al día por la mañana, así que
+        entre que se cumplen las 24 horas y el mensaje desaparece pueden pasar
+        unas horas más.
+      </p>
+
+      <h2 id="quien-mas">Quién más los ve</h2>
+      <p>
+        Nadie que no haga falta. Los datos se guardan en los servidores de
+        <strong> Google Cloud (Firebase)</strong> en la Unión Europea, y los
+        correos que te enviamos salen por <strong>Resend</strong>. Los dos son
+        proveedores nuestros y tratan los datos siguiendo nuestras instrucciones.
+      </p>
+      <p>
+        Fuera de eso, solo se ceden datos cuando la ley obliga: a la Agencia
+        Tributaria en las facturas, o a las autoridades si lo piden en un
+        procedimiento.
+      </p>
+
+      <h2 id="derechos">Tus derechos</h2>
+      <p>
+        Puedes pedirnos acceder a tus datos, corregirlos, borrarlos, limitarlos,
+        oponerte a que los tratemos o llevártelos. Se pide escribiendo a
+        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> desde la
+        dirección que nos diste, o presentándote en la oficina con tu documento
+        de identidad. Contestamos en un mes.
+      </p>
+      <p>
+        Si crees que no lo hemos hecho bien, puedes reclamar ante la
+        {' '}<a href="https://www.aepd.es" rel="noopener">Agencia Española de
+        Protección de Datos</a>.
+      </p>
+
+      {/*
+        ⚠️ Esta sección es el destino del enlace «Cookies» del pie. La URL
+        `/privacidad#cookies` está enlazada desde todas las páginas: si se
+        renombra el `id`, el pie apunta al vacío y nadie se entera.
+      */}
+      <h2 id="cookies">Cookies</h2>
+      <p>
+        <strong>Esta web no usa cookies.</strong> Ni propias ni de terceros: no
+        hay píxeles de publicidad, ni botones de redes sociales, ni mapas ni
+        vídeos incrustados. Las tipografías se sirven desde este mismo dominio.
+      </p>
+      <p>
+        Lo único que se guarda en tu navegador es una preferencia:
+        {' '}<code>velto-tema</code>, con el valor <code>claro</code> u
+        {' '}<code>oscuro</code>, para que la web se abra como la dejaste. Se
+        guarda en el almacenamiento local de tu propio navegador, no viaja a
+        ningún servidor y no sirve para identificarte ni para seguirte. La
+        eliminas borrando los datos del sitio desde tu navegador.
+      </p>
+      <p>
+        Por eso <strong>no verás un aviso de cookies aquí</strong>: recordar una
+        preferencia que has elegido tú está exento de consentimiento según el
+        art. 22.2 de la LSSI y la Guía de cookies de la Agencia Española de
+        Protección de Datos.
+      </p>
+
+      <h2 id="medicion">Cuántas visitas tiene esta web</h2>
+      <p>
+        Contamos cuánta gente entra y qué páginas mira, para saber si la web
+        sirve para algo. <strong>No se guarda nada en tu navegador</strong> para
+        hacerlo: ni cookie, ni identificador, ni nada que quede ahí después de
+        cerrarla. Por eso tampoco hay aviso que aceptar.
+      </p>
+      <p>
+        Lo que se hace es esto: al cargar una página, nuestro servidor calcula
+        una huella con tu dirección IP y el nombre de tu navegador, y guarda
+        <strong> solo esa huella</strong>, nunca la IP. La fórmula con la que se
+        calcula <strong>cambia cada día</strong>, así que la huella de hoy y la
+        de mañana no se parecen: ni nosotros podemos saber que eres la misma
+        persona que entró ayer. No sabemos quién eres, ni te seguimos entre
+        días, ni cruzamos esto con nada.
+      </p>
+      <p>
+        Lo que queda guardado son contadores por día —cuántas visitas, qué
+        páginas, cuántos llegaron a pedir precio— que no identifican a nadie. La
+        base legal es nuestro interés legítimo en saber si el escaparate
+        funciona (art. 6.1.f del RGPD), y puedes oponerte escribiéndonos. Si tu
+        navegador manda la señal «no rastrear», no te contamos.
+      </p>
+
+      <h2 id="menores">Menores</h2>
+      <p>
+        Esta web no va dirigida a menores de edad, y para alquilar hace falta
+        tener 21 años cumplidos y carné en vigor.
+      </p>
+
+      <p class="nota">
+        Última actualización: 30 de septiembre de 2026.
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .texto code {
+    font-family: var(--font-num);
+    font-size: 0.9em;
+    padding: 0.1em 0.35em;
+    background: var(--bg-input);
+    border-radius: var(--r-xs);
+  }
+</style>

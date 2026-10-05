@@ -350,3 +350,30 @@
     flex-basis: 100%;
   }
 }
+
+/*
+ * Visitas de la web.
+ *
+ * ⚠️ Las tarjetas reutilizan `.tile` de esta misma pantalla a propósito: es la
+ * misma idea —un número grande con su rótulo— y declarar otra clase igual es
+ * como se acaba con cinco `.badge` distintas.
+ */
+.web-visits__tiles { margin-bottom: 1.5rem; }
+
+/*
+ * La nota bajo la cifra. Pequeña y apagada, pero NO escondida: en «Visitantes»
+ * es lo que impide leer la suma como personas distintas.
+ */
+.tile-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.subcard-title {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}

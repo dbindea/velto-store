@@ -15,6 +15,175 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 3 de octubre de 2026 — el repaso del ciclo entero con el navegador
+
+Recorrido completo de las dos caras —web pública y backoffice— simulando el
+viaje del cliente de principio a fin: buscar, elegir coche, pre-reservar,
+recibir el presupuesto, y por el otro lado atender la solicitud y convertirla
+en reserva. Lo corregido va en cuatro commits (`037485d`, `6f8d6a4`, `7dac85e`,
+`dfe2de2`); aquí queda **lo que no se tocó y por qué**.
+
+### ⬜ N-38 · Asignar un cobro libre a una reserva — HOY NO SE PUEDE
+
+Dorel preguntó el 3 de octubre de 2026 si un cobro libre de un importe
+cualquiera se puede asignar después a una reserva con su concepto. **No existe.**
+No hay pantalla, ni servicio, ni método: `createManualPayment()` escribe el
+`reservationId` al crear y nadie lo cambia nunca.
+
+⚠️ **Y no es un hueco teórico: lo necesita un flujo que ya está en marcha.** El
+código lo da por hecho **en dos sitios**, con estas palabras:
+
+- `booking-requests.component.ts`: «Ese cobro va a vivir suelto en la lista de
+  Pagos **hasta que se asigne a una reserva**».
+- `booking-request.model.ts`: «El cobro nace suelto y **se asigna después, al
+  crear la reserva**».
+
+Pero el asistente de creación lee `fromRequest`, llama a `markConverted()` y
+**no toca `signalPaymentId`**; el servicio de reservas no sabe nada de
+`bookingRequestId`. O sea que es el patrón de la casa: escrito y nunca recorrido
+hasta el final.
+
+**La consecuencia, en el caso real:** el cliente paga 50 € de señal desde el
+enlace de la pre-reserva, el operador convierte la solicitud en reserva, y
+`commitReservationWithPayments()` siembra su propia fila de señal **pendiente**.
+Resultado: el cliente ha pagado y la reserva dice que debe 50 €. El dinero queda
+en un cobro libre que no cuenta para `remainingPaid`, así que la reserva no se
+puede cerrar bien.
+
+Qué hay que decidir antes de construirlo:
+
+- **¿Se asigna sola al convertir, o a mano?** Automática resuelve el caso real
+  sin que nadie se acuerde; a mano cubre además el cobro libre que no venía de
+  una solicitud.
+- **Qué pasa con la fila sembrada.** Lo coherente es que la señal de la reserva
+  nazca ya cobrada con ese dinero, no que convivan dos apuntes de 50 €.
+- **El concepto se reescribe o se conserva.** Hoy dice «Señal de la pre-reserva
+  P-XXXX», que es informativo y conviene no perder.
+- ⚠️ **Y mueve dinero entre libros**: un cobro que pasa de libre a una reserva
+  cambia lo que esa reserva dice deber. Va con la misma prudencia que las
+  devoluciones.
+
+### ✅ M-51 · Un cobro DENEGADO deja el enlace de pago muerto *(hecho el 3 oct 2026)*
+
+`getPaymentCheckout` manda a `state: 'unavailable'` todo pago con
+`status === 'failed'`, así que al cliente al que le deniegan la tarjeta le sale
+«Pago no disponible. Ponte en contacto con nosotros» y **el enlace de WhatsApp
+ya no le sirve**. No puede reintentar con otra tarjeta: tiene que llamar.
+
+⚠️ **La maquinaria para reintentar ya existe**: `resolveOrder()` sabe emitir un
+pedido nuevo cuando el anterior ya recibió aviso —justo el caso de una
+denegación, que si no la pasarela rechaza con `SIS0051`—, y el webhook ya
+distingue que *«una denegación de un pedido superado no marca el pago como
+fallido, porque el cliente pudo ser rechazado con una tarjeta y estar pagando
+con otra»*. Es decir: el sistema ya entiende que una denegación no es el final,
+y esta pantalla no.
+
+**Corregido el 3 de octubre de 2026** con el visto bueno de Dorel —«se debe
+poder reintentar realizar el pago, claro que sí»—. No hizo falta tocar nada más
+que esta pantalla: el resto ya lo contemplaba. Probado de punta a punta
+desplegando la function a desarrollo: el cobro que decía «Pago no disponible»
+ofrece ahora «Pagar con tarjeta · 50,00 €».
+
+### ⬜ M-52 · La pestaña activa es el texto menos legible de la pantalla
+
+En **Pagos y tema claro**, la pestaña de filtro seleccionada mide **2,53:1**:
+turquesa de marca sobre un tinte del mismo turquesa al 8 %, que oscurece el
+fondo y empeora el contraste en vez de mejorarlo. Está por debajo incluso de la
+concesión de marca ya aceptada (3,10 del turquesa sobre blanco). En tema oscuro
+la misma pestaña mide **4,92** y está bien.
+
+Es al revés de lo que debería: la pestaña activa es la que dice qué estás
+mirando. **No se ha tocado** porque cambiar la tinta de marca es decisión de
+Dorel; el precedente de cómo se resuelve está en `--warning-on`, que existe
+exactamente para esto —cuando un color de marca y su acompañante tienen que
+cambiar juntos según el tema—.
+
+### ⬜ M-53 · El tamaño del logo lo decide cada pantalla
+
+Corregido el síntoma —las tres pantallas de cliente ya miden 160×44 como la web
+pública— pero no la causa: `<app-brand-logo>` centraliza el dibujo y la tinta, y
+**deja el tamaño al que lo usa**, así que hay cinco declaraciones sueltas (tres
+iguales, dos distintas). Es el mismo patrón que ya obligó a hacer globales
+`.form-control`, `.btn-*`, `.checkbox-item`, `.detail-card` y `.badge`: la sexta
+pantalla inventará un sexto tamaño. La forma en idioma de la casa sería un
+`size` en el componente.
+
+### ⬜ M-54 · El campo trampa del formulario no está oculto para un lector de pantalla
+
+El *honeypot* de la pre-reserva está bien resuelto —fuera de pantalla,
+`tabindex="-1"`, `autocomplete="off"` y con el rótulo «No rellenar»— pero le
+falta `aria-hidden="true"`. Un lector de pantalla en modo lectura lo encuentra;
+si alguien lo rellena, su solicitud se descarta **en silencio**. El rótulo lo
+mitiga, por eso es menor.
+
+### Lo que se comprobó y estaba bien
+
+Conviene decirlo para no volver a mirarlo:
+
+- **La web pública no desborda** a 390 ni a 1280 px en sus 13 páginas, sin
+  imágenes rotas, sin `alt` ausentes, un solo `h1` por página y todas con título
+  y descripción.
+- **El «IVA incluido» de la web es cierto.** El API devuelve `net` y `gross` y
+  la web pinta el bruto — que además es lo que la ley exige en precio al
+  consumidor. No es el caso de F-36.
+- **Las fotos de coche se sirven bien**, con `<picture>`, `srcset` de 400/800/
+  1600 y `object-fit: cover`. El `0x0` que aparece al medir es carga perezosa
+  sin disparar, no una imagen rota.
+- **El ciclo público entero funciona**: pre-reserva → `200` con referencia,
+  precio garantizado 24 h, PDF servido por el enlace corto y correo enviado.
+- **El calendario y Solicitudes no se rompen** con la reserva sin snapshot que
+  sí tumbaba la lista de Reservas: resuelven el hueco con «—».
+
+---
+
+## Estado a 30 de septiembre de 2026 — la web pública, y lo que deja abierto
+
+Del 25 al 30 de septiembre el trabajo se fue a `web/`, que pasó de esqueleto a
+diez páginas. Lo hecho está en [traspaso-sesion.md](traspaso-sesion.md)
+**§ 2 octies**; aquí va solo lo que **queda abierto**, que es para lo que sirve
+este documento.
+
+### ⬜ N-37 · Publicar la web — y no es un despliegue, son tres cosas
+
+- [x] **Las dos Cloud Functions, subidas** el 30 de septiembre de 2026:
+  `createContactRequest` a desarrollo (yo) y a producción (Dorel), más
+  `createBookingRequest`, las tres públicas de lectura —que llevan el redondeo a
+  `,95`— y `sendDailyDigest` con el barrido de 24 h. Medido por **nombres contra
+  el manifiesto**, no a ojo: desarrollo **36 de 36**, producción **31**, y las
+  cinco que le faltan son las de la AEAT, que no van hasta el 1 de enero.
+  Probados de punta a punta por el rewrite de desarrollo: `/api/contacto`
+  devuelve `200` con su referencia y `/api/solicitud` un `400` en JSON.
+- [ ] **Los dos rewrites, en producción.** `/api/solicitud` y `/api/contacto`
+  viajan con el **hosting del target `web`**, que publica el CI al hacer merge a
+  `master`. Hasta ese merge, los formularios de la web de producción darían un
+  fallo de red — llega HTML donde se espera JSON. En desarrollo ya están.
+- [ ] **Seis datos de negocio sin decidir** —eran nueve—, en
+  [traspaso-sesion.md](traspaso-sesion.md) § 5: el punto de encuentro del
+  aeropuerto, la política de cancelación, la adhesión a una entidad de
+  resolución alternativa, la ficha de Google Business, los MX de
+  `veltomobility.com` y una revisión de abogado.
+  ⚠️ **Cerrados el 30 de septiembre de 2026 por Dorel:** las localidades
+  gratuitas (Arganda y Rivas, con el aeropuerto a tarifa y «Prefiero
+  especificar…» para todo lo demás), el **horario de la oficina** —con entrega
+  fuera de horario, sin precio— y **quién paga en un coche cedido**: el seguro,
+  la ITV y el mantenimiento son del propietario, en exclusiva.
+- [x] **La cláusula de jurisdicción, arreglada** el 30 de septiembre de 2026
+  (`7e33201`). Era **nula** por partida doble —art. 54.2 LEC en un contrato con
+  condiciones generales, y abusiva frente a un consumidor (art. 90.2 TRLGDCU)—
+  y estaba en **tres** sitios, no en uno: la cláusula 15 en los tres idiomas, el
+  resumen de `HIGHLIGHTS` —que lo decía **sin** la salvedad del consumidor, y es
+  el que se enseña en la pantalla pública de firma— y `/condiciones`.
+  ⚠️ **Escrito no es desplegado.** El contrato lo imprimen `generateContractPdf`,
+  `getContractForSigning` y `signContract`: desplegadas a **desarrollo** ese
+  mismo día, y **a producción van a mano**, en una tanda de tres.
+
+⚠️ **Y lo que la web afirma queda atado al código.** Un precio, un plazo de
+borrado o una cobertura escritos en una página son afirmaciones contrastables: si
+se toca `publicPrice()`, `CONSULTA_HORAS_POR_DEFECTO` o una cláusula, la página
+que lo cuenta se toca **el mismo día**.
+
+---
+
 ## Estado a 24 de septiembre de 2026 — doce commits y un repaso del flujo
 
 Sesión larga que tocó **el camino del dinero**. Lo hecho está en

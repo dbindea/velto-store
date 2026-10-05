@@ -1,0 +1,289 @@
+---
+/**
+ * El buscador de coches: lugar de recogida y las dos fechas.
+ *
+ * ⚠️ **Es UN componente porque sale en dos páginas y tiene que ser el mismo.**
+ * Vivía dentro de `index.astro` —marcado, estilos y lógica— y el 30 de
+ * septiembre de 2026 hubo que ponerlo también en la página de resultados, que
+ * hasta entonces tenía **su propio buscador de dos campos**: sin lugar de
+ * recogida, con otro fondo, otro botón y otra tipografía. O sea que quien
+ * buscaba en la portada y llegaba a los resultados se encontraba un formulario
+ * distinto del que acababa de usar, y al corregir las fechas perdía el lugar
+ * que había elegido. Copiarlo habría dado dos buscadores que divergen a la
+ * primera; esto da uno.
+ *
+ * ⚠️ **Los estilos tienen que vivir AQUÍ, no en la página.** Astro encapsula
+ * por fichero: una regla `.buscador` escrita en `index.astro` compila a
+ * `.buscador[data-astro-cid-de-la-pagina]` y **no alcanza** al formulario de un
+ * componente, que lleva el suyo. Es la misma trampa que dejó muerta la regla de
+ * `.coche__llamada` en la página de resultados.
+ *
+ * ⚠️ **Y la lista de zonas se estiliza en `global.css`**, no aquí: la monta
+ * `zonas-combo.ts` con `createElement`, así que esos nodos no llevan el
+ * atributo de encapsulación de nadie.
+ */
+import { ZONAS, ZONA_POR_DEFECTO } from '../lib/zonas';
+
+interface Props {
+  /**
+   * La portada lo monta a caballo del corte del héroe. En resultados no: allí
+   * es una barra más de la página y colgaría sobre el contenido de debajo.
+   */
+  flotante?: boolean;
+  /** A dónde envía. Sin valor, lo recoge el script de la propia página. */
+  accion?: string;
+  textoBoton?: string;
+}
+
+const { flotante = false, accion, textoBoton = 'Ver precios' } = Astro.props;
+---
+
+{/*
+  ⚠️ **Sin `action` NO se pone `method`.** Un formulario sin acción envía a la
+  propia URL, y en la página de resultados el script intercepta el envío; pero
+  si el JavaScript no llegara a cargar, un `method="get"` dejaría la página
+  recargándose con los parámetros puestos —que es justo lo que hace falta— y
+  con `method="post"` daría un error. Así que el respaldo es el correcto en las
+  dos páginas.
+*/}
+<form
+  id="buscador"
+  class:list={['buscador', { 'buscador--flotante': flotante }]}
+  action={accion}
+  method="get"
+>
+  {/*
+    ⚠️ **El `<datalist>` es el RESPALDO, no la lista que se ve.** Lo sustituye
+    `zonas-combo.ts` al arrancar, por lo mismo que el calendario se monta desde
+    JavaScript: si ese módulo no llegara a ejecutarse, el campo se queda con la
+    lista del navegador —imperfecta pero viva— en vez de sin ninguna.
+
+    ⚠️ **Y la fila `libre` se queda fuera.** Aquí no hay JavaScript que pueda
+    vaciar el campo, así que elegir «Prefiero especificar…» escribiría ese
+    rótulo como si fuera el nombre de un pueblo.
+  */}
+  <div class="buscador__campo buscador__campo--lugar">
+    <label for="lugar">Recogida en</label>
+    <div class="campo-con-aspa">
+      <input
+        type="text"
+        id="lugar"
+        name="place"
+        list="zonas"
+        value={ZONA_POR_DEFECTO}
+        placeholder="Tu localidad"
+        autocomplete="off"
+        maxlength="80"
+      />
+      <datalist id="zonas">
+        {ZONAS.filter((z) => !z.libre).map((z) => (
+          <option value={z.nombre} label={`${z.nombre} · ${z.coste}`} />
+        ))}
+      </datalist>
+      <button type="button" id="limpiar-lugar" class="aspa" aria-label="Borrar el lugar de recogida">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="buscador__campo buscador__campo--desde">
+    <label for="desde">Recogida</label>
+    <input type="datetime-local" id="desde" name="from" step="900" required />
+  </div>
+  <div class="buscador__campo buscador__campo--hasta">
+    <label for="hasta">Devolución</label>
+    <input type="datetime-local" id="hasta" name="to" step="900" required />
+  </div>
+
+  <button class="btn btn--brand buscador__btn" type="submit">
+    {textoBoton}
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    </svg>
+  </button>
+</form>
+
+<style>
+  /*
+   * La tarjeta del buscador es OSCURA en las dos páginas, y eso es la
+   * identidad: en la portada monta sobre el corte del héroe negro, y en
+   * resultados es la misma pieza sin el truco de la posición.
+   */
+  .buscador {
+    display: grid;
+    gap: var(--sp-4);
+    grid-template-columns: 1fr;
+    align-items: end;
+    padding: var(--sp-6);
+    background: var(--gray-900);
+    border: var(--bw) solid var(--gray-800);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-4);
+    /*
+     * ⚠️ **Sin estas dos líneas la lista de zonas sale TAPADA, y a medias.**
+     * La sección siguiente crea su propio contexto de apilado con
+     * `isolation: isolate` y, al ir después en el DOM, gana. Medido: el panel
+     * abría y `elementFromPoint` sobre su esquina devolvía la sección, así que
+     * las últimas filas quedaban debajo y no se podían pulsar — y un
+     * desplegable recortado no se lee como un fallo, se lee como que la lista
+     * tiene menos zonas.
+     *
+     * Un `z-index` alto DENTRO del panel no sirve: solo ordena dentro del
+     * contexto del buscador, no contra el hermano de su antepasado.
+     */
+    position: relative;
+    z-index: 2;
+  }
+
+  /* La portada, a caballo del corte. */
+  .buscador--flotante { transform: translateY(50%); }
+
+  /*
+   * ⚠️ **Se colocan los CUATRO a mano, no tres.** Los ítems con **fila
+   * explícita** se colocan ANTES que los automáticos, así que fijando solo los
+   * dos calendarios y el botón, esos tres se llevarían las columnas 1, 2 y 3 y
+   * el campo del lugar acabaría en la cuarta.
+   *
+   * En móvil no hace falta nada: una sola columna y el orden del código manda.
+   */
+  @media (min-width: 720px) {
+    .buscador { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.1fr) auto; }
+    .buscador__campo--lugar { grid-area: 1 / 1; }
+    .buscador__campo--desde,
+    .buscador__campo--hasta,
+    .buscador__btn { grid-row: 1; }
+  }
+
+  @media (max-width: 719px) {
+    /*
+     * ⚠️ **En móvil el buscador deja de colgar medio cuerpo.** El
+     * `translateY(50%)` vale en escritorio, donde es una fila baja; apilado son
+     * cuatro campos —367 px—, así que ese 50 % son **184 px de hueco negro
+     * vacío** entre la entradilla y el buscador. Medido: empezaba a 1.050 px
+     * del principio de la página, o sea a página y media de desplazamiento en
+     * un móvil de 844.
+     *
+     * 24 px fijos conservan el efecto de montar sobre el corte sin que dependa
+     * de lo alto que sea el formulario.
+     */
+    .buscador--flotante { transform: translateY(8px); }
+
+    /* 4 px por hueco y 8 de relleno: en una tarjeta de cuatro filas, 20 px. */
+    .buscador { gap: var(--sp-3); padding: var(--sp-5); }
+  }
+
+  /* Sin `min-width: 0` un campo ancho estira la fila entera. */
+  .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
+
+  .buscador__campo label {
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-medium);
+    color: var(--gray-400);
+  }
+
+  .buscador input {
+    min-height: var(--control-h);
+    padding: 0 var(--sp-4);
+    font-family: var(--font-num);
+    color: var(--velto-white);
+    /*
+     * ⚠️ **`background-color` y no `background`.** La forma corta **borra
+     * `background-image` sin avisar**, y esta regla gana por especificidad a la
+     * global: con ella, el icono del calendario que dibuja `.picker-propio` no
+     * llegaba — comprobado, `backgroundImage` se quedaba en `none`.
+     */
+    background-color: var(--velto-black);
+    /*
+     * ⚠️ **El contorno de un campo es `--border-input`, nunca el de las
+     * separaciones.** Con `--gray-800` se quedaba en **1,57:1** sobre el
+     * relleno, la mitad del 3:1 que pide WCAG 1.4.11: el campo no se
+     * delimitaba.
+     */
+    border: var(--bw) solid var(--border-input);
+    border-radius: var(--r-md);
+    /*
+     * ⚠️ El calendario de un `datetime-local` lo pinta el sistema y ningún CSS
+     * lo alcanza: lo único que lo hace legible sobre fondo oscuro es
+     * `color-scheme`. Va fijo a `dark` **en los dos temas**, porque esta
+     * tarjeta es oscura siempre — lo lee además `fecha-panel.ts` para decidir
+     * de qué color sale el panel propio.
+     */
+    color-scheme: dark;
+  }
+
+  /*
+   * ⚠️ **El campo del lugar NO va en `--font-num`.** Esa es la tipografía de
+   * cifras tabulares: bien para una fecha, mal para «Arganda del Rey», que sale
+   * con los espacios de los dígitos y parece una matrícula.
+   */
+  .buscador__campo--lugar input {
+    font-family: inherit;
+    /* Sitio para el aspa, que va encima del extremo derecho. */
+    padding-right: var(--sp-10);
+  }
+
+  .campo-con-aspa {
+    position: relative;
+    display: grid;
+  }
+
+  /*
+   * El aspa que vacía el campo.
+   *
+   * ⚠️ **44 px de zona pulsable y 16 de dibujo, y no es una incoherencia.** Lo
+   * que crece para el dedo es dónde se acierta, no el dibujo: una cruz de 44 px
+   * pintada gritaría dentro de un campo de formulario.
+   *
+   * ⚠️ **Solo aparece si hay algo que borrar.** Un aspa permanente sobre un
+   * campo vacío es un botón que no hace nada.
+   *
+   * ⚠️ **Se ancla al CAMPO, no al envoltorio, y ahí estaba el fallo.** Con
+   * `top: 50%` el centro se calcula sobre `.campo-con-aspa`, que en escritorio
+   * mide lo mismo que el campo —la lista flota— pero **en móvil no**: por
+   * debajo de 720 px la lista es `position: static` y empuja a propósito, así
+   * que el envoltorio pasa de 48 a 209 px y el aspa se iba al centro de esos
+   * 209. Medido a 390 px con la lista abierta: caía **fuera del campo y encima
+   * de una fila de la lista**, y como está posicionada gana el toque — quien
+   * apuntaba a una zona vaciaba el campo.
+   */
+  .aspa {
+    position: absolute;
+    top: calc(var(--control-h) / 2);
+    right: 0;
+    transform: translateY(-50%);
+    display: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--gray-400);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease);
+  }
+
+  .campo-con-aspa.tiene-texto .aspa { display: grid; }
+  .aspa:hover { color: var(--velto-white); }
+
+  /*
+   * ⚠️ **La lupa se mueve, el botón no.** Agrandar el botón entero desplazaría
+   * los tres campos de al lado en cada pasada —está en una rejilla— y el
+   * buscador daría un respingo.
+   */
+  .buscador__btn {
+    min-height: var(--control-h);
+    transition: background-color var(--t-fast) var(--ease);
+  }
+
+  .buscador__btn svg { transition: transform var(--t-base) var(--ease); }
+  .buscador__btn:hover svg { transform: translateX(3px) scale(1.12); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .buscador__btn svg { transition: none; }
+    .buscador__btn:hover svg { transform: none; }
+  }
+</style>

@@ -417,7 +417,14 @@ function drawVehicleBlock(
     `${vehicle.brand} ${vehicle.model}${vehicle.version ? ' ' + vehicle.version : ''}`,
     true
   );
-  row(b, L.plate + ':', vehicle.plateNumber, true);
+  /*
+   * ⚠️ **La matrícula solo si la hay.** El presupuesto que genera la web
+   * pública va SIN ella a propósito —el mapeador público la excluye para no
+   * publicar la placa de un coche, y menos la de un particular que lo cede—,
+   * y una fila «Matrícula:» vacía se lee como un dato que falta. El del
+   * operador la lleva siempre, así que ahí no cambia nada.
+   */
+  if (vehicle.plateNumber) row(b, L.plate + ':', vehicle.plateNumber, true);
   if (vehicle.year) row(b, L.year + ':', String(vehicle.year));
   // Raw enums from Firestore ('diesel', 'manual') translated into the document
   // language, rather than printed as stored.

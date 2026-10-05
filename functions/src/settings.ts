@@ -37,12 +37,33 @@ export interface OperationSettings {
    * sin IVA. Por eso el clamp admite desde 0.
    */
   vatRate: number;
+  /**
+   * Cuántas horas se mantiene el precio de una solicitud de la web.
+   *
+   * ⚠️ **Lo que se garantiza es el PRECIO, no el coche.** Apartar un vehículo
+   * sin pago ni identidad es una forma gratuita de dejar la flota sin alquilar:
+   * con cinco coches, una persona la bloquea entera en dos minutos. Mantener
+   * una cifra no quita inventario y sigue siendo una promesa real.
+   */
+  bookingRequestPriceHours: number;
+  /**
+   * Cuántas horas se conserva una solicitud **ya atendida** antes de borrarla.
+   *
+   * ⚠️ **Solo se borra lo atendido.** Una solicitud en `nueva` no se borra
+   * nunca: es trabajo pendiente, y perderla es perder un alquiler. Borrando por
+   * antigüedad a secas, una que entre un viernes a las 23:40 desaparecería el
+   * sábado a la misma hora sin dejar rastro — y no habría forma de distinguir
+   * «no escribió nadie» de «se me pasaron tres».
+   */
+  bookingRequestKeepHours: number;
 }
 
 const DEFAULTS: OperationSettings = {
   quoteValidityDays: 7,
   signingLinkExpiryDays: 7,
-  vatRate: 0.21
+  vatRate: 0.21,
+  bookingRequestPriceHours: 24,
+  bookingRequestKeepHours: 24
 };
 
 /** Una fracción de IVA creíble. El 0 entra; un 21 (porcentaje) no. */
@@ -77,7 +98,21 @@ export async function operationSettings(): Promise<OperationSettings> {
         90,
         DEFAULTS.signingLinkExpiryDays
       ),
-      vatRate: clampVatRate(data.vatRate, DEFAULTS.vatRate)
+      vatRate: clampVatRate(data.vatRate, DEFAULTS.vatRate),
+      // Entre una hora y un mes: menos no da tiempo a llamar, y más convierte
+      // el «precio garantizado» en una tarifa que nadie revisa.
+      bookingRequestPriceHours: clampDays(
+        data.bookingRequestPriceHours,
+        1,
+        720,
+        DEFAULTS.bookingRequestPriceHours
+      ),
+      bookingRequestKeepHours: clampDays(
+        data.bookingRequestKeepHours,
+        1,
+        8760,
+        DEFAULTS.bookingRequestKeepHours
+      )
     };
   } catch (err) {
     logger.warn('No se pudieron leer los ajustes; se usan los valores por defecto', err);

@@ -75,6 +75,20 @@ npm test                      # app (src/**/*.spec.ts) vía @angular/build:unit-
 npm --prefix functions test   # Cloud Functions (functions/src/**/*.spec.ts)
 ```
 
+⚠️ **`npm test` deja basura en `dist/test-out`, y por eso lleva un `pretest`.**
+El builder compila la aplicación para poder pasar los tests y escribe el
+resultado en `dist/test-out/<fecha>-<hash>` — **una carpeta por ejecución, y no
+borra ninguna**. Medido el 2 de octubre de 2026: **308 carpetas y 3,6 GB**
+acumulados desde el 21 de agosto, con el disco de la máquina al 100 % y
+comandos sueltos fallando con «No space left on device», que es un error que no
+dice de dónde viene. Para comparar, la build de verdad ocupa 3,7 MB: el 99,9 %
+de `dist/` era esto.
+
+Lo limpia `scripts/limpiar-salida-tests.js`, colgado de `pretest` y **no** de
+`posttest`: npm solo ejecuta el `post…` si el script termina bien, así que una
+tanda que falla —justo la que se repite más veces— dejaría su carpeta para
+siempre.
+
 Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar dinero:
 
 - `reservation-workflow.util.spec.ts` — los guards `can*`, los overrides de `WorkflowContext`, y las excepciones de workflow
@@ -412,12 +426,11 @@ src/app/
 ├── core/
 │   ├── auth/auth.service.ts          # Firebase Auth + autorización vía Firestore
 │   ├── config/brand.config.ts
-│   ├── firebase/                     # firestore.service.ts, storage.service.ts
+│   ├── firebase/storage.service.ts
 │   ├── guards/                       # auth.guard.ts, public.guard.ts
 │   ├── i18n/translate.service.ts
 │   ├── reports/reports.service.ts
 │   ├── search/global-search.service.ts
-│   ├── services/firebase-status.service.ts
 │   └── theme/theme.service.ts
 ├── features/                         # cada uno con pages/ + services/ + components/
 │   ├── calendar/  clients/  contracts/  dashboard/  expenses/
@@ -453,6 +466,16 @@ functions/src/
 ```
 
 **Ya no queda ningún placeholder**: Gastos y Ajustes se construyeron el 4 de septiembre de 2026.
+
+⚠️ **Y ya no queda andamio tampoco.** El 2 de octubre de 2026 se borraron tres
+piezas de los primeros días que **no llamaba nadie**: `home/home.component.ts`
+—una pantalla de «estado de Firebase» con colores de Tailwind que no estaba ni
+enrutada—, el `FirebaseStatusService` que la alimentaba, y
+`core/firebase/firestore.service.ts`, un envoltorio genérico de Firestore que
+quedó huérfano en cuanto cada feature se hizo su propio servicio. Esta misma
+lista los nombraba, así que **la estructura escrita aquí describía ficheros que
+ya no servían para nada**: si borras algo de `src/app`, mira si está en este
+árbol.
 
 ## Lógica de negocio
 
@@ -1066,6 +1089,140 @@ discute con razón: lo comprueba `layout.spec.ts` sobre los PDF reales, en los
 tres idiomas y los tres documentos, **y también que no aparezca** cuando no se
 pactó.
 
+### Las solicitudes de la web: «que me llamen», y el coche NO se aparta
+
+Un visitante elige coche y fechas en la web pública, deja nombre y teléfono, y
+la agencia le llama. Lo que se le promete es **el precio**, no el coche.
+
+⚠️ **Colección propia (`bookingRequests`), no un estado más de `Reservation`.**
+Una solicitud no tiene contrato, ni pagos, ni fianza, ni inspecciones, y su
+ciclo —nueva, contactada, convertida, descartada— no se parece al del alquiler.
+Y metida como estado habría empezado a **bloquear el coche en la web el mismo
+día**: `blocksAvailability()` es una **lista invertida** donde solo `returned`,
+`closed` y `cancelled` dejan libre y **todo lo demás bloquea**, así que un
+estado nuevo apartaría el coche sin que nadie escribiera una línea — justo lo
+contrario de lo que esto promete.
+
+⚠️ **La escribe SOLO la Cloud Function.** `firestore.rules` deniega `create`
+desde cliente: la clave del proyecto viaja en el bundle de la web, así que con
+`create` abierto cualquiera se saltaría los topes de longitud, el campo trampa y
+el límite por teléfono. La pantalla del backoffice solo lee y marca.
+
+⚠️ **Convertir NO crea la reserva aquí**: lleva los datos al asistente por la
+URL. Crear un alquiler es una sola escritura con sus filas de cobro, su
+disponibilidad y su cliente, y duplicar eso sería una segunda forma de crear
+reservas.
+
+⚠️ **Y durante un día esos parámetros NO LOS LEÍA NADIE.** «Convertir en
+reserva» navegaba con el coche, las fechas y el cliente en la URL y el asistente
+se abría en el paso 1 en blanco; y **nadie llamaba a `markConverted()`**, así que
+la solicitud se quedaba «sin contestar» para siempre, el filtro «Convertidas» no
+se alcanzaba nunca y la misma solicitud se podía convertir dos veces — justo lo
+que `canConvert()` existe para impedir. El patrón de siempre: escrito y nunca
+recorrido hasta el final. Corregido el 29 de septiembre de 2026.
+
+Lo que hace ahora, y por qué cada parte:
+
+- **Se para en el paso del CLIENTE**, que es lo único que la solicitud no trae:
+  la web pide un nombre y un teléfono, no una ficha con su DNI.
+- **El alta rápida nace escrita y el buscador NO.** Lo que llega es un nombre
+  tecleado por un desconocido: rellenando el buscador se daría por bueno el
+  primer cliente que se parezca.
+- ⚠️ **Si el coche ya no está libre, no se sigue.** Entre la solicitud y la
+  conversión pueden pasar días; saltar al cliente con otro coche haría que la
+  reserva saliera del que estuviera seleccionado.
+- ⚠️ **Hay una cinta que dice de dónde viene**, con la referencia, el coche y
+  las fechas. **Un asistente que se abre en el paso 3 sin explicar por qué es
+  peor que uno que se abre en el 1**: los dos primeros pasos salen en verde y
+  vacíos, y el operador se encuentra un «Nueva reserva» a medio hacer.
+- ⚠️ **Marcar la solicitud va DESPUÉS y su fallo no tumba nada.** La reserva ya
+  está creada; tirar ahí dejaría al operador viendo un error sobre un alquiler
+  que sí existe — y creándolo otra vez.
+
+#### La hora que nadie dijo son las 12:00
+
+⚠️ **El formulario de la web pide FECHAS, y lo que se guarda es la ventana de
+disponibilidad.** `widenToFullDays()` la ensancha a días completos, así que
+`pickupDate` son las **00:00** y `returnDate` las **23:59:59.999**. Eso es
+correcto para cruzarla con las reservas y **mentira como hora de entrega**: la
+ficha enseñaba «02/11/2026 – 09/11/2026» sin más, y al convertir llevaba al
+asistente una recogida de madrugada y una devolución a las 23:59.
+
+`DEFAULT_REQUEST_HOUR = 12` en `booking-request.util.ts`, con
+`requestPickupAt()` y `requestReturnAt()`: mediodía es la respuesta honesta a
+«no se dijo» —cae en horario de oficina y es lo que se va a pactar por teléfono
+de todos modos—. Decisión de Dorel del 29 de septiembre de 2026. **Lo usan la
+ficha y la conversión**, para que lo que se ve sea lo que se va a proponer.
+
+⚠️ **Es un RESPALDO, no la regla definitiva**, y la ficha no lo explica a
+propósito. Llegó a llevar una pista —«la web solo pide fechas»— y se quitó el
+mismo día: **la web va a pedir horas exactas**, así que una frase que describe
+un estado transitorio es una frase que hay que acordarse de borrar. El día que
+la web las mande, estas dos funciones se encuentran la hora puesta y el
+mediodía deja de aplicarse solo.
+
+⚠️ **Se reconstruye el día, no se mueve la hora sobre el objeto.** Con
+`setHours(12)` sobre las 23:59:59.**999** el día no cambia pero los
+milisegundos se quedan dentro, y esa fecha viaja al campo del asistente.
+
+#### El WhatsApp: redactado, editable y copiable
+
+⚠️ **El mensaje es un BORRADOR, no el texto final.** `whatsappMessage()` lo
+redacta al abrir la ficha —con la referencia dentro, que es lo que ata la
+conversación a lo que el cliente pidió— y el operador lo reescribe entero si
+quiere. Fue la decisión de Dorel al diseñar esto («redactado y editable antes de
+enviar») y **no estaba implementada**: el texto viajaba fijo dentro del enlace,
+sin que se pudiera ver ni tocar. Hecho el 29 de septiembre de 2026.
+
+⚠️ **Por eso `whatsappLink()` RECIBE el texto y no lo compone.** Componiéndolo,
+el operador reescribiría el mensaje y saldría el de siempre — y no se enteraría
+hasta verlo en el chat del cliente. Hay test de que el enlace lleva lo editado.
+
+⚠️ **Y «Copiar» es la vía de ESCRITORIO, no un adorno.** El enlace `wa.me` solo
+sirve de verdad en el móvil, que es donde abre la aplicación con el chat puesto;
+en el ordenador se escribe desde WhatsApp Web y hay que **pegar**. Sin el botón,
+copiar un texto de seis líneas de un `textarea` es seleccionarlo a mano.
+
+⚠️ **El mensaje NO se guarda en Firestore.** Es lo que se le dice a una persona
+en una conversación, no un dato de la solicitud: guardarlo obligaría a decidir
+qué pasa cuando el coche o el precio cambian y el texto ya no cuadra. Lo que sí
+se guarda es la **nota interna**, que es otra cosa.
+
+⚠️ **Y no promete el coche**, que es su regla de fondo: dice lo mismo que el
+cliente vio al enviar el formulario. Un WhatsApp que diga «te lo guardo»
+convierte en falso lo que la web dejó claro, y hay test de eso.
+
+#### Ampliar el plazo, y la nota que no se podía guardar
+
+⚠️ **Lo caducado se amplía desde AHORA; lo vigente, desde lo prometido**
+(`extendedGuaranteeUntil`). El caso normal es justo el primero —«se le pasó el
+plazo y se lo amplío mientras se lo piensa»— y sumando sobre una fecha vencida
+las 24 h podrían dejar la promesa **todavía en el pasado**: el operador pulsa,
+el aviso sigue diciendo «caducado» y parece que el botón no hace nada. Y si aún
+está en pie se suma a lo prometido, porque al cliente se le dijo una fecha y
+ampliar no puede recortarla.
+
+⚠️ **Un botón de 24 h que se pulsa dos veces, no un desplegable de días.** El
+plazo resultante está en la línea de encima, así que pasarse se ve al momento.
+Va **dentro de la celda del plazo**, no en la fila de acciones: allí serían seis
+botones y ninguno diría sobre qué actúa.
+
+⚠️ **Guardar la nota NO marca la solicitud como contactada.** Apuntar «intentado,
+no coge» es justo lo contrario de haber hablado con alguien, y cambiar el estado
+la sacaría de la lista de trabajo pendiente con el cliente sin atender. Por eso
+`saveInternalNote()` no pasa por `marcar()`.
+
+⚠️ **Y vaciarla tiene que BORRAR de verdad** (`deleteField()`): es el mismo fallo
+de los diez campos del mantenimiento —el limpiador quita la clave y un
+`updateDoc` sin la clave deja intacto lo que hubiera—. Comprobado de punta a
+punta: se guarda, se recarga, se vacía, se recarga y sigue vacía.
+
+> Hasta el 29 de septiembre de 2026 la nota **solo viajaba de rebote** con
+> «Marcar contactada» y con «Descartar»: en una solicitud ya contactada se
+> escribía, no había botón que la guardara y se perdía al cerrar la ficha. Y el
+> campo nacía **en blanco** teniendo nota, así que lo que se escribiera
+> sustituía lo anterior sin que se viera qué había.
+
 ### Eventos próximos: se derivan, no se guardan
 
 ⚠️ **Una entrega ya está en su reserva y una ITV en su mantenimiento.** Copiarlas
@@ -1204,29 +1361,46 @@ Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
 | target | Desarrollo | Producción |
 |---|---|---|
 | `backoffice` | `store.veltorent.com` | `rentalcar.veltomobility.com` |
-| `web` | `velto-web-dev.web.app` | *(sitio sin crear)* |
+| `web` | `velto-web-dev.web.app` | `velto-web.web.app` |
 
 ⚠️ **Esa segunda fila es lo que hay HOY, no lo que se pretende.** Aquí ponía
 `dev.veltorent.com` y `veltomobility.com` como si ya sirvieran, y medido el 25
 de septiembre de 2026 **ninguno de los dos existe**: `dev.veltorent.com` da
 NXDOMAIN, y `veltomobility.com` sirve el aparcamiento del registrador —IONOS, en
 alemán— con un **525** por HTTPS, porque el TLS entre Cloudflare y ese origen
-falla. En producción el sitio de hosting de la web **ni siquiera está creado**:
-`.firebaserc` manda el target `web` a `velto-web`, y
-`firebase hosting:sites:get velto-web --project prod` contesta «could not find
-site». Un merge a `master` publicaría el backoffice —va primero— y se caería en
-el paso siguiente.
+falla.
+
+> Y aquí ponía además que el sitio de producción **ni siquiera estaba creado**
+> —`firebase hosting:sites:get velto-web --project prod` contestaba «could not
+> find site»— y que por eso un merge a `master` se caería después de publicar el
+> backoffice. **Ya está creado**: comprobado el 29 de septiembre de 2026 con
+> `firebase hosting:sites:list --project prod`, que lo devuelve junto a
+> `rentalcar-veltomobility`. Ese bloqueo del merge ya no existe.
 
 Escrito como estaba, cualquiera que fuera a comprobar un despliegue miraba un
 dominio que no responde y concluía que el despliegue había fallado. **Esta tabla
 dice lo que sirve; los dominios entran cuando responden.**
 
-⚠️ **El canónico será `veltomobility.com`; `veltorent.com` servirá lo mismo y
-redirigirá.** Dos dominios con el mismo contenido **no suman posicionamiento, lo
-reparten**, así que el `<link rel="canonical">` del layout no es decorativo: sin
-él, Google elige por su cuenta cuál enseñar. ⚠️ Y esa redirección **no está en
-el repositorio**: `firebase.json` no tiene ningún bloque `redirects`, así que
-tiene que ser una regla de Cloudflare.
+⚠️ **El canónico es `veltomobility.com`, y desde el 2 de octubre de 2026 es el
+ÚNICO que la web nombra.** Aquí ponía que `veltorent.com` serviría lo mismo y
+redirigiría; Dorel lo dejó en el aire ese día —«más adelante ya veremos qué
+hacemos con veltorent, quizás otra página tipo landing, o renuncio al
+dominio»—, así que la web dejó de nombrarlo: el pie decía los dos y ahora dice
+uno.
+
+Dos dominios con el mismo contenido **no suman posicionamiento, lo reparten**,
+así que el `<link rel="canonical">` del layout sigue haciendo falta mientras
+`veltorent.com` resuelva a algo — y también por el sitio de desarrollo, que
+sirve el mismo HTML. ⚠️ Lo que **no** hay es ninguna redirección en el
+repositorio: `firebase.json` no tiene bloque `redirects`, así que el día que se
+decida qué hace ese dominio, se hace en Cloudflare.
+
+⚠️ **Y lo que ya está impreso no se arregla.** `VELTO_COMPANY_WEBSITE` no está
+puesta en ningún `.env`, así que el dominio que sale en las **facturas** era el
+literal por defecto de `company-config.ts` — `www.veltorent.com` hasta ese día.
+Las facturas emitidas en producción desde el 17 de septiembre lo llevan dentro y
+**no se pueden corregir**: una factura emitida no se edita ni se borra. Las
+siguientes salen con el bueno.
 
 ### El sitio de verdad se distingue por el MODO de compilación
 
@@ -2040,15 +2214,75 @@ cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
 necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
 conviene saberlo porque es un servicio más que aparece en la factura de Google.
 
+### Los correos comparten cáscara, y su maquetación está FUERA del envío
+
+`functions/src/alerts/email-shell.ts` es la única autoridad sobre cómo se ve un
+correo de la casa: el sobre, el rótulo de sección, la fila, la caja de aviso y
+el botón. Lo usan el **resumen diario** (`digest-email.ts`) y el **aviso de una
+solicitud de la web** (`public/booking-request-email.ts`).
+
+⚠️ **Existe para que no diverjan.** Son dos correos del mismo negocio y llegan
+al mismo buzón: con cada uno maquetado por su cuenta —y así estaban—, el segundo
+que alguien toque acaba con otro gris, otro interlineado y otro ancho, y la
+cuenta parece de dos empresas. Es la misma razón por la que la marca de los PDF
+vive en un solo `brand.ts`.
+
+⚠️ **La maquetación va SEPARADA del envío, y eso es lo que deja mirarla.** El
+aviso de la solicitud se construía dentro de la función que llama a Resend, así
+que no había forma de verlo sin mandarlo — y el patrón de fallo que más se
+repite aquí es el código que se escribe y nunca se ejecuta. `renderDigestEmail()`
+ya lo hacía bien; `renderBookingRequestEmail()` sigue la misma forma. Se miran
+volcándolos a un `.html` y abriéndolos en el navegador a 390 px.
+
+⚠️ **Un correo sin versión de texto plano puntúa como spam**, y el de las
+solicitudes iba sin ella — justo el que no se puede perder. Hay clientes de
+correo que solo enseñan esa.
+
+⚠️ **Y los estilos van EN LÍNEA**, repitiendo la familia en cada elemento:
+Gmail borra el `<style>` del `<head>` en la vista móvil, y Outlook no hereda
+`font-family` dentro de una tabla —estos correos son casi todo tabla—, así que
+lo que no la lleve encima sale en Times New Roman.
+
+⚠️ **Al tocar la cáscara, la comprobación es un DIFF del render.** El resumen
+diario salió byte a byte idéntico al extraerla (4214 bytes de HTML y 519 de
+texto, con una muestra que pasa por todas las ramas), que es lo que permitió dar
+el cambio por bueno sin mandar un correo. Misma idea que el manifiesto de
+descubrimiento con las functions.
+
+⚠️ **`pieSinFilete` se pone cuando el cuerpo termina en un BOTÓN.** El filete del
+pie existe para cerrar una lista de filas —en el resumen cada `fila()` lleva el
+suyo y este remata la última—, pero debajo de una pastilla turquesa lo que se ve
+es una raya suelta a todo lo ancho que parece una sección vacía. Va como opción
+explícita y no adivinando si el cuerpo acaba en botón: mirar el final de una
+cadena de HTML es la clase de regla que se rompe el día que alguien meta un
+espacio.
+
+⚠️ **«No alquiles este coche» solo si es verdad.** El resumen lo decía de
+**cualquier** vencimiento, y solo la ITV y el seguro impiden circular
+(`BLOCKING_MAINTENANCE_TYPES`): un cambio de aceite vencido salía con esa frase
+mientras el asistente ofrecía el coche sin rechistar. Por eso
+`VencimientoVehiculo` lleva `bloquea`, copia fiel de aquella lista. Un aviso que
+el sistema no respalda se deja de creer, y arrastra consigo a los que sí.
+
 ⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 28 de
 septiembre de 2026 con `firebase functions:list`, comparando los nombres contra
 los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| el código define | **34** | — |
-| desarrollo | **34** | — |
-| producción | **29** | las cinco de la AEAT |
+| el código define | **36** | — |
+| desarrollo | **36** | — |
+| producción | **31** | **solo** las cinco de la AEAT |
+
+⚠️ **Vuelto a medir el 3 de octubre de 2026, y la fila de producción había
+envejecido**: ponía **29** y que faltaba además `createBookingRequest`. Las dos
+públicas de la web —`createBookingRequest` y `createContactRequest`— **ya están
+desplegadas**. Es justo lo que el párrafo de abajo avisa: la cifra escrita a
+mano se queda vieja, y lo que vale es comparar los **nombres**.
+
+⚠️ **Y estar desplegada no es estar alcanzable.** Esas dos siguen sin sus
+rewrites `/api/solicitud` y `/api/contacto`, que viajan con el **hosting**: la
+petición cae en el catch-all y devuelve HTML donde se espera JSON.
 
 ⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
 ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
@@ -2090,7 +2324,7 @@ explícito. La misma frase estaba repetida en
 ### El arranque en frío lo paga la function más ligera
 
 ⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
-`index.ts` reexporta las 34 functions. Así que la cadena de imports de la más
+`index.ts` reexporta las 36 functions. Así que la cadena de imports de la más
 pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
 pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
 certificado de la AEAT **antes de devolver una lista de coches**.
@@ -2150,7 +2384,7 @@ en cuanto haya un `onCall` o un `onRequest`.
    especificador mal escrito ya no falla al arrancar — falla la primera vez que
    alguien genera un PDF. Es la lección de `sharp`.
 3. **El manifiesto tiene que salir idéntico.** Es la comprobación que convierte
-   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 34
+   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 36
    functions con sus triggers, regiones y secrets, así que si no cambia, no
    cambia nada de lo que se despliega.
 
@@ -2207,6 +2441,33 @@ Por eso existe además la ruta pública `d/:id` en `app.routes.ts`
 ([document-redirect.component.ts](src/app/features/documents/document-redirect.component.ts)),
 que reenvía directamente a la function. Es el paracaídas, no el plan: convierte un rewrite
 olvidado en un salto extra en vez de una pantalla de login.
+
+### Un enlace profundo sobrevive al login
+
+⚠️ **No sobrevivía, y se notó en cuanto los correos empezaron a llevar enlaces
+al backoffice.** `authGuard` mandaba a `/login` **sin guardar a dónde ibas** y el
+login navegaba siempre a `/dashboard`: abrir desde el correo el aviso de una
+solicitud —sin sesión, o en otro navegador— dejaba al operador en el panel, sin
+una pista de qué había pasado con el enlace que acababa de pulsar. Lo contó
+Dorel el 29 de septiembre de 2026 y **no es de Solicitudes**: le pasaba a
+cualquier enlace del backoffice que alguien reciba por correo o por WhatsApp.
+
+Hoy el guard pone `?returnUrl=` y `loginWithGoogle()` vuelve ahí. Va **en la
+URL** y no en un servicio, para que la intención sobreviva a la recarga del
+`signInWithPopup` y además se vea.
+
+⚠️ **Y todo lo que lo lea pasa por `safeReturnUrl()`**, que es lo que impide un
+*open redirect*: ese valor llega por la barra de direcciones, así que
+`…/login?returnUrl=https://otro-sitio` convertiría el login de la empresa en un
+trampolín —el usuario ve el dominio de siempre, entra con su cuenta y acaba en
+una página ajena—. La regla es **blanca**: solo pasa una ruta interna. Los dos
+casos que se cuelan si uno solo comprueba «empieza por barra» son `//otro-sitio`
+y `/\otro-sitio`, que el navegador resuelve como **absolutas**; hay test de los
+dos, y de que `/login` no se devuelve a sí mismo.
+
+⚠️ **`navigateByUrl` y no `navigate([…])`.** Aquella interpreta la cadena como
+una URL entera; esta la trataría como **un solo segmento**, así que
+`/reservations/1?tab=pagos` acabaría escapado y sin resolver.
 
 **El login es solo para la agencia.** Las cuatro rutas de cliente —`sign-contract/:token`,
 `d/:id`, `pay/:paymentId` y `v/:codigo`— van declaradas **antes** del bloque con
@@ -2971,7 +3232,7 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **29**.
+siga dando **31** (medido el 3 de octubre de 2026).
 
 ⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
 **códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
@@ -3056,6 +3317,7 @@ correctos; ojo con dar por hecho que un secret manda cuando quizá no está.
 authorizedUsers  clients  contracts  contractSigningTokens  expenses
 payments  reservations  settings  vehicles  inspections  vehicleMaintenance
 collaborators  collaboratorSales  collaboratorInvoices  reminders
+bookingRequests
 invoices  invoiceCounters  billingProfiles  verifactuDeclarations
 verifactuSubmissions
 ```
@@ -3567,6 +3829,29 @@ porque su geometría no es esa.
 Se descubrió con el botón «Emitir declaración» de Ajustes, que llevaba meses así
 sin que se notara porque solo aparece cuando falta la declaración.
 
+⚠️ **Y con `.detail-card` van SEIS.** La usaban cinco pantallas y la declaraban
+cuatro —con las mismas cuatro líneas copiadas—, así que la quinta, Solicitudes,
+salía **con las esquinas en pico** mientras el resto de la aplicación las lleva
+redondeadas. Lo vio Dorel el 29 de septiembre de 2026 comparándola con una
+reserva. Su `overflow: hidden` tampoco es cosmético: es lo que recorta la banda
+de `.card-header` contra el radio.
+
+⚠️ **Y con `.badge` van CINCO.** Quince pantallas declaran su propia chapa de
+estado repitiendo a mano el relleno, el radio y el tamaño de letra —con **cuatro
+radios distintos** entre ellas—, así que la dieciséis se escribió declarando
+solo los colores: la pantalla de Solicitudes tenía los cuatro estados con su
+color bien puesto y la chapa salía con `padding: 0`, `border-radius: 0` y
+`display: block`, o sea una franja de color detrás del texto. Desde el 28 de
+septiembre de 2026 la **forma** es global; el **color** no, porque depende del
+enumerado de cada módulo — y una chapa sin color se ve, lo que no se ve es una
+sin forma.
+
+⚠️ **Esto no lo caza `css:audit`**, y por eso se repite: la clase *está*
+declarada, y lo que falta es lo que esa declaración pone dentro. Es la variante
+hermana de la que ya está documentada —la clase declarada bajo un antepasado que
+no la envuelve—. Lo que vale es `getComputedStyle()` en la pantalla de verdad.
+Comprobado que las quince siguen mandando sobre lo suyo: la chapa de Facturas
+mide `999px` y 12 px después del cambio, igual que antes.
 
 ### `npm run spacing:audit` — la escala de espaciado
 
@@ -3623,6 +3908,16 @@ Lo que lo distingue es `getComputedStyle()` en la pantalla de verdad: ahí se ve
 un SCSS de componente, comprueba que el antepasado envuelve de verdad a la
 clase**, sobre todo en ficheros donde conviven varias tarjetas parecidas
 (`.detail-card`, `.refund-card`, `.pricing-card`).
+
+⚠️ **Y hay una TERCERA que tampoco caza, la más fácil de cometer: la clase que
+declara OTRO componente.** El auditor comprueba que la clase esté escrita en
+algún SCSS, no que ese SCSS **alcance** al elemento — y con la encapsulación de
+Angular no alcanza casi nunca. Pasó el 29 de septiembre de 2026 con un
+`class="btn-icon"` en Solicitudes: seis pantallas la declaran, esta no, el botón
+salió sin forma y `css:audit` lo dio por bueno. **Antes de usar una clase que
+hayas visto en otra pantalla, comprueba que la declara la tuya o `styles.scss`**
+— y si la geometría que te hace falta no es la de aquella, ponle otro nombre:
+la misma clase con dos formas es peor que dos nombres.
 
 ⚠️ **Y volvió a pasar el 24 de septiembre de 2026, con un mapa `*_COLORS`.**
 `PAYMENT_STATUS_COLORS` produce seis clases y la ficha de la reserva solo
@@ -4107,6 +4402,32 @@ Los neutrales son **grises fríos con tinte teal** (`--gray-950` … `--gray-50`
 bloques de tema las mapeen a los nombres semánticos. Un componente que pinte con
 `--gray-700` se salta el tema y no cambiará al alternar claro y oscuro.
 
+⚠️ **Con UNA excepción, y es al revés de lo que parece: sobre una superficie de
+marca hay que usar la rampa.** `--velto-black` no es un token de tema —es negro
+en los cuatro—, así que el texto que se apoya en él tampoco puede cambiar: un
+`--text-2` encima se volvería texto oscuro sobre negro en el tema claro. En la
+web pública son el héroe y el pie, y sus trece usos directos de rampa están
+**bien**. La pregunta no es «¿usa una rampa?» sino «¿cambia su fondo con el
+tema?».
+
+### La web pública contra el kit: contrastado el 28 de septiembre de 2026
+
+Los **132** tokens del kit están los 132 en `web/src/styles/global.css`. De 24
+diferencias aparentes, **23 son de formato** —el kit está minificado (`.875rem`,
+`cubic-bezier(.4,0,.2,1)`) y la web formateada (`0.875rem`)—: mismo valor.
+
+⚠️ **La única diferencia real es `--font-sans`, y la web tiene razón.** El kit lo
+declara `"gotham","montserrat",…`, con Gotham **de cuerpo**; la web lo deja en
+Montserrat y pone Gotham en `--font-display`, que es donde va. Si algún día se
+regenera el kit, esta es la línea que no se copia tal cual.
+
+Medido en el navegador alternando el tema, que es lo que lo prueba:
+
+| | claro | oscuro | |
+|---|---|---|---|
+| héroe y pie | 13,44:1 sobre negro | 13,44:1 sobre negro | no cambian, y es correcto |
+| cuerpo | negro sobre blanco | blanco sobre negro | cambia, y es correcto |
+
 ⚠️ **'Inter' no existe en este proyecto.** Se pedía como fuente de cuerpo en tres sitios
 sin cargarla en ninguno —ni `@font-face` ni Google Fonts—, así que el cuerpo llevaba años
 componiéndose en la fuente del sistema mientras el CSS decía otra cosa. El cuerpo es la
@@ -4191,11 +4512,24 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay **29** desplegadas y
-el código define **34**: las cinco que faltan hablan con la AEAT y no están allí
-hasta el 1 de enero. Un despliegue completo las subiría.
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **31** desplegadas y
+el código define **36**: faltan **las cinco** de la AEAT, que no van allí hasta
+el 1 de enero y que un despliegue completo subiría. Medido el 3 de octubre de
+2026 comparando los nombres, no la cifra.
 
-⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 34 functions, un
+⚠️ **Lo que falta no son functions, es CÓDIGO NUEVO dentro de las que ya están.**
+De las 31, **28 corren código viejo** —27 ficheros cambiados en `functions/src`,
+y uno es `company-config.ts`, que lo importa casi todo—. El guion por tandas y
+en orden de daño está en
+[docs/despliegue-produccion.md](docs/despliegue-produccion.md).
+
+⚠️ **Y las dos públicas que escriben necesitan HOSTING además de la function.**
+Sus rewrites —`/api/solicitud` y `/api/contacto`— viajan con el hosting, no con
+las functions: sin ellos la petición cae en el catch-all de la web y devuelve
+HTML donde se esperaba JSON, así que el visitante escribe seis líneas y ve un
+fallo de red. Es la lección de `/d/**`, que estuvo escrita sin desplegar.
+
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 36 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
 medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
 cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.
@@ -4227,7 +4561,9 @@ cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en u
   `calculateReservationPaymentSummary(payments, reservation)` en vez de leer la copia. Y al
   añadir un campo al resumen, mételo también en la comparación de
   `reconcileAfterExternalPayment()`, o la copia no se pondrá al día nunca: el resto cuadra.
-- Sin lint.
+- ~~Sin lint.~~ **Existe desde el 22 de septiembre de 2026** y está documentado
+  arriba (`npm run lint`). La línea se quedó aquí tres semanas contradiciendo a
+  su propio fichero: una lista de deuda técnica que no se tacha deja de leerse.
 - `deploy.log` y `test-contract-{en,es,ro}.pdf` están en `.gitignore` y **ya no están en el
   índice** (comprobado con `git ls-files` el 7 de septiembre de 2026). La trampa que los
   puso aquí sigue siendo cierta para el siguiente: ignorar un fichero no deja de seguir uno

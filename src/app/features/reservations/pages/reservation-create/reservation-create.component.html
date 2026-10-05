@@ -10,6 +10,27 @@
     </div>
   </div>
 
+  <!--
+    ⚠️ **De dónde viene esta reserva, cuando viene de una solicitud.**
+    Saltando al paso del cliente, los dos primeros salen en verde y vacíos: el
+    operador se encuentra un «Nueva reserva» a medio hacer sin una pista de qué
+    reserva es. Aquí van las tres cosas que necesita para no tener que
+    acordarse: la referencia que el cliente cita, el coche y las fechas.
+  -->
+  @if (fromRequestRef) {
+    <div class="from-request">
+      <i class="pi pi-inbox"></i>
+      <span>
+        {{ 'reservations.fromRequest.banner' | translate }}
+        <strong class="mono">{{ fromRequestRef }}</strong>
+        @if (selectedVehicle) {
+          · {{ selectedVehicle.vehicle.brand }} {{ selectedVehicle.vehicle.model }}
+        }
+        · {{ pickupDateTime | date: 'dd/MM/yyyy HH:mm' }} – {{ returnDateTime | date: 'dd/MM/yyyy HH:mm' }}
+      </span>
+    </div>
+  }
+
   <!-- Stepper -->
   <div class="stepper">
     @for (step of steps; track step) {

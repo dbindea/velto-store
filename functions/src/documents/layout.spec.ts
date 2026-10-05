@@ -40,8 +40,8 @@ const company = {
   address: COMPANY_ADDRESS,
   officeAddress: COMPANY_OFFICE_ADDRESS,
   phone: '+34 623 766 181',
-  email: 'reservas@veltorent.com',
-  website: 'www.veltorent.com'
+  email: 'reservas@veltomobility.com',
+  website: 'veltomobility.com'
 };
 
 // Deliberately awkward: a long legal name and a long address are exactly what
@@ -484,6 +484,55 @@ describe('the real documents, in every language', () => {
    * que recibe al confirmar y el contrato lo que firma. Los tres tienen que
    * decir la misma cifra.
    */
+  /**
+   * El presupuesto que genera la WEB PÚBLICA va sin matrícula.
+   *
+   * ⚠️ **No es un caso raro: es el de cualquiera que haga una pre-reserva
+   * desde la web.** El mapeador público excluye la placa a propósito —clonado
+   * de matrículas, y en un coche cedido señala el vehículo de un particular—,
+   * así que el PDF se construye con ese campo vacío. Lo que había que
+   * comprobar es que el documento sigue siendo un documento: sin la fila
+   * fantasma «Matrícula:» y sin que lo de debajo se descoloque.
+   */
+  describe('el presupuesto de la web, sin matrícula', () => {
+    const SIN_MATRICULA = { ...vehicle, plateNumber: '' };
+
+    for (const locale of LOCALES) {
+      it(`${locale}: ni se imprime la fila ni se rompe la maquetación`, async () => {
+        let captured: PdfBuilder | null = null;
+        await buildQuotePdf({
+          company,
+          client,
+          vehicle: SIN_MATRICULA,
+          rental,
+          pricing,
+          locale,
+          generatedAt: new Date('2026-08-27T09:00:00Z'),
+          validUntil: new Date('2026-09-03T09:00:00Z'),
+          onLayout: (b: PdfBuilder) => {
+            captured = b;
+          }
+        });
+
+        const b = captured as unknown as PdfBuilder;
+        expect(b).not.toBeNull();
+        expect(b.assertNoOverlaps()).toEqual([]);
+        expect(b.assertInsideMargins()).toEqual([]);
+        expect(b.assertNoMissingGlyphs()).toEqual([]);
+
+        /*
+         * Y el coche se sigue nombrando: sin matrícula, lo que identifica el
+         * vehículo es la marca y el modelo. Un presupuesto que no dice de qué
+         * coche habla no vale para nada.
+         */
+        const textos = b.boxes.map(t => t.text).join(' ');
+        expect(textos).toContain(vehicle.brand);
+        expect(textos).toContain(vehicle.model);
+        expect(textos).not.toContain('4466LKK');
+      });
+    }
+  });
+
   describe('la entrega a domicilio sale impresa', () => {
     const CON_ENTREGA = {
       ...pricing,

@@ -140,6 +140,20 @@
   --brand-text: var(--teal-700); --brand-soft: var(--teal-50); --brand-soft-2: var(--teal-100);
   --ink: #000000; --ink-hover: var(--gray-800); --text-on-ink: #ffffff;
   --border: var(--gray-200); --border-strong: var(--gray-300); --divider: var(--gray-100);
+  /*
+   * ⚠️ **El contorno de un CAMPO es este, nunca `--border` ni `--border-strong`.**
+   * Aquellos separan, y pueden ser sutiles; este tiene que llegar a 3:1, que es
+   * lo que WCAG 1.4.11 pide al contorno de un control. Medido el 29 de
+   * septiembre de 2026: los campos de la web iban con `--border-strong` y
+   * quedaban en **1,38:1 el peor** —el diálogo de «Que me llamen» en tema
+   * claro— y 1,56 los del buscador. O sea que el campo no se delimitaba: lo
+   * único que lo separaba de su tarjeta era una raya que no se ve.
+   * `--gray-500` da 3,73:1 sobre blanco y 3,50 sobre `--gray-50`.
+   *
+   * Es la misma corrección que el backoffice hizo el 23 de septiembre, con la
+   * misma rampa —son idénticas en los dos proyectos— y por el mismo motivo.
+   */
+  --border-input: var(--gray-500);
   --focus: var(--teal-600); --focus-ring: 0 0 0 3px rgba(32, 164, 143, 0.28);
   --success: var(--green-600); --success-bg: var(--green-100);
   --warning: var(--amber-600); --warning-bg: var(--amber-100);
@@ -161,6 +175,13 @@
   --brand-text: var(--teal-300); --brand-soft: rgba(32, 164, 143, 0.14); --brand-soft-2: rgba(32, 164, 143, 0.26);
   --ink: #ffffff; --ink-hover: var(--gray-200); --text-on-ink: #000000;
   --border: var(--gray-800); --border-strong: var(--gray-700); --divider: var(--gray-900);
+  /*
+   * En oscuro se mide contra la TARJETA y no contra el relleno, porque ahí el
+   * relleno del campo y su tarjeta están a un paso: 3,13:1 sobre `--gray-900`,
+   * 3,38 sobre `--gray-950` y 3,68 sobre negro, que son las tres superficies
+   * donde hay campos. Quien delimita es el borde.
+   */
+  --border-input: var(--gray-600);
   --focus: var(--teal-300); --focus-ring: 0 0 0 3px rgba(92, 198, 179, 0.32);
   --success: #4cc38a; --success-bg: rgba(76, 195, 138, 0.14);
   --warning: #f0b429; --warning-bg: rgba(240, 180, 41, 0.14);
@@ -202,6 +223,695 @@ img, svg { display: block; max-width: 100%; }
 .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 
 /*
+ * ⚠️ **`hidden` tiene que GANAR, y por defecto pierde.** El navegador esconde
+ * un elemento con `[hidden]` desde su propia hoja, y en la cascada **el origen
+ * manda antes que la especificidad**: cualquier `display` nuestro le gana. Un
+ * `<fieldset hidden>` al que le hayamos puesto `display: grid` **se sigue
+ * viendo**, y entonces el formulario de contacto enseña sus tres ramas a la vez
+ * y manda los campos de las tres.
+ *
+ * Es exactamente lo que dejó el panel del calendario dibujado con el popover
+ * cerrado, tragándose los clics. La misma lección, otra propiedad.
+ */
+[hidden] {
+  display: none !important;
+}
+
+/* ===========================================================================
+ * CONTROLES NATIVOS, VESTIDOS DE CONTROLES DE VELTO
+ *
+ * Portado del backoffice (`src/styles.scss`, «Native controls, dressed as app
+ * controls») el 29 de septiembre de 2026, a petición de Dorel: «aplicar estilo
+ * a los calendarios, select, options igual que en el backoffice».
+ *
+ * ⚠️ **Va GLOBAL, no en el `<style>` de una página**, y hay dos motivos
+ * distintos. El conocido: Astro le cuelga el `data-astro-cid` a **cada
+ * compuesto** del selector, así que `[data-theme='dark'] select` compila a
+ * `[data-theme=dark][cid] select[cid]` y no casa nunca, porque `[data-theme]`
+ * vive en el `<html>`. Y el nuevo, que es peor: el panel del calendario **lo
+ * crea JavaScript y se cuelga del `<body>`**, o sea que no lleva el `cid` de
+ * ninguna página y ninguna regla escopada lo alcanza ni escribiéndola bien.
+ *
+ * Qué alcanza el CSS y qué no, que conviene saberlo antes de intentarlo:
+ *   - el control cerrado           → nuestro del todo
+ *   - la lista de un `<select>`    → nuestra desde Chrome 135 (`::picker`)
+ *   - la lista de un `<datalist>`  → **de nadie**: `::picker()` solo acepta
+ *                                    `select`. Por eso el campo de zonas lleva
+ *                                    una lista construida a mano.
+ *   - el calendario del navegador  → de nadie, y por eso se pone otro delante
+ * ======================================================================== */
+
+/*
+ * El gris de los iconos que dibujamos: el chevron del `select` y el calendario.
+ *
+ * ⚠️ **Es un valor a mano y no un `var()`, porque un `data:` URI no puede leer
+ * una variable.** Por eso queda escrito aquí lo que hay que respetar al
+ * cambiarlo: `--gray-500` pasa el 3:1 de WCAG 1.4.11 en las cuatro superficies
+ * reales de la web — 3,28:1 sobre `--gray-100`, 3,59 sobre `--gray-800`, 3,73
+ * sobre blanco y 5,63 sobre negro.
+ *
+ * ⚠️ **El backoffice usa `#94a3b8` y ese NO vale aquí.** Es `slate-400` de
+ * Tailwind, un resto de la rampa vieja que el propio kit sustituyó por los
+ * grises con tinte teal: sobre campo claro se queda en **2,26:1**. Se ha
+ * portado la regla, no el número.
+ */
+
+select {
+  /* Fuera el chevron del sistema, o en Windows se apilan los dos. */
+  appearance: none;
+  -webkit-appearance: none;
+
+  /*
+   * ⚠️ **La CAJA va aquí, no solo el adorno.** En el backoffice este bloque
+   * trae únicamente el chevron porque allí la caja la pone `.form-control`,
+   * que es global. Esta web no tiene equivalente: la caja la ponen
+   * `.buscador input` y `.dlg__campo input`, que apuntan a `input` y **no
+   * alcanzan a un `select`**. Sin esto, el primer `<select>` que alguien
+   * escriba saldrá con su flecha, con su lista bonita y sin fondo, sin borde y
+   * más bajo que los campos de al lado.
+   */
+  min-height: var(--control-h);
+  padding: 0 var(--sp-8) 0 var(--sp-4);
+  color: var(--text);
+  background-color: var(--bg-input);
+  border: var(--bw) solid var(--border-input);
+  border-radius: var(--r-md);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%237c868a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5 6 6.5l5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sp-3) center;
+  background-size: 0.7rem;
+  cursor: pointer;
+}
+
+select:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/*
+ * Por si acaso: Firefox y Chrome en Linux hacen caso de esto en la lista del
+ * sistema; los demás la pintan ellos y solo `color-scheme` la alcanza.
+ *
+ * ⚠️ **`select option`, nunca `option` a secas.** Suelto alcanzaría también a
+ * los `<option>` de un `<datalist>`, cuya lista **no se puede ver ni medir**
+ * porque la pinta el navegador fuera de la página: se estaría cambiando a
+ * ciegas algo que no hay forma de comprobar.
+ */
+select option,
+select optgroup {
+  background: var(--surface-card);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+ * La lista desplegable, por fin nuestra
+ *
+ * Chrome 135+ trae el *customizable select*: con `appearance: base-select` la
+ * lista sale del sistema y entra en la página como un elemento más.
+ *
+ * ⚠️ **La media query NO sobra, y es el error que el backoffice ya pagó** (del
+ * 7 al 22 de septiembre de 2026). **Chrome para Android soporta
+ * `base-select`**, así que con el `@supports` a solas el móvil deja de abrir la
+ * hoja del sistema y abre un popover de página — y el síntoma no es estético:
+ * el desplegable **deja de cerrarse al volver a tocar el campo** y obliga a
+ * elegir una opción para salir.
+ *
+ * La regla, que vale para lo que venga: **`@supports` contesta si el navegador
+ * puede, nunca si conviene.** Cuando la respuesta depende del aparato, hay que
+ * preguntar por el aparato.
+ * ------------------------------------------------------------------------- */
+@media (hover: hover) and (pointer: fine) {
+  @supports (appearance: base-select) {
+    select {
+      appearance: base-select;
+      display: flex;
+      align-items: center;
+    }
+
+    /* El control cerrado no cambia: se esconde el triángulo del navegador y se
+       mantiene nuestro chevron. Lo que se venía a mejorar es la lista. */
+    select::picker-icon { display: none; }
+
+    ::picker(select) {
+      appearance: base-select;
+      background: var(--surface-card);
+      border: var(--bw) solid var(--border);
+      border-radius: var(--r-md);
+      box-shadow: var(--sh-3);
+      padding: var(--sp-1);
+      margin-top: var(--sp-1);
+      max-height: 18rem;
+      overflow-y: auto;
+    }
+
+    select option {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--r-sm);
+      color: var(--text);
+      background: transparent;
+      font-size: var(--fs-small);
+      cursor: pointer;
+    }
+
+    /* El check de la elegida lo dibuja el navegador y ocupa sitio aunque no se
+       vea; sin esto las etiquetas bailan al abrir. */
+    select option::checkmark { color: var(--brand); order: 1; margin-left: auto; }
+    select option:hover,
+    select option:focus { background: var(--bg-alt); color: var(--text); }
+    select option:checked { color: var(--brand-text); font-weight: var(--fw-medium); }
+    select option:disabled { color: var(--text-3); cursor: not-allowed; }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * El indicador de fecha del navegador
+ *
+ * ⚠️ **No se le toca el color.** Con `color-scheme` declarado —y lo está, en
+ * los dos bloques de tema— el navegador ya lo dibuja del tono que toca. El
+ * backoffice llegó a llevar un `filter: invert(0.75)` encima que durante meses
+ * lo **escondió**: invertir un icono ya claro da un gris oscuro sobre un campo
+ * oscuro. La regla general: si `color-scheme` ya lo resuelve, un filtro de
+ * color encima no lo mejora, lo rompe — y lo rompe solo en un tema.
+ *
+ * Lo único nuestro es la mano: el indicador se puede pulsar y el navegador no
+ * lo dice.
+ * ------------------------------------------------------------------------- */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+input[type='month']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Y cuando el calendario lo pone la web
+ *
+ * ⚠️ **Esta clase la pone `fecha-panel.ts`, y SOLO donde toma el mando.** Es
+ * la diferencia que hace que sea segura: esconde el indicador del navegador,
+ * así que puesta donde no hay panel propio dejaría el campo sin ninguna forma
+ * de abrir un calendario — un icono pintado que no hace nada. Por eso se añade
+ * desde JavaScript y no en la plantilla: si el módulo no llega a ejecutarse, el
+ * campo se queda con el icono nativo y sigue funcionando.
+ *
+ * El icono se dibuja igual que el chevron de los `select` y a la misma
+ * distancia del borde: dos iconos en la misma fila de un formulario que no se
+ * alinearan entre sí se notaría enseguida.
+ * ------------------------------------------------------------------------- */
+input.picker-propio::-webkit-calendar-picker-indicator { display: none; }
+
+input.picker-propio {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c868a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sp-3) center;
+  background-size: 1rem;
+  /*
+   * ⚠️ **El `!important` es de este hueco, y está medido.** `.buscador input`
+   * escrito dentro de un `.astro` compila a `.buscador[cid] input[cid]`, que
+   * mide **(0,3,1)** porque Astro le cuelga el atributo a **cada compuesto**;
+   * esta regla mide (0,1,1). Sin forzarlo, el padding se quedaba en los 16 px
+   * de la página —comprobado en pantalla— y la fecha corría por debajo del
+   * icono. Es el mismo motivo por el que lo lleva el backoffice, con la misma
+   * aritmética y el mismo alcance: **solo el hueco**, nunca los colores.
+   */
+  padding-right: var(--sp-8) !important;
+}
+
+/* ===========================================================================
+ * LA PROSA: ENTRADILLA, COLUMNA DE TEXTO, NOTA Y LISTA CON MARCA
+ *
+ * ⚠️ **`.entrada` estaba ROTA en cinco páginas, y no lo decía nadie.** La
+ * declaraba un `<style is:global>` dentro de `flota.astro`, y Astro **empaqueta
+ * el CSS por página**: un `is:global` de una página es global dentro de ESA
+ * página y no viaja a las demás. Comprobado sobre el build — `.entrada{`
+ * aparece en `dist/flota.html` y en ninguno de condiciones, contacto,
+ * entrega-a-domicilio, reservar y 404.
+ *
+ * La consecuencia, medida en `/contacto` a 1280 px: la entradilla salía a
+ * **16 px, en blanco puro y con 1098 px de ancho** —sin límite de línea— en vez
+ * de 18 px atenuados a 58 caracteres. Un renglón de 1098 px está muy por encima
+ * de lo que se puede leer sin perder la línea.
+ *
+ * Es la TERCERA variante del fallo que `css:audit` no caza, y la más
+ * traicionera: para el auditor la clase está declarada —y lo está—, lo que
+ * falla es que el fichero que la declara **no alcanza** a quien la usa. Las
+ * otras dos ya están documentadas en CLAUDE.md: la clase escrita bajo un
+ * antepasado que no la envuelve, y la que declara otro componente.
+ *
+ * ⚠️ **`.texto`, `.nota` y `.lista-check` NO estaban rotas**, y conviene no
+ * confundirlo: cada una se usa hoy en la misma página que la declara. Suben
+ * aquí porque las páginas nuevas las necesitan, y dejarlas abajo repetiría el
+ * caso de `.entrada` a la primera.
+ * ======================================================================== */
+
+.entrada {
+  color: var(--text-2);
+  font-size: var(--fs-lead);
+  max-width: 58ch;
+  margin: var(--sp-5) 0 var(--sp-10);
+}
+
+/* La columna de prosa larga: condiciones, aviso legal, privacidad. */
+.texto {
+  max-width: 68ch;
+}
+
+.texto h2 {
+  margin-top: var(--sp-12);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-h3);
+  /*
+   * ⚠️ La cabecera es pegajosa: sin esto, llegar por un ancla —`/condiciones#requisitos`,
+   * y el pie está lleno de ellos— deja el título debajo de la cabecera y lo que
+   * se lee es el párrafo de en medio.
+   */
+  scroll-margin-top: 90px;
+}
+
+.texto h3 {
+  margin-top: var(--sp-8);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-h4);
+}
+
+.texto p,
+.texto li {
+  color: var(--text-2);
+  margin-bottom: var(--sp-4);
+}
+
+.texto ul,
+.texto ol {
+  margin: 0 0 var(--sp-4);
+  padding-left: var(--sp-5);
+}
+
+/* Un dato secundario al pie de una sección: la fecha de actualización, una
+   aclaración. Más pequeño y más apagado que el cuerpo. */
+.nota {
+  color: var(--text-3);
+  font-size: var(--fs-small);
+}
+
+/* La lista con la marca de verificación delante, sin viñeta del navegador. */
+.lista-check {
+  list-style: none;
+  margin: var(--sp-6) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.lista-check li {
+  position: relative;
+  padding-left: var(--sp-8);
+  color: var(--text-2);
+}
+
+/*
+ * ⚠️ **La marca es `content` con `aria-hidden` implícito**, no un carácter
+ * dentro del texto: un lector de pantalla leería «marca de verificación» antes
+ * de cada línea. El contenido generado por CSS no entra en el árbol de
+ * accesibilidad en los lectores actuales, que es justo lo que se quiere aquí.
+ */
+.lista-check li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 14px;
+  height: 8px;
+  border-left: 2px solid var(--brand);
+  border-bottom: 2px solid var(--brand);
+  transform: rotate(-45deg);
+}
+
+/* ---------------------------------------------------------------------------
+ * EL CALENDARIO DE VELTO
+ *
+ * Lo dibuja `web/src/lib/fecha-panel.ts` y se cuelga del `<body>` como
+ * `popover`, así que **no hereda de ninguna tarjeta**: todos sus colores se
+ * declaran aquí.
+ *
+ * ⚠️ **Es un `popover`, y eso sustituye al `z-index`.** En la portada hay un
+ * `<dialog>` que se abre con `showModal()`, y contra el top layer ningún
+ * `z-index` sirve — ni el máximo. Un popover entra en ese mismo top layer.
+ * ------------------------------------------------------------------------- */
+.calendario {
+  position: fixed;
+  margin: 0;
+  inset: auto;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  font-size: var(--fs-small);
+  color: var(--text);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-4);
+  user-select: none;
+}
+
+/*
+ * ⚠️ **El `display` va AQUÍ, y esto es lo que hace que el panel desaparezca.**
+ *
+ * El navegador esconde un popover cerrado con
+ * `[popover]:not(:popover-open) { display: none }`, que es una regla suya —de
+ * la hoja del agente de usuario—. Y en la cascada **el ORIGEN manda antes que
+ * la especificidad**: cualquier declaración de autor le gana, por floja que
+ * sea. Con `display: flex` en `.calendario` a secas, cerrar el panel le quitaba
+ * el top layer y **lo dejaba dibujado**: medido, 275 × 553 px encima de la
+ * página y `elementFromPoint()` devolviendo sus botones, o sea tragándose los
+ * clics de lo que hubiera debajo. Sin un solo error en consola.
+ *
+ * Declarándolo solo mientras está abierto, el navegador recupera el mando.
+ * Esto se comprueba **cerrando el panel y midiendo**, nunca leyendo el fichero.
+ */
+.calendario:popover-open {
+  display: flex;
+  /*
+   * El tope real lo pone `colocar()` midiendo la pantalla; esto es lo que hace
+   * que el recorte se pueda recorrer en vez de esconder el pie del panel.
+   */
+  overflow-y: auto;
+}
+
+/*
+ * ⚠️ **La superficie la decide el CAMPO, no la página.** El buscador de la
+ * portada vive sobre una tarjeta que es oscura **en los dos temas**, así que
+ * sus campos llevan `color-scheme: dark`. Sin esto, en tema claro saldría un
+ * panel blanco colgando de un campo negro. Lo decide el montador leyendo el
+ * `color-scheme` del propio campo.
+ */
+.calendario--oscuro {
+  color: var(--velto-white);
+  background: var(--gray-900);
+  border-color: var(--gray-800);
+}
+
+.calendario__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.calendario__mes {
+  flex: 1;
+  text-align: center;
+  font-weight: var(--fw-medium);
+}
+
+.calendario__nav {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.calendario--oscuro .calendario__nav { color: var(--gray-300); }
+.calendario__nav:hover { background: var(--bg-alt); color: var(--text); }
+.calendario--oscuro .calendario__nav:hover { background: var(--gray-800); color: var(--velto-white); }
+
+.calendario__semana,
+.calendario__rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, 34px);
+  gap: 2px;
+}
+
+.calendario__semana span {
+  text-align: center;
+  font-size: var(--fs-overline);
+  /* `--text-3` es `--gray-500`, y a 11 px sobre blanco se queda en 4,1:1. */
+  color: var(--gray-600);
+  padding-bottom: var(--sp-1);
+}
+.calendario--oscuro .calendario__semana span { color: var(--gray-400); }
+
+.calendario__dia {
+  height: 34px;
+  padding: 0;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.calendario__dia:hover:not(:disabled) { background: var(--bg-alt); }
+.calendario--oscuro .calendario__dia:hover:not(:disabled) { background: var(--gray-800); }
+
+/*
+ * Los días del mes de al lado se ven —dan contexto— pero se apagan.
+ *
+ * ⚠️ **El apagado se hace con el COLOR, no apilando `opacity` encima.** Con
+ * `--text-3` y un `opacity: 0.55` sobre el panel claro salían a **1,91:1**:
+ * botones pulsables cuya fecha no se puede leer. Son días elegibles, no
+ * decoración — quien reserva a primeros de mes los usa.
+ */
+.calendario__dia.es-de-fuera { color: var(--gray-600); }
+.calendario--oscuro .calendario__dia.es-de-fuera { color: var(--gray-500); }
+
+/*
+ * Hoy se marca con un borde y lo elegido con relleno. Si los dos pintaran
+ * igual no se distinguiría cuál es cuál — y en la captura de Dorel se ven los
+ * dos a la vez, el 29 y el 30.
+ */
+.calendario__dia.es-hoy { box-shadow: inset 0 0 0 1px var(--brand); }
+
+.calendario__dia.es-elegido {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-weight: var(--fw-medium);
+}
+
+.calendario__dia:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.calendario__hora {
+  display: flex;
+  gap: var(--sp-2);
+  border-top: var(--bw) solid var(--border);
+  padding-top: var(--sp-2);
+}
+.calendario--oscuro .calendario__hora { border-top-color: var(--gray-800); }
+
+.calendario__columna {
+  /*
+   * ⚠️ **`position: relative` NO es decorativo: es lo que centra la hora.**
+   * `offsetTop` se mide contra el antepasado **posicionado**, y sin esto ese
+   * antepasado es el panel entero (`position: fixed`). Medido: con las 10:00
+   * elegidas la columna se desplazaba hasta las 18 y la hora elegida quedaba
+   * fuera de la vista — o sea que el panel se abría enseñando una hora que no
+   * era la del campo. Está documentado en el backoffice como una de las tres
+   * trampas del suyo, y aun así se repite en cuanto se olvida esta línea.
+   */
+  position: relative;
+  /* Alto fijo con desplazamiento: 24 horas no caben y una lista sin tope
+     estiraría el panel hasta salirse de la pantalla. */
+  max-height: 168px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 60px;
+
+  /*
+   * ⚠️ **La barra de desplazamiento también es parte del panel.** Por defecto
+   * sale la del sistema —ancha, con su carril— y dentro de un panel estrecho
+   * es lo primero que se ve. Van las dos formas: la estándar la entiende
+   * Firefox y los pseudo-elementos los aplica Chrome.
+   */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.calendario__columna::-webkit-scrollbar { width: 6px; }
+.calendario__columna::-webkit-scrollbar-track { background: transparent; }
+.calendario__columna::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-xs);
+}
+
+.calendario__item {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.calendario__item:hover { background: var(--bg-alt); }
+.calendario--oscuro .calendario__item:hover { background: var(--gray-800); }
+.calendario__item.es-elegido {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  font-weight: var(--fw-medium);
+}
+
+.calendario__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  border-top: var(--bw) solid var(--border);
+  padding-top: var(--sp-2);
+}
+.calendario--oscuro .calendario__pie { border-top-color: var(--gray-800); }
+
+.calendario__pie-derecha { display: flex; align-items: center; gap: var(--sp-1); }
+
+.calendario__borrar,
+.calendario__hoy,
+.calendario__cerrar {
+  /* 44 px, que es la medida del dedo: son los únicos botones del panel que no
+     son una celda del calendario. */
+  min-height: var(--touch);
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.calendario__borrar:hover:not(:disabled),
+.calendario__hoy:hover:not(:disabled),
+.calendario__cerrar:hover:not(:disabled) { background: var(--bg-alt); }
+.calendario--oscuro .calendario__borrar:hover:not(:disabled),
+.calendario--oscuro .calendario__hoy:hover:not(:disabled),
+.calendario--oscuro .calendario__cerrar:hover:not(:disabled) { background: var(--gray-800); }
+.calendario__borrar:disabled,
+.calendario__hoy:disabled,
+.calendario__cerrar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/*
+ * ⚠️ **En rojo porque es el único de los tres que destruye algo.** «Hoy» y
+ * «Cerrar» son reversibles de un vistazo; este deja el campo vacío.
+ */
+.calendario__borrar { color: var(--danger); }
+/*
+ * ⚠️ **Y su variante oscura, que faltaba.** El panel sale `--oscuro` siempre en
+ * el buscador de la portada —sus campos llevan `color-scheme: dark` en los dos
+ * temas—, así que en tema claro «Borrar» heredaba el `--danger` del bloque
+ * claro (#c8322b) sobre un panel casi negro: **3,36:1**. Los otros dos botones
+ * sí tenían su variante; este se quedó fuera.
+ */
+.calendario--oscuro .calendario__borrar { color: #f26b62; }
+.calendario__hoy { color: var(--brand-text); }
+.calendario--oscuro .calendario__hoy { color: var(--teal-300); }
+/* `--text-3` es `--gray-500` en claro y se queda en 4,1:1 sobre blanco. */
+.calendario__cerrar { color: var(--gray-600); }
+.calendario--oscuro .calendario__cerrar { color: var(--gray-400); }
+
+/* ---------------------------------------------------------------------------
+ * LA LISTA DE ZONAS DE RECOGIDA
+ *
+ * La dibuja `web/src/lib/zonas-combo.ts`. Mismo lenguaje que la lista de un
+ * `<select>` de arriba, porque para el visitante es la misma cosa.
+ *
+ * ⚠️ **Va DENTRO de `.campo-con-aspa`, no en el top layer**, al revés que el
+ * calendario. Así sigue al campo sin recalcular nada al desplazar, que con una
+ * lista de tres filas pegada a su campo es más robusto que colocarla a mano. Lo
+ * que hace que se vea es `.buscador { position: relative; z-index: 2 }`, en la
+ * portada: sin eso la tapa la sección siguiente.
+ * ------------------------------------------------------------------------- */
+.zonas {
+  position: absolute;
+  top: calc(100% + var(--sp-1));
+  left: 0;
+  right: 0;
+  bottom: auto;
+  z-index: 3;
+  margin: 0;
+  padding: var(--sp-1);
+  list-style: none;
+  background: var(--gray-900);
+  border: var(--bw) solid var(--gray-800);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-4);
+}
+
+/*
+ * ⚠️ **Vuelca hacia arriba cuando el teclado no deja sitio debajo.** Lo decide
+ * `zonas-combo.ts` midiendo contra `visualViewport`, que es lo único que sabe
+ * del teclado: `innerHeight` no cambia cuando sube.
+ */
+.zonas--arriba {
+  top: auto;
+  bottom: calc(100% + var(--sp-1));
+}
+
+/*
+ * ⚠️ **En una sola columna la lista EMPUJA, no flota.** Con el buscador en
+ * columna, una lista flotante de tres filas cae justo encima del campo
+ * «Recogida» que viene debajo — y un toque ahí aterriza en un `<li>` y cambia
+ * la zona en vez de abrir el calendario. Es el peor tipo de fallo táctil:
+ * hace algo, y algo distinto de lo que se quería.
+ *
+ * Ocupando sitio de verdad, el campo de fecha baja y ningún toque puede
+ * desviarse. El buscador crece 128 px mientras la lista está abierta, y eso es
+ * preferible a una zona de toque que miente. Es además lo que hacen los
+ * desplegables de móvil que se expanden en línea.
+ */
+@media (max-width: 719px) {
+  .zonas,
+  .zonas--arriba {
+    position: static;
+    top: auto;
+    bottom: auto;
+    margin-top: var(--sp-1);
+    box-shadow: none;
+  }
+}
+
+.zonas__opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-small);
+  color: var(--velto-white);
+  cursor: pointer;
+}
+
+.zonas__opcion.es-activa { background: var(--gray-800); }
+.zonas__opcion.es-elegida .zonas__nombre { color: var(--teal-300); font-weight: var(--fw-medium); }
+
+/*
+ * El precio, apagado y a la derecha. Es el dato que decide si se reserva, así
+ * que va en la propia fila y no en una línea aparte bajo el campo: aquella la
+ * quitó Dorel —«no tiene sentido, complica demasiado»— y tenía razón.
+ */
+.zonas__coste {
+  color: var(--gray-400);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+/*
  * El rótulo de sección: turquesa, versalitas y el tracking del logotipo. Es la
  * pieza que más «Velto» hace parecer a una página.
  */
@@ -213,10 +923,27 @@ img, svg { display: block; max-width: 100%; }
   color: var(--brand-text);
 }
 
+/*
+ * Lo que se apaga para quien pide menos movimiento.
+ *
+ * ⚠️ **`animation-iteration-count: 1` faltaba, y con el fondo animado deja de
+ * ser teórico.** Acortar la duración a 0,01 ms **no para** una animación
+ * `infinite`: la deja dando vueltas a decenas de miles de ciclos por segundo, o
+ * sea un parpadeo — peor que la animación original, y con riesgo real para
+ * alguien fotosensible o con problemas vestibulares. Hasta hoy no se notaba
+ * porque no había ninguna animación en bucle; el humo del fondo es la primera.
+ *
+ * ⚠️ **Y `scroll-behavior: auto`, que también faltaba.** La línea 174 pone
+ * `html { scroll-behavior: smooth }`, así que quien había pedido menos
+ * movimiento seguía teniendo el desplazamiento suave — de los movimientos que
+ * peor sientan, y activo desde antes de este cambio.
+ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -229,7 +956,21 @@ img, svg { display: block; max-width: 100%; }
 }
 
 .seccion { padding-block: var(--section-y); }
-.seccion--alt { background: var(--bg-alt); }
+/*
+ * La sección alterna: un degradado gris, no un color plano.
+ *
+ * ⚠️ **En tema oscuro el plano era casi invisible.** `--bg-alt` sobre `--bg`
+ * es `#0B0F0E` sobre `#000000`: razón **1,05**, o sea que la sección que
+ * debería distinguirse del fondo no se distinguía de nada. Es justo lo que
+ * Dorel pidió —«en tono noche todo se vuelve negro y las secciones más claras
+ * hay que diferenciarlas en gris gradient»—.
+ *
+ * ⚠️ **Y es translúcido a propósito**, no un gris opaco: así el humo de la
+ * sección de al lado se ve a través del borde en vez de cortarse en seco.
+ */
+.seccion--alt {
+  background: linear-gradient(180deg, var(--seccion-alt-1), var(--seccion-alt-2));
+}
 
 /*
  * Las tres barras inclinadas del isotipo, como marca de sección.
@@ -280,6 +1021,47 @@ img, svg { display: block; max-width: 100%; }
 .btn--soft { background: var(--brand-soft); color: var(--brand-text); }
 .btn--soft:hover { background: var(--brand-soft-2); }
 
+/* ---- Un botón apagado tiene que PARECERLO ---------------------------------
+ *
+ * ⚠️ **No había ninguna regla, y esto es el M-46 del backoffice otra vez.**
+ * `.btn:disabled` no existía, así que un botón deshabilitado medía
+ * `opacity: 1`, `cursor: pointer` y su color de marca entero: igual que uno
+ * pulsable. El de la pre-reserva sí se apagaba de verdad —medido el 2 de
+ * octubre de 2026, tres clics seguidos dan **una** petición—, pero nada de eso
+ * se veía, así que lo que el visitante hace es volver a pulsar.
+ *
+ * ⚠️ **`pointer-events: none` y no `cursor: not-allowed`.** Hace falta para el
+ * `<a>` de descargar —un enlace no entiende `disabled`— y de paso apaga el
+ * `:hover` del color de marca, que si no seguiría encendiéndose bajo el ratón
+ * y contaría lo contrario. El cursor se queda en flecha, que ya dice que ahí
+ * no se pulsa.
+ */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/*
+ * La rueda del estado ocupado. Ver `lib/boton-ocupado.ts`: entre pulsar
+ * «Reservar» y la respuesta pasan segundos, y una espera sin nada que se mueva
+ * se lee como una aplicación colgada.
+ */
+.btn__rueda {
+  flex: none;
+  animation: btn-girar 0.7s linear infinite;
+}
+
+@keyframes btn-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* Quien pida menos movimiento se queda con la rueda quieta, que sigue
+   distinguiendo el botón ocupado del normal. */
+@media (prefers-reduced-motion: reduce) {
+  .btn__rueda { animation: none; }
+}
+
 /* ---- Tarjetas ----------------------------------------------------------- */
 
 .card {
@@ -320,7 +1102,42 @@ img, svg { display: block; max-width: 100%; }
  * El empujón lo da `margin-top: auto` sobre el precio, que arrastra consigo el
  * detalle y el botón: así el bloque de dinero queda pegado abajo en todas.
  */
-.coche { height: 100%; }
+/*
+ * La tarjeta de coche, y lo que pasa al pasar el ratón.
+ *
+ * ⚠️ **Se anima la tarjeta ENTERA, no el enlace de dentro.** El `<a>` ocupa
+ * casi todo pero no todo —el botón «Que me llamen» va fuera, porque un botón
+ * dentro de un enlace no es HTML válido—, así que con el hover en el enlace la
+ * tarjeta se encendía a medias: el pie se quedaba con el fondo de antes.
+ *
+ * ⚠️ **Y solo donde hay ratón.** Con el dedo no existe el «pasar por encima»:
+ * lo que hay es un toque, y en muchos móviles el primer toque se queda en
+ * estado hover. Una tarjeta que se levanta y se queda levantada después de
+ * volver de la ficha se lee como que está seleccionada.
+ */
+.coche {
+  height: 100%;
+  transition:
+    border-color var(--t-base) var(--ease),
+    box-shadow var(--t-base) var(--ease),
+    background-color var(--t-base) var(--ease),
+    transform var(--t-base) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .coche:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--sh-3);
+    background-color: var(--bg-alt);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coche { transition: none; }
+  .coche:hover { transform: none; }
+}
+
 .coche__link { display: flex; flex-direction: column; height: 100%; color: inherit; }
 .coche__link:hover { text-decoration: none; }
 
@@ -347,6 +1164,22 @@ img, svg { display: block; max-width: 100%; }
  * recorte y a su altura natural (`.ficha__fotos img`): lo que aquí se corta,
  * allí se ve. Es la tarjeta la que necesita una rejilla uniforme.
  */
+/*
+ * ⚠️ **El `<picture>` tiene que estirarse, y sin esta línea la foto salía
+ * enmarcada.** `marcadoFoto()` envuelve la imagen en un `<picture>` para poder
+ * ofrecer WebP, así que el `height: 100%` del `img` **no se resolvía contra la
+ * caja 4/3 sino contra el `<picture>`, que es de alto automático**: la imagen
+ * se quedaba en su proporción natural, centrada, con dos franjas de `--bg-alt`
+ * arriba y abajo. Medido el 30 de septiembre de 2026 en una tarjeta de 349 px:
+ * caja de 261 px de alto, imagen de 185 y **38 px de gris por lado**. Se veía
+ * como un recorte con marco —«bordes tan visibles que parecen recortados», lo
+ * dijo Dorel— y llevaba así desde que existen las tarjetas, en las tres
+ * páginas.
+ *
+ * ⚠️ **Y no vale con quitar el `aspect-ratio`.** La caja uniforme es lo que
+ * hace que la rejilla no baile: sin ella, cada coche mide lo que mida su foto.
+ */
+.coche__foto picture { display: block; width: 100%; height: 100%; }
 .coche__foto img { width: 100%; height: 100%; object-fit: cover; }
 
 .coche__sinfoto {
@@ -379,13 +1212,172 @@ img, svg { display: block; max-width: 100%; }
 .coche__specs svg { color: var(--text-3); }
 
 /* El `auto` es lo que pega el bloque de dinero al fondo de la tarjeta. */
-.coche__precio { margin: auto 0 0; }
+.coche__dinero { margin-top: auto; }
+.coche__precio { margin: 0; }
 .coche__precio strong { font-size: var(--fs-price); font-weight: var(--fw-bold); letter-spacing: var(--ls-tight); }
 .coche__precio span { color: var(--text-2); font-size: var(--fs-small); }
 .coche__precio--consultar { font-size: var(--fs-h4); color: var(--text-2); }
 
-.coche__detalle { margin: var(--sp-1) 0 var(--sp-5); color: var(--text-3); font-size: var(--fs-caption); }
-.coche__btn { width: 100%; }
+.coche__detalle { margin: var(--sp-1) 0 0; color: var(--text-3); font-size: var(--fs-caption); }
+
+/*
+ * El botón de la tarjeta: «Reservar» cuando hay fechas y precio, «Calcular
+ * precio» cuando solo hay un «desde».
+ *
+ * ⚠️ **Vive AQUÍ y no en la página de resultados, y eso arregla un fallo que
+ * llevaba desde que existe.** Estaba escrito en el `<style>` de
+ * `reservar.astro` como `.coche__llamada`, y esa hoja está **encapsulada por
+ * Astro**: compila a `.coche__llamada:where([data-astro-cid-…])` y la tarjeta
+ * la inyecta `tarjeta.ts` con `innerHTML`, así que **no lleva ese atributo y la
+ * regla no se aplicaba nunca**. Medido el 30 de septiembre de 2026: el botón
+ * salía con `margin: 0px`, pegado al borde inferior izquierdo de la tarjeta y
+ * a media anchura. Es la tercera vez que muerde lo mismo —una clase declarada
+ * que no alcanza— y la razón por la que todo lo de `.coche` es global.
+ */
+.coche__btn { width: 100%; margin-top: var(--sp-5); }
+
+/*
+ * ⚠️ **La flecha se mueve, el botón no.** Lo pidió Dorel el 2 de octubre de
+ * 2026 —«un botón reservar con una flecha y que tenga animación»—, y lo que se
+ * anima es solo la flecha: agrandar el botón recolocaría el contenido de la
+ * tarjeta en cada pasada del ratón, y una `transform` la resuelve el
+ * compositor sin recalcular nada.
+ *
+ * ⚠️ **El disparador es la TARJETA, no el botón.** Toda la tarjeta es el
+ * enlace, así que el ratón casi nunca está encima del botón: con
+ * `.coche__btn:hover` la flecha solo se movía en la última fila de la tarjeta
+ * y parecía que la animación no estaba puesta.
+ */
+.coche__btn svg { transition: transform var(--t-base) var(--ease); }
+.coche__link:hover .coche__btn svg,
+.coche__link:focus-visible .coche__btn svg { transform: translateX(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .coche__btn svg { transition: none; }
+  .coche__link:hover .coche__btn svg,
+  .coche__link:focus-visible .coche__btn svg { transform: none; }
+}
+
+/* ---- Las chapas de filtro -------------------------------------------------
+ *
+ * La tira de «Todos · SUV · Económico» de la página de resultados.
+ *
+ * ⚠️ **Están AQUÍ y no en la hoja de la página porque las crea el
+ * JavaScript**, desde los coches que ha devuelto la búsqueda. Una hoja de
+ * página está encapsulada por Astro y sus reglas llevan un atributo que esos
+ * nodos no tienen: la chapa saldría sin forma, como ya pasó con el botón de la
+ * tarjeta y como pasó en el backoffice con `.badge`.
+ *
+ * ⚠️ **Y el estado activo usa `--ink`, no negro escrito a mano.** Ese par se
+ * invierte con el tema —negro sobre claro, blanco sobre oscuro—, así que la
+ * chapa elegida se distingue en los dos. Con `--velto-black` fijo, en el tema
+ * oscuro la chapa activa sería casi el fondo de la página.
+ */
+.chapas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+}
+
+.chapa {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border-strong);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition:
+    color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chapa:hover { color: var(--text); border-color: var(--brand); }
+}
+
+.chapa.es-activa {
+  color: var(--text-on-ink);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* La cuenta pesa menos que el rótulo, o la chapa se lee como una cifra. */
+.chapa__n { color: var(--text-3); font-size: var(--fs-caption); }
+.chapa.es-activa .chapa__n { color: inherit; opacity: 0.7; }
+
+/* ---- La misma tarjeta, en fila --------------------------------------------
+ *
+ * La vista de lista de la página de resultados. **Es la misma tarjeta**: el
+ * marcado no cambia, solo se recoloca. Dos marcados para el mismo coche serían
+ * dos sitios donde arreglar el día que cambie un dato.
+ *
+ * ⚠️ **Solo desde 720 px, y no es un olvido.** Por debajo, la rejilla ya es de
+ * una columna: las dos vistas saldrían **idénticas**, así que el interruptor
+ * sería un mando que no hace nada. Por eso la página tampoco lo enseña en
+ * móvil — lo esconde el propio interruptor, no esta hoja.
+ */
+.rejilla--filas { grid-template-columns: 1fr; gap: var(--sp-4); }
+
+@media (min-width: 720px) {
+  .rejilla--filas .coche { display: flex; flex-direction: row; align-items: stretch; }
+
+  /* `min-width: 0` o un nombre largo estira la fila entera y se lleva por
+     delante la columna del precio. */
+  .rejilla--filas .coche__link { flex: 1; flex-direction: row; min-width: 0; }
+
+  .rejilla--filas .coche__foto { flex: none; width: 240px; }
+
+  /*
+   * El cuerpo pasa a dos columnas: los datos a la izquierda y el dinero a la
+   * derecha, alineado con el botón. El `span 3` es lo que lo mantiene
+   * centrado contra las tres líneas de la izquierda.
+   */
+  .rejilla--filas .coche__cuerpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    column-gap: var(--sp-6);
+    padding: var(--sp-5) var(--sp-6);
+  }
+
+  .rejilla--filas .overline,
+  .rejilla--filas .coche__nombre,
+  .rejilla--filas .coche__specs { grid-column: 1; }
+
+  .rejilla--filas .coche__nombre { margin: var(--sp-1) 0 var(--sp-3); }
+  .rejilla--filas .coche__specs { margin: 0; }
+
+  .rejilla--filas .coche__dinero {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin: 0;
+    text-align: right;
+  }
+
+  /*
+   * ⚠️ **El botón es una TERCERA columna, no una fila debajo del precio.** En
+   * la vista de lista la tarjeta mide 180 px de alto: puesto debajo, el botón
+   * se lleva el aire que separa el precio de su letra pequeña y las dos cifras
+   * se leen como una. A la derecha y centrado contra las tres líneas de la
+   * izquierda queda donde estaba antes de que el botón entrara en el enlace.
+   */
+  .rejilla--filas .coche__btn {
+    grid-column: 3;
+    grid-row: 1 / span 3;
+    align-self: center;
+    width: auto;
+    margin: 0;
+  }
+}
 
 /* ---- Traído de la referencia (demo.awaikenthemes.com/rentgo) -------------
  *
@@ -430,7 +1422,18 @@ img, svg { display: block; max-width: 100%; }
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--brand-soft);
+  /*
+   * ⚠️ **Gris, no verde, y el motivo es medible.** El círculo se pintaba con
+   * `--brand-soft` (#E6F6F3) sobre una tarjeta blanca (#F6F8F8): razón de
+   * luminancia **1,05**, o sea exactamente la misma claridad. Lo único que
+   * separaba el círculo de su tarjeta era el tono verde — no aportaba jerarquía,
+   * aportaba color. Y es uno de los dos sitios de toda la web donde un verde
+   * hacía de superficie, que es lo que Dorel pidió quitar: el verde se queda
+   * para botones y acciones.
+   *
+   * El ICONO de dentro sí sigue siendo de marca: eso es un trazo, no un fondo.
+   */
+  background: var(--bg-alt);
   color: var(--brand-text);
   margin-bottom: var(--sp-5);
 }
@@ -445,12 +1448,23 @@ img, svg { display: block; max-width: 100%; }
  */
 .faq { display: grid; gap: var(--sp-3); }
 
+/*
+ * Las preguntas frecuentes.
+ *
+ * ⚠️ **Fondo GRIS, no verde.** La pregunta abierta se pintaba con
+ * `--brand-soft`, un verde clarito, y es justo lo que Dorel quitó de toda la
+ * página: el verde queda para botones y acciones, los fondos son blanco, negro
+ * y grises. Una pregunta desplegada no es una acción, es contenido.
+ */
 .faq details {
   background: var(--surface-card);
   border: var(--bw) solid var(--border);
   border-radius: var(--r-lg);
   overflow: hidden;
+  transition: border-color var(--t-base) var(--ease);
 }
+
+.faq details[open] { border-color: var(--border-strong); }
 
 .faq summary {
   display: flex;
@@ -461,8 +1475,13 @@ img, svg { display: block; max-width: 100%; }
   font-weight: var(--fw-medium);
   cursor: pointer;
   list-style: none;
+  transition: background-color var(--t-fast) var(--ease);
 }
 .faq summary::-webkit-details-marker { display: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .faq summary:hover { background: var(--bg-alt); }
+}
 
 .faq summary::after {
   content: '';
@@ -475,14 +1494,216 @@ img, svg { display: block; max-width: 100%; }
   transition: transform var(--t-base) var(--ease);
 }
 
-.faq details[open] summary { background: var(--brand-soft); color: var(--brand-text); }
+.faq details[open] summary { background: var(--bg-alt); }
 .faq details[open] summary::after { transform: rotate(-135deg); }
 
+/*
+ * La animación de abrir y cerrar.
+ *
+ * ⚠️ **`<details>` no anima por su cuenta**: el navegador enseña y esconde su
+ * contenido de golpe, y `height: auto` no es interpolable. El truco que sí
+ * funciona en todas partes es una rejilla de una fila que va de `0fr` a `1fr`:
+ * eso sí se interpola, y no hace falta saber cuánto mide el texto.
+ *
+ * ⚠️ **Y el hijo necesita `min-height: 0` y `overflow: hidden`.** Sin ellos, el
+ * contenido de una celda de rejilla no baja de su altura natural y la fila se
+ * queda abierta: la animación no se ve y el cuerpo aparece de golpe igual.
+ *
+ * El cierre lo acompaña un poco de JS en la página: sin él, el navegador quita
+ * el contenido en cuanto se suelta `open` y solo se animaría la apertura.
+ */
+.faq__animable {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-base) var(--ease);
+}
+
+.faq details[open] .faq__animable { grid-template-rows: 1fr; }
+/* Cerrándose: sigue `open` —para que el contenido exista— pero ya encoge. */
+.faq details[open].cerrandose .faq__animable { grid-template-rows: 0fr; }
+
+.faq__animable > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .faq .faq__cuerpo {
+  /*
+   * ⚠️ **El aire entre la pregunta y la respuesta lo puso Dorel** el 30 de
+   * septiembre de 2026, probándolo en el navegador. Sin él la respuesta arranca
+   * pegada al filete de la cabecera y las dos se leen como un solo bloque:
+   * cuesta ver dónde acaba la pregunta y empieza lo que contesta.
+   *
+   * Va en `global.css` y no en la portada, así que lo recogen **las dos**
+   * páginas que tienen acordeón —la portada y `/preguntas-frecuentes`— sin que
+   * nadie tenga que acordarse. Es la lección de `.entrada`, que vivió declarada
+   * en una página y usada en seis.
+   */
+  margin-top: 1rem;
   padding: 0 var(--sp-6) var(--sp-5);
   color: var(--text-2);
   font-size: var(--fs-small);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .faq__animable { transition: none; }
+  .faq summary::after { transition: none; }
+}
+
+
+/* ===========================================================================
+ * EL FONDO: MASAS DE GRIS QUE SE MUEVEN
+ *
+ * Lo pidió Dorel el 29 de septiembre de 2026 —«un gradient que se mueve tipo
+ * humo aleatorio en tonos grises blanco y negro»— y al ver la primera versión
+ * mandó una referencia: un degradado amplio y limpio, de gris claro a negro,
+ * sin grano.
+ *
+ * ⚠️ **Por eso esto NO lleva ruido, y la primera versión sí.** Iba con una
+ * máscara de `feTurbulence`, que da volutas con textura: de cerca se ve el
+ * grano y el resultado es «niebla», no «degradado». La referencia es lo
+ * contrario —masas grandes fundidas entre sí—, así que son cuatro radiales muy
+ * difusos, sin máscara y sin un solo byte de ruido.
+ *
+ * ⚠️ **Y las masas van en capas separadas a propósito.** Un solo elemento con
+ * los cuatro degradados no se puede animar por partes: al moverlo, se mueven
+ * los cuatro juntos y el conjunto se lee como una imagen que se desliza. En dos
+ * capas con periodos distintos, las masas se cruzan entre sí y es ahí donde
+ * aparece la sensación de que algo se mueve despacio.
+ *
+ * ⚠️ **El tema CLARO está en su techo, y el número sale de medirlo.** El humo
+ * oscurece el fondo, y hay texto que se apoya directamente en él —no dentro de
+ * una tarjeta—. Medido el 29 de septiembre de 2026 fotografiando la portada
+ * con el contenido oculto y muestreando el píxel más oscuro dentro de la caja
+ * de cada texto: once trozos, el peor es el aviso de «No hemos podido cargar
+ * la flota» a **4,92:1** sobre un mínimo de 4,5. Subir `--masa-1` lo tumba, y
+ * lo tumba justo en el mensaje que explica que algo ha fallado.
+ *
+ * En OSCURO sobra sitio —el peor sale a 6,34:1—, porque ahí las masas aclaran
+ * un fondo negro y el texto es claro. Si algún día se quiere más dramatismo,
+ * el que puede crecer es el oscuro; el claro no.
+ * ======================================================================== */
+:root,
+[data-theme='light'] {
+  /*
+   * Tres tonos: el más oscuro da el peso, el medio el cuerpo y el claro
+   * levanta una zona. En claro son negros translúcidos sobre blanco.
+   */
+  --masa-1: rgb(0 0 0 / 0.26);
+  --masa-2: rgb(0 0 0 / 0.15);
+  --masa-3: rgb(0 0 0 / 0.08);
+  --seccion-alt-1: rgb(0 0 0 / 0.05);
+  --seccion-alt-2: rgb(0 0 0 / 0.02);
+}
+
+[data-theme='dark'] {
+  /*
+   * ⚠️ **En oscuro NO es el mismo número con el color cambiado.** Un 16 % de
+   * blanco sobre negro pesa mucho más que un 16 % de negro sobre blanco: el
+   * ojo distingue mucho mejor lo que se aclara en la sombra. Se conserva el
+   * efecto, no el valor.
+   */
+  --masa-1: rgb(255 255 255 / 0.16);
+  --masa-2: rgb(255 255 255 / 0.09);
+  --masa-3: rgb(255 255 255 / 0.05);
+  --seccion-alt-1: rgb(255 255 255 / 0.1);
+  --seccion-alt-2: rgb(255 255 255 / 0.04);
+}
+
+/*
+ * ⚠️ **Contenido en su sección, no fijo a la ventana.** Fijo tiene dos
+ * problemas: en iOS la barra de direcciones cambia el alto del viewport y
+ * obliga a rerasterizar al desplazar, y hay que pelear el z-index con la
+ * cabecera pegajosa. Contenido, ni una cosa ni la otra.
+ */
+.con-humo { position: relative; isolation: isolate; }
+.con-humo > .contenedor { position: relative; z-index: 1; }
+
+.humo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+
+/*
+ * ⚠️ **`inset` negativo y grande, y no es margen de sobra.** Las capas se
+ * trasladan hasta 12 % de su tamaño; sin desbordar por los cuatro lados, al
+ * moverse asomaría el borde del degradado y se vería la costura. Y el
+ * `overflow: hidden` del padre es lo que impide que eso ensanche la página.
+ */
+.humo__capa {
+  position: absolute;
+  inset: -25%;
+  /*
+   * ⚠️ **El `blur` es lo que convierte cuatro manchas en una masa.** Sin él se
+   * distinguen los bordes de cada radial por muy difuso que sea su `transparent`,
+   * y se ve lo que es: cuatro círculos. Con 80 px se funden.
+   *
+   * Va en `filter` y no en `backdrop-filter`: aquí se difumina lo que la capa
+   * PINTA, no lo que hay detrás — difuminar el fondo emborronaría el texto de
+   * la sección.
+   */
+  filter: blur(80px);
+}
+
+.humo__capa--a {
+  background:
+    radial-gradient(38% 42% at 18% 22%, var(--masa-1), transparent 68%),
+    radial-gradient(45% 38% at 78% 68%, var(--masa-2), transparent 70%);
+}
+
+.humo__capa--b {
+  background:
+    radial-gradient(52% 46% at 72% 18%, var(--masa-2), transparent 72%),
+    radial-gradient(40% 50% at 28% 82%, var(--masa-3), transparent 66%);
+}
+
+/*
+ * ⚠️ **Los periodos no son múltiplos entre sí (127 y 89 s).** Con 60 y 120 las
+ * dos capas se resincronizarían cada dos minutos y el ojo pilla el patrón;
+ * primos entre sí tardan casi tres horas en repetirse. Eso es lo «aleatorio»
+ * que pedía Dorel, sin una línea de JavaScript.
+ *
+ * ⚠️ **Y el recorrido es pequeño —un 12 %— con `alternate`.** Aquí sí conviene
+ * ir y volver, al revés que con una textura en baldosa: no hay patrón que
+ * repetir, así que un bucle de ida y vuelta muy lento se lee como respiración
+ * y no como un carrusel.
+ */
+@keyframes masa-a {
+  from { transform: translate3d(-6%, -4%, 0) scale(1.05); }
+  to   { transform: translate3d(7%, 5%, 0) scale(1.15); }
+}
+
+@keyframes masa-b {
+  from { transform: translate3d(5%, 6%, 0) scale(1.12); }
+  to   { transform: translate3d(-7%, -5%, 0) scale(1.02); }
+}
+
+/*
+ * ⚠️ **El movimiento se AÑADE en `no-preference`, no se quita en `reduce`.**
+ * Es el patrón bueno: quien pide menos movimiento se queda con las masas
+ * QUIETAS —que siguen siendo un degradado, no un hueco— y si alguien
+ * refactoriza el bloque de reduced-motion, esto sigue parado.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .humo__capa--a { animation: masa-a 127s ease-in-out infinite alternate; }
+  .humo__capa--b { animation: masa-b 89s ease-in-out infinite alternate; }
+}
+
+/*
+ * ⚠️ **En móvil, la mitad de capas.** Un `blur` de 80 px sobre un elemento que
+ * ocupa la sección entera es lo más caro de todo esto, y un teléfono de gama
+ * media lo paga en cada fotograma. La capa que se queda es la que lleva las
+ * masas con más peso.
+ */
+@media (max-width: 719px) {
+  .humo__capa--b { display: none; }
+  .humo__capa { filter: blur(60px); }
+}
+
 
 /* Bloque a dos columnas: titular a la izquierda, contenido a la derecha. */
 .dos-columnas {
@@ -495,3 +1716,145 @@ img, svg { display: block; max-width: 100%; }
 @media (min-width: 900px) {
   .dos-columnas { grid-template-columns: 1fr 1.2fr; gap: var(--sp-16); }
 }
+
+/* ---- Esqueleto de carga ------------------------------------------------- */
+/*
+ * ⚠️ **Ocupa el sitio de las tarjetas que van a llegar, no un hueco cualquiera.**
+ * Una tarjeta de resultados mide 335×586 en un móvil de 390 px, así que el
+ * esqueleto reserva esa altura: si fuera más bajo, al llegar los coches la
+ * página pegaría un salto — que es el defecto que un esqueleto viene a quitar,
+ * no a causar.
+ *
+ * ⚠️ **Y el brillo es `transform` sobre una capa, no `background-position`.**
+ * Animar la posición de un degradado repinta en cada fotograma; una capa que
+ * se traslada la mueve el compositor. Importa porque esto corre justo mientras
+ * el móvil está ocupado descargando y parseando el JavaScript de la pantalla.
+ *
+ * Vive en `global.css` y no en la hoja de la página porque una hoja de página
+ * va encapsulada por Astro, y aquí hay markup que comparte estilos con lo que
+ * inyecta el script — la misma razón que las chapas de filtro.
+ */
+.esq {
+  background: var(--surface-card);
+  border: var(--bw) solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  min-height: 586px;
+  display: grid;
+  align-content: start;
+  gap: var(--sp-4);
+}
+
+.esq__foto { height: 250px; border-radius: var(--r-md); }
+
+.esq__linea { height: 14px; border-radius: var(--r-pill); }
+.esq__linea--corta { width: 38%; }
+.esq__linea--media { width: 64%; }
+
+.esq__foto,
+.esq__linea {
+  position: relative;
+  overflow: hidden;
+  /*
+   * ⚠️ **`--border` y no `--divider`.** En tema oscuro `--divider` vale
+   * `--gray-900`, que es EXACTAMENTE el fondo de la tarjeta: los bloques del
+   * esqueleto salían invisibles y la pantalla enseñaba tres cajas vacías. En
+   * claro sí se veía, que es como pasan estas cosas. `--border` es gris 200 en
+   * claro y gris 800 en oscuro, así que contrasta con su tarjeta en los dos.
+   */
+  background: var(--border);
+}
+
+.esq__foto::after,
+.esq__linea::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  animation: esq-brillo 1.4s ease-in-out infinite;
+}
+
+@keyframes esq-brillo {
+  to { transform: translateX(100%); }
+}
+
+/*
+ * Sin movimiento, el esqueleto sigue siendo útil: lo que informa es que el
+ * hueco está reservado, no el brillo.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .esq__foto::after,
+  .esq__linea::after { display: none; }
+}
+
+/* ---- Destacados de la ficha: etiqueta DGT y gancho ---------------------- */
+/*
+ * ⚠️ **Van juntos y arriba**, pegados al título: son las dos cosas que deciden
+ * si este coche sirve —si entra en Madrid y qué trae que no traen los demás— y
+ * se miran antes que la ficha técnica.
+ *
+ * Viven en `global.css` y no en la hoja del componente porque este markup lo
+ * **inyecta el script**, y una hoja de componente va encapsulada por Astro y no
+ * lo alcanza. Es la misma razón que las chapas de filtro.
+ */
+.ficha__destacados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+
+.etiqueta-dgt {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.etiqueta-dgt svg { flex: none; }
+
+.etiqueta-dgt__texto { display: grid; }
+.etiqueta-dgt__texto strong { font-size: 0.9rem; }
+/*
+ * ⚠️ El matiz de la «B» es largo a propósito y aquí NO se recorta: decirle a
+ * medias a alguien que puede entrar en Madrid es peor que no decírselo.
+ */
+.etiqueta-dgt__texto small { font-size: 0.8rem; color: var(--text-2); line-height: 1.35; }
+
+/*
+ * El gancho. Con fondo de marca tenue y filete a la izquierda, que es como se
+ * lee «esto es distinto» sin gritar — el mismo recurso que el aviso de los
+ * correos.
+ */
+.ficha__gancho {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* La misma pegatina, pequeña, en las tarjetas del listado. */
+.coche__etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+/*
+ * El esqueleto de la FICHA no reserva 586 px como el de una tarjeta de
+ * resultados: aquí lo que viene detrás es una página entera, y un bloque tan
+ * alto antes de la foto sería un agujero. Reserva lo justo para que el salto al
+ * llegar el coche no se note.
+ */
+.esq--ficha {
+  min-height: 0;
+  margin-top: var(--sp-4);
+}
+
+.esq--ficha .esq__foto { height: 200px; }

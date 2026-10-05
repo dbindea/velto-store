@@ -48,6 +48,28 @@
           <p class="concept">{{ view()!.concept }}</p>
         }
 
+        <!--
+          ⚠️ **Qué es este dinero, ANTES de pagarlo y no después.** Una señal
+          se descuenta del alquiler y no se devuelve si el cliente anula la
+          reserva; eso hay que decirlo donde se decide, no en una página de
+          condiciones que nadie abre con la tarjeta en la mano.
+
+          ⚠️ **Y solo en una señal.** Esta pantalla sirve también para el resto
+          del alquiler, la fianza y los cargos extra: enseñar «no se devuelve»
+          encima de una FIANZA —que es justo el dinero que sí se devuelve—
+          sería falso y además asustaría al cliente en el peor momento.
+
+          ⚠️ **Las dos direcciones, no solo la que nos conviene.** Si Velto no
+          puede dar el coche, la señal vuelve entera. Decir solo la mitad que
+          perjudica al cliente es lo que convierte una cláusula en abusiva —y
+          además aquí es cierto: el coche no se bloquea al pagar.
+        -->
+        @if (view()!.isBookingSignal) {
+          <p class="signal-terms">
+            {{ 'payments.checkout.signalTerms' | translate }}
+          </p>
+        }
+
         <button class="btn-pay" type="button" [disabled]="paying()" (click)="pay()">
           @if (paying()) { <i class="pi pi-spin pi-spinner"></i> }
           @else { <i class="pi pi-credit-card"></i> }
@@ -70,7 +92,34 @@
     }
   </main>
 
+  <!--
+    ⚠️ **La razón social y el NIF van AQUÍ porque los exige el banco.** El
+    manual del TPV Virtual pide que «el nombre del comercio y el de la persona
+    propietaria, física o jurídica, aparezcan en la página principal y en la
+    página de pago», y esta es la página de pago. Sin ellos, el alta del TPV
+    se queda parada en la revisión del comercio.
+
+    ⚠️ **Y no rompe la regla de la marca, la cumple.** `brandName` es lo que le
+    habla al cliente y la razón social solo sale «acompañada del NIF», donde la
+    empresa comparece como persona jurídica. Cobrar dinero es exactamente eso,
+    así que van juntos y nunca el `legalName` suelto.
+
+    ⚠️ **Y las condiciones se enlazan, no se resumen.** Quien está a punto de
+    pagar tiene derecho a leer qué pasa si cancela antes de pulsar, no después
+    — y el art. 97.1.l del TRLGDCU obliga a informar de que no hay
+    desistimiento ANTES de contratar.
+  -->
   <footer class="public-footer">
     <span>{{ view()?.brandName || '' }}</span>
+    @if (view()?.legalName) {
+      <span class="public-footer__legal">
+        {{ view()!.legalName }}@if (view()?.taxId) { · NIF {{ view()!.taxId }} }
+      </span>
+    }
+    @if (view()?.termsUrl) {
+      <a class="public-footer__enlace" [href]="view()!.termsUrl" target="_blank" rel="noopener">
+        {{ 'payments.checkout.terms' | translate }}
+      </a>
+    }
   </footer>
 </div>

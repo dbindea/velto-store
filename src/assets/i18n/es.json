@@ -162,7 +162,9 @@
     "search": "Buscar",
     "showingLatest": "Se muestran los más recientes. Para uno antiguo concreto, usa el buscador.",
     "viewAll": "Ver todo",
-    "emailPlaceholder": "cliente@email.com"
+    "emailPlaceholder": "cliente@email.com",
+    "copy": "Copiar",
+    "copyFailed": "No se pudo copiar"
   },
   "contracts": {
     "actions": {
@@ -334,7 +336,14 @@
     "viewAll": "Ver todos",
     "viewContract": "Ver contrato",
     "viewReservation": "Ver reserva",
-    "viewVehicle": "Ver vehículo"
+    "viewVehicle": "Ver vehículo",
+    "bookingRequests": {
+      "label": "Llamadas pendientes",
+      "oneSingular": "solicitud sin atender",
+      "onePlural": "solicitudes sin atender",
+      "priceExpired": "precio caducado",
+      "hint": "Han pedido que se les llame desde la web"
+    }
   },
   "expenses": {
     "category": {
@@ -575,6 +584,8 @@
     },
     "report": {
       "action": "Parte PDF",
+      "copyFailed": "No se ha podido copiar el enlace. Ábrelo y copia la dirección.",
+      "copyLink": "Copiar enlace",
       "error": "No se pudo generar el parte",
       "problems": {
         "inspectionRequired": "Falta la inspección de la que emitir el parte",
@@ -678,7 +689,8 @@
     "vehicles": "Vehículos",
     "invoices": "Facturas",
     "collaborators": "Colaboradores",
-    "events": "Eventos"
+    "events": "Eventos",
+    "bookingRequests": "Solicitudes"
   },
   "payments": {
     "actions": {
@@ -703,7 +715,9 @@
       "secureNote": "Pago procesado por Redsys. No guardamos los datos de tu tarjeta.",
       "subtitle": "Pago seguro",
       "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
-      "unavailableTitle": "Pago no disponible"
+      "unavailableTitle": "Pago no disponible",
+      "signalTerms": "Esta señal se descuenta del precio del alquiler. Al pagarla, confirmamos tu reserva y bloqueamos el coche para esas fechas; si después anulas la reserva, la señal no se devuelve. Si somos nosotros los que no podemos darte el coche, te la devolvemos entera.",
+      "terms": "Cancelaciones y devoluciones"
     },
     "confirm": {
       "cancelMessage": "El cobro quedará cancelado y dejará de contar como pendiente.",
@@ -965,7 +979,28 @@
     "outExpenses": "Gastos",
     "outMaintenance": "Taller",
     "outCommissions": "Incentivos",
-    "outOwnerShares": "Propietarios"
+    "outOwnerShares": "Propietarios",
+    "web": {
+      "title": "Visitas de la web",
+      "visitors": "Visitantes",
+      "visitorsNote": "Suma de los únicos de cada día. Quien vuelve otro día cuenta otra vez: no se puede saber que es la misma persona, y eso es a propósito.",
+      "pageViews": "Páginas vistas",
+      "quotes": "Llegaron a la cotización",
+      "quotesNote": "Abrieron el formulario con el precio delante",
+      "bots": "Bots descartados",
+      "botsNote": "No cuentan como visitantes",
+      "funnel": "El recorrido",
+      "routes": "Por página",
+      "route": "Página",
+      "views": "Visitas",
+      "step": {
+        "prices": "Vieron precios de unas fechas",
+        "detail": "Abrieron la ficha de un coche",
+        "quote": "Llegaron a la cotización"
+      },
+      "empty": "Todavía no hay visitas en estas fechas.",
+      "loadFailed": "No se han podido leer las visitas de la web"
+    }
   },
   "reservations": {
     "actions": {
@@ -1164,8 +1199,10 @@
       "waivedHint": "No se pide señal: el importe completo queda en el resto del alquiler."
     },
     "list": {
+      "clientMissing": "Cliente sin datos",
       "empty": "No hay reservas todavía",
-      "emptyFiltered": "Ninguna reserva con este filtro"
+      "emptyFiltered": "Ninguna reserva con este filtro",
+      "vehicleMissing": "Vehículo sin datos"
     },
     "messages": {
       "invalidDates": "La fecha de devolución debe ser posterior a la de recogida",
@@ -1274,7 +1311,12 @@
       "depositWaived": "Sin fianza (no se pidió)",
       "remainingPaymentNotDue": "Sin resto (todo iba en la señal)"
     },
-    "title": "Reservas"
+    "title": "Reservas",
+    "fromRequest": {
+      "vehicleGone": "El coche de la solicitud ya no está libre en esas fechas. Elige otro o cambia las fechas.",
+      "markFailed": "La reserva se creó, pero la solicitud no se pudo marcar como convertida",
+      "banner": "Viene de la solicitud"
+    }
   },
   "search": {
     "close": "Cerrar",
@@ -1301,7 +1343,9 @@
       "quoteValidity": "La validez del presupuesto tiene que ser de al menos un día",
       "saveFailed": "No se ha podido guardar",
       "signingExpiry": "El enlace de firma tiene que durar al menos un día",
-      "vatRate": "El IVA se escribe en porcentaje, entre 0 y 100"
+      "vatRate": "El IVA se escribe en porcentaje, entre 0 y 100",
+      "requestPriceHours": "El precio garantizado va entre 1 hora y 30 días.",
+      "requestKeepHours": "El plazo de borrado va entre 1 hora y un año."
     },
     "operation": {
       "days": "días",
@@ -1315,7 +1359,13 @@
       "signingExpiry": "Caducidad del enlace de firma",
       "signingExpiryHint": "Los enlaces ya enviados conservan la suya: lo que el cliente tiene en su móvil no caduca antes por cambiar esto.",
       "vat": "IVA general",
-      "vatHint": "Se aplica a las reservas nuevas y se congela en cada una. Se escribe en porcentaje: 21, no 0,21."
+      "vatHint": "Se aplica a las reservas nuevas y se congela en cada una. Se escribe en porcentaje: 21, no 0,21.",
+      "hours": "horas",
+      "requestPriceHours": "Precio garantizado de una solicitud",
+      "requestPriceHoursHint": "Cuánto se mantiene el precio que la web le enseñó a quien pide que le llamemos. El coche no queda apartado: lo que se garantiza es la cifra.",
+      "requestKeepHours": "Borrar solicitudes atendidas",
+      "requestKeepHoursHint": "Cuánto se conserva una solicitud ya contactada, convertida o descartada antes de borrar su nombre y su teléfono. Las que siguen sin contestar se borran a las 72 horas, y el resumen diario las avisa antes.",
+      "requestFrozenHint": "Los dos plazos rigen para las solicitudes que entren a partir de ahora: cada una se lleva el suyo al nacer, así que cambiarlos no mueve el precio ya prometido ni la caducidad de las que ya existen."
     },
     "saved": "Guardado",
     "subtitle": "Valores por defecto y quién puede entrar",
@@ -1489,7 +1539,10 @@
       "roadsideAssistancePhone": "Teléfono de asistencia en carretera",
       "ownership": "Propiedad",
       "owner": "Propietario",
-      "ownerSharePercent": "Reparto del propietario"
+      "ownerSharePercent": "Reparto del propietario",
+      "environmentalLabel": "Etiqueta ambiental (DGT)",
+      "publicHighlight": "Destacado",
+      "publicDescription": "Descripción pública"
     },
     "filterAllCategories": "Todas las categorías",
     "filterAllStatus": "Todos los estados",
@@ -1566,7 +1619,8 @@
       "rentalClassification": "Clasificación de alquiler",
       "reservations": "Reservas",
       "insurance": "Seguro y asistencia",
-      "ownership": "De quién es el coche"
+      "ownership": "De quién es el coche",
+      "publicInfo": "Lo que ve el cliente"
     },
     "status": {
       "available": "Disponible",
@@ -1616,6 +1670,22 @@
       "veltoKeeps": "Velto se queda el",
       "loadError": "No se han podido cargar los colaboradores. Sin la lista no se puede elegir propietario.",
       "createError": "No se ha podido crear el colaborador."
+    },
+    "publicInfo": {
+      "hint": "Esto sale en la web pública. La nota interna es la «Descripción» de Datos básicos, y no sale nunca.",
+      "highlightPlaceholder": "Incluye bono anual de parking gratuito en Madrid",
+      "highlightHint": "Una línea con lo que este coche tiene y los demás no. Sale resaltada en la ficha.",
+      "descriptionPlaceholder": "Híbrido automático, muy poco consumo en ciudad y etiqueta ECO.",
+      "descriptionHint": "El párrafo que explica el coche en la web."
+    },
+    "environmentalLabel": {
+      "none": "No consta",
+      "hints": {
+        "B": "Entra en Madrid con limitaciones: consulta la ZBE antes de circular.",
+        "C": "Entra en Madrid y puede aparcar en zona SER.",
+        "ECO": "Entra en Madrid y aparca gratis en zona SER (con límite de tiempo).",
+        "ZERO": "Entra en Madrid sin restricciones y aparca gratis en zona SER."
+      }
     }
   },
   "workflow": {
@@ -2033,5 +2103,74 @@
     "subtitle": "Todo lo que hay que hacer, en un solo sitio",
     "title": "Eventos próximos",
     "today": "Hoy"
+  },
+  "bookingRequests": {
+    "title": "Solicitudes de la web",
+    "subtitle": "Quien ha pedido que le llamemos, con lo que eligió",
+    "day": "día",
+    "days": "días",
+    "call": "Llamar",
+    "whatsapp": "WhatsApp",
+    "markContacted": "Marcar contactada",
+    "convert": "Convertir en reserva",
+    "discardAction": "Descartar",
+    "openReservation": "Ver la reserva",
+    "priceExpired": "El precio ya no se garantiza",
+    "notePlaceholder": "Lo que hablasteis…",
+    "notHeld": "Al cliente se le dijo que el coche no queda reservado y que lo que se le garantiza es el precio.",
+    "status": {
+      "new": "Sin contestar",
+      "contacted": "Contactada",
+      "converted": "Convertida",
+      "discarded": "Descartada"
+    },
+    "filters": {
+      "open": "Sin cerrar",
+      "new": "Sin contestar",
+      "contacted": "Contactadas",
+      "converted": "Convertidas",
+      "discarded": "Descartadas",
+      "all": "Todas"
+    },
+    "fields": {
+      "dates": "Fechas",
+      "phone": "Teléfono",
+      "received": "Recibida",
+      "priceUntil": "Precio garantizado hasta",
+      "internalNote": "Nota interna",
+      "message": "Mensaje para el cliente",
+      "place": "Recogida en"
+    },
+    "empty": {
+      "title": "Ninguna solicitud",
+      "hint": "Aquí aparecen las peticiones de «Que me llamen» de la web."
+    },
+    "discard": {
+      "title": "¿Descartar esta solicitud?",
+      "message": "Deja de aparecer entre las pendientes. Seguirás viéndola en el filtro «Descartadas» hasta que se borre."
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar las solicitudes.",
+      "saveFailed": "No se pudo guardar el cambio.",
+      "gone": "Esa solicitud ya no existe.",
+      "alreadyHandled": "Esa solicitud ya está atendida: vuelve a abrirla para ver cómo está."
+    },
+    "saveNote": "Guardar nota",
+    "noteSaved": "Nota guardada",
+    "extend": "Ampliar 24 h",
+    "extended": "Precio garantizado 24 horas más",
+    "pickup": "Recogida",
+    "return": "Devolución",
+    "copied": "Copiado",
+    "signal": {
+      "title": "Señal",
+      "help": "Crea el cobro y manda el enlace al cliente. El coche NO se bloquea: la reserva se hace al convertir.",
+      "create": "Cobrar la señal",
+      "open": "Ver el cobro",
+      "created": "Cobro creado. Copia el enlace y mándaselo.",
+      "failed": "No se pudo crear el cobro.",
+      "noAmount": "Esta solicitud no tiene precio: no se puede calcular la señal.",
+      "concept": "Señal de la pre-reserva {reference}"
+    }
   }
 }

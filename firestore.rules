@@ -237,6 +237,69 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Solicitudes de la web pública: «que me llamen».
+    //
+    // La CREA la function `createBookingRequest`, que entra con el admin SDK y
+    // no pasa por aquí. Desde cliente **no se puede crear**: si se pudiera,
+    // cualquiera con la clave del bundle —que viaja en la web— llenaría la
+    // colección saltándose los topes de longitud, el campo trampa y el límite
+    // por teléfono que la function aplica.
+    //
+    // Leerlas y trabajarlas es de cualquier autorizado, no de administrador:
+    // llamar a quien ha pedido un coche es trabajo de la agencia, como la
+    // pantalla de Eventos. Lo que sí es de administrador es borrarlas, por lo
+    // mismo que en el resto: borrar es irreversible.
+    //
+    // ⚠️ El público no puede leerlas de ninguna manera. Llevan nombre y
+    // teléfono, y un identificador reenviado no puede devolver los datos de
+    // nadie — la misma razón por la que el id del recibo no es el del pago.
+    match /bookingRequests/{requestId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow create: if false;
+      allow update: if isAuthorized(request.auth.token.email);
+      allow delete: if callerIsAdmin();
+    }
+
+    // Las consultas del formulario de contacto, con exactamente las mismas
+    // reglas y por los mismos motivos: las escribe SOLO la Cloud Function
+    // (`createContactRequest`), que es donde viven los topes de longitud, el
+    // campo trampa y el límite por teléfono. Con `create` abierto, la clave del
+    // bundle —que viaja en la web pública— dejaría llenar la colección.
+    //
+    // ⚠️ Y el público no puede leerlas de ninguna manera: llevan nombre,
+    // teléfono, a veces correo, y el texto que la persona escribió.
+    match /contactRequests/{requestId} {
+      allow read: if isAuthorized(request.auth.token.email);
+      allow create: if false;
+      allow update: if isAuthorized(request.auth.token.email);
+      allow delete: if callerIsAdmin();
+    }
+
+    // Las visitas de la web pública, agregadas por día.
+    //
+    // Las escribe SOLO la Cloud Function `trackWebVisit`, que entra con el
+    // admin SDK y no pasa por aquí. Desde cliente **no se puede escribir**: con
+    // `create` o `update` abiertos, cualquiera con la clave del bundle —que
+    // viaja en la web— inflaría los contadores a mano, y un número de visitas
+    // que cualquiera puede mover no vale para decidir nada.
+    //
+    // ⚠️ **Y leerlas es de quien ve informes, no de cualquier autorizado.** Es
+    // la misma raya que `viewReports`: cuánta gente entra en la web es dato de
+    // negocio, no de la operación diaria.
+    //
+    // ⚠️ La subcolección `visitors` lleva las huellas del día, que son
+    // seudónimos. No se leen desde la aplicación —el contador ya está en el
+    // documento del día— así que aquí no se abren: lo que no hace falta leer,
+    // no se deja leer.
+    match /webAnalytics/{dia} {
+      allow read: if callerIsAdmin();
+      allow write: if false;
+
+      match /visitors/{huella} {
+        allow read, write: if false;
+      }
+    }
+
     // Destinatarios de factura: quién paga, que no siempre es quien conduce.
     // Esto sí es una ficha normal y se edita como cualquier otra; lo que queda
     // congelado en la factura es el snapshot, no este documento.

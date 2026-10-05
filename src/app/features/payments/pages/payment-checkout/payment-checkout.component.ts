@@ -12,6 +12,13 @@ interface CheckoutView {
   currency: string;
   concept: string;
   brandName: string;
+  /** Razón social y NIF de quien cobra. Los exige el banco en esta pantalla. */
+  legalName?: string;
+  taxId?: string;
+  /** La política de devoluciones. Vacía mientras el dominio no sirva. */
+  termsUrl?: string;
+  /** Si es la señal de una pre-reserva: decide si se enseña su letra pequeña. */
+  isBookingSignal?: boolean;
   paymentUrl?: string;
   formData?: { [key: string]: string };
 }

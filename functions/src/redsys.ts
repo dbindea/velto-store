@@ -278,6 +278,52 @@ interface PublicCheckoutResponse {
   concept: string;
   /** Marca de la empresa, para que el cliente sepa a quién paga. */
   brandName: string;
+  /**
+   * Razón social y NIF de quien cobra.
+   *
+   * ⚠️ **Lo exige el BANCO, y es la excepción a la regla de la marca.** El
+   * manual del TPV Virtual pide que «el nombre del comercio y el de la persona
+   * propietaria, física o jurídica, aparezcan en la página principal **y en la
+   * página de pago**». Esta es la página de pago.
+   *
+   * ⚠️ **Y no contradice la regla de la casa, la cumple.** `brandName` manda
+   * en todo lo que le habla al cliente y la razón social solo aparece «donde
+   * la empresa comparece como persona jurídica, es decir acompañada del NIF»:
+   * cobrar dinero es exactamente eso. Por eso van los dos juntos y nunca el
+   * `legalName` suelto.
+   */
+  legalName: string;
+  taxId: string;
+  /**
+   * La política de cancelaciones y devoluciones, en la web pública.
+   *
+   * ⚠️ **Vacía mientras el dominio no sirva, y entonces no se pinta el
+   * enlace.** Un enlace muerto en la pantalla donde alguien va a meter su
+   * tarjeta es peor que no ofrecerlo: se lee como que la empresa no tiene esa
+   * política. Se enciende poniendo `VELTO_WEB_BASE_URL` en
+   * `functions/.env.<proyecto>` el día que `veltomobility.com` responda.
+   *
+   * ⚠️ **Y la sirve la FUNCTION, no `brand.config.ts`.** Aquel se compila
+   * dentro del bundle y vale lo mismo en los dos entornos — es exactamente lo
+   * que hizo que la pantalla de firma enseñara el correo de desarrollo a un
+   * cliente real (F-33).
+   */
+  termsUrl: string;
+  /**
+   * Si este cobro es la **señal** de una pre-reserva de la web.
+   *
+   * ⚠️ **La pantalla tiene que decir qué pasa con ese dinero, y solo aquí.**
+   * Una señal se descuenta del alquiler y no se devuelve si el cliente anula
+   * la reserva después; una fianza, un resto o un cargo extra **no** funcionan
+   * así. Enseñar esa letra en todos los cobros sería falso en la mayoría —y
+   * alarmante en una fianza, que es justo el dinero que sí se devuelve—.
+   *
+   * ⚠️ **Es un booleano y no el `bookingRequestId`.** El id de una solicitud no
+   * se publica: la referencia se dicta por teléfono y esta respuesta la lee
+   * cualquiera que tenga el enlace. Lo que la pantalla necesita saber es qué
+   * clase de dinero es, no de qué documento salió.
+   */
+  isBookingSignal: boolean;
   /** Solo cuando `state` es `pending`. */
   paymentUrl?: string;
   formData?: { [key: string]: string };
@@ -328,13 +374,46 @@ export const getPaymentCheckout = onCall(
       amount: outstandingAmount(payment),
       currency: payment.currency || 'EUR',
       concept: String(payment.concept || ''),
-      brandName: company.brandName
+      brandName: company.brandName,
+      legalName: company.legalName,
+      taxId: company.taxId,
+      termsUrl: (process.env.VELTO_WEB_BASE_URL || '').replace(/\/$/, '')
+        ? `${(process.env.VELTO_WEB_BASE_URL || '').replace(/\/$/, '')}/devoluciones`
+        : '',
+      // Lo es si salió de una solicitud de la web. No se publica cuál.
+      isBookingSignal: Boolean(payment.bookingRequestId)
     };
 
     if (payment.status === 'paid') {
       return { ...base, state: 'paid' };
     }
-    if (payment.status === 'failed' || (Number(payment.amount) || 0) <= 0) {
+
+    /**
+     * ⚠️ **Una denegación NO cierra el enlace, y antes sí lo cerraba.** Un
+     * `status: 'failed'` devolvía `unavailable`, así que al cliente al que el
+     * banco le rechazaba la tarjeta le salía «Pago no disponible, ponte en
+     * contacto con nosotros» y el enlace que tenía en el WhatsApp **se moría
+     * ahí**: no podía probar con otra tarjeta, tenía que llamar. Y lo normal
+     * tras una denegación es justo eso, probar con otra.
+     *
+     * Decisión de Dorel del 3 de octubre de 2026: «se debe poder reintentar
+     * realizar el pago, claro que sí».
+     *
+     * ⚠️ **Y no hay que tocar nada más para que funcione**, porque el resto ya
+     * lo contemplaba: `resolveOrder()` emite un pedido NUEVO en cuanto el
+     * anterior recibió aviso —si se reutilizara, la pasarela lo rechazaría con
+     * `SIS0051`—, y el webhook ya sabe que «una denegación de un pedido
+     * superado no marca el pago como fallido, porque el cliente pudo ser
+     * rechazado con una tarjeta y estar pagando con otra». Era esta pantalla la
+     * única pieza que daba la denegación por definitiva.
+     *
+     * ⚠️ **El tope es lo PENDIENTE, no el importe del concepto.** Con
+     * `payment.amount` un cobro de 50 € con 20 € ya entrados en efectivo
+     * volvería a ofrecer 50. `base.amount` ya es `outstandingAmount()`, así que
+     * esto cierra además el caso de un pago cubierto por otra vía al que le
+     * quedaba el estado sin actualizar: sin nada que cobrar, no hay formulario.
+     */
+    if (base.amount <= 0) {
       return { ...base, state: 'unavailable' };
     }
 

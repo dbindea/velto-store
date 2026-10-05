@@ -1,0 +1,61 @@
+{
+  "name": "Velto — alquiler de coches en Arganda del Rey",
+  "short_name": "Velto",
+  "description": "Alquila un coche con el precio final desde el primer clic: impuestos incluidos, kilómetros por escrito y entrega a domicilio.",
+  "start_url": "/?origen=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#20A48F",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": [
+    "travel",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buscar coche",
+      "short_name": "Buscar",
+      "url": "/reservar",
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Toda la flota",
+      "short_name": "Flota",
+      "url": "/flota",
+      "icons": [
+        {
+          "src": "/brand/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

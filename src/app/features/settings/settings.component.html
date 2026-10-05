@@ -124,6 +124,54 @@
           <small class="hint">{{ 'settings.operation.includedKmHint' | translate }}</small>
         </div>
 
+        <!--
+          ⚠️ **Los dos plazos de las solicitudes de la web, y NO son el mismo
+          aunque ambos valgan 24.** Uno dice cuánto se mantiene el precio que se
+          le prometió al cliente; el otro, cuánto se guarda una solicitud ya
+          atendida antes de borrar su nombre y su teléfono. Juntarlos en un solo
+          campo ataría una promesa comercial a una decisión sobre datos
+          personales, y el día que uno tuviera que cambiar arrastraría al otro.
+        -->
+        <div class="field">
+          <label class="required" for="priceHours">
+            {{ 'settings.operation.requestPriceHours' | translate }}
+          </label>
+          <div class="input-suffix">
+            <input id="priceHours" name="priceHours" type="number" min="1" max="720" step="1"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['bookingRequestPriceHours']"
+                   [(ngModel)]="form.bookingRequestPriceHours" />
+            <span>{{ 'settings.operation.hours' | translate }}</span>
+          </div>
+          <app-form-error [problems]="operationProblems['bookingRequestPriceHours']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.requestPriceHoursHint' | translate }}</small>
+        </div>
+
+        <div class="field">
+          <label class="required" for="keepHours">
+            {{ 'settings.operation.requestKeepHours' | translate }}
+          </label>
+          <div class="input-suffix">
+            <input id="keepHours" name="keepHours" type="number" min="1" max="8760" step="1"
+                   class="form-control"
+                   [class.is-invalid]="submitted() && operationProblems['bookingRequestKeepHours']"
+                   [(ngModel)]="form.bookingRequestKeepHours" />
+            <span>{{ 'settings.operation.hours' | translate }}</span>
+          </div>
+          <app-form-error [problems]="operationProblems['bookingRequestKeepHours']" [show]="submitted()" />
+          <small class="hint">{{ 'settings.operation.requestKeepHoursHint' | translate }}</small>
+        </div>
+
+        <!--
+          ⚠️ **Y se dice que no es retroactivo**, porque aquí es lo que más
+          engaña: cambiar el plazo no mueve el precio que ya se prometió ni la
+          caducidad de las solicitudes que ya existen. Cada una se llevó su
+          plazo congelado al nacer, igual que el IVA de una reserva. Sin esta
+          frase, el operador que baje el plazo se quedaría esperando un borrado
+          que no va a ocurrir.
+        -->
+        <p class="section-hint">{{ 'settings.operation.requestFrozenHint' | translate }}</p>
+
         <!-- El resumen junto al botón: en un formulario largo el campo en rojo
              puede quedar fuera de la pantalla, y lo único que se ve es que
              pulsar no hace nada. -->

@@ -8,9 +8,16 @@
     "build": "astro build",
     "build:prod": "astro build --mode live",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "vitest run",
+    "vars:audit": "node scripts/vars-audit.js"
   },
   "dependencies": {
     "astro": "^5.14.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.7"
   }
 }

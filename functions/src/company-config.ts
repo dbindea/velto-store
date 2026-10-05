@@ -74,8 +74,21 @@ export function companyConfig(): CompanyConfig {
       process.env.VELTO_COMPANY_ADDRESS ||
       COMPANY_ADDRESS,
     phone: process.env.VELTO_COMPANY_PHONE || '+34 623 766 181',
-    email: process.env.VELTO_COMPANY_EMAIL || 'reservas@veltorent.com',
-    website: process.env.VELTO_COMPANY_WEBSITE || 'www.veltorent.com',
+    email: process.env.VELTO_COMPANY_EMAIL || 'reservas@veltomobility.com',
+    /**
+     * ⚠️ **El dominio que se IMPRIME en las facturas, y nadie lo configura.**
+     * `VELTO_COMPANY_WEBSITE` no está puesta en ningún `.env`, así que lo que
+     * sale impreso es este literal — y hasta el 2 de octubre de 2026 decía
+     * `www.veltorent.com`. Es decir: las facturas emitidas en producción desde
+     * el 17 de septiembre llevan ese dominio dentro, y **no se pueden
+     * corregir**, porque una factura emitida no se edita ni se borra. Las
+     * siguientes ya salen con el bueno.
+     *
+     * Dorel decidió ese día quedarse solo con `veltomobility.com` de cara al
+     * cliente; qué se hace con `veltorent.com` —una landing, o soltarlo— está
+     * sin decidir, y mientras tanto no se nombra en ningún sitio.
+     */
+    website: process.env.VELTO_COMPANY_WEBSITE || 'veltomobility.com',
     representativeName: process.env.VELTO_COMPANY_REP_NAME || '',
     representativeNie: process.env.VELTO_COMPANY_REP_NIE || ''
   };

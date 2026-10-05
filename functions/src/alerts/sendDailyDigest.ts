@@ -16,10 +16,15 @@
  */
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { CONSULTA_HORAS_POR_DEFECTO } from '../public/contact-core';
 import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import { firestore } from '../admin-guard';
+// ⚠️ El `toDate()` de la web pública, que devuelve null ante una fecha ilegible
+// en vez de la de hoy. Aquí eso es lo correcto: una solicitud con la fecha rota
+// no se borra sola, se queda para que alguien la mire.
+import { toDate } from '../public/core';
 import { companyConfig } from '../company-config';
 import {
   asuntoDe,
@@ -28,6 +33,7 @@ import {
   rangoManana,
   type MovimientoReserva,
   type Resumen,
+  type SolicitudSinContestar,
   type VencimientoVehiculo
 } from './daily-digest';
 import { renderDigestEmail } from './digest-email';
@@ -214,10 +220,52 @@ export async function construirResumen(
         month: '2-digit',
         year: 'numeric'
       }).format(cuando),
-      diasRestantes: Math.round((cuando.getTime() - ahora.getTime()) / 86_400_000)
+      diasRestantes: Math.round((cuando.getTime() - ahora.getTime()) / 86_400_000),
+      /**
+       * ⚠️ **Copia FIEL de `BLOCKING_MAINTENANCE_TYPES`** (la app,
+       * `vehicle-availability.util.ts`), que es quien de verdad impide alquilar.
+       * Si allí se añade un concepto, aquí también — o el correo volverá a
+       * decir lo contrario que la aplicación.
+       */
+      bloquea: m['type'] === 'itv' || m['type'] === 'insurance'
     });
   }
   vencimientos.sort((a, b) => a.diasRestantes - b.diasRestantes);
+
+  /**
+   * Las solicitudes que nadie ha contestado.
+   *
+   * ⚠️ **Entran en el resumen porque ahora se BORRAN**, y un borrado sin aviso
+   * convierte una posible venta en una pérdida silenciosa. Con 72 horas de
+   * plazo, una solicitud sale en tres resúmenes antes de desaparecer: eso es lo
+   * que hace que borrarlas sea razonable.
+   *
+   * ⚠️ **Y se ordenan por lo que les QUEDA, no por cuándo llegaron.** Lo que
+   * hay que llamar hoy es lo que se va mañana, no lo más reciente.
+   */
+  const solicitudesSnap = await db
+    .collection('bookingRequests')
+    .where('status', '==', 'new')
+    .get();
+
+  const sinContestar: SolicitudSinContestar[] = [];
+  for (const doc of solicitudesSnap.docs) {
+    const s = doc.data();
+    const creada = aFecha(s['createdAt']);
+    if (!creada) continue;
+    const horasRestantes = Math.round(
+      HORAS_SIN_CONTESTAR - (ahora.getTime() - creada.getTime()) / 3_600_000
+    );
+    const v = (s['vehicleSnapshot'] ?? {}) as Record<string, unknown>;
+    sinContestar.push({
+      referencia: String(s['reference'] || '—'),
+      cliente: String(s['name'] || '—'),
+      telefono: String(s['phone'] || '—'),
+      coche: `${v['brand'] ?? ''} ${v['model'] ?? ''}`.trim() || '—',
+      horasRestantes
+    });
+  }
+  sinContestar.sort((a, b) => a.horasRestantes - b.horasRestantes);
 
   entregas.sort((a, b) => a.hora.localeCompare(b.hora));
   devoluciones.sort((a, b) => a.hora.localeCompare(b.hora));
@@ -227,6 +275,7 @@ export async function construirResumen(
     entregas,
     devoluciones,
     vencimientos,
+    sinContestar,
     sinFirmar: entregas.filter((e) => e.contratoSinFirmar).length,
     avisos
   };
@@ -309,8 +358,251 @@ export const sendDailyDigest = onSchedule(
       // Que falle una tarde no puede tumbar la siguiente.
       logger.error('Resumen diario: falló', { err });
     }
+
+    /**
+     * ⚠️ **La limpieza va AQUÍ y no en una function programada propia**, y es
+     * una decisión de coste: estrenar un `onSchedule` nuevo en producción
+     * activaría Cloud Scheduler allí —hoy no está: las cinco de la AEAT, que
+     * son las que lo usan, no están desplegadas— y sería un servicio más en la
+     * factura de Google. Esta ya corre a las nueve en los dos proyectos.
+     *
+     * Va **fuera del `try` del resumen**: que falle el correo no puede dejar
+     * datos personales sin borrar, ni al revés.
+     *
+     * ⚠️ **Y va DESPUÉS, que desde el 5 de octubre de 2026 no es indiferente.**
+     * El resumen nombra las solicitudes sin contestar con lo que les queda, y
+     * con 72 horas de plazo y un correo al día eso son **tres** avisos antes de
+     * que el barrido se las lleve. Barriendo primero, la última —la que sale
+     * como «ÚLTIMO DÍA»— desaparecería antes de que el correo la nombrara, y el
+     * aviso que justifica el borrado se perdería justo en la vuelta que
+     * importa. Los dos bloques parecen independientes y no lo son del todo.
+     */
+    try {
+      const borradas = await limpiarSolicitudesCaducadas(new Date());
+      if (borradas) logger.info('Solicitudes caducadas borradas', { borradas });
+    } catch (err) {
+      logger.error('No se pudieron limpiar las solicitudes', { err });
+    }
+
+    /*
+     * ⚠️ **En su propio `try`, no dentro del de arriba.** Si el barrido de las
+     * solicitudes fallara, el de las consultas tiene que correr igualmente: lo
+     * contrario dejaría datos personales sin borrar **y** con un plazo
+     * publicado en `/privacidad` diciendo que se borran. Es la misma razón por
+     * la que la limpieza entera va fuera del `try` del resumen.
+     */
+    try {
+      const borradas = await limpiarConsultasCaducadas(new Date());
+      if (borradas) logger.info('Consultas de contacto borradas', { borradas });
+    } catch (err) {
+      logger.error('No se pudieron limpiar las consultas', { err });
+    }
   }
 );
+
+/**
+ * Los cuatro estados que el barrido puede borrar — o sea, todos.
+ *
+ * ⚠️ **`new` entró el 5 de octubre de 2026, y hasta ese día la regla era la
+ * contraria.** Aquí ponía que lo que sigue en `new` no se borra nunca: una
+ * solicitud sin atender es trabajo pendiente, y la que entra un viernes a las
+ * 23:40 no puede desaparecer el sábado sin que se distinga «no escribió nadie»
+ * de «se me pasaron tres». Decisión de Dorel ese día: se borran igual a las 72
+ * h. Lo que hace que el argumento viejo ya no aplique son **dos** cosas, y las
+ * dos tienen que seguir siendo ciertas: el plazo es más largo que el de las
+ * atendidas (72 h frente a 24) y el resumen de las 9:00 las **nombra** cada
+ * mañana con lo que les queda. Quitando cualquiera de las dos, esto vuelve a
+ * ser un borrado silencioso de trabajo pendiente.
+ *
+ * ⚠️ **La lista se queda aunque hoy estén los cuatro estados.** Es lo que hace
+ * que un estado nuevo —uno que signifique «en negociación», por ejemplo— no
+ * empiece a borrarse solo por existir: entrar aquí hay que escribirlo.
+ *
+ * ⚠️ **El plazo de las atendidas se lee de la PROPIA solicitud** (`keepHours`),
+ * congelado al crearla, no de Ajustes. Cambiar el ajuste no puede mover la
+ * caducidad de las que ya existen: es la misma regla que congela el IVA en
+ * `pricingSnapshot`. El de las sin contestar es una constante — ver
+ * `HORAS_SIN_CONTESTAR`.
+ */
+export const ESTADOS_BORRABLES = ['new', 'contacted', 'discarded', 'converted'] as const;
+
+/**
+ * Lo que se espera a una solicitud que **nadie ha contestado**, antes de
+ * borrarla.
+ *
+ * ⚠️ **Hasta el 5 de octubre de 2026 no se borraban NUNCA.** El argumento era
+ * bueno —una solicitud sin atender es trabajo pendiente, y perderla es perder
+ * un alquiler— y se quedaba corto por el otro lado: lo que no se contesta nunca
+ * acaba siendo un nombre y un teléfono de alguien guardados para siempre, y la
+ * política de privacidad no lo cubría. Decisión de Dorel ese día: 72 horas.
+ *
+ * ⚠️ **Y 72 h son TRES avisos antes de borrar**, no uno. El resumen de las 9:00
+ * las lista cada mañana, así que una solicitud sin contestar sale en tres
+ * correos antes de desaparecer. Eso es lo que hace que borrarlas sea razonable
+ * y no una pérdida silenciosa: con 24 h habría casos de llegar un viernes por
+ * la noche y no verse nunca.
+ *
+ * ⚠️ **Es una constante y no un ajuste, a propósito.** Un plazo de borrado de
+ * datos personales editable desde una pantalla es un número que se puede bajar
+ * a 1 por error y llevarse el trabajo de la semana; cambiarlo aquí pide un
+ * despliegue, que es exactamente la fricción que conviene. El de las atendidas
+ * sí es ajuste porque va **congelado en cada solicitud** al crearla, así que
+ * tocarlo no afecta a las que ya existen; esto se lee al barrer y sí las
+ * afectaría a todas.
+ */
+export const HORAS_SIN_CONTESTAR = 72;
+
+/**
+ * ¿Se puede borrar ya esta solicitud?
+ *
+ * ⚠️ **Pura y aparte, como `blockingMaintenance()`.** Esto decide un borrado
+ * definitivo de datos personales, corre una vez al día sin nadie delante y no
+ * tenía **ni un test**: lo único que impedía que se llevara trabajo pendiente
+ * era un `where` que nadie comprobaba. Con la regla fuera de la consulta se
+ * puede probar sin Firestore, que es la única forma de cubrir los casos raros.
+ *
+ * ⚠️ **En la duda NO se borra.** Sin fecha desde la que contar, o con un
+ * `keepHours` ilegible, se conserva: un dato de más se puede borrar mañana, y
+ * uno borrado no vuelve.
+ *
+ * ⚠️ **Y mientras el precio siga PROMETIDO, tampoco.** Este es el fallo que
+ * encontró la revisión del 29 de septiembre de 2026 y que costaría un alquiler:
+ * el botón «Ampliar 24 h» alarga lo que se le dice al cliente —«te mantengo el
+ * precio hasta el jueves»— y **no alargaba el registro que sostiene esa
+ * promesa**. Con los plazos por defecto, una solicitud contactada el lunes y
+ * ampliada hasta el jueves se borraba el miércoles: el cliente llamaba dentro
+ * de su plazo citando la referencia y aquí no había nada. Los dos plazos son
+ * ajustes independientes —`bookingRequestPriceHours` llega a 720 h y
+ * `bookingRequestKeepHours` baja a 1—, así que no basta con que «suelan»
+ * cuadrar: la aplicación no puede borrar aquello a lo que ella misma sigue
+ * comprometida.
+ */
+export function solicitudCaducada(d: Record<string, unknown>, ahora: Date): boolean {
+  /**
+   * ⚠️ **Las sin contestar cuentan desde que LLEGARON, no desde que se
+   * atendieron**, que es lo obvio en cuanto se dice: no las ha atendido nadie.
+   * Y con su propio plazo, que es más largo — ver `HORAS_SIN_CONTESTAR`.
+   */
+  const sinContestar = d['status'] === 'new';
+
+  const desde = sinContestar
+    ? toDate(d['createdAt'])
+    : toDate(d['handledAt']) || toDate(d['createdAt']);
+  if (!desde) return false;
+
+  const horas = sinContestar ? HORAS_SIN_CONTESTAR : Number(d['keepHours']);
+  if (!isFinite(horas) || horas <= 0) return false;
+  if (ahora.getTime() - desde.getTime() < horas * 60 * 60 * 1000) return false;
+
+  const garantia = toDate(d['priceGuaranteedUntil']);
+  if (garantia && garantia.getTime() > ahora.getTime()) return false;
+
+  return true;
+}
+
+/**
+ * Borra las solicitudes de la web que ya cumplieron su plazo.
+ *
+ * ⚠️ **Se llamaba `limpiarSolicitudesAtendidas` y el nombre pasó a mentir** el
+ * día que `new` entró en `ESTADOS_BORRABLES`: desde entonces también se lleva
+ * las que no ha atendido nadie, que son justo las que más duele perder. Un
+ * nombre que dice menos de lo que la función hace es el que deja a alguien
+ * tranquilo al leer la llamada.
+ */
+export async function limpiarSolicitudesCaducadas(ahora: Date): Promise<number> {
+  const db = firestore();
+  const snap = await db
+    .collection('bookingRequests')
+    .where('status', 'in', [...ESTADOS_BORRABLES])
+    .get();
+
+  let borradas = 0;
+  let lote = db.batch();
+  let enLote = 0;
+
+  for (const doc of snap.docs) {
+    if (!solicitudCaducada(doc.data(), ahora)) continue;
+
+    lote.delete(doc.ref);
+    borradas++;
+    // Un `writeBatch` admite 500 operaciones.
+    if (++enLote === 400) {
+      await lote.commit();
+      lote = db.batch();
+      enLote = 0;
+    }
+  }
+  if (enLote) await lote.commit();
+  return borradas;
+}
+
+/**
+ * ¿Se puede borrar ya este mensaje de contacto?
+ *
+ * ⚠️ **Al revés que una solicitud de reserva, aquí SÍ se borra por antigüedad
+ * a secas**, sin mirar el estado. Y es deliberado: una solicitud sin atender es
+ * trabajo pendiente y perderla es perder un alquiler, pero de un mensaje de
+ * contacto **ya salió un correo** en el instante en que se envió — Dorel lo
+ * tiene en su bandeja, y él mismo dijo que si hace falta más tiempo se queda
+ * con el correo. Lo que se borra aquí es la copia, no el original.
+ *
+ * ⚠️ **El plazo se lee del PROPIO mensaje** (`keepHours`), congelado al
+ * crearlo, no de una constante leída al barrer. Es lo que permite ampliarlo
+ * para uno concreto sin mover los demás, y la misma regla que congela el IVA en
+ * `pricingSnapshot`: cambiar el ajuste no puede mover lo que ya existe.
+ *
+ * ⚠️ **Y en la duda NO se borra.** Sin fecha desde la que contar, o con un
+ * `keepHours` ilegible, se conserva: un dato de más se puede borrar mañana, y
+ * uno borrado no vuelve.
+ */
+export function consultaCaducada(d: Record<string, unknown>, ahora: Date): boolean {
+  const creada = toDate(d['createdAt']);
+  if (!creada) return false;
+
+  const horas = Number(d['keepHours'] ?? CONSULTA_HORAS_POR_DEFECTO);
+  if (!isFinite(horas) || horas <= 0) return false;
+
+  return ahora.getTime() - creada.getTime() >= horas * 60 * 60 * 1000;
+}
+
+/**
+ * Borra los mensajes de contacto que ya han cumplido su plazo.
+ *
+ * ⚠️ **Sin esto, la política de privacidad sería falsa desde el primer día.**
+ * El barrido de arriba mira SOLO `bookingRequests`; una colección nueva no la
+ * limpia nadie, y eso no falla en ninguna parte — simplemente los datos se
+ * quedan ahí para siempre.
+ *
+ * ⚠️ **Corre una vez al día, a las nueve**, así que entre que se cumplen las 24
+ * horas y el mensaje desaparece pueden pasar unas horas más. La página de
+ * privacidad lo dice con esas palabras: publicar «24 horas» a secas sería
+ * publicar algo que no se cumple exactamente.
+ */
+export async function limpiarConsultasCaducadas(ahora: Date): Promise<number> {
+  const db = firestore();
+  // Sin `where`: son pocos documentos por definición —se borran a diario— y
+  // filtrar por fecha en la consulta exigiría un índice que ataría el barrido a
+  // que esté construido. Es la misma decisión que el límite por teléfono.
+  const snap = await db.collection('contactRequests').get();
+
+  let borradas = 0;
+  let lote = db.batch();
+  let enLote = 0;
+
+  for (const doc of snap.docs) {
+    if (!consultaCaducada(doc.data(), ahora)) continue;
+
+    lote.delete(doc.ref);
+    borradas++;
+    if (++enLote === 400) {
+      await lote.commit();
+      lote = db.batch();
+      enLote = 0;
+    }
+  }
+  if (enLote) await lote.commit();
+  return borradas;
+}
 
 /**
  * Ver el resumen ahora, sin esperar a las ocho.

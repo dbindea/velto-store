@@ -815,6 +815,39 @@ input[type='radio'] {
   color: var(--warning-color);
 }
 
+/* ---------------------------------------------------------------------------
+ * La FORMA de una chapa de estado, global.
+ *
+ * ⚠️ **Es la quinta vez que pasa lo mismo**, después de `.form-control`,
+ * `.btn-*`, `.checkbox-item` y `.page-header`: quince pantallas declaran su
+ * propia `.badge` con el relleno, el radio y el tamaño de letra repetidos a
+ * mano —con **cuatro radios distintos** entre ellas—, y la número dieciséis se
+ * escribe declarando solo los colores. Eso fue exactamente la pantalla de
+ * Solicitudes: los cuatro estados llegaban con su color bien puesto y la chapa
+ * salía con `padding: 0`, `border-radius: 0` y `display: block`, o sea una
+ * franja de color detrás del texto en vez de una pastilla.
+ *
+ * ⚠️ **Y no lo caza `css:audit`**, porque la clase *está* declarada: lo que
+ * falta es lo que esa declaración pone dentro. Solo se ve mirando la pantalla,
+ * que es donde lo vio Dorel las cuatro veces anteriores.
+ *
+ * ⚠️ **No pisa a quien ya la declara.** La regla del componente mide (0,2,0)
+ * con la encapsulación y esta (0,1,0), así que las quince siguen mandando sobre
+ * lo suyo y nada cambia de aspecto. Lo que cambia es que una pantalla nueva ya
+ * no sale desnuda.
+ *
+ * El color NO va aquí a propósito: depende del enumerado de cada módulo, y una
+ * chapa sin color se ve —lo que no se ve es una sin forma.
+ * ------------------------------------------------------------------------- */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .field-hint.error,
 .section-hint.error {
   color: var(--error-color);
@@ -1190,11 +1223,117 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 1.5rem;
 }
 
+/*
+ * El armazón de una pantalla: el ancho, la cabecera, su bajada y el cuerpo de
+ * una tarjeta.
+ *
+ * ⚠️ **Son globales porque es el fallo que más se repite aquí**, y acabo de
+ * cometerlo: `.page` la declaraban **30** componentes, `.page-header` 28 y
+ * `.subtitle` 25, así que una pantalla nueva que no se acuerde de copiarlas
+ * sale **desnuda** — sin ancho máximo, sin cabecera y con la bajada del tamaño
+ * del titular. Compila, pasa los tests, despliega bien, y lo único que falla es
+ * lo que ve el operador. Es exactamente la historia de `.form-control`, que
+ * pasó a global tras olvidarse cuatro veces, y la de `.btn-*`.
+ *
+ * ⚠️ **No pisan a quien ya las declara.** La regla del componente es
+ * `.page-header[_ngcontent-xxx]` y mide (0,2,0); estas miden (0,1,0). Las 30
+ * pantallas que ya las traen siguen mandando sobre lo suyo — lo comprobado es
+ * que los valores coinciden, así que tampoco heredan nada que las mueva.
+ *
+ * ⚠️ **El `max-width` es el más ancho a propósito.** Varía entre 900 y 1200 px
+ * según la pantalla; quien quiera más estrecho ya lo declara, y errar por ancho
+ * deja el contenido donde estaba en vez de estrecharlo sin que nadie lo pida.
+ */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+
+  /**
+   * ⚠️ **Sin esto la cabecera se sale de la pantalla en el móvil.** Es un flex
+   * en fila, y un hijo que no puede encoger por debajo de su contenido
+   * —`min-width: auto`, la trampa de flex que este fichero ya documenta— no
+   * baja de línea: se desborda. Medido el 3 de octubre de 2026 en Vehículos a
+   * 390 px: `.filters` acababa en **388 px** con la página en 384, y **28 px
+   * por fuera de su propio padre**, que medía 360.
+   *
+   * `wrap` es la corrección mínima y es la regla de la casa: **recolocar,
+   * nunca ocultar**. En pantalla ancha no cambia nada, porque solo actúa
+   * cuando el contenido no cabe.
+   *
+   * La usan **29 plantillas y 28 la redeclaran**, pero ninguna declara
+   * `flex-wrap`: la cascada va por propiedad, así que esta llega a todas sin
+   * pelear especificidad.
+   */
+  flex-wrap: wrap;
+
+  /**
+   * ⚠️ **Un subtítulo suelto salía disparado al borde derecho.** La cabecera
+   * reparte con `space-between`, así que un `.subtitle` que cuelga directamente
+   * de ella se lee como «la otra punta de la fila»: en el panel, «Ajustes» a la
+   * izquierda y su descripción pegada al margen derecho, a media pantalla de
+   * distancia del título que describe.
+   *
+   * Pasa en **cuatro pantallas** —panel, Solicitudes, Contratos y Ajustes—;
+   * las demás envuelven el título y el subtítulo en un `<div>`, que es la
+   * forma buena. Esta regla las deja a todas igual sin tocar cuatro
+   * plantillas, y **no alcanza** a las que ya lo anidan, porque es `>`.
+   *
+   * `flex-basis: 100%` lo baja a su propia línea, debajo del título, que es
+   * donde se lee. Solo funciona con el `flex-wrap: wrap` de arriba.
+   */
+  > .subtitle {
+    flex-basis: 100%;
+    margin-top: 0.25rem;
+  }
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.card-content {
+  padding: 1rem;
+}
+
 .card {
   background: var(--bg-card);
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+}
+
+/* ---------------------------------------------------------------------------
+ * La tarjeta de ficha, global.
+ *
+ * ⚠️ **Y con esta van SEIS**, después de `.form-control`, `.btn-*`,
+ * `.checkbox-item`, `.page-header` y `.badge`. La usaban cinco pantallas y la
+ * declaraban cuatro —con las mismas cuatro líneas copiadas—, así que la quinta,
+ * Solicitudes, salía **con las esquinas en pico** mientras el resto de la
+ * aplicación las lleva redondeadas. Lo vio Dorel comparándola con una reserva.
+ *
+ * ⚠️ **`overflow: hidden` no es cosmético**: es lo que recorta la banda de
+ * `.card-header` contra el radio. Sin él la cabecera de color se sale por las
+ * esquinas y la tarjeta parece rota justo arriba, que es donde se mira.
+ *
+ * No pisa a las cuatro que ya la declaran —(0,2,0) contra (0,1,0)— y además
+ * dicen exactamente esto mismo, así que nada cambia de aspecto donde ya estaba.
+ * ------------------------------------------------------------------------- */
+.detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .card-header {

@@ -24,7 +24,12 @@ const LIMITS = {
   signingLinkExpiryDays: { min: 1, max: 90 },
   // Fracción, no porcentaje. El 0 es legítimo; el 1 sería un IVA del 100 %.
   vatRate: { min: 0, max: 1 },
-  defaultIncludedKmPerDay: { min: 0, max: 100000 }
+  defaultIncludedKmPerDay: { min: 0, max: 100000 },
+  // Menos de una hora no da tiempo a llamar; más de un mes convierte el
+  // «precio garantizado» en una tarifa que nadie revisa.
+  bookingRequestPriceHours: { min: 1, max: 720 },
+  // Un año de tope: son datos personales de alguien que quizá nunca alquiló.
+  bookingRequestKeepHours: { min: 1, max: 8760 }
 } as const;
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
@@ -76,6 +81,22 @@ export function resolveSettings(raw: Partial<OperationSettings> | null | undefin
         LIMITS.defaultIncludedKmPerDay.max,
         base.defaultIncludedKmPerDay
       )
+    ),
+    bookingRequestPriceHours: Math.round(
+      clampNumber(
+        raw.bookingRequestPriceHours,
+        LIMITS.bookingRequestPriceHours.min,
+        LIMITS.bookingRequestPriceHours.max,
+        base.bookingRequestPriceHours
+      )
+    ),
+    bookingRequestKeepHours: Math.round(
+      clampNumber(
+        raw.bookingRequestKeepHours,
+        LIMITS.bookingRequestKeepHours.min,
+        LIMITS.bookingRequestKeepHours.max,
+        base.bookingRequestKeepHours
+      )
     )
   };
 }
@@ -115,6 +136,30 @@ export function validateSettings(settings: Partial<OperationSettings>): FieldPro
     )
   ) {
     problems['defaultIncludedKmPerDay'] = 'settings.errors.includedKm';
+  }
+  /**
+   * ⚠️ **Sin esto los dos plazos se recortarían EN SILENCIO.** `resolveSettings`
+   * ya los topa, pero recortar no es validar: quien teclee 0 horas guardaría y
+   * se quedaría convencido de haber puesto 0, mientras la aplicación usa 1. Es
+   * la razón por la que esta función existe al lado de aquella.
+   */
+  if (
+    outOfRange(
+      settings.bookingRequestPriceHours,
+      LIMITS.bookingRequestPriceHours.min,
+      LIMITS.bookingRequestPriceHours.max
+    )
+  ) {
+    problems['bookingRequestPriceHours'] = 'settings.errors.requestPriceHours';
+  }
+  if (
+    outOfRange(
+      settings.bookingRequestKeepHours,
+      LIMITS.bookingRequestKeepHours.min,
+      LIMITS.bookingRequestKeepHours.max
+    )
+  ) {
+    problems['bookingRequestKeepHours'] = 'settings.errors.requestKeepHours';
   }
 
   return problems;

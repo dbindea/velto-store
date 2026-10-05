@@ -34,7 +34,20 @@
 
   app-brand-logo {
     display: block;
-    height: 36px;
+    /**
+     * ⚠️ **44 px, que es lo que mide el logo en la cabecera de la web
+     * pública.** Estuvo en 36 y el razonamiento de arriba —que el cliente
+     * puede recibir dos cosas el mismo día y deben parecer de la misma
+     * empresa— se quedaba corto: paraba en las tres pantallas de Angular.
+     * El cliente llega aquí **desde `veltomobility.com`**, así que el salto
+     * que se veía era de 44 a 36 en mitad de su viaje. Medido el 3 de
+     * octubre de 2026 a 390 px: web 160×44, aquí 131×36.
+     *
+     * Si se cambia, se cambia también en `sign-contract` y en
+     * `contract-verify`, que son las otras dos que ve el cliente, y en
+     * `web/src/layouts/Base.astro`, que es la que manda.
+     */
+    height: 44px;
     max-width: 200px;
   }
 }
@@ -133,6 +146,25 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * La letra pequeña de la señal, encima del botón de pagar.
+ *
+ * ⚠️ **Pequeña pero LEGIBLE: 0,8 rem y el color del texto secundario**, no el
+ * apagado. Es una condición económica que el cliente acepta al pulsar; puesta
+ * en gris claro a 0,7 rem sería de las que no se leen, y una condición que no
+ * se puede leer no se ha aceptado.
+ */
+.signal-terms {
+  margin: 0;
+  padding: 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  border-radius: 8px;
+}
+
 .btn-pay {
   width: 100%;
   display: inline-flex;
@@ -193,10 +225,37 @@
   &:hover { color: var(--accent-color); }
 }
 
+/*
+ * El pie de la pantalla de pago: marca, razón social con NIF y la política.
+ *
+ * ⚠️ **En columna y no en una línea.** La razón social con el NIF mide unos
+ * 35 caracteres y la marca otros 14: en un móvil de 390 px, en fila, se parten
+ * por donde caiga y el NIF acaba suelto en su propio renglón, que es como se
+ * lee un dato que no cuadra.
+ */
 .public-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding: 1rem;
   text-align: center;
   font-size: 0.75rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border-color);
+}
+
+/*
+ * ⚠️ **Escritas enteras y no con `&__legal`.** `css:audit` busca la clase
+ * literal en el SCSS: anidadas las daba por desnudas sin estarlo, y un
+ * auditor que grita en falso se deja de leer. Mismo motivo que `.senal__estado`.
+ */
+.public-footer__legal {
+  /* Es el dato registral: se lee si se busca, no compite con el importe. */
+  opacity: 0.85;
+}
+
+.public-footer__enlace {
+  color: var(--text-secondary);
+  text-decoration: underline;
 }

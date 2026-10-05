@@ -1,5 +1,26 @@
 ---
 import Base from '../layouts/Base.astro';
+import { flotaEnBuild } from '../lib/flota-build';
+import { tarjetaCoche } from '../lib/tarjeta';
+import { migas } from '../lib/schema';
+
+/**
+ * ⚠️ **La flota, pintada ya en el HTML.** Hasta el 2 de octubre de 2026 esta
+ * página servía 61 palabras y la última era «Cargando la flota…»: para un
+ * rastreador que no ejecute JavaScript —y los de los buscadores con IA no lo
+ * ejecutan— el catálogo de esta empresa estaba vacío.
+ *
+ * ⚠️ **Se usa la MISMA función que el navegador** (`tarjetaCoche`), no una
+ * plantilla parecida. Dos formas de pintar la misma tarjeta divergen a la
+ * primera, y aquí la divergencia sería invisible: nadie compara a ojo el HTML
+ * del servidor con el que repinta el script.
+ *
+ * ⚠️ **Y el script sigue repintando al cargar.** Lo de aquí es el estado del
+ * último despliegue; lo que el visitante ve es lo de ahora. Por eso esto no
+ * rompe «publicar un coche se ve al momento».
+ */
+const coches = await flotaEnBuild();
+const tarjetas = coches.map((c) => tarjetaCoche(c)).join('');
 ---
 
 <Base
@@ -8,23 +29,54 @@ import Base from '../layouts/Base.astro';
   ruta="/flota"
   precarga="flota"
 >
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(migas([{ nombre: 'Inicio', ruta: '' }, { nombre: 'Flota', ruta: '/flota' }]))}
+  />
   <section class="seccion">
     <div class="contenedor">
       <p class="overline">Flota</p>
       <h1>Precio por día, todo incluido</h1>
+      {/*
+        ⚠️ **Aquí ponía «con IVA incluido» y se quitó el 30 de septiembre de
+        2026.** No es que deje de ser cierto —el precio sigue siendo el bruto—:
+        es que se decía en **seis** sitios distintos, y Dorel lo cortó con un
+        argumento que vale para toda la web: «poner tantas veces parece que
+        estás haciendo mucho hincapié en algo para ocultar alguna ilegalidad».
+        Tenía razón; repetir una garantía la convierte en sospecha.
+
+        ⚠️ **Y quitar las palabras NO incumple nada.** Lo que obliga la ley
+        —art. 60 del TRLGDCU y el Real Decreto de precios— es que **el precio
+        que se le enseña a un particular lleve los impuestos dentro**, no que
+        se escriba la coletilla al lado. El precio sigue siendo el bruto en
+        todas partes (`publicPrice()`), y dónde se dice está decidido: el pie
+        de todas las páginas, la pregunta frecuente que lo pregunta, y la
+        entradilla de los resultados. Ahí y en ningún sitio más.
+      */}
       <p class="entrada">
-        El precio que ves es el total por día con IVA incluido, y baja cuantos
-        más días alquiles. Para unas fechas concretas,
+        El precio que ves es el total por día, y baja cuantos más días
+        alquiles. Para unas fechas concretas,
         <a href="/reservar">consulta la disponibilidad</a>.
       </p>
 
-      <!--
+      {/*
         ⚠️ TRES estados y no dos: cargando, vacío y roto. Enseñar «no hay
         coches» cuando lo que ha fallado es la petición manda al visitante a
         otra web creyendo que no tenemos flota.
-      -->
-      <div id="lista" class="rejilla" hidden></div>
-      <p id="cargando" class="aviso">Cargando la flota…</p>
+      */}
+      {/*
+        ⚠️ **Nace con los coches del build y VISIBLE si los hay.** Oculto y
+        vacío, el HTML previo no serviría de nada: un rastreador lee el
+        marcado, y `hidden` le dice que eso no se enseña.
+
+        ⚠️ **Y «Cargando la flota…» solo sale si no hay nada que enseñar.** Con
+        tarjetas ya pintadas, ese aviso sería falso desde el primer byte — y
+        encima el visitante vería los coches **y** un cartel diciendo que se
+        están cargando.
+      */}
+      <div id="lista" class="rejilla" hidden={!tarjetas} set:html={tarjetas} />
+      <p id="cargando" class="aviso" hidden={!!tarjetas}>Cargando la flota…</p>
       <p id="vacio" class="aviso" hidden>
         Ahora mismo no hay vehículos publicados. Llámanos y te decimos qué
         tenemos disponible.
@@ -62,11 +114,11 @@ import Base from '../layouts/Base.astro';
     });
 </script>
 
-<style is:global>
-  .entrada {
-    color: var(--text-2);
-    font-size: var(--fs-lead);
-    max-width: 58ch;
-    margin: var(--sp-5) 0 var(--sp-10);
-  }
-</style>
+{/*
+  ⚠️ **Aquí había un `<style is:global>` con `.entrada`, y era global de
+  mentira.** Astro empaqueta el CSS **por página**: un `is:global` escrito en
+  una página vale dentro de ella y no viaja a las demás. Las otras cinco
+  páginas que usan esa clase se pintaban sin estilo — 16 px en blanco puro y
+  1098 px de ancho de línea. Ahora vive en `global.css`, que sí lo es porque lo
+  importa el layout.
+*/}

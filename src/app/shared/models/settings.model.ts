@@ -46,6 +46,27 @@ export interface OperationSettings {
   /** Kilómetros incluidos por día que se proponen al dar de alta un vehículo. */
   defaultIncludedKmPerDay: number;
 
+  /**
+   * Cuántas horas se mantiene el precio de una solicitud de la web.
+   *
+   * ⚠️ **Lo que se garantiza es el PRECIO, no el coche.** Apartar un vehículo
+   * sin pago ni identidad deja la flota bloqueable por cualquiera: con cinco
+   * coches, una persona la aparta entera en dos minutos. Mantener una cifra no
+   * quita inventario y sigue siendo una promesa que se puede cumplir.
+   */
+  bookingRequestPriceHours: number;
+
+  /**
+   * Cuántas horas se conserva una solicitud **ya atendida** antes de borrarla.
+   *
+   * ⚠️ **Solo se borra lo atendido.** Una solicitud sin tocar no se borra nunca:
+   * es trabajo pendiente, y perderla es perder un alquiler. Borrando por
+   * antigüedad a secas, una que entrara un viernes a las 23:40 desaparecería el
+   * sábado a la misma hora sin dejar rastro, y no habría forma de distinguir
+   * «no escribió nadie» de «se me pasaron tres».
+   */
+  bookingRequestKeepHours: number;
+
   updatedAt?: any;
   updatedBy?: string;
 }
@@ -62,7 +83,11 @@ export const DEFAULT_OPERATION_SETTINGS: OperationSettings = {
   quoteValidityDays: 7,
   signingLinkExpiryDays: 7,
   vatRate: 0.21,
-  defaultIncludedKmPerDay: 500
+  defaultIncludedKmPerDay: 500,
+  // ⚠️ Los mismos que `functions/src/settings.ts`, que es la otra copia: la app
+  // y las functions no pueden compartir módulo. Si cambian, cambian en los dos.
+  bookingRequestPriceHours: 24,
+  bookingRequestKeepHours: 24
 };
 
 /** El documento único donde viven. */

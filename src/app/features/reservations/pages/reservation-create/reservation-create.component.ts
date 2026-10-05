@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { NotificationService } from '@core/notifications/notification.service';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { BookingRequestService } from '@features/booking-requests/services/booking-request.service';
 import { Client, QuickClientData } from '@shared/models/client.model';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import {
@@ -27,7 +28,7 @@ import { SettingsService } from '@features/settings/services/settings.service';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
-import { roundMoney } from '@shared/utils/payment-summary.util';
+import { roundMoney, suggestInitialPayment } from '@shared/utils/payment-summary.util';
 import {
   canCreateReservationForClient,
   clientTrustWarning as trustWarningOf
@@ -51,6 +52,8 @@ type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 })
 export class ReservationCreateComponent implements OnInit {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private bookingRequests = inject(BookingRequestService);
   private notifications = inject(NotificationService);
   private reservationService = inject(ReservationService);
   private clientService = inject(ClientService);
@@ -61,6 +64,27 @@ export class ReservationCreateComponent implements OnInit {
   permissions = inject(PermissionsService);
 
   // Current step
+  /**
+   * La solicitud de la web de la que viene esta reserva, si viene de una.
+   *
+   * ⚠️ Se guarda para marcarla **convertida** al crearla: sin esto la solicitud
+   * se quedaba en «sin contestar» para siempre, el filtro «Convertidas» no se
+   * alcanzaba nunca y la misma solicitud se podía convertir dos veces.
+   */
+  private fromRequestId: string | null = null;
+
+  /**
+   * La referencia de esa solicitud, para poder decirlo en pantalla.
+   *
+   * ⚠️ **Un asistente que se abre en el paso 3 sin explicar por qué es peor que
+   * uno que se abre en el 1.** Al saltar directo al cliente, los pasos de
+   * fechas y coche salen en verde y **vacíos**: el operador ve «Nueva reserva»
+   * a medio hacer sin una sola pista de qué reserva es. Y es justo lo que Dorel
+   * pedía evitar cuando dijo «no me acuerdo qué coche era» — llevarle al paso
+   * del cliente sin enseñarle el coche resuelve media petición.
+   */
+  fromRequestRef = '';
+
   currentStep: Step = 'dates';
   steps: Step[] = ['dates', 'vehicle', 'client', 'summary'];
 
@@ -184,6 +208,81 @@ export class ReservationCreateComponent implements OnInit {
     // nueva. Se piden aquí, al abrir el asistente, para que ya estén cuando el
     // operador llegue al resumen. Si fallan, rigen los valores del código.
     void this.settingsService.load();
+    void this.precargarDesdeSolicitud();
+  }
+
+  /**
+   * Venir de una solicitud de la web con todo puesto.
+   *
+   * ⚠️ **Estos parámetros se mandaban y NO los leía nadie.** «Convertir en
+   * reserva» navegaba aquí con el coche, las fechas y el cliente en la URL, y
+   * el asistente los ignoraba por completo: se abría en el paso 1 en blanco. Lo
+   * contó Dorel el 29 de septiembre de 2026 con la frase que lo resume —«no me
+   * acuerdo qué coche era»—, y es el patrón de fallo de siempre: el código
+   * estaba escrito y nadie había recorrido el flujo hasta el final.
+   *
+   * ⚠️ **Se para en el paso del CLIENTE**, que es lo único que la solicitud no
+   * trae: la web pide un nombre y un teléfono, no una ficha con su DNI. Las
+   * fechas y el coche ya están decididos, así que hacérselos elegir otra vez es
+   * pedirle que recuerde algo que la aplicación ya sabe.
+   */
+  private async precargarDesdeSolicitud(): Promise<void> {
+    const q = this.route.snapshot.queryParamMap;
+    const vehicleId = q.get('vehicleId');
+    const pickup = q.get('pickup');
+    const devolucion = q.get('return');
+    if (!vehicleId || !pickup || !devolucion) return;
+
+    this.fromRequestId = q.get('fromRequest');
+    this.fromRequestRef = q.get('requestRef') ?? '';
+    this.pickupDateTimeInput = pickup;
+    this.returnDateTimeInput = devolucion;
+
+    /**
+     * ⚠️ **El alta rápida nace escrita, y el buscador NO.** Lo que la web trae
+     * es un nombre tecleado por un desconocido, no una ficha: puede haber un
+     * cliente que ya exista con ese teléfono y puede no haberlo. Rellenando el
+     * buscador se le daría por bueno el primero que se parezca; rellenando el
+     * alta, el operador busca como siempre y, si no está, lo da de alta sin
+     * teclear nada.
+     */
+    this.quickClient.fullName = q.get('clientName') ?? '';
+    this.quickClient.phone = q.get('clientPhone') ? `+${q.get('clientPhone')}` : '';
+
+    /**
+     * ⚠️ **El lugar que pidió en la web, puesto como lugar de recogida.** Es
+     * el campo que más fácil se olvida al convertir y el que decide si hay que
+     * mover una furgoneta — y además se **imprime** en el presupuesto, el
+     * justificante y el contrato, así que dejarlo en el valor por defecto
+     * manda al cliente a una dirección que él no eligió.
+     *
+     * ⚠️ **Solo la recogida, no la devolución.** Son dos trayectos que se
+     * pactan por separado —hay quien pide que se lo lleven y devuelve en
+     * oficina—, y la web solo pregunta por uno: rellenar los dos con lo mismo
+     * sería inventarse la mitad.
+     *
+     * ⚠️ **Y no toca `deliveryPickupFee`.** El suplemento lo teclea el
+     * operador: la web no cobra nada y el catálogo de zonas es una promesa
+     * comercial, no una tarifa que esta pantalla pueda aplicar sola.
+     */
+    const lugar = q.get('pickupPlace');
+    if (lugar) this.pickupLocation = lugar;
+
+    await this.searchAvailability();
+
+    const elegido = this.availabilityResults.find((v) => v.vehicleId === vehicleId);
+    /**
+     * ⚠️ **Si el coche ya no está libre, NO se sigue adelante.** Entre que el
+     * cliente pidió que le llamaran y el operador convierte pueden pasar días:
+     * saltar al paso del cliente con otro coche —o sin ninguno— haría que la
+     * reserva saliera del que estuviera seleccionado. Se queda en la lista, con
+     * su motivo al lado como cualquier otra búsqueda, y el operador decide.
+     */
+    if (!elegido?.available) {
+      this.notifications.error('reservations.fromRequest.vehicleGone');
+      return;
+    }
+    this.selectVehicle(elegido);
   }
 
   private loadRecentClients(): void {
@@ -454,6 +553,28 @@ export class ReservationCreateComponent implements OnInit {
         this.vatExempt,
         { pickupFee: Number(this.deliveryPickupFee) || 0, returnFee: Number(this.deliveryReturnFee) || 0 }
       );
+
+      /**
+       * ⚠️ **La solicitud se marca convertida DESPUÉS, y su fallo no tumba
+       * nada.** La reserva ya está creada y es lo que vale; perder la marca es
+       * un desajuste que se arregla a mano, tirar aquí dejaría al operador
+       * viendo un error sobre un alquiler que sí existe — y lo crearía otra vez.
+       * Misma regla que el aviso de la solicitud, que nunca tumba la solicitud,
+       * y que el sellado del contrato, que nunca tumba la firma.
+       *
+       * Sin esto la solicitud se quedaba **en «sin contestar» para siempre**: el
+       * filtro «Convertidas» no se alcanzaba nunca y la misma se podía
+       * convertir dos veces, que es justo lo que `canConvert()` existe para
+       * impedir.
+       */
+      if (this.fromRequestId) {
+        try {
+          await this.bookingRequests.markConverted(this.fromRequestId, reservationId);
+        } catch (error) {
+          console.error('La reserva se creó, pero la solicitud no se marcó:', error);
+          this.notifications.error('reservations.fromRequest.markFailed');
+        }
+      }
 
       this.router.navigate(['/reservations', reservationId]);
     } catch (error: any) {
@@ -921,11 +1042,14 @@ export class ReservationCreateComponent implements OnInit {
   }
 
   /**
-   * The signal never exceeds the agreed price: a 50 € signal on a 30 € rental
-   * would leave the reservation impossible to settle.
+   * ⚠️ **La regla vive en `payment-summary.util.ts`, no aquí.** Estaba escrita
+   * en este getter —`min(50, precio)`— y era el único sitio que sabía cuánta
+   * señal se pide; en cuanto hubo que cobrarla también desde la ficha de una
+   * solicitud de la web, eso se habría copiado. Y de paso cambia: por debajo
+   * de 50 € la señal son 25 y no el alquiler entero.
    */
   get initialPayment(): number {
-    return roundMoney(Math.min(APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT, this.finalPrice));
+    return suggestInitialPayment(this.finalPrice);
   }
 
   /**

@@ -32,16 +32,65 @@ import { firestore, storageBucket } from '../admin-guard';
 import { operationSettings } from '../settings';
 import { toDetail, toSummary } from './mapper';
 import {
-  addVat,
+  publicPrice,
   blocksAvailability,
   calculateCalendarDays,
+  diaIso,
+  diasOcupados,
   rangesOverlap,
   tariffNetPrice,
   toDate,
   vehicleIsPublishable,
+  ventanaDeMantenimiento,
+  ventanaOcupada,
   widenToFullDays,
 } from './core';
+import type { VentanaOcupada } from './core';
 import type { PublicAvailableVehicle } from './types';
+import { defineSecret } from 'firebase-functions/params';
+import { companyConfig } from '../company-config';
+import { publicBaseUrl } from '../public-url';
+/**
+ * ⚠️ **Estático y no perezoso a propósito.** La regla del arranque en frío es
+ * apartar lo que pesa, y esto son cinco funciones que devuelven cadenas, sin una
+ * sola dependencia: un módulo de 432, frente a los cientos que costaría un
+ * `pdf-lib`. Cargarlo perezosamente solo complicaría el único sitio que lo usa.
+ */
+import { renderBookingRequestEmail, type BookingRequestEmailData } from './booking-request-email';
+import { renderBookingRequestClienteEmail } from './booking-request-cliente-email';
+import { presupuestoDeSolicitud } from './booking-request-quote';
+import { renderContactEmail } from './contact-email';
+import {
+  generateContactReference,
+  looksAutomated as contactoAutomatizado,
+  validateContact,
+  CONSULTA_HORAS_POR_DEFECTO,
+  type ContactInput
+} from './contact-core';
+import {
+  generateReference,
+  looksAutomated,
+  priceGuaranteedUntil,
+  validateBookingRequest,
+  type BookingRequestInput
+} from './booking-request-core';
+
+/**
+ * ⚠️ **Declarado aquí y leído DENTRO del handler.** Un secret que existe en
+ * Secret Manager pero no aparece en el `secrets: [...]` de su function no se
+ * monta en el runtime: `process.env` sale `undefined` y el código se va por la
+ * rama del «no está configurado», en silencio y con el despliegue en verde.
+ */
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
+
+const RESEND_API_URL = 'https://api.resend.com/emails';
+
+/** La colección de las solicitudes de la web. */
+const SOLICITUDES = 'bookingRequests';
+
+/** Cuántas solicitudes admite un mismo teléfono seguidas, y en cuánto rato. */
+const LIMITE_SOLICITUDES = 3;
+const LIMITE_SOLICITUDES_MINUTOS = 30;
 
 /**
  * Cuántos coches se devuelven como mucho.
@@ -57,13 +106,97 @@ const MAX_VEHICULOS = 60;
 const MAX_DIAS = 90;
 
 /**
+ * Una reserva cuyas fechas no se pueden leer: ocupa **siempre**.
+ *
+ * ⚠️ Es duro y es lo correcto. No se sabe cuándo ocupa, así que ofrecer
+ * cualquier día sería adivinar, y la regla de esta carpeta es que ante la duda
+ * no se publica. Sale además en el log, que es donde alguien puede verlo y
+ * arreglar el documento.
+ */
+const OCUPA_SIEMPRE: VentanaOcupada = { inicio: new Date(0), fin: new Date(8.64e15) };
+
+/**
+ * Todo lo que deja un coche sin alquilar: sus reservas —con el día de
+ * preparación dentro— y sus citas de taller bloqueantes.
+ *
+ * ⚠️ **Un solo sitio para los TRES caminos** —el buscador, la solicitud y el
+ * calendario de la ficha—, porque la única forma de que no discrepen es que
+ * hagan literalmente la misma cuenta. Antes cada uno leía las reservas por su
+ * lado; el día que uno aplicara la preparación y otro no, la web ofrecería un
+ * coche y después rechazaría la solicitud con «vehicle-unavailable», con el
+ * visitante ya con los datos puestos.
+ *
+ * ⚠️ **Son dos consultas por coche, y con esta flota está bien.** Con 2–10
+ * coches son veinte lecturas; el día que no lo sea, la salida es un campo
+ * plano indexable —no un filtro por fecha, que con los mapas
+ * `{ seconds, nanoseconds }` que escribe esta aplicación **no filtra nada**.
+ */
+async function ventanasOcupadas(vehicleId: string): Promise<VentanaOcupada[]> {
+  const [reservas, mantenimientos] = await Promise.all([
+    firestore().collection('reservations').where('vehicleId', '==', vehicleId).get(),
+    firestore().collection('vehicleMaintenance').where('vehicleId', '==', vehicleId).get(),
+  ]);
+
+  const ventanas: VentanaOcupada[] = [];
+
+  for (const r of reservas.docs) {
+    const data = r.data();
+    if (!blocksAvailability(data['reservationStatus'])) continue;
+    const v = ventanaOcupada(data['pickupDateTime'], data['returnDateTime']);
+    if (!v) {
+      logger.warn('Reserva con fechas ilegibles: el coche se da por ocupado', {
+        vehicleId,
+        reserva: r.id,
+      });
+      ventanas.push(OCUPA_SIEMPRE);
+      continue;
+    }
+    ventanas.push(v);
+  }
+
+  /*
+   * ⚠️ **Solo las de prioridad alta, y solo su día.** Decisión de Dorel del 1
+   * de octubre de 2026: un cambio de aceite puede esperar, una ITV no. La
+   * regla está en `ventanaDeMantenimiento()`, con sus tests.
+   */
+  for (const m of mantenimientos.docs) {
+    const v = ventanaDeMantenimiento(m.data());
+    if (v) ventanas.push(v);
+  }
+
+  return ventanas;
+}
+
+/**
+ * Hasta dónde mira el calendario de la ficha.
+ *
+ * ⚠️ **Tiene que ir con `MAX_DIAS`, y por eso son 90 + 90.** El calendario deja
+ * elegir una recogida dentro del horizonte y un alquiler de hasta 90 días, así
+ * que mirando solo 90 el final de un alquiler largo caería en terreno que no
+ * se ha comprobado — y la web enseñaría libre lo que no sabe. Con el doble,
+ * cualquier rango que el calendario permita está dentro de lo mirado.
+ *
+ * ⚠️ **Y lo que hay más allá NO se pinta como libre**: el calendario corta ahí
+ * (`availableUntil`). Un día en blanco se lee como disponible, y eso es
+ * exactamente lo que no se puede afirmar.
+ */
+const HORIZONTE_DIAS = 180;
+
+/**
  * Se acepta cualquier origen porque esto **es** público: la web de Velto, un
  * buscador o un agregador leen lo mismo. Restringirlo daría sensación de
  * control sin darlo — un `Origin` lo pone quien quiera con `curl`.
  */
-function cors(res: Response): void {
+function cors(res: Response, metodos = 'GET, OPTIONS'): void {
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.set('Access-Control-Allow-Methods', metodos);
+  /**
+   * ⚠️ **`Content-Type` hace falta para el POST de la solicitud.** Un `fetch`
+   * con cuerpo JSON dispara una comprobación previa, y sin esta cabecera el
+   * navegador la rechaza **antes** de llamar — así que la function nunca se
+   * entera y lo que se ve es un fallo de red sin explicación.
+   */
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
   res.set('Access-Control-Max-Age', '3600');
 }
 
@@ -162,8 +295,38 @@ export const publicVehicleDetail = onRequest({ cors: false }, async (req: Reques
       return;
     }
     const ajustes = await operationSettings();
-    cache(res, 600);
-    res.json({ vehicle: toDetail(id, raw, storageBucket().bucket().name, ajustes.vatRate) });
+
+    /*
+     * ⚠️ **El calendario de la ficha se sirve AQUÍ y no en un endpoint
+     * aparte.** La página ya pide esta llamada, así que un segundo endpoint
+     * serían dos viajes, dos cachés que se desincronizan y un rewrite más que
+     * desplegar — y ya sabemos lo que cuesta un rewrite olvidado.
+     *
+     * ⚠️ **Y son DÍAS, no rangos.** Con los instantes exactos se puede saber a
+     * qué hora devuelve el coche un cliente concreto; es la misma razón por la
+     * que el buscador ensancha su ventana a días completos.
+     */
+    const ventanas = await ventanasOcupadas(id);
+    const hoy = new Date();
+    const ocupados = diasOcupados(ventanas, hoy, HORIZONTE_DIAS);
+
+    /*
+     * ⚠️ **La caché baja de 600 s a 120**, la misma que la disponibilidad.
+     * Desde que la ficha lleva dentro los días ocupados, diez minutos de caché
+     * son diez minutos enseñando libre un día que alguien acaba de reservar. Y
+     * la cabecera de `firebase.json` para `/api/vehicle` va a juego: la del CDN
+     * manda sobre esta.
+     */
+    cache(res, 120);
+    res.json({
+      vehicle: toDetail(id, raw, storageBucket().bucket().name, ajustes.vatRate, {
+        busyDays: ocupados,
+        /** Hasta dónde se ha mirado. Más allá, el calendario no puede afirmar nada. */
+        availableUntil: diaIso(
+          new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + HORIZONTE_DIAS - 1)
+        ),
+      }),
+    });
   } catch (error) {
     logger.error('Fallo sirviendo la ficha pública', error);
     fallo(res, 500, 'internal');
@@ -195,8 +358,24 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
   const hasta = parseFecha(req.query['to']);
   if (!desde || !hasta) { fallo(res, 400, 'bad-dates'); return; }
 
+  /*
+   * ⚠️ **Dos cuentas distintas y a propósito: una para OCUPAR y otra para
+   * COBRAR.** La ventana ensanchada a días completos es la que cruza con las
+   * reservas —así no se puede averiguar a qué hora devuelve el coche un
+   * cliente concreto—, pero los días que se cobran salen de los instantes
+   * REALES.
+   *
+   * ⚠️ **Y hasta el 1 de octubre de 2026 se cobraban los de la ventana, que
+   * son uno más.** Del 1 al 4 a las 12:00 son **72 horas, o sea 3 días**
+   * —regla de Dorel, y la misma que aplica `calculateCalendarDays()` en el
+   * backoffice: bloques de 24 h y se suma uno a partir de una hora de resto—.
+   * Ensanchada, la ventana iba del día 1 a las 00:00 al día 5 a las 00:00 y
+   * salían **4**. O sea que la web cotizaba un día de más que el contrato, y
+   * esa misma cifra viajaba al `quoteSnapshot` que Dorel lee en el correo para
+   * cobrar a mano.
+   */
   const ventana = widenToFullDays(desde, hasta);
-  const dias = calculateCalendarDays(ventana.from, ventana.to);
+  const dias = calculateCalendarDays(desde, hasta);
   if (dias < 1) { fallo(res, 400, 'bad-range'); return; }
   if (dias > MAX_DIAS) { fallo(res, 400, 'range-too-long'); return; }
 
@@ -231,31 +410,20 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
         continue;
       }
 
-      const reservas = await firestore()
-        .collection('reservations')
-        .where('vehicleId', '==', coche.id)
-        .get();
-
-      let ocupado = false;
-      for (const r of reservas.docs) {
-        const data = r.data();
-        if (!blocksAvailability(data['reservationStatus'])) continue;
-        const inicio = toDate(data['pickupDateTime']);
-        const fin = toDate(data['returnDateTime']);
-        /**
-         * ⚠️ **Una fecha ilegible cuenta como OCUPADO.** `toDate()` de la app
-         * devolvería hoy y la reserva dejaría de solapar: el coche saldría
-         * libre estando alquilado. Ante la duda, no se publica.
-         */
-        if (!inicio || !fin) { ocupado = true; break; }
-        if (rangesOverlap(ventana.from, ventana.to, inicio, fin)) { ocupado = true; break; }
-      }
-      if (ocupado) continue;
+      /*
+       * ⚠️ **Lo que ocupa a un coche lo decide `ventanasOcupadas()`, que es la
+       * misma que usan el calendario de la ficha y la solicitud.** Lleva
+       * dentro el día de preparación de cada devolución y las citas de taller
+       * de prioridad alta. Contarlo aquí por separado era lo que permitía que
+       * la web ofreciera un coche y después rechazara la solicitud.
+       */
+      const ventanas = await ventanasOcupadas(coche.id);
+      if (ventanas.some(v => rangesOverlap(ventana.from, ventana.to, v.inicio, v.fin))) continue;
 
       libres.push({
         ...toSummary(coche.id, coche.raw, bucket, ajustes.vatRate),
         totalDays: dias,
-        price: { ...addVat(neto, ajustes.vatRate), currency: 'EUR' },
+        price: { ...publicPrice(neto, ajustes.vatRate), currency: 'EUR' },
       });
     }
 
@@ -265,6 +433,15 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
       from: ventana.from.toISOString(),
       to: ventana.to.toISOString(),
       totalDays: dias,
+      /*
+       * ⚠️ **Las horas que se garantiza el precio viajan con la
+       * disponibilidad, y no es un capricho.** La web lo tiene que decir
+       * **antes** de que el visitante envíe la pre-reserva, y el plazo vive en
+       * `settings/operation`: escrito a mano en la página, el día que Dorel lo
+       * cambie seguiría prometiendo lo de antes. Es la misma regla que el
+       * plazo de borrado publicado en `/privacidad`.
+       */
+      priceGuaranteedHours: ajustes.bookingRequestPriceHours,
       vehicles: libres,
     });
   } catch (error) {
@@ -272,3 +449,549 @@ export const checkPublicAvailability = onRequest({ cors: false }, async (req: Re
     fallo(res, 500, 'internal');
   }
 });
+
+/**
+ * Una solicitud de la web: «que me llamen».
+ *
+ * ⚠️ **Es el ÚNICO endpoint público que escribe**, y por eso lleva encima todo
+ * lo que los otros tres no necesitan: topes de longitud, campo trampa y un
+ * límite por teléfono. Los demás solo leen; aquí cualquiera del mundo deja un
+ * documento en Firestore.
+ *
+ * ⚠️ **No crea una reserva ni un cliente, y esa es la regla que lo sostiene.**
+ * Una reserva bloquearía el coche, saldría en el calendario y contaría en
+ * informes — o sea, apartar la flota gratis. Un cliente llenaría el fichero de
+ * gente que nunca alquiló, con su nombre y su teléfono dentro. Los dos nacen
+ * cuando el operador convierte, no antes. Es la misma regla que ya sostiene el
+ * presupuesto: los documentos informativos no tocan el estado del alquiler.
+ *
+ * ⚠️ **Lo que se garantiza es el PRECIO, no el coche**, y el texto que ve el
+ * cliente lo dice. Apartar un vehículo sin pago ni identidad deja la flota
+ * bloqueable por cualquiera; mantener una cifra no quita inventario.
+ */
+export const createBookingRequest = onRequest(
+  { cors: false, secrets: [RESEND_API_KEY] },
+  async (req: Request, res: Response) => {
+    cors(res, 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { fallo(res, 405, 'method-not-allowed'); return; }
+
+    const cuerpo = (req.body ?? {}) as BookingRequestInput;
+
+    /**
+     * ⚠️ **Al robot se le contesta que sí.** Devolviendo un error aprende a no
+     * rellenar el campo escondido y la trampa deja de servir para siempre. La
+     * referencia que se lleva no existe en ninguna parte.
+     */
+    if (looksAutomated(cuerpo)) {
+      logger.info('Solicitud descartada por el campo trampa');
+      res.json({ reference: generateReference(), priceGuaranteedUntil: null });
+      return;
+    }
+
+    const validado = validateBookingRequest(cuerpo);
+    if (!validado.ok) { fallo(res, 400, validado.error); return; }
+    const { vehicleId, name, phone, note, email, place } = validado.fields;
+
+    const desde = parseFecha(cuerpo.from);
+    const hasta = parseFecha(cuerpo.to);
+    if (!desde || !hasta) { fallo(res, 400, 'bad-dates'); return; }
+
+    // La ventana ensanchada ocupa; los días que se cobran salen de los
+    // instantes reales. Ver la nota larga en checkPublicAvailability.
+    const ventana = widenToFullDays(desde, hasta);
+    const dias = calculateCalendarDays(desde, hasta);
+    if (dias < 1) { fallo(res, 400, 'bad-range'); return; }
+    if (dias > MAX_DIAS) { fallo(res, 400, 'range-too-long'); return; }
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    if (ventana.from < hoy) { fallo(res, 400, 'past-date'); return; }
+
+    try {
+      /**
+       * ⚠️ **El límite va por TELÉFONO y no por IP.** Detrás de un móvil hay
+       * una IP compartida por media provincia, así que limitar por ahí deja
+       * fuera a clientes de verdad; y el teléfono es obligatorio, que es lo que
+       * lo hace posible. No pretende parar a un atacante decidido —cambiar de
+       * número es fácil—: pretende que un formulario reenviado veinte veces no
+       * llene la bandeja.
+       */
+      /**
+       * ⚠️ **Un solo `where` y el resto en memoria, a propósito.** Cruzar
+       * `phone` con un rango de `createdAt` exige un índice compuesto, y eso
+       * ataría el único endpoint público que escribe a que un índice esté
+       * construido: mientras se crea, la function devuelve 500 y el visitante
+       * ve «no hemos podido enviarlo». Lo comprobé desplegándolo así.
+       *
+       * Para un teléfono dado hay siempre un puñado de documentos —el límite de
+       * abajo y la limpieza diaria lo garantizan—, así que traerlos y filtrar
+       * aquí cuesta lo mismo y no depende de nada.
+       */
+      const desdeVentana = Date.now() - LIMITE_SOLICITUDES_MINUTOS * 60 * 1000;
+      const mismoTelefono = await firestore()
+        .collection(SOLICITUDES)
+        .where('phone', '==', phone)
+        .limit(50)
+        .get();
+      const recientes = mismoTelefono.docs.filter((d) => {
+        const cuando = toDate(d.data()['createdAt']);
+        return cuando !== null && cuando.getTime() >= desdeVentana;
+      });
+      if (recientes.length >= LIMITE_SOLICITUDES) {
+        fallo(res, 429, 'too-many-requests', { phone });
+        return;
+      }
+
+      const ajustes = await operationSettings();
+
+      /**
+       * ⚠️ **El coche se comprueba AQUÍ otra vez**, aunque la web solo ofrezca
+       * los libres: entre que se pintó la lista y se envió el formulario cabe
+       * una reserva. Y se recalcula el precio, que no viaja en la petición.
+       */
+      const doc = await firestore().collection('vehicles').doc(vehicleId).get();
+      const raw = doc.data() as Record<string, unknown> | undefined;
+      if (!doc.exists || !raw || raw['publicEnabled'] !== true || !vehicleIsPublishable(raw['status'])) {
+        fallo(res, 409, 'vehicle-unavailable');
+        return;
+      }
+
+      const neto = tariffNetPrice(raw['pricingRules'] as never, dias);
+      // Sin tarifa para esos días no se cotiza: la regla de toda la web pública.
+      if (neto === null) { fallo(res, 409, 'vehicle-unavailable'); return; }
+
+      // La misma cuenta que hizo el buscador para ofrecer este coche: si aquí
+      // se contara distinto, aceptaríamos lo que la web dijo que no había —y
+      // al revés, que es peor: el visitante rellena sus datos y se lleva un
+      // error por algo que la página acababa de ofrecerle.
+      const ventanas = await ventanasOcupadas(vehicleId);
+      if (ventanas.some(v => rangesOverlap(ventana.from, ventana.to, v.inicio, v.fin))) {
+        fallo(res, 409, 'vehicle-unavailable');
+        return;
+      }
+
+      const precio = publicPrice(neto, ajustes.vatRate);
+      const ahora = new Date();
+      const garantia = priceGuaranteedUntil(ahora, ajustes.bookingRequestPriceHours);
+      const reference = generateReference();
+
+      const solicitud = {
+        reference,
+        status: 'new',
+        createdAt: ahora,
+        name,
+        phone,
+        /**
+         * ⚠️ **Vacío si no lo dejó, y es opcional a propósito.** Lo que hace
+         * falta para atender una pre-reserva es el teléfono; cada campo
+         * exigido de más es gente que abandona. Quien lo deja recibe el
+         * presupuesto por correo, y quien no, lo descarga en la pantalla.
+         */
+        email,
+        note,
+        /**
+         * ⚠️ **Dónde recoge el coche, y hasta el 2 de octubre de 2026 NO se
+         * guardaba.** El buscador lo pide desde que existe y el dato moría en
+         * la URL: una pre-reserva del aeropuerto —la que cuesta 30 € y una
+         * furgoneta— llegaba aquí indistinguible de una de oficina.
+         *
+         * ⚠️ **Es el lugar PEDIDO, no un importe.** El suplemento no viaja ni
+         * se suma al precio: la entrega a domicilio se teclea a mano por
+         * reserva en el backoffice (`deliveryFees`, fuera del
+         * `pricingSnapshot`), así que meterlo aquí sería una segunda fuente de
+         * verdad para el mismo euro. Lo que hace falta es que el operador sepa
+         * dónde hay que llevarlo.
+         */
+        pickupPlace: place,
+        vehicleId,
+        /**
+         * Lo que el cliente VIO, congelado. No es comodidad: el operador va a
+         * llamar citando esa cifra, y el coche puede cambiar de tarifa mañana.
+         * Misma razón que `pricingSnapshot`.
+         */
+        vehicleSnapshot: {
+          brand: String(raw['brand'] ?? ''),
+          model: String(raw['model'] ?? ''),
+          category: String(raw['category'] ?? '')
+        },
+        quoteSnapshot: {
+          totalDays: dias,
+          net: precio.net,
+          gross: precio.gross,
+          vatRate: precio.vatRate,
+          currency: 'EUR'
+        },
+        pickupDate: ventana.from,
+        returnDate: ventana.to,
+        priceGuaranteedUntil: garantia,
+        /** El plazo de borrado, congelado: ver `bookingRequestKeepHours`. */
+        keepHours: ajustes.bookingRequestKeepHours
+      };
+
+      const ref = await firestore().collection(SOLICITUDES).add(solicitud);
+
+      /**
+       * ⚠️ **Nada de lo que viene ahora puede tumbar la solicitud.** Se escribe
+       * primero y se adorna después: perder el correo o el presupuesto es un
+       * problema, perder la pre-reserva que el cliente acaba de mandar es uno
+       * mucho mayor. Misma regla que el sellado del contrato, que se guarda sin
+       * sellar antes que perder la firma.
+       */
+      try {
+        await avisarSolicitud(ref.id, solicitud);
+      } catch (error) {
+        logger.error('No se pudo avisar de la solicitud', { id: ref.id, error });
+      }
+
+      /*
+       * El presupuesto en PDF, con la misma validez que el precio garantizado.
+       *
+       * ⚠️ **Se genera AQUÍ y no cuando alguien lo pida.** Un endpoint que
+       * generase el PDF a demanda tendría que aceptar la referencia como
+       * llave, y esa referencia es corta y se dicta por teléfono: cualquiera
+       * probando combinaciones se bajaría presupuestos con el nombre y el
+       * teléfono de otro. Generado ahora, el secreto es el id de la carpeta
+       * (~95 bits), como en el resto de los enlaces `/d/…`.
+       */
+      const presupuesto = await presupuestoDeSolicitud({
+        nombre: name,
+        telefono: phone,
+        email,
+        coche: raw,
+        recogida: desde,
+        devolucion: hasta,
+        dias,
+        precio,
+        validoHasta: garantia,
+        // El presupuesto imprime el lugar de recogida si se dijo: es el mismo
+        // `pickupLocation` que lleva el del operador y el contrato.
+        ...(place ? { lugar: place } : {}),
+        ...(typeof raw['defaultDepositAmount'] === 'number'
+          ? { fianza: raw['defaultDepositAmount'] as number }
+          : {}),
+      });
+
+      /*
+       * ⚠️ **El enlace se guarda en la solicitud.** Así el operador puede
+       * reenviar el MISMO papel que recibió el cliente, en vez de hacer otro
+       * con otra fecha y otro importe — que es como se acaba discutiendo cuál
+       * de los dos vale.
+       */
+      if (presupuesto) {
+        await ref.update({ quoteUrl: presupuesto }).catch((error) => {
+          logger.error('No se pudo guardar el enlace del presupuesto', { id: ref.id, error });
+        });
+      }
+
+      /*
+       * ⚠️ **El correo al cliente, solo si lo ha dejado.** Es opcional en el
+       * formulario a propósito: lo que hace falta para atender una pre-reserva
+       * es el teléfono, y cada campo exigido de más es gente que abandona.
+       */
+      if (email) {
+        try {
+          await avisarCliente(solicitud, presupuesto ?? '');
+        } catch (error) {
+          logger.error('No se pudo mandar el correo al cliente', { id: ref.id, error });
+        }
+      }
+
+      res.json({
+        reference,
+        priceGuaranteedUntil: garantia.toISOString(),
+        /** El presupuesto para descargar. `null` si no se pudo generar. */
+        quoteUrl: presupuesto,
+        /** Para que la pantalla pueda decir «te lo hemos mandado a…». */
+        emailed: !!email,
+      });
+    } catch (error) {
+      logger.error('Fallo creando la solicitud', error);
+      fallo(res, 500, 'internal');
+    }
+  }
+);
+
+/**
+ * El correo que avisa de una solicitud nueva.
+ *
+ * ⚠️ **Lleva dentro todo lo que hace falta para decidir sin abrir nada**: coche,
+ * fechas, días, precio y teléfono. Un aviso que obliga a entrar en la
+ * aplicación para saber si merece la pena es un aviso que se mira más tarde, y
+ * más tarde el cliente ya ha llamado a otro.
+ *
+ * ⚠️ **Aquí solo se manda; cómo se ve está en `booking-request-email.ts`.**
+ *
+ * ⚠️ **Y NO es un WhatsApp, aunque sería lo natural.** Mandarlo exigiría la
+ * WhatsApp Business Cloud API: un número dedicado que no puede ser el del móvil
+ * de la agencia, verificación de empresa con Meta, plantilla aprobada y pago por
+ * mensaje —sería una plantilla de utilidad fuera de ventana de servicio—. Lo
+ * gratuito es al revés: contestar dentro de las 24 h a quien te escribe. Por eso
+ * el WhatsApp va en el otro sentido, desde la ficha del panel con un enlace
+ * `wa.me`, que no cuesta nada y sale del número de siempre.
+ */
+/**
+ * El correo que recibe **el cliente** con su pre-reserva.
+ *
+ * ⚠️ **No sustituye al aviso a la agencia: son dos correos distintos.** Aquel
+ * le dice a Dorel que hay alguien esperando; este le dice al cliente qué ha
+ * pedido y hasta cuándo le vale el precio. Mezclarlos daría un correo que no
+ * sirve del todo a ninguno de los dos.
+ *
+ * ⚠️ **Y dice LO MISMO que la pantalla.** El coche no queda reservado, lo que
+ * se garantiza es el precio, y el plazo es el que devuelve la function. Si el
+ * correo lo contara distinto, el cliente se quedaría con la versión que más le
+ * conviene — y con razón, porque se la hemos dado por escrito.
+ */
+async function avisarCliente(
+  s: {
+    reference: string;
+    name: string;
+    email: string;
+    pickupPlace?: string;
+    vehicleSnapshot: { brand: string; model: string };
+    quoteSnapshot: { totalDays: number; gross: number };
+    pickupDate: Date;
+    returnDate: Date;
+    priceGuaranteedUntil: Date;
+  },
+  presupuesto: string
+): Promise<void> {
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) {
+    logger.warn('Cliente sin avisar: RESEND_API_KEY no está configurada', {
+      referencia: s.reference,
+    });
+    return;
+  }
+
+  const empresa = companyConfig();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const cuando = (d: Date) =>
+    `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} a las ${p(d.getHours())}:${p(d.getMinutes())}`;
+
+  const { subject, html, text } = renderBookingRequestClienteEmail({
+    nombre: s.name,
+    referencia: s.reference,
+    coche: `${s.vehicleSnapshot.brand} ${s.vehicleSnapshot.model}`.trim(),
+    dias: s.quoteSnapshot.totalDays,
+    importe: `${s.quoteSnapshot.gross.toFixed(2).replace('.', ',')} €`,
+    recogida: cuando(s.pickupDate),
+    devolucion: cuando(s.returnDate),
+    ...(s.pickupPlace ? { lugar: s.pickupPlace } : {}),
+    garantia: `hasta el ${cuando(s.priceGuaranteedUntil)}`,
+    presupuesto,
+    marca: empresa.brandName,
+    telefonoEmpresa: empresa.phone,
+  });
+
+  const r = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `${empresa.brandName} <${empresa.email}>`,
+      to: [s.email],
+      /*
+       * ⚠️ **El `reply-to` es el correo de la empresa**, que es el mismo
+       * remitente: así una respuesta del cliente llega a alguien. Sin esto,
+       * contestar a un correo transaccional se pierde.
+       */
+      reply_to: empresa.email,
+      subject,
+      html,
+      text,
+    }),
+  });
+  if (!r.ok) {
+    throw new Error(`Resend respondió ${r.status}: ${await r.text()}`);
+  }
+}
+
+async function avisarSolicitud(id: string, s: BookingRequestEmailData): Promise<void> {
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) {
+    logger.warn('Solicitud sin avisar: RESEND_API_KEY no está configurada', { id });
+    return;
+  }
+
+  const empresa = companyConfig();
+  const base = publicBaseUrl();
+  const { subject, html, text } = renderBookingRequestEmail(s, {
+    brandName: empresa.brandName,
+    enlace: base ? `${base}/booking-requests/${id}` : ''
+  });
+
+  const r = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `${empresa.brandName} <${empresa.email}>`,
+      to: [empresa.email],
+      subject,
+      html,
+      text
+    })
+  });
+  if (!r.ok) {
+    throw new Error(`Resend respondió ${r.status}: ${await r.text()}`);
+  }
+}
+
+/* ===========================================================================
+ * EL FORMULARIO DE CONTACTO
+ * ======================================================================== */
+
+/** Las consultas del formulario, separadas de las solicitudes de reserva. */
+const CONSULTAS = 'contactRequests';
+
+/**
+ * ⚠️ **Más holgado que el de las solicitudes (3 en 30 minutos), y a propósito.**
+ * Una solicitud es siempre la misma acción —pedir precio de un coche—, pero por
+ * aquí alguien puede escribir, darse cuenta de que se dejó un dato y volver a
+ * enviar. Dos de más no llenan una bandeja; cinco seguidos sí son un robot que
+ * ha pasado la trampa.
+ */
+const LIMITE_CONSULTAS = 5;
+const LIMITE_CONSULTAS_MINUTOS = 30;
+
+/**
+ * «Escríbenos»: el formulario guiado de `/contacto`.
+ *
+ * ⚠️ **Es el SEGUNDO endpoint público que escribe**, y por eso lleva lo mismo
+ * que el primero: topes de longitud, campo trampa y límite por teléfono. Los de
+ * lectura no necesitan nada de esto; aquí cualquiera del mundo deja un
+ * documento en Firestore.
+ *
+ * ⚠️ **No crea cliente, ni reserva, ni solicitud de reserva.** Es una consulta:
+ * queda un documento y sale un correo. Quien decide si eso se convierte en algo
+ * es Dorel, llamando — igual que con las solicitudes de la web, y por la misma
+ * razón: un fichero lleno de gente que nunca alquiló es un fichero que hay que
+ * justificar ante la AEPD.
+ *
+ * ⚠️ **Y no se guarda nada que no se haya pedido.** Ni la IP, ni el navegador,
+ * ni de qué página venía. Lo que no se guarda no hay que protegerlo, ni
+ * declararlo en la política de privacidad, ni borrarlo cuando alguien lo pida.
+ */
+export const createContactRequest = onRequest(
+  { cors: false, secrets: [RESEND_API_KEY] },
+  async (req: Request, res: Response) => {
+    cors(res, 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { fallo(res, 405, 'method-not-allowed'); return; }
+
+    const cuerpo = (req.body ?? {}) as ContactInput;
+
+    /**
+     * ⚠️ **Al robot se le contesta que sí.** Devolviendo un error aprende a no
+     * rellenar el campo escondido y la trampa deja de servir para siempre. La
+     * referencia que se lleva no existe en ninguna parte.
+     */
+    if (contactoAutomatizado(cuerpo)) {
+      logger.info('Consulta descartada por el campo trampa');
+      res.json({ reference: generateContactReference() });
+      return;
+    }
+
+    const validado = validateContact(cuerpo);
+    if (!validado.ok) { fallo(res, 400, validado.error); return; }
+    const campos = validado.fields;
+
+    try {
+      /**
+       * ⚠️ **Un solo `where` y el resto en memoria**, igual que en las
+       * solicitudes y por el mismo motivo: cruzar `phone` con un rango de
+       * `createdAt` exige un índice compuesto, y eso ataría un endpoint público
+       * a que un índice esté construido. Mientras se crea, la function devuelve
+       * 500 y el visitante ve «no hemos podido enviarlo».
+       */
+      const desdeVentana = Date.now() - LIMITE_CONSULTAS_MINUTOS * 60 * 1000;
+      const mismoTelefono = await firestore()
+        .collection(CONSULTAS)
+        .where('phone', '==', campos.phone)
+        .limit(50)
+        .get();
+      const recientes = mismoTelefono.docs.filter((d) => {
+        const cuando = toDate(d.data()['createdAt']);
+        return cuando !== null && cuando.getTime() >= desdeVentana;
+      });
+      if (recientes.length >= LIMITE_CONSULTAS) {
+        fallo(res, 429, 'too-many-requests', { phone: campos.phone });
+        return;
+      }
+
+      const reference = generateContactReference();
+      const consulta = {
+        reference,
+        status: 'new',
+        createdAt: new Date(),
+        /**
+         * ⚠️ **El plazo de borrado se congela AQUÍ, en el propio documento.**
+         * Leído al barrer, cambiar la constante movería la caducidad de todo lo
+         * que ya existe; guardado, se puede ampliar el de un mensaje concreto
+         * sin tocar los demás. Es la misma regla que congela el IVA en
+         * `pricingSnapshot` y el plazo en una solicitud de reserva.
+         *
+         * Y el número está **publicado** en `/privacidad`: si se cambia, se
+         * cambia esa página el mismo día.
+         */
+        keepHours: CONSULTA_HORAS_POR_DEFECTO,
+        ...campos
+      };
+
+      const ref = await firestore().collection(CONSULTAS).add(consulta);
+
+      /**
+       * ⚠️ **El aviso NUNCA tumba la consulta.** Se escribe primero y se avisa
+       * después: perder el correo es un problema, perder lo que la persona
+       * acaba de escribir es uno mucho mayor. Misma regla que el sellado del
+       * contrato, que se guarda sin sellar antes que perder la firma.
+       */
+      try {
+        const empresa = companyConfig();
+        const { subject, html, text } = renderContactEmail(
+          { reference, ...campos },
+          { brandName: empresa.brandName }
+        );
+        await enviarCorreo(subject, html, text);
+      } catch (error) {
+        logger.error('No se pudo avisar de la consulta', { id: ref.id, error });
+      }
+
+      res.json({ reference });
+    } catch (error) {
+      logger.error('Fallo creando la consulta', error);
+      fallo(res, 500, 'internal');
+    }
+  }
+);
+
+/**
+ * Manda un correo a la propia empresa.
+ *
+ * ⚠️ **El remitente y el destinatario son el mismo**, que es lo que hace que
+ * Resend lo acepte: solo admite remitentes de un dominio verificado. Si el
+ * dominio de `companyConfig().email` no lo está, esto falla con un 403 que
+ * **no dice «dominio sin verificar»** — dice «Error al enviar el email (403)».
+ */
+async function enviarCorreo(subject: string, html: string, text: string): Promise<void> {
+  const apiKey = RESEND_API_KEY.value();
+  if (!apiKey) {
+    logger.warn('Consulta sin avisar: RESEND_API_KEY no está configurada');
+    return;
+  }
+  const empresa = companyConfig();
+  const r = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `${empresa.brandName} <${empresa.email}>`,
+      to: [empresa.email],
+      subject,
+      html,
+      text
+    })
+  });
+  if (!r.ok) {
+    throw new Error(`Resend respondió ${r.status}: ${await r.text()}`);
+  }
+}

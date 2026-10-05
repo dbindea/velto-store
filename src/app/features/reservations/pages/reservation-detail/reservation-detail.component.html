@@ -388,12 +388,15 @@
                   {{ 'inspections.actions.view' | translate }}
                 </button>
                 <!-- El parte al que el contrato remite. No se manda solo: se
-                     genera y se copia el enlace cuando el cliente lo pide. -->
+                     pone a disposición del cliente cuando lo pide.
+                     Son DOS botones a propósito —abrir y copiar—, como los
+                     cobros de esta misma pantalla: antes había uno solo que
+                     decía «Parte PDF» y lo que hacía era copiar un enlace. -->
                 <button
                   class="btn-secondary"
                   type="button"
                   [disabled]="generatingReport() === pickup.id"
-                  (click)="shareInspectionReport(pickup)"
+                  (click)="openInspectionReport(pickup)"
                 >
                   @if (generatingReport() === pickup.id) {
                     <i class="pi pi-spin pi-spinner"></i>
@@ -401,6 +404,15 @@
                     <i class="pi pi-file-pdf"></i>
                   }
                   {{ 'inspections.report.action' | translate }}
+                </button>
+                <button
+                  class="btn-secondary"
+                  type="button"
+                  [disabled]="generatingReport() === pickup.id"
+                  (click)="copyInspectionReportLink(pickup)"
+                >
+                  <i class="pi pi-copy"></i>
+                  {{ 'inspections.report.copyLink' | translate }}
                 </button>
               } @else {
                 <p class="inspection-draft">{{ 'inspections.messages.pickupDraft' | translate }}</p>
@@ -501,7 +513,7 @@
                   class="btn-secondary"
                   type="button"
                   [disabled]="generatingReport() === ret.id"
-                  (click)="shareInspectionReport(ret)"
+                  (click)="openInspectionReport(ret)"
                 >
                   @if (generatingReport() === ret.id) {
                     <i class="pi pi-spin pi-spinner"></i>
@@ -509,6 +521,15 @@
                     <i class="pi pi-file-pdf"></i>
                   }
                   {{ 'inspections.report.action' | translate }}
+                </button>
+                <button
+                  class="btn-secondary"
+                  type="button"
+                  [disabled]="generatingReport() === ret.id"
+                  (click)="copyInspectionReportLink(ret)"
+                >
+                  <i class="pi pi-copy"></i>
+                  {{ 'inspections.report.copyLink' | translate }}
                 </button>
               } @else {
                 <p class="inspection-draft">{{ 'inspections.messages.returnDraft' | translate }}</p>

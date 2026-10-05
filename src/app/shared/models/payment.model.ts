@@ -83,6 +83,19 @@ export interface Payment {
    * this null and set `isFreePayment: true`.
    */
   reservationId?: string;
+  /**
+   * La solicitud de la web de la que salió este cobro, si salió de una.
+   *
+   * ⚠️ **Es lo que convierte un cobro libre cualquiera en «la señal de la
+   * pre-reserva P-4K7M9X».** Sin él, un cobro sin reserva es un apunte suelto
+   * y nadie puede decir de qué era: la pantalla pública de pago no sabría que
+   * tiene que explicar las condiciones de la señal, y el día que haya que
+   * asignarlo a la reserva no habría por dónde encontrarlo.
+   *
+   * ⚠️ **Opcional y aditivo**: la inmensa mayoría de los cobros no vienen de
+   * la web, y su ausencia significa exactamente eso.
+   */
+  bookingRequestId?: string;
   /** Optional client link. Free payments may set this when the
    *  payer happens to be an existing client. */
   clientId?: string;

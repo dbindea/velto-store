@@ -26,6 +26,23 @@ interface Props {
    */
   ruta: string | null;
   /**
+   * La imagen con la que se comparte ESTA página, si tiene una propia.
+   *
+   * ⚠️ **Existe para que un coche compartido enseñe el coche.** Sin ella todas
+   * las páginas comparten el logotipo, que es lo correcto para `/condiciones`
+   * y lo peor posible para la ficha de un Corolla: un enlace de WhatsApp sin
+   * la foto del coche del que se está hablando. Lo pidió Dorel el 2 de octubre
+   * de 2026.
+   *
+   * ⚠️ **Y tiene que ser ABSOLUTA.** Las de los coches vienen de Storage y ya
+   * lo son; si algún día se pasa una ruta relativa, los rastreadores de
+   * WhatsApp y LinkedIn no la resuelven —leen el HTML fuera de contexto— y la
+   * tarjeta sale sin imagen. Es el fallo clásico de esta etiqueta.
+   */
+  imagen?: string;
+  /** Qué se ve en esa imagen. Con una foto de coche, el coche. */
+  imagenAlt?: string;
+  /**
    * Qué datos adelantar desde el `<head>`, si esta página pide alguno.
    *
    * ⚠️ **Lo que ahorra es medio segundo en toda visita**, y no por ir más
@@ -40,7 +57,32 @@ interface Props {
   precarga?: 'flota' | 'coche';
 }
 
-const { titulo, descripcion, ruta, precarga } = Astro.props;
+const { titulo, descripcion, ruta, precarga, imagen, imagenAlt: alt } = Astro.props;
+
+/** La de la página si la trae; si no, la de la marca. Siempre absoluta. */
+const imagenAlt = alt || "Velto Mobility — alquiler de coches en Arganda del Rey";
+const imagenCompartir = imagen || `${SITIO}/brand/og.png`;
+
+/**
+ * El menú principal, decidido por Dorel el 30 de septiembre de 2026.
+ *
+ * ⚠️ **`href` y `ruta` son dos campos distintos a propósito.** La portada se
+ * enlaza como `/` y declara su canónica como `''`; comparando contra `href`,
+ * ninguna página casaría nunca y comparando solo contra `ruta`, la portada no
+ * tendría enlace. Con los dos, `aria-current="page"` marca exactamente una.
+ *
+ * ⚠️ **El rótulo puede ser más corto que el título de la página**, y aquí lo
+ * es: la página se titula «Pon tu coche en alquiler» y el menú dice lo mismo
+ * porque cabe —se comprobó midiendo—, pero si algún día no cupiera, lo que se
+ * acorta es esta cadena y no la URL: aquella la teclea Google, este lo lee una
+ * persona en una barra de 288 px.
+ */
+const MENU = [
+  { rotulo: 'Buscar', href: '/', ruta: '' },
+  { rotulo: 'Entrega a domicilio', href: '/entrega-a-domicilio', ruta: '/entrega-a-domicilio' },
+  { rotulo: 'Pon tu coche en alquiler', href: '/pon-tu-coche-en-alquiler', ruta: '/pon-tu-coche-en-alquiler' },
+  { rotulo: 'Contacto', href: '/contacto', ruta: '/contacto' },
+];
 
 /**
  * El script que adelanta la petición de datos, como TEXTO.
@@ -89,8 +131,41 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <title>{titulo}</title>
     <meta name="description" content={descripcion} />
     <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
+    {/*
+      ⚠️ **PNG, porque iOS NO acepta SVG en `apple-touch-icon`.** Lo ignora y
+      pone una **captura de la página** como icono, que es lo que se veía al
+      añadir la web a la pantalla de inicio de un iPhone: la portada en
+      miniatura, ilegible. El backoffice ya lo tenía resuelto y su propio
+      comentario lo explicaba; aquí faltaba la etiqueta y el fichero.
 
-    <!--
+      ⚠️ **Y el PNG está COPIADO de `src/assets/brand/`**, como los colores de
+      marca y los datos de empresa: `web/` es una build aparte y no comparte
+      nada con la aplicación. Si se rediseña el icono, se copia aquí también.
+    */}
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
+
+    {/*
+      ⚠️ **El manifiesto es lo que deja instalar la web como aplicación**, que
+      es lo que pidió Dorel el 2 de octubre de 2026. Sin él, Android ofrece
+      «Añadir a pantalla de inicio» y lo que crea es un **acceso directo al
+      navegador**: se abre con barra de direcciones, pestañas y todo. Con él se
+      abre en su propia ventana, con el icono y el color de la marca.
+
+      ⚠️ **Y NO lleva service worker, a propósito.** Un `display: standalone`
+      no lo exige; lo que exige un service worker es el modo sin conexión, y
+      aquí **sería mentira**: esta web no sirve de nada sin red —la flota, la
+      disponibilidad y el precio los da una API en cada visita—. Una aplicación
+      que se abre sin conexión y no puede enseñar un solo coche es peor que un
+      error de red honesto. Si algún día hay algo que de verdad funcione sin
+      red, entonces se añade.
+
+      ⚠️ **`start_url` lleva `?origen=pwa`** para poder distinguir las visitas
+      desde el icono en el futuro; no lo lee nadie todavía, y no hace falta que
+      lo lea para que sirva: queda en el histórico.
+    */}
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    {/*
       ⚠️ **Las fotos viven en OTRO origen, y el saludo se paga dentro del camino
       crítico.** Salen de `firebasestorage.googleapis.com`, así que la primera no
       puede empezar a bajar hasta hacer DNS + TCP + TLS contra un servidor con el
@@ -102,17 +177,20 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       carga, mucho antes de que se sepa qué fotos hay. `crossorigin` no es
       opcional: sin él el navegador abre una conexión anónima distinta de la que
       luego usará para las imágenes, y el saludo se paga igual.
-    -->
+    */}
     <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin />
 
     {adelanto && <script is:inline set:html={adelanto} />}
 
-    <!--
-      ⚠️ La canónica es lo que impide que los DOS dominios compitan entre sí.
-      `veltorent.com` sirve el mismo sitio; sin esto, Google reparte el
-      posicionamiento en vez de sumarlo y puede acabar enseñando el que no
-      queremos.
-    -->
+    {/*
+      ⚠️ **La canónica sigue haciendo falta aunque ya solo se nombre un
+      dominio.** Desde el 2 de octubre de 2026 la web no menciona
+      `veltorent.com` —está sin decidir si acabará siendo una landing o se
+      suelta—, pero mientras ese dominio exista y resuelva a algo, una
+      canónica explícita es lo que impide que Google elija por su cuenta qué
+      versión enseñar. Y vale igual para el sitio de desarrollo, que sirve el
+      mismo HTML.
+    */}
     {canonica && <link rel="canonical" href={canonica} />}
 
     {
@@ -136,15 +214,74 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
     <meta property="og:site_name" content="Velto" />
     <meta property="og:title" content={titulo} />
     <meta property="og:description" content={descripcion} />
+    <meta property="og:locale" content="es_ES" />
     {canonica && <meta property="og:url" content={canonica} />}
-    <meta name="theme-color" content="#20A48F" />
 
-    <!--
+    {/*
+      ⚠️ **La imagen al compartir, que NO existía — y el canal principal de
+      esta empresa es WhatsApp.** Cada enlace que manda Velto, o que un cliente
+      reenvía a un amigo, salía como una tarjeta de texto sin foto: la forma
+      más pobre de aparecer y la que menos se pulsa. Medido el 2 de octubre de
+      2026: cero `og:image` en las once páginas.
+
+      ⚠️ **Es PNG porque WhatsApp y Facebook NO aceptan SVG**, que es lo único
+      que había en `brand/`. La genera `scripts/generar-og.js` a partir del
+      logo de verdad, así que rediseñarlo y volver a ejecutarlo la actualiza.
+
+      ⚠️ **Y la URL es ABSOLUTA, siempre.** Una ruta relativa funciona en el
+      navegador y **no** en los rastreadores de WhatsApp o LinkedIn, que leen
+      el HTML fuera de contexto: el `og:image` se queda sin resolver y la
+      tarjeta vuelve a salir sin imagen. Es el fallo clásico de esta etiqueta.
+
+      ⚠️ **Las medidas se declaran a propósito.** Sin ellas, el rastreador
+      tiene que descargar la imagen para saber si la enseña grande o como
+      miniatura — y si tarda, la enseña pequeña. Con `og:image:width` lo sabe
+      antes de bajarla.
+    */}
+    {/*
+      ⚠️ **Las medidas y el tipo solo se declaran para la imagen de la MARCA.**
+      Esa sí se sabe que es un PNG de 1200×630 porque la genera
+      `scripts/generar-og.js`; la foto de un coche viene de Storage con la
+      proporción que tenga y es JPEG o WebP. Declarar 1200×630 de una foto que
+      no lo es hace que el rastreador reserve un hueco que no encaja y recorte
+      donde no debe — y es peor que no decir nada, porque con la etiqueta se fía
+      y sin ella mide.
+    */}
+    <meta property="og:image" content={imagenCompartir} />
+    {!imagen && <meta property="og:image:width" content="1200" />}
+    {!imagen && <meta property="og:image:height" content="630" />}
+    {!imagen && <meta property="og:image:type" content="image/png" />}
+    <meta property="og:image:alt" content={imagenAlt} />
+
+    {/*
+      ⚠️ **`summary_large_image` o la tarjeta sale en miniatura.** Por defecto X
+      enseña un cuadrado pequeño al lado del texto; con esto, la imagen ocupa
+      el ancho. Las dos etiquetas son de X pero las leen más sitios —Slack
+      entre ellos—, y no estorban a Open Graph.
+    */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={imagenCompartir} />
+    {/*
+      ⚠️ **Esto pinta la barra de direcciones de Chrome en Android, y estaba
+      en VERDE.** Es el tercer sitio donde un verde hacía de superficie —los
+      otros dos eran el círculo de los iconos y la cabecera de una pregunta
+      abierta—, y el más visible de los tres: ocupa el borde de la pantalla en
+      cada visita desde un móvil. El verde se queda para botones y acciones.
+
+      ⚠️ **Y va por `media`, uno por esquema.** Aquí no vale el tema que el
+      visitante haya elegido en la web: el navegador lee esta etiqueta antes de
+      que corra una sola línea nuestra, así que lo único que puede seguir es la
+      preferencia del sistema.
+    */}
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+
+    {/*
       ⚠️ **El tema se aplica ANTES de pintar, y por eso va aquí en crudo.** Con
       el script al final, una recarga en tema oscuro enseña un fogonazo blanco
       antes de corregirse — es exactamente el parpadeo que el backoffice ya tuvo
       que resolver con su pantalla de arranque.
-    -->
+    */}
     <script is:inline>
       (function () {
         try {
@@ -161,33 +298,116 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
   <body>
     <header class="cab">
       <div class="contenedor cab__fila">
+        {/*
+          ⚠️ **Un 40% más grande: 132×34 → 185×48.** Lo pidió Dorel porque la
+          marca no resaltaba. Los atributos `width`/`height` no son decorativos:
+          reservan el hueco antes de que el SVG cargue, y sin ellos la cabecera
+          pega un salto al pintar.
+        */}
         <a class="cab__logo" href="/" aria-label="Velto, inicio">
-          <img src="/brand/logo-on-light.svg" alt="Velto" class="cab__logo--claro" width="132" height="34" />
-          <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="132" height="34" />
+          <img src="/brand/logo-on-light.svg" alt="Velto" class="cab__logo--claro" width="185" height="51" />
+          <img src="/brand/logo-on-dark.svg" alt="Velto" class="cab__logo--oscuro" width="185" height="51" />
         </a>
 
-        <nav class="cab__nav" aria-label="Principal">
-          <a href="/flota">Flota</a>
-          <a href="/entrega-a-domicilio">Entrega a domicilio</a>
-          <a href="/condiciones">Condiciones</a>
-          <a href="/contacto">Contacto</a>
+        {/*
+          ⚠️ **El menú vive en un array y no escrito a mano**, porque hay que
+          marcar cuál es la página actual y eso se decide comparando con `ruta`.
+          Y `ruta` de la portada vale `''` mientras su enlace vale `/`: sin los
+          dos campos, «Buscar» saldría marcada en todo el sitio.
+        */}
+        {/*
+          ⚠️ **El botón del menú son las TRES BARRAS del isotipo, no un
+          sándwich cualquiera.** Lo pidió Dorel así —«que el sándwich no sea el
+          típico sino uno hecho a medida con las líneas oblicuas cortadas de
+          Velto»— y la inclinación no se inventa: es `--skew`, la misma de la
+          «V» y la «E» del logotipo y la de las barras del héroe. Al abrirse se
+          convierte en aspa, que es lo que dice cómo se cierra.
+
+          ⚠️ **Son `<span>` y no un SVG**: así heredan `--skew` y el color de
+          marca del tema, y el aspa se hace con dos transformaciones en vez de
+          con dos dibujos.
+
+          ⚠️ **Y lleva `aria-expanded`, que es lo que lo convierte en un mando
+          y no en un adorno**: sin él, un lector de pantalla anuncia un botón
+          que no dice si lo que controla está abierto.
+        */}
+        <button
+          id="cab-menu"
+          class="cab__hamb"
+          type="button"
+          aria-expanded="false"
+          aria-controls="menu-principal"
+          aria-label="Abrir el menú"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav id="menu-principal" class="cab__nav" aria-label="Principal">
+          {MENU.map((m) => (
+            <a href={m.href} aria-current={ruta === m.ruta ? 'page' : undefined}>{m.rotulo}</a>
+          ))}
         </nav>
 
         <div class="cab__acciones">
-          <a class="cab__tel" href={`tel:${tel}`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-              <path d="M9 10.5c.5 2 2 3.5 4.5 4.5l1-1.2a.8.8 0 0 1 .9-.2l1.8.8a1 1 0 0 1 .6.9v1.8a1 1 0 0 1-1.1 1A13 13 0 0 1 5 7.3 1 1 0 0 1 6 6.2h1.8a1 1 0 0 1 .9.6l.8 1.8a.8.8 0 0 1-.2.9Z"/>
+          {/*
+            ⚠️ **El `aria-label` es obligatorio aquí, y no es celo.** En móvil el
+            `<span>` del número se esconde por sitio (ver `.cab__tel span` abajo)
+            y el SVG va `aria-hidden`, así que sin esto el enlace se queda **sin
+            nombre accesible ninguno** justo donde más se usa: un botón de llamar
+            en un teléfono. En escritorio el número lo nombraba y por eso no se
+            veía venir.
+          */}
+          <a class="cab__tel" href={`tel:${tel}`} aria-label={`Llamar al ${EMPRESA.telefono}`}>
+            {/*
+              ⚠️ **Esto es el icono DEL KIT, y antes no lo era.** El kit define
+              un `Icon` canónico —caja 24, `fill: none`, trazo `1.75`, remates y
+              uniones redondeados— y su cabecera lo pide a `18`. Aquí había 16 px
+              con trazo `2`, sin `stroke-linejoin`, y **un path propio**: un
+              recorte del auricular, no el auricular. A ese grosor y ese tamaño
+              se empastaba y quedaba como una mancha al lado de un número que sí
+              se lee.
+
+              El path es el del kit (`phone`), completo.
+            */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
             </svg>
             <span>{EMPRESA.telefono}</span>
           </a>
 
+          {/*
+            ⚠️ **Los DOS iconos van en el HTML y los cambia el CSS.** Pintar uno
+            y sustituirlo con JavaScript haría que en la primera pintura saliera
+            el que no toca: el tema se resuelve en el `<head>` —antes de pintar,
+            para que no haya fogonazo— pero el icono se decidiría al final. Un
+            parpadeo de luna a sol en cada carga, justo lo que ese script evita.
+
+            ⚠️ **Y el icono dice A QUÉ SE VA, no dónde se está.** En claro la
+            luna —«ponlo oscuro»—, en oscuro el sol. Un botón dice lo que hace
+            al pulsarlo.
+
+            El tema ya arrancaba siguiendo al sistema (`prefers-color-scheme`);
+            lo que faltaba era que el botón lo contara.
+          */}
           <button id="tema" class="cab__tema" type="button" aria-label="Cambiar entre tema claro y oscuro">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="cab__tema-luna" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+            <svg class="cab__tema-sol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
             </svg>
           </button>
 
-          <a class="btn btn--brand" href="/reservar">Reservar</a>
+          {/*
+            ⚠️ **Aquí había un botón «Reservar» y sobraba.** Llevaba a
+            `/reservar`, que es el mismo buscador que está unos píxeles más abajo
+            en la propia portada: un botón que lleva a donde ya estás. Lo señaló
+            Dorel el 29 de septiembre de 2026.
+
+            La página `/reservar` sigue existiendo y el menú no la enseña a
+            propósito: es el destino del buscador, no un sitio al que se navega.
+          */}
         </div>
       </div>
     </header>
@@ -200,10 +420,31 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       <div class="contenedor">
         <div class="pie__rejilla">
           <div class="pie__marca">
-            <img src="/brand/logo-on-dark.svg" alt="Velto" width="120" height="31" />
+            {/*
+              ⚠️ **Los atributos valen lo mismo que los de la cabecera.** Son
+              los que reservan el hueco antes de que cargue el SVG; si no
+              cuadran con lo que luego pone el CSS, el pie pega un salto al
+              pintar. Medido el 3 de octubre de 2026: aquí el logo salía a
+              120×31 y en la cabecera a 160×44, o sea tres cuartos de tamaño en
+              la misma pantalla.
+            */}
+            <img src="/brand/logo-on-dark.svg" alt="Velto" width="185" height="51" />
+            {/*
+              ⚠️ **Aquí ponía «seguro a todo riesgo», y va en TODAS las
+              páginas.** La cláusula 13 dice que el coche lleva la
+              responsabilidad civil obligatoria y que el todo riesgo «sólo será
+              aplicable si ha sido expresamente contratado y abonado por el
+              ARRENDATARIO». O sea que el pie de cada página prometía una
+              cobertura que el contrato niega — y sobrevivió al repaso del 28 de
+              septiembre de 2026, que solo miró la portada.
+
+              La lección es la de siempre en esta casa: al cambiar una
+              afirmación, **búscala en todo el sitio**, no en la pantalla desde
+              la que te la señalaron.
+            */}
             <p>
-              Alquiler de coches con precio final: seguro a todo riesgo,
-              kilómetros pactados por escrito y entrega en tu casa.
+              Alquiler de coches en Arganda del Rey con el precio cerrado al
+              reservar y entrega a domicilio.
             </p>
             <ul class="pie__datos">
               <li>
@@ -222,17 +463,33 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
           </div>
 
           <div>
-            <p class="overline">Alquiler</p>
+            <p class="overline">Alquilar</p>
             <ul class="pie__enlaces">
-              <li><a href="/flota">Flota</a></li>
-              <li><a href="/entrega-a-domicilio">Entrega a domicilio</a></li>
+              <li><a href="/">Buscar coche</a></li>
+              <li><a href="/flota">Toda la flota</a></li>
               <li><a href="/reservar">Consultar fechas</a></li>
+              <li><a href="/entrega-a-domicilio">Entrega a domicilio</a></li>
+            </ul>
+          </div>
+
+          {/*
+            La columna del otro lado del negocio. Va aquí y no dentro de
+            «Alquilar» porque le habla a otra persona: el que tiene un coche
+            parado, no el que busca uno.
+          */}
+          <div>
+            <p class="overline">Tu coche</p>
+            <ul class="pie__enlaces">
+              <li><a href="/pon-tu-coche-en-alquiler">Pon tu coche en alquiler</a></li>
+              <li><a href="/pon-tu-coche-en-alquiler#tu-parte">Cómo se calcula tu parte</a></li>
+              <li><a href="/contacto?motivo=poner-en-alquiler">Contarnos qué coche tienes</a></li>
             </ul>
           </div>
 
           <div>
             <p class="overline">Ayuda</p>
             <ul class="pie__enlaces">
+              <li><a href="/preguntas-frecuentes">Preguntas frecuentes</a></li>
               <li><a href="/condiciones#requisitos">Requisitos para alquilar</a></li>
               <li><a href="/condiciones#cancelar">Modificar o cancelar</a></li>
               <li><a href="/condiciones#averia">Qué hacer en caso de avería</a></li>
@@ -240,27 +497,57 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
             </ul>
           </div>
 
+          {/*
+            ⚠️ **El bloque con la razón social, el NIF y el domicilio SOCIAL
+            salió de aquí el 30 de septiembre de 2026, y se fue a
+            `/aviso-legal` — no a las condiciones.** Lo pidió Dorel («quitamos
+            el NIF porque esto va en condiciones»), y el sitio al que va importa:
+
+            El art. 10 de la LSSI obliga a tener esos datos accesibles «de forma
+            permanente, fácil, directa y gratuita». Una página propia enlazada
+            desde el pie de **todas** las páginas lo cumple; metidos en las
+            condiciones de alquiler, no — esas regulan el contrato y se leen
+            antes de reservar, no son la identificación del prestador. O sea que
+            el enlace de aquí abajo es lo que hace legal haber quitado el
+            bloque: si algún día desaparece, vuelve a hacer falta el bloque.
+          */}
           <div>
             <p class="overline">Legal</p>
             <ul class="pie__enlaces">
               <li><a href="/condiciones">Condiciones de alquiler</a></li>
+              {/*
+                ⚠️ **Tiene que estar en el pie de TODAS las páginas, y no solo
+                porque quede bien.** Para dar de alta el TPV Virtual, el banco
+                comprueba que la política de devoluciones esté publicada y
+                accesible; y el art. 97.1.l del TRLGDCU obliga a informar de
+                que no hay desistimiento **antes** de contratar, no en una
+                página que haya que buscar.
+              */}
+              <li><a href="/devoluciones">Cancelaciones y devoluciones</a></li>
+              <li><a href="/aviso-legal">Aviso legal</a></li>
+              <li><a href="/privacidad">Privacidad</a></li>
+              {/*
+                Dice «Cookies» porque es lo que la gente busca en un pie, y
+                lleva a la sección donde se explica que esta web no pone
+                ninguna. Una página titulada «Política de cookies» en un sitio
+                sin cookies sería el mismo error que el contrato que anunciaba
+                una firma digital que no llevaba.
+              */}
+              <li><a href="/privacidad#cookies">Cookies</a></li>
             </ul>
-            <!--
-              ⚠️ El ÚNICO sitio donde aparece la razón social, y va junto al
-              NIF: es donde la empresa comparece como persona jurídica. En todo
-              lo demás, la marca. Y `razonSocial` acaba en punto, así que la
-              frase no lleva otro detrás.
-            -->
-            <p class="pie__legal">
-              {EMPRESA.razonSocial}<br />
-              NIF {EMPRESA.nif}<br />
-              {EMPRESA.domicilioSocial}
-            </p>
           </div>
         </div>
 
+        {/*
+          ⚠️ **Un solo dominio, `veltomobility.com`.** Aquí se nombraban los
+          dos, y Dorel lo cortó el 2 de octubre de 2026: qué se hace con
+          `veltorent.com` —una landing, o soltar el dominio— está sin decidir,
+          y mientras tanto nombrarlo solo reparte la marca. Si algún día vuelve
+          a servir contenido, lo que hay que mirar primero es la canónica de
+          arriba, no esta línea.
+        */}
         <div class="pie__cierre">
-          <span>© {anio} Velto Mobility · veltorent.com · veltomobility.com</span>
+          <span>© {anio} Velto Mobility · veltomobility.com</span>
           <span>Precios en euros, IVA incluido</span>
         </div>
       </div>
@@ -273,6 +560,59 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         d.dataset.theme = nuevo;
         try { localStorage.setItem('velto-tema', nuevo); } catch (e) { /* modo privado */ }
       });
+
+      /*
+       * El menú plegable del móvil.
+       *
+       * ⚠️ **El estado vive en `aria-expanded`, no en una variable aparte.**
+       * Son el mismo hecho: con dos, el día que una se quede sin actualizar el
+       * botón diría una cosa a la vista y otra a un lector de pantalla — y el
+       * que se queda viejo es siempre el que no se mira. Es la misma decisión
+       * que el interruptor de vista de la página de resultados.
+       */
+      (function () {
+        var boton = document.getElementById('cab-menu');
+        var menu = document.getElementById('menu-principal');
+        if (!boton || !menu) return;
+
+        function poner(abierto) {
+          boton.setAttribute('aria-expanded', String(abierto));
+          boton.setAttribute('aria-label', abierto ? 'Cerrar el menú' : 'Abrir el menú');
+          menu.classList.toggle('esta-abierto', abierto);
+        }
+
+        boton.addEventListener('click', function () {
+          poner(boton.getAttribute('aria-expanded') !== 'true');
+        });
+
+        /*
+         * ⚠️ **Se cierra al tocar fuera y con Escape.** Un panel que solo se
+         * cierra con su propio botón obliga a volver a buscarlo, y en un móvil
+         * tapa media pantalla. Es lo mismo que el backoffice tuvo que
+         * aprender con su menú «Más», que se quedaba abierto encima de la
+         * pantalla siguiente.
+         */
+        document.addEventListener('click', function (e) {
+          if (boton.getAttribute('aria-expanded') !== 'true') return;
+          if (boton.contains(e.target) || menu.contains(e.target)) return;
+          poner(false);
+        });
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') poner(false);
+        });
+
+        /*
+         * ⚠️ **Y al pasar a escritorio.** Cruzando los 1040 px el CSS vuelve a
+         * enseñar el menú entero y esconde el botón: sin esto, el `aria-expanded`
+         * se quedaría en `true` para siempre, y al volver a móvil el menú
+         * saldría abierto sin que nadie lo hubiera pedido.
+         */
+        var ancho = matchMedia('(min-width: 1040px)');
+        ancho.addEventListener('change', function (e) {
+          if (e.matches) poner(false);
+        });
+      })();
     </script>
 
     <style is:global>
@@ -292,6 +632,22 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       }
 
       .cab__logo { flex: none; }
+
+      /*
+       * ⚠️ **La marca mide lo mismo arriba y abajo, y se declara UNA vez.**
+       * El logo del pie salía a 120 px contra los 185 de la cabecera, así que
+       * al recorrer la página la marca se encogía a dos tercios al llegar
+       * abajo. Medido el 3 de octubre de 2026.
+       *
+       * ⚠️ **Y solo el ancho: la altura va `auto`.** El SVG mide 300×82, o sea
+       * una proporción de 3,66; los atributos de la cabecera decían 185×48,
+       * que es 3,85, así que el navegador lo **achataba un 5 %** en escritorio
+       * —en móvil no se veía porque ahí ya había un `height: auto`—. Los
+       * atributos siguen haciendo falta para reservar el hueco antes de que
+       * cargue el SVG, pero ahora cuadran con la proporción de verdad.
+       */
+      .cab__logo img,
+      .pie__marca img { width: 185px; height: auto; }
       /* Un logo por tema: el isotipo va en negativo sobre fondo oscuro. */
       [data-theme='light'] .cab__logo--oscuro,
       [data-theme='dark'] .cab__logo--claro { display: none; }
@@ -302,14 +658,117 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         margin-right: auto;
       }
 
+      /*
+       * El subrayado del menú: grueso, cortado en oblicuo y animado.
+       *
+       * ⚠️ **No puede ser un `border-bottom`, que es lo que era.** Un borde no
+       * se inclina ni crece: o está o no está, y aparecía de golpe con los
+       * extremos rectos. Con un pseudoelemento se pueden hacer las tres cosas
+       * que pidió Dorel.
+       *
+       * ⚠️ **Y el corte oblicuo no es un adorno: es `--skew`, la inclinación
+       * real de la «V» y la «E» del logotipo.** El kit ya subraya así su enlace
+       * activo —3 px, `var(--brand)`, `skewX(var(--skew))`—, o sea que esto no
+       * se inventa nada: adopta lo que el kit ya hacía y que esta web no había
+       * copiado. Aquí va a 4 px porque Dorel pidió que resaltara, y porque lo
+       * del kit marca «dónde estoy» mientras esto marca además el hover.
+       *
+       * ⚠️ **Crece con `scaleX`, no con `width`.** El ancho lo anima el hilo
+       * principal, recalculando la disposición de la cabecera en cada
+       * fotograma; una transformación la resuelve el compositor. Es la
+       * diferencia entre un subrayado que se desliza y uno que se arrastra.
+       *
+       * ⚠️ **Y el skew y la escala van en la MISMA declaración.** `transform`
+       * es una sola propiedad: escritos en dos reglas, la segunda borra la
+       * primera y el subrayado sale recto sin que nada falle.
+       */
       .cab__nav a {
+        position: relative;
         color: var(--text);
         font-size: var(--fs-small);
         font-weight: var(--fw-medium);
         padding: var(--sp-2) 0;
-        border-bottom: 2px solid transparent;
       }
-      .cab__nav a:hover { color: var(--brand-text); border-bottom-color: var(--brand); text-decoration: none; }
+
+      .cab__nav a::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 4px;
+        background: var(--brand);
+        transform: skewX(var(--skew)) scaleX(0);
+        /* Nace del centro: es donde está el ojo al pasar por encima. */
+        transform-origin: center;
+        transition: transform var(--t-fast) var(--ease);
+      }
+
+      .cab__nav a:hover,
+      .cab__nav a[aria-current='page'] { color: var(--brand-text); text-decoration: none; }
+
+      .cab__nav a:hover::after,
+      .cab__nav a[aria-current='page']::after { transform: skewX(var(--skew)) scaleX(1); }
+
+      /*
+       * ⚠️ **Quien pide menos movimiento lo tiene.** El subrayado sigue
+       * apareciendo —es la señal de dónde está el puntero, y quitarla dejaría
+       * el menú sin respuesta— pero llega sin recorrido.
+       */
+      @media (prefers-reduced-motion: reduce) {
+        .cab__nav a::after { transition: none; }
+      }
+
+      /*
+       * El botón del menú: las tres barras del isotipo, en pequeño.
+       *
+       * ⚠️ **En escritorio no existe** —el menú está a la vista— y por eso
+       * nace en `display: none`: la media query de móvil lo enciende. Al revés
+       * —nacer visible y esconderlo— deja un parpadeo en la primera pintura de
+       * cada carga, que es justo lo que el script del tema se cuida de evitar.
+       */
+      .cab__hamb {
+        display: none;
+        place-content: center;
+        gap: 4px;
+        order: 2;
+        /* 44 px, la medida de lo que se pulsa con el dedo. */
+        width: var(--touch);
+        height: var(--touch);
+        padding: 0;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+      }
+
+      .cab__hamb span {
+        display: block;
+        width: 22px;
+        height: 3px;
+        background: var(--brand);
+        /* La misma inclinación que la «V» del logotipo y las barras del héroe. */
+        transform: skewX(var(--skew));
+        transition:
+          transform var(--t-base) var(--ease),
+          opacity var(--t-fast) var(--ease);
+      }
+
+      /*
+       * Abierto es un aspa: la de arriba y la de abajo se cruzan y la de en
+       * medio se va. El desplazamiento de 7 px es el alto de una barra más su
+       * hueco, o sea lo que hay que recorrer hasta el centro.
+       */
+      .cab__hamb[aria-expanded='true'] span:first-child {
+        transform: translateY(7px) rotate(45deg);
+      }
+      .cab__hamb[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+      .cab__hamb[aria-expanded='true'] span:last-child {
+        transform: translateY(-7px) rotate(-45deg);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cab__hamb span { transition: none; }
+      }
 
       .cab__acciones { display: flex; align-items: center; gap: var(--sp-4); }
 
@@ -337,6 +796,15 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       .cab__tema:hover { color: var(--brand-text); }
 
       /*
+       * El icono dice a dónde se VA, no dónde se está: en claro la luna, en
+       * oscuro el sol. Lo decide el CSS con el mismo `data-theme` que el
+       * script del `<head>` ya dejó puesto antes de la primera pintura, así
+       * que no hay parpadeo.
+       */
+      [data-theme='light'] .cab__tema-sol,
+      [data-theme='dark'] .cab__tema-luna { display: none; }
+
+      /*
        * ⚠️ En móvil la navegación se RECOLOCA, no se esconde tras un botón.
        * «Flota» y «Contacto» son la mitad de las visitas que llegan con el
        * pulgar, y lo que no se ve no se pulsa.
@@ -359,18 +827,114 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
        *    44 px del botón de tema y los 48 del de reservar son zona táctil y
        *    ahí no se recorta.
        */
-      @media (max-width: 900px) {
+      /*
+       * ⚠️ **El corte sube de 900 a 1039 px, y lo decide el menú nuevo.**
+       * Medido con los rótulos puestos: a 1024 px «Entrega a domicilio» y «Pon
+       * tu coche en alquiler» se parten en dos líneas, y el teléfono también,
+       * así que el menú se lee como SEIS opciones en un portátil corriente.
+       * Con las etiquetas de antes ese defecto existía en una banda de 1 px;
+       * con estas, en una franja que usa mucha gente.
+       */
+      @media (max-width: 1039px) {
         .cab__fila { flex-wrap: wrap; gap: var(--sp-3); padding-block: var(--sp-3); }
-        .cab__nav { order: 3; width: 100%; margin: 0; overflow-x: auto; gap: var(--sp-5); }
-        /* Sin esto la tira deslizable no existe: los enlaces se parten. */
-        .cab__nav a { white-space: nowrap; flex: none; }
-        /* La barra de deslizamiento sobra: es una tira de cuatro enlaces. */
-        .cab__nav { scrollbar-width: none; }
-        .cab__nav::-webkit-scrollbar { display: none; }
+
+        /*
+         * ⚠️ **ENVUELVE, no se desliza.** Era una tira con `overflow-x: auto` y
+         * la barra escondida, y con los rótulos nuevos se salían 150 px: a
+         * 390 px quedaban a la vista DOS de los cuatro enlaces, «Pon tu coche
+         * en alquiler» cortado a media palabra y «Contacto» directamente no
+         * aparecía — sin barra, sin sombra y sin nada que dijera que había más.
+         *
+         * Choca con la regla que este mismo fichero declara tres secciones más
+         * arriba: en móvil la navegación **se recoloca, no se esconde**. Lo que
+         * no se ve no se pulsa.
+         *
+         * Cuesta 41 px de cabecera, y se recuperan apretando el héroe —que
+         * tenía 64 px de margen bajo la entradilla—, porque lo otro que pidió
+         * Dorel es que el buscador se vea sin bajar. Acortar el rótulo NO lo
+         * evita: con «Pon tu coche» siguen saliendo dos filas.
+         */
+        /*
+         * ⚠️ **Y desde el 1 de octubre de 2026 tampoco envuelve: se pliega
+         * detrás del botón.** Envolver respetaba la regla —nada se esconde—
+         * pero costaba 41 px de cabecera en TODAS las páginas, y Dorel lo
+         * cortó: «el menú en el móvil no me gusta mucho, convendría poner un
+         * panel con un icono tipo sándwich».
+         *
+         * ⚠️ **Y esto NO incumple la regla de recolocar y nunca ocultar.** Lo
+         * que aquella prohíbe es que una opción desaparezca sin que nadie
+         * sepa que está —la tira deslizable, que se comía «Contacto» sin
+         * ninguna señal—. Aquí hay un mando a la vista que dice que hay un
+         * menú, y al abrirlo salen las cuatro enteras.
+         */
+        .cab__nav {
+          order: 3;
+          width: 100%;
+          margin: 0;
+          /* Una debajo de otra: en un panel se leen mejor que en dos filas. */
+          flex-direction: column;
+          gap: var(--sp-1);
+          padding: var(--sp-2) 0 var(--sp-3);
+          border-top: var(--bw) solid var(--border);
+        }
+        .cab__nav a { flex: none; padding-block: var(--sp-3); }
+
+        /*
+         * ⚠️ **Cerrado se quita del flujo con `display: none`, no con una
+         * altura 0.** Un menú de altura cero sigue siendo alcanzable con el
+         * tabulador: el visitante tabula y el foco se va a enlaces que no se
+         * ven. Es el mismo motivo por el que el campo trampa del formulario se
+         * saca de la pantalla en vez de esconderse.
+         */
+        .cab__nav:not(.esta-abierto) { display: none; }
+
+        .cab__hamb { display: grid; }
+      }
+
+      /*
+       * ⚠️ **El logotipo baja a 160 px en pantallas estrechas, y la cuenta es
+       * exacta.** Medido a 390 px: la fila tiene **335 px** de contenido y la
+       * primera línea necesitaba **349** —logo 185, acciones 96, botón 44 y
+       * dos huecos de 12—. Catorce de más, así que el botón del menú se caía a
+       * una segunda fila él solo y la cabecera volvía a medir 129 px, que es
+       * justo lo que este menú venía a ahorrar.
+       *
+       * ⚠️ **Se encoge el logo y no el botón.** Los 44 px del botón son zona
+       * táctil y ahí no se recorta —es la misma regla que ya salvó el botón de
+       * llamar—; el logotipo sigue siendo el grande que pidió Dorel en
+       * escritorio, que es donde se le miraba.
+       *
+       * ⚠️ **Y solo el ancho: la altura va `auto`.** Los atributos
+       * `width`/`height` del HTML son los que reservan el hueco antes de que
+       * cargue el SVG; tocando los dos a mano se pierde esa proporción y la
+       * cabecera pega un salto al pintar.
+       */
+      @media (max-width: 479px) {
+        .cab__logo img,
+        .pie__marca img { width: 160px; height: auto; }
 
         .cab__acciones { margin-left: auto; gap: var(--sp-2); }
         .cab__acciones .btn { padding-inline: var(--sp-4); }
+
+        /*
+         * ⚠️ **Escondiendo el número, lo único que queda pulsable es el SVG de
+         * 16 px** — y eso es el botón de LLAMAR, que en este negocio es la
+         * acción principal: la portada promete «Alguien responde». El botón de
+         * tema que tiene al lado sí mide `--touch` (44 px), así que en un móvil
+         * cambiar el tema era tres veces más fácil que llamar.
+         *
+         * El número se sigue escondiendo —no cabe— pero el área no: se le da la
+         * misma caja de 44 px que a su vecino. Es la misma regla que el aspa del
+         * backoffice, donde lo que crece para el dedo es dónde se acierta y no
+         * el dibujo.
+         */
         .cab__tel span { display: none; }
+        .cab__tel {
+          display: grid;
+          place-items: center;
+          width: var(--touch);
+          height: var(--touch);
+        }
       }
 
       /* ---- Pie ---- */
@@ -388,8 +952,34 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
       }
 
-      .pie__marca { grid-column: span 1; max-width: 34ch; }
-      @media (min-width: 900px) { .pie__marca { grid-column: span 1; } }
+      /*
+       * ⚠️ **Con CINCO columnas hay que declarar la rejilla, no dejar
+       * `auto-fit`.** El contenedor mide 1200 px menos `--page-x`, o sea unos
+       * 1072 útiles; cinco columnas de 200 más cuatro huecos de 40 piden 1160.
+       * `auto-fit` mete cuatro y manda la quinta a una segunda fila ella sola,
+       * que no se lee como una decisión sino como un fallo de maquetación.
+       *
+       * La de marca lleva 1,4fr porque dentro van la dirección y el correo, que
+       * son líneas largas; las otras cuatro son listas de enlaces cortos.
+       */
+      @media (min-width: 1000px) {
+        .pie__rejilla {
+          grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr));
+          column-gap: var(--sp-8);
+        }
+        /* ⚠️ Y fuera el `max-width`, o la columna sale más estrecha que su
+           carril y el hueco de al lado parece un error. */
+        .pie__marca { max-width: none; }
+      }
+
+      .pie__marca { max-width: 34ch; }
+      /*
+       * ⚠️ **El mismo ancho que la cabecera, y por el mismo camino.** El logo
+       * del pie medía 120 px contra los 185 de arriba: en una página que se
+       * recorre de un tirón, la marca se encogía a la mitad al llegar abajo.
+       * Solo el ancho —la altura va `auto`— por lo mismo que arriba: tocando
+       * los dos a mano se pierde la proporción del SVG.
+       */
       .pie__marca img { margin-bottom: var(--sp-5); }
       .pie__marca p { color: var(--gray-400); margin-bottom: var(--sp-5); }
 
@@ -403,7 +993,8 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       .pie a { color: var(--gray-300); }
       .pie a:hover { color: var(--velto-white); }
 
-      .pie__legal { color: var(--gray-500); font-size: var(--fs-caption); line-height: var(--lh-relaxed); }
+      /* `.pie__legal` se fue con el bloque del NIF: ahora eso vive en
+         `/aviso-legal`, que declara lo suyo. */
 
       .pie__cierre {
         margin-top: var(--sp-12);
@@ -417,5 +1008,18 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         font-size: var(--fs-caption);
       }
     </style>
+
+    {/*
+      La señal de visita.
+      ⚠️ **Va en el layout y no página por página**, para que una página nueva
+      se mida sola: acordarse de añadirla en cada `.astro` es exactamente como
+      se acaba con media web sin medir y un informe que miente por abajo.
+      ⚠️ Y va **al final del `<body>`**: medir no puede retrasar lo que el
+      visitante ha venido a leer.
+    */}
+    <script>
+      import { medirVista } from '../lib/medir';
+      medirVista();
+    </script>
   </body>
 </html>

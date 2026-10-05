@@ -22,7 +22,7 @@ import {
   PublicVehicleSummary,
   VehiclePricingRule,
 } from './types';
-import { addVat, lowestPricePerDay } from './core';
+import { cheapestRule, publicPrice } from './core';
 
 /** La carpeta pública. Un solo sitio, para que nadie escriba la ruta a mano. */
 export const PUBLIC_PHOTOS_FOLDER = 'public-vehicles';
@@ -94,11 +94,25 @@ export function photoUrls(
   return salida;
 }
 
-/** El «desde X €/día», con los dos lados del impuesto. */
+/**
+ * El «desde X €/día», con los dos lados del impuesto.
+ *
+ * ⚠️ **Va por `publicPrice()` y no por `addVat()`**: lo que se anuncia termina
+ * en `,95` y sale **hacia abajo** de lo que dice la tarifa. Decisión de Dorel
+ * del 30 de septiembre de 2026. Lo importante es que el redondeo viva aquí y no
+ * en la web que lo pinta: la misma cifra viaja también al `quoteSnapshot` de
+ * una solicitud, que es lo que él lee en el correo para cobrarlo a mano.
+ */
 function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): PublicPrice | undefined {
-  const min = lowestPricePerDay(rules);
-  if (min === null) return undefined;
-  return { ...addVat(min, vatRate), currency: 'EUR' };
+  const tramo = cheapestRule(rules);
+  if (!tramo) return undefined;
+  const dias = Number(tramo.minDays);
+  return {
+    ...publicPrice(tramo.pricePerDay, vatRate),
+    currency: 'EUR',
+    // El primer tramo empieza en 1 y ahí el matiz no aporta nada.
+    ...(Number.isFinite(dias) && dias > 1 ? { fromDays: dias } : {}),
+  };
 }
 
 /**
@@ -107,6 +121,16 @@ function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): 
  * `raw` es el documento tal cual sale de Firestore: sin tipar a propósito, para
  * que nadie pueda escribir `...raw` y que compile.
  */
+/**
+ * Las cuatro etiquetas de la DGT que se pueden publicar.
+ *
+ * ⚠️ **Escritas aquí y no importadas del modelo de la app**: las functions y la
+ * app compilan con tsconfigs separados y no pueden compartir módulo, igual que
+ * la aritmética del IVA. Si se añade una quinta categoría, se añade en los dos
+ * sitios.
+ */
+const ETIQUETAS_VALIDAS = ['B', 'C', 'ECO', 'ZERO'] as const;
+
 export function toSummary(
   id: string,
   raw: Record<string, unknown>,
@@ -127,6 +151,26 @@ export function toSummary(
     seats: Number(raw['seats'] ?? 0),
     luggageCapacity: Number(raw['luggageCapacity'] ?? 0),
     ...(raw['color'] ? { color: String(raw['color']) } : {}),
+    /**
+     * ⚠️ **La etiqueta se publica por LISTA BLANCA, no tal cual.** Lo que hay
+     * en Firestore lo escribe un `<select>` de la ficha, pero este fichero es
+     * el único sitio por el que algo sale a internet y no puede fiarse de lo
+     * que le llegue: un valor raro —un documento sembrado a mano, un campo
+     * renombrado a medias— se publicaría tal cual y la web pintaría un
+     * distintivo que no existe. Si no es una de las cuatro, no sale.
+     */
+    ...(ETIQUETAS_VALIDAS.includes(String(raw['environmentalLabel']) as never)
+      ? { environmentalLabel: String(raw['environmentalLabel']) as 'B' | 'C' | 'ECO' | 'ZERO' }
+      : {}),
+    /**
+     * ⚠️ `publicHighlight`, **nunca `description`**: la misma regla que la
+     * descripción pública de la ficha. Y recortado, porque es una línea
+     * destacada: lo que no quepa no se corta solo en la web, se cuela y
+     * descuadra la tarjeta.
+     */
+    ...(raw['publicHighlight']
+      ? { highlight: String(raw['publicHighlight']).trim().slice(0, 120) }
+      : {}),
     ...(fotos.length ? { photo: fotos[0] } : {}),
     ...(precioDesde(raw['pricingRules'] as VehiclePricingRule[], vatRate)
       ? { priceFrom: precioDesde(raw['pricingRules'] as VehiclePricingRule[], vatRate) }
@@ -134,16 +178,34 @@ export function toSummary(
   };
 }
 
+/**
+ * Lo que el calendario de la ficha necesita saber, ya calculado.
+ *
+ * ⚠️ **Entra como parámetro y no se lee del documento del coche**, porque no
+ * está ahí: sale de cruzar sus reservas. Se pasa entero y explícito para que
+ * esta función siga siendo el único sitio por el que un dato sale a internet.
+ */
+export interface DisponibilidadPublica {
+  /** Días `yyyy-MM-dd` que NO se pueden coger, con la preparación dentro. */
+  busyDays: string[];
+  /** El último día que se ha mirado. Más allá, el calendario no afirma nada. */
+  availableUntil: string;
+}
+
 /** La ficha completa. */
 export function toDetail(
   id: string,
   raw: Record<string, unknown>,
   bucket: string,
-  vatRate: number
+  vatRate: number,
+  disponibilidad?: DisponibilidadPublica
 ): PublicVehicleDetail {
   const f = (raw['features'] ?? {}) as Record<string, unknown>;
   return {
     ...toSummary(id, raw, bucket, vatRate),
+    ...(disponibilidad
+      ? { busyDays: disponibilidad.busyDays, availableUntil: disponibilidad.availableUntil }
+      : {}),
     acrissCode: String(raw['acrissCode'] ?? ''),
     features: {
       airConditioning: f['airConditioning'] === true,

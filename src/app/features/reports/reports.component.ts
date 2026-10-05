@@ -5,6 +5,7 @@ import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { TranslateService } from '@core/i18n/translate.service';
 import { NotificationService } from '@core/notifications/notification.service';
 import { AnalyticsService, AnalyticsData } from '@features/reports/services/analytics.service';
+import { WebAnalyticsService, type ResumenDeVisitas } from '@features/reports/services/web-analytics.service';
 import { LineChartComponent, LineSeries } from '@shared/components/charts/line-chart.component';
 import { DonutChartComponent, DonutSlice } from '@shared/components/charts/donut-chart.component';
 import { BarChartComponent, BarRow } from '@shared/components/charts/bar-chart.component';
@@ -68,6 +69,7 @@ function mesesAbreviados(idioma: string): string[] {
 })
 export class ReportsComponent implements OnInit {
   private analytics = inject(AnalyticsService);
+  private webAnalytics = inject(WebAnalyticsService);
   private notifications = inject(NotificationService);
   private translate = inject(TranslateService);
 
@@ -139,6 +141,39 @@ export class ReportsComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+    void this.cargarVisitas();
+  }
+
+  // --- Visitas de la web pública -------------------------------------------
+
+  readonly visitas = signal<ResumenDeVisitas | null>(null);
+
+  /**
+   * ⚠️ **Se carga aparte y su fallo NO tumba Informes.** Las visitas son lo
+   * accesorio de esta pantalla: que no se puedan leer no puede dejar sin ver el
+   * beneficio, los cobros ni los gastos, que es a lo que se viene. Por eso va
+   * fuera del `try` de arriba y con su propio aviso.
+   */
+  private async cargarVisitas(): Promise<void> {
+    try {
+      const r = this.range();
+      this.visitas.set(await this.webAnalytics.resumen(r.from, r.to));
+    } catch {
+      this.visitas.set(null);
+      this.notifications.error('reports.web.loadFailed', {
+        retry: () => void this.cargarVisitas()
+      });
+    }
+  }
+
+  /**
+   * La ruta, como se lee.
+   *
+   * ⚠️ La portada se guarda como `home` porque una clave de mapa no puede
+   * llevar `/`; aquí se devuelve la barra, que es lo que el operador reconoce.
+   */
+  rutaLegible(clave: string): string {
+    return clave === 'home' ? '/' : `/${clave}`;
   }
 
   // --- Ingresos ------------------------------------------------------------

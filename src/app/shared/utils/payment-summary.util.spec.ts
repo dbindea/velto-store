@@ -11,6 +11,7 @@ import {
   collectedTotalsOf,
   distributeRetentionAcrossCharges,
   selectSettleablePayment,
+  suggestInitialPayment,
   SERVICE_TYPES
 } from './payment-summary.util';
 
@@ -681,5 +682,50 @@ describe('buildInitialPaymentRows — las filas del servicio a domicilio', () =>
       deliveryFees: { pickupFee: 15, returnFee: 15 }
     } as Reservation);
     expect(filas.find((f) => f['type'] === 'delivery_fee')?.['concept']).toBe('delivery_fee');
+  });
+});
+
+/**
+ * La señal: dos cifras y un tope.
+ *
+ * ⚠️ **Vive aquí y no en el asistente**, que es donde estaba. En cuanto hubo
+ * que cobrarla también desde la ficha de una solicitud de la web, una regla
+ * metida en un getter de componente se habría copiado — y la copia es la que
+ * se queda vieja.
+ */
+describe('suggestInitialPayment', () => {
+  it.each([
+    [302.5, 50],
+    [50, 50],
+    [50.01, 50]
+  ])('un alquiler de %s € pide 50 € de señal', (precio, esperado) => {
+    expect(suggestInitialPayment(precio)).toBe(esperado);
+  });
+
+  it.each([
+    [49.99, 25],
+    [40, 25],
+    [25, 25]
+  ])('por debajo de 50 € la señal baja a 25 (%s €)', (precio, esperado) => {
+    expect(suggestInitialPayment(precio)).toBe(esperado);
+  });
+
+  it('⚠️ y nunca supera al alquiler', () => {
+    // Una señal mayor que el alquiler deja la reserva imposible de liquidar:
+    // el «resto» saldría negativo. Es raro, y lo raro es lo que nadie prueba.
+    expect(suggestInitialPayment(20)).toBe(20);
+    expect(suggestInitialPayment(12.5)).toBe(12.5);
+  });
+
+  it('⚠️ la regla ANTERIOR pedía el alquiler entero, y eso ya no pasa', () => {
+    // `min(50, precio)` daba 40 € de señal para un alquiler de 40 €: el
+    // alquiler completo por adelantado y el resto a cero.
+    expect(suggestInitialPayment(40)).not.toBe(40);
+  });
+
+  it('un precio imposible no inventa una señal', () => {
+    expect(suggestInitialPayment(0)).toBe(0);
+    expect(suggestInitialPayment(-10)).toBe(0);
+    expect(suggestInitialPayment(NaN)).toBe(0);
   });
 });

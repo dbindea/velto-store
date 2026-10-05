@@ -1,0 +1,380 @@
+/*
+ * ⚠️ **Los colores salen de las variables del tema, nunca de las rampas.** Un
+ * componente que pinte con `--gray-700` se salta el tema y no cambia al
+ * alternar claro y oscuro. Y un `var()` sin declarar no falla: el navegador
+ * descarta la declaración entera, que es como los badges de estado estuvieron
+ * meses sin fondo.
+ */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  cursor: pointer;
+
+  /* Transparente de base: aquí el tinte sí vale como `background` a secas. */
+  &:hover { background: var(--bg-hover); }
+
+  &.is-active {
+    color: var(--text-on-accent, #fff);
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+}
+
+.filtro__n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.lista {
+  display: grid;
+  gap: 12px;
+}
+
+/*
+ * La cabecera ES la fila de la lista, así que se pulsa entera. El resto de la
+ * tarjeta solo existe cuando está abierta.
+ */
+.solicitud__fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) auto auto auto;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+
+/*
+ * La abierta se distingue de las demás.
+ *
+ * ⚠️ Sin esto, con la ficha desplegada no se ve de cuál cuelga: en una lista de
+ * diez filas iguales, el bloque de botones parece del de arriba o del de abajo.
+ * El filete de marca a la izquierda es lo mismo que hacen las tarjetas de aviso
+ * del panel.
+ */
+.solicitud.is-open {
+  border-left: 3px solid var(--accent-color);
+}
+
+.solicitud__quien {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.solicitud__ref {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.solicitud__que {
+  min-width: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.solicitud__sep { opacity: 0.5; }
+
+.solicitud__precio {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/*
+ * ⚠️ **Las CUATRO clases del enumerado, bajo el selector que de verdad las
+ * lleva.** Media tabla estilada no da error en ninguna parte y el estado que
+ * falta es siempre el que nadie mira hasta que aparece — pasó dos veces en la
+ * ficha de la reserva, con «Pagado» saliendo como texto negro invisible.
+ */
+.badge {
+  &.status-new {
+    color: var(--warning-color);
+    background: var(--warning-bg);
+  }
+  &.status-contacted {
+    color: var(--info-color);
+    background: var(--info-bg);
+  }
+  &.status-converted {
+    color: var(--success-color);
+    background: var(--success-bg);
+  }
+  &.status-discarded {
+    color: var(--text-muted);
+    background: var(--bg-main);
+  }
+
+  /*
+   * El estado del cobro de la señal.
+   *
+   * ⚠️ **Los SEIS, y no solo los dos que se ven el primer día.** `PaymentStatus`
+   * tiene seis valores y la pastilla los pinta todos; dejando fuera `failed`,
+   * `refunded`, `partial` o `cancelled`, el día que uno aparezca sale sin
+   * fondo y en negro — que es invisible en los tres temas oscuros. Es
+   * literalmente lo que avisa el comentario de aquí arriba, y ha pasado dos
+   * veces en la ficha de la reserva.
+   */
+  &.senal-pending {
+    color: var(--warning-color);
+    background: var(--warning-bg);
+  }
+  &.senal-partial {
+    color: var(--info-color);
+    background: var(--info-bg);
+  }
+  &.senal-paid {
+    color: var(--success-color);
+    background: var(--success-bg);
+  }
+  &.senal-failed {
+    color: var(--error-color);
+    background: var(--error-bg);
+  }
+  &.senal-refunded,
+  &.senal-cancelled {
+    color: var(--text-muted);
+    background: var(--bg-main);
+  }
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/*
+ * ⚠️ **`align-content: start`, o el valor se despega de su etiqueta.** La
+ * rejilla de arriba iguala la altura de las cuatro celdas, y la de las fechas
+ * mide el doble desde que lleva dos líneas: sin esto, las filas de las demás se
+ * estiran para rellenar y el teléfono acaba flotando a media altura, medido en
+ * 52 px de fila para un dato de 24. Se ve como si estuviera desalineado con su
+ * rótulo, y lo está.
+ */
+.dato {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dato__et {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/*
+ * Una fecha con su hora no se parte por la mitad.
+ *
+ * ⚠️ Es lo contrario de la regla general de la casa —la prosa larga parte en
+ * dos líneas antes que desbordar—, y aquí vale porque no es prosa: son dos
+ * instantes, y «12:00» solo en una línea no es media fecha, es un dato que
+ * parece de otra cosa.
+ */
+.nowrap {
+  white-space: nowrap;
+}
+
+.caducado { color: var(--text-muted); }
+
+.nota-cliente {
+  margin: 0 0 16px;
+  padding: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  border-radius: 8px;
+}
+
+.nota-interna {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/*
+ * Los botones de un campo, debajo y alineados a la derecha: es la esquina en la
+ * que acaba de escribir el operador.
+ *
+ * ⚠️ `flex-wrap` porque en el mensaje son dos —Copiar y WhatsApp— y en un móvil
+ * estrecho no caben en una línea; sin él, el segundo se sale de la tarjeta.
+ */
+.nota-editor__pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/*
+ * El «Ampliar 24 h», dentro de la celda del plazo que amplía.
+ *
+ * ⚠️ **Se encoge al contenido** (`justify-self: start`): en una celda de
+ * rejilla un botón se estira a todo el ancho de la columna, y uno de 180 px
+ * debajo de una fecha se lee como el botón principal de la ficha, que no lo es.
+ *
+ * ⚠️ **Y tiene caja, no es un `.btn-ghost`.** Sin ella no se leía como algo que
+ * se pulsa: era un icono y un texto sueltos bajo la fecha, indistinguibles de
+ * la pista gris que hay bajo las otras celdas. Lo pidió Dorel el 29 de
+ * septiembre de 2026 — «Ampliar 24 h en un botón».
+ */
+.btn-ampliar {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}
+
+/*
+ * Un hito con su icono: sale el coche, vuelve el coche.
+ *
+ * ⚠️ El icono va a `--text-muted` a propósito. Lo que se lee es la fecha; el
+ * icono solo dice cuál de las dos es, y al color del texto competiría con ella.
+ */
+.hito {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  i {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}
+
+/* El dato y su botón de copiar, en la misma línea. */
+.con-copia {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/*
+ * El botón de copiar, pegado al dato.
+ *
+ * ⚠️ **Y NO se llama `.btn-icon`, aunque lo parezca.** Esa clase existe en seis
+ * pantallas con una geometría concreta —32 px **con borde**—, que junto a un
+ * número de teléfono pesa más que el dato que acompaña. Reutilizar el nombre
+ * con otra forma sería la misma clase significando dos cosas, que es peor que
+ * tener dos nombres.
+ *
+ * ⚠️ **Y la primera versión SÍ la usaba, sin declararla.** Este componente no
+ * la declara y la encapsulación de Angular impide que llegue la de otro, así
+ * que el botón salía sin forma. `css:audit` lo dio por bueno —la clase está
+ * escrita en algún SCSS— y es una laguna suya que conviene conocer: comprueba
+ * que la clase existe, no que **alcance** al elemento.
+ */
+.btn-copiar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+
+  /* Transparente de base: aquí el tinte sí vale como `background` a secas. */
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  /* Copiado: el tic se queda un momento en verde, que es lo que se busca. */
+  .pi-check {
+    color: var(--success-color);
+  }
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/*
+ * ⚠️ Los dos enlaces de la barra son `<a>`, no `<button>`: hace falta forzar
+ * la caja, porque `.btn-secondary` global la trae pero un `<a>` sigue siendo
+ * en línea y quedaría desalineado con los botones de al lado.
+ */
+.acciones a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+/* Mobile-first: se recoloca, no se oculta. Un importe o un estado escondido
+   dentro de una media query es un fallo, no una adaptación. */
+@media (max-width: 720px) {
+  .solicitud__fila {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'quien estado'
+      'que   precio';
+    gap: 8px;
+  }
+  .solicitud__quien { grid-area: quien; }
+  .solicitud__que { grid-area: que; }
+  .solicitud__precio { grid-area: precio; }
+  .badge { grid-area: estado; justify-self: end; }
+  .solicitud__fila > .pi { display: none; }
+
+  .acciones > * { flex: 1 1 auto; justify-content: center; }
+}
+
+/*
+ * La señal y su enlace de pago.
+ *
+ * ⚠️ **El enlace se parte por donde sea** (`anywhere`). Es una URL sin espacios
+ * de unos 60 caracteres dentro de una tarjeta estrecha: sin esto estira la
+ * columna y se lleva por delante la ficha entera en el móvil, que es la trampa
+ * que CLAUDE.md documenta con `min-width: 0`.
+ */
+/*
+ * ⚠️ **En píxeles y `rem`, como el resto de este fichero.** Los `--sp-*` y
+ * `--fs-*` son tokens de `web/`, no del backoffice: aquí no existen, y un
+ * `var()` sin declarar no se ignora —deja la propiedad en `unset` y **gana la
+ * cascada**, borrando lo que hubiera debajo—. Escribirlos por inercia es el
+ * fallo que dejó un día del calendario en blanco sobre blanco.
+ */
+/*
+ * ⚠️ **Escrita entera y no con `&__estado`**, como el resto del fichero. La
+ * anidación compila bien, pero `css:audit` busca la clase **literal** en el
+ * SCSS y da por desnudo lo que no encuentra: con `&__` la daba por rota sin
+ * estarlo. Un auditor que grita en falso se deja de leer, y entonces deja de
+ * cazar las de verdad.
+ */
+.senal__estado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.enlace-pago {
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}

@@ -1010,3 +1010,27 @@ textarea.form-control {
   font-size: 0.78rem;
   font-weight: 600;
 }
+
+/*
+ * De qué solicitud viene esta reserva.
+ *
+ * ⚠️ **Es una cinta informativa, no un aviso.** No ha pasado nada malo: solo se
+ * está diciendo por qué el asistente se abrió por el paso tres. Con los colores
+ * de error o de alerta parecería que algo falló, y con ellos el operador se
+ * pararía a leerlo dos veces cada vez que convierte una solicitud.
+ */
+.from-request {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  border-radius: 8px;
+
+  i {
+    color: var(--accent-color);
+  }
+}

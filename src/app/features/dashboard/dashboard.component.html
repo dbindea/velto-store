@@ -46,6 +46,57 @@
     }
     <div class="cards-grid">
       @for (card of cards; track $index) {
+        <!--
+          Las solicitudes de la web: alguien esperando una llamada.
+
+          ⚠️ **La estructura es la del resto de tarjetas**, con las clases que ya
+          existen (`card`, `card-header`, `card-subtext`, `card-list`,
+          `card-action`). Inventar aquí `solicitud-*` es exactamente cómo la
+          tarjeta de mantenimiento salió sin caja: cuatro clases que ningún SCSS
+          declaraba.
+        -->
+        @if (card.type === 'booking_requests') {
+          <div class="card warning-card" (click)="openBookingRequests()">
+            <div class="card-header">
+              <i class="pi pi-phone"></i>
+              <span class="card-label">{{ 'dashboard.bookingRequests.label' | translate }}</span>
+            </div>
+            <div class="card-subtext">
+              {{ card.items.length }}
+              {{
+                card.items.length === 1
+                  ? ('dashboard.bookingRequests.oneSingular' | translate)
+                  : ('dashboard.bookingRequests.onePlural' | translate)
+              }}
+            </div>
+            <ul class="card-list">
+              @for (s of card.items.slice(0, 5); track s.id) {
+                <li
+                  class="card-list-item"
+                  (click)="$event.stopPropagation(); openBookingRequest(s.id)"
+                >
+                  <span class="list-title">{{ s.name }}</span>
+                  <span class="list-meta">
+                    {{ s.vehicleSnapshot.brand }} {{ s.vehicleSnapshot.model }}
+                    <!--
+                      ⚠️ El precio caducado se dice, pero en gris y al final: no
+                      es una alarma. Ver `bookingPriceExpired()`.
+                    -->
+                    @if (bookingPriceExpired(s)) {
+                      · {{ 'dashboard.bookingRequests.priceExpired' | translate }}
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+            <div class="card-subtext">{{ 'dashboard.bookingRequests.hint' | translate }}</div>
+            <div class="card-action">
+              {{ 'common.viewAll' | translate }}
+              <i class="pi pi-arrow-right"></i>
+            </div>
+          </div>
+        }
+
         <!-- Fleet availability (always shown) -->
         @if (card.type === 'fleet') {
           <div class="card fleet-card" (click)="openVehicles()">

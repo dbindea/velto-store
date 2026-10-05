@@ -96,7 +96,7 @@
         {
           "source": "/api/vehicle",
           "headers": [
-            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=600" }
+            { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=120" }
           ]
         },
         {
@@ -125,6 +125,27 @@
           "source": "/api/availability",
           "function": {
             "functionId": "checkPublicAvailability",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/solicitud",
+          "function": {
+            "functionId": "createBookingRequest",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/contacto",
+          "function": {
+            "functionId": "createContactRequest",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/visita",
+          "function": {
+            "functionId": "trackWebVisit",
             "region": "europe-west1"
           }
         },

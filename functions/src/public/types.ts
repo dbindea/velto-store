@@ -71,6 +71,20 @@ export interface PublicPrice {
   /** FRACCIÓN, no porcentaje: `0.21`. Misma convención que `pricingSnapshot`. */
   vatRate: number;
   currency: 'EUR';
+  /**
+   * Desde cuántos días rige este precio, cuando es un «desde».
+   *
+   * ⚠️ **Sin esto, «desde 25 €/día» es un precio que casi nadie paga.** El
+   * «desde» sale del tramo más barato y, con los tramos normales de la casa, el
+   * precio por día baja según se alarga el alquiler: o sea que el más barato es
+   * el del último tramo, el abierto. Quien lee «desde 25 €» y alquila tres días
+   * se encuentra otra cifra al elegir fechas.
+   *
+   * ⚠️ **Solo lo lleva `priceFrom`.** El precio de un alquiler con fechas
+   * elegidas es exacto y no necesita matiz. Opcional y aditivo, como manda la
+   * casa para todo campo nuevo.
+   */
+  fromDays?: number;
 }
 
 /**
@@ -134,6 +148,25 @@ export interface PublicVehicleSummary {
   photo?: PublicPhotoUrl;
   /** «Desde X €/día», del tramo más barato de la tabla. */
   priceFrom?: PublicPrice;
+  /**
+   * La etiqueta ambiental de la DGT: `B`, `C`, `ECO` o `0`.
+   *
+   * ⚠️ **Va en el RESUMEN y no solo en la ficha**, porque es un criterio para
+   * elegir: quien alquila para entrar en Madrid descarta coches desde la lista,
+   * y obligarle a abrir uno por uno para saberlo es hacerle perder el tiempo.
+   *
+   * ⚠️ **Opcional, y su ausencia no significa «sin etiqueta»**: significa que
+   * no consta. La web no afirma nada cuando falta — decir «sin etiqueta» de un
+   * coche que sí la tiene es tan falso como lo contrario.
+   */
+  environmentalLabel?: 'B' | 'C' | 'ECO' | 'ZERO';
+  /**
+   * Una línea con lo que este coche tiene y los demás no.
+   *
+   * ⚠️ **Es el `publicHighlight` del coche, nunca su `description`.** Aquella
+   * es la nota interna del operador. Esta se escribe para el cliente.
+   */
+  highlight?: string;
 }
 
 /** La ficha. Lo del listado, más lo que hace falta para decidir. */
@@ -151,6 +184,21 @@ export interface PublicVehicleDetail extends PublicVehicleSummary {
   depositAmount?: number;
   includedKmPerDay?: number;
   minimumRentalDays?: number;
+  /**
+   * Los días que este coche **no** se puede coger, en `yyyy-MM-dd` local.
+   *
+   * ⚠️ **Días y no rangos, a propósito.** Con los instantes exactos se podría
+   * saber a qué hora devuelve el coche un cliente concreto; es la misma razón
+   * por la que el buscador ensancha su ventana a días completos.
+   *
+   * ⚠️ **Y llevan dentro el día de preparación**: un coche devuelto ayer sale
+   * ocupado hoy, porque hay que revisarlo, limpiarlo y repostarlo. Lo calcula
+   * `disponibleDesde()` y lo comparten los tres sitios que cruzan reservas, o
+   * la web ofrecería lo que después rechaza.
+   */
+  busyDays?: string[];
+  /** El último día mirado. Más allá, el calendario no puede afirmar nada. */
+  availableUntil?: string;
 }
 
 /** Un coche libre para las fechas pedidas, con su precio orientativo. */

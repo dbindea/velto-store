@@ -1,109 +1,298 @@
 ---
 import Base from '../layouts/Base.astro';
+import Buscador from '../components/Buscador.astro';
 import { EMPRESA } from '../lib/empresa';
+import { ORDENES } from '../lib/resultados';
 ---
 
-<!--
-  ⚠️ **«Velto», no «VELTO MOBILITY».** El título ponía la razón social, y la
-  regla de la casa es que esa solo aparece **donde la empresa comparece como
-  persona jurídica, o sea junto al NIF** — en esta web, únicamente el bloque
-  legal del pie. Un título de pestaña le habla al cliente, y ahí manda la marca.
-  Era además la única de las ocho páginas que se salía.
--->
+{/*
+  ⚠️ **Esta es una página de RESULTADOS, y hasta el 30 de septiembre de 2026
+  estaba escrita como una página de preguntas.** El titular decía «¿Qué fechas
+  necesitas?» y la entradilla explicaba lo que iba a pasar — a alguien que
+  llega desde la portada **con las fechas ya elegidas y la búsqueda ya hecha**.
+  Lo que hay que enseñarle es lo que ha encontrado, no volver a preguntarle.
+
+  ⚠️ **Y el buscador es EL MISMO componente que el de la portada.** Aquí había
+  otro, de dos campos: sin lugar de recogida, con fondo claro y otro botón. O
+  sea que corregir las fechas te devolvía un formulario distinto del que
+  acababas de usar, y perdías el lugar por el camino. Lo pidió Dorel: «trae el
+  buscador original ya relleno con los datos completados y modificables».
+
+  ⚠️ **«Velto», no «VELTO MOBILITY».** La razón social solo aparece donde la
+  empresa comparece como persona jurídica, o sea junto al NIF — en esta web,
+  únicamente el bloque legal del pie.
+*/}
 <Base
-  titulo="Consultar disponibilidad | Velto"
-  descripcion="Dinos las fechas y te decimos qué coches quedan libres y cuánto cuesta el alquiler completo, con IVA incluido."
+  titulo="Coches libres y precio del alquiler | Velto"
+  descripcion="Los coches que quedan libres en tus fechas, con el precio final del alquiler. Eliges uno y lo reservamos."
   ruta="/reservar"
 >
   <section class="seccion">
     <div class="contenedor">
-      <h1>¿Qué fechas necesitas?</h1>
+      <p class="chip">Disponibilidad</p>
+      <h1>Elige tu coche</h1>
+      {/*
+        ⚠️ **Una frase, no un párrafo.** Aquí había cuatro líneas explicando lo
+        que el visitante está a punto de ver debajo, y en un móvil eso son
+        120 px que empujan los coches fuera de la pantalla. En una página de
+        resultados la prosa compite con el contenido; en la portada, no.
+
+        ⚠️ **Y NO dice «te llamamos», que es lo que decía.** Lo cortó Dorel el
+        30 de septiembre de 2026 con dos motivos, y los dos mandan sobre la
+        redacción de aquí en adelante:
+
+        1. **El canal no está decidido y no tiene por qué estarlo.** Puede ser
+           una llamada, un WhatsApp, o que él reserve el coche directamente sin
+           preguntar nada. Anunciar una llamada compromete el único canal que
+           igual no se usa.
+        2. **«Te llamamos» se lee como una espera.** Sus palabras: «la gente
+           tiene la impresión de que esto va pa largo… ¿quién sabe cuándo me
+           van a llamar?». En una página de resultados, eso es lo último que se
+           lee antes de decidir.
+
+        ⚠️ **Y tiene que seguir valiendo cuando la reserva sea online.** Por eso
+        «para reservarlo» y no «para pedirlo»: describe **para qué** sirve
+        elegir, que es lo mismo hoy —una pre-reserva que confirmamos— y el día
+        que se cierre sola desde la web. Lo que NO puede decir es que el coche
+        queda reservado al pulsar: eso lo dice el diálogo, con su letra, porque
+        es donde deja de ser cierto.
+
+        ⚠️ **«Tasas» se quedó fuera a propósito.** Dorel escribió «impuesto y
+        tasas ya incluidas» y en este precio **no hay ninguna tasa**: lo que
+        lleva dentro es el IVA. Y el que llegue en avión paga **+30 € por
+        llevárselo a Barajas** (`zonas.ts`), así que prometer «tasas incluidas»
+        es perder esa discusión en el mostrador. «Sin gastos de gestión» dice
+        lo que él quería decir —que no hay sorpresas— y además es verdad: está
+        prometido igual en la portada.
+      */}
       <p class="entrada">
-        Te decimos qué coches quedan libres y el precio del alquiler completo,
-        con IVA incluido. La reserva la cerramos por teléfono o WhatsApp.
+        Precio final del alquiler: impuestos incluidos y sin gastos de gestión.
+        Elige uno para reservarlo.
       </p>
 
-      <form id="form" class="buscador">
-        <div class="buscador__campo">
-          <label for="desde">Recogida</label>
-          <input type="date" id="desde" name="desde" required />
-        </div>
-        <div class="buscador__campo">
-          <label for="hasta">Devolución</label>
-          <input type="date" id="hasta" name="hasta" required />
-        </div>
-        <button class="btn btn--brand" type="submit">Ver disponibilidad</button>
-      </form>
+      {/*
+        ⚠️ **En móvil el buscador se pliega, y eso es lo que hace usable esta
+        página.** Medido a 390 px con el buscador entero desplegado: la primera
+        tarjeta empezaba a **1.194 px del principio**, o sea a página y media de
+        desplazamiento antes de ver un solo coche. Es exactamente la queja que
+        Dorel tuvo con la portada el 29 de septiembre («el buscador empezaba a
+        1.050 px») y aquí duele más, porque lo que se viene a ver son los
+        resultados, no el formulario.
 
-      <!--
-        ⚠️ El mensaje de error del formulario va ANTES de los resultados y con
-        `role="alert"`: si el aviso apareciera debajo de la lista, en un móvil
-        quedaría fuera de la pantalla y el visitante pulsaría otra vez creyendo
-        que el botón no funciona.
-      -->
-      <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
+        ⚠️ **Plegado NO es escondido:** en su sitio queda una línea que dice lo
+        que se ha buscado —el lugar y las fechas— y que se abre de un toque. La
+        regla de la casa es recolocar y nunca ocultar; lo que no puede pasar es
+        que el visitante no sepa qué se está buscando.
 
-      <div id="resultado" hidden>
-        <h2 id="resumen" class="resumen"></h2>
-        <div id="lista" class="rejilla"></div>
+        ⚠️ **Y lo pliega el JavaScript, no el HTML.** Si el script no llegara a
+        ejecutarse, el botón se queda oculto y el formulario **visible**: el
+        respaldo es la página de siempre, no una página sin buscador.
+      */}
+      <div class="buscador-hueco">
+        <button
+          type="button"
+          id="plegar"
+          class="resumen-busqueda"
+          aria-expanded="true"
+          aria-controls="buscador"
+          hidden
+        >
+          <span class="resumen-busqueda__texto" id="resumen-busqueda"></span>
+          <span class="resumen-busqueda__accion">Cambiar</span>
+        </button>
+        <Buscador textoBoton="Buscar" />
       </div>
 
-      <p id="cargando" class="aviso" hidden>Consultando…</p>
+      {/*
+        ⚠️ El aviso va ANTES de los resultados y con `role="alert"`: debajo de
+        la lista, en un móvil quedaría fuera de la pantalla y el visitante
+        pulsaría otra vez creyendo que el botón no funciona.
+      */}
+      <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
+      <p id="cargando" class="aviso" hidden>Buscando coches libres…</p>
       <p id="vacio" class="aviso" hidden>
         No queda ningún coche libre en esas fechas. Prueba con otras o
         <a href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">escríbenos</a>:
         a veces podemos mover algo.
       </p>
+
+      <div id="resultado" hidden>
+        {/*
+          La barra de resultados: lo que se ha encontrado a la izquierda y los
+          mandos a la derecha.
+
+          ⚠️ **Los mandos van ARRIBA, no en una columna lateral.** Con dos o
+          diez coches, una barra de filtros a un lado se come un tercio del
+          ancho para ordenar cuatro tarjetas. Y en un móvil una columna lateral
+          no existe: acaba encima de los resultados, que es lo que se venía a
+          ver.
+        */}
+        <div class="barra">
+          <div>
+            <h2 id="resumen" class="barra__cuenta"></h2>
+            <p id="fechas" class="barra__fechas"></p>
+          </div>
+
+          <div class="barra__mandos">
+            {/*
+              ⚠️ **Un `<select>` y no otra tira de chapas.** Cuatro criterios
+              en chapas son cuatro mandos más en una barra que ya tiene los
+              del tipo de coche, y la regla que pidió Dorel es «simple y
+              minimalista para no volver loco al cliente». Un desplegable dice
+              **cuál** está puesto sin ocupar sitio, y en el móvil lo abre el
+              sistema.
+            */}
+            <label class="orden">
+              <span class="oculto-visual">Ordenar los coches</span>
+              <select id="orden">
+                {ORDENES.map((o) => <option value={o.valor}>{o.rotulo}</option>)}
+              </select>
+            </label>
+
+            {/*
+              ⚠️ **El interruptor de vista se esconde en móvil a propósito.**
+              Por debajo de 720 px la rejilla ya es de una columna, así que las
+              dos vistas salen idénticas: enseñarlo sería un botón que no hace
+              nada, que en esta casa es un fallo.
+            */}
+            <div class="vista" role="group" aria-label="Cómo se ven los coches">
+              <button type="button" class="vista__btn" data-vista="rejilla" aria-pressed="true">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                <span class="oculto-visual">Ver en cuadrícula</span>
+              </button>
+              <button type="button" class="vista__btn" data-vista="filas" aria-pressed="false">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>
+                <span class="oculto-visual">Ver en lista</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/*
+          Las chapas las pinta el script desde los coches encontrados, así que
+          **sus estilos viven en `global.css`**: una hoja de página está
+          encapsulada por Astro y no alcanza a lo que inyecta el JavaScript.
+        */}
+        <div id="chapas" class="chapas" role="group" aria-label="Filtrar por tipo de coche"></div>
+
+        <div id="lista" class="rejilla"></div>
+
+        {/*
+          ⚠️ **El esqueleto, y por qué hace falta aunque ya hubiera un aviso.**
+          Medido el 3 de octubre de 2026 contra el sitio desplegado en 3G lento:
+          esta pantalla enseña «Elige tu coche» con **la lista vacía durante 3,1
+          segundos** y sin una sola señal de que esté trabajando. El aviso
+          «Buscando coches libres…» existía, pero nace `hidden` y **lo destapa
+          el módulo de JavaScript** — o sea que no puede cubrir justo el rato
+          que se tarda en descargar ese módulo, que es casi todo el rato. Un
+          indicador que solo aparece cuando ya ha llegado lo que esperabas no
+          indica nada.
+
+          ⚠️ **Por eso lo destapa un script EN LÍNEA**, que corre al parsear:
+          es la única forma de que se vea antes que el módulo. Y solo si la URL
+          trae fechas, porque `/reservar` a secas no busca nada y anunciar una
+          búsqueda que no existe es peor que no decir nada.
+
+          `aria-hidden` porque no aporta nada a quien no lo ve: el estado ya lo
+          cuenta el aviso, que es texto de verdad.
+        */}
+        <div id="esqueleto" class="rejilla" hidden aria-hidden="true">
+          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
+          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
+          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
+        </div>
+      </div>
+
+      <script is:inline>
+        /*
+         * Corre al parsear, antes que el módulo: si la URL pide unas fechas,
+         * esta pantalla va a buscar, y hay que decirlo ya.
+         */
+        (function () {
+          var p = new URLSearchParams(location.search);
+          if (!p.get('from') || !p.get('to')) return;
+          var c = document.getElementById('cargando');
+          var e = document.getElementById('esqueleto');
+          if (c) c.hidden = false;
+          if (e) e.hidden = false;
+        })();
+      </script>
+
+      {/*
+        ⚠️ **Aquí ya NO hay diálogo de pre-reserva, y es la decisión del 2 de
+        octubre de 2026.** La tarjeta llevaba un «Seleccionar» que lo abría al
+        momento, así que pulsar su cuerpo llevaba a la ficha y pulsar su botón
+        abría un formulario: dos destinos para la misma tarjeta, y el botón es
+        lo que más se ve. Es el mismo enredo que Dorel mandó quitar en la ficha
+        con las dos tarjetas verdes.
+
+        La pre-reserva se hace **en la ficha** (`PreReserva.astro`), que es
+        donde el precio se recalcula al mover el calendario y donde el visitante
+        ha visto el coche. Desde aquí se llega con las fechas puestas, así que
+        no cuesta un paso de verdad: cuesta un clic en «Reservar».
+      */}
     </div>
   </section>
 </Base>
 
 <script>
-  import { disponibilidad } from '../lib/api';
+  import { disponibilidad, type CocheDisponible } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
+  import { instanteDeLaUrl, montarBuscador } from '../lib/buscador';
+  import {
+    ORDEN_POR_DEFECTO,
+    chapasDeCategoria,
+    esOrden,
+    filtrar,
+    ordenar,
+    resumen,
+    rotuloFechas,
+    type Orden,
+  } from '../lib/resultados';
+  import { medirHito } from '../lib/medir';
 
-  const form = document.getElementById('form') as HTMLFormElement;
-  const desde = document.getElementById('desde') as HTMLInputElement;
-  const hasta = document.getElementById('hasta') as HTMLInputElement;
   const problema = document.getElementById('problema')!;
   const resultado = document.getElementById('resultado')!;
-  const resumen = document.getElementById('resumen')!;
+  const resumenEl = document.getElementById('resumen')!;
+  const fechasEl = document.getElementById('fechas')!;
+  const chapasEl = document.getElementById('chapas')!;
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
+  /* El esqueleto se enciende y se apaga con el aviso: son el mismo estado. */
+  const esqueleto = document.getElementById('esqueleto')!;
   const vacio = document.getElementById('vacio')!;
-
-  /** `yyyy-MM-dd` en hora local. `toISOString()` pasaría a UTC y restaría un día. */
-  function iso(d: Date): string {
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-  }
-
-  // Ni recoger en el pasado ni devolver antes de recoger: lo dice el campo, no
-  // un mensaje después de pulsar.
-  const hoy = new Date();
-  desde.min = iso(hoy);
-  hasta.min = iso(hoy);
-  desde.addEventListener('change', () => {
-    hasta.min = desde.value || iso(hoy);
-    if (hasta.value && hasta.value < hasta.min) hasta.value = '';
-  });
+  const ordenEl = document.getElementById('orden') as HTMLSelectElement;
 
   /**
-   * Las fechas que venían del buscador de la portada.
+   * Lo que ha devuelto la API, **entero y sin tocar**.
    *
-   * ⚠️ **Y se consulta sola.** Quien ya eligió fechas allí y pulsó «Ver
-   * precios» espera ver precios, no un formulario relleno y un botón más que
-   * pulsar: eso es hacerle repetir lo que ya hizo.
+   * ⚠️ Filtrar y ordenar trabajan sobre copias de esto: si se recortara la
+   * lista al filtrar, quitar el filtro no podría devolver los coches que ya no
+   * están, y habría que volver a preguntar a la API — con la posibilidad de
+   * que entre medias la disponibilidad haya cambiado y aparezcan o desaparezcan
+   * coches al pulsar una chapa.
    */
+  let libres: CocheDisponible[] = [];
+  let categoria: string | null = null;
+  let orden: Orden = ORDEN_POR_DEFECTO;
+  let vista: 'rejilla' | 'filas' = 'rejilla';
+
   const params = new URLSearchParams(location.search);
-  const dFrom = params.get('from');
-  const dTo = params.get('to');
-  if (dFrom && dTo && /^\d{4}-\d{2}-\d{2}$/.test(dFrom) && /^\d{4}-\d{2}-\d{2}$/.test(dTo)) {
-    desde.value = dFrom;
-    hasta.min = dFrom;
-    hasta.value = dTo;
-    queueMicrotask(() => form.requestSubmit());
-  }
+
+  /*
+   * El buscador, con lo que traía la URL ya puesto. Si no trae nada, el módulo
+   * propone mañana a las diez y tres días — y se busca igual: una página de
+   * resultados en blanco con un formulario es la página de preguntas que esto
+   * venía a dejar de ser.
+   */
+  const campos = montarBuscador({
+    valores: {
+      desde: instanteDeLaUrl(params.get('from')),
+      hasta: instanteDeLaUrl(params.get('to')),
+      lugar: params.get('place'),
+    },
+    alBuscar: ({ desde, hasta, lugar }) => buscar(desde, hasta, lugar),
+  });
 
   /**
    * ⚠️ Las claves que devuelve la function se traducen AQUÍ. Enseñar
@@ -117,83 +306,322 @@ import { EMPRESA } from '../lib/empresa';
     'range-too-long': 'Para alquileres de más de tres meses, llámanos y lo vemos.',
   };
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  let dias = 0;
+
+  function buscar(desde: string, hasta: string, lugar: string) {
+    /*
+     * ⚠️ **La URL se actualiza con la búsqueda, y por eso `replaceState`.** Sin
+     * esto, quien corrige las fechas aquí y comparte el enlace manda las
+     * fechas viejas — las que traía la portada—. Y `replaceState` en vez de
+     * `pushState` porque el botón de atrás tiene que devolver al visitante de
+     * donde vino, no recorrer hacia atrás cada búsqueda que haya probado.
+     */
+    const url = new URL(location.href);
+    url.searchParams.set('from', desde);
+    url.searchParams.set('to', hasta);
+    if (lugar) url.searchParams.set('place', lugar);
+    else url.searchParams.delete('place');
+    history.replaceState(null, '', url);
+
     problema.hidden = true;
     resultado.hidden = true;
     vacio.hidden = true;
     cargando.hidden = false;
+    esqueleto.hidden = false;
 
-    disponibilidad(desde.value, hasta.value)
+    /*
+     * ⚠️ **Se DEVUELVE la promesa, y no es cosmético.** Es lo que deja al
+     * buscador apagar su botón mientras dura la consulta: sin esto,
+     * `montarBuscador` lo soltaría en el mismo instante en que lo apaga.
+     */
+    return disponibilidad(desde, hasta)
       .then((r) => {
         cargando.hidden = true;
+        esqueleto.hidden = true;
         if (!r.vehicles.length) {
           vacio.hidden = false;
           return;
         }
-        const dias = r.totalDays === 1 ? '1 día' : `${r.totalDays} días`;
-        resumen.textContent = `${r.vehicles.length === 1 ? '1 coche libre' : `${r.vehicles.length} coches libres`} · ${dias}`;
-        lista.innerHTML = r.vehicles.map((v) => tarjetaCoche(v)).join('');
+        libres = r.vehicles;
+        dias = r.totalDays;
+        // Ha visto precios de verdad, no solo la pagina.
+        medirHito('precios');
+        // Una búsqueda nueva empieza sin filtro: el tipo de coche que se eligió
+        // para las fechas de antes puede no existir en estas.
+        categoria = null;
+        pintar();
         resultado.hidden = false;
+        /*
+         * ⚠️ **En móvil se vuelve a plegar al encontrar.** Quien acaba de
+         * pulsar «Buscar» quiere ver coches: dejando el formulario abierto,
+         * los resultados nacen 387 px por debajo del pulgar y parece que no ha
+         * pasado nada. Solo si había algo que enseñar — con la lista vacía, el
+         * formulario abierto es justo lo que hace falta para corregir.
+         */
+        if (estrecho.matches) plegado(true);
       })
       .catch((err: Error) => {
         cargando.hidden = true;
+        esqueleto.hidden = true;
         problema.textContent =
           MOTIVOS[err.message] ?? 'No hemos podido consultar la disponibilidad. Inténtalo otra vez.';
         problema.hidden = false;
       });
+  }
+
+  function pintarChapas() {
+    const chapas = chapasDeCategoria(libres);
+    chapasEl.hidden = chapas.length === 0;
+    chapasEl.replaceChildren(
+      ...chapas.map((ch) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chapa';
+        const puesta = ch.clave === categoria;
+        b.setAttribute('aria-pressed', String(puesta));
+        b.classList.toggle('es-activa', puesta);
+        /*
+         * ⚠️ **El número va en su propio elemento.** Metido en el mismo texto,
+         * un lector de pantalla lee «SUV2» de corrido; y visualmente hace falta
+         * que pese menos que el rótulo, o la chapa se lee como una cifra.
+         */
+        b.innerHTML = `${ch.rotulo} <span class="chapa__n">${ch.cuantos}</span>`;
+        b.addEventListener('click', () => {
+          categoria = ch.clave;
+          pintar();
+        });
+        return b;
+      })
+    );
+  }
+
+  function pintar() {
+    const mostrados = ordenar(filtrar(libres, categoria), orden);
+    resumenEl.textContent = resumen(mostrados.length, dias);
+    fechasEl.textContent = campos
+      ? rotuloFechas(campos.desde.value, campos.hasta.value)
+      : '';
+    pintarChapas();
+    lista.classList.toggle('rejilla--filas', vista === 'filas');
+    /*
+     * ⚠️ **Las fechas viajan con cada tarjeta.** Es lo que hace que entrar en
+     * un coche desde aquí no pierda la búsqueda: la ficha se abre con el
+     * calendario ya marcado y el precio hecho.
+     */
+    const fechas = campos
+      ? {
+          desde: campos.desde.value,
+          hasta: campos.hasta.value,
+          // Y el lugar, que hasta el 2 de octubre de 2026 se quedaba aquí.
+          lugar: campos.lugar?.value.trim() ?? '',
+        }
+      : undefined;
+    lista.innerHTML = mostrados.map((v) => tarjetaCoche(v, fechas)).join('');
+  }
+
+  ordenEl.addEventListener('change', () => {
+    if (esOrden(ordenEl.value)) orden = ordenEl.value;
+    pintar();
   });
+
+  document.querySelectorAll<HTMLButtonElement>('.vista__btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      vista = b.dataset.vista === 'filas' ? 'filas' : 'rejilla';
+      document
+        .querySelectorAll<HTMLButtonElement>('.vista__btn')
+        .forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+      pintar();
+    });
+  });
+
+  /*
+   * ⚠️ **La vista elegida NO se guarda.** `/privacidad` dice que lo único que
+   * esta web deja en el navegador es `velto-tema`, y esa frase es una promesa
+   * contrastable: guardar aquí una preferencia más la convertiría en falsa el
+   * mismo día. Si algún día se quiere recordar, se toca la página legal a la
+   * vez.
+   */
+
+  // --- El buscador plegado en móvil ----------------------------------------
+
+  const plegar = document.getElementById('plegar') as HTMLButtonElement;
+  const resumenBusqueda = document.getElementById('resumen-busqueda')!;
+  const estrecho = matchMedia('(max-width: 719px)');
+
+  /**
+   * ⚠️ **Las fechas van DELANTE del lugar, y no es indiferente.** La línea se
+   * recorta con puntos suspensivos cuando no cabe —a 390 px casi siempre—, así
+   * que lo primero es lo que decide los resultados que hay debajo. Con el
+   * lugar delante, «Arganda del Rey · Del 1 al 4 de …» dejaba fuera justo el
+   * dato por el que se ha buscado.
+   */
+  function textoDeLaBusqueda(): string {
+    if (!campos) return '';
+    const fechas = rotuloFechas(campos.desde.value, campos.hasta.value);
+    const donde = campos.lugar?.value.trim();
+    return donde ? `${fechas} · ${donde}` : fechas;
+  }
+
+  function plegado(si: boolean) {
+    if (!campos) return;
+    campos.form.hidden = si;
+    plegar.setAttribute('aria-expanded', String(!si));
+    resumenBusqueda.textContent = textoDeLaBusqueda();
+  }
+
+  /*
+   * ⚠️ **Se escucha el cambio de la media query, no solo el arranque.** Girar
+   * el teléfono o abrir las herramientas de desarrollo cruza los 720 px: sin
+   * esto, un móvil girado a horizontal se quedaría con el buscador plegado y
+   * el botón escondido por el CSS, o sea **sin ninguna forma de cambiar las
+   * fechas**. Es el mismo tipo de callejón sin salida que el diálogo de fecha
+   * de Android sin botón de vaciar.
+   */
+  function ajustarPliegue() {
+    plegar.hidden = !estrecho.matches;
+    plegado(estrecho.matches);
+  }
+
+  plegar.addEventListener('click', () => plegado(!campos?.form.hidden));
+  estrecho.addEventListener('change', ajustarPliegue);
+  ajustarPliegue();
+
+  // Y se busca al entrar, con lo que traiga la URL o con la propuesta.
+  if (campos) buscar(campos.desde.value, campos.hasta.value, campos.lugar?.value ?? '');
 </script>
 
 <style>
   /*
-   * ⚠️ Los tokens son los del design system, y no es un detalle de estilo: aquí
-   * hubo un momento con `var(--papel-hundido)` y `var(--linea)`, que **no
-   * existen**. Un `var()` sin declarar no falla — la declaración entera
-   * desaparece —, así que el buscador se quedaba sin fondo, sin borde y sin
-   * radio, y el build no dice nada. Es la misma trampa que dejó los badges del
-   * backoffice sin color durante meses.
+   * El buscador es una tarjeta oscura y aquí no monta sobre ningún corte, así
+   * que el aire se lo pone la página. Sin esto queda pegado a la entradilla.
    */
-  .buscador {
-    display: grid;
+  .buscador-hueco { margin: var(--sp-8) 0 var(--sp-10); }
+
+  /*
+   * La línea que queda cuando el buscador está plegado: a la izquierda lo que
+   * se ha buscado, a la derecha la invitación a cambiarlo.
+   *
+   * ⚠️ **Es un `<button>` entero, no un enlace con un icono.** Toda la fila es
+   * la zona pulsable: con el dedo, apuntar a la palabra «Cambiar» en una barra
+   * de 44 px de alto es la clase de diana que se falla.
+   */
+  .resumen-busqueda {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--sp-4);
-    grid-template-columns: 1fr;
-    align-items: end;
-    padding: var(--sp-6);
-    background: var(--bg-alt);
-    border: var(--bw) solid var(--border);
-    border-radius: var(--r-xl);
-    margin-bottom: var(--sp-10);
-  }
-
-  @media (min-width: 720px) {
-    .buscador { grid-template-columns: 1fr 1fr auto; }
-  }
-
-  /* Sin `min-width: 0` un campo ancho estira la fila entera. */
-  .buscador__campo { display: grid; gap: var(--sp-2); min-width: 0; }
-
-  .buscador__campo label {
-    font-size: var(--fs-caption);
-    font-weight: var(--fw-medium);
-    color: var(--text-2);
-  }
-
-  .buscador input {
-    min-height: var(--control-h);
-    padding: 0 var(--sp-4);
-    font-family: var(--font-num);
+    width: 100%;
+    min-height: var(--touch);
+    padding: var(--sp-3) var(--sp-4);
+    font: inherit;
+    text-align: left;
     color: var(--text);
     background: var(--surface-card);
     border: var(--bw) solid var(--border-strong);
-    border-radius: var(--r-md);
-    /*
-     * ⚠️ El calendario de un `input[type=date]` lo pinta el sistema y ningún
-     * CSS lo alcanza: lo único que lo hace legible es `color-scheme`. Aquí se
-     * hereda del tema, que puede ser oscuro.
-     */
-    color-scheme: light dark;
+    border-radius: var(--r-pill);
+    cursor: pointer;
   }
 
-  .resumen { margin-bottom: var(--sp-6); }
+  .resumen-busqueda__texto {
+    font-size: var(--fs-small);
+    font-weight: var(--fw-medium);
+    /* Un lugar largo no puede empujar a «Cambiar» fuera de la barra. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .resumen-busqueda__accion {
+    flex: none;
+    font-size: var(--fs-caption);
+    font-weight: var(--fw-medium);
+    color: var(--brand-text);
+  }
+
+  /* ---- La barra de resultados -------------------------------------------- */
+
+  .barra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+  }
+
+  .barra__cuenta { margin: 0; font-size: var(--fs-h3); }
+  .barra__fechas { margin: var(--sp-1) 0 0; color: var(--text-2); font-size: var(--fs-small); }
+
+  .barra__mandos { display: flex; align-items: center; gap: var(--sp-3); }
+
+  /*
+   * ⚠️ **El desplegable se estiliza aquí y no hereda del buscador.** Aquel es
+   * una tarjeta oscura con `color-scheme: dark`; este vive sobre el fondo de la
+   * página y tiene que seguir al tema.
+   */
+  .orden select {
+    min-height: var(--control-h);
+    padding: 0 var(--sp-8) 0 var(--sp-4);
+    font: inherit;
+    color: var(--text);
+    background-color: var(--bg-input);
+    border: var(--bw) solid var(--border-input);
+    border-radius: var(--r-pill);
+    color-scheme: inherit;
+    cursor: pointer;
+  }
+
+  .vista {
+    display: flex;
+    gap: var(--sp-1);
+    padding: var(--sp-1);
+    background: var(--bg-alt);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-pill);
+  }
+
+  .vista__btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    color: var(--text-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+  }
+
+  /*
+   * ⚠️ **El estado se pinta desde `aria-pressed`, no desde una clase.** Son el
+   * mismo hecho: con una clase aparte, el día que una se quede sin actualizar
+   * el botón diría una cosa a la vista y otra a un lector de pantalla — y el
+   * que se queda viejo es siempre el que no se mira.
+   */
+  .vista__btn[aria-pressed='true'] {
+    color: var(--text-on-ink);
+    background: var(--ink);
+  }
+
+  @media (max-width: 719px) {
+    /* Ver «La misma tarjeta, en fila» en `global.css`: por debajo de 720 px las
+       dos vistas son idénticas y el interruptor no haría nada. */
+    .vista { display: none; }
+    .barra__mandos { width: 100%; }
+    .orden { flex: 1; }
+    .orden select { width: 100%; }
+
+    /*
+     * ⚠️ **El encabezado se aprieta, que es lo que hace que se vea un coche
+     * sin desplazar.** Es la misma cuenta que se hizo en la portada el 30 de
+     * septiembre: con el menú en dos filas la cabecera ya se come 150 px, así
+     * que lo que sobra es el aire de la sección. Medido a 390 px: la primera
+     * tarjeta pasa de 1.194 px —con el buscador desplegado— a caber en los 844
+     * de un móvil corriente.
+     */
+    .seccion { padding-top: var(--sp-6); }
+    .buscador-hueco { margin: var(--sp-5) 0 var(--sp-6); }
+    .barra__cuenta { font-size: var(--fs-h4); }
+  }
 </style>

@@ -7,6 +7,7 @@
  */
 
 import { Payment, PaymentStatus, PaymentType } from '@shared/models/payment.model';
+import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { roundMoney } from './money.util';
 import { deliveryFeeBreakdown } from './pricing.util';
 import {
@@ -34,6 +35,34 @@ export function calculatePaymentStatus(amount: number, paidAmount: number): Paym
   if (paidAmount <= 0) return 'pending';
   if (paidAmount >= amount) return 'paid';
   return 'partial';
+}
+
+/**
+ * Cuánta señal se pide por un alquiler que vale `precio`.
+ *
+ * ⚠️ **Es la ÚNICA autoridad sobre la señal, y antes había media.** La regla
+ * vivía dentro de un getter del asistente —`min(50, precio)`— y era el único
+ * sitio del sistema que sabía cuánto se pide. En cuanto hubo que cobrar la
+ * señal desde otro sitio —la ficha de una solicitud de la web— habría habido
+ * dos reglas, y la segunda es siempre la que se queda vieja. Misma idea que
+ * `pricing.util.ts` con el precio.
+ *
+ * ⚠️ **Dos cifras, 50 y 25, sin porcentajes.** Decisión de Dorel del 2 de
+ * octubre de 2026. La regla anterior pedía el alquiler entero cuando valía
+ * menos de 50 €: un alquiler de 40 € nacía con 40 € de señal y 0 € de resto.
+ *
+ * ⚠️ **Y el tope sigue estando**, que es lo que la regla vieja sí hacía bien:
+ * una señal mayor que el alquiler deja la reserva imposible de liquidar. Con
+ * un alquiler de 20 €, la señal son 20 y no 25. Es un caso raro y por eso
+ * tiene test: lo raro es lo que nadie prueba a mano.
+ */
+export function suggestInitialPayment(precio: number): number {
+  if (!isFinite(precio) || precio <= 0) return 0;
+  const propuesta =
+    precio < APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT
+      ? APP_DEFAULTS.REDUCED_INITIAL_PAYMENT
+      : APP_DEFAULTS.DEFAULT_INITIAL_PAYMENT;
+  return roundMoney(Math.min(propuesta, precio));
 }
 
 /** Rental money proper: the signal, the balance, or a single full payment. */

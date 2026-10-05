@@ -1,0 +1,349 @@
+---
+/**
+ * La pre-reserva: el visitante elige un coche y unas fechas, deja su teléfono
+ * y Velto se lo confirma.
+ *
+ * ⚠️ **Es un componente porque sale en DOS sitios**: la página de resultados y
+ * la ficha de cada coche. Lo pidió Dorel el 1 de octubre de 2026 —«desde aquí
+ * se tiene que poder hacer la pre-reserva sin tener que volver a buscar y
+ * volver a seleccionar»—, y la alternativa era copiar sesenta líneas de
+ * marcado y otras tantas de script. Dos copias de un formulario que crea
+ * solicitudes acaban pidiendo campos distintos.
+ *
+ * ⚠️ **El `<dialog>` es nativo**: bloquea el fondo, cierra con Escape y atrapa
+ * el foco sin una línea de JavaScript. El diálogo de confirmación del
+ * backoffice hace eso mismo a mano.
+ *
+ * ⚠️ **Y la pantalla de «hecho» es MARCADO, no `innerHTML`.** Antes se
+ * inyectaba al recibir la respuesta, y esos nodos no llevan el atributo de
+ * encapsulación de Astro: la referencia —lo único que el visitante tiene que
+ * apuntar— salía **sin estilo ninguno**. Es el mismo fallo que dejó el botón
+ * de la tarjeta sin forma. Aquí las dos caras están en la plantilla y el
+ * script solo las enseña.
+ */
+---
+
+<dialog id="dlg" class="dlg">
+  <div class="dlg__caja">
+    <button type="button" class="dlg__cerrar" id="dlg-cerrar" aria-label="Cerrar">×</button>
+
+    {/* ---- Pedirlo ---------------------------------------------------- */}
+    <form id="dlg-form" method="dialog">
+      <h2 class="dlg__titulo">Pre-reserva</h2>
+      <p id="dlg-resumen" class="dlg__resumen"></p>
+
+      <label class="dlg__campo">
+        <span>Tu nombre</span>
+        <input type="text" name="name" required maxlength="80" autocomplete="name" />
+      </label>
+
+      <label class="dlg__campo">
+        <span>Teléfono</span>
+        <input type="tel" name="phone" required maxlength="24" autocomplete="tel"
+               inputmode="tel" placeholder="612 345 678" />
+      </label>
+
+      {/*
+        ⚠️ **El correo es OPCIONAL, y esa es la decisión.** Lo que hace falta
+        para atender una pre-reserva es el teléfono; cada campo exigido de más
+        es gente que abandona. Quien lo deje recibe el presupuesto en su
+        correo, y quien no, lo descarga en la pantalla siguiente — así nadie
+        se queda sin el papel por no querer dar un dato.
+
+        ⚠️ **Y la etiqueta dice PARA QUÉ sirve.** «Correo (opcional)» a secas
+        se lee como un dato que pedimos porque sí, y lo que hace es decidir si
+        el presupuesto llega al buzón o hay que guardarlo a mano.
+      */}
+      <label class="dlg__campo">
+        <span>Correo <em>(opcional, para mandarte el presupuesto)</em></span>
+        <input type="email" name="email" maxlength="120" autocomplete="email"
+               inputmode="email" placeholder="tu@correo.com" />
+      </label>
+
+      <label class="dlg__campo">
+        <span>Algo que debamos saber <em>(opcional)</em></span>
+        <textarea name="note" rows="2" maxlength="400"
+                  placeholder="Lo necesito por la tarde…"></textarea>
+      </label>
+
+      {/*
+        ⚠️ El campo trampa. Lo esconde el CSS, no un `hidden`: un robot que lee
+        el HTML ve los dos igual, pero `hidden` también lo esconde de los
+        lectores de pantalla y aquí lo que hace falta es que ninguna PERSONA lo
+        rellene. `tabindex="-1"` lo saca del tabulador.
+      */}
+      <div class="dlg__trampa" aria-hidden="true">
+        <label>No rellenar
+          <input type="text" name="trap" tabindex="-1" autocomplete="off" />
+        </label>
+      </div>
+
+      <p id="dlg-error" class="dlg__aviso" role="alert" hidden></p>
+
+      {/*
+        ⚠️ **Pone «Reservar», no «Enviar».** Lo cambió Dorel el 2 de octubre de
+        2026: «es más optimista, aun siendo una pre-reserva». Y no miente
+        —justo debajo está escrito qué es y qué falta—: lo que describe es lo
+        que el visitante cree que está haciendo, que es reservar un coche.
+        «Enviar» describe lo que hace el formulario, que no le importa a nadie.
+      */}
+      <button type="submit" class="btn btn--brand dlg__enviar" id="dlg-enviar">Reservar</button>
+
+      {/*
+        ⚠️ **Lo que de verdad pasa, antes de pulsar y no después.** El coche NO
+        se aparta: apartarlo sin pago ni identidad dejaría la flota bloqueable
+        por cualquiera. Lo que se garantiza es el precio, y eso sí se puede
+        prometer porque lo congela `quoteSnapshot`.
+
+        ⚠️ **Las horas las pone el script, no están escritas aquí.** Salen de
+        `settings/operation` (`bookingRequestPriceHours`) y hoy son 24, pero es
+        un ajuste: escribiéndolo a mano, el día que Dorel lo cambie la web
+        seguiría prometiendo lo de antes. Es la misma regla que el plazo de
+        borrado publicado en `/privacidad`.
+
+        ⚠️ **Y se dice lo que falta para que sea una reserva de verdad**: la
+        señal. Es lo que pidió Dorel y además es cierto —`reservationStatus`
+        pasa a `confirmed` al cobrarla—, así que el visitante sabe que esto no
+        es el final del camino.
+
+        ⚠️ **«Te contactaremos», sin decir el canal.** El formulario pide un
+        teléfono y ese teléfono vale para una llamada y para un WhatsApp; cuál
+        se use se decide en cada caso.
+
+        ⚠️ **La redacción es LITERAL de Dorel** (2 de octubre de 2026), y lo
+        que añade sobre la anterior no es estilo: dice que en ese plazo se
+        **confirma la disponibilidad**. El coche no se aparta —esa es la regla
+        de toda la web—, así que entre la pre-reserva y la llamada puede
+        haberse ido; prometer solo «lo dejamos en firme» daba por hecho que
+        seguiría ahí.
+
+        ⚠️ **«Al abonarse la señal», no «únicamente cuando abones la señal».**
+        Mismo hecho y dos tonos muy distintos: el segundo señala al visitante
+        con el dedo justo en el momento en que acaba de decidirse. Lo corrigió
+        Dorel el mismo día —«parece muy rudo, muy agresivo»—. La condición no
+        se suaviza, se despersonaliza.
+      */}
+      <p class="dlg__letra">
+        Estás realizando una <strong>pre-reserva</strong> con
+        <strong>precio garantizado durante <span id="dlg-horas">24 horas</span></strong>.
+        En ese plazo te contactaremos por teléfono o WhatsApp para confirmar la
+        disponibilidad y gestionar el pago de la señal. El coche quedará
+        reservado <strong>al abonarse la señal</strong>.
+      </p>
+    </form>
+
+    {/* ---- Hecho ------------------------------------------------------- */}
+    <div id="dlg-hecho" hidden>
+      <h2 class="dlg__titulo">Pre-reserva hecha</h2>
+      {/*
+        ⚠️ La referencia se enseña **grande y a solas**: es lo que Velto va a
+        citar al confirmar y lo que el visitante repetirá si escribe por
+        WhatsApp. Perdida entre el resto del texto no sirve para nada.
+      */}
+      <p id="dlg-ref" class="dlg__ref"></p>
+      {/*
+        ⚠️ **Da las gracias, y el verbo va en futuro.** «Te contactamos al
+        teléfono que nos has dejado» era correcto y sonaba a acuse de recibo de
+        una administración. Es la pantalla en la que alguien acaba de dejar su
+        teléfono a un desconocido; cuesta una palabra y es la que pidió Dorel
+        el 2 de octubre de 2026: «más tacto, más humanidad».
+      */}
+      <p class="dlg__resumen">
+        Gracias. Te contactaremos al teléfono que nos has dejado.
+      </p>
+      {/*
+        ⚠️ **Aquí la fecha es la de VERDAD, no «24 horas».** La devuelve la
+        function (`priceGuaranteedUntil`) con el plazo ya calculado, así que
+        esto no repite una cuenta que ya está hecha ni puede discrepar de ella.
+      */}
+      <p id="dlg-garantia" class="dlg__letra"></p>
+
+      {/*
+        ⚠️ **El presupuesto se ofrece aquí y no se da por mandado.** Lo pidió
+        Dorel —«no le podemos dar la opción de descargar el pdf de presupuesto,
+        y con el código de pre-reserva»— y el motivo de que sea un enlace y no
+        solo un correo es que **el correo es opcional**: quien no lo deje se
+        iría de la pantalla sin nada por escrito.
+
+        ⚠️ **Y el enlace es el corto de la casa** (`/d/q…`), el mismo que se
+        manda por WhatsApp: la URL de Storage mide ~160 caracteres y parece un
+        intento de phishing.
+
+        Nace oculto: si el PDF no se pudo generar, lo que no puede salir es un
+        botón que lleve a ninguna parte.
+
+        ⚠️ **Es el botón PRINCIPAL de esta pantalla, no el de cerrar.** Iba en
+        `--ghost` y «Entendido» en negro macizo, o sea que lo que más pesaba
+        era irse. Lo único que queda por hacer aquí es llevarse el papel
+        —sobre todo quien no dejó correo, que si no se va sin nada escrito—,
+        así que lleva el color de marca y el icono de descarga, y cerrar pasa
+        a ser el secundario. Lo pidió Dorel: «más visible y con el simbolito
+        de descargar».
+      */}
+      <a id="dlg-presupuesto" class="btn btn--brand dlg__enviar" hidden
+         target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        Descargar el presupuesto
+      </a>
+      <p id="dlg-correo" class="dlg__letra" hidden></p>
+
+      {/*
+        ⚠️ **Dicho con las MISMAS palabras que antes de enviar.** Es el mismo
+        hecho en dos pantallas seguidas: contado de dos maneras, el visitante
+        se pregunta si son dos cosas distintas.
+      */}
+      <p class="dlg__letra">
+        El coche quedará reservado <strong>al abonarse la señal</strong>.
+      </p>
+
+      {/*
+        ⚠️ **Dice «Cerrar» y lleva a la portada, y las dos cosas van juntas.**
+        «Entendido» cerraba el diálogo y dejaba al visitante en la misma ficha,
+        con el calendario marcado y el botón de reservar intacto: la salida
+        más natural desde ahí es volver a pulsarlo y mandar una segunda
+        solicitud del mismo coche. Lo vio Dorel el 2 de octubre de 2026 —«si me
+        quedo aquí el cliente puede volver a intentarlo»—.
+
+        ⚠️ **Lo gobierna el evento `close` del `<dialog>`, no este botón.** La
+        × de arriba y la tecla Escape cierran igual, y por tres puertas
+        distintas había dos que dejaban al visitante donde no debe estar. Ver
+        `pre-reserva.ts`.
+      */}
+      <button type="button" class="btn btn--ghost dlg__enviar" id="dlg-ok">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<style>
+  /*
+   * ⚠️ Los tokens son los del design system —`--bg`, `--border`, `--sp-*`—. Un
+   * `var()` sin declarar es peor que no escribir nada: la propiedad pasa a
+   * valer `unset`, así que **gana la cascada y borra lo que hubiera**. Es lo
+   * que dejó un día del calendario en blanco sobre blanco.
+   */
+  .dlg {
+    border: none;
+    padding: 0;
+    background: transparent;
+    max-width: min(440px, calc(100vw - var(--sp-8)));
+    color: var(--text);
+  }
+  .dlg::backdrop { background: rgb(0 0 0 / 0.55); }
+
+  /*
+   * ⚠️ **El desenfoque es lo que manda la mirada al formulario**, y por eso va
+   * acompañado de BAJAR el tinte. Detrás de esta modal hay un calendario con
+   * treinta y un números y una tarjeta de precio: con el fondo nítido, el ojo
+   * los sigue leyendo aunque estén oscurecidos. Difuminado dejan de ser texto y
+   * pasan a ser una textura, que es justo lo que se quiere.
+   *
+   * ⚠️ **Y el tinte baja SOLO donde hay desenfoque.** Si bajara siempre, el
+   * navegador que no soporte `backdrop-filter` se quedaría con un velo más
+   * flojo y sin nada que lo compense: el fondo se leería **mejor** que antes,
+   * o sea lo contrario de lo que se pide. Por eso el `@supports` cambia las dos
+   * cosas a la vez y nunca una sola.
+   *
+   * El prefijo `-webkit-` no es herencia: Safari lo sigue necesitando, y es
+   * medio tráfico de esta web.
+   */
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .dlg::backdrop {
+      background: rgb(0 0 0 / 0.42);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+  }
+
+  /*
+   * ⚠️ **Quien pide menos transparencia pide esto, no un punto medio.** El
+   * desenfoque es un efecto de transparencia, así que aquí se retira entero y
+   * se devuelve el velo opaco: tapar es la alternativa honesta a difuminar, y
+   * media capa difuminada sería lo peor de las dos.
+   */
+  @media (prefers-reduced-transparency: reduce) {
+    .dlg::backdrop {
+      background: rgb(0 0 0 / 0.78);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  .dlg__caja {
+    position: relative;
+    padding: var(--sp-6);
+    background: var(--bg);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  .dlg__caja form,
+  .dlg__caja > div[id] { display: grid; gap: var(--sp-4); }
+
+  .dlg__titulo { margin: 0; font-size: var(--fs-h3); }
+
+  /* El coche, los días y el precio: lo que el visitante acaba de elegir. */
+  .dlg__resumen { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
+
+  .dlg__campo { display: grid; gap: var(--sp-2); min-width: 0; }
+  .dlg__campo > span { font-size: var(--fs-small); font-weight: var(--fw-medium); }
+  .dlg__campo em { color: var(--text-3); font-style: normal; font-weight: 400; }
+
+  .dlg__campo input,
+  .dlg__campo textarea {
+    width: 100%;
+    padding: var(--sp-3);
+    font: inherit;
+    color: var(--text);
+    background-color: var(--bg-input);
+    /* El contorno de un control es este: llega al 3:1 que pide WCAG 1.4.11. */
+    border: var(--bw) solid var(--border-input);
+    border-radius: var(--r-md);
+  }
+  .dlg__campo textarea { resize: vertical; }
+
+  .dlg__aviso { margin: 0; color: var(--danger); font-size: var(--fs-small); }
+
+  /*
+   * ⚠️ El campo trampa se saca de la pantalla, no se pone `display: none`:
+   * algunos robots descartan lo que está oculto de la forma obvia.
+   */
+  .dlg__trampa {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .dlg__cerrar {
+    position: absolute;
+    top: var(--sp-2);
+    right: var(--sp-2);
+    /* 44 px, como el resto de lo que se pulsa con el dedo. */
+    width: var(--touch);
+    height: var(--touch);
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .dlg__enviar { justify-self: stretch; }
+
+  .dlg__ref {
+    margin: 0;
+    font-family: var(--font-num);
+    font-size: var(--fs-price);
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-wide);
+    color: var(--brand-text);
+  }
+
+  .dlg__letra { margin: 0; font-size: var(--fs-caption); color: var(--text-2); }
+</style>

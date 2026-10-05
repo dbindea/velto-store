@@ -1,13 +1,23 @@
-# Traspaso de sesión — 24 de septiembre de 2026
+# Traspaso de sesión — 3 de octubre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> Lo primero que hay que mirar es **§ 2 quinquies**, que son los doce commits del
-> día 24 y tocan el camino del dinero, y **§ 2 ter**, que dice qué hay sin subir y
-> qué falta por desplegar. Las secciones anteriores (§ 2, § 2 bis, § 2 quater)
-> son historia: se leen si algo no cuadra.
+> Lo primero que hay que mirar es **§ 2 nonies**, que es lo último que pasó (2 y
+> 3 de octubre), y después **§ 2 ter**, que dice qué falta por desplegar — y esta
+> vez **no basta con el merge**: hay dos Cloud Functions nuevas y dos rewrites de
+> hosting. El guion completo, por tandas y en orden de daño, está escrito aparte
+> en [despliegue-produccion.md](despliegue-produccion.md), que es el documento
+> que hay que seguir cuando se decida subir. Luego **§ 5**, con los huecos que
+> solo puede cerrar Dorel.
+>
+> ⚠️ **Y si algo no compila nada más abrir, lee § 2 nonies antes de buscar el
+> fallo en el código.** El 3 de octubre desaparecieron ficheros del espacio de
+> trabajo al azar, `node_modules` incluido, y el síntoma parecía código roto.
+>
+> Las secciones anteriores (§ 2 a § 2 octies) son historia: se leen si algo no
+> cuadra.
 >
 > Si lo que buscas es **el mensaje con el que abrir la sesión**, está aparte en
 > [prompt-nueva-sesion.md](prompt-nueva-sesion.md): aquel dice *cómo se trabaja*
@@ -467,10 +477,375 @@ tres del 9 al 14.
 
 ---
 
+---
+
+## 2 octies. Del 28 al 30 de septiembre — la web pública deja de ser un esqueleto
+
+Veinticinco commits en tres días, y casi todos en `web/`. Hasta aquí la web
+existía pero era un escaparate sin puerta; ahora tiene menú, contenido, dos
+formularios que escriben y páginas legales. **Es el cambio de peso de esta
+etapa**, y la parte del backoffice que lo acompaña —las solicitudes— toca el
+camino por el que entra un cliente.
+
+### Lo que hay que saber antes de tocar la web
+
+⚠️ **`web/` es una TERCERA build, y desde el 29 de septiembre tiene tests y
+tsconfig propios.** Antes no tenía ninguna de las dos cosas:
+
+- `web/package.json` estrena **vitest** (28 tests en 2 ficheros) y declara
+  `@astrojs/check` y `typescript`, que estaban instalados a mano y sin guardar.
+- `web/tsconfig.json` **no existía**, así que `astro check` subía por el árbol y
+  typechequeaba **la app de Angular** —169 ficheros— sin mirar ni una línea de la
+  web, saliendo en verde sobre el proyecto equivocado. Con el suyo son **28**
+  ficheros, y salieron a la luz dos imports de tipo sin `import type` que
+  `verbatimModuleSyntax` prohíbe desde siempre — más, el 30, un `SITIO` importado
+  y nunca usado en la página de preguntas, que es exactamente para lo que sirve.
+
+⚠️ **Astro empaqueta el CSS POR PÁGINA, y eso rompió cinco entradillas sin que
+nada avisara.** `.entrada` la declaraba un `<style is:global>` dentro de
+`flota.astro`: un `is:global` de una página es global **dentro de esa página** y
+no viaja a las demás. Medido en `/contacto` a 1280 px, la entradilla salía a
+**16 px, en blanco puro y con 1098 px de ancho de línea** en vez de 18 px
+atenuados a 58 caracteres. Es la **tercera variante** del fallo que `css:audit`
+no caza: la clase está declarada, y lo que falla es que su fichero no alcanza.
+Hoy `.entrada`, `.texto`, `.nota` y `.lista-check` viven en `global.css`.
+
+⚠️ **Y una clase reutilizada por su nombre volvió a costar.** Se llamó `.zonas` a
+una rejilla de tarjetas, y `.zonas` ya era el desplegable del buscador
+—`position: absolute`—: las tarjetas salieron flotando encima de la sección
+anterior. Se vio en una captura, no leyendo el código.
+
+### El calendario propio, portado a JavaScript vanilla
+
+Dorel lo pidió con dos capturas —el selector de Chrome y el panel del
+backoffice— y es un **port de la regla, no del resultado**. Vive en
+`web/src/lib/fecha-picker.ts` (aritmética pura, 24 tests) y `fecha-panel.ts`
+(el panel). Dos diferencias, y las dos son **correcciones de fallos que en el
+backoffice siguen vivos**:
+
+1. **`parseValue('date', min)` no sabe leer el `min` de un `datetime-local`** —la
+   regex va anclada—, así que devuelve `null` y el panel **no deshabilita ni un
+   día**. Los cuatro campos de la web son `datetime-local` con `min`.
+   `parseLimite()` acepta las dos formas.
+2. **Los minutos salen del `step` del campo**, no fijos de cinco en cinco. Con
+   `step="900"` una lista de cinco minutos deja el campo en `stepMismatch`: el
+   formulario no se envía y el botón deja de hacer nada **sin error en consola**.
+
+⚠️ **Con el dedo manda la hoja del sistema**, a propósito. El backoffice fuerza
+el suyo en móvil por un motivo que aquí no existe —el diálogo de Android no sabe
+vaciar— y estos campos son `required` y siempre traen valor.
+
+### Tres fallos de esta etapa que conviene no repetir
+
+⚠️ **`display: flex` en un popover lo deja PINTADO al cerrarse.** La regla que
+esconde un `[popover]` cerrado la pone el navegador, y **en la cascada el origen
+manda antes que la especificidad**: cualquier declaración de autor le gana.
+Medido: 275 × 553 px encima de la página tragándose los clics, sin un error. El
+`display` va en `.calendario:popover-open`. Lo mismo vale para `[hidden]`, que
+ahora lleva `!important` en `global.css` por esa razón exacta.
+
+⚠️ **Abrir un popover desde `mousedown` no funciona con un ratón de verdad.** El
+descarte automático corre en `pointerdown`/`pointerup`, así que el `pointerup`
+del mismo clic lo cierra. Y `preventDefault()` sobre `mousedown` no lo evita:
+solo suprime los eventos de compatibilidad de ratón. **La comprobación decía que
+funcionaba** porque la herramienta se colgó entre los dos eventos y dejó el clic
+a medias — y un clic sintético no dispara el descarte. Se abre en `click`.
+
+⚠️ **`24.95 - 24` da `0.9499999999999993`.** Al redondear precios a la
+terminación `,95`, un importe que **ya** terminaba en `,95` bajaba un euro
+entero. Solo pasaba en los precios redondos, que es donde nadie mira. Lo cazó su
+propio test. La cuenta va en **céntimos enteros**.
+
+### Los precios públicos, y por qué el redondeo vive en el backend
+
+Decisión de Dorel del 30 de septiembre: la web anuncia precios terminados en
+**`,95`** y **siempre hacia abajo** (`publicPrice()` en
+`functions/src/public/core.ts`). Hacia arriba sería cobrar más de lo anunciado;
+hacia abajo se regalan como mucho **0,99 € por cifra**.
+
+⚠️ **Está en el BACKEND y no en la web que lo pinta**, y ese es el punto: la
+misma cifra viaja a la tarjeta del listado, a la disponibilidad de un rango y al
+`quoteSnapshot` que se congela en una solicitud — **que es lo que Dorel lee en
+el correo para cobrarlo a mano**. Redondeando solo al pintar, la web diría 24,95
+y el correo 26,43.
+
+⚠️ **Y el neto se recalcula desde el bruto ya redondeado.** Conservando el de la
+tarifa, `neto + IVA` dejaría de dar el bruto anunciado.
+
+⚠️ **El aeropuerto son 30 € por trayecto CON IVA**, y en el backoffice hay que
+teclear **24,79 NETO** para que el contrato imprima 30,00: `deliveryFees` se
+teclea neto y el IVA se suma. Tecleando 30 imprimiría 36,30. Está escrito en
+`web/src/lib/zonas.ts`.
+
+### Lo legal, que nació en esta etapa
+
+- **`/aviso-legal`** existe porque el NIF salió del pie. El art. 10 de la LSSI
+  exige esos datos accesibles «de forma permanente, fácil, directa y gratuita»;
+  una página enlazada desde el pie de **todas** las páginas cumple. ⚠️ **Si ese
+  enlace desaparece, vuelve a hacer falta el bloque en el pie.**
+- **`/privacidad`** y su ancla `#cookies`. ⚠️ **No hay página de cookies porque
+  no hay cookies**: cero analítica, cero píxeles, tipografías propias y el mapa
+  de Contacto es un **enlace**, no un incrustado. Lo único que se guarda es
+  `velto-tema` en `localStorage`. **Eso se rompe con una línea**: analítica, un
+  mapa incrustado, un vídeo de YouTube o tipografías de `fonts.googleapis.com`, y
+  esa página pasa a ser falsa el mismo día y hace falta banner.
+- **Los datos registrales** salen de `company-config.ts`, y allí llevan una
+  advertencia que ahora está publicada: vienen del **pie de la factura** y **no
+  coinciden** con los que el código traía antes («Tomo 45067, Folio 44, Hoja
+  M-793170»). Merece una pregunta a la gestoría.
+- **El plazo de borrado de los mensajes de contacto son 24 h**, y ese número
+  está **publicado** en `/privacidad`. ⚠️ Un plazo escrito en una política es una
+  afirmación contrastable contra Firestore: si se toca
+  `CONSULTA_HORAS_POR_DEFECTO`, se toca esa página el mismo día.
+
+### Lo que NO se pudo prometer, y por qué
+
+De las tres cosas que Dorel quería afirmar en la entrega a domicilio, **una se
+sostiene y dos hubo que reescribirlas**:
+
+| Lo que pidió | Lo que dice la web | Por qué |
+|---|---|---|
+| «limpio» | igual | el parte fotografía el estado, y ese es el de devolución |
+| «con el depósito lleno» | «con combustible, y anotado» | la cláusula 6 dice que se devuelve con el nivel con el que salió — prometer lleno obliga al cliente a devolverlo lleno |
+| «asegurado» | «responsabilidad civil obligatoria y asistencia; el todo riesgo es opcional» | la cláusula 13. Esa frase suelta ya estuvo en el pie de todas las páginas y hubo que quitarla el 29 |
+
+Y **«Pon tu coche en alquiler» no lleva ni una cifra**: el porcentaje vive en el
+**coche** (`Vehicle.ownerSharePercent`) y la reserva lo congela; el valor del
+código es el defecto de un campo de formulario, no una tarifa. Publicarlo lo
+convertiría en la oferta de la empresa.
+
+### El sitemap se comprueba en los DOS sentidos
+
+Son **doce** páginas construidas y **diez** en el sitemap: fuera quedan el `404`
+—una página de error no se indexa nunca— y `coche`, que vive en `/coche/{id}` y
+la pinta JavaScript, así que no hay una URL que listar.
+
+⚠️ **Y eso está en un test, no en la cabeza de nadie.** `sitemap.spec.ts`
+recorre `src/pages/` y falla en las dos direcciones: una página nueva que nadie
+añada al sitemap, y una ruta del sitemap que ya no exista. `FUERA_DEL_SITEMAP`
+guarda el motivo de cada exclusión, que es lo que permite distinguir «se ha
+decidido» de «se ha olvidado» — sin eso, la lista se lee como completa.
+
+⚠️ **El spec vive en `src/lib/`, no en `src/pages/`.** Astro trata **todo** lo
+que hay en `pages/` como una ruta y trató de compilar vitest: el build se cayó
+con un error que no menciona nada de esto.
+
+### El menú, y una medida que decide el diseño
+
+El menú es **Buscar · Entrega a domicilio · Pon tu coche en alquiler ·
+Contacto**. ⚠️ **No cabe en un móvil**: a 390 px hay **288 px** útiles y los
+cuatro rótulos miden **499**. La tira deslizable de antes escondía «Contacto»
+entero, así que ahora **envuelve en dos filas** —la regla de la casa es
+recolocar, nunca ocultar— y los 45 px que crece la cabecera se recuperaron
+apretando el héroe. Acortar el rótulo **no lo evita**: con «Pon tu coche» siguen
+saliendo dos filas.
+
+### Qué falta para que la web funcione de verdad
+
+⚠️ **Los dos endpoints públicos que ESCRIBEN necesitan function Y hosting.** Sus
+rewrites —`/api/solicitud` y `/api/contacto`— viajan con el **hosting**, no con
+las functions: sin ellos la petición cae en el catch-all y devuelve HTML donde
+se espera JSON, así que el visitante rellena el formulario y ve un fallo de red.
+Es la lección de `/d/**`.
+
+## 2 nonies. El 1 y el 2 de octubre, y el incidente del 3
+
+**Catorce commits**, todos de la última milla de la web antes de producción. Lo
+que conviene llevarse, porque son decisiones de Dorel y no detalles:
+
+- **La señal es 50 €, y 25 € si el alquiler vale menos de 50 €.** A propósito
+  sin porcentajes ni cálculos: un número que se dice por teléfono sin pensarlo.
+  Y **no es reembolsable una vez firmado el contrato** —no se pueden tener
+  coches bloqueados sin ganar nada—, pero **la pre-reserva sigue siendo
+  gratuita**. Son dos momentos distintos y el texto los separa.
+- **La política de devoluciones y desistimiento**, que no es un adorno legal:
+  es lo que **BBVA exige** para conceder la pasarela nueva. El análisis de lo
+  que pide PayGold está en [tpv-bbva.md](tpv-bbva.md).
+- **`veltorent.com` deja de nombrarse en la web.** Solo `veltomobility.com`.
+  Dorel dejó en el aire qué hacer con el dominio viejo —«quizás otra página
+  tipo landing, o renuncio»—, así que la web no lo menciona hasta que se decida.
+- **SEO completo**: prerender de las fichas, datos estructurados, PWA e imágenes
+  al compartir. Era el encargo explícito antes de subir.
+- **El botón ocupado se ve ocupado**, y el presupuesto se abre en otra pestaña
+  en vez de sacarte de la web. Lo pidió Dorel llamándolo «vital»: un botón que
+  se puede pulsar dos veces duplica la reserva.
+
+**Y el guion de despliegue**, que es el entregable que hay que seguir cuando se
+decida subir: [despliegue-produccion.md](despliegue-produccion.md). **28
+functions en 15 órdenes**, por tandas de dos o tres y **en orden de daño** —los
+contratos primero, porque hoy producción imprime una cláusula de sumisión a los
+juzgados de Madrid que es nula frente a un consumidor—. Está calculado del
+**grafo de imports**, no a ojo: 27 ficheros cambiados en `functions/src` dejan
+33 functions con código viejo, porque `company-config.ts` lo importa casi todo.
+
+**Los tres correos de Google** (GKE/Filestore, Hosting on-demand y Cloud Build)
+quedaron analizados y **ninguno pide hacer nada**. El de GKE es el que más
+alarma y el que menos toca: aquí no hay Kubernetes. Queda un solo comando por
+confirmar, y es de Dorel porque `gcloud` pide reautenticación:
+`gcloud container clusters list --project velto-store`.
+
+### ⚠️ El 3 de octubre desaparecieron ficheros del espacio de trabajo
+
+**Esto no es historia: es lo primero que hay que descartar si algo no compila.**
+Entre las 13:50 y las 14:05 desaparecieron ficheros **al azar**, sin ninguna
+regla que los una —ni carpeta, ni extensión, ni tamaño—. Uno de ellos
+desapareció **mientras la sesión trabajaba**.
+
+| Qué se perdió | Lo cubre git |
+|---|---|
+| `src/assets/i18n/ro.json` | ✅ |
+| `reservation-detail.component.html` | ✅ |
+| `functions/src/contracts/clauses.ts` | ✅ |
+| `@types/node/buffer.d.ts` (en la raíz **y** en `functions/`) | ❌ |
+| `primeicons/fonts/` — 2 de 5 ficheros | ❌ |
+| `web/node_modules/js-yaml/dist/js-yaml.mjs` | ❌ |
+
+⚠️ **Y el síntoma no se parecía a la causa**, que es lo caro de esto: el
+typecheck de functions daba **183 errores de `Buffer`** y la build de la app no
+resolvía las fuentes de PrimeIcons. Los dos parecen código roto y no había una
+línea mal — faltaban ficheros **dentro de `node_modules`**, que git no cubre.
+
+**El procedimiento que funcionó**, en este orden:
+
+1. `git status` y `git diff HEAD`. **Si el árbol es idéntico a HEAD, el código
+   no es.** Eso descarta la mitad del espacio de búsqueda en diez segundos.
+2. `git restore` lo commiteado.
+3. `npm ci` en **las tres** instalaciones —raíz, `functions/` y `web/`—, que son
+   independientes y se rompieron las tres.
+
+⚠️ **Tras un `npm ci`, la primera tanda de tests de functions puede dar dos
+fallos falsos.** `arranque.spec.ts` importa `pdf.ts` (114 KB) y `clauses.ts`
+(88 KB) con la caché fría y se pasa del **timeout de 5 s**. En caliente pasan
+los 683. No es código, pero asusta justo cuando uno ya desconfía de todo.
+
+⚠️ **Y una trampa de medición que costó una vuelta: `comando | tail` devuelve el
+código de salida del `tail`.** La primera build de la app informó `exited with
+code 0` **habiendo fallado**. Es el mismo error que CLAUDE.md ya avisa al contar
+la lista de functions con `grep -c`: al verificar algo, el código de salida se
+captura del comando, no de la tubería.
+
+**La causa no está probada, pero hay un sospechoso con nombre: CCleaner 7.** Su
+servicio de fondo (`CCleaner_service`) corre permanentemente en la máquina. Su
+tarea programada no se ha ejecutado nunca, así que si fue él fue por Limpieza
+inteligente o a mano. Descartado midiendo: Defender (limpio), salud de los
+discos (`Healthy`), `git fsck` (limpio) y `chkdsk` (sin carpetas `found.*`). Que
+los ficheros se pudieran **recuperar** apunta a un borrado normal a la papelera
+y no a corrupción del disco. Lo pendiente es de Dorel: excluir
+`C:\Users\dorel\workspace` en CCleaner.
+
+**Estado al cerrar el 3 de octubre, verificado entero:** build de app, functions
+y web; 856 tests de app y 683 de functions; lint en **0 errores** (291 avisos,
+la deuda de siempre); las cuatro auditorías en verde; las tres instalaciones de
+dependencias sin `missing` ni `invalid`; y `git diff HEAD` vacío contra
+`7a3d8d3`. **No se perdió nada.**
+
+---
+
+## 2 decies. El 4 y el 5 de octubre — seis encargos, y lo que salió por el camino
+
+Esta tanda vino de Dorel usando la aplicación, que es como entra el trabajo desde
+que producción es real. Los seis encargos están hechos; lo que conviene leer es
+**lo que apareció al hacerlos**, que no estaba pedido y es lo que muerde.
+
+### Las visitas de la web, sin cookies y sin banner
+
+Informes tiene ahora visitantes únicos por día, las rutas que pisan y cuántos
+llegan al presupuesto. La function es `trackWebVisit` y la aritmética está
+aparte, con tests, en `functions/src/public/analitica-core.ts`.
+
+⚠️ **No se guarda nada en el aparato del visitante, y de ahí cuelga todo lo
+demás.** La huella es un SHA-256 de IP + navegador con una **sal que cambia cada
+día** (`VELTO_ANALYTICS_SALT`): sin almacenamiento no hace falta banner (art.
+22.2 LSSI) y el dato deja de ser reidentificable al día siguiente. Hay un test
+que afirma justo eso —la misma persona en otro día da otra huella—, porque es la
+propiedad **legal**, no un detalle de implementación: el día que alguien fije la
+sal «para poder seguir al usuario entre días», ese test cae y debe caer.
+
+⚠️ **Y por eso «usuarios únicos acumulados» NO se puede dar, que es lo que Dorel
+pidió.** Con la sal rotando, sumar los días cuenta a la misma persona tantas
+veces como vuelva. La pantalla **lo dice** en vez de enseñar un número que
+parecería esa cifra y no lo sería. Es la regla de la casa: una cifra creíble y
+equivocada es peor que un hueco.
+
+⚠️ **Un cliente de consola cuenta como persona si nadie lo mira.** Una sonda
+hecha con PowerShell entró como visitante humano: su `User-Agent` empieza por
+`Mozilla/5.0`, así que la lista de bots por nombre no la veía. Están añadidos
+`powershell`, `postman`, `guzzle` y `apache-httpclient`, con un test que usa esa
+cadena exacta. Y el beacon se calla ante `navigator.webdriver` y DNT, así que
+Playwright no ensucia la medición.
+
+### Lo que salió al mirar, y no estaba pedido
+
+- ⚠️ **Los PDF pesaban 1,2 MB por no subconjuntar la fuente.** `embedFont` sin
+  `{ subset: true }` mete la Gotham entera en cada documento. Medido sobre un
+  presupuesto real: **1194,2 KB → 40,9 KB**. Son los cinco `embedFont` de
+  `contracts/pdf.ts`; si se añade uno nuevo, lleva la opción o el documento
+  vuelve a engordar un megabyte sin que nada falle.
+- ⚠️ **Una reserva con un snapshot incompleto borraba de la lista a TODAS las de
+  debajo.** Un `@for` de Angular que revienta a mitad no pinta un hueco: aborta
+  el bucle. Medido: cinco reservas, tres pintadas. Lo arreglan los `@if` sobre
+  `vehicleSnapshot`, `clientSnapshot` y `pricingSnapshot`. **Lo que se ve es una
+  lista más corta, que se lee como «no hay más», no como un error.**
+- ⚠️ **La solicitud proponía un día de más.** `widenToFullDays()` guarda el final
+  de la ventana **exclusivo** —la medianoche UTC del día siguiente— y
+  `requestReturnAt()` lo leía como inclusivo. El test que lo cubría usaba un
+  valor **imaginado** (23:59:59.999) en vez del que de verdad se guarda, así que
+  pasaba en verde sobre una forma que no existe. Al escribir una prueba sobre
+  datos guardados, **saca el valor de Firestore, no de la cabeza**.
+- ⚠️ **`window.open()` después de un `await` lo bloquea el navegador**, y el
+  parte de entrega no se abría en producción por eso. La pestaña se abre
+  **síncrona**, antes de esperar nada, y luego se le pone el `href`. Y **sin
+  `noopener`**: con él, `window.open` devuelve `null` y no hay a quién asignarle
+  la URL.
+- ⚠️ **`set({ merge: true })` NO interpreta las claves con punto como ruta
+  anidada**; solo `update()` lo hace. `{'routes.flota': increment(1)}` habría
+  creado un campo llamado literalmente `routes.flota`. Van objetos anidados.
+
+### Lo del 5 de octubre: las solicitudes sin contestar se borran
+
+Decisión de Dorel: **a las 72 h**, aunque nadie las haya tocado. Hasta ese día
+`new` era el único estado que no se borraba nunca, y el argumento contrario está
+escrito en `ESTADOS_BORRABLES` porque sigue siendo bueno: una solicitud sin
+atender es trabajo pendiente, y la que entra un viernes a las 23:40 no puede
+desaparecer el sábado.
+
+Lo que lo sustituye son **dos** cosas, y las dos tienen que seguir siendo
+ciertas o esto vuelve a ser un borrado silencioso:
+
+1. **El plazo es más largo que el de las atendidas** —72 h frente a las 24 de
+   `bookingRequestKeepHours`— y se cuenta desde que **llegó**, no desde que se
+   tocó el documento. Con `handledAt` mandando, teclear una nota le reseteaba el
+   plazo a algo que sigue sin contestarse.
+2. **El resumen diario las nombra**, una por una, con las horas que les quedan, y
+   las del último día salen en el **asunto**. Esa sección no existía: el
+   comentario con el que justifiqué las 72 h decía «son TRES avisos antes de
+   borrar» y era falso —el resumen tenía tres secciones y ninguna las
+   mencionaba—. Antes que dejar un comentario que miente, se construye el aviso.
+
+⚠️ **Y por eso el barrido va DESPUÉS del envío en `sendDailyDigest`.** Los dos
+bloques parecen independientes y ya no lo son: barriendo primero, la última
+vuelta desaparecería antes de que el correo la nombrara.
+
+⚠️ **Tres frases pasaron a ser falsas el mismo día**, y se arreglaron en la misma
+pasada porque el texto y el hecho se deciden juntos: el `hint` de Ajustes decía
+en los tres idiomas que las sin contestar «no se borran nunca»,
+`booking-request.model.ts` lo repetía, y `/privacidad` solo contaba el caso de
+las atendidas. Esa última es la que importa: es un plazo **publicado**.
+
+Y `limpiarSolicitudesAtendidas` pasó a llamarse `limpiarSolicitudesCaducadas`.
+El nombre viejo decía menos de lo que la función hace, que es justo lo que deja
+tranquilo a quien lee la llamada.
+
+**Estado al cerrar el 5 de octubre:** 715 tests de functions y 858 de app, las
+tres builds en verde, el bundle carga como lo carga el contenedor, auditoría i18n
+OK, y `sendDailyDigest` **desplegada en desarrollo**. El correo se miró
+renderizado a 390 px, no solo en el test.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-Medido el 22 de septiembre al cerrar la sesión. **No te fíes de las cifras, que
-envejecen — vuelve a preguntarlo:**
+**No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
 
 ```bash
 git log --oneline origin/master..HEAD     # lo que develop tiene y produccion no
@@ -478,20 +853,69 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 24 de septiembre al cerrar**: `develop` en `3220cab` y
-**`origin/develop` en el mismo commit** —Dorel fue subiendo en paralelo—, con
-**12 commits que NO están en producción** (los de § 2 quinquies). `origin/master`
-en `12ea9f0`.
+**Medido el 5 de octubre al cerrar**: nada sin subir, y **65 commits que NO están
+en producción**. Y esta vez **no basta con el merge**, al revés que el día 24:
 
-⚠️ **NO hace falta desplegar Cloud Functions, ni reglas, ni índices.**
-Comprobado: entre `origin/master` y `develop` **no cambia un solo fichero de
-`functions/`**, ni `firestore.rules`, ni `firestore.indexes.json`, ni
-`storage.rules`, ni `firebase.json`. Todo el trabajo del día 24 es frontend. Un
-merge a `master` despliega hosting por CI y con eso está todo. Es la excepción,
-no la regla: normalmente hay que mirarlo.
+| Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
+|---|---|---|
+| `functions/src/` | 34 | **a mano**, por tandas de dos o tres |
+| `src/` (backoffice) | 57 | CI, al hacer merge a `master` |
+| `web/` | 54 | CI, al hacer merge a `master` |
+| `firebase.json`, `firestore.rules` | 2 | **a mano** (`deploy:prod:rules`) y hosting |
 
-⚠️ **Pero SÍ hay claves i18n nuevas** —41 líneas añadidas en `es.json`, y los
-tres idiomas—, así que aplica la nota de la caché: `assets/i18n/*.json` no lleva
+⚠️ **Y hay una function NUEVA que el guion del día 3 no nombra: `trackWebVisit`.**
+Medido ese mismo día comparando los **nombres** —no las cifras—, desplegadas:
+
+| | Cuántas | Cuáles faltan |
+|---|---|---|
+| el código define | **37** | — |
+| desarrollo | **37** | — |
+| producción | **31** | las cinco de la AEAT **y `trackWebVisit`** |
+
+Las cinco de la AEAT faltan **a propósito** hasta el 1 de enero. `trackWebVisit`
+no: sin ella, la web publicada mide contra una function que allí no existe. Va
+con su rewrite `/api/visita`, que viaja con el **hosting** — el mismo caso que
+`/api/solicitud` y `/api/contacto`. `VELTO_ANALYTICS_SALT` ya está puesta en los
+dos proyectos.
+
+⚠️ **El guion está escrito aparte**:
+[despliegue-produccion.md](despliegue-produccion.md), con las 28 functions en 15
+órdenes y en orden de daño. Lo de aquí abajo es el porqué; aquel es el qué
+teclear.
+
+⚠️ **Aquí ponía que `createBookingRequest` y `createContactRequest` estaban sin
+desplegar, y YA NO ES CIERTO.** Medido el 3 de octubre con
+`firebase functions:list --project prod`, comparando los **nombres** contra los
+exports de `index.ts`: producción tiene **31** y el código define **36**, y lo
+único que falta son **las cinco de la AEAT** —a propósito, hasta el 1 de enero—.
+Las dos de la web están allí.
+
+⚠️ **Lo que SÍ sigue faltando son sus rewrites, y eso las deja inalcanzables.**
+`/api/solicitud` y `/api/contacto` no están en el `firebase.json` de `master` y
+viajan con el **hosting**, no con las functions: la petición cae en el catch-all
+y devuelve HTML donde se espera JSON. El visitante rellena el formulario y ve un
+fallo de red. Es la lección de `/d/**`, otra vez. **Estar desplegada no es estar
+alcanzable.**
+
+Y la actualización de **`sendDailyDigest`**, que ahora barre también los
+mensajes de contacto a las 24 h — ese plazo **está publicado en `/privacidad`**,
+así que hasta que se despliegue la política dice algo que no se cumple.
+
+⚠️ **En producción, nunca `--only functions` a secas.** Subiría las cinco de la
+AEAT. Y con 36 functions a la vez se agota la cuota de CPU de Cloud Run: medido
+el 28 de septiembre con 35, entraron 15 y fallaron 19.
+
+⚠️ **Antes de desplegar, descarta el código** y compara el manifiesto:
+
+```bash
+cd functions && node -e "require('./lib/index.js')"   # el bundle carga
+FUNCTIONS_CONTROL_API=true PORT=8361 node node_modules/firebase-functions/lib/bin/firebase-functions.js . &
+curl -s http://127.0.0.1:8361/__/functions.yaml -o /tmp/manifiesto.json
+curl -s http://127.0.0.1:8361/__/quitquitquit
+```
+
+⚠️ **Y hay claves i18n nuevas** —87 líneas añadidas en `es.json` y las mismas en
+los otros dos—, así que aplica la nota de la caché: `assets/i18n/*.json` no lleva
 huella, y aunque `firebase.json` ya declara `no-cache` para esa ruta, el dominio
 propio va detrás de Cloudflare. **Quien dice la verdad sobre lo publicado es
 `rentalcar-veltomobility.web.app`**, no el dominio propio.
@@ -556,6 +980,59 @@ Cuando llegue uno de esos, el orden que ha funcionado:
 
 La lista viva está en [mejoras-pendientes.md](mejoras-pendientes.md). Lo que hay
 que tener en la cabeza al retomar:
+
+### Lo que bloquea publicar la web (30 de septiembre de 2026)
+
+**Lo primero son los dos despliegues** de § 2 ter: functions y hosting. Sin
+ellos los dos formularios de la web devuelven un fallo de red.
+
+**Y seis huecos que solo puede cerrar Dorel** —eran nueve, y el 30 de
+septiembre de 2026 cerró tres—. Están marcados en el código o en las páginas y
+ninguno se puede inventar:
+
+| Qué falta | Dónde muerde |
+|---|---|
+| Si está adherido a alguna entidad de resolución de litigios | `/aviso-legal` lleva un `[PENDIENTE]`; la Ley 7/2017 no deja callarse |
+| En el aeropuerto, dónde se queda con el cliente | terminal y punto de encuentro; hoy la página solo puede decir «te lo llevamos» |
+| Una política de cancelación | no consta en ninguna parte; el contrato solo regula el retraso en la devolución |
+| Si hay ficha de Google Business Profile | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
+| Que `veltomobility.com` RECIBA correo | hoy **no tiene ni un registro MX**: las dos páginas legales nombran esa dirección como canal de derechos RGPD |
+| Que lo legal lo mire un abogado | está escrito y es honesto, pero lo firma una empresa real |
+
+**Los tres que se cerraron**, con lo que hay que saber de cada uno:
+
+- **Las localidades.** Gratis **Arganda y Rivas**; el aeropuerto a su tarifa; y
+  para todo lo demás una cuarta opción, **«Prefiero especificar…»**, que vacía
+  el campo y deja escribir —con la localidad capitalizándose sola, porque es un
+  nombre propio—. Nació como «Otra» y duró unas horas: dejaba la palabra «Otra»
+  escrita en el campo, o sea que quien vive en Cuenca acababa con un formulario
+  que no nombra Cuenca.
+  ⚠️ **Y «Madrid capital» pasó a «Comunidad de Madrid»** en la lista de la
+  página de entrega: singularizar la capital entre pueblos del corredor se lee
+  como que la empresa llega a Madrid y **no** a Alcalá.
+- **El horario:** L-V 10-14 y 17-20, sábado 10-14, domingo cerrado, **con
+  entrega fuera de horario y sin precio publicado**. Vive una sola vez en
+  `empresa.ts` y de ahí salen la tarjeta y el `openingHoursSpecification`.
+- **El coche cedido:** seguro, ITV y mantenimiento son del propietario, en
+  exclusiva.
+  ⚠️ **Lo que NO se publicó fue la exoneración general** que pedía la misma
+  frase —«no nos responsabilizamos de nada absolutamente»—: frente a un
+  particular es nula (arts. 82 y 86 TRLGDCU, y 1102 CC), así que **no protege**,
+  y contradice lo que la propia página promete cuatro secciones más arriba.
+  Está contado en el comentario de cabecera de `/pon-tu-coche-en-alquiler`.
+
+⚠️ **Y la que estaba publicada mal en `/condiciones` ya está arreglada**
+(`7e33201`, 30 de septiembre de 2026). La sumisión a los juzgados de **Madrid
+capital** era nula —art. 54.2 LEC en un contrato con condiciones generales— y
+abusiva frente a un consumidor (art. 90.2 TRLGDCU). Estaba en **tres** sitios y
+no en uno: la cláusula 15 en los tres idiomas, el resumen de `HIGHLIGHTS` —que
+lo decía **sin** la salvedad del consumidor y es el que se enseña en la pantalla
+pública de firma— y la página. Ahora manda la regla legal: si el arrendatario es
+consumidor, el juzgado de su domicilio.
+⚠️ **Falta desplegarlo a producción**: lo imprimen `generateContractPdf`,
+`getContractForSigning` y `signContract`, y las functions van a mano.
+
+### Lo de siempre
 
 **Con fecha, y es lo único con fecha:** el guion del 1 de enero de 2027
 ([verifactu-alta.md](verifactu-alta.md) § 5 bis). Incluye un paso nuevo —el 3
@@ -641,10 +1118,16 @@ Tres cosas que hay que retomar, y ninguna es código a medias:
    ⚠️ Añadir un dominio es reversible; **retirar el viejo no**: los contratos
    firmados llevan impreso un QR que apunta a `/v/…` del dominio con el que se
    generaron.
-3. **Los 283 avisos del lint.** Son deuda reconocida, no ruido: 107 promesas sin
-   esperar —la mayoría a propósito— y 172 de accesibilidad en plantillas (47
-   `<div (click)>` que no se alcanzan con el teclado). Se repasan por tandas y
-   **entonces** se suben a `error`.
+3. **Los avisos del lint**, que a 30 de septiembre de 2026 son **290** —eran 283
+   el día 22—. Son deuda reconocida, no ruido: promesas sin esperar —la mayoría a
+   propósito— y accesibilidad en plantillas (`<div (click)>` que no se alcanzan
+   con el teclado). Se repasan por tandas y **entonces** se suben a `error`.
+   ⚠️ **Lo que importa es que sigan siendo 0 errores**: si sale un error, es de
+   lo que acabas de tocar.
+4. ⚠️ **El Storage de producción sigue sin vaciar.** Está contado en § 2 sexies:
+   el borrado masivo lo paró el clasificador de permisos y Firestore sí se vació,
+   así que allí siguen **el DNI, el carné y la firma de personas reales cuyas
+   fichas ya no existen**, con su token de descarga vivo. No es deuda estética.
 
 Y dos cosas menores que quedaron sin ejercitar en su pantalla real, por no haber
 datos en desarrollo: el panel de **fecha y hora juntas** (solo existe en editar

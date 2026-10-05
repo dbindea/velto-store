@@ -162,7 +162,9 @@
     "search": "Search",
     "showingLatest": "Showing the most recent ones. To find an older one, use the search box.",
     "viewAll": "View all",
-    "emailPlaceholder": "customer@email.com"
+    "emailPlaceholder": "customer@email.com",
+    "copy": "Copy",
+    "copyFailed": "Could not copy"
   },
   "contracts": {
     "actions": {
@@ -334,7 +336,14 @@
     "viewAll": "View all",
     "viewContract": "View contract",
     "viewReservation": "View reservation",
-    "viewVehicle": "View vehicle"
+    "viewVehicle": "View vehicle",
+    "bookingRequests": {
+      "label": "Calls to make",
+      "oneSingular": "request not handled yet",
+      "onePlural": "requests not handled yet",
+      "priceExpired": "price expired",
+      "hint": "They asked to be called back from the website"
+    }
   },
   "expenses": {
     "category": {
@@ -575,6 +584,8 @@
     },
     "report": {
       "action": "Report PDF",
+      "copyFailed": "The link could not be copied. Open it and copy the address.",
+      "copyLink": "Copy link",
       "error": "The report could not be generated",
       "problems": {
         "inspectionRequired": "No inspection to issue the report for",
@@ -678,7 +689,8 @@
     "vehicles": "Vehicles",
     "invoices": "Invoices",
     "collaborators": "Partners",
-    "events": "Events"
+    "events": "Events",
+    "bookingRequests": "Requests"
   },
   "payments": {
     "actions": {
@@ -703,7 +715,9 @@
       "secureNote": "Payment processed by Redsys. We never store your card details.",
       "subtitle": "Secure payment",
       "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us.",
-      "unavailableTitle": "Payment unavailable"
+      "unavailableTitle": "Payment unavailable",
+      "signalTerms": "This deposit is deducted from the rental price. Once paid, we confirm your booking and hold the car for those dates; if you cancel afterwards, the deposit is not refunded. If we are the ones unable to provide the car, you get it back in full.",
+      "terms": "Cancellations and refunds"
     },
     "confirm": {
       "cancelMessage": "The payment will be cancelled and will no longer count as outstanding.",
@@ -965,7 +979,28 @@
     "outExpenses": "Expenses",
     "outMaintenance": "Workshop",
     "outCommissions": "Commissions",
-    "outOwnerShares": "Owners"
+    "outOwnerShares": "Owners",
+    "web": {
+      "title": "Website visits",
+      "visitors": "Visitors",
+      "visitorsNote": "Sum of each day’s unique visitors. Someone returning on another day counts again: we cannot tell it is the same person, and that is deliberate.",
+      "pageViews": "Page views",
+      "quotes": "Reached the quote",
+      "quotesNote": "Opened the form with the price in front of them",
+      "bots": "Bots discarded",
+      "botsNote": "Not counted as visitors",
+      "funnel": "The journey",
+      "routes": "By page",
+      "route": "Page",
+      "views": "Views",
+      "step": {
+        "prices": "Saw prices for some dates",
+        "detail": "Opened a car page",
+        "quote": "Reached the quote"
+      },
+      "empty": "No visits in this period yet.",
+      "loadFailed": "Website visits could not be read"
+    }
   },
   "reservations": {
     "actions": {
@@ -1164,8 +1199,10 @@
       "waivedHint": "No deposit on booking: the whole amount stays in the rental balance."
     },
     "list": {
+      "clientMissing": "Client data missing",
       "empty": "No reservations yet",
-      "emptyFiltered": "No reservations match this filter"
+      "emptyFiltered": "No reservations match this filter",
+      "vehicleMissing": "Vehicle data missing"
     },
     "messages": {
       "invalidDates": "Return date must be after pickup date",
@@ -1274,7 +1311,12 @@
       "depositWaived": "No deposit (not requested)",
       "remainingPaymentNotDue": "No remainder (all in the down payment)"
     },
-    "title": "Reservations"
+    "title": "Reservations",
+    "fromRequest": {
+      "vehicleGone": "The car from the request is no longer free on those dates. Pick another one or change the dates.",
+      "markFailed": "The reservation was created, but the request could not be marked as converted",
+      "banner": "From request"
+    }
   },
   "search": {
     "close": "Close",
@@ -1301,7 +1343,9 @@
       "quoteValidity": "The quote must be valid for at least one day",
       "saveFailed": "It could not be saved",
       "signingExpiry": "The signing link must last at least one day",
-      "vatRate": "VAT is written as a percentage, between 0 and 100"
+      "vatRate": "VAT is written as a percentage, between 0 and 100",
+      "requestPriceHours": "The guaranteed price must be between 1 hour and 30 days.",
+      "requestKeepHours": "The deletion window must be between 1 hour and one year."
     },
     "operation": {
       "days": "days",
@@ -1315,7 +1359,13 @@
       "signingExpiry": "Signing link expiry",
       "signingExpiryHint": "Links already sent keep their own: what the customer has on their phone does not expire sooner because of this.",
       "vat": "General VAT rate",
-      "vatHint": "Applied to new reservations and frozen into each one. Written as a percentage: 21, not 0.21."
+      "vatHint": "Applied to new reservations and frozen into each one. Written as a percentage: 21, not 0.21.",
+      "hours": "hours",
+      "requestPriceHours": "Guaranteed price of a request",
+      "requestPriceHoursHint": "How long the price shown on the website is held for someone who asked for a call back. The car is not held: what is guaranteed is the figure.",
+      "requestKeepHours": "Delete handled requests after",
+      "requestKeepHoursHint": "How long a contacted, converted or discarded request is kept before its name and phone are deleted. Requests still unanswered are deleted after 72 hours, and the daily summary warns you first.",
+      "requestFrozenHint": "Both windows apply to requests arriving from now on: each one freezes its own when created, so changing them does not move a price already promised nor the expiry of existing requests."
     },
     "saved": "Saved",
     "subtitle": "Default values and who can get in",
@@ -1489,7 +1539,10 @@
       "roadsideAssistancePhone": "Roadside assistance phone",
       "ownership": "Ownership",
       "owner": "Owner",
-      "ownerSharePercent": "Owner share"
+      "ownerSharePercent": "Owner share",
+      "environmentalLabel": "Environmental label (DGT)",
+      "publicHighlight": "Highlight",
+      "publicDescription": "Public description"
     },
     "filterAllCategories": "All categories",
     "filterAllStatus": "All statuses",
@@ -1566,7 +1619,8 @@
       "rentalClassification": "Rental classification",
       "reservations": "Reservations",
       "insurance": "Insurance and roadside assistance",
-      "ownership": "Who owns the car"
+      "ownership": "Who owns the car",
+      "publicInfo": "What the customer sees"
     },
     "status": {
       "available": "Available",
@@ -1616,6 +1670,22 @@
       "veltoKeeps": "Velto keeps",
       "loadError": "Could not load the partners. Without the list there is no owner to choose.",
       "createError": "Could not create the partner."
+    },
+    "publicInfo": {
+      "hint": "This appears on the public website. The internal note is the «Description» under Basic data, and never leaves the office.",
+      "highlightPlaceholder": "Includes a free annual Madrid parking pass",
+      "highlightHint": "One line with what this car has and the others do not. Shown highlighted on the page.",
+      "descriptionPlaceholder": "Automatic hybrid, very low city consumption and an ECO label.",
+      "descriptionHint": "The paragraph that describes the car on the website."
+    },
+    "environmentalLabel": {
+      "none": "Not recorded",
+      "hints": {
+        "B": "Enters Madrid with restrictions: check the low-emission zone first.",
+        "C": "Enters Madrid and may park in the SER zone.",
+        "ECO": "Enters Madrid and parks free in the SER zone (time limited).",
+        "ZERO": "Enters Madrid with no restrictions and parks free in the SER zone."
+      }
     }
   },
   "workflow": {
@@ -2033,5 +2103,74 @@
     "subtitle": "Everything that needs doing, in one place",
     "title": "Upcoming events",
     "today": "Today"
+  },
+  "bookingRequests": {
+    "title": "Website requests",
+    "subtitle": "People who asked for a call back, with what they picked",
+    "day": "day",
+    "days": "days",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "markContacted": "Mark as contacted",
+    "convert": "Turn into a booking",
+    "discardAction": "Discard",
+    "openReservation": "Open the booking",
+    "priceExpired": "The price is no longer guaranteed",
+    "notePlaceholder": "What you agreed…",
+    "notHeld": "The customer was told the car is not held and that what is guaranteed is the price.",
+    "status": {
+      "new": "Not answered",
+      "contacted": "Contacted",
+      "converted": "Converted",
+      "discarded": "Discarded"
+    },
+    "filters": {
+      "open": "Open",
+      "new": "Not answered",
+      "contacted": "Contacted",
+      "converted": "Converted",
+      "discarded": "Discarded",
+      "all": "All"
+    },
+    "fields": {
+      "dates": "Dates",
+      "phone": "Phone",
+      "received": "Received",
+      "priceUntil": "Price guaranteed until",
+      "internalNote": "Internal note",
+      "message": "Message for the customer",
+      "place": "Pick-up at"
+    },
+    "empty": {
+      "title": "No requests",
+      "hint": "Call-back requests from the website show up here."
+    },
+    "discard": {
+      "title": "Discard this request?",
+      "message": "It stops showing among the pending ones. You will still see it under the «Discarded» filter until it is deleted."
+    },
+    "errors": {
+      "loadFailed": "The requests could not be loaded.",
+      "saveFailed": "The change could not be saved.",
+      "gone": "That request no longer exists.",
+      "alreadyHandled": "That request has already been handled: open it again to see its state."
+    },
+    "saveNote": "Save note",
+    "noteSaved": "Note saved",
+    "extend": "Extend 24 h",
+    "extended": "Price held for another 24 hours",
+    "pickup": "Pick-up",
+    "return": "Return",
+    "copied": "Copied",
+    "signal": {
+      "title": "Deposit",
+      "help": "Create the charge and send the link to the customer. The car is NOT held: the booking is made when you convert it.",
+      "create": "Charge the deposit",
+      "open": "Open the charge",
+      "created": "Charge created. Copy the link and send it.",
+      "failed": "The charge could not be created.",
+      "noAmount": "This request has no price: the deposit cannot be calculated.",
+      "concept": "Deposit for pre-booking {reference}"
+    }
   }
 }

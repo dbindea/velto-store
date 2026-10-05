@@ -128,5 +128,12 @@ export { syncAuthClaims, onAuthorizedUserChanged } from './auth-claims';
  * habría sido una línea y habría publicado la póliza del seguro, el bastidor y
  * el porcentaje que se lleva el dueño de un coche cedido.
  */
-export { publicVehicles, publicVehicleDetail, checkPublicAvailability } from './public/api';
+export {
+  publicVehicles,
+  publicVehicleDetail,
+  checkPublicAvailability,
+  createBookingRequest,
+  createContactRequest
+} from './public/api';
 export { publishVehiclePhoto, unpublishVehiclePhoto } from './public/publishVehiclePhoto';
+export { trackWebVisit } from './public/trackWebVisit';

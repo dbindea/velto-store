@@ -3,18 +3,18 @@ import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
 ---
 
-<!--
+{/*
   ⚠️ **Esta página RESUME el contrato, no lo sustituye, y no puede decir nada
   que el contrato no diga.** Cada punto de aquí sale de una cláusula real de
   `functions/src/contracts/clauses.ts` — la edad mínima de 21 años, los treinta
   minutos de cortesía, la fianza que se devuelve tras la inspección, la
-  autorización escrita para salir de España, los tribunales de Madrid—. Si esas
+  autorización escrita para salir de España, el juzgado competente—. Si esas
   cláusulas cambian, **esto cambia con ellas**.
 
   Es la misma regla que ya mordió cinco veces en los PDF: el texto y el hecho se
   deciden juntos. Una web que promete algo que el contrato no recoge es una
   discusión en el mostrador, y con razón del cliente.
--->
+*/}
 <Base
   titulo="Condiciones de alquiler | Velto"
   descripcion="Lo importante antes de reservar: edad mínima, qué incluye el precio, fianza, kilómetros, combustible y dónde se puede circular."
@@ -40,11 +40,60 @@ import { EMPRESA } from '../lib/empresa';
 
       <h2 id="cancelar">Recogida, devolución y cancelación</h2>
       <p>
+        {/*
+          ⚠️ Aquí ponía «un retraso puede suponer un cargo», y la cláusula 4 del
+          contrato dice otra cosa: pasados los treinta minutos se cobra **un día
+          entero** por cada fracción de 24 horas. No era falso, era vago — y esta
+          página existe justo para que nadie se entere en el mostrador. Quien
+          llega cuarenta minutos tarde esperaba un recargo proporcional.
+        */}
         Se acuerdan por escrito el día, la hora y el lugar. Hay
-        <strong>treinta minutos de cortesía</strong>; a partir de ahí, un retraso
-        puede suponer un cargo. Al entregar y al devolver el coche hacemos un
-        parte con fotos: es lo que evita discusiones después sobre un golpe o el
-        nivel de combustible.
+        <strong>treinta minutos de cortesía</strong>; a partir de ahí, la
+        devolución tardía se cobra como <strong>un día más de alquiler</strong>
+        por cada 24 horas empezadas. Al entregar y al devolver el coche hacemos
+        un parte con fotos: es lo que evita discusiones después sobre un golpe o
+        el nivel de combustible.
+      </p>
+
+      {/*
+        ⚠️ **Esta sección se titulaba «…y cancelación» y NO decía nada de
+        cancelar.** Era uno de los seis huecos que arrastraba la web: la
+        política no constaba en ninguna parte —ni aquí, ni en el contrato, que
+        solo regula el retraso en la devolución—. La fijó Dorel el 2 de octubre
+        de 2026 al decidir el cobro de la señal desde el backoffice.
+
+        ⚠️ **Y está escrita en los DOS sentidos a propósito.** Frente a un
+        consumidor, una cláusula que solo le penaliza a él es justo la que los
+        arts. 85 y 87.6 del TRLGDCU dejan sin efecto; una señal que funciona
+        igual en las dos direcciones —él la pierde si anula, la empresa la
+        devuelve si no cumple— es la figura de las arras del art. 1454 del
+        Código Civil y se sostiene. No es adorno legal: la mitad que
+        compromete a Velto **ya era verdad** —si el coche se va, se devuelve el
+        dinero— y escribirla no cuesta nada.
+
+        ⚠️ **Lo que separa gratis de no gratis es el PAGO, no la pre-reserva.**
+        Pedir precio por la web no compromete a nada y eso tiene que quedar
+        dicho aquí: si no, el visitante lee «no se devuelve» y no rellena el
+        formulario.
+      */}
+      <h3>Si hay que cancelar</h3>
+      <p>
+        Pedir precio en la web <strong>no cuesta nada y no te compromete</strong>:
+        mientras no pagues nada, puedes dejarlo sin más.
+      </p>
+      <p>
+        La reserva queda en firme cuando abonas la <strong>señal</strong> —50 €,
+        o 25 € si el alquiler cuesta menos de 50 €—. Esa señal
+        <strong>se descuenta del precio del alquiler</strong>, y a partir de ese
+        momento el coche queda apartado para tus fechas y deja de ofrecerse a
+        nadie más. Por eso, <strong>si cancelas después, la señal no se
+        devuelve</strong>: es lo único que compensa tener un coche parado unos
+        días sin alquilar.
+      </p>
+      <p>
+        Y al revés: <strong>si somos nosotros los que no podemos darte el
+        coche</strong>, por una avería o por lo que sea, te devolvemos la señal
+        <strong>entera</strong> y sin que tengas que reclamarla.
       </p>
 
       <h2>Precio, fianza y forma de pago</h2>
@@ -105,10 +154,21 @@ import { EMPRESA } from '../lib/empresa';
         <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a>.
       </p>
 
+      {/*
+        ⚠️ **Aquí ponía que el contrato somete las controversias a los juzgados
+        de Madrid capital, y se corrigió el 30 de septiembre de 2026 en los dos
+        sitios a la vez.** Esa sumisión es nula en un contrato con condiciones
+        generales (art. 54.2 LEC) y abusiva frente a un consumidor (art. 90.2
+        TRLGDCU), así que arreglar solo la página habría dejado el papel
+        diciéndolo: lo que se cambió primero fue la cláusula 15 de
+        `functions/src/contracts/clauses.ts`, y esta frase la sigue. Si alguien
+        vuelve a tocar allí, aquí.
+      */}
       <h2>Si hay desacuerdo</h2>
       <p>
-        Lo hablamos primero, que suele bastar. El contrato somete cualquier
-        controversia a los Juzgados y Tribunales de Madrid (capital).
+        Lo hablamos primero, que suele bastar. Si no, decide el juzgado que
+        señala la ley: <strong>si eres un particular, el de tu domicilio</strong>.
+        El contrato no te obliga a pleitear en otra ciudad.
       </p>
 
       <p class="nota">
@@ -121,26 +181,15 @@ import { EMPRESA } from '../lib/empresa';
 </Base>
 
 <style>
-  .texto {
-    max-width: 68ch;
-  }
-
-  .texto h2 {
-    font-size: var(--fs-h3);
-    margin-top: var(--sp-10);
-    /* La cabecera es pegajosa: sin esto, un ancla deja el título debajo. */
-    scroll-margin-top: 90px;
-  }
-
-  .texto p {
-    color: var(--text-2);
-  }
-
+  /*
+   * ⚠️ `.texto` y `.nota` viven ahora en `global.css`, con las demás clases de
+   * prosa: las usan también el aviso legal y la privacidad, y dejarlas aquí
+   * habría repetido el caso de `.entrada` —declarada en una página y usada en
+   * seis— a la primera. Lo que queda aquí es solo lo propio de esta página.
+   */
   .nota {
-    margin-top: 2.5rem;
-    padding-top: 1.25rem;
+    margin-top: var(--sp-10);
+    padding-top: var(--sp-5);
     border-top: var(--bw) solid var(--border);
-    font-size: var(--fs-small);
-    color: var(--text-3);
   }
 </style>

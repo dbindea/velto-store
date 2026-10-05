@@ -18,6 +18,16 @@ export interface PrecioPublico {
   gross: number;
   vatRate: number;
   currency: 'EUR';
+  /**
+   * Desde cuántos días rige, cuando es un «desde».
+   *
+   * ⚠️ **Copia fiel de `PublicPrice` en `functions/src/public/types.ts`**, como
+   * el resto de esta interfaz: la web y las functions compilan por separado y no
+   * pueden compartir módulo. Si cambia allí, cambia aquí — y si se queda corta,
+   * el campo llega y TypeScript dice que no existe, que es lo que acaba de
+   * pasar al añadirlo.
+   */
+  fromDays?: number;
 }
 
 export interface FotoPublica {
@@ -93,6 +103,17 @@ export interface CocheResumen {
   color?: string;
   photo?: FotoPublica;
   priceFrom?: PrecioPublico;
+  /**
+   * La etiqueta ambiental de la DGT.
+   *
+   * ⚠️ **Su ausencia NO significa «sin etiqueta»**, significa que no consta. La
+   * web no dice nada cuando falta: afirmar que un coche no tiene distintivo
+   * cuando sí lo tiene es tan falso como lo contrario, y de esto depende si el
+   * cliente puede entrar en Madrid.
+   */
+  environmentalLabel?: 'B' | 'C' | 'ECO' | 'ZERO';
+  /** Una línea con lo que este coche tiene y los demás no. */
+  highlight?: string;
 }
 
 export interface CocheFicha extends CocheResumen {
@@ -109,6 +130,19 @@ export interface CocheFicha extends CocheResumen {
   depositAmount?: number;
   includedKmPerDay?: number;
   minimumRentalDays?: number;
+  /**
+   * Los días `yyyy-MM-dd` que este coche **no** se puede coger.
+   *
+   * ⚠️ **Llevan dentro el día de preparación.** Un coche devuelto ayer sale
+   * ocupado hoy: hay que revisarlo, limpiarlo y repostarlo antes de volver a
+   * entregarlo. Lo calcula el backend (`disponibleDesde()` en
+   * `functions/src/public/core.ts`) con la **misma cuenta** que hace el
+   * buscador, porque un calendario que enseñe libre un día que la búsqueda
+   * después rechaza es peor que no tener calendario.
+   */
+  busyDays?: string[];
+  /** El último día que el backend ha mirado. Más allá no se afirma nada. */
+  availableUntil?: string;
 }
 
 export interface CocheDisponible extends CocheResumen {
@@ -122,8 +156,11 @@ export interface CocheDisponible extends CocheResumen {
  * petición falló manda al visitante a otra web. Por eso cada llamada puede
  * lanzar y la página distingue los tres estados: cargando, vacío y roto.
  */
-async function pedir<T>(ruta: string): Promise<T> {
-  const r = await fetch(ruta, { headers: { Accept: 'application/json' } });
+async function pedir<T>(ruta: string, opciones?: RequestInit): Promise<T> {
+  const r = await fetch(ruta, {
+    ...opciones,
+    headers: { Accept: 'application/json', ...(opciones?.headers ?? {}) },
+  });
   if (!r.ok) {
     let clave = 'error';
     try {
@@ -183,10 +220,149 @@ export function ficha(id: string): Promise<{ vehicle: CocheFicha }> {
 export function disponibilidad(
   desde: string,
   hasta: string
-): Promise<{ from: string; to: string; totalDays: number; vehicles: CocheDisponible[] }> {
+): Promise<RespuestaDisponibilidad> {
   return pedir(
     `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}`
   );
+}
+
+/**
+ * Lo mismo, pero de UN coche: el precio de unas fechas en su propia ficha.
+ *
+ * ⚠️ **Se pide al backend en vez de calcularlo aquí**, aunque la ficha ya
+ * tenga el «desde». Ese «desde» es el tramo más barato —el de un alquiler
+ * largo— y la tabla de tramos **no se publica**: es la curva de descuento del
+ * negocio. Así que el precio de tres días solo lo sabe el backend, que además
+ * lo redondea a la terminación de escaparate y lo congela igual en la
+ * solicitud. Calcularlo en el navegador sería inventárselo.
+ *
+ * ⚠️ **Y devuelve la lista, no el coche.** Si el coche está ocupado en esas
+ * fechas, `vehicles` viene **vacío** — que es la respuesta correcta y hay que
+ * tratarla: es lo que pasa cuando alguien reserva entre que se pintó el
+ * calendario y se eligieron las fechas.
+ */
+export function disponibilidadCoche(
+  desde: string,
+  hasta: string,
+  vehicleId: string
+): Promise<RespuestaDisponibilidad> {
+  return pedir(
+    `/api/availability?from=${encodeURIComponent(desde)}&to=${encodeURIComponent(hasta)}` +
+      `&vehicleId=${encodeURIComponent(vehicleId)}`
+  );
+}
+
+export interface RespuestaDisponibilidad {
+  from: string;
+  to: string;
+  totalDays: number;
+  /**
+   * Cuántas horas se garantiza el precio de una pre-reserva.
+   *
+   * ⚠️ **Viene del backend y no está escrito en la web**, porque es un ajuste
+   * (`settings/operation`): escrito a mano aquí, el día que Dorel lo cambie la
+   * página seguiría prometiendo lo de antes. Es la misma regla que el plazo de
+   * borrado publicado en `/privacidad`.
+   *
+   * ⚠️ **Y es opcional a propósito**: es un campo nuevo, y un navegador con la
+   * respuesta todavía cacheada puede no traerlo. Quien lo pinte tiene que
+   * saber qué hacer sin él.
+   */
+  priceGuaranteedHours?: number;
+  vehicles: CocheDisponible[];
+}
+
+export interface SolicitudEnviada {
+  reference: string;
+  /** Hasta cuándo se mantiene el precio. `null` solo en el camino del robot. */
+  priceGuaranteedUntil: string | null;
+  /**
+   * El enlace corto al presupuesto en PDF.
+   *
+   * ⚠️ **Puede venir `null`, y hay que tratarlo.** El PDF se genera después de
+   * escribir la solicitud y **no puede tumbarla**: si falla, la pre-reserva
+   * existe igual y lo único que falta es el papel. Un botón que lleve a
+   * ninguna parte es peor que no ofrecerlo.
+   */
+  quoteUrl?: string | null;
+  /** Si se ha mandado por correo, para poder decirlo. */
+  emailed?: boolean;
+}
+
+/**
+ * «Que me llamen»: el visitante deja su nombre y su teléfono.
+ *
+ * ⚠️ **NO manda el precio, y no es un olvido.** Lo recalcula la function con las
+ * tarifas del coche: si la cifra viajara desde aquí, cualquiera pediría un coche
+ * por un euro cambiándola en el navegador. Es la misma regla que el importe del
+ * recibo, que se lee del pago y no de la pantalla.
+ *
+ * ⚠️ **Y `trap` es el campo escondido.** Va siempre, vacío: lo rellenan los
+ * robots, no las personas.
+ */
+export function solicitar(datos: {
+  vehicleId: string;
+  from: string;
+  to: string;
+  name: string;
+  phone: string;
+  note: string;
+  /** Opcional: si lo deja, se le manda el presupuesto. */
+  email: string;
+  /**
+   * Dónde quiere recoger el coche: lo que eligió en el buscador.
+   *
+   * ⚠️ **Hasta el 2 de octubre de 2026 esto NO viajaba, y era el agujero del
+   * aeropuerto.** El buscador pide el lugar desde que existe y el dato se
+   * quedaba en la URL: alguien elegía «Aeropuerto · +30 €» y a Velto le
+   * llegaba una solicitud idéntica a una de oficina. El suplemento sigue sin
+   * sumarse al precio —la entrega se teclea a mano por reserva en el
+   * backoffice— pero ahora al menos consta dónde hay que llevar el coche.
+   */
+  place: string;
+  trap: string;
+}): Promise<SolicitudEnviada> {
+  return pedir('/api/solicitud', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  });
+}
+
+/**
+ * Lo que manda el formulario de contacto.
+ *
+ * ⚠️ **Copia fiel de `ContactInput` en `functions/src/public/contact-core.ts`**,
+ * como el resto de este fichero: la web y las functions compilan por separado y
+ * no pueden compartir módulo. Si cambia allí, cambia aquí.
+ *
+ * ⚠️ **Y `trap` va siempre, vacío**: es el campo escondido que rellenan los
+ * robots y no las personas. Al robot se le contesta que sí, para que no
+ * aprenda a dejarlo en blanco.
+ */
+export interface ConsultaContacto {
+  motivo: string;
+  name: string;
+  phone: string;
+  email: string;
+  mensaje: string;
+  duracion?: string;
+  queCoche?: string;
+  domicilio?: string;
+  lugar?: string;
+  coche?: string;
+  anio?: string;
+  poblacion?: string;
+  parado?: string;
+  trap: string;
+}
+
+export function contactar(datos: ConsultaContacto): Promise<{ reference: string }> {
+  return pedir('/api/contacto', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+  });
 }
 
 /**

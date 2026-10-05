@@ -181,9 +181,31 @@ export function tariffNetPrice(
  * cualquiera. El «desde» es lo único que el cliente necesita para comparar.
  */
 export function lowestPricePerDay(rules: VehiclePricingRule[] | undefined): number | null {
+  return cheapestRule(rules)?.pricePerDay ?? null;
+}
+
+/**
+ * El tramo más barato, entero.
+ *
+ * ⚠️ **Hace falta el tramo y no solo su precio**, porque el escaparate dice
+ * «desde X €/día» y ese X es el del alquiler **más largo**: con los tramos
+ * normales de la casa, el precio por día baja según se alarga el alquiler, así
+ * que el más barato es el del último tramo —el abierto, sin `maxDays`—. Sin
+ * decir desde cuántos días rige, «desde 25 €» es un precio que casi nadie va a
+ * pagar y el visitante lo descubre al elegir fechas.
+ *
+ * ⚠️ **Y se devuelve el tramo REAL de cada coche, no un número escrito a
+ * mano.** Las reglas se editan coche a coche en su ficha: dar por supuesto que
+ * el tramo largo empieza a los 31 días sería cierto hoy y falso el día que
+ * alguien configure otro.
+ */
+export function cheapestRule(
+  rules: VehiclePricingRule[] | undefined
+): VehiclePricingRule | null {
   if (!rules?.length) return null;
-  const precios = rules.map(r => r.pricePerDay).filter(p => typeof p === 'number' && p > 0);
-  return precios.length ? Math.min(...precios) : null;
+  const validas = rules.filter(r => typeof r.pricePerDay === 'number' && r.pricePerDay > 0);
+  if (!validas.length) return null;
+  return validas.reduce((a, b) => (b.pricePerDay < a.pricePerDay ? b : a));
 }
 
 /**
@@ -198,6 +220,227 @@ export function addVat(net: number, vatRate: number): { net: number; gross: numb
   const rate = typeof vatRate === 'number' && vatRate >= 0 ? vatRate : DEFAULT_VAT_RATE;
   const base = roundMoney(net);
   return { net: base, gross: roundMoney(base * (1 + rate)), vatRate: rate };
+}
+
+/**
+ * Lo que termina un precio de escaparate.
+ *
+ * Decisión de Dorel del 30 de septiembre de 2026: «tengo que mostrar precio de
+ * tipo desde 24,95 € al día o desde 49,95 €, redondeando a la baja con lo que
+ * viene de backend».
+ */
+const TERMINACION = 0.95;
+
+/**
+ * Baja un importe hasta la terminación de escaparate más cercana.
+ *
+ * ⚠️ **Siempre HACIA ABAJO, y esa es la parte que no se puede tocar.** El
+ * precio que la web anuncia es el que el cliente va a pagar: hacia arriba sería
+ * cobrar más de lo anunciado, que es justo lo que la ley de consumo prohíbe.
+ * Hacia abajo, lo peor que pasa es que la empresa cobre un poco menos de lo que
+ * marca su tarifa — como mucho **0,99 € por cifra**, y es una decisión
+ * comercial suya.
+ *
+ * ⚠️ **Y el importe pequeño se deja en paz.** Con menos de 1 €, bajar a la
+ * terminación daría un número negativo o ridículo. No pasa hoy —ninguna tarifa
+ * de alquiler baja de ahí— pero una función de dinero no puede devolver un
+ * negativo porque nadie previera el caso.
+ */
+export function aTerminacion(bruto: number): number {
+  if (!Number.isFinite(bruto) || bruto < 1) return roundMoney(bruto);
+
+  /*
+   * ⚠️ **La cuenta va en CÉNTIMOS ENTEROS, y no es purismo.** Escrita con
+   * decimales, `24.95 - 24` da `0.9499999999999993` en coma flotante, que es
+   * menor que `0.95`: un precio que ya terminaba en `,95` bajaba **un euro
+   * entero** hasta `23,95`. Lo cazó su propio test, y en producción habría sido
+   * dinero regalado en silencio, solo en los precios ya redondos.
+   */
+  const centimos = Math.round(roundMoney(bruto) * 100);
+  const terminacion = Math.round(TERMINACION * 100);
+  const enteros = Math.floor(centimos / 100) * 100;
+  // Con los céntimos ya por encima de la terminación, se baja a la de ESTE
+  // entero; si no, a la del anterior. 25,00 → 24,95 y 24,99 → 24,95.
+  const objetivo = centimos - enteros >= terminacion ? enteros + terminacion : enteros - 100 + terminacion;
+  return objetivo / 100;
+}
+
+/**
+ * El precio tal y como se publica: con IVA, y terminado en `,95`.
+ *
+ * ⚠️ **El neto se RECALCULA desde el bruto redondeado, no se conserva.** Si se
+ * dejara el neto de la tarifa, `neto + IVA` dejaría de dar el bruto que se
+ * anuncia y cualquier desglose que alguien imprima estaría descuadrado por
+ * céntimos. Es la misma regla que el backoffice aplica al revés en
+ * `vatBreakdownOf()`: los dos lados del impuesto tienen que cuadrar contra la
+ * cifra que se enseña, no contra la que se calculó primero.
+ *
+ * ⚠️ **Y esto vive en el BACKEND a propósito**, no en la web que lo pinta. La
+ * misma cifra viaja a tres sitios: la tarjeta del listado, la disponibilidad de
+ * un rango y el `quoteSnapshot` que se congela en una solicitud y que Dorel lee
+ * **en el correo para cobrarlo a mano**. Redondeando solo al pintar, la web
+ * diría 24,95 y el correo 26,43 — y se cobraría más de lo prometido.
+ */
+export function publicPrice(
+  net: number,
+  vatRate: number
+): { net: number; gross: number; vatRate: number } {
+  const conIva = addVat(net, vatRate);
+  const bruto = aTerminacion(conIva.gross);
+  const rate = conIva.vatRate;
+  return {
+    net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),
+    gross: bruto,
+    vatRate: rate,
+  };
+}
+
+/**
+ * La hora a la que un coche devuelto vuelve a estar disponible, **al día
+ * siguiente**.
+ *
+ * Regla de negocio de Dorel del 30 de septiembre de 2026, dicha así: «si una
+ * persona entrega el coche hoy a las 12:00 o 14:00 no se puede alquilar hasta
+ * el día siguiente a las 12:00, para revisar, limpiar y rellenar combustible».
+ */
+export const HORA_DISPONIBLE_TRAS_DEVOLVER = 12;
+
+/**
+ * Cuándo vuelve a estar libre un coche después de una devolución.
+ *
+ * ⚠️ **Esto NO existe en el backoffice, y es a propósito.** Allí hay un
+ * operador delante que sabe si el coche está listo —puede haberlo limpiado en
+ * media hora, o el cliente siguiente puede ser de confianza—; aquí no hay
+ * nadie, y ofrecer un coche que está sin repostar es una entrega que sale mal.
+ * Es la misma regla que ya separa las dos disponibilidades: en una pantalla,
+ * pasarse de prudente se ve y se corrige; en una web, ofrecer de más es una
+ * reserva que alguien atenderá.
+ *
+ * ⚠️ **Y por eso la web puede decir que NO a algo que el backoffice acepta.**
+ * No es una discrepancia: es que el mostrador tiene una información que la web
+ * no tiene. Lo que no puede pasar es lo contrario.
+ */
+export function disponibleDesde(devolucion: Date): Date {
+  const d = new Date(devolucion);
+  d.setDate(d.getDate() + 1);
+  d.setHours(HORA_DISPONIBLE_TRAS_DEVOLVER, 0, 0, 0);
+  return d;
+}
+
+/**
+ * La ventana que bloquea una reserva, **con el día de preparación dentro**.
+ *
+ * ⚠️ **Existe para que los TRES sitios que cruzan reservas cuenten lo mismo.**
+ * Son el buscador, la solicitud de «que me llamen» y el calendario de la ficha,
+ * y cada uno lo hacía por su cuenta: el día que uno aplique la preparación y
+ * otro no, la web ofrece un coche y después rechaza la solicitud con
+ * «vehicle-unavailable» — el visitante rellena sus datos y se lleva un error
+ * por algo que la página acababa de ofrecerle.
+ *
+ * Devuelve `null` cuando las fechas no se pueden leer, y quien llama lo trata
+ * como **ocupado**: es la regla de toda esta carpeta, ante la duda no publicar.
+ */
+export function ventanaOcupada(pickup: unknown, devolucion: unknown): VentanaOcupada | null {
+  const inicio = toDate(pickup);
+  const fin = toDate(devolucion);
+  if (!inicio || !fin) return null;
+  return { inicio, fin: disponibleDesde(fin) };
+}
+
+/**
+ * Las prioridades de mantenimiento que dejan el coche sin alquilar.
+ *
+ * ⚠️ **Manda la PRIORIDAD, no el tipo, y lo decidió Dorel el 1 de octubre de
+ * 2026:** «que el coche no esté disponible solo para aquel día en concreto y
+ * cuando la prioridad sea alta, porque si hay un cambio de aceite esto puede
+ * esperar». Un aceite se aplaza; una ITV, no.
+ *
+ * ⚠️ **Y bloquea SOLO ESE DÍA**, no todo lo que venga después. Es distinto de
+ * lo que hace el backoffice con una ITV **caducada** —allí el coche no sale a
+ * la calle hasta pasarla, porque circular sin ella es ilegal—: esto es la cita
+ * del taller, un día que el coche no está.
+ */
+export const PRIORIDADES_BLOQUEANTES = ['high', 'critical'] as const;
+
+/** Los estados en los que un mantenimiento ya no ocupa nada. */
+const MANTENIMIENTO_RESUELTO = ['completed', 'cancelled'] as const;
+
+/**
+ * El día que ocupa un mantenimiento, o `null` si no ocupa ninguno.
+ *
+ * ⚠️ **Sin fecha no bloquea, y aquí sí es lo correcto** —al revés que en una
+ * reserva, donde la fecha ilegible bloquea—. Un mantenimiento sin
+ * `nextDueDate` es un recordatorio sin día: no se sabe cuándo, así que no hay
+ * ningún día concreto que apartar. Bloquear «por si acaso» dejaría el coche
+ * inalquilable para siempre por una nota que alguien escribió sin fecha.
+ */
+export function ventanaDeMantenimiento(raw: Record<string, unknown>): VentanaOcupada | null {
+  const prioridad = raw['priority'];
+  if (typeof prioridad !== 'string') return null;
+  if (!(PRIORIDADES_BLOQUEANTES as readonly string[]).includes(prioridad)) return null;
+
+  const estado = raw['status'];
+  if (typeof estado === 'string' && (MANTENIMIENTO_RESUELTO as readonly string[]).includes(estado)) {
+    return null;
+  }
+
+  const dia = toDate(raw['nextDueDate']);
+  if (!dia) return null;
+
+  const inicio = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate());
+  const fin = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + 1);
+  return { inicio, fin };
+}
+
+/** Un día en `yyyy-MM-dd`, **en hora local**. */
+export function diaIso(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Una ventana de ocupación ya resuelta: cuándo sale el coche y cuándo vuelve a estar listo. */
+export interface VentanaOcupada {
+  inicio: Date;
+  /** El instante en que vuelve a estar disponible, **con la preparación dentro**. */
+  fin: Date;
+}
+
+/**
+ * Los días que un coche **no** se puede coger, para pintar el calendario.
+ *
+ * ⚠️ **Se calcula con la MISMA cuenta que hace el buscador, y eso es lo único
+ * que importa aquí.** Un calendario que enseñe libre un día que la búsqueda
+ * después rechaza es peor que no tener calendario: el visitante elige ese día,
+ * pulsa, y la web le dice que no hay coches. Por eso un día se marca ocupado
+ * cuando **el día entero** —de 00:00 a 00:00 del siguiente— se pisa con la
+ * ventana de la reserva, que es exactamente lo que comprueba
+ * `checkPublicAvailability` después de `widenToFullDays()`.
+ *
+ * ⚠️ **Y la ventana lleva dentro el día de preparación** (`disponibleDesde`),
+ * así que el día en que un coche vuelve sale ocupado aunque la reserva
+ * terminara a mediodía. Es lo que hace que el calendario explique por qué un
+ * coche «que ya ha vuelto» no se puede coger.
+ *
+ * ⚠️ **Días y no rangos**, por lo mismo que `widenToFullDays()` existe: con
+ * instantes se podría reconstruir a qué hora devuelve el coche un cliente
+ * concreto.
+ */
+export function diasOcupados(
+  ventanas: VentanaOcupada[],
+  desde: Date,
+  cuantosDias: number
+): string[] {
+  const salida: string[] = [];
+  const dia = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+
+  for (let i = 0; i < cuantosDias; i++) {
+    const inicioDia = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + i);
+    const finDia = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + i + 1);
+    if (ventanas.some(v => rangesOverlap(inicioDia, finDia, v.inicio, v.fin))) {
+      salida.push(diaIso(inicioDia));
+    }
+  }
+  return salida;
 }
 
 /**

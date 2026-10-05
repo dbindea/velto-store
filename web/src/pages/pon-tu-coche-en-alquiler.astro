@@ -1,0 +1,394 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+{/*
+  ⚠️ **Esta página NO lleva ni un porcentaje, y eso es el diseño, no un olvido.**
+
+  En el backoffice el reparto vive en el COCHE (`Vehicle.ownerSharePercent`), no
+  en el colaborador: un mismo propietario puede ceder un utilitario y una
+  furgoneta con repartos distintos, y la reserva lo congela en
+  `ownerShareSnapshot`. Hay un `DEFAULT_OWNER_SHARE_PERCENT` en el código, pero
+  es **el valor con el que nace un campo de formulario**, no una tarifa.
+  Publicarlo lo convertiría en la oferta de Velto y ataría a Dorel delante del
+  siguiente que llegue con otro coche.
+
+  ⚠️ **Lo que SÍ se afirma está respaldado por `owner-share.util.ts`**, una por
+  una: la base es el alquiler sin IVA; quedan fuera el IVA, la fianza, los
+  cargos extra y el desplazamiento; se devenga al CERRAR la reserva; el
+  porcentaje se congela y no se recalcula hacia atrás; y Velto es quien alquila
+  y quien factura al cliente, así que el propietario no aparece de cara a él.
+
+  ⚠️ **Y quién paga el seguro, la ITV y el mantenimiento ya está decidido: el
+  propietario, en exclusiva.** Lo dijo Dorel el 30 de septiembre de 2026 y cierra
+  el hueco que esta página llevaba abierto desde que se escribió —aquí ponía que
+  «se acuerda por escrito», que era lo único honesto mientras no hubiera
+  respuesta—. Sigue sin estar **modelado** en el sistema (`expenses` no tiene
+  dimensión de propiedad), pero eso es otra cosa: es un acuerdo entre dos
+  personas, no un dato que la aplicación tenga que llevar.
+
+  ⚠️ **Lo que NO se publica es una exoneración general.** Dorel lo dijo así —«no
+  nos responsabilizamos de fallos técnicos, de accidentes, de nada
+  absolutamente»— y la parte que se sostiene está escrita: Velto no paga esos
+  gastos ni responde del estado mecánico del coche. Lo que no puede ir es el «de
+  nada absolutamente», por dos motivos que además juegan en contra de quien la
+  escribe: frente a un particular una exoneración total es nula (arts. 82 y 86
+  TRLGDCU, y art. 1102 del Código Civil para el dolo), así que **no protege** y
+  solo da la sensación de que sí; y contradice lo que esta misma página promete
+  cuatro secciones más arriba —el contrato con el cliente, la fianza y los partes
+  con fotos—, que es precisamente lo que responde de los daños. Un párrafo que
+  se contradice con otro de la misma página no tranquiliza a nadie: lo que hace
+  es que el propietario pregunte por teléfono cuál de los dos vale.
+*/}
+<Base
+  titulo="Pon tu coche en alquiler en Arganda del Rey | Velto"
+  descripcion="¿Tienes un coche parado? Lo alquilamos nosotros y tú te llevas un porcentaje de cada alquiler. Nos encargamos del cliente, del contrato, del cobro y del seguimiento."
+  ruta="/pon-tu-coche-en-alquiler"
+>
+  <section class="seccion">
+    <div class="contenedor">
+      <p class="chip">Pon tu coche en alquiler</p>
+      <h1>Tu coche parado no da nada. Alquilado, sí.</h1>
+      <p class="entrada">
+        Si tienes un coche que usas los fines de semana —o que casi no usas—
+        puede estar alquilado el resto del tiempo. Lo alquilamos nosotros, con
+        nuestro contrato y nuestros clientes, y tú te llevas un porcentaje de
+        cada alquiler. No hay que darse de alta en nada: se habla, se acuerda
+        por escrito y nos ocupamos.
+      </p>
+      <div class="acciones">
+        <a class="btn btn--brand" href="/contacto?motivo=poner-en-alquiler">
+          Contarnos lo de mi coche
+        </a>
+        <a class="btn btn--ghost" href="/flota">Ver cómo se vería en la web</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion seccion--alt">
+    <div class="contenedor">
+      <h2>Cinco pasos, y cuatro son nuestros</h2>
+      <ol class="pasos">
+        <li>
+          <h3>Nos lo cuentas</h3>
+          <p>
+            Marca, modelo, año, kilómetros aproximados y cuándo lo tienes libre.
+            Por teléfono, por WhatsApp o con el formulario.
+          </p>
+        </li>
+        <li>
+          <h3>Lo vemos y acordamos tu parte</h3>
+          <p>
+            Quedamos en la oficina de {EMPRESA.oficinaCiudad.replace('28500 ', '')}.
+            Miramos el coche y los papeles, te decimos por cuánto creemos que se
+            alquila y acordamos qué porcentaje del alquiler es para ti. Lo que
+            salga de ahí queda por escrito <strong>antes</strong> de publicar
+            nada.
+          </p>
+        </li>
+        <li>
+          <h3>Lo publicamos</h3>
+          <p>
+            Fotos, ficha y precio en esta misma web. Sale igual que los
+            nuestros: quien lo vea no sabe de quién es, porque
+            <strong> tu nombre y tu matrícula no aparecen</strong>.
+          </p>
+        </li>
+        <li>
+          <h3>Lo alquilamos nosotros</h3>
+          <p>
+            El cliente es nuestro, el contrato lo firma con nosotros y el dinero
+            lo cobramos nosotros. Tú no tienes que hablar con nadie, ni entregar
+            el coche, ni perseguir un pago.
+          </p>
+        </li>
+        <li>
+          <h3>Cobras tu parte</h3>
+          <p>
+            Cuando el alquiler se cierra —el coche de vuelta, la fianza resuelta
+            y las cuentas con el cliente cerradas— tu parte queda apuntada con su
+            importe, y se te paga en efectivo o por transferencia.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  {/*
+    El ancla la enlaza el pie («Cómo se calcula tu parte»). Si se renombra, ese
+    enlace apunta al vacío y no falla nada.
+  */}
+  <section class="seccion" id="tu-parte">
+    <div class="contenedor dos-columnas">
+      <div>
+        <p class="chip">Tu parte</p>
+        <h2>Un porcentaje del alquiler, y solo del alquiler</h2>
+        <p>
+          Tu parte es un porcentaje del importe del alquiler <strong>sin
+          IVA</strong>. Se acuerda coche a coche antes de empezar, así que no hay
+          una tarifa que leer en una página web: la cifra te la decimos a ti, con
+          tu coche delante.
+        </p>
+        <p>
+          El precio del alquiler lo fijamos nosotros, y tu parte se calcula sobre
+          <strong> lo que de verdad se cobró</strong>. Si a un cliente se le
+          cierra un precio distinto del de la tarifa, tu porcentaje se aplica
+          sobre ese precio y no sobre uno teórico.
+        </p>
+
+        <h3>Lo que no entra en el cálculo</h3>
+        <ul class="exclusiones">
+          <li>
+            <strong>El IVA.</strong> No es dinero de la empresa, es de Hacienda:
+            la empresa lo cobra y lo entrega. Repartirlo sería pagarte un
+            porcentaje de un impuesto.
+          </li>
+          <li>
+            <strong>La fianza.</strong> Es un depósito del cliente que está en
+            custodia y se le devuelve. No es un ingreso de nadie.
+          </li>
+          <li>
+            <strong>Los cargos extra de la devolución.</strong> Combustible que
+            falta, limpieza, kilómetros de más: los pone y los gestiona la
+            agencia.
+          </li>
+          <li>
+            <strong>El desplazamiento.</strong> Si al cliente le llevamos el
+            coche a casa, eso lo ponemos nosotros con nuestra furgoneta y
+            nuestras horas. No lo pone tu coche.
+          </li>
+        </ul>
+      </div>
+
+      <aside class="card destacado">
+        <h3>Tu porcentaje se graba en cada alquiler</h3>
+        <p>
+          Si algún día lo renegociamos, el cambio vale para los alquileres
+          siguientes. Los que ya estaban hechos se pagan al porcentaje que
+          estaba pactado ese día: <strong>nunca se recalcula hacia atrás</strong>.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="seccion seccion--alt">
+    <div class="contenedor">
+      <h2>Qué ponemos nosotros y qué pones tú</h2>
+      <div class="reparto">
+        <article class="card">
+          <h3>Lo ponemos nosotros</h3>
+          <ul class="lista-check">
+            <li>El cliente, y las llamadas.</li>
+            <li>
+              El contrato, firmado antes de entregar el coche y con los
+              conductores nombrados uno a uno: solo conducen las personas que
+              aparecen escritas en él.
+            </li>
+            <li>El cobro, la fianza y la factura al cliente.</li>
+            <li>
+              El parte de entrega y el de devolución, con fotos, kilómetros y
+              nivel de combustible en las dos direcciones.
+            </li>
+            <li>
+              El control de la ITV y del seguro: el sistema no deja alquilar un
+              coche al que le haya caducado cualquiera de los dos, ni para unas
+              fechas en las que vaya a caducar a mitad del alquiler.
+            </li>
+            <li>La entrega y la recogida a domicilio, si el cliente las pide.</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>Lo pones tú</h3>
+          <ul class="lista-check">
+            <li>El coche, con sus papeles en orden y a tu nombre.</li>
+            <li>
+              <strong>El seguro</strong>, contratado por ti y en vigor. La
+              póliza que se imprime en el contrato del cliente es la del coche,
+              es decir la tuya.
+            </li>
+            <li><strong>La ITV</strong>, pasada y al día.</li>
+            <li>
+              <strong>El mantenimiento</strong>: revisiones, neumáticos, aceite
+              y cualquier avería o reparación que necesite el coche.
+            </li>
+            <li>Decirnos cuándo lo tienes libre.</li>
+          </ul>
+          <p class="nota reparto__nota">
+            Esos tres son tuyos porque el coche es tuyo: nosotros lo alquilamos,
+            no lo poseemos. Velto no paga el seguro, la ITV ni el mantenimiento,
+            y no responde del estado mecánico del vehículo.
+          </p>
+        </article>
+      </div>
+
+      {/*
+        ⚠️ **Esta pregunta hay que contestarla aquí o se contesta sola, y mal.**
+        La lista de al lado acaba de decir que Velto no responde del estado del
+        coche, así que lo siguiente que piensa cualquiera es «¿y si me lo
+        destrozan?». Dejarlo en el aire después de esa frase se lee como que no
+        responde nadie — y no es verdad: responde el cliente, que es quien firma
+        el alquiler. Lo que se afirma aquí está respaldado por el contrato (los
+        daños son del arrendatario), por la fianza y por los dos partes con
+        fotos, que es justo para lo que existen.
+      */}
+      <p class="nota reparto__pie">
+        <strong>¿Y si un cliente lo daña?</strong> El alquiler lo firma él: el
+        contrato le hace responsable de los daños, se le cobra una fianza y el
+        coche se fotografía al salir y al volver, así que hay con qué
+        reclamarle. Lo que cubra o no cubra un siniestro depende de la póliza
+        del coche, que es la tuya. Eso y el reparto se firman por escrito antes
+        de empezar.
+      </p>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <div class="contenedor columna">
+      <p class="chip">El dinero</p>
+      <h2>Cuándo cobras</h2>
+      <p>
+        Tu parte se calcula <strong>al cerrar cada alquiler</strong>, no al
+        reservarlo: mientras el coche está fuera, los importes todavía se pueden
+        mover. Cerrar significa que el coche ha vuelto, que se ha hecho el parte
+        de devolución y que las cuentas con el cliente están resueltas.
+      </p>
+      <p>
+        En ese momento la cifra deja de ser un cálculo y pasa a ser un importe
+        apuntado, con su fecha, su coche y su alquiler detrás. Es lo que permite
+        que dentro de seis meses cualquiera de los dos pueda decir de dónde salió
+        cada euro.
+      </p>
+      <p>
+        El pago es en efectivo o por transferencia, y queda anotado el día en que
+        salió el dinero, no el día en que se apuntó.
+      </p>
+
+      <h3>Tu factura</h3>
+      <p>
+        Lo normal es que nos pases una factura por la cesión del coche, y una
+        sola puede cubrir varios alquileres: no hace falta una por cada uno.
+        <strong> No atamos el pago a la factura</strong> — si todavía no la
+        tienes hecha, se te paga igual y la factura llega cuando llegue.
+      </p>
+
+      <h2>Lo que no te vamos a prometer</h2>
+      <ul class="exclusiones">
+        <li>
+          <strong>No te garantizamos ingresos.</strong> Depende de la época, del
+          coche y de la demanda. Cualquiera que te ponga una cifra en una web se
+          la está inventando.
+        </li>
+        <li>
+          <strong>No te prometemos que se alquile todas las semanas.</strong> Lo
+          que sí hacemos es publicarlo, enseñarlo y moverlo igual que los
+          nuestros.
+        </li>
+        <li>
+          <strong>No hay exclusividad ni permanencia.</strong> Si quieres el
+          coche un fin de semana, se bloquea y no se alquila esos días.
+        </li>
+      </ul>
+
+      <div class="cierre">
+        <h2>¿Hablamos de tu coche?</h2>
+        <p>
+          Cuéntanos qué tienes y cuándo lo tienes libre. Te decimos por cuánto
+          creemos que se alquila y qué porcentaje te podemos dar, sin compromiso.
+        </p>
+        <div class="acciones">
+          <a class="btn btn--brand" href="/contacto?motivo=poner-en-alquiler">
+            Contarnos lo de mi coche
+          </a>
+          <a class="btn btn--ghost" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+            Preguntar por WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-6); }
+
+  .columna { max-width: 68ch; }
+  .columna p { color: var(--text-2); margin-bottom: var(--sp-4); }
+  .columna h2 { margin-top: var(--sp-12); margin-bottom: var(--sp-4); }
+  .columna h3 { margin-top: var(--sp-8); margin-bottom: var(--sp-2); }
+
+  /*
+   * Los pasos: el número lo pone el contador de CSS y no el texto, porque
+   * insertar un paso en medio renumeraría a mano todo lo que viene detrás — es
+   * la misma razón por la que las cláusulas del contrato se referencian por
+   * nombre y no por número.
+   */
+  .pasos {
+    counter-reset: paso;
+    list-style: none;
+    margin: var(--sp-8) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--sp-6);
+  }
+
+  @media (min-width: 900px) {
+    .pasos { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+  }
+
+  .pasos li {
+    counter-increment: paso;
+    position: relative;
+    padding-left: var(--sp-12);
+  }
+
+  .pasos li::before {
+    content: counter(paso);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-num);
+    font-weight: var(--fw-medium);
+    color: var(--text-on-brand);
+    background: var(--brand);
+    border-radius: var(--r-pill);
+  }
+
+  .pasos h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-2); }
+  .pasos p { color: var(--text-2); font-size: var(--fs-small); }
+
+  .dos-columnas { display: grid; gap: var(--sp-10); align-items: start; }
+  @media (min-width: 900px) { .dos-columnas { grid-template-columns: 1.6fr 1fr; } }
+  .dos-columnas p { color: var(--text-2); margin-bottom: var(--sp-4); }
+  .dos-columnas h3 { margin: var(--sp-8) 0 var(--sp-3); font-size: var(--fs-h4); }
+
+  .exclusiones { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-4); }
+  .exclusiones li {
+    color: var(--text-2);
+    padding-left: var(--sp-5);
+    border-left: 2px solid var(--border-strong);
+  }
+
+  .destacado { padding: var(--sp-8); }
+  .destacado h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
+  .destacado p { color: var(--text-2); font-size: var(--fs-small); margin: 0; }
+
+  .reparto {
+    display: grid;
+    gap: var(--sp-6);
+    margin-top: var(--sp-8);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+  .reparto .card { padding: var(--sp-8); }
+  .reparto h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-2); }
+  .reparto__nota { margin-top: var(--sp-6); }
+  /* Cuelga de las dos tarjetas, no de una: por eso va fuera de la rejilla. */
+  .reparto__pie { margin-top: var(--sp-6); }
+
+  .cierre { margin-top: var(--sp-16); }
+</style>

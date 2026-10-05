@@ -1,0 +1,158 @@
+---
+import Base from '../../layouts/Base.astro';
+import FichaCoche from '../../components/FichaCoche.astro';
+import { flotaEnBuild } from '../../lib/flota-build';
+import { migas } from '../../lib/schema';
+import { SITIO } from '../../lib/empresa';
+import {
+  cambio,
+  categoria,
+  combustible,
+  euros,
+  nombreCoche,
+  type CocheResumen,
+} from '../../lib/api';
+
+/**
+ * La ficha de un coche **con su HTML y sus etiquetas de verdad**.
+ *
+ * ⚠️ **Medido el 2 de octubre de 2026, antes de esto:** una ficha servía 118
+ * palabras a quien no ejecuta JavaScript, y lo que había dentro era el
+ * **formulario de pre-reserva** — no el coche. El título que se compartía era
+ * «Alquila este coche en Arganda del Rey» para los cuatro coches, y la imagen,
+ * el logotipo de la marca. Un enlace de WhatsApp no decía qué coche era.
+ *
+ * ⚠️ **Esto NO revoca «la web es estática y los datos se piden al cargar».** El
+ * respaldo (`coche.astro` + el rewrite `/coche/**`) sigue sirviendo cualquier
+ * coche publicado después del despliegue, y el script repinta siempre con los
+ * datos de ahora. Lo que se gana es el HTML previo de los coches que ya
+ * existían; lo que no se pierde es nada.
+ *
+ * ⚠️ **Si la API no responde al compilar, esto genera CERO páginas** y la web
+ * se comporta exactamente como antes. Ver `flota-build.ts`: un build que no se
+ * puede hacer porque una function está arrancando en frío sería mucho peor.
+ */
+export async function getStaticPaths() {
+  const coches = await flotaEnBuild();
+  return coches.map((coche) => ({ params: { id: coche.id }, props: { coche } }));
+}
+
+interface Props {
+  coche: CocheResumen;
+}
+
+const { coche } = Astro.props;
+const nombre = nombreCoche(coche);
+
+/**
+ * ⚠️ **El título lleva el coche Y el sitio.** «Toyota Corolla» solo compite con
+ * todos los Toyota Corolla del mundo; lo que esta empresa puede ganar es
+ * «Toyota Corolla de alquiler en Arganda», que es una búsqueda con intención y
+ * sin competencia nacional.
+ */
+const titulo = `${nombre} de alquiler en Arganda del Rey | Velto`;
+
+const desde = coche.priceFrom ? `desde ${euros(coche.priceFrom.gross)} al día, ` : '';
+const descripcion =
+  `Alquila un ${nombre} en Arganda del Rey: ${desde}${coche.seats} plazas, ` +
+  `${cambio(coche.transmission).toLowerCase()} y ${coche.luggageCapacity} maletas. ` +
+  `Precio final con impuestos incluidos y entrega a domicilio.`;
+
+/**
+ * ⚠️ **La foto del COCHE al compartir, no el logotipo.** Es lo que pidió Dorel
+ * —«fotos de coches que deben salir»— y es lo que hace que un enlace mandado
+ * por WhatsApp enseñe el coche del que se está hablando.
+ *
+ * ⚠️ **Y es la del build, no la de ahora.** Si alguien cambia la foto, el
+ * enlace compartido sigue enseñando la anterior hasta el siguiente despliegue.
+ * Es el mismo trato que el resto de esta página y es asumible: una foto vieja
+ * del coche correcto comunica infinitamente más que un logotipo.
+ */
+const imagen = coche.photo?.url;
+
+/**
+ * El resumen que va dentro del HTML, para quien no ejecuta JavaScript.
+ *
+ * ⚠️ **Lo reemplaza el script en cuanto carga**, y por eso puede ser escueto:
+ * no compite con la ficha de verdad, la sustituye mientras no la hay. Lo que
+ * tiene que llevar es lo que un rastreador necesita para entender la página —
+ * qué coche es, qué lleva y cuánto cuesta— en HTML semántico y sin adornos.
+ */
+const esc = (s: string) =>
+  s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  );
+
+const resumen = `
+  <h1>${esc(nombre)}</h1>
+  <p>${esc(categoria(coche.category))} · ${coche.seats} plazas · ${esc(cambio(coche.transmission))} ·
+     ${esc(combustible(coche.fuelType))} · ${coche.luggageCapacity} maletas</p>
+  ${coche.priceFrom ? `<p>Desde <strong>${esc(euros(coche.priceFrom.gross))}</strong> al día.</p>` : ''}
+  ${coche.photo ? `<img src="${esc(coche.photo.url)}" alt="${esc(nombre)}" width="${coche.photo.width ?? 800}" height="${coche.photo.height ?? 600}" />` : ''}
+  <p>Alquiler en Arganda del Rey con precio final, impuestos incluidos y entrega a domicilio.</p>`;
+
+/**
+ * ⚠️ **`Car` y no `Product`.** Es un tipo real de schema.org y le dice al
+ * buscador que esto es un vehículo con sus plazas y su cambio, no un artículo
+ * de tienda. El `offers` es lo que permite que el precio salga en el
+ * resultado.
+ *
+ * ⚠️ **Y el precio es el «desde», que es lo que la página promete.** Declarar
+ * el de unas fechas concretas sería declarar un precio que depende de una
+ * consulta que el buscador no hace.
+ */
+const datosCoche = {
+  '@context': 'https://schema.org',
+  '@type': 'Car',
+  name: nombre,
+  brand: { '@type': 'Brand', name: coche.brand },
+  model: coche.model,
+  vehicleModelDate: String(coche.year),
+  seatingCapacity: coche.seats,
+  fuelType: combustible(coche.fuelType),
+  vehicleTransmission: cambio(coche.transmission),
+  ...(imagen ? { image: imagen } : {}),
+  url: `${SITIO}/coche/${coche.id}`,
+  ...(coche.priceFrom
+    ? {
+        offers: {
+          '@type': 'Offer',
+          price: coche.priceFrom.gross,
+          priceCurrency: 'EUR',
+          availability: 'https://schema.org/InStock',
+          url: `${SITIO}/coche/${coche.id}`,
+          /** El precio es por día de alquiler, y hay que decirlo o se lee como el del coche. */
+          priceSpecification: {
+            '@type': 'UnitPriceSpecification',
+            price: coche.priceFrom.gross,
+            priceCurrency: 'EUR',
+            unitCode: 'DAY',
+          },
+        },
+      }
+    : {}),
+};
+---
+
+<Base
+  titulo={titulo}
+  descripcion={descripcion}
+  ruta={`/coche/${coche.id}`}
+  precarga="coche"
+  imagen={imagen}
+  imagenAlt={`${nombre} de alquiler en Velto, Arganda del Rey`}
+>
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(datosCoche)} />
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(
+      migas([
+        { nombre: 'Inicio', ruta: '' },
+        { nombre: 'Flota', ruta: '/flota' },
+        { nombre, ruta: `/coche/${coche.id}` },
+      ])
+    )}
+  />
+  <FichaCoche resumen={resumen} />
+</Base>

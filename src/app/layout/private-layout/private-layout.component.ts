@@ -11,6 +11,7 @@ import { GlobalSearchComponent } from '@shared/components/global-search/global-s
 import { BrandLogoComponent } from '@shared/components/brand-logo/brand-logo.component';
 import { Permission, ROUTE_PERMISSIONS, can } from '@shared/utils/permissions.util';
 import { BUILD_INFO } from '@core/config/build-info';
+import { BookingRequestService } from '@features/booking-requests/services/booking-request.service';
 
 interface MenuItem {
   path: string;
@@ -19,6 +20,15 @@ interface MenuItem {
   showInMobile: boolean;
   /** Permiso necesario para verlo. Sin él, lo ve cualquier usuario autorizado. */
   permission?: Permission;
+  /**
+   * Lleva un contador al lado.
+   *
+   * ⚠️ **Es lo que hace que una entrada de menú más no sea un problema**: se ve
+   * que hay dos solicitudes sin contestar sin tener que entrar. Sin él, la
+   * pantalla depende de que alguien se acuerde de abrirla — y una solicitud que
+   * nadie ve en una hora es un alquiler perdido.
+   */
+  badge?: 'bookingRequests';
 }
 
 @Component({
@@ -41,6 +51,7 @@ export class PrivateLayoutComponent {
   authService = inject(AuthService);
   themeService = inject(ThemeService);
   private router = inject(Router);
+  private bookingRequests = inject(BookingRequestService);
 
   sidebarOpen = signal(false);
 
@@ -67,6 +78,15 @@ export class PrivateLayoutComponent {
         this.sidebarOpen.set(false);
         this.moreMenuOpen.set(false);
         this.searchOpen.set(false);
+      });
+
+    this.bookingRequests
+      .watchRequests()
+      .pipe(takeUntilDestroyed())
+      .subscribe({
+        next: (r) => this.solicitudesNuevas.set(r.filter((x) => x.status === 'new').length),
+        // Ver `solicitudesNuevas`: un contador que falta no puede tirar el menú.
+        error: () => this.solicitudesNuevas.set(0)
       });
   }
 
@@ -112,6 +132,19 @@ export class PrivateLayoutComponent {
   private readonly allMenuItems: MenuItem[] = [
     { path: '/dashboard', iconClass: 'pi pi-home', labelKey: 'menu.dashboard', showInMobile: true },
     { path: '/reservations', iconClass: 'pi pi-book', labelKey: 'menu.reservations', showInMobile: true },
+    /**
+     * ⚠️ **Justo debajo de Reservas, y ese sitio es una decisión.** El orden va
+     * de lo que más se abre a lo que menos (decisión de Dorel, 23 de septiembre
+     * de 2026), y una solicitud sin contestar es de lo más urgente que hay: el
+     * cliente está esperando una llamada y mientras tanto puede llamar a otro.
+     */
+    {
+      path: '/booking-requests',
+      iconClass: 'pi pi-inbox',
+      labelKey: 'menu.bookingRequests',
+      showInMobile: false,
+      badge: 'bookingRequests'
+    },
     { path: '/events', iconClass: 'pi pi-bell', labelKey: 'menu.events', showInMobile: true },
     { path: '/calendar', iconClass: 'pi pi-calendar', labelKey: 'menu.calendar', showInMobile: true },
     { path: '/vehicles', iconClass: 'pi pi-car', labelKey: 'menu.vehicles', showInMobile: false },
@@ -173,9 +206,47 @@ export class PrivateLayoutComponent {
     this.visibleMenuItems().filter((item) => item.showInMobile)
   );
 
+  /**
+   * Cuántas solicitudes de la web están sin contestar.
+   *
+   * ⚠️ **Se ESCUCHA, no se lee al entrar.** Quien crea una solicitud es un
+   * visitante desde fuera, en cualquier momento: con una lectura de una vez, el
+   * contador se quedaría a cero toda la sesión y la entrada de menú no serviría
+   * para lo único que existe. Es la misma razón por la que escuchan los pagos.
+   *
+   * ⚠️ **Y un fallo aquí no puede tirar el menú.** Si la consulta falla —un
+   * despliegue de reglas propagándose— el contador se queda a cero y la
+   * aplicación sigue: un número que falta es un problema pequeño, un menú que
+   * no se pinta es uno grande.
+   */
+  private readonly solicitudesNuevas = signal(0);
+
+  readonly badgeCounts = computed<Record<string, number>>(() => ({
+    bookingRequests: this.solicitudesNuevas()
+  }));
+
   readonly remainingMenuItems = computed(() =>
     this.visibleMenuItems().filter((item) => !item.showInMobile)
   );
+
+  /**
+   * ¿Hay algo con contador **escondido dentro de «Más»**?
+   *
+   * ⚠️ **Sin esto, en un móvil un aviso no existe.** Solicitudes no cabe en la
+   * barra de abajo —son seis huecos y hay quince entradas—, así que su contador
+   * vivía donde solo se ve abriendo el menú: o sea, se ve cuando ya has ido a
+   * mirar. Justo lo contrario de para lo que está un contador.
+   *
+   * ⚠️ **Es un punto y no un número**, y la diferencia importa el día que haya
+   * un segundo contador: sumar dos cosas distintas —solicitudes y lo que
+   * venga— da una cifra que no significa nada. El punto dice «hay algo aquí
+   * dentro», que es todo lo que un botón de menú puede decir con honradez; el
+   * número está dentro, en su entrada.
+   */
+  readonly hayAvisoEnMas = computed(() => {
+    const cuentas = this.badgeCounts();
+    return this.remainingMenuItems().some((item) => !!item.badge && cuentas[item.badge] > 0);
+  });
 
   moreMenuOpen = signal(false);
   searchOpen = signal(false);

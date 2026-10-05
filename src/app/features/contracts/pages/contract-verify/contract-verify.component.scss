@@ -33,7 +33,10 @@
 
   app-brand-logo {
     display: block;
-    height: 36px;
+    // 44 px: el mismo que la cabecera de la web pública y que las otras dos
+    // pantallas que ve el cliente. Ver el porqué en
+    // `payment-checkout.component.scss`.
+    height: 44px;
     max-width: 200px;
   }
 }

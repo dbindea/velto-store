@@ -1,60 +1,260 @@
 ---
 import Base from '../layouts/Base.astro';
 import { EMPRESA } from '../lib/empresa';
+import { RADIO_SIN_COSTE_KM, ZONAS, ZONAS_CERCANAS } from '../lib/zonas';
+
+const gratuitas = ZONAS.filter((z) => z.coste === 'gratuito');
+const aeropuerto = ZONAS.find((z) => z.nombre === 'Aeropuerto');
 ---
 
-<!--
-  ⚠️ **Esta página describe algo que el backoffice sabe hacer de verdad**, y por
-  eso puede estar aquí: la entrega y la recogida a domicilio son un concepto
-  propio del sistema (`deliveryFees`, con sus **dos trayectos separados**), se
-  teclean a mano al crear la reserva y **se imprimen en el contrato**, en el
-  presupuesto y en el justificante.
+{/*
+  ⚠️ **Cada afirmación de esta página está respaldada, y las tres que pidió
+  Dorel hubo que matizarlas.** La regla de la casa es que la web no promete lo
+  que el papel no sostiene — el contrato llegó a anunciar una firma digital que
+  no llevaba, y el presupuesto decía «los precios incluyen IVA» tres líneas
+  debajo de un desglose que lo sumaba.
 
-  De ahí salen las dos afirmaciones que se hacen y que no se pueden aflojar:
-  que el importe **se pacta antes** y que **consta por escrito**. Si mañana
-  dejara de imprimirse, esta página sería una promesa que el papel no respalda.
--->
+  · «Limpio» → se sostiene. El parte de entrega fotografía el estado, y ese es
+    el estado con el que hay que devolverlo.
+
+  · «Con combustible» → se dice así, NO «con el depósito lleno». La cláusula 6
+    dice que se devuelve con el nivel con el que salió, anotado y fotografiado.
+    Prometer lleno obligaría además al cliente a devolverlo lleno.
+
+  · «Asegurado» → se dice qué seguro. La cláusula 13 da la responsabilidad
+    civil obligatoria; el todo riesgo es **opcional y de pago**. Esa frase suelta
+    estuvo en el pie de TODAS las páginas y hubo que quitarla el 29 de
+    septiembre de 2026 por decir de más.
+
+  ⚠️ **Y las zonas se renderizan desde `zonas.ts`, no se escriben aquí.** Es el
+  mismo dato que usa el buscador: escrito dos veces, la página y el buscador
+  dirían cosas distintas del mismo pueblo en la misma visita.
+*/}
 <Base
-  titulo="Entrega a domicilio | Velto"
-  descripcion="Te llevamos el coche donde estés y lo recogemos al terminar. El desplazamiento se pacta antes y consta en el contrato."
+  titulo="Coche de alquiler a domicilio en Arganda del Rey | Velto"
+  descripcion="Te llevamos el coche de alquiler donde estés y lo recogemos al terminar. Sin coste en Arganda del Rey y alrededores; más lejos, con un importe que se pacta antes de reservar."
   ruta="/entrega-a-domicilio"
 >
   <section class="seccion">
     <div class="contenedor">
-      <p class="overline">Entrega a domicilio</p>
-      <h1>Te llevamos el coche donde estés</h1>
+      <p class="chip">Entrega a domicilio</p>
+      <h1>Te llevamos el coche de alquiler a donde estés</h1>
       <p class="entrada">
-        No hace falta que vengas a la oficina. Lo dejamos donde nos digas y lo
-        recogemos al terminar, a la hora que acordemos.
+        No hace falta que vengas a la oficina, ni que dejes tu coche aparcado en
+        la puerta mientras usas el nuestro. Te acercamos el coche a casa, al
+        trabajo o al hotel, y al terminar vamos a por él. En
+        <strong> Arganda del Rey y los pueblos a menos de {RADIO_SIN_COSTE_KM} km</strong>
+        no cuesta nada.
+      </p>
+      <div class="acciones">
+        <a class="btn btn--brand" href="/reservar">Consultar fechas y precios</a>
+        <a class="btn btn--ghost" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
+          Preguntar por WhatsApp
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion seccion--alt">
+    <div class="contenedor">
+      <h2>Cuatro pasos y ninguna cola</h2>
+      <ol class="pasos">
+        <li>
+          <h3>Dinos las fechas y la dirección</h3>
+          <p>
+            Por teléfono, por WhatsApp o desde el buscador. Nos vale un portal,
+            una oficina, un hotel o la puerta de la terminal.
+          </p>
+        </li>
+        <li>
+          <h3>Te decimos el precio completo</h3>
+          <p>
+            El del alquiler y el del desplazamiento, por separado y antes de
+            reservar. Si lo quieres por escrito, te mandamos el presupuesto con
+            las dos cifras dentro.
+          </p>
+        </li>
+        <li>
+          <h3>Llegamos a la hora acordada</h3>
+          <p>
+            Se firma el contrato allí mismo y hacemos el parte de entrega con
+            fotos: kilómetros, nivel de combustible y estado del coche. Es lo
+            que evita discusiones al devolverlo.
+          </p>
+        </li>
+        <li>
+          <h3>Al terminar vamos a por él</h3>
+          <p>
+            En el mismo sitio o en otro, como se haya pactado. Si prefieres
+            traerlo tú a la oficina, también: la vuelta se decide aparte.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="seccion" id="zonas">
+    <div class="contenedor">
+      <p class="chip">Zonas</p>
+      <h2>Dónde llevamos el coche</h2>
+      <p class="entrada">
+        Velto está en Arganda del Rey y trabaja sobre todo en su comarca. Por
+        eso la entrega no cuesta nada aquí al lado y más lejos se acuerda: lo
+        que se cobra es el viaje, no una tarifa inventada por kilómetro.
       </p>
 
-      <div class="bloques">
-        <article class="card bloque">
-          <h2>Se pacta antes, nunca después</h2>
-          <p>
-            El importe del desplazamiento se acuerda al reservar y aparece en el
-            contrato, en su propia línea. <strong>No es un cargo que salga al
-            devolver el coche.</strong>
+      <div class="cobertura">
+        <article class="card cobertura__zona">
+          <h3>Entrega y recogida gratuitas</h3>
+          <ul class="lista-check">
+            {gratuitas.map((z) => <li>{z.nombre}</li>)}
+            <li>Cualquier dirección a menos de {RADIO_SIN_COSTE_KM} km de Arganda</li>
+          </ul>
+          <p class="nota cobertura__nota">
+            Aquí no hay suplemento ni por llevarlo ni por ir a buscarlo.
           </p>
         </article>
 
-        <article class="card bloque">
-          <h2>Ida y vuelta se deciden por separado</h2>
-          <p>
-            Hay quien recoge en la oficina y solo pide que se le vaya a buscar.
-            Son dos servicios distintos y cada uno se pacta —y se cobra— por su
-            cuenta.
+        <article class="card cobertura__zona">
+          <h3>Cerca, con un importe que acordamos</h3>
+          <ul class="cobertura__lista">
+            {ZONAS_CERCANAS.map((n) => <li>{n}</li>)}
+          </ul>
+          <p class="nota cobertura__nota">
+            Dinos la dirección exacta y te damos el importe por teléfono. Lo
+            decimos <strong>antes</strong> de que reserves, y es el que aparece
+            después en el contrato.
           </p>
         </article>
 
-        <article class="card bloque">
-          <h2>Cerca de aquí, sin coste</h2>
+        {
+          aeropuerto && (
+            <article class="card cobertura__zona">
+              <h3>Adolfo Suárez Madrid-Barajas</h3>
+              <p class="cobertura__precio">{aeropuerto.coste}</p>
+              <p class="nota cobertura__nota">
+                Te llevamos el coche a Barajas con un suplemento fijo y lo
+                recogemos allí al volver si te viene mejor que traerlo. Es el
+                caso de quien aterriza tarde: sales del aeropuerto con el coche
+                puesto y sin pasar por ningún mostrador.
+              </p>
+              {/*
+                ⚠️ **Dónde se queda con el cliente, que era uno de los huecos
+                abiertos de la web.** Lo decidió Dorel el 2 de octubre de 2026:
+                en la zona de **Salidas** de la terminal.
+
+                ⚠️ **Y NO se nombra una terminal concreta a propósito.** Barajas
+                tiene cuatro y la que toca depende del vuelo de cada uno; poner
+                un número aquí sería mandar a alguien a la T1 cuando aterriza en
+                la T4, que a esas horas es media hora de tren. El cliente dice
+                su terminal al reservar y el punto exacto se confirma por
+                WhatsApp.
+
+                ⚠️ **Salidas y no Llegadas, aunque el cliente llegue.** En
+                Llegadas no se puede parar un coche: la acera es de parada
+                prohibida y la vigilan. La planta de Salidas es donde se deja a
+                alguien, y es donde se puede entregar un coche sin multa.
+              */}
+              <p class="nota cobertura__nota">
+                <strong>Dónde nos vemos:</strong> en la planta de
+                <strong> Salidas</strong> de tu terminal. Dinos cuál es al
+                reservar y te confirmamos el punto exacto por WhatsApp antes de
+                que vueles.
+              </p>
+            </article>
+          )
+        }
+      </div>
+
+      <p class="cobertura__pie">
+        ¿Tu pueblo no está en ninguna de las listas? Llama y lo vemos. La lista
+        dice dónde el precio ya está decidido, no hasta dónde llegamos.
+      </p>
+    </div>
+  </section>
+
+  <section class="seccion seccion--alt">
+    <div class="contenedor">
+      <p class="chip">Cómo llega el coche</p>
+      <h2>Lo que te encuentras en la puerta</h2>
+
+      <div class="incluye">
+        <article>
+          <h3>Limpio</h3>
           <p>
-            En Arganda del Rey y alrededores no cobramos el desplazamiento. Más
-            lejos, se acuerda un suplemento por teléfono antes de reservar.
+            El coche sale lavado y aspirado. Y no es solo cortesía: el estado de
+            limpieza con el que se entrega queda fotografiado en el parte, y ese
+            es el estado con el que hay que devolverlo. Si te lo diéramos sucio,
+            nos estaríamos quitando la referencia a nosotros mismos.
+          </p>
+        </article>
+
+        <article>
+          <h3>Con combustible, y anotado</h3>
+          <p>
+            Sale con combustible para rodar. El nivel exacto se anota y se
+            fotografía al entregarlo, y se devuelve con ese mismo nivel: no
+            pagas un depósito entero que no vas a gastar, y si lo traes con más,
+            tampoco hay que descontarlo de nada.
+          </p>
+        </article>
+
+        <article>
+          <h3>Asegurado y con asistencia</h3>
+          <p>
+            Con su seguro de responsabilidad civil obligatoria y asistencia en
+            carretera. La compañía, el número de póliza y el teléfono al que
+            llamar van <strong>impresos en tu contrato</strong>, y son los del
+            coche concreto que conduces. El <strong>todo riesgo es
+            opcional</strong>: si lo quieres, se contrata aparte y figura en el
+            precio.
+          </p>
+        </article>
+
+        <article>
+          <h3>Con su parte de entrega</h3>
+          <p>
+            Antes de darte las llaves hacemos el parte: kilómetros, combustible,
+            estado del coche y fotos, con su fecha. Se conserva y te lo pasamos
+            cuando lo pidas. Es lo que hace que un golpe que ya estaba no acabe
+            siendo tuyo.
+          </p>
+        </article>
+
+        <article>
+          <h3>El coche que elegiste</h3>
+          <p>
+            El de las fotos y la ficha. Aquí no existe el «grupo B o similar»:
+            lo que llega a tu portal es lo que viste en la web.
+          </p>
+        </article>
+
+        <article>
+          <h3>Sus kilómetros por escrito</h3>
+          <p>
+            Los kilómetros incluidos y lo que cuesta cada uno de más van en el
+            contrato. Si no se pactó nada por ese concepto, no se cobra nada.
           </p>
         </article>
       </div>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <div class="contenedor columna">
+      <h2>Dos trayectos, dos decisiones</h2>
+      <p>
+        La ida y la vuelta se pactan por separado, y no es una sutileza
+        administrativa: hay quien recoge el coche en la oficina porque le pilla
+        de camino y solo pide que vayamos a buscarlo al terminar. Se cobra lo
+        que se use.
+      </p>
+      <p>
+        El importe del desplazamiento aparece en su <strong>propia línea</strong>
+        del presupuesto, del justificante y del contrato. No se suma al precio
+        del alquiler ni sale al devolver el coche: <strong>no es un cargo
+        sorpresa</strong>, es un servicio que se acordó antes.
+      </p>
 
       <div class="cierre">
         <h2>¿Dónde lo necesitas?</h2>
@@ -62,11 +262,9 @@ import { EMPRESA } from '../lib/empresa';
           Dinos la dirección y las fechas y te decimos el precio final,
           desplazamiento incluido.
         </p>
-        <div class="cierre__acciones">
-          <a class="btn btn--brand" href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">
-            Preguntar por WhatsApp
-          </a>
-          <a class="btn btn--ghost" href="/reservar">Consultar fechas</a>
+        <div class="acciones">
+          <a class="btn btn--brand" href="/reservar">Consultar fechas</a>
+          <a class="btn btn--ghost" href="/contacto">Escribirnos</a>
         </div>
       </div>
     </div>
@@ -74,18 +272,71 @@ import { EMPRESA } from '../lib/empresa';
 </Base>
 
 <style>
-  .bloques {
+  .acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-top: var(--sp-6); }
+
+  .pasos {
+    counter-reset: paso;
+    list-style: none;
+    margin: var(--sp-8) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--sp-6);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+  .pasos li { counter-increment: paso; position: relative; padding-left: var(--sp-12); }
+  .pasos li::before {
+    content: counter(paso);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-num);
+    font-weight: var(--fw-medium);
+    color: var(--text-on-brand);
+    background: var(--brand);
+    border-radius: var(--r-pill);
+  }
+  .pasos h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-2); }
+  .pasos p { color: var(--text-2); font-size: var(--fs-small); }
+
+  /*
+   * ⚠️ **Se llama `.cobertura` y no `.zonas`, y eso es el arreglo de un fallo
+   * que se vio EN LA PANTALLA.** `.zonas` ya existe en `global.css`: es el
+   * desplegable del campo de recogida del buscador, que es `position: absolute`
+   * con `z-index: 3`. Al reutilizar el nombre aquí, las tres tarjetas salieron
+   * flotando **encima de la sección anterior**, tapando el cuarto paso, y el
+   * titular de esta sección desapareció debajo de ellas.
+   *
+   * Es la trampa que este proyecto ya tiene documentada —«antes de usar una
+   * clase que hayas visto en otra pantalla, comprueba cuál la declara»— y
+   * ninguna auditoría la caza: para `css:audit` la clase está declarada, y lo
+   * está. Lo que falla es que declara otra cosa.
+   */
+  .cobertura {
     display: grid;
     gap: var(--sp-6);
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-    margin-bottom: var(--sp-16);
   }
+  .cobertura__zona { padding: var(--sp-8); }
+  .cobertura__zona h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-4); }
+  .cobertura__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); color: var(--text-2); }
+  .cobertura__nota { margin-top: var(--sp-5); }
+  .cobertura__precio { font-family: var(--font-num); font-size: var(--fs-h3); color: var(--brand-text); }
+  .cobertura__pie { margin-top: var(--sp-8); color: var(--text-2); max-width: 60ch; }
 
-  .bloque { padding: var(--sp-8); }
-  .bloque h2 { font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
-  .bloque p { color: var(--text-2); font-size: var(--fs-small); }
+  .incluye {
+    display: grid;
+    gap: var(--sp-8);
+    margin-top: var(--sp-8);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  }
+  .incluye h3 { font-size: var(--fs-h4); margin-bottom: var(--sp-2); }
+  .incluye p { color: var(--text-2); font-size: var(--fs-small); }
 
-  .cierre { max-width: 52ch; }
-  .cierre p { color: var(--text-2); margin: var(--sp-4) 0 var(--sp-6); }
-  .cierre__acciones { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+  .columna { max-width: 68ch; }
+  .columna p { color: var(--text-2); margin-bottom: var(--sp-4); }
+  .cierre { margin-top: var(--sp-16); }
 </style>

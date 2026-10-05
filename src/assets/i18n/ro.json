@@ -162,7 +162,9 @@
     "search": "Caută",
     "showingLatest": "Se afișează cele mai recente. Pentru unul vechi anume, folosește căutarea.",
     "viewAll": "Vezi tot",
-    "emailPlaceholder": "client@email.com"
+    "emailPlaceholder": "client@email.com",
+    "copy": "Copiază",
+    "copyFailed": "Nu s-a putut copia"
   },
   "contracts": {
     "actions": {
@@ -334,7 +336,14 @@
     "viewAll": "Vezi toate",
     "viewContract": "Vezi contractul",
     "viewReservation": "Vezi rezervarea",
-    "viewVehicle": "Vezi vehiculul"
+    "viewVehicle": "Vezi vehiculul",
+    "bookingRequests": {
+      "label": "Apeluri de făcut",
+      "oneSingular": "cerere neprocesată",
+      "onePlural": "cereri neprocesate",
+      "priceExpired": "preț expirat",
+      "hint": "Au cerut să fie sunați de pe site"
+    }
   },
   "expenses": {
     "category": {
@@ -575,6 +584,8 @@
     },
     "report": {
       "action": "Proces-verbal PDF",
+      "copyFailed": "Linkul nu s-a putut copia. Deschide-l și copiază adresa.",
+      "copyLink": "Copiază linkul",
       "error": "Procesul-verbal nu a putut fi generat",
       "problems": {
         "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
@@ -678,7 +689,8 @@
     "vehicles": "Vehicule",
     "invoices": "Facturi",
     "collaborators": "Colaboratori",
-    "events": "Evenimente"
+    "events": "Evenimente",
+    "bookingRequests": "Solicitări"
   },
   "payments": {
     "actions": {
@@ -703,7 +715,9 @@
       "secureNote": "Plată procesată de Redsys. Nu păstrăm datele cardului tău.",
       "subtitle": "Plată securizată",
       "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
-      "unavailableTitle": "Plată indisponibilă"
+      "unavailableTitle": "Plată indisponibilă",
+      "signalTerms": "Acest avans se scade din prețul închirierii. După plată, confirmăm rezervarea și blocăm mașina pentru acele date; dacă anulezi ulterior, avansul nu se restituie. Dacă noi suntem cei care nu îți putem da mașina, îl primești înapoi integral.",
+      "terms": "Anulări și rambursări"
     },
     "confirm": {
       "cancelMessage": "Încasarea va fi anulată și nu va mai fi considerată restantă.",
@@ -965,7 +979,28 @@
     "outExpenses": "Cheltuieli",
     "outMaintenance": "Service",
     "outCommissions": "Comisioane",
-    "outOwnerShares": "Proprietari"
+    "outOwnerShares": "Proprietari",
+    "web": {
+      "title": "Vizite pe site",
+      "visitors": "Vizitatori",
+      "visitorsNote": "Suma vizitatorilor unici din fiecare zi. Cine revine în altă zi se numără din nou: nu se poate ști că e aceeași persoană, și asta e intenționat.",
+      "pageViews": "Pagini vizualizate",
+      "quotes": "Au ajuns la ofertă",
+      "quotesNote": "Au deschis formularul cu prețul în față",
+      "bots": "Boți excluși",
+      "botsNote": "Nu se numără ca vizitatori",
+      "funnel": "Parcursul",
+      "routes": "Pe pagină",
+      "route": "Pagină",
+      "views": "Vizite",
+      "step": {
+        "prices": "Au văzut prețuri pentru niște date",
+        "detail": "Au deschis fișa unei mașini",
+        "quote": "Au ajuns la ofertă"
+      },
+      "empty": "Încă nu sunt vizite în această perioadă.",
+      "loadFailed": "Vizitele site-ului nu au putut fi citite"
+    }
   },
   "reservations": {
     "actions": {
@@ -1164,8 +1199,10 @@
       "waivedHint": "Nu se cere avans: întreaga sumă rămâne în restul de plată."
     },
     "list": {
+      "clientMissing": "Client fără date",
       "empty": "Nu există rezervări",
-      "emptyFiltered": "Nicio rezervare cu acest filtru"
+      "emptyFiltered": "Nicio rezervare cu acest filtru",
+      "vehicleMissing": "Vehicul fără date"
     },
     "messages": {
       "invalidDates": "Data returnării trebuie să fie după data preluării",
@@ -1274,7 +1311,12 @@
       "depositWaived": "Fără garanție (nu s-a cerut)",
       "remainingPaymentNotDue": "Fără rest (totul a intrat în avans)"
     },
-    "title": "Rezervări"
+    "title": "Rezervări",
+    "fromRequest": {
+      "vehicleGone": "Mașina din cerere nu mai este liberă în acele date. Alege alta sau schimbă datele.",
+      "markFailed": "Rezervarea a fost creată, dar cererea nu a putut fi marcată ca transformată",
+      "banner": "Din cererea"
+    }
   },
   "search": {
     "close": "Închide",
@@ -1301,7 +1343,9 @@
       "quoteValidity": "Oferta trebuie să fie valabilă cel puțin o zi",
       "saveFailed": "Nu s-a putut salva",
       "signingExpiry": "Linkul de semnare trebuie să dureze cel puțin o zi",
-      "vatRate": "TVA se scrie ca procent, între 0 și 100"
+      "vatRate": "TVA se scrie ca procent, între 0 și 100",
+      "requestPriceHours": "Prețul garantat trebuie să fie între 1 oră și 30 de zile.",
+      "requestKeepHours": "Termenul de ștergere trebuie să fie între 1 oră și un an."
     },
     "operation": {
       "days": "zile",
@@ -1315,7 +1359,13 @@
       "signingExpiry": "Expirarea linkului de semnare",
       "signingExpiryHint": "Linkurile deja trimise o păstrează pe a lor: ce are clientul pe telefon nu expiră mai devreme din cauza asta.",
       "vat": "Cotă TVA generală",
-      "vatHint": "Se aplică rezervărilor noi și se îngheață în fiecare. Se scrie ca procent: 21, nu 0,21."
+      "vatHint": "Se aplică rezervărilor noi și se îngheață în fiecare. Se scrie ca procent: 21, nu 0,21.",
+      "hours": "ore",
+      "requestPriceHours": "Preț garantat pentru o solicitare",
+      "requestPriceHoursHint": "Cât timp se menține prețul pe care site-ul l-a arătat celui care a cerut să îl sunăm. Mașina nu este rezervată: ceea ce se garantează este suma.",
+      "requestKeepHours": "Șterge solicitările rezolvate după",
+      "requestKeepHoursHint": "Cât timp se păstrează o solicitare contactată, transformată sau respinsă înainte de a-i șterge numele și telefonul. Cele fără răspuns se șterg după 72 de ore, iar rezumatul zilnic te anunță înainte.",
+      "requestFrozenHint": "Ambele termene se aplică solicitărilor care vin de acum înainte: fiecare îl fixează pe al său la creare, așa că schimbarea lor nu mută un preț deja promis și nici expirarea celor existente."
     },
     "saved": "Salvat",
     "subtitle": "Valori implicite și cine poate intra",
@@ -1489,7 +1539,10 @@
       "roadsideAssistancePhone": "Telefon asistență rutieră",
       "ownership": "Proprietate",
       "owner": "Proprietar",
-      "ownerSharePercent": "Partea proprietarului"
+      "ownerSharePercent": "Partea proprietarului",
+      "environmentalLabel": "Etichetă de mediu (DGT)",
+      "publicHighlight": "Evidențiat",
+      "publicDescription": "Descriere publică"
     },
     "filterAllCategories": "Toate categoriile",
     "filterAllStatus": "Toate statusurile",
@@ -1566,7 +1619,8 @@
       "rentalClassification": "Clasificare de închiriere",
       "reservations": "Rezervări",
       "insurance": "Asigurare și asistență rutieră",
-      "ownership": "Al cui este vehiculul"
+      "ownership": "Al cui este vehiculul",
+      "publicInfo": "Ce vede clientul"
     },
     "status": {
       "available": "Disponibil",
@@ -1616,6 +1670,22 @@
       "veltoKeeps": "Velto păstrează",
       "loadError": "Colaboratorii nu au putut fi încărcați. Fără listă nu se poate alege un proprietar.",
       "createError": "Colaboratorul nu a putut fi creat."
+    },
+    "publicInfo": {
+      "hint": "Acestea apar pe site-ul public. Nota internă este «Descrierea» de la Date de bază și nu iese niciodată.",
+      "highlightPlaceholder": "Include abonament anual gratuit de parcare în Madrid",
+      "highlightHint": "Un rând cu ce are mașina asta și nu au celelalte. Apare evidențiat în fișă.",
+      "descriptionPlaceholder": "Hibrid automat, consum foarte mic în oraș și etichetă ECO.",
+      "descriptionHint": "Paragraful care descrie mașina pe site."
+    },
+    "environmentalLabel": {
+      "none": "Nu este consemnată",
+      "hints": {
+        "B": "Intră în Madrid cu restricții: verifică zona cu emisii reduse.",
+        "C": "Intră în Madrid și poate parca în zona SER.",
+        "ECO": "Intră în Madrid și parchează gratuit în zona SER (limitat în timp).",
+        "ZERO": "Intră în Madrid fără restricții și parchează gratuit în zona SER."
+      }
     }
   },
   "workflow": {
@@ -2033,5 +2103,74 @@
     "subtitle": "Tot ce trebuie făcut, într-un singur loc",
     "title": "Evenimente apropiate",
     "today": "Azi"
+  },
+  "bookingRequests": {
+    "title": "Solicitări de pe site",
+    "subtitle": "Cine a cerut să îl sunăm, cu ce a ales",
+    "day": "zi",
+    "days": "zile",
+    "call": "Sună",
+    "whatsapp": "WhatsApp",
+    "markContacted": "Marchează contactată",
+    "convert": "Transformă în rezervare",
+    "discardAction": "Renunță",
+    "openReservation": "Vezi rezervarea",
+    "priceExpired": "Prețul nu mai este garantat",
+    "notePlaceholder": "Ce ați vorbit…",
+    "notHeld": "Clientului i s-a spus că mașina nu este rezervată și că i se garantează prețul.",
+    "status": {
+      "new": "Fără răspuns",
+      "contacted": "Contactată",
+      "converted": "Transformată",
+      "discarded": "Respinsă"
+    },
+    "filters": {
+      "open": "În lucru",
+      "new": "Fără răspuns",
+      "contacted": "Contactate",
+      "converted": "Transformate",
+      "discarded": "Respinse",
+      "all": "Toate"
+    },
+    "fields": {
+      "dates": "Date",
+      "phone": "Telefon",
+      "received": "Primită",
+      "priceUntil": "Preț garantat până la",
+      "internalNote": "Notă internă",
+      "message": "Mesaj pentru client",
+      "place": "Ridicare la"
+    },
+    "empty": {
+      "title": "Nicio solicitare",
+      "hint": "Aici apar cererile de tip «Sună-mă» de pe site."
+    },
+    "discard": {
+      "title": "Respingi această solicitare?",
+      "message": "Nu mai apare printre cele în așteptare. O vei vedea în filtrul «Respinse» până când se șterge."
+    },
+    "errors": {
+      "loadFailed": "Solicitările nu au putut fi încărcate.",
+      "saveFailed": "Modificarea nu a putut fi salvată.",
+      "gone": "Cererea nu mai există.",
+      "alreadyHandled": "Cererea a fost deja procesată: deschide-o din nou ca să vezi cum stă."
+    },
+    "saveNote": "Salvează nota",
+    "noteSaved": "Notă salvată",
+    "extend": "Prelungește 24 h",
+    "extended": "Preț garantat încă 24 de ore",
+    "pickup": "Ridicare",
+    "return": "Returnare",
+    "copied": "Copiat",
+    "signal": {
+      "title": "Avans",
+      "help": "Creează plata și trimite linkul clientului. Mașina NU se blochează: rezervarea se face la conversie.",
+      "create": "Încasează avansul",
+      "open": "Vezi plata",
+      "created": "Plată creată. Copiază linkul și trimite-l.",
+      "failed": "Plata nu a putut fi creată.",
+      "noAmount": "Această cerere nu are preț: avansul nu se poate calcula.",
+      "concept": "Avans pentru pre-rezervarea {reference}"
+    }
   }
 }

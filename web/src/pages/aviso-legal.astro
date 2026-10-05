@@ -1,0 +1,193 @@
+---
+import Base from '../layouts/Base.astro';
+import { EMPRESA, SITIO } from '../lib/empresa';
+---
+
+{/*
+  ⚠️ **Esta página existe porque el NIF salió del pie**, y no es un detalle de
+  orden: es lo que hace legal haberlo quitado.
+
+  El art. 10 de la Ley 34/2002 (LSSI-CE) obliga a quien presta servicios por
+  internet a tener accesibles «de forma permanente, fácil, directa y gratuita»
+  su denominación social, su NIF, su domicilio y sus datos registrales. Una
+  página propia enlazada desde el pie de **todas** las páginas cumple; llevarlos
+  a las condiciones de alquiler no, porque aquellas regulan el contrato y se
+  leen antes de reservar — no son la identificación del prestador.
+
+  ⚠️ **Y por eso el enlace del pie no se puede quitar.** El día que desaparezca,
+  vuelve a hacer falta el bloque en el pie.
+
+  ⚠️ **Los datos registrales salen del PIE DE LA FACTURA**, copiados de
+  `functions/src/company-config.ts`. Allí llevan una advertencia que conviene
+  respetar: sustituyeron a unos anteriores —«Tomo 45067, Folio 44, Hoja
+  M-793170»— que no coinciden con los de la factura. Ganó la factura porque es
+  el documento que de verdad llega al cliente, pero merece una segunda mirada
+  con la gestoría; y si se corrigen allí, se corrigen en `empresa.ts`.
+
+  ⚠️ **Y esto lo ha escrito un programador, no un abogado.** El contenido es
+  honesto y sigue la norma que se cita, pero antes de publicar conviene que lo
+  revise alguien que responda de ello.
+*/}
+<Base
+  titulo="Aviso legal | Velto"
+  descripcion="Quién es el titular de esta web: denominación social, NIF, domicilio y datos de contacto de VELTO MOBILITY."
+  ruta="/aviso-legal"
+>
+  <section class="seccion">
+    <div class="contenedor texto">
+      <p class="overline">Aviso legal</p>
+      <h1>Quién hay detrás de esta web</h1>
+      <p class="entrada">
+        Los datos que la ley pide que estén siempre a la vista, en un sitio al
+        que se llega desde el pie de cualquier página.
+      </p>
+
+      <h2 id="titular">Titular</h2>
+      {/*
+        ⚠️ El ÚNICO sitio de toda la web donde aparece la razón social, y va
+        junto al NIF: es donde la empresa comparece como persona jurídica. En
+        todo lo demás manda la marca. Y `razonSocial` acaba en punto, así que
+        nunca se pone al final de una frase.
+      */}
+      {/*
+        ⚠️ **El `{' '}` no sobra: sin él el espacio DESAPARECE.** Astro trae
+        `compressHTML` activado por defecto y colapsa el espacio en blanco de la
+        plantilla; el que va entre una etiqueta y una **expresión** —o entre una
+        etiqueta y otra etiqueta— se lo lleva entero. Resultado en la página
+        publicada: «Oficina de atención al público:C/ María Zambrano, 4». Lo vio
+        Dorel el 5 de octubre de 2026 leyendo el aviso legal.
+        ⚠️ Un espacio escrito a secas (`</strong> {valor}`) es exactamente lo
+        que había aquí y NO funciona: hay que escribirlo como expresión, que es
+        lo único que el compresor no toca.
+        ⚠️ Y es un espacio normal, no `&nbsp;`: el domicilio es largo y tiene
+        que poder partir de línea en un móvil.
+        Pasa solo en esta página porque es la única donde una etiqueta va
+        seguida de un valor dinámico; donde el texto es estático, el compresor
+        sí deja un espacio.
+      */}
+      <ul>
+        <li><strong>Denominación social:</strong>{' '}{EMPRESA.razonSocial}</li>
+        <li><strong>NIF:</strong>{' '}{EMPRESA.nif}</li>
+        <li><strong>Domicilio social:</strong>{' '}{EMPRESA.domicilioSocial}</li>
+        <li><strong>Oficina de atención al público:</strong>{' '}{EMPRESA.oficina}</li>
+        <li><strong>Teléfono:</strong>{' '}{EMPRESA.telefono}</li>
+        <li><strong>Correo:</strong>{' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></li>
+        <li><strong>Datos registrales:</strong>{' '}{EMPRESA.registro}</li>
+      </ul>
+      <p class="nota">
+        El domicilio social es el inscrito en el Registro Mercantil. La oficina
+        de atención al público es donde se entrega y se recoge el coche, y es la
+        que aparece en el resto de la web.
+      </p>
+
+      <h2 id="objeto">Qué se ofrece aquí</h2>
+      <p>
+        Esta web informa sobre el alquiler de vehículos sin conductor y permite
+        consultar disponibilidad y precios, y dejar una solicitud para que te
+        llamemos. <strong>No se contrata ni se paga desde aquí:</strong> el
+        alquiler se cierra por teléfono, por WhatsApp o en la oficina, y se
+        formaliza en un contrato escrito que se firma antes de entregar el coche.
+      </p>
+      <p>
+        Las condiciones que rigen ese contrato están en
+        <a href="/condiciones">Condiciones de alquiler</a>.
+      </p>
+
+      <h2 id="precios">Precios y disponibilidad</h2>
+      <p>
+        Los precios que se muestran incluyen IVA y corresponden al alquiler del
+        vehículo durante los días indicados. La fianza va aparte y se devuelve.
+        Si se pacta entrega a domicilio, ese importe se acuerda antes y figura
+        en su propia línea del contrato.
+      </p>
+      <p>
+        La disponibilidad se consulta en tiempo real, pero mostrar un coche
+        libre no lo reserva: el vehículo queda apartado cuando se confirma la
+        reserva, no antes.
+      </p>
+
+      <h2 id="propiedad">Contenido de la web</h2>
+      <p>
+        Los textos, las fotografías de los vehículos, el logotipo y el diseño de
+        esta web son de VELTO MOBILITY o se usan con permiso de su titular. Se
+        pueden enlazar libremente; reproducirlos con fines comerciales, no.
+      </p>
+
+      <h2 id="responsabilidad">Responsabilidad</h2>
+      <p>
+        Ponemos cuidado en que lo que se publica aquí sea cierto y esté al día.
+        Aun así, un precio o una disponibilidad pueden cambiar entre que se
+        consultan y se reserva: lo que vale es lo que se confirme al cerrar la
+        reserva y lo que recoja el contrato.
+      </p>
+
+      <h2 id="reclamaciones">Reclamaciones</h2>
+      <p>
+        Existen hojas de reclamaciones a disposición del consumidor en la
+        oficina de {EMPRESA.oficinaCalle}. También puedes reclamar
+        escribiéndonos a <a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a>
+        o llamando al {EMPRESA.telefono}, y te contestamos por el mismo medio.
+      </p>
+      {/*
+        ⚠️ **Aquí había un `[PENDIENTE]` publicado**, y eso ya era peor que
+        cualquiera de las dos respuestas: una página legal con un corchete
+        dentro dice que nadie la ha terminado de leer.
+
+        ⚠️ **La Ley 7/2017 obliga a informar AUNQUE NO se esté adherido.** Su
+        título III impone a *todos* los empresarios informar de la existencia
+        de entidades acreditadas de resolución alternativa, estén adheridos o
+        no, y el incumplimiento es infracción sancionable en materia de
+        consumo. Callarse no es neutro.
+
+        ⚠️ **Y NO se enlaza la plataforma europea de ODR.** Dejó de operar el
+        **20 de julio de 2025** (Reglamento (UE) 2024/3228, que deroga el
+        524/2013): el enlace que durante años fue obligatorio es hoy un enlace
+        muerto en una página legal, que es exactamente lo que se revisa cuando
+        alguien busca un defecto. Si lo ves en una plantilla copiada de
+        internet, está desactualizada.
+
+        ⚠️ **Está escrito como NO adherido, que es el estado por defecto**: la
+        adhesión al Sistema Arbitral de Consumo es voluntaria y exige una
+        solicitud expresa. Si Velto se adhiere algún día, esto pasa a nombrar
+        la entidad **y su página web**, que es lo que la ley pide en ese caso —
+        y entonces también hay que decirlo en las condiciones generales, no
+        solo aquí.
+      */}
+      <p>
+        <strong>Resolución alternativa de litigios.</strong>
+        {/*
+          ⚠️ **El `{' '}` de después NO sobra.** Astro se come el espacio entre
+          una expresión y la etiqueta siguiente cuando hay un salto de línea
+          entre ellas: salía «VELTO MOBILITY, S.L.no está adherida», pegado. Es
+          primo del aviso de CLAUDE.md sobre que `legalName` acaba en punto —
+          esa razón social es un campo de minas en cuanto toca otro texto.
+        */}
+        {' '}{EMPRESA.razonSocial}{' '}<strong>no está adherida</strong> a ninguna
+        entidad de resolución alternativa de litigios en materia de consumo ni a
+        ningún código de conducta que obligue a ello. Te informamos de todos
+        modos, porque la ley nos obliga a hacerlo, de que existen entidades
+        acreditadas para resolver este tipo de conflictos sin ir a juicio: la
+        {' '}<a href="https://www.comunidad.madrid/servicios/consumo" rel="noopener">
+        Junta Arbitral de Consumo de la Comunidad de Madrid</a> y la oficina
+        municipal de información al consumidor (OMIC) de tu localidad.
+      </p>
+      <p class="nota">
+        Como no estamos adheridos, esas entidades solo pueden intervenir si
+        aceptamos su arbitraje en cada caso concreto. Antes de llegar ahí,
+        escríbenos: lo normal es que se resuelva en el mismo día.
+      </p>
+
+      <h2 id="ley">Ley aplicable</h2>
+      <p>
+        A esta web y a los contratos que de ella se deriven les es de aplicación
+        la legislación española. Si eres consumidor, cualquier reclamación
+        judicial se resuelve ante los tribunales que te correspondan por ley, sin
+        que ninguna cláusula pueda obligarte a acudir a otros.
+      </p>
+
+      <p class="nota">
+        Titular: {EMPRESA.razonSocial} · NIF {EMPRESA.nif} · {SITIO}
+      </p>
+    </div>
+  </section>
+</Base>
