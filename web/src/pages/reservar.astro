@@ -109,12 +109,92 @@ import { ORDENES } from '../lib/resultados';
         pulsaría otra vez creyendo que el botón no funciona.
       */}
       <p id="problema" class="aviso aviso--error" role="alert" hidden></p>
-      <p id="cargando" class="aviso" hidden>Buscando coches libres…</p>
-      <p id="vacio" class="aviso" hidden>
-        No queda ningún coche libre en esas fechas. Prueba con otras o
-        <a href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">escríbenos</a>:
-        a veces podemos mover algo.
-      </p>
+      {/*
+        BUSCANDO.
+
+        ⚠️ **Era una línea de texto suelta y no la veía nadie.** Dorel lo dijo
+        mirando la pantalla: en una página casi vacía, un gris centrado a media
+        altura no se distingue de un pie de foto. Ahora es la misma tarjeta que
+        el «no hay nada» —son los dos estados de la misma pregunta— y lleva
+        movimiento, que es lo único que de verdad dice «estoy trabajando».
+
+        ⚠️ **La ilustración son las barras de la marca**, las mismas de
+        `.barras`, corriendo. No es un adorno genérico: es el isotipo de Velto
+        en movimiento, y por eso la inclinación sale de `--skew`, que es la
+        real de la «V» del logotipo.
+
+        ⚠️ **Y `role="status"`, que ya lo tenía el `<p>`:** quien no ve la
+        animación necesita que le lean el texto.
+      */}
+      <div id="cargando" class="buscando" role="status" hidden>
+        <div class="panel-estado">
+          <div class="buscando__via" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <p class="buscando__titulo">Buscando coches libres…</p>
+          <p class="buscando__texto">Estamos mirando el calendario de cada coche para esas fechas.</p>
+        </div>
+      </div>
+      {/*
+        No haber encontrado nada es un RESULTADO, no un error, y por eso tiene
+        tarjeta propia en vez de una línea de texto gris.
+
+        ⚠️ **`role="status"` y no `alert`.** No ha fallado nada: la búsqueda se
+        ha hecho y la respuesta es que no hay. `alert` interrumpe al lector de
+        pantalla como si algo se hubiera roto.
+      */}
+      <div id="vacio" class="sin-nada" role="status" hidden>
+        <div class="panel-estado">
+          <span class="sin-nada__icono" aria-hidden="true">
+            {/*
+              Un calendario tachado, no un coche tachado: lo que no encaja son
+              las FECHAS —el coche existe y puede estar libre la semana que
+              viene—, y es además la acción que se propone debajo.
+            */}
+            <svg
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M8 2v4M16 2v4M3 10h18" />
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="m14 15-4 4m0-4 4 4" />
+            </svg>
+          </span>
+          <h2 class="sin-nada__titulo">No queda ningún coche libre en esas fechas</h2>
+          <p class="sin-nada__texto">
+            Prueba con otras fechas o
+            <a href={`https://wa.me/${EMPRESA.telefonoWhatsapp}`} rel="noopener">escríbenos</a>:
+            a veces podemos mover algo.
+          </p>
+        </div>
+
+        {/*
+          La flota debajo, para que el visitante no se quede en un callejón sin
+          salida.
+
+          ⚠️ **Nace oculta y solo se enseña si hay coches que enseñar.** Hoy
+          producción no publica ninguno (`api/fleet` devuelve una lista vacía),
+          y un titular «Nuestra flota» sobre un hueco es peor que no poner nada.
+
+          ⚠️ **Y lo que se promete es el CALENDARIO, no la disponibilidad.**
+          Estos son justo los coches que no están libres en esas fechas: decir
+          «mira estos otros» a secas sería ofrecer lo que se acaba de negar.
+        */}
+        <section id="otros" class="sin-nada__flota" hidden>
+          <h3 class="sin-nada__flota-titulo">Nuestra flota</h3>
+          <p class="sin-nada__flota-texto">
+            Verifica el calendario de disponibilidad de otros coches de nuestra flota.
+          </p>
+          <div id="otros-lista" class="rejilla"></div>
+        </section>
+      </div>
 
       <div id="resultado" hidden>
         {/*
@@ -178,29 +258,21 @@ import { ORDENES } from '../lib/resultados';
         <div id="lista" class="rejilla"></div>
 
         {/*
-          ⚠️ **El esqueleto, y por qué hace falta aunque ya hubiera un aviso.**
-          Medido el 3 de octubre de 2026 contra el sitio desplegado en 3G lento:
-          esta pantalla enseña «Elige tu coche» con **la lista vacía durante 3,1
-          segundos** y sin una sola señal de que esté trabajando. El aviso
-          «Buscando coches libres…» existía, pero nace `hidden` y **lo destapa
-          el módulo de JavaScript** — o sea que no puede cubrir justo el rato
-          que se tarda en descargar ese módulo, que es casi todo el rato. Un
-          indicador que solo aparece cuando ya ha llegado lo que esperabas no
-          indica nada.
+          ⚠️ **Aquí había un esqueleto de tres tarjetas grises que NO SE VEÍA
+          NUNCA.** Se añadió el 3 de octubre de 2026 con un argumento correcto
+          —la pantalla pasaba 3,1 segundos en blanco en 3G lento— y se escribió
+          **dentro de `#resultado`**, que está `hidden` justo mientras se busca.
+          Destaparlo no servía de nada: su antepasado seguía oculto. Por eso lo
+          que Dorel ve al buscar es solo la línea de texto, y por eso pidió algo
+          que se note.
 
-          ⚠️ **Por eso lo destapa un script EN LÍNEA**, que corre al parsear:
-          es la única forma de que se vea antes que el módulo. Y solo si la URL
-          trae fechas, porque `/reservar` a secas no busca nada y anunciar una
-          búsqueda que no existe es peor que no decir nada.
+          El patrón de siempre en esta casa: **escrito, desplegado y nunca
+          recorrido hasta el final**. Lo cubre ahora la tarjeta de «Buscando»,
+          que vive FUERA de `#resultado` y por eso sí se ve.
 
-          `aria-hidden` porque no aporta nada a quien no lo ve: el estado ya lo
-          cuenta el aviso, que es texto de verdad.
+          Las clases `.esq*` se quedan en `global.css`: las usa la ficha de
+          coche, donde sí funcionan.
         */}
-        <div id="esqueleto" class="rejilla" hidden aria-hidden="true">
-          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
-          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
-          <div class="esq"><div class="esq__foto"></div><div class="esq__linea esq__linea--corta"></div><div class="esq__linea"></div><div class="esq__linea esq__linea--media"></div></div>
-        </div>
       </div>
 
       <script is:inline>
@@ -212,9 +284,7 @@ import { ORDENES } from '../lib/resultados';
           var p = new URLSearchParams(location.search);
           if (!p.get('from') || !p.get('to')) return;
           var c = document.getElementById('cargando');
-          var e = document.getElementById('esqueleto');
           if (c) c.hidden = false;
-          if (e) e.hidden = false;
         })();
       </script>
 
@@ -236,7 +306,7 @@ import { ORDENES } from '../lib/resultados';
 </Base>
 
 <script>
-  import { disponibilidad, type CocheDisponible } from '../lib/api';
+  import { disponibilidad, flota, type CocheDisponible } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
   import { instanteDeLaUrl, montarBuscador } from '../lib/buscador';
   import {
@@ -258,10 +328,41 @@ import { ORDENES } from '../lib/resultados';
   const chapasEl = document.getElementById('chapas')!;
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
-  /* El esqueleto se enciende y se apaga con el aviso: son el mismo estado. */
-  const esqueleto = document.getElementById('esqueleto')!;
   const vacio = document.getElementById('vacio')!;
+  const otros = document.getElementById('otros')!;
+  const otrosLista = document.getElementById('otros-lista')!;
   const ordenEl = document.getElementById('orden') as HTMLSelectElement;
+
+  /**
+   * La flota entera, debajo del «no hay nada», para no dejar un callejón sin
+   * salida.
+   *
+   * ⚠️ **Se pide la PRIMERA vez que hace falta, no al cargar la página.** La
+   * mayoría de las búsquedas encuentran coches y entonces esto no se enseña
+   * nunca: pedirlo siempre sería una llamada de más en todas ellas. `flota()`
+   * ya cachea por su cuenta, así que buscar tres veces en seco no pide tres
+   * veces.
+   *
+   * ⚠️ **Si la flota viene vacía, la sección NO se enseña.** Es el caso de hoy
+   * en producción, que no publica ningún coche: un titular sobre un hueco es
+   * peor que no poner nada.
+   *
+   * ⚠️ **Y si falla, se calla.** Esto es un extra debajo de una respuesta que
+   * ya se ha dado; un aviso de error aquí haría parecer que la búsqueda —que
+   * sí funcionó— se ha roto.
+   */
+  let flotaPedida = false;
+  function enseñarFlota() {
+    if (flotaPedida) return;
+    flotaPedida = true;
+    flota()
+      .then(({ vehicles }) => {
+        if (!vehicles.length) return;
+        otrosLista.innerHTML = vehicles.map((v) => tarjetaCoche(v)).join('');
+        otros.hidden = false;
+      })
+      .catch(() => {});
+  }
 
   /**
    * Lo que ha devuelto la API, **entero y sin tocar**.
@@ -327,7 +428,6 @@ import { ORDENES } from '../lib/resultados';
     resultado.hidden = true;
     vacio.hidden = true;
     cargando.hidden = false;
-    esqueleto.hidden = false;
 
     /*
      * ⚠️ **Se DEVUELVE la promesa, y no es cosmético.** Es lo que deja al
@@ -337,9 +437,9 @@ import { ORDENES } from '../lib/resultados';
     return disponibilidad(desde, hasta)
       .then((r) => {
         cargando.hidden = true;
-        esqueleto.hidden = true;
         if (!r.vehicles.length) {
           vacio.hidden = false;
+          enseñarFlota();
           return;
         }
         libres = r.vehicles;
@@ -362,7 +462,6 @@ import { ORDENES } from '../lib/resultados';
       })
       .catch((err: Error) => {
         cargando.hidden = true;
-        esqueleto.hidden = true;
         problema.textContent =
           MOTIVOS[err.message] ?? 'No hemos podido consultar la disponibilidad. Inténtalo otra vez.';
         problema.hidden = false;
@@ -496,6 +595,155 @@ import { ORDENES } from '../lib/resultados';
    * que el aire se lo pone la página. Sin esto queda pegado a la entradilla.
    */
   .buscador-hueco { margin: var(--sp-8) 0 var(--sp-10); }
+
+  /*
+   * NO HABER ENCONTRADO NADA
+   *
+   * ⚠️ **Es una tarjeta y no una línea de texto porque es la respuesta a lo
+   * que el visitante acaba de preguntar.** Antes era un `<p class="aviso">`
+   * gris centrado en mitad de una página vacía: con el mismo peso visual que
+   * un pie de foto, y a 500 px por debajo del formulario en móvil.
+   */
+  .sin-nada { margin: var(--sp-10) 0 var(--sp-6); }
+  .buscando { margin: var(--sp-10) 0; }
+
+  /*
+   * ⚠️ **La caja la comparten «buscando» y «no hay nada», y es deliberado.**
+   * Son los dos estados de la misma pregunta —la que el visitante acaba de
+   * hacer— y uno sustituye al otro en el mismo sitio. Con dos cajas distintas,
+   * la página da un salto al terminar la búsqueda; y la segunda que alguien
+   * retoque se queda con otro radio y otro relleno, que es como esta web acabó
+   * con cuatro nombres para la misma casilla.
+   */
+  .panel-estado {
+    max-width: 560px;
+    margin-inline: auto;
+    padding: var(--sp-8) var(--sp-6);
+    text-align: center;
+    background: var(--surface-card);
+    border: var(--bw) solid var(--border);
+    border-radius: var(--r-xl);
+  }
+
+  /*
+   * LA CARRETERA: las tres barras del isotipo, corriendo.
+   *
+   * ⚠️ **`overflow: hidden` es lo que las convierte en un tramo de vía.** Sin
+   * él, las barras se salen de la caja y cruzan el texto.
+   */
+  .buscando__via {
+    position: relative;
+    width: 220px;
+    height: 10px;
+    margin: 0 auto var(--sp-5);
+    overflow: hidden;
+  }
+
+  /*
+   * El asfalto: es lo que hace que las barras se lean como marcas de una vía y
+   * no como tres rectángulos sueltos.
+   *
+   * ⚠️ **Va en `--border` y NO en `--divider`.** Aquel es el filete de las
+   * separaciones y en los temas oscuros vale `--gray-900`, o sea el mismo tono
+   * que la tarjeta: la vía existía y no se veía — medido en pantalla, no leído
+   * del fichero. Es la misma trampa que ya obligó a cambiarlo en el esqueleto.
+   */
+  .buscando__via::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .buscando__via span {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 40px;
+    height: 10px;
+    background: var(--brand);
+    /*
+     * ⚠️ **Se mueve con `transform`, no con `left`.** Aquello recalcula la
+     * maquetación en cada fotograma; esto lo compone la GPU. En un móvil de
+     * gama baja —que es donde se usa esto— la diferencia se ve.
+     */
+    animation: viaVelto 1.5s linear infinite;
+  }
+
+  /* Repartidas por la vía con retardos negativos: arrancan ya separadas, sin
+     el primer segundo en que las tres irían pegadas. */
+  .buscando__via span:nth-child(2) { animation-delay: -0.5s; }
+  .buscando__via span:nth-child(3) { animation-delay: -1s; }
+
+  @keyframes viaVelto {
+    from { transform: translateX(-50px) skewX(var(--skew)); }
+    to { transform: translateX(220px) skewX(var(--skew)); }
+  }
+
+  .buscando__titulo {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-h3);
+    font-weight: var(--fw-medium);
+    line-height: var(--lh-snug);
+  }
+
+  .buscando__texto { margin: 0; color: var(--text-2); }
+
+  /*
+   * ⚠️ **Sin movimiento, las barras se quedan QUIETAS y repartidas** — no
+   * desaparecen. Son la ilustración de la tarjeta, y quitarlas dejaría un
+   * hueco; lo que molesta a quien pide menos movimiento es el bucle, no el
+   * dibujo. El texto ya dice lo que está pasando.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .buscando__via span { animation: none; transform: skewX(var(--skew)); }
+    .buscando__via span:nth-child(2) { left: 70px; }
+    .buscando__via span:nth-child(3) { left: 140px; }
+  }
+
+  /*
+   * ⚠️ **El icono va en turquesa suave, no en rojo.** No se ha roto nada: la
+   * búsqueda funcionó y la respuesta es que no hay. En rojo se lee como un
+   * fallo de la web y el visitante vuelve a pulsar «Buscar».
+   */
+  .sin-nada__icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--sp-4);
+    color: var(--brand-text);
+    background: var(--brand-soft);
+    border-radius: var(--r-pill);
+  }
+
+  .sin-nada__titulo {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-h3);
+    font-weight: var(--fw-medium);
+    line-height: var(--lh-snug);
+  }
+
+  .sin-nada__texto { margin: 0; color: var(--text-2); }
+
+  /*
+   * La flota, debajo y separada por un filete: es otra cosa que lo de arriba
+   * —una salida, no la respuesta— y pegada parecería parte de la tarjeta.
+   */
+  .sin-nada__flota {
+    margin-top: var(--sp-10);
+    padding-top: var(--sp-8);
+    border-top: var(--bw) solid var(--divider);
+  }
+
+  .sin-nada__flota-titulo { margin: 0 0 var(--sp-2); }
+
+  .sin-nada__flota-texto {
+    margin: 0 0 var(--sp-6);
+    color: var(--text-2);
+    max-width: 60ch;
+  }
 
   /*
    * La línea que queda cuando el buscador está plegado: a la izquierda lo que

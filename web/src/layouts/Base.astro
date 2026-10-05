@@ -77,8 +77,30 @@ const imagenCompartir = imagen || `${SITIO}/brand/og.png`;
  * acorta es esta cadena y no la URL: aquella la teclea Google, este lo lee una
  * persona en una barra de 288 px.
  */
+/*
+ * ⚠️ **«Nuestra flota» entró el 5 de octubre de 2026, y hasta ese día el
+ * catálogo NO estaba en el menú.** Se llegaba solo desde el botón del héroe de
+ * la portada, desde el pie y desde la ficha de un coche: o sea que, estando en
+ * cualquier página interior, no había forma de ir a ver los coches.
+ *
+ * Lo decide un caso que contó Dorel y que el menú no contemplaba: alguien
+ * alquila un coche cinco días y otro tres. Esa persona no busca por fechas —
+ * **navega el catálogo** y mira el calendario de cada coche. «Buscar» sirve a
+ * quien ya sabe sus fechas; esto sirve a quien viene a ver qué hay.
+ *
+ * ⚠️ **Y va EN SEGUNDO lugar, no al final.** El orden es el del recorrido:
+ * buscar, mirar la flota, y solo después lo que son servicios o le hablan al
+ * propietario.
+ *
+ * ⚠️ **El quinto rótulo había que medirlo.** Este fichero ya documenta que a
+ * 1024 px dos de los cuatro se partían en dos líneas, así que un quinto no era
+ * gratis: por debajo de 1039 px el menú se pliega tras el botón y da igual,
+ * pero entre 1040 y ~1280 tiene que caber en una fila. Comprobado en el
+ * navegador con los cinco puestos — ver la nota del corte más abajo.
+ */
 const MENU = [
   { rotulo: 'Buscar', href: '/', ruta: '' },
+  { rotulo: 'Nuestra flota', href: '/flota', ruta: '/flota' },
   { rotulo: 'Entrega a domicilio', href: '/entrega-a-domicilio', ruta: '/entrega-a-domicilio' },
   { rotulo: 'Pon tu coche en alquiler', href: '/pon-tu-coche-en-alquiler', ruta: '/pon-tu-coche-en-alquiler' },
   { rotulo: 'Contacto', href: '/contacto', ruta: '/contacto' },
@@ -603,12 +625,17 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
         });
 
         /*
-         * ⚠️ **Y al pasar a escritorio.** Cruzando los 1040 px el CSS vuelve a
+         * ⚠️ **Y al pasar a escritorio.** Cruzando el corte, el CSS vuelve a
          * enseñar el menú entero y esconde el botón: sin esto, el `aria-expanded`
          * se quedaría en `true` para siempre, y al volver a móvil el menú
          * saldría abierto sin que nadie lo hubiera pedido.
+         *
+         * ⚠️ **Este 1200 es el mismo corte que el `@media` de arriba** —que va
+         * en 1199—, y los dos se mueven juntos. Descuadrados, hay una franja en
+         * la que el CSS pliega el menú y el script cree que sigue desplegado.
+         * El porqué del número está medido allí.
          */
-        var ancho = matchMedia('(min-width: 1040px)');
+        var ancho = matchMedia('(min-width: 1200px)');
         ancho.addEventListener('change', function (e) {
           if (e.matches) poner(false);
         });
@@ -834,8 +861,37 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
        * así que el menú se lee como SEIS opciones en un portátil corriente.
        * Con las etiquetas de antes ese defecto existía en una banda de 1 px;
        * con estas, en una franja que usa mucha gente.
+       *
+       * ⚠️ **Y de 1039 a 1199 el 5 de octubre de 2026, al entrar «Nuestra
+       * flota».** Ninguno de estos números está elegido a ojo; todos salen de
+       * medir en el navegador:
+       *
+       * - los cinco rótulos sin partir necesitan **612 px** de `<nav>`;
+       * - a 1040 px el `<nav>` solo dispone de **527** —el resto se lo llevan
+       *   el logotipo (185), las acciones (**187**, no 165: crecen con el
+       *   teléfono), los dos huecos de 32 y los 83 de margen de página—;
+       * - no llega a los 612 hasta una ventana de **1160 px**.
+       *
+       * ⚠️ **Y aun así el corte va en 1199/1200, no en 1159/1160.** A 1160 la
+       * holgura medida es de **cero** píxeles, y un corte sin margen lo rompe
+       * cualquier cosa que mueva una letra: otra tipografía mientras carga, un
+       * teléfono más largo, un rótulo que alguien alargue. Los 40 px de reserva
+       * cuestan una franja estrecha con el menú plegado; quedarse corto cuesta
+       * tres rótulos partidos en dos líneas, que es el defecto que todo esto
+       * existe para evitar.
+       *
+       * ⚠️ **Si se añade o se alarga un rótulo, estos números hay que VOLVER A
+       * MEDIRLOS.** Lo que falla si no se hace no es que algo desaparezca: es
+       * que tres enlaces se parten en dos líneas y el menú pasa a leerse como
+       * ocho opciones. Se mide poniendo `white-space: nowrap` a los enlaces y
+       * comparando el `scrollWidth` del `<nav>` con su ancho real.
+       *
+       * ⚠️ **Y el mismo corte vive en el `matchMedia` del script de abajo.**
+       * Son dos sitios y tienen que moverse juntos: descuadrados, hay una
+       * franja en la que el CSS pliega el menú y el script cree que sigue
+       * desplegado, así que el `aria-expanded` se queda mintiendo.
        */
-      @media (max-width: 1039px) {
+      @media (max-width: 1199px) {
         .cab__fila { flex-wrap: wrap; gap: var(--sp-3); padding-block: var(--sp-3); }
 
         /*
