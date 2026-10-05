@@ -913,6 +913,41 @@ Corregido el mismo día (PR #65). Las tres URL estuvieron unas horas en el
 sitemap; hoy sirven la página genérica sin datos, así que caerán solas del
 índice si Google llegó a pasar.
 
+### ⚠️ Las Cloud Functions corren en UTC y el negocio está en Madrid (PR #67)
+
+El fallo más caro del día, y llegó a un cliente. Una pre-reserva real pidió las
+**10:00**; el correo le dijo **00:00**, el presupuesto en PDF **12:00** y una
+devolución **el 26** de un coche que se devolvía el 25. Tres cifras para el mismo
+instante y ninguna era la suya.
+
+Tres fallos encadenados, y el primero es el que hay que recordar:
+
+1. **`new Date(y, m, d, h, min)` construye la fecha en la zona DEL PROCESO**, y
+   el contenedor es UTC. Las 10:00 de Madrid entraban como 10:00 UTC, o sea las
+   12:00. El PDF fija `Europe/Madrid` y era **fiel a un instante que ya estaba
+   mal** — por eso parecía que el fallo estaba en el PDF.
+2. El correo formateaba con `getDate()`/`getHours()`, que vuelven a leer UTC: el
+   mensaje decía una hora y el PDF adjunto **a ese mismo mensaje**, otra.
+3. Y el correo imprimía `pickupDate`/`returnDate`, que son la **ventana de
+   disponibilidad** —00:00 y final **exclusivo**—, no la recogida ni la
+   devolución.
+
+Lo resuelve [`functions/src/zona.ts`](../functions/src/zona.ts), con la vuelta
+doble que hacen falta los dos domingos del cambio de hora. **`daily-digest.ts`
+tenía una copia de esa aritmética** y pasa a usar la compartida: dos versiones de
+un cálculo de horario de verano es exactamente cómo nace el siguiente fallo.
+
+⚠️ **Y al escribir el respaldo salió otra trampa: `toDate()` CAE A HOY.** Ante
+cualquier cosa que no sabe leer devuelve la fecha actual —a propósito, para que
+un documento corrupto no tumbe una vista con el pipe `date`—, así que un
+`isNaN()` detrás **nunca salta**. Donde el respaldo honesto es otro, hay que
+reconocer las formas a mano y devolver `null`. Es la misma regla que la web
+pública ya aplica en `public/core.ts`.
+
+**La regla práctica:** si una fecha la teclea una persona y la lee otra, no la
+construyas ni la imprimas con los métodos locales del proceso. Hay un módulo
+para eso.
+
 ### Y un segundo «escrito y nunca recorrido», el mismo día (PR #66)
 
 El esqueleto de carga de `/reservar` —tres tarjetas grises, añadidas el 3 de
