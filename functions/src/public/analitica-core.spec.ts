@@ -30,6 +30,22 @@ describe('pareceBot', () => {
   });
 
   /**
+   * ⚠️ **Los clientes de consola que se disfrazan de navegador.** PowerShell
+   * manda un agente que empieza por `Mozilla/5.0`, y se contó como visitante
+   * en la primera prueba contra desarrollo. Este test está porque pasó.
+   */
+  it('caza a los clientes HTTP que empiezan por Mozilla', () => {
+    expect(
+      pareceBot(
+        'Mozilla/5.0 (Windows NT 10.0; Microsoft Windows 10.0.19045; es-ES) WindowsPowerShell/5.1.19041.6093'
+      )
+    ).toBe(true);
+    expect(pareceBot('PostmanRuntime/7.37.0')).toBe(true);
+    expect(pareceBot('GuzzleHttp/7')).toBe(true);
+    expect(pareceBot('Apache-HttpClient/4.5')).toBe(true);
+  });
+
+  /**
    * ⚠️ Sin agente no se cuenta. Un navegador siempre manda uno; quien no lo
    * manda es un programa que no se ha molestado en disimular.
    */

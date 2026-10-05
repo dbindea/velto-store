@@ -43,7 +43,17 @@ const SENAS_DE_BOT = [
   'puppeteer', 'playwright', 'selenium', 'lighthouse', 'pagespeed',
   'gptbot', 'claudebot', 'ccbot', 'perplexity', 'bytespider', 'ahrefs',
   'semrush', 'mj12', 'dotbot', 'petalbot', 'applebot', 'facebookexternalhit',
-  'preview', 'monitor', 'uptime', 'pingdom', 'probe'
+  'preview', 'monitor', 'uptime', 'pingdom', 'probe',
+  /**
+   * ⚠️ **Los clientes HTTP de consola, que no se anuncian como bots.** Esta
+   * tanda se añadió porque una sonda mía con `Invoke-WebRequest` **se contó
+   * como visitante**: PowerShell manda un agente con pinta de navegador
+   * —empieza por `Mozilla/5.0`— y ninguna de las señas de arriba aparecía. Es
+   * la prueba de que esta lista es la barrera DÉBIL: la fuerte es que la señal
+   * la dispare JavaScript, y por eso lo que entra por aquí a mano se cuela.
+   */
+  'powershell', 'httpclient', 'libwww', 'restsharp', 'postman', 'insomnia',
+  'http_request', 'urllib', 'httpie', 'guzzle', 'apache-httpclient'
 ];
 
 /** ¿El que llama dice ser un programa? */

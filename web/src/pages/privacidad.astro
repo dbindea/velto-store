@@ -14,11 +14,26 @@ import { EMPRESA } from '../lib/empresa';
   consentimiento lo que sirve exclusivamente para recordar una preferencia
   elegida por el usuario. O sea que **no hace falta banner**.
 
-  ⚠️ **Y eso se rompe con una línea.** Cuatro cosas lo tumban el mismo día que
-  se añadan: analítica de cualquier tipo, un mapa de Google incrustado, un vídeo
-  de YouTube, o tipografías desde `fonts.googleapis.com`. Si alguna entra, esta
-  página pasa a ser falsa y hace falta banner de verdad. Por eso el mapa de
-  Contacto es un ENLACE y no un `<iframe>`.
+  ⚠️ **Y eso se rompe con una línea.** Tres cosas lo tumban el mismo día que se
+  añadan: un mapa de Google incrustado, un vídeo de YouTube, o tipografías desde
+  `fonts.googleapis.com`. Si alguna entra, esta página pasa a ser falsa y hace
+  falta banner de verdad. Por eso el mapa de Contacto es un ENLACE y no un
+  `<iframe>`.
+
+  ⚠️ **El 5 de octubre de 2026 entró MEDICIÓN DE VISITAS, y por eso la lista de
+  arriba ya no la nombra.** Aquí decía «analítica de cualquier tipo» como cuarta
+  cosa que obliga a poner banner, y ese «de cualquier tipo» era demasiado
+  grueso: lo que obliga a pedir consentimiento es **almacenar o leer algo en el
+  terminal** (art. 22.2 LSSI). La medición que se añadió no guarda nada en el
+  navegador —la identidad del visitante la calcula el servidor con una huella de
+  IP y agente, y la sal rota cada día—, así que sigue sin hacer falta banner.
+  Ver `functions/src/public/analitica-core.ts`.
+
+  ⚠️ **Lo que sí cambió es que ahora hay tratamiento de la IP**, y eso tiene que
+  estar declarado: la sección «Cuántas visitas tiene esta web» es obligatoria, no
+  cortesía. Si algún día la medición pasa a usar una cookie o cualquier
+  identificador persistente, vuelve a hacer falta banner y esta página vuelve a
+  cambiar.
 
   ⚠️ **Y esto lo ha escrito un programador, no un abogado.**
 */}
@@ -131,9 +146,8 @@ import { EMPRESA } from '../lib/empresa';
       <h2 id="cookies">Cookies</h2>
       <p>
         <strong>Esta web no usa cookies.</strong> Ni propias ni de terceros: no
-        hay analítica, ni píxeles de publicidad, ni botones de redes sociales,
-        ni mapas ni vídeos incrustados. Las tipografías se sirven desde este
-        mismo dominio.
+        hay píxeles de publicidad, ni botones de redes sociales, ni mapas ni
+        vídeos incrustados. Las tipografías se sirven desde este mismo dominio.
       </p>
       <p>
         Lo único que se guarda en tu navegador es una preferencia:
@@ -147,8 +161,31 @@ import { EMPRESA } from '../lib/empresa';
         Por eso <strong>no verás un aviso de cookies aquí</strong>: recordar una
         preferencia que has elegido tú está exento de consentimiento según el
         art. 22.2 de la LSSI y la Guía de cookies de la Agencia Española de
-        Protección de Datos. El día que esta web incorpore analítica o cualquier
-        contenido incrustado de terceros, esta página cambiará y habrá aviso.
+        Protección de Datos.
+      </p>
+
+      <h2 id="medicion">Cuántas visitas tiene esta web</h2>
+      <p>
+        Contamos cuánta gente entra y qué páginas mira, para saber si la web
+        sirve para algo. <strong>No se guarda nada en tu navegador</strong> para
+        hacerlo: ni cookie, ni identificador, ni nada que quede ahí después de
+        cerrarla. Por eso tampoco hay aviso que aceptar.
+      </p>
+      <p>
+        Lo que se hace es esto: al cargar una página, nuestro servidor calcula
+        una huella con tu dirección IP y el nombre de tu navegador, y guarda
+        <strong> solo esa huella</strong>, nunca la IP. La fórmula con la que se
+        calcula <strong>cambia cada día</strong>, así que la huella de hoy y la
+        de mañana no se parecen: ni nosotros podemos saber que eres la misma
+        persona que entró ayer. No sabemos quién eres, ni te seguimos entre
+        días, ni cruzamos esto con nada.
+      </p>
+      <p>
+        Lo que queda guardado son contadores por día —cuántas visitas, qué
+        páginas, cuántos llegaron a pedir precio— que no identifican a nadie. La
+        base legal es nuestro interés legítimo en saber si el escaparate
+        funciona (art. 6.1.f del RGPD), y puedes oponerte escribiéndonos. Si tu
+        navegador manda la señal «no rastrear», no te contamos.
       </p>
 
       <h2 id="menores">Menores</h2>
