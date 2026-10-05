@@ -230,6 +230,44 @@
   }
   .dlg::backdrop { background: rgb(0 0 0 / 0.55); }
 
+  /*
+   * ⚠️ **El desenfoque es lo que manda la mirada al formulario**, y por eso va
+   * acompañado de BAJAR el tinte. Detrás de esta modal hay un calendario con
+   * treinta y un números y una tarjeta de precio: con el fondo nítido, el ojo
+   * los sigue leyendo aunque estén oscurecidos. Difuminado dejan de ser texto y
+   * pasan a ser una textura, que es justo lo que se quiere.
+   *
+   * ⚠️ **Y el tinte baja SOLO donde hay desenfoque.** Si bajara siempre, el
+   * navegador que no soporte `backdrop-filter` se quedaría con un velo más
+   * flojo y sin nada que lo compense: el fondo se leería **mejor** que antes,
+   * o sea lo contrario de lo que se pide. Por eso el `@supports` cambia las dos
+   * cosas a la vez y nunca una sola.
+   *
+   * El prefijo `-webkit-` no es herencia: Safari lo sigue necesitando, y es
+   * medio tráfico de esta web.
+   */
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .dlg::backdrop {
+      background: rgb(0 0 0 / 0.42);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+  }
+
+  /*
+   * ⚠️ **Quien pide menos transparencia pide esto, no un punto medio.** El
+   * desenfoque es un efecto de transparencia, así que aquí se retira entero y
+   * se devuelve el velo opaco: tapar es la alternativa honesta a difuminar, y
+   * media capa difuminada sería lo peor de las dos.
+   */
+  @media (prefers-reduced-transparency: reduce) {
+    .dlg::backdrop {
+      background: rgb(0 0 0 / 0.78);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
   .dlg__caja {
     position: relative;
     padding: var(--sp-6);
