@@ -843,6 +843,44 @@ renderizado a 390 px, no solo en el test.
 
 ---
 
+## 2 undecies. El despliegue del 5 de octubre — producción ya está al día
+
+⚠️ **Lo que dice § 2 ter abajo quedó CUMPLIDO ese día.** Se lee como historia,
+no como pendiente. Resumen de lo que se hizo y en qué orden, que es la parte
+reutilizable:
+
+1. **Reglas e índices** (`npm run deploy:prod:rules`) — hacían falta antes del
+   frontend porque `webAnalytics` era nueva.
+2. **24 functions en 13 órdenes**, por tandas de dos o tres, **cero fallos de
+   cuota**. `trackWebVisit` se **creó**; las demás, actualización.
+3. **El merge** (PR #64 → `9588c06`), que publica los dos sitios por CI.
+
+**El orden es la lección**: reglas → functions → hosting. Al revés, los tres
+rewrites nuevos —`/api/solicitud`, `/api/contacto`, `/api/visita`— se habrían
+publicado apuntando a functions que no existían, y la petición habría caído en
+el catch-all devolviendo HTML donde se espera JSON.
+
+**Estado comprobado al cerrar:** 32 functions en producción y solo faltan las
+cinco de la AEAT; `master` y `develop` sin diferencia; `veltomobility.com`
+sirviendo la web real con `robots.txt` con sitemap y sin `noindex`;
+`/api/visita` contestando 204.
+
+### ⚠️ Dos cosas que descubrió este despliegue y que valen para el siguiente
+
+- **`navigator.webdriver` NO está puesto en el navegador de Playwright de esta
+  máquina.** `sePuedeMedir()` lo usa como barrera para no contar automatismos, y
+  aquí **no funciona**: una visita de comprobación a `veltomobility.com` se contó
+  como persona. Lo mismo pasó con una sonda `Invoke-WebRequest` cuyo
+  `User-Agent` propio no llevaba ninguna seña de bot. O sea que la analítica de
+  producción del 5 de octubre arranca con **visitas falsas mías**.
+  **Al comprobar la web en producción, usa un `User-Agent` con `bot` dentro** —
+  o compruébalo contra desarrollo.
+- **El escaparate está vivo y vacío.** `api/fleet` devuelve `{"vehicles":[]}`:
+  no hay ningún coche marcado para publicar, y producción tiene uno solo.
+  Publicar la web no publica la flota.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**

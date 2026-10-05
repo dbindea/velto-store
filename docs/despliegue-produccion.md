@@ -1,5 +1,34 @@
 # Guion de despliegue a producción
 
+> ## ✅✅ TERMINADO el 5 de octubre de 2026 — este guion ya no tiene nada pendiente
+>
+> Se ejecutó entero: reglas e índices, **24 functions en 13 órdenes con cero
+> fallos de cuota**, y el merge (PR #64, `9588c06`) que publicó los dos sitios.
+>
+> | | Estado al cerrar |
+> |---|---|
+> | functions en producción | **32** — faltan solo las cinco de la AEAT, a propósito |
+> | `master` y `develop` | sincronizados, 0 commits de diferencia |
+> | `veltomobility.com` | **200**, sirve la web real y `/api/visita` contesta 204 |
+> | backoffice | los textos de hoy ya servidos en `assets/i18n/es.json` |
+>
+> ⚠️ **`trackWebVisit` se CREÓ** (`Successful create operation`): es la que
+> faltaba, y entró con su rewrite en el mismo merge.
+>
+> **Lo que queda abierto no es despliegue, es contenido y dominio:**
+> - **Ningún coche está publicado en la web.** `api/fleet` devuelve
+>   `{"vehicles":[]}` y producción tiene un solo vehículo (4466LKK, en
+>   alquiler). El escaparate está vivo y vacío.
+> - **`www.veltomobility.com` no resuelve.** Lo avisa el propio Cloudflare; el
+>   dominio sin `www` sí funciona.
+>
+> Para el siguiente despliegue, este guion vale como plantilla: lo que cambia es
+> **qué functions llevan código nuevo**, y eso se vuelve a medir con
+> `git diff <lo-desplegado>..HEAD -- functions/src` recorriendo el grafo de
+> imports. Las tandas de abajo siguen siendo el orden bueno.
+>
+> ---
+>
 > ## ✅ Ejecutado a medias el 3 de octubre de 2026
 >
 > **Hecho ya, y no hay que repetirlo:**
