@@ -413,6 +413,30 @@ habría relacionado una cosa con la otra. Hoy no se nota porque Cloudflare lo
 ignora: por defecto solo cachea por extensión de fichero y `/api/fleet` no tiene.
 O sea que era una trampa **armada y sin disparar**.
 
+### ✅ Las tres reglas están puestas desde el 5 de octubre de 2026
+
+Medido ese día contra producción, dos peticiones por ruta:
+
+| Ruta | `cf-cache-status` | Qué confirma |
+|---|---|---|
+| `/`, `/flota`, `/coche/{id}` | `HIT` | el HTML se sirve del borde |
+| `/api/fleet`, `/api/vehicle` | `MISS` → `HIT` → `EXPIRED` | cachea y revalida al vencer |
+| `/api/availability` | `DYNAMIC` | fuera a propósito |
+| `/api/visita`, `/solicitud`, `/contacto` | `DYNAMIC` | no se cachea ninguna |
+
+⚠️ **El `Browser TTL` tiene que seguir en «respect origin», y eso no se ve en la
+lista de reglas: se mide.** El HTML llega al navegador con `max-age=300`, que es
+el valor del origen. Con un Browser TTL largo puesto a mano, un visitante que ya
+hubiera pasado se quedaría con el HTML viejo **aunque purguemos** — la purga
+vacía Cloudflare, no el navegador de la gente. Hoy lo peor que pasa tras un
+despliegue son cinco minutos.
+
+⚠️ **Y las de escritura salen `DYNAMIC`, no `BYPASS`.** Eso NO demuestra que la
+regla de bypass esté activa: como ninguna otra las hace cacheables, se verían
+igual con regla y sin ella. Desde fuera no se distingue, así que esa regla se
+comprueba **en la lista del panel**, no midiendo. Vale como seguro para el día
+que alguien añada una regla amplia.
+
 ### Las tres reglas que tiene que haber si se activa el cacheo
 
 ⚠️ **`/api/solicitud`, `/api/contacto` y `/api/visita` van en BYPASS, siempre.**
