@@ -30,6 +30,7 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { asuntoDeCorreo } from '../entorno';
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 const RESEND_API_URL = 'https://api.resend.com/emails';
@@ -160,7 +161,7 @@ export const sendSignedContractEmail = onCall(
     const resendPayload = {
       from: company.email,
       to: [to],
-      subject,
+      subject: asuntoDeCorreo(subject),
       html,
       text,
       attachments: [

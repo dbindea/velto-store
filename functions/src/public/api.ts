@@ -65,6 +65,7 @@ import { renderContactEmail } from './contact-email';
  * que `arranque.spec.ts` vigila para todo lo que cuelgue de `index.ts`.
  */
 import { fechaHoraEnZona, instanteEnZona } from '../zona';
+import { asuntoDeCorreo } from '../entorno';
 import {
   generateContactReference,
   looksAutomated as contactoAutomatizado,
@@ -847,7 +848,7 @@ async function avisarCliente(
        * contestar a un correo transaccional se pierde.
        */
       reply_to: empresa.email,
-      subject,
+      subject: asuntoDeCorreo(subject),
       html,
       text,
     }),
@@ -877,7 +878,7 @@ async function avisarSolicitud(id: string, s: BookingRequestEmailData): Promise<
     body: JSON.stringify({
       from: `${empresa.brandName} <${empresa.email}>`,
       to: [empresa.email],
-      subject,
+      subject: asuntoDeCorreo(subject),
       html,
       text
     })
@@ -1036,7 +1037,7 @@ async function enviarCorreo(subject: string, html: string, text: string): Promis
     body: JSON.stringify({
       from: `${empresa.brandName} <${empresa.email}>`,
       to: [empresa.email],
-      subject,
+      subject: asuntoDeCorreo(subject),
       html,
       text
     })

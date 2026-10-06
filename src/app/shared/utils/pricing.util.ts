@@ -15,6 +15,7 @@ import { VehiclePricingRule } from '@shared/models/vehicle.model';
 // importándose en círculo. Ver `money.util.ts`.
 import { roundMoney } from '@shared/utils/money.util';
 import { TranslatableMessage } from '@shared/utils/i18n-params.util';
+import { curveAveragePerDay, curveTotal } from '@shared/utils/rental-curve.util';
 
 /**
  * Spanish standard VAT rate, as a FRACTION (0.21 = 21 %).
@@ -368,7 +369,15 @@ function ruleName(rule: VehiclePricingRule): string {
  * ficha del vehículo y la lee un operador que puede tener la aplicación en
  * rumano. Lista vacía = los tramos sirven.
  */
-export function validatePricingRules(rules: VehiclePricingRule[]): TranslatableMessage[] {
+export function validatePricingRules(
+  rules: VehiclePricingRule[],
+  /**
+   * El mínimo de días que admite ESE coche. Por defecto 1, que es el
+   * comportamiento de siempre: quien no lo pase sigue exigiendo cobertura
+   * desde el primer día.
+   */
+  minimumRentalDays = 1
+): TranslatableMessage[] {
   const errors: TranslatableMessage[] = [];
 
   if (!rules || rules.length === 0) {
@@ -413,7 +422,21 @@ export function validatePricingRules(rules: VehiclePricingRule[]): TranslatableM
    */
   if (errors.length > 0) return errors;
 
-  if (sorted[0].minDays !== 1) {
+  /**
+   * ⚠️ **Empieza en el mínimo de alquiler del coche, no siempre en el día 1.**
+   * Hasta el 6 de octubre de 2026 se exigía el 1 y punto, y eso obligaba a
+   * inventarse un precio de un día para un coche que **no se alquila por un
+   * día** — un número que no se cobra nunca y que, por estar escrito, acabaría
+   * cobrándose el día que alguien mirara la tabla. Lo pidió Dorel: «si pongo
+   * min. 3 días el sistema me deja guardar desde los 3».
+   *
+   * ⚠️ **Lo que NO cambia es por qué existe esta comprobación.** El peligro
+   * sigue siendo el hueco: si los tramos empiezan más tarde que el mínimo,
+   * `findPricingRuleByDays()` contesta `null` para los días de en medio, el
+   * precio sale **0** y el coche se alquila gratis. Por eso se compara contra
+   * el mínimo y no se quita la regla.
+   */
+  if (sorted[0].minDays > minimumRentalDays) {
     errors.push({
       key: 'vehicles.errors.pricingDoesNotStartAtOne',
       params: { from: String(sorted[0].minDays) }
@@ -507,12 +530,48 @@ export function calculateBasePrice(
     };
   }
 
+  /**
+   * ⚠️ **El total sale de la CURVA, no de «tarifa del tramo × días».**
+   * Decisión de Dorel del 6 de octubre de 2026. Con tramos, el precio de un día
+   * salta de golpe al cruzar un límite, y eso permite que un alquiler más largo
+   * cueste menos en total y que el precio medio por día suba al alargar — dos
+   * cosas que un cliente ve y discute con razón. Ver `rental-curve.util.ts`.
+   *
+   * ⚠️ **Lo que sigue decidiendo la tabla de tramos es OTRA cosa, y por eso no
+   * se ha quitado**: si esa duración está cubierta (`appliedRule`), que es el
+   * guard contra el hueco que alquilaba gratis, y cuál es la **tarifa base** —
+   * lo que vale un día— de la que cuelga toda la curva.
+   */
+  const base = baseRateOf(rules);
+  const basePrice = curveTotal(base, totalDays);
+
   return {
     totalDays,
     appliedRule: rule,
-    pricePerDay: rule.pricePerDay,
-    basePrice: totalDays * rule.pricePerDay
+    /**
+     * ⚠️ **Ahora es el precio MEDIO por día, y es informativo.** Antes era la
+     * tarifa del tramo, que con la curva ya no existe como tal. Redondeado y
+     * multiplicado por los días **no devuelve el total** —305 € en 8 días son
+     * 38,125 €/día—, así que quien necesite el importe usa `basePrice`.
+     */
+    pricePerDay: curveAveragePerDay(basePrice, totalDays),
+    basePrice
   };
+}
+
+/**
+ * La tarifa base del coche: lo que vale **un día**.
+ *
+ * ⚠️ **Es el tramo que empieza antes, no el más barato ni el que cubre hoy.**
+ * La curva arranca en `(1, 1)`, así que este número es su ancla: con los tramos
+ * de un coche a 90 €, `curveTotal(90, 3)` da 243 y no 270. Y es exactamente el
+ * número que el operador teclea primero en la ficha, que es lo que permite
+ * rellenar el resto de la tabla solo.
+ */
+export function baseRateOf(rules: VehiclePricingRule[] | undefined): number {
+  if (!rules?.length) return 0;
+  const primero = sortPricingRules(rules)[0];
+  return primero?.pricePerDay > 0 ? primero.pricePerDay : 0;
 }
 
 /**

@@ -28,6 +28,11 @@ import { PhotoUploadButtonsComponent } from '@shared/components/photo-upload-but
 import { DgtLabelComponent } from '@shared/components/dgt-label/dgt-label.component';
 import { AcrissInput, generateAcrissCode } from '@shared/utils/acriss-code.util';
 import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pricing.util';
+import {
+  LONG_STAY_FROM_DAYS,
+  curveAveragePerDay,
+  curveTotal
+} from '@shared/utils/rental-curve.util';
 import { TranslatableMessage, interpolate } from '@shared/utils/i18n-params.util';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
@@ -219,6 +224,21 @@ export class VehicleFormComponent implements OnInit {
           vin: vehicle.vin || '',
           description: vehicle.description || '',
           publicEnabled: vehicle.publicEnabled,
+          /*
+           * ⚠️ **Los tres de «Lo que ve el cliente» NO se cargaban, y eso no
+           * era solo que el formulario saliera vacío: era BORRADO DE DATOS.**
+           * `vehicle.service.ts` manda `deleteField()` cuando uno de estos
+           * llega vacío —para que vaciarlo signifique vaciarlo de verdad—, así
+           * que abrir un coche con etiqueta ECO y guardar cualquier otra cosa
+           * se la quitaba, sin que nadie tocara ese campo ni nada avisara.
+           *
+           * Es el mismo patrón que ya documenta este proyecto con los campos
+           * que nacen fuera del formulario: se añadieron al modelo, al servicio
+           * y a la plantilla, y se olvidó el único sitio que los lee de vuelta.
+           */
+          environmentalLabel: vehicle.environmentalLabel,
+          publicHighlight: vehicle.publicHighlight || '',
+          publicDescription: vehicle.publicDescription || '',
           features: { ...vehicle.features },
           pricingRules: vehicle.pricingRules?.length
             ? vehicle.pricingRules
@@ -234,7 +254,7 @@ export class VehicleFormComponent implements OnInit {
           manualPriceAllowed: vehicle.manualPriceAllowed ?? true,
         };
         this.updateAcrissCode();
-        this.pricingErrors = validatePricingRules(this.formData.pricingRules || []);
+        this.pricingErrors = validatePricingRules(this.formData.pricingRules || [], this.formData.minimumRentalDays ?? 1);
         this.existingImages = vehicle.images || [];
         // La lista de colaboradores y el vehículo se piden a la vez y no hay
         // orden garantizado entre las dos: el que termine el último es quien
@@ -647,7 +667,7 @@ export class VehicleFormComponent implements OnInit {
      * días faltan— ya está en rojo dentro de la propia sección, y repetir cinco
      * mensajes largos junto al botón tapa los demás campos que falten.
      */
-    if (validatePricingRules(this.formData.pricingRules || []).length > 0) {
+    if (validatePricingRules(this.formData.pricingRules || [], this.formData.minimumRentalDays ?? 1).length > 0) {
       problems['pricingRules'] = 'vehicles.errors.pricingRulesInvalid';
     }
     return problems;
@@ -752,19 +772,19 @@ export class VehicleFormComponent implements OnInit {
     });
 
     this.formData.pricingRules = [...rules];
-    this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+    this.pricingErrors = validatePricingRules(this.formData.pricingRules, this.formData.minimumRentalDays ?? 1);
   }
 
   removePricingRule(index: number): void {
     if (this.formData.pricingRules && this.formData.pricingRules.length > 1) {
       this.formData.pricingRules = this.formData.pricingRules.filter((_, i) => i !== index);
-      this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+      this.pricingErrors = validatePricingRules(this.formData.pricingRules, this.formData.minimumRentalDays ?? 1);
     }
   }
 
   restoreDefaultPricing(): void {
     this.formData.pricingRules = getDefaultPricingRules();
-    this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+    this.pricingErrors = validatePricingRules(this.formData.pricingRules, this.formData.minimumRentalDays ?? 1);
   }
 
   updatePricingRule(index: number, field: keyof VehiclePricingRule, value: any): void {
@@ -775,6 +795,47 @@ export class VehicleFormComponent implements OnInit {
       return { ...rule, [field]: value };
     });
 
-    this.pricingErrors = validatePricingRules(this.formData.pricingRules);
+    /*
+     * ⚠️ **Tocar el importe del PRIMER tramo rellena los demás**, porque ese
+     * número es la tarifa base de la que cuelga toda la curva: el resto de la
+     * tabla ya no es editable por separado sin mentir. Lo pidió Dorel el 6 de
+     * octubre de 2026 —«los intervalos se completen automática y dinámicamente
+     * al escribir el primer importe»—.
+     */
+    if (index === 0 && field === 'pricePerDay') this.rellenarTramosDesdeLaCurva();
+
+    this.pricingErrors = validatePricingRules(
+      this.formData.pricingRules,
+      this.formData.minimumRentalDays ?? 1
+    );
+  }
+
+  /**
+   * Rellena cada tramo con el precio MEDIO por día que la curva da en su último
+   * día.
+   *
+   * ⚠️ **Es el medio y no «la tarifa del tramo», porque con la curva eso ya no
+   * existe**: dentro de un mismo tramo cada día vale distinto. Enseñar el medio
+   * del último día es lo que hace cierto el «desde X €/día» que se publica, y
+   * cuadra con `lowestPricePerDay()`, que coge el tramo más barato — el abierto
+   * del final, que es `B × 0,5`.
+   *
+   * ⚠️ **Y no toca el primero.** Ese es la tarifa base: reescribirlo con su
+   * propio medio sería pisarle al operador el único número que de verdad
+   * teclea.
+   */
+  rellenarTramosDesdeLaCurva(): void {
+    const reglas = this.formData.pricingRules;
+    if (!reglas?.length) return;
+
+    const base = reglas[0]?.pricePerDay ?? 0;
+    if (!(base > 0)) return;
+
+    this.formData.pricingRules = reglas.map((regla, i) => {
+      if (i === 0) return regla;
+      const hasta = regla.maxDays ?? LONG_STAY_FROM_DAYS;
+      const total = curveTotal(base, hasta);
+      return { ...regla, pricePerDay: curveAveragePerDay(total, hasta) };
+    });
   }
 }

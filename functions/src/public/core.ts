@@ -26,6 +26,7 @@
  */
 
 import type { VehiclePricingRule } from './types';
+import { curveTotal } from './rental-curve';
 
 /** El tipo general. Duplicado de `pricing.util.ts`; si cambia allí, cambia aquí. */
 export const DEFAULT_VAT_RATE = 0.21;
@@ -169,7 +170,25 @@ export function tariffNetPrice(
 ): number | null {
   const rule = findPricingRuleByDays(rules, totalDays);
   if (!rule || !(rule.pricePerDay > 0)) return null;
-  return roundMoney(totalDays * rule.pricePerDay);
+
+  /*
+   * ⚠️ **El total sale de la CURVA, igual que en el backoffice**, y esta copia
+   * es obligada: app y functions compilan con tsconfigs separados y no pueden
+   * compartir módulo, como ya pasa con la aritmética del IVA. Si allí se mueve
+   * un punto de la curva, aquí también — o la web ofrecería un precio y el
+   * backoffice cobraría otro, que es el peor desenlace posible porque el
+   * cliente ya ha visto el primero.
+   */
+  const base = baseRateOf(rules);
+  if (!(base > 0)) return null;
+  return roundMoney(curveTotal(base, totalDays));
+}
+
+/** La tarifa base: lo que vale un día. Copia de `baseRateOf()` de la app. */
+export function baseRateOf(rules: VehiclePricingRule[] | undefined): number {
+  if (!rules?.length) return 0;
+  const primero = sorted(rules)[0];
+  return primero && primero.pricePerDay > 0 ? primero.pricePerDay : 0;
 }
 
 /**

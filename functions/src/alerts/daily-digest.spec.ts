@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { asuntoDe, horaEn, mereceEnvio, rangoManana, type Resumen } from './daily-digest';
+import {
+  asuntoDe,
+  entraEnElResumen,
+  horaEn,
+  mereceEnvio,
+  rangoManana,
+  type Resumen
+} from './daily-digest';
 import {
   ESTADOS_BORRABLES,
   HORAS_SIN_CONTESTAR,
@@ -103,6 +110,50 @@ const sinContestar = (horasRestantes = 48) => ({
   telefono: '600 11 22 33',
   coche: 'Kia Ceed',
   horasRestantes
+});
+
+/**
+ * ⚠️ **Treinta correos iguales entrenan a saltarse la sección.** Un vencimiento
+ * a 30 días salía cada día desde que se abría la ventana, y el día que de verdad
+ * urgía se leía por encima como los veintinueve anteriores. Lo dijo Dorel el 6
+ * de octubre de 2026.
+ */
+describe('qué días sale un vencimiento en el resumen', () => {
+  const ANTICIPACION = 30;
+
+  it('el día que se abre el plazo, que es cuando da tiempo a pedir cita', () => {
+    expect(entraEnElResumen(30, ANTICIPACION)).toBe(true);
+  });
+
+  it('el día antes, que es la última oportunidad de moverlo', () => {
+    expect(entraEnElResumen(1, ANTICIPACION)).toBe(true);
+  });
+
+  it('y el mismo día, porque a partir de mañana el coche no circula', () => {
+    expect(entraEnElResumen(0, ANTICIPACION)).toBe(true);
+  });
+
+  /**
+   * ⚠️ **Lo vencido no es un recordatorio: es un coche que la aplicación está
+   * rechazando.** Callarlo escondería justo lo que está costando alquileres, y
+   * es la misma regla que ya aplica la pantalla de Eventos.
+   */
+  it('lo ya vencido sale SIEMPRE, se lleve lo que se lleve vencido', () => {
+    expect(entraEnElResumen(-1, ANTICIPACION)).toBe(true);
+    expect(entraEnElResumen(-90, ANTICIPACION)).toBe(true);
+  });
+
+  it('y los días de en medio NO: ahí no hay nada nuevo que contar', () => {
+    for (const d of [2, 5, 14, 29]) {
+      expect(entraEnElResumen(d, ANTICIPACION)).toBe(false);
+    }
+  });
+
+  /** La anticipación es un parámetro: con 14, el aviso de apertura cae en el 14. */
+  it('sigue a la anticipación que se le pase, no a un 30 escrito a mano', () => {
+    expect(entraEnElResumen(14, 14)).toBe(true);
+    expect(entraEnElResumen(30, 14)).toBe(false);
+  });
 });
 
 describe('cuándo se manda y cuándo se calla', () => {
