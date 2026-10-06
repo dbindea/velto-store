@@ -502,7 +502,17 @@ describe('validatePricingRules — la cobertura, que es lo que cuesta dinero', (
       { minDays: 8, maxDays: null, pricePerDay: 40 }
     ];
     expect(claves(abiertoEnMedio)).toContain('vehicles.errors.pricingOpenNotLast');
-    expect(calculateBasePrice(abiertoEnMedio, 30).pricePerDay).toBe(60);
+    /**
+     * ⚠️ **Aquí ponía `pricePerDay === 60`, la tarifa del tramo, y desde la
+     * curva del 6 de octubre de 2026 ese campo es el precio MEDIO por día.**
+     * Lo que el tramo sigue decidiendo es la **tarifa base** —el primero, 60 €—
+     * y la cobertura; el total lo pone la curva: 30 días son 15 × 60 = 900, o
+     * sea 30 €/día de media. El aviso del tramo abierto sigue saliendo, que es
+     * lo que este test protege.
+     */
+    const r = calculateBasePrice(abiertoEnMedio, 30);
+    expect(r.basePrice).toBe(900);
+    expect(r.pricePerDay).toBe(30);
   });
 
   it('sigue cazando lo de antes: solape, precio a 0 y rango invertido', () => {

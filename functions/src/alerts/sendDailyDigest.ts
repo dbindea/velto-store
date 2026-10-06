@@ -28,6 +28,7 @@ import { toDate } from '../public/core';
 import { companyConfig } from '../company-config';
 import {
   asuntoDe,
+  entraEnElResumen,
   horaEn,
   mereceEnvio,
   rangoManana,
@@ -42,6 +43,7 @@ import { avisosDelSistema, type AvisoSistema } from './system-alerts';
 // `node-forge` (34 ms, 42 módulos). Ver la nota de `sendVerifactuRecords.ts`.
 import { verifactuEnabled, verifactuEndpoint } from '../invoices/verifactu';
 import type { Remision } from '../invoices/verifactu-submission';
+import { asuntoDeCorreo } from '../entorno';
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 /**
@@ -208,6 +210,14 @@ export async function construirResumen(
     const m = doc.data();
     const cuando = aFecha(m['nextDueDate']);
     if (!cuando || cuando > limite) continue;
+    /*
+     * ⚠️ **Y no basta con estar dentro de la ventana: hay que tocar HOY.** Sin
+     * esto, un vencimiento a 30 días salía en treinta correos seguidos, y la
+     * sección se convertía en ruido que se salta — justo el día que urge
+     * incluido. Ver `entraEnElResumen()`.
+     */
+    const dias = Math.round((cuando.getTime() - ahora.getTime()) / 86_400_000);
+    if (!entraEnElResumen(dias, VENCIMIENTO_DIAS)) continue;
     vencimientos.push({
       vehiculo: etiquetaVehiculo(m['vehicleSnapshot'] as Record<string, unknown>),
       concepto: String(m['title'] || m['type'] || '—'),
@@ -311,7 +321,7 @@ export async function enviarResumen(
       // de la empresa cambia con el entorno: sale del `.env`, no del código.
       from: company.email,
       to: [company.email],
-      subject: asunto,
+      subject: asuntoDeCorreo(asunto),
       html,
       text
     })

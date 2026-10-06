@@ -157,6 +157,35 @@ export interface SolicitudSinContestar {
   horasRestantes: number;
 }
 
+/**
+ * ¿Este vencimiento entra en el resumen de HOY?
+ *
+ * ⚠️ **Antes entraba todos los días desde que se abría la ventana**, así que una
+ * ITV a 30 días salía en treinta correos seguidos. Lo dijo Dorel el 6 de octubre
+ * de 2026: *«para un aviso de 14 días el email lo recibo el día 14 antes y el
+ * día antes del evento, no 14 veces»*.
+ *
+ * Y el motivo por el que esto importa está escrito tres secciones más arriba, a
+ * propósito de otra cosa: **un aviso que se repite sin novedad se deja de leer,
+ * y arrastra consigo a los que sí importan**. Treinta correos iguales entrenan a
+ * saltarse la sección entera — incluido el día que de verdad urge.
+ *
+ * Cuatro días, y cada uno con su motivo:
+ *
+ * - **El día que se abre el plazo** (`anticipacion`): es cuando aún da tiempo a
+ *   pedir cita sin prisa, que es para lo que sirve avisar con antelación.
+ * - **El día antes**: la última oportunidad de moverlo.
+ * - **El mismo día**: a partir de mañana el coche no puede circular.
+ * - **Y todo lo ya VENCIDO, siempre.** Esto no es un recordatorio, es un coche
+ *   que la aplicación está rechazando: callarlo sería esconder justamente lo
+ *   que está costando alquileres. Es la misma regla que la pantalla de Eventos.
+ */
+export function entraEnElResumen(diasRestantes: number, anticipacion: number): boolean {
+  if (diasRestantes < 0) return true;
+  if (diasRestantes <= 1) return true;
+  return diasRestantes === anticipacion;
+}
+
 export interface Resumen {
   fecha: string;
   entregas: MovimientoReserva[];

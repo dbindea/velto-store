@@ -1015,4 +1015,13 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+
+  // ⚠️ **El `.hint` global trae margen ARRIBA y ninguno abajo**, así que este
+  // párrafo se apoyaba directamente en la rejilla de fotos y se leía como el
+  // pie de la primera. Es el mismo caso que la descripción de la ficha pública
+  // pegada a las miniaturas: el aire entre dos cosas distintas no lo pone la
+  // separación interna de ninguna de las dos.
+  .hint {
+    margin-bottom: 1rem;
+  }
 }

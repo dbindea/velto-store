@@ -1361,14 +1361,33 @@ Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
 | target | Desarrollo | Producción |
 |---|---|---|
 | `backoffice` | `store.veltorent.com` | `rentalcar.veltomobility.com` |
-| `web` | `velto-web-dev.web.app` | `velto-web.web.app` |
+| `web` | `dev.veltorent.com` · `velto-web-dev.web.app` | **`veltomobility.com`** · `velto-web.web.app` |
 
-⚠️ **Esa segunda fila es lo que hay HOY, no lo que se pretende.** Aquí ponía
-`dev.veltorent.com` y `veltomobility.com` como si ya sirvieran, y medido el 25
-de septiembre de 2026 **ninguno de los dos existe**: `dev.veltorent.com` da
-NXDOMAIN, y `veltomobility.com` sirve el aparcamiento del registrador —IONOS, en
-alemán— con un **525** por HTTPS, porque el TLS entre Cloudflare y ese origen
-falla.
+**Medido el 5 de octubre de 2026**, host por host, y esta vez responden todos:
+
+| Host | Qué sirve | ¿Se indexa? |
+|---|---|---|
+| `veltomobility.com` | la web pública **real** | sí, es el escaparate |
+| `www.veltomobility.com` | **301** al apex | — |
+| `rentalcar.veltomobility.com` | backoffice de producción | no, `Disallow: /` |
+| `store.veltomobility.com` | **301** a `rentalcar.veltomobility.com` | — |
+| `store.veltorent.com` | backoffice de **desarrollo** | no, `Disallow: /` |
+| `dev.veltorent.com` | web pública de **desarrollo** | no, `noindex` |
+| `veltorent.com` (apex) | **no resuelve** | — |
+
+> ⚠️ **Aquí ponía que `dev.veltorent.com` y `veltomobility.com` NO existían**
+> —medido el 25 de septiembre: NXDOMAIN el primero y un 525 contra el
+> aparcamiento de IONOS el segundo—. Los dos sirven desde el 5 de octubre. Es la
+> tercera vez que esta tabla envejece, y la lección es siempre la misma: **un
+> inventario de dominios escrito a mano caduca**. Antes de concluir que un
+> despliegue falló porque un dominio no responde, vuelve a medirlo.
+
+⚠️ **Y los tres backoffices ya no son indexables**, que es la pregunta que
+surge al ver tres nombres sirviendo lo mismo: los tres entregan un `robots.txt`
+con `Disallow: /`, y para entrar hacen falta cuenta de Google, estar en
+`authorizedUsers` y pasar `firestore.rules`. Renombrarlos o apagarlos **no
+añadiría seguridad**; lo único que queda abierto es que el bundle se puede
+descargar, que es inherente a cualquier SPA.
 
 > Y aquí ponía además que el sitio de producción **ni siquiera estaba creado**
 > —`firebase hosting:sites:get velto-web --project prod` contestaba «could not
