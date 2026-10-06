@@ -177,6 +177,8 @@ const datosCoche = {
   precarga="coche"
   imagen={imagen}
   imagenAlt={`${nombre} de alquiler en Velto, Arganda del Rey`}
+  {...(coche.photo?.width ? { imagenAncho: coche.photo.width } : {})}
+  {...(coche.photo?.height ? { imagenAlto: coche.photo.height } : {})}
 >
   <script type="application/ld+json" is:inline set:html={JSON.stringify(datosCoche)} />
   <script

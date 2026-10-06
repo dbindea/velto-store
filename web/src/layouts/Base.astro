@@ -43,6 +43,16 @@ interface Props {
   /** Qué se ve en esa imagen. Con una foto de coche, el coche. */
   imagenAlt?: string;
   /**
+   * Las medidas REALES de esa imagen, si se conocen.
+   *
+   * ⚠️ **Sin ellas, el rastreador de WhatsApp tiene que DESCARGAR la foto para
+   * decidir si la enseña grande** — y si tarda, la enseña pequeña o no la
+   * enseña. Con la foto de un coche se saben: las devuelve la API en
+   * `photo.width` / `photo.height`.
+   */
+  imagenAncho?: number;
+  imagenAlto?: number;
+  /**
    * Qué datos adelantar desde el `<head>`, si esta página pide alguno.
    *
    * ⚠️ **Lo que ahorra es medio segundo en toda visita**, y no por ir más
@@ -57,11 +67,51 @@ interface Props {
   precarga?: 'flota' | 'coche';
 }
 
-const { titulo, descripcion, ruta, precarga, imagen, imagenAlt: alt } = Astro.props;
+const {
+  titulo,
+  descripcion,
+  ruta,
+  precarga,
+  imagen,
+  imagenAlt: alt,
+  imagenAncho,
+  imagenAlto
+} = Astro.props;
 
 /** La de la página si la trae; si no, la de la marca. Siempre absoluta. */
 const imagenAlt = alt || "Velto Mobility — alquiler de coches en Arganda del Rey";
 const imagenCompartir = imagen || `${SITIO}/brand/og.png`;
+
+/**
+ * Las medidas de la imagen que se comparte.
+ *
+ * ⚠️ **O las de verdad, o ninguna.** Con la foto de un coche vienen de la API;
+ * sin foto, es el PNG de marca que genera `scripts/generar-og.js` y que mide
+ * 1200×630 por construcción. Lo que no se puede hacer es declarar unas que no
+ * son: el rastreador se fía de la etiqueta y recorta por donde no debe.
+ */
+const medidasImagen = imagen
+  ? imagenAncho && imagenAlto
+    ? { ancho: imagenAncho, alto: imagenAlto }
+    : null
+  : { ancho: 1200, alto: 630 };
+
+/**
+ * ⚠️ **Se deduce de la extensión y no se da por hecho.** El PNG de marca es
+ * PNG; la foto de un coche es el JPEG de respaldo que publica
+ * `publishVehiclePhoto` — pero si algún día esa URL pasara a ser `.webp`,
+ * anunciar `image/jpeg` haría que el rastreador descartara la imagen por no
+ * cuadrar con lo que descarga.
+ */
+const tipoImagen = !imagen
+  ? "image/png"
+  : /\.jpe?g(\?|$)/i.test(imagenCompartir)
+    ? "image/jpeg"
+    : /\.png(\?|$)/i.test(imagenCompartir)
+      ? "image/png"
+      : /\.webp(\?|$)/i.test(imagenCompartir)
+        ? "image/webp"
+        : null;
 
 /**
  * El menú principal, decidido por Dorel el 30 de septiembre de 2026.
@@ -261,18 +311,32 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
       antes de bajarla.
     */}
     {/*
-      ⚠️ **Las medidas y el tipo solo se declaran para la imagen de la MARCA.**
-      Esa sí se sabe que es un PNG de 1200×630 porque la genera
-      `scripts/generar-og.js`; la foto de un coche viene de Storage con la
-      proporción que tenga y es JPEG o WebP. Declarar 1200×630 de una foto que
-      no lo es hace que el rastreador reserve un hueco que no encaja y recorte
-      donde no debe — y es peor que no decir nada, porque con la etiqueta se fía
-      y sin ella mide.
+      ⚠️ **Las medidas se declaran SIEMPRE, también para la foto de un coche —
+      y hasta el 6 de octubre de 2026 no era así.** Aquí ponía que de una foto
+      de Storage «no se saben», y sí se saben: la API las devuelve
+      (`photo.width` / `photo.height`) y esta misma página ya las usa en el
+      `<img>` del resumen prerenderizado. Lo que no se sabía era eso, no las
+      medidas.
+
+      El efecto de omitirlas lo describía el propio comentario de arriba: sin
+      ellas el rastreador tiene que **descargar** la foto para decidir si la
+      enseña grande, y si tarda la enseña pequeña o no la enseña. Es justo lo
+      que Dorel vio al mandar fichas de coche por WhatsApp desde producción.
+
+      ⚠️ **Lo que sigue siendo cierto es el aviso de no inventárselas.**
+      Declarar 1200×630 de una foto que no lo es hace que el rastreador reserve
+      un hueco que no encaja y recorte donde no debe. Por eso van las de verdad
+      o no va ninguna: si quien llama no las pasa, no se declaran.
     */}
     <meta property="og:image" content={imagenCompartir} />
-    {!imagen && <meta property="og:image:width" content="1200" />}
-    {!imagen && <meta property="og:image:height" content="630" />}
-    {!imagen && <meta property="og:image:type" content="image/png" />}
+    {/*
+      La URL absoluta otra vez, en `secure_url`: algunos rastreadores leen esta
+      y no `og:image`, y la que no esté se queda sin tarjeta.
+    */}
+    <meta property="og:image:secure_url" content={imagenCompartir} />
+    {medidasImagen && <meta property="og:image:width" content={String(medidasImagen.ancho)} />}
+    {medidasImagen && <meta property="og:image:height" content={String(medidasImagen.alto)} />}
+    {tipoImagen && <meta property="og:image:type" content={tipoImagen} />}
     <meta property="og:image:alt" content={imagenAlt} />
 
     {/*
