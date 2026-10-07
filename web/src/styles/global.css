@@ -617,6 +617,166 @@ input.picker-propio {
   border-color: var(--gray-800);
 }
 
+/*
+ * LA HOJA DEL MÓVIL
+ *
+ * ⚠️ **Con el dedo el panel deja de colgar del campo y se pega abajo**, a todo
+ * el ancho. Lo decide `esHoja()` en `fecha-panel.ts` —y no una media query de
+ * aquí— porque quien coloca el panel es JavaScript: `colocar()` escribe `top`,
+ * `left` y `max-height` **en línea**, y eso le gana a cualquier regla de esta
+ * hoja de estilos. La decisión se toma una sola vez, en el sitio que manda.
+ *
+ * Lo que se gana, que era el encargo de Dorel del 7 de octubre de 2026: el mes
+ * entero a la vista sin desplazar nada, celdas de 44 px —la medida del dedo— y
+ * las 24 horas en una rejilla que se abarca de un vistazo en vez de una columna
+ * que hay que recorrer.
+ *
+ * Es el mismo tratamiento que el panel del backoffice, que es lo otro que pedía
+ * ese día: el mismo calendario en los dos sitios.
+ */
+.calendario--hoja {
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: auto;
+  /* ⚠️ **Con tope de ancho, porque «dedo» no es «teléfono».** Lo que decide la
+     hoja es el puntero, así que una tableta o un portátil táctil entran por
+     aquí: medido a 1280 px, la hoja salía de 1274 px con las celdas del mes a
+     180 px cada una. Centrada y con tope se ve igual que en el teléfono. */
+  max-width: 480px;
+  margin-inline: auto;
+  max-height: 92vh;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  /* El pie cae dentro del área de los gestos del sistema en un iPhone. */
+  padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  /* Las esquinas de abajo las tapa el borde de la pantalla: redondearlas deja
+     dos muescas con el fondo de la página asomando. */
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-bottom: none;
+}
+
+.calendario--hoja .calendario__semana,
+.calendario--hoja .calendario__rejilla {
+  /* El mes ocupa el ancho de la pantalla, que es lo que lo hace legible con el
+     pulgar. `minmax(0, 1fr)` y no `1fr`: una celda con texto sin partir
+     ensancha la rejilla hasta salirse. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.calendario--hoja .calendario__semana span { font-size: var(--fs-small); }
+
+/* Cambiar de mes es lo que más se pulsa de la cabecera, y 32 px es el tamaño
+   del ratón: con el pulgar se falla contra el rótulo del mes. */
+.calendario--hoja .calendario__nav {
+  width: var(--touch);
+  height: var(--touch);
+  font-size: 1.375rem;
+}
+
+.calendario--hoja .calendario__dia {
+  height: var(--touch);
+  font-size: var(--fs-body);
+  border-radius: var(--r-md);
+}
+
+/*
+ * ⚠️ **Rejilla y no columna con desplazamiento.** Las 24 horas entran en cuatro
+ * filas de seis, así que no hay nada que recorrer ni que centrar al abrir — que
+ * era el otro problema del panel colgante en un teléfono.
+ *
+ * ⚠️ **Y la monta la COLUMNA, no su contenedor.** Con `display: contents` los
+ * botones subirían a la rejilla del padre y se vería igual, pero esa columna es
+ * el `role="listbox"` que los agrupa: un elemento sin caja es un elemento que
+ * algunos lectores de pantalla dejan de anunciar.
+ */
+.calendario--hoja .calendario__columna {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  /* Aquí sí ocupa todo: el tope de 110 px es del panel de escritorio, donde la
+     columna es una lista estrecha y no una rejilla. */
+  flex: 1 1 auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.calendario--hoja .calendario__item {
+  min-height: 40px;
+  font-size: var(--fs-body);
+  border-radius: var(--r-md);
+  /* Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo,
+     veinticuatro números sueltos parecen una tabla y no botones.
+
+     ⚠️ **La superficie es la del CAMPO, no `--bg-alt`.** Aquel se queda a 1,05
+     de la tarjeta blanca, por debajo de lo que el ojo distingue: el fondo
+     estaría puesto y no comunicaría nada. `--bg-input` da 1,135 medido, y
+     además es lo que la web usa para decir «esto es un control». */
+  background: var(--bg-input);
+}
+/* En el panel oscuro `--bg-input` vale lo mismo que su fondo (`--gray-900`),
+   así que ahí la ficha sube un escalón en vez de bajarlo: 1,34. */
+.calendario--oscuro.calendario--hoja .calendario__item { background: var(--gray-800); }
+
+.calendario--hoja .calendario__item.es-elegido { background: var(--brand); }
+.calendario--oscuro.calendario--hoja .calendario__item.es-elegido { background: var(--brand); }
+
+/*
+ * ⚠️ **El pie se queda pegado abajo, y eso es lo que salva las pantallas
+ * cortas.** Medido en un iPhone SE —375×553 útiles—: la hoja no cabe, se
+ * recorta a 92vh y «Seleccionar» quedaba **por debajo del borde**, o sea la
+ * salida de una hoja que tapa media pantalla escondida justo donde no se
+ * busca. Apretar las celdas arregla los 640 px y no llega a los 553: un pie
+ * pegajoso lo arregla a cualquier alto, que es lo que hay que querer.
+ *
+ * El fondo se hereda para que valga en el panel claro y en el oscuro sin
+ * repetir el color — si se escribiera, el texto que pasa por debajo se vería
+ * a través.
+ */
+.calendario--hoja .calendario__pie {
+  position: sticky;
+  bottom: 0;
+  background: inherit;
+  padding-bottom: var(--sp-1);
+}
+
+/*
+ * El botón que da la fecha por buena sí es un botón de verdad aquí: es la salida
+ * de una hoja que tapa media pantalla, y en el pie de un popover de escritorio
+ * sería un adorno.
+ */
+.calendario--hoja .calendario__cerrar,
+.calendario--oscuro.calendario--hoja .calendario__cerrar {
+  background: var(--brand);
+  color: var(--text-on-brand);
+  padding: var(--sp-2) var(--sp-4);
+  /* ⚠️ `--fw-medium`, que es el peso del kit. No hay `--fw-semibold`, y un
+     `var()` sin declarar **no falla: descarta la declaración entera**, así que
+     el botón se habría quedado con el peso heredado sin que nada avisara. */
+  font-weight: var(--fw-medium);
+}
+
+/*
+ * ⚠️ **En una pantalla corta la hoja se aprieta, no se recorta.** Medido con el
+ * modo dispositivo: a 390×780 la hoja mide 667 px y cabe entera, pero un iPhone
+ * SE deja 553 px útiles y entonces las últimas horas quedan por debajo del
+ * borde — hay que desplazar **dentro** del panel para llegar a «Seleccionar».
+ * El mes sigue entero en los dos casos, que es lo que se pedía, y lo que cede
+ * es el alto de las celdas.
+ *
+ * 38 px baja del dedo de 44, y aquí es correcto: una celda de calendario mide
+ * 52 px de ancho, así que el objetivo sigue siendo grande. Los diálogos del
+ * sistema hacen lo mismo en pantallas cortas.
+ */
+@media (max-height: 700px) {
+  .calendario--hoja { gap: var(--sp-2); }
+  .calendario--hoja .calendario__dia { height: 38px; }
+  .calendario--hoja .calendario__item { min-height: 34px; }
+  .calendario--hoja .calendario__nav { height: 38px; }
+}
+
 .calendario__cabecera {
   display: flex;
   align-items: center;
@@ -707,6 +867,11 @@ input.picker-propio {
 
 .calendario__hora {
   display: flex;
+  /* ⚠️ **Centrada, porque desde el 7 de octubre de 2026 la columna es UNA.** Al
+     quitar los minutos quedó sola, y con `flex: 1` se estiraba a los 250 px del
+     calendario: una pastilla de ese ancho con un «12» dentro no parece una
+     lista de horas, parece un botón que ocupa todo. */
+  justify-content: center;
   gap: var(--sp-2);
   border-top: var(--bw) solid var(--border);
   padding-top: var(--sp-2);
@@ -731,7 +896,7 @@ input.picker-propio {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex: 0 1 110px;
   min-width: 60px;
 
   /*

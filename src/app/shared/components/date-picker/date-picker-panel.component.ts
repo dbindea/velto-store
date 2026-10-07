@@ -17,11 +17,35 @@ import {
   PickerMode,
   addMonths,
   formatValue,
-  minuteSteps,
   monthGrid,
   outOfRange,
+  parseLimitValue,
   parseValue
 } from '@shared/utils/date-picker.util';
+
+/**
+ * ¿El panel se pega al borde inferior de la pantalla en vez de colgar del campo?
+ *
+ * ⚠️ **Colgando del campo, en un teléfono el mes NO se ve entero.** Entre la
+ * rejilla, las horas y el pie el panel mide unos 550 px, así que `place()` lo
+ * recortaba contra la pantalla y lo que sobraba —casi siempre las dos últimas
+ * semanas y el botón de aceptar— había que buscarlo desplazando **dentro** del
+ * panel. Y la pregunta que un calendario contesta de un vistazo es justo esa:
+ * en qué día de la semana cae el 15. Lo pidió Dorel el 7 de octubre de 2026:
+ * «ver el mes completo en la pantalla».
+ *
+ * ⚠️ **Se pregunta por el APARATO y no por el ancho**, que es la misma frontera
+ * que decide `base-select`: un teléfono en horizontal mide 844 px de ancho y 390
+ * de alto — con un corte por ancho se llevaría el panel de escritorio justo en
+ * la orientación donde menos cabe. Lo que decide es si hay dedo.
+ *
+ * ⚠️ **Y se lee una vez, al crear el panel.** Un aparato no cambia de puntero a
+ * media fecha, y el panel se cierra al redimensionar (lo hace la directiva), así
+ * que girar el teléfono ya vuelve a preguntarlo.
+ */
+export function prefersSheetLayout(): boolean {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
 
 /**
  * El calendario y el reloj de la aplicación.
@@ -68,7 +92,9 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
   readonly closed = output<void>();
 
   readonly hours = HOURS;
-  readonly minutes = minuteSteps();
+
+  /** Con el dedo, hoja abajo; con el ratón, colgando del campo. */
+  readonly asSheet = prefersSheetLayout();
 
   /** Lo elegido ahora mismo; nace de lo que hubiera en el campo. */
   private readonly picked = signal<Date | null>(null);
@@ -78,8 +104,10 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
   readonly showsCalendar = computed(() => this.mode() !== 'time');
   readonly showsTime = computed(() => this.mode() !== 'date');
 
-  private readonly minDate = computed(() => parseValue('date', this.min()));
-  private readonly maxDate = computed(() => parseValue('date', this.max()));
+  // ⚠️ `parseLimitValue` y no `parseValue('date', …)`: un `datetime-local` trae
+  // el límite con hora dentro y aquel lo descartaba entero. Ver el util.
+  private readonly minDate = computed(() => parseLimitValue(this.min()));
+  private readonly maxDate = computed(() => parseLimitValue(this.max()));
 
   readonly cells = computed<DayCell[]>(() =>
     monthGrid(this.visibleMonth(), {
@@ -123,7 +151,6 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
   });
 
   readonly pickedHour = computed(() => this.picked()?.getHours() ?? null);
-  readonly pickedMinute = computed(() => this.picked()?.getMinutes() ?? null);
 
   /**
    * El valor de partida se lee **una vez**, aquí.
@@ -213,19 +240,24 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
     if (this.mode() === 'date') this.closed.emit();
   }
 
+  /**
+   * ⚠️ **La hora se elige EN PUNTO: el minuto se pone a 0 siempre.** Decisión
+   * de Dorel del 7 de octubre de 2026. La columna de minutos de cinco en cinco
+   * era doce opciones más que recorrer con el pulgar para un negocio que pacta
+   * las entregas a y media como mucho — y la hora exacta de verdad la pone el
+   * parte de entrega, no este campo.
+   *
+   * ⚠️ **Y pone 0 aunque el campo ya trajera minutos.** Dejar los de antes
+   * —`base.getMinutes()`, que es lo que hacía— significaría que una recogida
+   * guardada a las 10:35 se queda en 11:35 al tocar la hora, con un minuto que
+   * ya no se puede cambiar porque la columna no existe.
+   */
   pickHour(h: number): void {
     const base = this.picked() ?? new Date();
     const nueva = new Date(base);
-    nueva.setHours(h, base.getMinutes(), 0, 0);
+    nueva.setHours(h, 0, 0, 0);
     this.commit(nueva);
-  }
-
-  pickMinute(m: number): void {
-    const base = this.picked() ?? new Date();
-    const nueva = new Date(base);
-    nueva.setMinutes(m, 0, 0);
-    this.commit(nueva);
-    // En un campo de hora, el minuto es el último dato que falta.
+    // En un campo de solo hora, la hora es el último dato que falta.
     if (this.mode() === 'time') this.closed.emit();
   }
 
@@ -273,6 +305,11 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
    * pantalla. Por eso lo monta la directiva fuera del árbol del formulario.
    */
   private place(): void {
+    // Como hoja no hay nada que colocar: lo hace el CSS pegándola al borde de
+    // abajo. Y escribir `top`/`left` en línea le GANARÍA a esa regla, así que
+    // esto no es un atajo, es lo que hace que la hoja funcione.
+    if (this.asSheet) return;
+
     const r = this.anchor();
     const panel = this.host.nativeElement.firstElementChild as HTMLElement | null;
     if (!r || !panel) return;

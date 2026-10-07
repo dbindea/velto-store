@@ -71,14 +71,20 @@ export function parseFechaHora(valor: string | null | undefined): Date | null {
 /**
  * Un límite (`min` o `max`) escrito de **cualquiera de las dos formas**.
  *
- * ⚠️ **Esta función es la primera corrección sobre el backoffice, y arregla un
- * fallo que allí sigue vivo.** `DatePickerPanelComponent` lee sus límites con
+ * ⚠️ **Esta función nació como corrección sobre el backoffice, y allí ya está
+ * aplicada.** `DatePickerPanelComponent` leía sus límites con
  * `parseValue('date', …)`, cuyo `ISO_FECHA` va **anclado** (`^…$`): un
  * `min="2026-09-29T10:00"` no casa, devuelve `null`, y el panel **no
- * deshabilita ni un solo día**. O sea que en un `datetime-local` —que es lo que
- * son los cuatro campos de esta web— el calendario ofrece días que el propio
- * campo rechaza después con `rangeUnderflow`, y el formulario se niega a
- * enviarse sin decir por qué.
+ * deshabilitaba ni un solo día**. O sea que en un `datetime-local` —que es lo
+ * que son los cuatro campos de esta web y los dos del asistente de reservas— el
+ * calendario ofrecía días que el propio campo rechaza después con
+ * `rangeUnderflow`, y el formulario se negaba a enviarse sin decir por qué.
+ * Allí lo arregla `parseLimitValue()` desde el 7 de octubre de 2026.
+ *
+ * ⚠️ **Lo que sigue siendo distinto es que aquí la HORA del límite se
+ * conserva.** El backoffice compara por días y deja la hora al campo; esta web
+ * la necesita, porque `horasValidas()` y `minutosValidos()` recortan las horas
+ * del primer día del rango.
  *
  * Aquí se acepta el día suelto y el día con hora, y se conserva la hora cuando
  * viene: hace falta para el primer día del rango, donde no todas las horas
@@ -183,11 +189,16 @@ export function rejillaDelMes(mesVisible: Date, opciones: OpcionesRejilla = {}):
  * Los minutos que se ofrecen, derivados del `step` del campo.
  *
  * ⚠️ **Esta es la segunda corrección sobre el backoffice, y sin ella el
- * buscador deja de funcionar sin dar un solo error.** Allí los minutos van
+ * buscador deja de funcionar sin dar un solo error.** Allí los minutos iban
  * fijos de cinco en cinco (`minuteSteps(5)`), y estos campos llevan
  * `step="900"` — cuartos de hora. El panel escribiría «10:05», el navegador lo
  * marcaría `stepMismatch`, el formulario no se enviaría y **pulsar «Ver
  * precios» no haría absolutamente nada**, sin nada en consola.
+ *
+ * ⚠️ **Y sigue haciendo falta aunque ya no haya columna de minutos** (7 de
+ * octubre de 2026): la hora se elige en punto, pero `minutosValidos()` empuja
+ * el minuto al primer hueco bueno cuando el `min` del campo cae a y media, y
+ * ese hueco tiene que caer en la rejilla del `step`.
  *
  * Es el mismo fallo que ya costó un rato por el otro extremo, cuando el `min`
  * cayó fuera de la rejilla del `step`: con `step=900` el navegador cuenta los

@@ -50,7 +50,45 @@ import {
  * aparato.
  */
 function mandaElNativo(): boolean {
-  return !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  /*
+   * ⚠️ **Y desde el 7 de octubre de 2026 NUNCA manda: es una REVERSIÓN, por eso
+   * se deja escrito todo lo de arriba.**
+   *
+   * El argumento sigue siendo bueno —la hoja del sistema está pensada para el
+   * pulgar— y lo tumbó mirarla: el diálogo de Android es un selector de
+   * **ruedas**, así que no se ve el mes. Para saber si el 8 cae en jueves hay
+   * que girar el día de uno en uno. Y esta es una web donde lo primero que se
+   * hace es elegir unas fechas de alquiler, que es justo la pregunta que un
+   * calendario contesta de un vistazo y una rueda no contesta nunca.
+   *
+   * Lo pidió Dorel ese día —«en el móvil quiero el calendario con vista del
+   * mes»— y de paso deja el mismo panel en los dos sitios, que era lo otro que
+   * pedía: el backoffice ya forzaba el suyo desde el 24 de septiembre.
+   *
+   * ⚠️ **Se conserva la función en vez de borrar la rama**, igual que
+   * `prefersNativePicker()` en el backoffice: es el punto donde volver el día
+   * que el selector del sistema enseñe el mes.
+   */
+  return false;
+}
+
+/**
+ * ¿El panel se pega al borde de abajo en vez de colgar del campo?
+ *
+ * ⚠️ **Colgando del campo, en un teléfono el mes NO se ve entero.** El panel
+ * mide unos 550 px, así que `colocar()` lo recorta contra la pantalla y lo que
+ * sobra —las últimas semanas y el pie— hay que buscarlo desplazando dentro del
+ * propio panel. Y lo primero que se hace en esta web es elegir unas fechas: la
+ * pregunta es en qué día de la semana cae el 15, y eso un mes recortado no lo
+ * contesta.
+ *
+ * ⚠️ **Se pregunta por el APARATO, no por el ancho**, que es la misma frontera
+ * que decide `base-select` en el backoffice: un teléfono en horizontal mide
+ * 844 px de ancho y 390 de alto, así que un corte por ancho le daría el panel
+ * de escritorio justo en la orientación donde menos cabe.
+ */
+function esHoja(): boolean {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
 
 /** Los 34 px de la derecha, que es exactamente lo que abre el del navegador. */
@@ -196,7 +234,7 @@ function crearPanel(): Panel {
     }
     raiz.append(rejilla);
 
-    // --- Hora y minuto, en dos columnas
+    // --- Las horas, en punto
     raiz.append(columnasDeHora());
 
     // --- Pie
@@ -300,21 +338,22 @@ function crearPanel(): Panel {
       elegida ??
       new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), horaBase, mins[0] ?? 0);
 
+    /*
+     * ⚠️ **La hora se elige EN PUNTO, y aquí había una columna de minutos.**
+     * Se quitó el 7 de octubre de 2026, a la vez que la del backoffice y por lo
+     * mismo: doce opciones más que recorrer con el pulgar para un negocio que
+     * pacta las recogidas en punto. Lo que el visitante elige aquí es una
+     * intención; la hora real la cierra la agencia por teléfono.
+     *
+     * ⚠️ **El minuto se fuerza a 0 aunque el campo trajera otro.** Dejando
+     * `b.getMinutes()` —que es lo que hacía—, una fecha que llegara con 10:35
+     * se quedaría en 11:35 al tocar la hora, con un minuto que ya no hay forma
+     * de cambiar porque la columna no existe.
+     */
     caja.append(
       columna('Horas', horas, elegida?.getHours() ?? null, (h) => {
         const b = base();
-        elegida = new Date(b.getFullYear(), b.getMonth(), b.getDate(), h, b.getMinutes());
-        corregirFueraDeRango();
-        escribir(elegida);
-        pintar();
-      })
-    );
-    caja.append(
-      columna('Minutos', mins, elegida?.getMinutes() ?? null, (m) => {
-        const b = base();
-        elegida = new Date(b.getFullYear(), b.getMonth(), b.getDate(), b.getHours(), m);
-        // Igual que en la columna de horas: era el único de los tres
-        // manejadores que no lo llamaba, y podía dejar el campo inválido.
+        elegida = new Date(b.getFullYear(), b.getMonth(), b.getDate(), h, 0);
         corregirFueraDeRango();
         escribir(elegida);
         pintar();
@@ -426,10 +465,18 @@ function crearPanel(): Panel {
       pintar();
     });
 
+    /*
+     * ⚠️ **Dice «Seleccionar» y no «Cerrar», y no es solo la palabra.** El panel
+     * escribe en el campo en cuanto se toca un día, así que el botón cierra en
+     * los dos casos; lo que cambia es lo que el visitante cree que pasa al
+     * pulsarlo. «Cerrar» se lee como salir sin guardar, y delante de un
+     * formulario de alquiler eso hace dudar de si la fecha ha quedado puesta.
+     * Lo pidió Dorel el 7 de octubre de 2026, junto con el del backoffice.
+     */
     const cerrar = document.createElement('button');
     cerrar.type = 'button';
     cerrar.className = 'calendario__cerrar';
-    cerrar.textContent = 'Cerrar';
+    cerrar.textContent = 'Seleccionar';
     cerrar.addEventListener('click', () => api.cerrar());
 
     derecha.append(hoy, cerrar);
@@ -448,6 +495,25 @@ function crearPanel(): Panel {
    */
   function colocar() {
     if (!campoActual) return;
+
+    /*
+     * ⚠️ **Como hoja no hay nada que colocar, y esto no es un atajo.** El panel
+     * se pega al borde de abajo desde el CSS, y aquí se escriben `top`, `left` y
+     * `max-height` **en línea**: eso le gana a cualquier regla de la hoja de
+     * estilos. Si esta salida no estuviera, la hoja volvería a colgar del campo
+     * sin que nada en el CSS lo explicara.
+     *
+     * Se limpian además, porque el panel es **uno solo para toda la página**:
+     * girar el teléfono con el panel abierto en escritorio dejaría puestos los
+     * valores de antes.
+     */
+    if (esHoja()) {
+      raiz.style.removeProperty('top');
+      raiz.style.removeProperty('left');
+      raiz.style.removeProperty('max-height');
+      return;
+    }
+
     const caja = campoActual.getBoundingClientRect();
     const vv = window.visualViewport;
     const altoUtil = vv ? vv.height : window.innerHeight;
@@ -510,10 +576,26 @@ function crearPanel(): Panel {
        * colgado del `<body>`, fuera de cualquier contenedor.
        */
       raiz.classList.toggle('calendario--oscuro', getComputedStyle(campo).colorScheme === 'dark');
+      // Con el dedo, hoja a lo ancho pegada abajo; con el ratón, colgando del
+      // campo. La clase es lo único que el CSS necesita saber.
+      raiz.classList.toggle('calendario--hoja', esHoja());
 
       pintar();
       raiz.showPopover();
       colocar();
+      /*
+       * ⚠️ **Y se centra la hora AQUÍ, no dentro de `pintar()`.** Allí se
+       * llamaba ya, y no servía de nada: hasta `showPopover()` el panel sigue
+       * en `display: none`, así que `clientHeight` y `offsetTop` valen **0** y
+       * el cálculo deja la columna en lo alto. Medido en el buscador de la
+       * portada con las 10:00 puestas: la lista se abría enseñando de la 00 a
+       * la 05, sin una sola hora marcada a la vista — o sea, el panel se abría
+       * diciendo que no había hora elegida.
+       *
+       * Dentro de `pintar()` sigue haciendo falta: al tocar un día se repinta
+       * con el panel ya abierto, y ahí sí mide.
+       */
+      centrarHoras();
 
       document.addEventListener('scroll', alDesplazar, true);
       window.addEventListener('resize', alRedimensionar);

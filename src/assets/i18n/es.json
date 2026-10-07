@@ -279,14 +279,14 @@
     }
   },
   "datePicker": {
-    "title": "Elegir fecha",
-    "previousMonth": "Mes anterior",
-    "nextMonth": "Mes siguiente",
     "clear": "Borrar",
     "hours": "Horas",
-    "minutes": "Minutos",
-    "today": "Hoy",
-    "now": "Ahora"
+    "nextMonth": "Mes siguiente",
+    "now": "Ahora",
+    "previousMonth": "Mes anterior",
+    "select": "Seleccionar",
+    "title": "Elegir fecha",
+    "today": "Hoy"
   },
   "dashboard": {
     "allClearHint": "No hay acciones pendientes. Buen trabajo.",

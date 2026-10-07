@@ -279,14 +279,14 @@
     }
   },
   "datePicker": {
-    "title": "Alege data",
-    "previousMonth": "Luna anterioară",
-    "nextMonth": "Luna următoare",
     "clear": "Golește",
     "hours": "Ore",
-    "minutes": "Minute",
-    "today": "Azi",
-    "now": "Acum"
+    "nextMonth": "Luna următoare",
+    "now": "Acum",
+    "previousMonth": "Luna anterioară",
+    "select": "Selectează",
+    "title": "Alege data",
+    "today": "Azi"
   },
   "dashboard": {
     "allClearHint": "Nu există acțiuni în așteptare. Bun treabă.",

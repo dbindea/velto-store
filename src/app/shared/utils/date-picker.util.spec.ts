@@ -4,11 +4,11 @@ import {
   formatDateTimeValue,
   formatDateValue,
   formatTimeValue,
-  minuteSteps,
   monthGrid,
   outOfRange,
   parseDateTimeValue,
   parseDateValue,
+  parseLimitValue,
   parseTimeValue
 } from './date-picker.util';
 
@@ -171,9 +171,39 @@ describe('addMonths', () => {
   });
 });
 
-describe('minuteSteps', () => {
-  it('doce por hora con saltos de cinco', () => {
-    expect(minuteSteps()).toHaveLength(12);
-    expect(minuteSteps()[1]).toBe(5);
+/**
+ * El `min` y el `max` de un campo, que se leían mal en la mitad de ellos.
+ *
+ * ⚠️ **Estos cuatro casos son el fallo que había**, no una comprobación de
+ * formato: con `parseValue('date', …)` un límite con hora dentro se resolvía
+ * como `null`, así que el panel no bloqueaba **ningún** día en los campos
+ * `datetime-local` — y los dos del asistente de reservas lo son.
+ */
+describe('parseLimitValue', () => {
+  it('lee el límite de un campo de fecha', () => {
+    const d = parseLimitValue('2026-10-07')!;
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(9);
+    expect(d.getDate()).toBe(7);
+  });
+
+  it('lee el límite de un campo de fecha Y HORA, que antes se descartaba', () => {
+    const d = parseLimitValue('2026-10-07T10:30')!;
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(9);
+    expect(d.getDate()).toBe(7);
+  });
+
+  it('con un límite de fecha y hora, el día anterior SÍ queda bloqueado', () => {
+    const min = parseLimitValue('2026-10-07T10:30');
+    expect(outOfRange(new Date(2026, 9, 6), min, null)).toBe(true);
+    // Y el día del propio límite vale entero: la hora la vigila el campo.
+    expect(outOfRange(new Date(2026, 9, 7), min, null)).toBe(false);
+  });
+
+  it('sin valor, sin límite', () => {
+    expect(parseLimitValue(null)).toBeNull();
+    expect(parseLimitValue('')).toBeNull();
+    expect(parseLimitValue('vaya')).toBeNull();
   });
 });

@@ -2,7 +2,12 @@
   El panel entero es `position: fixed` y lo coloca el componente: por eso no
   lleva `top` ni `left` escritos aquí.
 -->
-<div class="picker-panel" role="dialog" [attr.aria-label]="t('datePicker.title')">
+<div
+  class="picker-panel"
+  [class.is-sheet]="asSheet"
+  role="dialog"
+  [attr.aria-label]="t('datePicker.title')"
+>
   @if (showsCalendar()) {
     <div class="picker-head">
       <button
@@ -51,9 +56,8 @@
 
   @if (showsTime()) {
     <!--
-      Dos columnas y no una lista de horas completas: 24 × 12 son 288 filas
-      que no se recorren de un vistazo. Y el campo sigue admitiendo el teclado
-      para cualquier minuto que no esté en los saltos de cinco.
+      Las 24 horas y nada más: el campo sigue admitiendo el teclado para
+      cualquier minuto que haya que pactar fuera de la hora en punto.
     -->
     <div class="picker-time" [class.with-calendar]="showsCalendar()">
       <div class="picker-time-col" [attr.aria-label]="t('datePicker.hours')">
@@ -68,18 +72,13 @@
           </button>
         }
       </div>
-      <div class="picker-time-col" [attr.aria-label]="t('datePicker.minutes')">
-        @for (m of minutes; track m) {
-          <button
-            type="button"
-            class="picker-time-item"
-            [class.is-selected]="pickedMinute() === m"
-            (click)="pickMinute(m)"
-          >
-            {{ pad(m) }}
-          </button>
-        }
-      </div>
+      <!--
+        ⚠️ **Aquí había una columna de MINUTOS de cinco en cinco, y se quitó el
+        7 de octubre de 2026.** Eran doce opciones más que recorrer con el
+        pulgar para un negocio que pacta las entregas en punto, y la hora real
+        de la entrega la fija el parte, no este campo. La hora se guarda
+        siempre con el minuto a 0 — ver `pickHour()`.
+      -->
     </div>
   }
 
@@ -99,8 +98,16 @@
       <button type="button" class="picker-now" [disabled]="nowDisabled()" (click)="pickNow()">
         {{ showsCalendar() ? t('datePicker.today') : t('datePicker.now') }}
       </button>
+      <!--
+        ⚠️ **Dice «Seleccionar» y no «Cerrar», y no es solo la palabra.** El
+        panel escribe en el campo en cuanto se toca un día, así que el botón
+        cierra en los dos casos; lo que cambia es lo que el operador cree que
+        pasa al pulsarlo. «Cerrar» se lee como salir sin guardar —y con el
+        pulgar, delante de un cliente, eso hace dudar—, cuando lo que hace es
+        dar por buena la fecha. Lo pidió Dorel el 7 de octubre de 2026.
+      -->
       <button type="button" class="picker-close" (click)="closed.emit()">
-        {{ t('common.close') }}
+        {{ t('datePicker.select') }}
       </button>
     </span>
   </div>

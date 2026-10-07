@@ -98,6 +98,31 @@ export function parseValue(mode: PickerMode, valor: string | null | undefined): 
   return d;
 }
 
+/**
+ * Lee el `min` o el `max` de un campo, **venga de un `date` o de un
+ * `datetime-local`**.
+ *
+ * ⚠️ **Y hacía falta: el panel estaba ignorando los límites de la mitad de los
+ * campos.** Se leían con `parseValue('date', …)`, cuyo patrón está anclado
+ * (`^…$`), así que un `min="2026-10-07T10:00"` **no coincidía** y se resolvía
+ * como `null`: ninguna celda salía bloqueada y «Hoy» nunca se apagaba. O sea
+ * que en el asistente de reservas —donde los dos campos son `datetime-local`
+ * desde el 24 de septiembre de 2026— se podía elegir una recogida en el pasado
+ * tan tranquilamente; lo único que lo cazaba después era la validación del
+ * navegador, con el panel ya cerrado y el campo en rojo.
+ *
+ * Encontrado el 7 de octubre de 2026 mientras se quitaban los minutos. El
+ * panel nació para campos `date`, los `datetime-local` llegaron dos días
+ * después y esta línea se quedó atrás.
+ *
+ * Se parte por la `T` y se compara **por días**, que es lo que hace
+ * `outOfRange()`: la hora del límite la sigue vigilando el campo.
+ */
+export function parseLimitValue(valor: string | null | undefined): Date | null {
+  if (!valor) return null;
+  return parseDateValue(valor.split('T')[0]);
+}
+
 /** Escribe el valor de un campo según su tipo. */
 export function formatValue(mode: PickerMode, d: Date): string {
   if (mode === 'date') return formatDateValue(d);
@@ -180,18 +205,13 @@ export function addMonths(d: Date, meses: number): Date {
 }
 
 /**
- * Las horas que se ofrecen, en saltos.
+ * ⚠️ **Aquí había un `minuteSteps(5)` y se borró el 7 de octubre de 2026**, al
+ * quitarse la columna de minutos del panel: la hora se elige en punto. Era el
+ * único que lo llamaba, y una lista de minutos que nadie ofrece es andamio.
+ * Si algún día vuelven los minutos, está en el historial de git.
  *
- * ⚠️ **La lista no sustituye al teclado.** El campo sigue siendo un
- * `input[type=time]` y se puede escribir cualquier minuto; esto es el atajo
- * para los de siempre. Con saltos de cinco minutos salen 12 por hora, que es
- * una lista que se recorre de un vistazo — de uno en uno serían 60 y habría
- * que buscar.
+ * ⚠️ **La lista de horas no sustituye al teclado.** El campo sigue siendo un
+ * `input[type=time]` o `datetime-local` y se puede teclear cualquier minuto;
+ * esto es el atajo, no el único camino.
  */
-export function minuteSteps(paso = 5): number[] {
-  const salida: number[] = [];
-  for (let m = 0; m < 60; m += paso) salida.push(m);
-  return salida;
-}
-
 export const HOURS = Array.from({ length: 24 }, (_, h) => h);

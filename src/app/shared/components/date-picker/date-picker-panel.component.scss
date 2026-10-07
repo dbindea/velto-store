@@ -59,6 +59,178 @@
   user-select: none;
 }
 
+/**
+ * LA HOJA DEL MÓVIL
+ *
+ * ⚠️ **Con el dedo el panel deja de colgar del campo y se pega abajo**, a todo
+ * el ancho. Lo decide `prefersSheetLayout()` en el componente —y no una media
+ * query— porque el que coloca el panel es JavaScript: `place()` escribe `top` y
+ * `left` **en línea**, y eso le gana a cualquier regla de aquí. Así que la
+ * decisión se toma una sola vez, en el sitio que de verdad manda.
+ *
+ * Lo que se gana, que era el encargo: el mes entero a la vista sin desplazar
+ * nada, celdas de 44 px —la medida del dedo— y las 24 horas en una rejilla que
+ * cabe de un vistazo en vez de una columna que hay que recorrer.
+ */
+.picker-panel.is-sheet {
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: auto;
+  /**
+   * ⚠️ **Con tope de ancho, porque «dedo» no es «teléfono».** Lo que decide la
+   * hoja es el puntero, así que una tableta o un portátil táctil entran por
+   * aquí: medido a 1280 px, la hoja salía de **1274 px de ancho** con las
+   * celdas del mes a 180 px cada una. Centrada y con tope se ve igual que en el
+   * teléfono.
+   */
+  max-width: 480px;
+  margin-inline: auto;
+  max-height: 92vh;
+  overflow-y: auto;
+  // Las esquinas de abajo las tapa el borde de la pantalla: redondearlas deja
+  // dos muescas con el fondo de la página asomando.
+  border-radius: 16px 16px 0 0;
+  border-bottom: none;
+  padding: 0.75rem 1rem 1.25rem;
+  gap: 0.75rem;
+  // El pie cae dentro del área de los gestos del sistema en un iPhone.
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+
+  .picker-weekdays,
+  .picker-grid {
+    // El mes ocupa el ancho de la pantalla, que es lo que lo hace legible con
+    // el pulgar. `minmax(0, 1fr)` y no `1fr`: una celda con texto sin partir
+    // ensancha la rejilla hasta salirse, y es el fallo que ya midió 1200 px en
+    // el calendario grande.
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .picker-day {
+    height: 44px;
+    font-size: 0.9375rem;
+    border-radius: 10px;
+  }
+
+  .picker-weekdays span {
+    font-size: 0.75rem;
+  }
+
+  // Cambiar de mes es lo que más se pulsa de la cabecera, y 28 px es el tamaño
+  // del ratón: con el pulgar se falla contra el rótulo del mes.
+  .picker-nav {
+    width: 44px;
+    height: 44px;
+
+    i {
+      font-size: 1rem;
+    }
+  }
+
+  .picker-time-col {
+    // ⚠️ **Rejilla y no columna con desplazamiento.** Las 24 horas entran en
+    // cuatro filas de seis, así que no hay nada que recorrer ni que centrar al
+    // abrir — que era el otro problema del panel colgante en un teléfono.
+    //
+    // ⚠️ **Y la rejilla la monta la COLUMNA, no su contenedor.** Con
+    // `display: contents` en la columna los botones subirían a la rejilla del
+    // padre y se vería igual, pero esa columna es el `role="listbox"` que los
+    // agrupa: un elemento sin caja es un elemento que algunos lectores de
+    // pantalla dejan de anunciar.
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    // Aquí sí ocupa todo: el tope de 110 px es del panel de escritorio, donde
+    // la columna es una lista estrecha y no una rejilla.
+    flex: 1 1 auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .picker-time-item {
+    min-height: 40px;
+    font-size: 0.9375rem;
+    border-radius: 10px;
+    /**
+     * Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo,
+     * veinticuatro números sueltos parecen una tabla y no botones.
+     *
+     * ⚠️ **La superficie es la del CAMPO, no la del hueco.** Con `--bg-main`
+     * —lo primero que se escribió— la ficha queda a **1,085** de la tarjeta en
+     * los temas oscuros, por debajo de lo que el ojo distingue: el fondo estaba
+     * puesto y no comunicaba nada, que es exactamente lo que ya pasó con el
+     * tinte del hover al 2 %. `--bg-input` existe para separarse de la tarjeta
+     * en los cuatro temas —1,12 en claro y 1,34 en oscuro, medido— y además es
+     * lo que esta aplicación usa para decir «esto es un control».
+     */
+    background: var(--bg-input);
+  }
+
+  .picker-time-item.is-selected {
+    background: var(--accent-color);
+  }
+
+  /**
+   * ⚠️ **El pie se queda pegado abajo, y eso es lo que salva las pantallas
+   * cortas.** Medido en un iPhone SE —375×553 útiles—: la hoja no cabe, se
+   * recorta a 92vh y el botón de aceptar quedaba **por debajo del borde**, o
+   * sea la salida de una hoja que tapa media pantalla escondida justo donde no
+   * se busca. Apretar las celdas arregla los 640 px y no llega a los 553; un
+   * pie pegajoso lo arregla a cualquier alto.
+   *
+   * El fondo se hereda para que valga en los cuatro temas sin repetir el color
+   * — si no lo llevara, el contenido que pasa por debajo se vería a través.
+   */
+  .picker-foot {
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    padding-top: 0.75rem;
+    padding-bottom: 0.25rem;
+  }
+
+  // El botón que da la fecha por buena sí es un botón de verdad aquí: es la
+  // salida de una hoja que tapa media pantalla, y en el pie de un popover de
+  // escritorio sería un adorno.
+  .picker-close {
+    background: var(--accent-color);
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    font-weight: 600;
+  }
+}
+
+/**
+ * ⚠️ **En una pantalla corta la hoja se aprieta, no se recorta.** Medido con el
+ * modo dispositivo: a 390×780 mide 667 px y cabe entera, pero un iPhone SE deja
+ * 553 px útiles y entonces las últimas horas quedan por debajo del borde — hay
+ * que desplazar **dentro** del panel para llegar al botón. El mes sigue entero
+ * en los dos casos, que es lo que se pedía, y lo que cede es el alto.
+ *
+ * 38 px baja del dedo de 44, y aquí es correcto: una celda de calendario mide
+ * unos 50 px de ancho, así que el objetivo sigue siendo grande. Los diálogos
+ * del sistema hacen lo mismo en pantallas cortas.
+ */
+@media (max-height: 700px) {
+  .picker-panel.is-sheet {
+    gap: 0.5rem;
+
+    .picker-day {
+      height: 38px;
+    }
+
+    .picker-time-item {
+      min-height: 34px;
+    }
+
+    .picker-nav {
+      height: 38px;
+    }
+  }
+}
+
 .picker-head {
   display: flex;
   align-items: center;
@@ -148,6 +320,11 @@
 
 .picker-time {
   display: flex;
+  // ⚠️ **Centrada, porque desde el 7 de octubre de 2026 la columna es UNA.**
+  // Al quitar los minutos quedó sola, y con `flex: 1` se estiraba a los 236 px
+  // del calendario: una pastilla de ese ancho con un «12» dentro no parece una
+  // lista de horas, parece un botón que ocupa todo.
+  justify-content: center;
   gap: 0.5rem;
 
   // Cuando va debajo de un calendario, se separa con un filete.
@@ -165,7 +342,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex: 0 1 110px;
   min-width: 56px;
 
   /**
