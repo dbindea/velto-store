@@ -39,6 +39,7 @@ import * as admin from 'firebase-admin';
 import { CONTRACT_CLAUSES } from './clauses';
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { disposicionEnLinea, nombreDePdf } from '../documents/nombre-descarga';
 import type { ContractLocale } from './contract-types';
 
 interface GenerateRequest {
@@ -349,6 +350,17 @@ export const generateContractPdf = onCall(
     await file.save(Buffer.from(pdfBytes), {
       contentType: 'application/pdf',
       metadata: {
+        /*
+         * ⚠️ **Sin esto se baja una CARPETA.** Storage no manda
+         * `Content-Disposition`, así que el navegador saca el nombre de la ruta
+         * y trata cada barra como un directorio. El backoffice lo tapaba con
+         * `triggerDownload()`, que solo cubre sus dos botones; esto cubre
+         * también el visor del navegador y cualquier enlace.
+         * Ver `documents/nombre-descarga.ts`.
+         */
+        contentDisposition: disposicionEnLinea(
+          nombreDePdf('Contrato', vehicleSnapshot.plateNumber, clientSnapshot.fullName)
+        ),
         metadata: {
           firebaseStorageDownloadTokens: downloadToken
         }

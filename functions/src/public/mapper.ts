@@ -22,7 +22,7 @@ import {
   PublicVehicleSummary,
   VehiclePricingRule,
 } from './types';
-import { cheapestRule, publicPrice } from './core';
+import { baseRateOf, longestRule, publicPrice, tarifaMediaPorDia } from './core';
 
 /** La carpeta pública. Un solo sitio, para que nadie escriba la ruta a mano. */
 export const PUBLIC_PHOTOS_FOLDER = 'public-vehicles';
@@ -102,16 +102,46 @@ export function photoUrls(
  * del 30 de septiembre de 2026. Lo importante es que el redondeo viva aquí y no
  * en la web que lo pinta: la misma cifra viaja también al `quoteSnapshot` de
  * una solicitud, que es lo que él lee en el correo para cobrarlo a mano.
+ *
+ * ⚠️ **Y la cifra sale de la CURVA, no del número tecleado en el tramo.** Esto
+ * publicaba `tramo.pricePerDay`, que desde que existe la curva es un dato
+ * **informativo**: lo que se cobra es `tarifaPublica(base, días)`. Mientras la
+ * tabla se rellenó sola los dos coincidían; en cuanto alguien teclea un tramo a
+ * mano, dejan de coincidir y **la tarjeta promete un precio que el presupuesto
+ * no respeta**. Medido en producción el 8 de octubre de 2026, con los cinco
+ * coches publicados:
+ *
+ *     Dacia Duster   la tarjeta 29,95 €/día · el presupuesto 37,68  (+26 %)
+ *     Renault Kadjar la tarjeta 35,95 €/día · el presupuesto 41,50  (+15 %)
+ *     Ford Custom    la tarjeta 71,95 €/día · el presupuesto 54,45  (−24 %)
+ *
+ * Y la web promete «precio final desde el primer clic», así que las dos
+ * direcciones son malas: una decepciona al elegir fechas y la otra regala
+ * dinero. Desde aquí es imposible que discrepen, porque es la misma función que
+ * calcula el presupuesto.
+ *
+ * ⚠️ **Y el tramo se elige por el que EMPIEZA MÁS TARDE, no por el más barato
+ * de la tabla.** Es lo que aquel quería decir —el precio por día baja según se
+ * alarga el alquiler, así que el suelo está en el tramo abierto del final— y con
+ * números tecleados a mano «el más barato» puede ser cualquiera. La curva es
+ * monótona: el día que empieza el último tramo es el más barato, siempre.
  */
 function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): PublicPrice | undefined {
-  const tramo = cheapestRule(rules);
-  if (!tramo) return undefined;
+  const base = baseRateOf(rules);
+  const tramo = longestRule(rules);
+  if (!base || !tramo) return undefined;
+
   const dias = Number(tramo.minDays);
+  if (!Number.isFinite(dias) || dias < 1) return undefined;
+
+  const porDia = tarifaMediaPorDia(base, dias);
+  if (!porDia) return undefined;
+
   return {
-    ...publicPrice(tramo.pricePerDay, vatRate),
+    ...publicPrice(porDia, vatRate),
     currency: 'EUR',
     // El primer tramo empieza en 1 y ahí el matiz no aporta nada.
-    ...(Number.isFinite(dias) && dias > 1 ? { fromDays: dias } : {}),
+    ...(dias > 1 ? { fromDays: dias } : {}),
   };
 }
 

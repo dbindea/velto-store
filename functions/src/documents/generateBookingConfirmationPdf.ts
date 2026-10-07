@@ -38,6 +38,7 @@ import * as logger from 'firebase-functions/logger';
  * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
  * tests y despliega bien.
  */
+import { nombreDePdf, palabraDocumento } from './nombre-descarga';
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { reservationLocator } from './locator';
@@ -188,7 +189,12 @@ export const generateBookingConfirmationPdf = onCall(
 
     const uploaded = await uploadPdf(
       `reservations/${reservationId}/booking-confirmation.pdf`,
-      pdfBytes
+      pdfBytes,
+      nombreDePdf(
+        palabraDocumento('booking', locale),
+        reservation.vehicleSnapshot?.plateNumber,
+        reservation.clientSnapshot?.fullName
+      )
     );
 
     return {

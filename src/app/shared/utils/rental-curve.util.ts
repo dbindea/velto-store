@@ -119,6 +119,33 @@ export function curveAveragePerDay(total: number, dias: number): number {
   return Math.round((total / dias) * 100) / 100;
 }
 
+/** El salto de la escalera de precios que se le propone al operador. */
+export const RATE_STEP = 5;
+
+/**
+ * Lleva un importe al múltiplo de 5 más cercano, **y en un empate baja**.
+ *
+ * ⚠️ **Es para lo que se PROPONE, no para lo que se cobra.** Lo pidió Dorel el
+ * 8 de octubre de 2026 —«que no me recomiende 32,5 tampoco 44; mejor 30 y 45»—
+ * y lo que lleva detrás es que una tarifa es un número que se dice por teléfono:
+ * «treinta euros al día» se negocia, «treinta y dos cincuenta» se discute. El
+ * total del alquiler lo sigue decidiendo la curva al céntimo.
+ *
+ * ⚠️ **El empate baja a propósito**, que es el caso de su ejemplo: 32,50 está a
+ * la misma distancia de 30 que de 35 y él quiere ver 30. Y es la dirección
+ * segura de las dos — subir el precio propuesto es subirle el precio a un
+ * cliente sin que nadie lo haya decidido; bajarlo lo ve el operador en la misma
+ * pantalla y lo corrige tecleando.
+ *
+ * ⚠️ **`Math.round()` NO vale**: en JavaScript redondea los empates **hacia
+ * arriba** —`Math.round(6.5)` es 7—, así que 32,50 saldría 35. Negando dos veces
+ * se aprovecha que los negativos empatan al revés (`Math.round(-6.5)` es −6).
+ */
+export function roundToRateStep(importe: number, paso: number = RATE_STEP): number {
+  if (!(importe > 0) || !(paso > 0)) return 0;
+  return -Math.round(-importe / paso) * paso;
+}
+
 /**
  * ¿Hay algo mal en estos puntos? Devuelve el motivo, o `null` si valen.
  *

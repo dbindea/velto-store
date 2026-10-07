@@ -42,6 +42,7 @@ import { companyConfig } from '../company-config';
  * tests y despliega bien.
  */
 import { calculateInvoiceTotals, InvoiceLineInput } from './invoice-core';
+import { nombreDePdf, palabraDocumento } from '../documents/nombre-descarga';
 import { uploadPdf } from '../documents/storage';
 import type { ContractLocale } from '../contracts/contract-types';
 
@@ -169,7 +170,11 @@ export const generateProforma = onCall(
       proformaTitle: TEXTS['title'][locale]
     });
 
-    const subido = await uploadPdf(`proformas/${reference}/proforma.pdf`, pdf);
+    const subido = await uploadPdf(
+      `proformas/${reference}/proforma.pdf`,
+      pdf,
+      nombreDePdf(palabraDocumento('proforma', locale), reference, data.recipient?.name)
+    );
 
     logger.info('Proforma generated', { reference, total: totals.total });
     return { reference, pdfUrl: subido.pdfUrl };

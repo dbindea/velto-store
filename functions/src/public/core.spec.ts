@@ -5,7 +5,7 @@ import {
   calculateCalendarDays,
   findPricingRuleByDays,
   aTerminacion,
-  cheapestRule,
+  longestRule,
   publicPrice,
   lowestPricePerDay,
   rangesOverlap,
@@ -151,30 +151,52 @@ describe('el precio', () => {
     expect(tariffNetPrice([{ minDays: 1, maxDays: null, pricePerDay: 0 }], 2)).toBeNull();
   });
 
-  it('el «desde» es el tramo más barato', () => {
-    expect(lowestPricePerDay(TRAMOS)).toBe(50);
+  /**
+   * ⚠️ **El «desde» sale de la CURVA, no del número tecleado en el tramo.**
+   * Este test decía `toBe(50)` —el `pricePerDay` del último tramo— hasta el 8 de
+   * octubre de 2026, y eso es justo lo que hacía que la tarjeta prometiera un
+   * precio que el presupuesto no respetaba: con la tarifa base de 60 €, un
+   * alquiler de 4 días cuesta `curveTotal(60, 4)` y su media es 48,25, no 50.
+   *
+   * Medido en producción ese día, antes de corregirlo: el Duster anunciaba
+   * 29,95 €/día y cobraba 37,68 por los mismos 16 días.
+   */
+  it('el «desde» es lo que de verdad cuesta el día en el tramo más largo', () => {
+    /*
+     * La curva al día 4 con tarifa base 60, escrita entera para que el número no
+     * sea mágico: el multiplicador interpola entre (3; 2,7) y (7; 5,6), o sea
+     * 2,7 + ¼ × 2,9 = 3,425. Total 60 × 3,425 = 205,50 y por día 51,375 → 51,38.
+     * La tabla decía 50, que es lo que se publicaba y lo que no se cobraba.
+     */
+    expect(lowestPricePerDay(TRAMOS)).toBe(51.38);
     expect(lowestPricePerDay([])).toBeNull();
+    expect(lowestPricePerDay(undefined)).toBeNull();
   });
 
   /**
-   * ⚠️ **El escaparate necesita el tramo ENTERO, no solo su precio.** «Desde
-   * 50 €/día» sale del tramo más barato, que con las tarifas normales es el del
-   * alquiler más largo: sin decir desde cuántos días rige, es un precio que
-   * casi nadie va a pagar y el visitante lo descubre al elegir fechas.
+   * ⚠️ **El escaparate necesita el tramo ENTERO, no solo su precio.** Sin decir
+   * desde cuántos días rige, «desde 48,25 €» es un precio que casi nadie va a
+   * pagar y el visitante lo descubre al elegir fechas.
    */
-  it('el tramo más barato viene con sus días', () => {
-    expect(cheapestRule(TRAMOS)).toEqual({ minDays: 4, maxDays: null, pricePerDay: 50 });
+  it('el tramo del alquiler más largo viene con sus días', () => {
+    expect(longestRule(TRAMOS)).toEqual({ minDays: 4, maxDays: null, pricePerDay: 50 });
   });
 
-  it('y NO es simplemente el último: es el más barato', () => {
-    // Una tarifa mal configurada puede tener el tramo largo más caro. Coger el
-    // último por posición anunciaría un «desde» que no es el mínimo.
+  /**
+   * ⚠️ **Se elige por los DÍAS y no por el precio tecleado**, y esto es una
+   * reversión: antes era `cheapestRule()` y cogía el `pricePerDay` menor. Eso
+   * solo coincide si la tabla es coherente, y desde que el total lo calcula la
+   * curva esos números son informativos — en producción dos de los cinco coches
+   * publicados tenían como «más barato» un tramo intermedio. La curva es
+   * monótona: el suelo está donde empieza el último tramo, teclee lo que teclee
+   * nadie.
+   */
+  it('aunque la tabla tenga el tramo largo más caro, el «desde» es el suyo', () => {
     const raras = [
       { minDays: 1, maxDays: 6, pricePerDay: 40 },
       { minDays: 7, maxDays: null, pricePerDay: 45 },
     ];
-    expect(cheapestRule(raras)?.pricePerDay).toBe(40);
-    expect(cheapestRule(raras)?.minDays).toBe(1);
+    expect(longestRule(raras)?.minDays).toBe(7);
   });
 
   it('descarta los tramos sin precio, que no se pueden anunciar', () => {
@@ -182,10 +204,10 @@ describe('el precio', () => {
       { minDays: 1, maxDays: 3, pricePerDay: 0 },
       { minDays: 4, maxDays: null, pricePerDay: 48 },
     ];
-    expect(cheapestRule(conHuecos)?.pricePerDay).toBe(48);
-    expect(cheapestRule([{ minDays: 1, maxDays: null, pricePerDay: 0 }])).toBeNull();
-    expect(cheapestRule([])).toBeNull();
-    expect(cheapestRule(undefined)).toBeNull();
+    expect(longestRule(conHuecos)?.minDays).toBe(4);
+    expect(longestRule([{ minDays: 1, maxDays: null, pricePerDay: 0 }])).toBeNull();
+    expect(longestRule([])).toBeNull();
+    expect(longestRule(undefined)).toBeNull();
   });
 
   /** ⚠️ La tarifa es NETA y el IVA se SUMA: 30 € son 36,30 €. */

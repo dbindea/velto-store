@@ -41,6 +41,7 @@ import { randomUUID } from 'crypto';
  * arriba, la mejora se pierde entera y **nada más avisa**: compila, pasa los
  * tests y despliega bien.
  */
+import { nombreDePdf, palabraDocumento } from './nombre-descarga';
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { companyConfig } from '../company-config';
@@ -196,7 +197,15 @@ export const generateQuotePdf = onCall(
     // different offers, and overwriting one with the other would change a
     // document already sent to somebody.
     const quoteId = shortRandomId();
-    const uploaded = await uploadPdf(`quotes/${quoteId}/quote.pdf`, pdfBytes);
+    const uploaded = await uploadPdf(
+      `quotes/${quoteId}/quote.pdf`,
+      pdfBytes,
+      nombreDePdf(
+        palabraDocumento('quote', locale),
+        data.vehicle.plateNumber,
+        data.client?.fullName
+      )
+    );
 
     return {
       ...uploaded,

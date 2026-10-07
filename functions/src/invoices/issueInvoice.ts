@@ -58,6 +58,7 @@ import {
  * tests y despliega bien.
  */
 import { euRegimesEnabled } from './issueComplianceDeclaration';
+import { nombreDePdf, palabraDocumento } from '../documents/nombre-descarga';
 import { uploadPdf } from '../documents/storage';
 import type { ContractLocale } from '../contracts/contract-types';
 import {
@@ -792,7 +793,18 @@ export const issueInvoice = onCall(
               }
             : undefined
       });
-      const subido = await uploadPdf(`invoices/${invoiceRef.id}/invoice.pdf`, pdf);
+      const subido = await uploadPdf(
+        `invoices/${invoiceRef.id}/invoice.pdf`,
+        pdf,
+        // ⚠️ El número de factura va el PRIMERO, al revés que en los demás
+        // documentos: una factura se busca por su número, no por el nombre del
+        // cliente, y es lo que pide quien la reclama.
+        nombreDePdf(
+          palabraDocumento('invoice', resolveLocale(data.locale)),
+          resultado.fullNumber,
+          data.recipient?.name
+        )
+      );
       pdfUrl = subido.pdfUrl;
       await invoiceRef.set({ pdfUrl: subido.pdfUrl, pdfPath: subido.pdfPath }, { merge: true });
     } catch (err) {

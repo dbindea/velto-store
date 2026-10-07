@@ -31,7 +31,8 @@ import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pric
 import {
   LONG_STAY_FROM_DAYS,
   curveAveragePerDay,
-  curveTotal
+  curveTotal,
+  roundToRateStep
 } from '@shared/utils/rental-curve.util';
 import { TranslatableMessage, interpolate } from '@shared/utils/i18n-params.util';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
@@ -812,17 +813,27 @@ export class VehicleFormComponent implements OnInit {
 
   /**
    * Rellena cada tramo con el precio MEDIO por día que la curva da en su último
-   * día.
+   * día, llevado al múltiplo de 5 más cercano.
    *
    * ⚠️ **Es el medio y no «la tarifa del tramo», porque con la curva eso ya no
-   * existe**: dentro de un mismo tramo cada día vale distinto. Enseñar el medio
-   * del último día es lo que hace cierto el «desde X €/día» que se publica, y
-   * cuadra con `lowestPricePerDay()`, que coge el tramo más barato — el abierto
-   * del final, que es `B × 0,5`.
+   * existe**: dentro de un mismo tramo cada día vale distinto.
+   *
+   * ⚠️ **Y desde el 8 de octubre de 2026 va redondeado a 5**, por petición de
+   * Dorel: una tarifa es un número que se dice por teléfono, y «32,50 €/día» no
+   * lo es. Lo que esto escribe es **lo que el operador lee en la tabla**; el
+   * importe que se cobra lo sigue decidiendo `curveTotal()` al céntimo, así que
+   * redondear aquí no mueve ni un euro de ninguna reserva.
+   *
+   * ⚠️ **Y por eso hubo que sacar el «desde X €/día» del escaparate de esta
+   * tabla** (`precioDesde()` en `public/mapper.ts`). Publicaba este número
+   * tecleado mientras el presupuesto salía de la curva, así que con el redondeo
+   * habrían dejado de cuadrar — y ya no cuadraban antes: medido el 8 de octubre
+   * en producción, la tarjeta del Duster decía 29,95 €/día y el presupuesto de
+   * esos mismos 16 días cobraba 37,68.
    *
    * ⚠️ **Y no toca el primero.** Ese es la tarifa base: reescribirlo con su
-   * propio medio sería pisarle al operador el único número que de verdad
-   * teclea.
+   * propio medio —y encima redondeado— sería pisarle al operador el único número
+   * que de verdad teclea, y mover el precio de todos los alquileres del coche.
    */
   rellenarTramosDesdeLaCurva(): void {
     const reglas = this.formData.pricingRules;
@@ -835,7 +846,7 @@ export class VehicleFormComponent implements OnInit {
       if (i === 0) return regla;
       const hasta = regla.maxDays ?? LONG_STAY_FROM_DAYS;
       const total = curveTotal(base, hasta);
-      return { ...regla, pricePerDay: curveAveragePerDay(total, hasta) };
+      return { ...regla, pricePerDay: roundToRateStep(curveAveragePerDay(total, hasta)) };
     });
   }
 }

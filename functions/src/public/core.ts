@@ -192,39 +192,66 @@ export function baseRateOf(rules: VehiclePricingRule[] | undefined): number {
 }
 
 /**
- * El precio por día más barato de la tabla, para el «desde X €/día».
+ * El precio por día más barato, para el «desde X €/día».
  *
  * ⚠️ **Se publica ESTO y no la tabla entera.** La tabla completa es la curva de
  * descuento del negocio: dice el suelo de precio, a partir de cuántos días se
  * baja y cuánto, o sea la posición de negociación de Velto publicada para
  * cualquiera. El «desde» es lo único que el cliente necesita para comparar.
+ *
+ * ⚠️ **Y sale de la CURVA, no del número tecleado en el tramo**, por lo mismo
+ * que `precioDesde()` en el mapper: aquel es informativo desde que el total lo
+ * calcula la curva, y publicarlo hacía que la tarjeta prometiera un precio que
+ * el presupuesto no respetaba.
  */
 export function lowestPricePerDay(rules: VehiclePricingRule[] | undefined): number | null {
-  return cheapestRule(rules)?.pricePerDay ?? null;
+  const tramo = longestRule(rules);
+  const base = baseRateOf(rules);
+  if (!tramo || !(base > 0)) return null;
+  const dias = Number(tramo.minDays);
+  if (!Number.isFinite(dias) || dias < 1) return null;
+  return tarifaMediaPorDia(base, dias) || null;
 }
 
 /**
- * El tramo más barato, entero.
+ * El tramo que **empieza más tarde**: el del alquiler más largo.
  *
  * ⚠️ **Hace falta el tramo y no solo su precio**, porque el escaparate dice
- * «desde X €/día» y ese X es el del alquiler **más largo**: con los tramos
- * normales de la casa, el precio por día baja según se alarga el alquiler, así
- * que el más barato es el del último tramo —el abierto, sin `maxDays`—. Sin
- * decir desde cuántos días rige, «desde 25 €» es un precio que casi nadie va a
- * pagar y el visitante lo descubre al elegir fechas.
+ * «desde X €/día» y ese X es el del alquiler más largo. Sin decir desde cuántos
+ * días rige, «desde 25 €» es un precio que casi nadie va a pagar y el visitante
+ * lo descubre al elegir fechas.
  *
  * ⚠️ **Y se devuelve el tramo REAL de cada coche, no un número escrito a
  * mano.** Las reglas se editan coche a coche en su ficha: dar por supuesto que
  * el tramo largo empieza a los 31 días sería cierto hoy y falso el día que
  * alguien configure otro.
+ *
+ * ⚠️ **Esto se llamaba `cheapestRule()` y elegía por el PRECIO tecleado**, que
+ * es lo mismo solo si la tabla es coherente. Desde la curva no tiene por qué
+ * serlo —esos números son informativos—, y en producción no lo era: el 8 de
+ * octubre de 2026, dos de los cinco coches publicados tenían como «más barato»
+ * un tramo intermedio, así que el escaparate anunciaba el precio de 16 días
+ * como si fuera el suelo. La curva es monótona: el suelo está donde empieza el
+ * último tramo, y eso no depende de lo que nadie teclee.
  */
-export function cheapestRule(
+export function longestRule(
   rules: VehiclePricingRule[] | undefined
 ): VehiclePricingRule | null {
   if (!rules?.length) return null;
   const validas = rules.filter(r => typeof r.pricePerDay === 'number' && r.pricePerDay > 0);
   if (!validas.length) return null;
-  return validas.reduce((a, b) => (b.pricePerDay < a.pricePerDay ? b : a));
+  return validas.reduce((a, b) => (Number(b.minDays) > Number(a.minDays) ? b : a));
+}
+
+/**
+ * El precio medio por día de un alquiler de `dias` días, **neto**.
+ *
+ * Lo que de verdad se cobra es `curveTotal()`; esto solo lo divide para poder
+ * anunciarlo. Copia de `curveAveragePerDay()` de la app.
+ */
+export function tarifaMediaPorDia(base: number, dias: number): number {
+  if (!(base > 0) || !(dias > 0)) return 0;
+  return roundMoney(curveTotal(base, dias) / dias);
 }
 
 /**
