@@ -1196,6 +1196,94 @@ transforma al vuelo —medido con la máquina cargada: 5,1 s y 8,0 s—. Plazo a
 que un import perezoso mal escrito revienta la primera vez que alguien genera un
 PDF, no al arrancar.
 
+## 2 quaterdecies. El 8 de octubre — las tarifas redondas y el PDF que bajaba carpeta
+
+Dos encargos de Dorel, y entre medias apareció el fallo que más importa de los
+tres.
+
+### ⚠️ El «desde X €/día» del escaparate NO era el precio que cobraba
+
+La tarjeta de cada coche publicaba el `pricePerDay` **tecleado en el tramo**,
+mientras el presupuesto sale de la **curva**. Mientras la tabla se rellenó sola
+los dos coincidían; en cuanto alguien teclea un tramo a mano, dejan de hacerlo.
+Medido en producción ese día, con los cinco coches publicados:
+
+| Coche | La tarjeta | El presupuesto |
+|---|---|---|
+| Dacia Duster | 29,95 €/día desde 16 días | **37,68** (+26 %) |
+| Renault Kadjar | 35,95 €/día desde 16 días | **41,50** (+15 %) |
+| Ford Custom | 71,95 €/día desde 31 días | **54,45** (−24 %) |
+
+Las dos direcciones son malas, y la web promete «precio final desde el primer
+clic»: una decepciona al elegir fechas y la otra regala dinero. Lo arregla
+`precioDesde()` calculando con **la misma curva** que el presupuesto, así que no
+pueden discrepar por construcción.
+
+⚠️ **Y el tramo se elige por el que EMPIEZA MÁS TARDE**, no por el precio
+tecleado: `cheapestRule()` pasa a ser `longestRule()`. La curva es monótona, el
+suelo está donde empieza el último tramo, y eso no depende de lo que nadie
+escriba. Con números a mano, «el más barato» puede ser un tramo intermedio — y
+en producción lo era en dos de cinco coches.
+
+Queda una diferencia de **menos del 1 %** entre la tarjeta y el presupuesto, y es
+inevitable: `publicPrice()` redondea a `,95` **hacia abajo** (regla del 30 de
+septiembre) y lo hace dos veces sobre magnitudes distintas —el precio por día de
+la tarjeta y el total del presupuesto—. 35,95 contra 36,29 en el Clio.
+
+### Las tarifas se proponen en múltiplos de 5
+
+«Que no me recomiende 32,5 tampoco 44; mejor 30 y 45». Lo hace
+`roundToRateStep()`, y **el empate baja** —32,50 va a 30, que es su ejemplo—
+porque subir el precio propuesto es subírselo a un cliente sin que nadie lo haya
+decidido.
+
+⚠️ **`Math.round()` no vale**: en JavaScript los empates van **hacia arriba**, así
+que 32,50 habría salido 35.
+
+⚠️ **Redondea lo que se PROPONE, no lo que se cobra.** El total lo sigue
+calculando `curveTotal()` al céntimo. Y por eso había que arreglar antes el
+«desde»: publicando la tabla, el redondeo habría metido hasta 2,50 €/día de
+error en una cifra que ya mentía.
+
+⚠️ **Consecuencia que se ve y es correcta:** dos tramos seguidos pueden quedar con
+el mismo número. Con base 55, el de 16–30 días y el de 31+ salen los dos a 25 €
+porque las medias reales son 27,3 y 27,5. No rompe nada —la tabla ya no decide
+dinero— pero conviene no leerlo como un fallo.
+
+### Un PDF se descargaba como una CARPETA
+
+Lo contó Dorel bajando un justificante de producción: le bajaba la carpeta, la
+subcarpeta y el fichero. Storage **no manda `Content-Disposition`**, así que el
+navegador saca el nombre de la ruta de la URL y trata cada barra como un
+directorio.
+
+⚠️ **Y el `triggerDownload()` del backoffice solo tapaba DOS botones.** Baja el
+fichero a un blob y le pone el nombre a mano, sí, pero no cubre los enlaces
+`target="_blank"` de las otras siete pantallas, ni el botón de guardar del visor
+de PDF del navegador, ni —sobre todo— el enlace `/d/…` que recibe el cliente por
+WhatsApp.
+
+Por eso el arreglo va en los **metadatos del objeto** y no en el frontend: diez
+sitios de subida, los nueve documentos, y todas las vías a la vez.
+`documents/nombre-descarga.ts` compone el nombre con las mismas reglas que
+`storage-name.util.ts` de la app —`_` separa campos, `-` une palabras, solo
+ASCII— y traduce la palabra del documento, porque **lo que se descarga lo lee
+una persona**.
+
+⚠️ **`inline` y no `attachment`**, o los botones de «Abrir» dejarían de abrir:
+pasarían a bajar un fichero.
+
+⚠️ **Solo vale para lo que se suba A PARTIR DE AHORA.** Un justificante de agosto
+seguirá bajando mal hasta que alguien lo regenere. No se tocan en masa los
+metadatos de ficheros de producción para arreglar un nombre.
+
+⚠️ **Y el compilador cazó que `contentDisposition` no va donde yo lo había
+puesto, pero solo en UNO de los dos sitios.** En `uploadPdf()` estaba arriba,
+junto a `contentType`, detrás de un `...(cond ? {} : {})` — y **el spread de un
+objeto condicional se salta la comprobación de propiedades de más**, así que
+compilaba y la cabecera no se habría puesto nunca. Va dentro de `metadata`, y
+escrito sin spread para que un error sea un error.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
@@ -1206,10 +1294,23 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 7 de octubre al cerrar, después del despliegue de § 2 terdecies:
-nada sin subir y nada sin desplegar.** `master` y `develop` están iguales, las
-32 functions de producción corren el código de hoy y los dos sitios se
-publicaron con el merge de la PR #70.
+**Medido el 8 de octubre: `develop` va por delante de `master`** con lo de
+§ 2 quaterdecies, desplegado y comprobado **solo en desarrollo** a la espera de
+que Dorel lo pruebe. Para llevarlo a producción hacen falta las dos cosas, en
+este orden:
+
+1. **Catorce functions a mano**, por tandas: las tres públicas del precio
+   (`publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability`), las
+   nueve que generan PDF (`generateQuotePdf`, `generateBookingConfirmationPdf`,
+   `generateInspectionReport`, `generateProforma`, `generateReceipt`,
+   `issueInvoice`, `issueComplianceDeclaration`, `generateContractPdf`,
+   `signContract`) y `createBookingRequest` con `publishVehiclePhoto`.
+2. **El merge**, que publica los dos sitios.
+
+⚠️ **Las tres primeras cambian el precio ANUNCIADO de los cinco coches
+publicados**, que es justo el fallo que se corrige: hoy anuncian hasta un 26 %
+por debajo de lo que cobran. Sin ellas, el merge deja la web igual de
+descuadrada.
 
 ⚠️ **Vuelve a medirlo tú, que esta tabla envejece en cada sesión** — y mídelo
 **desde el último despliegue de functions**, no desde `master`: el CI solo
