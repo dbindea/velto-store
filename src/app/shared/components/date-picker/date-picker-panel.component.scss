@@ -57,6 +57,56 @@
   font-size: 0.875rem;
   color: var(--text-primary);
   user-select: none;
+
+  /**
+   * ⚠️ **Entra y sale en 0,4 s, y eso lo pidió Dorel**: «parece demasiado
+   * brusco abrir y cerrar». Aparecer y desaparecer de golpe un panel que tapa
+   * media pantalla no deja ver de dónde sale ni adónde va.
+   *
+   * ⚠️ **Con `animation` y no con `transition`.** El panel se **crea y se
+   * destruye** —lo monta la directiva al abrir—, así que no hay un estado
+   * anterior desde el que transitar: una transición no se dispara nunca sobre
+   * un elemento recién insertado. La salida necesita además que la directiva
+   * espere a que termine antes de destruirlo; ver `DURACION_SALIDA_MS` allí.
+   *
+   * Los nombres llevan prefijo de la casa por costumbre; Angular además les
+   * pone el suyo —se lee `_ngcontent-ng-c…_veltoPickerEntra` en el estilo
+   * calculado—, así que no pueden chocar con los de otro componente.
+   */
+  animation: veltoPickerEntra 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.is-closing {
+    animation: veltoPickerSale 0.4s ease-in forwards;
+    // Mientras se va sigue estando en el DOM, y un panel que se desvanece no
+    // puede seguir tragándose los clics de lo que hay debajo.
+    pointer-events: none;
+  }
+}
+
+@keyframes veltoPickerEntra {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes veltoPickerSale {
+  to {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/**
+ * ⚠️ **Sin movimiento, aparece y desaparece y ya.** Y la directiva mira la
+ * misma consulta para no esperar los 0,4 s: si no se anima, esperar solo
+ * dejaría el panel quieto en pantalla antes de irse.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .picker-panel,
+  .picker-panel.is-closing {
+    animation: none;
+  }
 }
 
 /**
@@ -147,11 +197,27 @@
     flex: 1 1 auto;
     max-height: none;
     overflow: visible;
+    // ⚠️ **`start` y no el `normal` de serie, que ESTIRA las filas** repartiendo
+    // entre ellas el alto que le sobre a la columna. Es lo que hacía que la
+    // misma ficha midiera 40 px aquí y 50 en la web.
+    align-content: start;
   }
 
   .picker-time-item {
-    min-height: 40px;
-    font-size: 0.9375rem;
+    min-height: 44px;
+    // ⚠️ **Más pequeña que el día, y eso es parte de que se lea como una hora.**
+    // La ficha pone «10:00» en vez de «10» para no confundirse con los números
+    // del calendario de arriba; con el cuerpo de los días las dos rejillas
+    // competirían.
+    //
+    // ⚠️ **12 px y `nowrap`, que es lo que hace que quepa.** En la web, con
+    // 14 px, «00:00» pedía unos 42 px y el hueco entre rellenos eran 40: la
+    // ficha se partía en dos renglones y salía de 50 px de alto en vez de 44.
+    // Aquí no llegó a pasar, y se iguala igualmente — el panel tiene que medir
+    // lo mismo en los dos sitios.
+    font-size: 0.75rem;
+    padding-inline: 0.25rem;
+    white-space: nowrap;
     border-radius: 10px;
     /**
      * Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo,

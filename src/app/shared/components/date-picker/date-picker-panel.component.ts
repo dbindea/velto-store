@@ -34,17 +34,22 @@ import {
  * en qué día de la semana cae el 15. Lo pidió Dorel el 7 de octubre de 2026:
  * «ver el mes completo en la pantalla».
  *
- * ⚠️ **Se pregunta por el APARATO y no por el ancho**, que es la misma frontera
- * que decide `base-select`: un teléfono en horizontal mide 844 px de ancho y 390
- * de alto — con un corte por ancho se llevaría el panel de escritorio justo en
- * la orientación donde menos cabe. Lo que decide es si hay dedo.
+ * ⚠️ **Y desde el 8 de octubre de 2026 es que SÍ, siempre, también con ratón.**
+ * Nació preguntando por el aparato —`(hover: none) and (pointer: coarse)`, la
+ * misma frontera que decide `base-select`— y Dorel lo vio en los dos sitios y
+ * pidió el del móvil para escritorio: «realmente queda muy bien». Tiene razón
+ * por una cosa concreta además del gusto: colgando del campo, el panel con la
+ * rejilla grande mide unos 670 px y en un portátil de 768 px de alto **no cabe
+ * ni arriba ni abajo**, así que acababa recortado contra la pantalla. Como hoja
+ * cabe siempre.
  *
- * ⚠️ **Y se lee una vez, al crear el panel.** Un aparato no cambia de puntero a
- * media fecha, y el panel se cierra al redimensionar (lo hace la directiva), así
- * que girar el teléfono ya vuelve a preguntarlo.
+ * ⚠️ **Se conserva la función en vez de borrar la rama**, igual que
+ * `prefersNativePicker()`: es el punto donde volver si algún día se quiere el
+ * panel colgando del campo con el ratón. `place()` sigue escrito justo detrás
+ * por lo mismo.
  */
 export function prefersSheetLayout(): boolean {
-  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  return true;
 }
 
 /**

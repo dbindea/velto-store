@@ -26,6 +26,18 @@ import { PickerMode } from '@shared/utils/date-picker.util';
 const ZONA_ICONO_PX = 34;
 
 /**
+ * Lo que tarda el panel en irse, y **tiene que coincidir con el CSS**.
+ *
+ * ⚠️ **Son dos sitios porque no hay forma de que sea uno.** La animación vive
+ * en `date-picker-panel.component.scss` —`veltoPickerSale`, 0,4 s— y aquí hace
+ * falta un número para saber cuándo destruir el componente. Leer la duración
+ * calculada del elemento sería posible y frágil: depende de que el elemento ya
+ * esté pintado y de que nadie le ponga una animación encima. Si cambia una,
+ * cambia la otra.
+ */
+const DURACION_SALIDA_MS = 400;
+
+/**
  * ¿Manda el selector del sistema?
  *
  * ⚠️ **Ya no: nunca. Y esto es una REVERSIÓN, por eso está escrita.** Del 22 al
@@ -147,8 +159,14 @@ export class DatePickerDirective implements OnDestroy {
     }
   }
 
+  /**
+   * ⚠️ **Aquí se cierra SIN animar.** Si el componente que contiene el campo se
+   * está destruyendo —se navega a otra pantalla—, dejar un panel desvaneciéndose
+   * durante 0,4 s lo dejaría flotando sobre la pantalla siguiente: se cuelga del
+   * `<body>`, así que no se va con el formulario.
+   */
   ngOnDestroy(): void {
-    this.cerrar();
+    this.cerrar(true);
   }
 
   private usaPanelPropio(): boolean {
@@ -202,17 +220,47 @@ export class DatePickerDirective implements OnDestroy {
     });
   }
 
-  private cerrar(): void {
+  /**
+   * Cierra el panel, dejándole terminar su animación de salida.
+   *
+   * ⚠️ **La referencia se suelta ANTES de esperar**, y eso es lo que hace que
+   * esto no se enrede: durante los 0,4 s que el panel tarda en irse, esta
+   * directiva ya no lo tiene, así que volver a pulsar el icono abre uno nuevo
+   * en vez de alternar contra un panel que se está muriendo. El que se va no
+   * responde a nada —`pointer-events: none` en `.is-closing`— y se destruye
+   * solo cuando le toca.
+   *
+   * ⚠️ **Y los oyentes se quitan al principio.** Esperar a quitarlos dejaría
+   * medio segundo en el que un desplazamiento intentaría cerrar un panel que ya
+   * está cerrándose.
+   */
+  private cerrar(inmediato = false): void {
     if (!this.panel) return;
     document.removeEventListener('mousedown', this.alPulsarFuera, true);
     window.removeEventListener('resize', this.alMoverse, true);
     window.removeEventListener('scroll', this.alMoverse, true);
 
-    this.appRef.detachView(this.panel.hostView);
-    this.panel.destroy();
+    const vista = this.panel;
+    const contenedor = this.contenedor;
     this.panel = null;
-    this.contenedor?.remove();
     this.contenedor = null;
+
+    const destruir = (): void => {
+      this.appRef.detachView(vista.hostView);
+      vista.destroy();
+      contenedor?.remove();
+    };
+
+    const caja = contenedor?.querySelector<HTMLElement>('.picker-panel');
+    // Sin caja no hay nada que animar; y con `prefers-reduced-motion` el CSS no
+    // anima, así que esperar solo dejaría el panel quieto medio segundo.
+    if (inmediato || !caja || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      destruir();
+      return;
+    }
+
+    caja.classList.add('is-closing');
+    setTimeout(destruir, DURACION_SALIDA_MS);
   }
 
   /**

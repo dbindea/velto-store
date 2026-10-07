@@ -58,6 +58,13 @@
     <!--
       Las 24 horas y nada más: el campo sigue admitiendo el teclado para
       cualquier minuto que haya que pactar fuera de la hora en punto.
+
+      ⚠️ **Cada ficha dice «10:00» y no «10», y es por no confundirlas con los
+      días.** Debajo de una rejilla de números del 1 al 31, veinticuatro números
+      sueltos del 00 al 23 se leen como más días — lo dijo Dorel el 8 de octubre
+      de 2026 mirándolo. Los dos puntos y los dos ceros lo resuelven solos, sin
+      rótulo ni icono; lo que cuesta es letra más pequeña, que es exactamente lo
+      que además ayuda a distinguirlas del calendario de arriba.
     -->
     <div class="picker-time" [class.with-calendar]="showsCalendar()">
       <div class="picker-time-col" [attr.aria-label]="t('datePicker.hours')">
@@ -68,7 +75,7 @@
             [class.is-selected]="pickedHour() === h"
             (click)="pickHour(h)"
           >
-            {{ pad(h) }}
+            {{ pad(h) }}:00
           </button>
         }
       </div>

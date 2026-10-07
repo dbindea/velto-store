@@ -578,6 +578,30 @@ input.picker-propio {
   border-radius: var(--r-lg);
   box-shadow: var(--sh-4);
   user-select: none;
+
+  /*
+   * ⚠️ **Entra y sale en 0,4 s, y lo pidió Dorel**: «parece demasiado brusco
+   * abrir y cerrar». Aparecer y desaparecer de golpe un panel que tapa media
+   * pantalla no deja ver de dónde sale ni adónde va.
+   *
+   * ⚠️ **Las dos líneas raras de aquí son las que hacen que la SALIDA se vea.**
+   * `display` y `overlay` son propiedades **discretas**: sin
+   * `allow-discrete` cambian de golpe al principio, el panel desaparece y la
+   * transición de opacidad se queda animando algo que ya no está. `overlay` es
+   * además la que lo mantiene en el top layer mientras se va; sin ella sale del
+   * top layer al instante y se esconde detrás del diálogo de la portada.
+   *
+   * ⚠️ **Y `display` NO se declara aquí**, solo en `:popover-open`. Si se
+   * declarara, el navegador perdería el mando y el panel cerrado se quedaría
+   * dibujado — está contado tres párrafos más abajo, y costó medirlo.
+   */
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--t-slow) var(--ease),
+    transform var(--t-slow) var(--ease),
+    overlay var(--t-slow) allow-discrete,
+    display var(--t-slow) allow-discrete;
 }
 
 /*
@@ -602,6 +626,34 @@ input.picker-propio {
    * que el recorte se pueda recorrer en vez de esconder el pie del panel.
    */
   overflow-y: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/*
+ * ⚠️ **De dónde PARTE la entrada, y sin esto no hay entrada ninguna.** Un
+ * elemento recién mostrado no tiene estado anterior desde el que transitar: el
+ * navegador lo pinta ya con sus valores finales y la transición no se dispara.
+ * `@starting-style` es el único sitio donde se puede decir «empieza aquí».
+ *
+ * ⚠️ **Y va DESPUÉS de la regla de arriba**, que es lo único que no se puede
+ * cambiar de sitio: tiene la misma especificidad, así que escrito antes manda
+ * el otro y la animación desaparece sin dar ningún error.
+ */
+@starting-style {
+  .calendario:popover-open {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* Sin movimiento, aparece y desaparece y ya. */
+@media (prefers-reduced-motion: reduce) {
+  .calendario {
+    transition: none;
+    transform: none;
+  }
+  .calendario:popover-open { transform: none; }
 }
 
 /*
@@ -701,11 +753,31 @@ input.picker-propio {
   flex: 1 1 auto;
   max-height: none;
   overflow: visible;
+  /* ⚠️ **`start` y no el `normal` de serie, que ESTIRA las filas.** Medido: las
+     fichas salían de 50 px de alto con `min-height: 44px` puestos, porque la
+     rejilla repartía entre cuatro filas el alto que le sobraba a la columna. Y
+     entonces el backoffice y la web no medían lo mismo, que es justo lo que
+     este panel viene a evitar. */
+  align-content: start;
 }
 
 .calendario--hoja .calendario__item {
-  min-height: 40px;
-  font-size: var(--fs-body);
+  min-height: 44px;
+  /* ⚠️ **Más pequeña que el día, y eso es parte de que se lea como una hora.**
+     La ficha pone «10:00» en vez de «10» para no confundirse con los números del
+     calendario de arriba; con el cuerpo de los días las dos rejillas
+     competirían.
+
+     ⚠️ **Y con `--fs-small` NO CABÍA: se partía en dos líneas.** Medido, la
+     ficha salía de 50 px en vez de 44 —dos renglones de 21— porque «00:00» a
+     14 px pide unos 42 px y el hueco entre rellenos son 40. No se veía como un
+     desbordamiento (`scrollWidth` seguía cuadrando), se veía como una fila más
+     alta que la del backoffice. Por eso van las tres cosas juntas: cuerpo de
+     12 px, relleno lateral mínimo y `nowrap` como red —si algún día la rejilla
+     se estrecha, que se note en vez de apilarse. */
+  font-size: var(--fs-caption);
+  padding-inline: var(--sp-1);
+  white-space: nowrap;
   border-radius: var(--r-md);
   /* Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo,
      veinticuatro números sueltos parecen una tabla y no botones.
@@ -2055,8 +2127,19 @@ input.picker-propio {
 /*
  * LA CARRETERA: las tres barras del isotipo, corriendo.
  *
- * ⚠️ **`overflow: hidden` es lo que las convierte en un tramo de vía.** Sin
- * él, las barras se salen de la caja y cruzan el texto.
+ * ⚠️ **`overflow: hidden` es lo que las mantiene dentro de su tramo.** Sin él,
+ * las barras se salen de la caja y cruzan el texto.
+ *
+ * ⚠️ **Aquí había un ASFALTO —un filete gris al pie— y se quitó el 7 de octubre
+ * de 2026**, por petición de Dorel: solo las verdes. El argumento de ponerlo
+ * era que las barras se leyeran como marcas de una vía y no como tres
+ * rectángulos sueltos, y mirándolo no hacía falta: lo que dice que es un
+ * recorrido es el movimiento, no la línea. El gris solo añadía un elemento
+ * apagado en una tarjeta que ya tiene su borde.
+ *
+ * Se quita de **los dos sitios a la vez** —el buscador de /reservar y el cálculo
+ * de precio de la ficha de coche— porque la clase es la misma. Eso es justo por
+ * lo que vive aquí y no en cada página.
  */
 .buscando__via {
   position: relative;
@@ -2064,23 +2147,6 @@ input.picker-propio {
   height: 10px;
   margin: 0 auto var(--sp-5);
   overflow: hidden;
-}
-
-/*
- * El asfalto: es lo que hace que las barras se lean como marcas de una vía y
- * no como tres rectángulos sueltos.
- *
- * ⚠️ **Va en `--border` y NO en `--divider`.** Aquel es el filete de las
- * separaciones y en los temas oscuros vale `--gray-900`, o sea el mismo tono
- * que la tarjeta: la vía existía y no se veía — medido en pantalla, no leído
- * del fichero. Es la misma trampa que ya obligó a cambiarlo en el esqueleto.
- */
-.buscando__via::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 2px;
-  background: var(--border);
 }
 
 .buscando__via span {

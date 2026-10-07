@@ -82,13 +82,21 @@ function mandaElNativo(): boolean {
  * pregunta es en qué día de la semana cae el 15, y eso un mes recortado no lo
  * contesta.
  *
- * ⚠️ **Se pregunta por el APARATO, no por el ancho**, que es la misma frontera
- * que decide `base-select` en el backoffice: un teléfono en horizontal mide
- * 844 px de ancho y 390 de alto, así que un corte por ancho le daría el panel
- * de escritorio justo en la orientación donde menos cabe.
+ * ⚠️ **Y desde el 8 de octubre de 2026 es que SÍ, siempre, también con ratón.**
+ * Nació preguntando por el aparato —`(hover: none) and (pointer: coarse)`, la
+ * misma frontera que decide `base-select` en el backoffice— y Dorel lo vio en
+ * los dos sitios y pidió el del móvil para escritorio: «realmente queda muy
+ * bien». Y hay un motivo además del gusto: colgando del campo, el panel con la
+ * rejilla grande mide unos 670 px y en un portátil de 768 px de alto no cabe ni
+ * arriba ni abajo, así que acababa recortado contra la pantalla.
+ *
+ * ⚠️ **Se conserva la función en vez de borrar la rama**, igual que
+ * `prefersNativePicker()` en el backoffice: es el punto donde volver si algún
+ * día se quiere el panel colgando del campo con el ratón. `colocar()` sigue
+ * escrita justo detrás por lo mismo.
  */
 function esHoja(): boolean {
-  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  return true;
 }
 
 /** Los 34 px de la derecha, que es exactamente lo que abre el del navegador. */
@@ -382,7 +390,15 @@ function crearPanel(): Panel {
       }
       b.setAttribute('role', 'option');
       b.setAttribute('aria-selected', String(v === elegido));
-      b.textContent = pad(v);
+      /*
+       * ⚠️ **Dice «10:00» y no «10», y es por no confundirlas con los días.**
+       * Debajo de una rejilla de números del 1 al 31, veinticuatro números
+       * sueltos del 00 al 23 se leen como más días. Lo dijo Dorel el 8 de
+       * octubre de 2026 mirándolo, y los dos puntos lo resuelven sin rótulo ni
+       * icono — lo que cuesta es letra más pequeña, que además es lo que las
+       * separa del calendario de arriba.
+       */
+      b.textContent = `${pad(v)}:00`;
       b.addEventListener('click', () => alElegir(v));
       col.append(b);
     }
