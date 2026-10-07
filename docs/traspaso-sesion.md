@@ -1124,6 +1124,44 @@ en los dos sitios donde se usa, porque la clase es la misma. El filete gris
 existía para que las barras se leyeran como marcas de una vía; mirándolo, lo que
 dice que es un recorrido es el movimiento.
 
+### Y la tercera vuelta — lo que aclaró qué quería decir «el mismo calendario»
+
+Otras cinco, y la primera explica por qué este apartado tiene tres vueltas:
+
+- ⚠️ **«El mismo tipo de calendario del móvil» era el ASPECTO, no la
+  colocación.** La vuelta anterior lo leyó como «la hoja también en
+  escritorio», y al verlo pidió lo contrario: más pequeño y colgando del campo.
+  Así que ahora están separados y conviene no volver a mezclarlos: **el diseño**
+  —rejilla del mes, horas en fichas, botón de aceptar— vive fuera de `--hoja` y
+  `.is-sheet`, y **la colocación** la decide el puntero. En escritorio el panel
+  mide **340×489**, un 29 % menos que la hoja de 480×688.
+- ⚠️ **El hover de «Seleccionar» lo dejaba ilegible, y es el fallo de siempre**:
+  una regla agrupada con `background: var(--gray-800)` **borraba el relleno de
+  marca** y dejaba el rótulo —que va sobre turquesa— sobre gris oscuro. Ahora el
+  hover es su propio color. Medido: 6,77 → 8,08 en la web. La regla completa
+  está en CLAUDE.md desde los trece sitios del 24 de septiembre, y aun así
+  volvió a aparecer en cuanto se escribió un botón de marca nuevo.
+- **La mano solo sobre el icono del campo**, no sobre todo el `input`: con
+  `cursor: pointer` en el campo se diría que no se puede escribir en él. La
+  enciende un `mousemove` en la propia web, como ya hace el aspa de vaciar.
+- ⚠️ **Al desplazar, el panel SIGUE a la página en vez de cerrarse.** Se
+  reaplica el **desfase** medido al abrir, no se vuelve a colocar: la colocación
+  elige si el panel va encima o debajo según lo que quepa, así que llamarla en
+  cada fotograma lo haría saltar de un lado a otro del campo a media lectura. Va
+  por `requestAnimationFrame`; al **redimensionar** sí se cierra, porque ahí
+  cambia lo que cabe.
+- ⚠️ **De 00:00 a 06:00 no se ofrece ninguna hora** (`FIRST_HOUR` / `PRIMERA_HORA`
+  = 7). A esas horas no hay nadie en la oficina. Es una regla de negocio con la
+  lista **escrita en los dos proyectos**, así que tiene test en los dos: el día
+  que una cambie sin la otra, el visitante pediría en la web una hora que el
+  backoffice no ofrece. Y recorta lo que se **ofrece**, no lo que se puede
+  guardar — una reserva antigua de madrugada se sigue leyendo y editando.
+
+Y se borró el centrado de la hora elegida en los dos, que dejó de hacer falta al
+pasar las horas a una rejilla que cabe entera. Sus dos trampas —nada de
+`scrollIntoView()`, y medir por rectángulos y no por `offsetTop`— quedan
+contadas en el hueco que dejó.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
