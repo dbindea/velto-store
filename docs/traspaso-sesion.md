@@ -973,6 +973,122 @@ alguien añade o alarga un rótulo, **hay que volver a medirlo**.
 
 ---
 
+## 2 duodecies. El 6 y el 7 de octubre — la tarifa deja de ser escalones
+
+### La curva de precios, que es el cambio de fondo
+
+Las tarifas eran **tramos** —1-1, 3-5, 6-10…— con un precio por día dentro de
+cada uno, y eso tiene un defecto que se ve con los números de Dorel: **15 días
+costaban 1.125 € y 16 días, 1.120 €**. Un día más y el alquiler sale más barato.
+No es un caso rebuscado: pasa en cada salto de tramo, porque el precio por día
+baja de golpe y multiplica a todos los días anteriores.
+
+Lo sustituye una **curva por duración** en
+[`rental-curve.util.ts`](../src/app/shared/utils/rental-curve.util.ts): seis
+puntos de referencia (1, 3, 7, 14, 21 y 30 días) con su multiplicador sobre la
+tarifa base, e **interpolación lineal** entre ellos. Dos invariantes, probados
+día a día sobre 120 días × 3 tarifas base:
+
+- **El total nunca baja al añadir un día.**
+- **La media por día nunca sube al añadir un día.**
+
+⚠️ **`pricePerDay` pasa a ser la MEDIA, no una tarifa de tramo.** Lo que se
+cobra es `curveTotal()`; el por-día es derivado y solo sirve para enseñarlo. Si
+algo vuelve a multiplicar `pricePerDay × días`, vuelve el escalón.
+
+⚠️ **Y está DUPLICADA en `functions/src/public/rental-curve.ts`**, a propósito,
+como el IVA: la app y las functions no pueden compartir módulo. Si cambian los
+puntos, se cambian en los dos sitios.
+
+### Lo demás del 6 de octubre
+
+- ⚠️ **El formulario de vehículo PERDÍA tres campos al guardar.** No cargaba
+  `environmentalLabel`, `publicHighlight` ni `publicDescription`, así que abrir
+  una ficha y guardarla los borraba. Es el patrón de siempre: campos que nacen
+  después del formulario y nadie añade al cargador.
+- **El resumen diario avisaba catorce veces** de un mismo vencimiento. Ahora
+  `entraEnElResumen()` avisa **el día que se abre el plazo y la víspera**, y
+  siempre lo ya vencido.
+- **El prefijo `(DEV)`** en el asunto de todo correo que no salga de producción
+  ([`functions/src/entorno.ts`](../functions/src/entorno.ts)).
+- **Las fichas de coche no declaraban las medidas de su foto**, así que WhatsApp
+  tenía que descargarla para decidir el tamaño de la tarjeta y a veces no
+  pintaba nada: `og:image:width/height/type` y `og:image:secure_url`.
+
+### ⚠️ El prefijo (DEV) estaba ESCRITO y no llegaba: faltaba desplegar
+
+Dorel siguió recibiendo correos sin él. La causa no era el código: de las seis
+functions que mandan correo, a desarrollo solo se habían desplegado **dos** — y
+el prefijo se había subido a **producción**, donde por diseño no hace nada.
+
+Hoy los **cinco** envíos reales pasan por `asuntoDeCorreo()` —el resumen diario,
+el contrato firmado y los tres de `public/api.ts`— y también la **vista previa**
+de Ajustes, que enseñaba el asunto sin prefijo: una vista previa que no coincide
+con lo que sale es peor que no tenerla, porque es justo donde se va a
+comprobarlo.
+
+**La lección es la de siempre, con otra cara:** *una function editada no es una
+function desplegada*, y **desplegar al entorno equivocado se parece mucho a no
+desplegar**.
+
+### El calendario del móvil (7 de octubre)
+
+Encargo de Dorel: ver el mes completo en la pantalla, elegir hora **sin
+minutos**, un botón **«Seleccionar»**, y el mismo panel en el backoffice y en la
+web pública.
+
+- **Con el dedo el panel es una hoja pegada abajo**, a todo el ancho y con tope
+  de 480 px. Colgando del campo medía unos 550 px y se recortaba contra la
+  pantalla: las dos últimas semanas del mes y el pie había que buscarlos
+  desplazando **dentro** del panel.
+- ⚠️ **Lo decide el PUNTERO, no el ancho.** Es la frontera de `base-select`: un
+  teléfono en horizontal mide 844 px de ancho y 390 de alto, así que un corte
+  por ancho da el panel de escritorio justo donde menos cabe.
+- ⚠️ **Y lo decide JavaScript, no una media query**, porque quien coloca el
+  panel es JavaScript: `place()` y `colocar()` escriben `top`/`left` **en
+  línea** y eso gana a cualquier regla. La salida temprana de esas dos funciones
+  es lo que hace que la hoja funcione.
+- **Las 24 horas en rejilla de 6 × 4**, sin nada que recorrer. Y el pie se queda
+  **pegajoso**: medido en un iPhone SE —375×553 útiles— la hoja no cabe y
+  «Seleccionar» quedaba por debajo del borde.
+- **Fuera los minutos**, y el minuto se escribe **0 siempre**: dejando el que
+  trajera el campo, unas 10:35 se quedarían en 11:35 sin forma de cambiarlo.
+
+Tres cosas que aparecieron al mirarlo de cerca, y que valen más que el encargo:
+
+- ⚠️ **El panel del backoffice IGNORABA el `min` de los `datetime-local`.** Lo
+  leía con `parseValue('date', …)`, cuyo patrón va **anclado**, así que un
+  `min="2026-10-07T00:00"` no casaba y salía `null`: **ninguna celda bloqueada**.
+  En el asistente de reservas se podía elegir una recogida en el pasado, y lo
+  único que lo cazaba era la validación del navegador con el panel ya cerrado.
+  La web lo tenía resuelto desde el principio y lo **documentaba como un fallo
+  vivo en el backoffice** — nadie fue a arreglarlo. Hoy lo hace
+  `parseLimitValue()`, con tests.
+- ⚠️ **La web no centraba la hora elegida al abrir.** `centrarHoras()` se
+  llamaba dentro de `pintar()`, **antes** de `showPopover()`, y hasta ese momento
+  el panel está en `display: none`: `clientHeight` vale 0 y la columna se queda
+  arriba. Medido con las 10:00 puestas, se abría enseñando de la 00 a la 05 y sin
+  una hora marcada a la vista.
+- ⚠️ **La ficha de la hora se pintó primero con `--bg-main`**, que queda a
+  **1,085** de la tarjeta en los temas oscuros: el fondo estaba puesto y no
+  comunicaba nada. Es el mismo error que el tinte del hover al 2 %. Con
+  `--bg-input`, 1,12 en claro y 1,34 en oscuro — medido en los dos proyectos.
+
+⚠️ **Cómo se comprobó, que es reutilizable:** modo dispositivo por CDP
+(`Emulation.setDeviceMetricsOverride` con `mobile: true` + `setTouchEmulationEnabled`)
+a 390×780, 360×640 y 375×553, midiendo con `getBoundingClientRect()` que la
+rejilla del mes cae entera dentro de la ventana y que el pie se ve.
+⚠️ **Las CAPTURAS mienten bajo emulación**: `page.screenshot({ scale: 'css' })`
+vuelve a tocar las métricas del dispositivo, así que en pantallas pequeñas sale
+la página **sin** emular y el panel aparece colocado de otra forma, o no aparece.
+Lo que vale es la medida.
+
+⚠️ **Y para probar el backoffice en local hace falta sesión.** El perfil de
+Playwright la tiene para `store.veltorent.com`, no para `localhost`. Se copia:
+leer el objeto de `indexedDB.firebaseLocalStorageDb` → `firebaseLocalStorage` en
+el dominio y escribirlo en el local. Es el mismo proyecto de Firebase, así que
+el token vale.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
@@ -983,15 +1099,35 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 5 de octubre al cerrar**: nada sin subir, y **65 commits que NO están
-en producción**. Y esta vez **no basta con el merge**, al revés que el día 24:
+**Medido el 7 de octubre al cerrar**: nada sin subir, y **6 commits que NO están
+en producción**. Y **no basta con el merge**:
 
 | Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
 |---|---|---|
-| `functions/src/` | 34 | **a mano**, por tandas de dos o tres |
-| `src/` (backoffice) | 57 | CI, al hacer merge a `master` |
-| `web/` | 54 | CI, al hacer merge a `master` |
-| `firebase.json`, `firestore.rules` | 2 | **a mano** (`deploy:prod:rules`) y hosting |
+| `functions/src/` | 8 | **a mano**, por tandas de dos o tres |
+| `src/` (backoffice) | 14 | CI, al hacer merge a `master` |
+| `web/` | 5 | CI, al hacer merge a `master` |
+| reglas e índices | — | **sin cambios**, no hace falta `deploy:prod:rules` |
+
+Las **ocho** functions que hay que actualizar a mano, agrupadas por lo que las
+hace cambiar, y **ninguna es nueva**:
+
+| Function | Por qué cambia |
+|---|---|
+| `sendDailyDigest`, `previewDailyDigest` | el aviso de vencimientos y el prefijo `(DEV)` |
+| `sendSignedContractEmail` | el prefijo `(DEV)` |
+| `createBookingRequest`, `createContactRequest` | el prefijo `(DEV)` |
+| `publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability` | la **curva de tarifas** |
+
+⚠️ **Las tres últimas son las que deciden el precio que ve el cliente**, así que
+el escaparate de producción seguirá cobrando **por tramos** hasta que se
+desplieguen — con el salto que hace que 16 días valgan menos que 15. Si se hace
+el merge sin ellas, el backoffice y la web dirían **precios distintos para el
+mismo alquiler**.
+
+> Antes de esta línea ponía «medido el 5 de octubre: 65 commits», y eso quedó
+> cumplido con el despliegue de ese día (§ 2 undecies). Vuelve a medirlo tú: esta
+> tabla envejece en cada sesión.
 
 ⚠️ **Y hay una function NUEVA que el guion del día 3 no nombra: `trackWebVisit`.**
 Medido ese mismo día comparando los **nombres** —no las cifras—, desplegadas:
