@@ -1162,6 +1162,40 @@ pasar las horas a una rejilla que cabe entera. Sus dos trampas —nada de
 `scrollIntoView()`, y medir por rectángulos y no por `offsetTop`— quedan
 contadas en el hueco que dejó.
 
+## 2 terdecies. El despliegue del 7 de octubre — producción al día otra vez
+
+Autorizado por Dorel. El orden, que es la parte reutilizable:
+
+1. **Diez functions a mano**, en cinco tandas de una a tres, con 30 s entre
+   tandas: `sendDailyDigest`, `previewDailyDigest`, `sendSignedContractEmail`,
+   `publishVehiclePhoto`, `unpublishVehiclePhoto`, `publicVehicles`,
+   `publicVehicleDetail`, `checkPublicAvailability`, `createBookingRequest`,
+   `createContactRequest`. **Cero fallos de cuota.** Ninguna era nueva.
+2. **El merge** (PR #70), que publica los dos sitios por CI.
+
+⚠️ **Y la lección del día: `master` tenía la curva de tarifas desde la PR #69 y
+producción seguía cobrando por tramos.** El CI despliega **solo hosting**, así
+que un merge deja el frontend nuevo hablando con functions viejas. O sea que
+«está en master» no quiere decir «está desplegado», y para saber qué functions
+van viejas **no sirve** `git diff origin/master..origin/develop`: hay que diffear
+desde el commit del último despliegue de functions.
+
+**Comprobado al cerrar, contra `veltomobility.com`:** la curva calculando de 1 a
+35 días con el total que nunca baja y la media que nunca sube —15 días 523,93 €
+y 16 días 548,72 €, que era el salto que había que matar—; el calendario a
+340×489 con ratón y 390×639 con dedo, horas de 07:00 a 23:00 y los nueve días
+pasados bloqueados; la carretera de carga sin asfalto; y **32 functions, sin
+ninguna de la AEAT**.
+
+⚠️ **Y un test flojo que llevaba días fallando al azar.** `arranque.spec.ts`
+caía una de cada cuatro tandas con «Test timed out in 5000ms» en
+`generateContractPdf → ./pdf` y `getContractForSigning → ./clauses`. No era el
+import: son justo los módulos pesados que se sacaron del arranque, y vitest los
+transforma al vuelo —medido con la máquina cargada: 5,1 s y 8,0 s—. Plazo a
+30 s. **Un test que falla a veces se deja de mirar**, y ese es el que avisa de
+que un import perezoso mal escrito revienta la primera vez que alguien genera un
+PDF, no al arrancar.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
@@ -1172,35 +1206,15 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 7 de octubre al cerrar**: nada sin subir, y **6 commits que NO están
-en producción**. Y **no basta con el merge**:
+**Medido el 7 de octubre al cerrar, después del despliegue de § 2 terdecies:
+nada sin subir y nada sin desplegar.** `master` y `develop` están iguales, las
+32 functions de producción corren el código de hoy y los dos sitios se
+publicaron con el merge de la PR #70.
 
-| Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
-|---|---|---|
-| `functions/src/` | 8 | **a mano**, por tandas de dos o tres |
-| `src/` (backoffice) | 14 | CI, al hacer merge a `master` |
-| `web/` | 5 | CI, al hacer merge a `master` |
-| reglas e índices | — | **sin cambios**, no hace falta `deploy:prod:rules` |
-
-Las **ocho** functions que hay que actualizar a mano, agrupadas por lo que las
-hace cambiar, y **ninguna es nueva**:
-
-| Function | Por qué cambia |
-|---|---|
-| `sendDailyDigest`, `previewDailyDigest` | el aviso de vencimientos y el prefijo `(DEV)` |
-| `sendSignedContractEmail` | el prefijo `(DEV)` |
-| `createBookingRequest`, `createContactRequest` | el prefijo `(DEV)` |
-| `publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability` | la **curva de tarifas** |
-
-⚠️ **Las tres últimas son las que deciden el precio que ve el cliente**, así que
-el escaparate de producción seguirá cobrando **por tramos** hasta que se
-desplieguen — con el salto que hace que 16 días valgan menos que 15. Si se hace
-el merge sin ellas, el backoffice y la web dirían **precios distintos para el
-mismo alquiler**.
-
-> Antes de esta línea ponía «medido el 5 de octubre: 65 commits», y eso quedó
-> cumplido con el despliegue de ese día (§ 2 undecies). Vuelve a medirlo tú: esta
-> tabla envejece en cada sesión.
+⚠️ **Vuelve a medirlo tú, que esta tabla envejece en cada sesión** — y mídelo
+**desde el último despliegue de functions**, no desde `master`: el CI solo
+publica hosting, así que un merge puede dejar el frontend nuevo contra functions
+viejas sin que ningún `git diff` contra `master` lo diga.
 
 ⚠️ **Y hay una function NUEVA que el guion del día 3 no nombra: `trackWebVisit`.**
 Medido ese mismo día comparando los **nombres** —no las cifras—, desplegadas:
