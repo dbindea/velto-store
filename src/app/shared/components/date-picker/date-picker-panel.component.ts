@@ -34,22 +34,20 @@ import {
  * en qué día de la semana cae el 15. Lo pidió Dorel el 7 de octubre de 2026:
  * «ver el mes completo en la pantalla».
  *
- * ⚠️ **Y desde el 8 de octubre de 2026 es que SÍ, siempre, también con ratón.**
- * Nació preguntando por el aparato —`(hover: none) and (pointer: coarse)`, la
- * misma frontera que decide `base-select`— y Dorel lo vio en los dos sitios y
- * pidió el del móvil para escritorio: «realmente queda muy bien». Tiene razón
- * por una cosa concreta además del gusto: colgando del campo, el panel con la
- * rejilla grande mide unos 670 px y en un portátil de 768 px de alto **no cabe
- * ni arriba ni abajo**, así que acababa recortado contra la pantalla. Como hoja
- * cabe siempre.
+ * ⚠️ **Y lo que cambia con el ratón es DÓNDE se pone, no cómo se ve.** El 8 de
+ * octubre de 2026 esto llegó a devolver `true` siempre, porque Dorel pidió «el
+ * mismo tipo de calendario del móvil» para escritorio. Lo que quería era el
+ * **aspecto** —la rejilla grande, las horas en fichas, el botón— y eso se queda
+ * en los dos: lo dijo él mismo ese día, pidiendo que en escritorio fuera más
+ * pequeño y que colgara del campo siguiendo a la página. Son dos cosas distintas
+ * y conviene no volver a mezclarlas:
  *
- * ⚠️ **Se conserva la función en vez de borrar la rama**, igual que
- * `prefersNativePicker()`: es el punto donde volver si algún día se quiere el
- * panel colgando del campo con el ratón. `place()` sigue escrito justo detrás
- * por lo mismo.
+ * - **el diseño** es común, y vive fuera de `.is-sheet` en el SCSS;
+ * - **la colocación** depende del aparato: hoja abajo con el dedo, colgando del
+ *   campo con el ratón, que es el modismo de cada uno.
  */
 export function prefersSheetLayout(): boolean {
-  return true;
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
 
 /**
@@ -176,43 +174,19 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
     this.place();
     // Y otra vez cuando ya se ha pintado con su alto real, que es lo que
     // decide si cabe debajo del campo o hay que subirlo.
-    requestAnimationFrame(() => {
-      this.place();
-      this.centrarHoraElegida();
-    });
+    requestAnimationFrame(() => this.place());
   }
 
-  /**
-   * Deja la hora elegida a la vista al abrir.
-   *
-   * ⚠️ **Sin esto el panel se abre mintiendo.** Las 24 horas no caben, así que
-   * un campo con las 12:00 se abría enseñando de la 00 a la 05 y ninguna
-   * marcada: parecía que no había nada elegido y había que buscarlo
-   * desplazando.
-   *
-   * ⚠️ **Y se mueve la columna a mano, no con `scrollIntoView()`.** Ese método
-   * desplaza **todos** los antepasados con desplazamiento, incluida la página:
-   * el panel es `fixed` y se quedaría quieto mientras el formulario de detrás
-   * se va solo a otra parte.
+  /*
+   * ⚠️ **Aquí había un `centrarHoraElegida()` y se borró el 8 de octubre de
+   * 2026.** Movía a mano el `scrollTop` de la columna de horas para que la
+   * elegida no se abriera fuera de la vista, y traía dos trampas documentadas:
+   * nada de `scrollIntoView()` —desplaza también la página— y medir por
+   * rectángulos y no por `offsetTop`, que se cuenta contra el antepasado
+   * posicionado. Dejó de hacer falta al pasar las horas a una rejilla que cabe
+   * entera: ya no hay nada que desplazar. Si algún día vuelve una lista larga,
+   * está en el historial de git con su explicación.
    */
-  private centrarHoraElegida(): void {
-    const columnas = this.host.nativeElement.querySelectorAll<HTMLElement>('.picker-time-col');
-    columnas.forEach((col) => {
-      const marcada = col.querySelector<HTMLElement>('.is-selected');
-      if (!marcada) return;
-      /**
-       * ⚠️ **Por rectángulos y no por `offsetTop`.** `offsetTop` se mide
-       * contra el antepasado **posicionado**, que aquí es el panel entero y no
-       * la columna: con el calendario encima le sumaba sus 250 px y la lista
-       * de horas se iba a las cuatro de la tarde con las nueve marcadas fuera
-       * de la vista. Solo se veía en el campo de fecha **y** hora — en el de
-       * hora sola no hay nada encima y los dos números coinciden.
-       */
-      const rc = col.getBoundingClientRect();
-      const rm = marcada.getBoundingClientRect();
-      col.scrollTop += rm.top - rc.top - (col.clientHeight - marcada.clientHeight) / 2;
-    });
-  }
 
   t(clave: string): string {
     return this.translate.translate(clave);
@@ -309,6 +283,35 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
    * `fixed` en relativo a él— recortaría el panel o lo dejaría a media
    * pantalla. Por eso lo monta la directiva fuera del árbol del formulario.
    */
+  /**
+   * Mueve el panel con la página, en vez de cerrarlo al primer desplazamiento.
+   *
+   * ⚠️ **Antes se cerraba, y eso es lo que Dorel pidió quitar** el 8 de octubre
+   * de 2026: «que al hacer scroll de la página con el calendario abierto no
+   * desaparezca, sino que suba o baje haciendo scroll». Un panel que se cierra
+   * solo obliga a volver a abrirlo cada vez que uno mira algo de la pantalla, y
+   * encima parece que se ha roto.
+   *
+   * ⚠️ **Se reaplica el DESFASE, no se vuelve a colocar.** `place()` decide si
+   * el panel va encima o debajo del campo según lo que quepa, así que llamarlo
+   * en cada fotograma de desplazamiento haría que **saltara de un lado a otro**
+   * del campo a media lectura. Con el desfase se comporta como si estuviera
+   * pegado.
+   *
+   * ⚠️ **Y aquí NO se recorta contra la pantalla**, al revés que al abrir: si el
+   * campo se va de la vista, el panel se va con él. Es justo lo que se ha
+   * pedido; dejarlo clavado en el borde sería un panel flotando sin dueño.
+   */
+  follow(anchor: DOMRect): void {
+    if (this.asSheet || this.desfase === null) return;
+    const panel = this.host.nativeElement.firstElementChild as HTMLElement | null;
+    if (!panel) return;
+    panel.style.top = `${Math.round(anchor.top + this.desfase)}px`;
+  }
+
+  /** Lo que separa el borde de arriba del panel del del campo. Ver `follow()`. */
+  private desfase: number | null = null;
+
   private place(): void {
     // Como hoja no hay nada que colocar: lo hace el CSS pegándola al borde de
     // abajo. Y escribir `top`/`left` en línea le GANARÍA a esa regla, así que
@@ -338,5 +341,8 @@ export class DatePickerPanelComponent implements OnInit, AfterViewInit {
 
     panel.style.top = `${Math.round(arriba)}px`;
     panel.style.left = `${Math.round(izquierda)}px`;
+
+    // A partir de aquí el panel va pegado al campo: ver `follow()`.
+    this.desfase = Math.round(arriba) - r.top;
   }
 }

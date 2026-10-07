@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HOURS,
   addMonths,
   formatDateTimeValue,
   formatDateValue,
@@ -168,6 +169,26 @@ describe('addMonths', () => {
     const r = addMonths(new Date(2026, 11, 15), 1);
     expect(r.getFullYear()).toBe(2027);
     expect(r.getMonth()).toBe(0);
+  });
+});
+
+/**
+ * ⚠️ **La madrugada no se ofrece.** De 00:00 a 06:00 no hay nadie en la oficina,
+ * así que ofrecer esas horas es prometer una entrega que no se va a cumplir
+ * (decisión de Dorel del 8 de octubre de 2026). Está probado porque es una regla
+ * de negocio con la misma lista escrita en los dos proyectos —aquí y en
+ * `web/src/lib/fecha-picker.ts`—, y el día que una cambie sin la otra, el
+ * visitante podrá pedir en la web una hora que el backoffice no ofrece.
+ */
+describe('HOURS', () => {
+  it('va de las 07:00 a las 23:00', () => {
+    expect(HOURS[0]).toBe(7);
+    expect(HOURS.at(-1)).toBe(23);
+    expect(HOURS).toHaveLength(17);
+  });
+
+  it('no trae ninguna hora de madrugada', () => {
+    expect(HOURS.some((h) => h < 7)).toBe(false);
   });
 });
 

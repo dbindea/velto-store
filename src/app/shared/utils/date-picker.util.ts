@@ -214,4 +214,24 @@ export function addMonths(d: Date, meses: number): Date {
  * `input[type=time]` o `datetime-local` y se puede teclear cualquier minuto;
  * esto es el atajo, no el único camino.
  */
-export const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+/**
+ * La primera hora a la que la agencia entrega o recoge un coche.
+ *
+ * ⚠️ **De 00:00 a 06:00 no se ofrece ninguna**, por decisión de Dorel del 8 de
+ * octubre de 2026. No es una preferencia de diseño: a esas horas no hay nadie en
+ * la oficina, así que ofrecerlas es prometer algo que no se va a cumplir — y de
+ * paso eran siete fichas de las veinticuatro, una fila entera de la rejilla que
+ * no servía para nada.
+ *
+ * ⚠️ **El campo sigue admitiendo cualquier hora por teclado.** Esto recorta lo
+ * que se **ofrece**, no lo que se puede guardar: una reserva antigua de
+ * madrugada se sigue leyendo y editando bien, y lo único es que su ficha no sale
+ * marcada en el panel.
+ *
+ * El mismo valor está escrito en `web/src/lib/fecha-picker.ts`, como el IVA: son
+ * dos builds que no pueden compartir módulo.
+ */
+export const FIRST_HOUR = 7;
+
+export const HOURS = Array.from({ length: 24 - FIRST_HOUR }, (_, i) => i + FIRST_HOUR);

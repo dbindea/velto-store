@@ -239,6 +239,8 @@ export class DatePickerDirective implements OnDestroy {
     document.removeEventListener('mousedown', this.alPulsarFuera, true);
     window.removeEventListener('resize', this.alMoverse, true);
     window.removeEventListener('scroll', this.alMoverse, true);
+    if (this.pendiente) cancelAnimationFrame(this.pendiente);
+    this.pendiente = 0;
 
     const vista = this.panel;
     const contenedor = this.contenedor;
@@ -276,23 +278,40 @@ export class DatePickerDirective implements OnDestroy {
   };
 
   /**
-   * Al desplazar o cambiar el tamaño, el panel se cierra en vez de perseguir
-   * al campo. Es lo que hace el del navegador, y perseguirlo obliga a
-   * recalcular en cada píxel de desplazamiento.
+   * Al desplazar, el panel **sigue al campo**; al redimensionar, se cierra.
    *
-   * ⚠️ **Salvo si lo que se desplaza es el propio panel**, y esta línea costó
-   * un buen rato. El oyente va en fase de **captura** para enterarse también
-   * de lo que se desplace dentro de un contenedor con `overflow` —un modal, un
-   * panel lateral—, y un evento de desplazamiento **no burbujea** pero sí baja
-   * en la captura. Consecuencia: al abrir el reloj, centrar la hora elegida
-   * mueve la columna, eso dispara un desplazamiento, y el panel se cerraba a sí
-   * mismo en el mismo fotograma en que se abría. Sin error en consola y sin
-   * nada que mirar: simplemente no salía.
+   * ⚠️ **Antes se cerraba también al desplazar, y eso es lo que Dorel pidió
+   * quitar** el 8 de octubre de 2026: un panel que desaparece en cuanto uno
+   * mueve la rueda obliga a volver a abrirlo cada vez, y parece roto. Ahora sube
+   * y baja con la página. Al **redimensionar** sí se cierra: ahí cambia lo que
+   * cabe, y recolocarlo en mitad de un arrastre de la ventana es peor que
+   * empezar de nuevo.
+   *
+   * ⚠️ **Salvo si lo que se desplaza es el propio panel**, y esta línea costó un
+   * buen rato. El oyente va en fase de **captura** para enterarse también de lo
+   * que se desplace dentro de un contenedor con `overflow` —un modal, un panel
+   * lateral—, y un evento de desplazamiento **no burbujea** pero sí baja en la
+   * captura. Sigue haciendo falta: sin ella, desplazar dentro del propio panel
+   * en una pantalla corta lo movería contra un campo que no se ha movido.
+   *
+   * ⚠️ **Y va por fotograma.** Un desplazamiento dispara decenas de eventos por
+   * segundo; sin el `requestAnimationFrame` se mide y se escribe el estilo en
+   * cada uno.
    */
+  private pendiente = 0;
+
   private alMoverse = (evento: Event): void => {
     const destino = evento.target;
     if (destino instanceof Node && this.contenedor?.contains(destino)) return;
-    this.cerrar();
+    if (evento.type !== 'scroll') {
+      this.cerrar();
+      return;
+    }
+    if (this.pendiente) return;
+    this.pendiente = requestAnimationFrame(() => {
+      this.pendiente = 0;
+      this.panel?.instance.follow(this.input.getBoundingClientRect());
+    });
   };
 
   /**

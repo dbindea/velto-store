@@ -44,6 +44,17 @@
    * fallo: el problema no era de esa pantalla, era del número.
    */
   z-index: 1200;
+  /**
+   * ⚠️ **Ancho fijo, porque las columnas son `1fr`.** La rejilla del mes se
+   * repartía en columnas de 32 px y el panel medía lo que sumaran; desde que
+   * reparte el ancho —para que la hoja del móvil llene la pantalla— hay que
+   * decirle cuánto mide con el ratón, o se queda en el mínimo de su contenido.
+   *
+   * 340 px es **un 29 % menos que la hoja de 480**, que es lo que pidió Dorel el
+   * 8 de octubre de 2026: «en desktop el calendario es demasiado grande, 20-30 %
+   * más pequeño». Lo que encoge es la caja, no el diseño.
+   */
+  width: 340px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -119,8 +130,13 @@
  * decisión se toma una sola vez, en el sitio que de verdad manda.
  *
  * Lo que se gana, que era el encargo: el mes entero a la vista sin desplazar
- * nada, celdas de 44 px —la medida del dedo— y las 24 horas en una rejilla que
- * cabe de un vistazo en vez de una columna que hay que recorrer.
+ * nada y celdas de 44 px, la medida del dedo.
+ *
+ * ⚠️ **Aquí dentro va SOLO lo que es del móvil: medidas y el pegado al borde.**
+ * El diseño —la rejilla del mes, las horas en fichas, el botón de aceptar— vive
+ * en las reglas de fuera, porque es el mismo en los dos sitios. Llegó a estar
+ * todo aquí dentro un día, y entonces el panel de escritorio se quedaba con el
+ * aspecto viejo; separarlo es lo que permite encoger uno sin tocar el otro.
  */
 .picker-panel.is-sheet {
   top: auto;
@@ -148,16 +164,6 @@
   // El pie cae dentro del área de los gestos del sistema en un iPhone.
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
 
-  .picker-weekdays,
-  .picker-grid {
-    // El mes ocupa el ancho de la pantalla, que es lo que lo hace legible con
-    // el pulgar. `minmax(0, 1fr)` y no `1fr`: una celda con texto sin partir
-    // ensancha la rejilla hasta salirse, y es el fallo que ya midió 1200 px en
-    // el calendario grande.
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 4px;
-  }
-
   .picker-day {
     height: 44px;
     font-size: 0.9375rem;
@@ -179,63 +185,9 @@
     }
   }
 
-  .picker-time-col {
-    // ⚠️ **Rejilla y no columna con desplazamiento.** Las 24 horas entran en
-    // cuatro filas de seis, así que no hay nada que recorrer ni que centrar al
-    // abrir — que era el otro problema del panel colgante en un teléfono.
-    //
-    // ⚠️ **Y la rejilla la monta la COLUMNA, no su contenedor.** Con
-    // `display: contents` en la columna los botones subirían a la rejilla del
-    // padre y se vería igual, pero esa columna es el `role="listbox"` que los
-    // agrupa: un elemento sin caja es un elemento que algunos lectores de
-    // pantalla dejan de anunciar.
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 4px;
-    // Aquí sí ocupa todo: el tope de 110 px es del panel de escritorio, donde
-    // la columna es una lista estrecha y no una rejilla.
-    flex: 1 1 auto;
-    max-height: none;
-    overflow: visible;
-    // ⚠️ **`start` y no el `normal` de serie, que ESTIRA las filas** repartiendo
-    // entre ellas el alto que le sobre a la columna. Es lo que hacía que la
-    // misma ficha midiera 40 px aquí y 50 en la web.
-    align-content: start;
-  }
-
   .picker-time-item {
     min-height: 44px;
-    // ⚠️ **Más pequeña que el día, y eso es parte de que se lea como una hora.**
-    // La ficha pone «10:00» en vez de «10» para no confundirse con los números
-    // del calendario de arriba; con el cuerpo de los días las dos rejillas
-    // competirían.
-    //
-    // ⚠️ **12 px y `nowrap`, que es lo que hace que quepa.** En la web, con
-    // 14 px, «00:00» pedía unos 42 px y el hueco entre rellenos eran 40: la
-    // ficha se partía en dos renglones y salía de 50 px de alto en vez de 44.
-    // Aquí no llegó a pasar, y se iguala igualmente — el panel tiene que medir
-    // lo mismo en los dos sitios.
-    font-size: 0.75rem;
-    padding-inline: 0.25rem;
-    white-space: nowrap;
     border-radius: 10px;
-    /**
-     * Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo,
-     * veinticuatro números sueltos parecen una tabla y no botones.
-     *
-     * ⚠️ **La superficie es la del CAMPO, no la del hueco.** Con `--bg-main`
-     * —lo primero que se escribió— la ficha queda a **1,085** de la tarjeta en
-     * los temas oscuros, por debajo de lo que el ojo distingue: el fondo estaba
-     * puesto y no comunicaba nada, que es exactamente lo que ya pasó con el
-     * tinte del hover al 2 %. `--bg-input` existe para separarse de la tarjeta
-     * en los cuatro temas —1,12 en claro y 1,34 en oscuro, medido— y además es
-     * lo que esta aplicación usa para decir «esto es un control».
-     */
-    background: var(--bg-input);
-  }
-
-  .picker-time-item.is-selected {
-    background: var(--accent-color);
   }
 
   /**
@@ -257,15 +209,6 @@
     padding-bottom: 0.25rem;
   }
 
-  // El botón que da la fecha por buena sí es un botón de verdad aquí: es la
-  // salida de una hoja que tapa media pantalla, y en el pie de un popover de
-  // escritorio sería un adorno.
-  .picker-close {
-    background: var(--accent-color);
-    color: #fff;
-    padding: 0.5rem 1.25rem;
-    font-weight: 600;
-  }
 }
 
 /**
@@ -333,11 +276,16 @@
   }
 }
 
+/**
+ * ⚠️ **`minmax(0, 1fr)` y no `1fr`**: una celda con texto sin partir ensancha la
+ * rejilla hasta salirse, que es el fallo que ya midió 1200 px en el calendario
+ * grande.
+ */
 .picker-weekdays,
 .picker-grid {
   display: grid;
-  grid-template-columns: repeat(7, 32px);
-  gap: 2px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .picker-weekdays span {
@@ -348,7 +296,7 @@
 }
 
 .picker-day {
-  height: 32px;
+  height: 34px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -386,11 +334,6 @@
 
 .picker-time {
   display: flex;
-  // ⚠️ **Centrada, porque desde el 7 de octubre de 2026 la columna es UNA.**
-  // Al quitar los minutos quedó sola, y con `flex: 1` se estiraba a los 236 px
-  // del calendario: una pastilla de ese ancho con un «12» dentro no parece una
-  // lista de horas, parece un botón que ocupa todo.
-  justify-content: center;
   gap: 0.5rem;
 
   // Cuando va debajo de un calendario, se separa con un filete.
@@ -400,64 +343,72 @@
   }
 }
 
+/**
+ * ⚠️ **Rejilla, no columna con desplazamiento.** Las horas que se ofrecen —de
+ * las 07:00 a las 23:00— entran en tres filas de seis, así que no hay nada que
+ * recorrer ni que centrar al abrir, que era el otro problema del panel colgante.
+ *
+ * ⚠️ **Y la rejilla la monta la COLUMNA, no su contenedor.** Con
+ * `display: contents` los botones subirían a la rejilla del padre y se vería
+ * igual, pero esa columna es el `role="listbox"` que los agrupa: un elemento sin
+ * caja es un elemento que algunos lectores de pantalla dejan de anunciar.
+ *
+ * ⚠️ **`align-content: start` y no el `normal` de serie, que ESTIRA las filas**
+ * repartiendo entre ellas el alto que le sobre a la columna.
+ */
 .picker-time-col {
-  // Alto fijo con desplazamiento: 24 horas no caben en pantalla y una lista
-  // sin tope estiraría el panel hasta salirse.
-  max-height: 180px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 0 1 110px;
-  min-width: 56px;
-
-  /**
-   * ⚠️ **La barra de desplazamiento también es parte del panel.** Por defecto
-   * sale la del sistema —ancha, con su carril y sus flechas— y dentro de un
-   * panel de 150 px eso es lo primero que se ve al abrir el reloj.
-   *
-   * Van las **dos formas** a propósito: la estándar la entiende Firefox y los
-   * pseudo-elementos con prefijo los aplica Chrome, que es donde se trabaja.
-   * Medido aquí: el ancho acaba en 6 px, que es el de los pseudo-elementos.
-   */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-  }
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  align-content: start;
+  flex: 1 1 auto;
 }
 
+/**
+ * ⚠️ **Dice «10:00» y no «10», y por eso lleva su propio tamaño.** Debajo de una
+ * rejilla de números del 1 al 31, una fila de números sueltos se lee como más
+ * días; los dos puntos y un cuerpo menor lo resuelven sin rótulo ni icono.
+ *
+ * ⚠️ **12 px y `nowrap`, que es lo que hace que quepa.** En la web, con 14 px,
+ * «00:00» pedía unos 42 px y el hueco entre rellenos eran 40: la ficha se partía
+ * en dos renglones y salía de 50 px de alto en vez de 44. No se veía como un
+ * desbordamiento —`scrollWidth` cuadraba—, se veía como una fila más alta que la
+ * del otro proyecto.
+ */
 .picker-time-item {
-  padding: 0.25rem 0.5rem;
+  min-height: 30px;
+  padding: 0.25rem;
   border: none;
   border-radius: 6px;
-  background: transparent;
+  /**
+   * Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo, una
+   * rejilla de números sueltos parece una tabla y no botones.
+   *
+   * ⚠️ **La superficie es la del CAMPO, no la del hueco.** Con `--bg-main`
+   * —lo primero que se escribió— la ficha queda a **1,085** de la tarjeta en los
+   * temas oscuros, por debajo de lo que el ojo distingue: el fondo estaba puesto
+   * y no comunicaba nada, que es exactamente lo que ya pasó con el tinte del
+   * hover al 2 %. `--bg-input` se separa de la tarjeta en los cuatro temas
+   * —1,12 en claro y 1,34 en oscuro, medido— y además es lo que esta aplicación
+   * usa para decir «esto es un control».
+   */
+  background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   cursor: pointer;
   text-align: center;
 
+  // ⚠️ El tinte se SUPERPONE, no sustituye: escrito como `background` borraría
+  // la superficie de la ficha. Es la regla de la casa para `--bg-hover`.
   &:hover {
-    background: var(--bg-hover);
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
   }
 
   &.is-selected {
     background: var(--accent-color);
+    background-image: none;
     color: #fff;
     font-weight: 600;
   }
@@ -516,6 +467,25 @@
   color: var(--danger-color);
 }
 
+/**
+ * «Seleccionar» es un botón de verdad: es la salida del panel, y en un pie con
+ * otros dos enlaces de texto tiene que distinguirse de ellos.
+ *
+ * ⚠️ **Y su hover es su propio color, NO el tinte de los otros dos.** El tinte
+ * de `.picker-clear, .picker-now, .picker-close` está escrito como `background`
+ * a secas, así que sobre un botón con relleno de marca lo **borra** y deja el
+ * rótulo blanco sobre la tarjeta. Es el fallo que ya costó trece sitios el 24 de
+ * septiembre de 2026, y la regla está en CLAUDE.md: si el elemento lleva un
+ * color de marca, el hover es ese color oscuro; el tinte solo vale para lo que
+ * es transparente de base.
+ */
 .picker-close {
-  color: var(--text-muted);
+  background: var(--accent-color);
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
 }

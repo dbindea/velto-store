@@ -181,8 +181,23 @@ describe('hoy no vale cualquier hora', () => {
     expect(horas).toContain(23);
   });
 
-  it('al dia siguiente valen las 24', () => {
-    expect(horasValidas(new Date(2026, 8, 30), min).length).toBe(24);
+  it('al dia siguiente valen todas las de oficina, de 07:00 a 23:00', () => {
+    const horas = horasValidas(new Date(2026, 8, 30), min);
+    expect(horas).toEqual([7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]);
+  });
+
+  /**
+   * ⚠️ **La madrugada no se ofrece NUNCA, ni el día del `min` ni los demás.**
+   * Este test decía «al día siguiente valen las 24» hasta el 8 de octubre de
+   * 2026, y era cierto: el panel ofrecía de 00:00 a 06:00, horas a las que no
+   * hay nadie en la oficina. Se comprueba aparte del recorte por `min` porque
+   * son dos reglas distintas que se aplican sobre la misma lista.
+   */
+  it('la madrugada no sale aunque no haya limites', () => {
+    const horas = horasValidas(new Date(2026, 8, 30));
+    expect(horas[0]).toBe(7);
+    expect(horas).not.toContain(0);
+    expect(horas).not.toContain(6);
   });
 
   it('en la hora exacta del min se recortan los minutos', () => {

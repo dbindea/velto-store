@@ -224,7 +224,26 @@ export function minutosDelPaso(stepSegundos: number | null | undefined): number[
   return salida;
 }
 
-export const HORAS = Array.from({ length: 24 }, (_, h) => h);
+/**
+ * La primera hora a la que la agencia entrega o recoge un coche.
+ *
+ * ⚠️ **De 00:00 a 06:00 no se ofrece ninguna**, por decisión de Dorel del 8 de
+ * octubre de 2026. No es una preferencia de diseño: a esas horas no hay nadie en
+ * la oficina, así que ofrecerlas es prometer algo que no se va a cumplir — y de
+ * paso eran siete fichas de las veinticuatro, una fila entera de la rejilla que
+ * no servía para nada.
+ *
+ * ⚠️ **El campo sigue admitiendo cualquier hora por teclado**, igual que los
+ * minutos: esto recorta lo que se **ofrece**, no lo que se puede guardar. Una
+ * reserva antigua de madrugada se sigue leyendo bien; lo único es que su ficha
+ * no sale marcada en el panel.
+ *
+ * El mismo valor está escrito en `date-picker.util.ts` del backoffice, como el
+ * IVA: son dos builds que no pueden compartir módulo.
+ */
+export const PRIMERA_HORA = 7;
+
+export const HORAS = Array.from({ length: 24 - PRIMERA_HORA }, (_, i) => i + PRIMERA_HORA);
 
 /**
  * Qué horas se pueden elegir del día que está elegido.
