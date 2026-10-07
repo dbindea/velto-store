@@ -1089,6 +1089,41 @@ leer el objeto de `indexedDB.firebaseLocalStorageDb` → `firebaseLocalStorage` 
 el dominio y escribirlo en el local. Es el mismo proyecto de Firebase, así que
 el token vale.
 
+### Y la segunda vuelta, el mismo día: escritorio, horas y animación
+
+Dorel lo probó y pidió cuatro cosas más. Las tres primeras son del calendario:
+
+- **Las horas ponen «10:00» y no «10»**, a 12 px. Debajo de una rejilla del 1 al
+  31, veinticuatro números del 00 al 23 se leen como más días.
+  ⚠️ **Y a 14 px NO cabía: la ficha se partía en dos renglones** y salía de
+  50 px en vez de 44. No se veía como un desbordamiento —`scrollWidth`
+  cuadraba—, se veía como una fila más alta que la del otro proyecto. Van las
+  tres cosas juntas: 12 px, relleno lateral mínimo y `nowrap`.
+- **El panel del móvil es ya también el de escritorio.** Además del gusto
+  —«realmente queda muy bien»— tiene un motivo: colgando del campo, con la
+  rejilla grande mide unos 670 px y en un portátil de 768 px de alto no cabe ni
+  arriba ni abajo. `prefersSheetLayout()` y `esHoja()` devuelven `true`, con
+  `place()` y `colocar()` detrás como punto de vuelta.
+- **Abre y cierra en 0,4 s**, deslizando desde abajo. Y las dos
+  implementaciones son necesariamente distintas:
+  ⚠️ **En la web es un `popover` y lo hace el CSS**: `@starting-style` —única
+  forma de darle a un elemento recién mostrado un estado del que partir— más
+  `overlay` y `display` con **`allow-discrete`**, que es lo que lo mantiene en
+  el top layer mientras se va. Sin eso la salida no se ve: desaparece de golpe y
+  la opacidad anima algo que ya no está.
+  ⚠️ **En el backoffice el panel se CREA y se DESTRUYE**, así que no hay estado
+  anterior desde el que transitar y una `transition` no se dispararía nunca: va
+  con `@keyframes`, y la directiva espera a que termine la salida antes de
+  destruirlo. Suelta la referencia **antes** de esperar, para que volver a
+  pulsar abra uno nuevo en vez de alternar contra un panel que se muere.
+  ⚠️ **La duración está en DOS sitios** —el CSS y `DURACION_SALIDA_MS`— y no hay
+  forma de que sea uno. Si cambia una, cambia la otra.
+
+Y la cuarta: **la carretera de «Buscando coches libres…» se queda sin asfalto**,
+en los dos sitios donde se usa, porque la clase es la misma. El filete gris
+existía para que las barras se leyeran como marcas de una vía; mirándolo, lo que
+dice que es un recorrido es el movimiento.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
