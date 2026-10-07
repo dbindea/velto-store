@@ -642,7 +642,15 @@ export const previewDailyDigest = onCall(
       return {
         enviado: false,
         motivo: mereceEnvio(resumen) ? 'solo vista previa' : 'sin novedades',
-        asunto: mereceEnvio(resumen) ? asuntoDe(resumen, company.brandName) : undefined,
+        /*
+         * ⚠️ **Por `asuntoDeCorreo()`, igual que el envío de verdad.** Sin él,
+         * la vista previa enseñaba el asunto SIN el «(DEV)» que el correo sí
+         * lleva: una vista previa que no coincide con lo que sale es peor que
+         * no tenerla, porque es justo donde uno va a comprobarlo.
+         */
+        asunto: mereceEnvio(resumen)
+          ? asuntoDeCorreo(asuntoDe(resumen, company.brandName))
+          : undefined,
         resumen
       };
     }
