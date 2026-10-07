@@ -444,6 +444,14 @@ input.picker-propio {
   padding-right: var(--sp-8) !important;
 }
 
+/*
+ * ⚠️ **La mano solo sobre el icono.** La enciende `montarCalendario()` con un
+ * `mousemove`, porque la zona que abre el panel son los 34 px de la derecha y
+ * no el campo entero: con `cursor: pointer` en el `input` se estaría diciendo
+ * que ahí no se puede escribir, y sí se puede.
+ */
+input.picker-propio--icono { cursor: pointer; }
+
 /* ===========================================================================
  * LA PROSA: ENTRADILLA, COLUMNA DE TEXTO, NOTA Y LISTA CON MARCA
  *
@@ -568,6 +576,18 @@ input.picker-propio {
   position: fixed;
   margin: 0;
   inset: auto;
+  /*
+   * ⚠️ **Ancho fijo, porque las columnas son `1fr`.** La rejilla del mes se
+   * repartía en columnas de 34 px y el panel medía lo que sumaran; desde que
+   * reparte el ancho —para que la hoja del móvil llene la pantalla— hay que
+   * decirle cuánto mide con el ratón, o se queda en el mínimo de su contenido.
+   *
+   * 340 px es **un 29 % menos que la hoja de 480**, que es lo que Dorel pidió el
+   * 8 de octubre de 2026: «en desktop el calendario es demasiado grande, 20-30 %
+   * más pequeño». Lo que encoge es la caja, no el diseño — las celdas siguen
+   * siendo las mismas fichas.
+   */
+  width: 340px;
   flex-direction: column;
   gap: var(--sp-2);
   padding: var(--sp-3);
@@ -578,6 +598,30 @@ input.picker-propio {
   border-radius: var(--r-lg);
   box-shadow: var(--sh-4);
   user-select: none;
+
+  /*
+   * ⚠️ **Entra y sale en 0,4 s, y lo pidió Dorel**: «parece demasiado brusco
+   * abrir y cerrar». Aparecer y desaparecer de golpe un panel que tapa media
+   * pantalla no deja ver de dónde sale ni adónde va.
+   *
+   * ⚠️ **Las dos líneas raras de aquí son las que hacen que la SALIDA se vea.**
+   * `display` y `overlay` son propiedades **discretas**: sin
+   * `allow-discrete` cambian de golpe al principio, el panel desaparece y la
+   * transición de opacidad se queda animando algo que ya no está. `overlay` es
+   * además la que lo mantiene en el top layer mientras se va; sin ella sale del
+   * top layer al instante y se esconde detrás del diálogo de la portada.
+   *
+   * ⚠️ **Y `display` NO se declara aquí**, solo en `:popover-open`. Si se
+   * declarara, el navegador perdería el mando y el panel cerrado se quedaría
+   * dibujado — está contado tres párrafos más abajo, y costó medirlo.
+   */
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--t-slow) var(--ease),
+    transform var(--t-slow) var(--ease),
+    overlay var(--t-slow) allow-discrete,
+    display var(--t-slow) allow-discrete;
 }
 
 /*
@@ -602,6 +646,34 @@ input.picker-propio {
    * que el recorte se pueda recorrer en vez de esconder el pie del panel.
    */
   overflow-y: auto;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/*
+ * ⚠️ **De dónde PARTE la entrada, y sin esto no hay entrada ninguna.** Un
+ * elemento recién mostrado no tiene estado anterior desde el que transitar: el
+ * navegador lo pinta ya con sus valores finales y la transición no se dispara.
+ * `@starting-style` es el único sitio donde se puede decir «empieza aquí».
+ *
+ * ⚠️ **Y va DESPUÉS de la regla de arriba**, que es lo único que no se puede
+ * cambiar de sitio: tiene la misma especificidad, así que escrito antes manda
+ * el otro y la animación desaparece sin dar ningún error.
+ */
+@starting-style {
+  .calendario:popover-open {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* Sin movimiento, aparece y desaparece y ya. */
+@media (prefers-reduced-motion: reduce) {
+  .calendario {
+    transition: none;
+    transform: none;
+  }
+  .calendario:popover-open { transform: none; }
 }
 
 /*
@@ -615,6 +687,107 @@ input.picker-propio {
   color: var(--velto-white);
   background: var(--gray-900);
   border-color: var(--gray-800);
+}
+
+/*
+ * LA HOJA DEL MÓVIL
+ *
+ * ⚠️ **Con el dedo el panel deja de colgar del campo y se pega abajo**, a todo
+ * el ancho. Lo decide `esHoja()` en `fecha-panel.ts` —y no una media query de
+ * aquí— porque quien coloca el panel es JavaScript: `colocar()` escribe `top`,
+ * `left` y `max-height` **en línea**, y eso le gana a cualquier regla de esta
+ * hoja de estilos. La decisión se toma una sola vez, en el sitio que manda.
+ *
+ * Lo que se gana, que era el encargo de Dorel del 7 de octubre de 2026: el mes
+ * entero a la vista sin desplazar nada y celdas de 44 px, la medida del dedo.
+ *
+ * ⚠️ **Aquí abajo va SOLO lo que es del móvil: medidas y el pegado al borde.**
+ * El diseño —la rejilla del mes, las horas en fichas, el botón de aceptar— vive
+ * en las reglas de más abajo, sin `--hoja`, porque es el mismo en los dos
+ * sitios. Llegó a estar todo aquí dentro un día, y entonces el panel de
+ * escritorio se quedaba con el aspecto viejo; separarlo es lo que permite
+ * encoger uno sin tocar el otro.
+ */
+.calendario--hoja {
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: auto;
+  /* ⚠️ **Con tope de ancho, porque «dedo» no es «teléfono».** Lo que decide la
+     hoja es el puntero, así que una tableta o un portátil táctil entran por
+     aquí: medido a 1280 px, la hoja salía de 1274 px con las celdas del mes a
+     180 px cada una. Centrada y con tope se ve igual que en el teléfono. */
+  max-width: 480px;
+  margin-inline: auto;
+  max-height: 92vh;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  /* El pie cae dentro del área de los gestos del sistema en un iPhone. */
+  padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  /* Las esquinas de abajo las tapa el borde de la pantalla: redondearlas deja
+     dos muescas con el fondo de la página asomando. */
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-bottom: none;
+}
+
+.calendario--hoja .calendario__semana span { font-size: var(--fs-small); }
+
+/* Cambiar de mes es lo que más se pulsa de la cabecera, y 32 px es el tamaño
+   del ratón: con el pulgar se falla contra el rótulo del mes. */
+.calendario--hoja .calendario__nav {
+  width: var(--touch);
+  height: var(--touch);
+  font-size: 1.375rem;
+}
+
+.calendario--hoja .calendario__dia {
+  height: var(--touch);
+  font-size: var(--fs-body);
+  border-radius: var(--r-md);
+}
+
+.calendario--hoja .calendario__item {
+  min-height: 44px;
+  border-radius: var(--r-md);
+}
+
+/*
+ * ⚠️ **El pie se queda pegado abajo, y eso es lo que salva las pantallas
+ * cortas.** Medido en un iPhone SE —375×553 útiles—: la hoja no cabe, se
+ * recorta a 92vh y «Seleccionar» quedaba **por debajo del borde**, o sea la
+ * salida de una hoja que tapa media pantalla escondida justo donde no se
+ * busca. Apretar las celdas arregla los 640 px y no llega a los 553: un pie
+ * pegajoso lo arregla a cualquier alto, que es lo que hay que querer.
+ *
+ * El fondo se hereda para que valga en el panel claro y en el oscuro sin
+ * repetir el color — si se escribiera, el texto que pasa por debajo se vería
+ * a través.
+ */
+.calendario--hoja .calendario__pie {
+  position: sticky;
+  bottom: 0;
+  background: inherit;
+  padding-bottom: var(--sp-1);
+}
+
+/*
+ * ⚠️ **En una pantalla corta la hoja se aprieta, no se recorta.** Medido con el
+ * modo dispositivo: a 390×780 la hoja mide 667 px y cabe entera, pero un iPhone
+ * SE deja 553 px útiles y entonces las últimas horas quedan por debajo del
+ * borde — hay que desplazar **dentro** del panel para llegar a «Seleccionar».
+ * El mes sigue entero en los dos casos, que es lo que se pedía, y lo que cede
+ * es el alto de las celdas.
+ *
+ * 38 px baja del dedo de 44, y aquí es correcto: una celda de calendario mide
+ * 52 px de ancho, así que el objetivo sigue siendo grande. Los diálogos del
+ * sistema hacen lo mismo en pantallas cortas.
+ */
+@media (max-height: 700px) {
+  .calendario--hoja { gap: var(--sp-2); }
+  .calendario--hoja .calendario__dia { height: 38px; }
+  .calendario--hoja .calendario__item { min-height: 34px; }
+  .calendario--hoja .calendario__nav { height: 38px; }
 }
 
 .calendario__cabecera {
@@ -648,11 +821,16 @@ input.picker-propio {
 .calendario__nav:hover { background: var(--bg-alt); color: var(--text); }
 .calendario--oscuro .calendario__nav:hover { background: var(--gray-800); color: var(--velto-white); }
 
+/*
+ * ⚠️ **`minmax(0, 1fr)` y no `1fr`**: una celda con texto sin partir ensancha la
+ * rejilla hasta salirse, que es el fallo que ya midió 1200 px en el calendario
+ * grande del backoffice.
+ */
 .calendario__semana,
 .calendario__rejilla {
   display: grid;
-  grid-template-columns: repeat(7, 34px);
-  gap: 2px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .calendario__semana span {
@@ -713,57 +891,64 @@ input.picker-propio {
 }
 .calendario--oscuro .calendario__hora { border-top-color: var(--gray-800); }
 
+/*
+ * ⚠️ **Rejilla, no columna con desplazamiento.** Las horas que se ofrecen —de
+ * las 07:00 a las 23:00— entran en tres filas de seis, así que no hay nada que
+ * recorrer ni que centrar al abrir, que era el otro problema del panel colgante.
+ *
+ * ⚠️ **Y la monta la COLUMNA, no su contenedor.** Con `display: contents` los
+ * botones subirían a la rejilla del padre y se vería igual, pero esa columna es
+ * el `role="listbox"` que los agrupa: un elemento sin caja es un elemento que
+ * algunos lectores de pantalla dejan de anunciar.
+ *
+ * ⚠️ **`align-content: start` y no el `normal` de serie, que ESTIRA las filas**
+ * repartiendo entre ellas el alto que le sobre a la columna.
+ */
 .calendario__columna {
-  /*
-   * ⚠️ **`position: relative` NO es decorativo: es lo que centra la hora.**
-   * `offsetTop` se mide contra el antepasado **posicionado**, y sin esto ese
-   * antepasado es el panel entero (`position: fixed`). Medido: con las 10:00
-   * elegidas la columna se desplazaba hasta las 18 y la hora elegida quedaba
-   * fuera de la vista — o sea que el panel se abría enseñando una hora que no
-   * era la del campo. Está documentado en el backoffice como una de las tres
-   * trampas del suyo, y aun así se repite en cuanto se olvida esta línea.
-   */
-  position: relative;
-  /* Alto fijo con desplazamiento: 24 horas no caben y una lista sin tope
-     estiraría el panel hasta salirse de la pantalla. */
-  max-height: 168px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 60px;
-
-  /*
-   * ⚠️ **La barra de desplazamiento también es parte del panel.** Por defecto
-   * sale la del sistema —ancha, con su carril— y dentro de un panel estrecho
-   * es lo primero que se ve. Van las dos formas: la estándar la entiende
-   * Firefox y los pseudo-elementos los aplica Chrome.
-   */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-.calendario__columna::-webkit-scrollbar { width: 6px; }
-.calendario__columna::-webkit-scrollbar-track { background: transparent; }
-.calendario__columna::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: var(--r-xs);
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  align-content: start;
+  flex: 1 1 auto;
 }
 
+/*
+ * ⚠️ **Dice «10:00» y no «10», y por eso lleva su propio tamaño.** Debajo de una
+ * rejilla de números del 1 al 31, veinticuatro números sueltos del 00 al 23 se
+ * leen como más días; los dos puntos y un cuerpo menor lo resuelven sin rótulo
+ * ni icono.
+ *
+ * ⚠️ **Y con `--fs-small` NO CABÍA: se partía en dos líneas.** Medido, la ficha
+ * salía de 50 px de alto en vez de 44 —dos renglones— porque «00:00» a 14 px
+ * pide unos 42 px y el hueco entre rellenos eran 40. No se veía como un
+ * desbordamiento (`scrollWidth` cuadraba), se veía como una fila más alta que la
+ * del backoffice. Por eso van las tres cosas juntas: cuerpo de 12 px, relleno
+ * lateral mínimo y `nowrap` como red.
+ */
 .calendario__item {
-  padding: var(--sp-1) var(--sp-2);
-  font-size: var(--fs-small);
+  min-height: 30px;
+  padding: var(--sp-1);
+  font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   text-align: center;
   color: inherit;
-  background: transparent;
+  /* Un rectángulo tenue para que se lea como una ficha pulsable: sin fondo,
+     diecisiete números sueltos parecen una tabla y no botones. La superficie es
+     la del CAMPO —1,12 en claro y 1,34 en oscuro, medido—, porque `--bg-alt` se
+     queda a 1,05 de la tarjeta blanca. */
+  background: var(--bg-input);
   border: none;
   border-radius: var(--r-sm);
   cursor: pointer;
 }
+/* En el panel oscuro `--bg-input` vale lo mismo que su fondo (`--gray-900`),
+   así que ahí la ficha sube un escalón en vez de bajarlo. */
+.calendario--oscuro .calendario__item { background: var(--gray-800); }
 .calendario__item:hover { background: var(--bg-alt); }
-.calendario--oscuro .calendario__item:hover { background: var(--gray-800); }
-.calendario__item.es-elegido {
+.calendario--oscuro .calendario__item:hover { background: var(--gray-700); }
+.calendario__item.es-elegido,
+.calendario--oscuro .calendario__item.es-elegido {
   background: var(--brand);
   color: var(--text-on-brand);
   font-weight: var(--fw-medium);
@@ -796,11 +981,9 @@ input.picker-propio {
   cursor: pointer;
 }
 .calendario__borrar:hover:not(:disabled),
-.calendario__hoy:hover:not(:disabled),
-.calendario__cerrar:hover:not(:disabled) { background: var(--bg-alt); }
+.calendario__hoy:hover:not(:disabled) { background: var(--bg-alt); }
 .calendario--oscuro .calendario__borrar:hover:not(:disabled),
-.calendario--oscuro .calendario__hoy:hover:not(:disabled),
-.calendario--oscuro .calendario__cerrar:hover:not(:disabled) { background: var(--gray-800); }
+.calendario--oscuro .calendario__hoy:hover:not(:disabled) { background: var(--gray-800); }
 .calendario__borrar:disabled,
 .calendario__hoy:disabled,
 .calendario__cerrar:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -820,9 +1003,36 @@ input.picker-propio {
 .calendario--oscuro .calendario__borrar { color: #f26b62; }
 .calendario__hoy { color: var(--brand-text); }
 .calendario--oscuro .calendario__hoy { color: var(--teal-300); }
-/* `--text-3` es `--gray-500` en claro y se queda en 4,1:1 sobre blanco. */
-.calendario__cerrar { color: var(--gray-600); }
-.calendario--oscuro .calendario__cerrar { color: var(--gray-400); }
+
+/*
+ * «Seleccionar» es un botón de verdad: es la salida del panel, y en un pie con
+ * otros dos enlaces de texto tiene que distinguirse de ellos.
+ *
+ * ⚠️ **Y su hover es su propio color, NO el tinte gris de los otros dos.** Lo
+ * encontró Dorel el 8 de octubre de 2026 y es el fallo de siempre en esta casa:
+ * la regla agrupada `.calendario__cerrar:hover { background: var(--gray-800) }`
+ * **borraba el relleno de marca** y dejaba el rótulo —que es negro, porque va
+ * sobre turquesa— sobre gris oscuro. Un botón que al pasar el ratón se vuelve
+ * ilegible.
+ *
+ * La regla completa está en CLAUDE.md: si el elemento lleva un color de marca,
+ * el hover es ese color más oscuro o más claro; el tinte gris solo vale para lo
+ * que es transparente de base.
+ */
+.calendario__cerrar,
+.calendario--oscuro .calendario__cerrar {
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--text-on-brand);
+  background: var(--brand);
+  /* ⚠️ `--fw-medium`, que es el peso del kit. No hay `--fw-semibold`, y un
+     `var()` sin declarar **no falla: descarta la declaración entera**, así que
+     el botón se habría quedado con el peso heredado sin que nada avisara. */
+  font-weight: var(--fw-medium);
+}
+.calendario__cerrar:hover:not(:disabled),
+.calendario--oscuro .calendario__cerrar:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
 
 /* ---------------------------------------------------------------------------
  * LA LISTA DE ZONAS DE RECOGIDA
@@ -1890,8 +2100,19 @@ input.picker-propio {
 /*
  * LA CARRETERA: las tres barras del isotipo, corriendo.
  *
- * ⚠️ **`overflow: hidden` es lo que las convierte en un tramo de vía.** Sin
- * él, las barras se salen de la caja y cruzan el texto.
+ * ⚠️ **`overflow: hidden` es lo que las mantiene dentro de su tramo.** Sin él,
+ * las barras se salen de la caja y cruzan el texto.
+ *
+ * ⚠️ **Aquí había un ASFALTO —un filete gris al pie— y se quitó el 7 de octubre
+ * de 2026**, por petición de Dorel: solo las verdes. El argumento de ponerlo
+ * era que las barras se leyeran como marcas de una vía y no como tres
+ * rectángulos sueltos, y mirándolo no hacía falta: lo que dice que es un
+ * recorrido es el movimiento, no la línea. El gris solo añadía un elemento
+ * apagado en una tarjeta que ya tiene su borde.
+ *
+ * Se quita de **los dos sitios a la vez** —el buscador de /reservar y el cálculo
+ * de precio de la ficha de coche— porque la clase es la misma. Eso es justo por
+ * lo que vive aquí y no en cada página.
  */
 .buscando__via {
   position: relative;
@@ -1899,23 +2120,6 @@ input.picker-propio {
   height: 10px;
   margin: 0 auto var(--sp-5);
   overflow: hidden;
-}
-
-/*
- * El asfalto: es lo que hace que las barras se lean como marcas de una vía y
- * no como tres rectángulos sueltos.
- *
- * ⚠️ **Va en `--border` y NO en `--divider`.** Aquel es el filete de las
- * separaciones y en los temas oscuros vale `--gray-900`, o sea el mismo tono
- * que la tarjeta: la vía existía y no se veía — medido en pantalla, no leído
- * del fichero. Es la misma trampa que ya obligó a cambiarlo en el esqueleto.
- */
-.buscando__via::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 2px;
-  background: var(--border);
 }
 
 .buscando__via span {

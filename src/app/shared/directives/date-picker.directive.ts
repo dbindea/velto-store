@@ -26,6 +26,18 @@ import { PickerMode } from '@shared/utils/date-picker.util';
 const ZONA_ICONO_PX = 34;
 
 /**
+ * Lo que tarda el panel en irse, y **tiene que coincidir con el CSS**.
+ *
+ * ⚠️ **Son dos sitios porque no hay forma de que sea uno.** La animación vive
+ * en `date-picker-panel.component.scss` —`veltoPickerSale`, 0,4 s— y aquí hace
+ * falta un número para saber cuándo destruir el componente. Leer la duración
+ * calculada del elemento sería posible y frágil: depende de que el elemento ya
+ * esté pintado y de que nadie le ponga una animación encima. Si cambia una,
+ * cambia la otra.
+ */
+const DURACION_SALIDA_MS = 400;
+
+/**
  * ¿Manda el selector del sistema?
  *
  * ⚠️ **Ya no: nunca. Y esto es una REVERSIÓN, por eso está escrita.** Del 22 al
@@ -147,8 +159,14 @@ export class DatePickerDirective implements OnDestroy {
     }
   }
 
+  /**
+   * ⚠️ **Aquí se cierra SIN animar.** Si el componente que contiene el campo se
+   * está destruyendo —se navega a otra pantalla—, dejar un panel desvaneciéndose
+   * durante 0,4 s lo dejaría flotando sobre la pantalla siguiente: se cuelga del
+   * `<body>`, así que no se va con el formulario.
+   */
   ngOnDestroy(): void {
-    this.cerrar();
+    this.cerrar(true);
   }
 
   private usaPanelPropio(): boolean {
@@ -202,17 +220,49 @@ export class DatePickerDirective implements OnDestroy {
     });
   }
 
-  private cerrar(): void {
+  /**
+   * Cierra el panel, dejándole terminar su animación de salida.
+   *
+   * ⚠️ **La referencia se suelta ANTES de esperar**, y eso es lo que hace que
+   * esto no se enrede: durante los 0,4 s que el panel tarda en irse, esta
+   * directiva ya no lo tiene, así que volver a pulsar el icono abre uno nuevo
+   * en vez de alternar contra un panel que se está muriendo. El que se va no
+   * responde a nada —`pointer-events: none` en `.is-closing`— y se destruye
+   * solo cuando le toca.
+   *
+   * ⚠️ **Y los oyentes se quitan al principio.** Esperar a quitarlos dejaría
+   * medio segundo en el que un desplazamiento intentaría cerrar un panel que ya
+   * está cerrándose.
+   */
+  private cerrar(inmediato = false): void {
     if (!this.panel) return;
     document.removeEventListener('mousedown', this.alPulsarFuera, true);
     window.removeEventListener('resize', this.alMoverse, true);
     window.removeEventListener('scroll', this.alMoverse, true);
+    if (this.pendiente) cancelAnimationFrame(this.pendiente);
+    this.pendiente = 0;
 
-    this.appRef.detachView(this.panel.hostView);
-    this.panel.destroy();
+    const vista = this.panel;
+    const contenedor = this.contenedor;
     this.panel = null;
-    this.contenedor?.remove();
     this.contenedor = null;
+
+    const destruir = (): void => {
+      this.appRef.detachView(vista.hostView);
+      vista.destroy();
+      contenedor?.remove();
+    };
+
+    const caja = contenedor?.querySelector<HTMLElement>('.picker-panel');
+    // Sin caja no hay nada que animar; y con `prefers-reduced-motion` el CSS no
+    // anima, así que esperar solo dejaría el panel quieto medio segundo.
+    if (inmediato || !caja || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      destruir();
+      return;
+    }
+
+    caja.classList.add('is-closing');
+    setTimeout(destruir, DURACION_SALIDA_MS);
   }
 
   /**
@@ -228,23 +278,40 @@ export class DatePickerDirective implements OnDestroy {
   };
 
   /**
-   * Al desplazar o cambiar el tamaño, el panel se cierra en vez de perseguir
-   * al campo. Es lo que hace el del navegador, y perseguirlo obliga a
-   * recalcular en cada píxel de desplazamiento.
+   * Al desplazar, el panel **sigue al campo**; al redimensionar, se cierra.
    *
-   * ⚠️ **Salvo si lo que se desplaza es el propio panel**, y esta línea costó
-   * un buen rato. El oyente va en fase de **captura** para enterarse también
-   * de lo que se desplace dentro de un contenedor con `overflow` —un modal, un
-   * panel lateral—, y un evento de desplazamiento **no burbujea** pero sí baja
-   * en la captura. Consecuencia: al abrir el reloj, centrar la hora elegida
-   * mueve la columna, eso dispara un desplazamiento, y el panel se cerraba a sí
-   * mismo en el mismo fotograma en que se abría. Sin error en consola y sin
-   * nada que mirar: simplemente no salía.
+   * ⚠️ **Antes se cerraba también al desplazar, y eso es lo que Dorel pidió
+   * quitar** el 8 de octubre de 2026: un panel que desaparece en cuanto uno
+   * mueve la rueda obliga a volver a abrirlo cada vez, y parece roto. Ahora sube
+   * y baja con la página. Al **redimensionar** sí se cierra: ahí cambia lo que
+   * cabe, y recolocarlo en mitad de un arrastre de la ventana es peor que
+   * empezar de nuevo.
+   *
+   * ⚠️ **Salvo si lo que se desplaza es el propio panel**, y esta línea costó un
+   * buen rato. El oyente va en fase de **captura** para enterarse también de lo
+   * que se desplace dentro de un contenedor con `overflow` —un modal, un panel
+   * lateral—, y un evento de desplazamiento **no burbujea** pero sí baja en la
+   * captura. Sigue haciendo falta: sin ella, desplazar dentro del propio panel
+   * en una pantalla corta lo movería contra un campo que no se ha movido.
+   *
+   * ⚠️ **Y va por fotograma.** Un desplazamiento dispara decenas de eventos por
+   * segundo; sin el `requestAnimationFrame` se mide y se escribe el estilo en
+   * cada uno.
    */
+  private pendiente = 0;
+
   private alMoverse = (evento: Event): void => {
     const destino = evento.target;
     if (destino instanceof Node && this.contenedor?.contains(destino)) return;
-    this.cerrar();
+    if (evento.type !== 'scroll') {
+      this.cerrar();
+      return;
+    }
+    if (this.pendiente) return;
+    this.pendiente = requestAnimationFrame(() => {
+      this.pendiente = 0;
+      this.panel?.instance.follow(this.input.getBoundingClientRect());
+    });
   };
 
   /**

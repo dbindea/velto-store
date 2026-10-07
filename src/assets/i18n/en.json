@@ -279,14 +279,14 @@
     }
   },
   "datePicker": {
-    "title": "Pick a date",
-    "previousMonth": "Previous month",
-    "nextMonth": "Next month",
     "clear": "Clear",
     "hours": "Hours",
-    "minutes": "Minutes",
-    "today": "Today",
-    "now": "Now"
+    "nextMonth": "Next month",
+    "now": "Now",
+    "previousMonth": "Previous month",
+    "select": "Select",
+    "title": "Pick a date",
+    "today": "Today"
   },
   "dashboard": {
     "allClearHint": "No pending actions. Nice work.",

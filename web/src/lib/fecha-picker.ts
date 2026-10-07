@@ -71,14 +71,20 @@ export function parseFechaHora(valor: string | null | undefined): Date | null {
 /**
  * Un límite (`min` o `max`) escrito de **cualquiera de las dos formas**.
  *
- * ⚠️ **Esta función es la primera corrección sobre el backoffice, y arregla un
- * fallo que allí sigue vivo.** `DatePickerPanelComponent` lee sus límites con
+ * ⚠️ **Esta función nació como corrección sobre el backoffice, y allí ya está
+ * aplicada.** `DatePickerPanelComponent` leía sus límites con
  * `parseValue('date', …)`, cuyo `ISO_FECHA` va **anclado** (`^…$`): un
  * `min="2026-09-29T10:00"` no casa, devuelve `null`, y el panel **no
- * deshabilita ni un solo día**. O sea que en un `datetime-local` —que es lo que
- * son los cuatro campos de esta web— el calendario ofrece días que el propio
- * campo rechaza después con `rangeUnderflow`, y el formulario se niega a
- * enviarse sin decir por qué.
+ * deshabilitaba ni un solo día**. O sea que en un `datetime-local` —que es lo
+ * que son los cuatro campos de esta web y los dos del asistente de reservas— el
+ * calendario ofrecía días que el propio campo rechaza después con
+ * `rangeUnderflow`, y el formulario se negaba a enviarse sin decir por qué.
+ * Allí lo arregla `parseLimitValue()` desde el 7 de octubre de 2026.
+ *
+ * ⚠️ **Lo que sigue siendo distinto es que aquí la HORA del límite se
+ * conserva.** El backoffice compara por días y deja la hora al campo; esta web
+ * la necesita, porque `horasValidas()` y `minutosValidos()` recortan las horas
+ * del primer día del rango.
  *
  * Aquí se acepta el día suelto y el día con hora, y se conserva la hora cuando
  * viene: hace falta para el primer día del rango, donde no todas las horas
@@ -183,11 +189,16 @@ export function rejillaDelMes(mesVisible: Date, opciones: OpcionesRejilla = {}):
  * Los minutos que se ofrecen, derivados del `step` del campo.
  *
  * ⚠️ **Esta es la segunda corrección sobre el backoffice, y sin ella el
- * buscador deja de funcionar sin dar un solo error.** Allí los minutos van
+ * buscador deja de funcionar sin dar un solo error.** Allí los minutos iban
  * fijos de cinco en cinco (`minuteSteps(5)`), y estos campos llevan
  * `step="900"` — cuartos de hora. El panel escribiría «10:05», el navegador lo
  * marcaría `stepMismatch`, el formulario no se enviaría y **pulsar «Ver
  * precios» no haría absolutamente nada**, sin nada en consola.
+ *
+ * ⚠️ **Y sigue haciendo falta aunque ya no haya columna de minutos** (7 de
+ * octubre de 2026): la hora se elige en punto, pero `minutosValidos()` empuja
+ * el minuto al primer hueco bueno cuando el `min` del campo cae a y media, y
+ * ese hueco tiene que caer en la rejilla del `step`.
  *
  * Es el mismo fallo que ya costó un rato por el otro extremo, cuando el `min`
  * cayó fuera de la rejilla del `step`: con `step=900` el navegador cuenta los
@@ -213,7 +224,26 @@ export function minutosDelPaso(stepSegundos: number | null | undefined): number[
   return salida;
 }
 
-export const HORAS = Array.from({ length: 24 }, (_, h) => h);
+/**
+ * La primera hora a la que la agencia entrega o recoge un coche.
+ *
+ * ⚠️ **De 00:00 a 06:00 no se ofrece ninguna**, por decisión de Dorel del 8 de
+ * octubre de 2026. No es una preferencia de diseño: a esas horas no hay nadie en
+ * la oficina, así que ofrecerlas es prometer algo que no se va a cumplir — y de
+ * paso eran siete fichas de las veinticuatro, una fila entera de la rejilla que
+ * no servía para nada.
+ *
+ * ⚠️ **El campo sigue admitiendo cualquier hora por teclado**, igual que los
+ * minutos: esto recorta lo que se **ofrece**, no lo que se puede guardar. Una
+ * reserva antigua de madrugada se sigue leyendo bien; lo único es que su ficha
+ * no sale marcada en el panel.
+ *
+ * El mismo valor está escrito en `date-picker.util.ts` del backoffice, como el
+ * IVA: son dos builds que no pueden compartir módulo.
+ */
+export const PRIMERA_HORA = 7;
+
+export const HORAS = Array.from({ length: 24 - PRIMERA_HORA }, (_, i) => i + PRIMERA_HORA);
 
 /**
  * Qué horas se pueden elegir del día que está elegido.

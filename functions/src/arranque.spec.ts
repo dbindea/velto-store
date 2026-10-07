@@ -268,7 +268,26 @@ describe('los imports perezosos', () => {
         expect(mod, `${spec} no exporta ${n}`).toHaveProperty(n);
         expect(mod[n], `${spec}.${n} es undefined`).toBeDefined();
       }
-    }
+    },
+    /**
+     * ⚠️ **30 s, porque estos tests cargan justo lo PESADO.** Son los módulos
+     * que se sacaron del arranque precisamente por lo que tardan —`pdf-lib`,
+     * `fontkit`, `sharp`, el cliente de la AEAT— y vitest los transforma desde
+     * TypeScript al vuelo, sin caché compartida entre ficheros.
+     *
+     * Con el plazo de 5 s de serie fallaban **al azar**: tres de cada cuatro
+     * tandas pasaban enteras y la cuarta caía en `generateContractPdf → ./pdf`
+     * o en `getContractForSigning → ./clauses`, siempre con «Test timed out» y
+     * nunca con un error de resolución. Medido el 8 de octubre de 2026, con la
+     * máquina cargada: 5,1 s y 8,0 s. O sea que lo que fallaba era el plazo, no
+     * el import.
+     *
+     * Y eso importa más de lo que parece: **un test que falla a veces se deja de
+     * mirar**, y este es el que avisa de que un import perezoso mal escrito ya
+     * no revienta al arrancar sino la primera vez que alguien genera un PDF —
+     * la lección de `sharp`.
+     */
+    30_000
   );
 });
 

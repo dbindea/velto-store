@@ -50,7 +50,52 @@ import {
  * aparato.
  */
 function mandaElNativo(): boolean {
-  return !window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  /*
+   * ⚠️ **Y desde el 7 de octubre de 2026 NUNCA manda: es una REVERSIÓN, por eso
+   * se deja escrito todo lo de arriba.**
+   *
+   * El argumento sigue siendo bueno —la hoja del sistema está pensada para el
+   * pulgar— y lo tumbó mirarla: el diálogo de Android es un selector de
+   * **ruedas**, así que no se ve el mes. Para saber si el 8 cae en jueves hay
+   * que girar el día de uno en uno. Y esta es una web donde lo primero que se
+   * hace es elegir unas fechas de alquiler, que es justo la pregunta que un
+   * calendario contesta de un vistazo y una rueda no contesta nunca.
+   *
+   * Lo pidió Dorel ese día —«en el móvil quiero el calendario con vista del
+   * mes»— y de paso deja el mismo panel en los dos sitios, que era lo otro que
+   * pedía: el backoffice ya forzaba el suyo desde el 24 de septiembre.
+   *
+   * ⚠️ **Se conserva la función en vez de borrar la rama**, igual que
+   * `prefersNativePicker()` en el backoffice: es el punto donde volver el día
+   * que el selector del sistema enseñe el mes.
+   */
+  return false;
+}
+
+/**
+ * ¿El panel se pega al borde de abajo en vez de colgar del campo?
+ *
+ * ⚠️ **Colgando del campo, en un teléfono el mes NO se ve entero.** El panel
+ * mide unos 550 px, así que `colocar()` lo recorta contra la pantalla y lo que
+ * sobra —las últimas semanas y el pie— hay que buscarlo desplazando dentro del
+ * propio panel. Y lo primero que se hace en esta web es elegir unas fechas: la
+ * pregunta es en qué día de la semana cae el 15, y eso un mes recortado no lo
+ * contesta.
+ *
+ * ⚠️ **Y lo que cambia con el ratón es DÓNDE se pone, no cómo se ve.** El 8 de
+ * octubre de 2026 esto llegó a devolver `true` siempre, porque Dorel pidió «el
+ * mismo tipo de calendario del móvil» para escritorio. Lo que quería era el
+ * **aspecto** —la rejilla grande, las horas en fichas, el botón— y eso se queda
+ * en los dos: lo dijo él mismo ese mismo día, pidiendo que en escritorio fuera
+ * más pequeño y que **colgara del buscador** en vez de quedarse pegado a la
+ * pantalla. Son dos cosas distintas y conviene no volver a mezclarlas:
+ *
+ * - **el diseño** es común, y vive fuera de `--hoja`;
+ * - **la colocación** depende del aparato: hoja abajo con el dedo, colgando del
+ *   campo con el ratón, que es el modismo de cada uno.
+ */
+function esHoja(): boolean {
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
 
 /** Los 34 px de la derecha, que es exactamente lo que abre el del navegador. */
@@ -196,13 +241,11 @@ function crearPanel(): Panel {
     }
     raiz.append(rejilla);
 
-    // --- Hora y minuto, en dos columnas
+    // --- Las horas, en punto
     raiz.append(columnasDeHora());
 
     // --- Pie
     raiz.append(pie());
-
-    centrarHoras();
   }
 
   function botonNav(glifo: string, etiqueta: string, alPulsar: () => void) {
@@ -300,21 +343,22 @@ function crearPanel(): Panel {
       elegida ??
       new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), horaBase, mins[0] ?? 0);
 
+    /*
+     * ⚠️ **La hora se elige EN PUNTO, y aquí había una columna de minutos.**
+     * Se quitó el 7 de octubre de 2026, a la vez que la del backoffice y por lo
+     * mismo: doce opciones más que recorrer con el pulgar para un negocio que
+     * pacta las recogidas en punto. Lo que el visitante elige aquí es una
+     * intención; la hora real la cierra la agencia por teléfono.
+     *
+     * ⚠️ **El minuto se fuerza a 0 aunque el campo trajera otro.** Dejando
+     * `b.getMinutes()` —que es lo que hacía—, una fecha que llegara con 10:35
+     * se quedaría en 11:35 al tocar la hora, con un minuto que ya no hay forma
+     * de cambiar porque la columna no existe.
+     */
     caja.append(
       columna('Horas', horas, elegida?.getHours() ?? null, (h) => {
         const b = base();
-        elegida = new Date(b.getFullYear(), b.getMonth(), b.getDate(), h, b.getMinutes());
-        corregirFueraDeRango();
-        escribir(elegida);
-        pintar();
-      })
-    );
-    caja.append(
-      columna('Minutos', mins, elegida?.getMinutes() ?? null, (m) => {
-        const b = base();
-        elegida = new Date(b.getFullYear(), b.getMonth(), b.getDate(), b.getHours(), m);
-        // Igual que en la columna de horas: era el único de los tres
-        // manejadores que no lo llamaba, y podía dejar el campo inválido.
+        elegida = new Date(b.getFullYear(), b.getMonth(), b.getDate(), h, 0);
         corregirFueraDeRango();
         escribir(elegida);
         pintar();
@@ -337,32 +381,35 @@ function crearPanel(): Panel {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'calendario__item';
-      if (v === elegido) {
-        b.classList.add('es-elegido');
-        b.dataset.elegido = 'si';
-      }
+      // El `data-elegido` que había aquí lo leía `centrarHoras()`, que ya no
+      // existe: la clase basta para pintar y `aria-selected` para anunciarlo.
+      if (v === elegido) b.classList.add('es-elegido');
       b.setAttribute('role', 'option');
       b.setAttribute('aria-selected', String(v === elegido));
-      b.textContent = pad(v);
+      /*
+       * ⚠️ **Dice «10:00» y no «10», y es por no confundirlas con los días.**
+       * Debajo de una rejilla de números del 1 al 31, veinticuatro números
+       * sueltos del 00 al 23 se leen como más días. Lo dijo Dorel el 8 de
+       * octubre de 2026 mirándolo, y los dos puntos lo resuelven sin rótulo ni
+       * icono — lo que cuesta es letra más pequeña, que además es lo que las
+       * separa del calendario de arriba.
+       */
+      b.textContent = `${pad(v)}:00`;
       b.addEventListener('click', () => alElegir(v));
       col.append(b);
     }
     return col;
   }
 
-  /**
-   * ⚠️ **`scrollTop` a mano, no `scrollIntoView()`.** Aquel desplaza **también
-   * los antepasados**, así que centrar las 22:00 dentro del panel movía la
-   * página entera por debajo — y en el backoffice el desplazamiento de la
-   * página es justo lo que cierra el panel: se abría y se cerraba solo.
+  /*
+   * ⚠️ **Aquí había un `centrarHoras()` y se borró el 8 de octubre de 2026.**
+   * Movía a mano el `scrollTop` de la columna para que la hora elegida no se
+   * abriera fuera de la vista —nada de `scrollIntoView()`, que desplaza también
+   * los antepasados y en el backoffice eso cierra el panel—, y llegó a fallar
+   * por llamarse antes de `showPopover()`, cuando el panel aún no mide. Dejó de
+   * hacer falta al pasar las horas a una rejilla que cabe entera: ya no hay nada
+   * que desplazar. En el historial de git está con su explicación.
    */
-  function centrarHoras() {
-    for (const col of raiz.querySelectorAll<HTMLElement>('.calendario__columna')) {
-      const sel = col.querySelector<HTMLElement>('[data-elegido="si"]');
-      if (!sel) continue;
-      col.scrollTop = sel.offsetTop - col.clientHeight / 2 + sel.offsetHeight / 2;
-    }
-  }
 
   function pie() {
     const p = document.createElement('div');
@@ -426,10 +473,18 @@ function crearPanel(): Panel {
       pintar();
     });
 
+    /*
+     * ⚠️ **Dice «Seleccionar» y no «Cerrar», y no es solo la palabra.** El panel
+     * escribe en el campo en cuanto se toca un día, así que el botón cierra en
+     * los dos casos; lo que cambia es lo que el visitante cree que pasa al
+     * pulsarlo. «Cerrar» se lee como salir sin guardar, y delante de un
+     * formulario de alquiler eso hace dudar de si la fecha ha quedado puesta.
+     * Lo pidió Dorel el 7 de octubre de 2026, junto con el del backoffice.
+     */
     const cerrar = document.createElement('button');
     cerrar.type = 'button';
     cerrar.className = 'calendario__cerrar';
-    cerrar.textContent = 'Cerrar';
+    cerrar.textContent = 'Seleccionar';
     cerrar.addEventListener('click', () => api.cerrar());
 
     derecha.append(hoy, cerrar);
@@ -446,8 +501,36 @@ function crearPanel(): Panel {
    * afecta a un portátil con pantalla corta, porque con el dedo manda el
    * nativo, pero la medida correcta cuesta lo mismo.
    */
+  /**
+   * Lo que separa el borde de arriba del panel del borde de arriba del campo.
+   *
+   * Se decide **una vez**, al abrir, y a partir de ahí el panel se mueve con el
+   * campo. Ver `seguirAlCampo()`.
+   */
+  let desfase: number | null = null;
+
   function colocar() {
     if (!campoActual) return;
+    desfase = null;
+
+    /*
+     * ⚠️ **Como hoja no hay nada que colocar, y esto no es un atajo.** El panel
+     * se pega al borde de abajo desde el CSS, y aquí se escriben `top`, `left` y
+     * `max-height` **en línea**: eso le gana a cualquier regla de la hoja de
+     * estilos. Si esta salida no estuviera, la hoja volvería a colgar del campo
+     * sin que nada en el CSS lo explicara.
+     *
+     * Se limpian además, porque el panel es **uno solo para toda la página**:
+     * girar el teléfono con el panel abierto en escritorio dejaría puestos los
+     * valores de antes.
+     */
+    if (esHoja()) {
+      raiz.style.removeProperty('top');
+      raiz.style.removeProperty('left');
+      raiz.style.removeProperty('max-height');
+      return;
+    }
+
     const caja = campoActual.getBoundingClientRect();
     const vv = window.visualViewport;
     const altoUtil = vv ? vv.height : window.innerHeight;
@@ -475,17 +558,52 @@ function crearPanel(): Panel {
      * cierra. Con el tope, lo que sobra se recorre dentro del propio panel.
      */
     raiz.style.maxHeight = `${Math.max(240, altoUtil - top - 8)}px`;
+
+    // A partir de aquí el panel va pegado al campo: ver `seguirAlCampo()`.
+    desfase = top - caja.top;
   }
 
+  /**
+   * Mueve el panel con la página, en vez de cerrarlo al primer desplazamiento.
+   *
+   * ⚠️ **Antes se cerraba, y eso es lo que Dorel pidió quitar** el 8 de octubre
+   * de 2026: «que al hacer scroll de la página con el calendario abierto no
+   * desaparezca, sino que suba o baje haciendo scroll». Un panel que se cierra
+   * solo obliga a volver a abrirlo cada vez que uno mira algo de la página, y
+   * encima parece que se ha roto.
+   *
+   * ⚠️ **Se reaplica el DESFASE, no se vuelve a colocar.** `colocar()` decide
+   * si el panel va encima o debajo del campo según lo que quepa, así que
+   * llamarlo en cada fotograma de desplazamiento haría que el panel **saltara
+   * de un lado a otro** del campo a media lectura. Con el desfase se comporta
+   * como si estuviera pegado.
+   *
+   * ⚠️ **Y aquí NO se recorta contra la pantalla**, al revés que al abrir: si
+   * el campo se va de la vista, el panel se va con él. Eso es justo lo que se
+   * ha pedido; dejarlo clavado en el borde sería un panel flotando sin dueño.
+   */
+  function seguirAlCampo() {
+    if (!campoActual || desfase === null) return;
+    raiz.style.top = `${campoActual.getBoundingClientRect().top + desfase}px`;
+  }
+
+  let pendiente = 0;
   const alDesplazar = (e: Event) => {
     // ⚠️ El desplazamiento de las columnas de hora NO cuenta. Va en captura
     // —para enterarse de lo que se desplace en cualquier contenedor— así que
-    // también caza el de la propia lista al centrarla: sin esto, el panel se
-    // cierra a sí mismo nada más abrirse.
+    // también caza el de la propia lista al centrarla.
     if (e.target instanceof Node && raiz.contains(e.target)) return;
-    api.cerrar();
+    // Un desplazamiento dispara decenas de eventos por segundo; sin esto se
+    // mide y se escribe el estilo en cada uno.
+    if (pendiente) return;
+    pendiente = requestAnimationFrame(() => {
+      pendiente = 0;
+      seguirAlCampo();
+    });
   };
 
+  // ⚠️ Al redimensionar sí se vuelve a colocar entero: cambia lo que cabe, así
+  // que el lado elegido puede haber dejado de ser el bueno.
   const alRedimensionar = () => colocar();
 
   const api: Panel = {
@@ -510,6 +628,9 @@ function crearPanel(): Panel {
        * colgado del `<body>`, fuera de cualquier contenedor.
        */
       raiz.classList.toggle('calendario--oscuro', getComputedStyle(campo).colorScheme === 'dark');
+      // Con el dedo, hoja a lo ancho pegada abajo; con el ratón, colgando del
+      // campo. La clase es lo único que el CSS necesita saber.
+      raiz.classList.toggle('calendario--hoja', esHoja());
 
       pintar();
       raiz.showPopover();
@@ -523,8 +644,11 @@ function crearPanel(): Panel {
       document.removeEventListener('scroll', alDesplazar, true);
       window.removeEventListener('resize', alRedimensionar);
       window.visualViewport?.removeEventListener('resize', alRedimensionar);
+      if (pendiente) cancelAnimationFrame(pendiente);
+      pendiente = 0;
       if (raiz.matches(':popover-open')) raiz.hidePopover();
       campoActual = null;
+      desfase = null;
     },
   };
 
@@ -559,6 +683,25 @@ export function montarCalendario(campo: HTMLInputElement): void {
     const caja = campo.getBoundingClientRect();
     return e.clientX >= caja.right - ANCHO_ICONO;
   };
+
+  /*
+   * ⚠️ **La mano SOLO sobre el icono, no sobre el campo entero.** Lo pidió
+   * Dorel el 8 de octubre de 2026 —el icono se pulsa y el cursor seguía siendo
+   * la barra de texto, así que no parecía pulsable—, y la tentación es poner
+   * `cursor: pointer` al `input`: eso diría que el campo no se puede escribir,
+   * y aquí sí se puede. Es exactamente la misma distinción que ya hace el aspa
+   * de vaciar en el backoffice, que enciende su clase solo sobre su banda.
+   *
+   * ⚠️ **Y el oyente va en el campo, no en el documento.** Un `mousemove` de
+   * documento corre en cada píxel de cada movimiento del ratón de toda la
+   * página para contestar algo que solo importa dentro de estos dos campos.
+   */
+  campo.addEventListener('mousemove', (e) => {
+    campo.classList.toggle('picker-propio--icono', enElIcono(e));
+  });
+  campo.addEventListener('mouseleave', () => {
+    campo.classList.remove('picker-propio--icono');
+  });
 
   /*
    * ⚠️ **Se abre en el `click`, NO en el `mousedown`.** Es el fallo que costó
