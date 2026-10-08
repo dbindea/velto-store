@@ -50,19 +50,46 @@ describe('el título de una ficha', () => {
   });
 
   /**
-   * ⚠️ **Lo primero que se cae es la versión**, que es lo que nadie busca: entre
-   * «Tiguan Allspace de alquiler en Arganda» y «Tiguan Allspace Advance 2.0 Tdi
-   * Dsg», lo que trae visitas es lo primero.
+   * ⚠️ **Lleva la frase por la que se busca, entera.** Es lo que propuso Dorel:
+   * «alquiler de coches en Arganda» es lo que se teclea, y «Dacia Duster de
+   * alquiler en Arganda» —lo de antes— la parte en dos y pierde la coincidencia.
    */
-  it('con un nombre largo se queda sin versión antes que sin localidad', () => {
-    const t = tituloDeCoche(COCHE({ brand: 'Volkswagen', model: 'Tiguan Allspace' }));
-    expect(t).toBe('Volkswagen Tiguan Allspace de alquiler en Arganda | Velto');
+  it('lleva la frase que se busca, no una variante partida', () => {
+    for (const c of [COCHE(), COCHE({ brand: 'Kia', model: 'Ceed', version: '' })]) {
+      expect(tituloDeCoche(c)).toContain('alquiler de coches en Arganda');
+    }
+  });
+
+  /**
+   * ⚠️ **Lo primero que se cae es la versión**, que es lo que nadie busca: entre
+   * «Tiguan Allspace - alquiler de coches en Arganda» y «Tiguan Allspace Advance
+   * 2.0 Tdi Dsg», lo que trae visitas es lo primero.
+   */
+  it('con un nombre largo se queda sin versión, y después sin marca', () => {
+    const t = tituloDeCoche(
+      COCHE({ brand: 'Volkswagen', model: 'Tiguan Allspace', version: 'Advance 2.0 Tdi Dsg' })
+    );
+    expect(t).toBe('Volkswagen Tiguan Allspace - alquiler de coches en Arganda');
     expect(t).not.toContain('Advance');
   });
 
-  it('con un nombre corto cabe todo, versión incluida', () => {
-    const t = tituloDeCoche(COCHE({ brand: 'Kia', model: 'Ceed', version: 'Tech' }));
-    expect(t).toBe('Kia Ceed Tech de alquiler en Arganda del Rey | Velto');
+  /**
+   * ⚠️ **Con la frase completa, la versión casi nunca cabe**, y es un cambio de
+   * verdad respecto al formato anterior: el reclamo mide 37 caracteres y la
+   * marca 8, así que al nombre le quedan 12. «Kia Ceed GT» entra; «Dacia Duster
+   * Comfort 10 Tce 100», no. No se pierde nada que importe —la versión sigue en
+   * el `<h1>` y en la descripción— y lo que se gana es la frase que se teclea.
+   */
+  it('con un nombre MUY corto cabe hasta la versión', () => {
+    const t = tituloDeCoche(COCHE({ brand: 'Kia', model: 'Ceed', version: 'GT' }));
+    expect(t).toBe('Kia Ceed GT - alquiler de coches en Arganda del Rey | Velto');
+    expect(t.length).toBeLessThanOrEqual(MAX_TITULO);
+  });
+
+  it('con un nombre normal se cae la versión y queda la marca', () => {
+    const t = tituloDeCoche(COCHE({ brand: 'Dacia', model: 'Duster' }));
+    expect(t).toBe('Dacia Duster - alquiler de coches en Arganda del Rey | Velto');
+    expect(t.length).toBe(60);
   });
 
   /**

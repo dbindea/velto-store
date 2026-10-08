@@ -54,33 +54,49 @@ const MARCA = ' | Velto';
 /**
  * El título de una ficha, lo más completo que quepa en {@link MAX_TITULO}.
  *
+ * ⚠️ **El formato es «coche — alquiler de coches en Arganda del Rey», y lo
+ * propuso Dorel el 8 de octubre de 2026.** Tiene razón en lo que importa: la
+ * frase por la que se busca es **«alquiler de coches en Arganda»**, y
+ * «Dacia Duster de alquiler en Arganda» no la contiene — la parte, y pierde la
+ * coincidencia exacta.
+ *
+ * Su propuesta literal era `Dacia Duster - alquiler coches en Arganda del Rey |
+ * Velto Mobility`, y cambian dos cosas de ella, las dos medidas:
+ *
+ * - **Mide 66 caracteres** y Google corta sobre los 60, así que lo que se
+ *   perdía era justo el final: «| Velto Mobility». Con «| Velto» cabe en 60
+ *   exactos, y el buscador añade el nombre del sitio por su cuenta cuando falta.
+ * - **«alquiler de coches», con el «de».** Sin él la frase no es la que se
+ *   teclea ni la que se dice, y son dos caracteres.
+ *
  * ⚠️ **Es una escalera y se baja un peldaño cada vez, no se trunca de golpe.**
- * Cortar por la letra 60 produce cosas como «…de alquiler en Argan», que no es
- * que quede feo: es que la palabra por la que se compite queda partida. Lo que
- * se sacrifica va en orden de lo que menos cuesta:
+ * Cortar por la letra 60 produce cosas como «…en Argan», que no es que quede
+ * feo: es que la palabra por la que se compite queda partida. Lo que se
+ * sacrifica va en orden de lo que menos cuesta:
  *
  *   1. la versión del coche —«Advance 2.0 Tdi Dsg»— que nadie busca;
- *   2. «del Rey», que Google entiende igual;
- *   3. la marca, que Google añade sola;
- *   4. y solo al final se recorta el nombre.
+ *   2. la marca, que Google añade sola;
+ *   3. «del Rey», que Google entiende igual y los vecinos no dicen;
+ *   4. y solo al final se recorta, siempre por palabras enteras.
  */
 export function tituloDeCoche(c: CocheResumen): string {
   const completo = nombreCoche(c);
   const corto = [c.brand, c.model].filter(Boolean).join(' ');
+  const reclamo = 'alquiler de coches en Arganda del Rey';
+  const reclamoCorto = 'alquiler de coches en Arganda';
 
   const candidatos = [
-    `${completo} de alquiler en Arganda del Rey${MARCA}`,
-    `${corto} de alquiler en Arganda del Rey${MARCA}`,
-    `${corto} de alquiler en Arganda${MARCA}`,
-    `${corto} de alquiler en Arganda del Rey`,
-    `${corto} de alquiler en Arganda`,
+    `${completo} - ${reclamo}${MARCA}`,
+    `${corto} - ${reclamo}${MARCA}`,
+    `${corto} - ${reclamo}`,
+    `${corto} - ${reclamoCorto}${MARCA}`,
+    `${corto} - ${reclamoCorto}`,
   ];
 
   for (const t of candidatos) if (t.length <= MAX_TITULO) return t;
 
-  // Un nombre que no cabe ni así: se recorta por palabras, nunca a media
-  // palabra, y se queda sin localidad antes que sin coche.
-  return recortaPorPalabras(`${corto} de alquiler`, MAX_TITULO);
+  // Un nombre que no cabe ni así: se queda sin localidad antes que sin coche.
+  return recortaPorPalabras(`${corto} - alquiler de coches`, MAX_TITULO);
 }
 
 /**
