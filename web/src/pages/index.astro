@@ -4,6 +4,29 @@ import Buscador from '../components/Buscador.astro';
 import { EMPRESA } from '../lib/empresa';
 import { PREGUNTAS_PORTADA } from '../lib/preguntas';
 import { negocio } from '../lib/schema';
+import { flotaEnBuild } from '../lib/flota-build';
+import { COCHES_EN_PORTADA, tarjetaCoche } from '../lib/tarjeta';
+
+/**
+ * Los coches de la franja de la portada, **en el HTML**.
+ *
+ * ⚠️ **Esta sección existía desde siempre y estaba VACÍA hasta que corría el
+ * JavaScript.** Medido contra producción el 8 de octubre de 2026: la portada
+ * servía **cero enlaces a fichas de coche y cero nombres de coche**, mientras
+ * `/flota` servía los cinco. O sea que la página más fuerte del sitio —la que
+ * recibe los enlaces de fuera— no le pasaba nada a las páginas que venden, y
+ * quien no ejecuta JavaScript entraba en la portada de una empresa de alquiler
+ * y no veía ni un coche.
+ *
+ * Es exactamente el mismo agujero que se tapó en `/flota` el 2 de octubre, y
+ * aquí se quedó sin tapar: `/flota` prerrenderiza y la portada no.
+ *
+ * ⚠️ **Y no revoca que la web sea estática**: la lista se vuelve a pedir al
+ * cargar y se repinta, igual que en `/flota`. El prerender solo existe para que
+ * haya algo que leer antes del JavaScript.
+ */
+const cochesPortada = (await flotaEnBuild()).slice(0, COCHES_EN_PORTADA);
+const tarjetasPortada = cochesPortada.map((c) => tarjetaCoche(c)).join('');
 
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
@@ -62,8 +85,8 @@ const PROMESAS = [
 ---
 
 <Base
-  titulo="Velto — alquiler de coches con precio final en Arganda del Rey"
-  descripcion="Alquiler de coches en Arganda del Rey con el precio final desde el primer clic: IVA incluido, kilómetros por escrito y entrega a domicilio."
+  titulo="Alquiler de coches en Arganda del Rey, precio final | Velto"
+  descripcion="Alquiler de coches en Arganda del Rey con el precio final desde el primer clic: IVA incluido, kilómetros por escrito y entrega a domicilio gratis."
   ruta=""
   precarga="flota"
 >
@@ -170,8 +193,18 @@ const PROMESAS = [
         <a class="btn btn--ghost" href="/flota">Ver toda la flota</a>
       </div>
 
-      <div id="lista" class="rejilla" hidden></div>
-      <p id="cargando" class="aviso">Cargando la flota…</p>
+      {/*
+        ⚠️ **Nace con los coches del build y VISIBLE si los hay**, como en
+        `/flota`. Oculto y vacío, el HTML previo no serviría de nada: un
+        rastreador lee el marcado, y `hidden` le dice que eso no se enseña.
+
+        ⚠️ **Y «Cargando la flota…» solo sale si no hay nada que enseñar.** Con
+        tarjetas ya pintadas, ese aviso sería falso desde el primer byte, y el
+        visitante vería los coches **y** un cartel diciendo que se están
+        cargando.
+      */}
+      <div id="lista" class="rejilla" hidden={!tarjetasPortada} set:html={tarjetasPortada} />
+      <p id="cargando" class="aviso" hidden={!!tarjetasPortada}>Cargando la flota…</p>
       <p id="vacio" class="aviso" hidden>
         Ahora mismo no hay vehículos publicados. Llámanos y te decimos qué tenemos.
       </p>
@@ -258,7 +291,7 @@ const PROMESAS = [
 
 <script>
   import { flota } from '../lib/api';
-  import { tarjetaCoche } from '../lib/tarjeta';
+  import { COCHES_EN_PORTADA, tarjetaCoche } from '../lib/tarjeta';
   import { montarBuscador } from '../lib/buscador';
 
   /*
@@ -323,15 +356,42 @@ const PROMESAS = [
     .then(({ vehicles }) => {
       cargando.hidden = true;
       if (!vehicles.length) {
+        /*
+         * ⚠️ **Hay que ESCONDER la lista, no solo enseñar el aviso**, y esta
+         * línea faltaba: desde que la portada prerrenderiza, las tarjetas del
+         * build seguirían ahí —con sus precios— debajo de un «ahora mismo no
+         * hay vehículos publicados», diciendo las dos cosas a la vez. Es el
+         * mismo fallo que `/flota` ya tuvo que corregir, y aquí no podía darse
+         * porque la lista nacía vacía.
+         *
+         * Y no es solo el caso de la flota vacía: un coche despublicado entre
+         * el build y la visita se quedaría anunciado. **Manda lo que contesta
+         * la API.**
+         */
+        lista.hidden = true;
+        lista.innerHTML = '';
         vacio.hidden = false;
         return;
       }
-      // En la portada solo los tres primeros: el resto, en /flota.
-      lista.innerHTML = vehicles.slice(0, 3).map((v) => tarjetaCoche(v)).join('');
+      // En la portada solo los primeros: el resto, en /flota.
+      lista.innerHTML = vehicles
+        .slice(0, COCHES_EN_PORTADA)
+        .map((v) => tarjetaCoche(v))
+        .join('');
       lista.hidden = false;
     })
     .catch(() => {
       cargando.hidden = true;
+      /*
+       * ⚠️ **Si la API falla se dejan las tarjetas del build**, al revés que
+       * con la flota vacía. No es lo mismo «no hay coches» —que es un hecho que
+       * la API afirma— que «no he podido preguntar»: ahí lo prerrenderizado es
+       * la mejor información disponible, tiene como mucho un día por el barrido
+       * nocturno, y sus enlaces llevan a fichas que sí existen. Borrarlo
+       * dejaría la portada de una empresa de alquiler sin un solo coche por un
+       * corte de red.
+       */
+      if (!lista.hidden && lista.children.length) return;
       error.hidden = false;
     });
 </script>

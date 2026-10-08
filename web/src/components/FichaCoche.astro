@@ -91,6 +91,7 @@ const { resumen = '' } = Astro.props;
     type FotoPublica,
   } from '../lib/api';
   import { SITIO } from '../lib/empresa';
+  import { descripcionDeCoche, tituloDeCoche } from '../lib/seo';
   import { montarCalendario } from '../lib/calendario-vista';
   import { montarPreReserva, type DatosPreReserva } from '../lib/pre-reserva';
   import {
@@ -233,7 +234,19 @@ const { resumen = '' } = Astro.props;
 
   function pinta(v: CocheFicha): void {
     const nombre = nombreCoche(v);
-    document.title = `${nombre} | Velto`;
+
+    /*
+     * ⚠️ **El título y la descripción salen de `seo.ts`, los mismos que usa el
+     * prerender.** Aquí se escribía `${nombre} | Velto` a mano, y el HTML traía
+     * otro distinto: la misma URL tenía dos títulos según quién la leyera, uno
+     * de 85 caracteres que Google corta y otro sin la localidad.
+     *
+     * ⚠️ **Y esto hace falta igualmente**, no basta con el prerender: un coche
+     * dado de alta después del último despliegue **no** tiene HTML propio, así
+     * que su título y su descripción solo los pone esto. Lo que no puede es
+     * decir algo distinto.
+     */
+    document.title = tituloDeCoche(v);
 
     /*
      * ⚠️ **La canónica de la ficha se pone AQUÍ, no en el layout.** Esta página
@@ -274,6 +287,18 @@ const { resumen = '' } = Astro.props;
       m.setAttribute('property', 'og:url');
       return m;
     }).setAttribute('content', url);
+
+    /*
+     * ⚠️ **La descripción también, y por lo mismo que el título.** Un coche sin
+     * HTML propio se quedaba con la genérica —«Mira la disponibilidad real día a
+     * día…»—, que no nombra el coche ni dice su precio: justo lo que se lee en
+     * el resultado de búsqueda antes de decidir si se entra.
+     */
+    meta('meta[name="description"]', () => {
+      const m = document.createElement('meta');
+      m.name = 'description';
+      return m;
+    }).setAttribute('content', descripcionDeCoche(v));
 
     const extras = EXTRAS.filter(([k]) => v.features[k]).map(([, txt]) => `<li>${txt}</li>`).join('');
 
@@ -743,10 +768,41 @@ const { resumen = '' } = Astro.props;
     pintarAccion({ desde: null, hasta: null });
   }
 
+  /**
+   * Le dice a Google que esta URL no vale la pena.
+   *
+   * ⚠️ **Sin esto, `/coche/CUALQUIER-COSA` es una página indexable.** Medido en
+   * producción el 8 de octubre de 2026 con un id inventado: responde **200** con
+   * la página genérica y sin `noindex`, o sea un *soft 404*. El 404 de verdad lo
+   * dan las rutas normales —`/una-pagina-que-no-existe` devuelve 404—, pero
+   * `/coche/**` está **reescrito** a un único fichero, así que el servidor no
+   * puede saber que ese coche no existe: eso solo lo sabe la API, y para cuando
+   * contesta el HTML ya se ha servido con su 200.
+   *
+   * ⚠️ **Se inyecta, y es suficiente**: Google ejecuta JavaScript y lee el
+   * `head` resultante. Los rastreadores que no lo ejecutan se quedan con una
+   * página genérica sin contenido propio, que tampoco es algo que vayan a
+   * indexar con interés.
+   *
+   * ⚠️ **Y SOLO cuando la API dice que no existe, nunca cuando falla.** Son dos
+   * cosas distintas y confundirlas es lo caro: un corte de red de dos minutos
+   * marcaría `noindex` fichas de coches reales, y eso no se deshace cuando vuelve
+   * la red — se deshace cuando Google vuelva a pasar, que pueden ser semanas.
+   * Por eso cuelga de la rama `not-found` y no del `catch` entero.
+   */
+  function noIndexar(): void {
+    if (document.head.querySelector('meta[name="robots"]')) return;
+    const m = document.createElement('meta');
+    m.name = 'robots';
+    m.content = 'noindex, follow';
+    document.head.appendChild(m);
+  }
+
   if (!id) {
     cargando.hidden = true;
     if (esqueletoFicha) esqueletoFicha.hidden = true;
     nohay.hidden = false;
+    noIndexar();
   } else {
     ficha(id)
       .then(({ vehicle }) => {
@@ -759,8 +815,13 @@ const { resumen = '' } = Astro.props;
         if (esqueletoFicha) esqueletoFicha.hidden = true;
         // ⚠️ «No encontrado» y «algo ha fallado» son mensajes distintos: al
         // visitante le importa saber si el coche ya no está o si somos nosotros.
-        if (e.message === 'not-found') nohay.hidden = false;
-        else error.hidden = false;
+        // Y a Google también: lo primero se desindexa, lo segundo no se toca.
+        if (e.message === 'not-found') {
+          nohay.hidden = false;
+          noIndexar();
+        } else {
+          error.hidden = false;
+        }
       });
   }
 </script>

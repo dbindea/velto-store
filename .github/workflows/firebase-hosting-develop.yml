@@ -8,10 +8,16 @@
 # build y el proyecto de destino. Deliberado: si las pruebas no pasan aquí,
 # tampoco tienen por qué pasar en master.
 name: Deploy to Firebase Hosting on develop
+# ⚠️ **También a mano**, como producción y por el mismo motivo —la flota se
+# prerrenderiza al compilar—, aunque aquí importe menos: desarrollo es `noindex`
+# y no lo comparte nadie por WhatsApp. Está para poder probar el botón sin
+# tocar producción. **Sin barrido nocturno**: desplegar cada noche un entorno
+# que nadie mira solo gasta minutos de Actions.
 on:
   push:
     branches:
       - develop
+  workflow_dispatch:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest

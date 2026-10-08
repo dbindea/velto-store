@@ -48,6 +48,17 @@ const ICONO = {
  * de 2026: «este paso habría que saltarlo para que me dé la opción de apretar
  * solo al botón de reservar estas fechas».
  */
+/**
+ * Cuántos coches se enseñan en la portada.
+ *
+ * ⚠️ **Vive aquí porque lo usan DOS**: el prerender de `index.astro`, que
+ * escribe las tarjetas en el HTML, y su propio script, que las repinta con lo
+ * que conteste la API. Escrito dos veces, un día la portada serviría tres
+ * coches a Google y seis al visitante — y el `hidden` del prerender dejaría de
+ * cuadrar con lo que el script enseña.
+ */
+export const COCHES_EN_PORTADA = 6;
+
 export interface FechasElegidas {
   /** `yyyy-MM-ddTHH:mm`, en hora local. */
   desde: string;
