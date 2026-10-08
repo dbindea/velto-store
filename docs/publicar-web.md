@@ -404,6 +404,9 @@ no cambia el comportamiento de la aplicación.
   El cuidado sigue siendo el de la línea original: **el reenvío rompe SPF por
   diseño**, así que antes de endurecer hay que confirmar en el panel que todo lo
   legítimo pasa por **DKIM** —que sí sobrevive al reenvío— y no solo por SPF.
+
+  El procedimiento entero, con los registros de cada paso y el calendario, está
+  en [dmarc.md](dmarc.md).
 - **`index.html` del backoffice sigue a `max-age=3600`**, el mismo retraso de
   una hora que la web pública ya tiene corregido. Es un cambio aparte.
 

@@ -132,11 +132,41 @@ $dmarc = Registro "_dmarc.$Dominio" 'TXT'
 if ($dmarc) {
     $d = ($dmarc.Strings -join '')
     Write-Host "  $d"
-    if ($d -match 'p\s*=\s*(reject|quarantine)') {
-        # El reenvio rompe SPF por diseno: Cloudflare reescribe el sobre. Con
-        # una politica dura, correo legitimo de clientes deja de entrar y el
-        # Activity log de Cloudflare dice que lo entrego.
-        Write-Host '  -> CUIDADO con el reenvio: politica dura + forwarding' -ForegroundColor Yellow
+
+    # ⚠️ **Lo que importa no es que el registro exista, es que POLITICA tiene.**
+    # Con `p=none` el dominio esta igual de desprotegido que sin DMARC: solo
+    # pide informes. La diferencia no se ve leyendo el registro de un vistazo, y
+    # es justo lo que hay que saber. El procedimiento para endurecerlo esta en
+    # docs/dmarc.md.
+    if ($d -match 'p\s*=\s*reject') {
+        Write-Host '  -> politica DURA (reject): un correo que no autentique se RECHAZA' -ForegroundColor Green
+        Write-Host '     CUIDADO con el reenvio: rompe SPF por diseno. Tiene que pasar por DKIM.' -ForegroundColor Yellow
+    } elseif ($d -match 'p\s*=\s*quarantine') {
+        Write-Host '  -> politica MEDIA (quarantine): lo que no autentique va a spam' -ForegroundColor Green
+        Write-Host '     CUIDADO con el reenvio: rompe SPF por diseno. Tiene que pasar por DKIM.' -ForegroundColor Yellow
+    } elseif ($d -match 'p\s*=\s*none') {
+        Write-Host '  -> SOLO INFORMA: no protege nada todavia.' -ForegroundColor Yellow
+        Write-Host '     Cualquiera puede mandar correo haciendose pasar por este dominio.' -ForegroundColor Yellow
+        Write-Host '     Para endurecerlo: docs\dmarc.md' -ForegroundColor Yellow
+    }
+
+    # A donde van los informes. Que llegue una copia al buzon de uno es la causa
+    # de los XML diarios, y casi siempre sobra: el panel de Cloudflare ya los
+    # recoge y los enseña masticados.
+    $rua = [regex]::Matches($d, 'mailto:([^,;\s]+)')
+    if ($rua.Count -gt 0) {
+        Write-Host "  informes a $($rua.Count) destino(s):" -ForegroundColor DarkGray
+        foreach ($m in $rua) {
+            $destino = $m.Groups[1].Value
+            if ($destino -match 'dmarc-reports\.cloudflare\.net') {
+                Write-Host "    - $destino (panel de Cloudflare)" -ForegroundColor DarkGray
+            } else {
+                Write-Host "    - $destino  <- XML diarios a este buzon" -ForegroundColor Yellow
+            }
+        }
+    } else {
+        Write-Host '  -> sin rua=: nadie esta recogiendo informes, asi que no hay' -ForegroundColor Yellow
+        Write-Host '     forma de saber quien manda correo como este dominio.' -ForegroundColor Yellow
     }
 } else {
     Write-Host '  (ninguno) -> hoy no estorba; si algun dia se pone, empezar por p=none' -ForegroundColor DarkGray
