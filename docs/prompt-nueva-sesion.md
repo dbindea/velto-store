@@ -8,7 +8,7 @@
 > vieja. Lo que sí trae es lo que **no vive en el repositorio**: cómo trabaja
 > Dorel y qué se espera de ti.
 >
-> Última revisión: **30 de septiembre de 2026**.
+> Última revisión: **8 de octubre de 2026**.
 
 ---
 
@@ -133,8 +133,9 @@ Siete trampas al medir, todas pagadas ya:
 - **`VELTO_VERIFACTU_ENABLED` en producción**: sigue en `false` hasta el 1 de
   enero de 2027 y solo lo cambia Dorel.
 - **Las cinco Cloud Functions que hablan con la AEAT** no están en producción a
-  propósito. En producción, **nunca `--only functions` a secas**: el código
-  define 36 y allí hay 29.
+  propósito. En producción, **nunca `--only functions` a secas**: allí hay **32**
+  y un despliegue completo subiría esas cinco. La cifra envejece — compara
+  **nombres**, con `firebase functions:list --project prod --json`.
 - **Lo que la web PROMETE.** Un precio, un plazo de borrado o una cobertura
   escritos en una página son afirmaciones contrastables contra el código y
   contra Firestore. Si tocas `publicPrice()`, `CONSULTA_HORAS_POR_DEFECTO` o una
@@ -143,18 +144,19 @@ Siete trampas al medir, todas pagadas ya:
 ## 5. Qué hacer primero
 
 1. Pregunta el estado del repositorio con los comandos de arriba.
-2. **Di lo que falta por desplegar.** A 30 de septiembre de 2026 hay **dos Cloud
-   Functions nuevas sin subir** —`createBookingRequest` y
-   `createContactRequest`— más la actualización de `sendDailyDigest`, y las dos
-   primeras necesitan **hosting además de la function**, porque sus rewrites
-   viajan con el hosting. Sin eso, los formularios de la web devuelven un fallo
-   de red.
+2. **Di lo que falta por desplegar, midiéndolo.** A 8 de octubre de 2026 **no
+   falta nada**: `master` y `develop` están sincronizados y producción corre el
+   código de ese día. Pero eso envejece en cuanto alguien toque algo, y un
+   `git diff` contra `master` **no** dice si las functions están al día —el CI
+   solo publica hosting—. Lo que lo contesta es la marca de tiempo de cada una,
+   en `source.storageSource.generation` del `functions:list --json`.
 3. Si no te da una tarea concreta, **pregúntale**. El desarrollo por tandas se
    acabó: lo que viene sale de él usando la aplicación o mirando la web. Lo que
    sigue esperando está en [traspaso-sesion.md](traspaso-sesion.md) § 5 — los
-   nueve huecos de la web, el **Storage de producción sin vaciar** (el DNI, el
-   carné y la firma de personas reales cuyas fichas ya no existen), y confirmar
-   en un **Android de verdad** que el `select` ya se cierra.
+   **seis** huecos de negocio de la web (eran nueve), el **Storage de producción
+   sin vaciar** (el DNI, el carné y la firma de personas reales cuyas fichas ya
+   no existen), y confirmar en un **Android de verdad** que el `select` ya se
+   cierra.
 
 ⚠️ **Y dos cosas que deciden muchas discusiones de diseño.**
 
