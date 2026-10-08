@@ -4509,7 +4509,7 @@ filtro» teniendo trabajo dentro.
 
 ## Continuidad: copias, emergencia y una sola cuenta
 
-Dos documentos que no son de código y que conviene conocer antes de tocar nada
+Tres documentos que no son de código y que conviene conocer antes de tocar nada
 que afecte a producción:
 
 - [docs/copias-de-seguridad.md](docs/copias-de-seguridad.md) — qué está
@@ -4518,6 +4518,20 @@ que afecte a producción:
   proyectos** desde el 11 de septiembre de 2026.
 - [docs/emergencia.md](docs/emergencia.md) — el sobre: cómo seguir alquilando
   sin la aplicación, qué parar y a quién llamar.
+- [docs/dmarc.md](docs/dmarc.md) — el procedimiento para endurecer el DMARC del
+  dominio, paso a paso y con calendario.
+
+⚠️ **Los dos dominios tienen DMARC en `p=none`, que NO protege de nada**: solo
+pide informes. Por ese dominio salen contratos para firmar y facturas con un
+número de cuenta, así que mientras siga en `none` **cualquiera puede mandar un
+correo que diga venir de `@veltomobility.com`** y a quien lo reciba no le saltará
+nada. Lo que lo impide es `p=quarantine` y después `p=reject`.
+
+⚠️ **Y el paso previo no se puede saltar: hay que mirar los informes.** El
+reenvío **rompe SPF por diseño**, así que un dominio puede estar pasando DMARC
+hoy gracias a SPF y romperse el día que se endurece; lo que hay que confirmar en
+el panel de Cloudflare es que todo lo legítimo pasa por **DKIM**, que sí
+sobrevive al reenvío.
 
 ⚠️ **Restaurar un estado anterior reintroduce números y huellas ya consumidos.**
 Si se restaura la copia del día 15 el día 20, las facturas de esos días

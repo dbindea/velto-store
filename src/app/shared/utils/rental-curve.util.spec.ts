@@ -4,6 +4,7 @@ import {
   curveMultiplier,
   curvePointsProblem,
   curveTotal,
+  roundToRateStep,
   type CurvePoint
 } from './rental-curve.util';
 
@@ -158,5 +159,63 @@ describe('validar unos puntos editados', () => {
 describe('el multiplicador suelto', () => {
   it('a un día es exactamente 1, que es lo que hace de B la tarifa de un día', () => {
     expect(curveMultiplier(1)).toBe(1);
+  });
+});
+
+/**
+ * ⚠️ **Esto redondea lo que se PROPONE, no lo que se cobra.** Lo pidió Dorel el
+ * 8 de octubre de 2026 —«que no me recomiende 32,5 tampoco 44; mejor 30 y 45»—
+ * porque una tarifa es un número que se dice por teléfono. El total del alquiler
+ * lo sigue calculando `curveTotal()` al céntimo.
+ */
+describe('el redondeo a múltiplos de 5', () => {
+  it('es exactamente lo que pidió: 32,50 baja a 30 y 44 sube a 45', () => {
+    expect(roundToRateStep(32.5)).toBe(30);
+    expect(roundToRateStep(44)).toBe(45);
+  });
+
+  /**
+   * ⚠️ **El empate baja, y `Math.round()` NO lo hace.** En JavaScript los
+   * empates van hacia arriba —`Math.round(6.5)` es 7—, así que 32,50 habría
+   * salido 35 y 37,50 habría salido 40. Es justo el caso del ejemplo de Dorel,
+   * y la dirección segura: subir el precio propuesto es subírselo a un cliente
+   * sin que nadie lo haya decidido.
+   */
+  it('en un empate baja, nunca sube', () => {
+    expect(roundToRateStep(37.5)).toBe(35);
+    expect(roundToRateStep(42.5)).toBe(40);
+    expect(roundToRateStep(2.5)).toBe(0);
+  });
+
+  it('al múltiplo más cercano cuando no hay empate', () => {
+    expect(roundToRateStep(43.91)).toBe(45);
+    expect(roundToRateStep(34.3)).toBe(35);
+    expect(roundToRateStep(27.49)).toBe(25);
+    expect(roundToRateStep(28)).toBe(30);
+  });
+
+  it('un importe que ya es múltiplo de 5 no se mueve', () => {
+    expect(roundToRateStep(30)).toBe(30);
+    expect(roundToRateStep(55)).toBe(55);
+  });
+
+  it('lo que no es un importe sale 0, no NaN', () => {
+    expect(roundToRateStep(0)).toBe(0);
+    expect(roundToRateStep(-10)).toBe(0);
+    expect(roundToRateStep(NaN)).toBe(0);
+  });
+
+  /**
+   * ⚠️ **Nunca devuelve algo que no sea múltiplo del paso.** Es la única
+   * propiedad que de verdad importa: si saliera un 32,500000000000004 por la
+   * coma flotante, el operador vería otra vez un número que no se puede decir
+   * por teléfono.
+   */
+  it('todo lo que sale es múltiplo de 5, sin restos de coma flotante', () => {
+    for (let v = 0.5; v <= 200; v += 0.37) {
+      const r = roundToRateStep(v);
+      expect(r % 5).toBe(0);
+      expect(Math.abs(r - v)).toBeLessThanOrEqual(2.5);
+    }
   });
 });

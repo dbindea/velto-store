@@ -40,6 +40,7 @@ import * as admin from 'firebase-admin';
  */
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { disposicionEnLinea, nombreDePdf } from '../documents/nombre-descarga';
 import { SIGNING_SECRETS, isSigningConfigured } from './sign-pdf';
 import {
   formatVerificationCode,
@@ -300,6 +301,16 @@ export const signContract = onCall(
     await signedFile.save(Buffer.from(pdfParaGuardar), {
       contentType: 'application/pdf',
       metadata: {
+        // El contrato firmado es el que más se descarga, y el que más se manda
+        // por correo. Sin esto baja como carpeta. Ver `documents/nombre-descarga.ts`.
+        contentDisposition: disposicionEnLinea(
+          nombreDePdf(
+            'Contrato',
+            contract.vehicleSnapshot?.plateNumber,
+            contract.clientSnapshot?.fullName,
+            'firmado'
+          )
+        ),
         metadata: {
           firebaseStorageDownloadTokens: pdfToken
         }

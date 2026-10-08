@@ -21,6 +21,7 @@
 
 import * as logger from 'firebase-functions/logger';
 import { randomUUID } from 'crypto';
+import { nombreDePdf, palabraDocumento } from '../documents/nombre-descarga';
 import { uploadPdf } from '../documents/storage';
 import { documentLinkUrl, shortIdFor } from '../documents/documentLink';
 import { companyConfig } from '../company-config';
@@ -111,7 +112,21 @@ export async function presupuestoDeSolicitud(d: DatosPresupuesto): Promise<strin
      * se dicta por teléfono.
      */
     const quoteId = randomUUID().replace(/-/g, '').slice(0, 16);
-    await uploadPdf(`quotes/${quoteId}/quote.pdf`, pdfBytes);
+    /*
+     * ⚠️ **Sin matrícula a propósito**: una solicitud de la web promete el
+     * precio, no el coche, y el presupuesto se genera con `plateNumber: ''` por
+     * esa misma razón. Aquí van la marca y el modelo, que es lo que el visitante
+     * sí ha visto.
+     */
+    await uploadPdf(
+      `quotes/${quoteId}/quote.pdf`,
+      pdfBytes,
+      nombreDePdf(
+        palabraDocumento('quote', locale),
+        `${d.coche['brand'] ?? ''} ${d.coche['model'] ?? ''}`,
+        d.nombre
+      )
+    );
     return documentLinkUrl(shortIdFor('quote', quoteId));
   } catch (error) {
     logger.error('No se pudo generar el presupuesto de la solicitud', error);

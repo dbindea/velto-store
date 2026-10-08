@@ -22,6 +22,7 @@ import * as logger from 'firebase-functions/logger';
 import { randomUUID } from 'crypto';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { nombreDePdf, palabraDocumento } from '../documents/nombre-descarga';
 import { uploadPdf } from '../documents/storage';
 import { documentLinkUrl, shortIdFor } from '../documents/documentLink';
 import { reservationLocator } from '../documents/locator';
@@ -223,7 +224,11 @@ export const generateReceipt = onCall(
      * puede ser la puerta de atrás de esa decisión.
      */
     const shortId = shortIdFor('receipt', randomUUID().replace(/-/g, '').slice(0, 16));
-    const subido = await uploadPdf(`receipts/${shortId.slice(1)}/receipt.pdf`, pdf);
+    const subido = await uploadPdf(
+      `receipts/${shortId.slice(1)}/receipt.pdf`,
+      pdf,
+      nombreDePdf(palabraDocumento('receipt', locale), payerName)
+    );
 
     logger.info('Receipt generated', {
       paymentId,

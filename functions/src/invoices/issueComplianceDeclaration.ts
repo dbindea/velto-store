@@ -18,6 +18,7 @@ import * as logger from 'firebase-functions/logger';
 import { FieldValue } from 'firebase-admin/firestore';
 import { firestore } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { nombreDePdf, palabraDocumento } from '../documents/nombre-descarga';
 import { uploadPdf } from '../documents/storage';
 import {
   buildComplianceDeclaration,
@@ -187,7 +188,9 @@ export const issueComplianceDeclaration = onCall(
     // volver a emitir porque el id está ocupado.
     const subido = await uploadPdf(
       `verifactu-declarations/${version}/declaracion-responsable.pdf`,
-      pdf
+      pdf,
+      // Sin idioma: una declaración responsable se emite en español para la AEAT.
+      nombreDePdf(palabraDocumento('compliance'), version)
     );
 
     await ref.create({

@@ -21,6 +21,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
+import { nombreDePdf, palabraDocumento } from './nombre-descarga';
 import { uploadPdf } from './storage';
 import { documentLinkUrl, shortIdFor } from './documentLink';
 import { reservationLocator } from './locator';
@@ -369,7 +370,17 @@ export const generateInspectionReport = onCall(
      * ruta, así que aquí sí se puede usar; el del recibo no podía.
      */
     const shortId = shortIdFor('inspection', inspectionId);
-    const subido = await uploadPdf(`inspections/${inspectionId}/report.pdf`, pdf);
+    const subido = await uploadPdf(
+      `inspections/${inspectionId}/report.pdf`,
+      pdf,
+      // La fase va dentro del nombre: de un mismo coche hay dos partes y en una
+      // carpeta de descargas se distinguen por esta palabra o por nada.
+      nombreDePdf(
+        palabraDocumento('inspection', locale),
+        vehicle.plateNumber,
+        kind === 'return' ? 'devolucion' : 'entrega'
+      )
+    );
 
     logger.info('Inspection report generated', {
       inspectionId,

@@ -1162,6 +1162,128 @@ pasar las horas a una rejilla que cabe entera. Sus dos trampas —nada de
 `scrollIntoView()`, y medir por rectángulos y no por `offsetTop`— quedan
 contadas en el hueco que dejó.
 
+## 2 terdecies. El despliegue del 7 de octubre — producción al día otra vez
+
+Autorizado por Dorel. El orden, que es la parte reutilizable:
+
+1. **Diez functions a mano**, en cinco tandas de una a tres, con 30 s entre
+   tandas: `sendDailyDigest`, `previewDailyDigest`, `sendSignedContractEmail`,
+   `publishVehiclePhoto`, `unpublishVehiclePhoto`, `publicVehicles`,
+   `publicVehicleDetail`, `checkPublicAvailability`, `createBookingRequest`,
+   `createContactRequest`. **Cero fallos de cuota.** Ninguna era nueva.
+2. **El merge** (PR #70), que publica los dos sitios por CI.
+
+⚠️ **Y la lección del día: `master` tenía la curva de tarifas desde la PR #69 y
+producción seguía cobrando por tramos.** El CI despliega **solo hosting**, así
+que un merge deja el frontend nuevo hablando con functions viejas. O sea que
+«está en master» no quiere decir «está desplegado», y para saber qué functions
+van viejas **no sirve** `git diff origin/master..origin/develop`: hay que diffear
+desde el commit del último despliegue de functions.
+
+**Comprobado al cerrar, contra `veltomobility.com`:** la curva calculando de 1 a
+35 días con el total que nunca baja y la media que nunca sube —15 días 523,93 €
+y 16 días 548,72 €, que era el salto que había que matar—; el calendario a
+340×489 con ratón y 390×639 con dedo, horas de 07:00 a 23:00 y los nueve días
+pasados bloqueados; la carretera de carga sin asfalto; y **32 functions, sin
+ninguna de la AEAT**.
+
+⚠️ **Y un test flojo que llevaba días fallando al azar.** `arranque.spec.ts`
+caía una de cada cuatro tandas con «Test timed out in 5000ms» en
+`generateContractPdf → ./pdf` y `getContractForSigning → ./clauses`. No era el
+import: son justo los módulos pesados que se sacaron del arranque, y vitest los
+transforma al vuelo —medido con la máquina cargada: 5,1 s y 8,0 s—. Plazo a
+30 s. **Un test que falla a veces se deja de mirar**, y ese es el que avisa de
+que un import perezoso mal escrito revienta la primera vez que alguien genera un
+PDF, no al arrancar.
+
+## 2 quaterdecies. El 8 de octubre — las tarifas redondas y el PDF que bajaba carpeta
+
+Dos encargos de Dorel, y entre medias apareció el fallo que más importa de los
+tres.
+
+### ⚠️ El «desde X €/día» del escaparate NO era el precio que cobraba
+
+La tarjeta de cada coche publicaba el `pricePerDay` **tecleado en el tramo**,
+mientras el presupuesto sale de la **curva**. Mientras la tabla se rellenó sola
+los dos coincidían; en cuanto alguien teclea un tramo a mano, dejan de hacerlo.
+Medido en producción ese día, con los cinco coches publicados:
+
+| Coche | La tarjeta | El presupuesto |
+|---|---|---|
+| Dacia Duster | 29,95 €/día desde 16 días | **37,68** (+26 %) |
+| Renault Kadjar | 35,95 €/día desde 16 días | **41,50** (+15 %) |
+| Ford Custom | 71,95 €/día desde 31 días | **54,45** (−24 %) |
+
+Las dos direcciones son malas, y la web promete «precio final desde el primer
+clic»: una decepciona al elegir fechas y la otra regala dinero. Lo arregla
+`precioDesde()` calculando con **la misma curva** que el presupuesto, así que no
+pueden discrepar por construcción.
+
+⚠️ **Y el tramo se elige por el que EMPIEZA MÁS TARDE**, no por el precio
+tecleado: `cheapestRule()` pasa a ser `longestRule()`. La curva es monótona, el
+suelo está donde empieza el último tramo, y eso no depende de lo que nadie
+escriba. Con números a mano, «el más barato» puede ser un tramo intermedio — y
+en producción lo era en dos de cinco coches.
+
+Queda una diferencia de **menos del 1 %** entre la tarjeta y el presupuesto, y es
+inevitable: `publicPrice()` redondea a `,95` **hacia abajo** (regla del 30 de
+septiembre) y lo hace dos veces sobre magnitudes distintas —el precio por día de
+la tarjeta y el total del presupuesto—. 35,95 contra 36,29 en el Clio.
+
+### Las tarifas se proponen en múltiplos de 5
+
+«Que no me recomiende 32,5 tampoco 44; mejor 30 y 45». Lo hace
+`roundToRateStep()`, y **el empate baja** —32,50 va a 30, que es su ejemplo—
+porque subir el precio propuesto es subírselo a un cliente sin que nadie lo haya
+decidido.
+
+⚠️ **`Math.round()` no vale**: en JavaScript los empates van **hacia arriba**, así
+que 32,50 habría salido 35.
+
+⚠️ **Redondea lo que se PROPONE, no lo que se cobra.** El total lo sigue
+calculando `curveTotal()` al céntimo. Y por eso había que arreglar antes el
+«desde»: publicando la tabla, el redondeo habría metido hasta 2,50 €/día de
+error en una cifra que ya mentía.
+
+⚠️ **Consecuencia que se ve y es correcta:** dos tramos seguidos pueden quedar con
+el mismo número. Con base 55, el de 16–30 días y el de 31+ salen los dos a 25 €
+porque las medias reales son 27,3 y 27,5. No rompe nada —la tabla ya no decide
+dinero— pero conviene no leerlo como un fallo.
+
+### Un PDF se descargaba como una CARPETA
+
+Lo contó Dorel bajando un justificante de producción: le bajaba la carpeta, la
+subcarpeta y el fichero. Storage **no manda `Content-Disposition`**, así que el
+navegador saca el nombre de la ruta de la URL y trata cada barra como un
+directorio.
+
+⚠️ **Y el `triggerDownload()` del backoffice solo tapaba DOS botones.** Baja el
+fichero a un blob y le pone el nombre a mano, sí, pero no cubre los enlaces
+`target="_blank"` de las otras siete pantallas, ni el botón de guardar del visor
+de PDF del navegador, ni —sobre todo— el enlace `/d/…` que recibe el cliente por
+WhatsApp.
+
+Por eso el arreglo va en los **metadatos del objeto** y no en el frontend: diez
+sitios de subida, los nueve documentos, y todas las vías a la vez.
+`documents/nombre-descarga.ts` compone el nombre con las mismas reglas que
+`storage-name.util.ts` de la app —`_` separa campos, `-` une palabras, solo
+ASCII— y traduce la palabra del documento, porque **lo que se descarga lo lee
+una persona**.
+
+⚠️ **`inline` y no `attachment`**, o los botones de «Abrir» dejarían de abrir:
+pasarían a bajar un fichero.
+
+⚠️ **Solo vale para lo que se suba A PARTIR DE AHORA.** Un justificante de agosto
+seguirá bajando mal hasta que alguien lo regenere. No se tocan en masa los
+metadatos de ficheros de producción para arreglar un nombre.
+
+⚠️ **Y el compilador cazó que `contentDisposition` no va donde yo lo había
+puesto, pero solo en UNO de los dos sitios.** En `uploadPdf()` estaba arriba,
+junto a `contentType`, detrás de un `...(cond ? {} : {})` — y **el spread de un
+objeto condicional se salta la comprobación de propiedades de más**, así que
+compilaba y la cabecera no se habría puesto nunca. Va dentro de `metadata`, y
+escrito sin spread para que un error sea un error.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
@@ -1172,35 +1294,28 @@ git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
 git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
 ```
 
-**Medido el 7 de octubre al cerrar**: nada sin subir, y **6 commits que NO están
-en producción**. Y **no basta con el merge**:
+**Medido el 8 de octubre: `develop` va por delante de `master`** con lo de
+§ 2 quaterdecies, desplegado y comprobado **solo en desarrollo** a la espera de
+que Dorel lo pruebe. Para llevarlo a producción hacen falta las dos cosas, en
+este orden:
 
-| Qué cambia entre `master` y `develop` | Ficheros | Cómo se despliega |
-|---|---|---|
-| `functions/src/` | 8 | **a mano**, por tandas de dos o tres |
-| `src/` (backoffice) | 14 | CI, al hacer merge a `master` |
-| `web/` | 5 | CI, al hacer merge a `master` |
-| reglas e índices | — | **sin cambios**, no hace falta `deploy:prod:rules` |
+1. **Catorce functions a mano**, por tandas: las tres públicas del precio
+   (`publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability`), las
+   nueve que generan PDF (`generateQuotePdf`, `generateBookingConfirmationPdf`,
+   `generateInspectionReport`, `generateProforma`, `generateReceipt`,
+   `issueInvoice`, `issueComplianceDeclaration`, `generateContractPdf`,
+   `signContract`) y `createBookingRequest` con `publishVehiclePhoto`.
+2. **El merge**, que publica los dos sitios.
 
-Las **ocho** functions que hay que actualizar a mano, agrupadas por lo que las
-hace cambiar, y **ninguna es nueva**:
+⚠️ **Las tres primeras cambian el precio ANUNCIADO de los cinco coches
+publicados**, que es justo el fallo que se corrige: hoy anuncian hasta un 26 %
+por debajo de lo que cobran. Sin ellas, el merge deja la web igual de
+descuadrada.
 
-| Function | Por qué cambia |
-|---|---|
-| `sendDailyDigest`, `previewDailyDigest` | el aviso de vencimientos y el prefijo `(DEV)` |
-| `sendSignedContractEmail` | el prefijo `(DEV)` |
-| `createBookingRequest`, `createContactRequest` | el prefijo `(DEV)` |
-| `publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability` | la **curva de tarifas** |
-
-⚠️ **Las tres últimas son las que deciden el precio que ve el cliente**, así que
-el escaparate de producción seguirá cobrando **por tramos** hasta que se
-desplieguen — con el salto que hace que 16 días valgan menos que 15. Si se hace
-el merge sin ellas, el backoffice y la web dirían **precios distintos para el
-mismo alquiler**.
-
-> Antes de esta línea ponía «medido el 5 de octubre: 65 commits», y eso quedó
-> cumplido con el despliegue de ese día (§ 2 undecies). Vuelve a medirlo tú: esta
-> tabla envejece en cada sesión.
+⚠️ **Vuelve a medirlo tú, que esta tabla envejece en cada sesión** — y mídelo
+**desde el último despliegue de functions**, no desde `master`: el CI solo
+publica hosting, así que un merge puede dejar el frontend nuevo contra functions
+viejas sin que ningún `git diff` contra `master` lo diga.
 
 ⚠️ **Y hay una function NUEVA que el guion del día 3 no nombra: `trackWebVisit`.**
 Medido ese mismo día comparando los **nombres** —no las cifras—, desplegadas:

@@ -384,10 +384,29 @@ no cambia el comportamiento de la aplicación.
 
 - **Enero de 2027: Gmail deja de enviar como direcciones de terceros.** Decidir
   antes de diciembre si se pasa a Workspace.
-- **No hay `_dmarc` en ninguno de los dos dominios.** Hoy eso hace el cambio del
-  bloque 1 más seguro —el reenvío rompe SPF por diseño, y con `p=reject`
-  dejarían de entrar correos legítimos—. Si algún día se publica: empezar por
-  `p=none` con `rua=`.
+- ⚠️ **Aquí ponía que NO hay `_dmarc` en ninguno de los dos dominios, y ya no es
+  cierto.** Medido el 8 de octubre de 2026, los dos lo tienen y con la forma que
+  esta misma línea recomendaba —`p=none` con `rua=`—:
+
+  ```
+  _dmarc.veltomobility.com  v=DMARC1; p=none; rua=mailto:…@dmarc-reports.cloudflare.net,mailto:veltorent@gmail.com
+  _dmarc.veltorent.com      v=DMARC1; p=none; rua=mailto:…@dmarc-reports.cloudflare.net
+  ```
+
+  ⚠️ **La diferencia entre los dos es por qué a Dorel le llegan XML al correo**:
+  el de `veltomobility.com` tiene **dos** destinos, y el segundo es su buzón. El
+  primero es el DMARC Management de Cloudflare, que ya los recoge y los enseña
+  en el panel — así que la copia al correo no aporta nada que no esté ahí.
+
+  ⚠️ **Y `p=none` no protege de nada**: solo pide informes. Lo que impide que
+  alguien mande facturas falsas como `veltomobility.com` es `p=quarantine` y
+  después `p=reject`, y el paso previo es justo mirar esos informes unas semanas.
+  El cuidado sigue siendo el de la línea original: **el reenvío rompe SPF por
+  diseño**, así que antes de endurecer hay que confirmar en el panel que todo lo
+  legítimo pasa por **DKIM** —que sí sobrevive al reenvío— y no solo por SPF.
+
+  El procedimiento entero, con los registros de cada paso y el calendario, está
+  en [dmarc.md](dmarc.md).
 - **`index.html` del backoffice sigue a `max-age=3600`**, el mismo retraso de
   una hora que la web pública ya tiene corregido. Es un cambio aparte.
 
