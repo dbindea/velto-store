@@ -19,11 +19,30 @@
 # o falla, o —peor— sube el build de Angular al sitio de la web pública y la
 # deja sirviendo el backoffice a cualquiera que pase. El `target` se resuelve
 # contra `.firebaserc`, donde está la correspondencia con el id de cada sitio.
+# ⚠️ **Y se puede lanzar A MANO, que es lo que pidió Dorel el 8 de octubre de
+# 2026.** El motivo no es comodidad: la web pública **prerrenderiza la flota al
+# compilar**, así que un coche dado de alta después del último despliegue existe
+# para quien entra en la página —lo trae el JavaScript— y **no existe para
+# WhatsApp ni para Google**: su enlace sale con la foto genérica y su ficha no
+# entra en el sitemap. Lo mismo con un cambio de tarifa, que viaja dentro del
+# `og:description`.
+#
+# Hasta hoy la única forma de republicar era mergear algo a `master`, o sea
+# inventarse un commit. Con esto hay un botón: **Actions -> Deploy to Firebase
+# Hosting on merge -> Run workflow**.
+#
+# ⚠️ **Y el barrido nocturno existe por lo mismo**: para que un coche publicado
+# un martes no dependa de que alguien se acuerde de pulsar nada. Son las 04:15
+# UTC, que en España es de madrugada en los dos horarios; GitHub no garantiza la
+# hora exacta y aquí da igual.
 name: Deploy to Firebase Hosting on merge
 on:
   push:
     branches:
       - master
+  workflow_dispatch:
+  schedule:
+    - cron: '15 4 * * *'
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest

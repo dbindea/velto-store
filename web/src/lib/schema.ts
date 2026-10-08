@@ -85,12 +85,27 @@ export function negocio() {
      * ⚠️ **Sale del mismo catálogo que la página de entrega**, no de una lista
      * escrita aquí: dos listas de pueblos divergen a la primera.
      */
+    /**
+     * ⚠️ **Las coordenadas de la oficina, y no son un adorno.** Faltaban: el
+     * `GeoCircle` de abajo llevaba la dirección escrita como texto, así que
+     * Google tenía que geocodificarla él —y acertar— para saber dónde está el
+     * centro de la zona que se cubre. Salen de la propia ficha de Google
+     * Business, resolviendo el `maps.app.goo.gl` del `sameAs` el 8 de octubre
+     * de 2026: la URL final las trae, y así son **las mismas** que las de la
+     * ficha en vez de otras parecidas.
+     */
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: EMPRESA.latitud,
+      longitude: EMPRESA.longitud,
+    },
     areaServed: [
       {
         '@type': 'GeoCircle',
         geoMidpoint: {
           '@type': 'GeoCoordinates',
-          address: `${EMPRESA.oficinaCalle}, 28500 Arganda del Rey`,
+          latitude: EMPRESA.latitud,
+          longitude: EMPRESA.longitud,
         },
         geoRadius: String(RADIO_SIN_COSTE_KM * 1000),
       },

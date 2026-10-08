@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import FichaCoche from '../../components/FichaCoche.astro';
 import { flotaEnBuild } from '../../lib/flota-build';
 import { migas } from '../../lib/schema';
+import { descripcionDeCoche, tituloDeCoche } from '../../lib/seo';
 import { SITIO } from '../../lib/empresa';
 import {
   cambio,
@@ -49,14 +50,14 @@ const nombre = nombreCoche(coche);
  * todos los Toyota Corolla del mundo; lo que esta empresa puede ganar es
  * «Toyota Corolla de alquiler en Arganda», que es una búsqueda con intención y
  * sin competencia nacional.
+ *
+ * ⚠️ **Y los compone `seo.ts`, no esta página.** Lo escribía aquí, y el
+ * JavaScript de la ficha escribía otro distinto al cargar: la misma URL tenía
+ * dos títulos, uno de 85 caracteres —que Google corta— y otro sin la localidad.
+ * Los dos sitios llaman ahora a la misma función.
  */
-const titulo = `${nombre} de alquiler en Arganda del Rey | Velto`;
-
-const desde = coche.priceFrom ? `desde ${euros(coche.priceFrom.gross)} al día, ` : '';
-const descripcion =
-  `Alquila un ${nombre} en Arganda del Rey: ${desde}${coche.seats} plazas, ` +
-  `${cambio(coche.transmission).toLowerCase()} y ${coche.luggageCapacity} maletas. ` +
-  `Precio final con impuestos incluidos y entrega a domicilio.`;
+const titulo = tituloDeCoche(coche);
+const descripcion = descripcionDeCoche(coche);
 
 /**
  * ⚠️ **La foto del COCHE al compartir, no el logotipo.** Es lo que pidió Dorel

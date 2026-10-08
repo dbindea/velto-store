@@ -86,6 +86,21 @@ export const EMPRESA = {
    * Creada por Dorel el 2 de octubre de 2026.
    */
   fichaGoogle: 'https://maps.app.goo.gl/cAwZQU2H8s8vxUtv7',
+
+  /**
+   * Dónde está la oficina, en coordenadas.
+   *
+   * ⚠️ **Salen de la propia ficha de Google, no de un mapa cualquiera.** Se
+   * obtienen resolviendo el `maps.app.goo.gl` de arriba —la URL final las trae
+   * en el `@40.3017005,-3.4429687`—, y eso importa: así son **exactamente** las
+   * mismas que las de la ficha, en vez de otras parecidas sacadas de buscar la
+   * calle. Dos ubicaciones que no cuadran al metro es justo el tipo de
+   * discrepancia que hace que el buscador se fíe menos de las dos.
+   *
+   * Comprobadas el 8 de octubre de 2026.
+   */
+  latitud: 40.3017005,
+  longitud: -3.4429687,
 } as const;
 
 /**
