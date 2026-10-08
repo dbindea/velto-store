@@ -312,6 +312,41 @@ export function aTerminacion(bruto: number): number {
 }
 
 /**
+ * Lo mismo pero **hacia arriba**, para el «desde X €/día».
+ *
+ * ⚠️ **Un «desde» redondeado hacia abajo anuncia un precio que NO EXISTE**, y
+ * eso es lo que había: la tarjeta del Kadjar decía «desde 32,95 €/día en
+ * alquileres de 31 días o más» y el alquiler más barato de ese coche sale a
+ * **33,26 €/día**. Medido en producción el 8 de octubre de 2026 en los cinco
+ * coches publicados: los cinco anunciaban por debajo de lo que cobran.
+ *
+ * Es poco dinero —entre 0,27 y 0,50 € al día— y da igual: la cifra que se
+ * anuncia tiene que poderse cumplir. Decisión de Dorel ese mismo día, dicha
+ * así: «lo que me importa de verdad es el precio desde que sea real y que se
+ * pueda cumplir realmente; incluso prefiero cobrar un poquito menos de lo que
+ * anuncio».
+ *
+ * ⚠️ **La diferencia con el total NO es un descuido, son dos cosas distintas.**
+ * El **total** de un presupuesto se redondea hacia **abajo**: ahí el cliente
+ * paga menos que la tarifa, que es un regalo y nunca una promesa incumplida. El
+ * **«desde»** es una afirmación sobre el precio mínimo, así que tiene que
+ * quedar por encima de lo que se llega a cobrar. Las dos reglas dicen lo mismo:
+ * **nunca cobrar más de lo anunciado.**
+ */
+export function aTerminacionArriba(bruto: number): number {
+  if (!Number.isFinite(bruto) || bruto < 1) return roundMoney(bruto);
+
+  // Misma cuenta en céntimos enteros y por el mismo motivo de coma flotante.
+  const centimos = Math.round(roundMoney(bruto) * 100);
+  const terminacion = Math.round(TERMINACION * 100);
+  const enteros = Math.floor(centimos / 100) * 100;
+  // Si los céntimos ya llegan a la terminación, se sube a la del euro
+  // siguiente; si no, a la de este. 33,26 → 33,95 y 33,96 → 34,95.
+  const objetivo = centimos - enteros <= terminacion ? enteros + terminacion : enteros + 100 + terminacion;
+  return objetivo / 100;
+}
+
+/**
  * El precio tal y como se publica: con IVA, y terminado en `,95`.
  *
  * ⚠️ **El neto se RECALCULA desde el bruto redondeado, no se conserva.** Si se
@@ -333,6 +368,29 @@ export function publicPrice(
 ): { net: number; gross: number; vatRate: number } {
   const conIva = addVat(net, vatRate);
   const bruto = aTerminacion(conIva.gross);
+  const rate = conIva.vatRate;
+  return {
+    net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),
+    gross: bruto,
+    vatRate: rate,
+  };
+}
+
+/**
+ * El precio del «desde X €/día»: con IVA y terminado en `,95`, **hacia
+ * arriba**.
+ *
+ * ⚠️ **Es la única cifra de la web que se redondea para arriba**, y la razón es
+ * que es la única que **promete un mínimo**. Un total redondeado hacia abajo es
+ * un regalo; un «desde» redondeado hacia abajo es un precio que el cliente no
+ * va a conseguir nunca. Ver `aTerminacionArriba()`.
+ */
+export function publicPriceDesde(
+  net: number,
+  vatRate: number
+): { net: number; gross: number; vatRate: number } {
+  const conIva = addVat(net, vatRate);
+  const bruto = aTerminacionArriba(conIva.gross);
   const rate = conIva.vatRate;
   return {
     net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),

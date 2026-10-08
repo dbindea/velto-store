@@ -1315,7 +1315,8 @@
     "fromRequest": {
       "vehicleGone": "El coche de la solicitud ya no está libre en esas fechas. Elige otro o cambia las fechas.",
       "markFailed": "La reserva se creó, pero la solicitud no se pudo marcar como convertida",
-      "banner": "Viene de la solicitud"
+      "banner": "Viene de la solicitud",
+      "pricePromised": "Precio prometido en la web: {price}. No se sube sin avisar al cliente."
     }
   },
   "search": {
@@ -1604,7 +1605,8 @@
       "pricePerDay": "€/día",
       "removeRule": "Eliminar rango",
       "restoreDefaults": "Restaurar tarifas",
-      "rules": "Reglas de precio"
+      "rules": "Reglas de precio",
+      "realRate": "Se cobra, sin IVA:"
     },
     "reservations": {
       "history": "Histórico",

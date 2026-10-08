@@ -5,8 +5,12 @@ import {
   calculateCalendarDays,
   findPricingRuleByDays,
   aTerminacion,
+  aTerminacionArriba,
   longestRule,
   publicPrice,
+  publicPriceDesde,
+  tarifaMediaPorDia,
+  baseRateOf,
   lowestPricePerDay,
   rangesOverlap,
   tariffNetPrice,
@@ -306,6 +310,94 @@ describe('el precio de escaparate: terminado en ,95 y siempre HACIA ABAJO', () =
     expect(aTerminacion(0.5)).toBe(0.5);
     expect(aTerminacion(0)).toBe(0);
     expect(aTerminacion(NaN)).toBeNaN();
+  });
+});
+
+/**
+ * El redondeo del «desde», que va al revés.
+ *
+ * ⚠️ **Y no es una excepción a la regla de arriba: es la MISMA regla.** Aquella
+ * dice que un total no puede subir, porque el cliente lo paga; ésta dice que un
+ * «desde» no puede bajar, porque el cliente lo compara. Las dos significan
+ * **nunca cobrar más de lo anunciado**.
+ */
+describe('el redondeo del «desde»', () => {
+  it('sube al ,95 siguiente', () => {
+    expect(aTerminacionArriba(33.26)).toBe(33.95);
+    expect(aTerminacionArriba(30.22)).toBe(30.95);
+    expect(aTerminacionArriba(54.45)).toBe(54.95);
+  });
+
+  it('con los céntimos ya pasados, sube al ,95 del euro siguiente', () => {
+    expect(aTerminacionArriba(33.96)).toBe(34.95);
+    expect(aTerminacionArriba(34)).toBe(34.95);
+  });
+
+  it('un importe que ya termina en ,95 no se mueve', () => {
+    expect(aTerminacionArriba(33.95)).toBe(33.95);
+  });
+
+  /**
+   * ⚠️ **Lo que NUNCA puede pasar aquí: que el «desde» quede por debajo.** Es
+   * el fallo que tenía la web —anunciaba 32,95 y el alquiler más barato salía a
+   * 33,26—, y es justo el que un abogado buscaría: un precio anunciado que no
+   * se puede conseguir.
+   */
+  it('NUNCA baja, para ninguna entrada', () => {
+    for (let c = 100; c <= 30000; c += 7) {
+      const bruto = c / 100;
+      expect(aTerminacionArriba(bruto)).toBeGreaterThanOrEqual(bruto);
+    }
+  });
+
+  it('y nunca se pasa de 1 €, para no espantar anunciando de más', () => {
+    for (let c = 100; c <= 30000; c += 7) {
+      const bruto = c / 100;
+      expect(aTerminacionArriba(bruto) - bruto).toBeLessThan(1);
+    }
+  });
+
+  it('un importe por debajo de 1 € se deja en paz', () => {
+    expect(aTerminacionArriba(0.5)).toBe(0.5);
+    expect(aTerminacionArriba(0)).toBe(0);
+    expect(aTerminacionArriba(NaN)).toBeNaN();
+  });
+
+  /**
+   * ⚠️ **Y ésta es LA comprobación, la que encierra lo que se pidió.** No basta
+   * con que el redondeo suba: lo que tiene que ser cierto es que **ningún
+   * alquiler real salga por encima del precio anunciado**, para ninguna
+   * duración de las que cubre la frase «en alquileres de N días o más».
+   *
+   * Se recorre coche a coche y día a día, hasta 120. Antes de esto fallaba en
+   * **todas** las duraciones: la tarjeta del Kadjar decía 32,95 y el alquiler
+   * más barato de ese coche sale a 33,26.
+   */
+  it('lo anunciado nunca queda por debajo de lo que se llega a cobrar', () => {
+    const IVA = 0.21;
+    const tarifas = [
+      [{ minDays: 1, maxDays: 15, pricePerDay: 55 }, { minDays: 16, maxDays: null, pricePerDay: 30 }],
+      [{ minDays: 1, maxDays: 30, pricePerDay: 90 }, { minDays: 31, maxDays: null, pricePerDay: 45 }],
+      [{ minDays: 1, maxDays: null, pricePerDay: 23 }],
+    ];
+
+    for (const reglas of tarifas) {
+      const desdeDia = Number(longestRule(reglas)!.minDays);
+      const anunciado = publicPriceDesde(
+        tarifaMediaPorDia(baseRateOf(reglas), desdeDia),
+        IVA
+      ).gross;
+
+      for (let d = desdeDia; d <= 120; d++) {
+        const neto = tariffNetPrice(reglas, d);
+        if (neto === null) continue;
+        const porDiaReal = publicPrice(neto, IVA).gross / d;
+        expect(
+          porDiaReal,
+          `con ${d} días se cobran ${porDiaReal.toFixed(2)} €/día y se anuncian ${anunciado}`
+        ).toBeLessThanOrEqual(anunciado);
+      }
+    }
   });
 
   it('siempre acaba en ,95 de verdad', () => {

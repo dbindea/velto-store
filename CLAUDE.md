@@ -686,6 +686,77 @@ barato de todos— y `createReservationWithClient()` y el recálculo de
 duración sin tramo reescribiría a 0 el `pricingSnapshot` de un alquiler que ya
 tenía precio.
 
+#### Lo que se ANUNCIA nunca puede quedar por debajo de lo que se COBRA
+
+⚠️ **Es una sola regla y el 8 de octubre de 2026 se incumplía por los dos
+lados.** La dijo Dorel así: *«imagínate que un abogado que ve la web se pone a
+buscar fallos para poder demandarme por precios engañosos; lo que me importa de
+verdad es el precio desde que sea real y que se pueda cumplir realmente. Incluso
+prefiero cobrar un poquito menos de lo que anuncio»*. De ahí salen las tres
+direcciones de redondeo que hoy conviven, que **parecen incoherentes y dicen lo
+mismo**:
+
+| Cifra | Redondeo | Por qué |
+|---|---|---|
+| el **total** de un presupuesto concreto | a `,95` **hacia abajo** | el cliente paga menos que la tarifa: es un regalo, nunca una promesa incumplida |
+| el **«desde X €/día»** de una ficha | a `,95` **hacia arriba** | afirma un **mínimo**: por debajo anuncia un precio que no existe |
+| el **precio prometido** al convertir | se acuerda como **techo** | ya se le dijo una cifra al cliente, y la reserva no puede pedir más |
+
+⚠️ **El «desde» anunciaba por debajo en los CINCO coches publicados.** La ficha
+del Kadjar decía «desde 32,95 €/día en alquileres de 31 días o más» y el alquiler
+más barato de ese coche sale a **33,27**. Entre 0,27 y 0,50 € al día, y da igual:
+la cifra tenía que poderse cumplir. Lo arregla `publicPriceDesde()` con
+`aTerminacionArriba()`, y lo que lo vigila es un test de propiedad que recorre
+tres tablas de tarifas × duraciones de 1 a 120 días — **comprobado con su
+control**: volviendo a `publicPrice` falla con «con 16 días se cobran 41,50 €/día
+y se anuncian 40,95».
+
+⚠️ **Y convertir una solicitud cobraba 0,57 € MÁS de lo prometido.** La web
+redondea el total a la baja y esa cifra es la que el cliente vio, la que se
+congela en `quoteSnapshot` y la que sale en el correo; el asistente
+**recalculaba desde la curva** y salía al céntimo. Con el Kadjar a 31 días, la
+web prometía **1.030,95 €** y la reserva nacía pidiendo **1.031,52 €**. Lo
+resuelve `promisedPriceCeiling()`, y hay tres cosas suyas que no son adorno:
+
+- **Es un TECHO, no una tarifa.** La web cotiza sin saber quién es el cliente, así
+  que no puede aplicar el descuento de fidelidad. Si al convertir resulta que lo
+  tiene y su tarifa queda por debajo, **manda la tarifa**: a un cliente fiel no se
+  le cobra más por haber pedido hora por la web.
+- **Devuelve `null` cuando la tarifa ya cumple**, que es el caso normal. Forzar el
+  precio acordado sin que nadie pactara nada imprimiría una línea de ajuste en el
+  contrato.
+- **Caduca al cambiar de coche o de fechas**, como un precio acordado, y
+  **sobrevive al cambio de cliente**, al revés que él. Aquél se pactó contra una
+  base que el descuento acaba de mover; éste es una cifra que ya se dijo y que no
+  depende de quién sea.
+
+⚠️ **Y la pantalla lo DICE.** El campo sale por debajo de la tarifa con el botón
+de «volver al calculado» tres líneas más abajo: sin la frase, el operador lo
+devuelve a la tarifa creyendo corregir un error y le cobra al cliente más de lo
+que la web le dijo.
+
+⚠️ **Un céntimo de holgura no se persigue.** El neto del `quoteSnapshot` se
+recalcula desde el bruto ya redondeado, y con el 21 % no todo bruto es alcanzable
+desde un neto de dos decimales: 1.030,95 € se queda en 1.030,94 € al
+reconstruirlo. Está por debajo —el lado seguro— y perseguir ese céntimo pediría
+guardar el bruto como autoridad, y entonces el IVA dejaría de cuadrar por resta.
+
+#### La tabla de tramos NO dice lo que se cobra, y por eso lleva el rango debajo
+
+⚠️ **Desde la curva, el único importe de esa tabla que decide dinero es el del
+primer tramo.** Los demás son orientativos, y se leen como tarifas porque lo
+parecen: Dorel leyó «16-30 días: 30 €/día» en la ficha del Kadjar y dio por hecho
+que un alquiler de 16 días salía a 30 — se cobran **37,42** el día 16 y **30,00**
+el día 30. No era un fallo de cálculo: era la pantalla enseñando cinco números
+que no son lo que parecen.
+
+Ahora cada tramo lleva debajo lo que la curva cobra de verdad
+(`curveRangeForTier()`), y se enseña el **rango** y no un número: dentro de un
+tramo cada día vale distinto, que es toda la diferencia con los escalones de
+antes. En el tramo abierto los dos extremos coinciden, porque a partir de
+`LONG_STAY_FROM_DAYS` el precio por día es plano — ahí sí hay una tarifa, y es el
+suelo del coche.
+
 Dos convenciones distintas que conviene no confundir, y por eso los nombres son explícitos:
 
 - `vatRate` es una **fracción** (`0.21`)

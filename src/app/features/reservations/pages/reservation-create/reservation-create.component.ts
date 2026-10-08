@@ -24,6 +24,9 @@ import {
   VatBreakdown
 } from '@shared/utils/pricing.util';
 import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
+import { promisedPriceCeiling } from '@shared/utils/booking-request.util';
+import { interpolate } from '@shared/utils/i18n-params.util';
+import { TranslateService } from '@core/i18n/translate.service';
 import { SettingsService } from '@features/settings/services/settings.service';
 import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
@@ -60,6 +63,7 @@ export class ReservationCreateComponent implements OnInit {
   private vehicleService = inject(VehicleService);
   private documentService = inject(ReservationDocumentService);
   private settingsService = inject(SettingsService);
+  private translateService = inject(TranslateService);
   /** Público: la plantilla pregunta si se puede tocar el precio. */
   permissions = inject(PermissionsService);
 
@@ -165,6 +169,20 @@ export class ReservationCreateComponent implements OnInit {
    * mientras no se teclee otro. Ver `netPriceInput()`.
    */
   priceCleared = false;
+
+  /**
+   * Lo que la web le prometió a este cliente, **sin IVA**. 0 cuando no viene de
+   * una solicitud.
+   *
+   * ⚠️ **Es un techo, no una tarifa**, y la regla vive en
+   * `promisedPriceCeiling()`. Aquí solo se guarda y se aplica.
+   *
+   * ⚠️ **Y caduca al cambiar de coche o de fechas.** La web cotizó ESE coche
+   * para ESOS días: con otros, la cifra prometida no dice nada y dejarla puesta
+   * acordaría a mano un precio que nadie pactó. Lo limpian los mismos sitios
+   * que ya invalidan un precio acordado.
+   */
+  private promisedNet = 0;
 
   /**
    * Deposit agreed with the customer. `null` means "use the vehicle's
@@ -283,6 +301,36 @@ export class ReservationCreateComponent implements OnInit {
       return;
     }
     this.selectVehicle(elegido);
+
+    /**
+     * ⚠️ **El precio que se le prometió, DESPUÉS de elegir el coche.**
+     * `selectVehicle()` invalida el techo —es lo que tiene que hacer cuando el
+     * operador cambia de coche—, así que puesto antes se borraría aquí mismo.
+     *
+     * ⚠️ **Y se aplica aunque todavía no haya cliente.** El descuento de
+     * fidelidad puede bajar la tarifa por debajo del techo y entonces el techo
+     * se retira solo, pero eso lo decide `aplicarPrecioPrometido()` cada vez:
+     * esperar al cliente dejaría el paso del precio enseñando una cifra mayor
+     * que la prometida, que es justo lo que el operador va a citar por
+     * teléfono.
+     */
+    const prometido = Number(q.get('quotedNet'));
+    this.promisedNet = isFinite(prometido) && prometido > 0 ? prometido : 0;
+    this.aplicarPrecioPrometido();
+  }
+
+  /**
+   * Pone como precio acordado el que la web prometió, si la tarifa pide más.
+   *
+   * ⚠️ **No fuerza nada cuando la tarifa ya cumple**: ver
+   * `promisedPriceCeiling()`. Marcar «precio pactado» sin que nadie pactara
+   * imprimiría una línea de ajuste en el contrato.
+   */
+  private aplicarPrecioPrometido(): void {
+    const techo = promisedPriceCeiling(this.promisedNet, this.calculatedFinalPrice);
+    if (techo === null) return;
+    this.finalPriceOverride = techo;
+    this.priceCleared = false;
   }
 
   private loadRecentClients(): void {
@@ -409,6 +457,8 @@ export class ReservationCreateComponent implements OnInit {
     if (!result.available) return;
     if (this.selectedVehicle?.vehicleId !== result.vehicleId) {
       this.resetFinalPrice();
+      // La web cotizó otro coche: lo prometido ya no dice nada de este.
+      this.promisedNet = 0;
     }
     this.selectedVehicle = result;
     this.currentStep = 'client';
@@ -433,6 +483,15 @@ export class ReservationCreateComponent implements OnInit {
       this.resetFinalPrice();
     }
     this.selectedClient = client;
+    /**
+     * ⚠️ **El techo de la web sobrevive al cambio de cliente**, al revés que un
+     * precio acordado. Aquél se pactó contra una base que el descuento acaba de
+     * mover; éste es una cifra que ya se le dijo al cliente y que no depende de
+     * quién sea — la web cotiza sin saberlo. Y si el descuento deja la tarifa
+     * por debajo, el techo se retira solo: la llamada va después de
+     * `resetFinalPrice()` precisamente para medirse contra la base nueva.
+     */
+    this.aplicarPrecioPrometido();
     this.searchResults = [];
     this.clientSearchTerm = '';
     this.currentStep = 'summary';
@@ -839,6 +898,8 @@ export class ReservationCreateComponent implements OnInit {
     this.selectedVehicle = null;
     // Un precio acordado lo era para unas fechas concretas; con otras, no.
     this.resetFinalPrice();
+    // Y lo que la web prometió, igual: cotizó esos días y no otros.
+    this.promisedNet = 0;
     if (this.currentStep !== 'dates') this.currentStep = 'dates';
   }
 
@@ -946,6 +1007,36 @@ export class ReservationCreateComponent implements OnInit {
   /** True when the operator agreed a price other than the calculated one. */
   get priceOverridden(): boolean {
     return this.priceBreakdown.priceOverridden;
+  }
+
+  /**
+   * El precio no es una negociación del operador: es el que la web prometió.
+   *
+   * ⚠️ **Se dice, porque si no parece un precio pactado a mano.** El campo sale
+   * con una cifra por debajo de la tarifa y con el botón de «volver al
+   * calculado» al lado: sin explicarlo, el operador lo devuelve a la tarifa
+   * creyendo que alguien se equivocó al teclear, y le cobra al cliente más de
+   * lo que la web le dijo. Es la misma regla que la cinta de arriba: un
+   * asistente que nace a medio rellenar tiene que decir por qué.
+   */
+  get precioLimitadoPorLaWeb(): boolean {
+    return this.promisedNet > 0 && this.finalPriceOverride === this.promisedNet;
+  }
+
+  /**
+   * El aviso, con la cifra dentro.
+   *
+   * ⚠️ **Se traduce primero y se sustituye después**, que es la regla de
+   * `interpolate()`: el hueco `{price}` no está en el mismo sitio de la frase en
+   * los tres idiomas. Y la cifra que se nombra es la que el cliente vio, o sea
+   * **con IVA** — el campo de al lado es el neto, y enseñar ahí el neto haría
+   * que las dos cifras parecieran contradecirse.
+   */
+  get avisoPrecioPrometido(): string {
+    const conIva = addVat(this.promisedNet, this.vatRate).total;
+    return interpolate(this.translateService.translate('reservations.fromRequest.pricePromised'), {
+      price: `${conIva.toFixed(2).replace('.', ',')} €`
+    });
   }
 
   /** Signed difference against the calculation. Negative is a discount. */

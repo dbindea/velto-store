@@ -22,7 +22,7 @@ import {
   PublicVehicleSummary,
   VehiclePricingRule,
 } from './types';
-import { baseRateOf, longestRule, publicPrice, tarifaMediaPorDia } from './core';
+import { baseRateOf, longestRule, publicPriceDesde, tarifaMediaPorDia } from './core';
 
 /** La carpeta pública. Un solo sitio, para que nadie escriba la ruta a mano. */
 export const PUBLIC_PHOTOS_FOLDER = 'public-vehicles';
@@ -97,11 +97,16 @@ export function photoUrls(
 /**
  * El «desde X €/día», con los dos lados del impuesto.
  *
- * ⚠️ **Va por `publicPrice()` y no por `addVat()`**: lo que se anuncia termina
- * en `,95` y sale **hacia abajo** de lo que dice la tarifa. Decisión de Dorel
- * del 30 de septiembre de 2026. Lo importante es que el redondeo viva aquí y no
- * en la web que lo pinta: la misma cifra viaja también al `quoteSnapshot` de
- * una solicitud, que es lo que él lee en el correo para cobrarlo a mano.
+ * ⚠️ **Va por `publicPriceDesde()`, que redondea a `,95` HACIA ARRIBA.** Es la
+ * única cifra de la web que sube, y la razón es que es la única que **promete
+ * un mínimo**: con el redondeo normal —hacia abajo, decisión del 30 de
+ * septiembre— la tarjeta del Kadjar decía «desde 32,95 €/día» y el alquiler más
+ * barato de ese coche sale a **33,26**. Los cinco coches publicados anunciaban
+ * por debajo de lo que cobran, medido el 8 de octubre de 2026.
+ *
+ * Lo importante es que el redondeo viva aquí y no en la web que lo pinta: la
+ * misma cifra viaja también al `quoteSnapshot` de una solicitud, que es lo que
+ * Dorel lee en el correo para cobrarlo a mano.
  *
  * ⚠️ **Y la cifra sale de la CURVA, no del número tecleado en el tramo.** Esto
  * publicaba `tramo.pricePerDay`, que desde que existe la curva es un dato
@@ -138,7 +143,7 @@ function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): 
   if (!porDia) return undefined;
 
   return {
-    ...publicPrice(porDia, vatRate),
+    ...publicPriceDesde(porDia, vatRate),
     currency: 'EUR',
     // El primer tramo empieza en 1 y ahí el matiz no aporta nada.
     ...(dias > 1 ? { fromDays: dias } : {}),

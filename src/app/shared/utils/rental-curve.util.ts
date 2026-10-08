@@ -119,6 +119,39 @@ export function curveAveragePerDay(total: number, dias: number): number {
   return Math.round((total / dias) * 100) / 100;
 }
 
+/**
+ * Lo que la curva cobra de verdad en un tramo: el primer día y el último.
+ *
+ * ⚠️ **Existe porque la tabla de tramos NO dice lo que se cobra, y eso confunde
+ * a quien la rellena.** Desde la curva, el único importe que decide dinero es el
+ * del primer tramo —la tarifa base—; los demás son orientativos. Dorel leyó
+ * «16-30 días: 30 €/día» en la ficha del Kadjar y dio por hecho que un alquiler
+ * de 16 días salía a 30, y lo que se cobra son **34,30** el día 16 y **27,50** el
+ * día 30. No era un fallo de cálculo: era la pantalla enseñando cinco números
+ * que parecen tarifas y no lo son.
+ *
+ * ⚠️ **Se enseña el RANGO y no un número**, porque dentro de un tramo cada día
+ * vale distinto: ésa es toda la diferencia entre la curva y los escalones de
+ * antes, y un solo importe volvería a sugerir que hay una tarifa plana.
+ *
+ * ⚠️ **Y en el tramo abierto los dos extremos coinciden.** A partir de
+ * `LONG_STAY_FROM_DAYS` el multiplicador es lineal, así que el precio por día es
+ * **plano**: ahí sí hay una tarifa, y es el suelo del coche.
+ */
+export function curveRangeForTier(
+  baseRate: number,
+  minDays: number,
+  maxDays: number | null,
+  puntos: readonly CurvePoint[] = DEFAULT_CURVE_POINTS
+): { desde: number; hasta: number } | null {
+  if (!(baseRate > 0) || !(minDays > 0)) return null;
+  const fin = maxDays && maxDays >= minDays ? maxDays : Math.max(minDays, LONG_STAY_FROM_DAYS);
+  return {
+    desde: curveAveragePerDay(curveTotal(baseRate, minDays, puntos), minDays),
+    hasta: curveAveragePerDay(curveTotal(baseRate, fin, puntos), fin)
+  };
+}
+
 /** El salto de la escalera de precios que se le propone al operador. */
 export const RATE_STEP = 5;
 

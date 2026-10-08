@@ -31,6 +31,7 @@ import { getDefaultPricingRules, validatePricingRules } from '@shared/utils/pric
 import {
   LONG_STAY_FROM_DAYS,
   curveAveragePerDay,
+  curveRangeForTier,
   curveTotal,
   roundToRateStep
 } from '@shared/utils/rental-curve.util';
@@ -835,6 +836,23 @@ export class VehicleFormComponent implements OnInit {
    * propio medio —y encima redondeado— sería pisarle al operador el único número
    * que de verdad teclea, y mover el precio de todos los alquileres del coche.
    */
+  /**
+   * Lo que la curva cobra de verdad en ese tramo, para enseñarlo debajo.
+   *
+   * ⚠️ **La tabla no dice lo que se cobra, y hay que decirlo.** El único importe
+   * que decide dinero es el del primer tramo; los demás son orientativos, y leer
+   * «16-30 días: 30 €/día» como si fuera una tarifa es exactamente lo que pasó.
+   * Esto pone al lado el número verdadero.
+   *
+   * ⚠️ **Es NETO, como la columna de al lado.** La tarifa de la casa se negocia
+   * sin IVA —el impuesto se suma después—, así que mezclar aquí un bruto haría
+   * que los dos números de la misma fila hablaran de cosas distintas.
+   */
+  tramoReal(regla: VehiclePricingRule): { desde: number; hasta: number } | null {
+    const base = this.formData.pricingRules?.[0]?.pricePerDay ?? 0;
+    return curveRangeForTier(base, Number(regla.minDays), regla.maxDays ?? null);
+  }
+
   rellenarTramosDesdeLaCurva(): void {
     const reglas = this.formData.pricingRules;
     if (!reglas?.length) return;
