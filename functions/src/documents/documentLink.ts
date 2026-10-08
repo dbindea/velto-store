@@ -30,12 +30,30 @@
  * ruta del recibo dejaría que cualquiera con ese enlace reenviado se
  * descargase un PDF con el nombre del cliente, justo lo que
  * `getPaymentCheckout` se cuida de no revelar.
+ *
+ * ⚠️ **El nombre del fichero se LEE de los metadatos del objeto; aquí no se
+ * compone.** Esta function no redirige a Storage: lee el fichero y lo escribe
+ * ella, así que la cabecera que vale es la suya — y estuvo poniendo cuatro
+ * nombres fijos (`presupuesto.pdf`, `recibo.pdf`, `parte.pdf`, `reserva.pdf`)
+ * que **pisaban** el `contentDisposition` que `uploadPdf()` escribe desde el 7
+ * de octubre de 2026. O sea que el arreglo del PDF que bajaba como carpeta
+ * dejaba fuera justo la vía que decía arreglar «sobre todo»: el cliente abría
+ * el enlace de su WhatsApp, le daba a guardar y se bajaba `reserva.pdf` en vez
+ * de `Justificante_1234JKL_Marius-Ionescu-Pavel.pdf`. Y en español, para un
+ * cliente rumano. Corregido el 8 de octubre de 2026.
+ *
+ * Leerlo de ahí —en vez de recomponerlo— es lo que hace que no puedan
+ * discrepar, y trae gratis el idioma: quien generó el PDF ya puso la palabra en
+ * el idioma del documento (`palabraDocumento(tipo, locale)`). Recomponerlo aquí
+ * exigiría ir a Firestore por la matrícula y el cliente, y eso es precisamente
+ * lo que este endpoint no hace.
  */
 
 import { onRequest } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import { storageBucket } from '../admin-guard';
 import { publicBaseUrl } from '../public-url';
+import { disposicionEnLinea, nombreDePdf, palabraDocumento } from './nombre-descarga';
 
 /** Ids we mint: URL-safe, no separators, nothing to mistype over the phone. */
 const ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
@@ -76,6 +94,71 @@ export function shortIdFor(kind: DocumentKind, id: string): string {
 }
 
 /**
+ * Qué clase de documento hay detrás de un id corto.
+ *
+ * ⚠️ **Sale de invertir `PREFIXES`, no de mirar el final de la ruta.** El
+ * prefijo es quien decide la carpeta, así que preguntándole a él el tipo y la
+ * carpeta no pueden discrepar; con un `path.endsWith('report.pdf')` serían dos
+ * sitios donde está escrita la misma relación. Y pasa por
+ * `resolveDocumentPath()` a propósito: un id inválido no tiene tipo, o
+ * `/d/q` contestaría «presupuesto» sin que haya ningún documento.
+ */
+export function documentKindOf(shortId: string): DocumentKind | null {
+  if (!resolveDocumentPath(shortId)) return null;
+  const prefijo = shortId[0];
+  const entrada = (Object.entries(PREFIXES) as [DocumentKind, string][]).find(
+    ([, p]) => p === prefijo
+  );
+  return entrada ? entrada[0] : null;
+}
+
+/**
+ * El `filename` que lleva dentro un `Content-Disposition`, o `null`.
+ *
+ * ⚠️ **Se sanea aunque venga de nuestros propios metadatos.** Lo que se
+ * devuelve acaba en una cabecera HTTP, y un salto de línea ahí es una inyección
+ * de cabecera — Node lo rechaza con un `ERR_INVALID_CHAR`, así que el cliente
+ * vería un 500 al abrir su enlace. Solo pasa ASCII imprimible, sin comillas ni
+ * barras invertidas, que es exactamente lo que `trozo()` produce al subir.
+ *
+ * ⚠️ **No se mira `filename*=UTF-8''…`** (RFC 5987) porque no se escribe nunca:
+ * `nombre-descarga.ts` solo compone ASCII, a propósito. Si algún día apareciera,
+ * esto cae al nombre genérico en vez de entregar basura.
+ */
+function filenameDe(disposicion: string | null | undefined): string | null {
+  if (!disposicion) return null;
+  const encontrado = /;\s*filename\s*=\s*(?:"([^"]*)"|([^;]+))/i.exec(disposicion);
+  const crudo = (encontrado?.[1] ?? encontrado?.[2] ?? '').trim();
+  const limpio = crudo
+    .replace(/[^ -~]/g, '')
+    .replace(/["\\]/g, '')
+    .trim();
+  return limpio || null;
+}
+
+/**
+ * Con qué nombre se guarda el PDF que sirve este endpoint.
+ *
+ * Lo manda el objeto. El respaldo —un objeto subido **antes** del 7 de octubre
+ * de 2026, que no lleva metadato— es la palabra del tipo a secas:
+ * `Justificante.pdf`. No arregla la carpeta de nadie por arte de magia, pero es
+ * un nombre, que es lo único que impide que el navegador se invente uno desde
+ * la ruta.
+ *
+ * ⚠️ **Ese respaldo va en ESPAÑOL y no en el idioma del navegador del
+ * cliente.** El idioma que corresponde es el del PDF, y de un objeto sin
+ * metadato no se sabe cuál es: `Rezervare.pdf` sobre un documento en español
+ * sería una cifra creíble y equivocada. El español es el idioma por defecto de
+ * los documentos de la casa, así que es la apuesta honesta.
+ */
+export function nombreDeDescarga(
+  disposicionDelObjeto: string | null | undefined,
+  kind: DocumentKind
+): string {
+  return filenameDe(disposicionDelObjeto) ?? nombreDePdf(palabraDocumento(kind));
+}
+
+/**
  * Absolute link an operator can paste into WhatsApp.
  *
  * `VELTO_PUBLIC_BASE_URL` is the same secret the signing links already use, so
@@ -99,31 +182,44 @@ export const documentLink = onRequest(async (req, res) => {
   const segments = req.path.split('/').filter(Boolean);
   const shortId = segments[segments.length - 1] || '';
   const path = resolveDocumentPath(shortId);
+  const kind = documentKindOf(shortId);
 
-  if (!path) {
+  if (!path || !kind) {
     res.status(404).send('Documento no encontrado');
     return;
   }
 
   try {
     const file = storageBucket().bucket().file(path);
-    const [exists] = await file.exists();
-    if (!exists) {
-      res.status(404).send('Documento no encontrado');
-      return;
+
+    /*
+     * ⚠️ **`getMetadata()` y no `exists()`.** Hace falta el
+     * `contentDisposition` que escribió quien generó el PDF, y pedir los
+     * metadatos ya contesta si el objeto está: una llamada en vez de dos, en el
+     * camino que recorre el cliente desde su WhatsApp. Un 404 de aquí es «no
+     * está»; cualquier otro fallo sube al `catch` de abajo y sale como 500, que
+     * es lo honesto — un problema de permisos no es un documento inexistente.
+     */
+    let metadata: { contentDisposition?: string | null } | undefined;
+    try {
+      [metadata] = await file.getMetadata();
+    } catch (err) {
+      if (Number((err as { code?: number | string } | null)?.code) === 404) {
+        res.status(404).send('Documento no encontrado');
+        return;
+      }
+      throw err;
     }
 
-    const filename = path.endsWith('quote.pdf')
-      ? 'presupuesto.pdf'
-      : path.endsWith('receipt.pdf')
-        ? 'recibo.pdf'
-        : path.endsWith('report.pdf')
-          ? 'parte.pdf'
-          : 'reserva.pdf';
     res.setHeader('Content-Type', 'application/pdf');
     // `inline` so WhatsApp's in-app browser shows it instead of downloading a
-    // file the customer then has to hunt for.
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    // file the customer then has to hunt for. La decisión de que sea `inline`
+    // vive en `nombre-descarga.ts`, que es el único sitio que la explica: un
+    // `attachment` convertiría los botones de «Abrir» en botones de descargar.
+    res.setHeader(
+      'Content-Disposition',
+      disposicionEnLinea(nombreDeDescarga(metadata?.contentDisposition, kind))
+    );
     // Short cache: the booking confirmation is regenerated in place, and a
     // customer reopening the link should see the current state of their booking.
     res.setHeader('Cache-Control', 'public, max-age=300');
