@@ -1416,6 +1416,9 @@ prueba nada.
 
 ## 2 septdecies. El 8 de octubre, cuarta parte — el nombre del PDF que recibe el cliente
 
+**Desplegado a producción el 9 de octubre de 2026** (merge `f9d9078` + la
+function por nombre: `Successful update operation`, y el CI de hosting en verde).
+
 Salió **midiendo el estado**, no buscándolo: al comprobar qué functions corren
 código viejo, `documentLink` aparecía tocada por `4d8561f` —el commit de «los PDF
 bajan como fichero»— y el § 2 ter decía que a esas tres solo les faltaba el
@@ -1502,16 +1505,22 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
-**Vuelto a medir el 8 de octubre de 2026 por la noche:**
+**Vuelto a medir el 9 de octubre de 2026, después de desplegar: NO FALTA NADA.**
 
 | | |
 |---|---|
 | functions en producción | **32** de las **37** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
-| `master` vs `develop` | ⚠️ **develop por delante**: lleva el arreglo del nombre del PDF |
-| pendiente de desplegar | ⚠️ **`documentLink`**, y solo esa |
+| `master` vs `develop` | sincronizados (`f9d9078`) |
+| `documentLink` | desplegada el **9 de octubre**; ya no corre la del 21 de septiembre |
 | rewrites de la web | los **cuatro** responden |
 | suites | 904 · 758 · 98, las cuatro auditorías OK, lint 0 errores / 291 avisos |
+
+El `/d/**` de producción se comprobó sin tocar ni un dato: un id inexistente da
+**404 con `Content-Length: 23`** —que son exactamente los caracteres de
+«Documento no encontrado», el texto que escribe la function— y un `POST`, **405**.
+Lo que delataría un rewrite ausente es el **200** que da cualquier otra ruta, que
+es el catch-all de la SPA.
 
 Los rewrites se comprueban con un `POST` de cuerpo vacío, que es lo que separa
 uno que existe de uno que no: `/api/solicitud` y `/api/contacto` dan
@@ -1519,10 +1528,13 @@ uno que existe de uno que no: `/api/solicitud` y `/api/contacto` dan
 `/api/fleet` da 405 porque es de GET y `/api/visita` 204. **Lo que delataría un
 rewrite ausente es `200 text/html`.**
 
-⚠️ **`documentLink` lleva un arreglo que SÍ cambia lo que ve el cliente** (§ 2
-septdecies): el nombre con el que se baja el PDF del enlace corto. Está en
-`develop` y desplegada **solo en desarrollo**. En producción sigue la del 21 de
-septiembre, así que ahí el cliente se baja `reserva.pdf`.
+✅ **`documentLink` ya está en producción** (9 de octubre de 2026), con el
+arreglo del nombre del PDF del enlace corto — § 2 septdecies.
+⚠️ **Pero solo arregla los documentos NUEVOS.** Los justificantes y presupuestos
+que ya estaban generados en producción no llevan metadato, así que pasan de
+`reserva.pdf` a `Justificante.pdf` —mejor, pero sin matrícula ni cliente— hasta
+que se regeneren desde su ficha, que es un clic. Los metadatos de ficheros de
+producción no se tocan en masa: mucho riesgo para muy poco.
 
 ⚠️ **Y las otras DOS siguen corriendo código anterior al 28 de septiembre**:
 `syncAuthClaims` y `onAuthorizedUserChanged`, desplegadas el 25. Lo único que les
