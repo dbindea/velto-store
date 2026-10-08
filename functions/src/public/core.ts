@@ -26,7 +26,7 @@
  */
 
 import type { VehiclePricingRule } from './types';
-import { curveTotal } from './rental-curve';
+import { curveTotal, LONG_STAY_FROM_DAYS } from './rental-curve';
 
 /** El tipo general. Duplicado de `pricing.util.ts`; si cambia allí, cambia aquí. */
 export const DEFAULT_VAT_RATE = 0.21;
@@ -205,12 +205,48 @@ export function baseRateOf(rules: VehiclePricingRule[] | undefined): number {
  * el presupuesto no respetaba.
  */
 export function lowestPricePerDay(rules: VehiclePricingRule[] | undefined): number | null {
+  return sueloPorDia(rules)?.porDia ?? null;
+}
+
+/**
+ * El suelo de precio de un coche: cuánto cuesta el día más barato y **desde
+ * qué duración**.
+ *
+ * ⚠️ **Está en el día `LONG_STAY_FROM_DAYS`, NO donde empieza el último
+ * tramo.** Esto se calculaba con `tramo.minDays` y era falso para cualquier
+ * coche cuya tabla terminase antes del 31: la curva **sigue bajando** hasta ese
+ * día y solo a partir de ahí es plana. Medido contra desarrollo el 8 de octubre
+ * de 2026, el Peugeot 3008 —último tramo en el día 16— publicaba «desde 59,95
+ * €/día en alquileres de 16 días o más» y ese coche baja a **47,80**.
+ *
+ * ⚠️ **No incumplía nada, y por eso no saltó con lo demás**: anunciaba de más,
+ * o sea en la dirección segura. Lo que fallaba es la palabra «desde», que
+ * afirma un mínimo — y de paso el coche parecía un 25 % más caro de lo que es
+ * justo en el número con el que se compara una flota.
+ *
+ * ⚠️ **Las dos cifras viajan juntas a propósito.** «Desde 25 €» sin decir desde
+ * cuántos días es un precio que casi nadie va a pagar, y el visitante lo
+ * descubre al elegir fechas.
+ *
+ * ⚠️ **El tramo se sigue mirando, pero solo para saber si HAY tarifa.** Y el
+ * `Math.max` no sobra aunque la curva sea plana desde el 31: un coche con el
+ * último tramo en el día 45 cobra lo mismo el 31 que el 45, pero prometer «desde
+ * 31 días» cuando su tabla dice 45 sería anunciar una duración que su propia
+ * ficha contradice.
+ */
+export function sueloPorDia(
+  rules: VehiclePricingRule[] | undefined
+): { porDia: number; dias: number } | null {
   const tramo = longestRule(rules);
   const base = baseRateOf(rules);
   if (!tramo || !(base > 0)) return null;
-  const dias = Number(tramo.minDays);
-  if (!Number.isFinite(dias) || dias < 1) return null;
-  return tarifaMediaPorDia(base, dias) || null;
+
+  const inicio = Number(tramo.minDays);
+  if (!Number.isFinite(inicio) || inicio < 1) return null;
+
+  const dias = Math.max(inicio, LONG_STAY_FROM_DAYS);
+  const porDia = tarifaMediaPorDia(base, dias);
+  return porDia > 0 ? { porDia, dias } : null;
 }
 
 /**

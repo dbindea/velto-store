@@ -735,6 +735,22 @@ de «volver al calculado» tres líneas más abajo: sin la frase, el operador lo
 devuelve a la tarifa creyendo corregir un error y le cobra al cliente más de lo
 que la web le dijo.
 
+⚠️ **Y el «desde» tampoco estaba en el día que decía.** `sueloPorDia()` lo
+calculaba donde empieza el **último tramo**, y eso es falso para cualquier coche
+cuya tabla termine antes del 31: la curva **sigue bajando** hasta
+`LONG_STAY_FROM_DAYS` y solo a partir de ahí es plana, así que el mínimo de
+verdad es `base × LONG_STAY_RATE_FACTOR`. El Peugeot 3008 —último tramo en el
+día 16— publicaba «desde 59,95 €/día en alquileres de 16 días o más» y ese coche
+baja a **47,80**.
+
+Esto **no incumplía nada** —anunciaba de más, o sea cobrando menos de lo
+prometido— y por eso no saltó con lo demás. Lo que fallaba es la palabra
+«desde», que afirma un mínimo, y que el coche parecía un 25 % más caro de lo que
+es justo en el número con el que se compara una flota. Con el último tramo
+**más allá** del 31 manda el tramo: la curva cobra lo mismo, pero prometer «desde
+31 días» cuando la ficha dice 45 sería anunciar una duración que ella misma
+contradice.
+
 ⚠️ **Un céntimo de holgura no se persigue.** El neto del `quoteSnapshot` se
 recalcula desde el bruto ya redondeado, y con el 21 % no todo bruto es alcanzable
 desde un neto de dos decimales: 1.030,95 € se queda en 1.030,94 € al
