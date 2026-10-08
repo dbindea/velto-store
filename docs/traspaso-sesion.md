@@ -1284,6 +1284,82 @@ objeto condicional se salta la comprobación de propiedades de más**, así que
 compilaba y la cabecera no se habría puesto nunca. Va dentro de `metadata`, y
 escrito sin spread para que un error sea un error.
 
+## 2 quindecies. El 8 de octubre, segunda parte — la auditoría de SEO
+
+Dorel preguntó dos cosas: si hay que desplegar al dar de alta un coche, y qué
+mejoraría del SEO. La primera se contesta midiendo y la respuesta tiene matiz.
+
+### ⚠️ Sí hace falta desplegar, pero solo para WhatsApp y para Google
+
+|  | ¿Se ve sin desplegar? |
+|---|---|
+| Un cliente que abre la web | **sí**, al momento: lo trae el JavaScript |
+| La vista previa de WhatsApp | **no**: foto y título genéricos |
+| Google | **no**: ni HTML propio ni entrada en el sitemap |
+
+Y con un **cambio de tarifa** pasa lo mismo en un sitio que no es obvio: el
+precio de la web y del presupuesto es siempre el de ahora, pero el
+`og:description` lleva el precio **dentro** —«…desde 50,95 € al día…»—, así que
+la tarjeta de WhatsApp enseña el viejo hasta el siguiente despliegue.
+
+Por eso el despliegue de producción tiene ahora **`workflow_dispatch`** —un botón
+en Actions— y un **`schedule` a las 04:15 UTC**: el botón solo sirve si alguien
+se acuerda.
+
+### Lo que la auditoría encontró, y lo que NO
+
+⚠️ **Lo primero que hay que decir es lo que ya estaba bien**, porque es la mitad
+del valor de una auditoría: LCP de **288–448 ms** en móvil, **CLS 0**, 79–105 kB
+por página; `AutoRental` completo con horarios y zonas, `Car` + `Offer` con
+precio por día, `FAQPage`, migas; `canonical`, `lang`, Open Graph,
+`twitter:card`, sitemap, `robots.txt`, **`alt` en todas las imágenes** y un solo
+`<h1>` por página. Y las rutas inexistentes dan **404 de verdad**.
+
+⚠️ **Y una corrección mía: llegué a medir «canonical: false» en las 16
+páginas.** Era falso — mi expresión regular pedía el grupo 1 de un patrón sin
+grupos. **Una medición también se comprueba**, sobre todo cuando dice que algo
+muy básico está roto en todas partes a la vez.
+
+Lo que sí había:
+
+- **La franja de la flota de la PORTADA estaba vacía hasta que corría el
+  JavaScript.** La sección existía con su `<div id="lista" hidden>`, así que la
+  portada servía **cero enlaces a fichas y cero nombres de coche** mientras
+  `/flota` servía los cinco. Mismo agujero que se tapó en `/flota` el 2 de
+  octubre; aquí se quedó sin tapar.
+  ⚠️ **Y al prerrenderizarla aparece el fallo hermano**: hay que **esconder** la
+  lista cuando la API dice que no hay coches, o las tarjetas del build se quedan
+  debajo del aviso. Pero **no** cuando la API *falla*: ahí lo prerrenderizado es
+  la mejor información que hay. «No hay» y «no he podido preguntar» no son lo
+  mismo, y esa asimetría es deliberada.
+- ⚠️ **`/coche/<cualquier-cosa>` respondía 200 y era indexable**, un *soft 404*
+  del que se pueden generar infinitos escribiendo cualquier cosa. El 404 de
+  verdad lo dan las rutas normales; `/coche/**` está **reescrito**, así que el
+  servidor no puede saberlo — solo la API, y para entonces el HTML ya salió.
+  ⚠️ Se desindexa **solo cuando la API dice que no existe, nunca cuando falla**:
+  un corte de red de dos minutos marcaría `noindex` fichas de coches reales, y
+  eso no se deshace al volver la red sino cuando Google vuelva a pasar.
+- **La misma URL tenía DOS títulos**: 85 caracteres en el HTML y otro distinto
+  escrito por el JavaScript. Ahora los compone `web/src/lib/seo.ts`, que llaman
+  los dos — y los dos siguen haciendo falta, porque un coche sin HTML propio
+  solo tiene el título que le ponga el JavaScript.
+
+### El formato del título lo propuso Dorel, y es mejor
+
+`{coche} - alquiler de coches en Arganda del Rey | Velto`. Tiene razón en lo que
+importa: la frase que se teclea es **«alquiler de coches en Arganda»**, y
+«Dacia Duster de alquiler en Arganda» la parte en dos.
+
+De su propuesta literal cambian dos cosas, las dos medidas: la suya con
+«| Velto Mobility» mide **66** y Google corta en 60 —se perdía justo el final—, y
+«alquiler **de** coches» con el «de», que es como se dice y como se busca.
+
+⚠️ **Y el título baja una escalera, no se trunca.** Cortar por la letra 60 parte
+la palabra por la que se compite. Se sacrifica en orden: la versión del coche,
+la marca, «del Rey», y solo al final se recorta por palabras enteras. Con la
+frase completa, **la versión ya casi nunca cabe** — y no se pierde nada, sigue
+en el `<h1>` y en la descripción.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
