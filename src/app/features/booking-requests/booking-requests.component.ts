@@ -614,6 +614,17 @@ export class BookingRequestsComponent {
         clientName: r.name,
         clientPhone: r.phone,
         /**
+         * ⚠️ **El precio que se le PROMETIÓ, para que el asistente no pida
+         * más.** La web redondea el total a la baja hasta `,95` y el asistente
+         * recalcula desde la curva al céntimo: medido el 8 de octubre de 2026,
+         * la web prometía 1.030,95 € por un Kadjar de 31 días y la reserva
+         * nacía pidiendo 1.031,52 €. Viaja el **neto**, que es el campo que el
+         * asistente edita; allí se usa como techo y no como tarifa, porque un
+         * cliente con descuento de fidelidad puede salir más barato. Ver
+         * `promisedPriceCeiling()`.
+         */
+        ...((r.quoteSnapshot?.net ?? 0) > 0 ? { quotedNet: r.quoteSnapshot.net } : {}),
+        /**
          * ⚠️ **El lugar que pidió, para que no haya que volver a leerlo.** Es
          * el campo que más se olvida al teclear una reserva a partir de una
          * llamada, y el que decide si hay que mover una furgoneta. Va vacío

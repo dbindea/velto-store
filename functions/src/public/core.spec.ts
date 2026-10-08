@@ -5,9 +5,14 @@ import {
   calculateCalendarDays,
   findPricingRuleByDays,
   aTerminacion,
+  aTerminacionArriba,
   longestRule,
   publicPrice,
+  publicPriceDesde,
+  tarifaMediaPorDia,
+  baseRateOf,
   lowestPricePerDay,
+  sueloPorDia,
   rangesOverlap,
   tariffNetPrice,
   toDate,
@@ -161,16 +166,54 @@ describe('el precio', () => {
    * Medido en producción ese día, antes de corregirlo: el Duster anunciaba
    * 29,95 €/día y cobraba 37,68 por los mismos 16 días.
    */
-  it('el «desde» es lo que de verdad cuesta el día en el tramo más largo', () => {
+  it('el «desde» es lo que de verdad cuesta el día más barato', () => {
     /*
-     * La curva al día 4 con tarifa base 60, escrita entera para que el número no
-     * sea mágico: el multiplicador interpola entre (3; 2,7) y (7; 5,6), o sea
-     * 2,7 + ¼ × 2,9 = 3,425. Total 60 × 3,425 = 205,50 y por día 51,375 → 51,38.
-     * La tabla decía 50, que es lo que se publicaba y lo que no se cobraba.
+     * ⚠️ **El suelo está en el día 31, no donde empieza el último tramo.** Este
+     * test esperó `51,38` —la curva al día 4, donde empieza el tramo abierto de
+     * esta tabla— y era el mismo fallo de un escalón más arriba: la curva sigue
+     * bajando hasta el día 31 y solo ahí se vuelve plana, así que el mínimo de
+     * verdad es `base × LONG_STAY_RATE_FACTOR` = 60 × 0,5 = **30,00**.
+     *
+     * Escrito entero para que el número no sea mágico: `curveMultiplier(31)` es
+     * 31 × 0,5 = 15,5, total 60 × 15,5 = 930 y por día 930 / 31 = 30.
      */
-    expect(lowestPricePerDay(TRAMOS)).toBe(51.38);
+    expect(lowestPricePerDay(TRAMOS)).toBe(30);
     expect(lowestPricePerDay([])).toBeNull();
     expect(lowestPricePerDay(undefined)).toBeNull();
+  });
+
+  /**
+   * ⚠️ **El caso que lo destapó, con sus números**: un coche cuyo último tramo
+   * empieza ANTES del día 31. Medido contra desarrollo el 8 de octubre de 2026,
+   * el Peugeot 3008 publicaba «desde 59,95 €/día en alquileres de 16 días o
+   * más» y ese coche baja a 47,80 — un 25 % más caro de lo que es, justo en el
+   * número con el que se compara una flota.
+   */
+  it('el suelo no está donde empieza el último tramo, sino en el día 31', () => {
+    const terminaEn16 = [
+      { minDays: 1, maxDays: 1, pricePerDay: 79 },
+      { minDays: 2, maxDays: 15, pricePerDay: 60 },
+      { minDays: 16, maxDays: null, pricePerDay: 50 },
+    ];
+    // Al día 16 la curva todavía cobra 49,28 €/día; al 31 ya está en el suelo.
+    expect(sueloPorDia(terminaEn16)).toEqual({ porDia: 39.5, dias: 31 });
+
+    /*
+     * ⚠️ **Y con el último tramo MÁS ALLÁ del 31 manda el tramo.** La curva es
+     * plana desde el 31, así que el precio es el mismo; lo que no vale es
+     * prometer «desde 31 días» cuando la ficha del coche dice 45.
+     */
+    const terminaEn45 = [
+      { minDays: 1, maxDays: 44, pricePerDay: 79 },
+      { minDays: 45, maxDays: null, pricePerDay: 40 },
+    ];
+    expect(sueloPorDia(terminaEn45)).toEqual({ porDia: 39.5, dias: 45 });
+  });
+
+  it('sin tarifa no hay suelo que publicar', () => {
+    expect(sueloPorDia([])).toBeNull();
+    expect(sueloPorDia(undefined)).toBeNull();
+    expect(sueloPorDia([{ minDays: 1, maxDays: null, pricePerDay: 0 }])).toBeNull();
   });
 
   /**
@@ -306,6 +349,94 @@ describe('el precio de escaparate: terminado en ,95 y siempre HACIA ABAJO', () =
     expect(aTerminacion(0.5)).toBe(0.5);
     expect(aTerminacion(0)).toBe(0);
     expect(aTerminacion(NaN)).toBeNaN();
+  });
+});
+
+/**
+ * El redondeo del «desde», que va al revés.
+ *
+ * ⚠️ **Y no es una excepción a la regla de arriba: es la MISMA regla.** Aquella
+ * dice que un total no puede subir, porque el cliente lo paga; ésta dice que un
+ * «desde» no puede bajar, porque el cliente lo compara. Las dos significan
+ * **nunca cobrar más de lo anunciado**.
+ */
+describe('el redondeo del «desde»', () => {
+  it('sube al ,95 siguiente', () => {
+    expect(aTerminacionArriba(33.26)).toBe(33.95);
+    expect(aTerminacionArriba(30.22)).toBe(30.95);
+    expect(aTerminacionArriba(54.45)).toBe(54.95);
+  });
+
+  it('con los céntimos ya pasados, sube al ,95 del euro siguiente', () => {
+    expect(aTerminacionArriba(33.96)).toBe(34.95);
+    expect(aTerminacionArriba(34)).toBe(34.95);
+  });
+
+  it('un importe que ya termina en ,95 no se mueve', () => {
+    expect(aTerminacionArriba(33.95)).toBe(33.95);
+  });
+
+  /**
+   * ⚠️ **Lo que NUNCA puede pasar aquí: que el «desde» quede por debajo.** Es
+   * el fallo que tenía la web —anunciaba 32,95 y el alquiler más barato salía a
+   * 33,26—, y es justo el que un abogado buscaría: un precio anunciado que no
+   * se puede conseguir.
+   */
+  it('NUNCA baja, para ninguna entrada', () => {
+    for (let c = 100; c <= 30000; c += 7) {
+      const bruto = c / 100;
+      expect(aTerminacionArriba(bruto)).toBeGreaterThanOrEqual(bruto);
+    }
+  });
+
+  it('y nunca se pasa de 1 €, para no espantar anunciando de más', () => {
+    for (let c = 100; c <= 30000; c += 7) {
+      const bruto = c / 100;
+      expect(aTerminacionArriba(bruto) - bruto).toBeLessThan(1);
+    }
+  });
+
+  it('un importe por debajo de 1 € se deja en paz', () => {
+    expect(aTerminacionArriba(0.5)).toBe(0.5);
+    expect(aTerminacionArriba(0)).toBe(0);
+    expect(aTerminacionArriba(NaN)).toBeNaN();
+  });
+
+  /**
+   * ⚠️ **Y ésta es LA comprobación, la que encierra lo que se pidió.** No basta
+   * con que el redondeo suba: lo que tiene que ser cierto es que **ningún
+   * alquiler real salga por encima del precio anunciado**, para ninguna
+   * duración de las que cubre la frase «en alquileres de N días o más».
+   *
+   * Se recorre coche a coche y día a día, hasta 120. Antes de esto fallaba en
+   * **todas** las duraciones: la tarjeta del Kadjar decía 32,95 y el alquiler
+   * más barato de ese coche sale a 33,26.
+   */
+  it('lo anunciado nunca queda por debajo de lo que se llega a cobrar', () => {
+    const IVA = 0.21;
+    const tarifas = [
+      [{ minDays: 1, maxDays: 15, pricePerDay: 55 }, { minDays: 16, maxDays: null, pricePerDay: 30 }],
+      [{ minDays: 1, maxDays: 30, pricePerDay: 90 }, { minDays: 31, maxDays: null, pricePerDay: 45 }],
+      [{ minDays: 1, maxDays: null, pricePerDay: 23 }],
+    ];
+
+    for (const reglas of tarifas) {
+      const desdeDia = Number(longestRule(reglas)!.minDays);
+      const anunciado = publicPriceDesde(
+        tarifaMediaPorDia(baseRateOf(reglas), desdeDia),
+        IVA
+      ).gross;
+
+      for (let d = desdeDia; d <= 120; d++) {
+        const neto = tariffNetPrice(reglas, d);
+        if (neto === null) continue;
+        const porDiaReal = publicPrice(neto, IVA).gross / d;
+        expect(
+          porDiaReal,
+          `con ${d} días se cobran ${porDiaReal.toFixed(2)} €/día y se anuncian ${anunciado}`
+        ).toBeLessThanOrEqual(anunciado);
+      }
+    }
   });
 
   it('siempre acaba en ,95 de verdad', () => {

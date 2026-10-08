@@ -1315,7 +1315,8 @@
     "fromRequest": {
       "vehicleGone": "Mașina din cerere nu mai este liberă în acele date. Alege alta sau schimbă datele.",
       "markFailed": "Rezervarea a fost creată, dar cererea nu a putut fi marcată ca transformată",
-      "banner": "Din cererea"
+      "banner": "Din cererea",
+      "pricePromised": "Prețul promis pe site: {price}. Nu se mărește fără să fie anunțat clientul."
     }
   },
   "search": {
@@ -1604,7 +1605,8 @@
       "pricePerDay": "€/zi",
       "removeRule": "Elimină interval",
       "restoreDefaults": "Restabilește implicit",
-      "rules": "Reguli de preț"
+      "rules": "Reguli de preț",
+      "realRate": "Se încasează, fără TVA:"
     },
     "reservations": {
       "history": "Istoric",

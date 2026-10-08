@@ -336,3 +336,52 @@ export function sortRequests(requests: BookingRequest[]): BookingRequest[] {
     return fb - fa;
   });
 }
+
+/**
+ * El precio que la web prometió, convertido en lo único que puede ser: un
+ * **techo**.
+ *
+ * ⚠️ **Existe porque convertir una solicitud cobraba MÁS de lo prometido.** La
+ * web redondea el total a la baja hasta `,95` —`aTerminacion()` en las
+ * functions, y lo hace a propósito: lo peor que puede pasar es que la empresa
+ * cobre un poco menos—, y esa cifra es la que el cliente vio, la que viaja al
+ * `quoteSnapshot` y la que sale en el correo. Pero el asistente **recalculaba
+ * desde la curva** y salía al céntimo: medido el 8 de octubre de 2026 con el
+ * Kadjar a 31 días, la web promete **1.030,95 €** y el asistente pedía
+ * **1.031,52 €**. Cincuenta y siete céntimos de más, en la única dirección que
+ * no se puede defender.
+ *
+ * ⚠️ **Es un TECHO y no un precio fijo, y la diferencia la decide el cliente.**
+ * La web cotiza sin saber quién es: no puede aplicar el descuento de fidelidad
+ * porque nadie se ha identificado todavía. Si al convertir resulta que el
+ * cliente tiene un 5 %, la tarifa con su descuento puede quedar **por debajo**
+ * de lo prometido — y entonces manda la tarifa, porque a un cliente fiel no se
+ * le cobra más por haber pedido hora por la web. Es la regla que Dorel dio ese
+ * mismo día: «prefiero cobrar un poquito menos de lo que anuncio».
+ *
+ * ⚠️ **Y devuelve `null` cuando no hay que tocar nada**, que es el caso normal.
+ * Forzar el precio acordado cuando la tarifa ya cumple la promesa marcaría como
+ * «precio pactado a mano» una reserva en la que nadie pactó nada — y eso se
+ * imprime en el contrato como un ajuste.
+ *
+ * ⚠️ **Un céntimo de holgura no se persigue.** El neto que se guarda en el
+ * `quoteSnapshot` se recalcula desde el bruto ya redondeado, y con el 21 % no
+ * todo bruto es alcanzable desde un neto de dos decimales: la promesa de
+ * 1.030,95 € se queda en 1.030,94 € al reconstruirla. Está por debajo, que es
+ * el lado seguro, y perseguir ese céntimo pediría guardar el bruto como
+ * autoridad — y entonces el IVA dejaría de cuadrar por resta.
+ *
+ * @param promisedNet Lo prometido, **sin IVA** (`quoteSnapshot.net`).
+ * @param calculatedNet La tarifa con el descuento del cliente ya aplicado.
+ * @returns El neto que hay que acordar, o `null` si la tarifa ya cumple.
+ */
+export function promisedPriceCeiling(
+  promisedNet: number | null | undefined,
+  calculatedNet: number
+): number | null {
+  if (typeof promisedNet !== 'number' || !isFinite(promisedNet) || promisedNet <= 0) return null;
+  if (!isFinite(calculatedNet) || calculatedNet <= 0) return null;
+  // Con la tarifa ya por debajo de la promesa no hay nada que acordar.
+  if (calculatedNet <= promisedNet) return null;
+  return Math.round(promisedNet * 100) / 100;
+}

@@ -22,7 +22,7 @@ import {
   PublicVehicleSummary,
   VehiclePricingRule,
 } from './types';
-import { baseRateOf, longestRule, publicPrice, tarifaMediaPorDia } from './core';
+import { publicPriceDesde, sueloPorDia } from './core';
 
 /** La carpeta pública. Un solo sitio, para que nadie escriba la ruta a mano. */
 export const PUBLIC_PHOTOS_FOLDER = 'public-vehicles';
@@ -97,11 +97,16 @@ export function photoUrls(
 /**
  * El «desde X €/día», con los dos lados del impuesto.
  *
- * ⚠️ **Va por `publicPrice()` y no por `addVat()`**: lo que se anuncia termina
- * en `,95` y sale **hacia abajo** de lo que dice la tarifa. Decisión de Dorel
- * del 30 de septiembre de 2026. Lo importante es que el redondeo viva aquí y no
- * en la web que lo pinta: la misma cifra viaja también al `quoteSnapshot` de
- * una solicitud, que es lo que él lee en el correo para cobrarlo a mano.
+ * ⚠️ **Va por `publicPriceDesde()`, que redondea a `,95` HACIA ARRIBA.** Es la
+ * única cifra de la web que sube, y la razón es que es la única que **promete
+ * un mínimo**: con el redondeo normal —hacia abajo, decisión del 30 de
+ * septiembre— la tarjeta del Kadjar decía «desde 32,95 €/día» y el alquiler más
+ * barato de ese coche sale a **33,26**. Los cinco coches publicados anunciaban
+ * por debajo de lo que cobran, medido el 8 de octubre de 2026.
+ *
+ * Lo importante es que el redondeo viva aquí y no en la web que lo pinta: la
+ * misma cifra viaja también al `quoteSnapshot` de una solicitud, que es lo que
+ * Dorel lee en el correo para cobrarlo a mano.
  *
  * ⚠️ **Y la cifra sale de la CURVA, no del número tecleado en el tramo.** Esto
  * publicaba `tramo.pricePerDay`, que desde que existe la curva es un dato
@@ -120,28 +125,43 @@ export function photoUrls(
  * dinero. Desde aquí es imposible que discrepen, porque es la misma función que
  * calcula el presupuesto.
  *
- * ⚠️ **Y el tramo se elige por el que EMPIEZA MÁS TARDE, no por el más barato
- * de la tabla.** Es lo que aquel quería decir —el precio por día baja según se
- * alarga el alquiler, así que el suelo está en el tramo abierto del final— y con
- * números tecleados a mano «el más barato» puede ser cualquiera. La curva es
- * monótona: el día que empieza el último tramo es el más barato, siempre.
+ * ⚠️ **El suelo está en el día `LONG_STAY_FROM_DAYS`, no donde empieza el
+ * último tramo.** Aquí ponía lo contrario —«el día que empieza el último tramo
+ * es el más barato, siempre»— y es falso: la curva **sigue bajando** hasta el
+ * día 31 y solo a partir de ahí es plana, así que el mínimo de verdad es
+ * `base × LONG_STAY_RATE_FACTOR`. Un coche cuyo último tramo empiece antes
+ * anunciaba un suelo que no es el suyo: medido contra desarrollo el 8 de
+ * octubre de 2026, el Peugeot 3008 —último tramo en el día 16— decía «desde
+ * 59,95 €/día en alquileres de 16 días o más» cuando ese coche baja a **47,80**.
+ *
+ * ⚠️ **No era un incumplimiento, y por eso casi no se ve.** Anunciaba de más, o
+ * sea en la dirección segura: el cliente paga menos de lo prometido. Lo que
+ * falla es la palabra «desde», que afirma un mínimo y estaba dando uno que no
+ * lo era — y de paso el coche parecía un 25 % más caro de lo que es en el único
+ * número con el que se compara una flota.
+ *
+ * ⚠️ **Y el tramo se sigue mirando, pero solo para saber si HAY tarifa.** Un
+ * coche sin tabla no se publica con precio; `validatePricingRules()` exige
+ * además que el último tramo sea abierto, así que el día 31 siempre se alcanza.
  */
 function precioDesde(rules: VehiclePricingRule[] | undefined, vatRate: number): PublicPrice | undefined {
-  const base = baseRateOf(rules);
-  const tramo = longestRule(rules);
-  if (!base || !tramo) return undefined;
-
-  const dias = Number(tramo.minDays);
-  if (!Number.isFinite(dias) || dias < 1) return undefined;
-
-  const porDia = tarifaMediaPorDia(base, dias);
-  if (!porDia) return undefined;
+  const suelo = sueloPorDia(rules);
+  if (!suelo) return undefined;
+  const { porDia, dias } = suelo;
 
   return {
-    ...publicPrice(porDia, vatRate),
+    ...publicPriceDesde(porDia, vatRate),
     currency: 'EUR',
-    // El primer tramo empieza en 1 y ahí el matiz no aporta nada.
-    ...(dias > 1 ? { fromDays: dias } : {}),
+    /*
+     * ⚠️ **Siempre viaja, porque el suelo nunca está en el día 1.** Aquí había
+     * un `dias > 1` que venía de cuando esto leía el tramo tecleado: el primer
+     * tramo empieza en 1 y entonces «desde 1 día o más» no aportaba nada. Con
+     * el suelo en `LONG_STAY_FROM_DAYS` ese caso no existe, y la condición
+     * sobraba escondiendo que la cifra **necesita** su duración al lado: un
+     * «desde 30 €/día» sin decir desde cuántos días es la clase de promesa que
+     * un cliente da por incumplida en un alquiler de tres.
+     */
+    fromDays: dias,
   };
 }
 

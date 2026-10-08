@@ -707,6 +707,31 @@
                       </div>
                     </div>
                   </div>
+                  <!--
+                    ⚠️ **Lo que la curva cobra DE VERDAD en este tramo.** El
+                    importe de arriba es orientativo en todos los tramos menos
+                    en el primero —que es la tarifa base, la única que decide
+                    dinero—, y leerlo como una tarifa es exactamente lo que pasó:
+                    la ficha decía «16-30 días: 30 €/día» y lo que se cobra son
+                    34,30 el día 16 y 27,50 el día 30.
+
+                    ⚠️ **Va un RANGO y no un número** porque dentro de un tramo
+                    cada día vale distinto: eso es toda la diferencia entre la
+                    curva y los escalones de antes. En el tramo abierto los dos
+                    extremos coinciden, y ahí sí es una tarifa plana: el suelo
+                    del coche.
+                  -->
+                  @if (tramoReal(rule); as real) {
+                    <small class="field-hint">
+                      {{ 'vehicles.pricing.realRate' | translate }}
+                      @if (real.desde === real.hasta) {
+                        {{ real.desde | number: '1.2-2' }} €/día
+                      } @else {
+                        {{ real.desde | number: '1.2-2' }} → {{ real.hasta | number: '1.2-2' }}
+                        €/día
+                      }
+                    </small>
+                  }
                 </div>
               }
             </div>

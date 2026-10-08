@@ -511,6 +511,20 @@
                 }
 
                 <!--
+                  ⚠️ **Por qué el precio no es el de tarifa.** Lo puso la
+                  promesa de la web, no el operador, y el botón de «volver al
+                  calculado» está tres líneas más abajo: sin esta frase, se
+                  pulsa creyendo corregir un error y se le cobra al cliente más
+                  de lo que la web le dijo.
+                -->
+                @if (precioLimitadoPorLaWeb) {
+                  <p class="field-hint">
+                    <i class="pi pi-info-circle"></i>
+                    {{ avisoPrecioPrometido }}
+                  </p>
+                }
+
+                <!--
                   ⚠️ **El importe del ajuste solo si lo hay.** Pactar justo la
                   tarifa da un ajuste de 0, y «Ajuste manual: 0,00 €» es una
                   línea que no informa de nada. Lo que sí hace falta siempre que

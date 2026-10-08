@@ -26,7 +26,7 @@
  */
 
 import type { VehiclePricingRule } from './types';
-import { curveTotal } from './rental-curve';
+import { curveTotal, LONG_STAY_FROM_DAYS } from './rental-curve';
 
 /** El tipo general. Duplicado de `pricing.util.ts`; si cambia allí, cambia aquí. */
 export const DEFAULT_VAT_RATE = 0.21;
@@ -205,12 +205,48 @@ export function baseRateOf(rules: VehiclePricingRule[] | undefined): number {
  * el presupuesto no respetaba.
  */
 export function lowestPricePerDay(rules: VehiclePricingRule[] | undefined): number | null {
+  return sueloPorDia(rules)?.porDia ?? null;
+}
+
+/**
+ * El suelo de precio de un coche: cuánto cuesta el día más barato y **desde
+ * qué duración**.
+ *
+ * ⚠️ **Está en el día `LONG_STAY_FROM_DAYS`, NO donde empieza el último
+ * tramo.** Esto se calculaba con `tramo.minDays` y era falso para cualquier
+ * coche cuya tabla terminase antes del 31: la curva **sigue bajando** hasta ese
+ * día y solo a partir de ahí es plana. Medido contra desarrollo el 8 de octubre
+ * de 2026, el Peugeot 3008 —último tramo en el día 16— publicaba «desde 59,95
+ * €/día en alquileres de 16 días o más» y ese coche baja a **47,80**.
+ *
+ * ⚠️ **No incumplía nada, y por eso no saltó con lo demás**: anunciaba de más,
+ * o sea en la dirección segura. Lo que fallaba es la palabra «desde», que
+ * afirma un mínimo — y de paso el coche parecía un 25 % más caro de lo que es
+ * justo en el número con el que se compara una flota.
+ *
+ * ⚠️ **Las dos cifras viajan juntas a propósito.** «Desde 25 €» sin decir desde
+ * cuántos días es un precio que casi nadie va a pagar, y el visitante lo
+ * descubre al elegir fechas.
+ *
+ * ⚠️ **El tramo se sigue mirando, pero solo para saber si HAY tarifa.** Y el
+ * `Math.max` no sobra aunque la curva sea plana desde el 31: un coche con el
+ * último tramo en el día 45 cobra lo mismo el 31 que el 45, pero prometer «desde
+ * 31 días» cuando su tabla dice 45 sería anunciar una duración que su propia
+ * ficha contradice.
+ */
+export function sueloPorDia(
+  rules: VehiclePricingRule[] | undefined
+): { porDia: number; dias: number } | null {
   const tramo = longestRule(rules);
   const base = baseRateOf(rules);
   if (!tramo || !(base > 0)) return null;
-  const dias = Number(tramo.minDays);
-  if (!Number.isFinite(dias) || dias < 1) return null;
-  return tarifaMediaPorDia(base, dias) || null;
+
+  const inicio = Number(tramo.minDays);
+  if (!Number.isFinite(inicio) || inicio < 1) return null;
+
+  const dias = Math.max(inicio, LONG_STAY_FROM_DAYS);
+  const porDia = tarifaMediaPorDia(base, dias);
+  return porDia > 0 ? { porDia, dias } : null;
 }
 
 /**
@@ -312,6 +348,41 @@ export function aTerminacion(bruto: number): number {
 }
 
 /**
+ * Lo mismo pero **hacia arriba**, para el «desde X €/día».
+ *
+ * ⚠️ **Un «desde» redondeado hacia abajo anuncia un precio que NO EXISTE**, y
+ * eso es lo que había: la tarjeta del Kadjar decía «desde 32,95 €/día en
+ * alquileres de 31 días o más» y el alquiler más barato de ese coche sale a
+ * **33,26 €/día**. Medido en producción el 8 de octubre de 2026 en los cinco
+ * coches publicados: los cinco anunciaban por debajo de lo que cobran.
+ *
+ * Es poco dinero —entre 0,27 y 0,50 € al día— y da igual: la cifra que se
+ * anuncia tiene que poderse cumplir. Decisión de Dorel ese mismo día, dicha
+ * así: «lo que me importa de verdad es el precio desde que sea real y que se
+ * pueda cumplir realmente; incluso prefiero cobrar un poquito menos de lo que
+ * anuncio».
+ *
+ * ⚠️ **La diferencia con el total NO es un descuido, son dos cosas distintas.**
+ * El **total** de un presupuesto se redondea hacia **abajo**: ahí el cliente
+ * paga menos que la tarifa, que es un regalo y nunca una promesa incumplida. El
+ * **«desde»** es una afirmación sobre el precio mínimo, así que tiene que
+ * quedar por encima de lo que se llega a cobrar. Las dos reglas dicen lo mismo:
+ * **nunca cobrar más de lo anunciado.**
+ */
+export function aTerminacionArriba(bruto: number): number {
+  if (!Number.isFinite(bruto) || bruto < 1) return roundMoney(bruto);
+
+  // Misma cuenta en céntimos enteros y por el mismo motivo de coma flotante.
+  const centimos = Math.round(roundMoney(bruto) * 100);
+  const terminacion = Math.round(TERMINACION * 100);
+  const enteros = Math.floor(centimos / 100) * 100;
+  // Si los céntimos ya llegan a la terminación, se sube a la del euro
+  // siguiente; si no, a la de este. 33,26 → 33,95 y 33,96 → 34,95.
+  const objetivo = centimos - enteros <= terminacion ? enteros + terminacion : enteros + 100 + terminacion;
+  return objetivo / 100;
+}
+
+/**
  * El precio tal y como se publica: con IVA, y terminado en `,95`.
  *
  * ⚠️ **El neto se RECALCULA desde el bruto redondeado, no se conserva.** Si se
@@ -333,6 +404,29 @@ export function publicPrice(
 ): { net: number; gross: number; vatRate: number } {
   const conIva = addVat(net, vatRate);
   const bruto = aTerminacion(conIva.gross);
+  const rate = conIva.vatRate;
+  return {
+    net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),
+    gross: bruto,
+    vatRate: rate,
+  };
+}
+
+/**
+ * El precio del «desde X €/día»: con IVA y terminado en `,95`, **hacia
+ * arriba**.
+ *
+ * ⚠️ **Es la única cifra de la web que se redondea para arriba**, y la razón es
+ * que es la única que **promete un mínimo**. Un total redondeado hacia abajo es
+ * un regalo; un «desde» redondeado hacia abajo es un precio que el cliente no
+ * va a conseguir nunca. Ver `aTerminacionArriba()`.
+ */
+export function publicPriceDesde(
+  net: number,
+  vatRate: number
+): { net: number; gross: number; vatRate: number } {
+  const conIva = addVat(net, vatRate);
+  const bruto = aTerminacionArriba(conIva.gross);
   const rate = conIva.vatRate;
   return {
     net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),

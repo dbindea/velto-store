@@ -17,6 +17,7 @@ import {
   extendedGuaranteeUntil,
   formatPhone,
   newCount,
+  promisedPriceCeiling,
   requestPickupAt,
   requestReturnAt,
   priceStillGuaranteed,
@@ -450,5 +451,69 @@ describe('formatPhone', () => {
     const r = solicitud({ phone: '34600111222' });
     expect(telLink(r)).toBe('tel:+34600111222');
     expect(formatPhone(r.phone)).toBe('+34 600 111 222');
+  });
+});
+
+/**
+ * El precio prometido por la web, que es un techo y no una tarifa.
+ *
+ * ⚠️ **Lo que se prueba es que convertir no cobre MÁS de lo prometido**, que es
+ * lo que pasaba: la web redondea el total a la baja hasta `,95` y el asistente
+ * recalculaba desde la curva al céntimo. Y la otra mitad, que es la que se
+ * olvida: que un cliente con descuento de fidelidad **no pague el techo** si su
+ * tarifa sale por debajo.
+ */
+describe('el techo del precio prometido', () => {
+  it('acuerda lo prometido cuando la tarifa pide más', () => {
+    // El caso real del Kadjar a 31 días: la web prometió 1.030,95 € con IVA,
+    // o sea 852,02 € de neto, y la curva pide 852,50 €.
+    expect(promisedPriceCeiling(852.02, 852.5)).toBe(852.02);
+  });
+
+  it('no toca nada cuando la tarifa ya cumple la promesa', () => {
+    expect(promisedPriceCeiling(852.02, 852.02)).toBeNull();
+    expect(promisedPriceCeiling(852.02, 800)).toBeNull();
+  });
+
+  it('respeta el descuento de fidelidad cuando deja la tarifa por debajo', () => {
+    // 852,50 € con un 5 % son 809,88: al cliente fiel no se le sube al techo.
+    expect(promisedPriceCeiling(852.02, 809.88)).toBeNull();
+  });
+
+  it('no acuerda nada sin promesa', () => {
+    expect(promisedPriceCeiling(undefined, 852.5)).toBeNull();
+    expect(promisedPriceCeiling(null, 852.5)).toBeNull();
+    expect(promisedPriceCeiling(0, 852.5)).toBeNull();
+    expect(promisedPriceCeiling(-10, 852.5)).toBeNull();
+    expect(promisedPriceCeiling(NaN, 852.5)).toBeNull();
+  });
+
+  it('no acuerda nada sin tarifa con la que comparar', () => {
+    // Un coche sin tramo para esos días devuelve 0, y entonces el precio
+    // prometido no se puede dar por cumplible: eso lo para el buscador.
+    expect(promisedPriceCeiling(852.02, 0)).toBeNull();
+    expect(promisedPriceCeiling(852.02, NaN)).toBeNull();
+  });
+
+  it('redondea a céntimos lo que acuerda', () => {
+    expect(promisedPriceCeiling(852.019, 900)).toBe(852.02);
+  });
+
+  /**
+   * ⚠️ **La propiedad que de verdad importa**, porque es la que un abogado
+   * mediría: con la promesa puesta como techo, lo que se acaba cobrando nunca
+   * queda por encima de lo que la web dijo.
+   */
+  it('lo acordado nunca queda por encima de lo prometido', () => {
+    const prometido = 852.02;
+    for (let tarifa = 1; tarifa <= 2000; tarifa += 0.37) {
+      const neto = Math.round(tarifa * 100) / 100;
+      const techo = promisedPriceCeiling(prometido, neto);
+      const seCobra = techo ?? neto;
+      expect(
+        seCobra <= prometido + 1e-9,
+        `con una tarifa de ${neto} € se cobrarían ${seCobra} € y se prometieron ${prometido}`
+      ).toBe(true);
+    }
   });
 });
