@@ -3338,13 +3338,14 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **31** (medido el 3 de octubre de 2026).
+siga dando **32** (medido el 8 de octubre de 2026).
 
 ⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
 **códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
-no cuenta nada, según el patrón. Lo que vale es quitar los escapes y comparar
-los **nombres** contra los del manifiesto de descubrimiento: ahí se ve qué falta,
-no solo cuántas hay — que es la pregunta buena.
+no cuenta nada, según el patrón. **Lo que vale es `--json`**, que evita los
+escapes del todo, y comparar los **nombres** contra los del manifiesto de
+descubrimiento: ahí se ve qué falta, no solo cuántas hay — que es la pregunta
+buena. Intentarlo con `sed` y `grep` sobre la tabla dio **38** donde hay 32.
 
 ### Secrets
 
@@ -4632,16 +4633,32 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay **31** desplegadas y
-el código define **36**: faltan **las cinco** de la AEAT, que no van allí hasta
-el 1 de enero y que un despliegue completo subiría. Medido el 3 de octubre de
-2026 comparando los nombres, no la cifra.
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **32** desplegadas y
+faltan **las cinco** de la AEAT, que no van allí hasta el 1 de enero y que un
+despliegue completo subiría. Medido el 8 de octubre de 2026 comparando los
+**nombres** contra los `export … from` de `index.ts`, no la cifra.
 
-⚠️ **Lo que falta no son functions, es CÓDIGO NUEVO dentro de las que ya están.**
-De las 31, **28 corren código viejo** —27 ficheros cambiados en `functions/src`,
-y uno es `company-config.ts`, que lo importa casi todo—. El guion por tandas y
-en orden de daño está en
-[docs/despliegue-produccion.md](docs/despliegue-produccion.md).
+> Aquí ponía **31**, y que **28 corrían código viejo** con un guion pendiente.
+> Las dos cosas habían caducado: el guion se cerró entero el 5 de octubre
+> —24 functions en 13 órdenes, cero fallos de cuota— y `trackWebVisit` se creó
+> ese día, que es la que faltaba para llegar a 32. Tercera vez que una cifra
+> escrita a mano en este fichero envejece; lo que vale sigue siendo la
+> comparación de nombres, y se saca así:
+>
+> ```bash
+> npx firebase functions:list --project prod --json > fn.json
+> # y comparar contra los `export … from` de functions/src/index.ts
+> ```
+>
+> ⚠️ **Ojo con esa comparación**: un regex sobre `export { … } from` se traga
+> los **comentarios** escritos dentro de las llaves y los cuenta como functions
+> —salieron 41 donde hay 36—. Lo que delata el fallo es que los sobrantes
+> llevan `//` dentro.
+
+El guion por tandas, que vale como plantilla para el siguiente, está en
+[docs/despliegue-produccion.md](docs/despliegue-produccion.md): lo que cambia
+cada vez es **qué functions llevan código nuevo**, y eso se mide recorriendo el
+grafo de imports desde lo que se tocó.
 
 ⚠️ **Y las dos públicas que escriben necesitan HOSTING además de la function.**
 Sus rewrites —`/api/solicitud` y `/api/contacto`— viajan con el hosting, no con

@@ -1360,6 +1360,57 @@ la marca, «del Rey», y solo al final se recorta por palabras enteras. Con la
 frase completa, **la versión ya casi nunca cabe** — y no se pierde nada, sigue
 en el `<h1>` y en la descripción.
 
+## 2 sexdecies. El 8 de octubre, tercera parte — lo anunciado nunca por debajo de lo cobrado
+
+**Desplegado a producción el mismo día** (merge `1e94123` + las tres functions
+públicas por nombre). Lo que lo arrancó fue una pregunta de Dorel sobre la ficha
+del Kadjar —«creo que hay tarifa desde 16 días, no desde 31»— y lo que salió
+detrás fueron **tres incumplimientos de la misma regla**, los tres con dinero:
+
+1. **El «desde» anunciaba por debajo de lo que se cobra, en los cinco coches
+   publicados.** El Kadjar decía «desde 32,95 €/día» y su alquiler más barato
+   sale a **33,27**. Entre 0,27 y 0,50 € al día.
+2. **Convertir una solicitud de la web cobraba 0,57 € de más.** La web promete
+   1.030,95 € por un Kadjar de 31 días —el total redondeado a la baja, que es lo
+   que el cliente vio y lo que sale en el correo— y el asistente recalculaba
+   desde la curva: 1.031,52 €.
+3. **El «desde» no estaba en el día que decía.** Se calculaba donde empieza el
+   último tramo, y la curva sigue bajando hasta el 31. El Peugeot 3008 —tramo
+   final en el 16— decía «desde 59,95 €/día» y ese coche baja a **47,80**.
+
+El marco lo puso Dorel y es el que gobierna los tres: *«imagínate que un abogado
+que ve la web busca fallos para demandarme por precios engañosos; lo que me
+importa es que el precio desde sea real y se pueda cumplir. Incluso prefiero
+cobrar un poquito menos de lo que anuncio»*.
+
+**Lo que está escrito en CLAUDE.md** («Lo que se ANUNCIA nunca puede quedar por
+debajo de lo que se COBRA»), y aquí solo lo que hace falta para retomarlo:
+
+- `aTerminacionArriba()` + `publicPriceDesde()` — el «desde» redondea a `,95`
+  **hacia arriba**; el total de un presupuesto sigue redondeando **hacia abajo**.
+  Parecen incoherentes y dicen lo mismo.
+- `sueloPorDia()` — el suelo está en `LONG_STAY_FROM_DAYS`, no donde empieza el
+  último tramo. La usan `lowestPricePerDay()` y el `precioDesde()` del mapper,
+  que antes repetían el cálculo y estaban mal los dos.
+- `promisedPriceCeiling()` — el precio prometido se acuerda como **techo**: si el
+  descuento de fidelidad del cliente deja la tarifa por debajo, manda la tarifa.
+  Caduca al cambiar de coche o de fechas y sobrevive al cambio de cliente.
+- La **tabla de tramos** de la ficha del coche enseña debajo lo que se cobra de
+  verdad (`curveRangeForTier()`). Es lo que destapó todo: «16-30 días: 30 €/día»
+  son **34,31 → 27,50**.
+
+⚠️ **Lo que queda abierto y lo decide Dorel: la terminación `,95` del «desde» se
+pasa hasta 0,99 €/día.** El Corolla anuncia 30,95 y cobra 30,22 — un 2,4 %. Es
+la dirección segura y es su decisión del 30 de septiembre («precios tipo desde
+24,95»), pero si prefiere que el coche se vea tan barato como es, el «desde»
+puede ir al céntimo. Es una línea.
+
+⚠️ **Y el control de los tests está comprobado, no supuesto.** Revirtiendo cada
+arreglo, su test falla con los números reales: «con 16 días se cobran 41,50 €/día
+y se anuncian 40,95», y `{ porDia: 49.28, dias: 16 }` en vez de
+`{ porDia: 39.5, dias: 31 }`. Un test de propiedad que nadie ha visto fallar no
+prueba nada.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
