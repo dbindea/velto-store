@@ -259,6 +259,34 @@ procedimiento entero de comprobación de DNS—, así que va la tabla completa:
 | `curl -sI https://…` | ⚠️ **`curl` es un alias de `Invoke-WebRequest`**: traga el nombre y no las banderas | **`curl.exe`** |
 | `nslookup -type=TXT x \| grep` | Lo anterior, dos veces | `Resolve-DnsName x -Type TXT -Server 8.8.8.8` |
 
+⚠️ **Y desde el 3 de octubre de 2026 `curl.exe` NO hace HTTPS en esta máquina.**
+Le falta `/mingw64/ssl/certs/ca-bundle.crt` —la carpeta quedó con solo el
+`ca-bundle.trust.crt` y lleva la fecha de ese día, así que se lo llevó el
+incidente de los ficheros desaparecidos— y lo que devuelve es
+**`000` con código de salida 77**, que se lee como «el dominio no responde». Es
+justo la conclusión equivocada contra la que avisa la tabla de dominios: un
+despliegue que se da por fallido porque la comprobación está rota.
+
+Lo mide un `curl.exe -V` —si dice `(Schannel)`, hay salida— y hay dos:
+
+```bash
+CURL_SSL_BACKEND=schannel curl.exe -s -o /dev/null -w "%{http_code}\n" https://veltomobility.com/
+```
+
+```powershell
+Invoke-WebRequest -Uri https://… -Method HEAD -UseBasicParsing -TimeoutSec 30
+```
+
+El primero usa el almacén de certificados de Windows en vez del bundle que falta
+—comprobado el 8 de octubre: `000` sin la variable, **`200`** con ella—. El
+segundo es el que vale para **leer una cabecera concreta**
+(`$r.Headers['Content-Disposition']`), que es lo que hace falta al comprobar un
+PDF. Ojo con el `catch`: un 4xx levanta excepción y el código está en
+`$_.Exception.Response.StatusCode`.
+
+⚠️ **Contra `http://127.0.0.1` sigue funcionando** —no hay TLS que validar—, así
+que el manifiesto de descubrimiento se comprueba igual que siempre.
+
 ⚠️ **Y un `.ps1` se guarda con BOM UTF-8.** Sin él, PowerShell 5.1 lo lee como
 ANSI, los caracteres acentuados y los de caja se corrompen y el fichero
 **falla al parsear** con un error que habla de llaves sin cerrar — a cien líneas
@@ -2376,9 +2404,21 @@ los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| el código define | **36** | — |
-| desarrollo | **36** | — |
-| producción | **31** | **solo** las cinco de la AEAT |
+| el código define | **37** | — |
+| desarrollo | **37** | — |
+| producción | **32** | **solo** las cinco de la AEAT |
+
+⚠️ **Vuelto a medir el 8 de octubre de 2026 y la fila del CÓDIGO también había
+envejecido**: ponía 36 y son **37**. No es que se añadiera ninguna ese día —
+`previewDailyDigest` lleva ahí desde el resumen diario—, es que la cifra se
+escribió a ojo. Lo que la contesta sin contar a mano es el manifiesto de
+descubrimiento, que las enumera: `Object.keys(manifiesto.endpoints).length`.
+⚠️ Y **ojo al parsear `index.ts` con un regex**, que fue mi primer intento: dio
+**24**. El comentario `// Public, reached through the /d/** Hosting rewrite…`
+lleva dentro un `/*`, así que quitar los comentarios de bloque antes que los de
+línea abre uno falso que se cierra en el `*/` siguiente **y se come doce
+exports**. Es el mismo patrón que ya avisa este fichero con los `export … from`:
+el regex se traga los comentarios y la cifra sale creíble y equivocada.
 
 ⚠️ **Vuelto a medir el 3 de octubre de 2026, y la fila de producción había
 envejecido**: ponía **29** y que faltaba además `createBookingRequest`. Las dos
@@ -2443,7 +2483,7 @@ explícito. La misma frase estaba repetida en
 ### El arranque en frío lo paga la function más ligera
 
 ⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
-`index.ts` reexporta las 36 functions. Así que la cadena de imports de la más
+`index.ts` reexporta las 37 functions. Así que la cadena de imports de la más
 pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
 pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
 certificado de la AEAT **antes de devolver una lista de coches**.
@@ -2503,7 +2543,7 @@ en cuanto haya un `onCall` o un `onRequest`.
    especificador mal escrito ya no falla al arrancar — falla la primera vez que
    alguien genera un PDF. Es la lección de `sharp`.
 3. **El manifiesto tiene que salir idéntico.** Es la comprobación que convierte
-   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 36
+   un cambio en 26 ficheros en algo que se puede dar por bueno: describe las 37
    functions con sus triggers, regiones y secrets, así que si no cambia, no
    cambia nada de lo que se despliega.
 
@@ -2532,6 +2572,7 @@ https://velto-store.web.app/d/qA1b2C3d4E5f6G7h      (~46 caracteres)
 /d/q{id}  →  quotes/{id}/quote.pdf
 /d/r{id}  →  reservations/{id}/booking-confirmation.pdf
 /d/c{id}  →  receipts/{id}/receipt.pdf
+/d/i{id}  →  inspections/{id}/report.pdf
 ```
 
 Así el presupuesto sigue siendo tan efímero como era. El id es el secreto, igual que lo era
@@ -2548,6 +2589,47 @@ reutiliza como dirección en otro.
 Como el id aterriza directo en una ruta de Storage, `resolveDocumentPath()` **rechaza todo lo
 que no sea el alfabeto URL-safe** — sin barras ni puntos, así que no se puede salir de su
 carpeta ni llegar a `contracts/`. Está cubierto por tests.
+
+#### El nombre del fichero lo pone el OBJETO, y esta function lo pisaba
+
+⚠️ **`documentLink` no redirige a Storage: lee el fichero y lo escribe ella**, así
+que la cabecera que vale es la suya. Y escribía cuatro nombres fijos
+—`presupuesto.pdf`, `recibo.pdf`, `parte.pdf`, `reserva.pdf`— que **pisaban** el
+`contentDisposition` que `uploadPdf()` guarda en los metadatos desde el 7 de
+octubre de 2026. Es decir: el arreglo del PDF que bajaba como carpeta dejaba
+fuera **justo la vía que decía arreglar «sobre todo»**, la que recibe el cliente.
+Abría el enlace de su WhatsApp, le daba a guardar y se bajaba `reserva.pdf` en
+vez de `Justificante_1234JKL_Marius-Ionescu-Pavel.pdf` — y en español, fuera cual
+fuera el idioma del documento. Corregido el 8 de octubre de 2026.
+
+Hoy `nombreDeDescarga()` **lee** el nombre del metadato y lo reenvía. Tres cosas
+suyas que no son adorno:
+
+- **Leerlo es lo que impide que discrepen.** Recomponerlo aquí pediría ir a
+  Firestore por la matrícula y el cliente, y este endpoint **no tiene nada
+  detrás** a propósito: el id *es* la ruta. Además trae gratis el idioma — quien
+  generó el PDF ya eligió la palabra con `palabraDocumento(tipo, locale)`.
+- **El respaldo es la palabra del tipo a secas** (`Justificante.pdf`), para los
+  objetos subidos **antes** del 7 de octubre, que no llevan metadato. Va en
+  **español** y no en el idioma del navegador del cliente: el que corresponde es
+  el del PDF, y de un objeto sin metadato no se sabe cuál es. Lo que no puede
+  pasar es quedarse sin nombre, porque entonces vuelve la carpeta.
+- **La cabecera se recompone con `disposicionEnLinea()`**, no se reenvía tal
+  cual. Así la decisión de que sea `inline` sigue viviendo en un solo sitio, y un
+  metadato con `attachment` no puede convertir los botones de «Abrir» en botones
+  de descargar.
+
+⚠️ **Y pide los metadatos con `getMetadata()`, no con `exists()`.** Hacen falta
+igualmente, y pedirlos ya contesta si el objeto está: una llamada en vez de dos
+en el camino del cliente. Lo que hay que respetar es la distinción — un 404 de
+ahí es «no está» y cualquier otro fallo sale como **500**, porque un problema de
+permisos no es un documento inexistente. Comprobado en desarrollo contra la
+function desplegada: inexistente 404, prefijo desconocido 404, `qfoo.bar` 404,
+`POST` 405, y el bueno 200 con su nombre.
+
+⚠️ **El `filename` se sanea aunque venga de nuestros propios metadatos.** Acaba
+en un `res.setHeader()`, y un CRLF ahí es una inyección de cabecera: Node la
+rechaza con `ERR_INVALID_CHAR` y el cliente vería un **500** al abrir su enlace.
 
 El orden de los `rewrites` en `firebase.json` importa: `/d/**` va **antes** del catch-all de
 la SPA, o lo captura `index.html`.
@@ -4665,8 +4747,11 @@ despliegue completo subiría. Medido el 8 de octubre de 2026 comparando los
 >
 > ⚠️ **Ojo con esa comparación**: un regex sobre `export { … } from` se traga
 > los **comentarios** escritos dentro de las llaves y los cuenta como functions
-> —salieron 41 donde hay 36—. Lo que delata el fallo es que los sobrantes
-> llevan `//` dentro.
+> —salieron 41 donde hay 37—. Lo que delata el fallo es que los sobrantes
+> llevan `//` dentro. Y por el otro lado se queda **corto**: quitando los
+> comentarios de bloque antes que los de línea salen **24**, porque un `//` que
+> contenga `/*` abre un bloque falso. Las dos veces la cifra es creíble. Lo que
+> no falla es el manifiesto de descubrimiento, que las enumera.
 
 El guion por tandas, que vale como plantilla para el siguiente, está en
 [docs/despliegue-produccion.md](docs/despliegue-produccion.md): lo que cambia
@@ -4681,7 +4766,7 @@ fallo de red. Es la lección de `/d/**`, que estuvo escrita sin desplegar.
 **Los cuatro están puestos desde el 5 de octubre** y se comprueban como dice la
 sección de Cloud Functions: lo que delata uno ausente es `200 text/html`.
 
-⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 36 functions, un
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 37 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
 medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
 cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.

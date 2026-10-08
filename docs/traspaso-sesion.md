@@ -1414,6 +1414,69 @@ y se anuncian 40,95», y `{ porDia: 49.28, dias: 16 }` en vez de
 `{ porDia: 39.5, dias: 31 }`. Un test de propiedad que nadie ha visto fallar no
 prueba nada.
 
+## 2 septdecies. El 8 de octubre, cuarta parte — el nombre del PDF que recibe el cliente
+
+Salió **midiendo el estado**, no buscándolo: al comprobar qué functions corren
+código viejo, `documentLink` aparecía tocada por `4d8561f` —el commit de «los PDF
+bajan como fichero»— y el § 2 ter decía que a esas tres solo les faltaba el
+refactor de imports. Tirando del hilo, el fallo no era de despliegue sino del
+arreglo mismo.
+
+⚠️ **El arreglo del PDF que bajaba como carpeta dejaba fuera justo la vía que
+decía arreglar «sobre todo»: el enlace `/d/…` que recibe el cliente.**
+`documentLink` no redirige a Storage —lee el fichero y lo escribe ella—, así que
+la cabecera que vale es la suya, y escribía cuatro nombres fijos que **pisaban**
+el metadato del objeto:
+
+| lo que el objeto trae dentro | lo que el cliente se bajaba |
+|---|---|
+| `Justificante_1234JKL_Marius-Ionescu-Pavel.pdf` | `reserva.pdf` |
+| `Presupuesto_4466LKK_Andreea-Mitoseriu.pdf` | `presupuesto.pdf` |
+| `Rezervare_1234JKL_Ana-Ionescu.pdf` (rumano) | `reserva.pdf`, en español |
+
+Hoy `nombreDeDescarga()` **lee** el nombre del metadato en vez de componerlo, que
+es lo que impide que las dos vías discrepen y lo que trae gratis el idioma: quien
+generó el PDF ya eligió la palabra con `palabraDocumento(tipo, locale)`.
+Recomponerlo aquí pediría ir a Firestore por la matrícula y el cliente, y este
+endpoint **no tiene nada detrás** a propósito. El detalle está en CLAUDE.md, bajo
+«El nombre del fichero lo pone el OBJETO»; lo que hace falta para retomarlo:
+
+- El **respaldo** —objetos subidos antes del 7 de octubre, sin metadato— es la
+  palabra del tipo a secas (`Justificante.pdf`) y va en **español**: de un objeto
+  sin metadato no se sabe en qué idioma se emitió el PDF.
+- `getMetadata()` sustituye a `exists()`: los metadatos hacen falta igualmente y
+  pedirlos ya contesta si el objeto está. **Un 404 de ahí es «no está» y
+  cualquier otro fallo sale como 500**, que es el riesgo real del cambio y por eso
+  se midió en vivo.
+- El `filename` **se sanea** aunque venga de nuestros metadatos: un CRLF en un
+  `res.setHeader()` es una inyección de cabecera y Node tumba la petición con un
+  500 — el cliente vería un error al abrir su enlace.
+
+⚠️ **Verificado de punta a punta en desarrollo, que es lo que lo cierra.** Se
+generó el justificante de verdad desde el backoffice (`ng serve` en el **4201**,
+porque el 4200 lo ocupaba otro proyecto) y se midió la cabecera por las tres
+vías: el enlace corto con el rewrite, la function directa y Storage. Las tres
+dicen `inline; filename="Justificante_1234JKL_Marius-Ionescu-Pavel.pdf"`. Y los
+caminos de error, contra la function desplegada: inexistente **404**, prefijo
+desconocido **404**, `qfoo.bar` **404**, `POST` **405**.
+
+⚠️ **El control de los tests está comprobado.** Volviendo a ignorar el metadato,
+fallan **cuatro** con los nombres reales: «expected 'Justificante.pdf' to be
+'Justificante_1234JKL_Marius-Ionescu-Pavel.pdf'». Un test que nadie ha visto
+fallar no prueba nada.
+
+Y dos cosas del entorno que salieron en la misma pasada:
+
+⚠️ **`curl.exe` ya no hace HTTPS en esta máquina** — le falta el `ca-bundle.crt`
+desde el incidente del 3 de octubre y devuelve `000` con salida 77, que se lee
+como «el dominio no responde». La vía está en la tabla de PowerShell de
+CLAUDE.md: `CURL_SSL_BACKEND=schannel`, o `Invoke-WebRequest` cuando hay que leer
+una cabecera.
+
+⚠️ **El código define 37 functions, no 36.** La cifra llevaba mal un tiempo en
+los dos ficheros. Lo que la contesta es el manifiesto de descubrimiento; un regex
+sobre `index.ts` da **41 o 24** según por dónde se equivoque con los comentarios.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **Medido el 8 de octubre de 2026, después del despliegue: NO FALTA NADA.**
@@ -1439,12 +1502,16 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
+**Vuelto a medir el 8 de octubre de 2026 por la noche:**
+
 | | |
 |---|---|
-| functions en producción | **32** |
+| functions en producción | **32** de las **37** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
-| `master` vs `develop` | sincronizados |
+| `master` vs `develop` | ⚠️ **develop por delante**: lleva el arreglo del nombre del PDF |
+| pendiente de desplegar | ⚠️ **`documentLink`**, y solo esa |
 | rewrites de la web | los **cuatro** responden |
+| suites | 904 · 758 · 98, las cuatro auditorías OK, lint 0 errores / 291 avisos |
 
 Los rewrites se comprueban con un `POST` de cuerpo vacío, que es lo que separa
 uno que existe de uno que no: `/api/solicitud` y `/api/contacto` dan
@@ -1452,13 +1519,23 @@ uno que existe de uno que no: `/api/solicitud` y `/api/contacto` dan
 `/api/fleet` da 405 porque es de GET y `/api/visita` 204. **Lo que delataría un
 rewrite ausente es `200 text/html`.**
 
-⚠️ **Lo que queda es menor y conviene saberlo: TRES functions corren código
-anterior al 28 de septiembre.** Son `documentLink` (desplegada el 21 de
-septiembre) y las dos de los claims, `syncAuthClaims` y `onAuthorizedUserChanged`
-(el 25). Lo único que les falta es el refactor de imports (`0194ec0`), que es de
-**arranque en frío y no de comportamiento** —el manifiesto de descubrimiento
-salió idéntico—, así que no corrigen ningún fallo: solo arrancan más lentas y con
-más memoria. Se ponen al día cuando toque otra tanda.
+⚠️ **`documentLink` lleva un arreglo que SÍ cambia lo que ve el cliente** (§ 2
+septdecies): el nombre con el que se baja el PDF del enlace corto. Está en
+`develop` y desplegada **solo en desarrollo**. En producción sigue la del 21 de
+septiembre, así que ahí el cliente se baja `reserva.pdf`.
+
+⚠️ **Y las otras DOS siguen corriendo código anterior al 28 de septiembre**:
+`syncAuthClaims` y `onAuthorizedUserChanged`, desplegadas el 25. Lo único que les
+falta es el refactor de imports (`0194ec0`), que es de **arranque en frío y no de
+comportamiento** —el manifiesto de descubrimiento salió idéntico—, así que no
+corrigen ningún fallo: solo arrancan más lentas y con más memoria. Se ponen al
+día cuando toque otra tanda.
+
+> Aquí ponía que las **tres** estaban igual y que a las tres «solo les falta el
+> refactor de imports». Era verdad para dos y falso para `documentLink`: el
+> commit `4d8561f` tocó `storage.ts`, del que depende, y al tirar de ese hilo
+> salió que el arreglo del nombre ni siquiera llegaba a esa vía. Una lista de
+> «esto es menor» conviene volver a comprobarla antes de creérsela.
 
 > Aquí había media página diciendo qué faltaba por subir: catorce functions, el
 > merge, los dos rewrites, `trackWebVisit`, la cláusula de jurisdicción. **Todo
@@ -1560,8 +1637,13 @@ no en uno: la cláusula 15 en los tres idiomas, el resumen de `HIGHLIGHTS` —qu
 lo decía **sin** la salvedad del consumidor y es el que se enseña en la pantalla
 pública de firma— y la página. Ahora manda la regla legal: si el arrendatario es
 consumidor, el juzgado de su domicilio.
-⚠️ **Falta desplegarlo a producción**: lo imprimen `generateContractPdf`,
-`getContractForSigning` y `signContract`, y las functions van a mano.
+✅ **Ya está en producción.** Aquí ponía que faltaba desplegarlo, y había
+caducado: el commit es del 30 de septiembre y las tres functions que lo imprimen
+se subieron después —`getContractForSigning` el 3 de octubre,
+`generateContractPdf` y `signContract` el día 8—. Medido el 8 de octubre con la
+marca de tiempo de cada una (`source.storageSource.generation`), que es lo único
+que contesta esto: las functions van a mano y ningún `git diff` contra `master`
+lo dice.
 
 ### Lo de siempre
 
