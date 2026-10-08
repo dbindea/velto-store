@@ -2386,9 +2386,22 @@ públicas de la web —`createBookingRequest` y `createContactRequest`— **ya e
 desplegadas**. Es justo lo que el párrafo de abajo avisa: la cifra escrita a
 mano se queda vieja, y lo que vale es comparar los **nombres**.
 
-⚠️ **Y estar desplegada no es estar alcanzable.** Esas dos siguen sin sus
-rewrites `/api/solicitud` y `/api/contacto`, que viajan con el **hosting**: la
-petición cae en el catch-all y devuelve HTML donde se espera JSON.
+⚠️ **Y estar desplegada no es estar alcanzable** — la lección sigue valiendo, el
+hecho ya no. Aquí ponía que `createBookingRequest` y `createContactRequest`
+seguían sin sus rewrites `/api/solicitud` y `/api/contacto`, que viajan con el
+**hosting**. **Entraron con el merge del 5 de octubre.** Medido el 8 de octubre
+contra `veltomobility.com`, que es lo que distingue un rewrite que existe de uno
+que no: un `POST` con cuerpo vacío devuelve **`400 application/json`** —o sea
+llega a la function y ella lo rechaza—, no el HTML de la SPA.
+
+```bash
+curl.exe -s -o /dev/null -w "%{http_code} %{content_type}\n" \
+  -X POST -H "content-type: application/json" -d '{}' https://veltomobility.com/api/solicitud
+```
+
+Los cuatro responden: `/api/fleet` **405** (es de GET), `/api/solicitud` y
+`/api/contacto` **400**, `/api/visita` **204**. Lo que delataría un rewrite
+ausente es `200 text/html`.
 
 ⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
 ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
@@ -4665,6 +4678,8 @@ Sus rewrites —`/api/solicitud` y `/api/contacto`— viajan con el hosting, no 
 las functions: sin ellos la petición cae en el catch-all de la web y devuelve
 HTML donde se esperaba JSON, así que el visitante escribe seis líneas y ve un
 fallo de red. Es la lección de `/d/**`, que estuvo escrita sin desplegar.
+**Los cuatro están puestos desde el 5 de octubre** y se comprueban como dice la
+sección de Cloud Functions: lo que delata uno ausente es `200 text/html`.
 
 ⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 36 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:

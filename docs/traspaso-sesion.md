@@ -1,23 +1,26 @@
-# Traspaso de sesión — 3 de octubre de 2026
+# Traspaso de sesión — 8 de octubre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> Lo primero que hay que mirar es **§ 2 nonies**, que es lo último que pasó (2 y
-> 3 de octubre), y después **§ 2 ter**, que dice qué falta por desplegar — y esta
-> vez **no basta con el merge**: hay dos Cloud Functions nuevas y dos rewrites de
-> hosting. El guion completo, por tandas y en orden de daño, está escrito aparte
-> en [despliegue-produccion.md](despliegue-produccion.md), que es el documento
-> que hay que seguir cuando se decida subir. Luego **§ 5**, con los huecos que
-> solo puede cerrar Dorel.
+> **Orden de lectura:** **§ 2 sexdecies**, que es lo último que pasó (8 de
+> octubre: el precio anunciado contra el cobrado, desplegado a producción);
+> después **§ 2 ter**, que dice qué falta por desplegar — hoy **nada**, y por eso
+> esa sección empieza por cómo volver a medirlo en vez de por una lista; y luego
+> **§ 5**, con los huecos que solo puede cerrar Dorel, que son los únicos que
+> siguen abiertos de verdad.
+>
+> ⚠️ **No hay nada pendiente de subir.** `master` y `develop` están
+> sincronizados y producción corre el código de hoy. Si vas a empezar algo,
+> empiezas de limpio.
 >
 > ⚠️ **Y si algo no compila nada más abrir, lee § 2 nonies antes de buscar el
 > fallo en el código.** El 3 de octubre desaparecieron ficheros del espacio de
 > trabajo al azar, `node_modules` incluido, y el síntoma parecía código roto.
 >
-> Las secciones anteriores (§ 2 a § 2 octies) son historia: se leen si algo no
-> cuadra.
+> Las secciones anteriores (§ 2 a § 2 quindecies) son historia: se leen si algo
+> no cuadra.
 >
 > Si lo que buscas es **el mensaje con el que abrir la sesión**, está aparte en
 > [prompt-nueva-sesion.md](prompt-nueva-sesion.md): aquel dice *cómo se trabaja*
@@ -1413,108 +1416,55 @@ prueba nada.
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-**No te fíes de las cifras de aquí abajo, que envejecen — vuelve a preguntarlo:**
+**Medido el 8 de octubre de 2026, después del despliegue: NO FALTA NADA.**
+`master` y `develop` están sincronizados y producción corre el código de hoy.
+
+**No te fíes de esta frase — vuelve a preguntarlo, porque envejece cada sesión:**
 
 ```bash
-git log --oneline origin/master..HEAD     # lo que develop tiene y produccion no
-git log --oneline origin/develop..HEAD    # lo que ni siquiera esta subido
-git diff --stat origin/master..HEAD -- functions/   # vacio = no hay que desplegar functions
+git log --oneline origin/master..HEAD                # develop por delante de produccion
+git log --oneline origin/develop..HEAD               # lo que ni siquiera esta subido
+git diff --stat origin/master..HEAD -- functions/    # vacio = no hay que desplegar functions
 ```
 
-**Medido el 8 de octubre: `develop` va por delante de `master`** con lo de
-§ 2 quaterdecies, desplegado y comprobado **solo en desarrollo** a la espera de
-que Dorel lo pruebe. Para llevarlo a producción hacen falta las dos cosas, en
-este orden:
-
-1. **Catorce functions a mano**, por tandas: las tres públicas del precio
-   (`publicVehicles`, `publicVehicleDetail`, `checkPublicAvailability`), las
-   nueve que generan PDF (`generateQuotePdf`, `generateBookingConfirmationPdf`,
-   `generateInspectionReport`, `generateProforma`, `generateReceipt`,
-   `issueInvoice`, `issueComplianceDeclaration`, `generateContractPdf`,
-   `signContract`) y `createBookingRequest` con `publishVehiclePhoto`.
-2. **El merge**, que publica los dos sitios.
-
-⚠️ **Las tres primeras cambian el precio ANUNCIADO de los cinco coches
-publicados**, que es justo el fallo que se corrige: hoy anuncian hasta un 26 %
-por debajo de lo que cobran. Sin ellas, el merge deja la web igual de
-descuadrada.
-
-⚠️ **Vuelve a medirlo tú, que esta tabla envejece en cada sesión** — y mídelo
-**desde el último despliegue de functions**, no desde `master`: el CI solo
-publica hosting, así que un merge puede dejar el frontend nuevo contra functions
-viejas sin que ningún `git diff` contra `master` lo diga.
-
-⚠️ **Y hay una function NUEVA que el guion del día 3 no nombra: `trackWebVisit`.**
-Medido ese mismo día comparando los **nombres** —no las cifras—, desplegadas:
-
-| | Cuántas | Cuáles faltan |
-|---|---|---|
-| el código define | **37** | — |
-| desarrollo | **37** | — |
-| producción | **31** | las cinco de la AEAT **y `trackWebVisit`** |
-
-Las cinco de la AEAT faltan **a propósito** hasta el 1 de enero. `trackWebVisit`
-no: sin ella, la web publicada mide contra una function que allí no existe. Va
-con su rewrite `/api/visita`, que viaja con el **hosting** — el mismo caso que
-`/api/solicitud` y `/api/contacto`. `VELTO_ANALYTICS_SALT` ya está puesta en los
-dos proyectos.
-
-⚠️ **El guion está escrito aparte**:
-[despliegue-produccion.md](despliegue-produccion.md), con las 28 functions en 15
-órdenes y en orden de daño. Lo de aquí abajo es el porqué; aquel es el qué
-teclear.
-
-⚠️ **Aquí ponía que `createBookingRequest` y `createContactRequest` estaban sin
-desplegar, y YA NO ES CIERTO.** Medido el 3 de octubre con
-`firebase functions:list --project prod`, comparando los **nombres** contra los
-exports de `index.ts`: producción tiene **31** y el código define **36**, y lo
-único que falta son **las cinco de la AEAT** —a propósito, hasta el 1 de enero—.
-Las dos de la web están allí.
-
-⚠️ **Lo que SÍ sigue faltando son sus rewrites, y eso las deja inalcanzables.**
-`/api/solicitud` y `/api/contacto` no están en el `firebase.json` de `master` y
-viajan con el **hosting**, no con las functions: la petición cae en el catch-all
-y devuelve HTML donde se espera JSON. El visitante rellena el formulario y ve un
-fallo de red. Es la lección de `/d/**`, otra vez. **Estar desplegada no es estar
-alcanzable.**
-
-Y la actualización de **`sendDailyDigest`**, que ahora barre también los
-mensajes de contacto a las 24 h — ese plazo **está publicado en `/privacidad`**,
-así que hasta que se despliegue la política dice algo que no se cumple.
-
-⚠️ **En producción, nunca `--only functions` a secas.** Subiría las cinco de la
-AEAT. Y con 36 functions a la vez se agota la cuota de CPU de Cloud Run: medido
-el 28 de septiembre con 35, entraron 15 y fallaron 19.
-
-⚠️ **Antes de desplegar, descarta el código** y compara el manifiesto:
+⚠️ **Y mídelo desde el último despliegue de FUNCTIONS, no desde `master`.** El
+CI solo publica hosting, así que un merge puede dejar el frontend nuevo contra
+functions viejas sin que ningún `git diff` contra `master` lo diga. Lo que lo
+contesta de verdad es la marca de tiempo de cada una:
 
 ```bash
-cd functions && node -e "require('./lib/index.js')"   # el bundle carga
-FUNCTIONS_CONTROL_API=true PORT=8361 node node_modules/firebase-functions/lib/bin/firebase-functions.js . &
-curl -s http://127.0.0.1:8361/__/functions.yaml -o /tmp/manifiesto.json
-curl -s http://127.0.0.1:8361/__/quitquitquit
+npx firebase functions:list --project prod --json > fn.json
+# source.storageSource.generation son MICROsegundos: /1000 da la fecha
 ```
 
-⚠️ **Y hay claves i18n nuevas** —87 líneas añadidas en `es.json` y las mismas en
-los otros dos—, así que aplica la nota de la caché: `assets/i18n/*.json` no lleva
-huella, y aunque `firebase.json` ya declara `no-cache` para esa ruta, el dominio
-propio va detrás de Cloudflare. **Quien dice la verdad sobre lo publicado es
-`rentalcar-veltomobility.web.app`**, no el dominio propio.
+### El estado medido
 
-Para ponerlo en producción: que Dorel lo revise, merge a `master`, y **comprobar
-en el pie de la aplicación que el commit que se está ejecutando es el del
-merge** — para eso se puso (`98436c5`). Ojo con la caché de Cloudflare: el
-dominio propio puede seguir sirviendo lo viejo un rato, y quien dice la verdad es
-`rentalcar-veltomobility.web.app`.
+| | |
+|---|---|
+| functions en producción | **32** |
+| cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
+| `master` vs `develop` | sincronizados |
+| rewrites de la web | los **cuatro** responden |
 
-⚠️ **Y una advertencia de historial: Dorel commitea y sube en paralelo mientras
-yo trabajo.** El día 22, tres commits míos que estaban sin subir aparecieron en
-`origin/develop` a mitad de sesión, y una documentación mía se subió con el
-mensaje «claude» tres segundos después de crearse. **Antes de enmendar nada,
-comprobar si ya está en el remoto** (`git log origin/develop..HEAD`): enmendar un
-commit ya publicado obliga a un force-push, y aquí eso no se hace.
+Los rewrites se comprueban con un `POST` de cuerpo vacío, que es lo que separa
+uno que existe de uno que no: `/api/solicitud` y `/api/contacto` dan
+**`400 application/json`** —llegan a su function y ella los rechaza—,
+`/api/fleet` da 405 porque es de GET y `/api/visita` 204. **Lo que delataría un
+rewrite ausente es `200 text/html`.**
 
----
+⚠️ **Lo que queda es menor y conviene saberlo: TRES functions corren código
+anterior al 28 de septiembre.** Son `documentLink` (desplegada el 21 de
+septiembre) y las dos de los claims, `syncAuthClaims` y `onAuthorizedUserChanged`
+(el 25). Lo único que les falta es el refactor de imports (`0194ec0`), que es de
+**arranque en frío y no de comportamiento** —el manifiesto de descubrimiento
+salió idéntico—, así que no corrigen ningún fallo: solo arrancan más lentas y con
+más memoria. Se ponen al día cuando toque otra tanda.
+
+> Aquí había media página diciendo qué faltaba por subir: catorce functions, el
+> merge, los dos rewrites, `trackWebVisit`, la cláusula de jurisdicción. **Todo
+> eso se desplegó** entre el 5 y el 8 de octubre. Es la cuarta vez que esta
+> sección se queda vieja, y por eso ahora empieza por cómo volver a medirla en
+> vez de por una lista.
 
 ## 3. Cómo entra el trabajo a partir de ahora
 
