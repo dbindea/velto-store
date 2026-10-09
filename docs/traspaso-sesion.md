@@ -1601,23 +1601,44 @@ Cuando llegue uno de esos, el orden que ha funcionado:
 La lista viva está en [mejoras-pendientes.md](mejoras-pendientes.md). Lo que hay
 que tener en la cabeza al retomar:
 
-### Lo que bloquea publicar la web (30 de septiembre de 2026)
+### Lo que bloqueaba publicar la web — quedan DOS, no seis
 
-**Lo primero son los dos despliegues** de § 2 ter: functions y hosting. Sin
-ellos los dos formularios de la web devuelven un fallo de red.
-
-**Y seis huecos que solo puede cerrar Dorel** —eran nueve, y el 30 de
-septiembre de 2026 cerró tres—. Están marcados en el código o en las páginas y
-ninguno se puede inventar:
+⚠️ **Medido el 9 de octubre de 2026, y esta tabla llevaba cuatro filas de
+más.** Dorel avisó de que «muchas de esas cosas ya están hechas», y al
+comprobarlas una a una lo estaban: eran nueve, luego seis, y hoy son **dos**.
+La web ya está publicada, así que los dos despliegues que encabezaban esta
+sección tampoco faltan.
 
 | Qué falta | Dónde muerde |
 |---|---|
-| Si está adherido a alguna entidad de resolución de litigios | `/aviso-legal` lleva un `[PENDIENTE]`; la Ley 7/2017 no deja callarse |
-| En el aeropuerto, dónde se queda con el cliente | terminal y punto de encuentro; hoy la página solo puede decir «te lo llevamos» |
-| Una política de cancelación | no consta en ninguna parte; el contrato solo regula el retraso en la devolución |
-| Si hay ficha de Google Business Profile | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
-| Que `veltomobility.com` RECIBA correo | hoy **no tiene ni un registro MX**: las dos páginas legales nombran esa dirección como canal de derechos RGPD |
+| Si hay ficha de Google Business Profile | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda». **No se puede medir desde aquí** |
 | Que lo legal lo mire un abogado | está escrito y es honesto, pero lo firma una empresa real |
+
+**Los cuatro que se cerraron, con cómo se comprobó cada uno** —porque la próxima
+vez la pregunta será la misma:
+
+- **La resolución de litigios.** Ya no hay ningún `[PENDIENTE]` publicado:
+  `/aviso-legal` está escrito como **no adherido**, que es el estado por
+  defecto, informando de la existencia de entidades acreditadas porque el
+  título III de la Ley 7/2017 obliga a informar **aunque no se esté adherido**.
+  ⚠️ Y **no** enlaza la plataforma europea de ODR, que dejó de operar el 20 de
+  julio de 2025 (Reglamento (UE) 2024/3228): ese enlace, obligatorio durante
+  años, hoy está muerto. Si aparece en una plantilla copiada, está vieja.
+- **El aeropuerto.** `/entrega-a-domicilio` dice Barajas con suplemento fijo y
+  el punto de encuentro en la zona de **Salidas**, y ⚠️ **no nombra una terminal
+  concreta a propósito**: poner un número mandaría a alguien a la T1 cuando
+  aterriza en la T4, que a ciertas horas es media hora de tren. Lo dice el
+  cliente al reservar.
+- **La política de cancelación.** Existe `/devoluciones` desde el 2 de octubre
+  de 2026 —antes estaba a medias dentro de `/condiciones`—, y lo más importante
+  de la página es que **no hay desistimiento**: no es una licencia que se tome
+  Velto, es el art. 103.l del TRLGDCU, que excluye el alquiler de vehículos con
+  fecha de ejecución determinada.
+- **El correo entrante.** `veltomobility.com` **ya recibe**: tiene los tres MX
+  de Cloudflare Email Routing (`route1/2/3.mx.cloudflare.net`), igual que
+  `veltorent.com`. Se comprueba con `Resolve-DnsName veltomobility.com -Type MX
+  -Server 8.8.8.8`. Aquí ponía «no tiene ni un registro MX», y era lo que
+  dejaba sin canal los derechos RGPD que nombran las dos páginas legales.
 
 **Los tres que se cerraron**, con lo que hay que saber de cada uno:
 
@@ -1674,10 +1695,22 @@ automática a clientes conocidos (M-21); y consultar VIES antes de emitir, que
 hoy no se hace y una factura con un NIF-IVA que la AEAT no reconozca no se puede
 remitir nunca.
 
-**Deuda técnica que ahora sí puede morder:** Informes se trae seis colecciones
-enteras y filtra en memoria —es lo primero que se rompe cuando crezcan los
-datos—; y dos operadores pueden reservar el mismo coche, reducido a milisegundos
-pero no cerrado. Lo del lint **ya no aplica**: existe desde el 22 de septiembre.
+**Deuda técnica que ahora sí puede morder:** Informes se trae **cinco**
+colecciones enteras y filtra en memoria —`payments`, `reservations`, `vehicles`,
+`expenses` y `vehicleMaintenance`; solo `collaboratorSales` va con un `where`—, y
+es lo primero que se rompe cuando crezcan los datos. Lo del lint **ya no
+aplica**: existe desde el 22 de septiembre.
+
+✅ **Y la carrera de dos operadores sobre el mismo coche está CERRADA, por
+decisión de Dorel del 9 de octubre de 2026**: «nunca se va a dar, lo puedes dar
+por válido por mi parte». Y tiene razón por donde importa — es el **único
+usuario** de la aplicación, así que el escenario pide dos personas que no
+existen. Queda escrito para que nadie lo reabra como fallo, y con su condición
+dentro: **el día que entre a trabajar un segundo operador, esto vuelve a la
+lista**. Lo que sigue siendo cierto es el diagnóstico técnico —el SDK web no
+permite consultas dentro de una transacción, así que haría falta una Cloud
+Function con el admin SDK— y la mitigación que ya está puesta: la segunda
+comprobación a ras del `commit`, que deja la ventana en milisegundos.
 
 ### Lo que dejó el repaso del 24 de septiembre — CERRADO ese mismo día
 
@@ -1735,24 +1768,40 @@ Tres cosas que hay que retomar, y ninguna es código a medias:
    arreglo está verificado emulando el puntero por CDP —`base-select` con ratón,
    `none` con dedo— pero **nadie lo ha abierto en un teléfono**. Es lo primero
    que hay que preguntarle a Dorel al retomar.
-2. **El redirigir `store.veltomobility.com` → `rentalcar.veltomobility.com`.**
-   Decidido: solo redirección, las URL del cliente no cambian. Se hace **en el
-   panel de Cloudflare** (registro `A` a `192.0.2.1` proxado + una Redirect Rule)
-   o, si se prefiere todo en Google, añadiendo el dominio en Firebase Hosting con
-   la opción de redirigir. **No hay nada que programar** y no está hecho.
-   ⚠️ Añadir un dominio es reversible; **retirar el viejo no**: los contratos
-   firmados llevan impreso un QR que apunta a `/v/…` del dominio con el que se
-   generaron.
-3. **Los avisos del lint**, que a 30 de septiembre de 2026 son **290** —eran 283
-   el día 22—. Son deuda reconocida, no ruido: promesas sin esperar —la mayoría a
-   propósito— y accesibilidad en plantillas (`<div (click)>` que no se alcanzan
-   con el teclado). Se repasan por tandas y **entonces** se suben a `error`.
+2. ✅ **`store.veltomobility.com` YA redirige** a
+   `rentalcar.veltomobility.com`. Medido el 9 de octubre de 2026: **301 Moved
+   Permanently**. Aquí ponía «no está hecho» y la tabla de dominios de CLAUDE.md
+   ya lo daba por bueno desde el 5 de octubre — dos sitios diciendo cosas
+   distintas del mismo hecho, que es lo que pasa con un inventario escrito a
+   mano. Lo que sigue valiendo es el aviso: añadir un dominio es reversible y
+   **retirar el viejo no**, porque los contratos firmados llevan impreso un QR
+   que apunta a `/v/…` del dominio con el que se generaron.
+3. **Los avisos del lint**, que a 9 de octubre de 2026 son **291** —eran 290 el
+   día 30 y 283 el 22—. Son deuda reconocida, no ruido: promesas sin esperar —la
+   mayoría a propósito— y accesibilidad en plantillas (`<div (click)>` que no se
+   alcanzan con el teclado). Se repasan por tandas y **entonces** se suben a
+   `error`.
    ⚠️ **Lo que importa es que sigan siendo 0 errores**: si sale un error, es de
    lo que acabas de tocar.
-4. ⚠️ **El Storage de producción sigue sin vaciar.** Está contado en § 2 sexies:
-   el borrado masivo lo paró el clasificador de permisos y Firestore sí se vació,
-   así que allí siguen **el DNI, el carné y la firma de personas reales cuyas
-   fichas ya no existen**, con su token de descarga vivo. No es deuda estética.
+4. ✅ **El Storage de producción ya NO tiene huérfanos.** Aquí ponía que seguían
+   allí «el DNI, el carné y la firma de personas reales cuyas fichas ya no
+   existen». Comprobado carpeta por carpeta el 9 de octubre de 2026 contra la
+   consola —que es por donde se puede, porque `gcloud` pide reautenticación
+   interactiva y el MCP de Firebase no conecta—: las tres que llevan datos
+   personales **cuadran una a una** con Firestore.
+
+   | Carpeta | En Storage | En Firestore |
+   |---|---|---|
+   | `clients/` | 1 (`HgyWic6A…`) | ese mismo, y es el único cliente |
+   | `contracts/` | 1 (`KamNxLhL…`) | ese mismo, y es el único contrato |
+   | `inspections/` | 1 (`VRRlkUPJ…`) | esa misma |
+
+   ⚠️ **`quotes/` tiene tres carpetas sin documento detrás, y eso es correcto**:
+   un presupuesto **no persiste nada** en Firestore por diseño, así que no hay
+   ficha con la que cuadrarlo. Lo que sí conviene saber es que esos PDF llevan
+   dentro el nombre del cliente y su precio, su enlace `/d/q…` es el secreto —y
+   **no caducan nunca**. Si algún día estorba, eso es una limpieza por fecha, no
+   un huérfano.
 
 Y dos cosas menores que quedaron sin ejercitar en su pantalla real, por no haber
 datos en desarrollo: el panel de **fecha y hora juntas** (solo existe en editar

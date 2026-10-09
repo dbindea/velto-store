@@ -4880,8 +4880,16 @@ de la flota con **30 días** de antelación, y la pantalla de Eventos los deriva
 con `DEFAULT_EVENT_HORIZON = 7`. Lo que faltaba no era el aviso: era que el
 aviso tuviera consecuencias.
 
-⚠️ **Dos operadores pueden reservar el mismo coche.** La disponibilidad se consulta y se
-  escribe después, y entre medias cabe otra reserva. **No se puede cerrar desde el
-  cliente**: el SDK web no permite consultas dentro de una transacción, solo lecturas por
-  id. Haría falta una Cloud Function, donde el admin SDK sí admite `transaction.get(query)`.
-  Mitigado comprobando otra vez a ras del `commit` — la ventana pasa de ~1 s a milisegundos.
+✅ **Dos operadores reservando el mismo coche: CERRADO por decisión de Dorel**
+  del 9 de octubre de 2026 —«nunca se va a dar, lo puedes dar por válido por mi
+  parte»—, y tiene razón por donde importa: es el **único usuario** de la
+  aplicación, así que el escenario pide dos personas que no existen. No se
+  reabre como fallo. ⚠️ **Y su condición viaja con ella: el día que entre a
+  trabajar un segundo operador, esto vuelve a la lista.**
+
+  Queda el diagnóstico, que sigue siendo cierto: la disponibilidad se consulta y
+  se escribe después, y entre medias cabe otra reserva. **No se puede cerrar
+  desde el cliente** —el SDK web no permite consultas dentro de una transacción,
+  solo lecturas por id—, así que haría falta una Cloud Function, donde el admin
+  SDK sí admite `transaction.get(query)`. Y la mitigación ya está puesta: se
+  comprueba otra vez a ras del `commit`, que deja la ventana en milisegundos.
