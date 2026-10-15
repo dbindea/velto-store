@@ -100,16 +100,47 @@ jobs:
       #
       # Las dos comprobaciones son las dos caras del mismo hecho, a propósito:
       # una mira lo que TIENE que estar y la otra lo que NO puede estar.
+      #
+      # ⚠️ **«Ninguna página con `robots`» dejó de valer el 15 de octubre de
+      # 2026, y este guardia habría TUMBADO el despliegue.** Desde ese día hay
+      # exactamente una página del sitio real que sí lleva la marca: `coche.html`,
+      # el respaldo de las fichas, que servía un `200` genérico para cualquier id
+      # inventado —un *soft 404*— y ahora se declara `noindex`. El motivo entero
+      # está en `web/src/pages/coche.astro`.
+      #
+      # ⚠️ **Así que la regla se afina en vez de aflojarse**, que es lo que
+      # tentaba: borrar la comprobación habría devuelto el agujero que existía
+      # antes del 8 de octubre. Lo que distingue de verdad un build de desarrollo
+      # no es que haya una marca, es **cuál** y **dónde**:
+      #
+      #   - desarrollo marca TODAS las páginas, y siempre `noindex, nofollow`;
+      #   - el sitio real marca UNA, y solo con `noindex`.
+      #
+      # Por eso se comprueban las dos cosas, y la segunda afirma el conjunto
+      # EXACTO: así salta tanto un build de desarrollo como alguien que quite el
+      # `sinIndexar` del respaldo y devuelva el soft 404 sin enterarse.
+      #
+      # ⚠️ **Y mira también `web/dist/coche/`**, que el glob anterior no veía:
+      # ahí están las fichas prerrenderizadas, que son justo el contenido que no
+      # puede salir con `noindex` puesto.
       - name: El artefacto de la web es el del sitio real
         run: |
           set -e
           grep -q '^Sitemap:' web/dist/robots.txt \
             || { echo "::error::web/dist/robots.txt no anuncia sitemap: esto es un build de DESARROLLO"; exit 1; }
-          if grep -l 'name="robots"' web/dist/*.html; then
-            echo "::error::hay páginas con <meta name=robots> (noindex): esto es un build de DESARROLLO"
+
+          if grep -rl 'content="noindex, nofollow"' web/dist --include='*.html'; then
+            echo "::error::hay páginas marcadas como el SITIO de desarrollo (noindex, nofollow): esto es un build de DESARROLLO"
             exit 1
           fi
-          echo "OK: robots.txt con sitemap y ninguna página con noindex"
+
+          marcadas=$(grep -rl 'name="robots"' web/dist --include='*.html' | sed 's|^web/dist/||' | sort | tr '\n' ' ')
+          if [ "$marcadas" != "coche.html " ]; then
+            echo "::error::se esperaba que la ÚNICA página sin indexar fuera coche.html, y hay: ${marcadas:-ninguna}"
+            echo "::error::si es a propósito, actualiza este guardia; si no, alguien ha tocado sinIndexar en Base.astro"
+            exit 1
+          fi
+          echo "OK: robots.txt con sitemap, y coche.html es la única página sin indexar"
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

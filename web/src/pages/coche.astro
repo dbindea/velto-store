@@ -22,11 +22,48 @@ import FichaCoche from '../components/FichaCoche.astro';
   coche de la flota. El título bueno lo pone el script al cargar; quien ve el
   genérico es quien comparte el enlace de un coche recién publicado, y eso dura
   hasta el siguiente despliegue.
+
+  ⚠️ **Y por eso mismo NO SE INDEXA, desde el 15 de octubre de 2026.** Esa misma
+  cualidad que la hace útil —servir cualquier id con un texto que vale para
+  cualquier coche— la convierte en un *soft 404* en cuanto el id no existe:
+  `/coche/**` captura todo lo que no tenga HTML propio, así que
+  `/coche/loquesea` contestaba **200** con «Alquila este coche en Arganda del
+  Rey» y sin una sola marca para el rastreador. Medido ese día contra
+  producción: `/coche/demo-clio` → `200`, título genérico, ningún `robots`;
+  `/pagina-que-no-existe`, en cambio, sí daba un 404 honrado.
+
+  ⚠️ **Y no es un caso inventado: esos ids EXISTIERON en el sitemap.** Entre que
+  el dominio empezó a servir el 5 de octubre y el arreglo de `flota-build.ts` de
+  aquella misma tarde, el sitemap de producción ofreció a Google tres fichas de
+  la flota de **desarrollo** —dos de ellas `demo-…`—. Lo que quedó vivo es que
+  esas URL siguen contestando que sí.
+
+  ⚠️ **El coste es que un coche publicado entre despliegues tampoco se indexa, y
+  es lo correcto.** No está en el sitemap hasta el siguiente build de todos
+  modos, y lo que se evitaría indexándolo es peor: la misma página genérica,
+  idéntica para todos los coches nuevos a la vez, que Google tendría que volver a
+  rastrear para enterarse de qué coche era. Cuando se despliega, el coche tiene
+  su `/coche/{id}.html` con su título, su foto y su `Car` de schema.org — y
+  entonces sí entra. Lo que cambia es **cuándo** se indexa, nunca si la página
+  funciona: eso sigue siendo el primer minuto.
+
+  ⚠️ **Lo que NO se puede hacer es quitar la marca con JavaScript al encontrar
+  el coche**, que es la «mejora» evidente y está documentada como trampa por
+  Google: si el HTML servido trae `noindex`, el rastreador puede **no llegar a
+  renderizar** la página, así que nunca vería que se la han quitado. Al revés sí
+  vale —añadirla al no encontrarlo— y no haría falta: esto ya cubre los dos
+  casos sin depender de que corra un script.
+
+  ⚠️ **Y se puede marcar precisamente porque NO declara canónica** (`ruta={null}`
+  aquí abajo). Un `noindex` junto a una canónica a otra URL son señales
+  contradictorias y el `noindex` puede propagarse a la canónica. Si algún día
+  alguien le pone una ruta, hay que quitar esta marca en la misma pasada.
 */}
 <Base
   titulo="Alquila este coche en Arganda del Rey | Velto"
   descripcion="Mira la disponibilidad real día a día, elige tus fechas y te damos el precio final del alquiler, con los impuestos incluidos y sin gastos de gestión."
   ruta={null}
+  sinIndexar
   precarga="coche"
 >
   <FichaCoche />

@@ -15,6 +15,155 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 9 de octubre de 2026 — la lista, medida una a una
+
+Dorel pidió la lista de lo que queda y avisó de que **muchas cosas ya estaban
+hechas**: al comprobarlas lo estaban **seis**. Esta sección es lo que sobrevivió
+a esa comprobación, para retomarlo más adelante — su frase fue *«de momento creo
+que ya es estable»*, y lo medido ese día le da la razón: build, 904 + 758 + 98
+tests, las cuatro auditorías y 0 errores de lint, con producción al día.
+
+⚠️ **Lo que vale de esta sección no son los títulos, es cómo se comprueba cada
+uno.** La lista anterior tenía seis puntos caducados porque se leyeron en vez de
+medirse, así que cada ⬜ de aquí lleva su comando o su sitio.
+
+### ✅ M-55 · El PDF del enlace `/d/…` bajaba con nombre genérico *(hecho el 8-9 oct 2026)*
+
+`documentLink` escribía cuatro nombres fijos —`reserva.pdf`, `presupuesto.pdf`,
+`parte.pdf`, `recibo.pdf`— que **pisaban** el `contentDisposition` de los
+metadatos del objeto, así que el arreglo del 7 de octubre dejaba fuera justo la
+vía que decía arreglar «sobre todo»: la del cliente. Desplegado a producción el 9
+de octubre. Está contado en CLAUDE.md, «El nombre del fichero lo pone el OBJETO».
+
+### ⬜ M-61 · Los documentos ya generados en producción siguen con nombre genérico
+
+Consecuencia de M-55 y **no se arregla con código**: los objetos subidos antes
+del 7 de octubre no llevan metadato, así que bajan `Justificante.pdf` —mejor que
+`reserva.pdf`, pero sin matrícula ni cliente— hasta que alguien **regenere** el
+documento desde su ficha, que es un clic. Los metadatos de ficheros de producción
+no se tocan en masa: mucho riesgo para muy poco. Si un cliente pide su
+justificante, se regenera y ya sale bien.
+
+### ⬜ M-56 · Informes se trae CINCO colecciones enteras y filtra en memoria
+
+`analytics.service.ts` hace `getDocs(collection(...))` sin filtro sobre
+`payments`, `reservations`, `vehicles`, `expenses` y `vehicleMaintenance`; solo
+`collaboratorSales` lleva un `where`. Hoy no se nota y es lo primero que se rompe
+cuando crezcan los datos — y crecen con cada alquiler. Se mide abriendo Informes
+y mirando el número de documentos leídos en la consola de Firebase.
+
+### ⬜ M-57 · `minimumRentalDays` no impide nada al reservar
+
+Se rellena en la ficha del coche, la web lo **enseña** («Alquiler mínimo N días»)
+y `validatePricingRules()` ya lo usa para validar la tabla de tarifas, pero
+**nadie rechaza una reserva más corta**: no aparece en `reservation.service.ts` ni
+en la comprobación de disponibilidad. Es decir, un campo que el operador rellena
+creyendo que hace algo. Dos salidas: que bloquee de verdad, o que la ficha diga
+que es informativo.
+
+### ⬜ M-58 · El turquesa de marca como TEXTO se queda en 3,10:1
+
+Hace falta 4,5:1, así que pide un tono propio para texto —el de fondo se queda
+como está—. Es la única pareja de color de toda la aplicación por debajo del
+mínimo, y es anterior a la unificación de temas. Se mide con el recorrido de
+contraste descrito en CLAUDE.md, «Tema y color».
+
+### ⬜ M-59 · Los 291 avisos del lint
+
+Deuda reconocida, no ruido: promesas sin esperar —la mayoría a propósito, un
+`router.navigate()` no se espera nunca— y accesibilidad en plantillas (`<div
+(click)>` que no se alcanza con el teclado). Se repasan por tandas y **entonces**
+se suben a `error`. ⚠️ Lo que importa es que sigan siendo **0 errores**: si sale
+uno, es de lo que se acaba de tocar.
+
+### ⬜ M-60 · Dos functions corren código del 25 de septiembre
+
+`syncAuthClaims` y `onAuthorizedUserChanged`. Solo les falta el refactor de
+imports (`0194ec0`): **arranque en frío, no comportamiento** —el manifiesto salió
+idéntico—, así que no corrigen ningún fallo. Entran en la próxima tanda que toque
+producción. Se mide con `source.storageSource.generation` del
+`functions:list --project prod --json`.
+
+### ⬜ M-62 · Los presupuestos de `quotes/` no caducan nunca
+
+Salió comprobando el Storage de producción: hay tres carpetas en `quotes/` **sin
+documento detrás**, y eso es correcto —un presupuesto no persiste nada por
+diseño—. Lo que no está decidido es que esos PDF llevan dentro el nombre del
+cliente y su precio, su enlace `/d/q…` es el secreto, y **se quedan ahí para
+siempre**. Un presupuesto «tan efímero como era» que vive indefinidamente no es
+efímero. Sería una limpieza por fecha, no un huérfano que arreglar.
+
+### ⬜ N-39 · Servir los ficheros privados con enlaces firmados de corta vida
+
+Es la mitad que falta del cierre de Storage del 24 de septiembre. Hoy se sirven
+con `getDownloadURL()`, que devuelve una URL con `?token=` y **se salta
+`storage.rules`**: quien la tenga entra sin autenticarse. Lo cerrado es «cuenta
+de Google cualquiera + ruta conocida»; lo abierto es una URL filtrada y los
+tokens que quedaron vivos. Está explicado en CLAUDE.md, «Storage: autenticado NO
+es autorizado».
+
+### ⬜ N-40 · Consultar VIES antes de emitir una factura
+
+No existe en el código (comprobado con un grep por `VIES` en `functions/src` y
+`src/app`: cero resultados). Una factura con un NIF-IVA que la AEAT no reconozca
+**no se puede remitir nunca**, y una factura emitida no se edita ni se borra, así
+que el momento de comprobarlo es antes de consumir número — igual que el país
+obligatorio, que ya se valida ahí.
+
+### ⬜ N-41 · Endurecer el DMARC: `p=none` → `quarantine` → `reject`
+
+Medido el 9 de octubre: los dos dominios siguen en **`p=none`**, que no protege
+de nada, solo pide informes. Por ahí salen contratos para firmar y facturas con
+número de cuenta, así que cualquiera puede mandar un correo que diga venir de
+`@veltomobility.com` sin que al receptor le salte nada. ⚠️ **El paso previo no se
+salta**: hay que mirar los informes de Cloudflare y confirmar que todo lo
+legítimo pasa por **DKIM**, porque el reenvío rompe SPF por diseño. Procedimiento
+y calendario en [dmarc.md](dmarc.md).
+
+### Con fecha, y es lo único con fecha: el guion del 1 de enero de 2027
+
+[verifactu-alta.md](verifactu-alta.md) § 5 bis. Dentro va el **paso 3 bis**, que
+no existía y que lo crea haber empezado a facturar antes: **qué se hace con las
+facturas de 2026** al encender la remisión, porque el barrido se lleva todas las
+filas pendientes **sin filtro de fecha**. Si no se decide nada, en enero
+intentará remitir meses de facturas que nunca estuvieron obligadas. Las dos
+salidas están escritas y **hay que probarlas contra preproducción desde
+desarrollo, antes de enero**.
+
+Hoy: desarrollo emite y remite contra preproducción; producción **emite y no
+remite** (`VELTO_VERIFACTU_ENABLED=false`), y eso **solo lo cambia Dorel**.
+
+### Lo que solo puede cerrar Dorel
+
+| Qué | Por qué no se puede medir desde aquí |
+|---|---|
+| La ficha de **Google Business Profile** | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
+| Que lo **legal lo mire un abogado** | está escrito y es honesto, pero lo firma una empresa real |
+| Abrir un `select` en un **Android de verdad** | el arreglo está verificado emulando el puntero por CDP, pero nadie lo ha abierto en un teléfono |
+| Un **cobro por la vía pública del móvil** que se registre solo en producción | en desarrollo ya ocurrió; una vía de cobro no está probada hasta que alguien paga por ella y la aplicación se entera sin ayuda |
+| El **«desde» a `,95`** se pasa hasta 0,99 €/día | el Corolla anuncia 30,95 y cobra 30,22, un 2,4 %. Es la dirección segura y es su decisión del 30 de septiembre; si prefiere que el coche se vea tan barato como es, el «desde» puede ir al céntimo. Es una línea |
+| La **fianza automática a clientes conocidos** | es M-21, y sigue siendo una decisión de negocio |
+
+### Dos cosas que no son del producto
+
+- ⬜ **`curl.exe` perdió su `ca-bundle.crt`** el 3 de octubre, con el incidente de
+  los ficheros desaparecidos: devuelve `000` con salida 77 contra HTTPS, que se
+  lee como «el dominio no responde». Ya está documentada la vía
+  (`CURL_SSL_BACKEND=schannel`, o `Invoke-WebRequest` para leer una cabecera), así
+  que restaurarlo es comodidad y no bloqueo.
+- ⬜ **Una reserva de DESARROLLO con «Vehículo sin datos / Cliente sin datos»**,
+  vista de pasada el 8 de octubre en la lista: snapshots vacíos. Puede ser basura
+  de una siembra. No investigada, y no afecta a producción.
+
+### Y dos que quedaron sin ejercitar en su pantalla real
+
+Por no haber datos en desarrollo, no por estar a medias: el panel de **fecha y
+hora juntas** —solo existe en editar reserva; se probó el mismo código
+cambiándole el tipo a otro campo— y la **galería de fotos**, cuyo `(closed)` se
+renombró y se comprobó por grep y por compilación pero no abriendo una foto.
+
+---
+
 ## Estado a 3 de octubre de 2026 — el repaso del ciclo entero con el navegador
 
 Recorrido completo de las dos caras —web pública y backoffice— simulando el
@@ -153,15 +302,30 @@ este documento.
   cinco que le faltan son las de la AEAT, que no van hasta el 1 de enero.
   Probados de punta a punta por el rewrite de desarrollo: `/api/contacto`
   devuelve `200` con su referencia y `/api/solicitud` un `400` en JSON.
-- [ ] **Los dos rewrites, en producción.** `/api/solicitud` y `/api/contacto`
-  viajan con el **hosting del target `web`**, que publica el CI al hacer merge a
-  `master`. Hasta ese merge, los formularios de la web de producción darían un
-  fallo de red — llega HTML donde se espera JSON. En desarrollo ya están.
-- [ ] **Seis datos de negocio sin decidir** —eran nueve—, en
-  [traspaso-sesion.md](traspaso-sesion.md) § 5: el punto de encuentro del
-  aeropuerto, la política de cancelación, la adhesión a una entidad de
-  resolución alternativa, la ficha de Google Business, los MX de
-  `veltomobility.com` y una revisión de abogado.
+- [x] **Los dos rewrites, en producción** desde el merge del 5 de octubre de
+  2026. Medido el 8 y el 9 de octubre contra `veltomobility.com`, que es lo que
+  distingue un rewrite que existe de uno que no: `/api/solicitud` y
+  `/api/contacto` dan **`400 application/json`** —llegan a su function y ella los
+  rechaza—, `/api/fleet` da 405 porque es de GET y `/api/visita` 204. Lo que
+  delataría uno ausente es `200 text/html`.
+- [x] **Cuatro de los seis datos de negocio, cerrados.** Comprobados uno a uno el
+  9 de octubre de 2026, porque esta lista llevaba cuatro filas de más:
+  - **La resolución de litigios**: `/aviso-legal` ya no tiene ningún
+    `[PENDIENTE]`. Está escrito como **no adherido**, informando igualmente
+    porque el título III de la Ley 7/2017 obliga a ello aunque no se esté
+    adherido, y **sin** enlazar la plataforma europea de ODR, que dejó de operar
+    el 20 de julio de 2025.
+  - **El aeropuerto**: `/entrega-a-domicilio` dice Barajas con suplemento fijo y
+    el punto de encuentro en la zona de **Salidas**, y no nombra terminal a
+    propósito — un número mandaría a alguien a la T1 cuando aterriza en la T4.
+  - **La política de cancelación**: existe `/devoluciones` desde el 2 de octubre,
+    y lo importante de la página es que **no hay desistimiento**, por el art.
+    103.l del TRLGDCU y no por decisión de la casa.
+  - **El correo entrante**: `veltomobility.com` **ya recibe**, con los tres MX de
+    Cloudflare Email Routing. Se comprueba con
+    `Resolve-DnsName veltomobility.com -Type MX -Server 8.8.8.8`.
+- [ ] **Quedan DOS**, los dos fuera del repositorio: la ficha de **Google
+  Business Profile** y una **revisión de abogado**.
   ⚠️ **Cerrados el 30 de septiembre de 2026 por Dorel:** las localidades
   gratuitas (Arganda y Rivas, con el aeropuerto a tarifa y «Prefiero
   especificar…» para todo lo demás), el **horario de la oficina** —con entrega
@@ -173,9 +337,11 @@ este documento.
   y estaba en **tres** sitios, no en uno: la cláusula 15 en los tres idiomas, el
   resumen de `HIGHLIGHTS` —que lo decía **sin** la salvedad del consumidor, y es
   el que se enseña en la pantalla pública de firma— y `/condiciones`.
-  ⚠️ **Escrito no es desplegado.** El contrato lo imprimen `generateContractPdf`,
-  `getContractForSigning` y `signContract`: desplegadas a **desarrollo** ese
-  mismo día, y **a producción van a mano**, en una tanda de tres.
+  ✅ **Y ya está en producción**, aunque aquí ponía que faltaba: las tres
+  functions que lo imprimen se subieron después del commit —`getContractForSigning`
+  el 3 de octubre, `generateContractPdf` y `signContract` el 8—. Medido el 9 de
+  octubre con la marca de tiempo de cada una, que es lo único que lo contesta:
+  las functions van a mano y ningún `git diff` contra `master` lo dice.
 
 ⚠️ **Y lo que la web afirma queda atado al código.** Un precio, un plazo de
 borrado o una cobertura escritos en una página son afirmaciones contrastables: si
