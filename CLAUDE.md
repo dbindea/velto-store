@@ -1547,8 +1547,23 @@ original.
 
 | | Comando | Modo | `robots.txt` | `<meta robots>` |
 |---|---|---|---|---|
-| desarrollo y PR | `npm --prefix web run build` | `production` | `Allow: /` | `noindex, nofollow` |
-| **el sitio real** | `npm --prefix web run build:prod` | **`live`** | `Allow: /` + sitemap | *(ninguno)* |
+| desarrollo y PR | `npm --prefix web run build` | `production` | `Allow: /` | `noindex, nofollow` **en todas** |
+| **el sitio real** | `npm --prefix web run build:prod` | **`live`** | `Allow: /` + sitemap | `noindex` **solo en `coche.html`** |
+
+⚠️ **Esa última celda decía *(ninguno)* hasta el 15 de octubre de 2026, y ahora
+hay exactamente UNA.** `coche.html` es el respaldo de las fichas —lo sirve el
+rewrite `/coche/**` para cualquier id sin HTML propio— y servía un `200`
+genérico para cualquier id inventado: un *soft 404* ofrecido a Google, con los
+tres `demo-…` que el sitemap llegó a anunciar el 5 de octubre todavía
+contestando que sí. El motivo entero, en
+[coche.astro](web/src/pages/coche.astro); la decisión, en
+[indexacion.ts](web/src/lib/indexacion.ts).
+
+⚠️ **Lo que distingue un build de desarrollo ya no es que HAYA marca, sino cuál
+y dónde**: desarrollo marca **todas** las páginas y siempre con `noindex,
+nofollow`; el sitio real marca **una** y solo con `noindex`. Quien dé por buena
+la regla vieja —«si sale algo, va mal»— tumbará el despliegue por un artefacto
+correcto.
 
 ⚠️ **`astro build` usa el modo `production` POR DEFECTO**, así que el modo por
 defecto **no distingue nada**: lo que distingue es el `--mode live` que pasa
@@ -1563,14 +1578,38 @@ si alguien la enlaza —sin título ni descripción, que es la peor forma de
 aparecer—. Para sacar algo del índice hay que dejar que lo lean y decirles que
 no lo indexen.
 
-⚠️ **Nada comprueba que el artefacto de producción salió en modo `live`**, y es
-una comparación de cadenas colgando de un solo `run` de un solo workflow. Se
-mira así, que es de lo poco que se puede comprobar sin desplegar:
+⚠️ **Aquí ponía que NADA comprobaba que el artefacto salió en modo `live`, y
+dejó de ser cierto el 8 de octubre de 2026.** Lo comprueba un paso propio de
+`firebase-hosting-merge.yml`, **entre compilar y publicar**, y es lo único que
+impide publicar el escaparate real con el `noindex` de desarrollo puesto — un
+fallo que no rompe ningún test, ningún tipo y ningún despliegue, y que Google
+castiga retirando el sitio del índice.
+
+Afirma tres cosas, y las tres hacen falta:
+
+1. `web/dist/robots.txt` **anuncia** el sitemap (solo lo hace el modo `live`).
+2. **Ninguna** página lleva `noindex, nofollow`, que es la marca del *sitio* de
+   desarrollo y no puede aparecer en el real.
+3. La **única** página sin indexar es `coche.html`, afirmando el conjunto
+   exacto. Así salta también por el otro lado: alguien que quite el `sinIndexar`
+   del respaldo y devuelva el soft 404 sin enterarse.
+
+⚠️ **Y mira `web/dist/coche/` además de `web/dist/`**, que el glob original no
+veía: ahí están las fichas prerrenderizadas, que son justo el contenido que no
+puede salir con `noindex`.
+
+Lo mismo a mano, antes de desplegar:
 
 ```bash
-cat web/dist/robots.txt      # con "Sitemap:" = sitio real; sin él = desarrollo
-grep -l 'name="robots"' web/dist/*.html   # si sale algo en el build real, va mal
+cat web/dist/robots.txt                                  # con "Sitemap:" = sitio real
+grep -rl 'name="robots"' web/dist --include='*.html'     # SOLO debe salir coche.html
 ```
+
+⚠️ **Y el guardia se prueba con su control, no mirando que pase.** Las tres
+condiciones se validaron el 15 de octubre de 2026 contra artefactos
+manipulados a propósito —un `noindex, nofollow` colado en `/flota`, y el
+respaldo sin su marca—: las dos fallan, y el artefacto bueno pasa. Un guardia
+que solo se ha visto pasar no está probado.
 
 ⚠️ **Cada despliegue lleva su `target` explícito, y es obligatorio.** Sin él,
 `action-hosting-deploy` no sabe cuál de los dos publicar — y el peor caso no es

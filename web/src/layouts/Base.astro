@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { EMPRESA, SITIO, ES_SITIO_REAL } from '../lib/empresa';
+import { marcaRobots } from '../lib/indexacion';
 
 interface Props {
   titulo: string;
@@ -25,6 +26,19 @@ interface Props {
    * al compilar. Sin defecto, el compilador obliga a contestar una de las dos.
    */
   ruta: string | null;
+  /**
+   * Si esta página pide quedarse FUERA del índice, estando en el sitio real.
+   *
+   * ⚠️ **Va de la mano de `ruta`, y por eso está pegada a ella.** Una página con
+   * esta marca no puede declarar canónica a otra URL: son señales
+   * contradictorias y el riesgo es que el `noindex` se propague a la canónica,
+   * o sea que saque del índice la página buena. El motivo completo, en
+   * `indexacion.ts`.
+   *
+   * Hoy solo la pide `coche.astro`, el respaldo de las fichas, que pasa
+   * `ruta={null}` precisamente por esto.
+   */
+  sinIndexar?: boolean;
   /**
    * La imagen con la que se comparte ESTA página, si tiene una propia.
    *
@@ -71,6 +85,7 @@ const {
   titulo,
   descripcion,
   ruta,
+  sinIndexar,
   precarga,
   imagen,
   imagenAlt: alt,
@@ -191,6 +206,14 @@ const adelanto =
         `if(!i)return;window['__veltoVehicle:'+i]=fetch('/api/vehicle?id='+encodeURIComponent(i),${CABECERA_JSON}).then(${A_JSON});})();`
       : null;
 const canonica = ruta === null ? null : SITIO + ruta;
+/**
+ * ⚠️ **La decide `indexacion.ts` y no un condicional escrito aquí**, por lo
+ * mismo que el título de una ficha salió a `seo.ts`: son dos reglas que se
+ * solapan —el sitio entero y esta página— y escritas sueltas en la plantilla
+ * producían dos `<meta name="robots">` en cuanto coincidieran. Allí está además
+ * el aviso de por qué esto no puede convivir con una canónica a otra URL.
+ */
+const robots = marcaRobots({ sitioReal: ES_SITIO_REAL, sinIndexar });
 const anio = new Date().getFullYear();
 const tel = EMPRESA.telefono.replace(/\s/g, '');
 ---
@@ -279,8 +302,14 @@ const tel = EMPRESA.telefono.replace(/\s/g, '');
        * La marca es del rastreador, no del navegador: `noindex` saca la página
        * del índice y `nofollow` evita que los enlaces internos arrastren a las
        * demás.
+       *
+       * ⚠️ **Y desde el 15 de octubre de 2026 el sitio no es el único que puede
+       * pedirlo: una página suelta también** (`sinIndexar`). Hizo falta para el
+       * respaldo de las fichas de coche, que servía el mismo HTML genérico
+       * —con un `200`— para cualquier id inventado. Las dos reglas se componen
+       * en `indexacion.ts` para que no puedan salir dos etiquetas.
        */
-      !ES_SITIO_REAL && <meta name="robots" content="noindex, nofollow" />
+      robots && <meta name="robots" content={robots} />
     }
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Velto" />
