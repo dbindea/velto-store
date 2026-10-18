@@ -631,7 +631,24 @@ export class BookingRequestsComponent {
          * cuando la solicitud no lo trae —las anteriores al 2 de octubre de
          * 2026—, y entonces el asistente usa su valor por defecto.
          */
-        ...(r.pickupPlace ? { pickupPlace: r.pickupPlace } : {})
+        ...(r.pickupPlace ? { pickupPlace: r.pickupPlace } : {}),
+        /**
+         * ⚠️ **La señal ya cobrada, para que la reserva NO la vuelva a pedir.**
+         * Este campo se escribía desde el 2 de octubre de 2026 y **no lo leía
+         * nadie**: comprobado con grep sobre `src/` y `functions/` el 18 de
+         * octubre. Así que la secuencia normal del negocio terminaba mal —se
+         * cobraban 50 €, se convertía, y `buildInitialPaymentRows()` sembraba
+         * una fila nueva pidiendo otros 50—. La reserva decía deber un dinero
+         * que ya estaba en el banco y el cobro de verdad se quedaba suelto en
+         * Pagos, sin dueño.
+         *
+         * ⚠️ **Viaja esté pagado o no.** Lo que hay que evitar es la fila
+         * duplicada, y eso pasa igual con un cobro pendiente: el operador manda
+         * el enlace, el cliente tarda, y mientras tanto la conversión crearía
+         * la segunda petición del mismo dinero. Quien decide si se puede
+         * adoptar es `canAdoptSignalPayment()`, no esto.
+         */
+        ...(r.signalPaymentId ? { signalPaymentId: r.signalPaymentId } : {})
       }
     });
   }

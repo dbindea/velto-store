@@ -1,5 +1,5 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { Firestore, CollectionReference, arrayUnion, collection, doc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, limit, writeBatch, QueryConstraint } from '@angular/fire/firestore';
+import { Firestore, CollectionReference, arrayUnion, collection, deleteField, doc, updateDoc, getDoc, getDocs, onSnapshot, query, orderBy, where, limit, writeBatch, QueryConstraint } from '@angular/fire/firestore';
 import { Observable, from, firstValueFrom } from 'rxjs';
 import { map, first } from 'rxjs/operators';
 import { Vehicle } from '@shared/models/vehicle.model';
@@ -47,6 +47,12 @@ import {
   initialPaymentStatus,
   roundMoney
 } from '@shared/utils/payment-summary.util';
+import {
+  adoptedSignalFields,
+  canAdoptSignalPayment,
+  netPaidOf,
+  type AdoptableSignal
+} from '@shared/utils/signal-adoption.util';
 import { buildReservationNote } from '@shared/utils/reservation-note.util';
 import { cleanForFirestore } from '@shared/utils/firestore-clean.util';
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
@@ -847,7 +853,23 @@ export class ReservationService {
      * Entrega y recogida a domicilio, en **neto**. Se congelan en la reserva y
      * siembran una fila de cobro cada una. Ver `ReservationDeliveryFees`.
      */
-    deliveryFees?: ReservationDeliveryFees
+    deliveryFees?: ReservationDeliveryFees,
+    /**
+     * La señal **ya cobrada** de la solicitud que se está convirtiendo.
+     *
+     * ⚠️ **Sin esto, convertir cobraba la señal DOS VECES.** El backoffice sabe
+     * cobrarla desde el 2 de octubre de 2026 —crea un cobro libre atado a la
+     * solicitud y manda el enlace `/pay/:id`—, y `signalPaymentId` no lo leía
+     * nadie aquí: la reserva nacía sembrando una fila nueva por el mismo
+     * importe, y el cobro de verdad se quedaba suelto en Pagos.
+     *
+     * ⚠️ **Los dos campos van JUNTOS porque la comprobación los necesita
+     * juntos.** El id del cobro viaja por la URL de «Convertir», así que hay
+     * que poder verificar que ese cobro es de **esta** solicitud: ver
+     * `canAdoptSignalPayment()`. Separados, sería posible llamar con uno y sin
+     * el otro, que es justo el caso que no debe existir.
+     */
+    adoptSignal?: { paymentId: string; bookingRequestId: string }
   ): Promise<string> {
     // Do not rent to a customer marked `blocked`. The wizard disables the
     // button; this is the half that a stale tab or a direct call cannot skip.
@@ -930,7 +952,47 @@ export class ReservationService {
     // ⚠️ Rounded: `108.9 - 50` is `58.900000000000006` in binary floating
     // point, and this figure is written to Firestore and seeded as a payment
     // row that the operator then has to collect to the cent.
-    const initialPayment = roundMoney(Math.min(initialPaymentRequired, finalPrice));
+    /**
+     * La señal ya cobrada de la solicitud, si se está convirtiendo una.
+     *
+     * ⚠️ **Se lee y se valida ANTES de escribir nada.** Si el cobro no se
+     * puede adoptar, lo que corresponde es parar: seguir sembraría la fila
+     * duplicada que todo esto viene a evitar, y hacerlo en silencio dejaría al
+     * operador creyendo que la señal está cobrada en la reserva nueva.
+     *
+     * ⚠️ **Una vez, con `first()`.** `getPaymentById()` devuelve un stream
+     * vivo: sin él, `firstValueFrom` deja un oyente de Firestore abierto por
+     * cada reserva que se crea. Es la lección de `inspection.service.ts`.
+     */
+    let señalAdoptada: AdoptableSignal | null = null;
+    if (adoptSignal) {
+      señalAdoptada = await firstValueFrom(
+        this.paymentService.getPaymentById(adoptSignal.paymentId).pipe(first())
+      );
+      const decision = canAdoptSignalPayment(señalAdoptada, adoptSignal.bookingRequestId);
+      if (!decision.ok) throw new Error(decision.reason);
+    }
+
+    // A signal larger than the whole rental would leave the reservation
+    // impossible to settle, so it is capped at the agreed price.
+    //
+    // ⚠️ Rounded: `108.9 - 50` is `58.900000000000006` in binary floating
+    // point, and this figure is written to Firestore and seeded as a payment
+    // row that the operator then has to collect to the cent.
+    //
+    /**
+     * ⚠️ **Con señal adoptada, el importe lo pone el COBRO y no el asistente.**
+     * Al cliente se le pidió una cifra concreta y la pagó contra esa fila; si
+     * la reserva naciera pidiendo otra, la fila y la reserva dirían cosas
+     * distintas sobre el mismo dinero. El tope contra el precio se mantiene
+     * —una señal mayor que el alquiler deja la reserva imposible de liquidar—,
+     * así que la diferencia la absorbe el resto sin mover el total, que es lo
+     * mismo que hace `redistributeInitialPayment()` al editar.
+     */
+    const señalPedida = señalAdoptada
+      ? roundMoney(Math.max(0, Number(señalAdoptada.amount) || 0))
+      : initialPaymentRequired;
+    const initialPayment = roundMoney(Math.min(señalPedida, finalPrice));
     const remainingPaymentRequired = roundMoney(Math.max(0, finalPrice - initialPayment));
 
     const reservation: Omit<Reservation, 'id'> = {
@@ -1003,9 +1065,20 @@ export class ReservationService {
        * coche sale del neto del alquiler, y el desplazamiento lo pone la agencia.
        */
       deliveryFees: normalizeDeliveryFees(deliveryFees),
-      // Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
-      // `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
-      initialPayment: buildInitialPayment(initialPayment),
+      /**
+       * Una señal a 0 nace `waived`, no pendiente de cero euros. Ver
+       * `buildInitialPayment`; misma idea que `buildDeposit` con la fianza.
+       *
+       * ⚠️ **Con señal adoptada nace con lo que YA se cobró dentro.** Ese es
+       * todo el objeto de la adopción: la reserva reconoce el dinero que entró
+       * por la solicitud en vez de volver a pedirlo. Y como
+       * `initialPaymentStatus()` mira lo pagado antes que lo pedido, un cobro
+       * completo la deja `paid` sin que nadie registre nada a mano.
+       */
+      initialPayment: buildInitialPayment(
+        initialPayment,
+        señalAdoptada ? { paidAmount: netPaidOf(señalAdoptada) } : undefined
+      ),
       remainingPayment: {
         requiredAmount: remainingPaymentRequired,
         paidAmount: 0,
@@ -1019,16 +1092,34 @@ export class ReservationService {
       deposit: buildDeposit(depositRequired, depositWaivedReason),
       paymentStatus: 'pending',
       contractStatus: 'pending',
-      // Sin señal no hay cobro que dispare la confirmación, así que la reserva
-      // nace ya confirmada. Ver `reservationStatusAfterInitialChange`.
+      /**
+       * Sin señal no hay cobro que dispare la confirmación, así que la reserva
+       * nace ya confirmada. Ver `reservationStatusAfterInitialChange`.
+       *
+       * ⚠️ **Y con la señal YA COBRADA, igual.** Es lo que Dorel pidió con sus
+       * palabras —«la reserva se deja ya confirmada»— y sale solo de pasarle lo
+       * pagado: ese guard confirma cuando lo pagado alcanza lo pedido. Sin el
+       * tercer argumento, una reserva nacida de una solicitud ya pagada se
+       * quedaría en `reserved` para siempre, porque la otra vía a `confirmed`
+       * —`reservationStatusAfterPayment()`— solo corre al **registrar** un
+       * cobro, y aquí no se registra ninguno: se adopta uno que ya existía.
+       */
       reservationStatus:
-        reservationStatusAfterInitialChange('reserved', initialPayment) ?? 'reserved',
+        reservationStatusAfterInitialChange(
+          'reserved',
+          initialPayment,
+          señalAdoptada ? netPaidOf(señalAdoptada) : 0
+        ) ?? 'reserved',
       notes,
       createdAt: { seconds: Date.now() / 1000 },
       updatedAt: { seconds: Date.now() / 1000 }
     };
 
-    return this.commitReservationWithPayments(reservation, vehicle);
+    return this.commitReservationWithPayments(
+      reservation,
+      vehicle,
+      señalAdoptada?.id ? { paymentId: señalAdoptada.id } : undefined
+    );
   }
 
   /**
@@ -1619,7 +1710,19 @@ export class ReservationService {
      * propósito: así ninguno de los dos puede olvidarse: es el mismo motivo por
      * el que la reserva y sus filas de pago se escriben en un solo sitio.
      */
-    vehicle: Vehicle
+    vehicle: Vehicle,
+    /**
+     * El cobro de la señal que la reserva **adopta** en vez de volver a pedir.
+     *
+     * ⚠️ **Entra en el MISMO `writeBatch` que la reserva**, y ese es todo el
+     * motivo de que viaje hasta aquí en vez de escribirse después. Separados,
+     * un fallo entre medias dejaría la reserva creada diciendo que su señal
+     * está cobrada y el cobro todavía suelto y atado a la solicitud: dos
+     * documentos contándose cosas distintas sobre los mismos 50 €, y ninguna
+     * pantalla donde se vea. Es la misma razón por la que las filas de cobro no
+     * se siembran una a una.
+     */
+    adoptedSignal?: { paymentId: string }
   ): Promise<string> {
     const availability = await this.checkVehicleAvailability(
       reservation.vehicleId,
@@ -1655,7 +1758,55 @@ export class ReservationService {
     const saved: Reservation = { id: reservationRef.id, ...conReparto };
     const paymentsRef = collection(this.firestore, 'payments');
     for (const row of this.paymentService.buildInitialPayments(reservationRef.id, saved)) {
+      /**
+       * ⚠️ **La señal NO se siembra si se está adoptando una ya cobrada.** Es
+       * la mitad que faltaba: sin esto, la reserva nacería con su señal dada
+       * por pagada **y** con una fila nueva pidiendo ese mismo dinero otra vez.
+       * El resumen se deriva de `payments`, así que el alquiler quedaría
+       * debiendo una cantidad que ya está en el banco y no habría forma de
+       * cerrarlo.
+       */
+      if (adoptedSignal && row['type'] === 'initial_payment') continue;
       batch.set(doc(paymentsRef), row);
+    }
+
+    /**
+     * Y el cobro que ya existía pasa a ser la señal de esta reserva.
+     *
+     * ⚠️ **`isFreePayment` se borra con `deleteField()` y se añade AQUÍ, fuera
+     * del mapa.** Es un centinela —un objeto con propiedades propias— y
+     * cualquier limpiador que lo recorriera lo dejaría en `{}`: Firestore
+     * escribiría un mapa vacío en vez de borrar el campo. Es la regla de
+     * `cleanForFirestore()`, y ya corrompió los timestamps de los contratos.
+     *
+     * ⚠️ **Y hay que borrarlo, no dejarlo.** Un cobro con `isFreePayment` sigue
+     * siendo corregible desde la pantalla de Pagos; adoptado, su importe lo
+     * gobierna la reserva (`isGovernedByReservation`), que es la que mueve
+     * señal y resto a la vez sin alterar el total.
+     */
+    if (adoptedSignal) {
+      /**
+       * ⚠️ **Se LIMPIA, y esto falló de verdad al probarlo.** Las filas
+       * sembradas pasan por `cleanData()` dentro de `buildInitialPayments()`;
+       * ésta no pasaba por ninguno, y el `clientSnapshot` de un cliente sin
+       * correo lleva `email: undefined` dentro. Firestore lo rechaza entero:
+       * «Unsupported field value: undefined (found in field
+       * clientSnapshot.email)», y como va en el mismo `writeBatch`, **no se
+       * creaba la reserva tampoco**.
+       *
+       * Lo cazó recorrer el flujo contra desarrollo con un cliente de alta
+       * rápida —sin correo, que es el caso normal al convertir—: el typecheck,
+       * los tests y la build pasaban los tres.
+       *
+       * ⚠️ **Y el centinela se añade DESPUÉS de limpiar.** `deleteField()` es
+       * un objeto con propiedades propias: dentro del mapa que se limpia, el
+       * limpiador lo dejaría en `{}` y Firestore escribiría un mapa vacío en
+       * vez de borrar el campo.
+       */
+      batch.update(doc(this.firestore, `payments/${adoptedSignal.paymentId}`), {
+        ...this.cleanData(adoptedSignalFields(reservationRef.id, saved)),
+        isFreePayment: deleteField()
+      });
     }
 
     await batch.commit();

@@ -1318,6 +1318,16 @@
       "markFailed": "La reserva se creó, pero la solicitud no se pudo marcar como convertida",
       "banner": "Viene de la solicitud",
       "pricePromised": "Precio prometido en la web: {price}. No se sube sin avisar al cliente."
+    },
+    "signal": {
+      "alreadyPaid": "Esta señal ya está cobrada: la reserva la reconoce y no la vuelve a pedir",
+      "adoptedPending": "La señal de la solicitud sigue pendiente de cobro. La reserva la hereda en vez de pedir otra.",
+      "adopt": {
+        "notFound": "No se encuentra el cobro de la señal de esta solicitud",
+        "alreadyAttached": "Ese cobro ya pertenece a otra reserva",
+        "cancelled": "El cobro de la señal está cancelado: no se puede dar por pedida",
+        "otherRequest": "Ese cobro es de otra solicitud"
+      }
     }
   },
   "search": {

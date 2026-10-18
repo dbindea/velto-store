@@ -1318,6 +1318,16 @@
       "markFailed": "Rezervarea a fost creată, dar cererea nu a putut fi marcată ca transformată",
       "banner": "Din cererea",
       "pricePromised": "Prețul promis pe site: {price}. Nu se mărește fără să fie anunțat clientul."
+    },
+    "signal": {
+      "alreadyPaid": "Acest avans este deja încasat: rezervarea îl preia și nu îl mai cere o dată",
+      "adoptedPending": "Avansul cererii este încă neîncasat. Rezervarea îl preia în loc să ceară altul.",
+      "adopt": {
+        "notFound": "Nu se găsește încasarea avansului pentru această cerere",
+        "alreadyAttached": "Acea încasare aparține deja altei rezervări",
+        "cancelled": "Încasarea avansului este anulată: nu poate fi considerată cerută",
+        "otherRequest": "Acea încasare este a altei cereri"
+      }
     }
   },
   "search": {

@@ -1,6 +1,8 @@
 import { DatePickerDirective } from '@shared/directives/date-picker.directive';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { first } from 'rxjs/operators';
 import { NotificationService } from '@core/notifications/notification.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -32,6 +34,13 @@ import { FieldProblems, hasProblems } from '@shared/utils/form-problems.util';
 import { FormErrorComponent } from '@shared/components/form-error/form-error.component';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { roundMoney, suggestInitialPayment } from '@shared/utils/payment-summary.util';
+import { PaymentService } from '@features/payments/services/payment.service';
+import {
+  adoptedSignalIsPaid,
+  canAdoptSignalPayment,
+  netPaidOf,
+  type AdoptableSignal
+} from '@shared/utils/signal-adoption.util';
 import {
   canCreateReservationForClient,
   clientTrustWarning as trustWarningOf
@@ -57,6 +66,8 @@ export class ReservationCreateComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private bookingRequests = inject(BookingRequestService);
+  private payments = inject(PaymentService);
+  private destroyRef = inject(DestroyRef);
   private notifications = inject(NotificationService);
   private reservationService = inject(ReservationService);
   private clientService = inject(ClientService);
@@ -255,6 +266,19 @@ export class ReservationCreateComponent implements OnInit {
     this.fromRequestRef = q.get('requestRef') ?? '';
     this.pickupDateTimeInput = pickup;
     this.returnDateTimeInput = devolucion;
+
+    /**
+     * ⚠️ **La señal ya cobrada de la solicitud.** Sin esto, convertir una
+     * solicitud cuya señal ya se cobró creaba una fila nueva pidiendo ese mismo
+     * dinero otra vez — fallo vivo desde el 2 de octubre de 2026, porque
+     * `signalPaymentId` se escribía y no lo leía nadie aquí.
+     *
+     * Se carga para poder **decirlo en pantalla**: el operador tiene que ver
+     * que esa señal ya está cobrada antes de crear la reserva, no enterarse
+     * después mirando los pagos.
+     */
+    const señal = q.get('signalPaymentId');
+    if (señal && this.fromRequestId) this.cargarSenalCobrada(señal, this.fromRequestId);
 
     /**
      * ⚠️ **El alta rápida nace escrita, y el buscador NO.** Lo que la web trae
@@ -610,7 +634,17 @@ export class ReservationCreateComponent implements OnInit {
         this.priceOverridden ? this.netPrice : undefined,
         this.depositWaived ? this.depositWaivedReason.trim() : undefined,
         this.vatExempt,
-        { pickupFee: Number(this.deliveryPickupFee) || 0, returnFee: Number(this.deliveryReturnFee) || 0 }
+        { pickupFee: Number(this.deliveryPickupFee) || 0, returnFee: Number(this.deliveryReturnFee) || 0 },
+        /**
+         * ⚠️ **La señal ya cobrada, para que la reserva la ADOPTE en vez de
+         * volver a pedirla.** Va con su solicitud al lado porque el servicio
+         * vuelve a comprobar que ese cobro es de ésta: lo de aquí es la
+         * pantalla, y aquello es lo que impide que una pestaña vieja o una URL
+         * tecleada aten un cobro ajeno.
+         */
+        this.senalCobrada?.id && this.fromRequestId
+          ? { paymentId: this.senalCobrada.id, bookingRequestId: this.fromRequestId }
+          : undefined
       );
 
       /**
@@ -1132,14 +1166,71 @@ export class ReservationCreateComponent implements OnInit {
     this.priceCleared = false;
   }
 
+  // --- La señal ya cobrada de la solicitud ---------------------------------
+
+  /**
+   * El cobro de la señal que esta reserva va a adoptar, si lo hay.
+   *
+   * ⚠️ **Nace `null` y se queda `null` si no se puede adoptar.** El id llega
+   * por la URL, así que puede señalar a un cobro cancelado o de otra solicitud;
+   * quien lo decide es `canAdoptSignalPayment()`, la misma autoridad que vuelve
+   * a preguntar el servicio antes de escribir. Aquí es para la pantalla — allí
+   * es lo que impide que una pestaña vieja ate un cobro ajeno.
+   */
+  senalCobrada: AdoptableSignal | null = null;
+
+  private cargarSenalCobrada(paymentId: string, bookingRequestId: string): void {
+    this.payments
+      .getPaymentById(paymentId)
+      .pipe(first(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((pago) => {
+        if (!pago) return;
+        /**
+         * ⚠️ **Si no se puede adoptar, se avisa y se sigue.** Lo que no puede
+         * pasar es que el operador cree la reserva creyendo que la señal está
+         * cobrada cuando no se va a adoptar; y tampoco tumbar la conversión por
+         * esto, que dejaría una solicitud imposible de convertir por un cobro
+         * mal apuntado. Se queda sin adoptar y la reserva pide la señal como
+         * cualquier otra — que es el comportamiento de siempre.
+         */
+        const decision = canAdoptSignalPayment(pago, bookingRequestId);
+        if (!decision.ok) {
+          this.notifications.error(decision.reason);
+          return;
+        }
+        this.senalCobrada = pago;
+      });
+  }
+
+  /** Lo que de verdad entró por esa señal, descontando lo devuelto. */
+  get senalYaPagada(): number {
+    return this.senalCobrada ? netPaidOf(this.senalCobrada) : 0;
+  }
+
+  /** Si esa señal está cobrada del todo. La pantalla lo dice distinto. */
+  get senalEstaCobrada(): boolean {
+    return !!this.senalCobrada && adoptedSignalIsPaid(this.senalCobrada);
+  }
+
   /**
    * ⚠️ **La regla vive en `payment-summary.util.ts`, no aquí.** Estaba escrita
    * en este getter —`min(50, precio)`— y era el único sitio que sabía cuánta
    * señal se pide; en cuanto hubo que cobrarla también desde la ficha de una
    * solicitud de la web, eso se habría copiado. Y de paso cambia: por debajo
    * de 50 € la señal son 25 y no el alquiler entero.
+   *
+   * ⚠️ **Con señal adoptada manda el COBRO, no la propuesta.** Al cliente se le
+   * pidió una cifra y pagó contra ella; recalcularla aquí haría que el resumen
+   * enseñara una señal distinta de la que la reserva va a reconocer, y de la
+   * que el cliente tiene en su extracto. El tope contra el precio lo mantiene
+   * el servicio, que es quien cierra el total.
    */
   get initialPayment(): number {
+    if (this.senalCobrada) {
+      return roundMoney(
+        Math.min(Math.max(0, Number(this.senalCobrada.amount) || 0), this.finalPrice)
+      );
+    }
     return suggestInitialPayment(this.finalPrice);
   }
 

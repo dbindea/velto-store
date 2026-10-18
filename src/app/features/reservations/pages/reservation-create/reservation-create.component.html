@@ -587,6 +587,32 @@
                   <span>{{ 'reservations.pricing.initialPayment' | translate }}:</span>
                   <span class="highlight">{{ initialPayment | number:'1.2-2' }} €</span>
                 </div>
+
+                <!--
+                  ⚠️ **Que la señal ya está cobrada hay que DECIRLO aquí.** El
+                  importe de arriba no distingue entre «hay que cobrar 50 €» y
+                  «ya están cobrados», y son lo contrario: sin esta línea el
+                  operador crea la reserva y va a pedirle al cliente un dinero
+                  que ya pagó por el enlace.
+
+                  ⚠️ **Y distingue cobrada de PENDIENTE.** El cobro se adopta
+                  igual aunque el cliente no haya pagado todavía —lo que se
+                  evita es la fila duplicada—, pero entonces lo que la reserva
+                  tiene es una señal pendiente, no una resuelta. Enseñarlas
+                  igual sería el mismo error que dar por cobrado un parcial.
+                -->
+                @if (senalCobrada) {
+                  <p class="hint" [class.is-ok]="senalEstaCobrada">
+                    @if (senalEstaCobrada) {
+                      <i class="pi pi-check-circle"></i>
+                      {{ 'reservations.signal.alreadyPaid' | translate }}
+                      ({{ senalYaPagada | number:'1.2-2' }} €)
+                    } @else {
+                      <i class="pi pi-clock"></i>
+                      {{ 'reservations.signal.adoptedPending' | translate }}
+                    }
+                  </p>
+                }
                 <div class="price-row">
                   <span>{{ 'reservations.pricing.remainingPayment' | translate }}:</span>
                   <span>{{ remainingPayment | number:'1.2-2' }} €</span>

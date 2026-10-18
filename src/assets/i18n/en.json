@@ -1318,6 +1318,16 @@
       "markFailed": "The reservation was created, but the request could not be marked as converted",
       "banner": "From request",
       "pricePromised": "Price promised on the website: {price}. Do not raise it without telling the customer."
+    },
+    "signal": {
+      "alreadyPaid": "This advance payment is already collected: the reservation takes it over and will not ask for it again",
+      "adoptedPending": "The request's advance payment is still outstanding. The reservation takes it over instead of asking for another.",
+      "adopt": {
+        "notFound": "The advance payment for this request cannot be found",
+        "alreadyAttached": "That payment already belongs to another reservation",
+        "cancelled": "The advance payment is cancelled: it cannot be treated as requested",
+        "otherRequest": "That payment belongs to a different request"
+      }
     }
   },
   "search": {
