@@ -57,26 +57,49 @@ import { EMPRESA } from '../lib/empresa';
         avisar y no se te cobra nada. El coche tampoco queda apartado.
       </p>
 
+      {/*
+        ⚠️ **Lo que se reserva es una CATEGORÍA, no una matrícula** (Dorel, 17
+        de octubre de 2026). Aquí ponía «el coche queda apartado para tus
+        fechas y deja de ofrecerse a nadie más», que era falso —pagar la señal
+        no crea la reserva, y sin reserva nada bloquea el coche— y además
+        prometía por escrito lo único que Dorel decía no prometer. El motivo
+        largo está en `condiciones.astro`, junto a la misma frase.
+
+        ⚠️ **Y absorbe lo que esta página ya hacía por la puerta de atrás.**
+        El último párrafo decía «si te va bien, te ofrecemos antes otro coche
+        equivalente; la elección es tuya»: la promesa de categoría estaba
+        aquí, escondida como cortesía y solo para el caso de avería. Ahora es
+        la regla, y se dice al principio.
+
+        ⚠️ **Las negritas bajan a propósito.** Esta página llegó a tener el
+        11,9 % de sus palabras resaltadas —una de cada ocho—, con párrafos de
+        cuatro negritas en veintinueve palabras. Cuando casi todo destaca, no
+        destaca nada, y se lee como un texto que nadie ha releído. Lo que se
+        resalta ahora es lo que cuesta dinero: que la señal no vuelve, y que
+        si falla Velto vuelve todo.
+      */}
       <h2 id="senal">La señal</h2>
       <p>
-        La reserva queda en firme cuando abonas la <strong>señal</strong>:
-        <strong>50 €</strong>, o <strong>25 €</strong> si el alquiler cuesta
-        menos de 50 €. Esa señal <strong>se descuenta del precio del
-        alquiler</strong> — no es un cargo aparte.
+        La reserva se cierra cuando abonas la <strong>señal</strong>: 50 €, o
+        25 € si el alquiler cuesta menos de 50 €, y nunca más que el propio
+        alquiler. Esa señal se descuenta del precio del alquiler, no es un cargo
+        aparte.
       </p>
       <p>
-        Desde ese momento el coche queda apartado para tus fechas y deja de
-        ofrecerse a nadie más. Por eso, <strong>si cancelas tú, la señal no se
-        devuelve</strong>: es lo único que compensa tener un coche parado unos
-        días sin alquilar. El resto del alquiler, si ya lo hubieras pagado, sí
-        se devuelve entero.
+        Lo que reservas es un vehículo de la categoría que has elegido: puede
+        ser el que viste o uno similar de la misma categoría o superior, nunca
+        inferior, y el modelo concreto se confirma al cerrar la recogida.
       </p>
       <p>
-        <strong>Y al revés.</strong> Si somos nosotros los que no podemos darte
-        el coche —una avería, un siniestro, cualquier cosa—, te devolvemos
+        <strong>Si cancelas tú, la señal no se devuelve</strong>: es lo que
+        compensa el hueco que deja en la agenda un alquiler anulado. El resto
+        del alquiler, si ya lo hubieras pagado, sí se devuelve entero.
+      </p>
+      <p>
+        Y al revés: si somos nosotros los que no podemos darte un coche de esa
+        categoría —una avería, un siniestro, cualquier cosa—, te devolvemos
         <strong>todo lo pagado, señal incluida</strong>, sin que tengas que
-        reclamarlo. Si te va bien, te ofrecemos antes otro coche equivalente;
-        la elección es tuya.
+        reclamarlo.
       </p>
 
       {/*
@@ -108,6 +131,23 @@ import { EMPRESA } from '../lib/empresa';
         kilómetros de más, que se te justifica con el parte y sus fotos. Si la
         reserva se cancela antes de entregar el coche, la fianza vuelve entera
         aunque la señal no.
+      </p>
+      {/*
+        ⚠️ **La fianza se COBRA, no se retiene, y hay que decirlo.**
+        `REDSYS_TRANSACTION_TYPE` no está definida en ningún
+        `functions/.env.<proyecto>`, así que `redsys.ts` cae a `'0'`:
+        autorización, un cargo normal. No es una preautorización.
+
+        El cliente que espera una retención ve en su extracto un cobro de
+        200 €, cree que le hemos cobrado de más y llama. Dicho antes, no pasa
+        nada; descubierto en el extracto, es una incidencia — y con el banco
+        delante, un motivo de devolución. Es el mismo criterio que hizo
+        imprimir los plazos reales de abono en vez de «unos días».
+      */}
+      <p>
+        Si la pagas con tarjeta, la fianza se carga en ella como cualquier otro
+        cobro: la verás en tu extracto, no es una retención. Lo que no haya que
+        retener se te abona a esa misma tarjeta, con los plazos de aquí abajo.
       </p>
 
       <h2 id="como">Cómo se devuelve el dinero</h2>
@@ -145,18 +185,38 @@ import { EMPRESA } from '../lib/empresa';
         en las que nos apoyamos.
       </p>
 
+      {/*
+        ⚠️ **El espacio va FUERA de la etiqueta.** Aquí ponía
+        `<strong> Mastercard</strong>` y `<strong> euros (EUR)</strong>`, con
+        el espacio dentro de la negrita. Renderiza bien —el navegador colapsa
+        el salto de línea y el espacio en uno— pero se arrastra al copiar y
+        pegar, y es el artefacto que delata un texto que nadie ha releído. Los
+        nueve casos de la web se corrigieron el 17 de octubre de 2026.
+
+        ⚠️ **Y NO vale un guardia que busque `<strong>` seguido de espacio**: el
+        fuente tiene once negritas legítimamente partidas en dos líneas y las
+        marcaría todas. Un guardia que grita sobre texto correcto se apaga a la
+        semana.
+
+        ⚠️ **Bizum, transferencia y efectivo NO van por la pasarela.** Son
+        cobros que se apuntan a mano (`PaymentMethod`): `Ds_Merchant_Paymethods`
+        no se manda en ninguna parte del código. Enumerarlos junto a la tarjeta
+        sin separarlos daba a entender una integración que no existe.
+      */}
       <h2 id="pagos">Formas de pago que aceptamos</h2>
       <p>
-        Tarjeta de crédito o débito <strong>Visa</strong> y
-        <strong> Mastercard</strong>, <strong>Bizum</strong>, transferencia
-        bancaria y efectivo en oficina. Todos los importes de esta web están en
-        <strong> euros (EUR)</strong> e incluyen los impuestos.
+        Con tarjeta de crédito o débito <strong>Visa</strong> o
+        {' '}<strong>Mastercard</strong>, por la pasarela segura de nuestro
+        banco. También aceptamos Bizum, transferencia bancaria y efectivo en
+        oficina, que se acuerdan directamente con nosotros.
       </p>
       <p>
-        Los pagos con tarjeta se hacen en la pasarela segura de nuestro banco,
-        con <strong>autenticación reforzada</strong> del titular (3-D Secure).
-        {' '}<strong>{EMPRESA.razonSocial}</strong> no ve ni guarda en ningún
-        momento el número de tu tarjeta.
+        Todos los importes de esta web están en euros (EUR) e incluyen los
+        impuestos. Los pagos con tarjeta llevan autenticación reforzada del
+        titular (3-D Secure), y {EMPRESA.razonSocial}{' '}no ve ni guarda en
+        ningún momento el número de tu tarjeta. El detalle de qué se cobra y
+        cuándo está en el
+        {' '}<a href="/aviso-legal#pagos">aviso legal</a>.
       </p>
 
       <p class="nota">

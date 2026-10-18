@@ -93,7 +93,16 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
         `te contactaremos por teléfono o WhatsApp para confirmar la disponibilidad ` +
         `y gestionar el pago de la señal.`
     ) +
-    p(`El coche quedará reservado <strong>al abonarse la señal</strong>.`) +
+    /*
+     * ⚠️ **«La reserva se cierra», no «el coche quedará reservado»** (17 de
+     * octubre de 2026). Lo que se reserva es una **categoría** y no una
+     * matrícula: el motivo largo está en `web/src/pages/condiciones.astro`.
+     * Este correo es la cuarta superficie donde vivía la promesa vieja, y la
+     * nota de aquí arriba lo avisaba —«lo mismo que dice la pantalla, palabra
+     * por palabra»—: si se cambia allí y no aquí, el cliente se queda con la
+     * versión que más le convenga, y con razón.
+     */
+    p(`La reserva se cierra <strong>al abonarse la señal</strong>.`) +
     (d.presupuesto ? boton('Ver el presupuesto', d.presupuesto) : '') +
     p(
       `<span style="font-family:${TIPO};font-size:13px;color:${GRIS}">` +
@@ -139,7 +148,7 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
     '',
     `Te garantizamos este precio ${d.garantia}. En ese plazo te contactaremos por`,
     'teléfono o WhatsApp para confirmar la disponibilidad y gestionar el pago de la señal.',
-    'El coche quedará reservado al abonarse la señal.',
+    'La reserva se cierra al abonarse la señal.',
     ...(d.presupuesto ? ['', `Presupuesto: ${d.presupuesto}`] : []),
     '',
     `${d.marca} · ${d.telefonoEmpresa}`,

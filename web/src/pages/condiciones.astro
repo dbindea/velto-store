@@ -81,19 +81,50 @@ import { EMPRESA } from '../lib/empresa';
         Pedir precio en la web <strong>no cuesta nada y no te compromete</strong>:
         mientras no pagues nada, puedes dejarlo sin más.
       </p>
+      {/*
+        ⚠️ **Aquí se prometía el COCHE y ahora se promete la CATEGORÍA.**
+        Decisión de Dorel del 17 de octubre de 2026. Ponía «el coche queda
+        apartado para tus fechas y deja de ofrecerse a nadie más», y eso tenía
+        dos problemas a la vez:
+
+        · **Era falso.** Pagar la señal crea un cobro atado a la solicitud; la
+          reserva —lo único que bloquea el coche, vía `blocksAvailability()`—
+          no existe hasta que el operador la crea. Entre una cosa y otra el
+          coche se puede ir.
+        · **Y era justo lo que Dorel NO pone por escrito**, porque su respuesta
+          real cuando el coche no está es ofrecer otro de categoría igual o
+          superior, hablando.
+
+        ⚠️ **La categoría convierte esa negociación en CUMPLIMIENTO.** Es la
+        fórmula del sector —se reserva un grupo, no una matrícula— y hace que
+        «te doy uno mejor» sea literalmente lo prometido en vez de una
+        excepción que hay que justificar. Y el límite importa: igual o
+        superior, **nunca inferior**. Sin esa última palabra la cláusula sería
+        una puerta abierta a entregar menos de lo pagado, y frente a un
+        consumidor eso es de los arts. 85 y 87.6 del TRLGDCU.
+
+        ⚠️ **Si se cambia aquí, se cambia en los CUATRO sitios.** La misma
+        promesa vive en `/devoluciones#senal`, en `payments.checkout.signalTerms`
+        (los tres idiomas, que es la pantalla donde el cliente tiene la tarjeta
+        en la mano), en el modal de `PreReserva.astro` y en el correo de
+        `booking-request-cliente-email.ts`. Es la regla de la casa: el texto y
+        el hecho se deciden juntos, y aquí el texto está en cinco superficies.
+      */}
       <p>
-        La reserva queda en firme cuando abonas la <strong>señal</strong> —50 €,
-        o 25 € si el alquiler cuesta menos de 50 €—. Esa señal
-        <strong>se descuenta del precio del alquiler</strong>, y a partir de ese
-        momento el coche queda apartado para tus fechas y deja de ofrecerse a
-        nadie más. Por eso, <strong>si cancelas después, la señal no se
-        devuelve</strong>: es lo único que compensa tener un coche parado unos
-        días sin alquilar.
+        La reserva se cierra cuando abonas la <strong>señal</strong> —50 €, o
+        25 € si el alquiler cuesta menos de 50 €, y nunca más que el propio
+        alquiler—. Esa señal se descuenta del precio del alquiler. Lo que
+        reservas es un vehículo de la categoría que has elegido: puede ser el
+        que viste o uno similar de la <strong>misma categoría o superior, nunca
+        inferior</strong>, y el modelo concreto se confirma al cerrar la
+        recogida.
       </p>
       <p>
-        Y al revés: <strong>si somos nosotros los que no podemos darte el
-        coche</strong>, por una avería o por lo que sea, te devolvemos la señal
-        <strong>entera</strong> y sin que tengas que reclamarla.
+        Por eso, <strong>si cancelas tú, la señal no se devuelve</strong>: es lo
+        que compensa el hueco que deja en la agenda un alquiler anulado. Y al
+        revés: si somos nosotros los que no podemos darte un coche de esa
+        categoría, te devolvemos todo lo pagado, señal incluida, sin que tengas
+        que reclamarlo.
       </p>
 
       <h2>Precio, fianza y forma de pago</h2>
