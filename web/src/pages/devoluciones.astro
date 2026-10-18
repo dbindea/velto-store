@@ -33,6 +33,92 @@ import { EMPRESA } from '../lib/empresa';
 
   ⚠️ **Y esto lo ha escrito un programador, no un abogado**, igual que el resto
   de lo legal de esta web. Está anotado como pendiente de revisión.
+
+  ⚠️ **La política de cancelación cambió el 18 de octubre de 2026, y es MÁS
+  generosa que la que había.** Hasta ese día era una línea —«si cancelas tú, la
+  señal no se devuelve»— y Dorel la partió en tramos:
+
+  > «actualiza también la política de cancelaciones, devolución y derecho a
+  > desistimiento con la pérdida de la señal pasado el día en curso. es decir si
+  > una persona reserva a las 4 de la mañana, puede renunciar y solicitar
+  > devolución de la señal hasta las 23:59 del mismo día. Hasta un día antes de
+  > la reserva se puede cancelar todo con la pérdida de la señal.»
+
+  ⚠️ **El día que cuenta es el del PAGO, no el de la pre-reserva.** «Reservar»
+  y «pagar la señal» son el mismo instante —`reservationStatus` pasa a
+  `confirmed` al cobrarla, y por eso toda la web dice que la reserva se cierra
+  al abonarse—, pero una pre-reserva puede ser de la semana pasada. La tabla
+  nombra el pago porque es el único de los dos que deja hora registrada.
+
+  ⚠️ **Y NO se puede llamar «desistimiento» a esa ventana.** Es justo el error
+  que esta página existe para no cometer: el art. 103.l deja el alquiler con
+  fechas fuera del desistimiento y el art. 97.1.l obliga a decirlo, así que
+  bautizar la ventana nueva con ese nombre sería aceptar el régimen de los
+  catorce días por la puerta de atrás — y con él los doce meses que castigan
+  informarlo mal. Lo que Dorel concede es un derecho **contractual**,
+  voluntario, y se llama por lo que es: renunciar el mismo día. La palabra
+  «desistimiento» aparece solo en su sección, y allí para decir que no lo hay.
+
+  ⚠️ **Los tramos viven en el CONTRATO, y tocarlos aquí obliga a tocarlos
+  allí.** Esta nota decía lo contrario —«cambiar los tramos no obliga a tocar
+  el contrato»— y era cierto hasta el 18 de octubre de 2026, cuando el
+  articulado no regulaba la cancelación y su cláusula de jurisdicción se
+  limitaba a excluir el desistimiento «sin perjuicio de las condiciones de
+  cancelación pactadas». Desde hoy el contrato **las pacta él mismo**, en su
+  cláusula 5, con estos tres tramos escritos dentro.
+
+  Así que son dos sitios y hay que cambiarlos a la vez: esta página y
+  `functions/src/contracts/clauses.ts`. Y son **dos despliegues distintos**
+  —`web` y `functions`—, así que entre uno y otro hay horas en las que la web
+  y el papel no dicen lo mismo. Sale primero el contrato: una cláusula que
+  concede más de lo publicado no hace daño a nadie; una página que promete lo
+  que el papel firmado no recoge, sí.
+
+  ⚠️ **Publicarlo OBLIGA.** El art. 61.2 TRLGDCU hace exigible el contenido de
+  la oferta y la publicidad aunque no se repita en el contrato, así que la
+  ventana del mismo día no es un gesto comercial reversible: hay que poder
+  ejecutarla. Hoy se puede —`refundRedsysPayment` devuelve a la tarjeta sobre
+  cobros de los últimos 120 días, y esta ventana vive en las primeras horas—,
+  pero el día que alguien escriba aquí una promesa sin mecanismo detrás, gana
+  la promesa.
+
+  ⚠️ **Las últimas 24 horas antes de la recogida las decidí YO, no Dorel.** Su
+  frase se detiene en «hasta un día antes» y no dice qué pasa después. La
+  página las trata igual que a cualquier otra cancelación anterior a la entrega
+  —se pierde la señal y nada más—, por tres motivos que están escritos para
+  poder discutirlos:
+
+    · **Es lo único que Velto puede ejecutar.** A esas alturas lo que la
+      empresa tiene es la señal; cobrar el alquiler entero pediría un cargo que
+      ninguna pantalla sabe hacer. Escribir una regla que el sistema no puede
+      cumplir es la forma cara de mentir, y este repositorio lleva cinco
+      ejemplos.
+    · **Un 100 % de penalización a horas de la recogida es exactamente la
+      cláusula que los arts. 85 y 87.6 TRLGDCU dejan sin efecto**, y una
+      cláusula nula no protege a nadie: lo que consigue es que el cliente se la
+      crea hasta que alguien le diga que no. Mismo razonamiento que sacó del
+      contrato la sumisión a los juzgados de Madrid.
+    · **La señal ya hace ese trabajo.** Es la figura del art. 1454 del Código
+      Civil: compensa el hueco en la agenda, y lo compensa igual el martes que
+      la víspera por la noche.
+
+  Si Dorel quiere que el último día cueste más, es decisión suya y arrastra
+  código —una regla nueva, una pantalla que lo cobre y una revisión de alguien
+  que responda de ello—. Hasta entonces, aquí va dicho y no insinuado: la
+  página lo nombra en voz alta en vez de dejar que se deduzca de la tabla.
+
+  ⚠️ **Y la misma decisión está en la cláusula 5 del contrato**, escrita el
+  mismo día: «la pérdida de la señal agota la responsabilidad del ARRENDATARIO
+  por la cancelación». O sea que esto ya no es solo una línea de la web — lo
+  que se cambie aquí hay que cambiarlo allí, y al revés.
+
+  ⚠️ **Y el caso borde que obliga a topar la ventana: reservar a las 4:00 para
+  recoger a las 10:00 del MISMO día.** La web deja reservar para hoy, así que
+  «hasta las 23:59» abriría una ventana de arrepentimiento con el coche ya en
+  la calle — devolver entera la señal de un alquiler en curso. Por eso la
+  ventana termina en lo que ocurra antes, las 23:59 o la recogida, y eso está
+  dicho **en la tabla** y con el ejemplo debajo: un tope que solo vive en la
+  cabeza de quien lo escribió se pierde en la primera reescritura.
 */}
 <Base
   titulo="Cancelaciones, devoluciones y reembolsos | Velto"
@@ -43,10 +129,18 @@ import { EMPRESA } from '../lib/empresa';
     <div class="contenedor texto">
       <p class="overline">Devoluciones</p>
       <h1>Cancelaciones, devoluciones y reembolsos</h1>
+      {/*
+        ⚠️ **Esta entrada es lo primero que lee quien tiene la tarjeta en la
+        mano.** La pantalla de pago enlaza aquí sin ancla —`termsUrl` en
+        `functions/src/redsys.ts` es `${VELTO_WEB_BASE_URL}/devoluciones`—, así
+        que lo que resuman estas tres líneas es la política para quien está a un
+        toque de pagar. Decía «la señal es lo único que no se devuelve» y eso
+        dejó de ser cierto el 18 de octubre: el mismo día vuelve también.
+      */}
       <p class="entrada">
-        Lo corto: pedir precio no cuesta nada, la señal es lo único que no se
-        devuelve si cancelas tú, y todo lo demás vuelve al mismo sitio desde el
-        que pagaste.
+        Lo corto: pedir precio no cuesta nada; si te arrepientes el mismo día en
+        que pagas, te devolvemos hasta la señal; después, lo único que no vuelve
+        es la señal.
       </p>
 
       <h2 id="pre-reserva">Antes de pagar nada</h2>
@@ -90,16 +184,105 @@ import { EMPRESA } from '../lib/empresa';
         ser el que viste o uno similar de la misma categoría o superior, nunca
         inferior, y el modelo concreto se confirma al cerrar la recogida.
       </p>
+
+      {/*
+        ⚠️ **Es una TABLA y no tres párrafos, y la diferencia es para qué se
+        viene a esta página.** Quien la abre no quiere leerse la política:
+        quiere mirar en qué fila cae y saber si recupera su dinero. Con tres
+        párrafos hay que leerse los tres para descartar dos; con dos columnas
+        —cuándo / qué pasa— se busca la fila y se sale. Es la única tabla de
+        toda la web, y por eso su estilo vive en el `<style>` de esta página: el
+        día que una segunda la necesite, sube a `global.css`, que es lo que ya
+        pasó con `.entrada` y con `.texto`.
+
+        ⚠️ **El tope de la primera fila va DENTRO de la celda**, no en una nota
+        al pie. Esa fila es la que se lee rápido, se recuerda mal y se cita de
+        memoria por teléfono; separada de su límite se convierte en «me dijeron
+        que tenía hasta las doce de la noche» en un alquiler ya entregado.
+
+        ⚠️ **Y la tercera fila no es relleno: es la que CIERRA la serie.** Sin
+        ella la tabla deja abierto qué pasa una vez recogido el coche, y el
+        lector lo rellena con la fila que más le convenga.
+
+        ⚠️ **Esa fila es la única ADVERSA de las tres, y por eso está.** Dice lo
+        que dice la cláusula 5 del contrato: entregado el vehículo el alquiler
+        ha comenzado, y devolverlo antes no da derecho al reembolso de los días
+        no disfrutados salvo acuerdo expreso. Callarlo habría dejado la página
+        enumerando solo lo que se devuelve — y quien cancela a mitad de alquiler
+        descubriría la condición en el PDF que ya firmó, que es justo la
+        discusión en el mostrador que esta web existe para evitar.
+
+        ⚠️ **Las tres filas y la cláusula 5 se escribieron el MISMO día y tienen
+        que viajar juntas.** Si una de las dos se despliega sin la otra, el
+        resumen y el contrato dicen cosas distintas sobre dinero. Es la regla de
+        la casa: el texto y el hecho se deciden juntos.
+      */}
+      <h3 id="cancelar">Si cancelas tú</h3>
       <p>
-        <strong>Si cancelas tú, la señal no se devuelve</strong>: es lo que
-        compensa el hueco que deja en la agenda un alquiler anulado. El resto
-        del alquiler, si ya lo hubieras pagado, sí se devuelve entero.
+        Desde que pagas la señal y hasta que recoges el coche puedes cancelar
+        cuando quieras, sin dar explicaciones. Lo que cambia según el momento es
+        el dinero:
+      </p>
+      <table class="tramos">
+        <thead>
+          <tr>
+            <th scope="col">Cuándo cancelas</th>
+            <th scope="col">Qué pasa con tu dinero</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              El mismo día en que pagas la señal, hasta las 23:59
+              <span class="tramos__tope">
+                o hasta la hora de recoger, si recoges ese mismo día
+              </span>
+            </th>
+            <td>Te devolvemos <strong>todo, señal incluida</strong>.</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Desde el día siguiente y hasta que recoges el coche
+            </th>
+            <td>
+              Se queda <strong>la señal</strong>. Todo lo demás que hubieras
+              pagado —el resto del alquiler, la fianza, la entrega a domicilio—
+              vuelve entero.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Una vez recogido el coche</th>
+            <td>
+              Ya no es una cancelación: el alquiler ha empezado. Devolver el
+              coche antes de tiempo no descuenta los días que no uses, salvo
+              que lo acordemos contigo.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        La primera fila la cierra la recogida, no el reloj. Si reservas a las
+        cuatro de la mañana para recoger a las diez, tienes esas seis horas y no
+        hasta las 23:59: con el coche ya entregado no hay nada a lo que
+        renunciar.
       </p>
       <p>
-        Y al revés: si somos nosotros los que no podemos darte un coche de esa
-        categoría —una avería, un siniestro, cualquier cosa—, te devolvemos
+        Y en las últimas horas, lo mismo que la víspera. Cancelar la noche antes
+        o la misma mañana entra en la segunda fila: pierdes la señal y nada más.
+        No cobramos el alquiler entero por cancelar, ni aunque avises tarde.
+      </p>
+      <p>
+        La señal se queda porque es lo que compensa el hueco que un alquiler
+        anulado deja en la agenda. Y compensa en los dos sentidos, que es lo de
+        aquí abajo.
+      </p>
+
+      <h3 id="fallamos">Si fallamos nosotros</h3>
+      <p>
+        Si somos nosotros los que no podemos darte un coche de esa categoría
+        —una avería, un siniestro, cualquier cosa—, te devolvemos
         <strong>todo lo pagado, señal incluida</strong>, sin que tengas que
-        reclamarlo.
+        reclamarlo y sin que importe el día que sea.
       </p>
 
       {/*
@@ -118,9 +301,28 @@ import { EMPRESA } from '../lib/empresa';
         vehículos «si los contratos prevén una fecha o un periodo de ejecución
         específicos», que es justo lo que haces al reservar del día 10 al 14.
       </p>
+      {/*
+        ⚠️ **Las dos cosas tienen que CONVIVIR, y por eso este párrafo empieza
+        separándolas.** Arriba hay una ventana de arrepentimiento que se parece
+        a un desistimiento y no lo es: si se dejara entender que sí, estaríamos
+        aceptando el régimen de los catorce días —y la sanción de los doce
+        meses— sobre un contrato que la ley excluye. Lo que se dice es la
+        frontera: aquello es ley y no la hay; esto es nuestro y te lo damos.
+
+        ⚠️ **Y se dice que nos obliga**, que es la mitad que convence. Una
+        concesión voluntaria se lee como reversible; el art. 61.2 TRLGDCU hace
+        exigible lo publicado aunque no esté en el contrato, así que decirlo no
+        regala nada que no estuviera ya regalado — y quita la pregunta de «¿y
+        si luego no me lo dan?».
+      */}
       <p>
-        Lo que sí tienes es lo de arriba: cancelar cuando quieras perdiendo
-        únicamente la señal, y recuperarlo todo si el que falla es Velto.
+        Eso es lo que dice la ley. Aparte de la ley está lo que te damos
+        nosotros, que es lo de arriba: el día en que pagas para arrepentirte y
+        recuperarlo todo, señal incluida, y después la posibilidad de cancelar
+        perdiendo únicamente la señal. No son los catorce días del
+        desistimiento ni salen de esa norma —te lo damos nosotros—, pero por
+        estar publicado aquí nos obliga igual, y el contrato que firmas lo
+        recoge con las mismas palabras en su cláusula de cancelación.
       </p>
 
       <h2 id="fianza">La fianza no es parte de esto</h2>
@@ -129,8 +331,8 @@ import { EMPRESA } from '../lib/empresa';
         alquiler: se devuelve siempre tras la inspección de devolución del
         coche, salvo lo que haya que retener por daños, combustible o
         kilómetros de más, que se te justifica con el parte y sus fotos. Si la
-        reserva se cancela antes de entregar el coche, la fianza vuelve entera
-        aunque la señal no.
+        reserva se cancela antes de entregar el coche, la fianza vuelve entera,
+        se devuelva o no la señal.
       </p>
       {/*
         ⚠️ **La fianza se COBRA, no se retiene, y hay que decirlo.**
@@ -170,14 +372,50 @@ import { EMPRESA } from '../lib/empresa';
         transferencia, y necesitaremos que nos des un IBAN.
       </p>
 
+      {/*
+        ⚠️ **Pedirlo y contestarlo son dos relojes distintos, y antes eran
+        uno.** Aquí ponía «te contestamos en un plazo máximo de 72 horas» y
+        nada más, lo cual era inofensivo mientras la política no tenía plazos;
+        con una ventana que muere a las 23:59 se vuelve una trampa: alguien
+        pide a las 23:50 del día bueno, se le contesta dos días después y la
+        respuesta es que ya había pasado el plazo. El plazo de respuesta es
+        **nuestro** y no puede comerse el suyo, así que lo que vale es la hora
+        del mensaje y así está escrito.
+
+        ⚠️ **Y por eso se le dice que guarde el envío.** La hora de su correo
+        es la prueba, y es suya: en este lado no hay ningún acuse automático
+        —`createBookingRequest` manda correo al crear una solicitud, pero una
+        cancelación llega al buzón de siempre—. Prometer un acuse sería
+        prometer un mecanismo que no existe.
+
+        ⚠️ **El teléfono no es una preferencia de estilo.** Con recogida el
+        mismo día la ventana puede medir horas y caer de madrugada, que es
+        justo cuando nadie lee el correo. Decirlo es más honesto que ofrecer
+        los dos canales como equivalentes cuando no lo son.
+      */}
       <h2 id="pedirlo">Cómo pedirlo</h2>
       <p>
         Escribiendo a
         {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> o
         llamando al <a href={`tel:${EMPRESA.telefono}`}>{EMPRESA.telefono}</a>,
-        con tu <strong>referencia de reserva</strong> delante. Te contestamos en
-        un plazo máximo de <strong>72 horas</strong> diciéndote qué se devuelve
-        y cuándo se ordena.
+        con tu <strong>referencia de reserva</strong> delante.
+      </p>
+      <p>
+        Para los plazos de arriba cuenta <strong>cuándo lo pides</strong>, no
+        cuándo te contestamos. Un correo enviado a las 23:50 del día en que
+        pagaste está dentro de plazo aunque lo leamos a la mañana siguiente:
+        vale la hora de tu mensaje, así que guarda el envío.
+      </p>
+      <p>
+        Si vas justo de tiempo, o si recoges el coche hoy mismo, llama en vez de
+        escribir: el correo cuenta igual, pero a ciertas horas no hay nadie
+        leyéndolo y lo que te juegas es la diferencia entre recuperar la señal o
+        no.
+      </p>
+      <p>
+        Te contestamos en un plazo máximo de 72 horas —normalmente el mismo
+        día— diciéndote qué se devuelve y cuándo se ordena. Ese plazo es
+        nuestro y no descuenta nada del tuyo.
       </p>
       <p>
         Si no estás de acuerdo con lo que se te retiene, dilo por escrito a esa
@@ -220,11 +458,115 @@ import { EMPRESA } from '../lib/empresa';
       </p>
 
       <p class="nota">
-        Última actualización: 2 de octubre de 2026. Los datos fiscales completos
-        del titular están en el <a href="/aviso-legal">aviso legal</a>, y el
-        detalle del alquiler en las
-        {' '}<a href="/condiciones">condiciones de alquiler</a>.
+        Última actualización: 18 de octubre de 2026. Los datos fiscales
+        completos del titular están en el
+        {' '}<a href="/aviso-legal">aviso legal</a>, y el detalle del alquiler
+        en las <a href="/condiciones">condiciones de alquiler</a>.
       </p>
     </div>
   </section>
 </Base>
+
+<style>
+  /*
+   * ⚠️ **La única tabla de toda la web, y por eso su estilo vive aquí.** No
+   * hay ni un `<table>` más en `web/src`, así que subir esto a `global.css`
+   * sería declarar en el sitio común algo que usa una sola página. La regla de
+   * la casa es la contraria y está escrita en `global.css`: lo que una segunda
+   * página necesita, sube — es lo que pasó con `.entrada`, declarada en una
+   * página y usada en seis. El día que haya una segunda tabla, esto se muda.
+   *
+   * ⚠️ **`table-layout: fixed` es lo que impide el desbordamiento**, no una
+   * preferencia. Sin él el navegador ensancha las columnas hasta que quepa la
+   * celda más larga, y a 390 px eso saca la tabla fuera de la pantalla — el
+   * fallo que ya tuvo Facturas en el backoffice y que allí hubo que medir, no
+   * mirar. Con `fixed` los anchos los manda la primera fila y el texto se
+   * parte dentro.
+   *
+   * ⚠️ **Los colores salen de las variables del tema, nunca de un valor fijo.**
+   * `--border`, `--text` y `--text-2` cambian entre claro y oscuro; un gris
+   * escrito a mano aquí se vería bien en uno de los dos y mal en el otro.
+   */
+  .tramos {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: var(--sp-5) 0 var(--sp-6);
+    text-align: left;
+  }
+
+  /*
+   * El cuerpo va al tamaño normal del texto: esta tabla ES el contenido por el
+   * que se entra en la página, y encogerla para que «quepa mejor» la convierte
+   * en letra pequeña — justo lo contrario de lo que se pretende. Lo único que
+   * baja es la cabecera de columna, que es una etiqueta y no un dato.
+   */
+  .tramos th,
+  .tramos td {
+    padding: var(--sp-3) 0;
+    vertical-align: top;
+    border-bottom: var(--bw) solid var(--border);
+  }
+
+  .tramos tr > * + * {
+    padding-left: var(--sp-4);
+  }
+
+  /*
+   * ⚠️ **No hay `width` en ninguna columna, y eso está MEDIDO.** Con
+   * `table-layout: fixed` el reparto por defecto es mitad y mitad, y así se
+   * queda. Hubo aquí un `width: 44%` para la primera columna —que es la de
+   * texto más corto— y a 375 px dejaba la tabla **51 px más alta** (691 contra
+   * 640): quitarle sitio a la celda de «cuándo» la obliga a partir en más
+   * líneas, y en un móvil esas líneas se pagan enteras. En escritorio las dos
+   * repartidas daban filas de una o dos líneas, que es lo que se buscaba.
+   *
+   * ⚠️ Y la declaración que había ni siquiera actuaba: escrita como
+   * `.tramos thead th { width: 44% }` la recibían las **dos** columnas, se
+   * normalizaban a 50/50 y no cambiaba nada. Comprobado antes de borrarla, no
+   * supuesto — es el patrón de la casa: antes de arreglar una regla, mira si
+   * es la que gana.
+   */
+  .tramos thead th {
+    font-family: var(--font-display);
+    font-weight: var(--fw-medium);
+    font-size: var(--fs-small);
+    color: var(--text-2);
+    border-bottom-color: var(--border-strong);
+  }
+
+  /* La celda de «cuándo» es la que se busca con la vista: va en el color del
+     cuerpo y no en el apagado, porque es la entrada del índice. */
+  .tramos tbody th {
+    font-weight: var(--fw-medium);
+    color: var(--text);
+  }
+
+  /*
+   * ⚠️ **El tope de la primera fila, dentro de su celda pero a otro peso.** La
+   * regla y su excepción se leían como una sola frase larga —«hasta las 23:59
+   * — o hasta la hora de recoger…»— y el guion cargaba con toda la
+   * separación. Puesto debajo y apagado, la fila se lee de un vistazo y el
+   * límite sigue viajando con ella, que era la condición: separado en una nota
+   * al pie se convierte en «me dijeron que tenía hasta las doce de la noche».
+   */
+  .tramos__tope {
+    display: block;
+    margin-top: var(--sp-1);
+    font-weight: var(--fw-book);
+    font-size: var(--fs-small);
+    color: var(--text-2);
+  }
+
+  .tramos tbody td {
+    color: var(--text-2);
+  }
+
+  /*
+   * ⚠️ El `.nota` de esta página se queda con lo que declara `global.css`
+   * —color y tamaño— y sin el filete superior que sí tiene en `/condiciones`.
+   * Es deliberado aquí abajo: el último `.nota` va detrás de una sección que ya
+   * termina en filete propio, y dos rayas seguidas se leen como un bloque
+   * vacío. Misma razón que `pieSinFilete` en la cáscara de los correos.
+   */
+</style>

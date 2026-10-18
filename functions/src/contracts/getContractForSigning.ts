@@ -11,7 +11,7 @@
  *   - contract number
  *   - status of the token (active / used / expired / cancelled)
  *   - PDF url so the customer can preview the contract
- *   - 9 high-level highlights from the contract (the "front page")
+ *   - the high-level highlights from the contract (the "front page")
  *   - preferred locale of the body (so the signing page can show
  *     clauses in es/en/ro)
  *
@@ -44,7 +44,7 @@ export interface PublicContractView {
   pickupLocation?: string;
   returnLocation?: string;
   pdfUrl?: string;
-  /** The 9 front-page highlights for the public signing page. */
+  /** The front-page highlights for the public signing page. */
   highlights: string[];
   /** Locale of the highlights + clauses; 'es' by default. */
   locale: ContractLocale;

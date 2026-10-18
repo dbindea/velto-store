@@ -716,7 +716,8 @@
       "subtitle": "Secure payment",
       "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us.",
       "unavailableTitle": "Payment unavailable",
-      "signalTerms": "This deposit is deducted from the rental price. Paying it closes your booking: what you book is a vehicle of that category, the same or higher, never lower. If you cancel afterwards, the deposit is not refunded; if we are the ones unable to give you a car of that category, you get it back in full.",
+      "signalTerms": "This advance payment is deducted from the rental price. Paying it closes your booking: a vehicle of that category, the same or higher, never lower. We refund it in full if you cancel before 23:59 on the day you pay it, or before pickup if you pick up that same day. After that, cancelling costs the advance payment and nothing more. If we are the ones who fail, it comes back in full.",
+      "signalTermsLink": "Read the cancellation policy",
       "terms": "Cancellations and refunds"
     },
     "confirm": {

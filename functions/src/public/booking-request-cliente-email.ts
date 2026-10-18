@@ -102,7 +102,29 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
      * por palabra»—: si se cambia allí y no aquí, el cliente se queda con la
      * versión que más le convenga, y con razón.
      */
-    p(`La reserva se cierra <strong>al abonarse la señal</strong>.`) +
+    /*
+     * ⚠️ **Y qué pasa si paga y cambia de idea** (18 de octubre de 2026). El
+     * párrafo decía dónde se cierra la reserva y callaba cómo se deshace, que
+     * es la otra mitad de la misma decisión: a este cliente se le va a mandar
+     * un enlace de pago, y el art. 97.1 del TRLGDCU pide las condiciones antes
+     * de contratar, no después.
+     *
+     * ⚠️ **La ventana NUNCA se escribe sin su tope.** «Hasta las 23:59» a
+     * secas sería falso para quien reserva de madrugada y recoge esa misma
+     * mañana: con el coche entregado no hay nada a lo que renunciar. El tope
+     * cuesta cuatro palabras y va en la misma frase, aquí y en las otras cinco
+     * superficies.
+     *
+     * ⚠️ **Y resume la cláusula, no la inventa.** El texto que manda es
+     * «CANCELACIÓN EL MISMO DÍA DE LA RESERVA» y «CANCELACIÓN POSTERIOR», en
+     * `functions/src/contracts/clauses.ts`. Si cambian allí, cambia aquí.
+     */
+    p(
+      `La reserva se cierra <strong>al abonarse la señal</strong>. Si la pagas y ` +
+        `cambias de idea, te la devolvemos entera hasta las 23:59 de ese mismo día ` +
+        `—o hasta la recogida, si recoges ese día—. Más tarde puedes cancelar ` +
+        `igualmente: se queda la señal y nada más.`
+    ) +
     (d.presupuesto ? boton('Ver el presupuesto', d.presupuesto) : '') +
     p(
       `<span style="font-family:${TIPO};font-size:13px;color:${GRIS}">` +
@@ -148,7 +170,10 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
     '',
     `Te garantizamos este precio ${d.garantia}. En ese plazo te contactaremos por`,
     'teléfono o WhatsApp para confirmar la disponibilidad y gestionar el pago de la señal.',
-    'La reserva se cierra al abonarse la señal.',
+    'La reserva se cierra al abonarse la señal. Si la pagas y cambias de idea, te la',
+    'devolvemos entera hasta las 23:59 de ese mismo día —o hasta la recogida, si',
+    'recoges ese día—. Más tarde puedes cancelar igualmente: se queda la señal y',
+    'nada más.',
     ...(d.presupuesto ? ['', `Presupuesto: ${d.presupuesto}`] : []),
     '',
     `${d.marca} · ${d.telefonoEmpresa}`,

@@ -61,12 +61,49 @@
 
           ⚠️ **Las dos direcciones, no solo la que nos conviene.** Si Velto no
           puede dar el coche, la señal vuelve entera. Decir solo la mitad que
-          perjudica al cliente es lo que convierte una cláusula en abusiva —y
-          además aquí es cierto: el coche no se bloquea al pagar.
+          perjudica al cliente es lo que convierte una cláusula en abusiva.
+
+          ⚠️ **Y desde el 18 de octubre de 2026 dice también CÓMO SE DESHACE.**
+          Antes solo contaba que la señal no vuelve, y esa ya no es toda la
+          verdad: hay una ventana —hasta las 23:59 del día en que se paga, o
+          hasta la recogida si es ese mismo día— en la que vuelve entera. El
+          art. 97.1 del TRLGDCU pide las condiciones **antes** de contratar, y
+          esta es literalmente la pantalla donde se contrata.
+
+          ⚠️ **Aquí ponía además «el coche no se bloquea al pagar», y había
+          dejado de ser cierto.** Lo era mientras el texto de al lado prometía
+          bloquearlo; desde que lo que se reserva es una **categoría**, pagar
+          la señal sí cierra la reserva. El comentario sobrevivió al cambio del
+          texto que justificaba — que es exactamente el fallo del que avisa.
         -->
         @if (view()!.isBookingSignal) {
           <p class="signal-terms">
             {{ 'payments.checkout.signalTerms' | translate }}
+
+            <!--
+              ⚠️ **El enlace va AQUÍ, y el del pie se queda donde está.** Aquel
+              vive debajo del botón de pagar, del aviso de Redsys y del de
+              actualizar: quien quiere leer qué pasa si cancela **antes** de
+              pulsar no lo encuentra donde lo busca. Y éste apunta a
+              `#cancelar`, no a la página entera, porque el tramo del mismo día
+              es justo lo que esta letra pequeña resume.
+
+              ⚠️ **Guardado por `termsUrl`, igual que el del pie.** Vacío
+              significa que el dominio no sirve esa página, y un enlace muerto
+              donde alguien mete su tarjeta se lee como que la empresa no tiene
+              política de cancelación — peor que no ofrecerlo.
+
+              ⚠️ **Y abre en otra pestaña.** Esta pantalla está a punto de
+              hacer un POST a Redsys: irse a leer la política y volver atrás es
+              la forma de perder un cobro.
+            -->
+            @if (view()?.termsUrl) {
+              <a class="signal-terms__enlace"
+                 [href]="view()!.termsUrl + '#cancelar'"
+                 target="_blank" rel="noopener">
+                {{ 'payments.checkout.signalTermsLink' | translate }}
+              </a>
+            }
           </p>
         }
 

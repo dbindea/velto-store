@@ -29,13 +29,22 @@ import { EMPRESA } from '../lib/empresa';
         queda en el móvil.
       </p>
 
+      {/*
+        ⚠️ **Aquí ponía «al menos 21 años» y el contrato pide DOS cosas más.**
+        Su cláusula 2 fija la edad máxima en 75 años cumplidos y exige un
+        permiso con antigüedad mínima — y la web se quedaba con la mitad fácil.
+        Prometer menos requisitos de los que el papel exige es la dirección
+        peligrosa: alguien de 76 años reserva por internet, paga la señal y se
+        entera en el mostrador. Comprobado contra `clauses.ts` el 18 de octubre
+        de 2026.
+      */}
       <h2 id="requisitos">Quién puede conducir</h2>
       <p>
-        Hace falta tener al menos <strong>21 años</strong> y un permiso de
-        conducir en vigor. Solo pueden conducir las personas que aparecen
-        <strong>por su nombre en el contrato</strong>: si vais a turnaros, hay
-        que decirlo al reservar y se añaden como conductores autorizados. No
-        cuesta nada, pero tiene que constar.
+        Hace falta tener <strong>entre 21 y 75 años</strong> y un permiso de
+        conducir en vigor con al menos un año de antigüedad. Solo pueden
+        conducir las personas que aparecen por su nombre en el contrato: si
+        vais a turnaros, hay que decirlo al reservar y se añaden como
+        conductores autorizados. No cuesta nada, pero tiene que constar.
       </p>
 
       <h2 id="cancelar">Recogida, devolución y cancelación</h2>
@@ -119,12 +128,70 @@ import { EMPRESA } from '../lib/empresa';
         inferior</strong>, y el modelo concreto se confirma al cerrar la
         recogida.
       </p>
+      {/*
+        ⚠️ **La política de cancelación la fijó Dorel el 18 de octubre de 2026,
+        y es MÁS generosa que la anterior.** Aquí ponía, a secas, «si cancelas
+        tú, la señal no se devuelve». Ahora hay un día de arrepentimiento,
+        literal suyo: «si una persona reserva a las 4 de la mañana, puede
+        renunciar y solicitar devolución de la señal hasta las 23:59 del mismo
+        día».
+
+        ⚠️ **El tope de la hora de recogida es la parte que NO dijo y sin la
+        cual la regla se rompe sola.** La web deja reservar para hoy, así que
+        reservar a las 4:00 para recoger a las 10:00 daría derecho a devolución
+        hasta las 23:59 —o sea, con el coche ya en la calle—. La ventana
+        termina en la PRIMERA de las dos.
+
+        ⚠️ **Las últimas 24 horas tampoco las dijo**, y aquí van como el tramo
+        normal: se pierde la señal y nada más. **Es una propuesta, no una
+        decisión suya**, y está anotada como tal. Su frase —«hasta un día antes
+        de la reserva se puede cancelar todo con la pérdida de la señal»— deja
+        el último día sin regular.
+
+        ⚠️ **Los tres tramos enteros viven en `/devoluciones#cancelar`, no
+        aquí.** Esta página los resume y remite; repetirlos completos en dos
+        sitios es cómo se acaban contando distinto — ya pasó con el IVA del
+        presupuesto.
+
+        ⚠️ **Y lo que manda es la cláusula 5 del contrato**, que los recoge con
+        las mismas palabras. Si cambian los tramos, se cambian en los dos sitios
+        y sale primero el contrato.
+      */}
       <p>
-        Por eso, <strong>si cancelas tú, la señal no se devuelve</strong>: es lo
-        que compensa el hueco que deja en la agenda un alquiler anulado. Y al
-        revés: si somos nosotros los que no podemos darte un coche de esa
-        categoría, te devolvemos todo lo pagado, señal incluida, sin que tengas
-        que reclamarlo.
+        <strong>Si cancelas tú</strong>, lo que pasa con tu dinero depende del
+        momento: el mismo día en que pagas la señal, hasta las 23:59 —o hasta la
+        hora de recoger, si recoges ese día—, te devolvemos todo. A partir de
+        ahí y hasta que recoges el coche puedes cancelar igualmente, y se queda
+        la señal y nada más. Y al revés: si somos nosotros los que no podemos
+        darte un coche de esa categoría, te devolvemos todo lo pagado, señal
+        incluida, sin que tengas que reclamarlo. El detalle está en
+        {' '}<a href="/devoluciones#cancelar">cancelaciones y devoluciones</a>.
+      </p>
+
+      {/*
+        ⚠️ **El pie enlaza esta sección con la etiqueta «Modificar o cancelar»**
+        (`Base.astro`), y hasta hoy aquí no había una sola palabra sobre
+        modificar. Un enlace que promete dos cosas y lleva a una es de los que
+        hacen llamar preguntando.
+
+        ⚠️ **Y el hecho ya estaba en el contrato**, cláusula 3: «Cualquier
+        modificación de fechas, horas o lugares requiere acuerdo escrito entre
+        las partes (puede ser por correo electrónico)». No se inventa nada.
+
+        ⚠️ **Lo de la señal está comprobado en `reservation-edit.util.ts`**:
+        `pickupDateTime` se mueve mientras el coche no haya salido,
+        `returnDateTime` hasta la devolución —la prórroga es el caso más
+        corriente del negocio— y editar la reserva **no pierde** la señal ya
+        cobrada: `redistributeInitialPayment()` mantiene el total y ajusta el
+        resto. Lo que no se puede tocar es su importe una vez cobrada.
+      */}
+      <h3>Si necesitas cambiar algo</h3>
+      <p>
+        Las fechas, las horas y los lugares se pueden mover de común acuerdo
+        mientras haya coche para las nuevas —también alargar un alquiler ya
+        empezado—, y basta con que quede por escrito: un correo vale. Cambiar no
+        es cancelar, así que la señal se mantiene, y si el alquiler pasa a
+        costar más o menos se ajusta la diferencia.
       </p>
 
       <h2>Precio, fianza y forma de pago</h2>

@@ -138,6 +138,34 @@
         disponibilidad y gestionar el pago de la señal. La reserva se cierra
         <strong>al abonarse la señal</strong>.
       </p>
+
+      {/*
+        ⚠️ **Párrafo aparte, y no una frase más dentro del anterior.** Aquél es
+        literal de Dorel (2 de octubre de 2026) y describe la pre-reserva; esto
+        describe lo que pasa **después**, cuando ya hay dinero de por medio.
+        Metido dentro habría que reescribir una redacción que se eligió palabra
+        a palabra.
+
+        ⚠️ **La ventana NUNCA se escribe sin su tope.** «Hasta las 23:59» a
+        secas es falso el día que alguien reserve a las 4:00 para recoger a las
+        10:00: con el coche ya entregado no hay nada a lo que renunciar. Es un
+        caso que la web permite hoy, no uno teórico.
+
+        ⚠️ **Y esto RESUME la cláusula del contrato, no la sustituye.** El texto
+        que manda es «CANCELACIÓN EL MISMO DÍA DE LA RESERVA» y «CANCELACIÓN
+        POSTERIOR» en `functions/src/contracts/clauses.ts`; los tres tramos
+        enteros están en `/devoluciones#cancelar`.
+
+        ⚠️ **El enlace abre en otra pestaña.** Dentro de un `<dialog>`, navegar
+        se lleva por delante el formulario a medio rellenar — y a estas alturas
+        el nombre y el teléfono ya están escritos.
+      */}
+      <p class="dlg__letra">
+        Si llegas a pagarla y cambias de idea, la señal vuelve entera hasta las
+        23:59 de ese mismo día —o hasta la recogida, si recoges ese día—. Más
+        tarde puedes cancelar igualmente: se queda la señal y nada más.
+        {' '}<a href="/devoluciones#cancelar" target="_blank" rel="noopener">Cancelaciones y devoluciones</a>.
+      </p>
     </form>
 
     {/* ---- Hecho ------------------------------------------------------- */}
@@ -202,6 +230,19 @@
       */}
       <p class="dlg__letra">
         La reserva se cierra <strong>al abonarse la señal</strong>.
+      </p>
+
+      {/*
+        ⚠️ **Palabra por palabra lo mismo que en la cara de antes de enviar**,
+        que es la regla que ya gobierna el párrafo de arriba: es el mismo hecho
+        en dos pantallas seguidas, y contado de dos maneras el visitante se
+        pregunta si son dos cosas distintas. Si se toca uno, se tocan los dos.
+      */}
+      <p class="dlg__letra">
+        Si llegas a pagarla y cambias de idea, la señal vuelve entera hasta las
+        23:59 de ese mismo día —o hasta la recogida, si recoges ese día—. Más
+        tarde puedes cancelar igualmente: se queda la señal y nada más.
+        {' '}<a href="/devoluciones#cancelar" target="_blank" rel="noopener">Cancelaciones y devoluciones</a>.
       </p>
 
       {/*
