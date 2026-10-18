@@ -59,6 +59,22 @@ import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from 'crypto
 // ----- Secrets / config -----
 const REDSYS_SECRET_KEY = defineSecret('REDSYS_SECRET_KEY');
 
+/**
+ * El bot que avisa de que ha entrado dinero.
+ *
+ * ⚠️ **Declararlo aquí no basta: hay que MONTARLO en la function.** Un secret
+ * que existe en Secret Manager y no aparece en el `secrets: [...]` de su
+ * callable no llega al runtime, así que `.value()` sale vacío y el código se va
+ * por la rama del «no está configurado» — en silencio desde fuera. Es F-12, y
+ * va montado en `redsysNotificationWebhook`, que es el único que lo usa.
+ *
+ * ⚠️ **Y el chat NO es un secreto**: es un identificador, cambia entre
+ * entornos y vive en `functions/.env.<proyecto>`, que es donde van las cosas
+ * que se pueden enseñar. Esa es además la ventaja que costó descubrir: las
+ * variables del `.env` llegan a `process.env` sin declararse en ninguna parte.
+ */
+const TELEGRAM_BOT_TOKEN = defineSecret('TELEGRAM_BOT_TOKEN');
+
 interface CreateRedsysLinkRequest {
   paymentId: string;
 }
@@ -433,7 +449,7 @@ export const getPaymentCheckout = onCall(
 
 export const redsysNotificationWebhook = onRequest(
   {
-    secrets: [REDSYS_SECRET_KEY]
+    secrets: [REDSYS_SECRET_KEY, TELEGRAM_BOT_TOKEN]
   },
   async (req, res) => {
     if (req.method !== 'POST') {
@@ -610,6 +626,66 @@ export const redsysNotificationWebhook = onRequest(
     // estar pagando ahora mismo. Marcar `failed` ahí sería dar por fallido un
     // pago en curso. Aprobado sí se aplica siempre: el dinero está cobrado.
     await paymentDoc.ref.update(update);
+
+    /**
+     * El aviso de que ha entrado dinero.
+     *
+     * ⚠️ **Esta function era la ÚNICA que lo sabía y no avisaba a nadie.** Lo
+     * contó Dorel el 18 de octubre de 2026 —«hasta que no vea el email o entre
+     * no me entero»—, y con la vía de pago desde la web el agujero pasa de
+     * molesto a caro: un cliente paga la señal de madrugada y la noticia espera
+     * a que alguien abra el panel.
+     *
+     * ⚠️ **Va DESPUÉS de escribir el cobro, y su fallo no tumba nada.**
+     * `avisarPorTelegram()` no lanza nunca; aun así se envuelve, porque leer la
+     * solicitud sí puede fallar. El orden de prioridades no admite discusión:
+     * el dinero ya está en el banco y a la pasarela hay que contestarle `200`
+     * —lo que no se le contesta, lo reintenta—. Misma regla que el sellado del
+     * contrato: perder el aviso es un problema, perder el registro del cobro es
+     * uno mucho mayor.
+     *
+     * ⚠️ **Solo cuando el banco ACEPTA.** Una denegación no es una noticia que
+     * merezca un pitido a las tres de la mañana, y el aviso de una **devolución**
+     * aprobada entra por `esDevolucion` y no por aquí: anunciar «cobro recibido»
+     * cuando el dinero ha salido sería contar al revés lo que pasó.
+     */
+    if (isApproved) {
+      try {
+        const { mensajeCobro, avisarPorTelegram } = await import('./alerts/telegram');
+
+        /*
+         * La referencia de la solicitud, si el cobro salió de una. Es una
+         * lectura más y solo en ese caso — la misma forma que ya tiene debajo
+         * la de la reserva. Vale la pena: en Telegram un `<code>` se copia
+         * tocándolo, y es lo que el operador va a teclear en el buscador.
+         */
+        let referencia: string | undefined;
+        if (payment.bookingRequestId) {
+          const solicitud = await db
+            .collection('bookingRequests')
+            .doc(payment.bookingRequestId)
+            .get();
+          const ref = solicitud.data()?.['reference'];
+          if (typeof ref === 'string' && ref) referencia = ref;
+        }
+
+        await avisarPorTelegram(
+          mensajeCobro({
+            // Lo que de verdad cobró el banco, no lo que la fila pedía.
+            importe: appliedPaidAmount(payment, parsed.Ds_Amount),
+            concepto: String(payment.concept || 'Cobro'),
+            completo: update.status === 'paid',
+            ...(referencia ? { referencia } : {}),
+            ...(payment.payerName ? { pagador: String(payment.payerName) } : {}),
+            ...(payment.notes ? { vehiculo: String(payment.notes) } : {})
+          }),
+          TELEGRAM_BOT_TOKEN.value(),
+          process.env.TELEGRAM_CHAT_ID
+        );
+      } catch (err) {
+        console.warn('No se pudo avisar del cobro', err);
+      }
+    }
 
     // If the payment is linked to a reservation, refresh its
     // paymentSummary so the UI reflects the new state.
