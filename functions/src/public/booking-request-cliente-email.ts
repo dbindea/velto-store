@@ -120,10 +120,10 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
      * `functions/src/contracts/clauses.ts`. Si cambian allí, cambia aquí.
      */
     p(
-      `La reserva se cierra <strong>al abonarse la señal</strong>. Si la pagas y ` +
-        `cambias de idea, te la devolvemos entera hasta las 23:59 de ese mismo día ` +
-        `—o hasta la recogida, si recoges ese día—. Más tarde puedes cancelar ` +
-        `igualmente: se queda la señal y nada más.`
+      `La reserva se cierra y queda confirmada al abonarse la señal. Aun así, si ` +
+        `cambias de idea, te devolvemos la señal <strong>íntegramente hasta las ` +
+        `23:59 del mismo día en que la pagas</strong>, siempre que no hayas recogido ` +
+        `ya el coche. Pasado ese plazo, la señal no será reembolsable.`
     ) +
     (d.presupuesto ? boton('Ver el presupuesto', d.presupuesto) : '') +
     p(
@@ -170,10 +170,10 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
     '',
     `Te garantizamos este precio ${d.garantia}. En ese plazo te contactaremos por`,
     'teléfono o WhatsApp para confirmar la disponibilidad y gestionar el pago de la señal.',
-    'La reserva se cierra al abonarse la señal. Si la pagas y cambias de idea, te la',
-    'devolvemos entera hasta las 23:59 de ese mismo día —o hasta la recogida, si',
-    'recoges ese día—. Más tarde puedes cancelar igualmente: se queda la señal y',
-    'nada más.',
+    'La reserva se cierra y queda confirmada al abonarse la señal. Aun así, si cambias',
+    'de idea, te devolvemos la señal íntegramente hasta las 23:59 del mismo día en que',
+    'la pagas, siempre que no hayas recogido ya el coche. Pasado ese plazo, la señal',
+    'no será reembolsable.',
     ...(d.presupuesto ? ['', `Presupuesto: ${d.presupuesto}`] : []),
     '',
     `${d.marca} · ${d.telefonoEmpresa}`,
