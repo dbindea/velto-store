@@ -518,38 +518,48 @@ const PROMESAS = [
   /*
    * EL VELO.
    *
-   * ⚠️ **El cielo ocupa más de la mitad del fotograma y es CLARO.** El titular
-   * es blanco y cae en la esquina superior izquierda —medido: de 111 a 421 px
-   * de los 608 del héroe—, o sea justo encima de la parte más brillante. Sin
-   * velo no se lee.
+   * ⚠️ **Dorel lo quitó el 19 de octubre de 2026 para verlo sin él** —«se ve
+   * raro»—, y queda escrito aquí porque lo que se quita tiene una consecuencia
+   * medida: el cielo es más de la mitad del fotograma y es claro, y el titular
+   * es blanco y cae justo encima (de 111 a 421 px de los 608 del héroe). Con
+   * el degradado, ese texto medía entre **15,9 y 19,9:1** sobre un fotograma
+   * real; sin él depende del fotograma, y los hay muy claros.
    *
-   * ⚠️ **Y es un degradado hacia la derecha, no un velo plano.** Un velo
-   * uniforme lo bastante oscuro para el texto dejaría el vídeo casi negro, y
-   * entonces no habría vídeo. Así el lado del texto va casi opaco y el derecho
-   * —el hueco que Dorel señaló— se abre y deja ver pasar los coches.
+   * Si hay que devolverlo, el que había era un degradado **hacia la derecha**
+   * y no un velo plano —`--velto-black` a la izquierda, 0.88 al 30 %, 0.58 al
+   * 70 % y 0.42 al final— más uno vertical suave (0.45 arriba, 0.12 al 35 %,
+   * 0.55 abajo). La razón de que fuera degradado y no plano: un velo uniforme
+   * lo bastante oscuro para el texto deja el vídeo casi negro, y entonces no
+   * hay vídeo.
    *
-   * El segundo degradado, el vertical, remata dos cosas: el borde superior,
-   * donde la cabecera se apoya, y el inferior, donde el buscador cuelga por
-   * debajo del bloque negro.
+   * ⚠️ **Lo que NO se puede quitar es el negro de `.hero`**, que está debajo:
+   * es lo que se ve mientras el póster no ha pintado y lo que sostiene el
+   * titular si el vídeo no carga.
+   *
+   * ⚠️ **Y lo que raro era el CORTE, no el velo.** El degradado iba de
+   * izquierda a derecha y arrancaba en negro opaco, así que el tercio
+   * izquierdo era un rectángulo negro y el resto vídeo: la mitad de la pantalla
+   * parecía una cosa y la otra mitad otra. Éste va de arriba abajo, que es
+   * como está repartida la imagen —cielo claro arriba, carretera abajo— y como
+   * está repartido el texto. No hay dos mitades, hay una sola imagen que se
+   * aclara hacia el suelo.
+   *
+   * ⚠️ **Los números son medidos, no elegidos a ojo.** Recorriendo los diez
+   * segundos del bucle, el píxel más claro bajo el titular es **196** y bajo la
+   * entradilla **192**. Con eso, un velo plano necesitaría 0,55 para que los
+   * dos pasen; éste llega al mismo sitio arriba —donde está el texto— y baja a
+   * 0,30 en el suelo, que es donde está lo único que se quiere ver.
    */
   .hero__fondo::after {
     content: '';
     position: absolute;
     inset: 0;
-    background:
-      linear-gradient(
-        to right,
-        var(--velto-black) 0%,
-        rgb(0 0 0 / 0.88) 30%,
-        rgb(0 0 0 / 0.58) 70%,
-        rgb(0 0 0 / 0.42) 100%
-      ),
-      linear-gradient(
-        to bottom,
-        rgb(0 0 0 / 0.45) 0%,
-        rgb(0 0 0 / 0.12) 35%,
-        rgb(0 0 0 / 0.55) 100%
-      );
+    background: linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.62) 0%,
+      rgb(0 0 0 / 0.6) 70%,
+      rgb(0 0 0 / 0.3) 100%
+    );
   }
 
   .hero__titular {
