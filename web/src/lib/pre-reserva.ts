@@ -145,13 +145,20 @@ export function montarPreReserva(): PreReserva | null {
   document.getElementById('dlg-cerrar')?.addEventListener('click', () => dlg.close());
   document.getElementById('dlg-ok')?.addEventListener('click', () => dlg.close());
   /*
-   * ⚠️ **«Que me llaméis» hace EXACTAMENTE lo que «Cerrar»**, y por eso no
-   * tiene camino propio. No es una opción que haya que registrar en ninguna
-   * parte: la pre-reserva ya está creada y Velto ya tiene el aviso. Lo único
-   * que cambia es que la persona ha dicho que no paga ahora, y eso no es un
-   * dato del negocio — es no hacer nada.
+   * ⚠️ **Aquí había un «Que me llaméis y ya decido» que CERRABA el diálogo, y
+   * duró unas horas.** Cerrar desde la cara de «hecho» lleva a la portada —por
+   * decisión de Dorel del 2 de octubre, para que nadie mande dos solicitudes
+   * del mismo coche—, así que pulsarlo **borraba la referencia, el enlace al
+   * presupuesto y el botón de pagar**. Lo probó Dorel el 19 de octubre: «me
+   * llevó a la home y perdí la modal».
+   *
+   * ⚠️ **Y el arreglo NO era ponerle un `target`**, que es lo primero que
+   * sugiere el síntoma. Los otros cuatro enlaces de esta pantalla —el
+   * presupuesto, las cancelaciones y los dos de la pantalla de pago— ya abren
+   * en otra pestaña y conservan el diálogo; comprobado uno a uno ese mismo día.
+   * Éste no tenía a dónde ir: no es una acción, es una frase que dice que
+   * pagar es opcional. Ahora es texto y no se puede pulsar.
    */
-  document.getElementById('dlg-no-pagar')?.addEventListener('click', () => dlg.close());
 
   /*
    * Pagar la señal: se pide el cobro y se manda a la pasarela.

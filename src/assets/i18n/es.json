@@ -717,7 +717,7 @@
       "subtitle": "Pago seguro",
       "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
       "unavailableTitle": "Pago no disponible",
-      "signalTerms": "Esta señal se descuenta del alquiler. Al pagarla cerramos tu reserva: un vehículo de esa categoría, igual o superior, nunca inferior. Te la devolvemos entera si anulas antes de las 23:59 del día en que la pagas —o antes de la recogida, si recoges ese mismo día—. Más tarde, cancelar cuesta la señal y nada más. Si fallamos nosotros, vuelve entera.",
+      "signalTerms": "La reserva se cierra y queda confirmada al abonarse la señal. Aun así, si cambias de idea, te devolvemos la señal íntegramente hasta las 23:59 del mismo día en que la pagas, siempre que no hayas recogido ya el coche. Pasado ese plazo, la señal no será reembolsable.",
       "signalTermsLink": "Leer la política de cancelación",
       "terms": "Cancelaciones y devoluciones"
     },

@@ -717,7 +717,7 @@
       "subtitle": "Plată securizată",
       "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
       "unavailableTitle": "Plată indisponibilă",
-      "signalTerms": "Acest avans se scade din prețul închirierii. Plata lui îți închide rezervarea: un vehicul din acea categorie, aceeași sau superioară, niciodată inferioară. Ți-l restituim integral dacă anulezi înainte de ora 23:59 a zilei în care îl plătești — sau înainte de preluare, dacă preiei chiar în acea zi. Mai târziu, anularea costă avansul și nimic mai mult. Dacă noi suntem cei care greșim, îl primești înapoi integral.",
+      "signalTerms": "Rezervarea se închide și rămâne confirmată la plata avansului. Chiar și așa, dacă te răzgândești, îți restituim avansul integral până la ora 23:59 a aceleiași zile în care îl plătești, cu condiția să nu fi preluat deja mașina. După acest termen, avansul nu mai este rambursabil.",
       "signalTermsLink": "Citește politica de anulare",
       "terms": "Anulări și rambursări"
     },

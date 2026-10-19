@@ -285,15 +285,24 @@
       <p id="dlg-pagar-error" class="dlg__aviso" role="alert" hidden></p>
 
       {/*
-        ⚠️ **Es un enlace y no un botón, y eso es lo que lo hace secundario sin
-        esconderlo.** Pintado como botón fantasma competiría con el turquesa; en
-        texto se lee entero y no se puede confundir con la acción principal.
+        ⚠️ **Es TEXTO, no un botón, y eso es el arreglo de un fallo real.**
+        Nació como un botón que cerraba el diálogo, y cerrar desde la cara de
+        «hecho» lleva a la portada: Dorel lo pulsó el 19 de octubre de 2026 y
+        **perdió la referencia, el presupuesto y el botón de pagar**. Un «me lo
+        pienso» que te echa de la página es lo contrario de pensárselo.
 
-        Nace oculto: sin pago ofrecido, la frase «prefiero que me llaméis» no
-        tiene contra qué contrastar — es lo único que va a pasar.
+        ⚠️ **Y no es que le faltara un `target`: es que no tenía a dónde ir.**
+        Aquí no hay nada que hacer — la pre-reserva ya está creada y Velto ya
+        tiene el aviso—, así que la frase solo informa de que pagar es
+        opcional. Lo que de verdad cierra sigue siendo «Cerrar», abajo, que es
+        donde se busca.
+
+        Nace oculto: sin pago ofrecido, «prefieres pensártelo» no tiene contra
+        qué contrastar — esperar la llamada es lo único que va a pasar.
       */}
       <p id="dlg-llamada" class="dlg__letra" hidden>
-        ¿Prefieres pensártelo? <button type="button" class="dlg__como-enlace" id="dlg-no-pagar">Que me llaméis y ya decido</button>.
+        ¿Prefieres pensártelo? No hace falta que hagas nada: te llamamos
+        igualmente dentro del plazo.
       </p>
 
       <a id="dlg-presupuesto" class="btn btn--brand dlg__enviar" hidden
@@ -475,33 +484,4 @@
 
   .dlg__letra { margin: 0; font-size: var(--fs-caption); color: var(--text-2); }
 
-  /*
-   * El «que me llaméis» de la pantalla de hecho.
-   *
-   * ⚠️ **Es un `<button>` disfrazado de enlace, y tiene que ser un botón.** No
-   * navega a ninguna parte: cierra el diálogo y lleva a la portada, que es lo
-   * que ya hace la × y la tecla Escape. Un `<a href="#">` haría lo mismo a la
-   * vista y mentiría a quien navega con lector de pantalla, que oiría «enlace»
-   * y esperaría ir a otro sitio.
-   *
-   * ⚠️ **Y lleva su `:focus-visible`.** Al quitarle el aspecto de botón se le
-   * quita también el recuadro de foco del navegador: sin esta regla, quien
-   * navega con el tabulador pierde de vista dónde está — y aquí lo que hay
-   * alrededor es un botón que cobra 50 €.
-   */
-  .dlg__como-enlace {
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    color: var(--brand);
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
-  .dlg__como-enlace:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
-    border-radius: var(--r-sm);
-  }
 </style>
