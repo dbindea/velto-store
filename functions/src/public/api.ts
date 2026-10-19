@@ -842,8 +842,28 @@ export const createSignalPayment = onRequest(
     const id = String((req.body as { id?: unknown })?.id ?? '').trim();
     if (!id || !/^[A-Za-z0-9_-]{6,64}$/.test(id)) { fallo(res, 400, 'bad-id'); return; }
 
+    /**
+     * ⚠️ **La bandera se mira ANTES de abrir la transacción, y no es un
+     * adorno.** Estaba solo dentro de `puedePagarSenal()`, así que con el pago
+     * apagado se leía igualmente el documento de Firestore para después
+     * negarse — y esto es un endpoint **público** que en producción solo sabe
+     * decir que no: cualquiera podía hacerle gastar una lectura por petición.
+     *
+     * ⚠️ **Y lo que de verdad lo motivó es que el comentario MENTÍA.** Aquí y
+     * en `.env.rentalcar-veltomobility` ponía «contesta 403 sin mirar siquiera
+     * la solicitud», y no era cierto. Se vio comprobando producción el 19 de
+     * octubre de 2026. La regla de la casa es que un comentario que describe
+     * algo que no pasa es peor que no tenerlo: o se corrige la frase, o se
+     * corrige el código. Aquí el código era además lo mejorable.
+     *
+     * ⚠️ **La comprobación de `puedePagarSenal()` SE QUEDA**, con lo que esto
+     * es defensa en profundidad y no un traslado. Allí está probada, y es la
+     * que sigue siendo la autoridad; ésta solo evita el viaje a Firestore.
+     */
+    const activo = pagoDeSenalActivo();
+    if (!activo) { fallo(res, CODIGO_SIN_SENAL.disabled, 'disabled'); return; }
+
     try {
-      const activo = pagoDeSenalActivo();
       const solicitudRef = firestore().collection(SOLICITUDES).doc(id);
 
       const salida = await firestore().runTransaction(async (tx) => {

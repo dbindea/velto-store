@@ -1268,9 +1268,19 @@ lanzaría cobros a nombre de otro. Misma regla que los enlaces `/d/…`.
 
 ⚠️ **En producción está APAGADO** (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED=false`),
 por decisión de Dorel al pedirlo: «para producción en disabled». Con la bandera
-en `false`, `createSignalPayment` contesta `403` **sin mirar siquiera la
-solicitud** y `createBookingRequest` le dice a la web que no lo ofrezca — las
+en `false`, `createSignalPayment` contesta `403` **antes de abrir la
+transacción** y `createBookingRequest` le dice a la web que no lo ofrezca — las
 dos capas hacen falta, porque esconder un botón es interfaz y no seguridad.
+
+⚠️ **Esa frase decía «sin mirar siquiera la solicitud» y era FALSA**, en los
+tres sitios donde estaba escrita. La comprobación vivía solo dentro de
+`puedePagarSenal()`, que corre **después** de leer el documento dentro de la
+transacción: con el pago apagado se gastaba una lectura de Firestore por
+petición, en un endpoint **público** que allí solo sabe decir que no. Salió
+comprobando producción el 19 de octubre de 2026, y se corrigió **el código, no
+la frase** — que es la salida que corresponde cuando lo que el comentario
+describe es además lo que debería pasar. La comprobación de `puedePagarSenal()`
+se queda: allí está probada y sigue siendo la autoridad.
 
 ⚠️ **La lista del panel enseña «Señal cobrada» en la fila.** Sin eso, dinero
 cobrado de madrugada se leía exactamente igual que una solicitud sin atender: el
