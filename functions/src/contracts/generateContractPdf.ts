@@ -179,6 +179,36 @@ export const generateContractPdf = onCall(
       }
     }
 
+    /**
+     * ⚠️ **Sin documento no hay contrato.** El PDF imprime la línea del
+     * documento **solo si existe** (`pdf.ts`, bloque del arrendatario), así que
+     * hasta hoy un cliente sin DNI producía un contrato que identificaba a la
+     * otra parte **solo por su nombre**, en silencio y sin que nada avisara. Un
+     * arrendamiento que no identifica a quien se lleva el coche no acredita
+     * nada el día que haya que reclamar.
+     *
+     * ⚠️ **Esto pasó de improbable a rutinario el 19 de octubre de 2026.** El
+     * alta rápida solo exige el NOMBRE, y el flujo que Dorel pidió es
+     * justamente ese: crear la reserva con lo que la web trae —nombre y
+     * teléfono— y completar el DNI y el carné cuando el cliente los mande. Con
+     * la señal ya cobrada y la reserva confirmada, el único paso que queda es
+     * generar el contrato, que es exactamente donde hace falta la identidad.
+     *
+     * ⚠️ **Se comprueba DESPUÉS de enriquecer, y por eso se desbloquea solo.**
+     * Lo de arriba lee la ficha viva del cliente: en cuanto el operador teclea
+     * el documento, el contrato sale sin tocar nada más. Comprobándolo contra
+     * el `clientSnapshot` congelado, completar la ficha no habría servido de
+     * nada y habría que recrear la reserva.
+     *
+     * ⚠️ **Y esto es el backend, no la pantalla.** La ficha apaga el botón y da
+     * el motivo, pero eso es la interfaz: una pestaña abierta desde antes o una
+     * llamada directa al callable no pasan por ella. Es la misma lección que
+     * `generateContractPdf` ya aprendió con `supersede`.
+     */
+    if (!String(clientSnapshot.documentNumber || '').trim()) {
+      throw new HttpsError('failed-precondition', 'contracts.errors.clientDocumentMissing');
+    }
+
     // 3. Load vehicle snapshot
     const vehicleSnapshot: {
       brand: string;

@@ -189,6 +189,7 @@
     },
     "errors": {
       "alreadySigned": "Acel contract este deja semnat. Ca să îl schimbi, trebuie refăcut.",
+      "clientDocumentMissing": "Lipsește actul de identitate sau pașaportul clientului. Un contract trebuie să identifice persoana care ia mașina, nu doar să o numească: completează-l în fișa lui și încearcă din nou.",
       "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
       "createSigningLink": "Linkul de semnare nu a putut fi creat.",
       "downloadFallback": "PDF-ul nu a putut fi descărcat; s-a deschis într-o filă nouă. Salvează-l de acolo.",
@@ -1716,6 +1717,7 @@
     "closeReservation": "Închide rezervarea",
     "completed": "Rezervare finalizată",
     "contractAlreadySigned": "Contractul este deja semnat",
+    "clientDocumentMissing": "Lipsește actul de identitate al clientului",
     "contractCancelled": "Contract anulat",
     "contractPending": "În așteptarea semnării",
     "exceptionReason": "Motiv",

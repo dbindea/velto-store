@@ -189,6 +189,7 @@
     },
     "errors": {
       "alreadySigned": "That contract is already signed. Reissue it to change it.",
+      "clientDocumentMissing": "The customer’s ID or passport is missing. A contract has to identify whoever takes the car, not just name them: complete it on their record and try again.",
       "cancelSigningLink": "The signing link could not be cancelled.",
       "createSigningLink": "The signing link could not be created.",
       "downloadFallback": "The PDF could not be downloaded; it was opened in a new tab. Save it from there.",
@@ -1716,6 +1717,7 @@
     "closeReservation": "Close reservation",
     "completed": "Reservation complete",
     "contractAlreadySigned": "Contract already signed",
+    "clientDocumentMissing": "The customer’s ID is missing",
     "contractCancelled": "Contract cancelled",
     "contractPending": "Pending signature",
     "exceptionReason": "Reason",

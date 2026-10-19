@@ -189,6 +189,7 @@
     },
     "errors": {
       "alreadySigned": "Ese contrato ya está firmado. Para cambiarlo hay que rehacerlo.",
+      "clientDocumentMissing": "Falta el DNI o el pasaporte del cliente. Un contrato tiene que identificar a quien se lleva el coche, no solo nombrarlo: complétalo en su ficha y vuelve a intentarlo.",
       "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
       "createSigningLink": "No se pudo crear el enlace de firma.",
       "downloadFallback": "No se pudo descargar el PDF; se ha abierto en otra pestaña. Guárdalo desde ahí.",
@@ -1716,6 +1717,7 @@
     "closeReservation": "Cerrar reserva",
     "completed": "Reserva completada",
     "contractAlreadySigned": "El contrato ya está firmado",
+    "clientDocumentMissing": "Falta el documento del cliente",
     "contractCancelled": "El contrato está cancelado",
     "contractPending": "Pendiente de firma",
     "exceptionReason": "Motivo",

@@ -1,6 +1,7 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { capitalizeWords, toReference, transformInput } from '@shared/utils/text-case.util';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { first } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -427,6 +428,7 @@ export class ReservationDetailComponent implements OnInit {
             this.loadInspections(id);
             this.watchContract(id);
             this.loadVehicleBlock(reservation);
+            this.loadClient(reservation);
           }
         },
         error: (error) => {
@@ -435,6 +437,42 @@ export class ReservationDetailComponent implements OnInit {
         }
       });
   }
+
+  /**
+   * La ficha **viva** del arrendatario.
+   *
+   * ⚠️ **No es para pintarla —eso ya lo hace el `clientSnapshot`— sino para que
+   * el workflow decida con el dato de hoy.** `canGenerateContract()` exige el
+   * documento del cliente, y el snapshot se congela al crear la reserva: con el
+   * flujo normal —crearla con lo que trae la web y completar el DNI cuando el
+   * cliente lo manda— seguiría vacío para siempre y el contrato no se
+   * desbloquearía nunca.
+   *
+   * ⚠️ **Se lee una vez (`first()`), no se escucha.** Lo que cambia mientras
+   * alguien mira una reserva es el contrato —lo firma el cliente en su móvil— y
+   * los pagos; una ficha de cliente no. Un oyente más por pantalla que no aporta
+   * nada es el «refrescar volviendo a llamar» que ya costó siete suscripciones
+   * apiladas. ⚠️ Y `first()` no es opcional: `getClientById()` devuelve un
+   * stream vivo, así que sin él queda un oyente abierto por cada reserva que se
+   * abra.
+   *
+   * ⚠️ **Su fallo no tumba la pantalla.** Sin cliente, el guard cae al snapshot
+   * y el backend sigue comprobándolo al generar: lo peor que pasa es que el
+   * botón quede apagado de más, no que se escape un contrato sin identificar.
+   */
+  private loadClient(reservation: Reservation): void {
+    if (!reservation.clientId) return;
+    this.clientService
+      .getClientById(reservation.clientId)
+      .pipe(first(), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (client) => (this.client = client),
+        error: (error) => console.error('No se pudo cargar el cliente:', error)
+      });
+  }
+
+  /** La ficha viva del arrendatario. Ver `loadClient()`. */
+  client: Client | null = null;
 
   /**
    * La ITV o el seguro del coche, contra la fecha de devolución de ESTA reserva.
@@ -1422,7 +1460,14 @@ export class ReservationDetailComponent implements OnInit {
       reservation: this.reservation,
       pickupInspection: this.pickupInspection,
       returnInspection: this.returnInspection,
-      contract: this.contract
+      contract: this.contract,
+      /**
+       * ⚠️ **La ficha viva, para que `canGenerateContract()` mire el DNI de
+       * hoy.** El `clientSnapshot` de la reserva se congeló al crearla; sin
+       * esto, completar el documento en la ficha del cliente no desbloquearía
+       * el contrato nunca. Ver `loadClient()`.
+       */
+      client: this.client
     } as WorkflowContext;
   }
 

@@ -67,6 +67,57 @@ const { resumen = '' } = Astro.props;
         <div class="esq__linea"></div>
         <div class="esq__linea esq__linea--media"></div>
       </div>
+      {/*
+        LA CARRETERA, mientras llegan la ficha técnica y el calendario.
+
+        ⚠️ **Es el hueco que dejaba la página PRERRENDERIZADA, y parecía
+        congelada.** Lo vio Dorel el 19 de octubre de 2026 con una captura: la
+        foto, las dos líneas de texto… y nada más, varios segundos. Lo que
+        falta debajo —ficha técnica, «Incluido en el alquiler», el calendario y
+        el precio— llega de la API, y la primera petición despierta una
+        instancia en frío.
+
+        ⚠️ **Y el esqueleto no lo tapaba A PROPÓSITO.** `#esqueleto-ficha` se
+        apaga justo cuando hay `resumen`, con el argumento —correcto— de que
+        sobre contenido ya montado un esqueleto es un parpadeo gratis. El
+        argumento sigue siendo bueno; lo que faltaba es que **el caso
+        prerrenderizado también tiene algo que esperar**, solo que más abajo.
+        Por eso este va con el `hidden` INVERTIDO: donde el esqueleto se calla,
+        esto habla, y nunca salen los dos.
+
+        ⚠️ **Va debajo del resumen y no encima**, que es lo que pidió Dorel:
+        arriba ya hay contenido de verdad y taparlo sería esconder lo único que
+        la página sí tiene. Esto ocupa el sitio de lo que falta.
+
+        ⚠️ **La carretera es la MISMA de `/reservar`** (`.buscando__via` +
+        `.panel-estado`, en `global.css`): es el isotipo de la marca en
+        movimiento, y dos animaciones de carga distintas en la misma web se
+        leen como dos webs. Aquí ya se usaba para recalcular el precio al
+        cambiar de fechas — este es el mismo hecho un momento antes.
+
+        ⚠️ **Y `role="status"` con su texto**: quien no ve la animación
+        necesita que le lean qué se está esperando.
+
+        ⚠️ **La envoltura es `ficha__cargando` y NO `buscando`**, que es la que
+        usa `/reservar`. Aquella vive en el `<style>` **encapsulado** de esa
+        página, así que aquí no la alcanzaría y este bloque se quedaría sin
+        margen: pegado al texto de arriba y al pie de abajo. Es el mismo motivo
+        por el que el cálculo de precio de más abajo solo toma
+        `.buscando__via` —que sí es global— y pone su propio `accion__via`.
+        Lo que se comparte es la carretera, no la caja.
+      */}
+      <div id="cargando-datos" class="ficha__cargando" role="status" hidden={!resumen}>
+        <div class="panel-estado">
+          <div class="buscando__via" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <p class="buscando__titulo">Cargando la disponibilidad…</p>
+          <p class="buscando__texto">
+            Estamos mirando el calendario de este coche y su ficha técnica.
+          </p>
+        </div>
+      </div>
+
       <p id="nohay" class="aviso" hidden>
         Este vehículo ya no está disponible en la web.
         <a href="/flota">Mira el resto de la flota</a>.
@@ -109,6 +160,14 @@ const { resumen = '' } = Astro.props;
   const cargando = document.getElementById('cargando')!;
   // El esqueleto se apaga con el aviso: son el mismo estado.
   const esqueletoFicha = document.getElementById('esqueleto-ficha');
+  /**
+   * La carretera que ocupa el hueco de la ficha técnica y el calendario.
+   *
+   * ⚠️ **Puede no existir**, igual que el esqueleto: el respaldo `coche.astro`
+   * monta este mismo componente sin `resumen`, y entonces quien espera es el
+   * esqueleto. Por eso no lleva `!`.
+   */
+  const cargandoDatos = document.getElementById('cargando-datos');
   const nohay = document.getElementById('nohay')!;
   const error = document.getElementById('error')!;
 
@@ -798,21 +857,34 @@ const { resumen = '' } = Astro.props;
     document.head.appendChild(m);
   }
 
-  if (!id) {
+  /**
+   * Apaga TODO lo que estaba esperando, salga como salga.
+   *
+   * ⚠️ **Existe porque son tres salidas y se repetían a mano.** Eran dos
+   * elementos y ahora son tres —el aviso, el esqueleto y la carretera—, y la
+   * forma de romperlo es añadir un cuarto y olvidarlo en una de las ramas:
+   * entonces la página carga bien y se queda una animación girando debajo,
+   * diciendo que espera algo que ya llegó. Con un solo sitio, no hay nada que
+   * acordarse de repetir.
+   */
+  function dejarDeEsperar(): void {
     cargando.hidden = true;
     if (esqueletoFicha) esqueletoFicha.hidden = true;
+    if (cargandoDatos) cargandoDatos.hidden = true;
+  }
+
+  if (!id) {
+    dejarDeEsperar();
     nohay.hidden = false;
     noIndexar();
   } else {
     ficha(id)
       .then(({ vehicle }) => {
-        cargando.hidden = true;
-        if (esqueletoFicha) esqueletoFicha.hidden = true;
+        dejarDeEsperar();
         pinta(vehicle);
       })
       .catch((e: Error) => {
-        cargando.hidden = true;
-        if (esqueletoFicha) esqueletoFicha.hidden = true;
+        dejarDeEsperar();
         // ⚠️ «No encontrado» y «algo ha fallado» son mensajes distintos: al
         // visitante le importa saber si el coche ya no está o si somos nosotros.
         // Y a Google también: lo primero se desindexa, lo segundo no se toca.
@@ -830,6 +902,23 @@ const { resumen = '' } = Astro.props;
   .migas { margin-bottom: var(--sp-5); }
 
   .ficha__titulo { margin: var(--sp-2) 0 var(--sp-8); }
+
+  /*
+   * La carretera mientras llegan la ficha técnica y el calendario.
+   *
+   * ⚠️ **Clase propia, y no la `.buscando` de `/reservar`.** Aquella vive en
+   * el `<style>` encapsulado de esa página y no alcanza hasta aquí: este
+   * bloque se quedaría sin margen, pegado al texto de arriba y al pie de
+   * abajo. `css:audit` no lo cazaría —la clase *está* escrita en algún
+   * sitio—, que es el fallo que este repositorio ya ha pagado con
+   * `.form-control`, `.btn-primary` y `.badge`. Lo que se comparte con
+   * `/reservar` son las piezas de dentro, que sí son globales.
+   *
+   * ⚠️ **Y el margen es el mismo valor** (`--sp-10`): es la misma espera
+   * contada en dos páginas, y dos separaciones distintas se notan al navegar
+   * de una a otra.
+   */
+  .ficha__cargando { margin: var(--sp-10) 0; }
 
   /*
    * ⚠️ **En móvil manda el ORDEN DEL CÓDIGO**, y es el del flujo: galería,
