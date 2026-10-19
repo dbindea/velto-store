@@ -49,7 +49,7 @@ import type { VentanaOcupada } from './core';
 import type { PublicAvailableVehicle } from './types';
 import { defineSecret } from 'firebase-functions/params';
 import { companyConfig } from '../company-config';
-import { publicBaseUrl } from '../public-url';
+import { publicBaseUrl, webBaseUrl } from '../public-url';
 /**
  * ⚠️ **Estático y no perezoso a propósito.** La regla del arranque en frío es
  * apartar lo que pesa, y esto son cinco funciones que devuelven cadenas, sin una
@@ -59,6 +59,7 @@ import { publicBaseUrl } from '../public-url';
 import { renderBookingRequestEmail, type BookingRequestEmailData } from './booking-request-email';
 import { renderBookingRequestClienteEmail } from './booking-request-cliente-email';
 import { presupuestoDeSolicitud } from './booking-request-quote';
+import { importeSenal, puedePagarSenal, type MotivoSinSenal } from './signal-core';
 import { renderContactEmail } from './contact-email';
 /*
  * ⚠️ Módulo puro y sin dependencias: no pesa en el arranque en frío, que es lo
@@ -730,7 +731,12 @@ export const createBookingRequest = onRequest(
        */
       if (email) {
         try {
-          await avisarCliente(solicitud, { recogida: desde, devolucion: hasta }, presupuesto ?? '');
+          await avisarCliente(
+            solicitud,
+            { recogida: desde, devolucion: hasta },
+            presupuesto ?? '',
+            ref.id
+          );
         } catch (error) {
           logger.error('No se pudo mandar el correo al cliente', { id: ref.id, error });
         }
@@ -743,9 +749,209 @@ export const createBookingRequest = onRequest(
         quoteUrl: presupuesto,
         /** Para que la pantalla pueda decir «te lo hemos mandado a…». */
         emailed: !!email,
+        /**
+         * Si en este entorno se puede pagar la señal, y de cuánto es.
+         *
+         * ⚠️ **Lo tiene que contestar el BACKEND, y no hay alternativa.** La
+         * web pública se construye **igual** para los dos entornos —mismo
+         * `web/dist`, sin `fileReplacements` ni `.env`—, así que no hay forma
+         * de que el bundle sepa si está sirviendo desarrollo o producción. Es
+         * exactamente el mismo problema que hizo que la pantalla de firma
+         * enseñara el correo de desarrollo a un cliente real (F-33): lo que
+         * distingue entorno vive en `functions/.env.<proyecto>` y, si una
+         * pantalla lo necesita, **se lo sirve la function**.
+         *
+         * ⚠️ **Y el id viaja aquí porque es la LLAVE del cobro.** La
+         * referencia corta no vale: se dicta por teléfono. Esto se le entrega
+         * solo a quien acaba de crear la solicitud, que es su dueño.
+         */
+        signal: {
+          enabled: pagoDeSenalActivo(),
+          amount: importeSenal(precio.gross),
+          id: ref.id
+        },
       });
     } catch (error) {
       logger.error('Fallo creando la solicitud', error);
+      fallo(res, 500, 'internal');
+    }
+  }
+);
+
+/**
+ * ¿Este entorno deja pagar la señal desde la web?
+ *
+ * ⚠️ **Bandera propia, y no se cuelga de ninguna de las que ya hay.** Es la
+ * lección de `VELTO_INVOICING_ENABLED` y `VELTO_VERIFACTU_ENABLED`, que
+ * funcionaron **de casualidad** mientras estuvieron apagadas a la vez y
+ * rompieron una pantalla el día que dejaron de ir juntas: cada pregunta se
+ * contesta con su propia bandera, aunque hoy coincidan.
+ *
+ * ⚠️ **Y se compara con `'true'` en vez de mirar si hay algo.** Un
+ * `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=false` es una cadena no vacía, así que
+ * `!!process.env.X` lo daría por encendido — que es el error que enciende
+ * cobros con tarjeta en producción leyendo un fichero que dice que no.
+ */
+function pagoDeSenalActivo(): boolean {
+  return (process.env.VELTO_WEB_SIGNAL_PAYMENT_ENABLED || '').trim().toLowerCase() === 'true';
+}
+
+/** Qué código HTTP le corresponde a cada negativa. */
+const CODIGO_SIN_SENAL: Record<MotivoSinSenal, number> = {
+  disabled: 403,
+  'not-found': 404,
+  closed: 409,
+  expired: 410,
+  'no-amount': 409
+};
+
+/**
+ * Crea el cobro de la señal de una pre-reserva y devuelve dónde pagarlo.
+ *
+ * Es la pieza que **quita a Dorel del medio**: hasta hoy el cobro lo creaba él
+ * desde el panel (`cobrarSenal`) y copiaba el enlace a WhatsApp, así que un
+ * cliente decidido a las dos de la mañana esperaba a que alguien se levantara.
+ *
+ * ⚠️ **El id de la solicitud ES el secreto**, como en los enlaces `/d/…` y en
+ * `/pay/:id`. Por eso la referencia corta (`P-4K7M9X`) **no vale como llave**:
+ * se dicta por teléfono y se teclea, así que con ella cualquiera probando
+ * combinaciones lanzaría cobros a nombre de otro.
+ *
+ * ⚠️ **Y por eso el id se valida contra el alfabeto URL-safe antes de tocar
+ * Firestore.** Aterriza directo en una ruta de documento; es la misma defensa
+ * que `resolveDocumentPath()`.
+ *
+ * ⚠️ **La decisión la toma `puedePagarSenal()`, que es pura y tiene tests.**
+ * Aquí solo se lee, se escribe y se traduce a HTTP. Lo que NO se comprueba es
+ * la disponibilidad del coche, por decisión expresa de Dorel — el motivo
+ * completo está en el docblock de aquella función.
+ *
+ * ⚠️ **Se escribe en TRANSACCIÓN, y no es ceremonia.** Dos pestañas abiertas,
+ * o un doble toque en el móvil, crearían dos cobros de 50 € para la misma
+ * señal; el cliente pagaría el enlace que le llegue y el otro se quedaría
+ * pendiente para siempre, pidiendo un dinero que ya entró. El `signalPaymentId`
+ * se lee **dentro** de la transacción, que es lo único que cierra la ventana.
+ */
+export const createSignalPayment = onRequest(
+  { cors: false },
+  async (req: Request, res: Response) => {
+    cors(res, 'POST, OPTIONS');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    if (req.method !== 'POST') { fallo(res, 405, 'method-not-allowed'); return; }
+
+    const id = String((req.body as { id?: unknown })?.id ?? '').trim();
+    if (!id || !/^[A-Za-z0-9_-]{6,64}$/.test(id)) { fallo(res, 400, 'bad-id'); return; }
+
+    try {
+      const activo = pagoDeSenalActivo();
+      const solicitudRef = firestore().collection(SOLICITUDES).doc(id);
+
+      const salida = await firestore().runTransaction(async (tx) => {
+        const snap = await tx.get(solicitudRef);
+        const s = (snap.exists ? snap.data() : null) as Record<string, unknown> | null;
+
+        const decision = puedePagarSenal(s, new Date(), activo);
+        if (!decision.ok) return { motivo: decision.motivo };
+
+        const reference = String(s?.['reference'] ?? '');
+        if (decision.yaCreado) {
+          return { paymentId: decision.yaCreado, importe: decision.importe, reference };
+        }
+
+        const coche = s?.['vehicleSnapshot'] as { brand?: string; model?: string } | undefined;
+        const nombreCoche = `${coche?.brand ?? ''} ${coche?.model ?? ''}`.trim();
+        const pagoRef = firestore().collection('payments').doc();
+        const ahora = new Date();
+
+        tx.set(pagoRef, {
+          /**
+           * ⚠️ **Cobro LIBRE, y no puede ser otra cosa.** Aquí todavía no hay
+           * reserva: hay un teléfono, un coche elegido y un precio prometido.
+           * Un `initial_payment` necesita una reserva a la que pertenecer.
+           * Es la misma forma exacta que escribe `cobrarSenal()` en el panel,
+           * y eso es lo que permite que `signal-adoption.util.ts` adopte esta
+           * señal al convertir sin distinguir de dónde vino.
+           */
+          isFreePayment: true,
+          bookingRequestId: id,
+          vehicleId: String(s?.['vehicleId'] ?? ''),
+          type: 'free_payment',
+          direction: 'income',
+          /**
+           * ⚠️ **`redsys` y no `manual_card`.** Aquel es el datáfono del
+           * mostrador, y confundirlos deja el histórico contando cobros
+           * presenciales que nunca ocurrieron.
+           */
+          method: 'redsys',
+          /**
+           * ⚠️ **`system` y no `manual`, que es lo que pone el del panel.** Es
+           * la única diferencia entre los dos cobros, y dice la verdad: a éste
+           * no lo tecleó nadie. Hoy no lo mira ningún filtro; está para que el
+           * día que alguien pregunte cuántas señales entraron solas, la
+           * respuesta esté en el dato y no haya que deducirla.
+           */
+          source: 'system',
+          status: 'pending',
+          /**
+           * ⚠️ **Nace con `paidAmount: 0`.** Lo que se crea es la petición de
+           * cobro, no el cobro: quien dice que el dinero entró es el webhook.
+           */
+          amount: decision.importe,
+          paidAmount: 0,
+          pendingAmount: decision.importe,
+          currency: 'EUR',
+          /**
+           * ⚠️ **El concepto nombra la referencia**, con las mismas palabras
+           * que `bookingRequests.signal.concept`. Este cobro vive suelto en la
+           * lista de Pagos hasta que se asigne a una reserva; sin la referencia
+           * dentro, dentro de una semana es un apunte de 50 € sin dueño.
+           */
+          concept: `Señal de la pre-reserva ${reference}`,
+          /** Lo lee el aviso de Telegram como «el coche». */
+          notes: nombreCoche,
+          payerName: String(s?.['name'] ?? ''),
+          payerPhone: String(s?.['phone'] ?? ''),
+          ...(s?.['email'] ? { payerEmail: String(s['email']) } : {}),
+          internalReference: `FRE-${Date.now().toString(36).toUpperCase()}-${Math.random()
+            .toString(36)
+            .substring(2, 6)
+            .toUpperCase()}`,
+          createdAt: ahora
+        });
+
+        /**
+         * ⚠️ **No se toca el estado de la solicitud**, igual que hace
+         * `attachSignalPayment()` en el panel. Que haya un cobro en marcha no
+         * es haber hablado con el cliente: marcarla «contactada» la sacaría de
+         * la lista de trabajo pendiente justo cuando hay que estar MÁS
+         * pendiente, porque hay dinero en camino.
+         */
+        tx.update(solicitudRef, { signalPaymentId: pagoRef.id });
+        return { paymentId: pagoRef.id, importe: decision.importe, reference };
+      });
+
+      if ('motivo' in salida && salida.motivo) {
+        fallo(res, CODIGO_SIN_SENAL[salida.motivo], salida.motivo, { id });
+        return;
+      }
+
+      /**
+       * ⚠️ **El pago se hace en la pantalla que YA existe**, la del backoffice
+       * (`/pay/:id`), no en una nueva de la web pública. Es la que Dorel ya
+       * manda por WhatsApp, la que hace el POST a Redsys —la pasarela solo
+       * admite POST— y la que lleva la razón social, el NIF y el enlace a la
+       * política de devoluciones que el banco exige. Una segunda pantalla de
+       * pago sería un segundo sitio donde arreglar lo mismo.
+       */
+      const base = publicBaseUrl();
+      const salidaOk = salida as { paymentId: string; importe: number; reference: string };
+      res.json({
+        amount: salidaOk.importe,
+        reference: salidaOk.reference,
+        payUrl: base ? `${base}/pay/${salidaOk.paymentId}` : ''
+      });
+    } catch (error) {
+      logger.error('Fallo creando el cobro de la señal', { id, error });
       fallo(res, 500, 'internal');
     }
   }
@@ -802,7 +1008,16 @@ async function avisarCliente(
    * mentira como hora de entrega.
    */
   horas: { recogida: Date; devolucion: Date },
-  presupuesto: string
+  presupuesto: string,
+  /**
+   * El id del documento de la solicitud.
+   *
+   * ⚠️ **Es la llave del cobro, y por eso NO es la referencia.** `P-4K7M9X` se
+   * dicta por teléfono y se teclea: con ella como llave, cualquiera probando
+   * combinaciones lanzaría cobros a nombre de otro. Éste mide ~95 bits y solo
+   * lo recibe quien acaba de crear la solicitud, igual que los enlaces `/d/…`.
+   */
+  id: string
 ): Promise<void> {
   const apiKey = RESEND_API_KEY.value();
   if (!apiKey) {
@@ -832,6 +1047,20 @@ async function avisarCliente(
     ...(s.pickupPlace ? { lugar: s.pickupPlace } : {}),
     garantia: `hasta el ${cuando(s.priceGuaranteedUntil)}`,
     presupuesto,
+    /*
+     * ⚠️ **Lleva a una página de la web, no a un enlace de pago ya emitido.**
+     * Un enlace de pago congela el importe: metido en un correo seguiría
+     * cobrando la señal de un presupuesto vencido. Esta página pregunta al
+     * backend al pulsar, así que el plazo se comprueba en ese momento —y es
+     * `puedePagarSenal()` quien lo decide, en un solo sitio.
+     *
+     * ⚠️ **Vacío si el entorno no lo ofrece**, y entonces el correo no enseña
+     * el botón. Es la misma bandera que mira la pantalla.
+     */
+    pagarSenal: pagoDeSenalActivo() && webBaseUrl()
+      ? `${webBaseUrl()}/pagar-senal?s=${encodeURIComponent(id)}`
+      : '',
+    importeSenal: `${importeSenal(s.quoteSnapshot.gross).toFixed(2).replace('.', ',')} €`,
     marca: empresa.brandName,
     telefonoEmpresa: empresa.phone,
   });

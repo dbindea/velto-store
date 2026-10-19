@@ -52,6 +52,19 @@
  */
 .solicitud__fila {
   display: grid;
+  /*
+   * ⚠️ **Cinco columnas, y la chapa de la señal NO es una de ellas.** Estuvo
+   * siéndolo un rato el 19 de octubre de 2026 y hubo que deshacerlo: una
+   * rejilla coloca por orden, así que una celda que solo llevan algunas filas
+   * **mueve las columnas** de esas filas. Medido: el precio salía a 914 px en
+   * las filas con chapa y a 1.004 en las de al lado — 195,95 € terminaba mucho
+   * antes que el 326,95 € de debajo.
+   *
+   * Reservar la celda vacía arreglaba el estado pero no el precio, porque las
+   * dos primeras columnas son `fr` y se encogen para dejarle sitio. La chapa
+   * vive ahora **dentro** de la primera columna, junto a la referencia, que es
+   * donde no descuadra nada — y donde tiene más sentido.
+   */
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) auto auto auto;
   align-items: center;
   gap: 16px;
@@ -150,6 +163,48 @@
     color: var(--text-muted);
     background: var(--bg-main);
   }
+}
+
+/*
+ * La chapa de «Señal cobrada» de la FILA, que no es la de la ficha.
+ *
+ * ⚠️ **Va aparte y no cuelga de `.badge` de arriba, porque vive en otro
+ * sitio.** Aquellas están anidadas bajo el bloque de la ficha abierta; ésta se
+ * pinta en la cabecera de la fila, que es un antepasado distinto. Es
+ * exactamente la trampa que `css:audit` no caza —la clase está declarada, pero
+ * bajo un padre que no la envuelve— y que ya dejó sin fondo las chapas de la
+ * ficha de la reserva.
+ *
+ * ⚠️ **Y la FORMA la pone `styles.scss`**, que declara `.badge` global desde el
+ * 28 de septiembre de 2026. Aquí solo va el color: una chapa sin color se ve,
+ * una sin forma es una franja de color detrás del texto.
+ */
+/*
+ * La referencia y, si la hay, la chapa de «Señal cobrada».
+ *
+ * ⚠️ **En línea y con `wrap`.** En una pantalla estrecha la chapa baja debajo
+ * de la referencia en vez de empujar el nombre fuera de la caja: la regla de la
+ * casa es recolocar, nunca ocultar.
+ */
+.solicitud__cabecera {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/*
+ * ⚠️ **El selector baja hasta `.solicitud__cabecera`** porque ahí es donde vive
+ * ahora la chapa. Las `senal-*` de arriba cuelgan del bloque de la ficha
+ * abierta y no alcanzan a la fila — es la trampa que `css:audit` no caza: la
+ * clase está declarada, pero bajo un padre que no la envuelve.
+ *
+ * La FORMA la pone el `.badge` global de `styles.scss`; aquí solo el color. Una
+ * chapa sin color se ve; una sin forma es una franja de color tras el texto.
+ */
+.solicitud__cabecera .badge.senal-cobrada {
+  color: var(--success-color);
+  background: var(--success-bg);
 }
 
 .datos {

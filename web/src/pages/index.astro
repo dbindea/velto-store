@@ -104,6 +104,49 @@ const PROMESAS = [
 
   {/* ---- Héroe ---------------------------------------------------------- */}
   <section class="hero">
+    {/*
+      EL FONDO: una carretera en movimiento detrás del titular.
+
+      ⚠️ **El negro liso se leía como «la página no ha cargado».** Lo vio Dorel
+      el 19 de octubre de 2026 con una captura de escritorio ancho: el titular
+      ocupa la mitad izquierda y la derecha era un rectángulo negro vacío. En
+      una pantalla de 1.100 px el héroe mide 1.085 × 608 —medido—, así que en
+      un monitor grande ese hueco es la mitad de la primera pantalla.
+
+      ⚠️ **El PÓSTER es lo que de verdad resuelve el problema, no el vídeo.**
+      Son 10 KB y los pinta el navegador con el primer byte, sin esperar a
+      nada; el vídeo llega cuando llega. Es la misma idea que la carretera de
+      la ficha de coche: lo que no puede pasar es que haya un hueco mientras
+      algo carga.
+
+      ⚠️ **Y el póster se saca del vídeo YA DESENFOCADO, no del original.**
+      Es el primer fotograma del fichero que se sirve, extraído de él. Sacado
+      del original quedaría nítido, y entonces el arranque del vídeo sería un
+      salto visible de enfocado a borroso justo en lo primero que se mira —
+      que es exactamente la clase de parpadeo que todo esto viene a quitar.
+
+      ⚠️ **Y el `<video>` nace SIN `src`.** Un `display: none` no evita la
+      descarga, así que la decisión de cargarlo o no se toma abajo en el script:
+      solo en pantalla ancha y solo si nadie ha pedido menos movimiento. En un
+      móvil —que es la mitad del tráfico y el que paga los datos— se queda el
+      póster solo, y el hueco que esto arregla no existe en vertical.
+
+      ⚠️ **`aria-hidden` y sin controles**: es decoración. Quien navega con
+      lector de pantalla no se pierde nada, y el titular sigue siendo el
+      contenido.
+    */}
+    <div class="hero__fondo" aria-hidden="true">
+      <video
+        class="hero__video"
+        poster="/video/carretera-poster.jpg"
+        muted
+        loop
+        playsinline
+        preload="none"
+        tabindex="-1"
+      ></video>
+    </div>
+
     <div class="contenedor">
       {/* Las tres barras del isotipo, inclinadas con `--skew`. */}
       <div class="barras" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -295,6 +338,64 @@ const PROMESAS = [
   import { montarBuscador } from '../lib/buscador';
 
   /*
+   * El vídeo del héroe: se carga AQUÍ y no en el HTML.
+   *
+   * ⚠️ **Un `display: none` no evita la descarga.** Si el `<video>` naciera con
+   * su `src` puesto, un móvil se bajaría casi un mega para no enseñarlo nunca
+   * — y es el aparato que paga los datos y el que menos lo necesita, porque en
+   * vertical no hay hueco negro que tapar. Por eso el marcado trae el póster y
+   * nada más, y la fuente se pone solo cuando toca.
+   *
+   * ⚠️ **Dos condiciones, y las dos son del aparato, no del navegador.** Ancho
+   * real (el hueco existe a partir de ahí) y que nadie haya pedido menos
+   * movimiento. Es la misma frontera que decide el calendario propio y los
+   * `select`: `@supports` contesta si el navegador *puede*, nunca si
+   * *conviene*.
+   *
+   * ⚠️ **Y si el navegador bloquea el autoplay, no pasa nada**: se queda el
+   * póster, que es justo lo que había antes de todo esto y ya resuelve lo que
+   * Dorel pedía. Por eso el `catch` está vacío y no hay aviso: no ha fallado
+   * nada que el visitante tenga que saber.
+   */
+  function fondoDelHeroe(): void {
+    const v = document.querySelector<HTMLVideoElement>('.hero__video');
+    if (!v) return;
+    const ancha = matchMedia('(min-width: 900px)').matches;
+    const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!ancha || quieto) return;
+    v.src = '/video/carretera.mp4';
+    /*
+     * ⚠️ **Nada de `playbackRate`: la lentitud y el desenfoque van DENTRO del
+     * fichero.** Aquí había un `v.playbackRate = 0.6` con un comentario que
+     * decía que recodificar «obligaría a duplicar fotogramas» y que el
+     * resultado en pantalla era idéntico. Las dos mitades eran falsas, y la
+     * segunda la cazó Dorel el 19 de octubre de 2026: «el vídeo va un poco
+     * sacadado».
+     *
+     * La cuenta: 300 fotogramas estirados a 16,6 s son **18 únicos por
+     * segundo**, así que a 60 Hz el navegador repite cada uno tres o cuatro
+     * veces de refresco, y de forma desigual. Eso es el tirón — y no es un
+     * problema de rendimiento de la máquina, que es lo primero que uno piensa:
+     * el vídeo se reproduce perfectamente, lo que pasa es que no hay más
+     * imágenes que enseñar.
+     *
+     * Hoy el fichero dura los 16,6 s a **30 fotogramas distintos**, generados
+     * al recodificar (`minterpolate`, en modo mezcla: funde los dos de origen
+     * en vez de inventarse el movimiento, que sobre coches cruzando deforma).
+     * Así que se reproduce a velocidad 1, sin repetir ninguno.
+     *
+     * ⚠️ **Y pesa MENOS que antes**: 351 KB por 16,6 s frente a los 499 KB que
+     * ocupaban 10. El desenfoque se lleva por delante el detalle fino, que es
+     * justo lo que se come los bits.
+     *
+     * El comando que lo produce está en `docs/video-del-heroe.md`, porque sin
+     * él el fichero es un binario que nadie sabe rehacer.
+     */
+    void v.play().catch(() => {});
+  }
+  fondoDelHeroe();
+
+  /*
    * El buscador: los límites de las fechas, la propuesta inicial, el lugar de
    * recogida y los calendarios propios.
    *
@@ -403,6 +504,148 @@ const PROMESAS = [
     padding-top: var(--sp-20);
     /* El buscador cuelga por debajo del bloque negro. */
     padding-bottom: 0;
+    /*
+     * ⚠️ **`position: relative` y NADA MÁS: nada de `isolation: isolate`.**
+     * Lo llevó un rato el 19 de octubre de 2026 y rompió el buscador entero.
+     *
+     * El fondo se mandaba atrás con `z-index: -1`, y para que eso no lo metiera
+     * detrás del propio negro del `<section>` hacía falta aislar el héroe. Pero
+     * aislar crea un **contexto de apilado**, y dentro de él se queda encerrado
+     * el `z-index: 2` del buscador — que es justo lo que le permite pisar la
+     * sección de abajo, porque `.buscador--flotante` lo baja medio alto con un
+     * `translateY(50%)` y sobresale.
+     *
+     * Consecuencia medida: `elementFromPoint` sobre el campo de fecha devolvía
+     * `SECTION.promesas-seccion`. O sea que el calendario no es que no abriera
+     * — es que **el clic nunca llegaba al campo**, lo recibía la sección
+     * siguiente pintada por encima. No había error en consola ni nada roto a
+     * la vista: solo un buscador que no respondía.
+     *
+     * La forma sin aislar: el fondo va **sin `z-index`** y es el primer hijo,
+     * así que los posicionados que vienen después lo pisan por orden de
+     * documento. Ver `.hero__fondo` y `.hero > .contenedor`.
+     */
+    position: relative;
+  }
+
+  /*
+   * ⚠️ **El negro de arriba NO se quita, se queda debajo.** Es lo que se ve
+   * mientras el póster no ha pintado y lo que sostiene el contraste si el
+   * vídeo no carga: el titular es blanco y no puede depender de que haya
+   * llegado una imagen.
+   */
+  .hero__fondo {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  /*
+   * ⚠️ **Es el mismo par que `.con-humo` en `global.css`, menos el aislamiento,
+   * y por eso se escribe igual.** El fondo va sin `z-index` y el contenido con
+   * `1`: así el texto pisa al vídeo sin que haya que mandar a nadie a negativo
+   * y sin crear un contexto de apilado en `.hero` — que es lo que rompió el
+   * buscador. Ver el comentario de `.hero`.
+   *
+   * ⚠️ **El `z-index: 1` de aquí es el que salva al buscador**, no el `2` que
+   * él lleva dentro: al subir este `.contenedor` sube todo lo que cuelga de él,
+   * y el `<section>` de abajo se queda detrás. Si algún día esta regla
+   * desaparece, el síntoma no será un buscador torcido: será uno que no
+   * responde al clic.
+   */
+  .hero > .contenedor {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+   * ⚠️ **El desenfoque NO está aquí: va cocido en el fichero.** Lo pidió Dorel
+   * el 19 de octubre de 2026 —«de todas formas me gustaría blurarlo sí o sí»—
+   * y un `filter: blur()` en CSS habría sido la respuesta corta. Se descartó
+   * por tres cosas, y la primera es la que importa: **un filtro sobre un
+   * `<video>` se recompone en cada fotograma**, así que habría empeorado el
+   * tirón que estaba arreglando. Además crea un contexto de apilado —justo lo
+   * que acababa de romper el buscador— y deja los bordes semitransparentes,
+   * que obliga a un `scale()` para esconderlos.
+   *
+   * Cocido pesa **menos** (el desenfoque se lleva el detalle fino, que es lo
+   * que se come los bits) y de paso cierra para siempre lo de las matrículas:
+   * ninguna puede quedar legible.
+   *
+   * ⚠️ **Lo que se pierde es poder ajustarlo en un segundo.** Cambiar la
+   * cantidad es volver a pasar el comando de `docs/video-del-heroe.md`.
+   */
+  .hero__video {
+    width: 100%;
+    height: 100%;
+    /*
+     * ⚠️ **Anclado ABAJO, y es lo que decide qué se ve en un monitor grande.**
+     * El alto del héroe lo marca su texto (608 px medidos), así que a 1.100 px
+     * la caja es 16:9 y cabe el fotograma entero; a 1.920 pasa a ser 3,2:1 y
+     * `cover` tiene que recortar. Centrado se quedaría con la franja de en
+     * medio, que es **cielo**; anclado abajo se queda con la carretera y los
+     * coches, que es lo único que aquí cuenta algo.
+     *
+     * ⚠️ **Sin movimiento o en móvil, el póster se queda solo**, y eso no es
+     * una degradación: es una foto fija de una carretera en vez de un hueco
+     * negro, que era todo el problema. Misma idea que las barras del buscador,
+     * que con `prefers-reduced-motion` se quedan quietas y no desaparecen.
+     */
+    object-fit: cover;
+    object-position: center bottom;
+    display: block;
+  }
+
+  /*
+   * EL VELO.
+   *
+   * ⚠️ **Dorel lo quitó el 19 de octubre de 2026 para verlo sin él** —«se ve
+   * raro»—, y queda escrito aquí porque lo que se quita tiene una consecuencia
+   * medida: el cielo es más de la mitad del fotograma y es claro, y el titular
+   * es blanco y cae justo encima (de 111 a 421 px de los 608 del héroe). Con
+   * el degradado, ese texto medía entre **15,9 y 19,9:1** sobre un fotograma
+   * real; sin él depende del fotograma, y los hay muy claros.
+   *
+   * Si hay que devolverlo, el que había era un degradado **hacia la derecha**
+   * y no un velo plano —`--velto-black` a la izquierda, 0.88 al 30 %, 0.58 al
+   * 70 % y 0.42 al final— más uno vertical suave (0.45 arriba, 0.12 al 35 %,
+   * 0.55 abajo). La razón de que fuera degradado y no plano: un velo uniforme
+   * lo bastante oscuro para el texto deja el vídeo casi negro, y entonces no
+   * hay vídeo.
+   *
+   * ⚠️ **Lo que NO se puede quitar es el negro de `.hero`**, que está debajo:
+   * es lo que se ve mientras el póster no ha pintado y lo que sostiene el
+   * titular si el vídeo no carga.
+   *
+   * ⚠️ **Y lo que raro era el CORTE, no el velo.** El degradado iba de
+   * izquierda a derecha y arrancaba en negro opaco, así que el tercio
+   * izquierdo era un rectángulo negro y el resto vídeo: la mitad de la pantalla
+   * parecía una cosa y la otra mitad otra. Éste va de arriba abajo, que es
+   * como está repartida la imagen —cielo claro arriba, carretera abajo— y como
+   * está repartido el texto. No hay dos mitades, hay una sola imagen que se
+   * aclara hacia el suelo.
+   *
+   * ⚠️ **Los números son medidos, no elegidos a ojo.** Recorriendo los diez
+   * segundos del bucle, el píxel más claro bajo el titular es **196** y bajo la
+   * entradilla **192**. Con eso, un velo plano necesitaría 0,55 para que los
+   * dos pasen; éste llega más arriba —donde está el texto— y afloja en el
+   * suelo, que es donde está lo único que se quiere ver.
+   *
+   * ⚠️ **Siete puntos más oscuro desde el 19 de octubre de 2026**, a petición
+   * de Dorel. No tiene techo de accesibilidad —cuanto más oscuro, más
+   * contraste— pero sí uno práctico: pasados los 0,75 el vídeo deja de leerse
+   * como vídeo y vuelve a ser el rectángulo negro que esto venía a quitar.
+   */
+  .hero__fondo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.69) 0%,
+      rgb(0 0 0 / 0.67) 70%,
+      rgb(0 0 0 / 0.37) 100%
+    );
   }
 
   .hero__titular {

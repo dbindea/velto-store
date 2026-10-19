@@ -61,6 +61,8 @@ export const RUTAS = [
 export const FUERA_DEL_SITEMAP: Record<string, string> = {
   '404': 'una página de error no se indexa nunca',
   coche: 'la ficha vive en /coche/{id} y la pinta JavaScript: no hay una URL que listar',
+  'pagar-senal':
+    'sin la llave ?s= no puede hacer nada: indexada sería un resultado que no lleva a ninguna parte',
 };
 
 export const GET: APIRoute = async () => {

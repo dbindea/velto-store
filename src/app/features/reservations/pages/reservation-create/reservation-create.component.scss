@@ -657,6 +657,30 @@ textarea.form-control {
         color: var(--accent-color);
       }
     }
+
+    /*
+     * La línea que dice qué pasa con la señal ya cobrada de la solicitud.
+     *
+     * ⚠️ **`.hint` es global y `.is-ok` NO, y por eso se declara aquí.** Con la
+     * encapsulación de Angular, una clase que declare otro componente no
+     * alcanza a este elemento: `css:audit` la daría por buena —está escrita en
+     * algún sitio— y la línea saldría sin color. Es el fallo de `btn-icon` en
+     * Solicitudes, y el de `.form-control` cuatro veces antes.
+     *
+     * ⚠️ **Solo el verde es propio.** Pendiente se queda con el gris de `.hint`:
+     * no es un problema, es información, y pintarla de ámbar la haría competir
+     * con los avisos que sí lo son.
+     */
+    .hint {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      margin-top: 0.25rem;
+
+      &.is-ok {
+        color: var(--success-color);
+      }
+    }
   }
 }
 

@@ -189,6 +189,7 @@
     },
     "errors": {
       "alreadySigned": "That contract is already signed. Reissue it to change it.",
+      "clientDocumentMissing": "The customer’s ID or passport is missing. A contract has to identify whoever takes the car, not just name them: complete it on their record and try again.",
       "cancelSigningLink": "The signing link could not be cancelled.",
       "createSigningLink": "The signing link could not be created.",
       "downloadFallback": "The PDF could not be downloaded; it was opened in a new tab. Save it from there.",
@@ -716,7 +717,8 @@
       "subtitle": "Secure payment",
       "unavailableMessage": "This charge cannot be paid right now. Please get in touch with us.",
       "unavailableTitle": "Payment unavailable",
-      "signalTerms": "This deposit is deducted from the rental price. Once paid, we confirm your booking and hold the car for those dates; if you cancel afterwards, the deposit is not refunded. If we are the ones unable to provide the car, you get it back in full.",
+      "signalTerms": "Your booking is closed and confirmed once the down payment is made. Even so, if you change your mind, we refund the down payment in full until 23:59 on the same day you pay it, as long as you have not already picked up the car. After that, the down payment is not refundable.",
+      "signalTermsLink": "Read the cancellation policy",
       "terms": "Cancellations and refunds"
     },
     "confirm": {
@@ -1317,6 +1319,16 @@
       "markFailed": "The reservation was created, but the request could not be marked as converted",
       "banner": "From request",
       "pricePromised": "Price promised on the website: {price}. Do not raise it without telling the customer."
+    },
+    "signal": {
+      "alreadyPaid": "This advance payment is already collected: the reservation takes it over and will not ask for it again",
+      "adoptedPending": "The request's advance payment is still outstanding. The reservation takes it over instead of asking for another.",
+      "adopt": {
+        "notFound": "The advance payment for this request cannot be found",
+        "alreadyAttached": "That payment already belongs to another reservation",
+        "cancelled": "The advance payment is cancelled: it cannot be treated as requested",
+        "otherRequest": "That payment belongs to a different request"
+      }
     }
   },
   "search": {
@@ -1705,6 +1717,7 @@
     "closeReservation": "Close reservation",
     "completed": "Reservation complete",
     "contractAlreadySigned": "Contract already signed",
+    "clientDocumentMissing": "The customer’s ID is missing",
     "contractCancelled": "Contract cancelled",
     "contractPending": "Pending signature",
     "exceptionReason": "Reason",
@@ -2173,7 +2186,8 @@
       "created": "Charge created. Copy the link and send it.",
       "failed": "The charge could not be created.",
       "noAmount": "This request has no price: the deposit cannot be calculated.",
-      "concept": "Deposit for pre-booking {reference}"
+      "concept": "Deposit for pre-booking {reference}",
+      "paidBadge": "Down payment in"
     }
   }
 }

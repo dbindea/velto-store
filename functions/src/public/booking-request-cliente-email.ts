@@ -39,6 +39,20 @@ export interface CorreoClienteDatos {
   garantia: string;
   /** El enlace corto al presupuesto. Vacío si no se pudo generar. */
   presupuesto: string;
+  /**
+   * A dónde va el botón de pagar la señal. **Vacío = no se ofrece**, que es lo
+   * que pasa en producción mientras la bandera esté apagada.
+   *
+   * ⚠️ **Es una página de la web, no un enlace de pago ya emitido**, y la
+   * diferencia decide dinero. Un enlace de pago lleva dentro un importe
+   * congelado: puesto en un correo, seguiría cobrando 50 € de un presupuesto
+   * de la semana pasada. Esta página pregunta al backend **en el momento de
+   * pulsar**, así que si el precio prometido ya venció contesta «llámanos» en
+   * vez de cobrar algo que ya no sostenemos.
+   */
+  pagarSenal: string;
+  /** Lo que se pide de señal, ya escrito («50,00 €»). */
+  importeSenal: string;
   marca: string;
   telefonoEmpresa: string;
 }
@@ -88,13 +102,89 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
      * al cliente con el dedo. Este correo se quedó con la versión vieja hasta
      * que alguien los puso uno al lado del otro.
      */
+    /*
+     * ⚠️ **Esta frase CAMBIA cuando se ofrece pagar, y no cambiarla fue un
+     * fallo real del 19 de octubre de 2026.** El correo decía «te
+     * contactaremos… para gestionar el pago de la señal» con un botón de pagar
+     * la señal tres líneas más abajo: dos instrucciones contradictorias en la
+     * misma pantalla, y la respuesta razonable del cliente es no hacer nada y
+     * esperar la llamada — justo lo que esto viene a evitar.
+     *
+     * Se vio **mirando el correo renderizado**, no leyendo el código. Es la
+     * misma lección que el presupuesto que decía «los precios incluyen IVA»
+     * encima de un desglose que lo sumaba: al cambiar lo que hace una
+     * pantalla, **busca las frases, no solo las fórmulas**.
+     *
+     * ⚠️ **Y la llamada se sigue prometiendo en los dos casos.** Pagar no
+     * puede parecer obligatorio: lo que se ofrece es adelantarlo, y quien no
+     * quiera tiene que leer que igualmente le van a llamar.
+     */
     p(
-      `Te garantizamos este precio <strong>${esc(d.garantia)}</strong>. En ese plazo ` +
-        `te contactaremos por teléfono o WhatsApp para confirmar la disponibilidad ` +
-        `y gestionar el pago de la señal.`
+      d.pagarSenal
+        ? `Te garantizamos este precio <strong>${esc(d.garantia)}</strong>. Puedes ` +
+            `cerrarla ya pagando la señal, o esperar a que te contactemos por ` +
+            `teléfono o WhatsApp dentro de ese plazo.`
+        : `Te garantizamos este precio <strong>${esc(d.garantia)}</strong>. En ese plazo ` +
+            `te contactaremos por teléfono o WhatsApp para confirmar la disponibilidad ` +
+            `y gestionar el pago de la señal.`
     ) +
-    p(`El coche quedará reservado <strong>al abonarse la señal</strong>.`) +
-    (d.presupuesto ? boton('Ver el presupuesto', d.presupuesto) : '') +
+    /*
+     * ⚠️ **«La reserva se cierra», no «el coche quedará reservado»** (17 de
+     * octubre de 2026). Lo que se reserva es una **categoría** y no una
+     * matrícula: el motivo largo está en `web/src/pages/condiciones.astro`.
+     * Este correo es la cuarta superficie donde vivía la promesa vieja, y la
+     * nota de aquí arriba lo avisaba —«lo mismo que dice la pantalla, palabra
+     * por palabra»—: si se cambia allí y no aquí, el cliente se queda con la
+     * versión que más le convenga, y con razón.
+     */
+    /*
+     * ⚠️ **Y qué pasa si paga y cambia de idea** (18 de octubre de 2026). El
+     * párrafo decía dónde se cierra la reserva y callaba cómo se deshace, que
+     * es la otra mitad de la misma decisión: a este cliente se le va a mandar
+     * un enlace de pago, y el art. 97.1 del TRLGDCU pide las condiciones antes
+     * de contratar, no después.
+     *
+     * ⚠️ **La ventana NUNCA se escribe sin su tope.** «Hasta las 23:59» a
+     * secas sería falso para quien reserva de madrugada y recoge esa misma
+     * mañana: con el coche entregado no hay nada a lo que renunciar. El tope
+     * cuesta cuatro palabras y va en la misma frase, aquí y en las otras cinco
+     * superficies.
+     *
+     * ⚠️ **Y resume la cláusula, no la inventa.** El texto que manda es
+     * «CANCELACIÓN EL MISMO DÍA DE LA RESERVA» y «CANCELACIÓN POSTERIOR», en
+     * `functions/src/contracts/clauses.ts`. Si cambian allí, cambia aquí.
+     */
+    p(
+      `La reserva se cierra y queda confirmada al abonarse la señal. Aun así, si ` +
+        `cambias de idea, te devolvemos la señal <strong>íntegramente hasta las ` +
+        `23:59 del mismo día en que la pagas</strong>, siempre que no hayas recogido ` +
+        `ya el coche. Pasado ese plazo, la señal no será reembolsable.`
+    ) +
+    /*
+     * ⚠️ **Pagar es el botón PRINCIPAL y el presupuesto pasa a enlace.** Es la
+     * misma jerarquía que la pantalla de «Pre-reserva hecha», y por el mismo
+     * motivo que obliga a que las dos digan lo mismo palabra por palabra: son
+     * el mismo hecho contado dos veces, y si una empuja a pagar y la otra a
+     * descargar un PDF, el cliente se pregunta cuál es el camino bueno.
+     *
+     * ⚠️ **Y si no se ofrece pago, el presupuesto RECUPERA el color.** Lo que
+     * no puede quedar es un correo sin ninguna acción: quien no dejó más que
+     * el teléfono se iría sin nada por escrito. Por eso la condición mira
+     * `pagarSenal` y no se escriben los dos botones a la vez.
+     */
+    (d.pagarSenal
+      ? boton(`Pagar la señal · ${d.importeSenal}`, d.pagarSenal) +
+        (d.presupuesto
+          ? p(
+              `<span style="font-family:${TIPO};font-size:13px;color:${GRIS}">` +
+                `¿Prefieres pensártelo? ` +
+                `<a href="${esc(d.presupuesto)}" style="color:${GRIS}">Descarga el presupuesto</a>` +
+                `.</span>`
+            )
+          : '')
+      : d.presupuesto
+        ? boton('Ver el presupuesto', d.presupuesto)
+        : '') +
     p(
       `<span style="font-family:${TIPO};font-size:13px;color:${GRIS}">` +
         `Tu referencia es <strong>${esc(d.referencia)}</strong>. Si prefieres adelantarlo, ` +
@@ -137,9 +227,31 @@ export function renderBookingRequestClienteEmail(d: CorreoClienteDatos): {
     `Devolución: ${d.devolucion}`,
     ...(d.lugar ? [`Dónde: ${d.lugar}`] : []),
     '',
-    `Te garantizamos este precio ${d.garantia}. En ese plazo te contactaremos por`,
-    'teléfono o WhatsApp para confirmar la disponibilidad y gestionar el pago de la señal.',
-    'El coche quedará reservado al abonarse la señal.',
+    /*
+     * ⚠️ **Las mismas dos redacciones que el HTML.** Hay clientes de correo
+     * que solo enseñan esta versión: si aquí siguiera diciendo «te
+     * contactaremos para gestionar el pago» con el enlace de pagar debajo,
+     * la contradicción volvería por la puerta de atrás.
+     */
+    ...(d.pagarSenal
+      ? [
+          `Te garantizamos este precio ${d.garantia}. Puedes cerrarla ya pagando la señal,`,
+          'o esperar a que te contactemos por teléfono o WhatsApp dentro de ese plazo.'
+        ]
+      : [
+          `Te garantizamos este precio ${d.garantia}. En ese plazo te contactaremos por`,
+          'teléfono o WhatsApp para confirmar la disponibilidad y gestionar el pago de la señal.'
+        ]),
+    'La reserva se cierra y queda confirmada al abonarse la señal. Aun así, si cambias',
+    'de idea, te devolvemos la señal íntegramente hasta las 23:59 del mismo día en que',
+    'la pagas, siempre que no hayas recogido ya el coche. Pasado ese plazo, la señal',
+    'no será reembolsable.',
+    /*
+     * ⚠️ **El mismo orden que el HTML.** Hay clientes de correo que solo
+     * enseñan esta versión: si aquí el pago fuera lo último y allí lo primero,
+     * serían dos correos distintos para la misma persona.
+     */
+    ...(d.pagarSenal ? ['', `Pagar la señal (${d.importeSenal}): ${d.pagarSenal}`] : []),
     ...(d.presupuesto ? ['', `Presupuesto: ${d.presupuesto}`] : []),
     '',
     `${d.marca} · ${d.telefonoEmpresa}`,

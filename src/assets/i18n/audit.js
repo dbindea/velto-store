@@ -351,6 +351,12 @@ const DESDE_LAS_FUNCTIONS = [
   // functions/src/contracts/generateContractPdf.ts
   'contracts.errors.alreadySigned',
   'contracts.errors.supersedeReasonRequired',
+  // Sin DNI no hay contrato: el PDF imprime la línea del documento **solo si
+  // existe**, así que un cliente sin él producía un contrato que identificaba
+  // al arrendatario solo por su nombre, en silencio. Se comprueba en la
+  // function —después de enriquecer con la ficha viva, para que completarla
+  // desbloquee— y no solo en la pantalla.
+  'contracts.errors.clientDocumentMissing',
   // functions/src/public/publishVehiclePhoto.ts — publicar una foto en la web.
   // Las seis salen de la function porque la comprobación que las produce solo
   // se puede hacer allí: que el origen esté dentro de la carpeta de ESE coche,

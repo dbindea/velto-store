@@ -133,7 +133,14 @@ export {
   publicVehicleDetail,
   checkPublicAvailability,
   createBookingRequest,
-  createContactRequest
+  createContactRequest,
+  /**
+   * ⚠️ **La ÚNICA pública que puede acabar cobrando dinero**, así que lleva
+   * bandera propia por entorno (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`) y en
+   * producción está apagada. Con ella en `false` contesta `403` sin mirar
+   * siquiera la solicitud.
+   */
+  createSignalPayment
 } from './public/api';
 export { publishVehiclePhoto, unpublishVehiclePhoto } from './public/publishVehiclePhoto';
 export { trackWebVisit } from './public/trackWebVisit';

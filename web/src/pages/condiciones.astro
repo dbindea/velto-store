@@ -29,13 +29,22 @@ import { EMPRESA } from '../lib/empresa';
         queda en el móvil.
       </p>
 
+      {/*
+        ⚠️ **Aquí ponía «al menos 21 años» y el contrato pide DOS cosas más.**
+        Su cláusula 2 fija la edad máxima en 75 años cumplidos y exige un
+        permiso con antigüedad mínima — y la web se quedaba con la mitad fácil.
+        Prometer menos requisitos de los que el papel exige es la dirección
+        peligrosa: alguien de 76 años reserva por internet, paga la señal y se
+        entera en el mostrador. Comprobado contra `clauses.ts` el 18 de octubre
+        de 2026.
+      */}
       <h2 id="requisitos">Quién puede conducir</h2>
       <p>
-        Hace falta tener al menos <strong>21 años</strong> y un permiso de
-        conducir en vigor. Solo pueden conducir las personas que aparecen
-        <strong>por su nombre en el contrato</strong>: si vais a turnaros, hay
-        que decirlo al reservar y se añaden como conductores autorizados. No
-        cuesta nada, pero tiene que constar.
+        Hace falta tener <strong>entre 21 y 75 años</strong> y un permiso de
+        conducir en vigor con al menos un año de antigüedad. Solo pueden
+        conducir las personas que aparecen por su nombre en el contrato: si
+        vais a turnaros, hay que decirlo al reservar y se añaden como
+        conductores autorizados. No cuesta nada, pero tiene que constar.
       </p>
 
       <h2 id="cancelar">Recogida, devolución y cancelación</h2>
@@ -81,19 +90,111 @@ import { EMPRESA } from '../lib/empresa';
         Pedir precio en la web <strong>no cuesta nada y no te compromete</strong>:
         mientras no pagues nada, puedes dejarlo sin más.
       </p>
+      {/*
+        ⚠️ **Aquí se prometía el COCHE y ahora se promete la CATEGORÍA.**
+        Decisión de Dorel del 17 de octubre de 2026. Ponía «el coche queda
+        apartado para tus fechas y deja de ofrecerse a nadie más», y eso tenía
+        dos problemas a la vez:
+
+        · **Era falso.** Pagar la señal crea un cobro atado a la solicitud; la
+          reserva —lo único que bloquea el coche, vía `blocksAvailability()`—
+          no existe hasta que el operador la crea. Entre una cosa y otra el
+          coche se puede ir.
+        · **Y era justo lo que Dorel NO pone por escrito**, porque su respuesta
+          real cuando el coche no está es ofrecer otro de categoría igual o
+          superior, hablando.
+
+        ⚠️ **La categoría convierte esa negociación en CUMPLIMIENTO.** Es la
+        fórmula del sector —se reserva un grupo, no una matrícula— y hace que
+        «te doy uno mejor» sea literalmente lo prometido en vez de una
+        excepción que hay que justificar. Y el límite importa: igual o
+        superior, **nunca inferior**. Sin esa última palabra la cláusula sería
+        una puerta abierta a entregar menos de lo pagado, y frente a un
+        consumidor eso es de los arts. 85 y 87.6 del TRLGDCU.
+
+        ⚠️ **Si se cambia aquí, se cambia en los CUATRO sitios.** La misma
+        promesa vive en `/devoluciones#senal`, en `payments.checkout.signalTerms`
+        (los tres idiomas, que es la pantalla donde el cliente tiene la tarjeta
+        en la mano), en el modal de `PreReserva.astro` y en el correo de
+        `booking-request-cliente-email.ts`. Es la regla de la casa: el texto y
+        el hecho se deciden juntos, y aquí el texto está en cinco superficies.
+      */}
       <p>
-        La reserva queda en firme cuando abonas la <strong>señal</strong> —50 €,
-        o 25 € si el alquiler cuesta menos de 50 €—. Esa señal
-        <strong>se descuenta del precio del alquiler</strong>, y a partir de ese
-        momento el coche queda apartado para tus fechas y deja de ofrecerse a
-        nadie más. Por eso, <strong>si cancelas después, la señal no se
-        devuelve</strong>: es lo único que compensa tener un coche parado unos
-        días sin alquilar.
+        La reserva se cierra cuando abonas la <strong>señal</strong> —50 €, o
+        25 € si el alquiler cuesta menos de 50 €, y nunca más que el propio
+        alquiler—. Esa señal se descuenta del precio del alquiler. Lo que
+        reservas es un vehículo de la categoría que has elegido: puede ser el
+        que viste o uno similar de la <strong>misma categoría o superior, nunca
+        inferior</strong>, y el modelo concreto se confirma al cerrar la
+        recogida.
       </p>
+      {/*
+        ⚠️ **La política de cancelación la fijó Dorel el 18 de octubre de 2026,
+        y es MÁS generosa que la anterior.** Aquí ponía, a secas, «si cancelas
+        tú, la señal no se devuelve». Ahora hay un día de arrepentimiento,
+        literal suyo: «si una persona reserva a las 4 de la mañana, puede
+        renunciar y solicitar devolución de la señal hasta las 23:59 del mismo
+        día».
+
+        ⚠️ **El tope de la hora de recogida es la parte que NO dijo y sin la
+        cual la regla se rompe sola.** La web deja reservar para hoy, así que
+        reservar a las 4:00 para recoger a las 10:00 daría derecho a devolución
+        hasta las 23:59 —o sea, con el coche ya en la calle—. La ventana
+        termina en la PRIMERA de las dos.
+
+        ⚠️ **Las últimas 24 horas no entraban en su frase** —«hasta un día antes
+        de la reserva se puede cancelar todo con la pérdida de la señal»— y las
+        **confirmó el mismo día**: van como el tramo normal, se pierde la señal
+        y nada más. El motivo por el que se propuso así y él aceptó: la señal
+        **ya es** la pena pactada (arras del art. 1454 CC), y cobrar de más por
+        avisar tarde la convertiría en una cláusula penal discutible frente a un
+        consumidor. Cancelar la noche antes cuesta lo mismo que cancelar una
+        semana antes.
+
+        ⚠️ **Los tres tramos enteros viven en `/devoluciones#cancelar`, no
+        aquí.** Esta página los resume y remite; repetirlos completos en dos
+        sitios es cómo se acaban contando distinto — ya pasó con el IVA del
+        presupuesto.
+
+        ⚠️ **Y lo que manda es la cláusula 5 del contrato**, que los recoge con
+        las mismas palabras. Si cambian los tramos, se cambian en los dos sitios
+        y sale primero el contrato.
+      */}
       <p>
-        Y al revés: <strong>si somos nosotros los que no podemos darte el
-        coche</strong>, por una avería o por lo que sea, te devolvemos la señal
-        <strong>entera</strong> y sin que tengas que reclamarla.
+        <strong>Si cancelas tú</strong>, lo que pasa con tu dinero depende del
+        momento: el mismo día en que pagas la señal, hasta las 23:59 —o hasta la
+        hora de recoger, si recoges ese día—, te devolvemos todo. A partir de
+        ahí y hasta que recoges el coche puedes cancelar igualmente, y se queda
+        la señal y nada más. Y al revés: si somos nosotros los que no podemos
+        darte un coche de esa categoría, te devolvemos todo lo pagado, señal
+        incluida, sin que tengas que reclamarlo. El detalle está en
+        {' '}<a href="/devoluciones#cancelar">cancelaciones y devoluciones</a>.
+      </p>
+
+      {/*
+        ⚠️ **El pie enlaza esta sección con la etiqueta «Modificar o cancelar»**
+        (`Base.astro`), y hasta hoy aquí no había una sola palabra sobre
+        modificar. Un enlace que promete dos cosas y lleva a una es de los que
+        hacen llamar preguntando.
+
+        ⚠️ **Y el hecho ya estaba en el contrato**, cláusula 3: «Cualquier
+        modificación de fechas, horas o lugares requiere acuerdo escrito entre
+        las partes (puede ser por correo electrónico)». No se inventa nada.
+
+        ⚠️ **Lo de la señal está comprobado en `reservation-edit.util.ts`**:
+        `pickupDateTime` se mueve mientras el coche no haya salido,
+        `returnDateTime` hasta la devolución —la prórroga es el caso más
+        corriente del negocio— y editar la reserva **no pierde** la señal ya
+        cobrada: `redistributeInitialPayment()` mantiene el total y ajusta el
+        resto. Lo que no se puede tocar es su importe una vez cobrada.
+      */}
+      <h3>Si necesitas cambiar algo</h3>
+      <p>
+        Las fechas, las horas y los lugares se pueden mover de común acuerdo
+        mientras haya coche para las nuevas —también alargar un alquiler ya
+        empezado—, y basta con que quede por escrito: un correo vale. Cambiar no
+        es cancelar, así que la señal se mantiene, y si el alquiler pasa a
+        costar más o menos se ajusta la diferencia.
       </p>
 
       <h2>Precio, fianza y forma de pago</h2>

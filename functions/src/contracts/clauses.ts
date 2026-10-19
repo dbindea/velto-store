@@ -27,7 +27,7 @@ import type {
   ContractLocale
 } from './contract-types';
 
-const CLAUSES_VERSION = 2;
+const CLAUSES_VERSION = 3;
 
 // ---------------------------------------------------------------------------
 // Canonical clause ids, used to bind translations together.
@@ -37,6 +37,7 @@ type ClauseId =
   | 'authorized_drivers'
   | 'rental_period'
   | 'price_and_deposit'
+  | 'cancellation'
   | 'mileage'
   | 'fuel_and_cleanliness'
   | 'legal_use'
@@ -160,6 +161,88 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
     }
   },
   /**
+   * Cancelación de la reserva, y qué es exactamente la señal.
+   *
+   * ⚠️ **Hasta hoy el contrato NO regulaba la cancelación por el cliente.** La
+   * única cláusula que hablaba de romper el plazo era la del período de
+   * alquiler, y solo del **retraso en la devolución**. Mientras tanto la web
+   * publicaba una política de cancelación («si cancelas tú, la señal no se
+   * devuelve») que el papel firmado no recogía en ninguna parte: el cliente
+   * firmaba un documento que no decía lo que se le había prometido, y en una
+   * discusión manda el papel. Es la regla de la casa al revés — la web RESUME
+   * el contrato y no puede decir nada que el contrato no diga.
+   *
+   * ⚠️ **La señal obliga a las DOS partes, y por eso se sostiene.** Frente a un
+   * consumidor, una cláusula que solo penaliza a una parte es justo la que los
+   * artículos 85 y 87.6 del TRLGDCU dejan sin efecto. Escrita en las dos
+   * direcciones —él la pierde si anula, el ARRENDADOR la devuelve entera si no
+   * cumple— es la figura de las arras del artículo 1454 del Código Civil. Y la
+   * mitad que compromete al ARRENDADOR **ya era verdad**: si el coche no está,
+   * se devuelve el dinero.
+   *
+   * ⚠️ **La pérdida de la señal es un TECHO, no un castigo.** Sin ese límite
+   * escrito, una cancelación dejaría abierta la reclamación de los daños reales
+   * por la vía del artículo 1101. Decirlo convierte la cláusula en una
+   * limitación de responsabilidad a favor del cliente, que es lo que de verdad
+   * la separa de una cláusula penal abusiva.
+   *
+   * ⚠️ **Y NO es el derecho de desistimiento.** El artículo 103.l) del TRLGDCU
+   * deja fuera del desistimiento el alquiler con fecha o período determinados,
+   * y el artículo 97.1.l) obliga a informarlo (callarlo extiende el plazo a
+   * doce meses). Lo que hay aquí es un derecho **contractual** que el
+   * ARRENDADOR concede porque quiere. Mezclar las dos cosas sería aceptar el
+   * régimen de catorce días por la puerta de atrás, así que el último párrafo
+   * dice las dos a la vez y en este orden.
+   *
+   * ⚠️ **El tope de la hora de entrega no es teórico.** La ventana del mismo
+   * día natural, sola, daría hasta las 23:59 a quien reserva a las 4:00 para
+   * recoger a las 10:00 — o sea, derecho a deshacer la reserva con el coche ya
+   * en la calle. La web permite reservar para hoy.
+   *
+   * ⚠️ **Una señal de 0 € se resuelve sola.** `buildInitialPayment()` la crea
+   * `waived` y la reserva nace confirmada; aquí no hace falta decir nada,
+   * porque perder una señal de cero no cuesta nada y el párrafo de la ventana
+   * del mismo día nombra el caso («si la señal no se hubiera exigido»).
+   *
+   * ⚠️ **No menciona el impuesto, y tiene que seguir sin mencionarlo.** El
+   * recorte de `withoutVatMentions()` es una sustitución literal de un
+   * fragmento que vive en la cláusula de precio; `clauses-vat.spec.ts` exige
+   * que el articulado recortado no conserve **ni una** mención. Una «señal con
+   * IVA incluido» escrita aquí haría fallar ese test en los tres idiomas.
+   */
+  cancellation: {
+    es: {
+      title: '5. CANCELACIÓN DE LA RESERVA Y NATURALEZA DE LA SEÑAL',
+      body: [
+        'Para confirmar la reserva, el ARRENDATARIO entrega al ARRENDADOR un anticipo a cuenta del precio, denominado señal, cuyo importe figura en la sección "Precio y fianza". La señal no es un cargo adicional ni un gasto de gestión: se descuenta íntegramente del precio del alquiler. Las partes le atribuyen expresamente la condición de arras penitenciales, por analogía con el artículo 1454 del Código Civil y al amparo de la libertad de pacto reconocida en el artículo 1255 del mismo texto legal, de modo que faculta a cualquiera de las dos partes para desligarse de la reserva en los términos que se expresan a continuación. La señal es distinta e independiente de la fianza a que se refiere la sección "Precio y fianza", que no es precio sino depósito en garantía.',
+        'CANCELACIÓN EL MISMO DÍA DE LA RESERVA. El ARRENDATARIO podrá cancelar la reserva y recuperar la totalidad de lo entregado, señal incluida, si lo comunica al ARRENDADOR hasta las 23:59 horas del mismo día natural en que abonó la señal o, si la señal no se hubiera exigido, en que la reserva quedó confirmada. Si la entrega del vehículo estuviese pactada para ese mismo día, el plazo terminará antes: en el momento pactado para la entrega. Este derecho no subsiste en ningún caso una vez entregado el vehículo.',
+        'CANCELACIÓN POSTERIOR. Transcurrido el plazo anterior, y hasta el momento pactado para la entrega del vehículo, el ARRENDATARIO podrá cancelar la reserva perdiendo únicamente la señal. El ARRENDADOR le reintegrará, sin deducción alguna, cualquier otra cantidad que hubiera percibido, incluidos el resto del precio del alquiler, la fianza y los servicios pactados que no se hubieran llegado a prestar. La pérdida de la señal agota la responsabilidad del ARRENDATARIO por la cancelación: el ARRENDADOR no le reclamará ninguna otra cantidad ni indemnización por este concepto. Entregado el vehículo, el alquiler ha comenzado y no cabe ya su cancelación; la devolución anticipada del vehículo no dará derecho al reembolso de los días no disfrutados, salvo acuerdo expreso del ARRENDADOR.',
+        'CANCELACIÓN POR EL ARRENDADOR. Lo reservado es un vehículo de la categoría contratada. Si antes de la entrega el ARRENDADOR no pudiera poner a disposición del ARRENDATARIO el vehículo identificado en la sección "Datos del vehículo", podrá sustituirlo por otro de categoría igual o superior, nunca inferior, sin coste adicional para el ARRENDATARIO. Si tampoco pudiera hacerlo, o si cancelase la reserva por cualquier otra causa a él imputable, devolverá la totalidad de las cantidades entregadas, señal incluida, sin necesidad de reclamación previa y sin perjuicio del derecho del ARRENDATARIO a exigir la indemnización de los daños y perjuicios que acredite, conforme al artículo 1101 del Código Civil.',
+        'FORMA, PLAZO Y RELACIÓN CON EL DERECHO DE DESISTIMIENTO. La cancelación se comunicará por cualquier medio que deje constancia, incluida la dirección de correo electrónico indicada en la cabecera, y surtirá efecto desde su recepción por el ARRENDADOR. Las cantidades que deban reintegrarse se abonarán por el mismo medio de pago empleado por el ARRENDATARIO, y el ARRENDADOR ordenará su devolución en el plazo máximo de catorce (14) días naturales desde la cancelación, sin que le sea imputable el tiempo que la entidad emisora tarde en reflejar el abono. Lo previsto en esta cláusula es un derecho de cancelación que el ARRENDADOR concede voluntariamente en este contrato: no deriva del derecho de desistimiento de la normativa de consumo ni lo sustituye, puesto que, conforme al artículo 103.l) del texto refundido de la Ley General para la Defensa de los Consumidores y Usuarios, el arrendamiento de vehículos para una fecha o un período de ejecución específicos está excluido de dicho derecho.'
+      ]
+    },
+    en: {
+      title: '5. CANCELLATION OF THE BOOKING AND THE ADVANCE PAYMENT',
+      body: [
+        'To confirm the booking, the RENTER pays the LESSOR an advance payment on account of the price, known as the "señal", the amount of which is shown in the "Price and deposit" section. The advance payment is neither an additional charge nor a handling fee: it is deducted in full from the rental price. The parties expressly give it the character of earnest money for withdrawal (arras penitenciales), by analogy with article 1454 of the Spanish Civil Code and under the freedom of contract recognised in article 1255 of the same text, so that it entitles either party to withdraw from the booking on the terms set out below. The advance payment is separate from and independent of the security deposit referred to in the "Price and deposit" section, which is not price but collateral.',
+        'CANCELLATION ON THE DAY OF THE BOOKING. The RENTER may cancel the booking and recover everything paid, including the advance payment, by notifying the LESSOR up to 23:59 on the same calendar day on which the advance payment was made or, if no advance payment was required, on which the booking was confirmed. If the vehicle is due to be handed over on that same day, the period ends earlier: at the time agreed for handover. This right does not survive the handover of the vehicle in any case.',
+        'LATER CANCELLATION. After that period, and until the time agreed for handover of the vehicle, the RENTER may cancel the booking losing only the advance payment. The LESSOR will refund, without any deduction, every other amount it had received, including the remainder of the rental price, the security deposit and any agreed service that had not been provided. The loss of the advance payment exhausts the RENTER\'s liability for the cancellation: the LESSOR will claim from them no further amount and no compensation on that account. Once the vehicle has been handed over the rental has begun and it can no longer be cancelled; returning the vehicle early gives no right to a refund of the days not used, unless the LESSOR expressly agrees.',
+        'CANCELLATION BY THE LESSOR. What is booked is a vehicle of the contracted category. If, before handover, the LESSOR cannot make available to the RENTER the vehicle identified in the "Vehicle data" section, it may replace it with another of equal or higher category, never lower, at no additional cost to the RENTER. If it cannot do that either, or if it cancels the booking for any other cause attributable to it, it will return every amount paid, including the advance payment, with no need for a prior claim and without prejudice to the RENTER\'s right to claim compensation for any loss they can prove, under article 1101 of the Spanish Civil Code.',
+        'FORM, TIME LIMIT AND RELATION TO THE RIGHT OF WITHDRAWAL. Cancellation shall be notified by any means that leaves a record, including the e-mail address shown in the header, and takes effect on receipt by the LESSOR. Amounts to be refunded will be paid by the same means of payment used by the RENTER, and the LESSOR will order the refund within a maximum of fourteen (14) calendar days from the cancellation; the time the issuing institution takes to show the credit is not attributable to the LESSOR. What this clause grants is a right of cancellation given voluntarily by the LESSOR in this contract: it neither derives from nor replaces the right of withdrawal under consumer legislation, since in accordance with article 103.l) of the Spanish consolidated text of the General Law for the Defence of Consumers and Users the rental of vehicles for a specific date or period of performance is excluded from that right.'
+      ]
+    },
+    ro: {
+      title: '5. ANULAREA REZERVĂRII ȘI NATURA AVANSULUI',
+      body: [
+        'Pentru a confirma rezervarea, LOCATARUL predă LOCATORULUI un avans din preț, denumit "señal", a cărui valoare figurează în secțiunea "Preț și garanție". Avansul nu este o taxă suplimentară și nici un cost de gestionare: se scade integral din prețul închirierii. Părțile îi atribuie în mod expres caracterul de arvună penitențială (arras penitenciales), prin analogie cu articolul 1454 din Codul Civil spaniol și în temeiul libertății contractuale recunoscute la articolul 1255 din același text, astfel încât dă dreptul oricăreia dintre părți să se dezlege de rezervare în condițiile arătate mai jos. Avansul este distinct și independent de garanția la care se referă secțiunea "Preț și garanție", care nu este preț, ci depozit de garanție.',
+        'ANULAREA ÎN ZIUA REZERVĂRII. LOCATARUL poate anula rezervarea și recupera integral tot ce a predat, inclusiv avansul, dacă îi comunică acest lucru LOCATORULUI până la ora 23:59 din aceeași zi calendaristică în care a achitat avansul sau, dacă avansul nu i-a fost cerut, în care rezervarea a fost confirmată. Dacă predarea vehiculului este convenită pentru aceeași zi, termenul se încheie mai devreme: la ora convenită pentru predare. Acest drept nu subzistă în niciun caz după predarea vehiculului.',
+        'ANULAREA ULTERIOARĂ. După expirarea termenului de mai sus, și până la ora convenită pentru predarea vehiculului, LOCATARUL poate anula rezervarea pierzând numai avansul. LOCATORUL îi va restitui, fără nicio deducere, orice altă sumă pe care o încasase, inclusiv restul prețului închirierii, garanția și serviciile convenite care nu au ajuns să fie prestate. Pierderea avansului epuizează răspunderea LOCATARULUI pentru anulare: LOCATORUL nu îi va pretinde nicio altă sumă și nicio despăgubire pentru acest motiv. După predarea vehiculului închirierea a început și nu mai poate fi anulată; returnarea anticipată a vehiculului nu dă dreptul la rambursarea zilelor nefolosite, cu excepția acordului expres al LOCATORULUI.',
+        'ANULAREA DE CĂTRE LOCATOR. Ceea ce se rezervă este un vehicul din categoria contractată. Dacă, înainte de predare, LOCATORUL nu poate pune la dispoziția LOCATARULUI vehiculul identificat în secțiunea "Datele vehiculului", îl poate înlocui cu altul de categorie egală sau superioară, niciodată inferioară, fără cost suplimentar pentru LOCATAR. Dacă nici acest lucru nu este posibil, sau dacă anulează rezervarea din orice altă cauză care îi este imputabilă, va restitui toate sumele predate, inclusiv avansul, fără a fi nevoie de o reclamație prealabilă și fără a aduce atingere dreptului LOCATARULUI de a pretinde despăgubirea prejudiciilor pe care le dovedește, conform articolului 1101 din Codul Civil spaniol.',
+        'FORMĂ, TERMEN ȘI RAPORTUL CU DREPTUL DE RETRAGERE. Anularea se comunică prin orice mijloc care lasă o dovadă, inclusiv adresa de e-mail indicată în antet, și produce efecte de la primirea sa de către LOCATOR. Sumele care trebuie restituite se vor plăti prin aceeași metodă de plată folosită de LOCATAR, iar LOCATORUL va ordona restituirea în termen de maximum paisprezece (14) zile calendaristice de la anulare, fără ca timpul în care instituția emitentă reflectă creditarea să îi fie imputabil. Ceea ce prevede această clauză este un drept de anulare acordat în mod voluntar de LOCATOR în prezentul contract: nu derivă din dreptul de retragere din legislația privind consumatorii și nici nu îl înlocuiește, întrucât, în conformitate cu articolul 103.l) din textul consolidat al Legii Generale pentru Apărarea Consumatorilor și Utilizatorilor din Spania, închirierea de vehicule pentru o dată sau o perioadă de executare determinată este exclusă de la acest drept.'
+      ]
+    }
+  },
+  /**
    * Kilometraje.
    *
    * ⚠️ **Sin esta cláusula el cargo por kilómetros no estaba pactado.** La
@@ -170,7 +253,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
    */
   mileage: {
     es: {
-      title: '5. KILOMETRAJE INCLUIDO Y KILÓMETROS ADICIONALES',
+      title: '6. KILOMETRAJE INCLUIDO Y KILÓMETROS ADICIONALES',
       body: [
         'El alquiler incluye el número de kilómetros indicado en la sección "Precio y fianza", resultado de multiplicar los kilómetros diarios allí expresados por los días de duración del alquiler. Los kilómetros incluidos y no recorridos no son reembolsables ni acumulables a otro alquiler.',
         'Los kilómetros que excedan de los incluidos se facturarán al precio por kilómetro indicado en esa misma sección. El cómputo se obtiene por diferencia entre la lectura del cuentakilómetros en la entrega y en la devolución, ambas reflejadas y fotografiadas en los partes de entrega y devolución, que el ARRENDADOR conserva, pone a disposición del ARRENDATARIO a su solicitud, y que forman parte inseparable de este contrato.',
@@ -178,7 +261,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '5. INCLUDED MILEAGE AND ADDITIONAL KILOMETRES',
+      title: '6. INCLUDED MILEAGE AND ADDITIONAL KILOMETRES',
       body: [
         'The rental includes the number of kilometres shown in the "Price and deposit" section, being the daily allowance stated there multiplied by the number of rental days. Included kilometres that are not driven are neither refundable nor transferable to another rental.',
         'Kilometres driven in excess of those included will be charged at the per-kilometre price shown in that same section. The count is the difference between the odometer reading at handover and at return, both recorded and photographed in the pick-up and return reports, which the LESSOR keeps, makes available to the RENTER on request, and which form an inseparable part of this contract.',
@@ -186,7 +269,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '5. KILOMETRAJ INCLUS ȘI KILOMETRI SUPLIMENTARI',
+      title: '6. KILOMETRAJ INCLUS ȘI KILOMETRI SUPLIMENTARI',
       body: [
         'Închirierea include numărul de kilometri indicat în secțiunea "Preț și garanție", rezultat din înmulțirea kilometrilor zilnici menționați acolo cu numărul de zile de închiriere. Kilometrii incluși și neparcurși nu se rambursează și nu se pot reporta la o altă închiriere.',
         'Kilometrii care depășesc numărul inclus se facturează la prețul pe kilometru indicat în aceeași secțiune. Calculul se face prin diferența dintre indicația kilometrajului la predare și la returnare, ambele consemnate și fotografiate în procesele-verbale de predare și de returnare, pe care LOCATORUL le păstrează, le pune la dispoziția LOCATARULUI la cererea acestuia, și care fac parte integrantă din acest contract.',
@@ -196,7 +279,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   fuel_and_cleanliness: {
     es: {
-      title: '6. COMBUSTIBLE, LIMPIEZA Y MANTENIMIENTO',
+      title: '7. COMBUSTIBLE, LIMPIEZA Y MANTENIMIENTO',
       body: [
         'El vehículo se entrega con el nivel de combustible que se haga constar y se fotografíe en el parte de entrega, y debe devolverse con ese mismo nivel, que se comprueba y se refleja en el parte de devolución. Si el nivel de devolución fuera inferior, se cobrará el repostaje al precio vigente en el momento de la devolución más un suplemento de gestión. Si el vehículo se devolviese con un nivel de combustible superior al de entrega, no se abonará cantidad alguna por la diferencia.',
         'El vehículo se devuelve en el mismo estado de limpieza en que se entregó. Cuando el vehículo se devuelva con condiciones de suciedad extraordinarias (vómito, barro, arena, pelos de animal, restos orgánicos, mal olor persistente, manchas no habituales, residuos en tapicería) el ARRENDADOR podrá cobrar al ARRENDATARIO los gastos de limpieza extraordinaria, con un mínimo equivalente a una hora de servicio profesional de detailing.',
@@ -204,7 +287,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '6. FUEL, CLEANLINESS AND MAINTENANCE',
+      title: '7. FUEL, CLEANLINESS AND MAINTENANCE',
       body: [
         'The vehicle is delivered with the fuel level recorded and photographed in the pick-up report, and must be returned with that same level, which is checked and recorded in the return report. If the return level is lower, refuelling will be charged at the price in force at the time of return plus a handling surcharge. If the vehicle is returned with a fuel level higher than at delivery, no amount will be paid for the difference.',
         'The vehicle is returned in the same state of cleanliness in which it was delivered. When the vehicle is returned in extraordinary dirty conditions (vomit, mud, sand, animal hair, organic remains, persistent bad smell, unusual stains, residues in upholstery) the LESSOR may charge the RENTER the extraordinary cleaning costs, with a minimum equivalent to one hour of professional detailing service.',
@@ -212,7 +295,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '6. COMBUSTIBIL, CURĂȚENIE ȘI ÎNTREȚINERE',
+      title: '7. COMBUSTIBIL, CURĂȚENIE ȘI ÎNTREȚINERE',
       body: [
         'Vehiculul se predă cu nivelul de combustibil consemnat și fotografiat în procesul-verbal de predare și trebuie returnat cu același nivel, care se verifică și se consemnează în procesul-verbal de returnare. Dacă nivelul la returnare este mai mic, se va percepe realimentarea la prețul în vigoare la momentul returnării plus un supliment de gestionare. Dacă vehiculul se returnează cu un nivel de combustibil mai mare decât la predare, nu se va plăti nicio sumă pentru diferență.',
         'Vehiculul se returnează în aceeași stare de curățenie în care a fost predat. Când vehiculul se returnează în condiții de murdărie extraordinară (vărsături, noroi, nisip, păr de animale, resturi organice, miros persistent neplăcut, pete neobișnuite, reziduuri în tapițerie) LOCATORUL poate percepe LOCATARULUI costurile de curățenie extraordinară, cu un minim echivalent cu o oră de serviciu profesional de detailing.',
@@ -222,7 +305,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   legal_use: {
     es: {
-      title: '7. USO LEGAL DEL VEHÍCULO Y COLABORACIÓN CON LAS AUTORIDADES',
+      title: '8. USO LEGAL DEL VEHÍCULO Y COLABORACIÓN CON LAS AUTORIDADES',
       body: [
         'El ARRENDATARIO declara que utilizará el vehículo exclusivamente para fines lícitos y de conformidad con la legislación española y europea vigente. Está expresamente prohibido: (i) transportar personas o mercancías con infracción de la ley; (ii) participar en competiciones, rallies, pruebas deportivas o cualquier uso en circuito; (iii) empujar o remolcar otros vehículos; (iv) utilizar el vehículo para la comisión de actos ilícitos; (v) circular fuera de carreteras pavimentadas o en condiciones no aptas para el vehículo; (vi) ceder, subarrendar o prestar el vehículo a terceros distintos de los conductores expresamente declarados en este contrato; (vii) conducir bajo los efectos del alcohol, drogas o sustancias que alteren la capacidad de conducción, o superar los límites legales de alcoholemia; (viii) fumar en el interior del vehículo; (ix) transportar animales sin transportín adecuado.',
         'El ARRENDATARIO será el único responsable de cualquier uso indebido, ilícito o contrario a la normativa aplicable realizado durante el período de alquiler, exonerando expresamente al ARRENDADOR de cualquier responsabilidad administrativa, civil o penal derivada de dichos actos, incluido el pago de fianzas en procedimientos penales en los que el ARRENDADOR pudiera personarse como perjudicado.',
@@ -231,7 +314,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '7. LAWFUL USE OF THE VEHICLE AND COOPERATION WITH AUTHORITIES',
+      title: '8. LAWFUL USE OF THE VEHICLE AND COOPERATION WITH AUTHORITIES',
       body: [
         'The RENTER declares that they will use the vehicle exclusively for lawful purposes and in accordance with current Spanish and European legislation. The following are expressly prohibited: (i) transporting persons or goods in violation of the law; (ii) taking part in competitions, rallies, sporting events or any use on a circuit; (iii) pushing or towing other vehicles; (iv) using the vehicle for the commission of unlawful acts; (v) driving off paved roads or in conditions unsuitable for the vehicle; (vi) assigning, subletting or lending the vehicle to third parties other than the drivers expressly declared in this contract; (vii) driving under the influence of alcohol, drugs or substances that impair driving ability, or exceeding the legal alcohol limits; (viii) smoking inside the vehicle; (ix) transporting animals without a suitable carrier.',
         'The RENTER shall be the sole responsible party for any improper, illicit or unlawful use of the vehicle during the rental period, expressly holding the LESSOR harmless from any administrative, civil or criminal liability arising from such acts, including the payment of any bail in criminal proceedings in which the LESSOR may appear as injured party.',
@@ -240,7 +323,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '7. FOLOSINȚA LEGALĂ A VEHICULULUI ȘI COOPERAREA CU AUTORITĂȚILE',
+      title: '8. FOLOSINȚA LEGALĂ A VEHICULULUI ȘI COOPERAREA CU AUTORITĂȚILE',
       body: [
         'LOCATARUL declară că va folosi vehiculul exclusiv în scopuri legale și în conformitate cu legislația spaniolă și europeană în vigoare. Sunt interzise în mod expres: (i) transportul de persoane sau mărfuri cu încălcarea legii; (ii) participarea la competiții, raliuri, probe sportive sau orice folosință pe circuit; (iii) împingerea sau tractarea altor vehicule; (iv) utilizarea vehiculului pentru săvârșirea de acte ilicite; (v) conducerea în afara drumurilor pavate sau în condiții nepotrivite pentru vehicul; (vi) cedarea, subînchirierea sau împrumutarea vehiculului către terți, alții decât conducătorii declarați în mod expres în acest contract; (vii) conducerea sub influența alcoolului, drogurilor sau a substanțelor care alterează capacitatea de conducere, sau depășirea limitelor legale de alcoolemie; (viii) fumatul în interiorul vehiculului; (ix) transportul animalelor fără cușcă adecvată.',
         'LOCATARUL va fi singurul responsabil pentru orice folosință necorespunzătoare, ilicită sau contrară normelor aplicabile realizată în perioada închirierii, exonorând în mod expres LOCATORUL de orice răspundere administrativă, civilă sau penală derivată din aceste acte, inclusiv plata cauțiunilor în procedurile penale în care LOCATORUL ar putea constitui parte civilă.',
@@ -251,21 +334,21 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   geographic_limits: {
     es: {
-      title: '8. ÁMBITO GEOGRÁFICO',
+      title: '9. ÁMBITO GEOGRÁFICO',
       body: [
         'El vehículo podrá ser conducido dentro del territorio de España (Península, Baleares, Ceuta y Melilla). Para desplazamientos a Canarias, Andorra, Gibraltar, Marruecos o cualquier otro país distinto de España, el ARRENDATARIO deberá obtener autorización previa, expresa y por escrito del ARRENDADOR, que podrá requerir la suscripción de un seguro de frontera o equivalente.',
         'La conducción del vehículo fuera del ámbito geográfico autorizado sin consentimiento escrito del ARRENDADOR se considera incumplimiento grave, dejando sin efecto todas las coberturas y dejando al ARRENDATARIO como único responsable de cuantos daños, sanciones, decomisos o gastos se deriven, incluidos los de repatriación del vehículo.'
       ]
     },
     en: {
-      title: '8. GEOGRAPHICAL SCOPE',
+      title: '9. GEOGRAPHICAL SCOPE',
       body: [
         'The vehicle may be driven within the territory of Spain (mainland, Balearic Islands, Ceuta and Melilla). For journeys to the Canary Islands, Andorra, Gibraltar, Morocco or any other country other than Spain, the RENTER must obtain prior, express, written authorisation from the LESSOR, which may require taking out a frontier-insurance policy or equivalent.',
         'Driving the vehicle outside the authorised geographical area without written consent of the LESSOR is considered a serious breach, voiding all coverages and leaving the RENTER as sole responsible party for any damage, sanctions, confiscations or costs, including repatriation of the vehicle.'
       ]
     },
     ro: {
-      title: '8. SFERA GEOGRAFICĂ',
+      title: '9. SFERA GEOGRAFICĂ',
       body: [
         'Vehiculul poate fi condus pe teritoriul Spaniei (peninsulă, Baleare, Ceuta și Melilla). Pentru deplasări în Canare, Andorra, Gibraltar, Maroc sau orice altă țară diferită de Spania, LOCATARUL trebuie să obțină autorizație prealabilă, expresă și scrisă a LOCATORULUI, care poate solicita încheierea unei polițe de asigurare de frontieră sau echivalentă.',
         'Conducerea vehiculului în afara sferei geografice autorizate fără consimțământul scris al LOCATORULUI este considerată încălcare gravă, anulând toate acoperirile și lăsând LOCATARUL ca unic responsabil pentru toate daunele, sancțiunile, confiscările sau cheltuielile derivate, inclusiv repatrierea vehiculului.'
@@ -274,7 +357,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   fines_penalties: {
     es: {
-      title: '9. MULTAS, SANCIONES, PEAJES Y GASTOS DE GESTIÓN',
+      title: '10. MULTAS, SANCIONES, PEAJES Y GASTOS DE GESTIÓN',
       body: [
         'El ARRENDATARIO será el único responsable de todas las multas, sanciones, denuncias, peajes, gastos de estacionamiento, accesos a ZBE, retirada por grúa y cualquier otra obligación económica derivada del uso del vehículo durante el período de alquiler.',
         'Serán igualmente por cuenta exclusiva del ARRENDATARIO los gastos de gestión administrativa en que incurra el ARRENDADOR como consecuencia de multas, sanciones o peajes a él repercutidos, con un mínimo de 30 € por expediente, así como el coste de los servicios de grúa, rescate, repatriación del vehículo, apertura del vehículo por pérdida de llaves y sustitución de cerraduras.',
@@ -282,7 +365,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '9. FINES, SANCTIONS, TOLLS AND ADMINISTRATIVE COSTS',
+      title: '10. FINES, SANCTIONS, TOLLS AND ADMINISTRATIVE COSTS',
       body: [
         'The RENTER shall be the sole responsible party for all fines, sanctions, complaints, tolls, parking costs, ZBE access charges, tow-away fees and any other economic obligation derived from the use of the vehicle during the rental period.',
         'The RENTER shall also be exclusively responsible for the administrative handling costs incurred by the LESSOR as a consequence of fines, sanctions or tolls passed on to it, with a minimum of 30 € per file, as well as the cost of tow, rescue, repatriation of the vehicle, vehicle opening for lost keys and lock replacement.',
@@ -290,7 +373,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '9. AMENZI, SANCȚIUNI, TAXE DE AUTOSTRADĂ ȘI COSTURI ADMINISTRATIVE',
+      title: '10. AMENZI, SANCȚIUNI, TAXE DE AUTOSTRADĂ ȘI COSTURI ADMINISTRATIVE',
       body: [
         'LOCATARUL va fi singurul responsabil pentru toate amenzile, sancțiunile, reclamațiile, taxele de autostradă, cheltuielile de parcare, taxele de acces ZBE, taxele de ridicare cu platformă și orice altă obligație economică derivată din folosința vehiculului în perioada închirierii.',
         'Vor fi de asemenea în sarcina exclusivă a LOCATARULUI cheltuielile de gestionare administrativă în care LOCATORUL va suporta ca urmare a amenzilor, sancțiunilor sau taxelor de autostradă care îi sunt imputate, cu un minim de 30 € per dosar, precum și costul serviciilor de platformă, salvare, repatriere a vehiculului, deschiderea vehiculului pentru chei pierdute și înlocuirea încuietorilor.',
@@ -300,7 +383,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   damages_intentional: {
     es: {
-      title: '10. DAÑOS AL VEHÍCULO, VANDALISMO Y ACTOS DELIBERADOS',
+      title: '11. DAÑOS AL VEHÍCULO, VANDALISMO Y ACTOS DELIBERADOS',
       body: [
         'El ARRENDATARIO será responsable de los daños causados al vehículo por uso negligente, conducción temeraria, incumplimiento de las normas de circulación, utilización indebida del vehículo, o por cualquier otro tipo de actuación culposa. El importe a abonar se determinará por peritación del taller designado por el ARRENDADOR o, en su caso, por la aseguradora, y se cargará de la fianza o, si esta fuere insuficiente, se reclamará por la vía correspondiente.',
         'En particular, el ARRENDATARIO será responsable del coste íntegro de la reparación de cualesquiera daños que se determinen como consecuencia de actos deliberados de vandalismo, entendido como toda acción intencionada de dañar, romper, rayar, manchar, mutilar, golpear, pintar, vaciar o inutilizar el vehículo, sus componentes, accesorios o elementos interiores o exteriores, así como los causados a propósito por terceros introducidos en el vehículo por el ARRENDATARIO, sin perjuicio de la responsabilidad penal que pudiera derivarse de conformidad con los artículos 263 y 264 del Código Penal (delito de daños), que contempla penas de prisión de uno a tres años para daños graves causados por cualquier medio, incluidas las pintadas o inscripciones, y de hasta un año de prisión cuando el valor del daño supere los 400 €.',
@@ -308,7 +391,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '10. VEHICLE DAMAGE, VANDALISM AND DELIBERATE ACTS',
+      title: '11. VEHICLE DAMAGE, VANDALISM AND DELIBERATE ACTS',
       body: [
         'The RENTER shall be liable for damage to the vehicle caused by negligent use, reckless driving, breach of traffic rules, improper use of the vehicle, or any other culpable action. The amount payable will be determined by the workshop appointed by the LESSOR or, if applicable, by the insurer, and will be charged against the deposit or, if insufficient, will be claimed through the appropriate channels.',
         'In particular, the RENTER shall be liable for the full cost of repairing any damage determined to be the result of deliberate acts of vandalism, understood as any intentional action to damage, break, scratch, stain, mutilate, hit, paint, empty or disable the vehicle, its components, accessories or interior or exterior elements, as well as that caused intentionally by third parties introduced into the vehicle by the RENTER, without prejudice to the criminal liability that may be derived from articles 263 and 264 of the Spanish Criminal Code (damage offence), which provides for prison sentences of one to three years for serious damage caused by any means, including graffiti or inscriptions, and of up to one year in prison when the value of the damage exceeds 400 €.',
@@ -316,7 +399,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '10. DAUNE ADUSE VEHICULULUI, VANDALISM ȘI ACTE DELIBERATE',
+      title: '11. DAUNE ADUSE VEHICULULUI, VANDALISM ȘI ACTE DELIBERATE',
       body: [
         'LOCATARUL va fi responsabil pentru daunele cauzate vehiculului prin folosință neglijentă, conducere temerară, încălcarea normelor de circulație, utilizarea necorespunzătoare a vehiculului sau prin orice alt tip de acțiune culpabilă. Suma de plată se va stabili prin expertiza atelierului desemnat de LOCATOR sau, dacă este cazul, de către asigurator, și se va debita din garanție sau, dacă aceasta este insuficientă, se va recupera pe calea corespunzătoare.',
         'În special, LOCATARUL va fi responsabil pentru costul integral al reparării oricăror daune care se stabilesc ca fiind consecința unor acte deliberate de vandalism, înțeles ca orice acțiune intenționată de a deteriora, rupe, zgâria, păta, mutila, lovi, picta, goli sau face inutilizabil vehiculul, componentele, accesoriile sau elementele sale interioare sau exterioare, precum și cele cauzate cu intenție de terțe persoane introduse în vehicul de către LOCATAR, fără a aduce atingere răspunderii penale care ar putea decurge din articolele 263 și 264 din Codul Penal spaniol (infracțiunea de daune), care prevede pedepse cu închisoarea de la unu la trei ani pentru daune grave cauzate prin orice mijloc, inclusiv graffiti sau inscripții, și de până la un an de închisoare când valoarea daunei depășește 400 €.',
@@ -326,7 +409,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   theft_unreturned: {
     es: {
-      title: '11. NO DEVOLUCIÓN, SUSTRACCIÓN Y APROPIACIÓN INDEBIDA',
+      title: '12. NO DEVOLUCIÓN, SUSTRACCIÓN Y APROPIACIÓN INDEBIDA',
       body: [
         'El ARRENDATARIO se obliga a devolver el vehículo, sus llaves, documentos y accesorios en la fecha, hora y lugar pactados. La retención del vehículo más allá del plazo contractual constituye un incumplimiento grave que puede ser constitutivo de delito, dando lugar a las responsabilidades civiles y, en su caso, penales que correspondan, en particular las previstas en los artículos 237 a 243 del Código Penal (sustracción), 244 del Código Penal (utilización ilegítima de vehículo ajeno) y 252 y siguientes del Código Penal (apropiación indebida y alzamiento de bienes).',
         'En caso de no devolución en la fecha pactada, el ARRENDADOR queda expresamente facultado para: (a) requerir al ARRENDATARIO la devolución inmediata del vehículo por cualquier medio, incluidos los telemáticos (localizador GPS); (b) formular denuncia ante las Fuerzas y Cuerpos de Seguridad, en particular ante la Guardia Civil, por los delitos de retención indebida, sustracción, apropiación indebida o, en su caso, estafa; (c) ejercitar las acciones civiles de reclamación del valor del vehículo, los daños y perjuicios y el lucro cesante; y (d) publicar los hechos a través de los medios que considere oportunos para la recuperación del vehículo.',
@@ -334,7 +417,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '11. FAILURE TO RETURN, THEFT AND MISAPPROPRIATION',
+      title: '12. FAILURE TO RETURN, THEFT AND MISAPPROPRIATION',
       body: [
         'The RENTER undertakes to return the vehicle, its keys, documents and accessories on the date, time and at the place agreed. Retention of the vehicle beyond the contractual term constitutes a serious breach that may constitute a criminal offence, giving rise to civil and, where applicable, criminal liabilities, in particular those provided for in articles 237 to 243 of the Spanish Criminal Code (theft), 244 of the Spanish Criminal Code (unlawful use of another\'s vehicle) and 252 and following of the Spanish Criminal Code (misappropriation and removal of assets).',
         'In the event of non-return on the agreed date, the LESSOR is expressly empowered to: (a) require the RENTER to return the vehicle immediately by any means, including telematic (GPS locator); (b) file a complaint with the Security Forces and Corps, in particular with the Guardia Civil, for the offences of unlawful retention, theft, misappropriation or, if applicable, fraud; (c) bring civil actions for the value of the vehicle, damages and lost profits; and (d) publish the facts through whatever means it considers appropriate for the recovery of the vehicle.',
@@ -342,7 +425,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '11. NERETURNAREA, FURTUL ȘI ÎNSUȘIREA INDEBITĂ',
+      title: '12. NERETURNAREA, FURTUL ȘI ÎNSUȘIREA INDEBITĂ',
       body: [
         'LOCATARUL se obligă să returneze vehiculul, cheile, documentele și accesoriile la data, ora și locul convenite. Reținerea vehiculului peste termenul contractual constituie o încălcare gravă care poate fi constitutivă de infracțiune, generând răspunderea civilă și, după caz, penală corespunzătoare, în special cele prevăzute la articolele 237-243 din Codul Penal spaniol (furt), 244 din Codul Penal spaniol (folosința nelegitimă a vehiculului altuia) și 252 și următoarele din Codul Penal spaniol (însușire nedatorată și ridicare de bunuri).',
         'În caz de nereturnare la data convenită, LOCATORUL este împuternicit în mod expres: (a) să solicite LOCATARULUI returnarea imediată a vehiculului prin orice mijloace, inclusiv telematice (localizator GPS); (b) să formuleze plângere la Forțele și Corpurile de Securitate, în special la Guardia Civil, pentru infracțiunile de reținere neîntemeiată, sustragere, însușire nedatorată sau, dacă este cazul, înșelăciune; (c) să exercite acțiunile civile de recuperare a valorii vehiculului, daune și pierderi de profit; și (d) să publice faptele prin mijloacele pe care le consideră oportune pentru recuperarea vehiculului.',
@@ -352,7 +435,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   incidents: {
     es: {
-      title: '12. ACCIDENTES, AVERÍAS Y ASISTENCIA',
+      title: '13. ACCIDENTES, AVERÍAS Y ASISTENCIA',
       body: [
         'En caso de accidente, robo, hurto, incendio, vandalismo o cualquier otra incidencia, el ARRENDATARIO deberá: (i) obtener parte de accidente firmado por ambas partes si hay terceros; (ii) denunciar el hecho ante las Fuerzas y Cuerpos de Seguridad competentes, obteniendo copia de la denuncia; (iii) no mover el vehículo hasta que se persone el personal del ARRENDADOR o las autoridades; (iv) comunicar el hecho al ARRENDADOR en el plazo máximo de dos (2) horas; (v) cumplimentar el parte amistoso de accidentes en los impresos disponibles en el vehículo. La omisión de la denuncia o de la comunicación facultará al ARRENDADOR para considerar al ARRENDATARIO como responsable de la totalidad de los daños.',
         'El vehículo cuenta con una póliza de seguro con cobertura de responsabilidad civil obligatoria frente a terceros, conforme al Real Decreto Legislativo 8/2004, sobre responsabilidad civil y seguro en la circulación de vehículos a motor. La identificación de la compañía aseguradora, el número de póliza y el teléfono de asistencia en carretera constan en la sección "Datos del vehículo" de este contrato. Las coberturas adicionales (seguro a todo riesgo con o sin franquicia, seguro de ocupantes, etc.) sólo serán aplicables si han sido expresamente contratadas y abonadas por el ARRENDATARIO, según se refleja en la sección "Precio y fianza".',
@@ -360,7 +443,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '12. ACCIDENTS, BREAKDOWNS AND ASSISTANCE',
+      title: '13. ACCIDENTS, BREAKDOWNS AND ASSISTANCE',
       body: [
         'In the event of an accident, theft, robbery, fire, vandalism or any other incident, the RENTER must: (i) obtain an accident report signed by both parties if there are third parties; (ii) report the event to the competent Security Forces and Corps, obtaining a copy of the report; (iii) not move the vehicle until the LESSOR\'s personnel or the authorities arrive; (iv) report the event to the LESSOR within a maximum of two (2) hours; (v) fill in the amicable accident form on the printed forms available in the vehicle. Failure to report or to inform will empower the LESSOR to consider the RENTER responsible for the totality of the damage.',
         'The vehicle is covered by an insurance policy with mandatory third-party liability cover, in accordance with Royal Legislative Decree 8/2004, on civil liability and insurance in vehicle traffic. The identification of the insurance company, the policy number and the road-assistance telephone number are shown in the "Vehicle data" section. Additional coverages (fully comprehensive insurance with or without deductible, occupant insurance, etc.) will only apply if expressly contracted and paid for by the RENTER, as reflected in the "Price and deposit" section.',
@@ -368,7 +451,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '12. ACCIDENTE, DEFECȚIUNI ȘI ASISTENȚĂ',
+      title: '13. ACCIDENTE, DEFECȚIUNI ȘI ASISTENȚĂ',
       body: [
         'În caz de accident, furt, tâlhărie, incendiu, vandalism sau orice alt incident, LOCATARUL trebuie: (i) să obțină un proces-verbal de accident semnat de ambele părți dacă există terți; (ii) să denunțe fapta la Forțele și Corpurile de Securitate competente, obținând o copie a denunțului; (iii) să nu miște vehiculul până la sosirea personalului LOCATORULUI sau a autorităților; (iv) să comunice fapta LOCATORULUI în termen de maximum două (2) ore; (v) să completeze formularul de accident amiabil pe tipizatele disponibile în vehicul. Omisiunea denunțului sau a comunicării va îndreptăți LOCATORUL să considere LOCATARUL responsabil pentru totalitatea daunelor.',
         'Vehiculul este acoperit de o poliță de asigurare cu acoperire de răspundere civilă obligatorie față de terți, conform Decretului legislativ regal 8/2004, privind răspunderea civilă și asigurarea în circulația vehiculelor. Identificarea companiei de asigurări, numărul poliței și telefonul de asistență rutieră sunt indicate în secțiunea "Datele vehiculului". Acoperirile suplimentare (asigurare casco cu sau fără franciză, asigurare de ocupanți etc.) se vor aplica doar dacă au fost contractate și plătite în mod expres de către LOCATAR, conform celor reflectate în secțiunea "Preț și garanție".',
@@ -378,7 +461,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   insurance: {
     es: {
-      title: '13. SEGURO Y COBERTURAS',
+      title: '14. SEGURO Y COBERTURAS',
       body: [
         'La póliza de seguro del vehículo cubre, como mínimo, la responsabilidad civil obligatoria frente a terceros prevista en la legislación española. La compañía aseguradora, el número de póliza y el teléfono de asistencia en carretera se indican en la sección "Datos del vehículo" del presente contrato.',
         'Quedan expresamente excluidos de toda cobertura, salvo pacto en contrario y pago de la prima adicional correspondiente, los daños derivados de: (a) conducir bajo los efectos del alcohol, drogas o sustancias psicotrópicas; (b) conducir sin el permiso adecuado o con el permiso suspendido, retirado o caducado; (c) utilizar el vehículo en actividades ilícitas o fuera de las vías públicas autorizadas; (d) transportar personas o mercancías infringiendo la ley; (e) cesión del vehículo a persona no autorizada; (f) abandonar el vehículo en lugar no permitido; (g) transportar más pasajeros de los autorizados por la ficha técnica del vehículo; (h) cualquier otra causa de exclusión prevista en la Ley de Contrato de Seguro o en las condiciones generales y particulares de la póliza.',
@@ -386,7 +469,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '13. INSURANCE AND COVERAGES',
+      title: '14. INSURANCE AND COVERAGES',
       body: [
         'The vehicle\'s insurance policy covers, at a minimum, the mandatory third-party liability cover required by Spanish law. The insurance company, the policy number and the road-assistance telephone number are indicated in the "Vehicle data" section of this contract.',
         'The following are expressly excluded from all coverages, unless otherwise agreed and the corresponding additional premium is paid, damage arising from: (a) driving under the influence of alcohol, drugs or psychotropic substances; (b) driving without the appropriate licence or with the licence suspended, withdrawn or expired; (c) using the vehicle in illicit activities or outside the authorised public roads; (d) transporting persons or goods in violation of the law; (e) assigning the vehicle to an unauthorised person; (f) abandoning the vehicle in a place not allowed; (g) transporting more passengers than authorised by the vehicle\'s technical sheet; (h) any other cause of exclusion foreseen in the Insurance Contract Act or in the general and particular conditions of the policy.',
@@ -394,7 +477,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '13. ASIGURARE ȘI ACOPERIRI',
+      title: '14. ASIGURARE ȘI ACOPERIRI',
       body: [
         'Polița de asigurare a vehiculului acoperă, ca minim, acoperirea de răspundere civilă obligatorie față de terți prevăzută de legislația spaniolă. Compania de asigurări, numărul poliței și telefonul de asistență rutieră sunt indicate în secțiunea "Datele vehiculului" a prezentului contract.',
         'Sunt excluse în mod expres din toate acoperirile, dacă nu se convine altfel și nu se plătește prima suplimentară corespunzătoare, daunele derivate din: (a) conducerea sub influența alcoolului, drogurilor sau a substanțelor psihotrope; (b) conducerea fără permisul corespunzător sau cu permisul suspendat, retras sau expirat; (c) utilizarea vehiculului în activități ilicite sau în afara drumurilor publice autorizate; (d) transportul de persoane sau mărfuri cu încălcarea legii; (e) cedarea vehiculului unei persoane neautorizate; (f) abandonarea vehiculului într-un loc nepermis; (g) transportul a mai mulți pasageri decât cei autorizați de fișa tehnică a vehiculului; (h) orice altă cauză de excludere prevăzută în Legea Contractului de Asigurare sau în condițiile generale și particulare ale poliței.',
@@ -404,7 +487,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
   },
   data_protection: {
     es: {
-      title: '14. PROTECCIÓN DE DATOS PERSONALES (LOPDGDD / RGPD)',
+      title: '15. PROTECCIÓN DE DATOS PERSONALES (LOPDGDD / RGPD)',
       body: [
         'En cumplimiento del Reglamento (UE) 2016/679 (RGPD) y de la Ley Orgánica 3/2018 (LOPDGDD), el ARRENDATARIO queda informado de que los datos personales facilitados en este contrato, así como los generados durante su ejecución (kilometraje, nivel de combustible, fotografías del estado del vehículo, partes de accidente y demás datos derivados del uso del vehículo), serán tratados por el ARRENDADOR, responsable del tratamiento, con las finalidades y bases jurídicas siguientes: (a) la gestión integral del contrato de alquiler y la facturación, sobre la base de la ejecución del contrato (art. 6.1.b RGPD); (b) el cumplimiento de obligaciones legales, fiscales, contables y mercantiles, y la identificación del conductor ante las autoridades administrativas y judiciales, sobre la base de una obligación legal (art. 6.1.c RGPD); (c) el mantenimiento del histórico de clientes, la reclamación extrajudicial y judicial de las cantidades adeudadas, la prevención del fraude y la seguridad del vehículo y de sus ocupantes, sobre la base del interés legítimo del ARRENDADOR (art. 6.1.f RGPD).',
         'GEOLOCALIZACIÓN DEL VEHÍCULO. El ARRENDATARIO queda expresamente informado de que el vehículo está equipado con un dispositivo de localización por GPS que permite conocer su posición durante el período de alquiler. Esta información se trata sobre la base del interés legítimo del ARRENDADOR (art. 6.1.f RGPD) y con las siguientes finalidades exclusivas: prevenir y recuperar el vehículo en caso de robo, hurto o no devolución; verificar el cumplimiento del ámbito geográfico autorizado; y atender los requerimientos de las autoridades. Los datos de localización no se utilizan para evaluar la conducción ni con fines comerciales, y se conservan únicamente durante el tiempo necesario para dichas finalidades.',
@@ -412,7 +495,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '14. PERSONAL DATA PROTECTION (GDPR / LOPDGDD)',
+      title: '15. PERSONAL DATA PROTECTION (GDPR / LOPDGDD)',
       body: [
         'In compliance with Regulation (EU) 2016/679 (GDPR) and Spanish Organic Law 3/2018 (LOPDGDD), the RENTER is informed that the personal data provided in this contract, as well as those generated during its performance (mileage, fuel level, photographs of the vehicle condition, accident reports and other data arising from the use of the vehicle), will be processed by the LESSOR, as data controller, for the following purposes and on the following legal bases: (a) full management of the rental contract and invoicing, on the basis of performance of the contract (art. 6.1.b GDPR); (b) compliance with legal, tax, accounting and commercial obligations, and identification of the driver before administrative and judicial authorities, on the basis of a legal obligation (art. 6.1.c GDPR); (c) maintenance of the customer history, out-of-court and judicial claims for amounts owed, fraud prevention and the safety of the vehicle and its occupants, on the basis of the legitimate interest of the LESSOR (art. 6.1.f GDPR).',
         'VEHICLE GEOLOCATION. The RENTER is expressly informed that the vehicle is fitted with a GPS tracking device that allows its position to be known during the rental period. This information is processed on the basis of the LESSOR legitimate interest (art. 6.1.f GDPR) and exclusively for the following purposes: preventing and recovering the vehicle in the event of theft or failure to return; verifying compliance with the authorised geographical scope; and responding to requests from the authorities. Location data is not used to assess driving behaviour or for commercial purposes, and is kept only for as long as those purposes require.',
@@ -420,7 +503,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '14. PROTECȚIA DATELOR CU CARACTER PERSONAL (RGPD / LOPDGDD)',
+      title: '15. PROTECȚIA DATELOR CU CARACTER PERSONAL (RGPD / LOPDGDD)',
       body: [
         'În conformitate cu Regulamentul (UE) 2016/679 (RGPD) și cu Legea Organică spaniolă 3/2018 (LOPDGDD), LOCATARUL este informat că datele cu caracter personal furnizate în acest contract, precum și cele generate în cursul executării sale (kilometrajul, nivelul de combustibil, fotografii ale stării vehiculului, procese-verbale de accident și alte date derivate din folosința vehiculului), vor fi prelucrate de LOCATOR, în calitate de operator, în următoarele scopuri și pe următoarele temeiuri juridice: (a) gestionarea integrală a contractului de închiriere și facturarea, pe baza executării contractului (art. 6.1.b RGPD); (b) îndeplinirea obligațiilor legale, fiscale, contabile și comerciale, precum și identificarea conducătorului în fața autorităților administrative și judecătorești, pe baza unei obligații legale (art. 6.1.c RGPD); (c) menținerea istoricului de clienți, recuperarea extrajudiciară și judiciară a sumelor datorate, prevenirea fraudei și securitatea vehiculului și a ocupanților săi, pe baza interesului legitim al LOCATORULUI (art. 6.1.f RGPD).',
         'GEOLOCALIZAREA VEHICULULUI. LOCATARUL este informat în mod expres că vehiculul este dotat cu un dispozitiv de localizare GPS care permite cunoașterea poziției sale pe durata închirierii. Aceste informații sunt prelucrate pe baza interesului legitim al LOCATORULUI (art. 6.1.f RGPD) și exclusiv în următoarele scopuri: prevenirea și recuperarea vehiculului în caz de furt sau nereturnare; verificarea respectării sferei geografice autorizate; și soluționarea solicitărilor autorităților. Datele de localizare nu sunt folosite pentru evaluarea conducerii și nici în scopuri comerciale și se păstrează doar atât timp cât este necesar pentru aceste scopuri.',
@@ -453,7 +536,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
    */
   jurisdiction: {
     es: {
-      title: '15. JURISDICCIÓN, LEY APLICABLE Y RESOLUCIÓN',
+      title: '16. JURISDICCIÓN, LEY APLICABLE Y RESOLUCIÓN',
       body: [
         'El presente contrato se rige por la legislación común y civil española, y en particular por las disposiciones del Código Civil, la Ley de Arrendamientos Urbanos en lo que resulte de aplicación supletoria, el Código de Comercio, la Ley sobre Responsabilidad Civil y Seguro en la Circulación de Vehículos a Motor (Real Decreto Legislativo 8/2004), el Código Penal en lo que resulte de aplicación, y cualesquiera otras normas que resulten aplicables al alquiler de vehículos sin conductor.',
         'Para la resolución de cualquier controversia, discrepancia o reclamación derivada del presente contrato o relacionada con él, será competente el Juzgado o Tribunal que determinen las normas legales aplicables, sin que las partes pacten sumisión expresa a ningún fuero, por tratarse de un contrato con condiciones generales (artículo 54.2 de la Ley de Enjuiciamiento Civil). Cuando el ARRENDATARIO tenga la condición de consumidor o usuario, será competente el Juzgado correspondiente a su domicilio.',
@@ -463,7 +546,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     en: {
-      title: '15. JURISDICTION, GOVERNING LAW AND SEVERABILITY',
+      title: '16. JURISDICTION, GOVERNING LAW AND SEVERABILITY',
       body: [
         'This contract is governed by the common and civil Spanish legislation, and in particular by the provisions of the Civil Code, the Urban Leases Act in so far as it applies suppletively, the Code of Commerce, the Act on Civil Liability and Insurance in Motor Vehicle Traffic (Royal Legislative Decree 8/2004), the Criminal Code in so far as it is applicable, and any other rules applicable to the rental of vehicles without driver.',
         'For the resolution of any dispute, discrepancy or claim derived from this contract or related to it, the competent Court shall be the one designated by the applicable legal rules, with no express submission to any jurisdiction agreed by the parties, as this is a contract containing general conditions (article 54.2 of the Spanish Civil Procedure Act). Where the RENTER has the status of consumer or user, the Court of their domicile shall be competent.',
@@ -473,7 +556,7 @@ const I18N: Record<ClauseId, Record<ContractLocale, LocalizedClause>> = {
       ]
     },
     ro: {
-      title: '15. JURISDICȚIE, LEGEA APLICABILĂ ȘI SEPARABILITATE',
+      title: '16. JURISDICȚIE, LEGEA APLICABILĂ ȘI SEPARABILITATE',
       body: [
         'Prezentul contract este guvernat de legislația comună și civilă spaniolă, și în special de dispozițiile Codului Civil, Legea Închirierilor Urbane în măsura în care se aplică în mod supletor, Codul Comercial, Legea privind Răspunderea Civilă și Asigurarea în Circulația Vehiculelor cu Motor (Decretul legislativ regal 8/2004), Codul Penal în măsura în care este aplicabil și orice alte norme aplicabile închirierii de vehicule fără șofer.',
         'Pentru soluționarea oricărei dispute, discrepanțe sau reclamații derivate din prezentul contract sau legate de acesta, va fi competentă instanța stabilită de normele legale aplicabile, fără ca părțile să convină o supunere expresă la vreo jurisdicție, fiind vorba de un contract cu condiții generale (articolul 54.2 din Legea spaniolă de procedură civilă). Când LOCATARUL are calitatea de consumator sau utilizator, va fi competentă instanța de la domiciliul său.',
@@ -489,6 +572,7 @@ const HIGHLIGHTS: Record<ContractLocale, string[]> = {
   es: [
     'El conductor principal asume toda responsabilidad por multas, sanciones, peajes, combustible y daños.',
     'La fianza se devuelve tras la inspección final; puede quedar retenida total o parcialmente.',
+    'Si el arrendatario cancela, pierde la señal y nada más; el mismo día de la reserva se le devuelve también.',
     'No devolución, robo, hurto o uso ilegítimo del vehículo puede tener consecuencias penales.',
     'Cualquier daño doloso, vandalismo o acto intencionado es responsabilidad personal del arrendatario.',
     'El vehículo se devuelve con las llaves, documentos y accesorios en el mismo estado de la entrega.',
@@ -500,6 +584,7 @@ const HIGHLIGHTS: Record<ContractLocale, string[]> = {
   en: [
     'The main driver is fully responsible for fines, traffic sanctions, tolls, fuel charges and damage to the vehicle.',
     'The security deposit is refunded after the final inspection; it may be partially or fully retained.',
+    'If the renter cancels they lose the advance payment and nothing else; on the day of the booking it comes back too.',
     'Failure to return the vehicle, theft, robbery or unlawful use may carry criminal liability.',
     'Any wilful damage, vandalism or deliberate act is the personal liability of the renter.',
     'The vehicle must be returned with the keys, documents and accessories in the same state as delivered.',
@@ -511,6 +596,7 @@ const HIGHLIGHTS: Record<ContractLocale, string[]> = {
   ro: [
     'Conducătorul principal își asumă întreaga răspundere pentru amenzi, sancțiuni de circulație, taxe de autostradă, combustibil și daune.',
     'Garanția se restituie după inspecția finală; poate fi reținută parțial sau integral.',
+    'Dacă locatarul anulează, pierde numai avansul; în ziua rezervării i se restituie și acesta.',
     'Nereturnarea, furtul, tâlhăria sau folosința ilicită a vehiculului poate atrage răspundere penală.',
     'Orice daună intenționată, vandalism sau act deliberat este responsabilitatea personală a locatarului.',
     'Vehiculul se returnează cu cheile, documentele și accesoriile în aceeași stare ca la predare.',

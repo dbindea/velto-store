@@ -1228,6 +1228,64 @@ URL. Crear un alquiler es una sola escritura con sus filas de cobro, su
 disponibilidad y su cliente, y duplicar eso sería una segunda forma de crear
 reservas.
 
+#### La señal se paga desde la web, y eso NO crea la reserva tampoco
+
+Desde el 19 de octubre de 2026 el visitante puede cerrar su pre-reserva pagando
+la señal él mismo, sin que Dorel le mande nada. Lo pidió así: *«hasta que no vea
+el email o entre no me entero»*, y antes el cobro lo creaba él en el panel
+(`cobrarSenal`) y copiaba el enlace a WhatsApp — o sea que quien decidía a las
+dos de la mañana esperaba a que alguien se levantara.
+
+⚠️ **Lo que cambia es QUIÉN lanza el cobro, y nada más.** El cobro es el mismo
+cobro libre con `bookingRequestId` que creaba el botón del panel, el pago se
+hace en la misma pantalla (`/pay/:id`) y la reserva la sigue creando Dorel
+convirtiendo la solicitud — con `signal-adoption.util.ts` adoptando esa señal en
+vez de volver a pedirla. Por eso casi no hubo que construir nada: lo único nuevo
+es `createSignalPayment`.
+
+⚠️ **`puedePagarSenal()` en `functions/src/public/signal-core.ts` es la única
+autoridad**, y es pura con tests: decide la bandera del entorno, el estado de la
+solicitud y el plazo del precio. Lo que **no** comprueba es la **disponibilidad
+del coche**, por decisión expresa de Dorel —*«como tengo varios coches en la
+flota puedo negociar verbalmente con el cliente para darle otro de mejor
+categoría»*—. Es seguro **porque lo que se promete es una categoría y no una
+matrícula**: el día que la web prometa un coche concreto, esta omisión pasa a
+ser un cargo por algo que no se puede entregar.
+
+⚠️ **Se escribe en TRANSACCIÓN y es idempotente.** Dos pestañas, o un doble
+toque en un móvil, crearían dos cobros de 50 € para la misma señal: el cliente
+pagaría el que le llegue y el otro se quedaría pidiendo para siempre un dinero
+que ya entró. `signalPaymentId` se lee **dentro** de la transacción.
+
+⚠️ **El enlace del correo lleva a una PÁGINA, no a un enlace de pago.** Un
+`/pay/:id` congela el importe: metido en una bandeja de entrada seguiría
+cobrando la señal de un presupuesto vencido. `/pagar-senal?s=<id>` pregunta al
+backend al pulsar, así que el plazo se comprueba en ese momento.
+
+⚠️ **Y la llave es el ID del documento, nunca la referencia.** `P-4K7M9X` se
+dicta por teléfono y se teclea: con ella, cualquiera probando combinaciones
+lanzaría cobros a nombre de otro. Misma regla que los enlaces `/d/…`.
+
+⚠️ **En producción está APAGADO** (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED=false`),
+por decisión de Dorel al pedirlo: «para producción en disabled». Con la bandera
+en `false`, `createSignalPayment` contesta `403` **sin mirar siquiera la
+solicitud** y `createBookingRequest` le dice a la web que no lo ofrezca — las
+dos capas hacen falta, porque esconder un botón es interfaz y no seguridad.
+
+⚠️ **La lista del panel enseña «Señal cobrada» en la fila.** Sin eso, dinero
+cobrado de madrugada se leía exactamente igual que una solicitud sin atender: el
+aviso de Telegram dice cuál es, pero un aviso que se pierde dejaba dinero en el
+banco sin nada en la pantalla que lo contara. **No cambia el estado** —pagar no
+es haber hablado con el cliente— y se consulta `payments`, no `signalPaymentId`,
+que solo dice que hay un cobro creado.
+
+⚠️ **Y la chapa va junto a la REFERENCIA, no al lado del estado.** Estuvo en una
+celda propia de la rejilla y **movía el precio 85 px** en las filas que la
+llevan: 195,95 € terminaba mucho antes que el 326,95 € de debajo. Una rejilla
+coloca por orden, así que una celda que solo llevan algunas filas descuadra esas
+filas; reservarla vacía arreglaba el estado pero no el precio, porque las dos
+primeras columnas son `fr` y se encogen para dejarle sitio.
+
 ⚠️ **Y durante un día esos parámetros NO LOS LEÍA NADIE.** «Convertir en
 reserva» navegaba con el coche, las fechas y el cliente en la URL y el asistente
 se abría en el paso 1 en blanco; y **nadie llamaba a `markConverted()`**, así que
@@ -2377,6 +2435,13 @@ También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf`, `doc
 (pública), `getPaymentCheckout` (**pública**, el cliente paga desde su móvil) y
 `getContractVerification` (**pública**, el QR del contrato en papel).
 
+⚠️ **`createSignalPayment` es PÚBLICA y es la única que puede acabar cobrando
+dinero**, así que lleva bandera propia por entorno
+(`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`) y **solo está desplegada en desarrollo**.
+Crea el cobro de la señal de una pre-reserva para que el visitante la pague sin
+que nadie le mande el enlace; lo decide `puedePagarSenal()`, que es pura y con
+tests. Ver «La señal se paga desde la web» en el módulo de Solicitudes.
+
 Y las de **facturación**: `issueInvoice`, `generateProforma`, `generateReceipt`,
 `issueComplianceDeclaration`, `getComplianceStatus` y las cinco de la remisión a
 la AEAT — `sendVerifactuRecords`, `sweepVerifactuRecords` (**programada**, cada
@@ -2443,9 +2508,16 @@ los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| el código define | **37** | — |
-| desarrollo | **37** | — |
-| producción | **32** | **solo** las cinco de la AEAT |
+| el código define | **38** | — |
+| desarrollo | **38** | — |
+| producción | **32** | las cinco de la AEAT **y `createSignalPayment`** |
+
+⚠️ **La 38 es `createSignalPayment`**, del 19 de octubre de 2026 (medido en el
+manifiesto, no contado a ojo). Y **no va a producción todavía**: allí el pago de
+la señal desde la web está apagado por decisión de Dorel, así que subirla sería
+dejar desplegado un endpoint que solo sabe contestar `403`. Cuando se encienda,
+va con su rewrite de hosting — sin él la petición cae en el catch-all y devuelve
+HTML donde se espera JSON.
 
 ⚠️ **Vuelto a medir el 8 de octubre de 2026 y la fila del CÓDIGO también había
 envejecido**: ponía 36 y son **37**. No es que se añadiera ninguna ese día —
@@ -3395,10 +3467,16 @@ justo lo que los `VELTO_COMPANY_*` nunca hicieron estando puestos como secrets.
 mismo que `VELTO_VERIFACTU_ENABLED`, que dice si los registros se **remiten** a
 la AEAT. Hoy, y esta combinación es la que importa:
 
-| | Emite (`INVOICING`) | Remite (`VERIFACTU`) |
-|---|---|---|
-| desarrollo | `true` | `true`, contra **preproducción** |
-| producción | **`true`** desde el 17 sep 2026 | **`false`** hasta el 1 de enero |
+| | Emite (`INVOICING`) | Remite (`VERIFACTU`) | Cobra la señal desde la web (`WEB_SIGNAL_PAYMENT`) |
+|---|---|---|---|
+| desarrollo | `true` | `true`, contra **preproducción** | `true` |
+| producción | **`true`** desde el 17 sep 2026 | **`false`** hasta el 1 de enero | **`false`** |
+
+⚠️ **La tercera es del 19 de octubre de 2026 y nació con su propia bandera, no
+colgada de ninguna de las otras dos** — que es justo la lección del párrafo de
+abajo. Y se compara contra la cadena `'true'`: un `=false` es una cadena **no
+vacía**, así que un `!!process.env.X` lo daría por encendido. Esa clase de
+descuido aquí enciende cobros con tarjeta en el entorno con dinero real.
 
 ⚠️ **Que las dos banderas dejaran de ir juntas rompió una pantalla el mismo
 día.** Ajustes decidía si consultar la remisión mirando `invoicingEnabled`, y
@@ -4185,6 +4263,34 @@ La lección práctica, más allá de la regla: **al borrar una tarjeta, comprueb
 clases se llevaba por delante.** Esas cuatro dejaron de estar declaradas cuando se
 retiró la tarjeta que las contenía, y el elemento que las usa vive en otro sitio.
 
+⚠️ **Y una CUARTA, que no es de clases: el `z-index` que un antepasado encierra.**
+Aquí la regla está escrita, alcanza al elemento y gana — y aun así no hace nada,
+porque alguien puso `isolation: isolate` tres niveles más arriba. Aislar crea un
+**contexto de apilado**, y dentro se queda atrapado cualquier `z-index` de dentro:
+deja de competir con los hermanos del antepasado.
+
+Pasó el 19 de octubre de 2026 en la web pública, al meter el vídeo del héroe. El
+buscador de la portada cuelga medio cuerpo por debajo del héroe con un
+`translateY(50%)` y pisa la sección siguiente gracias a su `z-index: 2`; con el
+héroe aislado, esa sección pasó a pintarse encima. Dorel lo contó como **«el
+calendario de seleccionar fechas ya no funciona»**, y no era el calendario: **el
+clic no llegaba al campo**. `elementFromPoint` sobre la banda del icono devolvía
+`SECTION.promesas-seccion`.
+
+Tres cosas que lo hacen peor que un fallo de CSS normal, y por eso está aquí:
+
+- **El síntoma no se parece a la causa.** Un formulario que no responde se lee
+  como JavaScript roto, así que se busca donde no es.
+- **No hay nada que mirar.** Ni error en consola, ni test rojo, ni nada torcido
+  en la pantalla: todo está en su sitio y encima.
+- **La causa está en otro fichero y en otro componente** que el que falla.
+
+Lo que lo resuelve sin aislar es el par que ya usa `.con-humo` en la web
+(`global.css`): el fondo **sin `z-index`** y el contenido con `1`. Y lo que lo
+diagnostica es `elementFromPoint` sobre el punto que se pulsa — no leer el SCSS,
+que dice la verdad y no sirve. El caso entero, en
+[docs/video-del-heroe.md](docs/video-del-heroe.md).
+
 ⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
 2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,
 `section-hint`, `total-hint`…) en 44 sitios, y `.loading-state` usado 25 veces y
@@ -4797,15 +4903,17 @@ El guion por tandas, que vale como plantilla para el siguiente, está en
 cada vez es **qué functions llevan código nuevo**, y eso se mide recorriendo el
 grafo de imports desde lo que se tocó.
 
-⚠️ **Y las dos públicas que escriben necesitan HOSTING además de la function.**
-Sus rewrites —`/api/solicitud` y `/api/contacto`— viajan con el hosting, no con
-las functions: sin ellos la petición cae en el catch-all de la web y devuelve
-HTML donde se esperaba JSON, así que el visitante escribe seis líneas y ve un
-fallo de red. Es la lección de `/d/**`, que estuvo escrita sin desplegar.
-**Los cuatro están puestos desde el 5 de octubre** y se comprueban como dice la
-sección de Cloud Functions: lo que delata uno ausente es `200 text/html`.
+⚠️ **Y las TRES públicas que escriben necesitan HOSTING además de la function.**
+Sus rewrites —`/api/solicitud`, `/api/contacto` y, desde el 19 de octubre de
+2026, `/api/pagar-senal`— viajan con el hosting, no con las functions: sin ellos
+la petición cae en el catch-all de la web y devuelve HTML donde se esperaba
+JSON, así que el visitante escribe seis líneas y ve un fallo de red. Es la
+lección de `/d/**`, que estuvo escrita sin desplegar. **Los cuatro primeros
+están puestos desde el 5 de octubre**, y el de la señal **solo en desarrollo**,
+porque en producción esa vía está apagada. Se comprueban como dice la sección de
+Cloud Functions: lo que delata uno ausente es `200 text/html`.
 
-⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 37 functions, un
+⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 38 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:
 medido el 28 de septiembre de 2026, entraron 15 y fallaron 19. Ver la nota de la
 cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en una.

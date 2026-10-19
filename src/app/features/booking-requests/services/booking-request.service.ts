@@ -8,10 +8,12 @@ import {
   doc,
   docData,
   getDoc,
+  query,
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  where
 } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { Observable, combineLatest, map, of } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import type {
   BookingRequest,
@@ -56,6 +58,61 @@ export class BookingRequestService {
     return docData(doc(this.firestore, COLECCION, id), { idField: 'id' }) as Observable<
       BookingRequest | undefined
     >;
+  }
+
+  /**
+   * Qué solicitudes tienen ya su señal **cobrada**.
+   *
+   * ⚠️ **Hace falta desde que la señal se paga sola desde la web.** Hasta hoy
+   * el cobro lo creaba el operador y le mandaba el enlace, así que sabía
+   * perfectamente cuál estaba esperando dinero. Ahora entra solo, de madrugada,
+   * sin que nadie lo haya tocado — y la fila de la lista se veía **idéntica** a
+   * las seis que no han contestado nadie. El aviso de Telegram dice cuál es,
+   * pero un aviso que se pierde deja dinero cobrado sin reserva detrás y nada
+   * en la pantalla que lo cuente.
+   *
+   * ⚠️ **Se consulta `payments`, no se mira `signalPaymentId`.** Ese campo solo
+   * dice que hay un cobro creado, no que haya entrado dinero: casi todos los
+   * que se creen no se van a pagar. Quien dice si el dinero entró es el pago,
+   * que es la única fuente de verdad — la misma regla que impide fiarse de
+   * `reservation.paymentSummary`.
+   *
+   * ⚠️ **Y escucha, no lee una vez.** Quien paga es el cliente desde su móvil,
+   * minutos después de que el operador abriera la pantalla; con `getDocs` la
+   * lista se quedaría mintiendo hasta que alguien pulsara F5. Es exactamente el
+   * caso que la nota de `watchRequests()` describe, un escalón más allá.
+   *
+   * ⚠️ **`in` admite 30 ids como mucho**, así que se parte en tandas. Con la
+   * flota de hoy sobra de largo; el tope está para que el día que la lista
+   * crezca no falle la consulta entera en silencio.
+   */
+  watchPaidSignals(ids: string[]): Observable<Set<string>> {
+    const conCobro = [...new Set(ids.filter(Boolean))];
+    if (!conCobro.length) return of(new Set<string>());
+
+    const tandas: string[][] = [];
+    for (let i = 0; i < conCobro.length; i += 30) tandas.push(conCobro.slice(i, i + 30));
+
+    const consultas = tandas.map(
+      (tanda) =>
+        collectionData(
+          query(
+            collection(this.firestore, 'payments'),
+            where('bookingRequestId', 'in', tanda),
+            where('status', '==', 'paid')
+          )
+        ) as Observable<{ bookingRequestId?: string }[]>
+    );
+
+    return combineLatest(consultas).pipe(
+      map((lotes) => {
+        const pagadas = new Set<string>();
+        for (const lote of lotes) {
+          for (const p of lote) if (p.bookingRequestId) pagadas.add(p.bookingRequestId);
+        }
+        return pagadas;
+      })
+    );
   }
 
   /**

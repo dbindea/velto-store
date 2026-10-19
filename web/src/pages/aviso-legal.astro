@@ -80,13 +80,37 @@ import { EMPRESA, SITIO } from '../lib/empresa';
         que aparece en el resto de la web.
       </p>
 
+      {/*
+        ⚠️ **Aquí ponía «No se contrata ni se paga desde aquí», y por esa frase
+        BBVA rechazó el alta del TPV Virtual** el 17 de octubre de 2026, con un
+        motivo de una línea: «En el aviso legal indicar lo que se pagará
+        mediante tarjeta». El revisor del banco abre esta página para aprobar
+        una pasarela de pago y encuentra escrito que aquí no se paga.
+
+        ⚠️ **Y la frase era CIERTA en lo que negaba y falsa en lo que daba a
+        entender.** Esta web sigue sin tener carrito: nadie teclea una tarjeta
+        en una página de `veltomobility.com`. Pero Velto cobra con tarjeta
+        desde el 31 de agosto de 2026, sobre un enlace de pago que manda la
+        agencia (`/pay/:id`), y eso el aviso legal no lo decía en ninguna
+        parte. Lo que se arregla no es la redacción: es que faltaba un hecho.
+
+        ⚠️ **Lo que se cobra está detallado abajo, en `#pagos`, y no aquí.**
+        Esa sección es la que el banco pidió; esta solo tiene que dejar de
+        contradecirla.
+      */}
       <h2 id="objeto">Qué se ofrece aquí</h2>
       <p>
         Esta web informa sobre el alquiler de vehículos sin conductor y permite
         consultar disponibilidad y precios, y dejar una solicitud para que te
-        llamemos. <strong>No se contrata ni se paga desde aquí:</strong> el
-        alquiler se cierra por teléfono, por WhatsApp o en la oficina, y se
-        formaliza en un contrato escrito que se firma antes de entregar el coche.
+        llamemos. <strong>No tiene carrito de compra:</strong> el alquiler se
+        cierra por teléfono, por WhatsApp o en la oficina, y se formaliza en un
+        contrato escrito que se firma antes de entregar el coche.
+      </p>
+      <p>
+        Lo que sí hay es cobro con tarjeta, sobre un enlace de pago que te
+        mandamos nosotros, o en la propia oficina. Qué se cobra, cuánto y
+        cuándo está más abajo, en
+        {' '}<a href="#pagos">Qué se paga con tarjeta</a>.
       </p>
       <p>
         Las condiciones que rigen ese contrato están en
@@ -102,8 +126,89 @@ import { EMPRESA, SITIO } from '../lib/empresa';
       </p>
       <p>
         La disponibilidad se consulta en tiempo real, pero mostrar un coche
-        libre no lo reserva: el vehículo queda apartado cuando se confirma la
-        reserva, no antes.
+        libre no lo reserva: nada queda apartado hasta que la reserva se cierra
+        con el pago de la señal.
+      </p>
+
+      {/*
+        ⚠️ **Esta sección existe porque la pidió el banco, con esas palabras.**
+        BBVA rechazó el alta del TPV el 17 de octubre de 2026 con el motivo
+        «En el aviso legal indicar lo que se pagará mediante tarjeta». La
+        información estaba escrita —en `/devoluciones#pagos`— y el banco la
+        quiere **aquí**, que es la página que identifica al prestador.
+
+        ⚠️ **No duplica a `/devoluciones`, se reparten el trabajo.** Aquí va
+        QUÉ se cobra y CUÁNDO; allí, con qué medios se paga, cómo se devuelve
+        el dinero y en qué plazos. Las dos se enlazan. Dos páginas contando lo
+        mismo acaban contándolo distinto, que es lo que pasó con el IVA del
+        presupuesto.
+
+        ⚠️ **Cada línea de aquí tiene que ser CIERTA contra el código**, no
+        contra lo que nos gustaría cobrar:
+          · la señal sale de `suggestInitialPayment()` en
+            `src/app/shared/utils/payment-summary.util.ts` — 50 €, 25 € por
+            debajo de 50 €, y `Math.min(propuesta, precio)`, que es el tope que
+            ninguna de las dos páginas decía;
+          · la fianza se carga con `REDSYS_TRANSACTION_TYPE` sin definir, o sea
+            `'0'` = autorización. Es un COBRO normal, **no una preautorización**,
+            y hay que decirlo: el cliente la ve en su extracto y si esperaba una
+            retención cree que le hemos cobrado de más;
+          · los cargos de la devolución salen de la inspección, no de aquí.
+
+        ⚠️ **Bizum NO va por la pasarela.** Existe como forma de pago
+        (`PaymentMethod`), pero es un cobro que se apunta a mano:
+        `Ds_Merchant_Paymethods` no se manda en ninguna parte. Decir que se
+        paga con Bizum «con tarjeta» sería anunciar una integración que no
+        existe — el error de la frase que prometía una firma digital que el
+        contrato no llevaba.
+      */}
+      <h2 id="pagos">Qué se paga con tarjeta</h2>
+      <p>
+        Cerrado el alquiler, te mandamos un enlace de pago con el importe ya
+        puesto. Ese enlace abre la pasarela segura de nuestro banco, y es ahí
+        donde se teclea la tarjeta: nunca en una página de esta web.
+      </p>
+      <p>Lo que se cobra con tarjeta es esto, y nada más:</p>
+      <ul>
+        <li>
+          <strong>La señal de la reserva.</strong> 50 €, o 25 € si el alquiler
+          cuesta menos de 50 €, y nunca más que el propio alquiler. Se descuenta
+          del precio: no es un cargo aparte.
+        </li>
+        <li>
+          <strong>El resto del alquiler.</strong> El precio acordado menos la
+          señal, antes de entregarte el coche.
+        </li>
+        <li>
+          <strong>La fianza.</strong> Un depósito en garantía, no un pago del
+          alquiler. Su importe se te dice antes de reservar y figura en el
+          contrato. Se carga en la tarjeta como un cobro normal —la verás en tu
+          extracto, no es una retención— y tras la inspección de devolución se
+          te abona a esa misma tarjeta lo que no haya que retener.
+        </li>
+        <li>
+          <strong>La entrega o la recogida a domicilio</strong>, si se pactan.
+          Cada trayecto se acuerda antes y va en su propia línea del contrato.
+        </li>
+        <li>
+          <strong>Los cargos de la devolución</strong>, si los hay: combustible,
+          kilómetros de más, limpieza o daños. Salen del parte de devolución con
+          sus fotos, y se te justifican antes de cobrarlos.
+        </li>
+      </ul>
+      <p>
+        Todos los importes van en euros (EUR). Los del alquiler y los servicios
+        llevan el IVA incluido; la fianza no es una venta y no lo lleva. No
+        cobramos ningún recargo por pagar con tarjeta, y pedir precio o dejar
+        una solicitud en esta web no cuesta nada.
+      </p>
+      <p>
+        El cobro lo procesa <strong>Redsys</strong>, la pasarela de nuestro
+        banco, con autenticación reforzada del titular (3-D Secure).
+        {' '}{EMPRESA.razonSocial}{' '}no ve ni guarda en ningún momento el
+        número de tu tarjeta. Las formas de pago que aceptamos, cómo se devuelve
+        el dinero y en qué plazos están en
+        {' '}<a href="/devoluciones">Cancelaciones, devoluciones y reembolsos</a>.
       </p>
 
       <h2 id="propiedad">Contenido de la web</h2>

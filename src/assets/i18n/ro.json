@@ -189,6 +189,7 @@
     },
     "errors": {
       "alreadySigned": "Acel contract este deja semnat. Ca să îl schimbi, trebuie refăcut.",
+      "clientDocumentMissing": "Lipsește actul de identitate sau pașaportul clientului. Un contract trebuie să identifice persoana care ia mașina, nu doar să o numească: completează-l în fișa lui și încearcă din nou.",
       "cancelSigningLink": "Linkul de semnare nu a putut fi anulat.",
       "createSigningLink": "Linkul de semnare nu a putut fi creat.",
       "downloadFallback": "PDF-ul nu a putut fi descărcat; s-a deschis într-o filă nouă. Salvează-l de acolo.",
@@ -716,7 +717,8 @@
       "subtitle": "Plată securizată",
       "unavailableMessage": "Această plată nu poate fi efectuată acum. Te rugăm să ne contactezi.",
       "unavailableTitle": "Plată indisponibilă",
-      "signalTerms": "Acest avans se scade din prețul închirierii. După plată, confirmăm rezervarea și blocăm mașina pentru acele date; dacă anulezi ulterior, avansul nu se restituie. Dacă noi suntem cei care nu îți putem da mașina, îl primești înapoi integral.",
+      "signalTerms": "Rezervarea se închide și rămâne confirmată la plata avansului. Chiar și așa, dacă te răzgândești, îți restituim avansul integral până la ora 23:59 a aceleiași zile în care îl plătești, cu condiția să nu fi preluat deja mașina. După acest termen, avansul nu mai este rambursabil.",
+      "signalTermsLink": "Citește politica de anulare",
       "terms": "Anulări și rambursări"
     },
     "confirm": {
@@ -1317,6 +1319,16 @@
       "markFailed": "Rezervarea a fost creată, dar cererea nu a putut fi marcată ca transformată",
       "banner": "Din cererea",
       "pricePromised": "Prețul promis pe site: {price}. Nu se mărește fără să fie anunțat clientul."
+    },
+    "signal": {
+      "alreadyPaid": "Acest avans este deja încasat: rezervarea îl preia și nu îl mai cere o dată",
+      "adoptedPending": "Avansul cererii este încă neîncasat. Rezervarea îl preia în loc să ceară altul.",
+      "adopt": {
+        "notFound": "Nu se găsește încasarea avansului pentru această cerere",
+        "alreadyAttached": "Acea încasare aparține deja altei rezervări",
+        "cancelled": "Încasarea avansului este anulată: nu poate fi considerată cerută",
+        "otherRequest": "Acea încasare este a altei cereri"
+      }
     }
   },
   "search": {
@@ -1705,6 +1717,7 @@
     "closeReservation": "Închide rezervarea",
     "completed": "Rezervare finalizată",
     "contractAlreadySigned": "Contractul este deja semnat",
+    "clientDocumentMissing": "Lipsește actul de identitate al clientului",
     "contractCancelled": "Contract anulat",
     "contractPending": "În așteptarea semnării",
     "exceptionReason": "Motiv",
@@ -2173,7 +2186,8 @@
       "created": "Plată creată. Copiază linkul și trimite-l.",
       "failed": "Plata nu a putut fi creată.",
       "noAmount": "Această cerere nu are preț: avansul nu se poate calcula.",
-      "concept": "Avans pentru pre-rezervarea {reference}"
+      "concept": "Avans pentru pre-rezervarea {reference}",
+      "paidBadge": "Avans încasat"
     }
   }
 }

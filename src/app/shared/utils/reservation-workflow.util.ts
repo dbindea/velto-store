@@ -33,7 +33,7 @@ import {
 } from '@shared/models/reservation.model';
 import { Inspection } from '@shared/models/inspection.model';
 import { Contract } from '@shared/models/contract.model';
-import { ClientTrustLevel } from '@shared/models/client.model';
+import { Client, ClientTrustLevel } from '@shared/models/client.model';
 
 // ---------------------------------------------------------------------------
 // Inputs that capture everything the workflow needs to decide.
@@ -48,6 +48,20 @@ export interface WorkflowContext {
   returnInspection?: Inspection | null;
   /** Latest contract document for this reservation, if any. */
   contract?: Contract | null;
+  /**
+   * La ficha **viva** del arrendatario, cuando la pantalla la tenga cargada.
+   *
+   * ⚠️ **Hace falta la viva y no el `clientSnapshot`**, y esa es toda la razón
+   * de que este campo exista: el snapshot se congela al crear la reserva, así
+   * que con el flujo normal —crear la reserva con lo que trae la web y
+   * completar el DNI cuando el cliente lo manda— se quedaría vacío para
+   * siempre. Un guard que mirase ahí seguiría bloqueando el contrato después
+   * de que el operador hubiera arreglado la ficha, sin forma de desbloquearlo.
+   *
+   * Es opcional porque no todas las pantallas lo cargan; ver
+   * `canGenerateContract()`, que usa el snapshot como respaldo.
+   */
+  client?: Client | null;
   /** True if the deposit is fully paid OR waived with a reason. */
   depositSettled?: boolean;
   /** True if the initial payment is fully paid. */
@@ -217,7 +231,31 @@ export function canGenerateContract(ctx: WorkflowContext): WorkflowDecision {
   if (ctx.contract?.status === 'signed') {
     return deny('workflow.contractAlreadySigned');
   }
+  if (!clientDocumentOf(ctx)) return deny('workflow.clientDocumentMissing');
   return ALLOW;
+}
+
+/**
+ * El documento del arrendatario, mirando primero la ficha viva.
+ *
+ * ⚠️ **El orden importa y es lo único que hace esto utilizable.** El
+ * `clientSnapshot` se congela al crear la reserva, y el flujo normal desde el
+ * 19 de octubre de 2026 es crearla con lo que trae la web —nombre y teléfono—
+ * y completar el DNI cuando el cliente lo manda. Mirando solo el snapshot, el
+ * contrato seguiría bloqueado después de arreglar la ficha y no habría forma
+ * de desbloquearlo salvo rehacer la reserva.
+ *
+ * ⚠️ **Y el snapshot es el respaldo, no un descuido.** No todas las pantallas
+ * cargan el cliente; sin él, una reserva antigua creada con DNI seguiría
+ * dejando generar su contrato, que es lo correcto. Es además el mismo orden
+ * que usa `generateContractPdf` al componer el PDF (`c.documentNumber ||
+ * snapshot.documentNumber`), así que las dos capas deciden con el mismo dato
+ * — si discreparan, el botón diría una cosa y el callable otra.
+ */
+function clientDocumentOf(ctx: WorkflowContext): string {
+  const vivo = ctx.client?.documentNumber;
+  const congelado = ctx.reservation.clientSnapshot?.documentNumber;
+  return String(vivo || congelado || '').trim();
 }
 
 /** Create a one-time signing link for the customer. */

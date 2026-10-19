@@ -189,6 +189,7 @@
     },
     "errors": {
       "alreadySigned": "Ese contrato ya está firmado. Para cambiarlo hay que rehacerlo.",
+      "clientDocumentMissing": "Falta el DNI o el pasaporte del cliente. Un contrato tiene que identificar a quien se lleva el coche, no solo nombrarlo: complétalo en su ficha y vuelve a intentarlo.",
       "cancelSigningLink": "No se pudo cancelar el enlace de firma.",
       "createSigningLink": "No se pudo crear el enlace de firma.",
       "downloadFallback": "No se pudo descargar el PDF; se ha abierto en otra pestaña. Guárdalo desde ahí.",
@@ -716,7 +717,8 @@
       "subtitle": "Pago seguro",
       "unavailableMessage": "Este cobro no se puede pagar ahora mismo. Ponte en contacto con nosotros.",
       "unavailableTitle": "Pago no disponible",
-      "signalTerms": "Esta señal se descuenta del precio del alquiler. Al pagarla, confirmamos tu reserva y bloqueamos el coche para esas fechas; si después anulas la reserva, la señal no se devuelve. Si somos nosotros los que no podemos darte el coche, te la devolvemos entera.",
+      "signalTerms": "La reserva se cierra y queda confirmada al abonarse la señal. Aun así, si cambias de idea, te devolvemos la señal íntegramente hasta las 23:59 del mismo día en que la pagas, siempre que no hayas recogido ya el coche. Pasado ese plazo, la señal no será reembolsable.",
+      "signalTermsLink": "Leer la política de cancelación",
       "terms": "Cancelaciones y devoluciones"
     },
     "confirm": {
@@ -1317,6 +1319,16 @@
       "markFailed": "La reserva se creó, pero la solicitud no se pudo marcar como convertida",
       "banner": "Viene de la solicitud",
       "pricePromised": "Precio prometido en la web: {price}. No se sube sin avisar al cliente."
+    },
+    "signal": {
+      "alreadyPaid": "Esta señal ya está cobrada: la reserva la reconoce y no la vuelve a pedir",
+      "adoptedPending": "La señal de la solicitud sigue pendiente de cobro. La reserva la hereda en vez de pedir otra.",
+      "adopt": {
+        "notFound": "No se encuentra el cobro de la señal de esta solicitud",
+        "alreadyAttached": "Ese cobro ya pertenece a otra reserva",
+        "cancelled": "El cobro de la señal está cancelado: no se puede dar por pedida",
+        "otherRequest": "Ese cobro es de otra solicitud"
+      }
     }
   },
   "search": {
@@ -1705,6 +1717,7 @@
     "closeReservation": "Cerrar reserva",
     "completed": "Reserva completada",
     "contractAlreadySigned": "El contrato ya está firmado",
+    "clientDocumentMissing": "Falta el documento del cliente",
     "contractCancelled": "El contrato está cancelado",
     "contractPending": "Pendiente de firma",
     "exceptionReason": "Motivo",
@@ -2173,7 +2186,8 @@
       "created": "Cobro creado. Copia el enlace y mándaselo.",
       "failed": "No se pudo crear el cobro.",
       "noAmount": "Esta solicitud no tiene precio: no se puede calcular la señal.",
-      "concept": "Señal de la pre-reserva {reference}"
+      "concept": "Señal de la pre-reserva {reference}",
+      "paidBadge": "Señal cobrada"
     }
   }
 }

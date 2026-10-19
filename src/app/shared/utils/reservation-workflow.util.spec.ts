@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { Reservation } from '@shared/models/reservation.model';
 import type { Contract } from '@shared/models/contract.model';
 import type { Inspection } from '@shared/models/inspection.model';
+import type { Client } from '@shared/models/client.model';
 import {
   buildWorkflowException,
   canCloseReservation,
   canCreateReservationForClient,
+  canGenerateContract,
   clientTrustWarning,
   canGenerateSigningLink,
   canRefundDeposit,
@@ -32,6 +34,16 @@ function makeReservation(overrides: Partial<Reservation> = {}): Reservation {
     reservationStatus: 'reserved',
     contractStatus: 'pending',
     paymentStatus: 'pending',
+    /**
+     * ⚠️ **El fixture lleva documento desde el 19 de octubre de 2026**, cuando
+     * `canGenerateContract()` empezó a exigirlo. No es relleno: una reserva
+     * real **siempre** tiene `clientSnapshot`, y sin él estos fixtures describían
+     * un caso que no existe. Lo delató `getReservationNextRequiredAction`, que
+     * pasó a contestar «falta el documento del cliente» — que era la respuesta
+     * correcta para un fixture sin cliente, y la equivocada para lo que ese
+     * test quería comprobar.
+     */
+    clientSnapshot: { fullName: 'Marius Ionescu', documentNumber: 'X1234567L' },
     initialPayment: { requiredAmount: 100, paidAmount: 100 },
     remainingPayment: { requiredAmount: 400, paidAmount: 400 },
     deposit: { requiredAmount: 300, paidAmount: 300, returnedAmount: 0, retainedAmount: 0 },
@@ -719,5 +731,75 @@ describe('getReservationTimelineSteps — un hito cumplido dice POR QUÉ lo est�
     expect(rotuloDe(ctx, 'remainingPaymentPaid')).toBe(
       'reservations.timeline.remainingPaymentNotDue'
     );
+  });
+});
+
+/**
+ * Sin documento no hay contrato.
+ *
+ * ⚠️ **Es la mitad de pantalla de un guard que vive en los DOS lados.** El que
+ * de verdad lo impide es `generateContractPdf`, porque una pestaña vieja o una
+ * llamada directa al callable no pasan por aquí. Lo que se prueba en este
+ * fichero es la decisión; que el backend la repita está en su propio código.
+ */
+describe('canGenerateContract — el documento del arrendatario', () => {
+  const conDni = (documentNumber?: string) =>
+    ({ documentNumber }) as unknown as Client;
+
+  const ctx = (opts: { snapshot?: string; cliente?: Client | null }): WorkflowContext => ({
+    reservation: makeReservation({
+      clientSnapshot: { fullName: 'Marius Ionescu', documentNumber: opts.snapshot }
+    } as unknown as Partial<Reservation>),
+    ...(opts.cliente !== undefined ? { client: opts.cliente } : {})
+  });
+
+  /**
+   * ⚠️ El caso que esto existe para parar: el PDF imprime la línea del
+   * documento **solo si existe**, así que sin él salía un contrato que
+   * identificaba al arrendatario solo por su nombre, y en silencio.
+   */
+  it('se niega si no hay documento por ninguna parte', () => {
+    const d = canGenerateContract(ctx({}));
+    expect(d.ok).toBe(false);
+    expect(reasonOf(d)).toBe('workflow.clientDocumentMissing');
+  });
+
+  it('deja generar cuando el cliente lo tiene', () => {
+    expect(canGenerateContract(ctx({ cliente: conDni('X1234567L') })).ok).toBe(true);
+  });
+
+  /**
+   * ⚠️ **El caso que hace esto utilizable, y el que se rompería mirando solo el
+   * snapshot.** El flujo normal es crear la reserva con lo que trae la web
+   * —nombre y teléfono— y completar el DNI después: si el guard mirase el
+   * snapshot congelado, arreglar la ficha no desbloquearía el contrato nunca.
+   */
+  it('la ficha VIVA desbloquea aunque el snapshot naciera vacío', () => {
+    expect(canGenerateContract(ctx({ snapshot: undefined, cliente: conDni('X1234567L') })).ok)
+      .toBe(true);
+  });
+
+  /**
+   * ⚠️ El respaldo: no todas las pantallas cargan el cliente. Sin él, una
+   * reserva antigua creada con DNI sigue dejando generar su contrato — que es
+   * además lo que hará el backend, porque compone con el mismo orden
+   * (`c.documentNumber || snapshot.documentNumber`).
+   */
+  it('cae al snapshot cuando la pantalla no ha cargado el cliente', () => {
+    expect(canGenerateContract(ctx({ snapshot: '12345678Z' })).ok).toBe(true);
+  });
+
+  it('un documento en blanco no cuenta como documento', () => {
+    expect(canGenerateContract(ctx({ snapshot: '   ', cliente: conDni('  ') })).ok).toBe(false);
+  });
+
+  /**
+   * El orden de los motivos: un contrato ya firmado se rechaza por eso y no por
+   * el DNI. Si no, al operador se le mandaría a arreglar una ficha que no es el
+   * problema.
+   */
+  it('un contrato firmado se rechaza por estar firmado, no por el DNI', () => {
+    const d = canGenerateContract({ ...ctx({}), contract: signedContract });
+    expect(reasonOf(d)).toBe('workflow.contractAlreadySigned');
   });
 });

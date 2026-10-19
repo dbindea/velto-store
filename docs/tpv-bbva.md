@@ -54,12 +54,44 @@ Lo que la entidad revisa antes de aprobar el alta:
 | **Derecho de desistimiento** | `/devoluciones#desistimiento` | ✅ *(nueva)* |
 | Política de privacidad y cookies | [`/privacidad`](https://veltomobility.com/privacidad) | ✅ |
 | Descripción del servicio y precios **con impuestos** | portada, `/flota`, ficha de cada coche | ✅ |
-| Moneda | declarada en `/devoluciones#pagos` | ✅ |
+| Moneda | declarada en `/devoluciones#pagos` y en `/aviso-legal#pagos` | ✅ |
 | Medios de pago aceptados | `/devoluciones#pagos` | ✅ |
+| **Qué se paga con tarjeta** | [`/aviso-legal#pagos`](https://veltomobility.com/aviso-legal#pagos) | ✅ *(nueva, 17 oct 2026 — es la que falló)* |
 | Datos de contacto y atención al cliente | [`/contacto`](https://veltomobility.com/contacto), con horario | ✅ |
 | Nombre del comercio **y del titular** en la portada y **en la página de pago** | pie de la web y pie de `/pay/:id` | ✅ *(nueva)* |
+| **Política de devoluciones enlazada desde la página de pago** | pie de `/pay/:id`, vía `VELTO_WEB_BASE_URL` | ✅ *(17 oct 2026 — estaba vacía en producción)* |
 | HTTPS en todo el sitio | Firebase Hosting | ✅ |
 | Entorno de pruebas superado antes de pasar a producción | `REDSYS_ENVIRONMENT=test` en desarrollo | ✅ |
+
+### 2 bis. El rechazo del 17 de octubre de 2026, y qué faltaba de verdad
+
+BBVA tumbó el alta con un motivo de una línea:
+
+> En el aviso legal indicar lo que se pagará mediante tarjeta.
+
+⚠️ **La información estaba escrita, pero en la página equivocada.** Las dos
+filas de arriba —moneda y medios de pago— la daban por cubierta porque vivía en
+`/devoluciones#pagos`. El banco la quiere en el **aviso legal**, que es la
+página que identifica al prestador y la primera que abre un revisor.
+
+⚠️ **Y el aviso legal decía lo contrario.** Su sección «Qué se ofrece aquí»
+llevaba escrito, en negrita: *«No se contrata ni se paga desde aquí»*. O sea
+que el revisor entra a aprobar una pasarela de pago y encuentra una declaración
+de que ahí no se paga. La frase era cierta en lo que negaba —esta web no tiene
+carrito, nadie teclea una tarjeta en `veltomobility.com`— y falsa en lo que
+daba a entender: Velto cobra con tarjeta desde el 31 de agosto de 2026, sobre
+un enlace `/pay/:id` que manda la agencia.
+
+**Lo que se hizo:** sustituir esa frase por «No tiene carrito de compra» más un
+párrafo que remite al bloque nuevo, y añadir `#pagos` con los cinco conceptos
+que se cobran, la moneda, los impuestos, la pasarela y el 3-D Secure. Cada
+línea contrastada contra el código, no contra lo que convendría cobrar.
+
+⚠️ **De paso salió a la luz un tope que ninguna página decía**:
+`suggestInitialPayment()` termina en `Math.min(propuesta, precio)`, así que un
+alquiler de 20 € pide 20 € de señal y no 25. Las dos páginas decían «25 € si el
+alquiler cuesta menos de 50 €» a secas. Ahora dicen «y nunca más que el propio
+alquiler».
 
 ⚠️ **El domicilio del aviso legal tiene que coincidir con el del contrato del
 TPV.** El banco lo compara. En `web/src/lib/empresa.ts` conviven dos
@@ -139,34 +171,49 @@ transferencia. Las dos cosas están publicadas en `/devoluciones#como`.
 
 ## 4. Lo que falta, y es de Dorel
 
-| Qué | Estado el 2 de octubre de 2026 |
+| Qué | Estado el 17 de octubre de 2026 |
 |---|---|
-| Que **`veltomobility.com` sirva de verdad** | ⛔ **pendiente** — hoy da el aparcamiento del registrador; el banco entra a mirar las políticas y no las encuentra |
+| Que **`veltomobility.com` sirva de verdad** | ✅ **resuelto** — sirve desde el 5 de octubre de 2026, comprobado cargándolo |
 | Que ese dominio **reciba correo** | ✅ **resuelto** — Email Routing de Cloudflare activo, comprobado con `Resolve-DnsName … -Type MX` |
+| **Qué se paga con tarjeta, en el aviso legal** | ✅ **resuelto** — `/aviso-legal#pagos`, 17 oct 2026. Es lo que falló |
 | **Entidad de resolución de litigios** | 🟡 escrito como «no adherido»; falta que Dorel lo confirme |
 | **Revisión por un abogado** | 🟡 en marcha, con un abogado y otra IA |
+| **Decirle al banco lo de la fianza** | 🟡 pendiente — ver 3.2: tasa de devoluciones alta por diseño, y no hay rastro de que se dijera |
 | **Cuenta de empresa en BBVA** | ✅ ya la tiene |
 | **Ficha de Google Business Profile** | ✅ creada, enlazada desde el JSON-LD |
 
-⚠️ **El único camino crítico que queda es el dominio.** Todo lo demás de la web
-está listo: mientras `veltomobility.com` no responda, la solicitud se cae en la
-revisión del comercio por un motivo que no tiene nada que ver con el código.
+> ⚠️ **Aquí ponía que el dominio era el camino crítico y que no respondía.**
+> Era cierto el 2 de octubre y dejó de serlo el 5. Esta tabla se quedó tres
+> semanas diciendo que el banco «entra a mirar las políticas y no las
+> encuentra», así que quien preparase la respuesta al rechazo leyendo esto
+> habría ido a arreglar un problema que ya no existe —y habría dejado el que
+> sí—. Es la cuarta vez que un inventario de dominios escrito a mano caduca en
+> este repositorio: **antes de dar por fallido un dominio, vuelve a medirlo.**
 
 ---
 
-## 5. Encender el enlace a la política en la pantalla de pago
+## 5. El enlace a la política en la pantalla de pago: encendido
 
-Está montado y **apagado a propósito**: `VELTO_WEB_BASE_URL` en
-`functions/.env.<proyecto>`. En desarrollo apunta a `velto-web-dev.web.app` y
-el enlace se pinta; en producción está **vacía** porque el dominio todavía no
-sirve, y un enlace muerto en la pantalla donde alguien va a meter la tarjeta se
-lee como que la empresa no tiene esa política.
+`VELTO_WEB_BASE_URL`, en `functions/.env.<proyecto>`. Lo lee
+`getPaymentCheckout` y de ahí sale el `termsUrl` que pinta el pie de
+`/pay/:id`; vacío, el `@if` no pinta nada.
 
-El día que `veltomobility.com` responda:
+⚠️ **Estuvo vacía en producción hasta el 17 de octubre de 2026**, y puesta en
+desarrollo. O sea que la única pantalla de pago sin el enlace a la política de
+cancelaciones era la única con dinero de verdad — y quien lo probara en
+desarrollo veía el enlace y daba el asunto por cerrado. La condición que la
+mantenía apagada («el día que el dominio responda») había caducado doce días
+antes.
 
 ```bash
 # functions/.env.rentalcar-veltomobility
-VELTO_WEB_BASE_URL=https://veltomobility.com
+VELTO_WEB_BASE_URL=https://veltomobility.com   # desde el 17 oct 2026
 ```
 
-y redesplegar `getPaymentCheckout`.
+⚠️ **Tocar el `.env` cambia el hash de TODAS las functions.** En producción el
+despliegue va por nombre y nunca `--only functions` a secas, que subiría las
+cinco de la AEAT que allí no deben estar:
+
+```bash
+firebase deploy --only functions:getPaymentCheckout --project prod
+```

@@ -138,7 +138,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.concept {
+.concept,
+// ⚠️ **La de «pagado» va aquí y no reusa `.concept` a secas**, porque vive
+// dentro de `.status-card`, que centra su contenido: con el mismo nombre
+// parecería la misma pieza y acabaría heredando cambios pensados para la otra.
+// Lo que comparten —tamaño, color y que la prosa parta antes que desbordar— se
+// declara una vez.
+.paid-concept {
   margin: 0;
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -163,6 +169,26 @@
   color: var(--text-secondary);
   background: var(--bg-main);
   border-radius: 8px;
+}
+
+/*
+ * El enlace a la política de cancelación, dentro del párrafo de la señal.
+ *
+ * ⚠️ **Se declara AQUÍ y no se toma prestada de otra pantalla.** Con la
+ * encapsulación de Angular, una clase declarada por otro componente no alcanza
+ * a este elemento: `css:audit` la daría por buena y el enlace saldría sin
+ * forma. Es el fallo de `btn-icon` en Solicitudes, y el de `.form-control`
+ * cuatro veces antes.
+ *
+ * ⚠️ **En su propia línea, no pegado al final de la frase.** Separado se lee
+ * como lo que es —una salida a la política entera—; a renglón seguido
+ * parecería una palabra subrayada más de la letra pequeña.
+ */
+.signal-terms__enlace {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  text-decoration: underline;
 }
 
 .btn-pay {
