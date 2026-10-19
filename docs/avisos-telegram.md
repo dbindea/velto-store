@@ -47,6 +47,25 @@ en frío, así que una librería de SMS la pagaría también una petición de
    `8123456789:AAE_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`. Ese token **es la llave**:
    quien lo tenga puede mandar mensajes como el bot.
 
+> ⚠️ **El token son las DOS mitades, con los dos puntos en medio — y esto ya
+> salió mal.** El 19 de octubre de 2026 los dos secrets se guardaron con solo
+> la parte de **después** de los dos puntos: 35 caracteres en vez de 46. Se
+> detectó comprobando la forma sin imprimir el valor, y `getMe` lo confirmó al
+> reconstruirlo.
+>
+> ⚠️ **Y el número de delante es el ID DEL BOT, no tu chat.** Se pasaron
+> `8831857807` y `8944806803` como «chat id de desarrollo y de producción» y
+> eran los ids de `@VeltoDevBot` y `@VeltoMobilityBot`. Un bot **no puede
+> escribirse a sí mismo**: con eso puesto, Telegram habría contestado
+> `chat not found` en cada cobro y el aviso no habría llegado nunca.
+>
+> Para comprobar la forma sin que el token aparezca en ninguna parte:
+>
+> ```bash
+> V=$(firebase functions:secrets:access TELEGRAM_BOT_TOKEN --project dev | tail -1 | tr -d '[:space:]')
+> printf '%s' "$V" | grep -qE '^[0-9]{8,12}:[A-Za-z0-9_-]{30,}$' && echo OK || echo MAL
+> ```
+
 ### 2. Saber a qué chat escribir
 
 Un bot no puede escribirle a nadie que no le haya hablado antes. Así que:

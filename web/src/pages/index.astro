@@ -358,6 +358,19 @@ const PROMESAS = [
     const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!ancha || quieto) return;
     v.src = '/video/carretera.mp4';
+    /*
+     * ⚠️ **Más lento a propósito.** A velocidad real los coches cruzan el
+     * encuadre de lado a lado y Dorel lo dijo mirándolo: «da un poco de
+     * vértigo tanto movimiento». Esto es un fondo detrás de un titular, no un
+     * plano que nadie va a ver; lo que tiene que hacer es moverse lo justo
+     * para que la página no parezca congelada.
+     *
+     * ⚠️ **Se hace AQUÍ y no recodificando.** Ralentizar el fichero obligaría
+     * a duplicar fotogramas —el resultado en pantalla es idéntico— y el vídeo
+     * pesaría más por el mismo movimiento. Así además es un número que se
+     * ajusta en un segundo si sigue pareciendo mucho o se queda corto.
+     */
+    v.playbackRate = 0.6;
     void v.play().catch(() => {});
   }
   fondoDelHeroe();
@@ -547,8 +560,13 @@ const PROMESAS = [
    * ⚠️ **Los números son medidos, no elegidos a ojo.** Recorriendo los diez
    * segundos del bucle, el píxel más claro bajo el titular es **196** y bajo la
    * entradilla **192**. Con eso, un velo plano necesitaría 0,55 para que los
-   * dos pasen; éste llega al mismo sitio arriba —donde está el texto— y baja a
-   * 0,30 en el suelo, que es donde está lo único que se quiere ver.
+   * dos pasen; éste llega más arriba —donde está el texto— y afloja en el
+   * suelo, que es donde está lo único que se quiere ver.
+   *
+   * ⚠️ **Siete puntos más oscuro desde el 19 de octubre de 2026**, a petición
+   * de Dorel. No tiene techo de accesibilidad —cuanto más oscuro, más
+   * contraste— pero sí uno práctico: pasados los 0,75 el vídeo deja de leerse
+   * como vídeo y vuelve a ser el rectángulo negro que esto venía a quitar.
    */
   .hero__fondo::after {
     content: '';
@@ -556,9 +574,9 @@ const PROMESAS = [
     inset: 0;
     background: linear-gradient(
       to bottom,
-      rgb(0 0 0 / 0.62) 0%,
-      rgb(0 0 0 / 0.6) 70%,
-      rgb(0 0 0 / 0.3) 100%
+      rgb(0 0 0 / 0.69) 0%,
+      rgb(0 0 0 / 0.67) 70%,
+      rgb(0 0 0 / 0.37) 100%
     );
   }
 
