@@ -1,0 +1,130 @@
+---
+/**
+ * «Pagar la señal», la página a la que lleva el botón del correo.
+ *
+ * ⚠️ **Existe porque un enlace de pago NO se puede meter en un correo.** Un
+ * `/pay/:id` lleva dentro un importe congelado: puesto en una bandeja de
+ * entrada seguiría cobrando la señal de un presupuesto vencido tres días
+ * después, con el coche alquilado y la tarifa cambiada. Esta página pregunta al
+ * backend **en el momento de pulsar**, y si el plazo ya venció contesta
+ * «llámanos» en vez de cobrar algo que no sostenemos.
+ *
+ * ⚠️ **Lo decide `puedePagarSenal()` en las functions, no esto.** Aquí no hay
+ * ninguna regla: se pide, y lo que vuelve se traduce a una frase. Una segunda
+ * copia del plazo en el navegador sería una segunda autoridad sobre cuándo se
+ * cobra, y la del navegador se puede cambiar con la consola abierta.
+ *
+ * ⚠️ **Y NO se indexa.** Es una página que solo tiene sentido con una llave en
+ * la URL; en el índice de Google sería un resultado que no lleva a ninguna
+ * parte. Por eso `ruta={null}` y `sinIndexar`, que es el par que ya usa el
+ * respaldo de las fichas de coche.
+ */
+import Base from '../layouts/Base.astro';
+import { EMPRESA } from '../lib/empresa';
+---
+
+<Base
+  titulo="Pagar la señal"
+  descripcion="Completa el pago de la señal de tu pre-reserva."
+  ruta={null}
+  sinIndexar
+>
+  <section class="seccion">
+    <div class="contenedor pago">
+      <h1 class="pago__titulo">Pagar la señal</h1>
+
+      {/*
+        ⚠️ **Se nace ESPERANDO, no en blanco.** La petición tarda lo que tarde
+        en despertar la instancia, y una pantalla vacía con un título se lee
+        como una página rota — el mismo problema que la ficha de coche tenía
+        antes de ponerle la carretera.
+      */}
+      <p id="pago-espera" class="pago__texto">Un momento, estamos abriendo el pago…</p>
+
+      {/*
+        El fallo. Nace oculto y lo rellena el script con la frase que toque.
+        ⚠️ **Siempre con una salida**: ninguna de las frases deja al cliente sin
+        saber qué hacer, porque aquí lo que hay delante es alguien que ha
+        decidido pagar.
+      */}
+      <div id="pago-fallo" hidden>
+        <p id="pago-motivo" class="pago__texto pago__texto--aviso" role="alert"></p>
+        <p class="pago__texto">
+          Escríbenos o llámanos al{' '}
+          <a href={`tel:${EMPRESA.telefono.replace(/\s+/g, '')}`}>{EMPRESA.telefono}</a>{' '}
+          y lo cerramos contigo.
+        </p>
+        <a class="btn btn--brand" href="/">Volver a la portada</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .pago { max-width: 34rem; display: grid; gap: var(--sp-4); }
+  .pago__titulo { margin: 0; font-size: var(--fs-h2); }
+  .pago__texto { margin: 0; color: var(--text-2); }
+  .pago__texto--aviso { color: var(--danger); }
+  /*
+   * ⚠️ **El `<div>` del fallo también tiene que apilar.** Sin esto sus tres
+   * hijos salen pegados: el `gap` del contenedor solo alcanza a sus hijos
+   * directos, y éste es uno solo con tres dentro.
+   */
+  #pago-fallo { display: grid; gap: var(--sp-4); justify-items: start; }
+</style>
+
+<script>
+  import { pagarSenal } from '../lib/api';
+
+  /**
+   * ⚠️ **Las mismas frases que el modal**, y por eso están escritas igual. Es
+   * el mismo hecho contado en dos sitios: si una dijera «ha caducado» y la otra
+   * «ya no está disponible», el cliente se preguntaría si son dos problemas.
+   *
+   * Lo que cambia es el final: allí hay una pantalla detrás con la pre-reserva
+   * recién hecha, y aquí no hay nada — así que aquí el teléfono va en la
+   * página, fuera de este mapa.
+   */
+  const MOTIVOS: Record<string, string> = {
+    disabled: 'Ahora mismo no podemos cobrar la señal desde aquí.',
+    expired: 'El precio que te dimos ya ha caducado. Tu pre-reserva sigue guardada.',
+    closed: 'Esta pre-reserva ya está cerrada.',
+    'no-amount': 'No hemos podido calcular la señal.',
+    'not-found': 'No encontramos esta pre-reserva.',
+    error: 'No hemos podido abrir el pago.',
+  };
+
+  const espera = document.getElementById('pago-espera');
+  const fallo = document.getElementById('pago-fallo');
+  const motivo = document.getElementById('pago-motivo');
+
+  function rendirse(clave: string): void {
+    if (espera) espera.hidden = true;
+    if (motivo) motivo.textContent = MOTIVOS[clave] ?? MOTIVOS['error'];
+    if (fallo) fallo.hidden = false;
+  }
+
+  /*
+   * ⚠️ **La llave es el id del documento, que llega en `?s=`.** No es la
+   * referencia: `P-4K7M9X` se dicta por teléfono y se teclea, así que con ella
+   * como llave cualquiera probando combinaciones lanzaría cobros a nombre de
+   * otro. Éste mide ~95 bits y solo lo tiene quien recibió el correo.
+   */
+  const id = new URLSearchParams(location.search).get('s') ?? '';
+  if (!id) {
+    rendirse('not-found');
+  } else {
+    pagarSenal(id)
+      .then((cobro) => {
+        if (!cobro.payUrl) throw new Error('error');
+        /*
+         * ⚠️ **`replace` y no `assign`.** Esta página no es un sitio al que
+         * volver: con `assign`, el botón de atrás del navegador la devolvería
+         * y volvería a lanzar la petición sola. Sacándola del historial, atrás
+         * lleva al correo, que es de donde se vino.
+         */
+        location.replace(cobro.payUrl);
+      })
+      .catch((e: Error) => rendirse(e.message));
+  }
+</script>

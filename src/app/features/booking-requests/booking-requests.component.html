@@ -41,7 +41,31 @@
           <!-- La cabecera es la fila de la lista: pulsarla despliega la ficha. -->
           <div class="card-header solicitud__fila" (click)="alternar(r.id)">
             <div class="solicitud__quien">
-              <span class="solicitud__ref mono">{{ r.reference }}</span>
+              <span class="solicitud__cabecera">
+                <span class="solicitud__ref mono">{{ r.reference }}</span>
+                <!--
+                  ⚠️ **La señal cobrada va AQUÍ, junto a la referencia, y no al
+                  lado del estado.** Es donde pertenece —habla de la solicitud,
+                  como la referencia— y además es el único sitio donde no
+                  descuadra nada: estas dos primeras columnas son `fr` y
+                  absorben lo que ocupe la chapa.
+
+                  Estuvo un rato en una celda propia entre el precio y el
+                  estado, y **movía el precio 85 px** en las filas que la
+                  llevan: 195,95 € terminaba mucho antes que 326,95 € de la
+                  fila de debajo. Medido en la pantalla, no deducido.
+
+                  ⚠️ **Y no sustituye al estado.** El estado dice si se ha
+                  hablado con el cliente; esto, si ha entrado dinero. Una
+                  solicitud puede estar «sin contestar» con 50 € cobrados —es
+                  justo el caso nuevo— y esa fila es la más urgente de la lista.
+                -->
+                @if (r.id && senalesCobradas().has(r.id)) {
+                  <span class="badge senal-cobrada">
+                    {{ 'bookingRequests.signal.paidBadge' | translate }}
+                  </span>
+                }
+              </span>
               <strong>{{ r.name }}</strong>
             </div>
             <div class="solicitud__que">
@@ -58,6 +82,17 @@
             <div class="solicitud__precio num">
               {{ r.quoteSnapshot.gross | number: '1.2-2' }} €
             </div>
+            <!--
+              ⚠️ **La señal cobrada va ANTES del estado, y son dos cosas
+              distintas.** El estado dice si se ha hablado con el cliente; esto
+              dice si ha entrado dinero. Una solicitud puede estar «sin
+              contestar» y tener 50 € cobrados —es justo el caso nuevo, el que
+              paga de madrugada— y esa fila es la más urgente de la lista.
+
+              ⚠️ **Y no sustituye al estado.** Fundirlos daría un quinto valor
+              en un enumerado que gobierna los filtros, el borrado y el guard de
+              convertir. Son dos hechos y se cuentan por separado.
+            -->
             <span class="badge" [ngClass]="STATUS_COLORS[r.status]">
               {{ STATUS_LABELS[r.status] | translate }}
             </span>

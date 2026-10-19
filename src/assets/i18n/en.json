@@ -2186,7 +2186,8 @@
       "created": "Charge created. Copy the link and send it.",
       "failed": "The charge could not be created.",
       "noAmount": "This request has no price: the deposit cannot be calculated.",
-      "concept": "Deposit for pre-booking {reference}"
+      "concept": "Deposit for pre-booking {reference}",
+      "paidBadge": "Down payment in"
     }
   }
 }

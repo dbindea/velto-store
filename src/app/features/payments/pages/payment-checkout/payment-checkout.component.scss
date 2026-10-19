@@ -138,7 +138,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.concept {
+.concept,
+// ⚠️ **La de «pagado» va aquí y no reusa `.concept` a secas**, porque vive
+// dentro de `.status-card`, que centra su contenido: con el mismo nombre
+// parecería la misma pieza y acabaría heredando cambios pensados para la otra.
+// Lo que comparten —tamaño, color y que la prosa parta antes que desbordar— se
+// declara una vez.
+.paid-concept {
   margin: 0;
   font-size: 0.9rem;
   color: var(--text-secondary);

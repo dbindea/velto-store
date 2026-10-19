@@ -26,6 +26,20 @@
         <h1>{{ 'payments.checkout.paidTitle' | translate }}</h1>
         <p>{{ 'payments.checkout.paidMessage' | translate }}</p>
         <p class="amount-paid">{{ view()!.amount | number:'1.2-2' }} €</p>
+        <!--
+          ⚠️ **El concepto también aquí, y lleva dentro la referencia.** Es lo
+          que Dorel pidió de esta pantalla: «una confirmación, número de
+          pre-reserva». No hace falta un campo nuevo — el concepto de una señal
+          de la web es literalmente «Señal de la pre-reserva P-4K7M9X», así que
+          enseñarlo contesta las dos cosas.
+
+          ⚠️ **Y no filtra nada que el otro estado no filtrara ya**: el
+          concepto se pinta igual antes de pagar. Lo que esta respuesta sigue
+          sin decir es quién paga, qué coche y qué reserva.
+        -->
+        @if (view()!.concept) {
+          <p class="paid-concept">{{ view()!.concept }}</p>
+        }
       </div>
     } @else if (view()!.state === 'unavailable') {
       <div class="status-card error">

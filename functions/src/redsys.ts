@@ -48,6 +48,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { FUNCTIONS_REGION } from './global-options';
 import { firestore } from './admin-guard';
 import { companyConfig } from './company-config';
+import { webBaseUrl } from './public-url';
 import {
   appliedPaidAmount,
   chargeAccepted,
@@ -393,15 +394,33 @@ export const getPaymentCheckout = onCall(
       brandName: company.brandName,
       legalName: company.legalName,
       taxId: company.taxId,
-      termsUrl: (process.env.VELTO_WEB_BASE_URL || '').replace(/\/$/, '')
-        ? `${(process.env.VELTO_WEB_BASE_URL || '').replace(/\/$/, '')}/devoluciones`
-        : '',
+      // Vacío = no se pinta el enlace. Ver `webBaseUrl()`, que es el único
+      // sitio que lee esa variable desde el 19 de octubre de 2026.
+      termsUrl: webBaseUrl() ? `${webBaseUrl()}/devoluciones` : '',
       // Lo es si salió de una solicitud de la web. No se publica cuál.
       isBookingSignal: Boolean(payment.bookingRequestId)
     };
 
     if (payment.status === 'paid') {
-      return { ...base, state: 'paid' };
+      /**
+       * ⚠️ **Cobrado se enseña lo PAGADO, no lo pendiente — que es cero.**
+       * `outstandingAmount()` contesta lo que falta, y lo que falta en un pago
+       * cerrado son 0,00 €: la pantalla decía «Pago recibido» con un **0,00 €**
+       * enorme debajo, al cliente que acababa de pagar 50 €. Se lee como que el
+       * pago no ha contado.
+       *
+       * Venía de antes y no se veía porque esta pantalla casi no se visitaba
+       * después de pagar; desde que la señal se paga desde la web es la
+       * pantalla de confirmación de **todos** los clientes, así que sale
+       * siempre. Lo encontró la prueba de punta a punta del 19 de octubre de
+       * 2026 — mirando lo que ve el cliente, no leyendo el código.
+       *
+       * ⚠️ **Y se lee `paidAmount`, no `amount`.** Son cosas distintas: aquel
+       * es lo que entró de verdad y éste lo que se pedía. En un cobro cerrado
+       * por corrección —se pedían 50 y entraron 30, y el operador ajustó el
+       * importe— el que dice la verdad es el primero.
+       */
+      return { ...base, amount: Number(payment.paidAmount) || 0, state: 'paid' };
     }
 
     /**

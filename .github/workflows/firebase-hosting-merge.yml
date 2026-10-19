@@ -123,6 +123,18 @@ jobs:
       # ⚠️ **Y mira también `web/dist/coche/`**, que el glob anterior no veía:
       # ahí están las fichas prerrenderizadas, que son justo el contenido que no
       # puede salir con `noindex` puesto.
+      #
+      # ⚠️ **Desde el 19 de octubre de 2026 son DOS, y la lista sigue siendo
+      # exacta a propósito.** La segunda es `pagar-senal.html`, la página a la
+      # que lleva el botón del correo: sin la llave `?s=` en la URL no puede
+      # hacer nada, así que indexada sería otro resultado que no lleva a ninguna
+      # parte — exactamente el soft 404 que se corrigió el 15 de octubre.
+      #
+      # Lo que NO se ha hecho es aflojar la comprobación a «como mucho dos» o a
+      # un patrón: el valor de este guardia es que **enumera**, así que una
+      # página nueva con `sinIndexar` obliga a venir aquí a decirlo. Es la misma
+      # razón por la que `permissions.util.spec.ts` afirma la lista completa de
+      # permisos del empleado en vez de enumerar lo denegado.
       - name: El artefacto de la web es el del sitio real
         run: |
           set -e
@@ -134,13 +146,15 @@ jobs:
             exit 1
           fi
 
+          esperadas="coche.html pagar-senal.html "
           marcadas=$(grep -rl 'name="robots"' web/dist --include='*.html' | sed 's|^web/dist/||' | sort | tr '\n' ' ')
-          if [ "$marcadas" != "coche.html " ]; then
-            echo "::error::se esperaba que la ÚNICA página sin indexar fuera coche.html, y hay: ${marcadas:-ninguna}"
+          if [ "$marcadas" != "$esperadas" ]; then
+            echo "::error::se esperaba que las ÚNICAS páginas sin indexar fueran: ${esperadas}"
+            echo "::error::y hay: ${marcadas:-ninguna}"
             echo "::error::si es a propósito, actualiza este guardia; si no, alguien ha tocado sinIndexar en Base.astro"
             exit 1
           fi
-          echo "OK: robots.txt con sitemap, y coche.html es la única página sin indexar"
+          echo "OK: robots.txt con sitemap, y las únicas sin indexar son ${esperadas}"
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

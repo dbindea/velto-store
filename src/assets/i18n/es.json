@@ -2186,7 +2186,8 @@
       "created": "Cobro creado. Copia el enlace y mándaselo.",
       "failed": "No se pudo crear el cobro.",
       "noAmount": "Esta solicitud no tiene precio: no se puede calcular la señal.",
-      "concept": "Señal de la pre-reserva {reference}"
+      "concept": "Señal de la pre-reserva {reference}",
+      "paidBadge": "Señal cobrada"
     }
   }
 }

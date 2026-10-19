@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged, map, switchMap } from 'rxjs';
 import { TranslatePipe } from '@shared/pipes/translate.pipe';
 import { NotificationService } from '@core/notifications/notification.service';
 import { ConfirmService } from '@core/notifications/confirm.service';
@@ -74,6 +75,13 @@ export class BookingRequestsComponent {
 
   readonly loading = signal(true);
   readonly requests = signal<BookingRequest[]>([]);
+  /**
+   * Las referencias cuya señal ya está cobrada.
+   *
+   * ⚠️ **Es un `Set` de ids de SOLICITUD, no de pagos.** La fila pregunta por
+   * sí misma, y así la consulta puede cambiar de forma sin tocar la plantilla.
+   */
+  readonly senalesCobradas = signal<Set<string>>(new Set());
   readonly filtro = signal<Filtro>('open');
   /** Cuál está abierta. Una ficha desplegable basta para cuatro acciones. */
   readonly abierta = signal<string | null>(null);
@@ -120,6 +128,45 @@ export class BookingRequestsComponent {
           this.loading.set(false);
           this.notifications.error('bookingRequests.errors.loadFailed');
         }
+      });
+
+    /**
+     * Cuáles tienen la señal ya **cobrada**, para que se vea en la lista.
+     *
+     * ⚠️ **Sin esto, dinero cobrado se leía igual que una solicitud sin
+     * atender.** Desde que la señal se paga desde la web, el cobro entra solo
+     * —de madrugada, sin que nadie lo toque— y la fila seguía diciendo «Sin
+     * contestar» como las demás. El aviso de Telegram dice cuál es, pero un
+     * aviso que se pierde dejaba dinero en el banco sin nada en la pantalla
+     * que lo contara.
+     *
+     * ⚠️ **No cambia el ESTADO, solo lo enseña.** Pagar no es haber hablado con
+     * el cliente: marcarla «contactada» la sacaría de la lista de trabajo
+     * pendiente justo cuando hay que estar más pendiente. Es la misma razón por
+     * la que `attachSignalPayment()` tampoco lo toca.
+     *
+     * ⚠️ **Se vuelve a suscribir con CADA lista**, y por eso va con
+     * `switchMap`. La consulta lleva los ids dentro, así que una lista nueva
+     * necesita una consulta nueva; encadenarlas sin cortar la anterior apilaría
+     * un oyente de Firestore por cambio, que es el fallo que este repositorio
+     * ya documenta.
+     */
+    toObservable(this.requests)
+      .pipe(
+        map((rs) => rs.map((r) => r.id ?? '').filter(Boolean)),
+        distinctUntilChanged((a, b) => a.length === b.length && a.every((x, i) => x === b[i])),
+        switchMap((ids) => this.service.watchPaidSignals(ids)),
+        takeUntilDestroyed()
+      )
+      .subscribe({
+        next: (pagadas) => this.senalesCobradas.set(pagadas),
+        /*
+         * ⚠️ **Un fallo aquí NO molesta a nadie.** Es un adorno de la lista:
+         * si la consulta falla, lo que se pierde es la chapa, y la ficha sigue
+         * diciendo la verdad porque carga su propio cobro. Un aviso rojo por
+         * esto taparía los que sí importan.
+         */
+        error: () => this.senalesCobradas.set(new Set())
       });
 
     /**

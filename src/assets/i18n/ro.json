@@ -2186,7 +2186,8 @@
       "created": "Plată creată. Copiază linkul și trimite-l.",
       "failed": "Plata nu a putut fi creată.",
       "noAmount": "Această cerere nu are preț: avansul nu se poate calcula.",
-      "concept": "Avans pentru pre-rezervarea {reference}"
+      "concept": "Avans pentru pre-rezervarea {reference}",
+      "paidBadge": "Avans încasat"
     }
   }
 }

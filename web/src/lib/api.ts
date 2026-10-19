@@ -287,6 +287,61 @@ export interface SolicitudEnviada {
   quoteUrl?: string | null;
   /** Si se ha mandado por correo, para poder decirlo. */
   emailed?: boolean;
+  /**
+   * Si se puede pagar la señal ahora mismo, y de cuánto es.
+   *
+   * ⚠️ **Lo contesta el BACKEND y no se puede deducir aquí.** `web/dist` se
+   * construye **igual** para los dos entornos —sin `fileReplacements` ni
+   * `.env`—, así que el bundle no sabe si está sirviendo desarrollo o
+   * producción; lo que distingue entorno vive en `functions/.env.<proyecto>`.
+   * Es el mismo problema que hizo que la pantalla de firma enseñara el correo
+   * de desarrollo a un cliente real.
+   *
+   * ⚠️ **Puede no venir**, y entonces no se ofrece. Una respuesta vieja —o la
+   * del camino del robot— no puede abrir un botón de pagar.
+   */
+  signal?: {
+    enabled: boolean;
+    amount: number;
+    /** La llave del cobro. Ver `pagarSenal()`. */
+    id: string;
+  } | null;
+}
+
+/** Por qué no se puede pagar la señal. Copia de `MotivoSinSenal`. */
+export type MotivoSinSenal = 'disabled' | 'not-found' | 'closed' | 'expired' | 'no-amount';
+
+export interface CobroDeSenal {
+  /** A dónde mandar al cliente a pagar. */
+  payUrl: string;
+  amount: number;
+  reference: string;
+}
+
+/**
+ * Crea el cobro de la señal de una pre-reserva y devuelve dónde pagarla.
+ *
+ * ⚠️ **La llave es el ID del documento, no la referencia.** `P-4K7M9X` se dicta
+ * por teléfono y se teclea: con ella como llave, cualquiera probando
+ * combinaciones lanzaría cobros a nombre de otro. El id mide ~95 bits y solo lo
+ * recibe quien acaba de crear la solicitud —o quien tiene su correo—, igual que
+ * los enlaces `/d/…`.
+ *
+ * ⚠️ **Es idempotente.** Llamarla dos veces devuelve el MISMO cobro: la
+ * function lo resuelve en una transacción mirando `signalPaymentId`. Dos
+ * pestañas, o un doble toque, no pueden crear dos señales de 50 €.
+ *
+ * ⚠️ **Y lo que devuelve es una URL del BACKOFFICE**, no de esta web: el pago
+ * se hace en `/pay/:id`, que es la pantalla que ya existe, la que hace el POST
+ * a Redsys —la pasarela solo admite POST— y la que lleva la razón social, el
+ * NIF y el enlace a devoluciones que exige el banco.
+ */
+export function pagarSenal(id: string): Promise<CobroDeSenal> {
+  return pedir('/api/pagar-senal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
 }
 
 /**

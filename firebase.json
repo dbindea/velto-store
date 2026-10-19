@@ -143,6 +143,13 @@
           }
         },
         {
+          "source": "/api/pagar-senal",
+          "function": {
+            "functionId": "createSignalPayment",
+            "region": "europe-west1"
+          }
+        },
+        {
           "source": "/api/visita",
           "function": {
             "functionId": "trackWebVisit",

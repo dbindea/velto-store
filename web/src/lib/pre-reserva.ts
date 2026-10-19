@@ -7,7 +7,7 @@
  * dónde salen el coche y las fechas; lo que pasa al pulsar «Enviar», no.
  */
 
-import { solicitar } from './api';
+import { euros, pagarSenal, solicitar } from './api';
 import { ocupar, ocuparUnRato, type Ocupado } from './boton-ocupado';
 import { capitalizarNombre, transformarCampo } from './texto';
 import { medirHito } from './medir';
@@ -70,6 +70,35 @@ const MOTIVOS: Record<string, string> = {
   'past-date': 'La recogida no puede ser en una fecha pasada.',
 };
 
+/**
+ * Lo que se le dice cuando el pago de la señal no sale.
+ *
+ * ⚠️ **Ninguno de estos mensajes dice que la pre-reserva se haya perdido**, y
+ * es lo más importante de los cinco: el cliente está mirando una pantalla que
+ * acaba de darle una referencia. Un «no se ha podido» a secas se lee como que
+ * todo el formulario se ha caído, y lo que hace entonces es volver a rellenarlo
+ * — y Velto recibe la misma solicitud dos veces.
+ *
+ * ⚠️ **Y todos acaban ofreciendo la salida que sí funciona**: que llamen ellos.
+ * Un error sin salida en la pantalla donde alguien iba a pagar es un cliente
+ * perdido.
+ */
+const MOTIVOS_SENAL: Record<string, string> = {
+  /*
+   * No debería verse nunca —el botón no se enseña con el pago apagado—, pero
+   * si alguien llega aquí con una pestaña vieja, lo honesto es decir que esto
+   * no va por aquí y no inventarse una avería.
+   */
+  disabled: 'Ahora mismo no podemos cobrar la señal desde aquí. Te llamamos y lo cerramos contigo.',
+  expired:
+    'El precio que te dimos ya ha caducado. Llámanos y te lo actualizamos: tu pre-reserva sigue guardada.',
+  closed: 'Esta pre-reserva ya está cerrada. Si crees que es un error, llámanos.',
+  'no-amount': 'No hemos podido calcular la señal. Te llamamos y lo cerramos contigo.',
+  'not-found': 'No encontramos esta pre-reserva. Llámanos con tu referencia delante.',
+  error:
+    'No hemos podido abrir el pago. Tu pre-reserva está hecha: inténtalo otra vez o espera a que te llamemos.',
+};
+
 export interface PreReserva {
   abrir: (datos: DatosPreReserva) => void;
 }
@@ -86,6 +115,11 @@ export function montarPreReserva(): PreReserva | null {
   const garantia = document.getElementById('dlg-garantia');
   const presupuesto = document.getElementById('dlg-presupuesto');
   const correo = document.getElementById('dlg-correo');
+  const pagar = document.getElementById('dlg-pagar') as HTMLButtonElement | null;
+  const pagarTexto = document.getElementById('dlg-pagar-texto');
+  const pagarError = document.getElementById('dlg-pagar-error');
+  const llamada = document.getElementById('dlg-llamada');
+  const gracias = document.getElementById('dlg-gracias');
   if (!dlg || !form || !hecho || !resumen || !error || !enviar || !ref) return null;
 
   let elegido: DatosPreReserva | null = null;
@@ -110,6 +144,54 @@ export function montarPreReserva(): PreReserva | null {
 
   document.getElementById('dlg-cerrar')?.addEventListener('click', () => dlg.close());
   document.getElementById('dlg-ok')?.addEventListener('click', () => dlg.close());
+  /*
+   * ⚠️ **«Que me llaméis» hace EXACTAMENTE lo que «Cerrar»**, y por eso no
+   * tiene camino propio. No es una opción que haya que registrar en ninguna
+   * parte: la pre-reserva ya está creada y Velto ya tiene el aviso. Lo único
+   * que cambia es que la persona ha dicho que no paga ahora, y eso no es un
+   * dato del negocio — es no hacer nada.
+   */
+  document.getElementById('dlg-no-pagar')?.addEventListener('click', () => dlg.close());
+
+  /*
+   * Pagar la señal: se pide el cobro y se manda a la pasarela.
+   *
+   * ⚠️ **El cobro se crea AL PULSAR, no al crear la pre-reserva.** Creándolo
+   * antes, toda solicitud dejaría una fila de 50 € pendiente en la lista de
+   * Pagos aunque nadie fuera a pagarla nunca — y la mayoría no va a pagar.
+   * Esa lista es donde Dorel mira lo que falta por cobrar: llenarla de cobros
+   * fantasma la inutiliza.
+   *
+   * ⚠️ **Y es idempotente por el lado del servidor**, que es donde tiene que
+   * estar: la function resuelve en una transacción mirando `signalPaymentId`.
+   * Un doble toque en un móvil no puede crear dos señales. Aquí lo único que
+   * se hace es apagar el botón mientras va, que es cortesía y no seguridad.
+   */
+  pagar?.addEventListener('click', () => {
+    const id = pagar.dataset.solicitud;
+    if (!id) return;
+    if (pagarError) pagarError.hidden = true;
+    const ocupadoPago = ocupar(pagar, 'Abriendo el pago…');
+    pagarSenal(id)
+      .then((cobro) => {
+        if (!cobro.payUrl) throw new Error('error');
+        /*
+         * ⚠️ **Misma pestaña, no una nueva.** Un pago que se abre en otra
+         * pestaña deja la de atrás diciendo «pre-reserva hecha» con el botón
+         * de pagar intacto: al volver, lo natural es pulsarlo otra vez. Y los
+         * bloqueadores de ventanas emergentes se comen el `window.open()` de
+         * un `then()`, porque ya no es un gesto del usuario — el pago se
+         * quedaría sin abrir sin decir por qué.
+         */
+        location.assign(cobro.payUrl);
+      })
+      .catch((err: Error) => {
+        ocupadoPago.libre();
+        if (!pagarError) return;
+        pagarError.textContent = MOTIVOS_SENAL[err.message] ?? MOTIVOS_SENAL['error'];
+        pagarError.hidden = false;
+      });
+  });
 
   /*
    * ⚠️ **El presupuesto se abre en OTRA pestaña, y el `target` solo no basta.**
@@ -240,6 +322,53 @@ export function montarPreReserva(): PreReserva | null {
           correo.hidden = !(r.emailed && dicho);
           if (!correo.hidden) correo.textContent = `También te lo hemos mandado a ${dicho}.`;
         }
+
+        /*
+         * ⚠️ **Lo enciende la RESPUESTA, nunca el bundle.** `web/dist` se
+         * construye igual para los dos entornos, así que esta pantalla no
+         * puede saber sola dónde está sirviendo; lo contesta la function
+         * leyendo `functions/.env.<proyecto>`. Hoy producción lo tiene
+         * apagado.
+         *
+         * ⚠️ **Y se exigen las TRES cosas**: que el entorno lo ofrezca, que
+         * haya importe y que haya llave. Un botón de pagar sin llave manda al
+         * cliente a un error después de haberle prometido que cerraba la
+         * reserva — y encima pensando que el problema es suyo.
+         */
+        const senal = r.signal;
+        const ofrecerPago = !!(senal && senal.enabled && senal.amount > 0 && senal.id);
+        if (pagar) {
+          pagar.hidden = !ofrecerPago;
+          if (ofrecerPago && pagarTexto) {
+            pagarTexto.textContent = `Pagar la señal · ${euros(senal!.amount)}`;
+          }
+          if (ofrecerPago) pagar.dataset.solicitud = senal!.id;
+        }
+        if (llamada) llamada.hidden = !ofrecerPago;
+
+        /*
+         * ⚠️ **La frase de las gracias cambia con el botón**, y las dos
+         * redacciones son las mismas que las del correo al cliente. Dejarla
+         * fija ponía «te contactaremos» justo encima de un botón de pagar:
+         * dos instrucciones a la vez, y la salida cómoda es no hacer nada.
+         *
+         * ⚠️ **La llamada se sigue prometiendo en los dos casos.** Pagar no
+         * puede parecer obligatorio: lo que se ofrece es adelantarlo.
+         */
+        if (gracias && ofrecerPago) {
+          gracias.textContent =
+            'Gracias. Puedes cerrarla ya pagando la señal, o esperar a que te llamemos.';
+        }
+
+        /*
+         * ⚠️ **Dos botones turquesa son ninguno.** Con el pago ofrecido, el
+         * presupuesto baja a secundario: lo que esta pantalla quiere que pase
+         * es que se cierre la reserva, y descargar un PDF es la alternativa.
+         * Sin pago, recupera el color — o la pantalla se quedaría sin ninguna
+         * acción destacada y quien no dejó correo se iría sin nada escrito.
+         */
+        presupuesto?.classList.toggle('btn--brand', !ofrecerPago);
+        presupuesto?.classList.toggle('btn--ghost', ofrecerPago);
 
         form.hidden = true;
         hecho.hidden = false;
