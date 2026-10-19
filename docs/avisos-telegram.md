@@ -99,16 +99,39 @@ firebase deploy --only functions:redsysNotificationWebhook --project prod
 
 ## Lo que hay que saber antes de desplegar
 
-⚠️ **Declarar un secret que no existe ROMPE el despliegue.** `TELEGRAM_BOT_TOKEN`
-está en el `secrets: [...]` de `redsysNotificationWebhook`, así que **tiene que
-existir en los dos proyectos** antes del primer despliegue de esa function, o el
-del proyecto que falte se cae. No hace falta que esté *usado* —el chat puede
-quedarse vacío— pero el secret tiene que existir. Para comprobarlo sin imprimir
+⚠️ **Declarar un secret que no existe ROMPE EL DESPLIEGUE DE TODAS LAS
+FUNCTIONS, no solo de la suya.** Esto es peor de lo que parecía y está medido:
+el 19 de octubre de 2026, intentando desplegar `generateContractPdf` —que no
+tiene nada que ver con Telegram— el CLI abortó con
+
+```
+Error: In non-interactive mode but have no value for the secret: TELEGRAM_BOT_TOKEN
+```
+
+El CLI valida los secrets del **codebase entero** antes de subir nada, así que
+nombrar otras functions no esquiva el problema. Para comprobarlo sin imprimir
 el valor:
 
 ```bash
 firebase functions:secrets:access TELEGRAM_BOT_TOKEN --project prod >/dev/null 2>&1; echo $?   # 0 = existe
 ```
+
+⚠️ **Por eso en desarrollo está dado de alta EN BLANCO**, con un espacio, desde
+ese mismo día. No es un descuido ni una credencial de mentira: es lo que
+desbloquea el resto de los despliegues mientras el bot no exista. Lo que
+mantiene el aviso apagado es el **chat**, que sigue vacío en el `.env`, y
+`avisarPorTelegram()` **recorta** los dos valores antes de mirarlos — un token
+en blanco cuenta como «sin configurar», así que no se intenta hablar con la API
+ni se llenan los logs de 401 en cada cobro.
+
+⚠️ **En PRODUCCIÓN todavía NO está**, y hay que crearlo antes del próximo
+despliegue de functions allí, o se caerá igual. Vale el mismo relleno:
+
+```bash
+printf ' ' | firebase functions:secrets:set TELEGRAM_BOT_TOKEN --project prod --data-file -
+```
+
+Cuando el bot exista, se sobrescribe con el token de verdad y se pone el chat.
 
 ⚠️ **Sin configurar no falla: se calla.** Si el token o el chat están vacíos,
 `avisarPorTelegram()` registra una línea en `info` y sigue. No es un error —

@@ -135,7 +135,20 @@ export async function avisarPorTelegram(
   token: string | undefined,
   chatId: string | undefined
 ): Promise<boolean> {
-  if (!token || !chatId) {
+  /**
+   * ⚠️ **Se RECORTA, y eso tiene un motivo operativo.** Declarar un secret que
+   * no existe **bloquea el despliegue de TODAS las functions**, no solo de la
+   * que lo usa: el CLI valida los secrets del codebase entero antes de subir
+   * nada, y contesta «In non-interactive mode but have no value for the
+   * secret». Medido el 19 de octubre de 2026 intentando desplegar
+   * `generateContractPdf`, que no tiene nada que ver con esto.
+   *
+   * Así que mientras el bot no exista, `TELEGRAM_BOT_TOKEN` se da de alta con
+   * un valor de relleno — y «de relleno» tiene que poder significar **vacío o
+   * en blanco**, o el código intentaría hablar con la API de Telegram con un
+   * token que no vale y llenaría los logs de 401 en cada cobro.
+   */
+  if (!token?.trim() || !chatId?.trim()) {
     logger.info('Telegram no configurado: no se manda el aviso');
     return false;
   }
