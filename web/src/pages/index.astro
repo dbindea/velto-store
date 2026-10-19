@@ -114,10 +114,16 @@ const PROMESAS = [
       un monitor grande ese hueco es la mitad de la primera pantalla.
 
       ⚠️ **El PÓSTER es lo que de verdad resuelve el problema, no el vídeo.**
-      Son 22 KB y los pinta el navegador con el primer byte, sin esperar a
+      Son 10 KB y los pinta el navegador con el primer byte, sin esperar a
       nada; el vídeo llega cuando llega. Es la misma idea que la carretera de
       la ficha de coche: lo que no puede pasar es que haya un hueco mientras
       algo carga.
+
+      ⚠️ **Y el póster se saca del vídeo YA DESENFOCADO, no del original.**
+      Es el primer fotograma del fichero que se sirve, extraído de él. Sacado
+      del original quedaría nítido, y entonces el arranque del vídeo sería un
+      salto visible de enfocado a borroso justo en lo primero que se mira —
+      que es exactamente la clase de parpadeo que todo esto viene a quitar.
 
       ⚠️ **Y el `<video>` nace SIN `src`.** Un `display: none` no evita la
       descarga, así que la decisión de cargarlo o no se toma abajo en el script:
@@ -359,18 +365,32 @@ const PROMESAS = [
     if (!ancha || quieto) return;
     v.src = '/video/carretera.mp4';
     /*
-     * ⚠️ **Más lento a propósito.** A velocidad real los coches cruzan el
-     * encuadre de lado a lado y Dorel lo dijo mirándolo: «da un poco de
-     * vértigo tanto movimiento». Esto es un fondo detrás de un titular, no un
-     * plano que nadie va a ver; lo que tiene que hacer es moverse lo justo
-     * para que la página no parezca congelada.
+     * ⚠️ **Nada de `playbackRate`: la lentitud y el desenfoque van DENTRO del
+     * fichero.** Aquí había un `v.playbackRate = 0.6` con un comentario que
+     * decía que recodificar «obligaría a duplicar fotogramas» y que el
+     * resultado en pantalla era idéntico. Las dos mitades eran falsas, y la
+     * segunda la cazó Dorel el 19 de octubre de 2026: «el vídeo va un poco
+     * sacadado».
      *
-     * ⚠️ **Se hace AQUÍ y no recodificando.** Ralentizar el fichero obligaría
-     * a duplicar fotogramas —el resultado en pantalla es idéntico— y el vídeo
-     * pesaría más por el mismo movimiento. Así además es un número que se
-     * ajusta en un segundo si sigue pareciendo mucho o se queda corto.
+     * La cuenta: 300 fotogramas estirados a 16,6 s son **18 únicos por
+     * segundo**, así que a 60 Hz el navegador repite cada uno tres o cuatro
+     * veces de refresco, y de forma desigual. Eso es el tirón — y no es un
+     * problema de rendimiento de la máquina, que es lo primero que uno piensa:
+     * el vídeo se reproduce perfectamente, lo que pasa es que no hay más
+     * imágenes que enseñar.
+     *
+     * Hoy el fichero dura los 16,6 s a **30 fotogramas distintos**, generados
+     * al recodificar (`minterpolate`, en modo mezcla: funde los dos de origen
+     * en vez de inventarse el movimiento, que sobre coches cruzando deforma).
+     * Así que se reproduce a velocidad 1, sin repetir ninguno.
+     *
+     * ⚠️ **Y pesa MENOS que antes**: 351 KB por 16,6 s frente a los 499 KB que
+     * ocupaban 10. El desenfoque se lleva por delante el detalle fino, que es
+     * justo lo que se come los bits.
+     *
+     * El comando que lo produce está en `docs/video-del-heroe.md`, porque sin
+     * él el fichero es un binario que nadie sabe rehacer.
      */
-    v.playbackRate = 0.6;
     void v.play().catch(() => {});
   }
   fondoDelHeroe();
@@ -485,13 +505,27 @@ const PROMESAS = [
     /* El buscador cuelga por debajo del bloque negro. */
     padding-bottom: 0;
     /*
-     * ⚠️ **`isolation: isolate` crea el contexto de apilado**, y sin él el
-     * `z-index: -1` del fondo se iría por detrás del `<section>` entero —o
-     * sea, detrás de su propio color negro— y no se vería nada. Es la forma
-     * de mandar un hijo al fondo sin tener que subir todo lo demás.
+     * ⚠️ **`position: relative` y NADA MÁS: nada de `isolation: isolate`.**
+     * Lo llevó un rato el 19 de octubre de 2026 y rompió el buscador entero.
+     *
+     * El fondo se mandaba atrás con `z-index: -1`, y para que eso no lo metiera
+     * detrás del propio negro del `<section>` hacía falta aislar el héroe. Pero
+     * aislar crea un **contexto de apilado**, y dentro de él se queda encerrado
+     * el `z-index: 2` del buscador — que es justo lo que le permite pisar la
+     * sección de abajo, porque `.buscador--flotante` lo baja medio alto con un
+     * `translateY(50%)` y sobresale.
+     *
+     * Consecuencia medida: `elementFromPoint` sobre el campo de fecha devolvía
+     * `SECTION.promesas-seccion`. O sea que el calendario no es que no abriera
+     * — es que **el clic nunca llegaba al campo**, lo recibía la sección
+     * siguiente pintada por encima. No había error en consola ni nada roto a
+     * la vista: solo un buscador que no respondía.
+     *
+     * La forma sin aislar: el fondo va **sin `z-index`** y es el primer hijo,
+     * así que los posicionados que vienen después lo pisan por orden de
+     * documento. Ver `.hero__fondo` y `.hero > .contenedor`.
      */
     position: relative;
-    isolation: isolate;
   }
 
   /*
@@ -503,10 +537,44 @@ const PROMESAS = [
   .hero__fondo {
     position: absolute;
     inset: 0;
-    z-index: -1;
     overflow: hidden;
   }
 
+  /*
+   * ⚠️ **Es el mismo par que `.con-humo` en `global.css`, menos el aislamiento,
+   * y por eso se escribe igual.** El fondo va sin `z-index` y el contenido con
+   * `1`: así el texto pisa al vídeo sin que haya que mandar a nadie a negativo
+   * y sin crear un contexto de apilado en `.hero` — que es lo que rompió el
+   * buscador. Ver el comentario de `.hero`.
+   *
+   * ⚠️ **El `z-index: 1` de aquí es el que salva al buscador**, no el `2` que
+   * él lleva dentro: al subir este `.contenedor` sube todo lo que cuelga de él,
+   * y el `<section>` de abajo se queda detrás. Si algún día esta regla
+   * desaparece, el síntoma no será un buscador torcido: será uno que no
+   * responde al clic.
+   */
+  .hero > .contenedor {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+   * ⚠️ **El desenfoque NO está aquí: va cocido en el fichero.** Lo pidió Dorel
+   * el 19 de octubre de 2026 —«de todas formas me gustaría blurarlo sí o sí»—
+   * y un `filter: blur()` en CSS habría sido la respuesta corta. Se descartó
+   * por tres cosas, y la primera es la que importa: **un filtro sobre un
+   * `<video>` se recompone en cada fotograma**, así que habría empeorado el
+   * tirón que estaba arreglando. Además crea un contexto de apilado —justo lo
+   * que acababa de romper el buscador— y deja los bordes semitransparentes,
+   * que obliga a un `scale()` para esconderlos.
+   *
+   * Cocido pesa **menos** (el desenfoque se lleva el detalle fino, que es lo
+   * que se come los bits) y de paso cierra para siempre lo de las matrículas:
+   * ninguna puede quedar legible.
+   *
+   * ⚠️ **Lo que se pierde es poder ajustarlo en un segundo.** Cambiar la
+   * cantidad es volver a pasar el comando de `docs/video-del-heroe.md`.
+   */
   .hero__video {
     width: 100%;
     height: 100%;

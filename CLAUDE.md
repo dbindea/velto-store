@@ -4185,6 +4185,34 @@ La lección práctica, más allá de la regla: **al borrar una tarjeta, comprueb
 clases se llevaba por delante.** Esas cuatro dejaron de estar declaradas cuando se
 retiró la tarjeta que las contenía, y el elemento que las usa vive en otro sitio.
 
+⚠️ **Y una CUARTA, que no es de clases: el `z-index` que un antepasado encierra.**
+Aquí la regla está escrita, alcanza al elemento y gana — y aun así no hace nada,
+porque alguien puso `isolation: isolate` tres niveles más arriba. Aislar crea un
+**contexto de apilado**, y dentro se queda atrapado cualquier `z-index` de dentro:
+deja de competir con los hermanos del antepasado.
+
+Pasó el 19 de octubre de 2026 en la web pública, al meter el vídeo del héroe. El
+buscador de la portada cuelga medio cuerpo por debajo del héroe con un
+`translateY(50%)` y pisa la sección siguiente gracias a su `z-index: 2`; con el
+héroe aislado, esa sección pasó a pintarse encima. Dorel lo contó como **«el
+calendario de seleccionar fechas ya no funciona»**, y no era el calendario: **el
+clic no llegaba al campo**. `elementFromPoint` sobre la banda del icono devolvía
+`SECTION.promesas-seccion`.
+
+Tres cosas que lo hacen peor que un fallo de CSS normal, y por eso está aquí:
+
+- **El síntoma no se parece a la causa.** Un formulario que no responde se lee
+  como JavaScript roto, así que se busca donde no es.
+- **No hay nada que mirar.** Ni error en consola, ni test rojo, ni nada torcido
+  en la pantalla: todo está en su sitio y encima.
+- **La causa está en otro fichero y en otro componente** que el que falla.
+
+Lo que lo resuelve sin aislar es el par que ya usa `.con-humo` en la web
+(`global.css`): el fondo **sin `z-index`** y el contenido con `1`. Y lo que lo
+diagnostica es `elementFromPoint` sobre el punto que se pulsa — no leer el SCSS,
+que dice la verdad y no sirve. El caso entero, en
+[docs/video-del-heroe.md](docs/video-del-heroe.md).
+
 ⚠️ **Los textos de ayuda y los estados son globales desde el 12 de septiembre de
 2026.** Había **once nombres** para lo mismo (`hint`, `field-hint`,
 `section-hint`, `total-hint`…) en 44 sitios, y `.loading-state` usado 25 veces y
