@@ -53,21 +53,48 @@ const tarjetasPortada = cochesPortada.map((c) => tarjetaCoche(c)).join('');
  *   la centralita que no puede decidir y el «grupo B o similar»— con un hecho
  *   comprobable, no con un adjetivo.
  */
+/**
+ * La silueta de fondo de cada tarjeta.
+ *
+ * ⚠️ **Van RELLENAS, no de trazo, y por eso no se reusa el icono de arriba.**
+ * Lo que sobrevive a un desenfoque de 14 px es la **masa**, no la línea: el
+ * icono de 1,75 px de grosor ampliado y difuminado se convierte en un borrón
+ * gris sin forma. Una silueta sólida sigue leyéndose como una casa o una llave
+ * con el ojo de lado, que es justo lo que se pide de una marca de agua.
+ *
+ * ⚠️ **Y el `viewBox` es el mismo (24×24) que el del icono a propósito**, para
+ * que las dos versiones de un mismo concepto se dibujen con la misma geometría
+ * y no se vayan separando cada vez que alguien retoque una.
+ */
+const SILUETA = {
+  /* Etiqueta de precio: la masa del tag con su agujero. */
+  precio: `<path fill-rule="evenodd" d="M11 2.6h8.4a2 2 0 0 1 2 2V13a2.4 2.4 0 0 1-.7 1.7l-6.6 6.6a2.4 2.4 0 0 1-3.4 0l-8.2-8.2a2.4 2.4 0 0 1 0-3.4l6.8-6.4a2 2 0 0 1 1.7-.7Zm6 3.4a2.1 2.1 0 1 0 0 4.2 2.1 2.1 0 0 0 0-4.2Z"/>`,
+  /* Casa con su puerta recortada. */
+  casa: `<path fill-rule="evenodd" d="M11.3 2.4a1.1 1.1 0 0 1 1.4 0l9.4 8.1a1 1 0 0 1-.7 1.8H20v8.6a1.1 1.1 0 0 1-1.1 1.1H5.1A1.1 1.1 0 0 1 4 20.9v-8.6H2.6a1 1 0 0 1-.7-1.8ZM10 14.4v6.1h4v-6.1Z"/>`,
+  /* Bocadillo de conversación, con su pico. */
+  conversacion: `<path d="M12 3c5.2 0 9.4 3.5 9.4 7.9s-4.2 7.9-9.4 7.9c-1 0-2-.1-2.9-.4l-5.2 2 1.6-4.2C3.5 14.8 2.6 12.9 2.6 10.9 2.6 6.5 6.8 3 12 3Z"/>`,
+  /* Llave: anillo macizo, caña y dos dientes. */
+  llave: `<path fill-rule="evenodd" d="M16.3 2.4a5.9 5.9 0 0 1 2.4 11.3l-.3.1v2.4l-1.6 1.6-1.4-1.4-1.5 1.5 1.5 1.5-2 2-2.2-2.2-6.1-6.1 7.7-7.7a5.9 5.9 0 0 1 3.5-3Zm1.3 3.3a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>`,
+};
+
 const PROMESAS = [
   {
     icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.5s2 2.6 5 3.5 5 1.6 5 3.5-2.2 3-5 3-5-1.1-5-3"/></svg>`,
+    silueta: SILUETA.precio,
     titulo: 'Precio cerrado al reservar',
     texto:
       'El importe que ves al reservar es lo que cuesta el alquiler. Sin gastos de gestión ni cargos por reservar desde la web.',
   },
   {
     icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>`,
+    silueta: SILUETA.casa,
     titulo: 'Sin pasar por la oficina',
     texto:
       'Llevamos y recogemos el coche en Arganda del Rey y alrededores sin coste. Más lejos, el importe se acuerda antes de reservar.',
   },
   {
     icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-5A8 8 0 1 1 21 11.5Z"/></svg>`,
+    silueta: SILUETA.conversacion,
     titulo: 'Quien contesta, decide',
     texto:
       'Hablas con la misma persona antes, durante y después del alquiler. Sin centralita ni número de incidencia.',
@@ -75,6 +102,7 @@ const PROMESAS = [
   {
     /* La llave del kit: esta tarjeta habla del coche concreto, no de un grupo. */
     icono: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 8.5-8.5M15.5 7.5 18 10l3-3-2.5-2.5"/></svg>`,
+    silueta: SILUETA.llave,
     titulo: 'Eliges coche, no categoría',
     texto: 'Reservas el vehículo que has visto, con sus fotos y su ficha. Aquí no existe el «o similar».',
   },
@@ -217,6 +245,19 @@ const PROMESAS = [
         {
           PROMESAS.map((p) => (
             <article class="card promesa">
+              {/*
+                La silueta de fondo. Decoración: `aria-hidden` y fuera del
+                orden de lectura.
+
+                ⚠️ **Es ESTÁTICA, y eso es el punto.** Sustituye a las masas
+                animadas de la sección, que eran la causa del scroll a tirones
+                en el móvil: un `blur` que no se mueve se rasteriza una vez y
+                después es una textura. Si algún día se le pone una animación,
+                vuelve el problema — y con cuatro, multiplicado por cuatro.
+              */}
+              <div class="promesa__silueta" aria-hidden="true">
+                <svg viewBox="0 0 24 24" set:html={p.silueta} />
+              </div>
               <div class="icono-circulo" set:html={p.icono} />
               <h2 class="promesa__titulo">{p.titulo}</h2>
               <p class="promesa__texto">{p.texto}</p>
@@ -843,4 +884,86 @@ const PROMESAS = [
   }
 
   .promesa .icono-circulo { margin-inline: auto; }
+
+  /*
+   * LA SILUETA DE FONDO.
+   *
+   * ⚠️ **El recorte lo pone `.card`, que ya trae `overflow: hidden`.** Por eso
+   * la silueta puede salirse por la esquina sin ensanchar la página: asoma, se
+   * corta contra el radio de la tarjeta y se lee como una marca de agua y no
+   * como un icono mal colocado.
+   *
+   * ⚠️ **Abajo a la derecha, y no centrada.** El contenido de esta tarjeta va
+   * centrado —icono, titular y párrafo—, así que una silueta en el medio
+   * competiría con el texto justo donde hay que leer. En la esquina queda
+   * detrás del final del párrafo, que es la zona más vacía.
+   */
+  .promesa { position: relative; }
+
+  .promesa__silueta {
+    position: absolute;
+    /*
+     * ⚠️ **ENTERA dentro, y es lo que decide si se lee o no.** Empezó
+     * sobresaliendo por la esquina —como una marca de agua de manual— y con la
+     * tarjeta de 292 px de alto se comía la base de la figura: la etiqueta de
+     * precio y la casa perdían el cuerpo y quedaban dos manchas. Dentro, las
+     * cuatro se reconocen.
+     */
+    right: 4px;
+    bottom: 4px;
+    width: 116px;
+    height: 116px;
+    /*
+     * ⚠️ **Estática y pequeña, que es lo que la hace barata.** Las masas de la
+     * sección se quitaron el 20 de octubre de 2026 porque su `blur` iba
+     * animado con un `scale()` y había que rasterizarlo en cada fotograma.
+     * Ésta no se mueve nunca: el navegador la difumina al pintarla y después
+     * compone la textura. Si alguien le añade una transición o una animación,
+     * vuelve el scroll a tirones del móvil.
+     *
+     * ⚠️ **5 px y no 14, que fue el primer valor.** Lo que sobrevive a un
+     * desenfoque es la masa, y pasados unos 8 px sobre una figura de 116 px ya
+     * no queda figura: las cuatro se leían igual, como un borrón claro. Con 5
+     * se reconoce la casa, el bocadillo, la llave y la etiqueta, y sigue sin
+     * competir con el texto. Ajustado mirando las tarjetas, no a ojo de regla.
+     */
+    filter: blur(5px);
+    pointer-events: none;
+    /*
+     * ⚠️ **Detrás del contenido, sin tocar el apilado de la sección.** Un
+     * `z-index` negativo la mandaría por detrás del fondo de la propia tarjeta
+     * —que es un degradado, no `transparent`— y desaparecería. Lo que la deja
+     * debajo es que el contenido sube, no que ella baje. Es el mismo par que
+     * resolvió el héroe.
+     */
+    z-index: 0;
+    color: var(--silueta);
+  }
+
+  .promesa__silueta svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    fill: currentColor;
+  }
+
+  /*
+   * ⚠️ **El contenido sube, y hace falta nombrarlo uno a uno.** Sin esto los
+   * tres hijos son estáticos y la silueta —posicionada— les pasa por encima,
+   * así que el párrafo se leería a través de un borrón.
+   */
+  .promesa .icono-circulo,
+  .promesa__titulo,
+  .promesa__texto {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+   * ⚠️ **El color sale de `--silueta`, que vive en los bloques de tema de
+   * `global.css`** —junto a `--masa-*`, que es su familia—. Estuvo declarado
+   * aquí un rato y `vars:audit` lo cantó con razón: un color que cambia con el
+   * tema declarado dentro de una página es un valor que la siguiente pantalla
+   * que quiera una silueta se va a reinventar.
+   */
 </style>

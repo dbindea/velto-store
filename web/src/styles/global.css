@@ -1804,6 +1804,29 @@ input.picker-propio--icono { cursor: pointer; }
   --masa-3: rgb(0 0 0 / 0.08);
   --seccion-alt-1: rgb(0 0 0 / 0.05);
   --seccion-alt-2: rgb(0 0 0 / 0.02);
+  /*
+   * La silueta de fondo de las tarjetas de la portada.
+   *
+   * ⚠️ **Es un TOKEN y no un valor dentro de `index.astro`**, por lo mismo que
+   * las masas de aquí arriba: es un color que cambia con el tema, y los colores
+   * que cambian con el tema viven en los bloques de tema. Declarado en la
+   * página, `vars:audit` lo canta —y con razón: la siguiente pantalla que
+   * quiera una silueta se inventaría su propio valor.
+   *
+   * Más tenue que `--masa-1` a propósito: aquella era el fondo de una sección
+   * entera y ésta cae **dentro** de una tarjeta, justo detrás del párrafo que
+   * hay que leer. Medido: el texto queda en **6,42:1** sobre la silueta, con
+   * 4,5 de mínimo.
+   *
+   * ⚠️ **13 % en claro y 14 % en oscuro: casi el mismo número, y eso es la
+   * EXCEPCIÓN a la regla de aquí abajo.** Las masas conservan el efecto y no el
+   * valor porque están sobre el fondo de la página; éstas van sobre una
+   * tarjeta, que en claro es casi blanca y en oscuro casi negra, así que el
+   * salto necesario sale parecido. No se dedujo: se midió sobre las tarjetas
+   * pintadas —30,3 niveles de separación en oscuro, 27,7 en claro— y se
+   * ajustó hasta igualarlos.
+   */
+  --silueta: rgb(0 0 0 / 0.13);
 }
 
 [data-theme='dark'] {
@@ -1818,6 +1841,9 @@ input.picker-propio--icono { cursor: pointer; }
   --masa-3: rgb(255 255 255 / 0.05);
   --seccion-alt-1: rgb(255 255 255 / 0.1);
   --seccion-alt-2: rgb(255 255 255 / 0.04);
+  /* Ver la nota del bloque claro: aquí los dos números SÍ se parecen, y es
+     por estar sobre una tarjeta y no sobre el fondo de la página. */
+  --silueta: rgb(255 255 255 / 0.14);
 }
 
 /*
@@ -1872,36 +1898,29 @@ input.picker-propio--icono { cursor: pointer; }
 }
 
 /*
- * ⚠️ **Los periodos no son múltiplos entre sí (127 y 89 s).** Con 60 y 120 las
- * dos capas se resincronizarían cada dos minutos y el ojo pilla el patrón;
- * primos entre sí tardan casi tres horas en repetirse. Eso es lo «aleatorio»
- * que pedía Dorel, sin una línea de JavaScript.
+ * ⚠️ **Las masas ya NO se mueven, y es un arreglo de rendimiento medido en un
+ * móvil de verdad** (20 de octubre de 2026). Aquí había dos animaciones de 127
+ * y 89 segundos, y eran la causa del scroll a tirones que Dorel veía en la
+ * portada: lo confirmó él activando «eliminar animaciones» en Android, y encaja
+ * con que `/flota` —que no tiene secciones `con-humo`— fuera siempre suave.
  *
- * ⚠️ **Y el recorrido es pequeño —un 12 %— con `alternate`.** Aquí sí conviene
- * ir y volver, al revés que con una textura en baldosa: no hay patrón que
- * repetir, así que un bucle de ida y vuelta muy lento se lee como respiración
- * y no como un carrusel.
+ * El motivo técnico es que las animaciones llevaban `scale()` dentro, y un
+ * elemento con `filter: blur()` que cambia de tamaño **hay que rasterizarlo
+ * otra vez**: no basta con recomponer la textura. Sobre una capa que ocupa la
+ * sección entera, eso es trabajo de GPU en cada fotograma, y lo paga todo lo
+ * demás que haya que pintar.
+ *
+ * ⚠️ **Quietas siguen costando una rasterización, pero UNA.** El degradado se
+ * difumina al pintarlo por primera vez y después es una textura que se compone
+ * y ya está. Por eso se quedan: lo caro no era el `blur`, era moverlo.
+ *
+ * ⚠️ **Y por eso los `@keyframes` se borran en vez de dejarlos sin usar.** Una
+ * animación declarada y no aplicada es una invitación a volver a engancharla
+ * sin saber lo que costó quitarla.
+ *
+ * Lo que da el movimiento ahora son las siluetas de las tarjetas de la portada
+ * (`.promesa__silueta` en `index.astro`), que son estáticas y pequeñas.
  */
-@keyframes masa-a {
-  from { transform: translate3d(-6%, -4%, 0) scale(1.05); }
-  to   { transform: translate3d(7%, 5%, 0) scale(1.15); }
-}
-
-@keyframes masa-b {
-  from { transform: translate3d(5%, 6%, 0) scale(1.12); }
-  to   { transform: translate3d(-7%, -5%, 0) scale(1.02); }
-}
-
-/*
- * ⚠️ **El movimiento se AÑADE en `no-preference`, no se quita en `reduce`.**
- * Es el patrón bueno: quien pide menos movimiento se queda con las masas
- * QUIETAS —que siguen siendo un degradado, no un hueco— y si alguien
- * refactoriza el bloque de reduced-motion, esto sigue parado.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .humo__capa--a { animation: masa-a 127s ease-in-out infinite alternate; }
-  .humo__capa--b { animation: masa-b 89s ease-in-out infinite alternate; }
-}
 
 /*
  * ⚠️ **En móvil, la mitad de capas.** Un `blur` de 80 px sobre un elemento que

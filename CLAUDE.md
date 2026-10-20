@@ -3512,10 +3512,31 @@ puede borrar y una emitida por error se queda para siempre.
 
 Llevan `VELTO_COMPANY_EMAIL` y `VELTO_PUBLIC_BASE_URL`, **distintos a propósito**:
 
-| | Correo | Dominio público |
-|---|---|---|
-| desarrollo | `reservas@veltorent.com` | `https://store.veltorent.com` |
-| producción | `reservas@veltomobility.com` | `https://rentalcar.veltomobility.com` |
+| | Correo | Backoffice (`PUBLIC_BASE_URL`) | Escaparate (`WEB_BASE_URL`) |
+|---|---|---|---|
+| desarrollo | `reservas@veltorent.com` | `https://store.veltorent.com` | `https://dev.veltorent.com` |
+| producción | `reservas@veltomobility.com` | `https://rentalcar.veltomobility.com` | `https://veltomobility.com` |
+
+⚠️ **Son DOS dominios distintos del mismo proyecto y confundirlos manda al
+cliente al sitio que no es.** `VELTO_PUBLIC_BASE_URL` es el **backoffice** —de
+donde cuelgan `/pay/:id`, `/sign-contract/:token` y los `/d/…`— y
+`VELTO_WEB_BASE_URL` es el **escaparate**, donde vive la política de
+devoluciones que enlaza la pantalla de pago y la página de pagar la señal. Los
+lee `public-url.ts`, que desde el 19 de octubre de 2026 es el único sitio que
+los toca.
+
+⚠️ **Y el escaparate de desarrollo era el `.web.app` hasta el 20 de octubre de
+2026**, que es un resto de cuando `dev.veltorent.com` no existía —medido
+NXDOMAIN el 25 de septiembre, responde desde el 5 de octubre—. Lo vio Dorel en
+el pie de la pantalla de pago. El motivo de cambiarlo no es estético: en
+producción ese enlace va al dominio propio **con Cloudflare delante**, y
+probando contra el `.web.app` no se prueba ese camino, que es justo donde
+aparecen los fallos de certificado, de redirección y de caché.
+
+⚠️ **Esto NO contradice «mira el `.web.app` para saber si un despliegue ha
+salido».** Son dos preguntas distintas: aquella es «qué hay publicado» y hay que
+saltarse la caché a propósito; ésta es un enlace que lee una persona, y tiene
+que ser el dominio de la casa.
 
 `VELTO_PUBLIC_BASE_URL` gobierna **las dos URL que recibe el cliente**: el enlace
 de firma del contrato y los enlaces cortos `/d/…` de presupuestos y
