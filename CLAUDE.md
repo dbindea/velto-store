@@ -258,6 +258,7 @@ procedimiento entero de comprobación de DNS—, así que va la tabla completa:
 | `a && b` | El operador `&&` **es de PowerShell 7**; en 5.1 es error de sintaxis | dos líneas, o `;` |
 | `curl -sI https://…` | ⚠️ **`curl` es un alias de `Invoke-WebRequest`**: traga el nombre y no las banderas | **`curl.exe`** |
 | `nslookup -type=TXT x \| grep` | Lo anterior, dos veces | `Resolve-DnsName x -Type TXT -Server 8.8.8.8` |
+| `foreach ($pid in …)` | ⚠️ **`$pid` es de SOLO LECTURA** en PowerShell —es el PID del propio proceso—: el bucle revienta con `VariableNotWritable` | cualquier otro nombre (`$proceso`, `$id`) |
 
 ⚠️ **Y desde el 3 de octubre de 2026 `curl.exe` NO hace HTTPS en esta máquina.**
 Le falta `/mingw64/ssl/certs/ca-bundle.crt` —la carpeta quedó con solo el
