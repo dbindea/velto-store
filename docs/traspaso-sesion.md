@@ -1,15 +1,21 @@
-# Traspaso de sesión — 8 de octubre de 2026
+# Traspaso de sesión — 20 de octubre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 sexdecies**, que es lo último que pasó (8 de
-> octubre: el precio anunciado contra el cobrado, desplegado a producción);
-> después **§ 2 ter**, que dice qué falta por desplegar — hoy **nada**, y por eso
-> esa sección empieza por cómo volver a medirlo en vez de por una lista; y luego
-> **§ 5**, con los huecos que solo puede cerrar Dorel, que son los únicos que
-> siguen abiertos de verdad.
+> **Orden de lectura:** **§ 2 octodecies**, que es lo último que pasó (del 15 al
+> 20 de octubre: el TPV del banco, el pago de la señal desde la web y el scroll
+> a tirones del móvil); después **§ 2 ter**, que dice qué falta por desplegar
+> —hoy **nada**, y por eso esa sección empieza por cómo volver a medirlo en vez
+> de por una lista—; y luego **§ 5**, con los huecos que solo puede cerrar
+> Dorel, que son los únicos que siguen abiertos de verdad.
+>
+> ⚠️ **Lo primero que hay que saber hoy: el expediente del TPV está en manos de
+> BBVA.** El aviso legal ya dice qué se cobra con tarjeta, que es lo que
+> rechazaron, y está vivo en producción. Mientras no contesten, **el pago de la
+> señal desde la web sigue apagado allí** (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`).
+> Encenderlo es una decisión de Dorel, no un despliegue pendiente.
 >
 > ⚠️ **No hay nada pendiente de subir.** `master` y `develop` están
 > sincronizados y producción corre el código de hoy. Si vas a empezar algo,
@@ -1480,6 +1486,141 @@ una cabecera.
 los dos ficheros. Lo que la contesta es el manifiesto de descubrimiento; un regex
 sobre `index.ts` da **41 o 24** según por dónde se equivoque con los comentarios.
 
+---
+
+## 2 octodecies. Del 15 al 20 de octubre — el TPV, la señal online y el scroll
+
+**Esto es lo último que pasó y es lo que hay que leer primero.** Son cinco días
+y diecinueve commits, y terminan con **producción al día**: el escaparate sirve
+los textos que el banco pidió y las functions están desplegadas.
+
+### Por qué empezó todo: el banco tumbó el TPV
+
+BBVA rechazó la solicitud del TPV virtual con una sola frase: *«En el aviso
+legal indicar lo que se pagará mediante tarjeta.»*
+
+Y tenían razón por partida doble: el aviso legal no solo callaba qué se cobra,
+es que **decía lo contrario** — «no se contrata ni se paga desde aquí», heredado
+de cuando la web era un folleto. Hoy `/aviso-legal#pagos` enumera los cinco
+conceptos (señal, resto, fianza, entrega a domicilio y cargos de devolución),
+la moneda, el IVA, que no hay recargo por tarjeta y que el cobro lo procesa
+Redsys con 3-D Secure. El expediente entero está en
+[tpv-bbva.md](tpv-bbva.md).
+
+⚠️ **Está vivo en producción desde el 19 de octubre y es lo que el banco tiene
+que mirar.** Mientras no conteste, la vía de pago desde la web sigue apagada
+allí.
+
+### La política de cancelación pasa a tener tres tramos
+
+Dictada por Dorel: la señal se devuelve **íntegra hasta las 23:59 del mismo día
+en que se paga**, y pasado ese plazo cancelar cuesta la señal y nada más.
+
+⚠️ **La ventana NUNCA se escribe sin su tope.** «Hasta las 23:59» a secas sería
+falso para quien reserva de madrugada y recoge esa misma mañana: con el coche
+entregado no hay nada a lo que renunciar. El tope cuesta cuatro palabras y va en
+la misma frase, en las **seis** superficies donde aparece — `/devoluciones`,
+`/condiciones`, el modal de la web, el correo al cliente, la pantalla de pago y
+la cláusula 5 del contrato.
+
+⚠️ **`CLAUSES_VERSION` pasó de 2 a 3** y todas las cláusulas posteriores se
+renumeraron. Las referencias entre cláusulas van por nombre y no por número
+justamente por esto.
+
+### El cliente paga la señal desde la web
+
+La pieza que quita a Dorel del medio: hasta aquí el cobro lo creaba él en el
+panel y copiaba el enlace a WhatsApp, así que quien decidía a las dos de la
+mañana esperaba a que alguien se levantara.
+
+Lo nuevo es **una sola function**, `createSignalPayment`, porque el resto ya
+existía: el cobro es el mismo cobro libre con `bookingRequestId`, se paga en la
+misma pantalla `/pay/:id`, y la reserva la sigue creando Dorel al convertir —con
+`signal-adoption.util.ts` adoptando esa señal en vez de volver a pedirla.
+
+| | |
+|---|---|
+| decide | `puedePagarSenal()` en `functions/src/public/signal-core.ts`, pura y con 19 tests |
+| bandera | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED` — `true` en desarrollo, **`false` en producción** |
+| llave | el **id del documento** de la solicitud, nunca la referencia corta |
+| desde el correo | `/pagar-senal?s=<id>`, una página que pregunta al backend **al pulsar** |
+
+⚠️ **Lo que NO comprueba es la disponibilidad del coche**, por decisión expresa
+de Dorel: *«como tengo varios coches en la flota puedo negociar verbalmente con
+el cliente para darle otro de mejor categoría»*. Es seguro **porque lo que se
+promete es una categoría y no una matrícula**. El día que la web prometa un
+coche concreto, esta omisión pasa a ser un cargo por algo que no se puede
+entregar.
+
+⚠️ **Se escribe en TRANSACCIÓN.** Dos pestañas o un doble toque crearían dos
+cobros de 50 € para la misma señal. Comprobado llamando dos veces: devuelve el
+mismo cobro.
+
+⚠️ **Y el enlace del correo lleva a una PÁGINA, no a un enlace de pago ya
+emitido.** Un `/pay/:id` congela el importe: metido en una bandeja de entrada
+seguiría cobrando la señal de un presupuesto vencido.
+
+Probado de punta a punta contra desarrollo con la pasarela de test:
+pre-reserva **P-F988RQ**, 50,00 €, **autorización 031478**, webhook, pantalla de
+pago y chapa en la lista del panel.
+
+### Tres defectos que solo salieron recorriendo el flujo entero
+
+- **La confirmación decía «Pago recibido» con 0,00 € debajo.** Leía lo
+  *pendiente*, que en un pago cerrado es cero. Venía de antes y casi no se veía;
+  desde que la señal se paga desde la web es la pantalla de confirmación de
+  **todos** los clientes.
+- **«Que me llaméis y ya decido» echaba a la portada.** Era un botón que cerraba
+  el diálogo, y cerrar desde la cara de «hecho» navega a `/` por decisión del 2
+  de octubre: borraba la referencia, el presupuesto y el botón de pagar. ⚠️ **El
+  arreglo no era un `target`** — los otros cuatro enlaces ya abren en pestaña
+  aparte, comprobado uno a uno. Ése no tenía a dónde ir: hoy es texto.
+- **El correo se contradecía**: «te contactaremos… para gestionar el pago de la
+  señal» con un botón de pagar tres líneas más abajo. La frase y el hecho se
+  deciden juntos.
+
+### El scroll a tirones del móvil: eran las masas del fondo
+
+Dorel grabó un vídeo. Lo que decía el vídeo y lo que resultó ser no coinciden, y
+el procedimiento vale para la próxima vez:
+
+1. **La grabación es de 120 Hz** y tenía 24 parones de más de 17 ms en 6 s.
+2. **Pero el reparto los delataba**: la tasa era idéntica desplazándose (3,8 %)
+   y con la página quieta (3,7 %), y los dos peores ocurrían **quieta**. Si el
+   tirón saliera de pintar el scroll, se concentrarían al desplazar.
+3. O sea que el vídeo apuntaba al **grabador**. ⚠️ Una grabación de pantalla
+   miente sobre el tirón más veces de las que acierta.
+4. Lo cerró **Dorel en su teléfono**, activando «eliminar animaciones»: el tirón
+   desapareció. Y encajaba con que `/flota` —sin secciones `con-humo`— fuera
+   siempre suave.
+
+⚠️ **La causa: `filter: blur()` + una animación con `scale()`.** Un desenfoque
+que cambia de tamaño hay que **rasterizarlo otra vez**, no basta con recomponer
+la textura; sobre una capa que ocupa la sección entera es trabajo de GPU en cada
+fotograma.
+
+Las masas se quedan **quietas** —un blur que no se mueve se calcula una vez— y
+los `@keyframes` se borraron. Lo decorativo pasa a cuatro **siluetas estáticas**
+en las tarjetas de la portada (etiqueta, casa, bocadillo y llave), rellenas y no
+de trazo porque lo que sobrevive a un desenfoque es la masa.
+
+⚠️ **Ni `requestAnimationFrame` ni el observador de fotogramas largos ven esto**,
+porque es trabajo del compositor; y frenar la CPU no frena la GPU. Reproducirlo
+en el escritorio dio cero. Lo que valió fue el aparato de verdad.
+
+### Y dos cosas sueltas
+
+- **El aviso de cobro por Telegram** funciona en los dos entornos. Dos bots
+  —`@VeltoDevBot` y `@VeltoMobilityBot`— al mismo chat, que identifica a la
+  persona y no al bot. Procedimiento en [avisos-telegram.md](avisos-telegram.md).
+- **El escaparate de desarrollo apunta a `dev.veltorent.com`**, no al `.web.app`.
+  Era un resto de cuando ese dominio no existía. ⚠️ Esto **no** contradice «mira
+  el `.web.app` para saber si un despliegue ha salido»: aquella pregunta es «qué
+  hay publicado» y hay que saltarse la caché; ésta es un enlace que lee una
+  persona.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **Medido el 8 de octubre de 2026, después del despliegue: NO FALTA NADA.**
@@ -1505,16 +1646,30 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
-**Vuelto a medir el 9 de octubre de 2026, después de desplegar: NO FALTA NADA.**
+**Vuelto a medir el 20 de octubre de 2026, después de desplegar: NO FALTA NADA.**
 
 | | |
 |---|---|
-| functions en producción | **32** de las **37** que define el código |
+| functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
-| `master` vs `develop` | sincronizados (`f9d9078`) |
-| `documentLink` | desplegada el **9 de octubre**; ya no corre la del 21 de septiembre |
-| rewrites de la web | los **cuatro** responden |
-| suites | 904 · 758 · 98, las cuatro auditorías OK, lint 0 errores / 291 avisos |
+| `master` vs `develop` | sincronizados (`4e4f867`) |
+| la nueva | `createSignalPayment`, desplegada **apagada** en producción |
+| rewrites de la web | los **cinco** responden, incluido `/api/pagar-senal` |
+| suites | **931 · 784 · 102**, las cuatro auditorías OK |
+
+⚠️ **Cómo se midió, porque la cifra sola no vale**: comparando los **nombres**
+de `firebase functions:list --project prod --json` contra los del manifiesto de
+descubrimiento. Contar a ojo la tabla con colores ANSI dio **38 donde hay 33**
+la última vez que alguien lo intentó.
+
+⚠️ **Y producción tiene CATORCE hashes de despliegue distintos**, porque se ha
+desplegado por tandas a lo largo de meses. Eso significa que **no todas corren
+el mismo código**: el hash solo agrupa lo que se subió junto. Si dudas de una en
+concreto, lo que lo contesta es desplegarla.
+
+> Aquí ponía **32 de 37**, medido el 9 de octubre. Las cifras de este fichero
+> envejecen cada sesión: es la cuarta vez que pasa. La frase que no envejece es
+> la de arriba — vuelve a medirlo.
 
 El `/d/**` de producción se comprobó sin tocar ni un dato: un id inexistente da
 **404 con `Content-Length: 23`** —que son exactamente los caracteres de
@@ -1600,6 +1755,45 @@ Cuando llegue uno de esos, el orden que ha funcionado:
 
 La lista viva está en [mejoras-pendientes.md](mejoras-pendientes.md). Lo que hay
 que tener en la cabeza al retomar:
+
+### Lo que está esperando a alguien de FUERA — y es lo primero
+
+| Qué | A quién espera | Qué desbloquea |
+|---|---|---|
+| **El TPV virtual** | **BBVA**, que tiene que revisar `/aviso-legal#pagos` | cobrar con tarjeta en producción sin el comercio de pruebas |
+| Encender el pago de la señal | **Dorel**, cuando el banco conteste | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest` |
+| Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
+| Ficha de Google Business Profile | Dorel | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
+
+⚠️ **Encender la bandera son DOS functions, no una.** La lee
+`createSignalPayment` —que decide si cobra— y `createBookingRequest`, que es
+quien le dice a la web si pinta el botón. Con una sola, o el botón no sale o
+sale y no cobra.
+
+### Lo que queda del pago de la señal, y no bloquea nada
+
+- **El justificante en la pantalla de confirmación.** Dorel lo pidió —«posibilidad
+  de bajar justificante»— y está sin hacer **a propósito**: el recibo lleva el
+  nombre del pagador dentro, y `/pay/:id` es un enlace que se reenvía. Ponerlo
+  sin más filtraría a quién pertenece la reserva, que es justo lo que
+  `getPaymentCheckout` se cuida de no revelar. La salida limpia es generar el
+  recibo al confirmarse el cobro y servirlo tras su propio id aleatorio
+  (`/d/c…`), que ya existe.
+- **El aviso de Telegram sin enlace a la solicitud.** Hoy lleva la referencia
+  dentro —que se copia tocándola— pero no un enlace directo a
+  `/booking-requests/:id`. El enlace profundo ya sobrevive al login desde el 29
+  de septiembre, así que es poco trabajo.
+- **El correo del webhook.** Telegram es el pitido; falta el registro escrito
+  que se puede buscar dentro de seis meses. Reutiliza la cáscara de
+  `functions/src/alerts/email-shell.ts`.
+
+### Y una que puede volver
+
+⚠️ **Si el scroll del móvil sigue dando tirones**, el siguiente sospechoso está
+identificado: las masas de `.humo` conservan `filter: blur(60px)` aunque ya no
+se muevan. Quietas deberían costar **una** rasterización, pero si el teléfono
+las sigue pagando al desplazar, se quitan — las siluetas de las tarjetas ya
+sostienen la decoración por sí solas.
 
 ### Lo que bloqueaba publicar la web — quedan DOS, no seis
 

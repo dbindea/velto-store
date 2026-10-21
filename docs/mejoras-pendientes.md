@@ -15,6 +15,62 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 20 de octubre de 2026 — lo que dejó la semana del TPV
+
+Cinco días de trabajo (del 15 al 20 de octubre) que terminan con producción al
+día: el aviso legal dice qué se cobra con tarjeta, la política de cancelación
+tiene sus tres tramos y el cliente puede pagar la señal desde la web —apagado en
+producción—. El relato está en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 octodecies.
+
+Lo que **queda abierto** de ahí, y ninguno bloquea nada:
+
+### ⬜ N-42 · El justificante en la pantalla de confirmación del pago
+
+Dorel lo pidió al diseñar la vía —«posibilidad de bajar justificante»— y está
+sin hacer **a propósito**, no por olvido.
+
+⚠️ **El problema es de privacidad, no de trabajo.** El recibo lleva dentro el
+nombre del pagador, y `/pay/:id` es un enlace que se reenvía: colgarlo ahí
+revelaría a nombre de quién está la reserva, que es justo lo que
+`getPaymentCheckout` se cuida de no decir devolviendo solo importe, concepto y
+marca. Es el mismo razonamiento por el que el id del recibo es **aleatorio** y
+no el del pago.
+
+La salida limpia: generar el recibo cuando el webhook confirma el cobro, y
+devolver su enlace `/d/c…` —que tiene su propio secreto— en la respuesta de
+`getPaymentCheckout` **solo cuando el pago está `paid`**.
+
+### ⬜ N-43 · El aviso de Telegram no lleva enlace a la solicitud
+
+Hoy lleva la referencia dentro, en `<code>`, que en Telegram se copia tocándola.
+Falta el salto directo a `/booking-requests/:id`. El enlace profundo ya
+sobrevive al login desde el 29 de septiembre (`?returnUrl=`), así que es poco
+trabajo. Lo compone `mensajeCobro()` en `functions/src/alerts/telegram.ts`, que
+es pura y tiene tests.
+
+### ⬜ N-44 · El webhook de cobro no manda correo
+
+Telegram es el pitido; el correo es el registro escrito que queda cuando el
+pitido falla y el que se puede buscar dentro de seis meses. Reutiliza la cáscara
+de `functions/src/alerts/email-shell.ts`, como el resumen diario y el aviso de
+una solicitud nueva.
+
+### ⬜ M-63 · Las masas de `.humo` conservan `blur(60px)` aunque ya no se muevan
+
+El scroll a tirones del móvil eran las **animaciones** de esas capas, y se
+quitaron el 20 de octubre: un desenfoque que cambia de tamaño hay que
+rasterizarlo en cada fotograma. Quietas deberían costar **una** rasterización y
+después ser una textura.
+
+⚠️ **Esto solo se abre si Dorel vuelve a notar tirones.** Si los nota, se quitan
+las masas: las cuatro siluetas de las tarjetas ya sostienen la decoración por sí
+solas. No se puede medir desde el escritorio —frenar la CPU no frena la GPU, y
+ni `requestAnimationFrame` ni el observador de fotogramas largos ven el trabajo
+del compositor—, así que lo contesta su teléfono.
+
+---
+
 ## Estado a 9 de octubre de 2026 — la lista, medida una a una
 
 Dorel pidió la lista de lo que queda y avisó de que **muchas cosas ya estaban

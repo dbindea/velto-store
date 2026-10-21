@@ -171,11 +171,18 @@ transferencia. Las dos cosas están publicadas en `/devoluciones#como`.
 
 ## 4. Lo que falta, y es de Dorel
 
+⚠️ **A 20 de octubre de 2026 el expediente está EN MANOS DEL BANCO.** Lo que
+rechazaron está corregido y publicado; lo que queda de esta tabla es amarillo y
+ninguno de los tres bloquea volver a presentarlo. Y mientras no contesten, **el
+pago de la señal desde la web sigue apagado en producción**
+(`VELTO_WEB_SIGNAL_PAYMENT_ENABLED=false`): encenderlo es una decisión de Dorel
+y son dos functions, no una.
+
 | Qué | Estado el 17 de octubre de 2026 |
 |---|---|
 | Que **`veltomobility.com` sirva de verdad** | ✅ **resuelto** — sirve desde el 5 de octubre de 2026, comprobado cargándolo |
 | Que ese dominio **reciba correo** | ✅ **resuelto** — Email Routing de Cloudflare activo, comprobado con `Resolve-DnsName … -Type MX` |
-| **Qué se paga con tarjeta, en el aviso legal** | ✅ **resuelto** — `/aviso-legal#pagos`, 17 oct 2026. Es lo que falló |
+| **Qué se paga con tarjeta, en el aviso legal** | ✅ **resuelto Y PUBLICADO** — `/aviso-legal#pagos`, escrito el 17 y vivo en **producción desde el 19 de octubre de 2026**. Es lo que falló |
 | **Entidad de resolución de litigios** | 🟡 escrito como «no adherido»; falta que Dorel lo confirme |
 | **Revisión por un abogado** | 🟡 en marcha, con un abogado y otra IA |
 | **Decirle al banco lo de la fianza** | 🟡 pendiente — ver 3.2: tasa de devoluciones alta por diseño, y no hay rastro de que se dijera |
