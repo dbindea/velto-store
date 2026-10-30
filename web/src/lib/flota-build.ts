@@ -61,27 +61,104 @@ const API = ES_SITIO_REAL
   : 'https://velto-web-dev.web.app/api/fleet';
 
 /** Que un build no se quede colgado esperando a una function en frío. */
-const TOPE_MS = 15000;
+const TOPE_MS = 20000;
 
-export async function flotaEnBuild(): Promise<CocheResumen[]> {
-  try {
-    const r = await fetch(API, { signal: AbortSignal.timeout(TOPE_MS) });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const datos = (await r.json()) as { vehicles?: CocheResumen[] };
-    const coches = datos.vehicles ?? [];
-    console.log(`[prerender] ${coches.length} coche(s) con HTML propio`);
-    return coches;
-  } catch (e) {
-    /*
-     * ⚠️ **Un aviso bien visible y seguir.** Sin él, un build que no alcanzó la
-     * API produce un sitio sin fichas y nadie se entera hasta que alguien mira
-     * el posicionamiento tres semanas después.
-     */
-    console.warn(
-      `[prerender] ⚠️  No se pudo leer la flota (${e instanceof Error ? e.message : e}). ` +
-        'El sitio se compila igual y las fichas las pintará el JavaScript, pero ' +
-        'ESTE DESPLIEGUE SALE SIN HTML DE COCHES para los rastreadores.'
-    );
-    return [];
+/**
+ * Cuántas veces se pide antes de rendirse.
+ *
+ * ⚠️ **Existe porque la PRIMERA llamada paga el arranque en frío**, y era justo
+ * la que generaba las fichas. Ver abajo.
+ */
+const INTENTOS = 3;
+
+/**
+ * La lectura del build, **una sola para todo el build**.
+ *
+ * ⚠️ **Esta memoización no es una optimización: es lo que impide que el sitemap
+ * anuncie páginas que no existen.** Pasó en producción el 30 de octubre de 2026
+ * y estuvo roto desde el 2 de octubre, que es cuando las fichas entraron en el
+ * sitemap. `flotaEnBuild()` la llaman **cuatro** sitios —`getStaticPaths()` de
+ * `/coche/[id].astro`, la portada, `/flota` y `/sitemap.xml`— y cada uno hacía
+ * **su propio `fetch`**, así que cada uno podía contestar algo distinto. El log
+ * del despliegue lo enseña tal cual:
+ *
+ * ```
+ * [prerender] ⚠️  No se pudo leer la flota (The operation was aborted due to timeout).
+ * [prerender] 3 coche(s) con HTML propio      ← /flota
+ * [prerender] 3 coche(s) con HTML propio      ← /index
+ * [prerender] 3 coche(s) con HTML propio      ← /sitemap.xml
+ * ```
+ *
+ * La que falló es la **primera**, la de `getStaticPaths()`: Astro resuelve las
+ * rutas antes de pintar nada, así que es siempre ella la que se come el arranque
+ * en frío de la function; las tres de después encuentran la instancia caliente y
+ * responden al momento. Resultado: **cero fichas generadas y tres en el
+ * sitemap**. El rewrite `/coche/**` las servía con el respaldo `coche.html`, que
+ * desde el 15 de octubre lleva `noindex` — o sea que la web le ofrecía a Google
+ * tres páginas y acto seguido le pedía que no las indexara.
+ *
+ * ⚠️ **Y no lo cazó nadie**: ni el build, ni los tests, ni el guardia de
+ * indexado del CI —que comprueba *qué* lleva `noindex`, no si el sitemap
+ * corresponde con lo que hay—. Solo se ve en Search Console tres semanas
+ * después, que es donde lo vio Dorel.
+ *
+ * El comentario de `sitemap.xml.ts` decía «se leen de la MISMA fuente que las
+ * genera»: era cierto como *función* y falso como *dato*. Ahora es cierto como
+ * dato — **una lectura, un resultado, el mismo para todos**. Si falla, falla
+ * para todos a la vez: el sitemap sale sin fichas y tampoco se genera ninguna,
+ * que es coherente y no engaña a nadie.
+ */
+let lectura: Promise<CocheResumen[]> | null = null;
+
+export function flotaEnBuild(): Promise<CocheResumen[]> {
+  lectura ??= leerFlota();
+  return lectura;
+}
+
+async function leerFlota(): Promise<CocheResumen[]> {
+  let ultimoFallo = '';
+
+  for (let intento = 1; intento <= INTENTOS; intento++) {
+    try {
+      const r = await fetch(API, { signal: AbortSignal.timeout(TOPE_MS) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const datos = (await r.json()) as { vehicles?: CocheResumen[] };
+      const coches = datos.vehicles ?? [];
+      console.log(`[prerender] ${coches.length} coche(s) con HTML propio`);
+      return coches;
+    } catch (e) {
+      ultimoFallo = e instanceof Error ? e.message : String(e);
+      if (intento < INTENTOS) {
+        /*
+         * ⚠️ **Se reintenta porque el primer intento ARRANCA la function.** Aun
+         * agotando su tope, la petición ha dejado la instancia levantándose, así
+         * que el siguiente la encuentra caliente — que es exactamente lo que le
+         * pasaba a las tres llamadas de después. Una espera corta entre medias
+         * le da tiempo a terminar de arrancar.
+         */
+        console.warn(
+          `[prerender] intento ${intento}/${INTENTOS} sin respuesta (${ultimoFallo}); ` +
+            'reintentando — la primera llamada suele pagar el arranque en frío.'
+        );
+        await new Promise((r) => setTimeout(r, intento * 2000));
+      }
+    }
   }
+
+  /*
+   * ⚠️ **Un aviso bien visible y seguir.** Sin él, un build que no alcanzó la
+   * API produce un sitio sin fichas y nadie se entera hasta que alguien mira
+   * el posicionamiento tres semanas después.
+   *
+   * ⚠️ **Y ahora lo que sale es COHERENTE**, que es lo que de verdad importa:
+   * sin fichas generadas, el sitemap tampoco las lista. Antes este mismo aviso
+   * salía mientras el sitemap sí las anunciaba.
+   */
+  console.warn(
+    `[prerender] ⚠️  No se pudo leer la flota en ${INTENTOS} intentos (${ultimoFallo}). ` +
+      'El sitio se compila igual y las fichas las pintará el JavaScript, pero ' +
+      'ESTE DESPLIEGUE SALE SIN HTML DE COCHES para los rastreadores — y, por lo ' +
+      'mismo, sin ellas en el sitemap.'
+  );
+  return [];
 }

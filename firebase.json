@@ -33,6 +33,12 @@
       ],
       "headers": [
         {
+          "source": "**",
+          "headers": [
+            { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+          ]
+        },
+        {
           "source": "/assets/i18n/**",
           "headers": [
             { "key": "Cache-Control", "value": "no-cache" }

@@ -72,6 +72,13 @@ jobs:
       # fallara, el backoffice ya está publicado. Son dos productos en un
       # repositorio, y que uno no salga no puede impedir que salga el otro.
       - run: npm --prefix web ci
+      # ⚠️ **Los tests de la web NO se ejecutaban en ningún workflow.** Ciento
+      # nueve tests escritos y cero recorridos, desde que existe la carpeta: el
+      # patrón que este proyecto llama dominante —código escrito y nunca
+      # ejecutado— aplicado esta vez a los propios tests. Cuesta un segundo.
+      # Encontrado el 30 de octubre de 2026 auditando por qué no saltó nada con
+      # el sitemap.
+      - run: npm --prefix web test
       #
       # ⚠️ **`build:prod`, y aquí ponía `build`.** Es el ÚNICO sitio que compila
       # el sitio de verdad, y esa diferencia es la que decide dos cosas que no
@@ -155,6 +162,33 @@ jobs:
             exit 1
           fi
           echo "OK: robots.txt con sitemap, y las únicas sin indexar son ${esperadas}"
+
+      # ⚠️ **Y una cuarta cosa, que es de otra familia y por eso va aparte.**
+      #
+      # Las tres de arriba auditan las MARCAS —quién lleva `noindex`— y todas
+      # cuelgan de `ES_SITIO_REAL`: son detección de MODO. Lo que falló el 30 de
+      # octubre de 2026 es una auditoría del INVENTARIO: **el sitemap es una
+      # promesa y `dist` es la mercancía, y nada comparaba las dos**.
+      #
+      # El sitemap anunció tres fichas de coche que el build no generó, el
+      # rewrite `/coche/**` se las sirvió a Google con el respaldo `coche.html`
+      # —que es `noindex`— y la web acabó ofreciendo tres URL para acto seguido
+      # pedir que no se indexaran. Estuvo así veintiocho días y solo se vio en
+      # Search Console.
+      #
+      # ⚠️ **Y este guardia no podía verlo, por construcción**: la condición 3
+      # usa `grep -rl 'name="robots"'`, que lista los ficheros que LLEVAN la
+      # marca, y una ficha indexable nunca la lleva — así que su salida es
+      # idéntica con tres fichas y con cero. Comprobado en las dos direcciones.
+      #
+      # ⚠️ **Sigue haciendo falta aunque la causa esté corregida**, y el motivo
+      # no caduca: el sitemap escribe `encodeURIComponent(id)` y
+      # `getStaticPaths()` usa el id crudo como nombre de fichero. Son dos
+      # transformaciones distintas del mismo dato, así que ponerse de acuerdo en
+      # el DATO —que es lo que arregló la memoización de `flotaEnBuild()`— no
+      # implica ponerse de acuerdo en el MAPEO.
+      - name: El sitemap y el dist dicen lo mismo
+        run: node web/scripts/comprobar-dist.mjs
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

@@ -1566,12 +1566,34 @@ Desde el 25 de septiembre de 2026 cada proyecto de Firebase sirve **dos webs**:
 > inventario de dominios escrito a mano caduca**. Antes de concluir que un
 > despliegue falló porque un dominio no responde, vuelve a medirlo.
 
-⚠️ **Y los tres backoffices ya no son indexables**, que es la pregunta que
-surge al ver tres nombres sirviendo lo mismo: los tres entregan un `robots.txt`
-con `Disallow: /`, y para entrar hacen falta cuenta de Google, estar en
-`authorizedUsers` y pasar `firestore.rules`. Renombrarlos o apagarlos **no
-añadiría seguridad**; lo único que queda abierto es que el bundle se puede
-descargar, que es inherente a cualquier SPA.
+⚠️ **Aquí ponía que los tres backoffices «ya no son indexables» porque entregan
+un `robots.txt` con `Disallow: /`, y era FALSO en producción.** Medido el 30 de
+octubre de 2026 contra `rentalcar.veltomobility.com/robots.txt`: **Cloudflare
+inyecta su bloque gestionado por delante del nuestro**, así que el fichero sirve
+**dos grupos `User-agent: *`** — el suyo con `Allow: /` primero y el nuestro con
+`Disallow: /` después. Google **fusiona** los grupos con el mismo user-agent, y
+ante dos reglas igual de específicas aplica la **menos restrictiva**: gana el
+`Allow`. Y el HTML del backoffice no llevaba `meta robots` ni `X-Robots-Tag`
+—comprobado en `/` y `/dashboard`—, así que **no quedaba nada** manteniéndolo
+fuera del índice.
+
+La lección general, que vale para cualquier fichero que sirva un dominio con
+Cloudflare delante: **lo que hay en `public/` no es lo que se entrega.** El
+`robots.txt` del repositorio dice una cosa y el servido dice otra, y eso solo se
+ve pidiéndolo.
+
+Lo arregla una cabecera, no el fichero: `firebase.json` declara
+`X-Robots-Tag: noindex, nofollow` para **todo** el target `backoffice`.
+Cloudflare no la toca, no depende de que nadie entre en un panel y viaja con el
+despliegue de hosting. Cubre de paso las cuatro rutas de cliente —`/d/…`,
+`/pay/…`, `/sign-contract/…` y `/v/…`—, que tampoco deben indexarse nunca: son
+URL con un secreto dentro.
+
+Para entrar siguen haciendo falta cuenta de Google, estar en `authorizedUsers` y
+pasar `firestore.rules`, así que esto **no era una brecha**: era el sitio
+apareciendo en Google. Renombrar los dominios o apagarlos no añadiría seguridad;
+lo único que queda abierto es que el bundle se puede descargar, que es inherente
+a cualquier SPA.
 
 > Y aquí ponía además que el sitio de producción **ni siquiera estaba creado**
 > —`firebase hosting:sites:get velto-web --project prod` contestaba «could not

@@ -4,9 +4,10 @@
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 novodecies**, que es lo último que pasó (el 30 de
-> octubre: los campos de fecha en el móvil, y **lo que queda por comprobar en un
-> teléfono de verdad**); después **§ 2 octodecies** (del 15 al 20 de octubre: el
+> **Orden de lectura:** **§ 2 vicies**, que es lo último que pasó (el 30 de
+> octubre, segunda parte: el sitemap anunciaba fichas que no existían, y el
+> backoffice de producción resultó ser indexable); después **§ 2 novodecies**
+> (ese mismo día: los campos de fecha en el móvil); después **§ 2 octodecies** (del 15 al 20 de octubre: el
 > TPV del banco, el pago de la señal desde la web y el scroll a tirones del
 > móvil); después **§ 2 ter**, que dice qué falta por desplegar
 > —hoy **nada**, y por eso esa sección empieza por cómo volver a medirlo en vez
@@ -1750,6 +1751,130 @@ El barrido de cascada encontró otras dos del mismo patrón, fuera del encargo:
 mirar el orden dentro de un fichero**. El scope de Astro le cuelga un atributo a
 cada compuesto del selector, así que una base con scope gana a un `@media`
 global pase lo que pase, sin que haya ningún problema de orden.
+
+---
+
+## 2 vicies. El 30 de octubre, segunda parte — el sitemap prometía lo que no existía
+
+Dorel trajo dos capturas de Search Console: **quince páginas «descubiertas y
+nunca rastreadas»** y un correo de «página alternativa con etiqueta canónica
+adecuada». Son **dos cosas distintas** y conviene no mezclarlas, porque una es
+un fallo nuestro y la otra no es nada.
+
+### El fallo: tres fichas anunciadas y cero generadas
+
+El sitemap de producción anunciaba tres `/coche/<id>` y **las tres se servían
+con `noindex`** — o sea, la web le ofrecía a Google tres páginas y acto seguido
+le pedía que no las indexara. Medido sin Cloudflare delante: las tres
+devolvían el título genérico del respaldo, así que lo que las servía era
+`coche.html` a través del rewrite `/coche/**`.
+
+La causa está en el log del despliegue:
+
+```
+[prerender] ⚠️  No se pudo leer la flota (The operation was aborted due to timeout).
+[prerender] 3 coche(s) con HTML propio      ← /flota
+[prerender] 3 coche(s) con HTML propio      ← /index
+[prerender] 3 coche(s) con HTML propio      ← /sitemap.xml
+```
+
+`flotaEnBuild()` la llamaban **cuatro** sitios y cada uno hacía **su propio
+`fetch`**. La que falla es siempre la **primera** —`getStaticPaths()`, porque
+Astro resuelve las rutas antes de pintar nada—, así que es ella la que se come
+el arranque en frío de la function; las tres de después encuentran la instancia
+caliente. Resultado: cero fichas y tres en el sitemap. Roto desde el **2 de
+octubre**, que es cuando las fichas entraron en el sitemap.
+
+Arreglado con **una sola lectura memoizada por build**, más reintentos. Lo que
+importa no es que vaya más rápido: es que ahora el sitemap **no puede**
+discrepar de lo generado. Si falla, falla para todos a la vez.
+
+### Por qué no lo cazó nada, y el guardia nuevo
+
+El guardia de indexado del CI audita **las marcas** —quién lleva `noindex`— y
+eso cuelga todo de `ES_SITIO_REAL`: es detección de **modo**. Esto era una
+auditoría de **inventario**: el sitemap es una promesa, `dist` es la mercancía,
+y nada comparaba las dos. Se montó la réplica y **las tres condiciones salen en
+verde con tres fichas y con cero**: `grep -rl 'name="robots"'` lista los
+ficheros que **llevan** la marca, y una ficha indexable nunca la lleva.
+
+Hay ahora un cuarto paso, [comprobar-dist.mjs](web/scripts/comprobar-dist.mjs),
+en los **tres** workflows. Afirma tres cosas: lo anunciado existe, lo anunciado
+no lleva marca, y toda ficha generada está anunciada. Probado con sus controles
+—artefacto bueno, ficha borrada, ficha huérfana y `noindex` inyectado—, no solo
+visto pasar.
+
+⚠️ **Y sigue haciendo falta aunque la causa esté corregida, por un motivo que no
+caduca**: el sitemap escribe `encodeURIComponent(id)` y `getStaticPaths()` usa
+el id **crudo** como nombre de fichero. Son dos transformaciones distintas del
+mismo dato, así que ponerse de acuerdo en el DATO no implica ponerse de acuerdo
+en el MAPEO.
+
+⚠️ **Y una cosa que salió de paso: `npm --prefix web test` no se ejecutaba en
+ningún workflow.** Ciento nueve tests escritos y cero recorridos desde que
+existe la carpeta. Cuesta un segundo y ya está en los tres.
+
+### El correo de la canónica NO es un fallo
+
+Lo produce `/contacto?motivo=poner-en-alquiler`, enlazada desde el pie de las
+once páginas. Declara canónica `/contacto` y Google la archiva como duplicado
+bien resuelto — que es **el comportamiento correcto**. Search Console avisa de
+cada motivo nuevo aunque sea benigno. **No hay que perseguirlo.**
+
+⚠️ Lo que sí es un defecto, aunque no de indexación: **ese parámetro no lo lee
+nadie.** Ni `contacto.astro` ni ningún módulo consulta `motivo`, así que el
+enlace promete llegar con la razón preseleccionada y llega al formulario en
+blanco. Si se arregla, la forma buena es `#poner-en-alquiler` leyendo
+`location.hash`: cuesta lo mismo, el `href` deja de mentir y **no nace ninguna
+URL duplicada**. Son tres sitios: `Base.astro:600` y
+`pon-tu-coche-en-alquiler.astro:61` y `:301`.
+
+### Las quince sin rastrear: no hay nada que bloquee
+
+Medido contra los dos hosts: `robots.txt` permite a Googlebot —aun con los dos
+grupos contradictorios de Cloudflare—, cero `X-Robots-Tag`, cero desafíos de
+Cloudflare para buscadores, TTFB de 40 ms y las once estáticas con 200,
+canónica propia y sin marca. **No hay bloqueo.** «Descubierta: actualmente sin
+indexar» con «Último rastreo: N/D» es el patrón de un dominio nuevo sin enlaces
+entrantes: Google lo encola y lo aplaza.
+
+Y hay una prueba positiva de que Googlebot **sí llega**: para clasificar una URL
+como «página alternativa con canónica adecuada» tiene que haberla descargado y
+parseado. Si Cloudflare lo bloqueara, ese correo no existiría.
+
+Lo que mueve la aguja es de Dorel, no del repositorio: pedir indexación a mano
+para las páginas con contenido, y conseguir dos o tres enlaces entrantes
+reales — la ficha de Google Business Profile, el directorio del ayuntamiento,
+las redes de la empresa.
+
+### El hallazgo que no buscábamos: el backoffice de producción era indexable
+
+⚠️ **`rentalcar.veltomobility.com` servía dos grupos `User-agent: *`** —el
+`Allow: /` que inyecta Cloudflare delante del nuestro, y nuestro `Disallow: /`
+detrás—. Google fusiona los grupos iguales y ante reglas igual de específicas
+aplica la **menos restrictiva**. Y su HTML no llevaba `meta robots` ni
+`X-Robots-Tag`: **no quedaba nada** dejándolo fuera del índice. CLAUDE.md
+afirmaba lo contrario.
+
+No era una brecha —para entrar hacen falta cuenta, `authorizedUsers` y
+`firestore.rules`—, pero el panel podía salir en Google. Lo cierra un
+`X-Robots-Tag: noindex, nofollow` sobre **todo** el target `backoffice` en
+`firebase.json`: Cloudflare no lo toca y viaja con el despliegue. Cubre además
+las cuatro rutas de cliente, que llevan un secreto en la URL.
+
+**La lección, que vale para cualquier dominio con Cloudflare delante: lo que hay
+en `public/` no es lo que se entrega.**
+
+### Lo que queda para el panel de Cloudflare (no es del repositorio)
+
+- **La ofuscación de correo** reescribe el `mailto:` del pie a
+  `/cdn-cgi/l/email-protection`, que **da 404 en las catorce páginas**. Son 404
+  rastreados en un sitio que va corto de rastreo, y el correo de la empresa es
+  invisible para Google.
+- **El `robots.txt` gestionado** contradice al nuestro en los dos hostnames. En
+  el escaparate da igual para Google; en el backoffice era lo de arriba.
+- **ClaudeBot recibe 403** en el borde pese a que nuestro `robots.txt` le dice
+  `Allow`. Decidir si se quiere dentro o fuera, pero no las dos cosas.
 
 ---
 

@@ -47,7 +47,18 @@ jobs:
 
       # La web pública: dev.veltorent.com
       - run: npm --prefix web ci
+      # Los 109 tests de la web, que hasta el 30 de octubre de 2026 no corrían
+      # en ningún workflow. Ver el comentario largo en el de `master`.
+      - run: npm --prefix web test
       - run: npm --prefix web run build
+      # ⚠️ **El sitemap no puede anunciar páginas que el build no generó.**
+      # Pasó en producción y estuvo veintiocho días sin que lo viera nadie: las
+      # fichas de coche entraban en el sitemap y no existían como fichero, así
+      # que el rewrite `/coche/**` se las daba a Google con el respaldo
+      # `noindex`. Aquí corre **también en desarrollo** —el guion omite por sí
+      # solo la comprobación de la marca, que allí la llevan todas— porque
+      # cazarlo antes de `master` es justo de lo que sirve este workflow.
+      - run: node web/scripts/comprobar-dist.mjs
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

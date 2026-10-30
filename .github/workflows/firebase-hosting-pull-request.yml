@@ -35,7 +35,12 @@ jobs:
 
       # Y de la web pública, que también se revisa antes de mezclar.
       - run: npm --prefix web ci
+      # Los 109 tests de la web, que hasta el 30 de octubre de 2026 no corrían
+      # en ningún workflow. Ver el comentario largo en el de `master`.
+      - run: npm --prefix web test
       - run: npm --prefix web run build
+      # Que el sitemap y el `dist` digan lo mismo. Ver el de `master`.
+      - run: node web/scripts/comprobar-dist.mjs
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
