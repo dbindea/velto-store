@@ -696,61 +696,6 @@ const PROMESAS = [
     margin-bottom: var(--sp-6);
   }
 
-  /*
-   * En un móvil, lo primero que hay que ver es el BUSCADOR.
-   *
-   * ⚠️ **Medido: el buscador empezaba a 1.050 px del principio** en una
-   * pantalla de 844 — o sea, a página y media de desplazamiento. Quien entra
-   * desde el móvil viene a mirar precios y se encontraba tres pantallazos de
-   * titular. Lo pidió Dorel el 29 de septiembre de 2026.
-   *
-   * ⚠️ **Se recorta el titular, no se esconde nada.** La regla de la casa es
-   * recolocar y nunca ocultar: el titular sigue entero, con su entradilla y sus
-   * barras; lo que baja es el tamaño de letra y el aire de alrededor. Con
-   * `2rem` caben tres líneas en vez de cinco.
-   *
-   * `--fs-display` es un `clamp()` que ya encoge con la ventana, pero su suelo
-   * son 2,75 rem: pensado para que un titular corto luzca, no para éste, que
-   * tiene sesenta caracteres.
-   */
-  /*
-   * ⚠️ **Y el héroe se aprieta 45 px más desde el 30 de septiembre de 2026**,
-   * que es exactamente lo que creció la cabecera al pasar el menú a dos filas.
-   * Con cuatro opciones —una de ellas «Pon tu coche en alquiler»— la tira
-   * deslizable escondía 150 px y «Contacto» no aparecía; envolver lo arregla y
-   * cuesta altura. Lo que Dorel pidió son las DOS cosas: el menú entero y el
-   * buscador a la vista sin bajar.
-   *
-   * El sitio salió de donde sobraba: 40 px de aire arriba y 32 de margen bajo
-   * la entradilla. Medido después: el botón «Ver precios» queda dentro de los
-   * 844 px de un móvil corriente, que es lo que había que conservar.
-   */
-  @media (max-width: 719px) {
-    .hero { padding-top: var(--sp-5); }
-
-    .hero__titular {
-      font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.5rem);
-      max-width: 20ch;
-      margin-bottom: var(--sp-3);
-    }
-
-    .hero__entrada { font-size: var(--fs-small); margin-bottom: var(--sp-5); }
-
-    /*
-     * ⚠️ **Lo que en móvil impide que el buscador cuelgue medio cuerpo se fue
-     * con él al componente.** Aquí había dos reglas `.hero .buscador` —el
-     * `translateY(8px)` en vez del 50 %, y el hueco y el relleno más
-     * apretados— y desde el componente son `.buscador--flotante` y la media
-     * query de su propia hoja. El motivo sigue valiendo y está escrito allí:
-     * apilado son cuatro campos, así que el 50 % dejaba **184 px de hueco
-     * negro vacío** y el buscador empezaba a 1.050 px del principio de la
-     * página, o sea a página y media de desplazamiento.
-     */
-
-    /* Y la sección de abajo recupera el hueco que ya no hace falta reservar. */
-    .promesas-seccion { padding-top: var(--section-y); }
-  }
-
   .hero__entrada {
     font-size: var(--fs-lead);
     color: var(--gray-300);
@@ -773,6 +718,89 @@ const PROMESAS = [
   .promesa { padding: var(--sp-6); }
   .promesa__titulo { font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
   .promesa__texto { color: var(--text-2); font-size: var(--fs-small); }
+
+  /*
+   * En un móvil, lo primero que hay que ver es el BUSCADOR.
+   *
+   * ⚠️ **Medido: el buscador empezaba a 1.050 px del principio** en una
+   * pantalla de 844 — o sea, a página y media de desplazamiento. Quien entra
+   * desde el móvil viene a mirar precios y se encontraba tres pantallazos de
+   * titular. Lo pidió Dorel el 29 de septiembre de 2026.
+   *
+   * ⚠️ **Se recorta el titular, no se esconde nada.** La regla de la casa es
+   * recolocar y nunca ocultar: el titular sigue entero, con su entradilla y sus
+   * barras; lo que baja es el tamaño de letra y el aire de alrededor. Con
+   * `2rem` caben tres líneas en vez de cinco.
+   *
+   * `--fs-display` es un `clamp()` que ya encoge con la ventana, pero su suelo
+   * son 2,75 rem: pensado para que un titular corto luzca, no para éste, que
+   * tiene sesenta caracteres.
+   *
+   * ⚠️ **Y el héroe se aprieta 45 px más desde el 30 de septiembre de 2026**,
+   * que es exactamente lo que creció la cabecera al pasar el menú a dos filas.
+   * Con cuatro opciones —una de ellas «Pon tu coche en alquiler»— la tira
+   * deslizable escondía 150 px y «Contacto» no aparecía; envolver lo arregla y
+   * cuesta altura. Lo que Dorel pidió son las DOS cosas: el menú entero y el
+   * buscador a la vista sin bajar.
+   *
+   * ⚠️ **Y ESTE BLOQUE ESTABA ESCRITO MÁS ARRIBA, donde no servía de nada.**
+   * Vivía entre `.hero__titular` y `.hero__entrada`, o sea **antes** de las dos
+   * reglas base que pretendía pisar —`.hero__entrada` y `.promesas-seccion`—.
+   * Misma especificidad y la base escrita después: gana la base, y una media
+   * query no añade peso ninguno. Medido el 30 de octubre de 2026 en el sitio en
+   * producción a 393 px de ancho: la entradilla salía con **64 px** de margen
+   * inferior cuando esta regla pide 20, y la sección de abajo con **124 px** de
+   * relleno cuando pide 64. Tres declaraciones muertas de cinco, y en silencio:
+   * el comentario de arriba afirma haberlo medido, así que durante un mes lo
+   * que se leía aquí **no era lo que hacía la página**.
+   *
+   * De ahí el hueco del que se quejó Dorel: 64 px de margen más los 8 del
+   * `translateY` del buscador son los 72 px que separaban la entradilla del
+   * formulario y empujaban «Ver precios» fuera de la pantalla. Con la regla
+   * viva son 28.
+   *
+   * La lección es la de siempre en este proyecto: **antes de arreglar una
+   * regla, comprueba que es la que gana**. Y una media query se escribe
+   * DESPUÉS de la base que corrige, no antes.
+   */
+  @media (max-width: 719px) {
+    .hero { padding-top: var(--sp-5); }
+
+    .hero__titular {
+      font-size: clamp(1.9rem, 1.4rem + 2.4vw, 2.5rem);
+      max-width: 20ch;
+      margin-bottom: var(--sp-3);
+    }
+
+    /*
+     * ⚠️ **Aquí había también un `font-size: var(--fs-small)` y NO se ha
+     * revivido.** Estaba muerto como los demás, así que la entradilla lleva un
+     * mes en producción a 18 px; devolverla a 14 ahora sería encoger un texto
+     * que nadie ha pedido encoger, aprovechando un arreglo de otra cosa. El
+     * hueco se quita con el margen, que es de lo que iba el encargo. Si algún
+     * día hace falta más sitio, ésta es la siguiente palanca y está medida: son
+     * tres líneas, unos 18 px.
+     */
+    .hero__entrada { margin-bottom: var(--sp-5); }
+
+    /*
+     * ⚠️ **Lo que en móvil impide que el buscador cuelgue medio cuerpo se fue
+     * con él al componente.** Aquí había dos reglas `.hero .buscador` —el
+     * `translateY(8px)` en vez del 50 %, y el hueco y el relleno más
+     * apretados— y desde el componente son `.buscador--flotante` y la media
+     * query de su propia hoja. El motivo sigue valiendo y está escrito allí:
+     * apilado son cuatro campos, así que el 50 % dejaba **184 px de hueco
+     * negro vacío** y el buscador empezaba a 1.050 px del principio de la
+     * página, o sea a página y media de desplazamiento.
+     */
+
+    /*
+     * Y la sección de abajo recupera el hueco que ya no hace falta reservar: en
+     * móvil la tarjeta solo cuelga 8 px, no media tarjeta, así que los 60 px
+     * extra del relleno base son hueco vacío debajo del formulario.
+     */
+    .promesas-seccion { padding-top: var(--section-y); }
+  }
 
   .titulo-fila {
     display: flex;

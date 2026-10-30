@@ -4,9 +4,11 @@
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 octodecies**, que es lo último que pasó (del 15 al
-> 20 de octubre: el TPV del banco, el pago de la señal desde la web y el scroll
-> a tirones del móvil); después **§ 2 ter**, que dice qué falta por desplegar
+> **Orden de lectura:** **§ 2 novodecies**, que es lo último que pasó (el 30 de
+> octubre: los campos de fecha en el móvil, y **lo que queda por comprobar en un
+> teléfono de verdad**); después **§ 2 octodecies** (del 15 al 20 de octubre: el
+> TPV del banco, el pago de la señal desde la web y el scroll a tirones del
+> móvil); después **§ 2 ter**, que dice qué falta por desplegar
 > —hoy **nada**, y por eso esa sección empieza por cómo volver a medirlo en vez
 > de por una lista—; y luego **§ 5**, con los huecos que solo puede cerrar
 > Dorel, que son los únicos que siguen abiertos de verdad.
@@ -1618,6 +1620,136 @@ en el escritorio dio cero. Lo que valió fue el aparato de verdad.
   el `.web.app` para saber si un despliegue ha salido»: aquella pregunta es «qué
   hay publicado» y hay que saltarse la caché; ésta es un enlace que lee una
   persona.
+
+---
+
+## 2 novodecies. El 30 de octubre — los campos de fecha en el móvil
+
+**Esto es lo último que pasó.** Dorel reportó seis cosas mirando su teléfono
+—Brave sobre Android— y **tres de ellas resultaron ser el mismo fallo**: el
+campo de fecha conserva la apariencia nativa.
+
+### El chevron no era nuestro, y eso lo explica casi todo
+
+En el móvil, cada campo de fecha enseñaba dos adornos a pocos milímetros: el
+calendario que dibujamos y una flechita hacia abajo que **no se podía pulsar**.
+Dorel preguntó qué pinta un chevron en algo que no es un desplegable, y la
+respuesta es que no pinta nada — **el único chevron del repositorio es el del
+`select`**, en los dos productos.
+
+Es el adorno del control nativo: sobre Android un campo de fecha se pinta con
+apariencia de desplegable (`menulist-button`). Esa flecha **no sale del
+pseudo-elemento** `::-webkit-calendar-picker-indicator`, así que el
+`display: none` que le hacían `.picker-custom` y `.picker-propio` nunca se la
+llevó. Lo que la quita es `appearance: none`, que no estaba en ninguno de los
+dos sitios: el único `appearance: none` del proyecto era el del `select`.
+
+Y de la misma apariencia nativa salía el **segundo** síntoma: un control nativo
+trae ancho intrínseco, y por eso los campos de fecha de la web no llegaban al
+borde mientras el de texto de al lado sí. El backoffice no lo sufría **por
+casualidad**: `.form-control` lleva `width: 100%` desde siempre. Ahora lo lleva
+también `.buscador input`.
+
+⚠️ **La regla va por TIPO de campo, no en `.picker-custom`**, que es donde cae
+primero. Esa clase cuelga de `usaPanelPropio()`, que devuelve `false` con
+`disabled` o `readonly`: puesta ahí, el chevron seguiría saliendo justo en los
+campos bloqueados — y hay una pantalla donde se ve en la misma rejilla, la
+edición de reserva, que deshabilita la recogida y deja editable la devolución.
+Comprobado que un campo sin `.picker-custom` conserva su caja: fondo
+`--bg-input`, borde y 49 px de alto.
+
+### Los dos calendarios a la vez: faltaba cancelar el `click`
+
+Se abría el nuestro **y encima el del sistema**. La causa estaba medida y
+escrita desde hacía meses en `ClearInputDirective`: **cancelar `mousedown` no
+cancela el `click`**, y en un `input[type=date]` el `click` **es** la activación
+que abre la hoja del sistema. `DatePickerDirective` solo escuchaba `mousedown`;
+y en la web, el `preventDefault()` del `click` estaba **detrás** de un `return`
+que lo saltaba fuera de la banda del icono.
+
+Se cierran las tres puertas, y las tres hacían falta:
+
+| puerta | cómo se cierra |
+|---|---|
+| la activación por puntero | `preventDefault()` en el `click`, **siempre** |
+| el foco (en Safari basta) | con el dedo ya no se llama a `.focus()` |
+| `Alt + ↓` | manejador propio, que además abre el nuestro |
+
+⚠️ **Y con el dedo abre el CAMPO ENTERO, no solo la banda del icono.** La banda
+existe para dejar sitio a teclear la fecha, y **en el móvil un campo de fecha no
+se teclea**: fuera de ella el toque no hacía nada nuestro y acababa abriendo el
+del sistema a solas, que es el caso peor. Con ratón se respeta la banda, porque
+ahí sí se teclean los segmentos.
+
+⚠️ **No se puede copiar `ClearInputDirective` tal cual**, que es la tentación.
+Aquella cancela dentro del `pointerdown`, y eso suprime el `mousedown` — que
+aquí es el **único** camino que abre el panel y además el que escucha
+`alPulsarFuera` para cerrarlo. Copiado literal, el calendario dejaría de abrirse
+y de cerrarse a la vez.
+
+### El hueco del héroe: tres reglas muertas por orden de cascada
+
+Dorel pidió quitar «más o menos la mitad» del aire entre la entradilla y el
+buscador. Resultó que el bloque `@media (max-width: 719px)` de `index.astro`
+estaba escrito **antes** de las reglas base que pretendía pisar: misma
+especificidad, base después, gana la base — y un `@media` no añade peso ninguno.
+Medido a 393 px contra producción:
+
+| pedía | salía |
+|---|---|
+| `.hero__entrada` margen 20 px | **64 px** |
+| `.hero__entrada` tamaño 14 px | **18 px** |
+| `.promesas-seccion` relleno 64 px | **124 px** |
+
+El comentario de al lado afirmaba haberlo medido, así que durante un mes **lo
+que se leía ahí no era lo que hacía la página**. Movido el bloque: el hueco pasa
+de 72 a 28 px y «Ver precios» sube 65 px.
+
+⚠️ **El tamaño de letra NO se ha revivido** a propósito. Llevaba un mes en
+producción a 18 px; devolverlo a 14 sería encoger un texto que nadie pidió
+encoger, aprovechando un arreglo de otra cosa. Es la siguiente palanca si hace
+falta más sitio, y está medida: unos 18 px.
+
+### ⚠️ Lo que NO se pudo comprobar aquí, y hay que mirar en el teléfono
+
+**El renderizado `menulist-button` de Android no se reproduce en esta máquina**,
+ni encogiendo la ventana ni con emulación táctil completa (`mobile: true`,
+puntero grueso, DPR 2,75): los tres campos miden lo mismo y no sale ningún
+chevron. Es una diferencia de *build* entre Chrome de escritorio y Chrome de
+Android, no algo que la emulación encienda.
+
+Así que **el chevron y el ancho se dan por arreglados por el mecanismo, no por
+medición**. Lo que hay que mirar en el móvil, con el despliegue de desarrollo
+delante, es sólo esto:
+
+1. que el chevron **ya no sale** al lado del calendario;
+2. que los dos campos de fecha de la web **llegan al borde** igual que el de
+   «Recogida en»;
+3. que al tocar un campo se abre **un solo** calendario, el nuestro.
+
+Lo que **sí** está medido aquí, en los dos productos y con inyección táctil
+real: el `click` sale cancelado, el campo **no recibe foco** con el dedo, el
+panel abre desde cualquier punto con el dedo y solo desde la banda con ratón, el
+segundo clic cierra, `Alt + ↓` abre el nuestro y la fecha **se sigue tecleando**
+(`appearance: none` no rompe la edición por teclado — comprobado contra
+producción con el mismo guion).
+
+### Dos reglas muertas más, encontradas y NO tocadas
+
+El barrido de cascada encontró otras dos del mismo patrón, fuera del encargo:
+
+- `Base.astro:1121` — `.pie__marca { max-width: none }` dentro de
+  `@media (min-width: 1000px)`, muerta por la base de la 1124. Hoy no se ve
+  porque el carril mide 248 px y el tope 315.
+- `global.css:1976` — el `gap` de `.dos-columnas` a partir de 900 px, muerto en
+  `pon-tu-coche-en-alquiler.astro` porque su regla local lleva scope de Astro y
+  mide (0,2,0) contra (0,1,0). **Esta sí se ve**: 40 px de separación ahí y
+  64 px en el resto de la web.
+
+⚠️ Y la lección para cualquier auditoría que se escriba de esto: **no basta con
+mirar el orden dentro de un fichero**. El scope de Astro le cuelga un atributo a
+cada compuesto del selector, así que una base con scope gana a un `@media`
+global pase lo que pase, sin que haya ningún problema de orden.
 
 ---
 

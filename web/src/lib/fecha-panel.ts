@@ -684,6 +684,27 @@ export function montarCalendario(campo: HTMLInputElement): void {
     return e.clientX >= caja.right - ANCHO_ICONO;
   };
 
+  /**
+   * ¿Este punto abre el panel?
+   *
+   * ⚠️ **Con el dedo abre el CAMPO ENTERO, y con el ratón solo la banda del
+   * icono.** No es una incoherencia: es que la banda existe para dejar sitio a
+   * teclear, y **en un móvil un campo de fecha no se teclea**. Chrome sobre
+   * Android no pone cursor dentro: lo único que sabe hacer ese control al
+   * tocarlo es abrir un calendario. Así que con el dedo, fuera de la banda no
+   * había nada que hacer — ni abrir el nuestro ni escribir— y el toque se
+   * perdía. Con el ratón sí se teclea, y ahí la banda se respeta porque es
+   * exactamente lo que hace el navegador.
+   *
+   * Es la misma frontera que ya decide `esHoja()` y el `base-select` del
+   * backoffice: **se pregunta por el aparato, no por lo que el navegador pueda**.
+   */
+  const abreAqui = (clientX: number) => {
+    const caja = campo.getBoundingClientRect();
+    if (esHoja()) return clientX >= caja.left && clientX <= caja.right;
+    return clientX >= caja.right - ANCHO_ICONO;
+  };
+
   /*
    * ⚠️ **La mano SOLO sobre el icono, no sobre el campo entero.** Lo pidió
    * Dorel el 8 de octubre de 2026 —el icono se pulsa y el cursor seguía siendo
@@ -723,20 +744,65 @@ export function montarCalendario(campo: HTMLInputElement): void {
     // Se anota ANTES de que el navegador procese el descarte automático: es lo
     // único que distingue «vengo a abrirlo» de «acabo de cerrarlo pulsando el
     // mismo icono». Sin esto, el segundo clic lo cerraría y lo reabriría.
-    estabaAbierto = enElIcono(e) && panel?.abiertoEn() === campo;
+    estabaAbierto = abreAqui(e.clientX) && panel?.abiertoEn() === campo;
   });
 
   campo.addEventListener('mousedown', (e) => {
     // Sin esto el campo toma el foco y la página se desplaza para enseñarlo, y
     // ese desplazamiento llega al oyente que cierra el panel.
-    if (enElIcono(e)) e.preventDefault();
+    //
+    // ⚠️ Y con el dedo suprime además el foco del campo entero, que en algunos
+    // navegadores —Safari, sin ir más lejos— es por sí solo otra forma de abrir
+    // el selector del sistema. Son dos puertas distintas y se cierran las dos.
+    if (abreAqui(e.clientX)) e.preventDefault();
   });
 
+  /*
+   * ⚠️ **El `preventDefault()` va SIEMPRE, y ese era el fallo: antes se volvía
+   * antes de llegar a él.**
+   *
+   * En un `input[type=date]` **el `click` es la activación que abre la hoja del
+   * sistema**, y eso no es una teoría: lo midió este mismo repositorio con
+   * inyección táctil real al escribir `ClearInputDirective`, donde vaciar el
+   * campo con el aspa abría acto seguido el calendario nativo pidiendo la fecha
+   * que el operador acababa de quitar. Está escrito en su `onClick`.
+   *
+   * Aquí la guarda `if (!enElIcono(e)) return;` estaba **antes** del
+   * `preventDefault()`, así que un toque fuera de la banda del icono no
+   * cancelaba nada: el navegador abría el suyo. Y dentro de la banda se abrían
+   * los dos, porque el nuestro no sustituye al nativo, se le pone delante.
+   * Ahora se cancela primero y se decide después si además abrimos.
+   *
+   * ⚠️ **Cancelar aquí NO estorba al teclado.** Esto solo anula la activación
+   * por puntero; tabular al campo y teclear la fecha sigue funcionando igual, y
+   * el panel se abre con `Alt + ↓` como cualquier desplegable.
+   */
   campo.addEventListener('click', (e) => {
-    if (!enElIcono(e)) return;
     e.preventDefault();
+    if (!abreAqui(e.clientX)) return;
     if (estabaAbierto) return;
     panel ??= crearPanel();
+    panel.cerrar();
+    panel.abrir(campo);
+  });
+
+  /*
+   * ⚠️ **`Alt + ↓` es la TERCERA puerta al selector del sistema, y estaba
+   * abierta.** Cancelar el puntero no la toca: es el atajo de toda la vida para
+   * desplegar un control, y en un campo de fecha el navegador lo atiende
+   * abriendo el suyo. O sea que quien navega con teclado seguía viendo el
+   * calendario del navegador por mucho que el ratón y el dedo ya no lo abrieran
+   * — y lo que se pidió es bloquearlo en cualquier sistema.
+   *
+   * Cerrarla cuesta lo mismo que abrir el nuestro, así que de paso el panel pasa
+   * a alcanzarse sin ratón, que antes no se podía. `Escape` no hace falta: lo
+   * cierra el descarte del propio `popover`.
+   */
+  campo.addEventListener('keydown', (e) => {
+    if (!e.altKey || e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    panel ??= crearPanel();
+    if (panel.abiertoEn() === campo) return;
     panel.cerrar();
     panel.abrir(campo);
   });

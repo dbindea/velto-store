@@ -184,6 +184,27 @@ const { flotante = false, accion, textoBoton = 'Ver precios' } = Astro.props;
   }
 
   .buscador input {
+    /*
+     * ⚠️ **Sin esto los campos de FECHA no llegan al borde, y solo en Android.**
+     * Con ratón los tres miden exactamente lo mismo —medido el 30 de octubre de
+     * 2026 contra el sitio en producción: 293,3 px los tres a 390 px de ancho—,
+     * y **tampoco se reproduce con emulación táctil completa** (`mobile: true`,
+     * puntero grueso, DPR 2,75: los tres a 312 px). O sea que encoger la ventana
+     * no vale para verlo, y por eso llevaba ahí sin que nadie lo cazara.
+     *
+     * En Chrome y Brave sobre Android de verdad, un `datetime-local` se pinta
+     * como control nativo con **ancho intrínseco**, y un ancho intrínseco **no
+     * se estira** con `justify-self: stretch`: la rejilla le da la columna
+     * entera y el campo se queda corto dentro de ella. El campo de texto de al
+     * lado sí llega, así que la tarjeta sale escalonada — que es justo lo que se
+     * ve en el móvil y no en el portátil.
+     *
+     * ⚠️ **El backoffice no lo sufre por casualidad, no por diseño:** su
+     * `.form-control` lleva `width: 100%` desde siempre (`src/styles.scss`), y
+     * por eso allí las fechas sí llegan al borde. Es la misma regla portada; lo
+     * que pasaba es que aquí no estaba.
+     */
+    width: 100%;
     min-height: var(--control-h);
     padding: 0 var(--sp-4);
     font-family: var(--font-num);

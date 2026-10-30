@@ -101,6 +101,15 @@ export class DatePickerDirective implements OnDestroy {
   private readonly nativo = prefersNativePicker();
 
   /**
+   * ¿Se está usando con el dedo?
+   *
+   * Se resuelve una vez, como `nativo` y por el mismo motivo: un ratón no se
+   * convierte en un dedo a mitad de un formulario, y preguntarlo en cada evento
+   * crearía un `MediaQueryList` por campo y por pulsación.
+   */
+  private readonly conDedo = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+  /**
    * La clase que esconde el icono del navegador y pinta el nuestro.
    *
    * Va aquí y no en la plantilla porque las plantillas no saben nada de esto:
@@ -131,8 +140,7 @@ export class DatePickerDirective implements OnDestroy {
   @HostListener('mousedown', ['$event'])
   onMouseDown(evento: MouseEvent): void {
     if (!this.usaPanelPropio()) return;
-    const rect = this.input.getBoundingClientRect();
-    if (evento.clientX < rect.right - ZONA_ICONO_PX) return;
+    if (!this.abreAqui(evento.clientX)) return;
 
     evento.preventDefault();
     /**
@@ -141,9 +149,44 @@ export class DatePickerDirective implements OnDestroy {
      * desplazamiento dispara el oyente que cierra el panel: se abría y se
      * cerraba en el mismo clic, sin error en consola y sin nada que mirar.
      * Costó un rato de más.
+     *
+     * ⚠️ **Y con el dedo NO se enfoca, que es la segunda puerta del selector
+     * del sistema.** En Safari basta el foco para que se abra —lo documenta ya
+     * `ClearInputDirective`—, así que enfocar aquí abriría justo lo que el
+     * `click` de abajo se dedica a cancelar. Con el dedo no hay nada que
+     * enfocar: no hay teclado que mantener abierto ni segmento que editar.
      */
-    this.input.focus({ preventScroll: true });
+    if (!this.conDedo) this.input.focus({ preventScroll: true });
     this.panel ? this.cerrar() : this.abrir();
+  }
+
+  /**
+   * ⚠️ **Este bloque es lo único que impide que se abran DOS calendarios, y
+   * faltaba.** En el móvil se abría el nuestro y encima el del sistema.
+   *
+   * La causa está medida y escrita en la directiva hermana
+   * (`ClearInputDirective.onClick`): **cancelar `mousedown` no cancela el
+   * `click`** —Pointer Events solo suprime los eventos de compatibilidad de
+   * ratón— y **en un `input[type=date]` el `click` ES la activación que abre la
+   * hoja del sistema**. Aquí solo se escuchaba `mousedown`, así que la
+   * activación llegaba intacta y el navegador hacía lo suyo por encima.
+   *
+   * ⚠️ **Se cancela SIEMPRE, no solo en la zona que abre.** En el móvil un campo
+   * de fecha no se teclea: tocar el centro no coloca ningún cursor, lo único que
+   * sabe hacer es abrir el calendario del sistema. Cancelando solo la banda del
+   * icono, tocar la fecha —que es donde uno toca— seguiría abriendo el nativo a
+   * solas, que es el caso peor de los dos.
+   *
+   * ⚠️ **Y NO se copia el `pointerdown` de `ClearInputDirective`.** Aquella
+   * cancela ahí, y cancelar `pointerdown` suprime el `mousedown` de
+   * compatibilidad — que aquí es el **único** camino que abre el panel, y
+   * además el que escucha `alPulsarFuera` para cerrarlo. Copiado tal cual, el
+   * calendario dejaría de abrirse y de cerrarse a la vez.
+   */
+  @HostListener('click', ['$event'])
+  onClick(evento: MouseEvent): void {
+    if (!this.usaPanelPropio()) return;
+    evento.preventDefault();
   }
 
   /** `Alt` + flecha abajo es el atajo de siempre para abrir un desplegable. */
@@ -171,6 +214,26 @@ export class DatePickerDirective implements OnDestroy {
 
   private usaPanelPropio(): boolean {
     return !this.nativo && !this.input.disabled && !this.input.readOnly;
+  }
+
+  /**
+   * ¿Este punto abre el panel?
+   *
+   * ⚠️ **Con el dedo abre el CAMPO ENTERO; con el ratón, solo la banda del
+   * icono.** No es una incoherencia: la banda existe para dejar sitio a
+   * teclear la fecha, y **en el móvil un campo de fecha no se teclea**. Chrome
+   * sobre Android no coloca cursor dentro, así que fuera de la banda el toque no
+   * hacía nada nuestro — y acababa abriendo el del sistema a solas. Con el ratón
+   * sí se teclean los segmentos, y ahí la banda se respeta porque es
+   * exactamente lo que hace el navegador.
+   *
+   * Es la misma frontera que ya decide el `base-select` de `styles.scss`: **se
+   * pregunta por el aparato, no por lo que el navegador pueda hacer.**
+   */
+  private abreAqui(clientX: number): boolean {
+    const caja = this.input.getBoundingClientRect();
+    if (this.conDedo) return clientX >= caja.left && clientX <= caja.right;
+    return clientX >= caja.right - ZONA_ICONO_PX;
   }
 
   private abrir(): void {

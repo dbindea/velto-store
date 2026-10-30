@@ -1030,6 +1030,38 @@ input[type='date'],
 input[type='time'],
 input[type='datetime-local'],
 input[type='month'] {
+  /*
+   * ⚠️ **Esto es lo que quita el chevron que sale PEGADO al icono en Android.**
+   * En el móvil aparecían dos adornos a pocos milímetros —nuestro calendario y
+   * una flechita hacia abajo—, hasta el punto de que no se acertaba a pulsar
+   * ninguno. Lo señaló Dorel el 30 de octubre de 2026 preguntando además qué
+   * pinta ahí un chevron si esto no es un desplegable. La respuesta es que no
+   * pinta nada, y que **no era nuestro**: el único chevron del proyecto es el
+   * del `select`, quinientas líneas más arriba.
+   *
+   * Es el adorno del control nativo. Sobre Android un campo de fecha se pinta
+   * con apariencia de desplegable (`menulist-button`), y esa flecha **no sale
+   * del pseudo-elemento** `::-webkit-calendar-picker-indicator`: por eso el
+   * `display: none` que le hace `.picker-custom` más abajo nunca se la llevó.
+   * Lo único que la quita es renunciar a la apariencia nativa.
+   *
+   * ⚠️ **Va aquí, por TIPO de campo, y no en `.picker-custom` — que es donde
+   * cae primero.** Esa clase cuelga de `usaPanelPropio()`, que devuelve `false`
+   * cuando el campo está `disabled` o `readonly`, así que puesta ahí el adorno
+   * seguiría saliendo justo en los campos bloqueados. Y hay una pantalla donde
+   * eso se ve en la misma rejilla: la edición de reserva deshabilita la recogida
+   * y deja editable la devolución (`[disabled]` campo a campo), de modo que una
+   * saldría con chevron y la de debajo no.
+   *
+   * ⚠️ **Y no deja ningún campo sin caja**, que es el riesgo de quitar la
+   * apariencia: el fondo, el borde, el radio y el relleno los pone
+   * `.form-control`, que es global desde el 15 de septiembre de 2026, y los seis
+   * filtros que no la llevan declaran los suyos. Un campo deshabilitado se queda
+   * sin ningún indicador, y es lo que corresponde: no hay nada que abrir.
+   */
+  appearance: none;
+  -webkit-appearance: none;
+
   &::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0.9;
@@ -1043,9 +1075,18 @@ input[type='month'] {
 /* ---------------------------------------------------------------------------
  * Y cuando el calendario lo pone la aplicación
  *
- * `DatePickerDirective` marca el campo con esta clase **solo donde toma el
- * mando** —escritorio con ratón—; en el móvil no la pone y todo lo de arriba
- * sigue vigente.
+ * `DatePickerDirective` marca el campo con esta clase donde toma el mando, que
+ * es **en todas partes**: `prefersNativePicker()` devuelve `false` desde la
+ * reversión del 24 de septiembre de 2026, así que el panel propio manda también
+ * con el dedo. Lo único que la deja fuera es un campo `disabled` o `readonly`,
+ * que no tiene nada que abrir.
+ *
+ * ⚠️ **Aquí ponía «solo donde toma el mando —escritorio con ratón—; en el móvil
+ * no la pone», y era FALSO desde aquel mismo día.** Un mes largo diciendo lo
+ * contrario de lo que hace el código, y además en la dirección más cara: quien
+ * viniera a tocar este bloque por un fallo de móvil concluiría que no le afecta.
+ * Lo cazó la auditoría del 30 de octubre de 2026 contrastando el comentario con
+ * `prefersNativePicker()`, no leyendo el CSS.
  *
  * ⚠️ **El icono se dibuja igual que el chevron de los `select`, y por el mismo
  * motivo.** Al esconder el indicador del navegador el campo se queda sin nada

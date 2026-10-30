@@ -427,7 +427,37 @@ input[type='month']::-webkit-calendar-picker-indicator:hover {
  * ------------------------------------------------------------------------- */
 input.picker-propio::-webkit-calendar-picker-indicator { display: none; }
 
+/*
+ * ⚠️ **El chevron que sale pegado al calendario en Android lo quita ESTO, no la
+ * línea de arriba.** En el móvil aparecían dos adornos a pocos milímetros —el
+ * calendario que dibujamos nosotros y una flechita hacia abajo— y el repositorio
+ * **no dibuja ningún chevron en un campo de fecha**: el único del proyecto es el
+ * del `select`, treinta líneas más arriba. O sea que no era nuestro.
+ *
+ * Es el adorno del control nativo: sobre Android un campo de fecha se pinta con
+ * apariencia de desplegable (`menulist-button`), y esa flecha **no la pinta el
+ * pseudo-elemento** `::-webkit-calendar-picker-indicator`, así que esconderlo
+ * —que es lo que hace la regla de arriba— no se la lleva. Lo único que la quita
+ * es renunciar a la apariencia nativa entera.
+ *
+ * ⚠️ **Y de paso es lo que da el ancho intrínseco** que dejaba estos campos sin
+ * llegar al borde: un control con apariencia nativa trae su propia medida. El
+ * `width: 100%` de `Buscador.astro` lo fuerza igualmente, porque las dos cosas
+ * tienen que ser ciertas por separado — un campo de fecha fuera del buscador no
+ * tiene por qué heredar aquella regla.
+ *
+ * ⚠️ **Va en `.picker-propio` y no en `input[type=date]` a secas**, por la misma
+ * razón que la línea de arriba: esta clase la pone `fecha-panel.ts` solo donde
+ * toma el mando. Suelta, un campo sin JavaScript se quedaría sin apariencia
+ * nativa **y** sin panel propio, o sea sin ninguna forma de abrir un calendario.
+ *
+ * ⚠️ **Y no se queda sin caja porque la pone `.buscador input`**: fondo, borde,
+ * radio y alto van escritos ahí. Si algún día hay un campo de fecha fuera del
+ * buscador, hay que darle caja o saldrá como texto suelto.
+ */
 input.picker-propio {
+  appearance: none;
+  -webkit-appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c868a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M3 10h18M8 3v4M16 3v4'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--sp-3) center;
