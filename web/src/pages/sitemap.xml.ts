@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { SITIO } from '../lib/empresa';
 import { flotaEnBuild } from '../lib/flota-build';
+import { slugsDeFlota } from '../lib/slug';
 
 /**
  * El sitemap, que hasta el 25 de septiembre de 2026 el `robots.txt` anunciaba
@@ -60,7 +61,7 @@ export const RUTAS = [
  */
 export const FUERA_DEL_SITEMAP: Record<string, string> = {
   '404': 'una página de error no se indexa nunca',
-  coche: 'la ficha vive en /coche/{id} y la pinta JavaScript: no hay una URL que listar',
+  coche: 'es el RESPALDO de /coche/{slug}: sirve cualquier dirección, así que no es una página',
   'pagar-senal':
     'sin la llave ?s= no puede hacer nada: indexada sería un resultado que no lleva a ninguna parte',
 };
@@ -80,8 +81,17 @@ export const GET: APIRoute = async () => {
    * sitemap sale con las once páginas fijas y ninguna ficha, que es
    * exactamente lo que hay en el `dist` de ese build.
    */
+  /*
+   * ⚠️ **Las fichas van por SLUG y se reparten con la MISMA función que las
+   * genera** (`slugsDeFlota`), no con una copia de la regla. Es la misma
+   * exigencia que ya tenía la lista de coches, y por el mismo motivo: dos
+   * reglas que calculen la dirección por su cuenta acaban discrepando, y lo
+   * que sale de eso es un sitemap que anuncia páginas que no existen — que es
+   * exactamente lo que pasó el 30 de octubre de 2026 por el otro lado.
+   */
   const coches = await flotaEnBuild();
-  const fichas = coches.map((c) => `/coche/${encodeURIComponent(c.id)}`);
+  const slugs = slugsDeFlota(coches);
+  const fichas = coches.map((c) => `/coche/${encodeURIComponent(slugs.get(c.id)!)}`);
 
   const urls = [...RUTAS, ...fichas]
     .map(r => `  <url><loc>${SITIO}${r}</loc></url>`)

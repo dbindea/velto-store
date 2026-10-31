@@ -75,8 +75,25 @@ export interface FechasElegidas {
   lugar?: string;
 }
 
+/**
+ * @param slug La dirección de la ficha, de `slugsDeFlota()`.
+ *
+ * ⚠️ **Es OBLIGATORIO y no se calcula aquí, y las dos cosas a propósito.** El
+ * slug depende de la flota **entera** —si hay dos Mégane, los dos cambian de
+ * dirección—, así que una tarjeta no puede decidirlo mirando su propio coche.
+ * Exigirlo obliga a cada sitio de llamada a traerlo del sitio bueno; con un
+ * valor por defecto, el día que alguien pinte una lista sin pensarlo saldrían
+ * direcciones que no existen y nada avisaría.
+ *
+ * ⚠️ **Y quien lo pasa usa `slugs.get(c.id) ?? c.id` como red.** Una lista
+ * filtrada —los resultados de una búsqueda, por ejemplo— puede no contener al
+ * gemelo que provocó el desempate, así que su slug saldría distinto del real.
+ * El id **siempre** resuelve (`cocheDeSegmento` acepta las dos formas), de modo
+ * que el peor caso es una URL fea y nunca un enlace roto.
+ */
 export function tarjetaCoche(
   c: CocheResumen | CocheDisponible,
+  slug: string,
   fechas?: FechasElegidas
 ): string {
   const nombre = esc(nombreCoche(c));
@@ -189,7 +206,7 @@ export function tarjetaCoche(
 
   return `
     <article class="card coche">
-      <a class="coche__link" href="/coche/${encodeURIComponent(c.id)}${conFechas}">
+      <a class="coche__link" href="/coche/${encodeURIComponent(slug)}${conFechas}">
         <div class="coche__foto">${foto}</div>
         <div class="coche__cuerpo">
           <p class="overline">${esc(categoria(c.category))}</p>

@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { flotaEnBuild } from '../lib/flota-build';
 import { tarjetaCoche } from '../lib/tarjeta';
+import { slugsDeFlota } from '../lib/slug';
 import { migas } from '../lib/schema';
 
 /**
@@ -20,7 +21,8 @@ import { migas } from '../lib/schema';
  * rompe «publicar un coche se ve al momento».
  */
 const coches = await flotaEnBuild();
-const tarjetas = coches.map((c) => tarjetaCoche(c)).join('');
+const slugs = slugsDeFlota(coches);
+const tarjetas = coches.map((c) => tarjetaCoche(c, slugs.get(c.id) ?? c.id)).join('');
 ---
 
 <Base
@@ -92,6 +94,7 @@ const tarjetas = coches.map((c) => tarjetaCoche(c)).join('');
 <script>
   import { flota } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
+  import { slugsDeFlota } from '../lib/slug';
 
   const lista = document.getElementById('lista')!;
   const cargando = document.getElementById('cargando')!;
@@ -119,7 +122,8 @@ const tarjetas = coches.map((c) => tarjetaCoche(c)).join('');
         vacio.hidden = false;
         return;
       }
-      lista.innerHTML = vehicles.map((v) => tarjetaCoche(v)).join('');
+      const slugs = slugsDeFlota(vehicles);
+      lista.innerHTML = vehicles.map((v) => tarjetaCoche(v, slugs.get(v.id) ?? v.id)).join('');
       lista.hidden = false;
     })
     .catch(() => {

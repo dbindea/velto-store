@@ -6,6 +6,7 @@ import { PREGUNTAS_PORTADA } from '../lib/preguntas';
 import { negocio } from '../lib/schema';
 import { flotaEnBuild } from '../lib/flota-build';
 import { COCHES_EN_PORTADA, tarjetaCoche } from '../lib/tarjeta';
+import { slugsDeFlota } from '../lib/slug';
 
 /**
  * Los coches de la franja de la portada, **en el HTML**.
@@ -25,8 +26,18 @@ import { COCHES_EN_PORTADA, tarjetaCoche } from '../lib/tarjeta';
  * cargar y se repinta, igual que en `/flota`. El prerender solo existe para que
  * haya algo que leer antes del JavaScript.
  */
-const cochesPortada = (await flotaEnBuild()).slice(0, COCHES_EN_PORTADA);
-const tarjetasPortada = cochesPortada.map((c) => tarjetaCoche(c)).join('');
+/*
+ * ⚠️ **Los slugs salen de la flota ENTERA, no de los seis de la portada.** El
+ * desempate depende de toda la flota: calculado sobre el recorte, un Mégane
+ * cuyo gemelo no entre en la portada saldría con la dirección corta mientras
+ * su ficha de verdad vive en la larga.
+ */
+const flotaCompleta = await flotaEnBuild();
+const slugsPortada = slugsDeFlota(flotaCompleta);
+const cochesPortada = flotaCompleta.slice(0, COCHES_EN_PORTADA);
+const tarjetasPortada = cochesPortada
+  .map((c) => tarjetaCoche(c, slugsPortada.get(c.id) ?? c.id))
+  .join('');
 
 /**
  * ⚠️ **Las cuatro promesas salen del contrato y del backoffice, no del aire.**
@@ -376,6 +387,7 @@ const PROMESAS = [
 <script>
   import { flota } from '../lib/api';
   import { COCHES_EN_PORTADA, tarjetaCoche } from '../lib/tarjeta';
+  import { slugsDeFlota } from '../lib/slug';
   import { montarBuscador } from '../lib/buscador';
 
   /*
@@ -516,9 +528,11 @@ const PROMESAS = [
         return;
       }
       // En la portada solo los primeros: el resto, en /flota.
+      // El mapa de slugs, de la lista ENTERA; el recorte, después. Ver el build.
+      const slugs = slugsDeFlota(vehicles);
       lista.innerHTML = vehicles
         .slice(0, COCHES_EN_PORTADA)
-        .map((v) => tarjetaCoche(v))
+        .map((v) => tarjetaCoche(v, slugs.get(v.id) ?? v.id))
         .join('');
       lista.hidden = false;
     })

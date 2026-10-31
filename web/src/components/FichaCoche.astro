@@ -28,12 +28,27 @@ interface Props {
    * JavaScript. Vacío en el respaldo, donde no se sabe qué coche es.
    */
   resumen?: string;
+  /**
+   * El id real del coche, cuando la página lo sabe.
+   *
+   * ⚠️ **Hace falta desde que la URL es un SLUG y no el id** (31 de octubre de
+   * 2026). El script pedía el coche con el último segmento de la ruta, que
+   * **era** el id; con `/coche/renault-megane` esa llamada devolvería «no
+   * encontrado» y **todas las fichas se quedarían en el mensaje de error**,
+   * también las prerrenderizadas. Puesto aquí, la página generada no tiene que
+   * deducir nada.
+   *
+   * Vacío en el respaldo `coche.astro`, donde no se sabe qué coche es: allí el
+   * slug se resuelve contra la flota, que es lo que cuesta una petición más y
+   * solo pasa con un coche publicado después del último despliegue.
+   */
+  cocheId?: string;
 }
 
-const { resumen = '' } = Astro.props;
+const { resumen = '', cocheId = '' } = Astro.props;
 ---
 
-<section class="seccion">
+<section class="seccion" data-coche-id={cocheId}>
     <div class="contenedor">
       <p class="migas"><a href="/flota">← Volver a la flota</a></p>
 
@@ -129,8 +144,10 @@ const { resumen = '' } = Astro.props;
   </section>
 
 <script>
+  import { cocheDeSegmento } from '../lib/slug';
   import {
     ficha,
+    flota,
     disponibilidadCoche,
     euros,
     nombreCoche,
@@ -171,8 +188,47 @@ const { resumen = '' } = Astro.props;
   const nohay = document.getElementById('nohay')!;
   const error = document.getElementById('error')!;
 
-  /** `/coche/ABC123` → `ABC123`. */
-  const id = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() ?? '');
+  /**
+   * Qué coche hay que pedir.
+   *
+   * ⚠️ **Antes era el último segmento de la ruta, y eso dejó de valer el 31 de
+   * octubre de 2026**, cuando la dirección pasó de ser el id a ser un slug
+   * (`/coche/renault-megane`). Pidiendo `?id=renault-megane` la API contesta
+   * «no encontrado», así que **todas** las fichas —las generadas incluidas—
+   * habrían acabado en el mensaje de error.
+   *
+   * Son dos caminos y hacen falta los dos:
+   *
+   * - **La página generada trae su id dentro** (`data-coche-id`), así que pide
+   *   el coche directamente: una sola llamada, igual que antes.
+   * - **El respaldo no lo trae**, porque sirve cualquier dirección. Ahí hay que
+   *   traducir el segmento, y eso solo se puede hacer con la flota delante:
+   *   `cocheDeSegmento()` acepta el slug **y el id crudo**, que es lo que
+   *   mantiene vivas las direcciones viejas que están en Google y en los
+   *   WhatsApp que ya se mandaron.
+   */
+  const segmento = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() ?? '');
+  const idIncrustado =
+    document.querySelector<HTMLElement>('[data-coche-id]')?.dataset.cocheId ?? '';
+
+  /** El id que se le pide a la API, resolviendo el slug si hace falta. */
+  async function idDelCoche(): Promise<string> {
+    if (idIncrustado) return idIncrustado;
+    if (!segmento) return '';
+    try {
+      const { vehicles } = await flota();
+      return cocheDeSegmento(vehicles, segmento)?.id ?? '';
+    } catch {
+      /*
+       * ⚠️ **Si la flota no contesta se devuelve el segmento tal cual.** Con
+       * una dirección vieja —que es un id— la llamada siguiente funciona igual;
+       * con un slug dará «no encontrado», que es el mensaje correcto cuando no
+       * hay forma de saber qué coche es. Lo que no vale es tragarse el fallo y
+       * dejar la ficha cargando para siempre.
+       */
+      return segmento;
+    }
+  }
 
   /*
    * El diálogo se monta una vez, al cargar: su marcado está en la plantilla y
@@ -316,7 +372,20 @@ const { resumen = '' } = Astro.props;
      * la **portada**: cada coche le decía a Google que es una copia de la
      * página principal.
      */
-    const url = `${SITIO}/coche/${encodeURIComponent(v.id)}`;
+    /*
+     * ⚠️ **Es la ruta que se está viendo, y antes era el id del coche.** Desde
+     * que la dirección es un slug, componerla con `v.id` haría que cada ficha
+     * prerrenderizada declarase en su HTML la canónica buena
+     * —`/coche/renault-megane`— y el script la **sustituyera** acto seguido por
+     * la vieja: la página diciéndose a sí misma que la buena es otra. Es la
+     * misma clase de contradicción que ya costó tres semanas de indexación.
+     *
+     * Y usar `pathname` arregla además lo que ya hacía falta: las tarjetas
+     * enlazan con `?from=…&to=…` dentro, y esos parámetros no son páginas
+     * distintas. La ruta sin consulta es exactamente lo que una canónica tiene
+     * que decir.
+     */
+    const url = `${SITIO}${location.pathname}`;
 
     /*
      * ⚠️ Las dos se CREAN si no están, no se actualizan a secas. Desde que el
@@ -873,29 +942,31 @@ const { resumen = '' } = Astro.props;
     if (cargandoDatos) cargandoDatos.hidden = true;
   }
 
-  if (!id) {
-    dejarDeEsperar();
-    nohay.hidden = false;
-    noIndexar();
-  } else {
-    ficha(id)
-      .then(({ vehicle }) => {
+  idDelCoche()
+    .then((id) => {
+      if (!id) {
+        dejarDeEsperar();
+        nohay.hidden = false;
+        noIndexar();
+        return;
+      }
+      return ficha(id).then(({ vehicle }) => {
         dejarDeEsperar();
         pinta(vehicle);
-      })
-      .catch((e: Error) => {
-        dejarDeEsperar();
-        // ⚠️ «No encontrado» y «algo ha fallado» son mensajes distintos: al
-        // visitante le importa saber si el coche ya no está o si somos nosotros.
-        // Y a Google también: lo primero se desindexa, lo segundo no se toca.
-        if (e.message === 'not-found') {
-          nohay.hidden = false;
-          noIndexar();
-        } else {
-          error.hidden = false;
-        }
       });
-  }
+    })
+    .catch((e: Error) => {
+      dejarDeEsperar();
+      // ⚠️ «No encontrado» y «algo ha fallado» son mensajes distintos: al
+      // visitante le importa saber si el coche ya no está o si somos nosotros.
+      // Y a Google también: lo primero se desindexa, lo segundo no se toca.
+      if (e.message === 'not-found') {
+        nohay.hidden = false;
+        noIndexar();
+      } else {
+        error.hidden = false;
+      }
+    });
 </script>
 
 <style is:global>

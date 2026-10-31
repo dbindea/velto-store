@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import FichaCoche from '../../components/FichaCoche.astro';
 import { flotaEnBuild } from '../../lib/flota-build';
+import { slugsDeFlota } from '../../lib/slug';
 import { migas } from '../../lib/schema';
 import { descripcionDeCoche, tituloDeCoche } from '../../lib/seo';
 import { SITIO } from '../../lib/empresa';
@@ -33,17 +34,32 @@ import {
  * se comporta exactamente como antes. Ver `flota-build.ts`: un build que no se
  * puede hacer porque una function está arrancando en frío sería mucho peor.
  */
+/**
+ * ⚠️ **La dirección es el SLUG, no el id, desde el 31 de octubre de 2026.**
+ * Antes era `/coche/jRfQu3ebHPe1HnWzvmrV` y lo pidió cambiar Dorel: una URL que
+ * no se puede dictar por teléfono ni recordar no sirve fuera de un enlace, y
+ * para un buscador veinte caracteres aleatorios no son ninguna palabra. El
+ * reparto —y el desempate cuando hay dos coches del mismo modelo— lo decide
+ * `slugsDeFlota()`, que mira la flota entera porque no se puede decidir
+ * mirando un coche solo.
+ */
 export async function getStaticPaths() {
   const coches = await flotaEnBuild();
-  return coches.map((coche) => ({ params: { id: coche.id }, props: { coche } }));
+  const slugs = slugsDeFlota(coches);
+  return coches.map((coche) => ({
+    params: { slug: slugs.get(coche.id)! },
+    props: { coche, slug: slugs.get(coche.id)! },
+  }));
 }
 
 interface Props {
   coche: CocheResumen;
+  slug: string;
 }
 
-const { coche } = Astro.props;
+const { coche, slug } = Astro.props;
 const nombre = nombreCoche(coche);
+const ruta = `/coche/${slug}`;
 
 /**
  * ⚠️ **El título lleva el coche Y el sitio.** «Toyota Corolla» solo compite con
@@ -149,7 +165,7 @@ const datosCoche = {
   fuelType: combustible(coche.fuelType),
   vehicleTransmission: cambio(coche.transmission),
   ...(imagen ? { image: imagen } : {}),
-  url: `${SITIO}/coche/${coche.id}`,
+  url: `${SITIO}${ruta}`,
   ...(coche.priceFrom
     ? {
         offers: {
@@ -157,7 +173,7 @@ const datosCoche = {
           price: coche.priceFrom.gross,
           priceCurrency: 'EUR',
           availability: 'https://schema.org/InStock',
-          url: `${SITIO}/coche/${coche.id}`,
+          url: `${SITIO}${ruta}`,
           /** El precio es por día de alquiler, y hay que decirlo o se lee como el del coche. */
           priceSpecification: {
             '@type': 'UnitPriceSpecification',
@@ -174,7 +190,7 @@ const datosCoche = {
 <Base
   titulo={titulo}
   descripcion={descripcion}
-  ruta={`/coche/${coche.id}`}
+  ruta={ruta}
   precarga="coche"
   imagen={imagen}
   imagenAlt={`${nombre} de alquiler en Velto, Arganda del Rey`}
@@ -189,9 +205,9 @@ const datosCoche = {
       migas([
         { nombre: 'Inicio', ruta: '' },
         { nombre: 'Flota', ruta: '/flota' },
-        { nombre, ruta: `/coche/${coche.id}` },
+        { nombre, ruta },
       ])
     )}
   />
-  <FichaCoche resumen={resumen} />
+  <FichaCoche resumen={resumen} cocheId={coche.id} />
 </Base>

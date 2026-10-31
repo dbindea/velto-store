@@ -308,6 +308,7 @@ import { ORDENES } from '../lib/resultados';
 <script>
   import { disponibilidad, flota, type CocheDisponible } from '../lib/api';
   import { tarjetaCoche } from '../lib/tarjeta';
+  import { slugsDeFlota } from '../lib/slug';
   import { instanteDeLaUrl, montarBuscador } from '../lib/buscador';
   import {
     ORDEN_POR_DEFECTO,
@@ -358,7 +359,10 @@ import { ORDENES } from '../lib/resultados';
     flota()
       .then(({ vehicles }) => {
         if (!vehicles.length) return;
-        otrosLista.innerHTML = vehicles.map((v) => tarjetaCoche(v)).join('');
+        const slugs = slugsDeFlota(vehicles);
+        otrosLista.innerHTML = vehicles
+          .map((v) => tarjetaCoche(v, slugs.get(v.id) ?? v.id))
+          .join('');
         otros.hidden = false;
       })
       .catch(() => {});
@@ -515,7 +519,16 @@ import { ORDENES } from '../lib/resultados';
           lugar: campos.lugar?.value.trim() ?? '',
         }
       : undefined;
-    lista.innerHTML = mostrados.map((v) => tarjetaCoche(v, fechas)).join('');
+    /*
+     * ⚠️ **Aquí el mapa sale de los DISPONIBLES, que es un subconjunto.** Un
+     * gemelo no disponible no entra, así que su desempate podría faltar — y por
+     * eso el respaldo es `c.id`, que resuelve siempre. Vale una URL fea antes
+     * que un enlace roto.
+     */
+    const slugs = slugsDeFlota(mostrados);
+    lista.innerHTML = mostrados
+      .map((v) => tarjetaCoche(v, slugs.get(v.id) ?? v.id, fechas))
+      .join('');
   }
 
   ordenEl.addEventListener('change', () => {
