@@ -2190,22 +2190,30 @@ que tener en la cabeza al retomar:
 | **El TPV virtual** | **BBVA**, que tiene que revisar `/aviso-legal#pagos` | cobrar con tarjeta en producción sin el comercio de pruebas |
 | Encender el pago de la señal | **Dorel**, cuando el banco conteste | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest` |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
-| **El teléfono de la ficha de Google** | **Dorel** | el botón de «Llamar», que es la acción principal de una ficha local |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
 
-⚠️ **La ficha existe, está bien y le falta el teléfono.** Contrastada el 31 de
-octubre de 2026 contra lo que la web declara en su JSON-LD, enumerando las
-filas del panel en vez de buscar la que se esperaba:
+✅ **La ficha de Google está completa y cuadra con la web.** Contrastada el 31
+de octubre de 2026 contra el JSON-LD que sirve la web, enumerando las filas del
+panel en vez de buscar la que se esperaba — que es lo que distingue «no está»
+de «mi selector es malo»:
 
 | | Ficha | Web | |
 |---|---|---|---|
-| nombre, dirección, coordenadas, horario, categoría | — | — | **coinciden** |
+| nombre, dirección, coordenadas, horario, categoría | — | — | coinciden |
 | sitio web | `https://veltomobility.com/` | `url` | ✓ |
-| **teléfono** | **no hay** | `+34 623 766 181` | ⚠️ |
+| teléfono | `623 76 61 81` | `+34 623 766 181` | ✓ |
 
-La propia ficha lo pide, abajo del todo: «Añadir número de teléfono del sitio».
-Y las dos fuentes diciendo cosas distintas es justo lo que debilita la
-correspondencia entre la web y el negocio.
+⚠️ **El teléfono faltaba y lo puso Dorel ese mismo día**, con Google
+pidiéndolo expresamente en la ficha. Queda escrito porque es el dato que más
+rinde ahí —el botón de «Llamar» resuelve en este negocio más consultas que la
+web— y porque, si algún día vuelve a faltar, tenerlo en los dos sitios
+diciendo cosas distintas es lo que debilita la correspondencia entre la web y
+el negocio.
+
+⚠️ **Y ojo al medirlo: `telefonosEnTexto` salió VACÍO con el teléfono puesto.**
+La ficha lo escribe `623 76 61 81` y la expresión regular buscaba
+`6dd ddd ddd`. Leída sola, esa medición habría dicho que no hay teléfono
+cuando sí lo hay. Lo que contestó bien fue enumerar las filas.
 
 ⚠️ **Lo que SÍ está atado: son la misma entidad.** El `sameAs` de
 `empresa.ts` (`maps.app.goo.gl/cAwZQU2H8s8vxUtv7`) y el enlace de compartir que
