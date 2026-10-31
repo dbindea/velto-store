@@ -279,7 +279,8 @@ const datosEstructurados = negocio();
 
           <div class="card lado__bloque">
             <h2>Correo</h2>
-            <p><a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a></p>
+            {/* Sin `mailto:`, por lo que explica `empresa.ts`. */}
+            <p>{EMPRESA.correo}</p>
             <p class="nota">Para presupuestos por escrito o facturas, mejor por aquí.</p>
           </div>
         </aside>

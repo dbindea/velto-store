@@ -55,7 +55,7 @@ import { EMPRESA } from '../lib/empresa';
       <p>
         {EMPRESA.razonSocial} NIF {EMPRESA.nif}, con domicilio en
         {' '}{EMPRESA.domicilioSocial}. Puedes escribirnos a
-        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> para
+        {' '}{EMPRESA.correo} para
         cualquier cosa relacionada con esta página.
       </p>
 
@@ -129,7 +129,12 @@ import { EMPRESA } from '../lib/empresa';
       <p>
         Puedes pedirnos acceder a tus datos, corregirlos, borrarlos, limitarlos,
         oponerte a que los tratemos o llevártelos. Se pide escribiendo a
-        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> desde la
+        {/*
+          ⚠️ **Texto, no enlace**, y aquí por lo mismo que en el aviso legal:
+          es el canal por el que se ejercen los derechos del RGPD, así que
+          tiene que poder leerse. Ver `empresa.ts`.
+        */}
+        {' '}{EMPRESA.correo} desde la
         dirección que nos diste, o presentándote en la oficina con tu documento
         de identidad. Contestamos en un mes.
       </p>

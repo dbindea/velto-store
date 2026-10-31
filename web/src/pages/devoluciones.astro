@@ -397,7 +397,11 @@ import { EMPRESA } from '../lib/empresa';
       <h2 id="pedirlo">Cómo pedirlo</h2>
       <p>
         Escribiendo a
-        {' '}<a href={`mailto:${EMPRESA.correo}`}>{EMPRESA.correo}</a> o
+        {/*
+          Sin `mailto:` (ver `empresa.ts`). El `tel:` se queda: Cloudflare no
+          toca esos, y en un móvil es lo que marca sin teclear el número.
+        */}
+        {' '}{EMPRESA.correo} o
         llamando al <a href={`tel:${EMPRESA.telefono}`}>{EMPRESA.telefono}</a>,
         con tu <strong>referencia de reserva</strong> delante.
       </p>

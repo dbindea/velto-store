@@ -23,10 +23,32 @@
  * - un coche publicado después del despliegue aparece igual que hoy —lo trae
  *   el JavaScript— y además gana su HTML en el siguiente despliegue.
  *
- * ⚠️ **Y si la API falla, el build NO se rompe.** Devuelve una lista vacía y la
- * página queda exactamente como estaba antes: «Cargando la flota…» y el
- * JavaScript haciendo su trabajo. Una web que no se puede compilar porque una
- * function está reiniciándose es mucho peor que una página sin HTML previo.
+ * ⚠️ **Y si la API falla, el build no se rompe… salvo en el SITIO REAL.** Aquí
+ * ponía que no se rompía nunca, con un argumento que sigue siendo bueno donde
+ * sigue aplicándose: una web que no se puede compilar porque una function está
+ * reiniciándose es peor que una página sin HTML previo, y en desarrollo y en los
+ * PR eso se mantiene —devuelve lista vacía y lo pinta el JavaScript—.
+ *
+ * ⚠️ **En `--mode live` dejó de ser cierto el 31 de octubre de 2026**, y el
+ * motivo es que desde entonces hay un **despliegue nocturno sin nadie
+ * delante**. Lo que antes era «este build sale sin HTML de coches» hoy es
+ * «este despliegue RETIRA del índice las fichas que ya estaban publicadas»:
+ *
+ * - sin coches no se genera ninguna ficha, así que `/coche/renault-megane`
+ *   vuelve a caer en el respaldo `coche.html`, que es `noindex`;
+ * - el sitemap sale sin ellas, coherente y vacío;
+ * - y `comprobar-dist.mjs` **da el visto bueno**, con razón: su trabajo es que
+ *   la promesa y la mercancía coincidan, y cero y cero coinciden.
+ *
+ * O sea que el único aviso era un `console.warn` en el log de un workflow
+ * programado a las 4 de la madrugada. Eso no es un aviso, es un mensaje en una
+ * botella — y el fallo que arreglaría es exactamente el que Dorel encontró en
+ * Search Console tres semanas tarde.
+ *
+ * Así que en el sitio real **se lanza**. El despliegue se queda rojo, no se
+ * publica nada y lo que sigue sirviendo es el build anterior, que tenía sus
+ * fichas. Es la decisión correcta de las dos: no hacer nada conserva lo bueno,
+ * publicar lo destruye.
  */
 
 import type { CocheResumen } from './api';
@@ -146,18 +168,39 @@ async function leerFlota(): Promise<CocheResumen[]> {
   }
 
   /*
-   * ⚠️ **Un aviso bien visible y seguir.** Sin él, un build que no alcanzó la
-   * API produce un sitio sin fichas y nadie se entera hasta que alguien mira
-   * el posicionamiento tres semanas después.
+   * ⚠️ **En el sitio real esto PARA el despliegue.** Ver la cabecera del
+   * fichero: publicar sin coches no deja el sitio «como estaba», lo deja peor
+   * que estaba — retira del índice unas fichas que ya tenían su HTML, su título
+   * y su canónica. Y con el barrido nocturno no hay nadie leyendo el log.
    *
-   * ⚠️ **Y ahora lo que sale es COHERENTE**, que es lo que de verdad importa:
-   * sin fichas generadas, el sitemap tampoco las lista. Antes este mismo aviso
+   * El mensaje dice qué hacer, porque quien se lo encuentre va a ser Dorel
+   * delante de un correo de GitHub a las nueve de la mañana: casi siempre es la
+   * function en frío o un minuto malo, y basta con relanzar el workflow.
+   */
+  if (ES_SITIO_REAL) {
+    throw new Error(
+      `No se pudo leer la flota en ${INTENTOS} intentos (${ultimoFallo}).\n` +
+        '    El despliegue se PARA a propósito: sin coches no se generan sus fichas, y publicar\n' +
+        '    así dejaría /coche/<slug> servido por el respaldo coche.html, que es noindex —\n' +
+        '    o sea retirando de Google unas páginas que ahora mismo están bien.\n' +
+        '    Lo que sigue publicado es el despliegue anterior, que sí las tiene.\n' +
+        `    Casi siempre es ${API} arrancando en frío: vuelve a lanzar el workflow.`
+    );
+  }
+
+  /*
+   * ⚠️ **Fuera del sitio real, un aviso bien visible y seguir.** Aquí el
+   * artefacto no se publica de cara a nadie y tumbar un PR porque una function
+   * de desarrollo está reiniciándose sería ruido.
+   *
+   * ⚠️ **Y lo que sale es COHERENTE**, que es lo que de verdad importa: sin
+   * fichas generadas, el sitemap tampoco las lista. Antes este mismo aviso
    * salía mientras el sitemap sí las anunciaba.
    */
   console.warn(
     `[prerender] ⚠️  No se pudo leer la flota en ${INTENTOS} intentos (${ultimoFallo}). ` +
       'El sitio se compila igual y las fichas las pintará el JavaScript, pero ' +
-      'ESTE DESPLIEGUE SALE SIN HTML DE COCHES para los rastreadores — y, por lo ' +
+      'ESTE BUILD SALE SIN HTML DE COCHES para los rastreadores — y, por lo ' +
       'mismo, sin ellas en el sitemap.'
   );
   return [];

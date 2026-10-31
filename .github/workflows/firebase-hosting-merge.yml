@@ -32,9 +32,23 @@
 # Hosting on merge -> Run workflow**.
 #
 # ⚠️ **Y el barrido nocturno existe por lo mismo**: para que un coche publicado
-# un martes no dependa de que alguien se acuerde de pulsar nada. Son las 04:15
-# UTC, que en España es de madrugada en los dos horarios; GitHub no garantiza la
-# hora exacta y aquí da igual.
+# un martes no dependa de que alguien se acuerde de pulsar nada.
+#
+# ⚠️ **No es «de madrugada», y aquí ponía que sí.** Medido el 31 de octubre de
+# 2026 sobre las doce últimas ejecuciones programadas: con el cron puesto a las
+# **04:15 UTC**, ninguna entró antes de las **08:54** y la más tardía fue a las
+# **10:55**. GitHub no garantiza la hora de un `schedule` y lo encola cuando
+# puede; el retraso aquí es sistemático, de cinco a seis horas y media.
+#
+# Eso tenía una consecuencia que no es cosmética: el último paso **purga la
+# caché de Cloudflare entera**, así que el barrido la estaba vaciando a las
+# 11:30 hora de Madrid — en pleno horario de oficina, justo cuando entran las
+# visitas. Por eso el cron se ha adelantado a las **02:35 UTC**: con el mismo
+# retraso cae sobre las 08:30, antes del día, y si GitHub algún día deja de
+# retrasarlo sigue siendo de noche en los dos horarios.
+#
+# La lección, que es la de siempre en esta casa: **una hora escrita en un cron
+# no es la hora a la que algo ocurre.** Se mira con `gh run list`.
 name: Deploy to Firebase Hosting on merge
 on:
   push:
@@ -42,7 +56,7 @@ on:
       - master
   workflow_dispatch:
   schedule:
-    - cron: '15 4 * * *'
+    - cron: '35 2 * * *'
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest

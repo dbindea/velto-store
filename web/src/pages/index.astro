@@ -339,9 +339,17 @@ const PROMESAS = [
           justo lo que Dorel quitó de las tarjetas: la cabecera ya lo lleva para
           quien quiera llamar. Lo pidió el 29 de septiembre de 2026.
         */}
+        {/*
+          ⚠️ **Y aquí había un segundo botón, «Escribir un email», que se ha
+          QUITADO en vez de dejarlo sin enlace.** Al retirar los `mailto:` de
+          la web (ver `empresa.ts`) este se quedaba sin nada que hacer, y un
+          botón que no hace nada es un fallo — no un botón apagado. Ponerle
+          `/contacto` tampoco valía: es exactamente donde lleva el de al lado,
+          y dos botones a la misma página solo hacen dudar de cuál es cuál.
+          El formulario es el canal, y «Contactar» ya es su puerta.
+        */}
         <div class="oficina__acciones">
           <a class="btn btn--brand" href="/contacto">Contactar</a>
-          <a class="btn btn--ghost" href={`mailto:${EMPRESA.correo}`}>Escribir un email</a>
         </div>
       </aside>
     </div>

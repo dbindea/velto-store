@@ -4,9 +4,11 @@
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 vicies**, que es lo último que pasó (el 30 de
-> octubre, segunda parte: el sitemap anunciaba fichas que no existían, y el
-> backoffice de producción resultó ser indexable); después **§ 2 novodecies**
+> **Orden de lectura:** **§ 2 vicies**, que es lo último que pasó (del 30 al 31
+> de octubre: el sitemap anunciaba fichas que no existían, el backoffice de
+> producción resultó ser indexable, las fichas pasaron a
+> `/coche/renault-megane`, se quitaron los nueve `mailto:` y se cerró un
+> agujero del despliegue nocturno); después **§ 2 novodecies**
 > (ese mismo día: los campos de fecha en el móvil); después **§ 2 octodecies** (del 15 al 20 de octubre: el
 > TPV del banco, el pago de la señal desde la web y el scroll a tirones del
 > móvil); después **§ 2 ter**, que dice qué falta por desplegar
@@ -1912,12 +1914,70 @@ con su título y su `data-coche-id`; `/coche/RuEYtRi9CvtwSjPoSRvd` —la URL
 vieja— abre el mismo coche por el respaldo; y `/coche/no-existe` dice «no hay»
 en vez de dar error. Y a través de Cloudflare llega idéntico.
 
+### Y el mismo día: fuera los nueve `mailto:`
+
+Decisión de Dorel —«las personas se contactan conmigo a través de
+formulario»—, y al medirlo resultó peor de lo que se había reportado. Contra
+`veltomobility.com/aviso-legal`, con la ofuscación de Cloudflare activada:
+
+- el `href` sale como `/cdn-cgi/l/email-protection#<hex>`, que **da 404**, y uno
+  de los nueve estaba en el **pie**, o sea en las catorce páginas;
+- y **el texto visible también desaparece**: `grep reservas@` sobre el HTML
+  servido no encuentra nada, solo tres `<span class="__cf_email__">`. Para
+  cualquier rastreador, el correo de esta empresa **no existía en ninguna
+  página** — ni en el aviso legal, donde es contenido obligatorio.
+
+Las nueve direcciones se quedan como **texto**: quitar el enlace y quitar el
+dato son cosas distintas, y la segunda sí incumpliría el art. 10.1.b de la LSSI
+y el canal de derechos del RGPD. Lo vigila `web/src/lib/mailto.spec.ts`, que
+busca `href=…mailto:` —no `mailto:` a secas, que saldría en los comentarios que
+explican esto—, **lleva su control** y además comprueba que el aviso legal y la
+privacidad siguen nombrando el correo.
+
+⚠️ **El botón «Escribir un email» de la portada se BORRÓ**, no se quedó sin
+enlace: un botón que no hace nada es un fallo, y darle `/contacto` lo habría
+dejado al lado de otro botón que ya va ahí.
+
+⚠️ **Orden si alguna vez se vuelve a enlazar:** la ofuscación ya no protege
+nada —no queda ni un `mailto:`— y conviene apagarla para que el texto se
+sirva limpio; pero apagarla **antes** de quitar los enlaces dejaría las nueve
+direcciones a la vista de cualquier recolector.
+
+### El barrido nocturno podía retirar las fichas del índice
+
+Encontrado al contestar «¿se puede automatizar que un coche nuevo llegue a
+Google?». La respuesta era que **ya está automatizado** —el workflow de
+`master` lleva `schedule` y `workflow_dispatch` desde el 8 de octubre— pero al
+mirarlo apareció un agujero que solo existe **porque** el despliegue es
+desatendido:
+
+si la lectura de la flota falla en el build, `flotaEnBuild()` devolvía `[]`, el
+build salía bien, `comprobar-dist.mjs` daba el visto bueno **con razón** (cero
+prometido y cero entregado coinciden) y se publicaba un sitio **sin ninguna
+ficha** — devolviendo `/coche/<slug>` al respaldo `noindex` y retirando de
+Google tres páginas que estaban bien. El único aviso era un `console.warn` en
+el log de un workflow de madrugada.
+
+Ahora, **solo en `--mode live`**, eso lanza: el despliegue se queda rojo y lo
+que sigue publicado es el build anterior, que sí tiene sus fichas. En
+desarrollo y en los PR se conserva el comportamiento tolerante, que ahí sigue
+siendo el bueno. Probado en las dos direcciones apuntando la API a una ruta
+inexistente: `build:prod` sale con código 1 y el mensaje explica qué hacer;
+`build` compila las 14 páginas con su aviso.
+
+⚠️ **Y la hora del cron no era la hora.** Con `15 4 * * *`, las doce últimas
+ejecuciones programadas entraron entre las **08:54 y las 10:55 UTC** — de cinco
+a seis horas y media tarde, sistemático. Eso dejaba la **purga completa de la
+caché de Cloudflare** cayendo a las 11:30 de Madrid, en horario de oficina.
+Movido a `35 2 * * *` para comprar margen. Una hora escrita en un cron no es la
+hora a la que algo ocurre: se mira con `gh run list`.
+
 ### Lo que queda para el panel de Cloudflare (no es del repositorio)
 
-- **La ofuscación de correo** reescribe el `mailto:` del pie a
-  `/cdn-cgi/l/email-protection`, que **da 404 en las catorce páginas**. Son 404
-  rastreados en un sitio que va corto de rastreo, y el correo de la empresa es
-  invisible para Google.
+- **La ofuscación de correo.** Ya no rompe ningún enlace —no queda ninguno—,
+  pero sigue encriptando el **texto** del correo, así que para un rastreador la
+  dirección de la empresa sigue sin existir. Apagarla ahora no tiene ninguna
+  contrapartida.
 - **El `robots.txt` gestionado** contradice al nuestro en los dos hostnames. En
   el escaparate da igual para Google; en el backoffice era lo de arriba.
 - **ClaudeBot recibe 403** en el borde pese a que nuestro `robots.txt` le dice

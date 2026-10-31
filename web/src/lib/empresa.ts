@@ -68,6 +68,33 @@ export const EMPRESA = {
    * contactado— y esta dirección sale impresa en las dos páginas legales como
    * canal de derechos RGPD y de reclamaciones. Si algún día esos MX
    * desaparecen, la web vuelve a prometer algo que no cumple.
+   *
+   * ⚠️ **Y esta dirección NO va enlazada con `mailto:` en ninguna parte de la
+   * web.** Son las nueve que había, quitadas el 31 de octubre de 2026 por
+   * decisión de Dorel —«las personas se contactan conmigo a través de
+   * formulario»— y con un motivo medido detrás: **Cloudflare tiene activada la
+   * ofuscación de correo**, y lo que hace con un `mailto:` no es protegerlo, es
+   * romperlo por los dos lados.
+   *
+   * Medido contra `veltomobility.com/aviso-legal` el 31 de octubre de 2026:
+   *
+   * - el `href` se reescribe a `/cdn-cgi/l/email-protection#<hex>`, que
+   *   **devuelve 404** — un enlace roto en las catorce páginas del sitio, y en
+   *   un dominio nuevo que va corto de presupuesto de rastreo;
+   * - y el **texto visible también desaparece**: `grep reservas@` sobre el HTML
+   *   servido no encuentra nada. En su lugar hay tres
+   *   `<span class="__cf_email__" data-cfemail="…">`, que solo el JavaScript de
+   *   Cloudflare sabe descifrar. O sea que para cualquier rastreador el correo
+   *   de esta empresa **no existe en ninguna página**.
+   *
+   * ⚠️ **Ojo con el orden si algún día se vuelve a enlazar**: la ofuscación se
+   * puede apagar en Cloudflare, y desde que no hay ni un `mailto:` ya no
+   * protege nada —solo estropea el texto—. Pero apagarla **antes** de quitar los
+   * enlaces sí dejaría las nueve direcciones a la vista de cualquier recolector.
+   *
+   * ⚠️ **Lo que se queda es el TEXTO, no un hueco.** Es contenido obligatorio
+   * del aviso legal (art. 10.1.b de la LSSI) y el canal de derechos RGPD de la
+   * política de privacidad: se puede dejar de enlazar, no de decir.
    */
   correo: 'reservas@veltomobility.com',
   /**
