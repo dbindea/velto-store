@@ -71,26 +71,39 @@ export const EMPRESA = {
    *
    * ⚠️ **Y esta dirección NO va enlazada con `mailto:` en ninguna parte de la
    * web.** Son las nueve que había, quitadas el 31 de octubre de 2026 por
-   * decisión de Dorel —«las personas se contactan conmigo a través de
-   * formulario»— y con un motivo medido detrás: **Cloudflare tiene activada la
-   * ofuscación de correo**, y lo que hace con un `mailto:` no es protegerlo, es
-   * romperlo por los dos lados.
+   * decisión de Dorel: «las personas se contactan conmigo a través de
+   * formulario». Es una preferencia suya y se respeta.
    *
-   * Medido contra `veltomobility.com/aviso-legal` el 31 de octubre de 2026:
+   * ⚠️ **Lo que NO hace es arreglar el 404, y eso hay que decirlo aquí porque
+   * este comentario llegó a afirmar lo contrario.** La ofuscación de correo de
+   * Cloudflare —activa en la zona— no se limita a reescribir los `mailto:` que
+   * encuentra: **fabrica un enlace donde solo había texto**. Medido el 31 de
+   * octubre de 2026 con este mismo cambio ya desplegado, comparando el origen
+   * con lo que entrega el borde:
    *
-   * - el `href` se reescribe a `/cdn-cgi/l/email-protection#<hex>`, que
-   *   **devuelve 404** — un enlace roto en las catorce páginas del sitio, y en
-   *   un dominio nuevo que va corto de presupuesto de rastreo;
-   * - y el **texto visible también desaparece**: `grep reservas@` sobre el HTML
-   *   servido no encuentra nada. En su lugar hay tres
-   *   `<span class="__cf_email__" data-cfemail="…">`, que solo el JavaScript de
-   *   Cloudflare sabe descifrar. O sea que para cualquier rastreador el correo
-   *   de esta empresa **no existe en ninguna página**.
+   *     velto-web-dev.web.app/aviso-legal   (Firebase, sin Cloudflare delante)
+   *       <strong>Correo:</strong> reservas@veltomobility.com
    *
-   * ⚠️ **Ojo con el orden si algún día se vuelve a enlazar**: la ofuscación se
-   * puede apagar en Cloudflare, y desde que no hay ni un `mailto:` ya no
-   * protege nada —solo estropea el texto—. Pero apagarla **antes** de quitar los
-   * enlaces sí dejaría las nueve direcciones a la vista de cualquier recolector.
+   *     dev.veltorent.com/aviso-legal       (lo mismo, a través de Cloudflare)
+   *       <a href="/cdn-cgi/l/email-protection" class="__cf_email__"
+   *          data-cfemail="abd9…">[email&#160;protected]</a>
+   *
+   * O sea: el origen sirve texto limpio y Cloudflare devuelve el ancla. Esa URL
+   * responde **404** —comprobado en los dos hosts, con fragmento y sin él—, así
+   * que el enlace roto sigue en las catorce páginas, y el correo sigue sin
+   * existir para cualquier rastreador que no ejecute su JavaScript.
+   *
+   * ⚠️ **Lo único que lo arregla es apagar el ajuste en Cloudflare**
+   * (Scrape Shield › Email Address Obfuscation). No es código y por eso no está
+   * aquí; está anotado en el traspaso de sesión, entre lo que solo puede hacer
+   * Dorel desde el panel.
+   *
+   * ⚠️ **Y entonces la dirección queda legible para los recolectores, vaya
+   * enlazada o no.** Un correo en texto plano se recoge con la misma expresión
+   * regular que un `mailto:`, así que quitar los enlaces **no** es una medida
+   * antispam y no debe contarse como tal: lo que protegía —mal— era la
+   * ofuscación. La decisión de apagarla es esa, a cambio de los 404 y de la
+   * invisibilidad.
    *
    * ⚠️ **Lo que se queda es el TEXTO, no un hueco.** Es contenido obligatorio
    * del aviso legal (art. 10.1.b de la LSSI) y el canal de derechos RGPD de la

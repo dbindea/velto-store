@@ -6,25 +6,24 @@ import { describe, expect, it } from 'vitest';
 /**
  * **La web pública no enlaza el correo con `mailto:`.**
  *
- * ⚠️ **Este test existe porque volver a poner uno NO FALLA NADA.** Compila,
- * pasa `astro check`, pasa el build, pasa el despliegue y la página se ve
- * perfectamente **en el navegador de quien la escribió**: el daño solo aparece
- * en el HTML que sirve Cloudflare, semanas después y en Search Console. Es el
- * patrón que este proyecto llama dominante, aplicado a una etiqueta de tres
- * caracteres.
- *
- * Lo que pasa de verdad, medido contra `veltomobility.com/aviso-legal` el 31 de
- * octubre de 2026 con la ofuscación de correo de Cloudflare activada:
- *
- * - el `href` se reescribe a `/cdn-cgi/l/email-protection#<hex>`, que **da
- *   404** — y había uno en el pie, o sea en las catorce páginas del sitio;
- * - y el **texto visible también se va**: `grep reservas@` sobre el HTML
- *   servido no encuentra nada, solo `<span class="__cf_email__">`. Para un
- *   rastreador, el correo de la empresa no existía en ninguna página.
- *
  * Decisión de Dorel del 31 de octubre de 2026: «las personas se contactan
  * conmigo a través de formulario». El razonamiento completo está en
  * `empresa.ts`, junto a la dirección.
+ *
+ * ⚠️ **Este test existe porque volver a poner uno NO FALLA NADA.** Compila,
+ * pasa `astro check`, pasa el build, pasa el despliegue y la página se ve
+ * perfectamente, así que lo único que lo impediría es acordarse — que es el
+ * mecanismo que este proyecto ya ha visto fallar cuatro veces con
+ * `.form-control`.
+ *
+ * ⚠️ **Y NO es una defensa contra el 404 de Cloudflare, aunque nació
+ * creyéndolo.** Medido ese mismo día con el cambio ya desplegado: la ofuscación
+ * de correo **fabrica el enlace aunque el fuente solo tenga texto**. El origen
+ * sirve `Correo: reservas@veltomobility.com` y el borde entrega
+ * `<a href="/cdn-cgi/l/email-protection" class="__cf_email__">`, que da 404. O
+ * sea que el enlace roto no lo quita este test ni el commit que lo trajo: lo
+ * quita apagar el ajuste en el panel de Cloudflare. Lo que esto sostiene es la
+ * decisión de arriba, que es razón suficiente y es otra cosa.
  *
  * ⚠️ **Lo que se prohíbe es el ENLACE, no la dirección.** El correo sigue
  * escrito como texto en el aviso legal y en la política de privacidad, donde es

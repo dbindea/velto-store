@@ -1914,18 +1914,42 @@ con su título y su `data-coche-id`; `/coche/RuEYtRi9CvtwSjPoSRvd` —la URL
 vieja— abre el mismo coche por el respaldo; y `/coche/no-existe` dice «no hay»
 en vez de dar error. Y a través de Cloudflare llega idéntico.
 
-### Y el mismo día: fuera los nueve `mailto:`
+### Y el mismo día: fuera los nueve `mailto:` — pero el 404 NO lo arregla eso
 
 Decisión de Dorel —«las personas se contactan conmigo a través de
-formulario»—, y al medirlo resultó peor de lo que se había reportado. Contra
-`veltomobility.com/aviso-legal`, con la ofuscación de Cloudflare activada:
+formulario»—, hecha y respetada. Lo que sigue está escrito porque **la primera
+versión de esta sección afirmaba que quitarlos quitaba los 404, y es falso**;
+se midió después y conviene que no se vuelva a creer.
 
-- el `href` sale como `/cdn-cgi/l/email-protection#<hex>`, que **da 404**, y uno
-  de los nueve estaba en el **pie**, o sea en las catorce páginas;
-- y **el texto visible también desaparece**: `grep reservas@` sobre el HTML
-  servido no encuentra nada, solo tres `<span class="__cf_email__">`. Para
-  cualquier rastreador, el correo de esta empresa **no existía en ninguna
-  página** — ni en el aviso legal, donde es contenido obligatorio.
+**La medición que lo decide**, el 31 de octubre de 2026, con el cambio ya
+desplegado en el sitio de desarrollo. La misma línea del aviso legal, pedida a
+los dos sitios:
+
+```
+velto-web-dev.web.app/aviso-legal      (Firebase, sin Cloudflare delante)
+  <strong>Correo:</strong> reservas@veltomobility.com
+
+dev.veltorent.com/aviso-legal          (lo mismo, a traves de Cloudflare)
+  <a href="/cdn-cgi/l/email-protection" class="__cf_email__"
+     data-cfemail="abd9...">[email&#160;protected]</a>
+```
+
+O sea: **la ofuscación de correo de Cloudflare fabrica el enlace aunque el
+fuente solo tenga texto.** No reescribe `mailto:`, reescribe **direcciones**.
+Esa URL responde **404** —comprobado en los dos hosts, con fragmento y sin él—,
+así que el enlace roto sigue en las catorce páginas y el correo sigue sin
+existir para un rastreador que no ejecute el `email-decode.min.js` que
+Cloudflare inyecta.
+
+⚠️ **Lo único que lo arregla es apagar el ajuste en el panel**, y por eso está
+abajo entre lo de Cloudflare. El commit no lo arregla; sostiene la preferencia
+de Dorel, que es razón suficiente y es otra cosa.
+
+⚠️ **Y quitar los enlaces NO es una medida antispam.** Un correo en texto plano
+se recoge con la misma expresión regular que un `mailto:`, así que en cuanto se
+apague la ofuscación la dirección queda legible para los recolectores vaya
+enlazada o no. La versión anterior de esta sección avisaba de «un orden» que no
+existe: no hay ventana que proteger.
 
 Las nueve direcciones se quedan como **texto**: quitar el enlace y quitar el
 dato son cosas distintas, y la segunda sí incumpliría el art. 10.1.b de la LSSI
@@ -1938,10 +1962,12 @@ privacidad siguen nombrando el correo.
 enlace: un botón que no hace nada es un fallo, y darle `/contacto` lo habría
 dejado al lado de otro botón que ya va ahí.
 
-⚠️ **Orden si alguna vez se vuelve a enlazar:** la ofuscación ya no protege
-nada —no queda ni un `mailto:`— y conviene apagarla para que el texto se
-sirva limpio; pero apagarla **antes** de quitar los enlaces dejaría las nueve
-direcciones a la vista de cualquier recolector.
+⚠️ **La lección general, que es la que vale más que el caso:** cuando hay un
+proxy delante, **el fuente no dice lo que se sirve**. Ya lo había enseñado el
+`robots.txt` del backoffice —el del repositorio decía una cosa y el entregado
+otra— y aquí ha vuelto por una vía distinta. La comprobación es siempre la
+misma: pedir la URL de verdad y comparar con el origen, que en este proyecto es
+el `.web.app`.
 
 ### El barrido nocturno podía retirar las fichas del índice
 
@@ -1974,10 +2000,14 @@ hora a la que algo ocurre: se mira con `gh run list`.
 
 ### Lo que queda para el panel de Cloudflare (no es del repositorio)
 
-- **La ofuscación de correo.** Ya no rompe ningún enlace —no queda ninguno—,
-  pero sigue encriptando el **texto** del correo, así que para un rastreador la
-  dirección de la empresa sigue sin existir. Apagarla ahora no tiene ninguna
-  contrapartida.
+- ⚠️ **La ofuscación de correo, y es lo único de esta lista que arregla un
+  fallo real.** Quitar los `mailto:` del repositorio **no bastó**: Cloudflare
+  fabrica el enlace a partir del texto, así que las catorce páginas siguen
+  apuntando a `/cdn-cgi/l/email-protection`, que da **404**, y el correo sigue
+  cifrado para los rastreadores. Está en **Scrape Shield › Email Address
+  Obfuscation**, es un interruptor por zona, y hay que apagarlo en
+  `veltomobility.com`. La contrapartida es real y hay que decirla: a partir de
+  ahí la dirección queda legible también para los recolectores de correo.
 - **El `robots.txt` gestionado** contradice al nuestro en los dos hostnames. En
   el escaparate da igual para Google; en el backoffice era lo de arriba.
 - **ClaudeBot recibe 403** en el borde pese a que nuestro `robots.txt` le dice
