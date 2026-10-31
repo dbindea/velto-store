@@ -1865,6 +1865,53 @@ las cuatro rutas de cliente, que llevan un secreto en la URL.
 **La lección, que vale para cualquier dominio con Cloudflare delante: lo que hay
 en `public/` no es lo que se entrega.**
 
+### Y el 31 de octubre: las fichas pasan a `/coche/renault-megane`
+
+Lo pidió Dorel antes de desplegar lo anterior: `/coche/jRfQu3ebHPe1HnWzvmrV` no
+se puede dictar por teléfono ni recordar, y para un buscador veinte caracteres
+aleatorios no son ninguna palabra.
+
+⚠️ **El desempate NO lleva la matrícula, y conviene saber por qué antes de
+volver a proponerlo.** La petición original era `renault-megane-4466lkk`, y la
+matrícula **no está en la API pública**: `mapper.ts` la excluye a propósito
+—clonado de placas, y en un coche cedido señala el vehículo de un particular—.
+Usarla obligaba a publicarla **y** a dejarla indexada en Google para siempre.
+Puesto así, Dorel eligió la alternativa: desempata la **versión**, que es dato
+público, y si aun así chocan, un código corto del id.
+
+⚠️ **El reparto depende de la flota ENTERA** (`slugsDeFlota`): si hay dos
+Mégane cambian los dos, así que no se puede decidir mirando un coche solo. Es
+determinista —los grupos en conflicto se ordenan por id— para que un despliegue
+no mueva la dirección de un coche sin que nadie toque nada. Por eso
+`tarjetaCoche()` **exige** el slug en vez de calcularlo, y quien lo pasa usa
+`slugs.get(c.id) ?? c.id`: una lista filtrada puede no traer al gemelo, y el id
+siempre resuelve.
+
+⚠️ **Las direcciones viejas con id siguen abriendo**, y hay que conservarlo:
+están en el índice de Google y en los WhatsApp que ya se mandaron.
+`cocheDeSegmento()` acepta las dos formas. **No hacen falta redirecciones**:
+esas URL nunca llegaron a indexarse —Search Console las daba como «descubiertas
+y nunca rastreadas»—, así que no hay nada que consolidar.
+
+⚠️ **Y el cambio que no se ve pero sostiene todo:** el script de la ficha pedía
+el coche con el **último segmento de la ruta**, que *era* el id. Con un slug esa
+llamada devuelve «no encontrado», así que **todas** las fichas —las
+prerrenderizadas incluidas— habrían acabado en el mensaje de error. Ahora la
+página generada trae su id dentro (`data-coche-id`) y el respaldo traduce el
+slug contra la flota.
+
+⚠️ **La canónica que escribe el script es `location.pathname`, no el id.** Con
+`v.id`, cada ficha generada declaraba en su HTML la canónica buena y el script
+la sustituía por la vieja un instante después. Y en el respaldo se queda
+apuntándose a sí misma **a propósito**: esa página es `noindex`, y un `noindex`
+junto a una canónica a otra URL son señales contradictorias que pueden
+propagar el `noindex` a la canónica — o sea, a la ficha de verdad.
+
+Comprobado en el sitio de desarrollo desplegado: `/coche/renault-clio` carga
+con su título y su `data-coche-id`; `/coche/RuEYtRi9CvtwSjPoSRvd` —la URL
+vieja— abre el mismo coche por el respaldo; y `/coche/no-existe` dice «no hay»
+en vez de dar error. Y a través de Cloudflare llega idéntico.
+
 ### Lo que queda para el panel de Cloudflare (no es del repositorio)
 
 - **La ofuscación de correo** reescribe el `mailto:` del pie a
