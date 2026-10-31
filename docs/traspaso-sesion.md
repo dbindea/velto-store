@@ -2003,11 +2003,44 @@ hora a la que algo ocurre: se mira con `gh run list`.
 - ⚠️ **La ofuscación de correo, y es lo único de esta lista que arregla un
   fallo real.** Quitar los `mailto:` del repositorio **no bastó**: Cloudflare
   fabrica el enlace a partir del texto, así que las catorce páginas siguen
-  apuntando a `/cdn-cgi/l/email-protection`, que da **404**, y el correo sigue
-  cifrado para los rastreadores. Está en **Scrape Shield › Email Address
-  Obfuscation**, es un interruptor por zona, y hay que apagarlo en
-  `veltomobility.com`. La contrapartida es real y hay que decirla: a partir de
-  ahí la dirección queda legible también para los recolectores de correo.
+  apuntando a `/cdn-cgi/l/email-protection`, que da **404**. Medido el 31 de
+  octubre de 2026: **22 enlaces rotos** repartidos por las 14 páginas, el
+  script `email-decode.min.js` inyectado en las 14, y **cero** páginas donde el
+  correo se lea sin ejecutar JavaScript.
+
+  ⚠️ **Y la ruta del panel hay que AVERIGUARLA, no darla por sabida.** La
+  documentación de Cloudflare del 26 de octubre de 2026 dice que el panel nuevo
+  de Security se está desplegando **gradualmente**, así que hoy conviven las dos
+  navegaciones según la cuenta. El discriminador es el botón **«Try new
+  dashboard»** en la esquina superior derecha de cualquier página de Security:
+
+  - **si está** → panel antiguo → menú lateral **Scrape Shield** › *Email
+    Address Obfuscation* › **Off**;
+  - **si no está** → panel nuevo → **Security › Settings** › categoría
+    *Client-side abuse* › *Email Address Obfuscation* › **Off**.
+
+  ⚠️ **El discriminador NUNCA es «¿existe Security → Settings?»**, que fue la
+  primera redacción de esta nota y es falsa: esa página **existe en los dos
+  paneles** con contenidos distintos, así que quien la use se queda mirando una
+  página real sin su interruptor y sin que salte ningún plan B.
+
+  ⚠️ **Y no se pulsa «Try new dashboard» para llegar al ajuste.** La migración
+  es **de un solo sentido** —lo dice la documentación: «the opt-out option is no
+  longer available… a one-way migration»—, y no hace ninguna falta: en el panel
+  antiguo el interruptor está a mano en Scrape Shield.
+
+  Es por **zona**: `veltomobility.com` es la que importa; `veltorent.com` solo
+  si se quiere que el sitio de desarrollo se comporte igual al probar. Y
+  **después hay que purgar** (Caching › Configuration › Purge Cache › Purge
+  Everything): el HTML se sirve del borde con `cf-cache-status: HIT` y `Age` de
+  hasta 2.500 s sobre un `max-age` de 300.
+
+  ⚠️ **La contrapartida, dicha:** a partir de ahí la dirección queda legible
+  también para los recolectores de correo. Existe una alternativa más fina y
+  documentada —envolver la dirección en `<!--email_off-->…<!--/email_off-->`,
+  que exime esa dirección sin apagar la función—, **sin comprobar todavía en
+  este sitio**. Si se adopta, se comprueba contra `dev.veltorent.com` primero,
+  que es donde la ofuscación también está puesta.
 - **El `robots.txt` gestionado** contradice al nuestro en los dos hostnames. En
   el escaparate da igual para Google; en el backoffice era lo de arriba.
 - **ClaudeBot recibe 403** en el borde pese a que nuestro `robots.txt` le dice
