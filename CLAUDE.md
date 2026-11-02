@@ -4976,13 +4976,22 @@ cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en u
 
 - **Redsys funciona de extremo a extremo** desde el 31 de agosto de 2026: probado contra la
   pasarela de test y **con dinero real en producción** (10 €, código de autorización
-  379521). El webhook recibe, valida la firma y escribe el resultado. Comercio `361040215`,
-  terminal `1`, `test` en dev y **`live`** en producción.
-  ⚠️ Ese cobro se hizo desde **el botón del operador**. La pantalla pública del móvil
-  llegó después y perdió un cobro real el 4 de septiembre (F-32): arreglado el mismo día,
-  pero **todavía no hay un pago por esa vía que se haya registrado solo**. Una vía de
-  cobro no está probada hasta que alguien paga por ella y la aplicación se entera sin
-  ayuda.
+  379521). El webhook recibe, valida la firma y escribe el resultado.
+  ⚠️ **Los dos entornos ya NO comparten comercio, desde el 2 de noviembre de 2026.**
+  Desarrollo pasó al comercio **propio de VELTO** que entregó BBVA para probar el alta
+  —`370770240`, terminal `001`, `test`— y producción sigue con el `361040215`, terminal
+  `1`, `live`, que es de otro comercio, está prestado y **es el que cobra de verdad**. Al
+  conceder producción hay que cambiar **tres líneas y no una** —comercio, terminal y
+  clave—, o las firmas salen con la clave de uno y el código de otro y la pasarela
+  contesta `SIS0042`, que se lee como «la clave está mal». El procedimiento y las seis
+  operaciones probadas están en [docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 bis.
+  ⚠️ **Y la pantalla pública del móvil ya se ha registrado sola, en desarrollo.** Aquí
+  ponía que «todavía no hay un pago por esa vía que se haya registrado solo» desde que
+  perdió un cobro real el 4 de septiembre (F-32). Dejó de ser cierto el 2 de noviembre:
+  pre-reserva en `dev.veltorent.com`, «Pagar la señal», 50 € pagados en la pasarela, y la
+  aplicación se enteró **sin que nadie abriera el panel**. En producción esa vía sigue
+  apagada. Una vía de cobro no está probada hasta que alguien paga por ella y la
+  aplicación se entera sin ayuda — y ésta ya lo está en el entorno donde se puede probar.
 - **Los cargos extra que la fianza no cubre quedan pendientes**, no cobrados. Antes nacían
   `paid` sin cobrarse y el exceso desaparecía (M-33). El reparto vive en
   `distributeRetentionAcrossCharges`, con tests.

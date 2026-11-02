@@ -15,6 +15,65 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 2 de noviembre de 2026 — el comercio propio del TPV
+
+BBVA entregó el entorno de pruebas del alta y desarrollo pasó al comercio de
+VELTO (`370770240` / `001`). Las seis operaciones probadas —dos autorizaciones,
+una denegación, un reintento y dos devoluciones— están en
+[tpv-bbva.md](tpv-bbva.md) § 3 bis. **Producción no se tocó.**
+
+Dos cosas que salieron por el camino y que **no son del cambio**: estaban antes y
+siguen estando.
+
+### ⬜ M-49 · Devolver una fianza a la tarjeta no la da por devuelta en los libros
+
+⚠️ **Hay dos mecanismos para el mismo hecho y ninguno sabe del otro.**
+`refundRedsysPayment` mueve el dinero —`update` sobre el cobro, subiendo
+`refundedAmount`— y **no escribe ninguna fila `deposit_refund`**; esas solo las
+crea el botón «Devolver total» de la ficha de la reserva
+(`payment.service.ts:846`), que escribe el apunte y **no mueve un euro**.
+
+Medido ese día: devuelta la fianza entera de 150 € a la tarjeta, la ficha del
+cobro dice «Este cobro está devuelto» y la cabecera de la reserva sigue diciendo
+**«Ya entregado 397,95 €»** y **«En depósito, se le devuelve al cliente:
+150,00 €»**. Las dos cifras son falsas: ese dinero ya salió.
+
+La causa está localizada y es de una línea: `collectedTotalsOf()` suma
+`paidAmount` y **no descuenta `refundedAmount`** —filtra solo lo `cancelled`, y
+un cobro `refunded` sigue contando entero—, y `depositReturned` mira únicamente
+las filas de tipo `deposit_refund`. Es justo lo contrario de `sumPaid()` en
+`analytics.util.ts`, que sí descuenta.
+
+⚠️ **No puede salir dinero dos veces, y por eso esto no es urgente.** El tope de
+`refundableAmount` queda a 0 y la aplicación no deja sacar más. Lo que sí puede
+pasar es que el operador pulse después «Devolver total» y los libros apunten una
+devolución que ya ocurrió — un descuadre, no una pérdida.
+
+⚠️ **Lo que hay que decidir antes de tocarlo es cuál de los dos manda**, y es
+una decisión de Dorel, no de código: o la devolución a tarjeta escribe también
+su apunte, o la pantalla avisa de que falta darla por devuelta. Arreglar solo
+`collectedTotalsOf()` cuadraría la cabecera y dejaría la fianza contando como
+resuelta sin que nadie lo haya decidido.
+
+### ⬜ M-50 · La ficha de cada coche pide el vehículo por el slug y recibe un 404
+
+⚠️ **Pasa en los DOS entornos, producción incluida.** Al abrir
+`/coche/renault-clio` la página llama a `/api/vehicle?id=renault-clio` —el slug—
+y la function contesta **404**; acto seguido resuelve el id real
+(`RuEYtRi9CvtwSjPoSRvd`) y repite la llamada, que sale `200`. O sea que **no
+está roto**: el precio se calcula, el calendario se pinta y la pre-reserva se
+puede hacer.
+
+Lo que deja es una petición desperdiciada y **dos errores en la consola de cada
+visita a una ficha**, que es el ruido que hace que un error de verdad no se vea.
+Comprobado el mismo día contra los dos hosts con `curl.exe`: los dos 404.
+
+La salida barata es que la página no intente el slug —ya resuelve el id ella
+misma—; la cara, que `publicVehicleDetail` acepte slug además de id. La primera
+basta.
+
+---
+
 ## Estado a 20 de octubre de 2026 — lo que dejó la semana del TPV
 
 Cinco días de trabajo (del 15 al 20 de octubre) que terminan con producción al
@@ -2319,6 +2378,13 @@ bases— y la subida de la factura a Storage.
   |---|---|---|---|
   | desarrollo | 361040215 | 1 | `test` |
   | producción | 361040215 | 1 | `live` |
+
+  > ⚠️ **Esa tabla es del 31 de agosto y la fila de desarrollo caducó el 2 de
+  > noviembre de 2026**: BBVA entregó el comercio propio de VELTO para probar el
+  > alta y desarrollo pasó a `370770240` / `001`. Producción se queda con el
+  > `361040215` hasta que concedan el pase. Se deja como estaba porque es el
+  > registro de aquel día; lo vigente está en
+  > [tpv-bbva.md](tpv-bbva.md) § 3 bis.
 
   **Probado contra la pasarela real de test.** `createRedsysPaymentLink`
   devuelve `200` —ya no aborta con «Redsys no está configurado»— con importe,
