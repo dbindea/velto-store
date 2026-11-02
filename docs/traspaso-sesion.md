@@ -1,14 +1,16 @@
-# Traspaso de sesión — 20 de octubre de 2026
+# Traspaso de sesión — 2 de noviembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 vicies**, que es lo último que pasó (del 30 al 31
-> de octubre: el sitemap anunciaba fichas que no existían, el backoffice de
-> producción resultó ser indexable, las fichas pasaron a
-> `/coche/renault-megane`, se quitaron los nueve `mailto:` y se cerró un
-> agujero del despliegue nocturno); después **§ 2 novodecies**
+> **Orden de lectura:** **§ 2 unvicies**, que es lo último que pasó (2 de
+> noviembre: BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al
+> comercio propio de VELTO, con seis operaciones probadas contra la pasarela);
+> después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap anunciaba fichas
+> que no existían, el backoffice de producción resultó ser indexable, las fichas
+> pasaron a `/coche/renault-megane`, se quitaron los nueve `mailto:` y se cerró
+> un agujero del despliegue nocturno); después **§ 2 novodecies**
 > (ese mismo día: los campos de fecha en el móvil); después **§ 2 octodecies** (del 15 al 20 de octubre: el
 > TPV del banco, el pago de la señal desde la web y el scroll a tirones del
 > móvil); después **§ 2 ter**, que dice qué falta por desplegar
@@ -16,15 +18,24 @@
 > de por una lista—; y luego **§ 5**, con los huecos que solo puede cerrar
 > Dorel, que son los únicos que siguen abiertos de verdad.
 >
-> ⚠️ **Lo primero que hay que saber hoy: el expediente del TPV está en manos de
-> BBVA.** El aviso legal ya dice qué se cobra con tarjeta, que es lo que
-> rechazaron, y está vivo en producción. Mientras no contesten, **el pago de la
-> señal desde la web sigue apagado allí** (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`).
-> Encenderlo es una decisión de Dorel, no un despliegue pendiente.
+> ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
+> BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
+> terminal `001`—, que es el paso previo. Desarrollo ya cobra contra ese comercio
+> y las seis operaciones que pide el banco están probadas; **producción sigue con
+> el `361040215`, que es prestado y es el que cobra de verdad.** Dorel iba a
+> pedir el pase a producción y avisará para sustituirlo allí. Mientras tanto, el
+> pago de la señal desde la web sigue **apagado** en producción
+> (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **No hay nada pendiente de subir.** `master` y `develop` están
-> sincronizados y producción corre el código de hoy. Si vas a empezar algo,
-> empiezas de limpio.
+> ⚠️ **`develop` lleva CUATRO commits por delante de `master`, y NO hay que
+> desplegar nada.** Son dos de documentación y el cambio del comercio de
+> **desarrollo**; del lado de producción el `.env` solo cambia comentarios. Ver
+> § 2 ter, que explica por qué un `git diff` contra `master` dice que
+> `functions/` cambió cuando no hay nada que subir.
+>
+> ⚠️ **Y mide las ramas contra `origin/`, no contra la local.** El 2 de
+> noviembre `master` en local estaba parado en un commit viejo y
+> `git log master..develop` dio **12** donde hay **4**.
 >
 > ⚠️ **Y si algo no compila nada más abrir, lee § 2 nonies antes de buscar el
 > fallo en el código.** El 3 de octubre desaparecieron ficheros del espacio de
@@ -2048,6 +2059,126 @@ hora a la que algo ocurre: se mira con `gh run list`.
 
 ---
 
+## 2 unvicies. El 2 de noviembre — el TPV pasa al comercio propio de VELTO
+
+**BBVA contestó.** Lo que entregó no es el alta: es el **entorno de pruebas**
+—el paso que el banco pide antes de conceder producción— y con él desarrollo
+dejó de cobrar contra un comercio prestado.
+
+Dorel dejó los datos en `C:\Users\dorel\workspace\redsys.txt`, fuera del
+repositorio, que es donde tienen que estar.
+
+| | Comercio | Terminal | Entorno |
+|---|---|---|---|
+| **desarrollo** | `361040215` → **`370770240`** | `1` → **`001`** | `test` |
+| producción | `361040215` *(sin tocar)* | `1` | `live` |
+
+⚠️ **Lo que cambia en el repositorio es UN fichero y dos líneas de valor**:
+`functions/.env.velto-store`. El comercio y el terminal no son secretos —viajan
+firmados dentro del formulario que ve el cliente— y viven ahí desde M-23.
+
+⚠️ **La clave NO hubo que cambiarla, aunque el comercio sí.** El banco asignó a
+este comercio de pruebas la clave que **Redsys publica en su documentación**, y
+resultó ser la que ya estaba en Secret Manager. Comprobado comparando huellas
+SHA-256 sin imprimir los valores: la de desarrollo coincidía y **la de
+producción es otra**, que es lo que tiene que pasar. Sorprende leer que una
+clave está en internet; en el entorno de test no hay nada que proteger.
+
+### Las seis operaciones, que es lo que el banco pide
+
+Contra `sis-t.redsys.es:25443`, tarjeta `4548 8120 4940 0004` (12/34, CVV 123) y
+el simulador EMV3DS 2.2.0. La pasarela se identifica como **VELTO MOBILITY
+(SPAIN)**, terminal `370770240-1`, y sale con la marca **BBVA** — que es la
+confirmación de que el comercio es el nuestro y no el prestado.
+
+| # | Operación | Vía | Resultado |
+|---|---|---|---|
+| 1 | Señal 50,00 € | **web pública** | autorizada · **401385** |
+| 2 | Fianza 150,00 € | backoffice | autorizada · **055388** |
+| 3 | Resto 197,95 € | backoffice | **denegada**, y SIS9915 al cancelar |
+| 4 | Resto, reintento | backoffice | autorizada · **055393** |
+| 5 | Devolución parcial 50,00 € | ficha del cobro | aceptada · **0900** |
+| 6 | Devolución del resto 100,00 € | ficha del cobro | aceptada · **0900** |
+
+Lo que cada una demuestra, que es lo que la tabla no dice:
+
+- ⚠️ **La 1 cierra la deuda de F-32.** Desde que se perdió aquel cobro real del
+  4 de septiembre, este fichero y CLAUDE.md decían que la pantalla pública del
+  móvil «no tenía todavía un pago que se hubiera registrado solo». **Dejó de ser
+  cierto**: pre-reserva en `dev.veltorent.com`, «Pagar la señal», pagado, y la
+  aplicación se enteró sin que nadie abriera el panel — `/pay/:id` decía «Pago
+  recibido · 50,00 €» al recargar. En producción esa vía sigue apagada.
+- ⚠️ **La 3 son DOS pruebas y conviene no confundirlas.** Un fallo de
+  **autenticación** 3-D Secure no llega a autorización, así que Redsys **no
+  notifica nada** y el cobro se queda `Pendiente` y pagable — comprobado: ni un
+  aviso en el webhook y la ficha sin cambiar. Lo que sí notifica es la
+  **cancelación** (SIS9915), y ahí pasa a `Fallido`.
+- ⚠️ **La 4 es la que protege de `SIS0051`.** El pedido salió **distinto** del
+  quemado: `resolveOrder()` emite uno nuevo en cuanto el anterior recibió aviso.
+  Reutilizándolo, el reintento tras una denegación fallaría siempre.
+- ⚠️ **La 5 y la 6 se leen con OTRA regla.** `0900` es devolución aceptada; con
+  la del cobro (`0000`–`0099`) parecerían un error, y lo que sigue a un error es
+  reintentar: dinero fuera dos veces. Y la parcial **no cambia el estado** — el
+  cobro sigue `paid` con `refundedAmount: 50`.
+
+⚠️ **El tope funciona.** Devueltos los 150 € completos, la sección de devolver
+**desaparece**: `refundableAmount` es 0 y no hay forma de sacar más.
+
+⚠️ **Lo que NO se probó, y hay que decirlo:** una **denegación de autorización**
+de verdad —fondos insuficientes, tarjeta caducada—. El simulador de este entorno
+deniega en la **autenticación**, un paso antes, y para el otro caso hace falta
+una tarjeta de pruebas que el banco no dio. Si BBVA lo exige, hay que pedírsela.
+Tampoco **Bizum**, que la pasarela ofrece y la aplicación no integra.
+
+### Lo siguiente, y es de Dorel
+
+Dijo que pediría el pase a producción y que avisaría para sustituirlo allí
+también. Cuando llegue, lo que hay escrito en
+[tpv-bbva.md](tpv-bbva.md) § 3 bis es el guion; de ahí, lo que no es obvio:
+
+- ⚠️ **Son TRES líneas y no una.** Lo que mandará el banco es la clave, así que
+  la tentación es cambiar solo el secret; con el `361040215` todavía escrito en
+  `.env.rentalcar-veltomobility`, las firmas saldrían con la clave de un
+  comercio y el código de otro y la pasarela contestaría **`SIS0042`** — que se
+  lee como «la clave está mal» y no como «no se corresponden».
+- ⚠️ **Y CONFIRMAR el número que mandan**, no darlo por igual al de pruebas. Lo
+  normal en Redsys es que coincida y solo cambie la clave, pero eso es lo normal
+  y no lo seguro.
+- ⚠️ **Lo que de verdad hay que mirar antes: las fianzas del comercio viejo.**
+  `refundRedsysPayment` lee el comercio y la clave de `process.env` **en cada
+  llamada** —no del documento del pago— y manda el pedido del cobro original. En
+  cuanto se cambie, **cualquier cobro hecho con el `361040215` deja de poderse
+  devolver desde la aplicación**: la petición sale a nombre de un comercio que
+  no conoce ese pedido. El caso que más duele es una **fianza cobrada y aún sin
+  devolver**, que es lo normal — se devuelve semanas después. No tiene arreglo en
+  el código: el documento guarda su `merchantCode`, pero la clave del comercio
+  viejo no se puede recuperar porque solo hay una en Secret Manager. Así que el
+  cambio se **planifica**: mirar antes si queda alguna, y o devolverla antes o
+  asumir que esa irá por el panel del banco.
+- ⚠️ **La primera operación en producción, importe mínimo y devuelta.** Allí
+  `live` significa dinero real: no hay tarjetas de prueba.
+
+### Y una lección de método que costó la primera medición de la sesión
+
+⚠️ **`git log master..develop` mintió, y la causa era la rama LOCAL.**
+`master` en local estaba parado en `f95e85a` —de una sesión anterior— mientras
+`origin/master` iba por `b432b43`, así que la comparación dio **12 commits** por
+delante donde hay **4**. Media página de este fichero se escribió sobre esa
+cifra antes de volver a mirarla.
+
+Lo que vale es comparar **contra `origin/`** y después de un `git fetch`:
+
+```bash
+git fetch origin
+git log --oneline origin/master..origin/develop
+```
+
+Es la misma lección que ya está escrita aquí para los dominios y para el
+inventario de functions, con otra cara: **la referencia que tienes delante no es
+la que está publicada.**
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
 **Medido el 8 de octubre de 2026, después del despliegue: NO FALTA NADA.**
@@ -2073,16 +2204,46 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
-**Vuelto a medir el 20 de octubre de 2026, después de desplegar: NO FALTA NADA.**
+**Vuelto a medir el 2 de noviembre de 2026: a producción NO le falta nada, y
+`develop` lleva CUATRO commits por delante que no hay que desplegar.**
 
 | | |
 |---|---|
+| `origin/master` | `b432b43`, desplegado y verificado |
+| `origin/develop` | `13b74b1` — **4 commits** por delante |
+| qué son esos 4 | dos de documentación y el cambio del comercio de **desarrollo** |
+| ¿hay que desplegar algo? | **no.** Lo único de `functions/` es el `.env`, y en el de producción **solo cambian comentarios** |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
-| `master` vs `develop` | sincronizados (`4e4f867`) |
-| la nueva | `createSignalPayment`, desplegada **apagada** en producción |
-| rewrites de la web | los **cinco** responden, incluido `/api/pagar-senal` |
-| suites | **931 · 784 · 102**, las cuatro auditorías OK |
+| rewrites de la web | los cinco responden; `/api/pagar-senal`, solo en desarrollo |
+
+⚠️ **Esas 33 se midieron hoy con `--json`, y de paso salió que CLAUDE.md estaba
+desfasado**: decía **32** y que faltaba además `createSignalPayment`. Está
+desplegada en producción desde el 20 de octubre —**apagada** por su bandera, que
+es otra cosa— y esta misma sección ya lo recogía entonces; lo que no se actualizó
+fue CLAUDE.md. Corregido hoy. Es el patrón de siempre: **la cifra escrita a mano
+en un sitio no se entera de lo que se midió en otro.**
+
+⚠️ **Esa penúltima fila es la que hay que entender antes de desplegar nada.**
+Tocar un `.env` cambia el hash de **todas** las functions, así que un `git diff`
+contra `master` dice que `functions/` cambió y parece que hay que subirlo. No lo
+hay: lo que cambió del lado de producción son comentarios. Se comprueba mirando
+solo las líneas de valor, que es lo que separa un cambio real de uno escrito:
+
+```bash
+git diff origin/master..origin/develop -- functions/.env.rentalcar-veltomobility \
+  | grep -E "^[+-][A-Z_]+="        # vacio = solo comentarios = nada que desplegar
+```
+
+⚠️ **Y mide contra `origin/`, no contra la rama local.** El 2 de noviembre
+`master` en local estaba parado en `f95e85a` y la comparación dio **12** donde
+hay **4** — ver el final de § 2 unvicies.
+
+> Aquí ponía **33 de 38** y «`master` y `develop` sincronizados», medido el 20 de
+> octubre. La cifra de functions estaba mal por lo de siempre —se contó a ojo— y
+> lo de las ramas caducó con el trabajo de los días siguientes. **Quinta vez que
+> esta sección envejece.** La frase que no envejece sigue siendo la de arriba:
+> vuelve a medirlo.
 
 ⚠️ **Cómo se midió, porque la cifra sola no vale**: comparando los **nombres**
 de `firebase functions:list --project prod --json` contra los del manifiesto de
@@ -2187,8 +2348,8 @@ que tener en la cabeza al retomar:
 
 | Qué | A quién espera | Qué desbloquea |
 |---|---|---|
-| **El TPV virtual** | **BBVA**, que tiene que revisar `/aviso-legal#pagos` | cobrar con tarjeta en producción sin el comercio de pruebas |
-| Encender el pago de la señal | **Dorel**, cuando el banco conteste | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest` |
+| **El pase a producción del TPV** | **Dorel lo pide, BBVA lo concede** | cobrar en producción con el comercio **propio** y no con el `361040215` prestado |
+| Encender el pago de la señal | **Dorel**, cuando el TPV esté concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y el rewrite `/api/pagar-senal`, que solo está en desarrollo** |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
 
@@ -2243,6 +2404,33 @@ sale y no cobra.
 - **El correo del webhook.** Telegram es el pitido; falta el registro escrito
   que se puede buscar dentro de seis meses. Reutiliza la cáscara de
   `functions/src/alerts/email-shell.ts`.
+
+### Dos que salieron probando el TPV, y una pide una decisión de Dorel
+
+Las dos son **previas** al cambio del comercio y están en
+[mejoras-pendientes.md](mejoras-pendientes.md) con el detalle medido.
+
+⚠️ **M-49 · Devolver una fianza a la tarjeta no la da por devuelta en los
+libros.** Hay dos mecanismos para el mismo hecho y ninguno sabe del otro:
+`refundRedsysPayment` mueve el dinero y **no escribe fila `deposit_refund`**;
+«Devolver total» escribe el apunte y **no mueve un euro**. Medido: devuelta la
+fianza entera de 150 €, la cabecera de la reserva seguía diciendo «Ya entregado
+397,95 €» y «En depósito, se le devuelve al cliente: 150,00 €». La causa está
+localizada —`collectedTotalsOf()` suma `paidAmount` y no descuenta
+`refundedAmount`, al revés que `sumPaid()`—.
+
+**No puede salir dinero dos veces**: el tope de `refundableAmount` queda a 0. Lo
+que puede pasar es un descuadre de libros. ⚠️ **Y lo que hay que decidir antes
+de tocarlo es cuál de los dos manda, que es de Dorel y no de código**: o la
+devolución a tarjeta escribe también su apunte, o la pantalla avisa de que falta
+darla por devuelta. Arreglar solo `collectedTotalsOf()` cuadraría la cabecera y
+daría la fianza por resuelta sin que nadie lo haya decidido.
+
+⚠️ **M-50 · La ficha de cada coche pide el vehículo por el slug y recibe un
+404**, en los **dos** entornos, producción incluida. Se recupera sola con el id
+real, así que **no está roto** —el precio se calcula y la pre-reserva se puede
+hacer—: deja una petición desperdiciada y dos errores en la consola de cada
+visita, que es el ruido que hace que un error de verdad no se vea.
 
 ### Y una que puede volver
 

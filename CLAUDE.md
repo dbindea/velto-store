@@ -2543,14 +2543,23 @@ los del manifiesto de descubrimiento en vez de a ojo):
 |---|---|---|
 | el código define | **38** | — |
 | desarrollo | **38** | — |
-| producción | **32** | las cinco de la AEAT **y `createSignalPayment`** |
+| producción | **33** | las cinco de la AEAT |
 
-⚠️ **La 38 es `createSignalPayment`**, del 19 de octubre de 2026 (medido en el
-manifiesto, no contado a ojo). Y **no va a producción todavía**: allí el pago de
-la señal desde la web está apagado por decisión de Dorel, así que subirla sería
-dejar desplegado un endpoint que solo sabe contestar `403`. Cuando se encienda,
-va con su rewrite de hosting — sin él la petición cae en el catch-all y devuelve
-HTML donde se espera JSON.
+⚠️ **Aquí ponía 32 y que faltaba además `createSignalPayment`, y las dos cosas
+eran FALSAS desde el 20 de octubre de 2026.** Está desplegada en producción
+desde ese día —**apagada** por `VELTO_WEB_SIGNAL_PAYMENT_ENABLED`, que es otra
+cosa: desplegada y encendida no son lo mismo— y el traspaso de sesión ya lo
+recogía entonces. Lo que no se actualizó fue esta tabla. Vuelto a medir el 2 de
+noviembre de 2026 con `--json`: **33**, y las cinco que faltan son las de la
+AEAT. Es el patrón que esta misma sección avisa dos párrafos más abajo, cometido
+aquí: **una cifra escrita a mano en un sitio no se entera de lo que se midió en
+otro.**
+
+⚠️ **Y la 38 es `createSignalPayment`**, del 19 de octubre de 2026 (medido en el
+manifiesto, no contado a ojo). Su rewrite `/api/pagar-senal` **sigue solo en
+desarrollo**: el día que se encienda el pago de la señal en producción hay que
+desplegar hosting además de la function — sin el rewrite la petición cae en el
+catch-all y devuelve HTML donde se espera JSON.
 
 ⚠️ **Vuelto a medir el 8 de octubre de 2026 y la fila del CÓDIGO también había
 envejecido**: ponía 36 y son **37**. No es que se añadiera ninguna ese día —
@@ -3604,7 +3613,8 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **32** (medido el 8 de octubre de 2026).
+siga dando **33** (medido el 2 de noviembre de 2026; ponía 32, del 8 de octubre,
+y se quedó corta al desplegar `createSignalPayment` el 20).
 
 ⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
 **códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
@@ -4927,10 +4937,11 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay **32** desplegadas y
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **33** desplegadas y
 faltan **las cinco** de la AEAT, que no van allí hasta el 1 de enero y que un
-despliegue completo subiría. Medido el 8 de octubre de 2026 comparando los
-**nombres** contra los `export … from` de `index.ts`, no la cifra.
+despliegue completo subiría. Medido el **2 de noviembre de 2026** con
+`functions:list --project prod --json`, comparando los **nombres** y no la cifra
+— que es lo que distingue qué falta de cuántas hay.
 
 > Aquí ponía **31**, y que **28 corrían código viejo** con un guion pendiente.
 > Las dos cosas habían caducado: el guion se cerró entero el 5 de octubre
