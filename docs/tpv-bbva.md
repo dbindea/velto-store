@@ -272,8 +272,50 @@ firebase deploy --only functions:redsysNotificationWebhook,functions:refundRedsy
 despliegue va por nombre y nunca `--only functions` a secas, que subiría las
 cinco de la AEAT que allí no deben estar.
 
+⚠️ **Lo primero es CONFIRMAR el comercio que mandan, no darlo por hecho.** Arriba
+va `370770240` porque lo normal en Redsys es que el número sea el mismo para test
+y para real y que lo único distinto sea la clave — pero eso es lo normal, no lo
+seguro: algunas altas traen número de comercio propio para producción. Lo que
+venga en el correo del banco manda sobre este fichero.
+
 ⚠️ **La primera operación en producción se hace con un importe mínimo y se
 devuelve.** Allí `live` significa dinero real: no hay tarjetas de prueba.
+
+### ⚠️ Y lo que de verdad hay que mirar antes: las fianzas del comercio viejo
+
+**Una devolución se firma con el comercio y la clave de HOY, y con el pedido del
+cobro de entonces.** `refundRedsysPayment` lee `REDSYS_MERCHANT_CODE` y
+`REDSYS_SECRET_KEY` de `process.env` en cada llamada —no del documento del
+pago— y manda `payment.redsys.order`, que se emitió bajo el comercio anterior.
+
+Es decir: **en cuanto se cambie el comercio de producción, cualquier cobro ya
+hecho con el `361040215` deja de poderse devolver desde la aplicación.** La
+petición saldría diciendo que es del `370770240` con un pedido que ese comercio
+no conoce, y el banco la rechaza. Y el pago que más probabilidades tiene de estar
+en ese estado es justo el peor: **una fianza cobrada y todavía sin devolver**,
+porque la fianza se devuelve casi siempre y se devuelve semanas después de
+cobrarse.
+
+⚠️ **No es un fallo del código, y por eso no tiene arreglo en el código.** El
+documento del pago sí guarda su `redsys.merchantCode` y su `redsys.terminal`, así
+que la función podría usarlos; lo que no puede recuperar es **la clave del
+comercio viejo**, que es una sola en Secret Manager. Dos comercios vivos a la vez
+pedirían dos claves, y eso es rehacer la configuración entera por un caso que
+dura unas semanas.
+
+Así que el cambio se **planifica**, no se hace a mitad de mes:
+
+1. **Antes de tocar nada**, mirar en Pagos de producción si queda algún cobro con
+   tarjeta sin devolver del todo — fianzas sobre todo.
+2. Si queda alguno, o se **devuelve antes** del cambio, o se asume que esa
+   devolución habrá que hacerla **desde el panel del banco** y no desde la
+   aplicación.
+3. Y dejar dicho a quien atienda: durante la transición, una fianza antigua que
+   haya que devolver va por el panel.
+
+⚠️ **El síntoma, si se olvida, no dice esto.** Lo que se verá es una devolución
+que el banco rechaza sobre un cobro que está perfectamente registrado y pagado, y
+lo primero que uno piensa es que la clave nueva está mal puesta.
 
 ---
 
