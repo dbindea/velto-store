@@ -27,11 +27,11 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **`develop` lleva CUATRO commits por delante de `master`, y NO hay que
-> desplegar nada.** Son dos de documentación y el cambio del comercio de
-> **desarrollo**; del lado de producción el `.env` solo cambia comentarios. Ver
-> § 2 ter, que explica por qué un `git diff` contra `master` dice que
-> `functions/` cambió cuando no hay nada que subir.
+> ⚠️ **`develop` va por delante de `master`, y NO hay que desplegar nada.** Lo
+> que lleva es documentación y el cambio del comercio de **desarrollo**; del
+> lado de producción el `.env` solo cambia comentarios. Ver § 2 ter, que explica
+> por qué un `git diff` contra `master` dice que `functions/` cambió cuando no
+> hay nada que subir.
 >
 > ⚠️ **Y mide las ramas contra `origin/`, no contra la local.** El 2 de
 > noviembre `master` en local estaba parado en un commit viejo y
@@ -2210,8 +2210,8 @@ npx firebase functions:list --project prod --json > fn.json
 | | |
 |---|---|
 | `origin/master` | `b432b43`, desplegado y verificado |
-| `origin/develop` | `13b74b1` — **4 commits** por delante |
-| qué son esos 4 | dos de documentación y el cambio del comercio de **desarrollo** |
+| `origin/develop` | por delante, con **los commits de esta sesión y los dos de documentación que arrastraba** |
+| qué son | documentación y el cambio del comercio de **desarrollo** — nada de producción |
 | ¿hay que desplegar algo? | **no.** Lo único de `functions/` es el `.env`, y en el de producción **solo cambian comentarios** |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
