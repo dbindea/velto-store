@@ -26,6 +26,7 @@
 import { PDFDocument } from 'pdf-lib';
 import { PdfBuilder, companyFooterLines, companyHeaderLines, formatMoney } from '../contracts/pdf';
 import type { ContractLocale } from '../contracts/contract-types';
+import { PAYMENT_TYPE_TEXT, esTipoEnCrudo, paymentTypeText } from '../payment-concept';
 
 export interface ReceiptPdfCompany {
   brandName: string;
@@ -148,41 +149,24 @@ const METHODS: Record<string, Record<ContractLocale, string>> = {
 };
 
 /**
- * Los conceptos, traducidos.
+ * Los rótulos de los conceptos viven en `../payment-concept`, que es el mismo
+ * lector que usan la pantalla pública de pago y la descripción que llega al
+ * banco. Estaban aquí dentro, y por eso aquéllos imprimían el enumerado en
+ * crudo: la tabla existía y no la alcanzaba nadie más.
  *
- * El `concept` guardado en el pago es texto en español —«Señal reserva»,
- * «Fianza»— porque lo escribe la aplicación al sembrar las filas. Imprimirlo
- * tal cual en un recibo rumano deja media frase en el idioma equivocado, así
- * que el titular del concepto sale de aquí y el texto del operador va debajo,
- * solo si añade algo.
+ * ⚠️ **Ese módulo NO puede importar nada pesado**: lo carga `redsys.ts`, que
+ * está en el camino del cliente, y este fichero trae `pdf-lib` de la mano.
  */
-const TYPES: Record<string, Record<ContractLocale, string>> = {
-  initial_payment: { es: 'Señal de la reserva', en: 'Booking deposit', ro: 'Avans rezervare' },
-  remaining_payment: { es: 'Resto del alquiler', en: 'Rental balance', ro: 'Rest închiriere' },
-  rental_payment: { es: 'Alquiler', en: 'Rental', ro: 'Închiriere' },
-  deposit: { es: 'Fianza', en: 'Security deposit', ro: 'Garanție' },
-  extra_fuel: { es: 'Combustible', en: 'Fuel', ro: 'Combustibil' },
-  refuel_penalty: {
-    es: 'Penalización por no repostar',
-    en: 'Refuelling penalty',
-    ro: 'Penalizare pentru nealimentare'
-  },
-  extra_cleaning: { es: 'Limpieza', en: 'Cleaning', ro: 'Curățenie' },
-  extra_km: { es: 'Kilómetros extra', en: 'Extra mileage', ro: 'Kilometri suplimentari' },
-  extra_damage: { es: 'Daños', en: 'Damage', ro: 'Daune' },
-  extra_fine: { es: 'Multa', en: 'Fine', ro: 'Amendă' },
-  extra_other: { es: 'Otros cargos', en: 'Other charges', ro: 'Alte costuri' },
-  free_payment: { es: 'Cobro', en: 'Payment', ro: 'Încasare' }
-};
+export { esTipoEnCrudo };
 
 export function methodLabel(value: string | undefined, loc: ContractLocale): string {
   const entry = value ? METHODS[value] : undefined;
   return entry ? entry[loc] : '—';
 }
 
+/** El rótulo del tipo de cobro, en el idioma del documento. */
 export function paymentTypeLabel(value: string | undefined, loc: ContractLocale): string {
-  const entry = value ? TYPES[value] : undefined;
-  return entry ? entry[loc] : '';
+  return paymentTypeText(value, loc);
 }
 
 /**
@@ -206,8 +190,18 @@ export function paymentTypeLabel(value: string | undefined, loc: ContractLocale)
  * ponía «Avans rezervare» y debajo «Señal reserva»: media línea en el idioma
  * equivocado que no añadía nada. El concepto no aporta si no dice más que el
  * nombre del tipo **en cualquiera** de los idiomas que la aplicación habla.
+ *
+ * ⚠️ **Y un concepto que es un ENUMERADO no aporta nunca**, aunque no se
+ * parezca a ningún titular. La comparación por palabras no lo caza
+ * —`rental_payment` no comparte ninguna con «Señal de la reserva»—, así que el
+ * recibo del cliente salía «Señal de la reserva» y debajo, en gris,
+ * **`rental_payment`**. Es el mismo defecto que el pipe de la aplicación y se
+ * arregla con la misma pregunta: si lo guardado es un valor del enumerado, no
+ * lo escribió el operador y no es un detalle.
  */
 export function conceptAddsDetail(concept: string, headings: string | string[]): boolean {
+  if (esTipoEnCrudo(concept)) return false;
+
   const palabras = (s: string) =>
     s
       .toLowerCase()
@@ -304,11 +298,18 @@ export async function buildReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arra
   // propósito y el texto de al lado es el que lleva el significado.
   const titular = paymentTypeLabel(input.paymentType, loc);
   const detalle = (input.concept || '').trim();
-  const enTodosLosIdiomas = input.paymentType
-    ? Object.values(TYPES[input.paymentType] || {})
+  const enTodosLosIdiomas: string[] = input.paymentType
+    ? Object.values(PAYMENT_TYPE_TEXT[input.paymentType] || {})
     : [];
+  // ⚠️ **El enumerado se descarta ANTES del `!titular`**, no solo dentro de
+  // `conceptAddsDetail()`. Con un tipo que la tabla no conozca el titular sale
+  // vacío, y ese atajo imprimía el concepto sin pasar por ninguna comprobación:
+  // es justo el caso en que el recibo salía sin rótulo y con `delivery_fee`
+  // debajo.
   const detalleAporta =
-    !!detalle && (!titular || conceptAddsDetail(detalle, enTodosLosIdiomas));
+    !!detalle &&
+    !esTipoEnCrudo(detalle) &&
+    (!titular || conceptAddsDetail(detalle, enTodosLosIdiomas));
   b.y -= 6;
   b.section(L.concept, { lead: 6 });
   if (titular) b.text(titular, { size: 9.5, bold: true, gap: detalleAporta ? 1 : 2 });

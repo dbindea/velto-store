@@ -47,6 +47,7 @@ import {
 import { depositAvailable, depositMovementProblem } from '@shared/utils/deposit.util';
 import { PermissionsService } from '@core/auth/permissions.service';
 import { receiptProblem } from '@shared/utils/receipt.util';
+import { isPaymentTypeSentinel } from '@shared/utils/payment-concept.util';
 import { TranslateService } from '@core/i18n/translate.service';
 
 export interface CreateManualPaymentData {
@@ -423,11 +424,17 @@ export class PaymentService {
     const settlement = applySettlement(payment, input.paidAmount);
 
     // Keep the seeded concept ("Señal reserva") unless the operator typed a
-    // real one. A concept that just echoes the payment type is what callers
-    // send when the field was left empty — same convention as PaymentConceptPipe.
+    // real one.
+    //
+    // ⚠️ **La pregunta es «¿esto es un enumerado?», no «¿coincide con el tipo
+    // de ESTA fila?».** Comparando contra `payment.type` —el de la fila que se
+    // está saldando, no el que mandó el formulario— un «pago completo» pasaba
+    // el guard en las dos filas que reparte (`'rental_payment' !==
+    // 'initial_payment'`) y pisaba sus conceptos sembrados con el enumerado en
+    // crudo. Así quedaron 6 de las 11 filas de cobro de producción.
     const typedConcept = input.concept?.trim();
     const concept =
-      typedConcept && typedConcept !== payment.type ? typedConcept : payment.concept;
+      typedConcept && !isPaymentTypeSentinel(typedConcept) ? typedConcept : payment.concept;
 
     await updateDoc(docRef, this.cleanData({
       ...settlement,
@@ -848,7 +855,9 @@ export class PaymentService {
       amount: roundMoney(amount),
       paidAmount: roundMoney(amount),
       paidAt: { seconds: Date.now() / 1000 },
-      concept: 'Devolución fianza',
+      // El tipo, no la frase: lo escribe el sistema, así que lo traduce quien
+      // lo lee. Ver `paymentConceptKey()`.
+      concept: 'deposit_refund',
       notes,
       source: 'manual',
       reservationSnapshot: {
@@ -894,7 +903,8 @@ export class PaymentService {
       amount: roundMoney(amount),
       paidAmount: roundMoney(amount),
       paidAt: { seconds: Date.now() / 1000 },
-      concept: 'Retención fianza',
+      // Igual que la devolución: el tipo, y lo traduce quien lo lee.
+      concept: 'deposit_retention',
       notes: reason,
       source: 'manual',
       reservationSnapshot: {

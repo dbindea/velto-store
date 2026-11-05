@@ -49,6 +49,7 @@ import { FUNCTIONS_REGION } from './global-options';
 import { firestore } from './admin-guard';
 import { companyConfig } from './company-config';
 import { webBaseUrl } from './public-url';
+import { paymentConceptI18nKey, paymentConceptText } from './payment-concept';
 import {
   appliedPaidAmount,
   chargeAccepted,
@@ -201,7 +202,13 @@ async function prepareRedsysCheckout(
       `https://${process.env.GCLOUD_REGION || FUNCTIONS_REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redsysNotificationWebhook`,
     Ds_Merchant_UrlOK: process.env.REDSYS_URL_OK || returnUrl,
     Ds_Merchant_UrlKO: process.env.REDSYS_URL_KO || returnUrl,
-    Ds_Merchant_ProductDescription: (payment.concept || 'Cobro Velto').slice(0, 125),
+    // ⚠️ **Esto es lo que el cliente lee en la pantalla del banco y lo que
+    // acaba en el extracto de su tarjeta**, así que no puede llevar un
+    // identificador de código. El concepto de una fila sembrada es el propio
+    // tipo (`initial_payment`), a propósito para que cada quien lo lea en su
+    // idioma; aquí no hay idioma del cliente que valga, así que se resuelve al
+    // español, que es el del comercio.
+    Ds_Merchant_ProductDescription: paymentConceptText(payment, 'es', 'Cobro Velto').slice(0, 125),
     /**
      * ⚠️ **El nombre del cliente NO viaja aquí.**
      *
@@ -390,7 +397,13 @@ export const getPaymentCheckout = onCall(
       // «50,00 €» y pagaba 50 más.
       amount: outstandingAmount(payment),
       currency: payment.currency || 'EUR',
-      concept: String(payment.concept || ''),
+      // ⚠️ **Una CLAVE i18n, no el texto guardado.** Esta pantalla la abre el
+      // cliente y elige su idioma allí, así que el backend no puede resolverla:
+      // manda la clave y la traduce la plantilla. Devolviéndolo en crudo, un
+      // cobro sembrado le enseñaba `initial_payment` donde tenía que leer
+      // «Señal de la reserva». El texto que escribe el operador sale intacto,
+      // porque `translate()` devuelve tal cual lo que no es clave.
+      concept: paymentConceptI18nKey(payment),
       brandName: company.brandName,
       legalName: company.legalName,
       taxId: company.taxId,
@@ -692,7 +705,7 @@ export const redsysNotificationWebhook = onRequest(
           mensajeCobro({
             // Lo que de verdad cobró el banco, no lo que la fila pedía.
             importe: appliedPaidAmount(payment, parsed.Ds_Amount),
-            concepto: String(payment.concept || 'Cobro'),
+            concepto: paymentConceptText(payment, 'es', 'Cobro'),
             completo: update.status === 'paid',
             ...(referencia ? { referencia } : {}),
             ...(payment.payerName ? { pagador: String(payment.payerName) } : {}),
