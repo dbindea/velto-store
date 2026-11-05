@@ -16,6 +16,7 @@ import {
   canMarkContacted,
   extendedGuaranteeUntil,
   formatPhone,
+  netForPromisedGross,
   newCount,
   promisedPriceCeiling,
   requestPickupAt,
@@ -26,6 +27,7 @@ import {
   whatsappLink,
   whatsappMessage
 } from './booking-request.util';
+import { addVat } from './pricing.util';
 
 function solicitud(p: Partial<BookingRequest> = {}): BookingRequest {
   return {
@@ -463,6 +465,52 @@ describe('formatPhone', () => {
  * olvida: que un cliente con descuento de fidelidad **no pague el techo** si su
  * tarifa sale por debajo.
  */
+/**
+ * ⚠️ **El techo se deriva del BRUTO, que es la cifra que el cliente vio.**
+ *
+ * El neto guardado en `quoteSnapshot` es una reconstrucción: `publicPrice()`
+ * divide el bruto ya terminado en `,95` y redondeaba al céntimo más cercano,
+ * así que podía quedar un céntimo por encima. Se corrigió en origen, pero un
+ * `quoteSnapshot` **no se migra hacia atrás**, así que las solicitudes ya
+ * escritas solo se arreglan aquí, al consumirlas.
+ */
+describe('el neto que cabe bajo el bruto prometido', () => {
+  it('EL CASO DE LA SOLICITUD VIEJA: nunca se pasa del total anunciado', () => {
+    // Peugeot 3008, 31 días: la página prometió 1.480,95 € y el neto guardado
+    // (1.223,93) reconstruía 1.480,96.
+    const techo = netForPromisedGross(1480.95, 0.21)!;
+    expect(addVat(techo, 0.21).total).toBeLessThanOrEqual(1480.95);
+    expect(techo).toBeLessThan(1223.93);
+  });
+
+  it('y no regala dinero: coge el MAYOR neto que cabe', () => {
+    const techo = netForPromisedGross(1480.95, 0.21)!;
+    expect(addVat(Math.round((techo + 0.01) * 100) / 100, 0.21).total).toBeGreaterThan(1480.95);
+  });
+
+  it('sin IVA el techo es el propio bruto', () => {
+    expect(netForPromisedGross(1480.95, 0)).toBe(1480.95);
+  });
+
+  it('se sostiene en toda la rejilla, con los cuatro tipos', () => {
+    for (const rate of [0.21, 0.1, 0.04, 0]) {
+      for (let centimos = 100; centimos <= 200000; centimos += 131) {
+        const bruto = centimos / 100;
+        const techo = netForPromisedGross(bruto, rate)!;
+        expect(addVat(techo, rate).total, `${bruto} al ${rate}`).toBeLessThanOrEqual(bruto);
+      }
+    }
+  });
+
+  it('sin promesa no hay techo', () => {
+    expect(netForPromisedGross(undefined, 0.21)).toBeNull();
+    expect(netForPromisedGross(null, 0.21)).toBeNull();
+    expect(netForPromisedGross(0, 0.21)).toBeNull();
+    expect(netForPromisedGross(-10, 0.21)).toBeNull();
+    expect(netForPromisedGross(NaN, 0.21)).toBeNull();
+  });
+});
+
 describe('el techo del precio prometido', () => {
   it('acuerda lo prometido cuando la tarifa pide más', () => {
     // El caso real del Kadjar a 31 días: la web prometió 1.030,95 € con IVA,

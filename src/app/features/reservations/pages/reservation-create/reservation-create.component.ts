@@ -26,7 +26,7 @@ import {
   VatBreakdown
 } from '@shared/utils/pricing.util';
 import { isDepositWaived, needsWaivedReason } from '@shared/utils/deposit.util';
-import { promisedPriceCeiling } from '@shared/utils/booking-request.util';
+import { netForPromisedGross, promisedPriceCeiling } from '@shared/utils/booking-request.util';
 import { interpolate } from '@shared/utils/i18n-params.util';
 import { TranslateService } from '@core/i18n/translate.service';
 import { SettingsService } from '@features/settings/services/settings.service';
@@ -193,7 +193,28 @@ export class ReservationCreateComponent implements OnInit {
    * acordaría a mano un precio que nadie pactó. Lo limpian los mismos sitios
    * que ya invalidan un precio acordado.
    */
-  private promisedNet = 0;
+  private promisedNetUrl = 0;
+
+  /**
+   * El BRUTO prometido: la cifra que el cliente leyó en la página.
+   *
+   * ⚠️ **Es la autoridad, y el neto solo el respaldo.** El neto guardado en
+   * `quoteSnapshot` es una reconstrucción que puede quedar un céntimo por
+   * encima del total anunciado; el bruto es literalmente lo que se le enseñó.
+   * Ver `netForPromisedGross()`.
+   */
+  private promisedGross = 0;
+
+  /**
+   * El techo en neto, derivado del bruto con el IVA de hoy.
+   *
+   * ⚠️ **Derivado y no guardado**, porque depende del tipo: con la casilla «sin
+   * IVA» marcada, el mismo total prometido significa otro neto. `vatRate` es un
+   * getter sobre la señal de Ajustes, así que esto se recalcula solo.
+   */
+  private get promisedNet(): number {
+    return netForPromisedGross(this.promisedGross, this.vatRate) ?? this.promisedNetUrl;
+  }
 
   /**
    * Deposit agreed with the customer. `null` means "use the vehicle's
@@ -339,7 +360,9 @@ export class ReservationCreateComponent implements OnInit {
      * teléfono.
      */
     const prometido = Number(q.get('quotedNet'));
-    this.promisedNet = isFinite(prometido) && prometido > 0 ? prometido : 0;
+    this.promisedNetUrl = isFinite(prometido) && prometido > 0 ? prometido : 0;
+    const prometidoBruto = Number(q.get('quotedGross'));
+    this.promisedGross = isFinite(prometidoBruto) && prometidoBruto > 0 ? prometidoBruto : 0;
     this.aplicarPrecioPrometido();
   }
 
@@ -355,6 +378,12 @@ export class ReservationCreateComponent implements OnInit {
     if (techo === null) return;
     this.finalPriceOverride = techo;
     this.priceCleared = false;
+  }
+
+  /** Lo prometido deja de valer: otro coche u otras fechas. Las DOS cifras. */
+  private olvidarPrecioPrometido(): void {
+    this.promisedGross = 0;
+    this.promisedNetUrl = 0;
   }
 
   private loadRecentClients(): void {
@@ -482,7 +511,7 @@ export class ReservationCreateComponent implements OnInit {
     if (this.selectedVehicle?.vehicleId !== result.vehicleId) {
       this.resetFinalPrice();
       // La web cotizó otro coche: lo prometido ya no dice nada de este.
-      this.promisedNet = 0;
+      this.olvidarPrecioPrometido();
     }
     this.selectedVehicle = result;
     this.currentStep = 'client';
@@ -499,7 +528,20 @@ export class ReservationCreateComponent implements OnInit {
     });
   }
 
-  selectClient(client: Client): void {
+  /**
+   * El paso del cliente tiene DOS salidas —elegirlo del buscador y darlo de
+   * alta con el formulario rápido— y las dos tienen que dejar el precio igual.
+   *
+   * ⚠️ **Por eso están aquí dentro y no copiadas en cada una.** El alta rápida
+   * hacía reset → asignar → resumen y **se dejaba
+   * `aplicarPrecioPrometido()`**, así que convertir una solicitud de la web
+   * perdía el techo prometido y la reserva nacía pidiendo hasta 0,99 € más de
+   * lo que el cliente había leído en la página. Y no es la vía rara: es la
+   * diseñada para una pre-reserva, donde `precargarDesdeSolicitud()` rellena a
+   * propósito el nombre y el teléfono del alta rápida porque quien escribe por
+   * la web todavía no tiene ficha.
+   */
+  private tomarCliente(client: Client): void {
     // A different client can carry a different loyalty discount, which moves
     // the calculated price. An agreed price measured against the previous
     // baseline no longer means what the operator intended.
@@ -516,9 +558,13 @@ export class ReservationCreateComponent implements OnInit {
      * `resetFinalPrice()` precisamente para medirse contra la base nueva.
      */
     this.aplicarPrecioPrometido();
+    this.currentStep = 'summary';
+  }
+
+  selectClient(client: Client): void {
+    this.tomarCliente(client);
     this.searchResults = [];
     this.clientSearchTerm = '';
-    this.currentStep = 'summary';
   }
 
   toggleQuickClientForm(): void {
@@ -588,12 +634,11 @@ export class ReservationCreateComponent implements OnInit {
       // Fetch the created client
       this.clientService.getClientById(clientId).subscribe((client) => {
         if (client) {
-          // Same reasoning as selectClient(): a new baseline for the price.
-          this.resetFinalPrice();
-          this.selectedClient = client;
+          // La MISMA salida que el buscador: reset de la base, el cliente, el
+          // techo prometido y el resumen. Ver `tomarCliente()`.
+          this.tomarCliente(client);
           this.showQuickClientForm = false;
           this.quickClient = { fullName: '', phone: '', email: '', documentNumber: '' };
-          this.currentStep = 'summary';
           // Keep the recent list honest if the operator steps back.
           this.loadRecentClients();
         }
@@ -933,7 +978,7 @@ export class ReservationCreateComponent implements OnInit {
     // Un precio acordado lo era para unas fechas concretas; con otras, no.
     this.resetFinalPrice();
     // Y lo que la web prometió, igual: cotizó esos días y no otros.
-    this.promisedNet = 0;
+    this.olvidarPrecioPrometido();
     if (this.currentStep !== 'dates') this.currentStep = 'dates';
   }
 
@@ -959,7 +1004,11 @@ export class ReservationCreateComponent implements OnInit {
       // de `DEFAULT_VAT_RATE` mientras la fila del IVA de al lado usaba el de
       // Ajustes: con el general los dos coincidían de casualidad, y con «sin
       // IVA» el total habría seguido llevando el impuesto sumado dentro.
-      this.vatRate
+      this.vatRate,
+      // Y si el coche está publicado, la tarifa es la que anuncia la web —
+      // terminada en `,95`—, para que la pantalla y el escaparate no digan dos
+      // cifras distintas del mismo alquiler. Ver `netoDeEscaparate()`.
+      this.selectedVehicle?.vehicle?.publicEnabled === true
     );
   }
 
@@ -1067,7 +1116,14 @@ export class ReservationCreateComponent implements OnInit {
    * que las dos cifras parecieran contradecirse.
    */
   get avisoPrecioPrometido(): string {
-    const conIva = addVat(this.promisedNet, this.vatRate).total;
+    /**
+     * ⚠️ **El bruto prometido se LEE, no se recompone.** Rehaciéndolo desde el
+     * neto, el aviso decía «la web prometió 1.480,96 €» de un presupuesto que
+     * anunciaba 1.480,95: nunca la cifra real, y es justo la que el operador va
+     * a citar por teléfono. Solo se recompone para las solicitudes que no
+     * traigan bruto.
+     */
+    const conIva = this.promisedGross || addVat(this.promisedNet, this.vatRate).total;
     return interpolate(this.translateService.translate('reservations.fromRequest.pricePromised'), {
       price: `${conIva.toFixed(2).replace('.', ',')} €`
     });

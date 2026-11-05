@@ -9,6 +9,8 @@
 
 import type { BookingRequest, BookingRequestStatus } from '@shared/models/booking-request.model';
 import { toDate } from './reservation-date.util';
+import { addVat } from './pricing.util';
+import { roundMoney } from './money.util';
 
 /**
  * ¿Sigue en pie el precio que se le prometió?
@@ -375,6 +377,49 @@ export function sortRequests(requests: BookingRequest[]): BookingRequest[] {
  * @param calculatedNet La tarifa con el descuento del cliente ya aplicado.
  * @returns El neto que hay que acordar, o `null` si la tarifa ya cumple.
  */
+/**
+ * El mayor NETO que, con el IVA puesto, no se pasa del BRUTO prometido.
+ *
+ * ⚠️ **La cifra que el cliente vio es el bruto, y el neto es una
+ * reconstrucción que puede pasarse un céntimo.** `publicPrice()` anuncia el
+ * bruto ya redondeado a `,95` y después recalcula el neto dividiendo con
+ * `roundMoney()`, que redondea al céntimo **más cercano**: cuando la fracción
+ * llega a 0,5 el neto sube, y al volver a multiplicar por 1,21 el total se
+ * queda un céntimo **por encima** del anunciado. Medido: el Peugeot 3008 a 31
+ * días se promete en 1.480,95 € y la reserva nacía pidiendo 1.480,96 €, en el
+ * 9,57 % de las duraciones.
+ *
+ * Por eso el techo se deriva del bruto y no se lee el neto guardado: así queda
+ * arreglado también para las solicitudes **ya escritas**, cuyo
+ * `quoteSnapshot.net` no se puede migrar hacia atrás.
+ *
+ * ⚠️ **Se ajusta contra `addVat()`, no contra una división.** Es ella quien
+ * decide el total que se le va a cobrar al cliente, con su propio redondeo, así
+ * que preguntarle a la aritmética en vez de a la función deja el céntimo al
+ * azar. Primero se baja hasta cumplir y después se sube todo lo que se pueda:
+ * cobrar de menos es el lado seguro, pero regalar un céntimo sin necesidad no
+ * es el objetivo.
+ */
+export function netForPromisedGross(
+  promisedGross: number | null | undefined,
+  vatRate: number
+): number | null {
+  if (typeof promisedGross !== 'number' || !isFinite(promisedGross) || promisedGross <= 0) {
+    return null;
+  }
+  const rate = isFinite(vatRate) && vatRate > 0 ? vatRate : 0;
+  if (rate === 0) return roundMoney(promisedGross);
+
+  let net = Math.floor((promisedGross / (1 + rate)) * 100) / 100;
+  for (let i = 0; i < 4 && net > 0 && addVat(net, rate).total > promisedGross; i++) {
+    net = roundMoney(net - 0.01);
+  }
+  for (let i = 0; i < 4 && addVat(roundMoney(net + 0.01), rate).total <= promisedGross; i++) {
+    net = roundMoney(net + 0.01);
+  }
+  return net > 0 ? net : null;
+}
+
 export function promisedPriceCeiling(
   promisedNet: number | null | undefined,
   calculatedNet: number

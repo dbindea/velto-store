@@ -927,7 +927,12 @@ export class ReservationService {
       basePriceResult.basePrice,
       client.loyaltyDiscountPercent,
       agreedNetPrice,
-      vatRate
+      vatRate,
+      // ⚠️ **Publicado = la tarifa termina en `,95`, como la anuncia la web.**
+      // Sin esto, el cliente que ve el precio en el escaparate y LLAMA —sin
+      // dejar solicitud, o sea sin `promisedPriceCeiling()` que lo corrija— se
+      // encontraba con hasta 0,99 € más de lo anunciado. Ver `netoDeEscaparate()`.
+      vehicle.publicEnabled === true
     );
 
     /**
@@ -1271,13 +1276,28 @@ export class ReservationService {
       const fidelidad = edit.client
         ? edit.client.loyaltyDiscountPercent
         : actual.pricingSnapshot?.loyaltyDiscountPercent;
+      /**
+       * ⚠️ **Se lo pregunta a `agreedNetPriceOf()`, que es quien lo sabe.**
+       * Aquí había una **tercera** copia de la pregunta —«¿hay precio
+       * acordado?»— escrita con `manualAdjustment` a secas, o sea la regla
+       * anterior al 19 de septiembre de 2026. Desde que el ajuste se mide
+       * contra la tarifa, pactar justo la tarifa da un ajuste de **0**: la
+       * copia contestaba «no hubo precio a mano», el recálculo volvía a la
+       * tarifa con descuento y **mover una fecha perdía el precio acordado**.
+       * Es exactamente lo que `priceOverridden` se añadió para impedir, y la
+       * nota de esa función ya avisaba de qué pasa cuando se escribe dos veces.
+       */
       const acordado =
-        edit.agreedNetPrice !== undefined
-          ? edit.agreedNetPrice
-          : actual.pricingSnapshot?.manualAdjustment
-            ? actual.pricingSnapshot?.netPrice
-            : null;
-      const resultado = resolveRentalPrice(base.basePrice, fidelidad, acordado, vatRate);
+        edit.agreedNetPrice !== undefined ? edit.agreedNetPrice : agreedNetPriceOf(actual);
+      // El mismo suelo de escaparate que al crear: una prórroga de un coche
+      // publicado no puede salir a un precio que la web no anuncia.
+      const resultado = resolveRentalPrice(
+        base.basePrice,
+        fidelidad,
+        acordado,
+        vatRate,
+        vehicle.publicEnabled === true
+      );
       pricing = {
         ...actual.pricingSnapshot,
         basePrice: resultado.tariffPrice,

@@ -12,8 +12,11 @@ import {
   resolveRentalPrice,
   resolveVatRate,
   suggestExtraKmCharge,
-  validatePricingRules
+  validatePricingRules,
+  aTerminacion,
+  netoDeEscaparate
 } from './pricing.util';
+import { roundMoney } from './money.util';
 import { VehiclePricingRule } from '@shared/models/vehicle.model';
 
 // ---------------------------------------------------------------------------
@@ -564,5 +567,141 @@ describe('validatePricingRules — la cobertura, que es lo que cuesta dinero', (
 
     const sinRotulo = validatePricingRules([{ minDays: 1, maxDays: 3, pricePerDay: 0 }]);
     expect(sinRotulo[0].params).toEqual({ rule: '1-3' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// El suelo de escaparate dentro de la tarifa.
+//
+// ⚠️ La curva es idéntica a la de la web; lo que no lo era es el último paso.
+// La web baja el bruto a `,95` y el asistente cobraba el céntimo exacto, así
+// que para el mismo coche y las mismas fechas el backoffice pedía hasta 0,99 €
+// MÁS de lo anunciado — la dirección que Dorel descartó expresamente. Decisión
+// suya del 5 de noviembre de 2026.
+// ---------------------------------------------------------------------------
+
+describe('aTerminacion — copia de `functions/src/public/core.ts`', () => {
+  /**
+   * ⚠️ **Los mismos casos que el test de las functions, a propósito.** Las dos
+   * copias existen porque la app y las functions no comparten módulo, y lo
+   * único que impide que diverjan es que afirmen lo mismo.
+   */
+  it('baja a la terminación de escaparate', () => {
+    expect(aTerminacion(26.43)).toBe(25.95);
+    expect(aTerminacion(50.2)).toBe(49.95);
+    expect(aTerminacion(25)).toBe(24.95);
+    expect(aTerminacion(30.01)).toBe(29.95);
+  });
+
+  it('un precio que YA termina en ,95 no baja un euro entero', () => {
+    // El fallo de coma flotante: `24.95 - 24` da 0.9499999999999993.
+    expect(aTerminacion(24.99)).toBe(24.95);
+    expect(aTerminacion(24.95)).toBe(24.95);
+    expect(aTerminacion(24.96)).toBe(24.95);
+  });
+
+  it('nunca sube, y nunca regala más de un euro', () => {
+    for (let c = 100; c <= 300000; c += 37) {
+      const bruto = c / 100;
+      expect(aTerminacion(bruto)).toBeLessThanOrEqual(bruto);
+      expect(bruto - aTerminacion(bruto)).toBeLessThan(1);
+      expect(Math.round(aTerminacion(bruto) * 100) % 100).toBe(95);
+    }
+  });
+
+  it('el importe pequeño se deja en paz', () => {
+    expect(aTerminacion(0.5)).toBe(0.5);
+    expect(aTerminacion(0)).toBe(0);
+    expect(aTerminacion(NaN)).toBeNaN();
+  });
+});
+
+describe('netoDeEscaparate — la tarifa tal y como la anuncia la web', () => {
+  /**
+   * ⚠️ **Lo que paga el cliente es el `,95`, o UN CÉNTIMO por debajo.** No
+   * siempre se puede clavar: el `,95` se fija sobre el bruto y el neto solo
+   * tiene dos decimales, así que con el 21 % hay brutos inalcanzables —14,95 €
+   * pide un neto de 12,3553…, y 12,35 reconstruye 14,94 mientras 12,36 se pasa
+   * a 14,96—. La holgura cae del lado seguro, que es la regla; afirmar el `,95`
+   * exacto sería afirmar algo que la aritmética no da. Lo cazó este mismo test.
+   */
+  it('lo que paga el cliente es el ,95, nunca por encima y como mucho un céntimo por debajo', () => {
+    let exactos = 0;
+    let total = 0;
+    for (const rate of [0.21, 0.1, 0]) {
+      for (let c = 1000; c <= 200000; c += 311) {
+        const neto = netoDeEscaparate(c / 100, rate);
+        const bruto = addVat(neto, rate).total;
+        const objetivo = aTerminacion(addVat(c / 100, rate).total);
+        expect(bruto, `neto ${neto} al ${rate}`).toBeLessThanOrEqual(objetivo);
+        expect(roundMoney(objetivo - bruto), `neto ${neto} al ${rate}`).toBeLessThanOrEqual(0.01);
+        total++;
+        if (bruto === objetivo) exactos++;
+      }
+    }
+    // Y no vale cumplirlo regalando dinero: se clava en la inmensa mayoría.
+    expect(exactos / total).toBeGreaterThan(0.9);
+  });
+
+  it('nunca se pasa del bruto de la curva: la rebaja la pone la empresa', () => {
+    for (const rate of [0.21, 0.1, 0]) {
+      for (let c = 1000; c <= 200000; c += 311) {
+        const curva = c / 100;
+        const neto = netoDeEscaparate(curva, rate);
+        expect(addVat(neto, rate).total).toBeLessThanOrEqual(addVat(curva, rate).total);
+      }
+    }
+  });
+
+  it('el caso medido: el Megane de un día', () => {
+    // Curva 45,00 € netos → 54,45 € con IVA → la web anuncia 53,95 €.
+    const neto = netoDeEscaparate(45, 0.21);
+    expect(addVat(neto, 0.21).total).toBe(53.95);
+  });
+
+  it('un importe sin sentido no revienta', () => {
+    expect(netoDeEscaparate(0, 0.21)).toBe(0);
+    expect(netoDeEscaparate(-10, 0.21)).toBe(0);
+    expect(netoDeEscaparate(NaN, 0.21)).toBe(0);
+  });
+});
+
+describe('el suelo DENTRO de resolveRentalPrice', () => {
+  /**
+   * ⚠️ **Va en la tarifa, no como precio acordado**, y esto es lo que lo
+   * comprueba. Metido por `agreedPrice`, `priceOverridden` sería true en TODAS
+   * las reservas: el contrato imprimiría una línea de «Ajuste acordado» que
+   * nadie pactó y un empleado sin `editPricing` no podría crear ni una reserva.
+   */
+  it('no marca precio acordado ni imprime ajuste', () => {
+    const p = resolveRentalPrice(45, 0, null, 0.21, true);
+    expect(p.finalPrice).toBe(53.95);
+    expect(p.priceOverridden).toBe(false);
+    expect(p.manualAdjustment).toBe(0);
+  });
+
+  it('sin publicar, la tarifa es la de la curva al céntimo', () => {
+    const p = resolveRentalPrice(45, 0, null, 0.21, false);
+    expect(p.finalPrice).toBe(54.45);
+    // Y es el valor por defecto: nadie baja un precio por olvido.
+    expect(resolveRentalPrice(45, 0, null, 0.21).finalPrice).toBe(54.45);
+  });
+
+  it('el descuento de fidelidad se aplica DESPUÉS, sobre la tarifa terminada', () => {
+    const sinDescuento = resolveRentalPrice(45, 0, null, 0.21, true);
+    const conDescuento = resolveRentalPrice(45, 5, null, 0.21, true);
+    expect(conDescuento.tariffPrice).toBe(sinDescuento.tariffPrice);
+    expect(conDescuento.netPrice).toBeLessThan(sinDescuento.netPrice);
+    // Lo anunciado sigue por encima de lo cobrado, que es toda la regla.
+    expect(conDescuento.finalPrice).toBeLessThanOrEqual(53.95);
+  });
+
+  it('un precio acordado a mano sigue mandando sobre el suelo', () => {
+    const p = resolveRentalPrice(45, 0, 40, 0.21, true);
+    expect(p.netPrice).toBe(40);
+    expect(p.priceOverridden).toBe(true);
+    // Y el ajuste se mide contra la tarifa YA terminada, que es la que se
+    // enseñó: contra la de la curva diría que se rebajaron 5,00 € en vez de 4,59.
+    expect(p.manualAdjustment).toBe(roundMoney(40 - p.tariffPrice));
   });
 });

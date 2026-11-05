@@ -669,8 +669,18 @@ export class BookingRequestsComponent {
          * asistente edita; allí se usa como techo y no como tarifa, porque un
          * cliente con descuento de fidelidad puede salir más barato. Ver
          * `promisedPriceCeiling()`.
+         *
+         * ⚠️ **Y viaja también el BRUTO, que es la cifra que el cliente vio de
+         * verdad.** El neto guardado es una reconstrucción —`publicPrice()`
+         * divide el bruto ya terminado en `,95` y redondea al céntimo más
+         * cercano—, así que puede quedar un céntimo por encima: el Peugeot 3008
+         * a 31 días se promete en 1.480,95 € y el neto guardado devuelve
+         * 1.480,96 €. El asistente deriva el techo del bruto con
+         * `netForPromisedGross()`; el neto se queda como respaldo para las
+         * solicitudes que no traigan bruto.
          */
         ...((r.quoteSnapshot?.net ?? 0) > 0 ? { quotedNet: r.quoteSnapshot.net } : {}),
+        ...((r.quoteSnapshot?.gross ?? 0) > 0 ? { quotedGross: r.quoteSnapshot.gross } : {}),
         /**
          * ⚠️ **El lugar que pidió, para que no haya que volver a leerlo.** Es
          * el campo que más se olvida al teclear una reserva a partir de una
