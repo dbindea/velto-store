@@ -1331,6 +1331,25 @@
         "cancelled": "The advance payment is cancelled: it cannot be treated as requested",
         "otherRequest": "That payment belongs to a different request"
       }
+    },
+    "availabilityCalendar": {
+      "title": "Availability for this car",
+      "hintStart": "Tap the pick-up day",
+      "hintEnd": "Now the return day",
+      "days": "day(s)",
+      "clear": "Change dates",
+      "free": "Free",
+      "occupied": "Booked",
+      "past": "Past",
+      "loading": "Loading availability…",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month"
+    },
+    "forVehicle": {
+      "lockedTitle": "Reservation for this car",
+      "lockedHint": "Pick the dates on the calendar. The car is already chosen.",
+      "lockedGone": "This car is not available on those dates",
+      "lockedChange": "Choose another car"
     }
   },
   "search": {
@@ -1467,7 +1486,8 @@
   },
   "vehicles": {
     "actions": {
-      "changeStatus": "Change status"
+      "changeStatus": "Change status",
+      "createReservation": "New reservation"
     },
     "addFirst": "Add first vehicle",
     "bodyTypes": {

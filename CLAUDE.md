@@ -2248,6 +2248,77 @@ salía sin rótulo y con el enumerado debajo. Lo cubre un test que los enumera.
   `payments` otra; si hay que devolverlo, eso es una devolución.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
 
+### «Crear reserva» desde la ficha del coche
+
+La petición llega por el coche —«¿me alquilas esta furgoneta?»— y el asistente
+empieza por las fechas, así que había que ir a Reservas, teclear unas fechas a
+ciegas y buscar el coche entre los resultados. Lo pidió Dorel el 5 de noviembre
+de 2026: *«si alguien me pide alquilar este coche, me gustaría poder realizar
+una reserva, ver el calendario de disponibilidad al igual que en la web pública
+y seguir el curso de nueva reserva para este coche hasta el final»*.
+
+⚠️ **No es un flujo nuevo: es la MISMA puerta que «Convertir en reserva», con
+un parámetro menos.** El coche viaja en la URL (`/reservations/new?vehicleId=…`)
+y lo único que cambia es en qué paso se para el asistente, porque lo que falta
+por decidir es distinto: con fechas salta al cliente, sin ellas se queda en el
+de fechas. Crear un alquiler sigue siendo una sola escritura con sus filas de
+cobro; duplicar eso desde la ficha habría sido una segunda forma de crear
+reservas.
+
+⚠️ **Se salta el paso del coche, pero NO su comprobación.** Al buscar, si el
+coche fijado sale disponible se selecciona solo y se va al cliente; si no, se
+queda en la lista **con su motivo al lado**, igual que al convertir una
+solicitud. Entre el calendario y la realidad están la ITV, el seguro y el
+estado del coche, que `searchAvailability()` sí mira y el calendario no.
+
+⚠️ **Y se puede soltar.** «Elegir otro coche» devuelve el asistente a la
+búsqueda normal: el operador entró por un coche y puede acabar vendiendo otro,
+que es lo que pasa en el mostrador.
+
+#### El calendario de disponibilidad, y en qué se aparta del de la web
+
+La aritmética vive en
+[availability-calendar.util.ts](src/app/shared/utils/availability-calendar.util.ts),
+**gemela de `web/src/lib/calendario-coche.ts`** y duplicada por lo mismo que el
+IVA y la curva: la web es una tercera build y no comparte módulo. Si cambia la
+regla allí, cambia aquí — y los dos tests afirman los mismos casos.
+
+⚠️ **Aparte de la pantalla y con tests, por lo mismo que el QR y el aspa: un
+calendario mal calculado tiene exactamente la misma pinta que uno bueno.** Lo
+que se rompe en silencio es peor que un dibujo feo — ofrecer un día ocupado, o
+cerrar un rango **por encima** de una reserva— y acaba en un cliente que se
+planta a por un coche que no está. Por eso `pickDay()` empieza de nuevo en vez
+de cerrar un rango que salta una reserva, y hay un test de ese caso.
+
+Tres diferencias con el de la web, y las tres son deliberadas:
+
+- ⚠️ **NO se aplica el día de preparación.** La web bloquea el día siguiente a
+  una devolución (`disponibleDesde` en `functions/src/public/core.ts`) porque
+  allí no hay nadie; aquí hay un operador que sabe si el coche está listo. El
+  calendario tiene que decir lo mismo que `searchAvailability()`, que es quien
+  después deja crear la reserva: uno más estricto pintaría de rojo días que el
+  asistente acepta, y entonces no se usaría.
+- ⚠️ **No hay «fuera de horizonte».** La web mira 180 días porque es lo que el
+  backend público comprueba; el backoffice lee las reservas del coche enteras,
+  así que un día lejano sin reserva está libre de verdad.
+- ⚠️ **Una reserva con fechas ilegibles se SALTA en vez de bloquear.** Es al
+  revés que la regla de la web («ante la duda no publicar»), y se puede porque
+  aquí el calendario solo propone: marcarla sería pintar de rojo un día
+  inventado, y `searchAvailability()` vuelve a cruzarlo todo antes de guardar.
+
+⚠️ **Y NO usa `toDate()` de `reservation-date.util`**, que ante un valor
+ilegible **cae a HOY** —hace bien: lo escribieron para que el pipe `date` no
+tumbe una pantalla entera—. Aquí eso marcaría el día de hoy como ocupado por
+una reserva que nadie puede leer: un día bloqueado al azar y sin explicación.
+Lleva su propio lector estricto, como ya hace `public/core.ts` por la misma
+razón.
+
+⚠️ **El calendario elige DÍAS y la hora la pone `PICKUP_HOUR`** (las 10:00, la
+de apertura y la misma que usa la web). Rellena los campos y **no busca solo**:
+la hora es una suposición que el operador casi siempre corrige con lo que se
+habló por teléfono, y buscar ahí comprobaría la disponibilidad contra una hora
+inventada.
+
 ### Crear una reserva es una sola escritura
 
 `commitReservationWithPayments()` mete la reserva **y sus filas de pago** en un
@@ -3241,6 +3312,59 @@ idiomas**: si no, un recibo rumano sacaba el concepto en español.
 ### Firma de contratos
 
 El cliente firma **sin cuenta**: `/sign-contract/:token`, ruta pública fuera del `authGuard`. El token (256 bits URL-safe) es de un solo uso y caduca (7 días por defecto). Los tokens viven en `contractSigningTokens`, colección con reglas de Firestore que **deniegan todo acceso desde cliente** — solo el admin SDK entra.
+
+### El contrato se dibuja DOS veces, y las dos entradas se escribían a mano
+
+⚠️ **`signContract` no retoca el PDF generado: lo REHACE** —tiene que hacerlo,
+porque la firma manuscrita va dentro y un PDF sellado no admite cambios—. Así
+que hay dos sitios que arman la entrada de `buildContractPdf`, y durante meses
+cada uno llevaba su propia lista de campos escrita a mano. Divergieron, y el
+que se quedó corto fue **el firmado**, que es el que tiene valor.
+
+Lo vio Dorel el 5 de noviembre de 2026 en un contrato real de producción: «no
+tiene los datos del seguro… debería salir la póliza y el teléfono ya que está
+en el perfil». El dato estaba —el coche lo tenía y el contrato lo guardó en su
+`vehicleSnapshot`— y **no tenía nada que ver con que el coche fuera de
+colaborador**, que es lo que parecía desde fuera.
+
+El PDF firmado salía sin **siete campos del vehículo y cuatro de la reserva**:
+
+- la **aseguradora, la póliza y el teléfono de asistencia** — y la cláusula de
+  accidentes dice literalmente que «constan en la sección Datos del vehículo»,
+  o sea el mismo defecto que esa cláusula ya obligó a arreglar una vez;
+- el **combustible** y la **transmisión**;
+- el aviso de **localizador GPS**, que es una obligación de información;
+- la **entrega y la recogida a domicilio** — un cargo que el contrato firmado
+  no menciona es un cargo que el cliente discute con razón, y el comentario del
+  propio snapshot decía que se congelaban «para que re-renderizar el PDF al
+  firmar reproduzca exactamente el mismo desglose»;
+- el **kilometraje pactado**, que además **ni siquiera se guardaba** en
+  `reservationSnapshot`: el camino de la firma no podía imprimirlo aunque
+  quisiera, y sin él no se sostiene el cargo del kilómetro extra;
+- y los **conductores adicionales**, que la cláusula 2 exige identificar
+  nominalmente. Un contrato firmado que no los nombra contradice su propio
+  articulado.
+
+⚠️ **El arreglo quita la causa, no parchea la lista.**
+[contract-snapshot.ts](functions/src/contracts/contract-snapshot.ts) es el
+único mapeo de «qué del contrato guardado llega al PDF», y pasan por él **los
+dos** caminos: lo que no esté mapeado no se imprime en ninguno, y eso se ve al
+momento. Arreglar los siete campos a mano habría dejado el mecanismo intacto
+para el octavo.
+
+⚠️ **Y el `generateContractPdf` dibuja desde el SNAPSHOT, no desde la reserva.**
+Ese es el detalle que lo cierra: mientras uno leyera la reserva viva y el otro
+el snapshot guardado, podían volver a decir cosas distintas aunque la lista de
+campos coincidiera. El seguro es la única excepción y se resuelve **antes** —se
+lee de la ficha del coche al generar, porque la póliza que vale es la vigente
+el día de la firma— y se guarda dentro.
+
+⚠️ **El test compara CLAVES, no valores.** Un campo nuevo en el snapshot que
+nadie mapee hace fallar el test, que es lo único que impide que esto se repita.
+
+⚠️ **Y los contratos YA FIRMADOS no se arreglan**: el PDF sellado es inmutable.
+Para que uno existente lleve el seguro hay que **sustituirlo** (`supersede`) y
+volver a firmarlo, con el archivado `-v{n}` de siempre.
 
 ### El contrato va firmado con el certificado FNMT
 

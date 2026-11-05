@@ -14,6 +14,18 @@
       </button>
 
       <div class="header-actions">
+        <!--
+          ⚠️ **Crear la reserva DESDE el coche, que es como llega la petición.**
+          «Alquílame esta furgoneta» empieza por el coche, no por unas fechas, y
+          hasta aquí había que ir a Reservas, poner fechas a ciegas y buscarlo
+          entre los resultados. No es un flujo nuevo: lleva al asistente de
+          siempre con el coche puesto y su calendario de disponibilidad
+          delante. Pedido por Dorel el 5 de noviembre de 2026.
+        -->
+        <button class="btn btn-secondary" (click)="createReservation()">
+          <i class="pi pi-calendar-plus"></i>
+          {{ 'vehicles.actions.createReservation' | translate }}
+        </button>
         <button class="btn btn-secondary" (click)="openStatusModal()">
           <i class="pi pi-sync"></i>
           {{ 'vehicles.actions.changeStatus' | translate }}

@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { first } from 'rxjs/operators';
+// ⚠️ `firstValueFrom` + `first()`: aquél resuelve con la primera emisión y no
+// cuelga, pero deja el oyente abierto — `first()` lo cierra. Ver la nota de
+// `watch…`/`get…` en CLAUDE.md.
+import { firstValueFrom } from 'rxjs';
 import { NotificationService } from '@core/notifications/notification.service';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -48,6 +52,15 @@ import {
 import { APP_DEFAULTS } from '@shared/constants/app.constants';
 import { ClientService } from '@features/clients/services/client.service';
 import { VehicleService } from '@features/vehicles/services/vehicle.service';
+import { Vehicle } from '@shared/models/vehicle.model';
+import { Reservation } from '@shared/models/reservation.model';
+import { AvailabilityCalendarComponent } from '@shared/components/availability-calendar/availability-calendar.component';
+import {
+  DateRange,
+  PICKUP_HOUR,
+  RETURN_HOUR,
+  asDateTimeInput
+} from '@shared/utils/availability-calendar.util';
 import { ReservationService, VehicleAvailabilityResult } from '@features/reservations/services/reservation.service';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { PermissionsService } from '@core/auth/permissions.service';
@@ -58,7 +71,15 @@ type Step = 'dates' | 'vehicle' | 'client' | 'summary';
 @Component({
   selector: 'app-reservation-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe, FormErrorComponent, DatePickerDirective, ClearInputDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    FormErrorComponent,
+    DatePickerDirective,
+    ClearInputDirective,
+    AvailabilityCalendarComponent
+  ],
   templateUrl: './reservation-create.component.html',
   styleUrl: './reservation-create.component.scss',
 })
@@ -193,6 +214,27 @@ export class ReservationCreateComponent implements OnInit {
    * acordaría a mano un precio que nadie pactó. Lo limpian los mismos sitios
    * que ya invalidan un precio acordado.
    */
+  /**
+   * «Crear reserva» desde la ficha de un coche.
+   *
+   * ⚠️ **Es la MISMA entrada que la conversión de una solicitud**, con un
+   * parámetro menos: allí llegan coche y fechas y el asistente salta al paso
+   * del cliente; aquí llega solo el coche y se queda en el de fechas, porque es
+   * lo único que falta por decidir. Lo pidió Dorel el 5 de noviembre de 2026:
+   * «si alguien me pide alquilar este coche… ver el calendario de
+   * disponibilidad y seguir el curso de nueva reserva hasta el final».
+   *
+   * ⚠️ **No es un flujo nuevo.** El coche se fija, se eligen las fechas y a
+   * partir de ahí el asistente es exactamente el de siempre — incluida la
+   * comprobación de disponibilidad, que es la que de verdad decide. Duplicar la
+   * creación de reservas por un atajo de pantalla sería una segunda forma de
+   * crear alquileres, que es justo lo que «Convertir en reserva» evitó.
+   */
+  lockedVehicleId: string | null = null;
+  vehiculoFijado: Vehicle | null = null;
+  reservasDelCoche: Reservation[] = [];
+  cargandoCalendario = false;
+
   private promisedNetUrl = 0;
 
   /**
@@ -281,6 +323,19 @@ export class ReservationCreateComponent implements OnInit {
     const vehicleId = q.get('vehicleId');
     const pickup = q.get('pickup');
     const devolucion = q.get('return');
+
+    /**
+     * ⚠️ **Con coche pero SIN fechas, se viene de la ficha del coche.** Es la
+     * otra entrada por la URL, y se separa aquí arriba a propósito: lo que
+     * cambia es solo en qué paso se para, porque lo que falta por decidir es
+     * distinto. Con fechas, el asistente salta al cliente; sin ellas, se queda
+     * en el calendario de ESE coche.
+     */
+    if (vehicleId && (!pickup || !devolucion)) {
+      await this.fijarCoche(vehicleId);
+      return;
+    }
+
     if (!vehicleId || !pickup || !devolucion) return;
 
     this.fromRequestId = q.get('fromRequest');
@@ -373,6 +428,66 @@ export class ReservationCreateComponent implements OnInit {
    * `promisedPriceCeiling()`. Marcar «precio pactado» sin que nadie pactara
    * imprimiría una línea de ajuste en el contrato.
    */
+  /**
+   * Fija el coche y carga su calendario.
+   *
+   * ⚠️ **Las reservas del coche se leen UNA vez, no se escuchan.** El
+   * calendario sirve para elegir unas fechas en los próximos segundos, y quien
+   * decide de verdad si se puede es `searchAvailability()`, que vuelve a
+   * cruzarlas justo antes de seguir. Un oyente vivo aquí sería un `watch…` por
+   * cada vez que se abre el asistente para no cambiar nada de lo que se ve.
+   *
+   * ⚠️ **Si el coche no se puede cargar, NO se bloquea el asistente**: se
+   * avisa y se sigue como una reserva normal, eligiendo coche en su paso. Dejar
+   * la pantalla muerta por un id malo en la URL sería peor que el fallo.
+   */
+  private async fijarCoche(vehicleId: string): Promise<void> {
+    this.lockedVehicleId = vehicleId;
+    this.cargandoCalendario = true;
+    try {
+      const coche = await firstValueFrom(
+        this.vehicleService.getVehicleById(vehicleId).pipe(first())
+      );
+      if (!coche) {
+        this.lockedVehicleId = null;
+        this.notifications.error('reservations.forVehicle.lockedGone');
+        return;
+      }
+      this.vehiculoFijado = coche;
+      this.reservasDelCoche = await firstValueFrom(
+        this.reservationService.getReservationsByVehicle(vehicleId).pipe(first())
+      );
+    } catch {
+      this.lockedVehicleId = null;
+      this.vehiculoFijado = null;
+      this.notifications.error('reservations.availability.searchFailed');
+    } finally {
+      this.cargandoCalendario = false;
+    }
+  }
+
+  /**
+   * El operador cerró un rango en el calendario.
+   *
+   * ⚠️ **Rellena los campos y NO busca solo.** El calendario elige días y la
+   * hora la pone `PICKUP_HOUR`, que es una suposición: el operador casi siempre
+   * tiene que corregirla con lo que se habló por teléfono. Buscando aquí, la
+   * disponibilidad se comprobaría contra una hora inventada y el paso siguiente
+   * se daría por hecho antes de que nadie mirara.
+   */
+  onCalendarRange(rango: DateRange): void {
+    if (!rango.desde || !rango.hasta) return;
+    this.onPickupDateTimeChange(asDateTimeInput(rango.desde, PICKUP_HOUR));
+    this.onReturnDateTimeChange(asDateTimeInput(rango.hasta, RETURN_HOUR));
+  }
+
+  /** Soltar el coche fijado y elegir en la lista, como una reserva normal. */
+  soltarCoche(): void {
+    this.lockedVehicleId = null;
+    this.vehiculoFijado = null;
+    this.reservasDelCoche = [];
+  }
+
   private aplicarPrecioPrometido(): void {
     const techo = promisedPriceCeiling(this.promisedNet, this.calculatedFinalPrice);
     if (techo === null) return;
@@ -495,6 +610,28 @@ export class ReservationCreateComponent implements OnInit {
         pickupDateTime,
         returnDateTime,
       );
+
+      /**
+       * ⚠️ **Con el coche fijado se salta su paso, pero NO su comprobación.**
+       * Quien dice si está libre esas fechas sigue siendo `searchAvailability()`:
+       * el calendario solo pinta las reservas que bloquean, y entre medias
+       * están la ITV, el seguro y el estado del coche, que él sí mira.
+       *
+       * ⚠️ **Y si no está disponible se queda en la lista con su motivo al
+       * lado**, igual que al convertir una solicitud. Saltar al cliente con
+       * otro coche haría que la reserva saliera del que estuviera seleccionado.
+       */
+      if (this.lockedVehicleId) {
+        const elegido = this.availabilityResults.find(
+          (v) => v.vehicleId === this.lockedVehicleId
+        );
+        if (elegido?.available) {
+          this.selectVehicle(elegido);
+          return;
+        }
+        this.notifications.error('reservations.forVehicle.lockedGone');
+      }
+
       this.currentStep = 'vehicle';
     } catch {
       // ⚠️ Estaba en español duro, y la plantilla ya lo pasa por el pipe: un

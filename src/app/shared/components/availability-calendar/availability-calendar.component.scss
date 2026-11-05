@@ -1,0 +1,192 @@
+// El calendario de disponibilidad de un coche.
+//
+// ⚠️ Los colores salen de las variables de tema, nunca de las rampas: un
+// `--gray-700` escrito aquí se saltaría el tema y no cambiaría al alternar
+// claro y oscuro.
+
+:host {
+  display: block;
+}
+
+.disponibilidad {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cal-mes {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cal-nav {
+  // 44 px de zona pulsable: es la medida del dedo, la misma que el aspa de los
+  // campos. El dibujo sigue siendo pequeño.
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  // Transparente de base, así que aquí el tinte de hover SÍ vale como
+  // `background` a secas. Ver la nota de `--bg-hover` en CLAUDE.md.
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.cal-semana,
+.cal-rejilla {
+  display: grid;
+  // ⚠️ `minmax(0, 1fr)` y no `1fr`: con el contenido sin partir, una celda se
+  // niega a encoger por debajo de su contenido y la rejilla desborda el móvil.
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.cal-semana {
+  margin-bottom: 4px;
+
+  span {
+    text-align: center;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+}
+
+.cal-dia {
+  aspect-ratio: 1;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent-color);
+  }
+
+  &.fuera-de-mes {
+    opacity: 0.35;
+  }
+
+  &.hoy {
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px var(--accent-color);
+  }
+
+  // ⚠️ Ocupado y pasado se distinguen entre sí, y los dos del libre: con un
+  // solo gris, un día alquilado se lee igual que uno que ya pasó y el operador
+  // no sabe si el coche está fuera o si solo está mirando atrás.
+  &.ocupado {
+    background: var(--error-bg);
+    color: var(--error-color);
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+
+  &.pasado {
+    background: transparent;
+    color: var(--text-muted);
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.sel-inicio,
+  &.sel-medio,
+  &.sel-fin,
+  &.sel-unico {
+    background: var(--accent-color);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  // Las puntas redondeadas y el medio cuadrado: así el tramo se lee como una
+  // barra y no como días sueltos pintados.
+  &.sel-inicio {
+    border-radius: 6px 0 0 6px;
+  }
+  &.sel-medio {
+    border-radius: 0;
+  }
+  &.sel-fin {
+    border-radius: 0 6px 6px 0;
+  }
+}
+
+.cal-pista {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cal-elegido {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.cal-limpiar {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.cal-leyenda {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .punto {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .punto.libre {
+    background: var(--bg-main);
+    border: 1px solid var(--border-input);
+  }
+
+  .punto.ocupado {
+    background: var(--error-bg);
+    border: 1px solid var(--error-color);
+  }
+}

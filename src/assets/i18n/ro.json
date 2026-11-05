@@ -1331,6 +1331,25 @@
         "cancelled": "Încasarea avansului este anulată: nu poate fi considerată cerută",
         "otherRequest": "Acea încasare este a altei cereri"
       }
+    },
+    "availabilityCalendar": {
+      "title": "Disponibilitatea acestei mașini",
+      "hintStart": "Apasă ziua de preluare",
+      "hintEnd": "Acum ziua de returnare",
+      "days": "zi(le)",
+      "clear": "Schimbă datele",
+      "free": "Liber",
+      "occupied": "Ocupat",
+      "past": "Trecut",
+      "loading": "Se încarcă disponibilitatea…",
+      "prevMonth": "Luna anterioară",
+      "nextMonth": "Luna următoare"
+    },
+    "forVehicle": {
+      "lockedTitle": "Rezervare pentru această mașină",
+      "lockedHint": "Alege datele în calendar. Mașina este deja aleasă.",
+      "lockedGone": "Această mașină nu este disponibilă în acele date",
+      "lockedChange": "Alege altă mașină"
     }
   },
   "search": {
@@ -1467,7 +1486,8 @@
   },
   "vehicles": {
     "actions": {
-      "changeStatus": "Schimbă status"
+      "changeStatus": "Schimbă status",
+      "createReservation": "Creează rezervare"
     },
     "addFirst": "Adaugă primul vehicul",
     "bodyTypes": {
