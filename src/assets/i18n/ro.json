@@ -588,6 +588,8 @@
       "copyFailed": "Linkul nu s-a putut copia. Deschide-l și copiază adresa.",
       "copyLink": "Copiază linkul",
       "error": "Procesul-verbal nu a putut fi generat",
+      "generating": "Se generează procesul-verbal…",
+      "generatingHint": "Se va deschide singur când este gata. Nu închide această filă.",
       "problems": {
         "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
         "notFound": "Inspecția nu a fost găsită"
@@ -1906,7 +1908,9 @@
       "results": "facturi",
       "to": "Până la",
       "year": "An"
-    }
+    },
+    "generating": "Se generează documentul…",
+    "generatingHint": "Se va deschide singur când este gata. Nu închide această filă."
   },
   "collaborators": {
     "adjustedTo": "ajustat la",

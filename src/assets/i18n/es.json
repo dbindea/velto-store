@@ -588,6 +588,8 @@
       "copyFailed": "No se ha podido copiar el enlace. Ábrelo y copia la dirección.",
       "copyLink": "Copiar enlace",
       "error": "No se pudo generar el parte",
+      "generating": "Generando el parte…",
+      "generatingHint": "Se abrirá solo en cuanto esté. No cierres esta pestaña.",
       "problems": {
         "inspectionRequired": "Falta la inspección de la que emitir el parte",
         "notFound": "No se encuentra la inspección"
@@ -1906,7 +1908,9 @@
       "results": "facturas",
       "to": "Hasta",
       "year": "Año"
-    }
+    },
+    "generating": "Generando el documento…",
+    "generatingHint": "Se abrirá solo en cuanto esté. No cierres esta pestaña."
   },
   "collaborators": {
     "adjustedTo": "ajustado a",

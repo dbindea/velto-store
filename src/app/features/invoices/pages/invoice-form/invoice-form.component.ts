@@ -43,6 +43,11 @@ import { Reservation } from '@shared/models/reservation.model';
 import { PaymentService } from '@features/payments/services/payment.service';
 import { CountryOption, countryOptions } from '@shared/utils/country.util';
 import { TranslateService } from '@core/i18n/translate.service';
+import {
+  TextosDeEspera,
+  openDeferredTab,
+  sendDeferredTab
+} from '@shared/utils/deferred-tab.util';
 import { ComplianceService } from '@features/settings/services/compliance.service';
 import { FieldProblems, hasProblems, problemKeys } from '@shared/utils/form-problems.util';
 import { chargesVat, DEFAULT_VAT_RATE } from '@shared/utils/pricing.util';
@@ -600,6 +605,13 @@ export class InvoiceFormComponent implements OnInit {
     }
     if (hasProblems(this.problems)) return;
 
+    // ⚠️ **La pestaña se abre con el clic todavía vivo**: emitir tarda y,
+    // vuelta la promesa, el navegador ya ha dado el gesto por caducado y se
+    // come el `window.open()` **sin decir nada**. Aquí duele más que en el
+    // parte, porque la factura ya está emitida y no se puede editar ni borrar.
+    // Ver `openDeferredTab()`.
+    const pestana = openDeferredTab(this.textosDeEspera());
+
     this.issuing.set(true);
     try {
       const res = await this.service.issue({
@@ -628,13 +640,31 @@ export class InvoiceFormComponent implements OnInit {
           this.isRectifying && this.rectifyingType === 'S' ? this.rectifiedVat : undefined
       });
       this.notifications.success('invoices.issued', { n: res.fullNumber });
-      if (res.pdfUrl) window.open(res.pdfUrl, '_blank');
+      if (res.pdfUrl) sendDeferredTab(pestana, res.pdfUrl);
+      else pestana?.close();
       void this.router.navigate(['/invoices']);
     } catch (err: any) {
+      pestana?.close();
       this.notifications.error(this.errorKeyOf(err));
     } finally {
       this.issuing.set(false);
     }
+  }
+
+  /**
+   * El cartel que ve el operador mientras se genera el documento.
+   *
+   * ⚠️ **Genérico («el documento») y no «la factura», porque lo comparten la
+   * emisión y la proforma**, y llamar «factura» a una proforma en la única
+   * pantalla que se ve durante la espera es justo la confusión que el diseño
+   * de ese papel se dedica a evitar.
+   */
+  private textosDeEspera(): TextosDeEspera {
+    return {
+      titulo: this.translate.translate('invoices.generating'),
+      pista: this.translate.translate('invoices.generatingHint'),
+      idioma: this.translate.language()
+    };
   }
 
   /**
@@ -668,6 +698,10 @@ export class InvoiceFormComponent implements OnInit {
    * justamente cuando se usa — para que el cliente vea lo que va a pagar.
    */
   async proforma(): Promise<void> {
+    // ⚠️ **Y aquí la proforma NO se guarda en ninguna parte**: si el navegador
+    // se come la apertura, el PDF se pierde y hay que volver a generarlo sin
+    // saber por qué no pasó nada. Mismo arreglo que la emisión.
+    const pestana = openDeferredTab(this.textosDeEspera());
     this.generatingProforma.set(true);
     try {
       const res = await this.service.generateProforma({
@@ -682,8 +716,11 @@ export class InvoiceFormComponent implements OnInit {
         notes: this.notes || undefined
       });
       this.notifications.success('invoices.proformaGenerated');
-      window.open(res.pdfUrl, '_blank');
+      sendDeferredTab(pestana, res.pdfUrl);
     } catch (err: any) {
+      // La pestaña en blanco no se deja abierta: diría que algo se está
+      // generando cuando lo que ha pasado es que ha fallado.
+      pestana?.close();
       this.notifications.error(
         this.errorKeyOf(err) === 'invoices.errors.issueFailed'
           ? 'invoices.errors.proformaFailed'

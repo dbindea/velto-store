@@ -588,6 +588,8 @@
       "copyFailed": "The link could not be copied. Open it and copy the address.",
       "copyLink": "Copy link",
       "error": "The report could not be generated",
+      "generating": "Generating the report…",
+      "generatingHint": "It will open by itself when ready. Do not close this tab.",
       "problems": {
         "inspectionRequired": "No inspection to issue the report for",
         "notFound": "The inspection could not be found"
@@ -1906,7 +1908,9 @@
       "results": "invoices",
       "to": "To",
       "year": "Year"
-    }
+    },
+    "generating": "Generating the document…",
+    "generatingHint": "It will open by itself when ready. Do not close this tab."
   },
   "collaborators": {
     "adjustedTo": "adjusted to",
