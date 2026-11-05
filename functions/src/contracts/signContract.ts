@@ -42,6 +42,7 @@ import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
 import { disposicionEnLinea, nombreDePdf } from '../documents/nombre-descarga';
 import { SIGNING_SECRETS, isSigningConfigured } from './sign-pdf';
+import { driversForPdf, reservationForPdf, vehicleForPdf } from './contract-snapshot';
 import {
   formatVerificationCode,
   generateVerificationCode,
@@ -214,28 +215,17 @@ export const signContract = onCall(
           address: contract.clientSnapshot?.address,
           drivingLicenseNumber: contract.clientSnapshot?.drivingLicenseNumber
         },
-        vehicle: {
-          brand: contract.vehicleSnapshot?.brand || '',
-          model: contract.vehicleSnapshot?.model || '',
-          version: contract.vehicleSnapshot?.version,
-          plateNumber: contract.vehicleSnapshot?.plateNumber || '',
-          year: contract.vehicleSnapshot?.year
-        },
-        reservation: {
-          pickupDateTime: toDate(contract.reservationSnapshot?.pickupDateTime),
-          returnDateTime: toDate(contract.reservationSnapshot?.returnDateTime),
-          totalDays: contract.reservationSnapshot?.totalDays,
-          pickupLocation: contract.reservationSnapshot?.pickupLocation,
-          returnLocation: contract.reservationSnapshot?.returnLocation,
-          finalPrice: contract.reservationSnapshot?.finalPrice,
-          depositAmount: contract.reservationSnapshot?.depositAmount,
-          tariffPrice: contract.reservationSnapshot?.tariffPrice,
-          loyaltyDiscountPercent: contract.reservationSnapshot?.loyaltyDiscountPercent,
-          loyaltyDiscount: contract.reservationSnapshot?.loyaltyDiscount,
-          manualAdjustment: contract.reservationSnapshot?.manualAdjustment,
-          netPrice: contract.reservationSnapshot?.netPrice,
-          vatRate: contract.reservationSnapshot?.vatRate
-        },
+        /**
+         * ⚠️ **Por el mapeo compartido, nunca a mano.** Aquí se copiaban cinco
+         * campos del vehículo y el PDF **firmado** —el que tiene valor— salía
+         * sin la aseguradora, la póliza, el teléfono de asistencia, el
+         * combustible, la transmisión, el aviso de GPS, el desplazamiento a
+         * domicilio, el kilometraje pactado y los conductores autorizados,
+         * mientras el generado los llevaba todos. Ver `contract-snapshot.ts`.
+         */
+        additionalDrivers: driversForPdf(contract.additionalDrivers),
+        vehicle: vehicleForPdf(contract.vehicleSnapshot),
+        reservation: reservationForPdf(contract.reservationSnapshot),
         inspection: contract.inspectionSnapshot
           ? {
               pickupKm: contract.inspectionSnapshot.pickupKm,

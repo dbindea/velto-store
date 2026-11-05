@@ -41,6 +41,7 @@ import { firestore, storageBucket } from '../admin-guard';
 import { companyConfig } from '../company-config';
 import { disposicionEnLinea, nombreDePdf } from '../documents/nombre-descarga';
 import type { ContractLocale } from './contract-types';
+import { driversForPdf, reservationForPdf, vehicleForPdf } from './contract-snapshot';
 
 interface GenerateRequest {
   reservationId: string;
@@ -77,13 +78,9 @@ interface GenerateResponse {
   supersededId?: string;
 }
 
-function toDate(value: any): Date | undefined {
-  if (!value) return undefined;
-  if (value instanceof Date) return value;
-  if (typeof value.toDate === 'function') return value.toDate();
-  if (value.seconds) return new Date(value.seconds * 1000);
-  return undefined;
-}
+// El `toDate()` que vivía aquí se fue con el mapeo: ahora las fechas las
+// resuelve `reservationForPdf()`, que es quien las necesita y la que usan los
+// dos caminos del PDF.
 
 function asString(value: any, fallback = ''): string {
   if (value === undefined || value === null) return fallback;
@@ -326,6 +323,52 @@ export const generateContractPdf = onCall(
 
     const company = companyConfig();
 
+    /**
+     * Lo que se congela de la reserva, **antes** de dibujar nada.
+     *
+     * ⚠️ **El PDF se construye desde ESTE objeto, no desde la reserva**, y ese
+     * es todo el arreglo: al firmar, el documento se rehace desde el snapshot
+     * guardado, así que lo que no entre aquí no puede salir en el contrato
+     * firmado. Mientras el generado leía la reserva y el firmado el snapshot,
+     * los dos documentos decían cosas distintas — y era el firmado el que salía
+     * corto. Ver `contract-snapshot.ts`.
+     */
+    const reservationSnapshot = {
+      pickupDateTime: reservation.pickupDateTime,
+      returnDateTime: reservation.returnDateTime,
+      totalDays: reservation.totalDays,
+      pickupLocation: reservation.pickupLocation,
+      returnLocation: reservation.returnLocation,
+      finalPrice: reservation.pricingSnapshot?.finalPrice,
+      depositAmount: depositRequired,
+      // Frozen alongside the price so re-rendering the PDF at signing time
+      // reproduces exactly the same breakdown, even if the client's discount
+      // or the VAT rate has moved in the meantime.
+      tariffPrice: reservation.pricingSnapshot?.basePrice,
+      loyaltyDiscountPercent: reservation.pricingSnapshot?.loyaltyDiscountPercent,
+      loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
+      manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
+      netPrice: reservation.pricingSnapshot?.netPrice,
+      vatRate: reservation.pricingSnapshot?.vatRate,
+      // Se congelan en el contrato como el resto del dinero: el documento
+      // firmado tiene que seguir diciendo qué se pactó por el desplazamiento.
+      deliveryPickupFee: reservation.deliveryFees?.pickupFee,
+      deliveryReturnFee: reservation.deliveryFees?.returnFee,
+      /**
+       * ⚠️ **El kilometraje pactado, que antes NO se guardaba.** El PDF
+       * generado lo imprimía leyéndolo de la reserva, pero el firmado se rehace
+       * desde este snapshot y ahí no estaba: el contrato que el cliente firma
+       * salía sin los km incluidos ni el precio del kilómetro extra, que es
+       * justo lo que sostiene el cargo de la devolución.
+       */
+      includedKmPerDay: reservation.pricingSnapshot?.includedKmPerDay,
+      extraKmPrice: reservation.pricingSnapshot?.extraKmPrice
+    };
+
+    const driversSnapshot = Array.isArray(reservation.additionalDrivers)
+      ? reservation.additionalDrivers
+      : [];
+
     // 7. Build the PDF
     const { buildContractPdf } = await import('./pdf');
     const pdfBytes = await buildContractPdf(
@@ -335,31 +378,12 @@ export const generateContractPdf = onCall(
         client: clientSnapshot,
         // Conductores autorizados además del arrendatario (cláusula 2). Se
         // copian de la reserva tal cual: son un snapshot, como el cliente.
-        additionalDrivers: Array.isArray(reservation.additionalDrivers)
-          ? reservation.additionalDrivers
-          : undefined,
-        vehicle: vehicleSnapshot,
-        reservation: {
-          pickupDateTime: toDate(reservation.pickupDateTime),
-          returnDateTime: toDate(reservation.returnDateTime),
-          totalDays: reservation.totalDays,
-          pickupLocation: reservation.pickupLocation,
-          returnLocation: reservation.returnLocation,
-          finalPrice: reservation.pricingSnapshot?.finalPrice,
-          depositAmount: depositRequired,
-          tariffPrice: reservation.pricingSnapshot?.basePrice,
-          loyaltyDiscountPercent: reservation.pricingSnapshot?.loyaltyDiscountPercent,
-          loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
-          manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
-          netPrice: reservation.pricingSnapshot?.netPrice,
-          vatRate: reservation.pricingSnapshot?.vatRate,
-          // Fuera de `pricingSnapshot` en la reserva, y por eso se leen aparte.
-          deliveryPickupFee: reservation.deliveryFees?.pickupFee,
-          deliveryReturnFee: reservation.deliveryFees?.returnFee,
-          // Lo que se pactó, no lo que hoy diga la ficha del coche.
-          includedKmPerDay: reservation.pricingSnapshot?.includedKmPerDay,
-          extraKmPrice: reservation.pricingSnapshot?.extraKmPrice
-        },
+        additionalDrivers: driversForPdf(driversSnapshot),
+        // Los tres por el mismo mapeo que usa `signContract` al rehacer el PDF:
+        // es lo único que garantiza que el documento firmado diga lo mismo que
+        // el que el cliente leyó.
+        vehicle: vehicleForPdf(vehicleSnapshot),
+        reservation: reservationForPdf(reservationSnapshot),
         inspection: pickupInspection
           ? {
               pickupKm: pickupInspection.km,
@@ -410,35 +434,15 @@ export const generateContractPdf = onCall(
       status: 'generated',
       contractNumber,
       locale: preferredLocale,
-      reservationSnapshot: {
-        pickupDateTime: reservation.pickupDateTime,
-        returnDateTime: reservation.returnDateTime,
-        totalDays: reservation.totalDays,
-        pickupLocation: reservation.pickupLocation,
-        returnLocation: reservation.returnLocation,
-        finalPrice: reservation.pricingSnapshot?.finalPrice,
-        depositAmount: depositRequired,
-        // Frozen alongside the price so re-rendering the PDF at signing time
-        // reproduces exactly the same breakdown, even if the client's discount
-        // or the VAT rate has moved in the meantime.
-        tariffPrice: reservation.pricingSnapshot?.basePrice,
-        loyaltyDiscountPercent: reservation.pricingSnapshot?.loyaltyDiscountPercent,
-        loyaltyDiscount: reservation.pricingSnapshot?.loyaltyDiscount,
-        manualAdjustment: reservation.pricingSnapshot?.manualAdjustment,
-        netPrice: reservation.pricingSnapshot?.netPrice,
-        vatRate: reservation.pricingSnapshot?.vatRate,
-        // Se congelan en el contrato como el resto del dinero: el documento
-        // firmado tiene que seguir diciendo qué se pactó por el desplazamiento.
-        deliveryPickupFee: reservation.deliveryFees?.pickupFee,
-        deliveryReturnFee: reservation.deliveryFees?.returnFee
-      },
+      // El MISMO objeto con el que se dibujó el PDF, no una segunda copia:
+      // escribirlo aparte es como el documento firmado acabó diciendo menos que
+      // el generado.
+      reservationSnapshot,
       clientSnapshot,
       // Se congelan en el contrato igual que el arrendatario: el documento
       // tiene que seguir diciendo quién estaba autorizado el día que se firmó,
       // aunque después se toque la reserva.
-      additionalDrivers: Array.isArray(reservation.additionalDrivers)
-        ? reservation.additionalDrivers
-        : [],
+      additionalDrivers: driversSnapshot,
       vehicleSnapshot,
       companySnapshot: company,
       // Persist a copy of the clauses bundle so the contract is reproducible
