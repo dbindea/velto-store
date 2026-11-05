@@ -139,7 +139,11 @@ sitio:
 - [ ] El **`.p12` de la FNMT** y su contraseña, en un pendrive o donde guardes lo
       importante
 - [ ] Dónde está registrado el dominio **veltomobility.com** y con qué cuenta
-- [ ] Contacto del **banco / Redsys** (comercio `361040215`, terminal `1`)
+- [ ] Contacto del **banco / Redsys**. ⚠️ **Son DOS comercios desde el 2 de
+      noviembre de 2026**: el que cobra de verdad es `361040215`, terminal `1`
+      —prestado, y es por el que hay que preguntar si hay que parar o devolver
+      algo—; `370770240`, terminal `001`, es el de VELTO y por ahora **solo
+      está en desarrollo**, en el entorno de pruebas del alta
 - [ ] Contacto de la **gestoría**
 - [ ] Una copia impresa de este documento
 - [ ] **Diez contratos de alquiler impresos en blanco** → ver § 3

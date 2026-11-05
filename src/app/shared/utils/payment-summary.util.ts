@@ -562,17 +562,29 @@ export function buildInitialPaymentRows(
     prefix: string;
     dueDate: any;
   }> = [
+    /**
+     * ⚠️ **El concepto de una fila sembrada es el TIPO, nunca una frase.** Los
+     * tres de abajo guardaban un literal castellano —«Señal reserva», «Resto
+     * alquiler», «Fianza»— y `translate()` devuelve tal cual lo que no es
+     * clave, así que un operador rumano los leía en español y el recibo en PDF
+     * de un cliente inglés los imprimía igual. Con el tipo dentro lo resuelve
+     * `paymentConceptKey()` en el idioma de quien mira, que es lo que hay que
+     * hacer con un concepto que escribe el sistema y no una persona.
+     *
+     * Las filas ya escritas se quedan con su literal: no se migra nada, y lo
+     * que sale en pantalla es lo mismo que salía.
+     */
     {
       type: 'initial_payment',
       amount: reservation.initialPayment?.requiredAmount || 0,
-      concept: 'Señal reserva',
+      concept: 'initial_payment',
       prefix: 'INIT',
       dueDate: now
     },
     {
       type: 'remaining_payment',
       amount: reservation.remainingPayment?.requiredAmount || 0,
-      concept: 'Resto alquiler',
+      concept: 'remaining_payment',
       prefix: 'REMAIN',
       dueDate: reservation.remainingPayment?.dueDate
     },
@@ -585,13 +597,6 @@ export function buildInitialPaymentRows(
      * ⚠️ El importe que va a la fila es el **bruto**: lo tecleado es neto y el
      * IVA se suma con el tipo congelado de la reserva. Una fila de cobro dice lo
      * que hay que cobrarle al cliente, no la base imponible.
-     */
-    /**
-     * ⚠️ **El concepto es el TIPO, no una frase en español.** Los tres de arriba
-     * guardan un literal castellano por herencia, y `PaymentConceptPipe` los
-     * pinta tal cual: un operador rumano lee «Señal reserva». Con el tipo dentro,
-     * el pipe resuelve la etiqueta traducida, que es lo que hay que hacer con un
-     * concepto que escribe el sistema y no una persona.
      */
     {
       type: 'delivery_fee',
@@ -610,7 +615,7 @@ export function buildInitialPaymentRows(
     {
       type: 'deposit',
       amount: reservation.deposit?.requiredAmount || 0,
-      concept: 'Fianza',
+      concept: 'deposit',
       prefix: 'DEP',
       dueDate: reservation.pickupDateTime
     }

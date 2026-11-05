@@ -169,6 +169,156 @@ transferencia. Las dos cosas están publicadas en `/devoluciones#como`.
 
 ---
 
+## 3 bis. El comercio de pruebas, y las operaciones que pidió el banco
+
+⚠️ **El 2 de noviembre de 2026 BBVA entregó el entorno de pruebas del alta.** Es
+el paso siguiente al expediente del § 4: el banco pide probar «varias
+operaciones» contra su entorno de test y después se solicita el pase a
+producción, con clave nueva.
+
+| | Comercio | Terminal | Moneda | Clave |
+|---|---|---|---|---|
+| **desarrollo** (`velto-store`) | `370770240` | `001` | 978 | la **pública de test** de Redsys |
+| producción (`rentalcar-veltomobility`) | `361040215` | `1` | 978 | la real, en Secret Manager |
+
+⚠️ **El comercio de producción NO se tocó, y es deliberado.** El `361040215` es
+de otro comercio y está prestado; es el que lleva cobrando de verdad desde el 31
+de agosto de 2026 y el alta de VELTO todavía no está concedida. Cambiarlo hoy
+dejaría producción sin cobrar.
+
+⚠️ **La clave de desarrollo no hizo falta cambiarla, aunque el comercio sí.** El
+banco asignó a este comercio de pruebas la clave que **Redsys publica en su
+documentación**, que es la que ya estaba en Secret Manager. Comprobado
+comparando huellas sin imprimir los valores: la de desarrollo coincidía y la de
+producción es otra, que es lo que tiene que pasar. Sorprende leer que una clave
+está en internet; en el entorno de test no hay nada que proteger.
+
+⚠️ **Y lo que cambia en el repositorio es UN fichero**: `.env.velto-store`. El
+código de comercio y el terminal no son secretos —viajan firmados dentro del
+formulario que ve cualquier cliente— y viven ahí desde M-23.
+
+### Las seis operaciones, medidas
+
+Todas contra `sis-t.redsys.es:25443` con la tarjeta de pruebas
+`4548 8120 4940 0004` (12/34, CVV 123) y el simulador EMV3DS 2.2.0. La pasarela
+se identifica como **VELTO MOBILITY (SPAIN)**, terminal `370770240-1`, y su
+pantalla sale con la marca **BBVA** — que es la confirmación de que el comercio
+es el nuestro y no el prestado.
+
+| # | Operación | Vía | Pedido | Resultado |
+|---|---|---|---|---|
+| 1 | Señal 50,00 € | **web pública** → `/pay/:id` | `9969DDD56F60` | autorizada, **401385** |
+| 2 | Fianza 150,00 € | backoffice, ficha de reserva | `1960400B85A1` | autorizada, **055388** |
+| 3 | Resto 197,95 € | backoffice | `4025599282AD` | **denegada** (autenticación 3DS) y después **SIS9915** al cancelar |
+| 4 | Resto 197,95 €, reintento | backoffice | `8683E8CE6504` | autorizada, **055393** |
+| 5 | Devolución parcial 50,00 € | ficha del cobro | sobre `1960400B85A1` | aceptada, **0900** |
+| 6 | Devolución del resto 100,00 € | ficha del cobro | sobre `1960400B85A1` | aceptada, **0900** |
+
+Lo que cada una demuestra, que es lo que no se ve en la tabla:
+
+- **La 1 cierra una deuda vieja.** La pantalla pública del móvil «no tenía
+  todavía un pago que se hubiera registrado solo» desde que perdió un cobro real
+  el 4 de septiembre de 2026 (F-32). Ahora sí: el visitante hizo la pre-reserva
+  en `dev.veltorent.com`, pulsó «Pagar la señal», pagó, y la aplicación se
+  enteró **sin que nadie abriera el panel** — `/pay/:id` enseñaba «Pago recibido
+  · 50,00 €» al recargar. En producción esa vía sigue apagada.
+- **La 3 separa dos cosas que se confunden.** Un fallo de **autenticación**
+  3-D Secure no llega a autorización, así que Redsys **no notifica nada** y el
+  cobro se queda `Pendiente` y pagable — comprobado: ni un aviso en el webhook y
+  la ficha sin cambiar. Lo que sí notifica es la **cancelación** (SIS9915), y
+  ahí el cobro pasa a `Fallido`. Son dos pruebas, no una.
+- **La 4 es la que protege de `SIS0051`.** El pedido es **distinto** del
+  quemado: `resolveOrder()` emite uno nuevo en cuanto el anterior recibió aviso,
+  porque la pasarela rechaza un pedido ya procesado. Si reutilizara, el
+  reintento tras una denegación fallaría siempre.
+- **La 5 y la 6 se leen con OTRA regla.** `0900` es devolución aceptada; con la
+  regla del cobro (`0000`–`0099`) parecerían un error, y lo que sigue a un error
+  es reintentar: dinero fuera dos veces. Y la parcial **no cambia el estado**:
+  el cobro sigue `paid` con `refundedAmount: 50`, que es lo que hace que
+  `sumPaid()` descuente en vez de mirar el estado.
+
+⚠️ **Y el tope funciona.** Tras devolver los 150 € completos la sección de
+devolver **desaparece** y la ficha dice «Este cobro está devuelto»:
+`refundableAmount` es 0 y no hay forma de sacar más desde la aplicación.
+
+⚠️ **Lo que NO se probó, y hay que decirlo:** una **denegación de autorización**
+de verdad —fondos insuficientes, tarjeta caducada—. El simulador de este entorno
+deniega en la **autenticación**, que es un paso antes, y para el otro caso hace
+falta una tarjeta de pruebas concreta que el banco no ha dado. Si BBVA lo exige
+en su lista, hay que pedírsela. Tampoco se probó **Bizum**, que la pasarela
+ofrece y la aplicación no integra.
+
+### Lo que hay que cambiar el día que concedan producción
+
+⚠️ **Son TRES líneas, no una.** Lo que el banco mandará es la clave nueva, así
+que la tentación es sustituir solo el secret; con el `361040215` todavía escrito
+en `.env.rentalcar-veltomobility`, las firmas saldrían con la clave de un
+comercio y el código de otro y la pasarela contestaría **`SIS0042`** — que se lee
+como «la clave está mal» y no como «no se corresponden».
+
+```bash
+# functions/.env.rentalcar-veltomobility
+REDSYS_MERCHANT_CODE=370770240      # el nuevo
+REDSYS_TERMINAL=001                 # tres dígitos, no 1
+REDSYS_ENVIRONMENT=live             # se queda
+
+firebase functions:secrets:set REDSYS_SECRET_KEY --project prod
+firebase deploy --only functions:createRedsysPaymentLink,functions:getPaymentCheckout --project prod
+firebase deploy --only functions:redsysNotificationWebhook,functions:refundRedsysPayment --project prod
+```
+
+⚠️ **Y son esas CUATRO functions y ninguna más.** Son las únicas que leen
+`REDSYS_*`; tocar el `.env` cambia el hash de todas, pero en producción el
+despliegue va por nombre y nunca `--only functions` a secas, que subiría las
+cinco de la AEAT que allí no deben estar.
+
+⚠️ **Lo primero es CONFIRMAR el comercio que mandan, no darlo por hecho.** Arriba
+va `370770240` porque lo normal en Redsys es que el número sea el mismo para test
+y para real y que lo único distinto sea la clave — pero eso es lo normal, no lo
+seguro: algunas altas traen número de comercio propio para producción. Lo que
+venga en el correo del banco manda sobre este fichero.
+
+⚠️ **La primera operación en producción se hace con un importe mínimo y se
+devuelve.** Allí `live` significa dinero real: no hay tarjetas de prueba.
+
+### ⚠️ Y lo que de verdad hay que mirar antes: las fianzas del comercio viejo
+
+**Una devolución se firma con el comercio y la clave de HOY, y con el pedido del
+cobro de entonces.** `refundRedsysPayment` lee `REDSYS_MERCHANT_CODE` y
+`REDSYS_SECRET_KEY` de `process.env` en cada llamada —no del documento del
+pago— y manda `payment.redsys.order`, que se emitió bajo el comercio anterior.
+
+Es decir: **en cuanto se cambie el comercio de producción, cualquier cobro ya
+hecho con el `361040215` deja de poderse devolver desde la aplicación.** La
+petición saldría diciendo que es del `370770240` con un pedido que ese comercio
+no conoce, y el banco la rechaza. Y el pago que más probabilidades tiene de estar
+en ese estado es justo el peor: **una fianza cobrada y todavía sin devolver**,
+porque la fianza se devuelve casi siempre y se devuelve semanas después de
+cobrarse.
+
+⚠️ **No es un fallo del código, y por eso no tiene arreglo en el código.** El
+documento del pago sí guarda su `redsys.merchantCode` y su `redsys.terminal`, así
+que la función podría usarlos; lo que no puede recuperar es **la clave del
+comercio viejo**, que es una sola en Secret Manager. Dos comercios vivos a la vez
+pedirían dos claves, y eso es rehacer la configuración entera por un caso que
+dura unas semanas.
+
+Así que el cambio se **planifica**, no se hace a mitad de mes:
+
+1. **Antes de tocar nada**, mirar en Pagos de producción si queda algún cobro con
+   tarjeta sin devolver del todo — fianzas sobre todo.
+2. Si queda alguno, o se **devuelve antes** del cambio, o se asume que esa
+   devolución habrá que hacerla **desde el panel del banco** y no desde la
+   aplicación.
+3. Y dejar dicho a quien atienda: durante la transición, una fianza antigua que
+   haya que devolver va por el panel.
+
+⚠️ **El síntoma, si se olvida, no dice esto.** Lo que se verá es una devolución
+que el banco rechaza sobre un cobro que está perfectamente registrado y pagado, y
+lo primero que uno piensa es que la clave nueva está mal puesta.
+
+---
+
 ## 4. Lo que falta, y es de Dorel
 
 ⚠️ **A 20 de octubre de 2026 el expediente está EN MANOS DEL BANCO.** Lo que
@@ -177,6 +327,10 @@ ninguno de los tres bloquea volver a presentarlo. Y mientras no contesten, **el
 pago de la señal desde la web sigue apagado en producción**
 (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED=false`): encenderlo es una decisión de Dorel
 y son dos functions, no una.
+
+> ⚠️ **El 2 de noviembre de 2026 el banco contestó con el entorno de pruebas**
+> —ver § 3 bis—, así que el expediente ya no está parado. Lo que queda de esta
+> tabla sigue vigente.
 
 | Qué | Estado el 17 de octubre de 2026 |
 |---|---|

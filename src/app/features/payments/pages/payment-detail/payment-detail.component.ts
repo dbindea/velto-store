@@ -23,6 +23,7 @@ import { ConfirmService } from '@core/notifications/confirm.service';
 import { NotificationService } from '@core/notifications/notification.service';
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { amountProblem, canEditAmount } from '@shared/utils/payment-edit.util';
+import { isPaymentTypeSentinel } from '@shared/utils/payment-concept.util';
 import {
   canRefund,
   refundProblem,
@@ -320,7 +321,16 @@ export class PaymentDetailComponent implements OnInit {
   openAmountForm(): void {
     if (!this.payment) return;
     this.amountDraft = this.payment.amount;
-    this.conceptDraft = this.payment.concept || '';
+    // ⚠️ **Un concepto que es el enumerado se abre VACÍO, no con el
+    // identificador dentro.** El concepto de una fila sembrada es el propio
+    // tipo —lo escribe el sistema para que cada quien lo lea en su idioma—, y
+    // precargándolo el operador que abriera este formulario para corregir el
+    // importe guardaría `initial_payment` como si lo hubiera tecleado él,
+    // congelándolo en español y en la pantalla del banco. Vacío significa «lo
+    // titula su tipo», que es lo que ya hace la pantalla.
+    this.conceptDraft = isPaymentTypeSentinel(this.payment.concept)
+      ? ''
+      : this.payment.concept || '';
     this.showAmountForm = true;
   }
 

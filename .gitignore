@@ -104,3 +104,14 @@ test-contract-*.pdf
 # vacía.
 docs/design/*.html
 .firebase/
+
+# El espacio de trabajo de VS Code es de Dorel: dice qué carpetas abre él y con
+# qué ajustes, y no tiene por qué ser lo mismo en otra máquina.
+#
+# ⚠️ Se sacó del repositorio el 31 de octubre de 2026 (`60f5dc9`) y **no se
+# ignoró**, así que reaparecía como `??` en cada `git status` — ruido en el
+# sitio donde se mira si queda algo por subir, y a un `git add -A` de volver a
+# entrar. Es el reverso de la trampa que CLAUDE.md ya documenta con
+# `deploy.log`: allí hacía falta `git rm --cached` además de ignorarlo, y aquí
+# hacía falta ignorarlo además del `git rm`. Las dos mitades hacen falta.
+*.code-workspace

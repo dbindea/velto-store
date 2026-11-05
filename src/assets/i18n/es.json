@@ -588,6 +588,8 @@
       "copyFailed": "No se ha podido copiar el enlace. Ábrelo y copia la dirección.",
       "copyLink": "Copiar enlace",
       "error": "No se pudo generar el parte",
+      "generating": "Generando el parte…",
+      "generatingHint": "Se abrirá solo en cuanto esté. No cierres esta pestaña.",
       "problems": {
         "inspectionRequired": "Falta la inspección de la que emitir el parte",
         "notFound": "No se encuentra la inspección"
@@ -1329,6 +1331,25 @@
         "cancelled": "El cobro de la señal está cancelado: no se puede dar por pedida",
         "otherRequest": "Ese cobro es de otra solicitud"
       }
+    },
+    "availabilityCalendar": {
+      "title": "Disponibilidad de este coche",
+      "hintStart": "Pulsa el día de recogida",
+      "hintEnd": "Ahora el día de devolución",
+      "days": "día(s)",
+      "clear": "Cambiar fechas",
+      "free": "Libre",
+      "occupied": "Ocupado",
+      "past": "Pasado",
+      "loading": "Cargando la disponibilidad…",
+      "prevMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente"
+    },
+    "forVehicle": {
+      "lockedTitle": "Reserva para este coche",
+      "lockedHint": "Elige las fechas en el calendario. El coche ya está elegido.",
+      "lockedGone": "Este coche no está disponible en esas fechas",
+      "lockedChange": "Elegir otro coche"
     }
   },
   "search": {
@@ -1465,7 +1486,8 @@
   },
   "vehicles": {
     "actions": {
-      "changeStatus": "Cambiar estado"
+      "changeStatus": "Cambiar estado",
+      "createReservation": "Crear reserva"
     },
     "addFirst": "Añadir primer vehículo",
     "bodyTypes": {
@@ -1906,7 +1928,9 @@
       "results": "facturas",
       "to": "Hasta",
       "year": "Año"
-    }
+    },
+    "generating": "Generando el documento…",
+    "generatingHint": "Se abrirá solo en cuanto esté. No cierres esta pestaña."
   },
   "collaborators": {
     "adjustedTo": "ajustado a",

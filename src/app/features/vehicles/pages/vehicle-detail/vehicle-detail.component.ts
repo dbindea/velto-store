@@ -675,6 +675,24 @@ export class VehicleDetailComponent implements OnInit {
     }
   }
 
+  /**
+   * Empezar una reserva de ESTE coche.
+   *
+   * ⚠️ **Lleva al asistente de siempre, no crea nada aquí.** Es la misma puerta
+   * que usa «Convertir en reserva» de una solicitud —el coche viaja en la URL—
+   * y con un parámetro menos: sin fechas, el asistente se queda en el paso de
+   * fechas con el calendario de disponibilidad de este coche delante. Crear un
+   * alquiler es una sola escritura con sus filas de cobro, su disponibilidad y
+   * su cliente; duplicar eso desde aquí sería una segunda forma de crear
+   * reservas.
+   */
+  createReservation(): void {
+    if (!this.vehicle?.id) return;
+    void this.router.navigate(['/reservations/new'], {
+      queryParams: { vehicleId: this.vehicle.id }
+    });
+  }
+
   trackByIndex(index: number): number {
     return index;
   }

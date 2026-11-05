@@ -38,7 +38,12 @@
           sin decir es quién paga, qué coche y qué reserva.
         -->
         @if (view()!.concept) {
-          <p class="paid-concept">{{ view()!.concept }}</p>
+          <!-- ⚠️ **Por el traductor, como todo lo visible.** `getPaymentCheckout`
+               devuelve una CLAVE cuando el concepto lo escribió el sistema, así
+               que sin el pipe el cliente leía `initial_payment`; y lo que
+               escribió el operador sale intacto, porque `translate()` devuelve
+               tal cual lo que no encuentra. -->
+          <p class="paid-concept">{{ view()!.concept | translate }}</p>
         }
       </div>
     } @else if (view()!.state === 'unavailable') {
@@ -59,7 +64,7 @@
         <p class="amount">{{ view()!.amount | number:'1.2-2' }} €</p>
 
         @if (view()!.concept) {
-          <p class="concept">{{ view()!.concept }}</p>
+          <p class="concept">{{ view()!.concept | translate }}</p>
         }
 
         <!--

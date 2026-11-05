@@ -1,0 +1,84 @@
+<div class="disponibilidad">
+  <div class="cal-header">
+    <button
+      type="button"
+      class="cal-nav"
+      (click)="mesAnterior()"
+      [disabled]="!puedeRetroceder"
+      [attr.aria-label]="'reservations.availabilityCalendar.prevMonth' | translate"
+      [title]="'reservations.availabilityCalendar.prevMonth' | translate"
+    >
+      <i class="pi pi-chevron-left"></i>
+    </button>
+    <span class="cal-mes">{{ etiquetaMes() }}</span>
+    <button
+      type="button"
+      class="cal-nav"
+      (click)="mesSiguiente()"
+      [attr.aria-label]="'reservations.availabilityCalendar.nextMonth' | translate"
+      [title]="'reservations.availabilityCalendar.nextMonth' | translate"
+    >
+      <i class="pi pi-chevron-right"></i>
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">{{ 'reservations.availabilityCalendar.loading' | translate }}</div>
+  } @else {
+    <div class="cal-semana" aria-hidden="true">
+      @for (k of weekdayKeys; track k) {
+        <span>{{ k | translate }}</span>
+      }
+    </div>
+
+    <div class="cal-rejilla" role="grid">
+      @for (celda of celdas(); track claveDia($index, celda)) {
+        <button
+          type="button"
+          role="gridcell"
+          class="cal-dia"
+          [class.fuera-de-mes]="!celda.delMes"
+          [class.hoy]="celda.hoy"
+          [class.ocupado]="celda.estado === 'ocupado'"
+          [class.pasado]="celda.estado === 'pasado'"
+          [class.sel-inicio]="celda.posicion === 'inicio'"
+          [class.sel-medio]="celda.posicion === 'medio'"
+          [class.sel-fin]="celda.posicion === 'fin'"
+          [class.sel-unico]="celda.posicion === 'unico'"
+          [disabled]="celda.estado !== 'libre'"
+          [title]="tituloCelda(celda)"
+          (click)="pulsar(celda)"
+        >
+          {{ celda.dia }}
+        </button>
+      }
+    </div>
+
+    <!--
+      ⚠️ La pista va DEBAJO y siempre visible: un calendario en el que hay que
+      pulsar dos veces y no lo dice se usa mal la primera vez, y entonces no se
+      vuelve a usar. Misma razón que el aviso del gesto de deslizar en el
+      calendario mensual.
+    -->
+    <p class="cal-pista">
+      @if (!rango().desde) {
+        {{ 'reservations.availabilityCalendar.hintStart' | translate }}
+      } @else if (!rango().hasta) {
+        {{ 'reservations.availabilityCalendar.hintEnd' | translate }}
+      } @else {
+        <span class="cal-elegido">
+          {{ rango().desde | date: 'dd/MM/yyyy' }} → {{ rango().hasta | date: 'dd/MM/yyyy' }}
+          · {{ dias() }} {{ 'reservations.availabilityCalendar.days' | translate }}
+        </span>
+        <button type="button" class="btn-ghost cal-limpiar" (click)="limpiar()">
+          {{ 'reservations.availabilityCalendar.clear' | translate }}
+        </button>
+      }
+    </p>
+
+    <div class="cal-leyenda">
+      <span><i class="punto libre"></i>{{ 'reservations.availabilityCalendar.free' | translate }}</span>
+      <span><i class="punto ocupado"></i>{{ 'reservations.availabilityCalendar.occupied' | translate }}</span>
+    </div>
+  }
+</div>

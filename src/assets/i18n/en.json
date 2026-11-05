@@ -588,6 +588,8 @@
       "copyFailed": "The link could not be copied. Open it and copy the address.",
       "copyLink": "Copy link",
       "error": "The report could not be generated",
+      "generating": "Generating the report…",
+      "generatingHint": "It will open by itself when ready. Do not close this tab.",
       "problems": {
         "inspectionRequired": "No inspection to issue the report for",
         "notFound": "The inspection could not be found"
@@ -1329,6 +1331,25 @@
         "cancelled": "The advance payment is cancelled: it cannot be treated as requested",
         "otherRequest": "That payment belongs to a different request"
       }
+    },
+    "availabilityCalendar": {
+      "title": "Availability for this car",
+      "hintStart": "Tap the pick-up day",
+      "hintEnd": "Now the return day",
+      "days": "day(s)",
+      "clear": "Change dates",
+      "free": "Free",
+      "occupied": "Booked",
+      "past": "Past",
+      "loading": "Loading availability…",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month"
+    },
+    "forVehicle": {
+      "lockedTitle": "Reservation for this car",
+      "lockedHint": "Pick the dates on the calendar. The car is already chosen.",
+      "lockedGone": "This car is not available on those dates",
+      "lockedChange": "Choose another car"
     }
   },
   "search": {
@@ -1465,7 +1486,8 @@
   },
   "vehicles": {
     "actions": {
-      "changeStatus": "Change status"
+      "changeStatus": "Change status",
+      "createReservation": "New reservation"
     },
     "addFirst": "Add first vehicle",
     "bodyTypes": {
@@ -1906,7 +1928,9 @@
       "results": "invoices",
       "to": "To",
       "year": "Year"
-    }
+    },
+    "generating": "Generating the document…",
+    "generatingHint": "It will open by itself when ready. Do not close this tab."
   },
   "collaborators": {
     "adjustedTo": "adjusted to",

@@ -588,6 +588,8 @@
       "copyFailed": "Linkul nu s-a putut copia. Deschide-l și copiază adresa.",
       "copyLink": "Copiază linkul",
       "error": "Procesul-verbal nu a putut fi generat",
+      "generating": "Se generează procesul-verbal…",
+      "generatingHint": "Se va deschide singur când este gata. Nu închide această filă.",
       "problems": {
         "inspectionRequired": "Lipsește inspecția pentru care se emite procesul-verbal",
         "notFound": "Inspecția nu a fost găsită"
@@ -1329,6 +1331,25 @@
         "cancelled": "Încasarea avansului este anulată: nu poate fi considerată cerută",
         "otherRequest": "Acea încasare este a altei cereri"
       }
+    },
+    "availabilityCalendar": {
+      "title": "Disponibilitatea acestei mașini",
+      "hintStart": "Apasă ziua de preluare",
+      "hintEnd": "Acum ziua de returnare",
+      "days": "zi(le)",
+      "clear": "Schimbă datele",
+      "free": "Liber",
+      "occupied": "Ocupat",
+      "past": "Trecut",
+      "loading": "Se încarcă disponibilitatea…",
+      "prevMonth": "Luna anterioară",
+      "nextMonth": "Luna următoare"
+    },
+    "forVehicle": {
+      "lockedTitle": "Rezervare pentru această mașină",
+      "lockedHint": "Alege datele în calendar. Mașina este deja aleasă.",
+      "lockedGone": "Această mașină nu este disponibilă în acele date",
+      "lockedChange": "Alege altă mașină"
     }
   },
   "search": {
@@ -1465,7 +1486,8 @@
   },
   "vehicles": {
     "actions": {
-      "changeStatus": "Schimbă status"
+      "changeStatus": "Schimbă status",
+      "createReservation": "Creează rezervare"
     },
     "addFirst": "Adaugă primul vehicul",
     "bodyTypes": {
@@ -1906,7 +1928,9 @@
       "results": "facturi",
       "to": "Până la",
       "year": "An"
-    }
+    },
+    "generating": "Se generează documentul…",
+    "generatingHint": "Se va deschide singur când este gata. Nu închide această filă."
   },
   "collaborators": {
     "adjustedTo": "ajustat la",

@@ -472,6 +472,45 @@ describe('publicPrice — los dos lados del impuesto cuadran contra lo que se EN
     expect(p.gross).toBe(24.95);
     expect(p.net).toBe(24.95);
   });
+
+  /**
+   * ⚠️ **El invariante que decide si se cobra más de lo anunciado.**
+   *
+   * El neto publicado es una RECONSTRUCCIÓN del bruto, y es el que se congela
+   * en `quoteSnapshot.net`: lo imprime el PDF del presupuesto —que recompone
+   * el total desde el neto— y lo usa el backoffice como techo al convertir.
+   * Con `roundMoney()` (al más cercano) ese neto subía cuando la fracción
+   * llegaba a 0,5 y el total reconstruido se pasaba **un céntimo por encima**
+   * del anunciado, o sea justo en la dirección que la regla de Dorel prohíbe.
+   *
+   * Caso real: Peugeot 3008, 31 días. La página promete 1.480,95 € y la
+   * reserva nacía pidiendo 1.480,96 €.
+   */
+  it('reconstruir el neto NUNCA se pasa del bruto anunciado', () => {
+    let exactos = 0;
+    let total = 0;
+    for (const rate of [0.21, 0.1, 0.04, 0]) {
+      for (let centimos = 100; centimos <= 300000; centimos += 37) {
+        const p = publicPrice(centimos / 100, rate);
+        const reconstruido = Math.round(p.net * (1 + rate) * 100) / 100;
+        expect(reconstruido, `neto ${p.net} al ${rate}`).toBeLessThanOrEqual(p.gross);
+        total++;
+        if (reconstruido === p.gross) exactos++;
+      }
+    }
+    // Y no vale cumplirlo regalando dinero: el neto tiene que ser el MAYOR que
+    // cabe, así que la inmensa mayoría reconstruye el bruto al céntimo exacto.
+    expect(exactos / total).toBeGreaterThan(0.9);
+  });
+
+  it('y el control: con el redondeo al más cercano, el 3008 se pasaba', () => {
+    // Sin esto, el test de arriba pasaría por no haber nada que cazar.
+    const p = publicPrice(1223.93, 0.21);
+    const alMasCercano = Math.round((p.gross / 1.21) * 100) / 100;
+    expect(Math.round(alMasCercano * 1.21 * 100) / 100).toBeGreaterThan(p.gross);
+    // Lo que publicamos, en cambio, cuadra.
+    expect(Math.round(p.net * 1.21 * 100) / 100).toBeLessThanOrEqual(p.gross);
+  });
 });
 
 // ---------------------------------------------------------------------------

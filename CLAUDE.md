@@ -730,6 +730,48 @@ mismo**:
 | el **total** de un presupuesto concreto | a `,95` **hacia abajo** | el cliente paga menos que la tarifa: es un regalo, nunca una promesa incumplida |
 | el **«desde X €/día»** de una ficha | a `,95` **hacia arriba** | afirma un **mínimo**: por debajo anuncia un precio que no existe |
 | el **precio prometido** al convertir | se acuerda como **techo** | ya se le dijo una cifra al cliente, y la reserva no puede pedir más |
+| el **total del backoffice**, si el coche está publicado | a `,95` **hacia abajo** | es el mismo coche del escaparate: no puede costar más por teléfono |
+
+⚠️ **Esa última fila es del 5 de noviembre de 2026, y hasta ese día el
+backoffice cobraba por encima de lo anunciado en el 99 % de los casos.** La
+curva de precios es **idéntica** en los dos lados —0 divergencias en 18.090
+combinaciones—; lo que no lo era es el último paso: `aTerminacion()` vivía
+**solo** en `functions/src/public/core.ts` y el asistente cobraba el céntimo
+exacto de la curva. El Megane de un día se publica a **53,95 €** y el asistente
+proponía **54,45 €**; el Duster de siete, 337,95 frente a 338,80.
+
+Lo único que lo corregía era `promisedPriceCeiling()`, y solo se dispara
+entrando por «Convertir en reserva» con `quotedNet` en la URL. **El cliente que
+ve el precio en la web y LLAMA** —que es lo que la web le pide— no deja
+solicitud, así que el operador creaba la reserva desde cero y nada en la
+pantalla decía que a ese cliente ya se le había anunciado otra cifra.
+
+Lo resuelve `netoDeEscaparate()` en `pricing.util.ts`, y tiene tres decisiones
+que no son adorno:
+
+- ⚠️ **Va en la TARIFA, no como precio acordado**, y ahí está casi todo.
+  Inyectado por `agreedPrice`, el neto dejaría de coincidir con
+  `discountedPrice` y entonces `priceOverridden` sería **true en todas** las
+  reservas: el contrato imprimiría una línea de «Ajuste acordado −0,70 €» que
+  nadie pactó, y un empleado sin permiso `editPricing` **no podría crear ni una
+  reserva**. Siendo parte de la tarifa, los cuatro consumidores —pantalla, PDF
+  del presupuesto, creación y edición— dicen lo mismo sin que nadie se acuerde.
+- ⚠️ **Solo con `publicEnabled`.** A nadie se le anunció nada de un coche que no
+  está en el escaparate: ahí bajar el precio sería un regalo sin motivo.
+- ⚠️ **El descuento de fidelidad se aplica DESPUÉS**, sobre la tarifa ya
+  terminada. La web cotiza sin saber quién es el cliente, así que lo anunciado
+  es el precio sin descuento y quien lo tenga paga menos por los dos lados.
+
+⚠️ **Y `aTerminacion()` está ahora DUPLICADA**, como el IVA y la curva: si
+cambia en `functions/src/public/core.ts`, cambia en `pricing.util.ts`. Los dos
+tests afirman los mismos casos a propósito — es lo único que impide que
+diverjan.
+
+⚠️ **Mueve la base del reparto con el dueño de un coche cedido**, hasta unos
+0,82 €, porque `owner-share.util.ts` reparte sobre `pricingSnapshot.netPrice`.
+Es poco y es dinero de un tercero, así que se dice: fue parte de la decisión,
+no un efecto colateral. **No es retroactivo**: las reservas ya creadas llevan su
+cifra congelada.
 
 ⚠️ **El «desde» anunciaba por debajo en los CINCO coches publicados.** La ficha
 del Kadjar decía «desde 32,95 €/día en alquileres de 31 días o más» y el alquiler
@@ -780,11 +822,40 @@ es justo en el número con el que se compara una flota. Con el último tramo
 31 días» cuando la ficha dice 45 sería anunciar una duración que ella misma
 contradice.
 
-⚠️ **Un céntimo de holgura no se persigue.** El neto del `quoteSnapshot` se
-recalcula desde el bruto ya redondeado, y con el 21 % no todo bruto es alcanzable
-desde un neto de dos decimales: 1.030,95 € se queda en 1.030,94 € al
-reconstruirlo. Está por debajo —el lado seguro— y perseguir ese céntimo pediría
-guardar el bruto como autoridad, y entonces el IVA dejaría de cuadrar por resta.
+⚠️ **Aquí ponía que el céntimo de holgura «no se persigue» porque cae del lado
+seguro, y era FALSO: caía del otro en el 9,57 % de los casos.** El neto del
+`quoteSnapshot` se reconstruye desde el bruto ya redondeado, y aquella división
+usaba `roundMoney()`, que redondea al céntimo **más cercano**: cuando la
+fracción llega a 0,5 el neto **sube**, y al volver a multiplicar por 1,21 el
+total se pasa un céntimo por encima del anunciado. Medido sobre 18.090
+combinaciones el 4 de noviembre de 2026: **1.731 sobrecobraban**. El Peugeot
+3008 a 31 días se promete en 1.480,95 € y la reserva nacía pidiendo 1.480,96 €.
+
+No es un céntimo cualquiera: va justo en la dirección que la regla de arriba
+prohíbe. Y llegaba a tres sitios, porque ese neto es el que se congela: el PDF
+del **presupuesto** —`vatBreakdownOf()` recompone el total desde el neto e
+**ignora `finalPrice`**—, el techo del asistente y el aviso que lee el operador.
+
+Lo resuelve `netoQueNoSePasa()` en `functions/src/public/core.ts`: el **mayor**
+neto cuyo `addVat()` no se pasa del bruto. Dos cosas suyas:
+
+- **Se ajusta contra `addVat()`, no contra la división.** Es ella quien decide
+  el total que se va a cobrar, con su propio redondeo; preguntarle a la
+  aritmética deja el céntimo al azar. Primero se baja hasta cumplir y después se
+  sube todo lo que se pueda, porque cobrar de menos es el lado seguro pero
+  regalar un céntimo sin necesidad no es el objetivo: así el bruto se reconstruye
+  **exacto en más del 90 %** de los casos.
+- ⚠️ **Y hace falta la gemela en la app**, `netForPromisedGross()`, porque **un
+  `quoteSnapshot` no se migra hacia atrás**: arreglar el origen no toca ni una
+  de las solicitudes ya escritas. Por eso el techo se deriva del **bruto**
+  —`quoteSnapshot.gross`, que es literalmente la cifra que el cliente vio— y no
+  se lee el neto guardado. El bruto viaja ahora en la URL al convertir
+  (`quotedGross`), y el neto se queda de respaldo.
+
+Lo vigila un test de propiedad con su control, que es lo que lo hace creíble:
+recorre cuatro tipos de IVA × la rejilla de importes afirmando que reconstruir
+nunca se pasa, y aparte comprueba que **con el redondeo al más cercano sí se
+pasaba**. Sin el control, el primero pasaría por no haber nada que cazar.
 
 #### La tabla de tramos NO dice lo que se cobra, y por eso lleva el rango debajo
 
@@ -2082,6 +2153,64 @@ la declara su propio SCSS.
   orden, y el sobrante abre fila aparte. Creando fila propia —como hacía— el dinero
   contaba como ingreso pero no para `remainingPaid`, así que **la reserva se cobraba
   entera y no se podía cerrar nunca** (D-5).
+
+#### El `concept` de un cobro: el ENUMERADO lo escribe el sistema, la frase la escribe una persona
+
+⚠️ **Y usar el enumerado como centinela de «no escribió nada» costó 6 de las 11
+filas de cobro de producción.** Lo vio Dorel el 4 de noviembre de 2026 en la
+ficha de una reserva: dos filas tituladas **`rental_payment`** en negrita, con
+«Señal» y «Resto alquiler» debajo. No faltaba ninguna clave —
+`payments.types.rentalPayment` está en los tres idiomas—: lo que estaba en
+crudo era el **concepto guardado en el documento**.
+
+El mecanismo, que es el que hay que recordar porque tiene dos mitades que se
+refuerzan:
+
+- La ficha mandaba `concept: this.newPayment.concept || this.newPayment.type`
+  con el campo vacío, o sea el **enumerado**.
+- `settlePendingPayment()` lo deshacía comparando contra `payment.type` —el tipo
+  de la fila **destino**, no el que mandó el formulario—. Al repartir un «pago
+  completo», `'rental_payment' !== 'initial_payment'` es cierto: lo tomaba por
+  concepto tecleado y **pisaba** el «Señal reserva» sembrado, en las dos filas.
+- Y al leer, `PaymentConceptPipe` solo resolvía «el concepto **es** su propio
+  tipo», así que un concepto con **otro** enumerado dentro caía en la rama del
+  texto libre y se pintaba verbatim.
+
+La regla, ahora en un solo sitio (`payment-concept.util.ts`, y su gemelo
+`functions/src/payment-concept.ts`): **si el concepto es un valor de
+`PaymentType`, no lo escribió el operador** — ni se conserva al escribir, ni se
+pinta al leer; se contesta con el rótulo del **tipo de la fila**.
+
+⚠️ **Y el tipo de la fila, no el del concepto.** Esa fila rota son 50 € de
+señal: titularla «Pago completo del alquiler» sería cambiar un rótulo crudo por
+uno que miente.
+
+⚠️ **El arreglo al leer tiene que estar en los DOS lados o no sirve.** El pipe
+es de Angular y **no alcanza al recibo en PDF**, que lo genera una Cloud
+Function —la misma razón por la que la aritmética del IVA está duplicada—. Las
+seis filas admiten recibo, así que el enumerado acababa impreso en un papel que
+se le da al cliente. Y hay dos superficies más de cara al cliente que tampoco
+pasan por el pipe: la pantalla pública `/pay/:id` —`getPaymentCheckout` devuelve
+ahora una **clave i18n**, porque el idioma lo elige el cliente allí— y
+`Ds_Merchant_ProductDescription`, que es lo que pinta la pasarela del banco y
+va en el extracto de la tarjeta.
+
+⚠️ **Lo ya escrito NO se migra**: se resuelve al leerlo, que es la forma de la
+casa. El «Señal reserva» sembrado se perdió al pisarse y solo se puede
+reconstruir desde el `type`, que es justo lo que hace el util.
+
+⚠️ **Y desde aquí los conceptos sembrados son el TIPO, los cinco.** «Señal
+reserva», «Resto alquiler» y «Fianza» eran literales en castellano —la propia
+nota de `buildInitialPaymentRows()` ya los declaraba pendientes— y
+`translate()` devuelve tal cual lo que no es clave, así que un operador rumano
+los leía en español y el recibo de un cliente inglés los imprimía igual. Las
+filas ya escritas se quedan con su literal y se ven como se veían.
+
+⚠️ **La tabla de rótulos de las functions tiene que estar COMPLETA y el
+compilador no lo comprueba**, porque el enumerado vive en la app y allí la clave
+es `string`. Faltaban `delivery_fee` y `collection_fee` —dos de los que sí
+admiten recibo—, así que `paymentTypeLabel()` devolvía **cadena vacía** y el PDF
+salía sin rótulo y con el enumerado debajo. Lo cubre un test que los enumera.
 - La **fianza es editable y puede ser 0**: a los clientes conocidos no se les cobra. Una fianza a 0 nace `waived` con **motivo obligatorio** (`buildDeposit` en `deposit.util.ts` lanza si falta). No es cosmético: `isDepositSettled()` solo da por resuelta una fianza a 0 **si hay motivo**, así que sin él la reserva no se puede cerrar nunca.
   ⚠️ **Y un campo numérico VACÍO no es un campo ilegible.** Confundirlos hacía la
   fianza imposible de bajar a 0: el manejador decía «lo que no se pueda
@@ -2118,6 +2247,77 @@ la declara su propio SCSS.
   pidió nada cuando entraron 30 € dejaría la reserva contando una cosa y
   `payments` otra; si hay que devolverlo, eso es una devolución.
 - La autorización de usuarios vive en la colección `authorizedUsers` de Firestore (doc ID = email en minúsculas, `active: true`), **no** en Firebase Console.
+
+### «Crear reserva» desde la ficha del coche
+
+La petición llega por el coche —«¿me alquilas esta furgoneta?»— y el asistente
+empieza por las fechas, así que había que ir a Reservas, teclear unas fechas a
+ciegas y buscar el coche entre los resultados. Lo pidió Dorel el 5 de noviembre
+de 2026: *«si alguien me pide alquilar este coche, me gustaría poder realizar
+una reserva, ver el calendario de disponibilidad al igual que en la web pública
+y seguir el curso de nueva reserva para este coche hasta el final»*.
+
+⚠️ **No es un flujo nuevo: es la MISMA puerta que «Convertir en reserva», con
+un parámetro menos.** El coche viaja en la URL (`/reservations/new?vehicleId=…`)
+y lo único que cambia es en qué paso se para el asistente, porque lo que falta
+por decidir es distinto: con fechas salta al cliente, sin ellas se queda en el
+de fechas. Crear un alquiler sigue siendo una sola escritura con sus filas de
+cobro; duplicar eso desde la ficha habría sido una segunda forma de crear
+reservas.
+
+⚠️ **Se salta el paso del coche, pero NO su comprobación.** Al buscar, si el
+coche fijado sale disponible se selecciona solo y se va al cliente; si no, se
+queda en la lista **con su motivo al lado**, igual que al convertir una
+solicitud. Entre el calendario y la realidad están la ITV, el seguro y el
+estado del coche, que `searchAvailability()` sí mira y el calendario no.
+
+⚠️ **Y se puede soltar.** «Elegir otro coche» devuelve el asistente a la
+búsqueda normal: el operador entró por un coche y puede acabar vendiendo otro,
+que es lo que pasa en el mostrador.
+
+#### El calendario de disponibilidad, y en qué se aparta del de la web
+
+La aritmética vive en
+[availability-calendar.util.ts](src/app/shared/utils/availability-calendar.util.ts),
+**gemela de `web/src/lib/calendario-coche.ts`** y duplicada por lo mismo que el
+IVA y la curva: la web es una tercera build y no comparte módulo. Si cambia la
+regla allí, cambia aquí — y los dos tests afirman los mismos casos.
+
+⚠️ **Aparte de la pantalla y con tests, por lo mismo que el QR y el aspa: un
+calendario mal calculado tiene exactamente la misma pinta que uno bueno.** Lo
+que se rompe en silencio es peor que un dibujo feo — ofrecer un día ocupado, o
+cerrar un rango **por encima** de una reserva— y acaba en un cliente que se
+planta a por un coche que no está. Por eso `pickDay()` empieza de nuevo en vez
+de cerrar un rango que salta una reserva, y hay un test de ese caso.
+
+Tres diferencias con el de la web, y las tres son deliberadas:
+
+- ⚠️ **NO se aplica el día de preparación.** La web bloquea el día siguiente a
+  una devolución (`disponibleDesde` en `functions/src/public/core.ts`) porque
+  allí no hay nadie; aquí hay un operador que sabe si el coche está listo. El
+  calendario tiene que decir lo mismo que `searchAvailability()`, que es quien
+  después deja crear la reserva: uno más estricto pintaría de rojo días que el
+  asistente acepta, y entonces no se usaría.
+- ⚠️ **No hay «fuera de horizonte».** La web mira 180 días porque es lo que el
+  backend público comprueba; el backoffice lee las reservas del coche enteras,
+  así que un día lejano sin reserva está libre de verdad.
+- ⚠️ **Una reserva con fechas ilegibles se SALTA en vez de bloquear.** Es al
+  revés que la regla de la web («ante la duda no publicar»), y se puede porque
+  aquí el calendario solo propone: marcarla sería pintar de rojo un día
+  inventado, y `searchAvailability()` vuelve a cruzarlo todo antes de guardar.
+
+⚠️ **Y NO usa `toDate()` de `reservation-date.util`**, que ante un valor
+ilegible **cae a HOY** —hace bien: lo escribieron para que el pipe `date` no
+tumbe una pantalla entera—. Aquí eso marcaría el día de hoy como ocupado por
+una reserva que nadie puede leer: un día bloqueado al azar y sin explicación.
+Lleva su propio lector estricto, como ya hace `public/core.ts` por la misma
+razón.
+
+⚠️ **El calendario elige DÍAS y la hora la pone `PICKUP_HOUR`** (las 10:00, la
+de apertura y la misma que usa la web). Rellena los campos y **no busca solo**:
+la hora es una suposición que el operador casi siempre corrige con lo que se
+habló por teléfono, y buscar ahí comprobaría la disponibilidad contra una hora
+inventada.
 
 ### Crear una reserva es una sola escritura
 
@@ -2415,7 +2615,9 @@ Los `Record<Enum, string>` de `shared/models/` contienen **claves i18n, nunca te
 
 Los getters de componente que leen esos mapas (`getStatusLabel()`, etc.) resuelven la clave con `translateService.translate()`, porque las plantillas los pintan sin `| translate`.
 
-⚠️ `TranslateService.translate()` devuelve **la propia clave** si no la encuentra, y **no hay fallback a español**: si falta en `ro.json`, el usuario rumano ve la clave en crudo.
+⚠️ `TranslateService.translate()` devuelve **la propia clave** si no la encuentra. Eso es lo que permite que el texto libre del operador atraviese el pipe intacto, y también lo que hace que una clave que falte se le pinte en crudo al usuario.
+
+> Aquí ponía además que **no hay fallback a español**, y dejó de ser cierto: `translate()` busca en `es.json` antes de rendirse (`translate.service.ts`), así que una clave que falte solo en `ro.json` se lee en español en vez de en crudo. Lo que no tiene respaldo es una clave que no esté **en ninguno**. La paridad la sigue vigilando `i18n:audit`, que es quien no deja llegar a ese caso.
 
 ⚠️ **Y una clave puede faltar sin faltar en el repositorio: por CACHÉ.** El
 dominio propio va detrás de Cloudflare y los ficheros de i18n se servían con
@@ -2543,14 +2745,23 @@ los del manifiesto de descubrimiento en vez de a ojo):
 |---|---|---|
 | el código define | **38** | — |
 | desarrollo | **38** | — |
-| producción | **32** | las cinco de la AEAT **y `createSignalPayment`** |
+| producción | **33** | las cinco de la AEAT |
 
-⚠️ **La 38 es `createSignalPayment`**, del 19 de octubre de 2026 (medido en el
-manifiesto, no contado a ojo). Y **no va a producción todavía**: allí el pago de
-la señal desde la web está apagado por decisión de Dorel, así que subirla sería
-dejar desplegado un endpoint que solo sabe contestar `403`. Cuando se encienda,
-va con su rewrite de hosting — sin él la petición cae en el catch-all y devuelve
-HTML donde se espera JSON.
+⚠️ **Aquí ponía 32 y que faltaba además `createSignalPayment`, y las dos cosas
+eran FALSAS desde el 20 de octubre de 2026.** Está desplegada en producción
+desde ese día —**apagada** por `VELTO_WEB_SIGNAL_PAYMENT_ENABLED`, que es otra
+cosa: desplegada y encendida no son lo mismo— y el traspaso de sesión ya lo
+recogía entonces. Lo que no se actualizó fue esta tabla. Vuelto a medir el 2 de
+noviembre de 2026 con `--json`: **33**, y las cinco que faltan son las de la
+AEAT. Es el patrón que esta misma sección avisa dos párrafos más abajo, cometido
+aquí: **una cifra escrita a mano en un sitio no se entera de lo que se midió en
+otro.**
+
+⚠️ **Y la 38 es `createSignalPayment`**, del 19 de octubre de 2026 (medido en el
+manifiesto, no contado a ojo). Su rewrite `/api/pagar-senal` **sigue solo en
+desarrollo**: el día que se encienda el pago de la señal en producción hay que
+desplegar hosting además de la function — sin el rewrite la petición cae en el
+catch-all y devuelve HTML donde se espera JSON.
 
 ⚠️ **Vuelto a medir el 8 de octubre de 2026 y la fila del CÓDIGO también había
 envejecido**: ponía 36 y son **37**. No es que se añadiera ninguna ese día —
@@ -3018,6 +3229,52 @@ que aquí sí se puede usar; el del recibo no podía.
 pide, que es lo que el contrato promete: que el parte se conserva y se pone a su
 disposición.
 
+#### Una pestaña abierta y vacía es, en un móvil, una página rota
+
+⚠️ **«El informe de entrega no abre a la primera; me abrió una página en blanco
+y con el segundo intento sí.»** Lo contó Dorel el 4 de noviembre de 2026, y no
+había nada roto: **no había nada dibujado**.
+
+El botón abre la pestaña con el clic todavía vivo —tiene que hacerlo, o el
+`window.open()` de después del `await` se lo come el bloqueador de emergentes
+sin decir nada— y le ponía la dirección cuando volvía el callable. Entre las dos
+cosas no escribía nada dentro. Y en un móvil **abrir una pestaña la trae a
+primer plano**, así que el único indicador de que algo pasaba —el spinner del
+botón— se quedaba en la pestaña que el navegador acababa de mandar al fondo.
+
+Medido en producción: **9,4 s** la primera vez —arranque en frío de
+`generateInspectionReport`, otro de `documentLink` y un fallo de caché en el
+borde— y **1,2 s** la segunda, con las dos functions calientes y el PDF en la
+caché del navegador. De ahí el «a la segunda sí»: mismo código, mismo PDF, misma
+pantalla.
+
+Lo resuelve `openDeferredTab()` en
+[deferred-tab.util.ts](src/app/shared/utils/deferred-tab.util.ts), y las dos
+mitades son inseparables: **abrir pronto y escribir algo dentro**. Cuatro cosas
+suyas que no son adorno:
+
+- ⚠️ **Sin `noopener` en el `window.open()`**, que es lo que parece de cajón y
+  rompe el arreglo: con él el navegador corta la referencia y `open()` devuelve
+  **null**, así que no habría pestaña a la que ponerle la dirección. Se consigue
+  lo mismo anulando `opener` después.
+- ⚠️ **`location.replace()` y no `href`.** Desde que la pestaña nace con un
+  cartel dentro, `href` apila una entrada de historial: el «Atrás» devolvería a
+  un «Generando…» que no va a progresar nunca, porque la promesa que lo iba a
+  sustituir terminó hace rato.
+- ⚠️ **El texto va por el traductor y ESCAPADO.** Es la única pantalla que el
+  operador ve durante esos segundos, y entra en un HTML concatenado a mano. Lo
+  cubre un test.
+- **El fondo lo pone el sistema** (`color-scheme: light dark`): esa pestaña no
+  tiene el tema de la aplicación, y un blanco fijo deslumbra a quien trabaja de
+  noche, que es media jornada de una agencia de alquiler.
+
+⚠️ **Y había dos sitios más con el mismo defecto, peor resuelto todavía**:
+emitir una **factura** y generar una **proforma** llamaban a `window.open()`
+*después* del `await` y sin comprobar el `null`. Ahí el síntoma no es una
+pestaña en blanco, es que **no pasa nada** — y en la proforma el PDF no se
+guarda en ninguna parte, así que el documento se perdía. Los dos usan ahora el
+mismo helper.
+
 ### El recibo de cobro: todo su diseño es no parecer una factura
 
 `generateReceipt` justifica **dinero recibido**, y esa es la única frase que hay dentro. Un
@@ -3055,6 +3312,59 @@ idiomas**: si no, un recibo rumano sacaba el concepto en español.
 ### Firma de contratos
 
 El cliente firma **sin cuenta**: `/sign-contract/:token`, ruta pública fuera del `authGuard`. El token (256 bits URL-safe) es de un solo uso y caduca (7 días por defecto). Los tokens viven en `contractSigningTokens`, colección con reglas de Firestore que **deniegan todo acceso desde cliente** — solo el admin SDK entra.
+
+### El contrato se dibuja DOS veces, y las dos entradas se escribían a mano
+
+⚠️ **`signContract` no retoca el PDF generado: lo REHACE** —tiene que hacerlo,
+porque la firma manuscrita va dentro y un PDF sellado no admite cambios—. Así
+que hay dos sitios que arman la entrada de `buildContractPdf`, y durante meses
+cada uno llevaba su propia lista de campos escrita a mano. Divergieron, y el
+que se quedó corto fue **el firmado**, que es el que tiene valor.
+
+Lo vio Dorel el 5 de noviembre de 2026 en un contrato real de producción: «no
+tiene los datos del seguro… debería salir la póliza y el teléfono ya que está
+en el perfil». El dato estaba —el coche lo tenía y el contrato lo guardó en su
+`vehicleSnapshot`— y **no tenía nada que ver con que el coche fuera de
+colaborador**, que es lo que parecía desde fuera.
+
+El PDF firmado salía sin **siete campos del vehículo y cuatro de la reserva**:
+
+- la **aseguradora, la póliza y el teléfono de asistencia** — y la cláusula de
+  accidentes dice literalmente que «constan en la sección Datos del vehículo»,
+  o sea el mismo defecto que esa cláusula ya obligó a arreglar una vez;
+- el **combustible** y la **transmisión**;
+- el aviso de **localizador GPS**, que es una obligación de información;
+- la **entrega y la recogida a domicilio** — un cargo que el contrato firmado
+  no menciona es un cargo que el cliente discute con razón, y el comentario del
+  propio snapshot decía que se congelaban «para que re-renderizar el PDF al
+  firmar reproduzca exactamente el mismo desglose»;
+- el **kilometraje pactado**, que además **ni siquiera se guardaba** en
+  `reservationSnapshot`: el camino de la firma no podía imprimirlo aunque
+  quisiera, y sin él no se sostiene el cargo del kilómetro extra;
+- y los **conductores adicionales**, que la cláusula 2 exige identificar
+  nominalmente. Un contrato firmado que no los nombra contradice su propio
+  articulado.
+
+⚠️ **El arreglo quita la causa, no parchea la lista.**
+[contract-snapshot.ts](functions/src/contracts/contract-snapshot.ts) es el
+único mapeo de «qué del contrato guardado llega al PDF», y pasan por él **los
+dos** caminos: lo que no esté mapeado no se imprime en ninguno, y eso se ve al
+momento. Arreglar los siete campos a mano habría dejado el mecanismo intacto
+para el octavo.
+
+⚠️ **Y el `generateContractPdf` dibuja desde el SNAPSHOT, no desde la reserva.**
+Ese es el detalle que lo cierra: mientras uno leyera la reserva viva y el otro
+el snapshot guardado, podían volver a decir cosas distintas aunque la lista de
+campos coincidiera. El seguro es la única excepción y se resuelve **antes** —se
+lee de la ficha del coche al generar, porque la póliza que vale es la vigente
+el día de la firma— y se guarda dentro.
+
+⚠️ **El test compara CLAVES, no valores.** Un campo nuevo en el snapshot que
+nadie mapee hace fallar el test, que es lo único que impide que esto se repita.
+
+⚠️ **Y los contratos YA FIRMADOS no se arreglan**: el PDF sellado es inmutable.
+Para que uno existente lleve el seguro hay que **sustituirlo** (`supersede`) y
+volver a firmarlo, con el archivado `-v{n}` de siempre.
 
 ### El contrato va firmado con el certificado FNMT
 
@@ -3604,7 +3914,8 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **32** (medido el 8 de octubre de 2026).
+siga dando **33** (medido el 2 de noviembre de 2026; ponía 32, del 8 de octubre,
+y se quedó corta al desplegar `createSignalPayment` el 20).
 
 ⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
 **códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
@@ -4927,10 +5238,11 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay **32** desplegadas y
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **33** desplegadas y
 faltan **las cinco** de la AEAT, que no van allí hasta el 1 de enero y que un
-despliegue completo subiría. Medido el 8 de octubre de 2026 comparando los
-**nombres** contra los `export … from` de `index.ts`, no la cifra.
+despliegue completo subiría. Medido el **2 de noviembre de 2026** con
+`functions:list --project prod --json`, comparando los **nombres** y no la cifra
+— que es lo que distingue qué falta de cuántas hay.
 
 > Aquí ponía **31**, y que **28 corrían código viejo** con un guion pendiente.
 > Las dos cosas habían caducado: el guion se cerró entero el 5 de octubre
@@ -4976,13 +5288,22 @@ cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en u
 
 - **Redsys funciona de extremo a extremo** desde el 31 de agosto de 2026: probado contra la
   pasarela de test y **con dinero real en producción** (10 €, código de autorización
-  379521). El webhook recibe, valida la firma y escribe el resultado. Comercio `361040215`,
-  terminal `1`, `test` en dev y **`live`** en producción.
-  ⚠️ Ese cobro se hizo desde **el botón del operador**. La pantalla pública del móvil
-  llegó después y perdió un cobro real el 4 de septiembre (F-32): arreglado el mismo día,
-  pero **todavía no hay un pago por esa vía que se haya registrado solo**. Una vía de
-  cobro no está probada hasta que alguien paga por ella y la aplicación se entera sin
-  ayuda.
+  379521). El webhook recibe, valida la firma y escribe el resultado.
+  ⚠️ **Los dos entornos ya NO comparten comercio, desde el 2 de noviembre de 2026.**
+  Desarrollo pasó al comercio **propio de VELTO** que entregó BBVA para probar el alta
+  —`370770240`, terminal `001`, `test`— y producción sigue con el `361040215`, terminal
+  `1`, `live`, que es de otro comercio, está prestado y **es el que cobra de verdad**. Al
+  conceder producción hay que cambiar **tres líneas y no una** —comercio, terminal y
+  clave—, o las firmas salen con la clave de uno y el código de otro y la pasarela
+  contesta `SIS0042`, que se lee como «la clave está mal». El procedimiento y las seis
+  operaciones probadas están en [docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 bis.
+  ⚠️ **Y la pantalla pública del móvil ya se ha registrado sola, en desarrollo.** Aquí
+  ponía que «todavía no hay un pago por esa vía que se haya registrado solo» desde que
+  perdió un cobro real el 4 de septiembre (F-32). Dejó de ser cierto el 2 de noviembre:
+  pre-reserva en `dev.veltorent.com`, «Pagar la señal», 50 € pagados en la pasarela, y la
+  aplicación se enteró **sin que nadie abriera el panel**. En producción esa vía sigue
+  apagada. Una vía de cobro no está probada hasta que alguien paga por ella y la
+  aplicación se entera sin ayuda — y ésta ya lo está en el entorno donde se puede probar.
 - **Los cargos extra que la fianza no cubre quedan pendientes**, no cobrados. Antes nacían
   `paid` sin cobrarse y el exceso desaparecía (M-33). El reparto vive en
   `distributeRetentionAcrossCharges`, con tests.

@@ -268,9 +268,11 @@ export function resolveRentalPrice(
   tariffPrice: number,
   loyaltyPercent: number | null | undefined,
   agreedPrice?: number | null,
-  vatRate: number = DEFAULT_VAT_RATE
+  vatRate: number = DEFAULT_VAT_RATE,
+  anunciadoAlPublico = false
 ): RentalPriceBreakdown {
-  const tariff = isFinite(tariffPrice) && tariffPrice > 0 ? roundMoney(tariffPrice) : 0;
+  const tarifaCurva = isFinite(tariffPrice) && tariffPrice > 0 ? roundMoney(tariffPrice) : 0;
+  const tariff = anunciadoAlPublico ? netoDeEscaparate(tarifaCurva, vatRate) : tarifaCurva;
   const percent = normalizeLoyaltyDiscountPercent(loyaltyPercent);
   // `tariff > 0` also keeps the result off negative zero, which would be
   // written to Firestore as `-0` and read back as a discount that is not one.
@@ -307,6 +309,100 @@ export function resolveRentalPrice(
     finalPrice: vat.total,
     priceOverridden: hasOverride
   };
+}
+
+/**
+ * Lo que termina un precio de escaparate. Decisión de Dorel del 30 de
+ * septiembre de 2026: «tengo que mostrar precio de tipo desde 24,95 € al día o
+ * desde 49,95 €, redondeando a la baja con lo que viene de backend».
+ */
+const TERMINACION = 0.95;
+
+/**
+ * Baja un importe hasta la terminación de escaparate más cercana.
+ *
+ * ⚠️ **Duplicada de `aTerminacion()` en `functions/src/public/core.ts`**, por lo
+ * mismo que la aritmética del IVA: la app y las functions no comparten módulo.
+ * Si cambia allí, cambia aquí — y lo vigila un test con los mismos casos.
+ *
+ * ⚠️ **Siempre HACIA ABAJO, y esa es la parte que no se puede tocar.** El precio
+ * que la web anuncia es el que el cliente va a pagar: hacia arriba sería cobrar
+ * más de lo anunciado. Hacia abajo, lo peor que pasa es que la empresa cobre un
+ * poco menos que su tarifa —como mucho 0,99 € por cifra— y es una decisión
+ * comercial suya.
+ *
+ * ⚠️ **La cuenta va en CÉNTIMOS ENTEROS, y no es purismo.** Escrita con
+ * decimales, `24.95 - 24` da `0.9499999999999993` en coma flotante, que es menor
+ * que `0.95`: un precio que ya terminaba en `,95` bajaba **un euro entero**.
+ */
+export function aTerminacion(bruto: number): number {
+  if (!isFinite(bruto) || bruto < 1) return roundMoney(bruto);
+
+  const centimos = Math.round(roundMoney(bruto) * 100);
+  const terminacion = Math.round(TERMINACION * 100);
+  const enteros = Math.floor(centimos / 100) * 100;
+  // Con los céntimos ya por encima de la terminación, se baja a la de ESTE
+  // entero; si no, a la del anterior. 25,00 → 24,95 y 24,99 → 24,95.
+  const objetivo =
+    centimos - enteros >= terminacion ? enteros + terminacion : enteros - 100 + terminacion;
+  return objetivo / 100;
+}
+
+/**
+ * La tarifa **tal y como la anuncia el escaparate**: el bruto bajado a `,95` y
+ * el mayor neto que cabe debajo.
+ *
+ * ## Por qué el backoffice también la usa
+ *
+ * ⚠️ **La curva de precios es idéntica en los dos lados; lo que no lo era es el
+ * último paso.** La web pasa el bruto por `aTerminacion()` y el asistente
+ * cobraba el céntimo exacto de la curva, así que para el mismo coche y las
+ * mismas fechas el backoffice pedía **hasta 0,99 € más de lo anunciado**: el
+ * Megane de un día se publica a 53,95 € y el asistente proponía 54,45 €. Solo
+ * pasaba con el cliente que ve el precio en la web y **llama** —convertir una
+ * solicitud sí respetaba lo prometido, vía `promisedPriceCeiling()`—, y es justo
+ * la dirección que Dorel descartó: *«prefiero cobrar un poquito menos de lo que
+ * anuncio»*. Medido el 4 de noviembre de 2026: 17.917 de 18.090 combinaciones.
+ * Decisión suya del 5 de noviembre de 2026.
+ *
+ * ⚠️ **Va en la TARIFA y no como precio acordado**, y ahí está casi todo el
+ * diseño. Metido por `agreedPrice`, el neto dejaría de coincidir con
+ * `discountedPrice` y entonces: `priceOverridden` sería **true en todas** las
+ * reservas, el contrato imprimiría una línea de «Ajuste acordado −0,70 €» que
+ * nadie pactó, y un empleado sin permiso `editPricing` **no podría crear ni una
+ * reserva**. Siendo parte de la tarifa, los cuatro consumidores —pantalla, PDF
+ * del presupuesto, creación y edición— dicen lo mismo sin que nadie se acuerde.
+ *
+ * ⚠️ **Solo para coches PUBLICADOS.** A nadie se le anunció nada de un coche que
+ * no está en el escaparate: ahí bajar el precio sería un regalo sin motivo.
+ *
+ * ⚠️ **Y el descuento de fidelidad se aplica DESPUÉS**, sobre la tarifa ya
+ * terminada. La web cotiza sin saber quién es el cliente, así que lo anunciado
+ * es el precio sin descuento: quien lo tenga paga menos por los dos lados, que
+ * sigue cumpliendo la regla.
+ */
+export function netoDeEscaparate(netoCurva: number, vatRate: number): number {
+  if (!isFinite(netoCurva) || netoCurva <= 0) return 0;
+
+  const rate = isFinite(vatRate) && vatRate > 0 ? vatRate : 0;
+  const bruto = aTerminacion(addVat(netoCurva, rate).total);
+  if (bruto <= 0) return 0;
+  if (rate === 0) return roundMoney(bruto);
+
+  /**
+   * El mayor neto cuyo `addVat()` no se pasa del bruto anunciado. Gemela de
+   * `netoQueNoSePasa()` en `functions/src/public/core.ts`: se ajusta contra
+   * `addVat()` y no contra la división, porque es ella quien decide el total
+   * que se va a cobrar, con su propio redondeo.
+   */
+  let neto = Math.floor((bruto / (1 + rate)) * 100) / 100;
+  for (let i = 0; i < 4 && neto > 0 && addVat(neto, rate).total > bruto; i++) {
+    neto = roundMoney(neto - 0.01);
+  }
+  for (let i = 0; i < 4 && addVat(roundMoney(neto + 0.01), rate).total <= bruto; i++) {
+    neto = roundMoney(neto + 0.01);
+  }
+  return Math.max(0, neto);
 }
 
 /**

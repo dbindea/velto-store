@@ -57,6 +57,39 @@
     <!-- Step 1: Dates -->
     @if (currentStep === 'dates') {
       <div class="step-panel">
+        <!--
+          ⚠️ **El coche ya elegido, cuando se viene de su ficha.**
+          Un asistente que se abre con un paso resuelto y no dice cuál es peor
+          que uno que se abre en blanco: el operador ve «Nueva reserva» y no
+          sabe de qué coche. Es la misma cinta que lleva la conversión de una
+          solicitud de la web, y por el mismo motivo.
+        -->
+        @if (vehiculoFijado; as coche) {
+          <div class="section coche-fijado">
+            <div class="from-request">
+              <i class="pi pi-car"></i>
+              <span>
+                {{ 'reservations.forVehicle.lockedTitle' | translate }}
+                <strong>{{ coche.brand }} {{ coche.model }}</strong>
+                @if (coche.plateNumber) {
+                  · <span class="mono">{{ coche.plateNumber }}</span>
+                }
+              </span>
+              <button type="button" class="btn-ghost" (click)="soltarCoche()">
+                {{ 'reservations.forVehicle.lockedChange' | translate }}
+              </button>
+            </div>
+
+            <h2>{{ 'reservations.availabilityCalendar.title' | translate }}</h2>
+            <p class="hint">{{ 'reservations.forVehicle.lockedHint' | translate }}</p>
+            <app-availability-calendar
+              [reservations]="reservasDelCoche"
+              [loading]="cargandoCalendario"
+              (rangePicked)="onCalendarRange($event)"
+            />
+          </div>
+        }
+
         <div class="section">
           <h2>{{ 'reservations.fields.pickupDate' | translate }}</h2>
           <!--

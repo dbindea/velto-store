@@ -406,10 +406,50 @@ export function publicPrice(
   const bruto = aTerminacion(conIva.gross);
   const rate = conIva.vatRate;
   return {
-    net: roundMoney(rate > 0 ? bruto / (1 + rate) : bruto),
+    net: netoQueNoSePasa(bruto, rate),
     gross: bruto,
     vatRate: rate,
   };
+}
+
+/**
+ * El mayor neto que, con el IVA puesto, **no se pasa** del bruto anunciado.
+ *
+ * ⚠️ **Aquí había un `roundMoney(bruto / (1 + rate))`, y redondea al céntimo
+ * MÁS CERCANO: cuando la fracción llega a 0,5 el neto sube y el total
+ * reconstruido se queda un céntimo POR ENCIMA del que se anunció.** Importa
+ * porque ese neto es el que se congela en `quoteSnapshot.net`, el que imprime
+ * el PDF del presupuesto —`vatBreakdownOf()` recompone el total desde el neto
+ * e ignora el bruto— y el que el backoffice usa como techo al convertir. O
+ * sea: la página decía 1.480,95 €, el papel imprimía 1.480,96 € y la reserva
+ * nacía pidiendo esa misma cifra. Medido: pasaba en el **9,57 %** de las
+ * duraciones.
+ *
+ * No es un céntimo cualquiera: la regla que dictó Dorel es que lo **anunciado**
+ * nunca puede quedar por debajo de lo **cobrado**, así que el error va justo en
+ * la dirección prohibida. Con el suelo, la holgura vuelve al lado seguro —que
+ * es además lo que CLAUDE.md ya afirmaba que pasaba.
+ *
+ * ⚠️ **Se ajusta contra `addVat()` y no contra la división**, porque es ella
+ * quien decide el total: primero se baja hasta cumplir y después se sube todo
+ * lo que se pueda, para no regalar un céntimo cuando el bruto sí es alcanzable.
+ *
+ * Gemela de `netForPromisedGross()` en
+ * `src/app/shared/utils/booking-request.util.ts`, que es la que arregla las
+ * solicitudes **ya escritas** —un `quoteSnapshot` no se migra hacia atrás—.
+ * Si cambia la regla aquí, cambia allí.
+ */
+function netoQueNoSePasa(bruto: number, rate: number): number {
+  if (rate <= 0) return roundMoney(bruto);
+
+  let neto = Math.floor((bruto / (1 + rate)) * 100) / 100;
+  for (let i = 0; i < 4 && neto > 0 && addVat(neto, rate).gross > bruto; i++) {
+    neto = roundMoney(neto - 0.01);
+  }
+  for (let i = 0; i < 4 && addVat(roundMoney(neto + 0.01), rate).gross <= bruto; i++) {
+    neto = roundMoney(neto + 0.01);
+  }
+  return Math.max(0, neto);
 }
 
 /**

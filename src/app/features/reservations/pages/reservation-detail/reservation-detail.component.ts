@@ -64,6 +64,12 @@ import {
   PaymentGroupKey,
   groupPaymentsForReservation
 } from '@shared/utils/payment-groups.util';
+import { paymentConceptKey } from '@shared/utils/payment-concept.util';
+import {
+  TextosDeEspera,
+  openDeferredTab,
+  sendDeferredTab
+} from '@shared/utils/deferred-tab.util';
 import { ReservationDocumentService } from '@features/reservations/services/reservation-document.service';
 import { RedsysPaymentService } from '@features/payments/services/redsys-payment.service';
 import { FUEL_TYPE_LABELS, TRANSMISSION_LABELS } from '@shared/models/vehicle.model';
@@ -999,7 +1005,14 @@ export class ReservationDetailComponent implements OnInit {
         method: this.newPayment.method,
         amount: this.newPayment.amount,
         paidAmount: this.newPayment.paidAmount,
-        concept: this.newPayment.concept || this.newPayment.type,
+        // ⚠️ **El centinela de «no escribió nada» es la cadena vacía, nunca el
+        // tipo.** Mandando el enumerado, `settlePendingPayment()` lo tomaba por
+        // concepto tecleado —compara contra el tipo de la fila DESTINO, que al
+        // repartir un «pago completo» nunca es `rental_payment`— y pisaba el
+        // «Señal reserva» sembrado con la cadena `rental_payment`, que después
+        // se pinta en crudo en cuatro pantallas y en el recibo en PDF. Así se
+        // escribieron 6 de las 11 filas de cobro de producción.
+        concept: this.newPayment.concept.trim(),
         notes: this.newPayment.notes,
         source: 'manual',
         reservationSnapshot: {
@@ -1423,9 +1436,11 @@ export class ReservationDetailComponent implements OnInit {
    */
   paymentTypeIfUseful(payment: Payment): string {
     const tipo = this.t(PAYMENT_TYPE_LABELS[payment.type], payment.type);
-    const concepto = payment.concept
-      ? this.translateService.translate(payment.concept)
-      : tipo;
+    // ⚠️ **La misma autoridad que el pipe que pinta la línea de encima.**
+    // Resolviendo aquí el concepto por su cuenta, una fila con el enumerado
+    // dentro calculaba «rental_payment» ≠ «Señal» y pintaba «Señal» debajo de
+    // «Señal»: justo la duplicación que este método existe para evitar.
+    const concepto = this.translateService.translate(paymentConceptKey(payment));
     return concepto.trim().toLowerCase() === tipo.trim().toLowerCase() ? '' : tipo;
   }
 
@@ -1596,14 +1611,12 @@ export class ReservationDetailComponent implements OnInit {
   async openInspectionReport(inspection: Inspection): Promise<void> {
     if (!inspection?.id || this.generatingReport()) return;
 
-    const pestana = window.open('', '_blank');
-    if (pestana) pestana.opener = null;
+    const pestana = openDeferredTab(this.textosDeEspera());
 
     this.generatingReport.set(inspection.id);
     try {
       const res = await this.inspectionService.generateReport(inspection.id);
-      if (pestana) pestana.location.href = res.shortUrl;
-      else window.open(res.shortUrl, '_blank', 'noopener');
+      sendDeferredTab(pestana, res.shortUrl);
     } catch (err: any) {
       // La pestaña en blanco no se deja abierta: diría que algo se está
       // cargando cuando lo que ha pasado es que ha fallado.
@@ -1614,6 +1627,27 @@ export class ReservationDetailComponent implements OnInit {
     } finally {
       this.generatingReport.set(null);
     }
+  }
+
+  /**
+   * Los textos del cartel de espera, resueltos en el idioma de la plataforma.
+   *
+   * ⚠️ **Es la única pantalla que el operador ve durante esos segundos**, así
+   * que pasa por el traductor como todo lo visible. Y la clave tiene que
+   * existir en los tres idiomas: `translate()` devuelve la clave en crudo
+   * cuando no la encuentra, y un operador rumano se quedaría nueve segundos
+   * mirando `inspections.report.generating`.
+   */
+  private textosDeEspera(): TextosDeEspera {
+    // ⚠️ **Las claves van LITERALES, no compuestas de un prefijo.** Montada al
+    // vuelo, la clave deja de poderse encontrar buscando el literal y
+    // `i18n:audit` la da por huérfana en los tres idiomas — que es exactamente
+    // lo que pasó al escribir esto.
+    return {
+      titulo: this.translateService.translate('inspections.report.generating'),
+      pista: this.translateService.translate('inspections.report.generatingHint'),
+      idioma: this.translateService.language()
+    };
   }
 
   /**
