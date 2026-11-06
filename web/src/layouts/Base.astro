@@ -75,10 +75,38 @@ interface Props {
    * 812 ms, porque el navegador no puede saber que el siguiente eslabón existe
    * hasta terminar el anterior. Desde el `<head>` arranca a los ~240 ms.
    *
-   * `'flota'` para las páginas que enseñan la lista; `'coche'` para la ficha,
-   * que saca el id del path.
+   * `'flota'` para las páginas que enseñan la lista; `'coche'` para la ficha
+   * generada, que además tiene que pasar `cocheId`.
    */
   precarga?: 'flota' | 'coche';
+  /**
+   * El id real del vehículo, obligatorio con `precarga="coche"`.
+   *
+   * ⚠️ **Antes se sacaba del último segmento del path, y eso dejó de valer el
+   * 31 de octubre de 2026**, cuando la dirección pasó a ser un slug
+   * (`/coche/renault-clio`). Es el mismo cambio que ya obligó a reescribir
+   * `idDelCoche()` en `FichaCoche.astro`, y aquí **no se tocó**: el adelanto
+   * se quedó pidiendo `?id=renault-clio`.
+   *
+   * Costaba dos cosas a la vez, y la segunda es la que no se veía:
+   *
+   * - un **404 por visita** a cada ficha, más el rechazo de la promesa sin
+   *   capturar: **dos errores en la consola** de cada visita, que es el ruido
+   *   que hace que un error de verdad no se vea (M-50);
+   * - y sobre todo, **el adelanto no servía NUNCA**. La promesa se guardaba
+   *   bajo `__veltoVehicle:<slug>` y `ficha()` la busca por
+   *   `__veltoVehicle:<id>`: la clave no coincidía ni en las fichas generadas,
+   *   así que el medio segundo que este bloque existe para ahorrar se perdía
+   *   entero desde el 31 de octubre. Medido el 6 de noviembre contra
+   *   `dev.veltorent.com`: 404 primero y la petición buena **entera** después.
+   *
+   * Por eso el id viaja como propiedad en vez de deducirse de la URL: la
+   * página generada lo conoce en tiempo de compilación, y el respaldo
+   * —`coche.astro`, que sirve cualquier dirección— no lo conoce y **no debe
+   * adivinarlo**; ése adelanta la flota, que es lo que de verdad va a pedir
+   * para traducir el slug.
+   */
+  cocheId?: string;
 }
 
 const {
@@ -87,6 +115,7 @@ const {
   ruta,
   sinIndexar,
   precarga,
+  cocheId,
   imagen,
   imagenAlt: alt,
   imagenAncho,
@@ -198,12 +227,23 @@ const MENU = [
 const CABECERA_JSON = `{ headers: { Accept: 'application/json' } }`;
 const A_JSON = `function (r) { if (!r.ok) throw new Error('error'); return r.json(); }`;
 
+/*
+ * ⚠️ **La clave tiene que ser la MISMA que consulta `ficha()`**, o el adelanto
+ * no se aprovecha y además se paga una petición de más. Allí es
+ * `__veltoVehicle:<id>`, con el id real: ver la nota de `cocheId` arriba.
+ *
+ * ⚠️ **Y los dos trozos van por `JSON.stringify`**, aunque un id de Firestore
+ * sea alfanumérico: esto se inyecta con `set:html`, que no escapa nada, así
+ * que lo que entre aquí se ejecuta tal cual. Componer la cadena a mano es
+ * fiarse de la forma del dato.
+ */
 const adelanto =
   precarga === 'flota'
     ? `window.__veltoFleet=fetch('/api/fleet',${CABECERA_JSON}).then(${A_JSON});`
-    : precarga === 'coche'
-      ? `(function(){var i=decodeURIComponent(location.pathname.split('/').filter(Boolean).pop()||'');` +
-        `if(!i)return;window['__veltoVehicle:'+i]=fetch('/api/vehicle?id='+encodeURIComponent(i),${CABECERA_JSON}).then(${A_JSON});})();`
+    : precarga === 'coche' && cocheId
+      ? `window[${JSON.stringify(`__veltoVehicle:${cocheId}`)}]=` +
+        `fetch(${JSON.stringify(`/api/vehicle?id=${encodeURIComponent(cocheId)}`)},${CABECERA_JSON})` +
+        `.then(${A_JSON});`
       : null;
 const canonica = ruta === null ? null : SITIO + ruta;
 /**

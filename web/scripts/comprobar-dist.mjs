@@ -92,6 +92,29 @@ function fichasEnDisco(dist) {
 }
 
 /**
+ * La clave bajo la que el `<head>` guarda el adelanto de un vehículo, si lo hay.
+ *
+ * Es lo único que decide si ese adelanto sirve para algo: `ficha()` en
+ * `api.ts` consulta `__veltoVehicle:<id>`, y una clave distinta deja la
+ * promesa ahí colgada sin que nadie la lea. Ver (D).
+ */
+export function claveAdelantoDe(html) {
+  const m = /window\["(__veltoVehicle:[^"]+)"\]\s*=/.exec(html);
+  return m ? m[1] : null;
+}
+
+/** ¿Adelanta la flota? Es lo que corresponde al respaldo, que no sabe el id. */
+export function adelantaFlota(html) {
+  return /window\.__veltoFleet\s*=/.test(html);
+}
+
+/** El id que la ficha generada lleva dentro, que es el que le pedirá a la API. */
+export function idIncrustadoDe(html) {
+  const m = /data-coche-id="([^"]*)"/.exec(html);
+  return m && m[1] ? m[1] : null;
+}
+
+/**
  * ¿Es un artefacto del SITIO de desarrollo?
  *
  * ⚠️ **Hace falta para no gritar catorce veces lo mismo.** Desarrollo marca
@@ -175,6 +198,73 @@ export function comprobar(dist) {
     const rel = `coche/${f}`;
     if (!anunciados.has(rel)) {
       errores.push(`existe ${rel} y el sitemap NO lo anuncia: esa ficha no la va a encontrar nadie`);
+    }
+  }
+
+  /*
+   * (D) El adelanto del `<head>` tiene que guardarse bajo la clave que la
+   * página va a consultar.
+   *
+   * ⚠️ **Nace de un fallo que duró seis días sin romper nada** (M-50, 6 de
+   * noviembre de 2026). El 31 de octubre la dirección de una ficha pasó de ser
+   * el id a ser un slug; `FichaCoche.astro` se adaptó y el adelanto de
+   * `Base.astro` **no**, así que pedía `?id=renault-clio` —**404 por visita**,
+   * dos errores en consola— y guardaba la promesa bajo `__veltoVehicle:<slug>`
+   * mientras `ficha()` la buscaba por `__veltoVehicle:<id>`. O sea que el medio
+   * segundo que ese bloque existe para ahorrar se perdía entero, **y en
+   * silencio**: la página cargaba bien, solo que más tarde.
+   *
+   * ⚠️ **Nada podía cazarlo antes de aquí.** No es un error de tipos —el
+   * adelanto es una cadena de JavaScript compuesta en el build—, ningún test de
+   * fuente conoce los ids —los decide una llamada de red— y la página funciona
+   * igual. Solo se ve con el artefacto delante, que es lo que este guion tiene.
+   *
+   * Y vale en los dos sentidos: la ficha generada tiene que adelantar **su**
+   * id, y el respaldo —que sirve cualquier dirección y no puede saber de qué
+   * coche se trata— **no puede adivinarlo**; ése adelanta la flota.
+   */
+  for (const f of fichasEnDisco(dist)) {
+    const rel = `coche/${f}`;
+    const html = readFileSync(join(dist, rel), 'utf8');
+    const id = idIncrustadoDe(html);
+    const clave = claveAdelantoDe(html);
+
+    if (!id) {
+      errores.push(
+        `${rel} no lleva data-coche-id: la ficha tendrá que resolver su propio slug contra la flota,\n` +
+          `    que es una petición de más en cada visita. ¿Se le dejó de pasar cocheId a FichaCoche?`
+      );
+      continue;
+    }
+    const esperada = `__veltoVehicle:${id}`;
+    if (!clave) {
+      errores.push(
+        `${rel} no adelanta su vehículo desde el <head>: se pierden ~570 ms en cada visita.\n` +
+          `    ¿Se le dejó de pasar precarga="coche" o cocheId a Base.astro?`
+      );
+    } else if (clave !== esperada) {
+      errores.push(
+        `${rel} adelanta bajo «${clave}» y la página pedirá «${esperada}»: ese adelanto no lo lee nadie.\n` +
+          `    Es el fallo de M-50: la clave se compuso con algo que no es el id (el slug del path, típicamente).`
+      );
+    }
+  }
+
+  /* (D bis) Y el respaldo no puede adivinar un id que no conoce. */
+  const respaldo = join(dist, 'coche.html');
+  if (existsSync(respaldo)) {
+    const html = readFileSync(respaldo, 'utf8');
+    const clave = claveAdelantoDe(html);
+    if (clave) {
+      errores.push(
+        `coche.html adelanta «${clave}», y ese respaldo sirve CUALQUIER dirección: ese id está adivinado\n` +
+          `    desde el path, así que será un slug y dará 404. Tiene que adelantar la flota, que es lo que\n` +
+          `    de verdad va a pedir para traducirlo.`
+      );
+    } else if (!adelantaFlota(html)) {
+      errores.push(
+        `coche.html no adelanta la flota, y la necesita sí o sí para traducir el slug a un id (idDelCoche()).`
+      );
     }
   }
 

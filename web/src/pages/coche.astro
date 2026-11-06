@@ -58,13 +58,21 @@ import FichaCoche from '../components/FichaCoche.astro';
   aquí abajo). Un `noindex` junto a una canónica a otra URL son señales
   contradictorias y el `noindex` puede propagarse a la canónica. Si algún día
   alguien le pone una ruta, hay que quitar esta marca en la misma pasada.
+
+  ⚠️ **Adelanta la FLOTA y no el coche, y es a propósito** (6 de noviembre de
+  2026). Este respaldo sirve cualquier dirección, así que no sabe qué coche es
+  hasta traducir el slug — y traducirlo es justamente pedir la flota, que es lo
+  que hace `idDelCoche()` en `FichaCoche.astro`. Adelantando «coche» habría que
+  adivinar el id desde el path, que es lo que producía un **404 por visita**
+  (M-50) y, peor, un adelanto guardado bajo una clave que nadie consultaba.
+  Aquí la flota sí es lo que la página va a pedir sí o sí.
 */}
 <Base
   titulo="Alquila este coche en Arganda del Rey | Velto"
   descripcion="Mira la disponibilidad real día a día, elige tus fechas y te damos el precio final del alquiler, con los impuestos incluidos y sin gastos de gestión."
   ruta={null}
   sinIndexar
-  precarga="coche"
+  precarga="flota"
 >
   <FichaCoche />
 </Base>
