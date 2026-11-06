@@ -8,6 +8,7 @@
  */
 
 import type { BookingRequest, BookingRequestStatus } from '@shared/models/booking-request.model';
+import { PICKUP_HOUR } from './availability-calendar.util';
 import { toDate } from './reservation-date.util';
 import { addVat } from './pricing.util';
 import { roundMoney } from './money.util';
@@ -35,11 +36,24 @@ export function priceStillGuaranteed(r: BookingRequest, now: Date = new Date()):
  * entrega: la ficha decía «02/11/2026 – 09/11/2026» sin más, y al convertir
  * llevaba al asistente una recogida a las 00:00 y una devolución a las 23:59.
  *
- * Mediodía es la respuesta honesta a «no se dijo»: cae dentro del horario de la
- * oficina, no da la madrugada por buena y es lo que el operador va a pactar por
- * teléfono de todos modos. Decisión de Dorel del 29 de septiembre de 2026.
+ * ⚠️ **Son las 10:00 desde el 6 de noviembre de 2026, y antes eran las 12:00.**
+ * Lo pidió Dorel en una frase que no admite matices —«la hora por defecto de
+ * alquiler hay que ponerla a 10:00 en todos los casos, web y backoffice»—, y la
+ * razón de fondo es que había **tres** respuestas a la misma pregunta: la web
+ * propone las 10:00 (`HORA_RECOGIDA`), el calendario del asistente las 10:00
+ * (`PICKUP_HOUR`) y esto contestaba las 12:00. El mediodía tenía su argumento
+ * —cae en horario de oficina y no da la madrugada por buena— y seguía siendo
+ * una tercera cifra: la misma solicitud proponía una hora en la ficha y el
+ * calendario de al lado otra.
+ *
+ * ⚠️ **Y no es una copia del 10, es `PICKUP_HOUR`.** Dos constantes con el
+ * mismo valor y distinto nombre vuelven a divergir en cuanto alguien toque una;
+ * es justo lo que acaba de pasar. La de la web sigue aparte porque es otra
+ * build y no puede compartir módulo, como el IVA y la curva de precios.
+ *
+ * Sigue siendo un **respaldo**: si la solicitud trae la hora puesta, manda ella.
  */
-export const DEFAULT_REQUEST_HOUR = 12;
+export const DEFAULT_REQUEST_HOUR = PICKUP_HOUR;
 
 /**
  * ¿Lo escribió `widenToFullDays()` en el backend?
@@ -60,13 +74,19 @@ function esMedianocheUtc(d: Date): boolean {
 }
 
 /**
- * Pasa un extremo de la ventana al mediodía del día que de verdad representa.
+ * Pasa un extremo de la ventana a la hora por defecto del día que de verdad
+ * representa.
+ *
+ * ⚠️ **Se llamaba `alMediodia()` y el nombre dejó de ser cierto** el 6 de
+ * noviembre de 2026, cuando la hora por defecto pasó a las 10:00. Un nombre que
+ * dice una hora concreta es un nombre que miente en cuanto esa hora cambia, y
+ * aquí lo que importa es **que es el respaldo**, no cuál es la cifra.
  *
  * ⚠️ Se reconstruye el día, no se mueve la hora sobre el mismo objeto: una
- * fecha de las 23:59:59.**999** con `setHours(12)` conserva los milisegundos
+ * fecha de las 23:59:59.**999** con `setHours(…)` conserva los milisegundos
  * dentro, y eso viaja al campo del asistente.
  */
-function alMediodia(valor: unknown, restarUnDia = false): Date | null {
+function aLaHoraPorDefecto(valor: unknown, restarUnDia = false): Date | null {
   if (!valor) return null;
   const d = toDate(valor);
   if (isNaN(d.getTime())) return null;
@@ -85,12 +105,17 @@ function alMediodia(valor: unknown, restarUnDia = false): Date | null {
 /**
  * ⚠️ **Si la solicitud trae la hora puesta, MANDA ella.** Es el día que esta
  * misma sección anunciaba: «el día que la web las mande, estas dos funciones se
- * encuentran la hora puesta y el mediodía deja de aplicarse solo». Llegó el 5 de
+ * encuentran la hora puesta y el respaldo deja de aplicarse solo». Llegó el 5 de
  * octubre de 2026, cuando se vio que la web ya pedía la hora —las 10:00— y la
  * tiraba al escribir la solicitud.
  *
- * El mediodía sigue ahí para las solicitudes **anteriores**, que no la guardan.
- * No es un parche de compatibilidad: es el respaldo honesto a «no se dijo».
+ * El respaldo sigue ahí para las solicitudes **anteriores**, que no la guardan.
+ * No es un parche de compatibilidad: es la respuesta honesta a «no se dijo».
+ *
+ * ⚠️ **Y desde que el respaldo también son las 10:00, este camino ya no se
+ * distingue del otro MIRANDO EL RESULTADO.** El test que lo protege pide por
+ * eso una hora distinta —las 16:00—, o pasaría igual con `horaPedida()`
+ * borrada.
  */
 function horaPedida(valor: unknown): Date | null {
   /*
@@ -99,8 +124,8 @@ function horaPedida(valor: unknown): Date | null {
    * que un `createdAt` corrupto no tumbe una vista entera con el pipe `date`—.
    * Aquí ese respaldo sería peor que el fallo: una solicitud con el campo
    * ilegible propondría **hoy** como día de recogida, y el operador lo llevaría
-   * al asistente sin que nada chirriara. Lo que se quiere es caer al mediodía
-   * del día que de verdad pidió el cliente.
+   * al asistente sin que nada chirriara. Lo que se quiere es caer a la hora por
+   * defecto del día que de verdad pidió el cliente.
    *
    * Es la misma regla que la web pública ya aplica en `public/core.ts`: ante
    * una fecha que no se entiende, `null` y no la de hoy.
@@ -124,7 +149,7 @@ function horaPedida(valor: unknown): Date | null {
 }
 
 export function requestPickupAt(r: BookingRequest): Date | null {
-  return horaPedida(r.pickupDateTime) ?? alMediodia(r.pickupDate);
+  return horaPedida(r.pickupDateTime) ?? aLaHoraPorDefecto(r.pickupDate);
 }
 
 /**
@@ -149,7 +174,7 @@ export function requestPickupAt(r: BookingRequest): Date | null {
  * sale de Firestore.
  */
 export function requestReturnAt(r: BookingRequest): Date | null {
-  return horaPedida(r.returnDateTime) ?? alMediodia(r.returnDate, true);
+  return horaPedida(r.returnDateTime) ?? aLaHoraPorDefecto(r.returnDate, true);
 }
 
 /**

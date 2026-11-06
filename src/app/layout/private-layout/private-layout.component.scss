@@ -137,9 +137,22 @@ app-brand-logo {
     text-align: center;
   }
 
+  /**
+   * ⚠️ **El icono se pone rojo Ferrari y el rótulo NO.** Pedido por Dorel el 6
+   * de noviembre de 2026. El color marca sobre qué entrada está el ratón sin
+   * tocar la legibilidad del texto, que es lo que de verdad se lee.
+   *
+   * ⚠️ **Y la entrada ACTIVA se queda fuera** (`:not(.active)`): ahí el fondo es
+   * el turquesa de marca y el rojo encima da **1,6:1** —ilegible— además de
+   * chillón. En la activa el icono sigue blanco, que es como se ve ahora.
+   */
   &:hover {
     background: var(--sidebar-hover);
     color: var(--sidebar-text);
+  }
+
+  &:hover:not(.active) i {
+    color: var(--sidebar-icon-hover);
   }
 
   &.active {

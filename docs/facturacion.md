@@ -9,6 +9,21 @@ de la AEAT, y las fuentes van citadas, pero **las decisiones de numeración y el
 alta en VeriFactu las tiene que confirmar la gestoría** antes de emitir una
 factura real.
 
+⚠️ **Y el CALENDARIO de este documento está en revisión desde el 6 de noviembre
+de 2026.** Todo lo que aquí dice «1 de enero de 2027» sigue siendo la fecha
+**vigente y publicada** —RD-ley 15/2025, sociedades—, pero Hacienda anunció el
+5 de octubre de 2026 que llevaría VeriFactu a **octubre de 2028**, sin que eso
+se haya publicado todavía. Lo demás de este análisis —numeración, inmutabilidad,
+contenido obligatorio, el QR— **no depende de esa fecha**. El estado y qué hay
+que mirar, en [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+
+⚠️ **Lo que sí conviene releer con eso delante es la sección 3**, donde se
+eligió empezar a facturar antes de la obligación para no dejar un tramo gris.
+Esa decisión se tomó con el 1 de enero de 2027 a cuatro meses vista; con la
+remisión en 2028, el tramo de facturas emitidas y no remitidas pasa de meses a
+**dos años**. No invalida lo decidido —la cadena de huellas se guarda igual
+desde la primera factura— pero sí agranda el paso 3 bis del guion.
+
 ---
 
 ## 0. Decisiones tomadas — 8 de septiembre de 2026

@@ -1984,7 +1984,9 @@
       "ownerSharePercent": "Share as owner",
       "ownerShareHint": "If they lend cars. It is the default: each car keeps its own and each booking freezes it.",
       "paidAt": "Payment date",
-      "paidAtHint": "The day the money actually left, which need not be today."
+      "paidAtHint": "The day the money actually left, which need not be today.",
+      "kind": "Why it is owed",
+      "percent": "Percentage"
     },
     "generated": "Generated",
     "generatedLower": "generated",
@@ -2017,7 +2019,7 @@
       "emailInvalid": "That email does not look valid",
       "hasSales": "Cannot delete: it has sales assigned. Set it to inactive instead",
       "nameRequired": "Enter the partner name",
-      "percentRequired": "Enter a commission percentage. Use 0 if they bring no customers",
+      "percentRequired": "The percentage is missing",
       "percentTooHigh": "More than 50 % is not a commission. Check the figure",
       "reservationCancelled": "That booking is cancelled and earns no commission",
       "reservationRequired": "Choose a booking",
@@ -2031,7 +2033,10 @@
       "invoiceDateRequired": "Enter the invoice date",
       "invoiceAmountRequired": "Enter the invoice amount",
       "invoiceAmountPositive": "The amount must be greater than zero",
-      "mixedCollaborators": "Those shares belong to different partners and cannot be recognised together"
+      "mixedCollaborators": "Those shares belong to different partners and cannot be recognised together",
+      "percentInvalid": "The percentage is not a number",
+      "percentRange": "The percentage must be between 0 and 100",
+      "saleRequired": "The entry was not found"
     },
     "saleAssigned": "Sale assigned",
     "sales": "Commissions and shares",
@@ -2084,7 +2089,15 @@
       "deleted": "Invoice deleted",
       "deleteTitle": "Delete the invoice",
       "deleteMessage": "The shares it covered will go back to awaiting an invoice."
-    }
+    },
+    "kindHint": {
+      "ownerVehicle": "The car on this reservation is theirs, so the normal case is the owner share. Their agreed percentage is proposed.",
+      "notOwnerVehicle": "The car on this reservation is not recorded as theirs. If there is an owner share anyway, change it by hand.",
+      "ownerAlready": "The car is theirs, but the owner share for this reservation is already recorded. What is left is the referral commission.",
+      "notOwnerButShare": "The car on this reservation is not recorded as theirs. The owner share will be recorded anyway: check the percentage."
+    },
+    "editKind": "Correct why it is owed",
+    "kindUpdated": "Reason corrected"
   },
   "events": {
     "alerts": {

@@ -1,22 +1,25 @@
-# Traspaso de sesión — 2 de noviembre de 2026
+# Traspaso de sesión — 6 de noviembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 unvicies**, que es lo último que pasó (2 de
-> noviembre: BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al
-> comercio propio de VELTO, con seis operaciones probadas contra la pasarela);
-> después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap anunciaba fichas
-> que no existían, el backoffice de producción resultó ser indexable, las fichas
-> pasaron a `/coche/renault-megane`, se quitaron los nueve `mailto:` y se cerró
-> un agujero del despliegue nocturno); después **§ 2 novodecies**
-> (ese mismo día: los campos de fecha en el móvil); después **§ 2 octodecies** (del 15 al 20 de octubre: el
-> TPV del banco, el pago de la señal desde la web y el scroll a tirones del
-> móvil); después **§ 2 ter**, que dice qué falta por desplegar
-> —hoy **nada**, y por eso esa sección empieza por cómo volver a medirlo en vez
-> de por una lista—; y luego **§ 5**, con los huecos que solo puede cerrar
-> Dorel, que son los únicos que siguen abiertos de verdad.
+> **Orden de lectura:** **§ 2 quatervicies**, que es lo último que pasó (6 de
+> noviembre por la noche: cuatro peticiones de Dorel, y la cuarta destapó que
+> «Asignar venta» solo sabía crear comisiones **de captación** — por eso el
+> reparto de una furgoneta cedida quedó registrado en producción con el
+> concepto y el porcentaje equivocados); después **§ 2 tervicies** (6 de
+> noviembre por la tarde: el botón «Crear reserva» recorrido **en pantalla** por
+> primera vez, y dos arreglos — la devolución de fianza a tarjeta que no llegaba
+> a los libros, y el adelanto de la ficha pública que no servía nunca); después
+> **§ 2 duovicies** (del 4 al 6: cinco cosas que vio Dorel usando la aplicación,
+> con su despliegue de 16 functions); después **§ 2 unvicies** (2 de noviembre:
+> BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al comercio
+> propio de VELTO); después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap
+> anunciaba fichas que no existían y el backoffice de producción resultó ser
+> indexable); después **§ 2 ter**, que dice qué falta por desplegar —hoy **sí
+> falta**: una function y el hosting de la web—; y luego **§ 5**, con los huecos
+> que solo puede cerrar Dorel.
 >
 > ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
 > BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
@@ -27,15 +30,28 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **`develop` va por delante de `master`, y NO hay que desplegar nada.** Lo
-> que lleva es documentación y el cambio del comercio de **desarrollo**; del
-> lado de producción el `.env` solo cambia comentarios. Ver § 2 ter, que explica
-> por qué un `git diff` contra `master` dice que `functions/` cambió cuando no
-> hay nada que subir.
+> ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y
+> queda UNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche, así que
+> M-49 está cerrado de punta a punta; lo que sigue viajando con el **merge a
+> `master`** es el hosting —la web pública (M-50) y todo el frontend del 6—. No
+> cambia la forma de ninguna respuesta, así que el orden con las functions da
+> igual. El detalle está en **§ 2 ter** — y se **mide**, no se copia de aquí.
 >
-> ⚠️ **Y mide las ramas contra `origin/`, no contra la local.** El 2 de
-> noviembre `master` en local estaba parado en un commit viejo y
-> `git log master..develop` dio **12** donde hay **4**.
+> ⚠️ **Y lo tercero, con fecha encima: VeriFactu está anunciado para octubre de
+> 2028 y NO publicado.** Dorel trajo la noticia el 6 de noviembre. Hacienda
+> anunció el 5 de octubre que llevaría las obligaciones pendientes a octubre de
+> 2028, para que coincidan con la factura electrónica obligatoria; **pero lo
+> que está en el BOE sigue siendo el 1 de enero de 2027** para sociedades, que
+> es el caso de VELTO. **Decisión suya: no se despliega nada y en DICIEMBRE se
+> vuelve a mirar el BOE.** Si para entonces la prórroga no está publicada,
+> quedan cuatro semanas con fiestas dentro para validar y desplegar. El relato
+> entero, con qué mirar exactamente, en
+> [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+>
+> ⚠️ **Y mide las ramas contra `origin/`, no contra la local: ha fallado DOS
+> veces seguidas.** El 2 de noviembre la comparación dio **12** donde había
+> **4**, y el 5 —con esta advertencia ya escrita— dio **20** donde había **12**,
+> porque `master` en local iba 8 commits por detrás. Haz el `git fetch`.
 >
 > ⚠️ **Y si algo no compila nada más abrir, lee § 2 nonies antes de buscar el
 > fallo en el código.** El 3 de octubre desaparecieron ficheros del espacio de
@@ -2179,12 +2195,462 @@ la que está publicada.**
 
 ---
 
+## 2 duovicies. Del 4 al 6 de noviembre — cinco cosas que vio Dorel usando la aplicación
+
+Esta es ya la etapa que § 3 anuncia: **nada de esto lo encontró un test**. Son
+cinco encargos suyos, mirando pantallas de producción, y los cinco salieron
+desplegados el 5 de noviembre.
+
+### 1 · «Claves sin traducción» que no eran claves
+
+En la ficha de una reserva real, dos filas de cobro tituladas **`rental_payment`**
+en negrita con «Señal» y «Resto alquiler» debajo.
+
+⚠️ **No faltaba ninguna clave** —`payments.types.rentalPayment` está en los tres
+idiomas—: lo que estaba en crudo era el **concepto guardado en el documento**.
+Diagnosticarlo como un hueco de i18n habría llevado a añadir una traducción para
+un valor que nunca debió guardarse.
+
+El mecanismo, con sus dos mitades, está en CLAUDE.md («El `concept` de un cobro:
+el ENUMERADO lo escribe el sistema, la frase la escribe una persona»). En corto:
+la ficha mandaba el **enumerado** como centinela de «el operador no escribió
+nada», y `settlePendingPayment()` lo deshacía comparando contra el tipo de la
+fila **destino** en vez de contra el que mandó el formulario. **6 de las 11**
+filas de cobro de producción quedaron así.
+
+⚠️ **Y llegaba a cuatro superficies de cara al cliente, no solo a la pantalla**:
+el **recibo en PDF** (que lo genera una function y no pasa por el pipe de
+Angular), la pantalla pública `/pay/:id`, y el
+`Ds_Merchant_ProductDescription` que pinta la pasarela del banco y acaba en el
+extracto de la tarjeta.
+
+Lo resuelve `payment-concept.util.ts` con su gemelo
+`functions/src/payment-concept.ts`. **Lo ya escrito no se migra**: se resuelve al
+leerlo.
+
+### 2 · «La calculadora de la web y la del backoffice no dan lo mismo»
+
+Tenía razón, y la causa **no era la curva**: comparadas las dos aritméticas
+sobre **18.090 combinaciones**, cero divergencias. Lo que no era igual era el
+último paso.
+
+⚠️ **`aTerminacion()` —el suelo a `,95`— vivía SOLO en `functions/src/public/core.ts`**,
+así que el escaparate publicaba el Megane de un día a **53,95 €** y el asistente
+proponía **54,45 €**. O sea que **el backoffice cobraba por encima de lo
+anunciado en el 99 % de los casos**, y lo único que lo corregía era
+`promisedPriceCeiling()`, que solo se dispara entrando por «Convertir en
+reserva». **El cliente que ve el precio en la web y LLAMA** —que es lo que la web
+le pide— no deja solicitud, así que nada avisaba al operador.
+
+Lo arregla `netoDeEscaparate()` en `pricing.util.ts`, y la decisión que lo
+sostiene es que **va en la TARIFA y no como precio acordado**: inyectado por
+`agreedPrice`, `priceOverridden` sería **true en todas** las reservas —contrato
+con una línea de ajuste que nadie pactó— y un empleado sin `editPricing` no
+podría crear ni una.
+
+Y por el camino salieron tres más, ninguna pedida:
+
+- ⚠️ **El céntimo del `quoteSnapshot` caía del lado PROHIBIDO en el 9,57 % de
+  los casos.** Aquí estuvo escrito que no se perseguía porque caía del lado
+  seguro, y era falso: `roundMoney()` redondea al **más cercano**, así que
+  **1.731 de 18.090** combinaciones sobrecobraban un céntimo sobre lo prometido.
+  Lo resuelve `netoQueNoSePasa()`, ajustando contra `addVat()` y no contra la
+  división.
+- ⚠️ **El alta rápida de cliente perdía el techo prometido.** Había dos salidas
+  del paso del cliente y solo una lo aplicaba.
+- ⚠️ **Y editar una fecha podía perder el precio acordado**: `editReservation()`
+  usaba `manualAdjustment` como marcador en vez de `agreedNetPriceOf()`, que es
+  la autoridad desde que un ajuste de 0 es indistinguible de «no se pactó nada».
+
+### 3 · «El informe de entrega no abre a la primera en el móvil»
+
+**No había nada roto: no había nada dibujado.** El botón abría la pestaña con el
+clic vivo —tiene que hacerlo, o el bloqueador se la come— y le ponía la dirección
+al volver el callable, sin escribir nada dentro mientras tanto. En un móvil,
+abrir una pestaña **la trae a primer plano**, así que el único indicador —el
+spinner del botón— se quedaba en la pestaña que el navegador acababa de mandar al
+fondo.
+
+Medido en producción: **9,4 s** la primera vez (dos arranques en frío y un fallo
+de caché en el borde) y **1,2 s** la segunda. De ahí el «a la segunda sí»: mismo
+código, mismo PDF.
+
+Lo resuelve `openDeferredTab()`, y **había dos sitios más peor resueltos** —emitir
+factura y generar proforma llamaban a `window.open()` *después* del `await`, sin
+comprobar el `null`—. Ahí el síntoma no es una pestaña en blanco, es que **no
+pasa nada**, y en la proforma el documento se perdía.
+
+### 4 · «El contrato de este coche no tiene los datos del seguro»
+
+⚠️ **No tenía nada que ver con que el coche fuera de colaborador**, que es lo que
+parecía desde fuera y lo que él mismo sospechaba. El dato estaba en la ficha y
+estaba guardado en el `vehicleSnapshot` del contrato.
+
+La causa: **`signContract` no retoca el PDF, lo REHACE** —la firma manuscrita va
+dentro y un PDF sellado no admite cambios—, así que hay **dos** sitios que arman
+la entrada de `buildContractPdf`, y cada uno llevaba su lista de campos escrita a
+mano. Divergieron, y el que se quedó corto fue **el firmado**, que es el que
+tiene valor: le faltaban **siete campos del vehículo y cuatro de la reserva**
+—aseguradora, póliza, teléfono de asistencia, combustible, transmisión, aviso de
+GPS, entrega y recogida a domicilio, kilometraje pactado y los conductores
+adicionales—.
+
+⚠️ **El arreglo quita la causa, no parchea la lista**:
+`functions/src/contracts/contract-snapshot.ts` es el único mapeo y pasan por él
+los dos caminos, con un test que compara **claves** contra un snapshot completo.
+Arreglar los once a mano habría dejado el mecanismo intacto para el doceavo.
+
+⚠️ **Y los contratos YA FIRMADOS no se arreglan.** El PDF sellado es inmutable:
+para que uno existente lleve el seguro hay que **sustituirlo** (`supersede`) y
+volver a firmarlo. Queda **pendiente de Dorel** decidirlo para
+`C-0SBXUX-2026` — ver [mejoras-pendientes.md](mejoras-pendientes.md).
+
+### 5 · «Crear reserva» desde la ficha del coche
+
+Lo pidió así: *«si alguien me pide alquilar este coche, me gustaría poder
+realizar una reserva, ver el calendario de disponibilidad al igual que en la web
+pública y seguir el curso de nueva reserva para este coche hasta el final»*.
+
+⚠️ **No es un flujo nuevo: es la MISMA puerta que «Convertir en reserva», con un
+parámetro menos.** El coche viaja en la URL (`/reservations/new?vehicleId=…`) y
+lo único que cambia es en qué paso se para el asistente. Duplicar la creación
+habría sido una segunda forma de crear reservas.
+
+El calendario vive en `availability-calendar.util.ts`, **gemelo de
+`web/src/lib/calendario-coche.ts`**, y se aparta de él en tres cosas a propósito
+—sin día de preparación, sin horizonte, y una reserva con fechas ilegibles se
+**salta** en vez de bloquear—. Las tres están razonadas en CLAUDE.md; la de fondo
+es que aquí hay un operador delante y el calendario solo **propone**:
+`searchAvailability()` vuelve a cruzarlo todo antes de guardar.
+
+### El despliegue del 5 de noviembre
+
+**16 functions**, en tandas de una y dos, **cero fallos de cuota**.
+
+⚠️ **`getPaymentCheckout` se dejó para DESPUÉS del hosting, a propósito.** Ahora
+devuelve una **clave i18n** en el concepto, así que desplegada antes del
+frontend, el bundle anterior se la habría pintado en crudo a un cliente con la
+tarjeta en la mano — el mismo fallo que acabábamos de corregir, por la puerta de
+atrás. **La regla general: una function que cambia la FORMA de su respuesta va
+después del frontend que la lee; una que solo cambia comportamiento, antes.**
+
+Verificado en vivo después: `/api/fleet` devuelve brutos en `,95` cuyos netos
+reconstruyen exacto (45,41 × 1,21 = 54,95), el backoffice responde, y siguen
+**33** functions en producción sin ninguna de las cinco de la AEAT.
+
+### Y dos lecciones de método, las dos repetidas
+
+⚠️ **La rama local volvió a mentir, cuatro días después de escribirlo aquí.**
+`master` en local estaba **8 commits** por detrás de `origin/master`, así que
+conté **20 commits** pendientes donde había **12**: lo de las fichas
+`/coche/renault-megane`, el sitemap y los campos de fecha ya estaba en
+producción. Le planteé el despliegue como más arriesgado de lo que era. § 2
+unvicies ya decía exactamente esto — **leerlo no basta, hay que hacer el
+`git fetch`**.
+
+⚠️ **Y «se dibuja dos veces» le sonó a «se guardan dos».** Al contar el arreglo
+del contrato firmado dije que el PDF se compone dos veces, y lo que él preguntó
+fue si la aplicación le iba a dejar contratos duplicados por ahí. No era una mala
+pregunta: era mi frase. **Lo que se compone en memoria no le importa a nadie; lo
+que importa es qué queda guardado** —un documento, dos PDF en rutas fijas que se
+pisan— y eso es lo que hay que decir primero.
+
+### El 6 de noviembre: la suite de la web estaba roja en el portátil y verde en el CI
+
+Midiendo para actualizar estos documentos salió que `npm --prefix web test`
+dejaba **un fichero sin cargar**: `comprobar-dist.spec.ts` reventaba con
+`SyntaxError: Invalid or unexpected token` **señalando su propia línea 2**, que
+es un error que manda a buscar el fallo donde no está.
+
+⚠️ **La causa era el `#!/usr/bin/env node` del módulo importado**, y solo pasa
+con **Node 24** —el del portátil— y no con el **22** que usa el CI. Así que la
+suite llevaba desde el 30 de octubre verde en GitHub y roja aquí. Nada ejecutaba
+ese guion por su shebang: los tres workflows lo llaman `node web/scripts/…`. Se
+quitó la línea y la suite pasa a **10 ficheros y 126 tests**.
+
+Lo que hay que llevarse no es el shebang: **una suite con un fichero
+permanentemente en rojo es una suite que se deja de mirar**, y la diferencia
+entre entornos la paga siempre el que mide en local.
+
+---
+
+## 2 quatervicies. El 6 de noviembre por la noche — cuatro peticiones, y una destapa un apunte mal escrito en producción
+
+Dorel pidió cuatro cosas mirando la pantalla. Tres son de forma; la cuarta
+venía con una pregunta suya —«¿le he registrado mal la venta o esto no está muy
+logrado?»— y la respuesta es **lo segundo, y con consecuencias en producción**.
+
+### 1 · El icono del menú en rojo Ferrari (M-66)
+
+`--sidebar-icon-hover: #ff2800`, con los demás tokens de la barra lateral.
+
+⚠️ **No cambia con el tema, y es correcto**: los cuatro pintan la barra oscura.
+⚠️ **Y la entrada ACTIVA se queda fuera** (`:not(.active)`): ahí el fondo es el
+turquesa de marca y el rojo encima da **1,6:1**.
+
+### 2 · El bloque del coche fijado, alineado y con su ritmo (M-67)
+
+Medido antes de tocar nada: la cinta, el rótulo, la pista y el calendario a
+**16 px**, y el texto de la cinta a **52** —12 de relleno + 16 de icono + 8 de
+hueco—. Y la pista a **0 px** del calendario con 16 hasta su propio título: el
+ritmo al revés.
+
+⚠️ **Y la primera corrección eligió mal la referencia, así que hubo una
+segunda.** Alineó los rótulos con el **texto de la cinta** (los 52) y Dorel lo
+devolvió al verlo: con eso el icono del coche quedaba colgando a la izquierda y
+los rótulos metidos 23 px respecto a «Pulsa el día de recogida». La escalera no
+desaparecía, se movía de sitio.
+
+La referencia buena es el **texto de dentro del calendario**, que es el
+elemento grande de la pantalla: su filete de 1 px más sus 12 de relleno, o sea
+**13**. Ahí arrancan ahora el icono del coche, el texto de la cinta y los dos
+rótulos. Medido a 1440 y a 390 px: 13 · 13 · 13 contra 12,67 del calendario —el
+0,33 es el filete de 1 px partido por el `devicePixelRatio`, no un desajuste.
+
+⚠️ **Lo que no coincidía era lo de DENTRO, no las cajas.** Las cuatro cajas ya
+estaban a ras del panel antes de empezar; alinear por la caja habría sido no
+tocar nada. Es la trampa de medir con `getBoundingClientRect()` sobre el
+elemento en vez de con un `Range` sobre su nodo de texto.
+
+⚠️ **Y los 13 px van copiados, con nota en los dos ficheros.** Una variable CSS
+en el `:host` del calendario solo baja a sus hijos, y subirla al padre pondría
+un componente compartido a depender de quien lo pinta. Mismo trato que el IVA
+duplicado en las functions: el número en dos sitios y un aviso en cada uno.
+
+⚠️ **El `margin-bottom` del rótulo no se aplicó al primer intento**, y es la
+aritmética de siempre: `.step-panel .section h2` mide (0,5,1) con la
+encapsulación de Angular y `.coche-fijado h2` mide (0,3,1). Se vio **midiendo**,
+no leyendo el SCSS.
+
+### 3 · La hora por defecto de alquiler: 10:00 en todos los casos (M-68)
+
+Eran **cuatro** respuestas a la misma pregunta, y dos convivían en la misma
+pantalla: el campo de recogida nacía a las **12:00** y el calendario de al lado
+proponía las **10:00**, así que elegir los días en el calendario cambiaba la
+hora de un campo ya relleno.
+
+Las dos del backoffice se leen ahora de `PICKUP_HOUR`/`RETURN_HOUR`; la de la
+web sigue aparte porque es otra build.
+
+⚠️ **Y hubo que arreglar un test, no solo cambiarle el número.** El que
+comprueba que «la hora pedida manda sobre el respaldo» la pedía a las 10:00 —el
+mismo valor que el respaldo nuevo—, así que habría seguido en verde con la
+función borrada. Pide las 16:00.
+
+### 4 · «Asignar venta» solo sabía crear comisiones de captación (M-69)
+
+El caso de Dorel: furgoneta cedida, venta asignada al propietario desde su
+ficha, y la fila sale **«POR TRAER EL CLIENTE»** con `137,20 € × 0%` y 102,90 €
+tecleados a mano.
+
+No fue un error suyo. `assignSale()` escribía `kind: 'referral'` **a pelo** y
+leía siempre `commissionPercent`, que en un propietario puro vale **0**
+legítimamente. La pantalla no preguntaba nada y no decía nada.
+
+⚠️ **El comentario que lo justificaba era cierto a medias, y ahí está la
+lección.** Decía que «el reparto por ceder el coche no se asigna a mano: sale
+del vehículo y se congela en la reserva» — y es verdad **solo si la reserva
+congeló su `ownerShareSnapshot`**. Un coche dado de alta como cedido *después*
+de crear la reserva no lo tiene, `ownerShareAccruals()` no devenga nada nunca, y
+entonces la asignación a mano es la **única** vía que queda. Un comentario que
+describe el camino feliz y no el que falta es un comentario que impide ver el
+agujero.
+
+Hoy el diálogo pregunta la clase, la propone mirando de quién es el coche —el
+snapshot congelado primero, la ficha del vehículo después— y propone el
+porcentaje de esa clase. Reproducido en desarrollo con el caso exacto (coche
+marcado como cedido **después** de la reserva): propone «Por ceder el coche» y
+**195,00 € sobre 260,00 € al 75 %**, y la fila nace sin marca de ajuste.
+
+⚠️ **Y recorrerlo destapó un botón encendido que no hacía nada.** Proponer el
+reparto de una reserva que **ya lo tiene** la sacaba de la lista —el filtro de
+«ya asignada» es por clase—, el desplegable volvía a «—» y `selectedReservationId`
+conservaba el id viejo: «Asignar» quedaba habilitado y `confirmAssign()` salía
+por la puerta de atrás sin escribir. Ahora manda la clase que sí queda libre, la
+pista lo explica, y el botón mira la reserva **resuelta** y no el id guardado.
+
+### 5 · Y lo ya registrado se puede corregir: la chapa del concepto se pulsa
+
+Dorel eligió esta salida de las tres que se le ofrecieron. La chapa de cada
+fila abre un editor con la clase y el porcentaje.
+
+⚠️ **Funciona con la venta ya PAGADA, al revés que el botón del importe.**
+Corregir el concepto **no mueve dinero**: `commissionAmount` no se toca. El
+botón del importe solo aparece mientras está pendiente porque allí el dinero no
+había salido todavía — son dos reglas distintas y cada una tiene su motivo.
+
+⚠️ **Comprueba el duplicado antes de escribir**, igual que `assignSale()`: una
+reserva admite un apunte de cada clase, no dos de la misma.
+
+Probado **reproduciendo la fila de producción** en desarrollo: se dejó un
+reparto en «POR TRAER EL CLIENTE · 260,00 € × 0% = 0,00 €, ajustado a
+195,00 €» y se corrigió a «POR CEDER EL COCHE · 260,00 € × 75% · 195,00 €», con
+la marca de ajuste desaparecida —el servicio borra `adjustmentReason` con
+`deleteField()` cuando el calculado vuelve a ser el importe— y la chapa de
+«falta su factura» de vuelta. El guardia del duplicado rechaza sin escribir.
+
+⚠️ **Lo que tiene que hacer Dorel en producción**: abrir la ficha de Adrian
+Puenaru, pulsar la chapa de esa fila y elegir «Por ceder el coche» con el 75 %
+que se propone. **Yo no escribo en producción.**
+
+⚠️ **Y el riesgo de duplicado está descartado**, preguntado ese mismo día: la
+reserva ya estaba cerrada cuando asignó la venta y no apareció ningún reparto
+pendiente, así que no tiene `ownerShareSnapshot`. Eso mismo explica el origen:
+el coche se dio de alta como cedido **después** de crear la reserva.
+
+⚠️ **Todo esto es frontend: no hay nada que desplegar a mano.** Entra con el CI
+al mergear. Lo que sigue pendiente de despliegue manual es lo de la tarde
+—`refundRedsysPayment`—, en § 2 ter.
+
+---
+
+## 2 tervicies. El 6 de noviembre por la tarde — lo que pasa al pulsar de verdad
+
+Tres cosas: **M-64 recorrido en pantalla** (que era el encargo), **N-45
+decidido** y dos arreglos, **M-49** y **M-50**. De los dos arreglos, el segundo
+resultó ser bastante más que lo que decía su ficha.
+
+### 1 · El botón «Crear reserva»: nada roto, y esta vez está pulsado
+
+Se desplegó el 5 de noviembre con 21 tests de la aritmética y **sin que nadie lo
+hubiera abierto**, que es el patrón de fallo dominante de esta casa. Recorridos
+los cuatro pasos contra desarrollo: **los cuatro pasan**.
+
+⚠️ **Lo primero fue liberar el 4200**, que lo tenía el `ng serve` de
+`gate2fly-platform` — es exactamente lo que impidió hacer esto el día 5, porque
+la sesión de Playwright está atada al origen y copiar la credencial entre
+orígenes lo bloquea el clasificador. Si vuelve a estar ocupado: `netstat -ano`
+para ver qué hay y pararlo, no servir en otro puerto.
+
+| Paso | Qué contestó la pantalla |
+|---|---|
+| el calendario pinta lo ocupado de **ese** coche | el Clio con 1–4 de diciembre `ocupado` y deshabilitados — su reserva real |
+| un rango que **cruza** una reserva | 28-nov → 6-dic **empieza de nuevo**; no cierra por encima |
+| crear y leerlo **en Firestore** | coche correcto, 3 días a las 10:00 de Madrid, `netPrice 161,94 → finalPrice 195,95` |
+| **el coche fijado NO disponible** | se queda en la lista con «Ya hay una reserva para estas fechas» **y** levanta su aviso. No salta al cliente con otro coche |
+
+⚠️ **Y de regalo quedó verificado en vivo el arreglo del 5 de noviembre**, que
+era lo que de verdad convenía confirmar: `/api/availability` anuncia ese Clio a
+3 días en `net 161,94 / gross 195,95` y la reserva nació **con la misma cifra al
+céntimo**. O sea que `netoDeEscaparate()` hace lo que prometía, y lo hace **en la
+tarifa**: el snapshot no marca precio acordado, así que el contrato no imprime
+ninguna línea de ajuste que nadie pactó.
+
+Salieron además dos cosas menores que **no se tocaron** y están escritas en
+[mejoras-pendientes.md](mejoras-pendientes.md) (M-64): el calendario escribe en
+los campos pero los campos no escriben en el calendario —así que al volver atrás
+desde «no disponible» el calendario no marca las fechas malas—, y la URL
+conserva el `vehicleId` tras «Elegir otro coche».
+
+### 2 · N-45: el contrato `C-0SBXUX-2026` se queda como está
+
+**Decisión de Dorel.** Lo que se le puso delante antes de decidir fue qué queda
+**guardado**, que es la lección de § 2 duovicies —«se dibuja dos veces» le sonó a
+«se guardan dos»— aplicada a propósito: no cómo funciona el mecanismo, sino qué
+aparece en el disco y qué hay que mandarle al cliente.
+
+⚠️ **Y preparando esa respuesta salió un defecto que nadie había visto: al
+sustituir un contrato, su PDF firmado se PISA.** El archivado copia el documento
+entero —número, fecha, huella, código de verificación— pero las rutas de Storage
+son **fijas por reserva**, así que el PDF nuevo escribe encima del anterior: el
+botón «Descargar PDF firmado» del archivado bajaría el nuevo, y la huella
+guardada dejaría de cuadrar con él. Es **M-65**, y la nota que importa es
+*cuándo*: hay que arreglarlo **antes** de la primera sustitución real, porque
+después el fichero ya está pisado. Hoy no corre prisa precisamente porque se
+decidió no rehacer ninguno.
+
+### 3 · M-49: el dinero salía del banco y los libros no se enteraban
+
+Había **dos mecanismos para el mismo hecho y ninguno sabía del otro**:
+`refundRedsysPayment` movía el dinero y no escribía fila; las filas
+`deposit_refund` solo las creaba el botón «Devolver total», que escribe el
+apunte y no mueve un euro.
+
+**Decisión de Dorel: manda el camino que mueve el dinero.** El motivo es el de
+siempre aquí — los libros no pueden depender de que alguien se acuerde de pulsar
+un segundo botón. Y cierra de paso el doble apunte que antes era posible:
+`depositAvailableFor()` deriva de las **filas vivas**, así que con el apunte
+escrito `depositAvailable()` baja a 0 y «Devolver total» se niega solo.
+
+⚠️ **Solo la fianza**, que es lo que había que acertar: por esa vía se devuelve
+cualquier cobro con tarjeta, y escribir `deposit_refund` para todos metería en el
+bloque de la fianza dinero que nunca lo fue — el mismo descuadre por la puerta de
+atrás. Y ⚠️ **el apunte no puede tumbar la devolución**: el dinero ya salió, así
+que un fallo ahí se registra con su importe y se sigue. Misma regla que el
+sellado del contrato, que nunca aborta la firma.
+
+### 4 · M-50 no era ruido en la consola: el adelanto llevaba seis días muerto
+
+La ficha pedía `/api/vehicle?id=renault-clio`, recibía 404 y reintentaba con el
+id. Eso decía la ficha de M-50, y **se quedaba corta**.
+
+⚠️ **El adelanto del `<head>` no servía NUNCA, ni en las fichas generadas.**
+Guardaba la promesa bajo `__veltoVehicle:<slug>` y `ficha()` la busca por
+`__veltoVehicle:<id>`: la clave no coincidía, así que los ~570 ms que ese bloque
+existe para ahorrar se perdían enteros desde el 31 de octubre, cuando la
+dirección pasó a ser un slug. `FichaCoche.astro` se adaptó aquel día y
+`Base.astro` no.
+
+**Lo que lo demostró fue mirar si la clave se CONSUME**, no contar peticiones: en
+local, sin backend, el adelanto falla y se reintenta igual, así que el número de
+peticiones no distingue nada. Contra `dev.veltorent.com` la clave queda **sin
+consumir**; con el arreglo, **consumida**.
+
+⚠️ **Y la salida que la ficha proponía —«que la página no intente el slug»—
+habría quitado los dos errores y dejado el adelanto igual de muerto.** Es el
+aviso de siempre: el diagnóstico escrito hace días describe el síntoma que se
+vio, no necesariamente la avería.
+
+El id viaja ahora como propiedad —la página generada lo conoce en build— y el
+respaldo `coche.astro` adelanta la **flota**, que es lo que de verdad necesita
+para traducir el slug. Lo vigila una comprobación nueva en `comprobar-dist.mjs`,
+que corre **entre compilar y publicar**: nada podía cazar esto antes de ahí —no
+es un error de tipos, ningún test de fuente conoce los ids, y la página funciona
+igual, solo que más lenta—. Validada con **tres controles** sobre artefactos
+manipulados a mano: la clave con el slug, la ficha que deja de adelantar y el
+respaldo que adivina un id. Las tres fallan; el artefacto bueno pasa.
+
+### Y una lección de método
+
+⚠️ **Una pantalla que «no engaña» puede estar costando medio segundo en cada
+visita, y eso no lo cuenta ningún test.** M-50 estaba clasificada como ruido de
+consola —«no está roto», decía su ficha, y era verdad— y debajo había una
+optimización entera sin funcionar. Cuando algo deja de encajar tras un cambio de
+formato de URL, conviene preguntarse **qué más leía ese formato**, no solo qué
+se ve roto.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-**Medido el 8 de octubre de 2026, después del despliegue: NO FALTA NADA.**
-`master` y `develop` están sincronizados y producción corre el código de hoy.
+⚠️ **Medido el 6 de noviembre de 2026 por la TARDE: sí falta, y son dos cosas.**
+Por la mañana no faltaba nada; el trabajo de la tarde (§ 2 tervicies) dejó esto
+esperando:
 
-**No te fíes de esta frase — vuelve a preguntarlo, porque envejece cada sesión:**
+| Qué | Cómo sale | Por qué |
+|---|---|---|
+| ~~**`refundRedsysPayment`**~~ | ~~a mano, por nombre~~ | **DESPLEGADA** por Dorel esa misma noche. M-49 cerrado de punta a punta |
+| **el hosting de la web** | con el merge a `master` (lo publica el CI) | M-50: el adelanto de la ficha pública |
+
+```powershell
+# M-49. Una sola function: no hace falta tanda. Hecho el 6 de noviembre.
+firebase deploy --only functions:refundRedsysPayment --project prod
+```
+
+⚠️ **El orden entre las dos da igual aquí, y conviene saber por qué**: la regla
+de la casa es que una function que cambia la **forma** de su respuesta va
+después del frontend que la lee. `refundRedsysPayment` devuelve exactamente lo
+mismo que antes —`refunded`, `remaining`, `authorizationCode`, `responseCode`—
+y solo escribe una fila de más, así que es un cambio de **comportamiento**. Y el
+de la web no toca ninguna function.
+
+⚠️ **Y `refundRedsysPayment` es la que saca dinero.** Antes de desplegarla,
+comprueba el bundle como lo carga el contenedor
+(`cd functions && node -e "require('./lib/index.js')"`) — hecho el 6 de
+noviembre: carga, y el manifiesto responde **200 en 0,56 s con las 38**.
+
+**No te fíes de la tabla de arriba — vuelve a preguntarlo, porque envejece cada
+sesión:**
 
 ```bash
 git log --oneline origin/master..HEAD                # develop por delante de produccion
@@ -2204,40 +2670,56 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
-**Vuelto a medir el 2 de noviembre de 2026: a producción NO le falta nada, y
-`develop` lleva CUATRO commits por delante que no hay que desplegar.**
+**Vuelto a medir el 6 de noviembre de 2026 por la tarde**, con `git fetch`
+delante:
 
 | | |
 |---|---|
-| `origin/master` | `b432b43`, desplegado y verificado |
-| `origin/develop` | por delante, con **los commits de esta sesión y los dos de documentación que arrastraba** |
-| qué son | documentación y el cambio del comercio de **desarrollo** — nada de producción |
-| ¿hay que desplegar algo? | **no.** Lo único de `functions/` es el `.env`, y en el de producción **solo cambian comentarios** |
+| `origin/master` | **`3e8a899`** — desplegado y verificado el 5 de noviembre |
+| `origin/develop` | **cinco** commits por delante: tres de documentación y el shebang (ninguno toca el bundle) **y los dos arreglos de la tarde** |
+| ¿hay que desplegar algo? | **sí**: `refundRedsysPayment` a mano y el hosting de la web con el merge. Ver la tabla del principio de esta sección |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
 | rewrites de la web | los cinco responden; `/api/pagar-senal`, solo en desarrollo |
+| las dos más viejas | `syncAuthClaims` y `onAuthorizedUserChanged`, del **25 de septiembre** — les falta solo el refactor de imports (M-60) |
 
-⚠️ **Esas 33 se midieron hoy con `--json`, y de paso salió que CLAUDE.md estaba
-desfasado**: decía **32** y que faltaba además `createSignalPayment`. Está
-desplegada en producción desde el 20 de octubre —**apagada** por su bandera, que
-es otra cosa— y esta misma sección ya lo recogía entonces; lo que no se actualizó
-fue CLAUDE.md. Corregido hoy. Es el patrón de siempre: **la cifra escrita a mano
-en un sitio no se entera de lo que se midió en otro.**
+> Aquí ponía, esa misma mañana, que **no faltaba nada**. Siguió siendo cierto
+> unas horas. Es la sexta vez que esta sección envejece, y la única frase que no
+> lo hace es la de arriba: vuelve a medirlo.
 
-⚠️ **Esa penúltima fila es la que hay que entender antes de desplegar nada.**
-Tocar un `.env` cambia el hash de **todas** las functions, así que un `git diff`
-contra `master` dice que `functions/` cambió y parece que hay que subirlo. No lo
-hay: lo que cambió del lado de producción son comentarios. Se comprueba mirando
-solo las líneas de valor, que es lo que separa un cambio real de uno escrito:
+⚠️ **Las 16 del 5 de noviembre se ven en la marca de tiempo, y es la forma de
+contestar «¿está desplegado mi arreglo?»** sin fiarse de ninguna frase de este
+fichero:
+
+```bash
+npx firebase functions:list --project prod --json > fn.json
+node -e "const l=JSON.parse(require('fs').readFileSync('fn.json','utf8')).result;
+ l.map(f=>[new Date(Number(f.source.storageSource.generation)/1000).toISOString().slice(0,16),f.id])
+  .sort().forEach(r=>console.log(r.join('  ')))"
+```
+
+⚠️ **El 2 de noviembre esa misma cifra salió desfasada en CLAUDE.md** —decía
+**32** y que faltaba además `createSignalPayment`, que estaba desplegada desde el
+20 de octubre, apagada por su bandera, que es otra cosa—. Es el patrón de
+siempre: **la cifra escrita a mano en un sitio no se entera de lo que se midió en
+otro.** Por eso aquí hay un comando y no solo un número.
+
+⚠️ **Y un `git diff` contra `master` puede decir que `functions/` cambió sin que
+haya nada que subir.** Tocar un `.env` cambia el hash de **todas**, y un cambio
+en el `.env` de **desarrollo** —o un comentario en el de producción— aparece
+igual en el diff. Lo que separa un cambio real de uno escrito es mirar solo las
+líneas de valor:
 
 ```bash
 git diff origin/master..origin/develop -- functions/.env.rentalcar-veltomobility \
   | grep -E "^[+-][A-Z_]+="        # vacio = solo comentarios = nada que desplegar
 ```
 
-⚠️ **Y mide contra `origin/`, no contra la rama local.** El 2 de noviembre
-`master` en local estaba parado en `f95e85a` y la comparación dio **12** donde
-hay **4** — ver el final de § 2 unvicies.
+⚠️ **Y mide contra `origin/`, no contra la rama local — ha fallado DOS veces
+seguidas.** El 2 de noviembre `master` en local estaba en `f95e85a` y la
+comparación dio **12** donde había **4**; el 5 de noviembre estaba **8 commits**
+por detrás y dio **20** donde había **12**. La segunda vez esta advertencia ya
+estaba escrita aquí: **leerla no basta, hay que hacer el `git fetch`.**
 
 > Aquí ponía **33 de 38** y «`master` y `develop` sincronizados», medido el 20 de
 > octubre. La cifra de functions estaba mal por lo de siempre —se contó a ojo— y
@@ -2250,10 +2732,14 @@ de `firebase functions:list --project prod --json` contra los del manifiesto de
 descubrimiento. Contar a ojo la tabla con colores ANSI dio **38 donde hay 33**
 la última vez que alguien lo intentó.
 
-⚠️ **Y producción tiene CATORCE hashes de despliegue distintos**, porque se ha
-desplegado por tandas a lo largo de meses. Eso significa que **no todas corren
-el mismo código**: el hash solo agrupa lo que se subió junto. Si dudas de una en
-concreto, lo que lo contesta es desplegarla.
+⚠️ **Y producción NO corre un código, corre treinta y tres.** Medido el 6 de
+noviembre de 2026: las 33 functions tienen **33 subidas distintas**, una cada
+una, porque desplegar por nombre y en tandas sube el bundle por separado. Aquí
+ponía «catorce hashes» y la idea era la correcta con el número equivocado: el
+hash **no agrupa nada**, así que la pregunta «¿corre esta function mi arreglo?»
+solo la contesta su marca de tiempo —la del comando de arriba— o volver a
+desplegarla. El reparto de hoy, por días: **16** del 5 de noviembre, 4 del 19 de
+octubre, 6 del 8, 2 del 5, 1 del 7, 2 del 3, y **2 del 25 de septiembre**.
 
 > Aquí ponía **32 de 37**, medido el 9 de octubre. Las cifras de este fichero
 > envejecen cada sesión: es la cuarta vez que pasa. La frase que no envejece es
@@ -2349,6 +2835,7 @@ que tener en la cabeza al retomar:
 | Qué | A quién espera | Qué desbloquea |
 |---|---|---|
 | **El pase a producción del TPV** | **Dorel lo pide, BBVA lo concede** | cobrar en producción con el comercio **propio** y no con el `361040215` prestado |
+| ~~Rehacer `C-0SBXUX-2026`~~ | ✅ **decidido el 6 de noviembre: NO se rehace** | queda en pie la condición, no la tarea: ese PDF remite a unos datos del seguro que no imprime, así que **si hay un siniestro con ese alquiler**, esto se reabre. Los contratos nuevos ya salen bien |
 | Encender el pago de la señal | **Dorel**, cuando el TPV esté concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y el rewrite `/api/pagar-senal`, que solo está en desarrollo** |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
@@ -2519,7 +3006,21 @@ lo dice.
 
 ### Lo de siempre
 
-**Con fecha, y es lo único con fecha:** el guion del 1 de enero de 2027
+**Con fecha, y es lo único con fecha:** ⚠️ **ahora son DOS fechas, y la primera
+es una revisión, no una entrega.**
+
+**En diciembre de 2026 — mirar el BOE.** VeriFactu está **anunciado** para
+octubre de 2028 y **no publicado**: lo vigente sigue siendo el 1 de enero de
+2027 para sociedades, que es VELTO. Decisión de Dorel del 6 de noviembre: no se
+adelanta trabajo y se revisa en diciembre. Lo único que mueve la fecha es un
+**real decreto en el BOE** que modifique la disposición final cuarta del RD
+1007/2023 — ni un anuncio, ni una nota de la AEAT, ni una noticia. Qué mirar y
+en qué orden, en [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+
+⚠️ **Y si en diciembre NO está publicada, lo de abajo pasa a ser urgente**, con
+cuatro semanas y las fiestas dentro.
+
+**El guion del 1 de enero de 2027**
 ([verifactu-alta.md](verifactu-alta.md) § 5 bis). Incluye un paso nuevo —el 3
 bis— que no existía y que lo crea haber empezado a facturar antes: **qué se hace
 con las facturas de 2026** cuando se encienda la remisión. El barrido se lleva
@@ -2527,6 +3028,13 @@ todas las filas pendientes **sin filtro de fecha**, así que si no se decide
 nada, en enero intentará remitir meses de facturas que nunca estuvieron
 obligadas. Las dos salidas están escritas y **hay que probarlas contra
 preproducción desde desarrollo, antes de enero**.
+
+⚠️ **Ojo con una lectura fácil y equivocada del aplazamiento:** aunque se
+publique, **el paso 3 bis no desaparece**, solo se mueve. Las facturas que se
+vayan emitiendo hasta 2028 seguirán acumulando filas pendientes en
+`verifactuSubmissions`, así que el día que se encienda la remisión habrá **dos
+años** de registros esperando en vez de unos meses. Cuanto más se aplaza, más
+grande es ese problema, no menos.
 
 **Decisiones de Dorel, sin prisa:** el turquesa `#20A48F` como texto se queda en
 3,10:1 y hace falta 4,5:1 —haría falta un tono propio para texto—; la fianza

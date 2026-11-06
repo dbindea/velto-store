@@ -481,9 +481,11 @@ export class BookingRequestsComponent {
   }
 
   /**
-   * ⚠️ **La ficha enseña MEDIODÍA, no la ventana guardada.** Lo almacenado son
-   * días completos —00:00 y 23:59:59— porque así se cruza con las reservas, y
-   * esas no son horas a las que se entregue un coche. Ver `DEFAULT_REQUEST_HOUR`.
+   * ⚠️ **La ficha enseña la hora PROPUESTA, no la ventana guardada.** Lo
+   * almacenado son días completos —00:00 y 23:59:59— porque así se cruza con
+   * las reservas, y esas no son horas a las que se entregue un coche. Ver
+   * `DEFAULT_REQUEST_HOUR`, que desde el 6 de noviembre de 2026 son las 10:00
+   * —las mismas que propone el calendario del asistente— y no el mediodía.
    */
   recogidaPropuesta(r: BookingRequest): Date | null {
     return requestPickupAt(r);

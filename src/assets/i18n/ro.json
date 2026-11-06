@@ -1984,7 +1984,9 @@
       "ownerSharePercent": "Partea ca proprietar",
       "ownerShareHint": "Dacă cedează mașini. Este propunerea: fiecare mașină o păstrează pe a sa, iar fiecare rezervare o îngheață.",
       "paidAt": "Data plății",
-      "paidAtHint": "Ziua în care au ieșit banii, care nu trebuie să fie neapărat azi."
+      "paidAtHint": "Ziua în care au ieșit banii, care nu trebuie să fie neapărat azi.",
+      "kind": "De ce i se datorează",
+      "percent": "Procent"
     },
     "generated": "Generat",
     "generatedLower": "generat",
@@ -2017,7 +2019,7 @@
       "emailInvalid": "Acel e-mail nu pare valid",
       "hasSales": "Nu se poate șterge: are vânzări atribuite. Marchează-l inactiv în schimb",
       "nameRequired": "Introdu numele colaboratorului",
-      "percentRequired": "Introdu un procent de comision. Pune 0 dacă nu aduce clienți",
+      "percentRequired": "Lipsește procentul",
       "percentTooHigh": "Peste 50 % nu este un comision. Verifică cifra",
       "reservationCancelled": "Acea rezervare este anulată și nu generează comision",
       "reservationRequired": "Alege o rezervare",
@@ -2031,7 +2033,10 @@
       "invoiceDateRequired": "Introdu data facturii",
       "invoiceAmountRequired": "Introdu suma facturii",
       "invoiceAmountPositive": "Suma trebuie să fie mai mare decât zero",
-      "mixedCollaborators": "Acele părți aparțin unor colaboratori diferiți și nu pot fi recunoscute împreună"
+      "mixedCollaborators": "Acele părți aparțin unor colaboratori diferiți și nu pot fi recunoscute împreună",
+      "percentInvalid": "Procentul nu este un număr",
+      "percentRange": "Procentul trebuie să fie între 0 și 100",
+      "saleRequired": "Înregistrarea nu a fost găsită"
     },
     "saleAssigned": "Vânzare atribuită",
     "sales": "Comisioane și părți",
@@ -2084,7 +2089,15 @@
       "deleted": "Factură ștearsă",
       "deleteTitle": "Șterge factura",
       "deleteMessage": "Părțile pe care le acoperea vor reveni la starea de așteptare a facturii."
-    }
+    },
+    "kindHint": {
+      "ownerVehicle": "Mașina din această rezervare este a lui, deci în mod normal este împărțirea pentru cedarea ei. Se propune procentul convenit.",
+      "notOwnerVehicle": "Mașina din această rezervare nu figurează ca fiind a lui. Dacă totuși există o împărțire, schimb-o manual.",
+      "ownerAlready": "Mașina este a lui, dar împărțirea pentru această rezervare este deja înregistrată. Ce rămâne liber este comisionul pentru aducerea clientului.",
+      "notOwnerButShare": "Mașina din această rezervare nu figurează ca fiind a lui. Împărțirea se va înregistra oricum: verifică procentul."
+    },
+    "editKind": "Corectează de ce i se datorează",
+    "kindUpdated": "Motiv corectat"
   },
   "events": {
     "alerts": {

@@ -152,6 +152,34 @@
             </select>
           </div>
 
+          <!--
+            ⚠️ **Por qué se le debe, y se PREGUNTA.** Hasta el 6 de noviembre de
+            2026 esta vía creaba siempre una comisión de captación sin decirlo:
+            el botón pone «Asignar venta» y la fila salía rotulada «Por traer el
+            cliente». Dorel registró así el reparto de una furgoneta cedida en
+            producción, con un 0 % que no era el suyo.
+
+            ⚠️ Y la clase va **arriba del importe**, no debajo: es lo que decide
+            qué porcentaje se propone, así que leerla después sería leerla tarde.
+          -->
+          @if (selectedReservationId) {
+            <div class="form-group">
+              <label for="saleKind">{{ 'collaborators.fields.kind' | translate }}</label>
+              <select id="saleKind" class="form-control" name="saleKind"
+                [ngModel]="assignKind()" (ngModelChange)="assignKind.set($event); onKindChosen()">
+                <option value="referral">{{ kindLabels.referral | translate }}</option>
+                <option value="vehicle_owner">{{ kindLabels.vehicle_owner | translate }}</option>
+              </select>
+              <!--
+                ⚠️ **Se dice de quién es el coche, no solo cuál se propone.** Un
+                desplegable que se rellena solo y no explica por qué se cambia
+                sin que nadie se entere — y aquí lo que se cambia es a qué
+                concepto se imputa el dinero de otra persona.
+              -->
+              <p class="field-hint">{{ assignKindHint | translate }}</p>
+            </div>
+          }
+
           <!-- ⚠️ El importe se propone y se puede cambiar. A veces se paga de
                más, a veces de menos, y a veces se redondea para que la cuenta
                sea fácil. Lo calculado se guarda igual, o dentro de seis meses la
@@ -162,10 +190,18 @@
                 <label for="assignAmount">{{ 'collaborators.fields.amount' | translate }}</label>
                 <input type="number" id="assignAmount" class="form-control" min="0" step="0.01"
                   [(ngModel)]="assignAmount" name="assignAmount" />
+                <!--
+                  ⚠️ **El porcentaje es el de la CLASE elegida, no el de
+                  captación.** Aquí ponía `collaborator()?.commissionPercent`
+                  siempre, así que un propietario puro —que lleva ese campo a 0—
+                  leía «lo calculado son 0,00 € (0%)» debajo de un reparto de
+                  102,90 €. Lo decide `suggestedPercentFor()`, el mismo util que
+                  usa el servicio al escribir.
+                -->
                 <p class="field-hint">
                   {{ 'collaborators.calculatedIs' | translate }}
                   {{ calculatedCommission | number: '1.2-2' }} €
-                  ({{ collaborator()?.commissionPercent }}%)
+                  ({{ assignPercent }}%)
                 </p>
               </div>
               @if (assignIsAdjusted) {
@@ -196,7 +232,7 @@
             {{ 'common.cancel' | translate }}
           </button>
           <button class="btn-primary" type="button"
-            [disabled]="!selectedReservationId || working()" (click)="confirmAssign()">
+            [disabled]="!canAssign" (click)="confirmAssign()">
             @if (working()) { <i class="pi pi-spin pi-spinner"></i> }
             {{ 'collaborators.assign' | translate }}
           </button>
@@ -573,9 +609,20 @@
                 cesión y el otro no. Sin esto, la pantalla los mezcla justo
                 después de que el modelo se hubiera cuidado de separarlos.
               -->
-              <span class="kind-tag" [class.owner]="s.kind === 'vehicle_owner'">
+              <!--
+                ⚠️ **La chapa se puede pulsar para CORREGIR el concepto**, y
+                también con la venta ya pagada. Nace de un apunte real: el
+                reparto de una furgoneta cedida quedó registrado como comisión
+                de captación con un 0 %, y no había forma de arreglarlo desde
+                aquí. Corregirlo no mueve dinero —el importe no se toca—, así
+                que no hay motivo para exigir que esté pendiente, al revés que
+                el botón de cambiar el importe.
+              -->
+              <button type="button" class="kind-tag" [class.owner]="s.kind === 'vehicle_owner'"
+                [disabled]="working()" (click)="startEditKind(s, $event)"
+                [attr.title]="'collaborators.editKind' | translate">
                 {{ kindLabels[s.kind] | translate }}
-              </span>
+              </button>
               <!--
                 ⚠️ **«Pendiente de recibir factura», nunca «sin factura».** Dorel
                 lo pidió con esas palabras: lo primero es un trámite que falta y
@@ -619,6 +666,37 @@
                   </span>
                 }
               </span>
+
+              <!--
+                ⚠️ **Corregir el concepto: la clase y el porcentaje, nunca el
+                importe.** Lo que se le debe o ya se le entregó no se toca aquí;
+                lo que se arregla es qué significa esa cifra. La línea de abajo
+                dice lo que daría el porcentaje escrito, para que se vea si la
+                fila deja de estar ajustada o pasa a estarlo.
+              -->
+              @if (editingKindId === s.id) {
+                <div class="kind-edit" (click)="$event.stopPropagation()">
+                  <select class="form-control" name="editKind" [(ngModel)]="editKind"
+                    (ngModelChange)="onEditKindChosen(s)">
+                    <option value="referral">{{ kindLabels.referral | translate }}</option>
+                    <option value="vehicle_owner">{{ kindLabels.vehicle_owner | translate }}</option>
+                  </select>
+                  <input type="number" class="form-control narrow" min="0" max="100" step="0.01"
+                    name="editKindPercent" [(ngModel)]="editKindPercent"
+                    [attr.aria-label]="'collaborators.fields.percent' | translate" />
+                  <span class="hint">
+                    {{ 'collaborators.calculatedIs' | translate }}
+                    {{ editKindCalculated(s) | number: '1.2-2' }} €
+                  </span>
+                  <button class="btn-ghost" type="button" (click)="cancelEditKind($event)">
+                    {{ 'common.cancel' | translate }}
+                  </button>
+                  <button class="btn-primary" type="button" [disabled]="working()"
+                    (click)="saveKind(s, $event)">
+                    {{ 'common.save' | translate }}
+                  </button>
+                </div>
+              }
             </div>
 
             <!-- Cambiar el importe. Solo mientras está pendiente: una vez

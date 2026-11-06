@@ -654,8 +654,9 @@ export const createBookingRequest = onRequest(
          * ⚠️ **Campos nuevos del 5 de octubre de 2026, y nacen opcionales**
          * porque hay solicitudes anteriores sin ellos: la regla de producción
          * es que un campo se añade, no se renombra ni se rellena en masa. Para
-         * las viejas sigue valiendo el respaldo del mediodía
-         * (`DEFAULT_REQUEST_HOUR`) en el backoffice.
+         * las viejas sigue valiendo el respaldo del backoffice
+         * (`DEFAULT_REQUEST_HOUR`), que desde el 6 de noviembre de 2026 son
+         * las 10:00 y no el mediodía.
          *
          * Hasta hoy **no se guardaban**, y eso hacía que el backoffice
          * propusiera las 12:00 para una pre-reserva pedida a las 10:00: la

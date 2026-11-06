@@ -15,6 +15,345 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 6 de noviembre de 2026 (noche) — cuatro peticiones de Dorel
+
+Cerradas las cuatro: **M-66** (el icono del menú en rojo Ferrari al pasar el
+ratón), **M-67** (el bloque del coche fijado, alineado y con su ritmo),
+**M-68** (la hora por defecto de alquiler, 10:00 en todos los casos) y
+**M-69** (asignar una venta ya pregunta **por qué** se le debe y propone el
+porcentaje que toca). El relato está en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 quatervicies.
+
+⚠️ **Y queda UNA COSA QUE HACER TÚ en producción**: el apunte de 102,90 € del
+Ford Custom está registrado como «Por traer el cliente» con un 0 %. Ya se puede
+arreglar desde la aplicación —se pulsa la chapa del concepto—, pero la
+corrección la tienes que hacer tú: yo no escribo en producción. Ver M-69.
+
+### ✅ M-69 · «Asignar venta» solo sabía crear comisiones de captación *(6 nov 2026)*
+
+Lo vio Dorel en producción: alquiló una furgoneta cedida, le asignó la venta al
+propietario desde su ficha y la fila salió **«POR TRAER EL CLIENTE»** con
+`137,20 € × 0%` y un importe tecleado a mano de 102,90 €.
+
+No fue un error suyo: `assignSale()` escribía `kind: 'referral'` **a pelo** y
+leía siempre `commissionPercent`, que en un propietario puro vale **0**
+legítimamente. La pantalla no preguntaba nada y no decía nada.
+
+El comentario que lo justificaba —«el reparto por ceder el coche no se asigna a
+mano: sale del vehículo y se congela en la reserva»— era cierto **solo si la
+reserva congeló su `ownerShareSnapshot`**. Un coche dado de alta como cedido
+*después* de crear la reserva no lo tiene, así que `ownerShareAccruals()` no
+devenga nada nunca y la asignación a mano era la única vía que quedaba — la
+única, y escribía el concepto equivocado.
+
+Hoy el diálogo pregunta la clase, la **propone** mirando de quién es el coche
+—el snapshot congelado primero y la ficha del vehículo después— y propone el
+porcentaje de esa clase. Comprobado en pantalla reproduciendo el caso: coche
+marcado como cedido después de la reserva, la pantalla propone «Por ceder el
+coche» y **195,00 € sobre 260,00 € al 75 %**, y la fila nace sin marca de
+ajuste y entra en «pendiente de recibir factura».
+
+⚠️ **Y salió un agujero al recorrerlo**: proponer el reparto de una reserva que
+**ya lo tiene** la sacaba de la lista, el desplegable volvía a «—» y el botón
+«Asignar» se quedaba **encendido sin hacer nada**. Ahora manda la clase que sí
+queda libre y la pista lo cuenta.
+
+#### ✅ Y se puede corregir lo ya registrado *(decisión de Dorel, 6 nov 2026)*
+
+Le ofrecí tres salidas para el apunte de producción y eligió **añadir el
+botón**, que es la única que deja el histórico coherente y sirve el día que
+vuelva a pasar.
+
+La chapa del concepto —«POR TRAER EL CLIENTE»— **se pulsa** y abre un editor con
+la clase y el porcentaje. Dos cosas suyas:
+
+- ⚠️ **Funciona con la venta ya PAGADA**, al revés que el botón de cambiar el
+  importe, que solo aparece mientras está pendiente. La diferencia tiene
+  motivo: corregir el concepto **no mueve dinero** —`commissionAmount` no se
+  toca—, y allí el dinero sí había salido.
+- ⚠️ **Comprueba el duplicado antes de escribir.** Una reserva admite un apunte
+  de cada clase pero no dos de la misma; pasar éste a una clase que ya existe
+  dejaría al colaborador con el doble, con las dos filas igual de creíbles.
+
+Probado de punta a punta contra desarrollo **reproduciendo la fila de
+producción**: se dejó un reparto en «POR TRAER EL CLIENTE · 260,00 € × 0% =
+0,00 €, ajustado a 195,00 €» —la misma forma que la suya— y se corrigió a «POR
+CEDER EL COCHE · 260,00 € × 75% · 195,00 €», con la marca de ajuste
+desaparecida y la chapa de «falta su factura» de vuelta. Y el guardia del
+duplicado rechaza con «Esa reserva ya está asignada a un colaborador» sin
+escribir nada.
+
+**Lo que tienes que hacer tú**: abrir la ficha de Adrian Puenaru en producción,
+pulsar la chapa de esa fila, elegir «Por ceder el coche» y dejar el 75 % que se
+propone.
+
+#### Por qué había que corregirlo
+
+La fila de 102,90 € del Ford Custom tiene el dinero **bien** —se pagó lo que se
+pactó— y tres cosas mal:
+
+- dice «Por traer el cliente» cuando es un reparto por ceder el coche;
+- dice `× 0%`, así que la cifra **no se puede explicar** dentro de seis meses;
+- al no ser `vehicle_owner`, **no entra en «pendiente de recibir factura»**: su
+  justificante no lo va a reclamar nadie, y en Informes se cuenta como comisión
+  y no como reparto a propietario.
+
+⚠️ **El riesgo de duplicado se preguntó y está DESCARTADO.** Si esa reserva
+hubiera llevado `ownerShareSnapshot` y no estuviera cerrada, al cerrarla el
+devengo automático habría creado un **segundo** apunte de 102,90 € —el filtro
+de «ya reconocido» solo mira los de clase `vehicle_owner`, y aquél es
+`referral`—. Dorel confirmó el 6 de noviembre que la reserva **ya estaba
+cerrada** cuando asignó la venta y que no apareció ningún reparto pendiente: no
+hay snapshot, así que no hay nada que se vaya a duplicar.
+
+⚠️ **Y eso mismo explica por qué no había devengo que recoger**, que es el
+origen de todo: el coche se dio de alta como cedido **después** de crear la
+reserva.
+
+### Lo de la mañana del 6 de noviembre de 2026
+
+Los cuatro puntos abiertos de la mañana están cerrados: **M-64** recorrido en
+pantalla, **N-45** decidido, **M-50** y **M-49** arreglados. El relato está en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 tervicies.
+
+⚠️ **De lo que quedaba por desplegar ya solo falta el hosting.**
+`refundRedsysPayment` (M-49) la subió Dorel a producción la noche del 6; el
+hosting de la web (M-50) viaja con el merge a `master`. Ver § 2 ter del
+traspaso.
+
+Y sale **una pendiente nueva**, encontrada al preparar N-45:
+
+### ⬜ M-65 · Al sustituir un contrato firmado, su PDF se pisa
+
+⚠️ **El archivado conserva los DATOS y no el FICHERO.** `generateContractPdf`
+con `supersede` copia el contrato entero a `contracts/{reservaId}-v{n}` —número,
+fecha de firma, huella SHA-256, código de verificación y los snapshots—, pero
+las rutas de Storage son **fijas por reserva**
+(`contracts/{id}/contract-signed.pdf`, en `signContract.ts`), así que al volver
+a firmar el fichero nuevo **pisa** al anterior.
+
+Consecuencias, y la segunda es la que importa:
+
+- El botón «Descargar PDF firmado» del contrato archivado —la ficha los enseña
+  a propósito, «uno que no se ve en ninguna parte es, para quien usa la
+  aplicación, uno borrado»— bajaría el PDF **nuevo**.
+- Y su **huella archivada dejaría de cuadrar** con lo que se descargue, que es
+  justo lo que esa huella existe para poder afirmar. La verificación pública no
+  se rompe —`getContractVerification` devuelve datos, no el fichero— pero diría
+  una huella que ya no corresponde a ningún PDF alcanzable.
+
+El original sobrevive solo como **generación antigua** del objeto (el versionado
+de Storage está activo desde el 11 de septiembre), recuperable con `gcloud` y no
+desde la aplicación.
+
+El arreglo son unas quince líneas: al archivar, **copiar** el objeto a
+`contracts/{id}-v{n}/contract-signed.pdf` con `file.copy()` y apuntar ahí el
+`signedPdfPath` y el `signedPdfUrl` del archivado. Hay que desplegar
+`generateContractPdf`.
+
+⚠️ **Hoy no urge porque no hay ningún contrato que sustituir** —N-45 se decidió
+que no—, pero esto hay que hacerlo **antes** de la primera sustitución real, no
+después: después el fichero ya está pisado.
+
+### ✅ M-68 · La hora por defecto de alquiler eran TRES horas distintas *(6 nov 2026)*
+
+«La hora por defecto de alquiler hay que ponerla a 10:00 en todos los casos, web
+y backoffice», dijo Dorel. Lo que había eran **cuatro** respuestas a la misma
+pregunta y dos de ellas convivían en la misma pantalla:
+
+| Dónde | Antes | Ahora |
+|---|---|---|
+| la web (`HORA_RECOGIDA`) | 10:00 | 10:00 |
+| el calendario del asistente (`PICKUP_HOUR`) | 10:00 | 10:00 |
+| el campo de recogida del asistente (`getDefaultPickupDateTime`) | **12:00** | 10:00 |
+| el respaldo de una solicitud sin hora (`DEFAULT_REQUEST_HOUR`) | **12:00** | 10:00 |
+
+⚠️ **La tercera era visible sin buscarla**: el asistente abría con «06/11/2026
+12:00» en el campo y el calendario de al lado proponía las 10:00, así que elegir
+los días **cambiaba la hora** de un campo que ya estaba relleno.
+
+⚠️ **Y no se copia el 10 en cuatro sitios.** Las dos del backoffice se leen de
+`PICKUP_HOUR`/`RETURN_HOUR`, que es lo único que impide que vuelvan a separarse;
+la de la web sigue aparte porque es otra build, como el IVA y la curva, y lo
+afirma su propio test.
+
+⚠️ **Y había que arreglar un test, no solo cambiarlo de número**: el que
+comprueba que «si la solicitud trae la hora pedida, manda ella» la pedía a las
+10:00 — o sea el mismo valor que el respaldo, así que habría seguido en verde
+con `horaPedida()` borrada. Pide las 16:00.
+
+### ✅ M-67 · El bloque del coche fijado salía en escalera *(6 nov 2026)*
+
+Medido en pantalla: la cinta, el rótulo «Disponibilidad de este coche», su pista
+y el calendario estaban todos a **16 px** salvo el texto de la cinta, que cae a
+**52** —12 de relleno, 16 de icono y 8 de hueco—. Y la pista pegaba con el
+calendario a **0 px** mientras dejaba 16 hasta su propio título: el ritmo al
+revés.
+
+⚠️ **Y hubo que corregirlo DOS VECES el mismo día, porque la primera referencia
+era la equivocada.** El primer intento alineó los dos rótulos con el texto de la
+cinta —los 52— y Dorel lo devolvió al verlo: así el icono del coche quedaba
+colgando a la izquierda y los rótulos metidos 23 px respecto a «Pulsa el día de
+recogida», que es el texto con el que se comparan de verdad. La escalera no
+desaparecía, **se movía de sitio**.
+
+La columna buena es la de **dentro del calendario** —su filete de 1 px más sus
+12 de relleno, o sea 13—, porque el calendario es el elemento grande y el que
+manda. Hoy el icono del coche, el texto de la cinta, el rótulo y la pista
+arrancan los cuatro ahí, en la misma vertical que la pista del calendario y su
+leyenda. Medido: 13 · 13 · 13 contra 12,67 del calendario, que es el píxel del
+filete partido por la pantalla.
+
+⚠️ **La referencia es el TEXTO del calendario, no su caja.** Las cuatro cajas
+—cinta, rótulos y calendario— ya estaban a ras del panel desde el principio: lo
+que no coincidía era lo de dentro, y alinear por la caja habría sido no cambiar
+nada.
+
+⚠️ **Y los 13 px son un número COPIADO, con su nota en los dos ficheros.** No
+hay forma de leerlos: una variable CSS declarada en el `:host` del calendario
+solo baja a sus hijos, y subirla al padre pondría un componente compartido a
+depender de quien lo pinta. Mismo trato que el IVA duplicado en las functions.
+
+⚠️ **Y el `margin-bottom` del rótulo no se aplicaba al primer intento.**
+`.step-panel .section h2` mide (0,5,1) con la encapsulación de Angular y
+`.coche-fijado h2` mide (0,3,1): **pierde**. Lleva `.step-panel .section`
+delante. Comprobado midiendo, no leyendo: 16 px antes, 4 px después.
+
+### ✅ M-66 · El icono del menú, en rojo Ferrari al pasar el ratón *(6 nov 2026)*
+
+Pedido por Dorel. `--sidebar-icon-hover: #ff2800`, junto a los demás tokens de
+la barra lateral.
+
+⚠️ **No cambia con el tema, y es correcto**: los cuatro pintan la barra oscura,
+así que el rojo compone contra un fondo casi negro en todos (4,8:1 sobre el más
+claro de los cuatro, por encima del 3:1 que pide un icono).
+
+⚠️ **La entrada ACTIVA se queda fuera.** Ahí el fondo es el turquesa de marca y
+el rojo encima da **1,6:1** —ilegible— además de chillón. Su icono sigue blanco.
+
+### ✅ N-45 · El contrato `C-0SBXUX-2026` se queda como está — decidido el 6 de noviembre de 2026
+
+**Decisión de Dorel: no se rehace.** Se le expuso qué quedaría guardado y qué
+habría que mandarle al cliente, incluido el hallazgo de M-65 (el PDF firmado
+anterior se habría pisado), y decidió dejarlo.
+
+⚠️ **Lo que queda en pie es la condición, no el riesgo de hoy:** ese PDF remite
+a una sección de datos del seguro que él no imprime, así que **si hay un
+siniestro con ese alquiler**, la cláusula de accidentes se apoya en un dato que
+no consta en el papel del cliente. Si eso llega a pasar, esto se reabre.
+
+Lo arreglado el 5 de noviembre (`contract-snapshot.ts`) vale para todos los
+contratos **nuevos**, que es lo que importaba cerrar.
+
+<details>
+<summary>Lo que se midió antes de decidirlo</summary>
+
+### ⬜ N-45 · El contrato `C-0SBXUX-2026` sigue sin los datos del seguro
+
+⚠️ **Lo arreglado vale para los contratos NUEVOS, y ese ya está firmado.** El PDF
+sellado es inmutable: no hay forma de añadirle la aseguradora, la póliza y el
+teléfono de asistencia que le faltan. La única salida es la que la aplicación ya
+tiene para esto: **sustituirlo** (`supersede: true` con motivo), que lo archiva
+como `contracts/{reservaId}-v1` con estado `superseded`, y volver a firmarlo.
+
+Lo que hay que saber antes de decidir:
+
+- **El papel que tiene el cliente deja de ser el acuerdo vigente**, y su QR se lo
+  dirá: `getContractVerification` contesta `superseded` —ni «no encontrado» ni
+  «válido»—, así que hay que mandarle el nuevo.
+- **Hay que volver a pedirle la firma**, con su enlace nuevo.
+- **El archivado no se borra nunca**, así que quedan dos documentos para esa
+  reserva. Es lo correcto —un error no se borra, se corrige con un documento
+  nuevo—, pero conviene saberlo porque Dorel preguntó expresamente por los
+  contratos que «se quedan por ahí».
+- ⚠️ **Y lo que está en juego es un cobro**: la cláusula de accidentes dice que
+  la póliza «consta en la sección Datos del vehículo», y en ese PDF no consta. Es
+  el mismo defecto que ya obligó a reescribir esa cláusula una vez.
+
+**Decide Dorel.** Si dice que no, no pasa nada mientras no haya un siniestro con
+ese alquiler; si dice que sí, son dos clics y un WhatsApp.
+
+</details>
+
+### ✅ M-64 · Recorrido en pantalla — 6 de noviembre de 2026, los cuatro pasos pasan
+
+Hecho con el navegador contra desarrollo, con el 4200 liberado (lo tenía
+`gate2fly-platform`). **Nada roto**, y es la primera vez que alguien lo pulsa.
+
+| Paso | Qué se midió |
+|---|---|
+| 1 · el calendario pinta lo ocupado de **ese** coche | el Clio sale con 1–4 de diciembre `ocupado` y deshabilitados, que es su reserva real; los pasados deshabilitados, «mes anterior» apagado |
+| 2 · un rango que cruza una reserva | 28-nov → 6-dic **empieza de nuevo**: suelta el 28 y deja el 6-dic como inicio nuevo. No cierra por encima |
+| 3 · crear y leerlo en Firestore | `vehicleId` el del coche de la ficha, 3 días exactos a las 10:00 de Madrid, `netPrice 161,94 → finalPrice 195,95` |
+| 4 · **el coche fijado NO disponible** | se queda en el paso 2 con «Ya hay una reserva para estas fechas» al lado, y además levanta el aviso «Este coche no está disponible en esas fechas». No salta al cliente con otro coche |
+
+Tres cosas más que salieron por el camino:
+
+- **El calendario lee en vivo**: creada la reserva del 6 al 9, al volver a
+  entrar esos cuatro días ya salían ocupados.
+- **La fijación sobrevive a volver atrás** —la cinta «Reserva para este coche»
+  y el calendario del Clio siguen ahí— y **«Elegir otro coche» la suelta** de
+  verdad.
+- ⚠️ **Y el precio cuadra con lo anunciado, medido contra la web**: `/api/availability`
+  da ese Clio a 3 días en `net 161,94 / gross 195,95` y la reserva nació con
+  exactamente eso. Es `netoDeEscaparate()` del 5 de noviembre funcionando en
+  vivo, y además **en la tarifa**: el snapshot no marca precio acordado, así
+  que el contrato no imprimirá ninguna línea de ajuste.
+
+La reserva de prueba se borró, comprobado en Firestore.
+
+#### Dos observaciones menores, no tocadas
+
+Ninguna engaña sobre disponibilidad —`searchAvailability()` vuelve a cruzarlo
+todo antes de guardar— así que se dejan escritas en vez de arregladas:
+
+- ⚠️ **El calendario escribe en los campos, pero los campos no escriben en el
+  calendario.** Escribiendo las fechas a mano —o volviendo atrás desde «no
+  disponible»— el calendario dice «Pulsa el día de recogida» con las fechas ya
+  puestas debajo. No confirma lo elegido, justo cuando el operador acaba de
+  corregir unas fechas malas. Arreglarlo es sincronizar en los dos sentidos, que
+  tiene riesgo de bucle: si se hace, con cuidado.
+- La URL conserva `?vehicleId=…` después de «Elegir otro coche», así que una
+  recarga vuelve a fijar el coche. Es defendible —recargar esa URL es volver a
+  entrar por ese coche— y se anota por si algún día molesta.
+
+### ✅ M-49 · La devolución a tarjeta deja ya su apunte — 6 de noviembre de 2026
+
+**Decisión de Dorel: manda el camino que mueve el dinero.** `refundRedsysPayment`
+escribe ahora la fila `deposit_refund` cuando lo devuelto era una fianza, así
+que la cabecera deja de decir «En depósito, se le devuelve al cliente: 150,00 €»
+de un dinero que ya salió.
+
+Y cierra el doble apunte que antes era posible: `depositAvailableFor()` deriva
+de las **filas vivas**, así que con el apunte escrito `depositAvailable()` baja
+a 0 y «Devolver total» se niega solo.
+
+⚠️ **Solo la fianza**, que es el matiz que había que acertar: por esa vía se
+devuelve cualquier cobro con tarjeta, y escribir `deposit_refund` para todos
+metería en el bloque de la fianza dinero que nunca lo fue. Lo decide
+`refundLeavesDepositEntry()`, pura y con su control de nueve tipos.
+
+⚠️ **Y el apunte no puede tumbar la devolución**: el dinero ya salió del banco,
+así que un fallo ahí se registra y se sigue. Misma regla que el sellado del
+contrato. **Pendiente de desplegar.**
+
+### ✅ M-50 · Los dos 404 de la ficha pública — 6 de noviembre de 2026
+
+Y no era solo ruido en la consola. El adelanto del `<head>` guardaba la promesa
+bajo `__veltoVehicle:<slug>` y `ficha()` la busca por `__veltoVehicle:<id>`:
+**la clave no coincidía ni en las fichas generadas**, así que los ~570 ms que
+ese bloque existe para ahorrar se perdían enteros desde el 31 de octubre.
+Medido contra `dev.veltorent.com`: la clave queda **sin consumir** y la petición
+buena se hace entera después.
+
+El id viaja ahora como propiedad (la página generada lo conoce en build) y el
+respaldo `coche.astro` adelanta la **flota**, que es lo que de verdad necesita
+para traducir el slug. Lo vigila una comprobación nueva en
+`comprobar-dist.mjs`, validada con **tres controles** sobre artefactos
+manipulados. **Pendiente de desplegar** (viaja con el hosting de la web).
+
+---
+
 ## Estado a 2 de noviembre de 2026 — el comercio propio del TPV
 
 BBVA entregó el entorno de pruebas del alta y desarrollo pasó al comercio de
@@ -25,7 +364,11 @@ una denegación, un reintento y dos devoluciones— están en
 Dos cosas que salieron por el camino y que **no son del cambio**: estaban antes y
 siguen estando.
 
-### ⬜ M-49 · Devolver una fianza a la tarjeta no la da por devuelta en los libros
+### ✅ M-49 · Devolver una fianza a la tarjeta no la da por devuelta en los libros
+
+> **Arreglado el 6 de noviembre de 2026** — ver arriba. El diagnóstico de abajo
+> era correcto; lo que faltaba era decidir cuál de los dos mecanismos manda, y
+> Dorel eligió que lo haga el que mueve el dinero.
 
 ⚠️ **Hay dos mecanismos para el mismo hecho y ninguno sabe del otro.**
 `refundRedsysPayment` mueve el dinero —`update` sobre el cobro, subiendo
@@ -55,7 +398,13 @@ su apunte, o la pantalla avisa de que falta darla por devuelta. Arreglar solo
 `collectedTotalsOf()` cuadraría la cabecera y dejaría la fianza contando como
 resuelta sin que nadie lo haya decidido.
 
-### ⬜ M-50 · La ficha de cada coche pide el vehículo por el slug y recibe un 404
+### ✅ M-50 · La ficha de cada coche pide el vehículo por el slug y recibe un 404
+
+> **Arreglado el 6 de noviembre de 2026** — ver arriba. ⚠️ **Y el diagnóstico de
+> abajo se quedaba corto**: no era «una petición desperdiciada», era que el
+> adelanto del `<head>` **no servía nunca**, ni en las fichas generadas, porque
+> la clave tampoco coincidía. La salida que proponía —«que la página no intente
+> el slug»— habría quitado los dos errores y dejado el adelanto igual de muerto.
 
 ⚠️ **Pasa en los DOS entornos, producción incluida.** Al abrir
 `/coche/renault-clio` la página llama a `/api/vehicle?id=renault-clio` —el slug—
@@ -235,7 +584,20 @@ salta**: hay que mirar los informes de Cloudflare y confirmar que todo lo
 legítimo pasa por **DKIM**, porque el reenvío rompe SPF por diseño. Procedimiento
 y calendario en [dmarc.md](dmarc.md).
 
-### Con fecha, y es lo único con fecha: el guion del 1 de enero de 2027
+### Con fecha: primero una revisión en DICIEMBRE, y detrás el guion de enero
+
+⚠️ **VeriFactu está anunciado para octubre de 2028 y NO publicado** (6 de
+noviembre de 2026). Hacienda lo anunció el 5 de octubre para hacerlo coincidir
+con la factura electrónica obligatoria, pero en el BOE sigue el RD-ley 15/2025:
+**1 de enero de 2027** para sociedades, que es VELTO. **Decisión de Dorel: no
+se adelanta trabajo y en diciembre se mira el BOE.** Lo único que mueve la
+fecha es un real decreto publicado — ni un anuncio, ni una nota de la AEAT.
+Qué mirar y en qué orden: [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+
+⚠️ **Si en diciembre no está publicada, lo de abajo pasa a ser urgente** con
+cuatro semanas y las fiestas dentro.
+
+### El guion del 1 de enero de 2027
 
 [verifactu-alta.md](verifactu-alta.md) § 5 bis. Dentro va el **paso 3 bis**, que
 no existía y que lo crea haber empezado a facturar antes: **qué se hace con las
@@ -244,6 +606,13 @@ filas pendientes **sin filtro de fecha**. Si no se decide nada, en enero
 intentará remitir meses de facturas que nunca estuvieron obligadas. Las dos
 salidas están escritas y **hay que probarlas contra preproducción desde
 desarrollo, antes de enero**.
+
+⚠️ **Y un aplazamiento NO lo hace desaparecer, lo agranda.** La fila de
+`verifactuSubmissions` nace en la misma transacción que cada factura **sin
+mirar la bandera**, así que producción acumula registros pendientes desde el 17
+de septiembre pase lo que pase. Con la remisión en 2028 serían **dos años** de
+cola esperando el día que se encienda, en vez de unos meses. Este paso hay que
+decidirlo igual; lo único que cambia es cuánta cola tiene delante.
 
 Hoy: desarrollo emite y remite contra preproducción; producción **emite y no
 remite** (`VELTO_VERIFACTU_ENABLED=false`), y eso **solo lo cambia Dorel**.

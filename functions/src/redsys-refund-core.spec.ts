@@ -8,7 +8,9 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  internalReference,
   refundAccepted,
+  refundLeavesDepositEntry,
   refundProblem,
   refundableAmount,
   toRedsysAmount
@@ -179,5 +181,57 @@ describe('cómo se le habla a Redsys', () => {
     expect(refundAccepted('')).toBe(false);
     expect(refundAccepted(undefined)).toBe(false);
     expect(refundAccepted('SIS0051')).toBe(false);
+  });
+});
+
+/**
+ * El apunte que faltaba en los libros (M-49).
+ *
+ * ⚠️ **Lo que de verdad hay que acertar aquí es el NO.** Por esta via se
+ * devuelve cualquier cobro con tarjeta —una senal, el resto del alquiler, un
+ * cargo extra—, y escribir `deposit_refund` para todos metería en el bloque de
+ * la fianza dinero que nunca fue fianza: `depositReturned` contaria de mas, que
+ * es el mismo descuadre que esta corrección viene a quitar, por la puerta de
+ * atras. Por eso hay mas casos negativos que positivos.
+ */
+describe('refundLeavesDepositEntry', () => {
+  it('una fianza devuelta a la tarjeta deja su apunte', () => {
+    expect(refundLeavesDepositEntry({ type: 'deposit' })).toBe(true);
+  });
+
+  it('CONTROL · ningun otro cobro lo deja', () => {
+    for (const type of [
+      'initial_payment',
+      'remaining_payment',
+      'rental_payment',
+      'free_payment',
+      'delivery_fee',
+      'collection_fee',
+      'extra_damage',
+      'extra_fuel',
+      'deposit_retention'
+    ]) {
+      expect(refundLeavesDepositEntry({ type })).toBe(false);
+    }
+  });
+
+  /**
+   * ⚠️ Un cobro sin `type` no se trata como fianza. La ausencia no es una
+   * fianza, y aqui equivocarse escribe un movimiento de dinero que no existio.
+   */
+  it('sin tipo, y sin pago, no se escribe nada', () => {
+    expect(refundLeavesDepositEntry({})).toBe(false);
+    expect(refundLeavesDepositEntry(null)).toBe(false);
+    expect(refundLeavesDepositEntry(undefined)).toBe(false);
+  });
+});
+
+describe('internalReference', () => {
+  it('lleva su prefijo y dos tramos', () => {
+    expect(internalReference('REF')).toMatch(/^REF-[0-9A-Z]+-[0-9A-Z]{1,4}$/);
+  });
+
+  it('dos seguidas no son iguales', () => {
+    expect(internalReference('REF')).not.toBe(internalReference('REF'));
   });
 });

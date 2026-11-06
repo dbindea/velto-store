@@ -16,6 +16,7 @@ import {
   COMMISSION_PAYMENT_METHOD_LABELS,
   COMMISSION_KIND_LABELS,
   COMMISSION_STATUS_LABELS,
+  CommissionKind,
   CommissionPaymentMethod
 } from '@shared/models/collaborator.model';
 import { Reservation } from '@shared/models/reservation.model';
@@ -33,12 +34,16 @@ import {
   commissionAmount,
   hasPeriod,
   isAdjusted,
+  kindPercentProblem,
   periodSummary,
   saleDate,
   salesInPeriod,
   settlements,
+  suggestedPercentFor,
+  suggestedSaleKind,
   yearlyTotals
 } from '@shared/utils/collaborator.util';
+import { VehicleService } from '@features/vehicles/services/vehicle.service';
 import {
   OwnerShareAccrual,
   accruedTotal,
@@ -70,6 +75,7 @@ export class CollaboratorDetailComponent implements OnInit {
   private router = inject(Router);
   private service = inject(CollaboratorService);
   private reservations = inject(ReservationService);
+  private vehicles = inject(VehicleService);
   private notifications = inject(NotificationService);
   private confirm = inject(ConfirmService);
 
@@ -96,8 +102,59 @@ export class CollaboratorDetailComponent implements OnInit {
 
   // --- Asignar una venta ---------------------------------------------------
   readonly showAssign = signal(false);
-  readonly assignable = signal<Reservation[]>([]);
   selectedReservationId = '';
+
+  /**
+   * Por qué se le debe lo que se está registrando.
+   *
+   * ⚠️ **Es una pregunta de la pantalla desde el 6 de noviembre de 2026.**
+   * Antes esta vía creaba **siempre** una comisión de captación y no lo decía
+   * en ninguna parte: el botón pone «Asignar venta» y la fila resultante sale
+   * rotulada «Por traer el cliente». Dorel registró así el reparto de una
+   * furgoneta cedida en producción y lo encontró mirando la ficha.
+   */
+  readonly assignKind = signal<CommissionKind>('referral');
+
+  /** Todas las reservas y todas las ventas, para decidir qué queda libre. */
+  private readonly todasLasReservas = signal<Reservation[]>([]);
+  private readonly todasLasVentas = signal<CollaboratorSale[]>([]);
+
+  /**
+   * De quién es cada coche, por si la reserva no lo congeló.
+   *
+   * ⚠️ **Hace falta porque `ownerShareSnapshot` puede no existir.** Se congela
+   * al crear la reserva: un coche dado de alta como cedido *después* deja
+   * reservas sin reparto, y entonces el devengo automático no sale nunca
+   * —`ownerShareAccruals()` exige el snapshot— y esta pantalla no tendría forma
+   * de reconocer un reparto que es evidente para quien está delante.
+   */
+  private readonly cochePorId = signal<
+    Record<string, { ownerCollaboratorId?: string; ownerSharePercent?: number }>
+  >({});
+
+  /**
+   * Las reservas que se le pueden asignar **con la clase elegida**.
+   *
+   * ⚠️ **El filtro depende del `kind`, y antes no.** Una misma reserva puede
+   * llevar los dos apuntes —comisión por traer al cliente y reparto por ceder
+   * el coche—, así que lo que la saca de la lista es tener ya uno **de esa
+   * clase**. Mirando los dos, el reparto de un coche cedido escondería la
+   * reserva y no habría forma de reconocer nunca la comisión de quien trajo al
+   * cliente. Es el mismo filtro que hace `assignSale()` en el servicio, y
+   * tienen que decir lo mismo.
+   */
+  readonly assignable = computed<Reservation[]>(() => {
+    const clase = this.assignKind();
+    const asignadas = new Set(
+      this.todasLasVentas()
+        .filter((s) => s.kind === clase && s.status !== 'cancelled')
+        .map((s) => s.reservationId)
+    );
+    return this.todasLasReservas()
+      .filter((r) => r.reservationStatus !== 'cancelled')
+      .filter((r) => Number(r.pricingSnapshot?.netPrice) > 0)
+      .filter((r) => !asignadas.has(r.id!));
+  });
 
   // --- Liquidar ------------------------------------------------------------
   readonly showSettle = signal(false);
@@ -261,51 +318,97 @@ export class CollaboratorDetailComponent implements OnInit {
   // --- Asignar -------------------------------------------------------------
 
   /**
-   * Las reservas que se le pueden asignar.
+   * Abre el diálogo y carga lo que hace falta para decidir.
    *
-   * ⚠️ **Se quitan las canceladas y las que ya tienen comisión viva.** Dejarlas
-   * en la lista es ofrecer algo que el servicio va a rechazar, y una reserva
-   * asignada dos veces es pagar dos veces por una venta.
+   * ⚠️ **Los coches se cargan aquí, y no son un adorno.** Sin ellos la pantalla
+   * solo puede reconocer un coche cedido por el `ownerShareSnapshot` de la
+   * reserva, que **puede no existir**: es justo el caso que dejó esto al
+   * descubierto en producción.
    */
   async startAssign(): Promise<void> {
     this.showAssign.set(true);
     this.selectedReservationId = '';
     this.assignAmount = null;
     this.assignReason = '';
+    this.assignKind.set('referral');
+    await this.cargarContexto();
+  }
+
+  /**
+   * Reservas, ventas y de quién es cada coche.
+   *
+   * ⚠️ **Lo necesitan los DOS sitios que deciden una clase**: asignar una venta
+   * nueva y corregir la de una ya creada. Cargándolo cada uno por su cuenta,
+   * las dos pantallas podrían proponer cosas distintas sobre la misma reserva.
+   */
+  private async cargarContexto(): Promise<void> {
     try {
-      const [todas, ventas] = await Promise.all([
+      const [todas, ventas, coches] = await Promise.all([
         firstValueFrom(this.reservations.getReservations()),
-        this.service.allSales()
+        this.service.allSales(),
+        firstValueFrom(this.vehicles.getVehicles())
       ]);
-      /**
-       * ⚠️ **Solo las de captación cuentan como «ya asignada».** Una reserva
-       * puede tener a la vez la comisión por traer al cliente y el reparto por
-       * ceder el coche: mirando las dos clases, el reparto de un coche cedido
-       * escondería esa reserva de esta lista y no habría forma de reconocerle
-       * nunca la comisión a quien trajo al cliente. Es el mismo filtro que hace
-       * `saleForReservation()` en el servicio, y tienen que decir lo mismo.
-       */
-      const asignadas = new Set(
-        ventas
-          .filter((s) => s.kind === 'referral' && s.status !== 'cancelled')
-          .map((s) => s.reservationId)
-      );
-      this.assignable.set(
-        (todas || [])
-          .filter((r) => r.reservationStatus !== 'cancelled')
-          .filter((r) => Number(r.pricingSnapshot?.netPrice) > 0)
-          .filter((r) => !asignadas.has(r.id!))
+      this.todasLasReservas.set(todas || []);
+      this.todasLasVentas.set(ventas || []);
+      this.cochePorId.set(
+        Object.fromEntries(
+          (coches || [])
+            .filter((v) => v.id)
+            .map((v) => [
+              v.id as string,
+              {
+                ownerCollaboratorId: v.ownerCollaboratorId,
+                ownerSharePercent: v.ownerSharePercent
+              }
+            ])
+        )
       );
     } catch {
       this.notifications.error('collaborators.errors.loadFailed');
     }
   }
 
+  /** La reserva elegida, si sigue estando en la lista de la clase actual. */
+  private get reservaElegida(): Reservation | undefined {
+    return this.assignable().find((x) => x.id === this.selectedReservationId);
+  }
+
+  /** El coche de la reserva elegida, para saber de quién es. */
+  private get cocheElegido() {
+    const id = this.reservaElegida?.vehicleId;
+    return id ? this.cochePorId()[id] : undefined;
+  }
+
+  /**
+   * El porcentaje que se propone, **según la clase de apunte**.
+   *
+   * ⚠️ **Leía siempre `commissionPercent` y ese era el fallo.** Un propietario
+   * puro lleva ese campo a 0 —el cero es válido y significa «no trae
+   * clientes»—, así que la pantalla proponía 0,00 € para un reparto de
+   * 102,90 € y el operador lo tecleaba a mano: la venta nacía marcada como
+   * ajustada sobre un calculado de cero.
+   */
+  get assignPercent(): number {
+    return suggestedPercentFor(
+      this.assignKind(),
+      this.reservaElegida,
+      this.collaborator(),
+      this.cocheElegido
+    );
+  }
+
   /** Lo que da el porcentaje para la reserva elegida. Es la propuesta. */
   get calculatedCommission(): number {
-    const r = this.assignable().find((x) => x.id === this.selectedReservationId);
-    const pct = this.collaborator()?.commissionPercent || 0;
-    return r ? commissionAmount(Number(r.pricingSnapshot?.netPrice) || 0, pct) : 0;
+    const r = this.reservaElegida;
+    if (!r) return 0;
+    return commissionAmount(Number(r.pricingSnapshot?.netPrice) || 0, this.assignPercent);
+  }
+
+  /** ¿El coche de la reserva elegida es de este colaborador? */
+  get esSuCoche(): boolean {
+    const r = this.reservaElegida;
+    if (!r) return false;
+    return suggestedSaleKind(r, this.collaborator()?.id, this.cocheElegido) === 'vehicle_owner';
   }
 
   /**
@@ -318,7 +421,89 @@ export class CollaboratorDetailComponent implements OnInit {
   assignAmount: number | null = null;
   assignReason = '';
 
+  /** ¿Esta reserva ya tiene un apunte vivo de esta clase? */
+  private yaTiene(reservationId: string, kind: CommissionKind): boolean {
+    return this.todasLasVentas().some(
+      (s) => s.reservationId === reservationId && s.kind === kind && s.status !== 'cancelled'
+    );
+  }
+
   onReservationChosen(): void {
+    /**
+     * ⚠️ **La clase se PROPONE al elegir la reserva, no al abrir.** Hasta no
+     * saber qué reserva es no se sabe de quién es el coche, y es el coche lo
+     * que decide cuál de los dos conceptos es el normal.
+     */
+    const elegida = this.reservaElegida;
+    const propuesta = suggestedSaleKind(elegida, this.collaborator()?.id, this.cocheElegido);
+
+    /**
+     * ⚠️ **Pero no se propone una clase que dejaría la reserva FUERA de la
+     * lista.** El filtro de «ya asignada» es por clase, así que proponer el
+     * reparto de una reserva que ya lo tiene la saca del desplegable: éste
+     * volvía a «—» mientras `selectedReservationId` conservaba el id viejo, de
+     * modo que el botón «Asignar» se quedaba **encendido sin hacer nada** —que
+     * es el peor de los dos males que la casa evita, peor que un botón
+     * apagado—. Medido en pantalla el 6 de noviembre de 2026 antes de
+     * corregirlo.
+     *
+     * Cuando pasa, manda la clase que **sí** queda libre y la pista lo cuenta.
+     */
+    if (elegida?.id && propuesta !== this.assignKind() && this.yaTiene(elegida.id, propuesta)) {
+      this.assignAmount = this.calculatedCommission;
+      this.assignReason = '';
+      return;
+    }
+
+    this.assignKind.set(propuesta);
+    this.assignAmount = this.calculatedCommission;
+    this.assignReason = '';
+  }
+
+  /**
+   * Qué explicar debajo del desplegable de la clase.
+   *
+   * ⚠️ **Son CUATRO frases y no dos**, porque la clase puede no ser la
+   * propuesta: o porque el operador la cambió, o porque la propuesta ya estaba
+   * reconocida. Una pista que solo contemple el caso normal dice algo falso en
+   * los otros tres, y ahí lo que se decide es a qué concepto se imputa el
+   * dinero de otra persona.
+   */
+  get assignKindHint(): string {
+    const suyo = this.esSuCoche;
+    if (this.assignKind() === 'vehicle_owner') {
+      return suyo
+        ? 'collaborators.kindHint.ownerVehicle'
+        : 'collaborators.kindHint.notOwnerButShare';
+    }
+    return suyo ? 'collaborators.kindHint.ownerAlready' : 'collaborators.kindHint.notOwnerVehicle';
+  }
+
+  /**
+   * ⚠️ **Mira la reserva RESUELTA, no el id guardado.** Con `!selectedReservationId`
+   * a secas, un id que ha dejado de estar en la lista deja el botón encendido
+   * y `confirmAssign()` sale por la puerta de atrás sin escribir nada.
+   */
+  get canAssign(): boolean {
+    return !!this.reservaElegida && !this.working();
+  }
+
+  /**
+   * Cambiar de clase a mano.
+   *
+   * ⚠️ **Puede dejar la reserva elegida fuera de la lista**, porque el filtro
+   * de «ya asignada» es por clase: si ya tiene un reparto y se pasa a reparto,
+   * desaparece. Sin limpiar la selección, el diálogo se quedaría con un id que
+   * ya no está en el desplegable y el botón de guardar enviaría una reserva que
+   * la pantalla no enseña.
+   */
+  onKindChosen(): void {
+    if (this.selectedReservationId && !this.reservaElegida) {
+      this.selectedReservationId = '';
+      this.assignAmount = null;
+      this.assignReason = '';
+      return;
+    }
     this.assignAmount = this.calculatedCommission;
     this.assignReason = '';
   }
@@ -331,6 +516,86 @@ export class CollaboratorDetailComponent implements OnInit {
 
   get assignDelta(): number {
     return Math.round((Number(this.assignAmount || 0) - this.calculatedCommission) * 100) / 100;
+  }
+
+  // --- Corregir por qué se le debe una venta ya creada ---------------------
+
+  /**
+   * ⚠️ **Se puede con la venta ya PAGADA, al revés que el importe.** Corregir
+   * el concepto no mueve dinero: `commissionAmount` no se toca. Lo que se
+   * arregla es qué significa esa cifra — y con ello el seguimiento de la
+   * factura del propietario y la línea en la que sale en Informes.
+   */
+  editingKindId: string | null = null;
+  editKind: CommissionKind = 'referral';
+  editKindPercent: number | null = null;
+
+  async startEditKind(sale: CollaboratorSale, e: Event): Promise<void> {
+    e.stopPropagation();
+    /**
+     * Las reservas y los coches hacen falta para **proponer** el porcentaje.
+     * Se cargan aquí y no al abrir la ficha: corregir un concepto es raro, y no
+     * compensa pagar dos lecturas en cada visita por si acaso.
+     */
+    await this.cargarContexto();
+    this.editingKindId = sale.id!;
+    this.editKind = sale.kind;
+    this.editKindPercent = Number(sale.commissionPercent) || 0;
+    this.onEditKindChosen(sale);
+  }
+
+  cancelEditKind(e: Event): void {
+    e.stopPropagation();
+    this.editingKindId = null;
+  }
+
+  /** La reserva y el coche de una venta ya creada, para proponer con ellos. */
+  private contextoDe(sale: CollaboratorSale) {
+    const reserva = this.todasLasReservas().find((r) => r.id === sale.reservationId);
+    const coche = reserva?.vehicleId ? this.cochePorId()[reserva.vehicleId] : undefined;
+    return { reserva, coche };
+  }
+
+  /**
+   * Al cambiar la clase, propone el porcentaje de esa clase.
+   *
+   * ⚠️ **Propone y no impone**, porque lo que se está arreglando es un apunte
+   * viejo: el porcentaje que se pactó entonces puede no ser el de la ficha de
+   * hoy, y el operador es quien lo sabe.
+   */
+  onEditKindChosen(sale: CollaboratorSale): void {
+    const { reserva, coche } = this.contextoDe(sale);
+    this.editKindPercent = suggestedPercentFor(
+      this.editKind,
+      reserva,
+      this.collaborator(),
+      coche
+    );
+  }
+
+  /** Lo que daría el porcentaje escrito. El importe NO se toca al corregir. */
+  editKindCalculated(sale: CollaboratorSale): number {
+    return commissionAmount(Number(sale.netAmount) || 0, Number(this.editKindPercent) || 0);
+  }
+
+  async saveKind(sale: CollaboratorSale, e: Event): Promise<void> {
+    e.stopPropagation();
+    const problema = kindPercentProblem(this.editKindPercent);
+    if (problema) {
+      this.notifications.error(problema);
+      return;
+    }
+    this.working.set(true);
+    try {
+      await this.service.updateSaleKind(sale, this.editKind, Number(this.editKindPercent));
+      this.editingKindId = null;
+      this.notifications.success('collaborators.kindUpdated');
+      await this.load(this.collaborator()!.id!);
+    } catch (err) {
+      this.notifications.error(this.errorKeyOf(err));
+    } finally {
+      this.working.set(false);
+    }
   }
 
   // --- Cambiar el importe de una venta ya creada ---------------------------
@@ -401,7 +666,7 @@ export class CollaboratorDetailComponent implements OnInit {
 
   async confirmAssign(): Promise<void> {
     const ficha = this.collaborator();
-    const reserva = this.assignable().find((r) => r.id === this.selectedReservationId);
+    const reserva = this.reservaElegida;
     if (!ficha || !reserva) return;
 
     this.working.set(true);
@@ -409,6 +674,7 @@ export class CollaboratorDetailComponent implements OnInit {
       await this.service.assignSale(
         ficha,
         reserva,
+        this.assignKind(),
         // Solo se manda si de verdad difiere: una venta sin ajuste no debe
         // nacer marcada como ajustada.
         this.assignIsAdjusted

@@ -8,6 +8,12 @@
   display: block;
 }
 
+// ⚠️ **El filete y el relleno deciden dónde se alinea lo de FUERA.** Quien
+// pinta este calendario mete sus rótulos en la misma columna que la pista y la
+// leyenda de aquí dentro, y para eso copia la suma de los dos —hoy 13 px— en
+// `$columna-texto` de `reservation-create.component.scss`. Una variable CSS
+// declarada en `:host` no serviría: solo baja a los hijos. Si cambias estos
+// dos valores, cambia allí.
 .disponibilidad {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

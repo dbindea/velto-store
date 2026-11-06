@@ -29,8 +29,10 @@ import {
   amountProblem,
   commissionAmount,
   estadoSegunReserva,
+  kindPercentProblem,
   paidAtProblem,
   saleProblem,
+  suggestedPercentFor,
   validateCollaborator,
   validateCollaboratorInvoice
 } from '@shared/utils/collaborator.util';
@@ -203,6 +205,20 @@ export class CollaboratorService {
     collaborator: Collaborator,
     reservation: Reservation,
     /**
+     * Por qué se le debe: por traer al cliente o por poner el coche.
+     *
+     * ⚠️ **Es un parámetro desde el 6 de noviembre de 2026, y antes estaba
+     * escrito `'referral'` a pelo.** El comentario que lo justificaba decía
+     * que «el reparto por ceder el coche no se asigna a mano», y es verdad
+     * **mientras la reserva congele su `ownerShareSnapshot`**: entonces el
+     * devengo se deriva solo al cerrarla. Lo que no contemplaba es el coche
+     * dado de alta como cedido *después* de crear la reserva — ahí no hay
+     * snapshot, no hay devengo, y esta vía era la única que quedaba. Lo vio
+     * Dorel en producción con una furgoneta cedida, registrada como «por traer
+     * el cliente» y con un 0 % que no era el suyo.
+     */
+    kind: CommissionKind,
+    /**
      * Lo que se le va a pagar de verdad, si no es lo que dio el porcentaje.
      *
      * ⚠️ **El calculado se guarda igual**, no se pisa: sin él, un importe
@@ -215,18 +231,27 @@ export class CollaboratorService {
     if (problema) throw new Error(problema);
 
     /**
-     * ⚠️ **Solo contra las de captación.** Si el coche de esta reserva es de un
-     * colaborador, al cerrarla habrá también un apunte de reparto; mirándolos
-     * todos, esa reserva quedaría marcada como «ya asignada» y no se podría
-     * reconocer nunca la comisión de quien trajo al cliente.
+     * ⚠️ **Contra los apuntes de ESTA clase, no contra todos.** Una misma
+     * reserva puede tener legítimamente los dos: la comisión por traer al
+     * cliente y el reparto por ceder el coche. Mirándolos todos, el reparto
+     * haría que la comisión de captación de esa misma reserva se rechazara con
+     * «ya está asignada» — que es justo lo que `kind` existe para impedir.
      */
-    const yaAsignada = await this.saleForReservation(reservation.id!, 'referral');
+    const yaAsignada = await this.saleForReservation(reservation.id!, kind);
     if (yaAsignada && yaAsignada.status !== 'cancelled') {
       throw new Error('collaborators.problems.alreadyAssigned');
     }
 
     const netAmount = Number(reservation.pricingSnapshot?.netPrice) || 0;
-    const percent = Number(collaborator.commissionPercent) || 0;
+    /**
+     * ⚠️ **El porcentaje sale del util, no de `collaborator.commissionPercent`.**
+     * Son dos campos distintos —la comisión de captación y el reparto como
+     * propietario— y aquí se leía siempre el primero: un propietario puro lleva
+     * `commissionPercent: 0`, así que su reparto se guardaba como «0 % ajustado
+     * a 102,90 €». Es la misma función que propone la cifra en la pantalla, no
+     * una segunda cuenta.
+     */
+    const percent = suggestedPercentFor(kind, reservation, collaborator);
     const calculado = commissionAmount(netAmount, percent);
 
     if (override) {
@@ -237,14 +262,7 @@ export class CollaboratorService {
     const venta: Omit<CollaboratorSale, 'id'> = {
       collaboratorId: collaborator.id!,
       collaboratorName: collaborator.name,
-      /**
-       * ⚠️ **Esta vía es siempre de captación**, y por eso va escrito y no
-       * deducido. Asignar una reserva a un colaborador desde su ficha es decir
-       * que él trajo al cliente; el reparto por ceder el coche no se asigna a
-       * mano —sale del vehículo y se congela en la reserva— y se devenga al
-       * cerrarla. Son dos apuntes distintos aunque acaben en la misma persona.
-       */
-      kind: 'referral',
+      kind,
       reservationId: reservation.id!,
       reservationSnapshot: {
         clientName: reservation.clientSnapshot?.fullName || '—',
@@ -273,6 +291,65 @@ export class CollaboratorService {
 
     const ref = await addDoc(this.salesRef, cleanForFirestore(venta) as Record<string, unknown>);
     return ref.id;
+  }
+
+  /**
+   * Corregir **por qué** se le debe un apunte ya creado.
+   *
+   * ⚠️ **Existe por un apunte real de producción.** El reparto de una furgoneta
+   * cedida quedó registrado como comisión de captación con un 0 %, porque hasta
+   * el 6 de noviembre de 2026 esta vía no sabía escribir otra cosa. El dinero
+   * estaba bien; lo que mentía era el concepto — y con él, el seguimiento de la
+   * factura del propietario y la línea en la que ese euro sale en Informes.
+   *
+   * ⚠️ **No mueve dinero, y por eso se admite con el apunte ya PAGADO.**
+   * `commissionAmount` —lo que se le debe o ya se le entregó— no se toca. Lo
+   * que se reescribe es `kind`, el porcentaje con el que se explica la cifra y
+   * el calculado que sale de él. Es justo lo contrario de `updateAmount()`, que
+   * solo se admite mientras está pendiente porque allí el dinero no había
+   * salido todavía.
+   *
+   * ⚠️ **Y se comprueba el DUPLICADO antes de escribir.** Una reserva puede
+   * tener un apunte de cada clase pero no dos de la misma: pasar éste a una
+   * clase que ya existe para esa reserva dejaría al colaborador con el doble de
+   * lo que se le debe, con las dos filas igual de creíbles. Es la misma regla
+   * que `assignSale()`.
+   */
+  async updateSaleKind(
+    sale: CollaboratorSale,
+    kind: CommissionKind,
+    percent: number
+  ): Promise<void> {
+    if (!sale?.id) throw new Error('collaborators.problems.saleRequired');
+
+    const problema = kindPercentProblem(percent);
+    if (problema) throw new Error(problema);
+
+    if (kind !== sale.kind) {
+      const otro = await this.saleForReservation(sale.reservationId, kind);
+      if (otro && otro.id !== sale.id && otro.status !== 'cancelled') {
+        throw new Error('collaborators.problems.alreadyAssigned');
+      }
+    }
+
+    const calculado = commissionAmount(Number(sale.netAmount) || 0, percent);
+
+    /**
+     * ⚠️ **Si deja de estar ajustado, el motivo del ajuste se BORRA.** Es un
+     * texto que explica una diferencia que ya no existe: dejarlo colgando daría
+     * una fila con «redondeado» escrito y nada redondeado. Y se borra con
+     * `deleteField()`, porque un `updateDoc` sin la clave deja intacto lo que
+     * hubiera.
+     */
+    const yaNoEstaAjustado = roundMoney(calculado) === roundMoney(Number(sale.commissionAmount));
+
+    await updateDoc(doc(this.salesRef, sale.id), {
+      kind,
+      commissionPercent: Number(percent),
+      calculatedAmount: calculado,
+      ...(yaNoEstaAjustado ? { adjustmentReason: deleteField() } : {}),
+      updatedAt: serverTimestamp()
+    });
   }
 
   /**

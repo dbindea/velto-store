@@ -1043,18 +1043,93 @@ textarea.form-control {
  * de error o de alerta parecería que algo falló, y con ellos el operador se
  * pararía a leerlo dos veces cada vez que convierte una solicitud.
  */
+/**
+ * La columna de texto del bloque, medida desde el borde izquierdo del panel.
+ *
+ * ⚠️ **Es lo que el CALENDARIO mete su contenido hacia dentro**: el filete de
+ * 1 px de `.disponibilidad` más sus 0,75 rem de relleno, en
+ * `availability-calendar.component.scss`. Se alinean con ella el icono del
+ * coche, el texto de la cinta, el rótulo y la pista, así que el bloque tiene
+ * un solo borde izquierdo de arriba abajo — el mismo que «Pulsa el día de
+ * recogida» y la leyenda, que son los textos de dentro del calendario.
+ *
+ * ⚠️ **Si cambia el relleno del calendario, cambia aquí.** No se puede leer
+ * desde fuera: una variable CSS declarada en su `:host` solo baja a sus hijos,
+ * y subirla al padre pondría al componente compartido a depender de quien lo
+ * pinta. Es el mismo trato que el IVA duplicado en las functions — un número
+ * copiado con su nota al lado, porque la alternativa es peor.
+ */
+$columna-texto: 13px;
+$cinta-gap: 8px;
+
 .from-request {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $cinta-gap;
   margin-bottom: 16px;
-  padding: 8px 12px;
+  padding: 8px $columna-texto;
   font-size: 0.8125rem;
   color: var(--text-secondary);
   background: var(--bg-main);
   border-radius: 8px;
 
+  /*
+   * ⚠️ **Sin ancho fijo.** Lo llevó medio día —16 px con el glifo centrado—
+   * para poder sumar la columna a partir de él, y lo que hacía era dejar el
+   * coche un par de píxeles a la derecha del texto de debajo. El glifo empieza
+   * donde empieza el relleno, que es justo lo que se pide.
+   */
   i {
     color: var(--accent-color);
+  }
+}
+
+/**
+ * El bloque del coche ya elegido: la cinta, el rótulo del calendario y su
+ * pista.
+ *
+ * ⚠️ **Los cuatro textos comparten columna con los de DENTRO del calendario**,
+ * y hubo que corregirlo dos veces el mismo día. La primera versión los alineó
+ * con el texto de la cinta —36 px, o sea su relleno más el icono— y eso dejaba
+ * el icono del coche colgando a la izquierda y los dos rótulos metidos 23 px
+ * respecto a «Pulsa el día de recogida»: la escalera no desaparecía, se movía
+ * de sitio. La columna buena es la del calendario, que es el elemento más
+ * grande y el que manda.
+ *
+ * ⚠️ **Y la referencia es el texto del calendario, no su CAJA.** Las cajas
+ * —cinta, rótulos y calendario— ya estaban las cuatro a ras del panel; lo que
+ * no coincidía era lo de dentro. Alinear por la caja habría sido no cambiar
+ * nada.
+ */
+/*
+ * ⚠️ **Lleva `.step-panel .section` delante a propósito.** El rótulo ya tiene
+ * su margen en `.step-panel .section h2`, que con la encapsulación de Angular
+ * mide (0,5,1); un `.coche-fijado h2` a secas mide (0,3,1) y **pierde** — el
+ * `margin-bottom` de aquí no se aplicaría y el ritmo se quedaría como estaba,
+ * sin que nada fallara. Comprobado midiendo: 16 px antes, 4 px después.
+ */
+.step-panel .section.coche-fijado {
+  .from-request {
+    /* La pista de debajo ya separa; aquí sobraba el doble hueco. */
+    margin-bottom: 12px;
+  }
+
+  h2,
+  .hint {
+    padding-left: $columna-texto;
+  }
+
+  /**
+   * ⚠️ **El ritmo iba al revés.** El rótulo dejaba 16 px hasta su pista y la
+   * pista **0** hasta el calendario, así que la frase que explica el calendario
+   * se leía pegada a él y despegada de su propio título. Ahora el rótulo y su
+   * pista van juntos y el hueco grande queda antes del calendario.
+   */
+  h2 {
+    margin-bottom: 4px;
+  }
+
+  .hint {
+    margin: 0 0 12px;
   }
 }

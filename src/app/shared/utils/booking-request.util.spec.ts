@@ -14,6 +14,7 @@ import {
   canDiscard,
   canExtendGuarantee,
   canMarkContacted,
+  DEFAULT_REQUEST_HOUR,
   extendedGuaranteeUntil,
   formatPhone,
   netForPromisedGross,
@@ -27,6 +28,7 @@ import {
   whatsappLink,
   whatsappMessage
 } from './booking-request.util';
+import { PICKUP_HOUR } from './availability-calendar.util';
 import { addVat } from './pricing.util';
 
 function solicitud(p: Partial<BookingRequest> = {}): BookingRequest {
@@ -233,7 +235,7 @@ describe('la hora que nadie dijo', () => {
    * daba una recogida a medianoche y una devolución a las 23:59. Ninguna de las
    * dos es una hora a la que se entregue un coche.
    */
-  it('convierte la ventana de días completos en dos mediodías', () => {
+  it('convierte la ventana de días completos en dos horas de apertura', () => {
     const r = solicitud({
       pickupDate: new Date(2026, 10, 2, 0, 0, 0, 0),
       returnDate: new Date(2026, 10, 9, 23, 59, 59, 999)
@@ -242,9 +244,9 @@ describe('la hora que nadie dijo', () => {
     const devolucion = requestReturnAt(r)!;
 
     expect(recogida.getDate()).toBe(2);
-    expect(recogida.getHours()).toBe(12);
+    expect(recogida.getHours()).toBe(10);
     expect(devolucion.getDate()).toBe(9);
-    expect(devolucion.getHours()).toBe(12);
+    expect(devolucion.getHours()).toBe(10);
   });
 
   /**
@@ -269,10 +271,10 @@ describe('la hora que nadie dijo', () => {
     const devolucion = requestReturnAt(r)!;
 
     expect(recogida.getDate()).toBe(4);
-    expect(recogida.getHours()).toBe(12);
+    expect(recogida.getHours()).toBe(10);
     // El 7, no el 8: el cliente pidió del 4 al 7.
     expect(devolucion.getDate()).toBe(7);
-    expect(devolucion.getHours()).toBe(12);
+    expect(devolucion.getHours()).toBe(10);
     expect(devolucion.getMinutes()).toBe(0);
   });
 
@@ -288,7 +290,7 @@ describe('la hora que nadie dijo', () => {
   });
 
   it('y NO arrastra los milisegundos del final del día', () => {
-    // 23:59:59.999 con `setHours(12)` deja el `.999` dentro, y eso viaja al
+    // 23:59:59.999 con `setHours(…)` deja el `.999` dentro, y eso viaja al
     // campo del asistente.
     const r = solicitud({ returnDate: new Date(2026, 10, 9, 23, 59, 59, 999) });
     const d = requestReturnAt(r)!;
@@ -318,15 +320,23 @@ describe('la hora que nadie dijo', () => {
    * function la guarda, **manda ella**; el mediodía se queda solo para las
    * solicitudes anteriores, que no la traen.
    */
-  it('si la solicitud trae la hora pedida, manda ella y no el mediodía', () => {
+  /**
+   * ⚠️ **Pide las 16:00 a propósito, y hasta el 6 de noviembre de 2026 pedía
+   * las 10:00.** Ese día el respaldo pasó de las 12:00 a las 10:00, así que una
+   * solicitud que pide las 10:00 da **el mismo resultado** venga la hora de
+   * donde venga: el test habría seguido en verde con `horaPedida()` borrada, que
+   * es justo lo que viene a proteger. Con una hora que el respaldo no puede
+   * producir, vuelve a distinguir.
+   */
+  it('si la solicitud trae la hora pedida, manda ella y no el respaldo', () => {
     const r = solicitud({
       pickupDate: new Date(2026, 9, 24, 0, 0, 0, 0),
       returnDate: new Date(2026, 9, 26, 0, 0, 0, 0),
-      pickupDateTime: new Date(2026, 9, 24, 10, 0, 0, 0),
-      returnDateTime: new Date(2026, 9, 25, 10, 0, 0, 0)
+      pickupDateTime: new Date(2026, 9, 24, 16, 0, 0, 0),
+      returnDateTime: new Date(2026, 9, 25, 16, 0, 0, 0)
     });
-    expect(requestPickupAt(r)!.getHours()).toBe(10);
-    expect(requestReturnAt(r)!.getHours()).toBe(10);
+    expect(requestPickupAt(r)!.getHours()).toBe(16);
+    expect(requestReturnAt(r)!.getHours()).toBe(16);
     // Y el día de devolución es el 25, no el 26 exclusivo de la ventana.
     expect(requestReturnAt(r)!.getDate()).toBe(25);
   });
@@ -338,14 +348,30 @@ describe('la hora que nadie dijo', () => {
    * test pasaba a mano y describía una forma que Firestore no guarda nunca; es
    * el mismo despiste que ya tuvo la primera versión de estas pruebas.
    */
-  it('sin la hora pedida sigue valiendo el mediodía, que es el caso antiguo', () => {
+  it('sin la hora pedida sigue valiendo el respaldo, que es el caso antiguo', () => {
     const r = solicitud({
       pickupDate: new Date(Date.UTC(2026, 9, 24)),
       returnDate: new Date(Date.UTC(2026, 9, 26))
     });
-    expect(requestPickupAt(r)!.getHours()).toBe(12);
-    expect(requestReturnAt(r)!.getHours()).toBe(12);
+    expect(requestPickupAt(r)!.getHours()).toBe(10);
+    expect(requestReturnAt(r)!.getHours()).toBe(10);
     expect(requestReturnAt(r)!.getDate()).toBe(25);
+  });
+
+  /**
+   * ⚠️ **La hora por defecto es la MISMA en los tres sitios, y esto es lo único
+   * que lo comprueba.** La app tenía dos respuestas a la misma pregunta —el
+   * calendario del asistente proponía las 10:00 y la ficha de una solicitud las
+   * 12:00— y nada avisaba del descuadre: la misma solicitud enseñaba una hora
+   * arriba y otra abajo. Afirmarlo aquí hace que separarlas otra vez cueste
+   * tocar un test.
+   *
+   * La tercera, `HORA_RECOGIDA` de la web, no se puede importar desde aquí —es
+   * otra build, como el IVA y la curva de precios— y lo afirma su propio test.
+   */
+  it('la hora por defecto es la misma que la del calendario, no una copia', () => {
+    expect(DEFAULT_REQUEST_HOUR).toBe(PICKUP_HOUR);
+    expect(DEFAULT_REQUEST_HOUR).toBe(10);
   });
 
   /**
@@ -353,13 +379,13 @@ describe('la hora que nadie dijo', () => {
    * la casa con los datos guardados —en la duda, lo que no se puede interpretar
    * no manda— y aquí evita que un documento raro deje la pantalla sin fechas.
    */
-  it('una hora guardada ilegible cae al mediodía en vez de romper', () => {
+  it('una hora guardada ilegible cae al respaldo en vez de romper', () => {
     const r = solicitud({
       pickupDate: new Date(Date.UTC(2026, 9, 24)),
       pickupDateTime: 'cuando sea'
     });
     const d = requestPickupAt(r)!;
-    expect(d.getHours()).toBe(12);
+    expect(d.getHours()).toBe(10);
     // Y el DÍA es el que pidió el cliente, no el de hoy.
     expect(d.getDate()).toBe(24);
   });
