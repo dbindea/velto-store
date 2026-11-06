@@ -30,13 +30,12 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **Y lo segundo: desde la tarde del 6 de noviembre SÍ hay cosas esperando.**
-> El release del 5 (`3e8a899`, con sus 16 functions) sigue siendo lo que corre
-> producción, y por delante van dos arreglos: **`refundRedsysPayment`**, que
-> hay que desplegar a mano, y el de la **web pública**, que viaja con el hosting
-> en el merge. Los dos son de comportamiento y ninguno cambia la forma de una
-> respuesta, así que el orden entre frontend y function da igual aquí. El detalle
-> está en **§ 2 ter** — y se **mide**, no se copia de aquí.
+> ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y
+> queda UNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche, así que
+> M-49 está cerrado de punta a punta; lo que sigue viajando con el **merge a
+> `master`** es el hosting —la web pública (M-50) y todo el frontend del 6—. No
+> cambia la forma de ninguna respuesta, así que el orden con las functions da
+> igual. El detalle está en **§ 2 ter** — y se **mide**, no se copia de aquí.
 >
 > ⚠️ **Y lo tercero, con fecha encima: VeriFactu está anunciado para octubre de
 > 2028 y NO publicado.** Dorel trajo la noticia el 6 de noviembre. Hacienda
@@ -2396,9 +2395,27 @@ Medido antes de tocar nada: la cinta, el rótulo, la pista y el calendario a
 hueco—. Y la pista a **0 px** del calendario con 16 hasta su propio título: el
 ritmo al revés.
 
-Hoy los tres textos comparten la columna 52 y el icono cuelga en el margen. El
-desplazamiento se **calcula** de las tres medidas de la cinta, para que tocar el
-relleno no rompa la alineación en silencio.
+⚠️ **Y la primera corrección eligió mal la referencia, así que hubo una
+segunda.** Alineó los rótulos con el **texto de la cinta** (los 52) y Dorel lo
+devolvió al verlo: con eso el icono del coche quedaba colgando a la izquierda y
+los rótulos metidos 23 px respecto a «Pulsa el día de recogida». La escalera no
+desaparecía, se movía de sitio.
+
+La referencia buena es el **texto de dentro del calendario**, que es el
+elemento grande de la pantalla: su filete de 1 px más sus 12 de relleno, o sea
+**13**. Ahí arrancan ahora el icono del coche, el texto de la cinta y los dos
+rótulos. Medido a 1440 y a 390 px: 13 · 13 · 13 contra 12,67 del calendario —el
+0,33 es el filete de 1 px partido por el `devicePixelRatio`, no un desajuste.
+
+⚠️ **Lo que no coincidía era lo de DENTRO, no las cajas.** Las cuatro cajas ya
+estaban a ras del panel antes de empezar; alinear por la caja habría sido no
+tocar nada. Es la trampa de medir con `getBoundingClientRect()` sobre el
+elemento en vez de con un `Range` sobre su nodo de texto.
+
+⚠️ **Y los 13 px van copiados, con nota en los dos ficheros.** Una variable CSS
+en el `:host` del calendario solo baja a sus hijos, y subirla al padre pondría
+un componente compartido a depender de quien lo pinta. Mismo trato que el IVA
+duplicado en las functions: el número en dos sitios y un aviso en cada uno.
 
 ⚠️ **El `margin-bottom` del rótulo no se aplicó al primer intento**, y es la
 aritmética de siempre: `.step-panel .section h2` mide (0,5,1) con la
@@ -2612,11 +2629,11 @@ esperando:
 
 | Qué | Cómo sale | Por qué |
 |---|---|---|
-| **`refundRedsysPayment`** | a mano, por nombre | M-49: la devolución de fianza a tarjeta no deja apunte en los libros hasta que esta function se despliegue |
+| ~~**`refundRedsysPayment`**~~ | ~~a mano, por nombre~~ | **DESPLEGADA** por Dorel esa misma noche. M-49 cerrado de punta a punta |
 | **el hosting de la web** | con el merge a `master` (lo publica el CI) | M-50: el adelanto de la ficha pública |
 
 ```powershell
-# M-49. Una sola function: no hace falta tanda.
+# M-49. Una sola function: no hace falta tanda. Hecho el 6 de noviembre.
 firebase deploy --only functions:refundRedsysPayment --project prod
 ```
 

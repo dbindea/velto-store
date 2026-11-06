@@ -1044,15 +1044,22 @@ textarea.form-control {
  * pararía a leerlo dos veces cada vez que convierte una solicitud.
  */
 /**
- * Las tres medidas de la cinta, en un solo sitio.
+ * La columna de texto del bloque, medida desde el borde izquierdo del panel.
  *
- * ⚠️ **Existen para que el rótulo de debajo pueda alinearse con su texto sin
- * copiar el número.** Ver `.coche-fijado` más abajo: el desplazamiento del
- * rótulo se suma de estas tres, así que tocar el relleno de la cinta mueve las
- * dos cosas a la vez. Escrito a mano, la alineación se rompería en silencio.
+ * ⚠️ **Es lo que el CALENDARIO mete su contenido hacia dentro**: el filete de
+ * 1 px de `.disponibilidad` más sus 0,75 rem de relleno, en
+ * `availability-calendar.component.scss`. Se alinean con ella el icono del
+ * coche, el texto de la cinta, el rótulo y la pista, así que el bloque tiene
+ * un solo borde izquierdo de arriba abajo — el mismo que «Pulsa el día de
+ * recogida» y la leyenda, que son los textos de dentro del calendario.
+ *
+ * ⚠️ **Si cambia el relleno del calendario, cambia aquí.** No se puede leer
+ * desde fuera: una variable CSS declarada en su `:host` solo baja a sus hijos,
+ * y subirla al padre pondría al componente compartido a depender de quien lo
+ * pinta. Es el mismo trato que el IVA duplicado en las functions — un número
+ * copiado con su nota al lado, porque la alternativa es peor.
  */
-$cinta-padding-x: 12px;
-$cinta-icono: 16px;
+$columna-texto: 13px;
 $cinta-gap: 8px;
 
 .from-request {
@@ -1060,16 +1067,20 @@ $cinta-gap: 8px;
   align-items: center;
   gap: $cinta-gap;
   margin-bottom: 16px;
-  padding: 8px $cinta-padding-x;
+  padding: 8px $columna-texto;
   font-size: 0.8125rem;
   color: var(--text-secondary);
   background: var(--bg-main);
   border-radius: 8px;
 
+  /*
+   * ⚠️ **Sin ancho fijo.** Lo llevó medio día —16 px con el glifo centrado—
+   * para poder sumar la columna a partir de él, y lo que hacía era dejar el
+   * coche un par de píxeles a la derecha del texto de debajo. El glifo empieza
+   * donde empieza el relleno, que es justo lo que se pide.
+   */
   i {
     color: var(--accent-color);
-    width: $cinta-icono;
-    text-align: center;
   }
 }
 
@@ -1077,17 +1088,18 @@ $cinta-gap: 8px;
  * El bloque del coche ya elegido: la cinta, el rótulo del calendario y su
  * pista.
  *
- * ⚠️ **Los tres textos comparten columna, y hasta el 6 de noviembre de 2026
- * no.** La cinta mete su contenido 36 px hacia dentro —12 de relleno, 16 de
- * icono y 8 de hueco— mientras el rótulo y la pista salían a ras del panel: un
- * borde izquierdo en escalera que Dorel vio en la pantalla. Lo que se alinea es
- * la **columna de texto**; el icono se queda fuera, colgando en el margen, que
- * es donde cuelga también el calendario de debajo.
+ * ⚠️ **Los cuatro textos comparten columna con los de DENTRO del calendario**,
+ * y hubo que corregirlo dos veces el mismo día. La primera versión los alineó
+ * con el texto de la cinta —36 px, o sea su relleno más el icono— y eso dejaba
+ * el icono del coche colgando a la izquierda y los dos rótulos metidos 23 px
+ * respecto a «Pulsa el día de recogida»: la escalera no desaparecía, se movía
+ * de sitio. La columna buena es la del calendario, que es el elemento más
+ * grande y el que manda.
  *
- * ⚠️ **El desplazamiento se CALCULA de las tres medidas de la cinta**, no se
- * escribe 36. Escrito a mano, cambiar el relleno de la cinta rompe la
- * alineación en silencio — y lo que se ve entonces es exactamente el defecto
- * que esto viene a quitar.
+ * ⚠️ **Y la referencia es el texto del calendario, no su CAJA.** Las cajas
+ * —cinta, rótulos y calendario— ya estaban las cuatro a ras del panel; lo que
+ * no coincidía era lo de dentro. Alinear por la caja habría sido no cambiar
+ * nada.
  */
 /*
  * ⚠️ **Lleva `.step-panel .section` delante a propósito.** El rótulo ya tiene
@@ -1104,7 +1116,7 @@ $cinta-gap: 8px;
 
   h2,
   .hint {
-    padding-left: $cinta-padding-x + $cinta-icono + $cinta-gap;
+    padding-left: $columna-texto;
   }
 
   /**

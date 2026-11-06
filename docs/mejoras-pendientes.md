@@ -116,8 +116,10 @@ Los cuatro puntos abiertos de la mañana están cerrados: **M-64** recorrido en
 pantalla, **N-45** decidido, **M-50** y **M-49** arreglados. El relato está en
 [traspaso-sesion.md](traspaso-sesion.md) § 2 tervicies.
 
-⚠️ **Queda una cosa POR DESPLEGAR**: `refundRedsysPayment` (M-49) y el hosting
-de la web (M-50). Ver § 2 ter del traspaso.
+⚠️ **De lo que quedaba por desplegar ya solo falta el hosting.**
+`refundRedsysPayment` (M-49) la subió Dorel a producción la noche del 6; el
+hosting de la web (M-50) viaja con el merge a `master`. Ver § 2 ter del
+traspaso.
 
 Y sale **una pendiente nueva**, encontrada al preparar N-45:
 
@@ -188,10 +190,29 @@ y el calendario estaban todos a **16 px** salvo el texto de la cinta, que cae a
 calendario a **0 px** mientras dejaba 16 hasta su propio título: el ritmo al
 revés.
 
-Hoy los tres textos comparten columna en 52 y el icono cuelga en el margen, con
-el calendario. El desplazamiento se **calcula** de las tres medidas de la cinta,
-no se escribe 36: con el número a mano, tocar el relleno rompería la alineación
-en silencio.
+⚠️ **Y hubo que corregirlo DOS VECES el mismo día, porque la primera referencia
+era la equivocada.** El primer intento alineó los dos rótulos con el texto de la
+cinta —los 52— y Dorel lo devolvió al verlo: así el icono del coche quedaba
+colgando a la izquierda y los rótulos metidos 23 px respecto a «Pulsa el día de
+recogida», que es el texto con el que se comparan de verdad. La escalera no
+desaparecía, **se movía de sitio**.
+
+La columna buena es la de **dentro del calendario** —su filete de 1 px más sus
+12 de relleno, o sea 13—, porque el calendario es el elemento grande y el que
+manda. Hoy el icono del coche, el texto de la cinta, el rótulo y la pista
+arrancan los cuatro ahí, en la misma vertical que la pista del calendario y su
+leyenda. Medido: 13 · 13 · 13 contra 12,67 del calendario, que es el píxel del
+filete partido por la pantalla.
+
+⚠️ **La referencia es el TEXTO del calendario, no su caja.** Las cuatro cajas
+—cinta, rótulos y calendario— ya estaban a ras del panel desde el principio: lo
+que no coincidía era lo de dentro, y alinear por la caja habría sido no cambiar
+nada.
+
+⚠️ **Y los 13 px son un número COPIADO, con su nota en los dos ficheros.** No
+hay forma de leerlos: una variable CSS declarada en el `:host` del calendario
+solo baja a sus hijos, y subirla al padre pondría un componente compartido a
+depender de quien lo pinta. Mismo trato que el IVA duplicado en las functions.
 
 ⚠️ **Y el `margin-bottom` del rótulo no se aplicaba al primer intento.**
 `.step-panel .section h2` mide (0,5,1) con la encapsulación de Angular y
