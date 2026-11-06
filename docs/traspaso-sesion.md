@@ -27,10 +27,11 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **Y lo segundo: producción está AL DÍA.** Las dos ramas en `3e8a899` y las
-> 16 functions del release desplegadas el 5 de noviembre. No hay nada esperando
-> a subirse — pero eso envejece en cuanto alguien toque algo, así que se
-> **mide**, no se copia de aquí.
+> ⚠️ **Y lo segundo: producción está AL DÍA.** El release salió el 5 de
+> noviembre —`3e8a899`, con sus 16 functions— y lo que `develop` lleva por
+> delante es **esta documentación y un arreglo que solo afecta a los tests**
+> (el shebang del guion del sitemap). **Nada que desplegar** — pero eso envejece
+> en cuanto alguien toque algo, así que se **mide**, no se copia de aquí.
 >
 > ⚠️ **Y mide las ramas contra `origin/`, no contra la local: ha fallado DOS
 > veces seguidas.** El 2 de noviembre la comparación dio **12** donde había
@@ -2389,8 +2390,9 @@ ramas en el mismo commit.**
 
 | | |
 |---|---|
-| `origin/master` y `origin/develop` | **`3e8a899`**, el mismo — desplegado y verificado el 5 de noviembre |
-| ¿hay que desplegar algo? | **no.** Las 16 functions del release salieron el 5 y el hosting lo publicó el CI |
+| `origin/master` | **`3e8a899`** — desplegado y verificado el 5 de noviembre |
+| `origin/develop` | dos commits por delante: **esta documentación** y el shebang del guion del sitemap, que solo cambiaba si el spec cargaba |
+| ¿hay que desplegar algo? | **no.** Las 16 functions del release salieron el 5, el hosting lo publicó el CI, y lo de después no toca ni el bundle ni `functions/` |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
 | rewrites de la web | los cinco responden; `/api/pagar-senal`, solo en desarrollo |
