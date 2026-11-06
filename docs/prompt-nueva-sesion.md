@@ -8,7 +8,7 @@
 > vieja. Lo que sí trae es lo que **no vive en el repositorio**: cómo trabaja
 > Dorel y qué se espera de ti.
 >
-> Última revisión: **8 de octubre de 2026**.
+> Última revisión: **6 de noviembre de 2026**.
 
 ---
 
@@ -34,10 +34,11 @@ de septiembre de 2026.
 
 1. **`CLAUDE.md`** — entero. Es largo y cada aviso está ahí porque el fallo ya
    ocurrió una vez. No es documentación: es la memoria de los errores.
-2. **`docs/traspaso-sesion.md`** — dónde quedó todo. Empieza por **§ 2 octies**
-   (la etapa de la web pública), sigue por **§ 2 ter** (qué falta por desplegar,
-   que ahora **no es solo el merge**) y **§ 5** (los nueve huecos que solo puede
-   cerrar Dorel antes de publicar la web).
+2. **`docs/traspaso-sesion.md`** — dónde quedó todo. Empieza por
+   **§ 2 duovicies** (del 4 al 6 de noviembre: las cinco cosas que vio Dorel
+   usando la aplicación y su despliegue), sigue por **§ 2 ter** (qué falta por
+   desplegar: a 6 de noviembre **nada**, y la sección dice cómo volver a
+   medirlo) y **§ 5** (los huecos que solo puede cerrar él).
 3. **`docs/mejoras-pendientes.md`** — la lista viva.
 4. **`FUNCIONAL.md`** — el negocio, si la tarea lo toca.
 
@@ -81,18 +82,27 @@ error**.
 Son **tres** suites, una por build:
 
 ```bash
-npm run build && npm test                  # backoffice: 847 tests en 36 ficheros
-npm --prefix functions run build && npm --prefix functions test   # 649 en 28
-npm --prefix web run build && npm --prefix web test               # 28 en 2
-npm --prefix web run check                 # astro check: 28 ficheros, 0 errores y 1 pista
+npm run build && npm test                  # backoffice: 988 tests en 41 ficheros
+npm --prefix functions run build && npm --prefix functions test   # 797 en 34
+npm --prefix web run build && npm --prefix web test               # 126 en 10
+npm --prefix web run check                 # astro check
 
 npm run i18n:audit && npm run css:audit && npm run spacing:audit && npm run rows:audit
-npm run lint    # linea base: 0 errores y 290 avisos
+npm run lint    # linea base: 0 errores y 291 avisos
 ```
 
+Las cuatro cifras son del **6 de noviembre de 2026** y están para comparar, no
+para alcanzar: lo que importa es que no bajen y que no haya ficheros en rojo.
+
 ⚠️ **`tsc` NO valida las plantillas y `strictTemplates` está activo**: hay que
-construir. Si sale un **error** de lint, es de lo que acabas de tocar; los 290
+construir. Si sale un **error** de lint, es de lo que acabas de tocar; los 291
 avisos son deuda reconocida.
+
+⚠️ **Y si una suite falla en local y pasa en el CI, compara la versión de
+Node.** El portátil va por **24** y el CI por **22**: un `#!/usr/bin/env node` en
+un módulo importado desde un spec rompe la carga en el primero y no en el
+segundo, con un error que señala el fichero equivocado. Costó una semana de
+suite roja en la web.
 
 ⚠️ **Y todo eso junto no ve lo que ve un ojo.** El patrón de fallo dominante es
 **código escrito, desplegado y jamás ejecutado**: compila, pasa los tests, se
@@ -103,6 +113,13 @@ importante lo ha encontrado Dorel usando la aplicación.
 contra `http://localhost:4200` (backoffice, Firebase de **desarrollo**), y la web
 pública se levanta con `npm --prefix web run dev` en `http://localhost:4321`.
 Recorre el flujo de verdad y lee el resultado en Firestore, no en la pantalla.
+
+⚠️ **Y la sesión está atada al ORIGEN, puerto incluido.** El 5 de noviembre el
+4200 lo tenía ocupado otro proyecto de la máquina, así que `ng serve` acabó en
+otro puerto y allí **no había sesión** — y copiar el token de Firebase entre
+orígenes lo bloquea el clasificador de permisos. Resultado: el calendario nuevo
+se desplegó sin que nadie lo hubiera visto. Si el 4200 está ocupado, **libéralo**
+(`npx kill-port 4200`, o mira qué hay escuchando) en vez de servir en otro.
 
 Siete trampas al medir, todas pagadas ya:
 
@@ -133,9 +150,14 @@ Siete trampas al medir, todas pagadas ya:
 - **`VELTO_VERIFACTU_ENABLED` en producción**: sigue en `false` hasta el 1 de
   enero de 2027 y solo lo cambia Dorel.
 - **Las cinco Cloud Functions que hablan con la AEAT** no están en producción a
-  propósito. En producción, **nunca `--only functions` a secas**: allí hay **32**
-  y un despliegue completo subiría esas cinco. La cifra envejece — compara
-  **nombres**, con `firebase functions:list --project prod --json`.
+  propósito. En producción, **nunca `--only functions` a secas**: allí hay **33**
+  de las 38 que define el código, y un despliegue completo subiría esas cinco. La
+  cifra envejece — compara **nombres**, con
+  `firebase functions:list --project prod --json`.
+- **El orden al desplegar:** una function que cambia la **forma** de su respuesta
+  va **después** del frontend que la lee; una que solo cambia comportamiento,
+  antes. Los dos caminos son distintos y durante unos minutos conviven versiones
+  cruzadas. El porqué, con su caso real, en CLAUDE.md.
 - **Lo que la web PROMETE.** Un precio, un plazo de borrado o una cobertura
   escritos en una página son afirmaciones contrastables contra el código y
   contra Firestore. Si tocas `publicPrice()`, `CONSULTA_HORAS_POR_DEFECTO` o una
@@ -143,20 +165,30 @@ Siete trampas al medir, todas pagadas ya:
 
 ## 5. Qué hacer primero
 
-1. Pregunta el estado del repositorio con los comandos de arriba.
-2. **Di lo que falta por desplegar, midiéndolo.** A 8 de octubre de 2026 **no
-   falta nada**: `master` y `develop` están sincronizados y producción corre el
-   código de ese día. Pero eso envejece en cuanto alguien toque algo, y un
+1. Pregunta el estado del repositorio con los comandos de arriba, **después de
+   un `git fetch`**. Esto ha fallado dos veces seguidas por medir contra la rama
+   local.
+2. **Di lo que falta por desplegar, midiéndolo.** A 6 de noviembre de 2026 **no
+   falta nada**: las dos ramas en `3e8a899` y las 16 functions del release
+   salieron el 5. Pero eso envejece en cuanto alguien toque algo, y un
    `git diff` contra `master` **no** dice si las functions están al día —el CI
    solo publica hosting—. Lo que lo contesta es la marca de tiempo de cada una,
-   en `source.storageSource.generation` del `functions:list --json`.
+   en `source.storageSource.generation` del `functions:list --json`; hay un
+   comando que las ordena en [traspaso-sesion.md](traspaso-sesion.md) § 2 ter.
 3. Si no te da una tarea concreta, **pregúntale**. El desarrollo por tandas se
    acabó: lo que viene sale de él usando la aplicación o mirando la web. Lo que
-   sigue esperando está en [traspaso-sesion.md](traspaso-sesion.md) § 5 — los
-   **seis** huecos de negocio de la web (eran nueve), el **Storage de producción
-   sin vaciar** (el DNI, el carné y la firma de personas reales cuyas fichas ya
-   no existen), y confirmar en un **Android de verdad** que el `select` ya se
-   cierra.
+   sigue esperando, ordenado por lo que más vale cerrar:
+   - **N-45** — decidir si se rehace el contrato `C-0SBXUX-2026`, el único
+     firmado que salió sin los datos del seguro. Un PDF sellado no se corrige:
+     hay que sustituirlo y volver a firmarlo. **Decide él.**
+   - **M-64** — recorrer en pantalla el botón «Crear reserva» de la ficha del
+     coche y su calendario. Tiene 21 tests de la aritmética y **nadie lo ha
+     pulsado**, que es el patrón de fallo dominante de esta casa.
+   - **M-49 y M-50** — la fianza devuelta a la tarjeta que los libros no dan por
+     devuelta, y los dos 404 por visita de la ficha pública.
+   - **El pase a producción del TPV**, que espera a BBVA, y el **Storage de
+     producción sin vaciar** (el DNI, el carné y la firma de personas reales cuyas
+     fichas ya no existen).
 
 ⚠️ **Y dos cosas que deciden muchas discusiones de diseño.**
 

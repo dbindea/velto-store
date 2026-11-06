@@ -1,22 +1,22 @@
-# Traspaso de sesión — 2 de noviembre de 2026
+# Traspaso de sesión — 6 de noviembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 unvicies**, que es lo último que pasó (2 de
-> noviembre: BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al
-> comercio propio de VELTO, con seis operaciones probadas contra la pasarela);
+> **Orden de lectura:** **§ 2 duovicies**, que es lo último que pasó (del 4 al 6
+> de noviembre: cinco cosas que vio Dorel usando la aplicación —el enumerado en
+> crudo en los conceptos de cobro, el backoffice cobrando por encima de lo que
+> anuncia la web, la pestaña en blanco del PDF, el contrato **firmado** sin los
+> datos del seguro, y la reserva desde la ficha del coche— con su despliegue de
+> 16 functions); después **§ 2 unvicies** (2 de noviembre: BBVA entregó el
+> entorno de pruebas del TPV y desarrollo pasó al comercio propio de VELTO);
 > después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap anunciaba fichas
-> que no existían, el backoffice de producción resultó ser indexable, las fichas
-> pasaron a `/coche/renault-megane`, se quitaron los nueve `mailto:` y se cerró
-> un agujero del despliegue nocturno); después **§ 2 novodecies**
-> (ese mismo día: los campos de fecha en el móvil); después **§ 2 octodecies** (del 15 al 20 de octubre: el
-> TPV del banco, el pago de la señal desde la web y el scroll a tirones del
-> móvil); después **§ 2 ter**, que dice qué falta por desplegar
-> —hoy **nada**, y por eso esa sección empieza por cómo volver a medirlo en vez
-> de por una lista—; y luego **§ 5**, con los huecos que solo puede cerrar
-> Dorel, que son los únicos que siguen abiertos de verdad.
+> que no existían y el backoffice de producción resultó ser indexable); después
+> **§ 2 ter**, que dice qué falta por desplegar —hoy **nada**, y por eso esa
+> sección empieza por cómo volver a medirlo en vez de por una lista—; y luego
+> **§ 5**, con los huecos que solo puede cerrar Dorel, que son los únicos que
+> siguen abiertos de verdad.
 >
 > ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
 > BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
@@ -27,15 +27,15 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **`develop` va por delante de `master`, y NO hay que desplegar nada.** Lo
-> que lleva es documentación y el cambio del comercio de **desarrollo**; del
-> lado de producción el `.env` solo cambia comentarios. Ver § 2 ter, que explica
-> por qué un `git diff` contra `master` dice que `functions/` cambió cuando no
-> hay nada que subir.
+> ⚠️ **Y lo segundo: producción está AL DÍA.** Las dos ramas en `3e8a899` y las
+> 16 functions del release desplegadas el 5 de noviembre. No hay nada esperando
+> a subirse — pero eso envejece en cuanto alguien toque algo, así que se
+> **mide**, no se copia de aquí.
 >
-> ⚠️ **Y mide las ramas contra `origin/`, no contra la local.** El 2 de
-> noviembre `master` en local estaba parado en un commit viejo y
-> `git log master..develop` dio **12** donde hay **4**.
+> ⚠️ **Y mide las ramas contra `origin/`, no contra la local: ha fallado DOS
+> veces seguidas.** El 2 de noviembre la comparación dio **12** donde había
+> **4**, y el 5 —con esta advertencia ya escrita— dio **20** donde había **12**,
+> porque `master` en local iba 8 commits por detrás. Haz el `git fetch`.
 >
 > ⚠️ **Y si algo no compila nada más abrir, lee § 2 nonies antes de buscar el
 > fallo en el código.** El 3 de octubre desaparecieron ficheros del espacio de
@@ -2179,10 +2179,190 @@ la que está publicada.**
 
 ---
 
+## 2 duovicies. Del 4 al 6 de noviembre — cinco cosas que vio Dorel usando la aplicación
+
+Esta es ya la etapa que § 3 anuncia: **nada de esto lo encontró un test**. Son
+cinco encargos suyos, mirando pantallas de producción, y los cinco salieron
+desplegados el 5 de noviembre.
+
+### 1 · «Claves sin traducción» que no eran claves
+
+En la ficha de una reserva real, dos filas de cobro tituladas **`rental_payment`**
+en negrita con «Señal» y «Resto alquiler» debajo.
+
+⚠️ **No faltaba ninguna clave** —`payments.types.rentalPayment` está en los tres
+idiomas—: lo que estaba en crudo era el **concepto guardado en el documento**.
+Diagnosticarlo como un hueco de i18n habría llevado a añadir una traducción para
+un valor que nunca debió guardarse.
+
+El mecanismo, con sus dos mitades, está en CLAUDE.md («El `concept` de un cobro:
+el ENUMERADO lo escribe el sistema, la frase la escribe una persona»). En corto:
+la ficha mandaba el **enumerado** como centinela de «el operador no escribió
+nada», y `settlePendingPayment()` lo deshacía comparando contra el tipo de la
+fila **destino** en vez de contra el que mandó el formulario. **6 de las 11**
+filas de cobro de producción quedaron así.
+
+⚠️ **Y llegaba a cuatro superficies de cara al cliente, no solo a la pantalla**:
+el **recibo en PDF** (que lo genera una function y no pasa por el pipe de
+Angular), la pantalla pública `/pay/:id`, y el
+`Ds_Merchant_ProductDescription` que pinta la pasarela del banco y acaba en el
+extracto de la tarjeta.
+
+Lo resuelve `payment-concept.util.ts` con su gemelo
+`functions/src/payment-concept.ts`. **Lo ya escrito no se migra**: se resuelve al
+leerlo.
+
+### 2 · «La calculadora de la web y la del backoffice no dan lo mismo»
+
+Tenía razón, y la causa **no era la curva**: comparadas las dos aritméticas
+sobre **18.090 combinaciones**, cero divergencias. Lo que no era igual era el
+último paso.
+
+⚠️ **`aTerminacion()` —el suelo a `,95`— vivía SOLO en `functions/src/public/core.ts`**,
+así que el escaparate publicaba el Megane de un día a **53,95 €** y el asistente
+proponía **54,45 €**. O sea que **el backoffice cobraba por encima de lo
+anunciado en el 99 % de los casos**, y lo único que lo corregía era
+`promisedPriceCeiling()`, que solo se dispara entrando por «Convertir en
+reserva». **El cliente que ve el precio en la web y LLAMA** —que es lo que la web
+le pide— no deja solicitud, así que nada avisaba al operador.
+
+Lo arregla `netoDeEscaparate()` en `pricing.util.ts`, y la decisión que lo
+sostiene es que **va en la TARIFA y no como precio acordado**: inyectado por
+`agreedPrice`, `priceOverridden` sería **true en todas** las reservas —contrato
+con una línea de ajuste que nadie pactó— y un empleado sin `editPricing` no
+podría crear ni una.
+
+Y por el camino salieron tres más, ninguna pedida:
+
+- ⚠️ **El céntimo del `quoteSnapshot` caía del lado PROHIBIDO en el 9,57 % de
+  los casos.** Aquí estuvo escrito que no se perseguía porque caía del lado
+  seguro, y era falso: `roundMoney()` redondea al **más cercano**, así que
+  **1.731 de 18.090** combinaciones sobrecobraban un céntimo sobre lo prometido.
+  Lo resuelve `netoQueNoSePasa()`, ajustando contra `addVat()` y no contra la
+  división.
+- ⚠️ **El alta rápida de cliente perdía el techo prometido.** Había dos salidas
+  del paso del cliente y solo una lo aplicaba.
+- ⚠️ **Y editar una fecha podía perder el precio acordado**: `editReservation()`
+  usaba `manualAdjustment` como marcador en vez de `agreedNetPriceOf()`, que es
+  la autoridad desde que un ajuste de 0 es indistinguible de «no se pactó nada».
+
+### 3 · «El informe de entrega no abre a la primera en el móvil»
+
+**No había nada roto: no había nada dibujado.** El botón abría la pestaña con el
+clic vivo —tiene que hacerlo, o el bloqueador se la come— y le ponía la dirección
+al volver el callable, sin escribir nada dentro mientras tanto. En un móvil,
+abrir una pestaña **la trae a primer plano**, así que el único indicador —el
+spinner del botón— se quedaba en la pestaña que el navegador acababa de mandar al
+fondo.
+
+Medido en producción: **9,4 s** la primera vez (dos arranques en frío y un fallo
+de caché en el borde) y **1,2 s** la segunda. De ahí el «a la segunda sí»: mismo
+código, mismo PDF.
+
+Lo resuelve `openDeferredTab()`, y **había dos sitios más peor resueltos** —emitir
+factura y generar proforma llamaban a `window.open()` *después* del `await`, sin
+comprobar el `null`—. Ahí el síntoma no es una pestaña en blanco, es que **no
+pasa nada**, y en la proforma el documento se perdía.
+
+### 4 · «El contrato de este coche no tiene los datos del seguro»
+
+⚠️ **No tenía nada que ver con que el coche fuera de colaborador**, que es lo que
+parecía desde fuera y lo que él mismo sospechaba. El dato estaba en la ficha y
+estaba guardado en el `vehicleSnapshot` del contrato.
+
+La causa: **`signContract` no retoca el PDF, lo REHACE** —la firma manuscrita va
+dentro y un PDF sellado no admite cambios—, así que hay **dos** sitios que arman
+la entrada de `buildContractPdf`, y cada uno llevaba su lista de campos escrita a
+mano. Divergieron, y el que se quedó corto fue **el firmado**, que es el que
+tiene valor: le faltaban **siete campos del vehículo y cuatro de la reserva**
+—aseguradora, póliza, teléfono de asistencia, combustible, transmisión, aviso de
+GPS, entrega y recogida a domicilio, kilometraje pactado y los conductores
+adicionales—.
+
+⚠️ **El arreglo quita la causa, no parchea la lista**:
+`functions/src/contracts/contract-snapshot.ts` es el único mapeo y pasan por él
+los dos caminos, con un test que compara **claves** contra un snapshot completo.
+Arreglar los once a mano habría dejado el mecanismo intacto para el doceavo.
+
+⚠️ **Y los contratos YA FIRMADOS no se arreglan.** El PDF sellado es inmutable:
+para que uno existente lleve el seguro hay que **sustituirlo** (`supersede`) y
+volver a firmarlo. Queda **pendiente de Dorel** decidirlo para
+`C-0SBXUX-2026` — ver [mejoras-pendientes.md](mejoras-pendientes.md).
+
+### 5 · «Crear reserva» desde la ficha del coche
+
+Lo pidió así: *«si alguien me pide alquilar este coche, me gustaría poder
+realizar una reserva, ver el calendario de disponibilidad al igual que en la web
+pública y seguir el curso de nueva reserva para este coche hasta el final»*.
+
+⚠️ **No es un flujo nuevo: es la MISMA puerta que «Convertir en reserva», con un
+parámetro menos.** El coche viaja en la URL (`/reservations/new?vehicleId=…`) y
+lo único que cambia es en qué paso se para el asistente. Duplicar la creación
+habría sido una segunda forma de crear reservas.
+
+El calendario vive en `availability-calendar.util.ts`, **gemelo de
+`web/src/lib/calendario-coche.ts`**, y se aparta de él en tres cosas a propósito
+—sin día de preparación, sin horizonte, y una reserva con fechas ilegibles se
+**salta** en vez de bloquear—. Las tres están razonadas en CLAUDE.md; la de fondo
+es que aquí hay un operador delante y el calendario solo **propone**:
+`searchAvailability()` vuelve a cruzarlo todo antes de guardar.
+
+### El despliegue del 5 de noviembre
+
+**16 functions**, en tandas de una y dos, **cero fallos de cuota**.
+
+⚠️ **`getPaymentCheckout` se dejó para DESPUÉS del hosting, a propósito.** Ahora
+devuelve una **clave i18n** en el concepto, así que desplegada antes del
+frontend, el bundle anterior se la habría pintado en crudo a un cliente con la
+tarjeta en la mano — el mismo fallo que acabábamos de corregir, por la puerta de
+atrás. **La regla general: una function que cambia la FORMA de su respuesta va
+después del frontend que la lee; una que solo cambia comportamiento, antes.**
+
+Verificado en vivo después: `/api/fleet` devuelve brutos en `,95` cuyos netos
+reconstruyen exacto (45,41 × 1,21 = 54,95), el backoffice responde, y siguen
+**33** functions en producción sin ninguna de las cinco de la AEAT.
+
+### Y dos lecciones de método, las dos repetidas
+
+⚠️ **La rama local volvió a mentir, cuatro días después de escribirlo aquí.**
+`master` en local estaba **8 commits** por detrás de `origin/master`, así que
+conté **20 commits** pendientes donde había **12**: lo de las fichas
+`/coche/renault-megane`, el sitemap y los campos de fecha ya estaba en
+producción. Le planteé el despliegue como más arriesgado de lo que era. § 2
+unvicies ya decía exactamente esto — **leerlo no basta, hay que hacer el
+`git fetch`**.
+
+⚠️ **Y «se dibuja dos veces» le sonó a «se guardan dos».** Al contar el arreglo
+del contrato firmado dije que el PDF se compone dos veces, y lo que él preguntó
+fue si la aplicación le iba a dejar contratos duplicados por ahí. No era una mala
+pregunta: era mi frase. **Lo que se compone en memoria no le importa a nadie; lo
+que importa es qué queda guardado** —un documento, dos PDF en rutas fijas que se
+pisan— y eso es lo que hay que decir primero.
+
+### El 6 de noviembre: la suite de la web estaba roja en el portátil y verde en el CI
+
+Midiendo para actualizar estos documentos salió que `npm --prefix web test`
+dejaba **un fichero sin cargar**: `comprobar-dist.spec.ts` reventaba con
+`SyntaxError: Invalid or unexpected token` **señalando su propia línea 2**, que
+es un error que manda a buscar el fallo donde no está.
+
+⚠️ **La causa era el `#!/usr/bin/env node` del módulo importado**, y solo pasa
+con **Node 24** —el del portátil— y no con el **22** que usa el CI. Así que la
+suite llevaba desde el 30 de octubre verde en GitHub y roja aquí. Nada ejecutaba
+ese guion por su shebang: los tres workflows lo llaman `node web/scripts/…`. Se
+quitó la línea y la suite pasa a **10 ficheros y 126 tests**.
+
+Lo que hay que llevarse no es el shebang: **una suite con un fichero
+permanentemente en rojo es una suite que se deja de mirar**, y la diferencia
+entre entornos la paga siempre el que mide en local.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-**Medido el 8 de octubre de 2026, después del despliegue: NO FALTA NADA.**
-`master` y `develop` están sincronizados y producción corre el código de hoy.
+**Medido el 6 de noviembre de 2026, después del despliegue: NO FALTA NADA.**
+`master` y `develop` están en el mismo commit y producción corre el código de
+hoy.
 
 **No te fíes de esta frase — vuelve a preguntarlo, porque envejece cada sesión:**
 
@@ -2204,40 +2384,51 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
-**Vuelto a medir el 2 de noviembre de 2026: a producción NO le falta nada, y
-`develop` lleva CUATRO commits por delante que no hay que desplegar.**
+**Vuelto a medir el 6 de noviembre de 2026: producción está al día y las dos
+ramas en el mismo commit.**
 
 | | |
 |---|---|
-| `origin/master` | `b432b43`, desplegado y verificado |
-| `origin/develop` | por delante, con **los commits de esta sesión y los dos de documentación que arrastraba** |
-| qué son | documentación y el cambio del comercio de **desarrollo** — nada de producción |
-| ¿hay que desplegar algo? | **no.** Lo único de `functions/` es el `.env`, y en el de producción **solo cambian comentarios** |
+| `origin/master` y `origin/develop` | **`3e8a899`**, el mismo — desplegado y verificado el 5 de noviembre |
+| ¿hay que desplegar algo? | **no.** Las 16 functions del release salieron el 5 y el hosting lo publicó el CI |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
 | rewrites de la web | los cinco responden; `/api/pagar-senal`, solo en desarrollo |
+| las dos más viejas | `syncAuthClaims` y `onAuthorizedUserChanged`, del **25 de septiembre** — les falta solo el refactor de imports (M-60) |
 
-⚠️ **Esas 33 se midieron hoy con `--json`, y de paso salió que CLAUDE.md estaba
-desfasado**: decía **32** y que faltaba además `createSignalPayment`. Está
-desplegada en producción desde el 20 de octubre —**apagada** por su bandera, que
-es otra cosa— y esta misma sección ya lo recogía entonces; lo que no se actualizó
-fue CLAUDE.md. Corregido hoy. Es el patrón de siempre: **la cifra escrita a mano
-en un sitio no se entera de lo que se midió en otro.**
+⚠️ **Las 16 del 5 de noviembre se ven en la marca de tiempo, y es la forma de
+contestar «¿está desplegado mi arreglo?»** sin fiarse de ninguna frase de este
+fichero:
 
-⚠️ **Esa penúltima fila es la que hay que entender antes de desplegar nada.**
-Tocar un `.env` cambia el hash de **todas** las functions, así que un `git diff`
-contra `master` dice que `functions/` cambió y parece que hay que subirlo. No lo
-hay: lo que cambió del lado de producción son comentarios. Se comprueba mirando
-solo las líneas de valor, que es lo que separa un cambio real de uno escrito:
+```bash
+npx firebase functions:list --project prod --json > fn.json
+node -e "const l=JSON.parse(require('fs').readFileSync('fn.json','utf8')).result;
+ l.map(f=>[new Date(Number(f.source.storageSource.generation)/1000).toISOString().slice(0,16),f.id])
+  .sort().forEach(r=>console.log(r.join('  ')))"
+```
+
+⚠️ **El 2 de noviembre esa misma cifra salió desfasada en CLAUDE.md** —decía
+**32** y que faltaba además `createSignalPayment`, que estaba desplegada desde el
+20 de octubre, apagada por su bandera, que es otra cosa—. Es el patrón de
+siempre: **la cifra escrita a mano en un sitio no se entera de lo que se midió en
+otro.** Por eso aquí hay un comando y no solo un número.
+
+⚠️ **Y un `git diff` contra `master` puede decir que `functions/` cambió sin que
+haya nada que subir.** Tocar un `.env` cambia el hash de **todas**, y un cambio
+en el `.env` de **desarrollo** —o un comentario en el de producción— aparece
+igual en el diff. Lo que separa un cambio real de uno escrito es mirar solo las
+líneas de valor:
 
 ```bash
 git diff origin/master..origin/develop -- functions/.env.rentalcar-veltomobility \
   | grep -E "^[+-][A-Z_]+="        # vacio = solo comentarios = nada que desplegar
 ```
 
-⚠️ **Y mide contra `origin/`, no contra la rama local.** El 2 de noviembre
-`master` en local estaba parado en `f95e85a` y la comparación dio **12** donde
-hay **4** — ver el final de § 2 unvicies.
+⚠️ **Y mide contra `origin/`, no contra la rama local — ha fallado DOS veces
+seguidas.** El 2 de noviembre `master` en local estaba en `f95e85a` y la
+comparación dio **12** donde había **4**; el 5 de noviembre estaba **8 commits**
+por detrás y dio **20** donde había **12**. La segunda vez esta advertencia ya
+estaba escrita aquí: **leerla no basta, hay que hacer el `git fetch`.**
 
 > Aquí ponía **33 de 38** y «`master` y `develop` sincronizados», medido el 20 de
 > octubre. La cifra de functions estaba mal por lo de siempre —se contó a ojo— y
@@ -2250,10 +2441,14 @@ de `firebase functions:list --project prod --json` contra los del manifiesto de
 descubrimiento. Contar a ojo la tabla con colores ANSI dio **38 donde hay 33**
 la última vez que alguien lo intentó.
 
-⚠️ **Y producción tiene CATORCE hashes de despliegue distintos**, porque se ha
-desplegado por tandas a lo largo de meses. Eso significa que **no todas corren
-el mismo código**: el hash solo agrupa lo que se subió junto. Si dudas de una en
-concreto, lo que lo contesta es desplegarla.
+⚠️ **Y producción NO corre un código, corre treinta y tres.** Medido el 6 de
+noviembre de 2026: las 33 functions tienen **33 subidas distintas**, una cada
+una, porque desplegar por nombre y en tandas sube el bundle por separado. Aquí
+ponía «catorce hashes» y la idea era la correcta con el número equivocado: el
+hash **no agrupa nada**, así que la pregunta «¿corre esta function mi arreglo?»
+solo la contesta su marca de tiempo —la del comando de arriba— o volver a
+desplegarla. El reparto de hoy, por días: **16** del 5 de noviembre, 4 del 19 de
+octubre, 6 del 8, 2 del 5, 1 del 7, 2 del 3, y **2 del 25 de septiembre**.
 
 > Aquí ponía **32 de 37**, medido el 9 de octubre. Las cifras de este fichero
 > envejecen cada sesión: es la cuarta vez que pasa. La frase que no envejece es
@@ -2349,6 +2544,7 @@ que tener en la cabeza al retomar:
 | Qué | A quién espera | Qué desbloquea |
 |---|---|---|
 | **El pase a producción del TPV** | **Dorel lo pide, BBVA lo concede** | cobrar en producción con el comercio **propio** y no con el `361040215` prestado |
+| **Rehacer `C-0SBXUX-2026`, o no** | **Dorel** | que ese contrato firmado lleve la póliza y el teléfono de asistencia. El arreglo del 5 de noviembre vale para los nuevos; un PDF sellado **no se puede corregir**, hay que sustituirlo (`supersede`) y volver a firmarlo. Si no se hace, el contrato sigue remitiendo a una sección que no imprime |
 | Encender el pago de la señal | **Dorel**, cuando el TPV esté concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y el rewrite `/api/pagar-senal`, que solo está en desarrollo** |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |

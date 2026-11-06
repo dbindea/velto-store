@@ -15,6 +15,63 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 6 de noviembre de 2026 — lo que dejó el release del 5
+
+Cinco encargos de Dorel mirando producción, los cinco desplegados el 5 de
+noviembre. El relato está en [traspaso-sesion.md](traspaso-sesion.md)
+§ 2 duovicies. Lo que **queda abierto** de ahí son dos cosas, y una es una
+decisión suya.
+
+### ⬜ N-45 · El contrato `C-0SBXUX-2026` sigue sin los datos del seguro
+
+⚠️ **Lo arreglado vale para los contratos NUEVOS, y ese ya está firmado.** El PDF
+sellado es inmutable: no hay forma de añadirle la aseguradora, la póliza y el
+teléfono de asistencia que le faltan. La única salida es la que la aplicación ya
+tiene para esto: **sustituirlo** (`supersede: true` con motivo), que lo archiva
+como `contracts/{reservaId}-v1` con estado `superseded`, y volver a firmarlo.
+
+Lo que hay que saber antes de decidir:
+
+- **El papel que tiene el cliente deja de ser el acuerdo vigente**, y su QR se lo
+  dirá: `getContractVerification` contesta `superseded` —ni «no encontrado» ni
+  «válido»—, así que hay que mandarle el nuevo.
+- **Hay que volver a pedirle la firma**, con su enlace nuevo.
+- **El archivado no se borra nunca**, así que quedan dos documentos para esa
+  reserva. Es lo correcto —un error no se borra, se corrige con un documento
+  nuevo—, pero conviene saberlo porque Dorel preguntó expresamente por los
+  contratos que «se quedan por ahí».
+- ⚠️ **Y lo que está en juego es un cobro**: la cláusula de accidentes dice que
+  la póliza «consta en la sección Datos del vehículo», y en ese PDF no consta. Es
+  el mismo defecto que ya obligó a reescribir esa cláusula una vez.
+
+**Decide Dorel.** Si dice que no, no pasa nada mientras no haya un siniestro con
+ese alquiler; si dice que sí, son dos clics y un WhatsApp.
+
+### ⬜ M-64 · El botón «Crear reserva» y su calendario no se han visto en pantalla
+
+La aritmética del calendario tiene **21 tests** y el recorrido está razonado
+contra el de la web pública, pero **nadie ha pulsado el botón**: la sesión local
+se quedó sin autenticar y copiar el token entre orígenes lo bloquea el
+clasificador.
+
+⚠️ **Es justo el patrón de fallo dominante de este proyecto** —código escrito,
+desplegado y jamás ejecutado—, así que no es una formalidad. Lo que hay que
+recorrer, en este orden:
+
+1. Ficha de un coche → «Crear reserva» → que el calendario pinte los días
+   ocupados de **ese** coche.
+2. Elegir un rango que cruce una reserva: tiene que **empezar de nuevo**, no
+   cerrar un rango por encima de ella.
+3. Seguir hasta crear la reserva y comprobar en Firestore que nace con el coche
+   correcto y su precio.
+4. Y el caso que de verdad importa: **el coche fijado que NO está disponible** en
+   esas fechas — tiene que quedarse en la lista con su motivo al lado, no saltar
+   al cliente con otro coche.
+
+Lo puede cerrar Dorel usándolo una vez, que es como se ha cerrado casi todo aquí.
+
+---
+
 ## Estado a 2 de noviembre de 2026 — el comercio propio del TPV
 
 BBVA entregó el entorno de pruebas del alta y desarrollo pasó al comercio de

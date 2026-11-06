@@ -98,6 +98,20 @@ Cobertura actual — deliberadamente estrecha, centrada en lo que puede costar d
 - `functions/src/contracts/qr.spec.ts` — que el QR del contrato **se lee de verdad**: rasteriza los rectángulos que se dibujan y los descifra con `jsqr`. Un símbolo mal montado tiene la misma pinta que uno bueno
 - `clear-input.util.spec.ts` — dónde se puede pulsar para vaciar un campo, y sobre todo que esa zona **no invade la del calendario**. Misma razón que el QR: un aspa que no se puede pulsar tiene la misma pinta que una buena
 - `functions/src/arranque.spec.ts` — qué **no** se puede cargar al arrancar, y que cada import perezoso sigue resolviendo. Ver «El arranque en frío» más abajo
+- `availability-calendar.util.spec.ts` — que el calendario **no ofrece un día ocupado** y que un rango no se cierra por encima de una reserva. Misma razón que el QR y el aspa: un calendario mal calculado tiene la misma pinta que uno bueno
+- `payment-concept.util.spec.ts` — que un enumerado guardado como concepto **no se pinta en crudo**, en los dos lados (`functions/src/payment-concept.spec.ts` enumera además los 16 tipos, que el compilador no comprueba)
+- `functions/src/contracts/contract-snapshot.spec.ts` — compara **claves**, no valores: un campo del snapshot del contrato que nadie mapee hace fallar el test, que es lo único que impide que el PDF **firmado** vuelva a salir con menos datos que el generado
+
+**Los tres números, medidos el 6 de noviembre de 2026** — valen como línea base,
+no como objetivo: app **988** en 41 ficheros, functions **797** en 34, web
+**126** en 10, y el lint con **0 errores y 291 avisos**.
+
+⚠️ **Y la suite de la web estuvo una semana verde en el CI y roja aquí.** Un
+`#!/usr/bin/env node` en un módulo importado desde un spec rompe la carga con
+**Node 24** y no con el **22** que usa el CI, y el error —`SyntaxError: Invalid
+or unexpected token`— señala la línea 2 **del spec**, o sea el fichero
+equivocado. Si una suite falla en local y pasa en GitHub, lo primero que hay que
+comparar es la versión de Node.
 
 El builder `@angular/build:unit-test` es **experimental** en Angular 20 y avisa por consola al arrancar. `tsconfig.spec.json` usa `vitest/globals`, no jasmine.
 
@@ -119,6 +133,22 @@ tsconfigs separados.
 - **No hay formateador en marcha.** La configuración de Prettier está en
   `package.json` y **no la ejecuta nada**: ni un script, ni el lint, ni el CI.
 - **El CI no despliega Cloud Functions.** Solo hosting. Van a mano y con destino explícito: `npm run deploy:dev:functions` o `deploy:prod:functions`. Es el punto más frágil de los dos entornos — es fácil arreglar algo en uno y olvidarlo en el otro.
+
+⚠️ **Y por eso el ORDEN importa, que es lo que no se ve viniendo.** El frontend
+y las functions se despliegan por caminos distintos, así que durante unos
+minutos conviven el bundle de antes con las functions de después, o al revés. La
+regla: **una function que cambia la FORMA de su respuesta va DESPUÉS del
+frontend que la lee; una que solo cambia comportamiento, antes.**
+
+El caso real es del 5 de noviembre de 2026 y se evitó a propósito:
+`getPaymentCheckout` pasó a devolver una **clave i18n** en el concepto, así que
+subida antes del hosting, el bundle anterior se la habría pintado **en crudo a un
+cliente con la tarjeta en la mano** — el mismo fallo que ese release venía a
+corregir, por la puerta de atrás. Se dejó para después de que el CI publicara.
+
+⚠️ **Y lo que NO sirve de consuelo es que el cliente recargue.** `/pay/:id` es un
+enlace que llega por WhatsApp y se abre una vez; quien lo abra en esa ventana ve
+lo que ve.
 - **No hay tests de componentes ni E2E.** Solo utils y lógica pura.
 
 ⚠️ **Desplegar las trece de golpe agota la cuota de CPU de Cloud Run**, y el
