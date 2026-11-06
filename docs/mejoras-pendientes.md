@@ -15,12 +15,65 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
-## Estado a 6 de noviembre de 2026 — lo que dejó el release del 5
+## Estado a 6 de noviembre de 2026 (tarde) — recorrido en pantalla y dos decisiones
 
-Cinco encargos de Dorel mirando producción, los cinco desplegados el 5 de
-noviembre. El relato está en [traspaso-sesion.md](traspaso-sesion.md)
-§ 2 duovicies. Lo que **queda abierto** de ahí son dos cosas, y una es una
-decisión suya.
+Los cuatro puntos abiertos de la mañana están cerrados: **M-64** recorrido en
+pantalla, **N-45** decidido, **M-50** y **M-49** arreglados. El relato está en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 tervicies.
+
+⚠️ **Queda una cosa POR DESPLEGAR**: `refundRedsysPayment` (M-49) y el hosting
+de la web (M-50). Ver § 2 ter del traspaso.
+
+Y sale **una pendiente nueva**, encontrada al preparar N-45:
+
+### ⬜ M-65 · Al sustituir un contrato firmado, su PDF se pisa
+
+⚠️ **El archivado conserva los DATOS y no el FICHERO.** `generateContractPdf`
+con `supersede` copia el contrato entero a `contracts/{reservaId}-v{n}` —número,
+fecha de firma, huella SHA-256, código de verificación y los snapshots—, pero
+las rutas de Storage son **fijas por reserva**
+(`contracts/{id}/contract-signed.pdf`, en `signContract.ts`), así que al volver
+a firmar el fichero nuevo **pisa** al anterior.
+
+Consecuencias, y la segunda es la que importa:
+
+- El botón «Descargar PDF firmado» del contrato archivado —la ficha los enseña
+  a propósito, «uno que no se ve en ninguna parte es, para quien usa la
+  aplicación, uno borrado»— bajaría el PDF **nuevo**.
+- Y su **huella archivada dejaría de cuadrar** con lo que se descargue, que es
+  justo lo que esa huella existe para poder afirmar. La verificación pública no
+  se rompe —`getContractVerification` devuelve datos, no el fichero— pero diría
+  una huella que ya no corresponde a ningún PDF alcanzable.
+
+El original sobrevive solo como **generación antigua** del objeto (el versionado
+de Storage está activo desde el 11 de septiembre), recuperable con `gcloud` y no
+desde la aplicación.
+
+El arreglo son unas quince líneas: al archivar, **copiar** el objeto a
+`contracts/{id}-v{n}/contract-signed.pdf` con `file.copy()` y apuntar ahí el
+`signedPdfPath` y el `signedPdfUrl` del archivado. Hay que desplegar
+`generateContractPdf`.
+
+⚠️ **Hoy no urge porque no hay ningún contrato que sustituir** —N-45 se decidió
+que no—, pero esto hay que hacerlo **antes** de la primera sustitución real, no
+después: después el fichero ya está pisado.
+
+### ✅ N-45 · El contrato `C-0SBXUX-2026` se queda como está — decidido el 6 de noviembre de 2026
+
+**Decisión de Dorel: no se rehace.** Se le expuso qué quedaría guardado y qué
+habría que mandarle al cliente, incluido el hallazgo de M-65 (el PDF firmado
+anterior se habría pisado), y decidió dejarlo.
+
+⚠️ **Lo que queda en pie es la condición, no el riesgo de hoy:** ese PDF remite
+a una sección de datos del seguro que él no imprime, así que **si hay un
+siniestro con ese alquiler**, la cláusula de accidentes se apoya en un dato que
+no consta en el papel del cliente. Si eso llega a pasar, esto se reabre.
+
+Lo arreglado el 5 de noviembre (`contract-snapshot.ts`) vale para todos los
+contratos **nuevos**, que es lo que importaba cerrar.
+
+<details>
+<summary>Lo que se midió antes de decidirlo</summary>
 
 ### ⬜ N-45 · El contrato `C-0SBXUX-2026` sigue sin los datos del seguro
 
@@ -47,28 +100,84 @@ Lo que hay que saber antes de decidir:
 **Decide Dorel.** Si dice que no, no pasa nada mientras no haya un siniestro con
 ese alquiler; si dice que sí, son dos clics y un WhatsApp.
 
-### ⬜ M-64 · El botón «Crear reserva» y su calendario no se han visto en pantalla
+</details>
 
-La aritmética del calendario tiene **21 tests** y el recorrido está razonado
-contra el de la web pública, pero **nadie ha pulsado el botón**: la sesión local
-se quedó sin autenticar y copiar el token entre orígenes lo bloquea el
-clasificador.
+### ✅ M-64 · Recorrido en pantalla — 6 de noviembre de 2026, los cuatro pasos pasan
 
-⚠️ **Es justo el patrón de fallo dominante de este proyecto** —código escrito,
-desplegado y jamás ejecutado—, así que no es una formalidad. Lo que hay que
-recorrer, en este orden:
+Hecho con el navegador contra desarrollo, con el 4200 liberado (lo tenía
+`gate2fly-platform`). **Nada roto**, y es la primera vez que alguien lo pulsa.
 
-1. Ficha de un coche → «Crear reserva» → que el calendario pinte los días
-   ocupados de **ese** coche.
-2. Elegir un rango que cruce una reserva: tiene que **empezar de nuevo**, no
-   cerrar un rango por encima de ella.
-3. Seguir hasta crear la reserva y comprobar en Firestore que nace con el coche
-   correcto y su precio.
-4. Y el caso que de verdad importa: **el coche fijado que NO está disponible** en
-   esas fechas — tiene que quedarse en la lista con su motivo al lado, no saltar
-   al cliente con otro coche.
+| Paso | Qué se midió |
+|---|---|
+| 1 · el calendario pinta lo ocupado de **ese** coche | el Clio sale con 1–4 de diciembre `ocupado` y deshabilitados, que es su reserva real; los pasados deshabilitados, «mes anterior» apagado |
+| 2 · un rango que cruza una reserva | 28-nov → 6-dic **empieza de nuevo**: suelta el 28 y deja el 6-dic como inicio nuevo. No cierra por encima |
+| 3 · crear y leerlo en Firestore | `vehicleId` el del coche de la ficha, 3 días exactos a las 10:00 de Madrid, `netPrice 161,94 → finalPrice 195,95` |
+| 4 · **el coche fijado NO disponible** | se queda en el paso 2 con «Ya hay una reserva para estas fechas» al lado, y además levanta el aviso «Este coche no está disponible en esas fechas». No salta al cliente con otro coche |
 
-Lo puede cerrar Dorel usándolo una vez, que es como se ha cerrado casi todo aquí.
+Tres cosas más que salieron por el camino:
+
+- **El calendario lee en vivo**: creada la reserva del 6 al 9, al volver a
+  entrar esos cuatro días ya salían ocupados.
+- **La fijación sobrevive a volver atrás** —la cinta «Reserva para este coche»
+  y el calendario del Clio siguen ahí— y **«Elegir otro coche» la suelta** de
+  verdad.
+- ⚠️ **Y el precio cuadra con lo anunciado, medido contra la web**: `/api/availability`
+  da ese Clio a 3 días en `net 161,94 / gross 195,95` y la reserva nació con
+  exactamente eso. Es `netoDeEscaparate()` del 5 de noviembre funcionando en
+  vivo, y además **en la tarifa**: el snapshot no marca precio acordado, así
+  que el contrato no imprimirá ninguna línea de ajuste.
+
+La reserva de prueba se borró, comprobado en Firestore.
+
+#### Dos observaciones menores, no tocadas
+
+Ninguna engaña sobre disponibilidad —`searchAvailability()` vuelve a cruzarlo
+todo antes de guardar— así que se dejan escritas en vez de arregladas:
+
+- ⚠️ **El calendario escribe en los campos, pero los campos no escriben en el
+  calendario.** Escribiendo las fechas a mano —o volviendo atrás desde «no
+  disponible»— el calendario dice «Pulsa el día de recogida» con las fechas ya
+  puestas debajo. No confirma lo elegido, justo cuando el operador acaba de
+  corregir unas fechas malas. Arreglarlo es sincronizar en los dos sentidos, que
+  tiene riesgo de bucle: si se hace, con cuidado.
+- La URL conserva `?vehicleId=…` después de «Elegir otro coche», así que una
+  recarga vuelve a fijar el coche. Es defendible —recargar esa URL es volver a
+  entrar por ese coche— y se anota por si algún día molesta.
+
+### ✅ M-49 · La devolución a tarjeta deja ya su apunte — 6 de noviembre de 2026
+
+**Decisión de Dorel: manda el camino que mueve el dinero.** `refundRedsysPayment`
+escribe ahora la fila `deposit_refund` cuando lo devuelto era una fianza, así
+que la cabecera deja de decir «En depósito, se le devuelve al cliente: 150,00 €»
+de un dinero que ya salió.
+
+Y cierra el doble apunte que antes era posible: `depositAvailableFor()` deriva
+de las **filas vivas**, así que con el apunte escrito `depositAvailable()` baja
+a 0 y «Devolver total» se niega solo.
+
+⚠️ **Solo la fianza**, que es el matiz que había que acertar: por esa vía se
+devuelve cualquier cobro con tarjeta, y escribir `deposit_refund` para todos
+metería en el bloque de la fianza dinero que nunca lo fue. Lo decide
+`refundLeavesDepositEntry()`, pura y con su control de nueve tipos.
+
+⚠️ **Y el apunte no puede tumbar la devolución**: el dinero ya salió del banco,
+así que un fallo ahí se registra y se sigue. Misma regla que el sellado del
+contrato. **Pendiente de desplegar.**
+
+### ✅ M-50 · Los dos 404 de la ficha pública — 6 de noviembre de 2026
+
+Y no era solo ruido en la consola. El adelanto del `<head>` guardaba la promesa
+bajo `__veltoVehicle:<slug>` y `ficha()` la busca por `__veltoVehicle:<id>`:
+**la clave no coincidía ni en las fichas generadas**, así que los ~570 ms que
+ese bloque existe para ahorrar se perdían enteros desde el 31 de octubre.
+Medido contra `dev.veltorent.com`: la clave queda **sin consumir** y la petición
+buena se hace entera después.
+
+El id viaja ahora como propiedad (la página generada lo conoce en build) y el
+respaldo `coche.astro` adelanta la **flota**, que es lo que de verdad necesita
+para traducir el slug. Lo vigila una comprobación nueva en
+`comprobar-dist.mjs`, validada con **tres controles** sobre artefactos
+manipulados. **Pendiente de desplegar** (viaja con el hosting de la web).
 
 ---
 
@@ -82,7 +191,11 @@ una denegación, un reintento y dos devoluciones— están en
 Dos cosas que salieron por el camino y que **no son del cambio**: estaban antes y
 siguen estando.
 
-### ⬜ M-49 · Devolver una fianza a la tarjeta no la da por devuelta en los libros
+### ✅ M-49 · Devolver una fianza a la tarjeta no la da por devuelta en los libros
+
+> **Arreglado el 6 de noviembre de 2026** — ver arriba. El diagnóstico de abajo
+> era correcto; lo que faltaba era decidir cuál de los dos mecanismos manda, y
+> Dorel eligió que lo haga el que mueve el dinero.
 
 ⚠️ **Hay dos mecanismos para el mismo hecho y ninguno sabe del otro.**
 `refundRedsysPayment` mueve el dinero —`update` sobre el cobro, subiendo
@@ -112,7 +225,13 @@ su apunte, o la pantalla avisa de que falta darla por devuelta. Arreglar solo
 `collectedTotalsOf()` cuadraría la cabecera y dejaría la fianza contando como
 resuelta sin que nadie lo haya decidido.
 
-### ⬜ M-50 · La ficha de cada coche pide el vehículo por el slug y recibe un 404
+### ✅ M-50 · La ficha de cada coche pide el vehículo por el slug y recibe un 404
+
+> **Arreglado el 6 de noviembre de 2026** — ver arriba. ⚠️ **Y el diagnóstico de
+> abajo se quedaba corto**: no era «una petición desperdiciada», era que el
+> adelanto del `<head>` **no servía nunca**, ni en las fichas generadas, porque
+> la clave tampoco coincidía. La salida que proponía —«que la página no intente
+> el slug»— habría quitado los dos errores y dejado el adelanto igual de muerto.
 
 ⚠️ **Pasa en los DOS entornos, producción incluida.** Al abrir
 `/coche/renault-clio` la página llama a `/api/vehicle?id=renault-clio` —el slug—

@@ -4,19 +4,18 @@
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 duovicies**, que es lo último que pasó (del 4 al 6
-> de noviembre: cinco cosas que vio Dorel usando la aplicación —el enumerado en
-> crudo en los conceptos de cobro, el backoffice cobrando por encima de lo que
-> anuncia la web, la pestaña en blanco del PDF, el contrato **firmado** sin los
-> datos del seguro, y la reserva desde la ficha del coche— con su despliegue de
-> 16 functions); después **§ 2 unvicies** (2 de noviembre: BBVA entregó el
-> entorno de pruebas del TPV y desarrollo pasó al comercio propio de VELTO);
-> después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap anunciaba fichas
-> que no existían y el backoffice de producción resultó ser indexable); después
-> **§ 2 ter**, que dice qué falta por desplegar —hoy **nada**, y por eso esa
-> sección empieza por cómo volver a medirlo en vez de por una lista—; y luego
-> **§ 5**, con los huecos que solo puede cerrar Dorel, que son los únicos que
-> siguen abiertos de verdad.
+> **Orden de lectura:** **§ 2 tervicies**, que es lo último que pasó (6 de
+> noviembre por la tarde: el botón «Crear reserva» recorrido **en pantalla** por
+> primera vez, y dos arreglos — la devolución de fianza a tarjeta que no llegaba
+> a los libros, y el adelanto de la ficha pública que no servía nunca); después
+> **§ 2 duovicies** (del 4 al 6: cinco cosas que vio Dorel usando la aplicación,
+> con su despliegue de 16 functions); después **§ 2 unvicies** (2 de noviembre:
+> BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al comercio
+> propio de VELTO); después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap
+> anunciaba fichas que no existían y el backoffice de producción resultó ser
+> indexable); después **§ 2 ter**, que dice qué falta por desplegar —hoy **sí
+> falta**: una function y el hosting de la web—; y luego **§ 5**, con los huecos
+> que solo puede cerrar Dorel.
 >
 > ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
 > BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
@@ -27,11 +26,13 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **Y lo segundo: producción está AL DÍA.** El release salió el 5 de
-> noviembre —`3e8a899`, con sus 16 functions— y lo que `develop` lleva por
-> delante es **esta documentación y un arreglo que solo afecta a los tests**
-> (el shebang del guion del sitemap). **Nada que desplegar** — pero eso envejece
-> en cuanto alguien toque algo, así que se **mide**, no se copia de aquí.
+> ⚠️ **Y lo segundo: desde la tarde del 6 de noviembre SÍ hay cosas esperando.**
+> El release del 5 (`3e8a899`, con sus 16 functions) sigue siendo lo que corre
+> producción, y por delante van dos arreglos: **`refundRedsysPayment`**, que
+> hay que desplegar a mano, y el de la **web pública**, que viaja con el hosting
+> en el merge. Los dos son de comportamiento y ninguno cambia la forma de una
+> respuesta, así que el orden entre frontend y function da igual aquí. El detalle
+> está en **§ 2 ter** — y se **mide**, no se copia de aquí.
 >
 > ⚠️ **Y mide las ramas contra `origin/`, no contra la local: ha fallado DOS
 > veces seguidas.** El 2 de noviembre la comparación dio **12** donde había
@@ -2359,13 +2360,153 @@ entre entornos la paga siempre el que mide en local.
 
 ---
 
+## 2 tervicies. El 6 de noviembre por la tarde — lo que pasa al pulsar de verdad
+
+Tres cosas: **M-64 recorrido en pantalla** (que era el encargo), **N-45
+decidido** y dos arreglos, **M-49** y **M-50**. De los dos arreglos, el segundo
+resultó ser bastante más que lo que decía su ficha.
+
+### 1 · El botón «Crear reserva»: nada roto, y esta vez está pulsado
+
+Se desplegó el 5 de noviembre con 21 tests de la aritmética y **sin que nadie lo
+hubiera abierto**, que es el patrón de fallo dominante de esta casa. Recorridos
+los cuatro pasos contra desarrollo: **los cuatro pasan**.
+
+⚠️ **Lo primero fue liberar el 4200**, que lo tenía el `ng serve` de
+`gate2fly-platform` — es exactamente lo que impidió hacer esto el día 5, porque
+la sesión de Playwright está atada al origen y copiar la credencial entre
+orígenes lo bloquea el clasificador. Si vuelve a estar ocupado: `netstat -ano`
+para ver qué hay y pararlo, no servir en otro puerto.
+
+| Paso | Qué contestó la pantalla |
+|---|---|
+| el calendario pinta lo ocupado de **ese** coche | el Clio con 1–4 de diciembre `ocupado` y deshabilitados — su reserva real |
+| un rango que **cruza** una reserva | 28-nov → 6-dic **empieza de nuevo**; no cierra por encima |
+| crear y leerlo **en Firestore** | coche correcto, 3 días a las 10:00 de Madrid, `netPrice 161,94 → finalPrice 195,95` |
+| **el coche fijado NO disponible** | se queda en la lista con «Ya hay una reserva para estas fechas» **y** levanta su aviso. No salta al cliente con otro coche |
+
+⚠️ **Y de regalo quedó verificado en vivo el arreglo del 5 de noviembre**, que
+era lo que de verdad convenía confirmar: `/api/availability` anuncia ese Clio a
+3 días en `net 161,94 / gross 195,95` y la reserva nació **con la misma cifra al
+céntimo**. O sea que `netoDeEscaparate()` hace lo que prometía, y lo hace **en la
+tarifa**: el snapshot no marca precio acordado, así que el contrato no imprime
+ninguna línea de ajuste que nadie pactó.
+
+Salieron además dos cosas menores que **no se tocaron** y están escritas en
+[mejoras-pendientes.md](mejoras-pendientes.md) (M-64): el calendario escribe en
+los campos pero los campos no escriben en el calendario —así que al volver atrás
+desde «no disponible» el calendario no marca las fechas malas—, y la URL
+conserva el `vehicleId` tras «Elegir otro coche».
+
+### 2 · N-45: el contrato `C-0SBXUX-2026` se queda como está
+
+**Decisión de Dorel.** Lo que se le puso delante antes de decidir fue qué queda
+**guardado**, que es la lección de § 2 duovicies —«se dibuja dos veces» le sonó a
+«se guardan dos»— aplicada a propósito: no cómo funciona el mecanismo, sino qué
+aparece en el disco y qué hay que mandarle al cliente.
+
+⚠️ **Y preparando esa respuesta salió un defecto que nadie había visto: al
+sustituir un contrato, su PDF firmado se PISA.** El archivado copia el documento
+entero —número, fecha, huella, código de verificación— pero las rutas de Storage
+son **fijas por reserva**, así que el PDF nuevo escribe encima del anterior: el
+botón «Descargar PDF firmado» del archivado bajaría el nuevo, y la huella
+guardada dejaría de cuadrar con él. Es **M-65**, y la nota que importa es
+*cuándo*: hay que arreglarlo **antes** de la primera sustitución real, porque
+después el fichero ya está pisado. Hoy no corre prisa precisamente porque se
+decidió no rehacer ninguno.
+
+### 3 · M-49: el dinero salía del banco y los libros no se enteraban
+
+Había **dos mecanismos para el mismo hecho y ninguno sabía del otro**:
+`refundRedsysPayment` movía el dinero y no escribía fila; las filas
+`deposit_refund` solo las creaba el botón «Devolver total», que escribe el
+apunte y no mueve un euro.
+
+**Decisión de Dorel: manda el camino que mueve el dinero.** El motivo es el de
+siempre aquí — los libros no pueden depender de que alguien se acuerde de pulsar
+un segundo botón. Y cierra de paso el doble apunte que antes era posible:
+`depositAvailableFor()` deriva de las **filas vivas**, así que con el apunte
+escrito `depositAvailable()` baja a 0 y «Devolver total» se niega solo.
+
+⚠️ **Solo la fianza**, que es lo que había que acertar: por esa vía se devuelve
+cualquier cobro con tarjeta, y escribir `deposit_refund` para todos metería en el
+bloque de la fianza dinero que nunca lo fue — el mismo descuadre por la puerta de
+atrás. Y ⚠️ **el apunte no puede tumbar la devolución**: el dinero ya salió, así
+que un fallo ahí se registra con su importe y se sigue. Misma regla que el
+sellado del contrato, que nunca aborta la firma.
+
+### 4 · M-50 no era ruido en la consola: el adelanto llevaba seis días muerto
+
+La ficha pedía `/api/vehicle?id=renault-clio`, recibía 404 y reintentaba con el
+id. Eso decía la ficha de M-50, y **se quedaba corta**.
+
+⚠️ **El adelanto del `<head>` no servía NUNCA, ni en las fichas generadas.**
+Guardaba la promesa bajo `__veltoVehicle:<slug>` y `ficha()` la busca por
+`__veltoVehicle:<id>`: la clave no coincidía, así que los ~570 ms que ese bloque
+existe para ahorrar se perdían enteros desde el 31 de octubre, cuando la
+dirección pasó a ser un slug. `FichaCoche.astro` se adaptó aquel día y
+`Base.astro` no.
+
+**Lo que lo demostró fue mirar si la clave se CONSUME**, no contar peticiones: en
+local, sin backend, el adelanto falla y se reintenta igual, así que el número de
+peticiones no distingue nada. Contra `dev.veltorent.com` la clave queda **sin
+consumir**; con el arreglo, **consumida**.
+
+⚠️ **Y la salida que la ficha proponía —«que la página no intente el slug»—
+habría quitado los dos errores y dejado el adelanto igual de muerto.** Es el
+aviso de siempre: el diagnóstico escrito hace días describe el síntoma que se
+vio, no necesariamente la avería.
+
+El id viaja ahora como propiedad —la página generada lo conoce en build— y el
+respaldo `coche.astro` adelanta la **flota**, que es lo que de verdad necesita
+para traducir el slug. Lo vigila una comprobación nueva en `comprobar-dist.mjs`,
+que corre **entre compilar y publicar**: nada podía cazar esto antes de ahí —no
+es un error de tipos, ningún test de fuente conoce los ids, y la página funciona
+igual, solo que más lenta—. Validada con **tres controles** sobre artefactos
+manipulados a mano: la clave con el slug, la ficha que deja de adelantar y el
+respaldo que adivina un id. Las tres fallan; el artefacto bueno pasa.
+
+### Y una lección de método
+
+⚠️ **Una pantalla que «no engaña» puede estar costando medio segundo en cada
+visita, y eso no lo cuenta ningún test.** M-50 estaba clasificada como ruido de
+consola —«no está roto», decía su ficha, y era verdad— y debajo había una
+optimización entera sin funcionar. Cuando algo deja de encajar tras un cambio de
+formato de URL, conviene preguntarse **qué más leía ese formato**, no solo qué
+se ve roto.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-**Medido el 6 de noviembre de 2026, después del despliegue: NO FALTA NADA.**
-`master` y `develop` están en el mismo commit y producción corre el código de
-hoy.
+⚠️ **Medido el 6 de noviembre de 2026 por la TARDE: sí falta, y son dos cosas.**
+Por la mañana no faltaba nada; el trabajo de la tarde (§ 2 tervicies) dejó esto
+esperando:
 
-**No te fíes de esta frase — vuelve a preguntarlo, porque envejece cada sesión:**
+| Qué | Cómo sale | Por qué |
+|---|---|---|
+| **`refundRedsysPayment`** | a mano, por nombre | M-49: la devolución de fianza a tarjeta no deja apunte en los libros hasta que esta function se despliegue |
+| **el hosting de la web** | con el merge a `master` (lo publica el CI) | M-50: el adelanto de la ficha pública |
+
+```powershell
+# M-49. Una sola function: no hace falta tanda.
+firebase deploy --only functions:refundRedsysPayment --project prod
+```
+
+⚠️ **El orden entre las dos da igual aquí, y conviene saber por qué**: la regla
+de la casa es que una function que cambia la **forma** de su respuesta va
+después del frontend que la lee. `refundRedsysPayment` devuelve exactamente lo
+mismo que antes —`refunded`, `remaining`, `authorizationCode`, `responseCode`—
+y solo escribe una fila de más, así que es un cambio de **comportamiento**. Y el
+de la web no toca ninguna function.
+
+⚠️ **Y `refundRedsysPayment` es la que saca dinero.** Antes de desplegarla,
+comprueba el bundle como lo carga el contenedor
+(`cd functions && node -e "require('./lib/index.js')"`) — hecho el 6 de
+noviembre: carga, y el manifiesto responde **200 en 0,56 s con las 38**.
+
+**No te fíes de la tabla de arriba — vuelve a preguntarlo, porque envejece cada
+sesión:**
 
 ```bash
 git log --oneline origin/master..HEAD                # develop por delante de produccion
@@ -2385,18 +2526,22 @@ npx firebase functions:list --project prod --json > fn.json
 
 ### El estado medido
 
-**Vuelto a medir el 6 de noviembre de 2026: producción está al día y las dos
-ramas en el mismo commit.**
+**Vuelto a medir el 6 de noviembre de 2026 por la tarde**, con `git fetch`
+delante:
 
 | | |
 |---|---|
 | `origin/master` | **`3e8a899`** — desplegado y verificado el 5 de noviembre |
-| `origin/develop` | dos commits por delante: **esta documentación** y el shebang del guion del sitemap, que solo cambiaba si el spec cargaba |
-| ¿hay que desplegar algo? | **no.** Las 16 functions del release salieron el 5, el hosting lo publicó el CI, y lo de después no toca ni el bundle ni `functions/` |
+| `origin/develop` | **cinco** commits por delante: tres de documentación y el shebang (ninguno toca el bundle) **y los dos arreglos de la tarde** |
+| ¿hay que desplegar algo? | **sí**: `refundRedsysPayment` a mano y el hosting de la web con el merge. Ver la tabla del principio de esta sección |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
 | rewrites de la web | los cinco responden; `/api/pagar-senal`, solo en desarrollo |
 | las dos más viejas | `syncAuthClaims` y `onAuthorizedUserChanged`, del **25 de septiembre** — les falta solo el refactor de imports (M-60) |
+
+> Aquí ponía, esa misma mañana, que **no faltaba nada**. Siguió siendo cierto
+> unas horas. Es la sexta vez que esta sección envejece, y la única frase que no
+> lo hace es la de arriba: vuelve a medirlo.
 
 ⚠️ **Las 16 del 5 de noviembre se ven en la marca de tiempo, y es la forma de
 contestar «¿está desplegado mi arreglo?»** sin fiarse de ninguna frase de este
@@ -2546,7 +2691,7 @@ que tener en la cabeza al retomar:
 | Qué | A quién espera | Qué desbloquea |
 |---|---|---|
 | **El pase a producción del TPV** | **Dorel lo pide, BBVA lo concede** | cobrar en producción con el comercio **propio** y no con el `361040215` prestado |
-| **Rehacer `C-0SBXUX-2026`, o no** | **Dorel** | que ese contrato firmado lleve la póliza y el teléfono de asistencia. El arreglo del 5 de noviembre vale para los nuevos; un PDF sellado **no se puede corregir**, hay que sustituirlo (`supersede`) y volver a firmarlo. Si no se hace, el contrato sigue remitiendo a una sección que no imprime |
+| ~~Rehacer `C-0SBXUX-2026`~~ | ✅ **decidido el 6 de noviembre: NO se rehace** | queda en pie la condición, no la tarea: ese PDF remite a unos datos del seguro que no imprime, así que **si hay un siniestro con ese alquiler**, esto se reabre. Los contratos nuevos ya salen bien |
 | Encender el pago de la señal | **Dorel**, cuando el TPV esté concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y el rewrite `/api/pagar-senal`, que solo está en desarrollo** |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
