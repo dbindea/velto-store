@@ -1,6 +1,16 @@
-#!/usr/bin/env node
 /**
  * ¿Lo que el sitemap PROMETE existe de verdad en `web/dist`?
+ *
+ * ⚠️ **Y no lleva `#!/usr/bin/env node`, aunque sea un guion.** Lo llevó hasta
+ * el 6 de noviembre de 2026, y con él `comprobar-dist.spec.ts` **no cargaba en
+ * esta máquina**: el import del spec reventaba con `SyntaxError: Invalid or
+ * unexpected token` señalando su propia línea 2, que es un error que manda a
+ * buscar el fallo en el fichero equivocado. Pasa con Node 24 y no con el 22 que
+ * usa el CI, así que la suite de la web salía **verde en GitHub y roja en el
+ * portátil** — y una suite que siempre tiene un fichero en rojo es una suite que
+ * se deja de mirar. Nada lo ejecuta como `./comprobar-dist.mjs`: los tres
+ * workflows lo llaman `node web/scripts/comprobar-dist.mjs`, así que la línea
+ * solo decoraba.
  *
  * ⚠️ **Nace de un fallo que estuvo vivo veintiocho días y no lo vio nadie.** El
  * 30 de octubre de 2026 Dorel trajo una captura de Search Console: quince
