@@ -24,10 +24,15 @@ ratón), **M-67** (el bloque del coche fijado, alineado y con su ritmo),
 porcentaje que toca). El relato está en
 [traspaso-sesion.md](traspaso-sesion.md) § 2 quatervicies.
 
-⚠️ **Y queda UNA COSA QUE HACER TÚ en producción**: el apunte de 102,90 € del
-Ford Custom está registrado como «Por traer el cliente» con un 0 %. Ya se puede
-arreglar desde la aplicación —se pulsa la chapa del concepto—, pero la
-corrección la tienes que hacer tú: yo no escribo en producción. Ver M-69.
+**Las cuatro están en producción** desde el merge `0f382f4` de esa noche, y
+Dorel las recorrió allí: «probado y todo perfecto». M-67 llevó **dos** intentos
+—la primera alineación eligió la referencia equivocada—, y eso está contado en
+su ficha porque es la parte que enseña algo.
+
+⚠️ **Lo único que no podía hacer yo era la corrección del apunte**: el de
+102,90 € del Ford Custom nació como «Por traer el cliente» con un 0 %, y
+arreglarlo es escribir en producción. El botón que lo permite ya está allí —se
+pulsa la chapa del concepto—. Ver M-69.
 
 ### ✅ M-69 · «Asignar venta» solo sabía crear comisiones de captación *(6 nov 2026)*
 

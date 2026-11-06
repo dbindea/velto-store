@@ -17,9 +17,10 @@
 > BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al comercio
 > propio de VELTO); después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap
 > anunciaba fichas que no existían y el backoffice de producción resultó ser
-> indexable); después **§ 2 ter**, que dice qué falta por desplegar —hoy **sí
-> falta**: una function y el hosting de la web—; y luego **§ 5**, con los huecos
-> que solo puede cerrar Dorel.
+> indexable); después **§ 2 ter**, que dice qué falta por desplegar —al cerrar
+> el 6 de noviembre, **nada**: el merge a `master` publicó el hosting y la
+> function de M-49 la subió Dorel a mano—; y luego **§ 5**, con los huecos que
+> solo puede cerrar Dorel.
 >
 > ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
 > BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
@@ -30,12 +31,15 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y
-> queda UNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche, así que
-> M-49 está cerrado de punta a punta; lo que sigue viajando con el **merge a
-> `master`** es el hosting —la web pública (M-50) y todo el frontend del 6—. No
-> cambia la forma de ninguna respuesta, así que el orden con las functions da
-> igual. El detalle está en **§ 2 ter** — y se **mide**, no se copia de aquí.
+> ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y no
+> queda NINGUNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche y el
+> resto —la web pública (M-50) y todo el frontend del día— salió con el merge a
+> `master` (`0f382f4`), que el CI publicó en los dos targets. **Comprobado
+> contra producción, no contra el log del CI**: `rentalcar.veltomobility.com`
+> sirve ya las claves nuevas (`collaborators.editKind`) además del `.web.app`,
+> o sea que Cloudflare no se quedó con la copia vieja, y
+> `veltomobility.com/robots.txt` anuncia el sitemap, que es la marca del build
+> real. Dorel lo recorrió entero en producción: **«probado y todo perfecto»**.
 >
 > ⚠️ **Y lo tercero, con fecha encima: VeriFactu está anunciado para octubre de
 > 2028 y NO publicado.** Dorel trajo la noticia el 6 de noviembre. Hacienda
@@ -2623,14 +2627,23 @@ se ve roto.
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **Medido el 6 de noviembre de 2026 por la TARDE: sí falta, y son dos cosas.**
-Por la mañana no faltaba nada; el trabajo de la tarde (§ 2 tervicies) dejó esto
-esperando:
+⚠️ **Al cerrar el 6 de noviembre de 2026: NADA.** Durante la tarde faltaron dos
+cosas y las dos salieron esa misma noche, así que esta tabla queda como
+histórico — **no la creas, vuelve a medirlo con los comandos del final**:
 
-| Qué | Cómo sale | Por qué |
+| Qué | Cómo salió | Por qué |
 |---|---|---|
-| ~~**`refundRedsysPayment`**~~ | ~~a mano, por nombre~~ | **DESPLEGADA** por Dorel esa misma noche. M-49 cerrado de punta a punta |
-| **el hosting de la web** | con el merge a `master` (lo publica el CI) | M-50: el adelanto de la ficha pública |
+| ~~**`refundRedsysPayment`**~~ | ~~a mano, por nombre~~ | **DESPLEGADA** por Dorel. M-49 cerrado de punta a punta |
+| ~~**el hosting**~~ | ~~con el merge a `master`~~ | **PUBLICADO** en `0f382f4`: la web pública (M-50) y el frontend del día, los dos targets |
+
+⚠️ **Y lo publicado se comprobó CONTRA PRODUCCIÓN, no contra el log del CI.**
+Un `success` dice que el CI terminó, no que el dominio sirva lo nuevo — que es
+justo donde se cuela la caché de Cloudflare. Lo que lo contesta es pedir un
+fichero que haya cambiado: `assets/i18n/es.json` va con `no-cache` y hoy traía
+claves nuevas, así que `grep editKind` sobre los **dos** hosts —el `.web.app` y
+el dominio propio— distingue «publicado» de «publicado y servido». Los dos lo
+traían. Para el escaparate vale `robots.txt`, que solo anuncia el sitemap en
+modo `live`.
 
 ```powershell
 # M-49. Una sola function: no hace falta tanda. Hecho el 6 de noviembre.
