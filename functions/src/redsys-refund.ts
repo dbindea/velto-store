@@ -25,7 +25,9 @@ import { firestore } from './admin-guard';
 import { signRedsysParameters } from './redsys';
 import {
   RefundablePayment,
+  internalReference,
   refundAccepted,
+  refundLeavesDepositEntry,
   refundProblem,
   refundableAmount,
   roundMoney,
@@ -233,6 +235,80 @@ export const refundRedsysPayment = onCall(
       }),
       updatedAt: FieldValue.serverTimestamp()
     });
+
+    /**
+     * Y el apunte en los libros, si lo que se ha devuelto era una fianza.
+     *
+     * ⚠️ **Va DESPUÉS de que el banco acepte, y no puede tumbar la
+     * devolución.** El dinero ya salió: lanzar aquí le diría al operador que la
+     * devolución falló cuando sí se hizo, y lo que sigue a eso es reintentar —
+     * dinero fuera dos veces, que es justo lo que el resto de esta function
+     * está escrita para impedir. Si falla, se registra y se sigue: un apunte
+     * que falta se arregla a mano; una devolución repetida, con una llamada al
+     * comercio.
+     *
+     * Es la misma regla que el sellado del contrato, que nunca aborta la firma.
+     */
+    if (refundLeavesDepositEntry(pagoFinal)) {
+      try {
+        const p = (snapFinal.data() || {}) as Record<string, unknown>;
+        await db.collection('payments').add({
+          reservationId: p['reservationId'] ?? null,
+          clientId: p['clientId'] ?? null,
+          vehicleId: p['vehicleId'] ?? null,
+          type: 'deposit_refund',
+          method: 'redsys',
+          status: 'paid',
+          amount: importe,
+          paidAmount: importe,
+          paidAt: FieldValue.serverTimestamp(),
+          /*
+           * El TIPO, no la frase: lo escribe el sistema, así que lo traduce
+           * quien lo lee. Guardar aquí «Devolución de fianza» congelaría el
+           * castellano en el recibo de un cliente inglés. Ver
+           * `payment-concept.ts`.
+           */
+          concept: 'deposit_refund',
+          notes: (data.reason || '').trim() || null,
+          source: 'redsys_refund',
+          /*
+           * Los snapshots se copian del cobro devuelto en vez de leer la
+           * reserva: son los mismos datos congelados y ahorran una lectura en
+           * el camino por el que sale dinero.
+           */
+          clientSnapshot: p['clientSnapshot'] ?? null,
+          vehicleSnapshot: p['vehicleSnapshot'] ?? null,
+          reservationSnapshot: p['reservationSnapshot'] ?? null,
+          /** De qué cobro sale, para poder cuadrarlo sin adivinar por importes. */
+          refundOfPaymentId: paymentId,
+          internalReference: internalReference('REF'),
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+
+        /*
+         * ⚠️ **Y se toca la reserva, igual que hace el webhook del cobro.** El
+         * resumen embebido lo recalcula el frontend
+         * (`reconcileAfterExternalPayment`), que escucha esta colección: sin
+         * esto la ficha abierta sí se enteraría —por el oyente de `payments`—
+         * pero una que se abra más tarde leería la copia vieja.
+         */
+        const reservationId = p['reservationId'];
+        if (typeof reservationId === 'string' && reservationId) {
+          await db
+            .collection('reservations')
+            .doc(reservationId)
+            .update({ paymentUpdatedAt: FieldValue.serverTimestamp() });
+        }
+      } catch (err) {
+        console.error(
+          `Devolución ACEPTADA por el banco (${importe} € del pago ${paymentId}) y NO se pudo ` +
+            `escribir su apunte deposit_refund. La reserva dirá que la fianza sigue en depósito ` +
+            `hasta que se apunte a mano.`,
+          err
+        );
+      }
+    }
 
     return {
       refunded: importe,

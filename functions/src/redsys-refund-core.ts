@@ -20,6 +20,8 @@
 export interface RefundablePayment {
   status?: string;
   method?: string;
+  /** El tipo de cobro. Decide si la devolución deja además apunte de fianza. */
+  type?: string;
   /** Lo que de verdad entró. */
   paidAmount?: number;
   /** Lo ya devuelto de este mismo cobro, si hubo devoluciones parciales. */
@@ -144,4 +146,47 @@ export function refundAccepted(responseCode: string | number | undefined): boole
   const n = Number(responseCode);
   if (!Number.isFinite(n)) return false;
   return n >= 900 && n <= 999;
+}
+
+/**
+ * ¿Esta devolución tiene que dejar además un apunte de fianza devuelta?
+ *
+ * ⚠️ **Había DOS mecanismos para el mismo hecho y ninguno sabía del otro**
+ * (M-49, decidido por Dorel el 6 de noviembre de 2026). `refundRedsysPayment`
+ * mueve el dinero —sube `refundedAmount`— y no escribía ninguna fila; las filas
+ * `deposit_refund` solo las creaba el botón «Devolver total» de la ficha, que
+ * escribe el apunte y **no mueve un euro**. Devuelta la fianza entera a la
+ * tarjeta, la ficha del cobro decía «devuelto» y la cabecera de la reserva
+ * seguía diciendo **«En depósito, se le devuelve al cliente: 150,00 €»**: una
+ * deuda con el cliente que ya se había pagado.
+ *
+ * Manda el camino que mueve el dinero. El motivo es el de siempre aquí: los
+ * libros no pueden depender de que alguien se acuerde de pulsar un segundo
+ * botón — y de paso `depositAvailable()` baja a 0, así que el doble apunte que
+ * antes era posible queda cerrado por el propio tope.
+ *
+ * ⚠️ **Solo la FIANZA, y ese es el matiz que hay que acertar.** Por aquí se
+ * devuelve cualquier cobro con tarjeta: una señal, el resto del alquiler, un
+ * cargo extra. Escribir `deposit_refund` para todos metería en el bloque de la
+ * fianza dinero que nunca fue fianza, y `depositReturned` —que es lo que esta
+ * corrección arregla— contaría de más. Para los demás tipos basta
+ * `refundedAmount`, que es lo que ya descuenta `sumPaid()` en Informes.
+ */
+export function refundLeavesDepositEntry(
+  payment: RefundablePayment | null | undefined
+): boolean {
+  return payment?.type === 'deposit';
+}
+
+/**
+ * La referencia interna de un apunte escrito por el backend.
+ *
+ * Misma forma que `generateInternalReference()` de la app —prefijo, instante en
+ * base 36 y cuatro caracteres al azar—, duplicada a propósito como el resto:
+ * las functions no comparten módulo con el frontend.
+ */
+export function internalReference(prefix = 'PMT'): string {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${ts}-${rand}`;
 }
