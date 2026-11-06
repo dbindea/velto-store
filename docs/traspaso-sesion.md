@@ -2452,11 +2452,34 @@ conservaba el id viejo: «Asignar» quedaba habilitado y `confirmAssign()` salí
 por la puerta de atrás sin escribir. Ahora manda la clase que sí queda libre, la
 pista lo explica, y el botón mira la reserva **resuelta** y no el id guardado.
 
-⚠️ **Lo que queda es decisión de Dorel, y no se puede hacer desde la
-aplicación.** El apunte de producción tiene el dinero bien y el concepto mal, y
-`collaboratorSales` **no tiene ni borrado ni cambio de clase en la interfaz**.
-Las tres consecuencias y el riesgo de duplicado al cerrar esa reserva están en
-[mejoras-pendientes.md](mejoras-pendientes.md) § M-69.
+### 5 · Y lo ya registrado se puede corregir: la chapa del concepto se pulsa
+
+Dorel eligió esta salida de las tres que se le ofrecieron. La chapa de cada
+fila abre un editor con la clase y el porcentaje.
+
+⚠️ **Funciona con la venta ya PAGADA, al revés que el botón del importe.**
+Corregir el concepto **no mueve dinero**: `commissionAmount` no se toca. El
+botón del importe solo aparece mientras está pendiente porque allí el dinero no
+había salido todavía — son dos reglas distintas y cada una tiene su motivo.
+
+⚠️ **Comprueba el duplicado antes de escribir**, igual que `assignSale()`: una
+reserva admite un apunte de cada clase, no dos de la misma.
+
+Probado **reproduciendo la fila de producción** en desarrollo: se dejó un
+reparto en «POR TRAER EL CLIENTE · 260,00 € × 0% = 0,00 €, ajustado a
+195,00 €» y se corrigió a «POR CEDER EL COCHE · 260,00 € × 75% · 195,00 €», con
+la marca de ajuste desaparecida —el servicio borra `adjustmentReason` con
+`deleteField()` cuando el calculado vuelve a ser el importe— y la chapa de
+«falta su factura» de vuelta. El guardia del duplicado rechaza sin escribir.
+
+⚠️ **Lo que tiene que hacer Dorel en producción**: abrir la ficha de Adrian
+Puenaru, pulsar la chapa de esa fila y elegir «Por ceder el coche» con el 75 %
+que se propone. **Yo no escribo en producción.**
+
+⚠️ **Y el riesgo de duplicado está descartado**, preguntado ese mismo día: la
+reserva ya estaba cerrada cuando asignó la venta y no apareció ningún reparto
+pendiente, así que no tiene `ownerShareSnapshot`. Eso mismo explica el origen:
+el coche se dio de alta como cedido **después** de crear la reserva.
 
 ⚠️ **Todo esto es frontend: no hay nada que desplegar a mano.** Entra con el CI
 al mergear. Lo que sigue pendiente de despliegue manual es lo de la tarde

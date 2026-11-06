@@ -34,6 +34,7 @@ import {
   commissionAmount,
   hasPeriod,
   isAdjusted,
+  kindPercentProblem,
   periodSummary,
   saleDate,
   salesInPeriod,
@@ -330,6 +331,17 @@ export class CollaboratorDetailComponent implements OnInit {
     this.assignAmount = null;
     this.assignReason = '';
     this.assignKind.set('referral');
+    await this.cargarContexto();
+  }
+
+  /**
+   * Reservas, ventas y de quién es cada coche.
+   *
+   * ⚠️ **Lo necesitan los DOS sitios que deciden una clase**: asignar una venta
+   * nueva y corregir la de una ya creada. Cargándolo cada uno por su cuenta,
+   * las dos pantallas podrían proponer cosas distintas sobre la misma reserva.
+   */
+  private async cargarContexto(): Promise<void> {
     try {
       const [todas, ventas, coches] = await Promise.all([
         firstValueFrom(this.reservations.getReservations()),
@@ -504,6 +516,86 @@ export class CollaboratorDetailComponent implements OnInit {
 
   get assignDelta(): number {
     return Math.round((Number(this.assignAmount || 0) - this.calculatedCommission) * 100) / 100;
+  }
+
+  // --- Corregir por qué se le debe una venta ya creada ---------------------
+
+  /**
+   * ⚠️ **Se puede con la venta ya PAGADA, al revés que el importe.** Corregir
+   * el concepto no mueve dinero: `commissionAmount` no se toca. Lo que se
+   * arregla es qué significa esa cifra — y con ello el seguimiento de la
+   * factura del propietario y la línea en la que sale en Informes.
+   */
+  editingKindId: string | null = null;
+  editKind: CommissionKind = 'referral';
+  editKindPercent: number | null = null;
+
+  async startEditKind(sale: CollaboratorSale, e: Event): Promise<void> {
+    e.stopPropagation();
+    /**
+     * Las reservas y los coches hacen falta para **proponer** el porcentaje.
+     * Se cargan aquí y no al abrir la ficha: corregir un concepto es raro, y no
+     * compensa pagar dos lecturas en cada visita por si acaso.
+     */
+    await this.cargarContexto();
+    this.editingKindId = sale.id!;
+    this.editKind = sale.kind;
+    this.editKindPercent = Number(sale.commissionPercent) || 0;
+    this.onEditKindChosen(sale);
+  }
+
+  cancelEditKind(e: Event): void {
+    e.stopPropagation();
+    this.editingKindId = null;
+  }
+
+  /** La reserva y el coche de una venta ya creada, para proponer con ellos. */
+  private contextoDe(sale: CollaboratorSale) {
+    const reserva = this.todasLasReservas().find((r) => r.id === sale.reservationId);
+    const coche = reserva?.vehicleId ? this.cochePorId()[reserva.vehicleId] : undefined;
+    return { reserva, coche };
+  }
+
+  /**
+   * Al cambiar la clase, propone el porcentaje de esa clase.
+   *
+   * ⚠️ **Propone y no impone**, porque lo que se está arreglando es un apunte
+   * viejo: el porcentaje que se pactó entonces puede no ser el de la ficha de
+   * hoy, y el operador es quien lo sabe.
+   */
+  onEditKindChosen(sale: CollaboratorSale): void {
+    const { reserva, coche } = this.contextoDe(sale);
+    this.editKindPercent = suggestedPercentFor(
+      this.editKind,
+      reserva,
+      this.collaborator(),
+      coche
+    );
+  }
+
+  /** Lo que daría el porcentaje escrito. El importe NO se toca al corregir. */
+  editKindCalculated(sale: CollaboratorSale): number {
+    return commissionAmount(Number(sale.netAmount) || 0, Number(this.editKindPercent) || 0);
+  }
+
+  async saveKind(sale: CollaboratorSale, e: Event): Promise<void> {
+    e.stopPropagation();
+    const problema = kindPercentProblem(this.editKindPercent);
+    if (problema) {
+      this.notifications.error(problema);
+      return;
+    }
+    this.working.set(true);
+    try {
+      await this.service.updateSaleKind(sale, this.editKind, Number(this.editKindPercent));
+      this.editingKindId = null;
+      this.notifications.success('collaborators.kindUpdated');
+      await this.load(this.collaborator()!.id!);
+    } catch (err) {
+      this.notifications.error(this.errorKeyOf(err));
+    } finally {
+      this.working.set(false);
+    }
   }
 
   // --- Cambiar el importe de una venta ya creada ---------------------------

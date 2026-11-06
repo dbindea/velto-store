@@ -648,10 +648,20 @@
 // Por qué se le debe: la etiqueta de cada fila.
 // Turquesa para el reparto por el coche y neutra para la captación, porque el
 // color sigue al concepto y no a su posición en la lista.
+/**
+ * La chapa del concepto, que desde el 6 de noviembre de 2026 es un BOTÓN.
+ *
+ * ⚠️ **Hay que repetir lo que un `<button>` trae de serie y no queremos**:
+ * `font` no se hereda en un control de formulario, y el navegador le pone su
+ * propio `background`, su borde y su alineación vertical. Sin esto la chapa
+ * dejaba de parecer una chapa en cuanto cambió de etiqueta.
+ */
 .kind-tag {
   align-self: flex-start;
+  font-family: inherit;
   font-size: 0.7rem;
   font-weight: 600;
+  line-height: 1.4;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.125rem 0.375rem;
@@ -659,10 +669,51 @@
   background: var(--bg-input);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
+  cursor: pointer;
 
   &.owner {
     color: var(--accent-color);
     border-color: var(--accent-color);
+  }
+
+  /*
+   * ⚠️ El tinte se SUPERPONE, no sustituye: `--bg-hover` es translúcido y
+   * escrito como `background` a secas borraría el relleno de la chapa.
+   */
+  &:hover:not(:disabled) {
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+/**
+ * Corregir el concepto de una venta ya creada.
+ *
+ * ⚠️ Va **debajo de la fila entera** y no al lado de la chapa: son dos
+ * controles y dos botones, y metidos en la línea del concepto empujarían el
+ * coche y la fecha fuera de la pantalla en un móvil.
+ */
+.kind-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  min-width: 0;
+
+  .form-control {
+    width: auto;
+    min-width: 120px;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .form-control.narrow {
+    min-width: 72px;
+    max-width: 90px;
   }
 }
 

@@ -241,6 +241,30 @@ export function suggestedPercentFor(
   return 0;
 }
 
+/**
+ * ¿Vale este porcentaje para corregir la clase de un apunte ya creado?
+ *
+ * ⚠️ **Corregir el concepto NO mueve dinero, y por eso se puede hacer con el
+ * apunte ya pagado.** Lo que cambia es `kind` y el porcentaje con el que se
+ * explica la cifra; `commissionAmount` —lo que se le debe o ya se le entregó—
+ * se queda intacto. Esa es la diferencia con cambiar el importe, que solo se
+ * admite mientras está pendiente: allí el dinero no había salido.
+ *
+ * ⚠️ **El hueco se comprueba ANTES de convertir.** `Number(null)` y
+ * `Number('')` son **0**, y el 0 es un porcentaje válido en las dos clases —un
+ * colaborador que no trae clientes, un coche cedido gratis—, así que un campo
+ * vacío pasaría como una corrección perfectamente plausible.
+ */
+export function kindPercentProblem(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') {
+    return 'collaborators.problems.percentRequired';
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 'collaborators.problems.percentInvalid';
+  if (n < 0 || n > 100) return 'collaborators.problems.percentRange';
+  return null;
+}
+
 export function saleProblem(
   reserva: ReservationForCommission | null | undefined,
   colaborador: Collaborator | null | undefined

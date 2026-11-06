@@ -22,6 +22,7 @@ import {
   awaitingInvoiceTotal,
   coveredByInvoice,
   isOwnerOfReservation,
+  kindPercentProblem,
   suggestedPercentFor,
   suggestedSaleKind
 } from './collaborator.util';
@@ -774,5 +775,66 @@ describe('qué apunte se propone al registrar una venta', () => {
     const coche = { ownerCollaboratorId: 'c9' };
     expect(isOwnerOfReservation({ vehicleId: 'v1' }, undefined, coche)).toBe(false);
     expect(suggestedSaleKind({ vehicleId: 'v1' }, undefined, coche)).toBe('referral');
+  });
+});
+
+/**
+ * El porcentaje con el que se corrige un apunte ya creado.
+ *
+ * ⚠️ **Corregir el concepto no mueve dinero**, y por eso se admite con la venta
+ * ya pagada: lo que se reescribe es `kind` y el porcentaje que explica la
+ * cifra, nunca `commissionAmount`.
+ */
+describe('corregir por qué se le debe una venta', () => {
+  it('el hueco se caza ANTES de convertir, porque Number("") es 0', () => {
+    expect(kindPercentProblem(null)).toBe('collaborators.problems.percentRequired');
+    expect(kindPercentProblem(undefined)).toBe('collaborators.problems.percentRequired');
+    expect(kindPercentProblem('')).toBe('collaborators.problems.percentRequired');
+  });
+
+  /**
+   * ⚠️ **El CONTROL del test de arriba: el 0 es válido en las dos clases.** Un
+   * colaborador que no trae clientes y un coche cedido gratis existen los dos,
+   * así que sin comprobar el hueco aparte un campo vacío pasaría como una
+   * corrección al 0 % perfectamente plausible.
+   */
+  it('pero un 0 escrito a propósito sí vale', () => {
+    expect(kindPercentProblem(0)).toBeNull();
+    expect(kindPercentProblem('0')).toBeNull();
+    expect(kindPercentProblem(100)).toBeNull();
+  });
+
+  it('fuera de 0–100 no es un porcentaje', () => {
+    expect(kindPercentProblem(-1)).toBe('collaborators.problems.percentRange');
+    expect(kindPercentProblem(101)).toBe('collaborators.problems.percentRange');
+    expect(kindPercentProblem('lo que sea')).toBe('collaborators.problems.percentInvalid');
+  });
+
+  /**
+   * ⚠️ **Y al corregir, la fila deja de estar ajustada SOLA.** Es lo que
+   * distingue una corrección de un parche: el apunte de producción decía
+   * «0,00 €, ajustado a 102,90 €» porque el porcentaje era el que no tocaba;
+   * con el suyo, el calculado vuelve a ser el importe y la nota del ajuste
+   * sobra. Es la condición que hace que el servicio borre `adjustmentReason`.
+   */
+  it('con el porcentaje bueno, el calculado vuelve a ser el importe', () => {
+    const mal = venta({
+      kind: 'referral',
+      netAmount: 137.2,
+      commissionPercent: 0,
+      commissionAmount: 102.9,
+      calculatedAmount: 0,
+      adjustmentReason: 'redondeado'
+    });
+    expect(isAdjusted(mal)).toBe(true);
+
+    const bien = venta({
+      ...mal,
+      kind: 'vehicle_owner',
+      commissionPercent: 75,
+      calculatedAmount: commissionAmount(137.2, 75)
+    });
+    expect(bien.calculatedAmount).toBe(102.9);
+    expect(isAdjusted(bien)).toBe(false);
   });
 });

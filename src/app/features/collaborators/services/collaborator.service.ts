@@ -29,6 +29,7 @@ import {
   amountProblem,
   commissionAmount,
   estadoSegunReserva,
+  kindPercentProblem,
   paidAtProblem,
   saleProblem,
   suggestedPercentFor,
@@ -290,6 +291,65 @@ export class CollaboratorService {
 
     const ref = await addDoc(this.salesRef, cleanForFirestore(venta) as Record<string, unknown>);
     return ref.id;
+  }
+
+  /**
+   * Corregir **por qué** se le debe un apunte ya creado.
+   *
+   * ⚠️ **Existe por un apunte real de producción.** El reparto de una furgoneta
+   * cedida quedó registrado como comisión de captación con un 0 %, porque hasta
+   * el 6 de noviembre de 2026 esta vía no sabía escribir otra cosa. El dinero
+   * estaba bien; lo que mentía era el concepto — y con él, el seguimiento de la
+   * factura del propietario y la línea en la que ese euro sale en Informes.
+   *
+   * ⚠️ **No mueve dinero, y por eso se admite con el apunte ya PAGADO.**
+   * `commissionAmount` —lo que se le debe o ya se le entregó— no se toca. Lo
+   * que se reescribe es `kind`, el porcentaje con el que se explica la cifra y
+   * el calculado que sale de él. Es justo lo contrario de `updateAmount()`, que
+   * solo se admite mientras está pendiente porque allí el dinero no había
+   * salido todavía.
+   *
+   * ⚠️ **Y se comprueba el DUPLICADO antes de escribir.** Una reserva puede
+   * tener un apunte de cada clase pero no dos de la misma: pasar éste a una
+   * clase que ya existe para esa reserva dejaría al colaborador con el doble de
+   * lo que se le debe, con las dos filas igual de creíbles. Es la misma regla
+   * que `assignSale()`.
+   */
+  async updateSaleKind(
+    sale: CollaboratorSale,
+    kind: CommissionKind,
+    percent: number
+  ): Promise<void> {
+    if (!sale?.id) throw new Error('collaborators.problems.saleRequired');
+
+    const problema = kindPercentProblem(percent);
+    if (problema) throw new Error(problema);
+
+    if (kind !== sale.kind) {
+      const otro = await this.saleForReservation(sale.reservationId, kind);
+      if (otro && otro.id !== sale.id && otro.status !== 'cancelled') {
+        throw new Error('collaborators.problems.alreadyAssigned');
+      }
+    }
+
+    const calculado = commissionAmount(Number(sale.netAmount) || 0, percent);
+
+    /**
+     * ⚠️ **Si deja de estar ajustado, el motivo del ajuste se BORRA.** Es un
+     * texto que explica una diferencia que ya no existe: dejarlo colgando daría
+     * una fila con «redondeado» escrito y nada redondeado. Y se borra con
+     * `deleteField()`, porque un `updateDoc` sin la clave deja intacto lo que
+     * hubiera.
+     */
+    const yaNoEstaAjustado = roundMoney(calculado) === roundMoney(Number(sale.commissionAmount));
+
+    await updateDoc(doc(this.salesRef, sale.id), {
+      kind,
+      commissionPercent: Number(percent),
+      calculatedAmount: calculado,
+      ...(yaNoEstaAjustado ? { adjustmentReason: deleteField() } : {}),
+      updatedAt: serverTimestamp()
+    });
   }
 
   /**

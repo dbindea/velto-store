@@ -609,9 +609,20 @@
                 cesión y el otro no. Sin esto, la pantalla los mezcla justo
                 después de que el modelo se hubiera cuidado de separarlos.
               -->
-              <span class="kind-tag" [class.owner]="s.kind === 'vehicle_owner'">
+              <!--
+                ⚠️ **La chapa se puede pulsar para CORREGIR el concepto**, y
+                también con la venta ya pagada. Nace de un apunte real: el
+                reparto de una furgoneta cedida quedó registrado como comisión
+                de captación con un 0 %, y no había forma de arreglarlo desde
+                aquí. Corregirlo no mueve dinero —el importe no se toca—, así
+                que no hay motivo para exigir que esté pendiente, al revés que
+                el botón de cambiar el importe.
+              -->
+              <button type="button" class="kind-tag" [class.owner]="s.kind === 'vehicle_owner'"
+                [disabled]="working()" (click)="startEditKind(s, $event)"
+                [attr.title]="'collaborators.editKind' | translate">
                 {{ kindLabels[s.kind] | translate }}
-              </span>
+              </button>
               <!--
                 ⚠️ **«Pendiente de recibir factura», nunca «sin factura».** Dorel
                 lo pidió con esas palabras: lo primero es un trámite que falta y
@@ -655,6 +666,37 @@
                   </span>
                 }
               </span>
+
+              <!--
+                ⚠️ **Corregir el concepto: la clase y el porcentaje, nunca el
+                importe.** Lo que se le debe o ya se le entregó no se toca aquí;
+                lo que se arregla es qué significa esa cifra. La línea de abajo
+                dice lo que daría el porcentaje escrito, para que se vea si la
+                fila deja de estar ajustada o pasa a estarlo.
+              -->
+              @if (editingKindId === s.id) {
+                <div class="kind-edit" (click)="$event.stopPropagation()">
+                  <select class="form-control" name="editKind" [(ngModel)]="editKind"
+                    (ngModelChange)="onEditKindChosen(s)">
+                    <option value="referral">{{ kindLabels.referral | translate }}</option>
+                    <option value="vehicle_owner">{{ kindLabels.vehicle_owner | translate }}</option>
+                  </select>
+                  <input type="number" class="form-control narrow" min="0" max="100" step="0.01"
+                    name="editKindPercent" [(ngModel)]="editKindPercent"
+                    [attr.aria-label]="'collaborators.fields.percent' | translate" />
+                  <span class="hint">
+                    {{ 'collaborators.calculatedIs' | translate }}
+                    {{ editKindCalculated(s) | number: '1.2-2' }} €
+                  </span>
+                  <button class="btn-ghost" type="button" (click)="cancelEditKind($event)">
+                    {{ 'common.cancel' | translate }}
+                  </button>
+                  <button class="btn-primary" type="button" [disabled]="working()"
+                    (click)="saveKind(s, $event)">
+                    {{ 'common.save' | translate }}
+                  </button>
+                </div>
+              }
             </div>
 
             <!-- Cambiar el importe. Solo mientras está pendiente: una vez

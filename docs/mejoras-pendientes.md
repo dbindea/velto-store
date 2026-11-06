@@ -24,10 +24,10 @@ ratón), **M-67** (el bloque del coche fijado, alineado y con su ritmo),
 porcentaje que toca). El relato está en
 [traspaso-sesion.md](traspaso-sesion.md) § 2 quatervicies.
 
-⚠️ **Y queda una decisión tuya en producción**: el apunte de 102,90 € del Ford
-Custom está registrado como «Por traer el cliente» con un 0 %, y **no hay forma
-de corregirlo desde la aplicación** —`collaboratorSales` no tiene borrado ni
-cambio de clase en la interfaz—. Ver M-69.
+⚠️ **Y queda UNA COSA QUE HACER TÚ en producción**: el apunte de 102,90 € del
+Ford Custom está registrado como «Por traer el cliente» con un 0 %. Ya se puede
+arreglar desde la aplicación —se pulsa la chapa del concepto—, pero la
+corrección la tienes que hacer tú: yo no escribo en producción. Ver M-69.
 
 ### ✅ M-69 · «Asignar venta» solo sabía crear comisiones de captación *(6 nov 2026)*
 
@@ -58,7 +58,36 @@ ajuste y entra en «pendiente de recibir factura».
 «Asignar» se quedaba **encendido sin hacer nada**. Ahora manda la clase que sí
 queda libre y la pista lo cuenta.
 
-#### ⬜ Lo que queda, y es decisión tuya: el apunte de producción
+#### ✅ Y se puede corregir lo ya registrado *(decisión de Dorel, 6 nov 2026)*
+
+Le ofrecí tres salidas para el apunte de producción y eligió **añadir el
+botón**, que es la única que deja el histórico coherente y sirve el día que
+vuelva a pasar.
+
+La chapa del concepto —«POR TRAER EL CLIENTE»— **se pulsa** y abre un editor con
+la clase y el porcentaje. Dos cosas suyas:
+
+- ⚠️ **Funciona con la venta ya PAGADA**, al revés que el botón de cambiar el
+  importe, que solo aparece mientras está pendiente. La diferencia tiene
+  motivo: corregir el concepto **no mueve dinero** —`commissionAmount` no se
+  toca—, y allí el dinero sí había salido.
+- ⚠️ **Comprueba el duplicado antes de escribir.** Una reserva admite un apunte
+  de cada clase pero no dos de la misma; pasar éste a una clase que ya existe
+  dejaría al colaborador con el doble, con las dos filas igual de creíbles.
+
+Probado de punta a punta contra desarrollo **reproduciendo la fila de
+producción**: se dejó un reparto en «POR TRAER EL CLIENTE · 260,00 € × 0% =
+0,00 €, ajustado a 195,00 €» —la misma forma que la suya— y se corrigió a «POR
+CEDER EL COCHE · 260,00 € × 75% · 195,00 €», con la marca de ajuste
+desaparecida y la chapa de «falta su factura» de vuelta. Y el guardia del
+duplicado rechaza con «Esa reserva ya está asignada a un colaborador» sin
+escribir nada.
+
+**Lo que tienes que hacer tú**: abrir la ficha de Adrian Puenaru en producción,
+pulsar la chapa de esa fila, elegir «Por ceder el coche» y dejar el 75 % que se
+propone.
+
+#### Por qué había que corregirlo
 
 La fila de 102,90 € del Ford Custom tiene el dinero **bien** —se pagó lo que se
 pactó— y tres cosas mal:
@@ -69,11 +98,17 @@ pactó— y tres cosas mal:
   justificante no lo va a reclamar nadie, y en Informes se cuenta como comisión
   y no como reparto a propietario.
 
-⚠️ **Y hay un riesgo concreto que conviene mirar**: si esa reserva **sí** llevaba
-`ownerShareSnapshot` y todavía no está cerrada, al cerrarla el devengo
-automático creará un **segundo** apunte de 102,90 € —el filtro de «ya
-reconocido» solo mira los de clase `vehicle_owner`, y éste es `referral`—. Si al
-abrir la ficha del propietario aparece un reparto pendiente de 102,90 €, es eso.
+⚠️ **El riesgo de duplicado se preguntó y está DESCARTADO.** Si esa reserva
+hubiera llevado `ownerShareSnapshot` y no estuviera cerrada, al cerrarla el
+devengo automático habría creado un **segundo** apunte de 102,90 € —el filtro
+de «ya reconocido» solo mira los de clase `vehicle_owner`, y aquél es
+`referral`—. Dorel confirmó el 6 de noviembre que la reserva **ya estaba
+cerrada** cuando asignó la venta y que no apareció ningún reparto pendiente: no
+hay snapshot, así que no hay nada que se vaya a duplicar.
+
+⚠️ **Y eso mismo explica por qué no había devengo que recoger**, que es el
+origen de todo: el coche se dio de alta como cedido **después** de crear la
+reserva.
 
 ### Lo de la mañana del 6 de noviembre de 2026
 

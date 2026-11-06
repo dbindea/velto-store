@@ -1985,7 +1985,8 @@
       "ownerShareHint": "Si cede coches. Es la propuesta: cada coche guarda el suyo y cada reserva lo congela.",
       "paidAt": "Fecha del pago",
       "paidAtHint": "El día en que salió el dinero, que no tiene por qué ser hoy.",
-      "kind": "Por qué se le debe"
+      "kind": "Por qué se le debe",
+      "percent": "Porcentaje"
     },
     "generated": "Generado",
     "generatedLower": "generado",
@@ -2018,7 +2019,7 @@
       "emailInvalid": "Ese correo no parece válido",
       "hasSales": "No se puede borrar: tiene ventas asignadas. Dalo de baja en su lugar",
       "nameRequired": "Pon el nombre del colaborador",
-      "percentRequired": "Indica un porcentaje de comisión. Pon 0 si no trae clientes",
+      "percentRequired": "Falta el porcentaje",
       "percentTooHigh": "Más de un 50 % no es una comisión. Revisa la cifra",
       "reservationCancelled": "Esa reserva está cancelada y no genera comisión",
       "reservationRequired": "Elige una reserva",
@@ -2032,7 +2033,10 @@
       "invoiceDateRequired": "Pon la fecha de la factura",
       "invoiceAmountRequired": "Pon el importe de la factura",
       "invoiceAmountPositive": "El importe tiene que ser mayor que cero",
-      "mixedCollaborators": "Esos repartos son de colaboradores distintos y no se pueden reconocer juntos"
+      "mixedCollaborators": "Esos repartos son de colaboradores distintos y no se pueden reconocer juntos",
+      "percentInvalid": "El porcentaje no es un número",
+      "percentRange": "El porcentaje va de 0 a 100",
+      "saleRequired": "No se encuentra el apunte"
     },
     "saleAssigned": "Venta asignada",
     "sales": "Comisiones y repartos",
@@ -2091,7 +2095,9 @@
       "notOwnerVehicle": "El coche de esta reserva no consta como suyo. Si aun así hay reparto, cámbialo a mano.",
       "ownerAlready": "El coche es suyo, pero su reparto por esta reserva ya está reconocido. Lo que queda libre es la comisión por traer el cliente.",
       "notOwnerButShare": "El coche de esta reserva no consta como suyo. Se registrará el reparto igualmente: comprueba el porcentaje."
-    }
+    },
+    "editKind": "Corregir por qué se le debe",
+    "kindUpdated": "Concepto corregido"
   },
   "events": {
     "alerts": {
