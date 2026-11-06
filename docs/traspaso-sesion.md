@@ -34,6 +34,17 @@
 > respuesta, así que el orden entre frontend y function da igual aquí. El detalle
 > está en **§ 2 ter** — y se **mide**, no se copia de aquí.
 >
+> ⚠️ **Y lo tercero, con fecha encima: VeriFactu está anunciado para octubre de
+> 2028 y NO publicado.** Dorel trajo la noticia el 6 de noviembre. Hacienda
+> anunció el 5 de octubre que llevaría las obligaciones pendientes a octubre de
+> 2028, para que coincidan con la factura electrónica obligatoria; **pero lo
+> que está en el BOE sigue siendo el 1 de enero de 2027** para sociedades, que
+> es el caso de VELTO. **Decisión suya: no se despliega nada y en DICIEMBRE se
+> vuelve a mirar el BOE.** Si para entonces la prórroga no está publicada,
+> quedan cuatro semanas con fiestas dentro para validar y desplegar. El relato
+> entero, con qué mirar exactamente, en
+> [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+>
 > ⚠️ **Y mide las ramas contra `origin/`, no contra la local: ha fallado DOS
 > veces seguidas.** El 2 de noviembre la comparación dio **12** donde había
 > **4**, y el 5 —con esta advertencia ya escrita— dio **20** donde había **12**,
@@ -2862,7 +2873,21 @@ lo dice.
 
 ### Lo de siempre
 
-**Con fecha, y es lo único con fecha:** el guion del 1 de enero de 2027
+**Con fecha, y es lo único con fecha:** ⚠️ **ahora son DOS fechas, y la primera
+es una revisión, no una entrega.**
+
+**En diciembre de 2026 — mirar el BOE.** VeriFactu está **anunciado** para
+octubre de 2028 y **no publicado**: lo vigente sigue siendo el 1 de enero de
+2027 para sociedades, que es VELTO. Decisión de Dorel del 6 de noviembre: no se
+adelanta trabajo y se revisa en diciembre. Lo único que mueve la fecha es un
+**real decreto en el BOE** que modifique la disposición final cuarta del RD
+1007/2023 — ni un anuncio, ni una nota de la AEAT, ni una noticia. Qué mirar y
+en qué orden, en [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+
+⚠️ **Y si en diciembre NO está publicada, lo de abajo pasa a ser urgente**, con
+cuatro semanas y las fiestas dentro.
+
+**El guion del 1 de enero de 2027**
 ([verifactu-alta.md](verifactu-alta.md) § 5 bis). Incluye un paso nuevo —el 3
 bis— que no existía y que lo crea haber empezado a facturar antes: **qué se hace
 con las facturas de 2026** cuando se encienda la remisión. El barrido se lleva
@@ -2870,6 +2895,13 @@ todas las filas pendientes **sin filtro de fecha**, así que si no se decide
 nada, en enero intentará remitir meses de facturas que nunca estuvieron
 obligadas. Las dos salidas están escritas y **hay que probarlas contra
 preproducción desde desarrollo, antes de enero**.
+
+⚠️ **Ojo con una lectura fácil y equivocada del aplazamiento:** aunque se
+publique, **el paso 3 bis no desaparece**, solo se mueve. Las facturas que se
+vayan emitiendo hasta 2028 seguirán acumulando filas pendientes en
+`verifactuSubmissions`, así que el día que se encienda la remisión habrá **dos
+años** de registros esperando en vez de unos meses. Cuanto más se aplaza, más
+grande es ese problema, no menos.
 
 **Decisiones de Dorel, sin prisa:** el turquesa `#20A48F` como texto se queda en
 3,10:1 y hace falta 4,5:1 —haría falta un tono propio para texto—; la fianza

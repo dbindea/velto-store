@@ -2831,7 +2831,9 @@ ausente es `200 text/html`.
 ⚠️ **Las cinco de la AEAT faltan A PROPÓSITO**, con el guion del 1 de enero
 ([docs/verifactu-alta.md](docs/verifactu-alta.md) § 5 bis): `sendVerifactuRecords`,
 `sweepVerifactuRecords`, `getVerifactuStatus`, `retryVerifactuRecord` y
-`checkVerifactuConnection`.
+`checkVerifactuConnection`. ⚠️ **Y esa fecha está en revisión desde el 6 de
+noviembre de 2026** — anunciado octubre de 2028, no publicado; se mira el BOE
+en diciembre. Ver § 0 bis de ese mismo documento antes de contar las semanas.
 
 > Aquí ponía **29 y 22**, y que faltaban además `syncAuthClaims` y
 > `onAuthorizedUserChanged` «pendientes de desplegar». Las dos **ya están en
@@ -3843,7 +3845,25 @@ la AEAT. Hoy, y esta combinación es la que importa:
 | | Emite (`INVOICING`) | Remite (`VERIFACTU`) | Cobra la señal desde la web (`WEB_SIGNAL_PAYMENT`) |
 |---|---|---|---|
 | desarrollo | `true` | `true`, contra **preproducción** | `true` |
-| producción | **`true`** desde el 17 sep 2026 | **`false`** hasta el 1 de enero | **`false`** |
+| producción | **`true`** desde el 17 sep 2026 | **`false`**, y ver abajo | **`false`** |
+
+⚠️ **Ese «hasta el 1 de enero» que ponía aquí tiene ahora una fecha de
+revisión.** Hacienda anunció el 5 de octubre de 2026 que llevaría VeriFactu a
+**octubre de 2028**, para hacerlo coincidir con la factura electrónica
+obligatoria — pero **no está publicado**: lo que está en el BOE sigue siendo el
+RD-ley 15/2025, que deja a las sociedades en el **1 de enero de 2027**, y VELTO
+tributa por Sociedades. Decisión de Dorel del 6 de noviembre: **no se despliega
+nada y en diciembre se vuelve a mirar el BOE.** Lo único que mueve la fecha es
+un real decreto publicado, no un anuncio ni una nota de la AEAT. El detalle, en
+[docs/verifactu-alta.md](docs/verifactu-alta.md) § 0 bis.
+
+⚠️ **Y aplazarlo no encoge el problema, lo agranda.** La fila de
+`verifactuSubmissions` nace en la **misma transacción** que cada factura, sin
+mirar la bandera, y el barrido busca `pendienteEnvio == true` **sin filtro de
+fecha**. O sea que producción lleva acumulando registros pendientes desde el 17
+de septiembre y seguirá: el día que se encienda la remisión, el barrido
+intentará mandarlos **todos**. Es el paso 3 bis del guion, y cada mes de
+aplazamiento le añade un mes de facturas.
 
 ⚠️ **La tercera es del 19 de octubre de 2026 y nació con su propia bandera, no
 colgada de ninguna de las otras dos** — que es justo la lección del párrafo de

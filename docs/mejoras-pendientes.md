@@ -411,7 +411,20 @@ salta**: hay que mirar los informes de Cloudflare y confirmar que todo lo
 legítimo pasa por **DKIM**, porque el reenvío rompe SPF por diseño. Procedimiento
 y calendario en [dmarc.md](dmarc.md).
 
-### Con fecha, y es lo único con fecha: el guion del 1 de enero de 2027
+### Con fecha: primero una revisión en DICIEMBRE, y detrás el guion de enero
+
+⚠️ **VeriFactu está anunciado para octubre de 2028 y NO publicado** (6 de
+noviembre de 2026). Hacienda lo anunció el 5 de octubre para hacerlo coincidir
+con la factura electrónica obligatoria, pero en el BOE sigue el RD-ley 15/2025:
+**1 de enero de 2027** para sociedades, que es VELTO. **Decisión de Dorel: no
+se adelanta trabajo y en diciembre se mira el BOE.** Lo único que mueve la
+fecha es un real decreto publicado — ni un anuncio, ni una nota de la AEAT.
+Qué mirar y en qué orden: [verifactu-alta.md](verifactu-alta.md) § 0 bis.
+
+⚠️ **Si en diciembre no está publicada, lo de abajo pasa a ser urgente** con
+cuatro semanas y las fiestas dentro.
+
+### El guion del 1 de enero de 2027
 
 [verifactu-alta.md](verifactu-alta.md) § 5 bis. Dentro va el **paso 3 bis**, que
 no existía y que lo crea haber empezado a facturar antes: **qué se hace con las
@@ -420,6 +433,13 @@ filas pendientes **sin filtro de fecha**. Si no se decide nada, en enero
 intentará remitir meses de facturas que nunca estuvieron obligadas. Las dos
 salidas están escritas y **hay que probarlas contra preproducción desde
 desarrollo, antes de enero**.
+
+⚠️ **Y un aplazamiento NO lo hace desaparecer, lo agranda.** La fila de
+`verifactuSubmissions` nace en la misma transacción que cada factura **sin
+mirar la bandera**, así que producción acumula registros pendientes desde el 17
+de septiembre pase lo que pase. Con la remisión en 2028 serían **dos años** de
+cola esperando el día que se encienda, en vez de unos meses. Este paso hay que
+decidirlo igual; lo único que cambia es cuánta cola tiene delante.
 
 Hoy: desarrollo emite y remite contra preproducción; producción **emite y no
 remite** (`VELTO_VERIFACTU_ENABLED=false`), y eso **solo lo cambia Dorel**.

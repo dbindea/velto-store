@@ -46,6 +46,68 @@ por hecho que la próxima no se retrasa también. Anotado por Dorel el 9 de
 septiembre de 2026, y **es un aviso, no un permiso para no estar listo**: si se
 aplaza no pasa nada por llegar antes; si no se aplaza y no estamos, sí pasa.
 
+### Y está pasando: anunciado el tercer aplazamiento, a octubre de 2028
+
+⚠️ **Anunciado el 5 de octubre de 2026 y NO PUBLICADO a 6 de noviembre.** Es la
+distinción entera de esta sección, así que va primero: Hacienda trasladó al
+**Foro de Asociaciones y Profesionales Tributarios** su intención de llevar las
+obligaciones pendientes del RD 1007/2023 a **octubre de 2028**, y la AEAT sacó
+una nota informativa al día siguiente. Sociedades pasaría del 1 de enero de
+2027 a octubre de 2028; autónomos, del 1 de julio de 2027.
+
+**Lo que obliga hoy sigue siendo otra cosa.** La última norma publicada es el
+**RD-ley 15/2025, de 2 de diciembre** (BOE del 3), que modificó la disposición
+final cuarta del RD 1007/2023 y dejó a las sociedades en el **1 de enero de
+2027**. Mientras no salga el real decreto que lo cambie, esa es la fecha de
+VELTO — que tributa por Sociedades.
+
+⚠️ **Dos cosas que añaden incertidumbre, en las dos direcciones:** las Cortes
+están disueltas y hay elecciones el **29 de noviembre de 2026**, lo que no
+ayuda a que nadie firme nada; pero el propio RD-ley 15/2025 **preservó el rango
+reglamentario** del RD 1007/2023, así que el Gobierno puede cambiar los plazos
+por real decreto **sin pasar por las Cortes**. O sea: es perfectamente
+factible, y hoy no ha ocurrido.
+
+⚠️ **Y la factura electrónica B2B NO se aplaza — ojo con mezclarlas.** El
+motivo del aplazamiento es hacerlas coincidir, pero son **dos obligaciones
+distintas y dos proyectos distintos**: VeriFactu es remitir un registro de
+facturación a la AEAT, y la factura electrónica es emitir en **formato
+estructurado** e intercambiarla por una plataforma. Lo segundo **no está
+construido aquí**. Su calendario (RD 238/2026, con la Orden HAC/1028/2026
+publicada en el BOE el 5 de octubre de 2026) es octubre de **2027** para quien
+factura más de 8 M€ y octubre de **2028** para el resto, que es el caso de
+VELTO. Dicho de otro modo: **si la prórroga sale, en octubre de 2028 le caen
+las dos a la vez**, y solo una está hecha.
+
+### La decisión: esperar, con una revisión en diciembre
+
+**Decisión de Dorel del 6 de noviembre de 2026**, con lo de arriba delante:
+**no se despliega nada** ni se adelanta trabajo, y en **diciembre se vuelve a
+mirar**.
+
+⚠️ **La revisión de diciembre no es una formalidad, y conviene hacerla
+PRONTO.** Si para entonces la prórroga está publicada, todo se mueve a 2028 con
+año y medio por delante. Si **no** está publicada, quedan unas cuatro semanas
+—con las fiestas dentro— para validar contra preproducción, desplegar las cinco
+functions de la AEAT y encender `VELTO_VERIFACTU_ENABLED`, que es el guion del
+§ 5 bis. Ése es el escenario que hay que poder ver venir, y por eso la fecha de
+la revisión importa más que la de la obligación.
+
+**Qué mirar, en este orden:**
+
+1. ¿Hay **real decreto publicado en el BOE** que modifique la disposición final
+   cuarta del RD 1007/2023? Es lo único que cuenta: un anuncio, una nota de la
+   AEAT o una noticia **no mueven la fecha**.
+2. Si lo hay: apuntar aquí su referencia y su fecha, y mover el guion del § 5
+   bis al nuevo plazo.
+3. Si no lo hay: decidir con el calendario delante si se corre o si se asume
+   llegar tarde — y eso lo decide Dorel, no este documento.
+
+⚠️ **Lo que NO cambia con ningún aplazamiento** está tres párrafos más abajo y
+es lo importante: el registro de facturación **se sigue guardando con cada
+factura**. No depende de cuándo haya que remitir, sino de que una factura
+emitida no se pueda editar después.
+
 **Qué hay que vigilar, y cuándo**
 
 - **Antes de encender producción** (`VELTO_INVOICING_ENABLED=true` y después
