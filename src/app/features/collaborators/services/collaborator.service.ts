@@ -31,6 +31,7 @@ import {
   estadoSegunReserva,
   paidAtProblem,
   saleProblem,
+  suggestedPercentFor,
   validateCollaborator,
   validateCollaboratorInvoice
 } from '@shared/utils/collaborator.util';
@@ -203,6 +204,20 @@ export class CollaboratorService {
     collaborator: Collaborator,
     reservation: Reservation,
     /**
+     * Por qué se le debe: por traer al cliente o por poner el coche.
+     *
+     * ⚠️ **Es un parámetro desde el 6 de noviembre de 2026, y antes estaba
+     * escrito `'referral'` a pelo.** El comentario que lo justificaba decía
+     * que «el reparto por ceder el coche no se asigna a mano», y es verdad
+     * **mientras la reserva congele su `ownerShareSnapshot`**: entonces el
+     * devengo se deriva solo al cerrarla. Lo que no contemplaba es el coche
+     * dado de alta como cedido *después* de crear la reserva — ahí no hay
+     * snapshot, no hay devengo, y esta vía era la única que quedaba. Lo vio
+     * Dorel en producción con una furgoneta cedida, registrada como «por traer
+     * el cliente» y con un 0 % que no era el suyo.
+     */
+    kind: CommissionKind,
+    /**
      * Lo que se le va a pagar de verdad, si no es lo que dio el porcentaje.
      *
      * ⚠️ **El calculado se guarda igual**, no se pisa: sin él, un importe
@@ -215,18 +230,27 @@ export class CollaboratorService {
     if (problema) throw new Error(problema);
 
     /**
-     * ⚠️ **Solo contra las de captación.** Si el coche de esta reserva es de un
-     * colaborador, al cerrarla habrá también un apunte de reparto; mirándolos
-     * todos, esa reserva quedaría marcada como «ya asignada» y no se podría
-     * reconocer nunca la comisión de quien trajo al cliente.
+     * ⚠️ **Contra los apuntes de ESTA clase, no contra todos.** Una misma
+     * reserva puede tener legítimamente los dos: la comisión por traer al
+     * cliente y el reparto por ceder el coche. Mirándolos todos, el reparto
+     * haría que la comisión de captación de esa misma reserva se rechazara con
+     * «ya está asignada» — que es justo lo que `kind` existe para impedir.
      */
-    const yaAsignada = await this.saleForReservation(reservation.id!, 'referral');
+    const yaAsignada = await this.saleForReservation(reservation.id!, kind);
     if (yaAsignada && yaAsignada.status !== 'cancelled') {
       throw new Error('collaborators.problems.alreadyAssigned');
     }
 
     const netAmount = Number(reservation.pricingSnapshot?.netPrice) || 0;
-    const percent = Number(collaborator.commissionPercent) || 0;
+    /**
+     * ⚠️ **El porcentaje sale del util, no de `collaborator.commissionPercent`.**
+     * Son dos campos distintos —la comisión de captación y el reparto como
+     * propietario— y aquí se leía siempre el primero: un propietario puro lleva
+     * `commissionPercent: 0`, así que su reparto se guardaba como «0 % ajustado
+     * a 102,90 €». Es la misma función que propone la cifra en la pantalla, no
+     * una segunda cuenta.
+     */
+    const percent = suggestedPercentFor(kind, reservation, collaborator);
     const calculado = commissionAmount(netAmount, percent);
 
     if (override) {
@@ -237,14 +261,7 @@ export class CollaboratorService {
     const venta: Omit<CollaboratorSale, 'id'> = {
       collaboratorId: collaborator.id!,
       collaboratorName: collaborator.name,
-      /**
-       * ⚠️ **Esta vía es siempre de captación**, y por eso va escrito y no
-       * deducido. Asignar una reserva a un colaborador desde su ficha es decir
-       * que él trajo al cliente; el reparto por ceder el coche no se asigna a
-       * mano —sale del vehículo y se congela en la reserva— y se devenga al
-       * cerrarla. Son dos apuntes distintos aunque acaben en la misma persona.
-       */
-      kind: 'referral',
+      kind,
       reservationId: reservation.id!,
       reservationSnapshot: {
         clientName: reservation.clientSnapshot?.fullName || '—',

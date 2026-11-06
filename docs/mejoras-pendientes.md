@@ -15,7 +15,67 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
-## Estado a 6 de noviembre de 2026 (tarde) — recorrido en pantalla y dos decisiones
+## Estado a 6 de noviembre de 2026 (noche) — cuatro peticiones de Dorel
+
+Cerradas las cuatro: **M-66** (el icono del menú en rojo Ferrari al pasar el
+ratón), **M-67** (el bloque del coche fijado, alineado y con su ritmo),
+**M-68** (la hora por defecto de alquiler, 10:00 en todos los casos) y
+**M-69** (asignar una venta ya pregunta **por qué** se le debe y propone el
+porcentaje que toca). El relato está en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 quatervicies.
+
+⚠️ **Y queda una decisión tuya en producción**: el apunte de 102,90 € del Ford
+Custom está registrado como «Por traer el cliente» con un 0 %, y **no hay forma
+de corregirlo desde la aplicación** —`collaboratorSales` no tiene borrado ni
+cambio de clase en la interfaz—. Ver M-69.
+
+### ✅ M-69 · «Asignar venta» solo sabía crear comisiones de captación *(6 nov 2026)*
+
+Lo vio Dorel en producción: alquiló una furgoneta cedida, le asignó la venta al
+propietario desde su ficha y la fila salió **«POR TRAER EL CLIENTE»** con
+`137,20 € × 0%` y un importe tecleado a mano de 102,90 €.
+
+No fue un error suyo: `assignSale()` escribía `kind: 'referral'` **a pelo** y
+leía siempre `commissionPercent`, que en un propietario puro vale **0**
+legítimamente. La pantalla no preguntaba nada y no decía nada.
+
+El comentario que lo justificaba —«el reparto por ceder el coche no se asigna a
+mano: sale del vehículo y se congela en la reserva»— era cierto **solo si la
+reserva congeló su `ownerShareSnapshot`**. Un coche dado de alta como cedido
+*después* de crear la reserva no lo tiene, así que `ownerShareAccruals()` no
+devenga nada nunca y la asignación a mano era la única vía que quedaba — la
+única, y escribía el concepto equivocado.
+
+Hoy el diálogo pregunta la clase, la **propone** mirando de quién es el coche
+—el snapshot congelado primero y la ficha del vehículo después— y propone el
+porcentaje de esa clase. Comprobado en pantalla reproduciendo el caso: coche
+marcado como cedido después de la reserva, la pantalla propone «Por ceder el
+coche» y **195,00 € sobre 260,00 € al 75 %**, y la fila nace sin marca de
+ajuste y entra en «pendiente de recibir factura».
+
+⚠️ **Y salió un agujero al recorrerlo**: proponer el reparto de una reserva que
+**ya lo tiene** la sacaba de la lista, el desplegable volvía a «—» y el botón
+«Asignar» se quedaba **encendido sin hacer nada**. Ahora manda la clase que sí
+queda libre y la pista lo cuenta.
+
+#### ⬜ Lo que queda, y es decisión tuya: el apunte de producción
+
+La fila de 102,90 € del Ford Custom tiene el dinero **bien** —se pagó lo que se
+pactó— y tres cosas mal:
+
+- dice «Por traer el cliente» cuando es un reparto por ceder el coche;
+- dice `× 0%`, así que la cifra **no se puede explicar** dentro de seis meses;
+- al no ser `vehicle_owner`, **no entra en «pendiente de recibir factura»**: su
+  justificante no lo va a reclamar nadie, y en Informes se cuenta como comisión
+  y no como reparto a propietario.
+
+⚠️ **Y hay un riesgo concreto que conviene mirar**: si esa reserva **sí** llevaba
+`ownerShareSnapshot` y todavía no está cerrada, al cerrarla el devengo
+automático creará un **segundo** apunte de 102,90 € —el filtro de «ya
+reconocido» solo mira los de clase `vehicle_owner`, y éste es `referral`—. Si al
+abrir la ficha del propietario aparece un reparto pendiente de 102,90 €, es eso.
+
+### Lo de la mañana del 6 de noviembre de 2026
 
 Los cuatro puntos abiertos de la mañana están cerrados: **M-64** recorrido en
 pantalla, **N-45** decidido, **M-50** y **M-49** arreglados. El relato está en
@@ -57,6 +117,63 @@ El arreglo son unas quince líneas: al archivar, **copiar** el objeto a
 ⚠️ **Hoy no urge porque no hay ningún contrato que sustituir** —N-45 se decidió
 que no—, pero esto hay que hacerlo **antes** de la primera sustitución real, no
 después: después el fichero ya está pisado.
+
+### ✅ M-68 · La hora por defecto de alquiler eran TRES horas distintas *(6 nov 2026)*
+
+«La hora por defecto de alquiler hay que ponerla a 10:00 en todos los casos, web
+y backoffice», dijo Dorel. Lo que había eran **cuatro** respuestas a la misma
+pregunta y dos de ellas convivían en la misma pantalla:
+
+| Dónde | Antes | Ahora |
+|---|---|---|
+| la web (`HORA_RECOGIDA`) | 10:00 | 10:00 |
+| el calendario del asistente (`PICKUP_HOUR`) | 10:00 | 10:00 |
+| el campo de recogida del asistente (`getDefaultPickupDateTime`) | **12:00** | 10:00 |
+| el respaldo de una solicitud sin hora (`DEFAULT_REQUEST_HOUR`) | **12:00** | 10:00 |
+
+⚠️ **La tercera era visible sin buscarla**: el asistente abría con «06/11/2026
+12:00» en el campo y el calendario de al lado proponía las 10:00, así que elegir
+los días **cambiaba la hora** de un campo que ya estaba relleno.
+
+⚠️ **Y no se copia el 10 en cuatro sitios.** Las dos del backoffice se leen de
+`PICKUP_HOUR`/`RETURN_HOUR`, que es lo único que impide que vuelvan a separarse;
+la de la web sigue aparte porque es otra build, como el IVA y la curva, y lo
+afirma su propio test.
+
+⚠️ **Y había que arreglar un test, no solo cambiarlo de número**: el que
+comprueba que «si la solicitud trae la hora pedida, manda ella» la pedía a las
+10:00 — o sea el mismo valor que el respaldo, así que habría seguido en verde
+con `horaPedida()` borrada. Pide las 16:00.
+
+### ✅ M-67 · El bloque del coche fijado salía en escalera *(6 nov 2026)*
+
+Medido en pantalla: la cinta, el rótulo «Disponibilidad de este coche», su pista
+y el calendario estaban todos a **16 px** salvo el texto de la cinta, que cae a
+**52** —12 de relleno, 16 de icono y 8 de hueco—. Y la pista pegaba con el
+calendario a **0 px** mientras dejaba 16 hasta su propio título: el ritmo al
+revés.
+
+Hoy los tres textos comparten columna en 52 y el icono cuelga en el margen, con
+el calendario. El desplazamiento se **calcula** de las tres medidas de la cinta,
+no se escribe 36: con el número a mano, tocar el relleno rompería la alineación
+en silencio.
+
+⚠️ **Y el `margin-bottom` del rótulo no se aplicaba al primer intento.**
+`.step-panel .section h2` mide (0,5,1) con la encapsulación de Angular y
+`.coche-fijado h2` mide (0,3,1): **pierde**. Lleva `.step-panel .section`
+delante. Comprobado midiendo, no leyendo: 16 px antes, 4 px después.
+
+### ✅ M-66 · El icono del menú, en rojo Ferrari al pasar el ratón *(6 nov 2026)*
+
+Pedido por Dorel. `--sidebar-icon-hover: #ff2800`, junto a los demás tokens de
+la barra lateral.
+
+⚠️ **No cambia con el tema, y es correcto**: los cuatro pintan la barra oscura,
+así que el rojo compone contra un fondo casi negro en todos (4,8:1 sobre el más
+claro de los cuatro, por encima del 3:1 que pide un icono).
+
+⚠️ **La entrada ACTIVA se queda fuera.** Ahí el fondo es el turquesa de marca y
+el rojo encima da **1,6:1** —ilegible— además de chillón. Su icono sigue blanco.
 
 ### ✅ N-45 · El contrato `C-0SBXUX-2026` se queda como está — decidido el 6 de noviembre de 2026
 

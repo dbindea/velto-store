@@ -20,7 +20,10 @@ import {
   invoiceMismatch,
   awaitingInvoice,
   awaitingInvoiceTotal,
-  coveredByInvoice
+  coveredByInvoice,
+  isOwnerOfReservation,
+  suggestedPercentFor,
+  suggestedSaleKind
 } from './collaborator.util';
 import type { CollaboratorSale, Collaborator } from '@shared/models/collaborator.model';
 
@@ -687,5 +690,89 @@ describe('la factura que manda el propietario', () => {
       expect(coveredByInvoice(s, 'f1')).toBe(337.5);
       expect(coveredByInvoice(s, 'f2')).toBe(90);
     });
+  });
+});
+
+/**
+ * Qué clase de apunte se propone, y con qué porcentaje.
+ *
+ * ⚠️ **Esto nace de un apunte real de producción del 6 de noviembre de 2026.**
+ * Dorel alquiló una furgoneta cedida, asignó la venta al propietario desde su
+ * ficha y la fila salió rotulada «Por traer el cliente» con `137,20 € × 0%` y
+ * un importe tecleado a mano de 102,90 €. Ni la clase ni el porcentaje eran los
+ * suyos: aquella vía escribía `kind: 'referral'` a pelo y leía siempre
+ * `commissionPercent`, que en un propietario puro vale **0** legítimamente.
+ */
+describe('qué apunte se propone al registrar una venta', () => {
+  /** El colaborador del caso: solo cede coches, no trae clientes. */
+  const propietario = colaborador({ id: 'c9', commissionPercent: 0, ownerSharePercent: 75 });
+
+  it('si el coche va congelado en la reserva, propone el reparto y su porcentaje', () => {
+    const r = { vehicleId: 'v1', ownerShareSnapshot: { collaboratorId: 'c9', sharePercent: 75 } };
+    expect(suggestedSaleKind(r, 'c9')).toBe('vehicle_owner');
+    expect(suggestedPercentFor('vehicle_owner', r, propietario)).toBe(75);
+  });
+
+  /**
+   * ⚠️ **El caso que dejó esto al descubierto, y el que no tiene otra salida.**
+   * `ownerShareSnapshot` se congela al CREAR la reserva: un coche dado de alta
+   * como cedido después deja reservas sin reparto, y entonces el devengo
+   * automático no sale nunca —`ownerShareAccruals()` exige el snapshot— y la
+   * única vía que queda es registrarlo a mano. Sin mirar la ficha del coche,
+   * la pantalla propondría «por traer el cliente».
+   */
+  it('sin snapshot, el coche de la ficha vale para reconocer el reparto', () => {
+    const r = { vehicleId: 'v1' };
+    const coche = { ownerCollaboratorId: 'c9', ownerSharePercent: 75 };
+    expect(suggestedSaleKind(r, 'c9', coche)).toBe('vehicle_owner');
+    expect(suggestedPercentFor('vehicle_owner', r, propietario, coche)).toBe(75);
+  });
+
+  /**
+   * ⚠️ **El CONTROL: la regla vieja daba 0 en este mismo caso.** Sin él este
+   * fichero afirmaría un 75 que podría venir de cualquier sitio; con él se ve
+   * que lo que se arregló es leer el campo que toca.
+   */
+  it('y la regla vieja —el porcentaje de captación— habría dado 0,00 €', () => {
+    const r = { vehicleId: 'v1', ownerShareSnapshot: { collaboratorId: 'c9', sharePercent: 75 } };
+    expect(commissionAmount(137.2, propietario.commissionPercent)).toBe(0);
+    expect(commissionAmount(137.2, suggestedPercentFor('vehicle_owner', r, propietario))).toBe(
+      102.9
+    );
+  });
+
+  it('un coche que no es suyo propone captación, con su porcentaje', () => {
+    const r = { vehicleId: 'v2', ownerShareSnapshot: { collaboratorId: 'otro', sharePercent: 60 } };
+    const comercial = colaborador({ id: 'c9', commissionPercent: 25, ownerSharePercent: 75 });
+    expect(suggestedSaleKind(r, 'c9')).toBe('referral');
+    expect(suggestedPercentFor('referral', r, comercial)).toBe(25);
+  });
+
+  /**
+   * ⚠️ **Un reparto congelado al 0 % es válido y NO cae al de la ficha.** El
+   * cero significa «se cedió gratis» y está permitido por
+   * `ownerSharePercentProblem()`. Encadenando con `||`, `Number(0) || x` se va
+   * al siguiente candidato y se le pagaría un 75 % que nadie pactó.
+   */
+  it('un reparto congelado al 0 % manda sobre el de la ficha', () => {
+    const r = { vehicleId: 'v1', ownerShareSnapshot: { collaboratorId: 'c9', sharePercent: 0 } };
+    expect(suggestedPercentFor('vehicle_owner', r, propietario, { ownerSharePercent: 75 })).toBe(0);
+  });
+
+  /** Lo congelado manda sobre la ficha del coche, que pudo cambiar después. */
+  it('lo congelado en la reserva gana al porcentaje de hoy del coche', () => {
+    const r = { vehicleId: 'v1', ownerShareSnapshot: { collaboratorId: 'c9', sharePercent: 60 } };
+    expect(suggestedPercentFor('vehicle_owner', r, propietario, { ownerSharePercent: 80 })).toBe(60);
+  });
+
+  it('sin ningún porcentaje por ninguna vía, cero y no NaN', () => {
+    const sinNada = colaborador({ id: 'c9', commissionPercent: 0 });
+    expect(suggestedPercentFor('vehicle_owner', { vehicleId: 'v1' }, sinNada)).toBe(0);
+  });
+
+  it('sin colaborador no hay coche suyo que valga', () => {
+    const coche = { ownerCollaboratorId: 'c9' };
+    expect(isOwnerOfReservation({ vehicleId: 'v1' }, undefined, coche)).toBe(false);
+    expect(suggestedSaleKind({ vehicleId: 'v1' }, undefined, coche)).toBe('referral');
   });
 });

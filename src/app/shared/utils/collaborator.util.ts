@@ -13,6 +13,7 @@ import {
   CollaboratorBalance,
   CollaboratorInvoice,
   CollaboratorSale,
+  CommissionKind,
   CommissionStatus
 } from '@shared/models/collaborator.model';
 import { FieldProblems } from '@shared/utils/form-problems.util';
@@ -131,6 +132,114 @@ export type ReservationForCommission = {
   reservationStatus: string;
   pricingSnapshot?: { netPrice?: number } | null;
 };
+
+// ---------------------------------------------------------------------------
+// Qué clase de apunte se está registrando, y con qué porcentaje
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo justo de una reserva para proponer la clase de apunte y su porcentaje.
+ *
+ * Tipo propio y estrecho —no `Reservation`— por lo mismo que
+ * `ReservationForOwnerShare`: para probar esto sin construir una reserva
+ * entera, y para que se vea de un vistazo de qué depende el dinero.
+ */
+export interface ReservationForSuggestion {
+  vehicleId?: string;
+  ownerShareSnapshot?: { collaboratorId?: string; sharePercent?: number } | null;
+}
+
+/** Lo que se sabe del coche: de quién es y con qué reparto. */
+export interface VehicleOwnerHint {
+  ownerCollaboratorId?: string;
+  ownerSharePercent?: number;
+}
+
+/**
+ * ¿El coche de esta reserva es de este colaborador?
+ *
+ * ⚠️ **Se mira el snapshot congelado Y la ficha del coche, en ese orden.** El
+ * snapshot es la verdad del día del alquiler y manda; pero **puede no
+ * existir**, y ese es justo el caso que dejó esto al descubierto: si el coche
+ * se dio de alta como cedido *después* de crear la reserva, la reserva no
+ * congeló ningún reparto y el devengo automático no sale nunca —
+ * `ownerShareAccruals()` exige el snapshot—. Sin mirar también la ficha, la
+ * pantalla no tendría forma de reconocer un reparto que es evidente para quien
+ * está delante.
+ */
+export function isOwnerOfReservation(
+  reserva: ReservationForSuggestion | null | undefined,
+  collaboratorId: string | undefined,
+  coche?: VehicleOwnerHint | null
+): boolean {
+  if (!collaboratorId) return false;
+  if (reserva?.ownerShareSnapshot?.collaboratorId === collaboratorId) return true;
+  return !!coche?.ownerCollaboratorId && coche.ownerCollaboratorId === collaboratorId;
+}
+
+/**
+ * Qué clase de apunte propone la pantalla al elegir una reserva.
+ *
+ * ⚠️ **Si el coche es suyo, lo normal es el REPARTO, no la captación.** Lo dijo
+ * Dorel el 6 de noviembre de 2026 mirando un apunte real de producción: «un
+ * propietario puede traer clientes y es muy poco frecuente; lo normal es que él
+ * ponga el coche suyo». Hasta ese día esta vía creaba **siempre** una comisión
+ * de captación —estaba escrito `kind: 'referral'` a pelo, sin que la pantalla
+ * lo dijera—, así que el reparto de una furgoneta cedida quedó registrado
+ * como «por traer el cliente» y con el porcentaje equivocado.
+ *
+ * Es una **propuesta**: los dos casos existen y el operador puede cambiarla.
+ */
+export function suggestedSaleKind(
+  reserva: ReservationForSuggestion | null | undefined,
+  collaboratorId: string | undefined,
+  coche?: VehicleOwnerHint | null
+): CommissionKind {
+  return isOwnerOfReservation(reserva, collaboratorId, coche) ? 'vehicle_owner' : 'referral';
+}
+
+/**
+ * El porcentaje que se propone para cada clase de apunte.
+ *
+ * ⚠️ **No es el mismo campo, y ese era el fallo.** Un colaborador que solo cede
+ * coches lleva `commissionPercent: 0` —el 0 es válido y significa «no trae
+ * clientes»— y su reparto vive en `ownerSharePercent`. Proponiendo siempre el
+ * primero, la pantalla ofrecía **0,00 €** para un reparto de 102,90 € y el
+ * operador tenía que teclear el importe a mano: el apunte nacía marcado como
+ * «ajustado» por 102,90 € sobre un calculado de cero, que es una fila que
+ * dentro de seis meses no se puede explicar.
+ *
+ * ⚠️ **Para el reparto manda el porcentaje CONGELADO en la reserva.** Es el que
+ * se pactó el día del alquiler; el de la ficha del coche o el del colaborador
+ * pueden haberse movido desde entonces. Solo se baja a ellos cuando la reserva
+ * no congeló ninguno, que es el caso del coche dado de alta tarde.
+ */
+export function suggestedPercentFor(
+  kind: CommissionKind,
+  reserva: ReservationForSuggestion | null | undefined,
+  colaborador: Pick<Collaborator, 'commissionPercent' | 'ownerSharePercent'> | null | undefined,
+  coche?: VehicleOwnerHint | null
+): number {
+  if (kind === 'referral') return Number(colaborador?.commissionPercent) || 0;
+
+  /**
+   * ⚠️ **El hueco se comprueba ANTES de convertir.** `Number(null)` y
+   * `Number('')` son **0**, no `NaN`, así que un `|| 0` encadenado haría que un
+   * reparto sin congelar cayera a cero en vez de bajar al siguiente escalón —
+   * y cero es un reparto perfectamente válido, así que nada chirriaría. Es el
+   * mismo fallo que ya salió con `ownerSharePercent` y con `commissionPercent`.
+   */
+  for (const candidato of [
+    reserva?.ownerShareSnapshot?.sharePercent,
+    coche?.ownerSharePercent,
+    colaborador?.ownerSharePercent
+  ]) {
+    if (candidato === null || candidato === undefined) continue;
+    const n = Number(candidato);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
 
 export function saleProblem(
   reserva: ReservationForCommission | null | undefined,

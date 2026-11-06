@@ -1984,7 +1984,8 @@
       "ownerSharePercent": "Partea ca proprietar",
       "ownerShareHint": "Dacă cedează mașini. Este propunerea: fiecare mașină o păstrează pe a sa, iar fiecare rezervare o îngheață.",
       "paidAt": "Data plății",
-      "paidAtHint": "Ziua în care au ieșit banii, care nu trebuie să fie neapărat azi."
+      "paidAtHint": "Ziua în care au ieșit banii, care nu trebuie să fie neapărat azi.",
+      "kind": "De ce i se datorează"
     },
     "generated": "Generat",
     "generatedLower": "generat",
@@ -2084,6 +2085,12 @@
       "deleted": "Factură ștearsă",
       "deleteTitle": "Șterge factura",
       "deleteMessage": "Părțile pe care le acoperea vor reveni la starea de așteptare a facturii."
+    },
+    "kindHint": {
+      "ownerVehicle": "Mașina din această rezervare este a lui, deci în mod normal este împărțirea pentru cedarea ei. Se propune procentul convenit.",
+      "notOwnerVehicle": "Mașina din această rezervare nu figurează ca fiind a lui. Dacă totuși există o împărțire, schimb-o manual.",
+      "ownerAlready": "Mașina este a lui, dar împărțirea pentru această rezervare este deja înregistrată. Ce rămâne liber este comisionul pentru aducerea clientului.",
+      "notOwnerButShare": "Mașina din această rezervare nu figurează ca fiind a lui. Împărțirea se va înregistra oricum: verifică procentul."
     }
   },
   "events": {

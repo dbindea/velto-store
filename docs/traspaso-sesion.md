@@ -4,7 +4,11 @@
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 tervicies**, que es lo último que pasó (6 de
+> **Orden de lectura:** **§ 2 quatervicies**, que es lo último que pasó (6 de
+> noviembre por la noche: cuatro peticiones de Dorel, y la cuarta destapó que
+> «Asignar venta» solo sabía crear comisiones **de captación** — por eso el
+> reparto de una furgoneta cedida quedó registrado en producción con el
+> concepto y el porcentaje equivocados); después **§ 2 tervicies** (6 de
 > noviembre por la tarde: el botón «Crear reserva» recorrido **en pantalla** por
 > primera vez, y dos arreglos — la devolución de fianza a tarjeta que no llegaba
 > a los libros, y el adelanto de la ficha pública que no servía nunca); después
@@ -2368,6 +2372,95 @@ quitó la línea y la suite pasa a **10 ficheros y 126 tests**.
 Lo que hay que llevarse no es el shebang: **una suite con un fichero
 permanentemente en rojo es una suite que se deja de mirar**, y la diferencia
 entre entornos la paga siempre el que mide en local.
+
+---
+
+## 2 quatervicies. El 6 de noviembre por la noche — cuatro peticiones, y una destapa un apunte mal escrito en producción
+
+Dorel pidió cuatro cosas mirando la pantalla. Tres son de forma; la cuarta
+venía con una pregunta suya —«¿le he registrado mal la venta o esto no está muy
+logrado?»— y la respuesta es **lo segundo, y con consecuencias en producción**.
+
+### 1 · El icono del menú en rojo Ferrari (M-66)
+
+`--sidebar-icon-hover: #ff2800`, con los demás tokens de la barra lateral.
+
+⚠️ **No cambia con el tema, y es correcto**: los cuatro pintan la barra oscura.
+⚠️ **Y la entrada ACTIVA se queda fuera** (`:not(.active)`): ahí el fondo es el
+turquesa de marca y el rojo encima da **1,6:1**.
+
+### 2 · El bloque del coche fijado, alineado y con su ritmo (M-67)
+
+Medido antes de tocar nada: la cinta, el rótulo, la pista y el calendario a
+**16 px**, y el texto de la cinta a **52** —12 de relleno + 16 de icono + 8 de
+hueco—. Y la pista a **0 px** del calendario con 16 hasta su propio título: el
+ritmo al revés.
+
+Hoy los tres textos comparten la columna 52 y el icono cuelga en el margen. El
+desplazamiento se **calcula** de las tres medidas de la cinta, para que tocar el
+relleno no rompa la alineación en silencio.
+
+⚠️ **El `margin-bottom` del rótulo no se aplicó al primer intento**, y es la
+aritmética de siempre: `.step-panel .section h2` mide (0,5,1) con la
+encapsulación de Angular y `.coche-fijado h2` mide (0,3,1). Se vio **midiendo**,
+no leyendo el SCSS.
+
+### 3 · La hora por defecto de alquiler: 10:00 en todos los casos (M-68)
+
+Eran **cuatro** respuestas a la misma pregunta, y dos convivían en la misma
+pantalla: el campo de recogida nacía a las **12:00** y el calendario de al lado
+proponía las **10:00**, así que elegir los días en el calendario cambiaba la
+hora de un campo ya relleno.
+
+Las dos del backoffice se leen ahora de `PICKUP_HOUR`/`RETURN_HOUR`; la de la
+web sigue aparte porque es otra build.
+
+⚠️ **Y hubo que arreglar un test, no solo cambiarle el número.** El que
+comprueba que «la hora pedida manda sobre el respaldo» la pedía a las 10:00 —el
+mismo valor que el respaldo nuevo—, así que habría seguido en verde con la
+función borrada. Pide las 16:00.
+
+### 4 · «Asignar venta» solo sabía crear comisiones de captación (M-69)
+
+El caso de Dorel: furgoneta cedida, venta asignada al propietario desde su
+ficha, y la fila sale **«POR TRAER EL CLIENTE»** con `137,20 € × 0%` y 102,90 €
+tecleados a mano.
+
+No fue un error suyo. `assignSale()` escribía `kind: 'referral'` **a pelo** y
+leía siempre `commissionPercent`, que en un propietario puro vale **0**
+legítimamente. La pantalla no preguntaba nada y no decía nada.
+
+⚠️ **El comentario que lo justificaba era cierto a medias, y ahí está la
+lección.** Decía que «el reparto por ceder el coche no se asigna a mano: sale
+del vehículo y se congela en la reserva» — y es verdad **solo si la reserva
+congeló su `ownerShareSnapshot`**. Un coche dado de alta como cedido *después*
+de crear la reserva no lo tiene, `ownerShareAccruals()` no devenga nada nunca, y
+entonces la asignación a mano es la **única** vía que queda. Un comentario que
+describe el camino feliz y no el que falta es un comentario que impide ver el
+agujero.
+
+Hoy el diálogo pregunta la clase, la propone mirando de quién es el coche —el
+snapshot congelado primero, la ficha del vehículo después— y propone el
+porcentaje de esa clase. Reproducido en desarrollo con el caso exacto (coche
+marcado como cedido **después** de la reserva): propone «Por ceder el coche» y
+**195,00 € sobre 260,00 € al 75 %**, y la fila nace sin marca de ajuste.
+
+⚠️ **Y recorrerlo destapó un botón encendido que no hacía nada.** Proponer el
+reparto de una reserva que **ya lo tiene** la sacaba de la lista —el filtro de
+«ya asignada» es por clase—, el desplegable volvía a «—» y `selectedReservationId`
+conservaba el id viejo: «Asignar» quedaba habilitado y `confirmAssign()` salía
+por la puerta de atrás sin escribir. Ahora manda la clase que sí queda libre, la
+pista lo explica, y el botón mira la reserva **resuelta** y no el id guardado.
+
+⚠️ **Lo que queda es decisión de Dorel, y no se puede hacer desde la
+aplicación.** El apunte de producción tiene el dinero bien y el concepto mal, y
+`collaboratorSales` **no tiene ni borrado ni cambio de clase en la interfaz**.
+Las tres consecuencias y el riesgo de duplicado al cerrar esa reserva están en
+[mejoras-pendientes.md](mejoras-pendientes.md) § M-69.
+
+⚠️ **Todo esto es frontend: no hay nada que desplegar a mano.** Entra con el CI
+al mergear. Lo que sigue pendiente de despliegue manual es lo de la tarde
+—`refundRedsysPayment`—, en § 2 ter.
 
 ---
 

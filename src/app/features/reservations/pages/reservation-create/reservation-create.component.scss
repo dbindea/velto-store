@@ -1043,12 +1043,24 @@ textarea.form-control {
  * de error o de alerta parecería que algo falló, y con ellos el operador se
  * pararía a leerlo dos veces cada vez que convierte una solicitud.
  */
+/**
+ * Las tres medidas de la cinta, en un solo sitio.
+ *
+ * ⚠️ **Existen para que el rótulo de debajo pueda alinearse con su texto sin
+ * copiar el número.** Ver `.coche-fijado` más abajo: el desplazamiento del
+ * rótulo se suma de estas tres, así que tocar el relleno de la cinta mueve las
+ * dos cosas a la vez. Escrito a mano, la alineación se rompería en silencio.
+ */
+$cinta-padding-x: 12px;
+$cinta-icono: 16px;
+$cinta-gap: 8px;
+
 .from-request {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: $cinta-gap;
   margin-bottom: 16px;
-  padding: 8px 12px;
+  padding: 8px $cinta-padding-x;
   font-size: 0.8125rem;
   color: var(--text-secondary);
   background: var(--bg-main);
@@ -1056,5 +1068,56 @@ textarea.form-control {
 
   i {
     color: var(--accent-color);
+    width: $cinta-icono;
+    text-align: center;
+  }
+}
+
+/**
+ * El bloque del coche ya elegido: la cinta, el rótulo del calendario y su
+ * pista.
+ *
+ * ⚠️ **Los tres textos comparten columna, y hasta el 6 de noviembre de 2026
+ * no.** La cinta mete su contenido 36 px hacia dentro —12 de relleno, 16 de
+ * icono y 8 de hueco— mientras el rótulo y la pista salían a ras del panel: un
+ * borde izquierdo en escalera que Dorel vio en la pantalla. Lo que se alinea es
+ * la **columna de texto**; el icono se queda fuera, colgando en el margen, que
+ * es donde cuelga también el calendario de debajo.
+ *
+ * ⚠️ **El desplazamiento se CALCULA de las tres medidas de la cinta**, no se
+ * escribe 36. Escrito a mano, cambiar el relleno de la cinta rompe la
+ * alineación en silencio — y lo que se ve entonces es exactamente el defecto
+ * que esto viene a quitar.
+ */
+/*
+ * ⚠️ **Lleva `.step-panel .section` delante a propósito.** El rótulo ya tiene
+ * su margen en `.step-panel .section h2`, que con la encapsulación de Angular
+ * mide (0,5,1); un `.coche-fijado h2` a secas mide (0,3,1) y **pierde** — el
+ * `margin-bottom` de aquí no se aplicaría y el ritmo se quedaría como estaba,
+ * sin que nada fallara. Comprobado midiendo: 16 px antes, 4 px después.
+ */
+.step-panel .section.coche-fijado {
+  .from-request {
+    /* La pista de debajo ya separa; aquí sobraba el doble hueco. */
+    margin-bottom: 12px;
+  }
+
+  h2,
+  .hint {
+    padding-left: $cinta-padding-x + $cinta-icono + $cinta-gap;
+  }
+
+  /**
+   * ⚠️ **El ritmo iba al revés.** El rótulo dejaba 16 px hasta su pista y la
+   * pista **0** hasta el calendario, así que la frase que explica el calendario
+   * se leía pegada a él y despegada de su propio título. Ahora el rótulo y su
+   * pista van juntos y el hueco grande queda antes del calendario.
+   */
+  h2 {
+    margin-bottom: 4px;
+  }
+
+  .hint {
+    margin: 0 0 12px;
   }
 }

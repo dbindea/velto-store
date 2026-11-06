@@ -7,6 +7,7 @@
  * - Minimum is 1 day if return > pickup
  */
 
+import { PICKUP_HOUR, RETURN_HOUR } from './availability-calendar.util';
 
 /**
  * Calculate calendar days between two datetimes.
@@ -91,21 +92,30 @@ export function dateRangesOverlap(
 }
 
 /**
- * Get default pickup datetime (today at noon).
+ * Con qué horas nace el asistente de reserva: hoy y mañana, **a las 10:00**.
+ *
+ * ⚠️ **Eran las 12:00 hasta el 6 de noviembre de 2026**, y era la cuarta
+ * respuesta distinta a la misma pregunta. En la misma pantalla convivían el
+ * calendario de disponibilidad proponiendo las 10:00 (`PICKUP_HOUR`) y este
+ * campo naciendo a las 12:00: elegir los días en el calendario **cambiaba la
+ * hora** del campo que ya estaba relleno, sin que nada lo dijera. Lo zanjó
+ * Dorel —«la hora por defecto de alquiler hay que ponerla a 10:00 en todos los
+ * casos, web y backoffice»—, que es la hora a la que abre la oficina.
+ *
+ * ⚠️ **Se leen de `PICKUP_HOUR` y `RETURN_HOUR`, no se copia el 10.** Es lo
+ * único que impide que vuelvan a separarse: con el número escrito aquí, mover
+ * la hora del calendario dejaría otra vez dos cifras en la misma pantalla.
  */
 export function getDefaultPickupDateTime(): Date {
   const now = new Date();
-  now.setHours(12, 0, 0, 0);
+  now.setHours(PICKUP_HOUR, 0, 0, 0);
   return now;
 }
 
-/**
- * Get default return datetime (tomorrow at noon).
- */
 export function getDefaultReturnDateTime(): Date {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(12, 0, 0, 0);
+  tomorrow.setHours(RETURN_HOUR, 0, 0, 0);
   return tomorrow;
 }
 

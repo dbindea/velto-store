@@ -1984,7 +1984,8 @@
       "ownerSharePercent": "Share as owner",
       "ownerShareHint": "If they lend cars. It is the default: each car keeps its own and each booking freezes it.",
       "paidAt": "Payment date",
-      "paidAtHint": "The day the money actually left, which need not be today."
+      "paidAtHint": "The day the money actually left, which need not be today.",
+      "kind": "Why it is owed"
     },
     "generated": "Generated",
     "generatedLower": "generated",
@@ -2084,6 +2085,12 @@
       "deleted": "Invoice deleted",
       "deleteTitle": "Delete the invoice",
       "deleteMessage": "The shares it covered will go back to awaiting an invoice."
+    },
+    "kindHint": {
+      "ownerVehicle": "The car on this reservation is theirs, so the normal case is the owner share. Their agreed percentage is proposed.",
+      "notOwnerVehicle": "The car on this reservation is not recorded as theirs. If there is an owner share anyway, change it by hand.",
+      "ownerAlready": "The car is theirs, but the owner share for this reservation is already recorded. What is left is the referral commission.",
+      "notOwnerButShare": "The car on this reservation is not recorded as theirs. The owner share will be recorded anyway: check the percentage."
     }
   },
   "events": {

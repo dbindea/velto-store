@@ -1984,7 +1984,8 @@
       "ownerSharePercent": "Reparto como propietario",
       "ownerShareHint": "Si cede coches. Es la propuesta: cada coche guarda el suyo y cada reserva lo congela.",
       "paidAt": "Fecha del pago",
-      "paidAtHint": "El día en que salió el dinero, que no tiene por qué ser hoy."
+      "paidAtHint": "El día en que salió el dinero, que no tiene por qué ser hoy.",
+      "kind": "Por qué se le debe"
     },
     "generated": "Generado",
     "generatedLower": "generado",
@@ -2084,6 +2085,12 @@
       "deleted": "Factura eliminada",
       "deleteTitle": "Eliminar la factura",
       "deleteMessage": "Los repartos que cubría volverán a quedar pendientes de recibir factura."
+    },
+    "kindHint": {
+      "ownerVehicle": "El coche de esta reserva es suyo, así que lo normal es el reparto por cederlo. Se propone su porcentaje pactado.",
+      "notOwnerVehicle": "El coche de esta reserva no consta como suyo. Si aun así hay reparto, cámbialo a mano.",
+      "ownerAlready": "El coche es suyo, pero su reparto por esta reserva ya está reconocido. Lo que queda libre es la comisión por traer el cliente.",
+      "notOwnerButShare": "El coche de esta reserva no consta como suyo. Se registrará el reparto igualmente: comprueba el porcentaje."
     }
   },
   "events": {

@@ -123,6 +123,18 @@
   --sidebar-text-muted: var(--gray-400);
   --sidebar-hover: rgba(255, 255, 255, 0.06);
   --sidebar-active: var(--accent-color);
+  /**
+   * El icono del menú al pasar el ratón. Rojo Ferrari, pedido por Dorel el 6 de
+   * noviembre de 2026.
+   *
+   * ⚠️ **Va aquí y no en el componente, pero NO cambia con el tema**, y eso es
+   * correcto: los cuatro temas pintan la barra lateral oscura —`--gray-900`,
+   * `--gray-950`, `#101614`, `#0B1220`—, así que el rojo compone contra un fondo
+   * casi negro en todos. Medido sobre el más claro de los cuatro: **4,8:1**, por
+   * encima del 3:1 que pide un icono. El día que un tema traiga la barra clara,
+   * este valor se redefine en su bloque igual que `--sidebar-bg`.
+   */
+  --sidebar-icon-hover: #ff2800;
 
   // Borders
   --border-color: var(--gray-200);
