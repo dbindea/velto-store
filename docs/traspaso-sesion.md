@@ -2760,13 +2760,28 @@ que hace `RedsysPaymentService.openGateway()`.
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **Al cerrar el 7 de noviembre de 2026: NADA de functions.** El trabajo del
-día es todo backend —las dos del recordatorio, el arreglo del resumen y el
-webhook con la marca de entorno— y **ya está desplegado en los dos entornos, por
-tandas y por nombre**. Producción da **35** functions (`functions:list --project
-prod --json`), y siguen faltando a propósito las cinco de la AEAT. **No hay nada
-de frontend en este día**, así que no hace falta merge a `master` para que
-funcione; lo que falta es subir el commit a `develop`.
+⚠️ **Al cerrar el 7 de noviembre de 2026: NADA.** El trabajo del día es todo
+backend —las dos del recordatorio, el arreglo del resumen y el webhook con la
+marca de entorno— y está **desplegado en los dos entornos, por tandas y por
+nombre**. Producción da **35** functions (`functions:list --project prod
+--json`), y siguen faltando a propósito las cinco de la AEAT.
+
+Y `master` está al día: el merge **`68d10f3`** lo publicó a petición de Dorel.
+⚠️ **No llevaba ni una línea de frontend** —el diff contra `src/`, `web/`,
+`angular.json` y `package.json` salía **vacío**—, así que el CI republicó el
+mismo bundle; el merge sirve para que la rama de producción tenga el código que
+producción ya ejecutaba. **Comprobado contra el dominio, no contra el log del
+CI**: el pie del backoffice dice `VELTO v1.0 68d10f3` en
+`rentalcar.veltomobility.com` —o sea que Cloudflare no se quedó con la copia
+vieja— y el `robots.txt` del escaparate sigue anunciando el sitemap, que es la
+marca del modo `live`.
+
+⚠️ **Y las marcas de subida de las functions se miraron una a una**, que es lo
+que distingue «desplegado» de «creo que lo desplegué»: las cinco llevan la fecha
+del día 7 (`source.storageSource.generation`, que son microsegundos). Hubo que
+volver a subir `previewDailyDigest` por un cambio que era **solo un comentario**
+—no cambiaba nada— para que el bundle desplegado y el repositorio no divergieran
+ni en eso.
 
 > Histórico del 6 de noviembre, que queda como ejemplo — **no lo creas, vuelve a
 > medirlo con los comandos del final**:
