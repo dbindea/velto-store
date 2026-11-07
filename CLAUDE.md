@@ -2568,6 +2568,48 @@ eso `inspection.service.ts` lleva `.pipe(first())`. (`firstValueFrom` sí
 resuelve con la primera emisión y no cuelga; lo que deja es un oyente abierto
 para leer una vez.)
 
+## Firestore: una fecha de reserva NO se puede consultar por RANGO
+
+⚠️ **`toTimestamp()` no devuelve un `Timestamp`: devuelve un objeto plano
+`{ seconds, nanoseconds }`**, y el SDK lo escribe como un **mapa**. Firestore
+ordena **por tipo antes que por valor**, así que
+`where('returnDateTime', '>=', unaFecha)` compara un timestamp contra mapas y
+**no devuelve ni un documento**: ni error, ni aviso, ni resultado. Medido el 7 de
+noviembre de 2026 documento a documento en desarrollo — las seis reservas
+guardadas así, mientras `updatedAt` y `signedAt` sí son `Timestamp` de verdad
+porque los escribe el admin SDK.
+
+Lo que costó: **`sendDailyDigest` llevaba desde el 10 de septiembre saliendo sin
+una sola entrega ni devolución**, y los días sin vencimientos ni solicitudes no
+salía siquiera, porque `mereceEnvio()` no tenía nada que contar. El correo de la
+mañana decía la verdad sobre todo menos sobre los coches.
+
+⚠️ **Y tapaba un segundo fallo en el mismo sitio: el campo es
+`reservationStatus`, no `status`.** El resumen filtraba por `r['status']`, que no
+existe en el documento, así que comparaba contra `undefined` y **no filtraba
+nada** — una reserva cancelada habría salido como entrega de mañana. No se vio
+porque el primer fallo llegaba antes: no había nada que filtrar. Ya estaba
+avisado en un comentario de `generateBookingConfirmationPdf.ts`.
+
+La forma, y es la única que hay mientras el campo sea un mapa: **se acota por
+estado en la consulta y el rango se filtra en memoria.**
+`caeEnElRango()` y `ESTADOS_CON_MOVIMIENTO`, en
+[daily-digest.ts](functions/src/alerts/daily-digest.ts), con tests de las cuatro
+formas que llegan de verdad (`{seconds}`, `{_seconds}`, `Timestamp`, `Date`) y
+de los bordes en hora de Madrid. El precio conocido: lo que nadie cierra sigue
+dentro de esos estados y se lee cada vez.
+
+⚠️ **Lo que NO se ha hecho es migrar el campo**, y es deliberado: son fechas de
+reservas vivas en producción, y un cambio de forma ahí se prueba contra una copia
+—no contra la base— y se despliega en dos pasos. Un `orderBy('pickupDateTime')`
+tiene el mismo problema de fondo, así que **antes de consultar una fecha de
+reserva hay que mirar cómo está guardada**.
+
+> Es la tercera vez que este mapa muerde con la misma forma. Ya vació el
+> calendario —allí era `new Date({seconds})` dando `Invalid Date`— y ya obligó a
+> escribir el `toDate()` de cuatro ramas. **El dato no es lo que el nombre del
+> campo dice que es.**
+
 ## Firestore: `undefined` está prohibido
 
 Firestore lanza `Cannot use 'undefined' as a Firestore value`. Hay dos defensas y conviene conocer ambas:
@@ -2713,9 +2755,97 @@ la AEAT — `sendVerifactuRecords`, `sweepVerifactuRecords` (**programada**, cad
 cinco minutos), `getVerifactuStatus`, `retryVerifactuRecord` y
 `checkVerifactuConnection`.
 
-⚠️ **`sweepVerifactuRecords` es la primera function programada del proyecto**, y
+⚠️ **`sweepVerifactuRecords` fue la primera function programada del proyecto**, y
 necesita la API de Cloud Scheduler activada. El primer despliegue la activa solo;
 conviene saberlo porque es un servicio más que aparece en la factura de Google.
+
+⚠️ **Y aquí ponía que Cloud Scheduler «hoy no está» en producción, que era
+FALSO**: `sendDailyDigest` es una `onSchedule` y corre allí a las 9:00 desde el
+10 de septiembre de 2026. Hoy hay **tres** programadas —el barrido de la AEAT (solo
+desarrollo), el resumen de las 9:00 y el recordatorio de las 17:00—, o sea **dos
+trabajos en producción y tres en desarrollo**. El plan de Cloud Scheduler da tres
+trabajos gratis **por cuenta de facturación**, y los dos proyectos comparten una,
+así que a partir de aquí pueden aparecer unos céntimos al mes. Lo que no vale es
+seguir decidiendo con la frase vieja: colgar una tarea de otra para «no estrenar
+Scheduler» ya no ahorra nada.
+
+### El aviso de las 17:00: el WhatsApp de la prórroga, ya escrito
+
+`sendReturnReminders` manda por Telegram, a las 17:00 de Madrid, un mensaje por
+cada alquiler que termina **mañana**, con el texto para el cliente redactado y
+listo para pegar. Lo pidió Dorel el 7 de noviembre de 2026 con su propio ejemplo
+escrito a mano.
+
+⚠️ **No es el resumen diario a otra hora**, y de ahí sale todo lo demás. El de
+las 9:00 cuenta lo que hay que **preparar**; este trae lo que hay que
+**escribirle a una persona**, y la hora es parte de la petición: la tarde de
+antes es la última en la que se puede vender una prórroga. A las 9:00 del día de
+la devolución el cliente ya está de camino.
+
+⚠️ **Uno por reserva, no un mensaje con la lista.** El valor entero está en que
+el texto del cliente va en un `<pre>`, que en Telegram **se copia tocándolo**:
+con tres clientes en el mismo mensaje no hay nada que tocar, y hay que
+seleccionar a mano en un móvil — el trabajo que esto venía a quitar.
+
+⚠️ **La cabecera queda FUERA del bloque.** Lo que se copia tiene que ser
+exactamente lo que recibe el cliente: un «Mañana termina un alquiler» o una
+matrícula pegados en su chat delatan que el mensaje lo escribió una máquina — y
+la matrícula no es asunto suyo. Hay test de eso.
+
+⚠️ **No manda nada al cliente, y es deliberado.** Llega un borrador para copiar
+y un enlace `wa.me` que **abre** WhatsApp con el texto puesto; quien pulsa enviar
+es Dorel. Mandarlo solo pediría la API de WhatsApp Business —número aparte,
+verificación con Meta, plantilla aprobada y pago por mensaje— y quitaría la
+última revisión humana de algo que lee un cliente.
+
+⚠️ **El texto es de Dorel, casi literal**, como el de las solicitudes. Se le
+corrigieron dos faltas —«escibeme» y «proroga»— y se le añadió el lugar de
+devolución, que ahorra la siguiente pregunta del cliente. Va en **español
+siempre**: no hay ningún campo en `Client` que diga en qué idioma habla, así que
+elegirlo sería inventárselo.
+
+⚠️ **Y las dos correcciones que hizo él al leerlo son de negocio, no de estilo.**
+«Prolongar la **estancia**» pasó a «prolongar**la**» —*«es un coche, no un
+hotel»*: la palabra era de hostelería y la puse yo—, y «**te espero** a esa hora
+en X» pasó a «**quedamos** a esa hora en X», que de paso resuelve lo único que
+no se podía deducir: el artículo del lugar. «En Aeropuerto T1» pide un «el» que
+«en Oficinas Velto» no lleva, y el lugar lo teclea el operador — con «quedamos»
+las dos formas se leen bien. Hay test de los dos.
+
+⚠️ **Sin parte de entrega se avisa IGUAL, y eso no es laxitud.** Pedir solo
+`delivered` es lo correcto en teoría y tiene un modo de fallo que no se nota:
+quien no complete los partes no recibiría este aviso **nunca**, y un aviso que no
+llega no se echa de menos. Si la recogida ya pasó, el coche se da por fuera y el
+mensaje lo dice. Lo ya `returned` **no** se avisa: ofrecer una prórroga de un
+alquiler terminado es el aviso que hace que se dejen de leer los demás.
+
+⚠️ **El teléfono es TEXTO LIBRE en la ficha de un cliente**, al revés que en las
+solicitudes de la web. Conviven `+34623766181` y `600111222` —las dos formas
+están hoy en la base—, así que `telefonoParaWhatsapp()` normaliza y **en la duda
+devuelve `null`**: sin enlace, con el teléfono a la vista para marcarlo a mano.
+Nueve dígitos se dan por españoles, que es una suposición y está escrita como
+tal; es segura **porque el enlace solo abre el chat**, con el nombre del contacto
+delante.
+
+⚠️ **Y los avisos de Telegram llevan `(DEV)` fuera de producción**, aplicado en
+`avisarPorTelegram()` — donde se **envía**, igual que `asuntoDeCorreo()`. Hoy
+desarrollo escribe por `@VeltoDevBot` y producción por `@VeltoMobilityBot`, pero
+`TELEGRAM_CHAT_ID` es **el mismo número** en los dos `.env` y lo único que los
+separa es una decisión que no estaba escrita en el código. Esto arregla de paso
+el aviso de cobro, que no la llevaba.
+
+⚠️ **Las dos vistas previas aceptan `fecha` («haz como si hoy fuera este día»)**,
+y no es un adorno: es lo que permitió **ver** que el resumen diario llevaba dos
+meses sin entregas ni devoluciones. Sin ella, comprobar un aviso programado exige
+que mañana haya movimiento de verdad, o cambiarle la fecha a una reserva para
+provocarlo — tocar datos para mirarlos. `diaDeReferencia()` usa **mediodía UTC**
+y rechaza un día que no existe: `new Date('2026-02-31T…')` no es inválida, se
+desborda al 3 de marzo y el ensayo saldría de otro día sin decirlo.
+
+Comprobado de punta a punta el 7 de noviembre de 2026, en los dos entornos y
+contra datos reales: el aviso llegó a Telegram (`enviados: 1`) y en producción
+sale el alquiler del Renault Megane que vuelve el **14/11 a las 14:00** — o sea
+que el aviso de ese alquiler saldrá el día 13.
 
 ### Los correos comparten cáscara, y su maquetación está FUERA del envío
 
@@ -2773,9 +2903,15 @@ los del manifiesto de descubrimiento en vez de a ojo):
 
 | | Cuántas | Cuáles faltan |
 |---|---|---|
-| el código define | **38** | — |
-| desarrollo | **38** | — |
-| producción | **33** | las cinco de la AEAT |
+| el código define | **40** | — |
+| desarrollo | **40** | — |
+| producción | **35** | las cinco de la AEAT |
+
+> Medido el **7 de noviembre de 2026**: las dos nuevas son
+> `sendReturnReminders` y `previewReturnReminders`, y están en los dos entornos.
+> El código se contó en el manifiesto de descubrimiento —`Object.keys(
+> manifiesto.endpoints).length`—, no a ojo, y producción con
+> `functions:list --project prod --json`.
 
 ⚠️ **Aquí ponía 32 y que faltaba además `createSignalPayment`, y las dos cosas
 eran FALSAS desde el 20 de octubre de 2026.** Está desplegada en producción
@@ -2870,7 +3006,7 @@ explícito. La misma frase estaba repetida en
 ### El arranque en frío lo paga la function más ligera
 
 ⚠️ **El contenedor evalúa `index.ts` ENTERO en cada arranque en frío**, y
-`index.ts` reexporta las 37 functions. Así que la cadena de imports de la más
+`index.ts` reexporta las 40 functions. Así que la cadena de imports de la más
 pesada la paga también la más ligera: una petición de `/api/fleet` desde la web
 pública cargaba `pdf-lib`, `fontkit`, `sharp`, `@signpdf` y el `node-forge` del
 certificado de la AEAT **antes de devolver una lista de coches**.
@@ -3582,6 +3718,40 @@ dinero que sí entró y se quedó. Por eso `sumPaid()` **descuenta
 `notifiedAt` de la pasarela llevaba así desde siempre y no se vio porque hasta
 que hubo un cobro real con notificación el `@if` no entraba nunca.
 
+#### La fianza RETENIDA en la tarjeta: el comercio no lo permite todavía
+
+Lo preguntó Dorel el 7 de noviembre de 2026 —preautorizar la fianza, y luego
+cobrar parte, cobrarla toda o desbloquearla— y la respuesta está medida contra
+el comercio de pruebas del banco: la pasarela contesta **`SIS0256`, «El comercio
+no permite operativa de preautorización»**. Con su control: el **mismo**
+formulario con el tipo `0` en vez del `1` sale autorizado, así que no es un
+problema de datos ni de firma.
+
+Lo que hay que saber antes de volver a mirarlo, y el detalle entero está en
+[docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 ter:
+
+- **La operativa encaja con una fianza**: tipo `1` retiene, `2` confirma por un
+  importe **menor o igual** y libera el resto, `9` lo desbloquea. Pero admite
+  **una sola** confirmación (`SIS0060`), así que se decide una vez, al cerrar.
+- ⚠️ **El plazo es el punto que lo puede tumbar**: la guía de Redsys dice **30
+  días** y su tabla de errores **7** (`SIS0132`, `SIS0530`). Con 7 no sirve para
+  los alquileres largos de VELTO, así que hay que pedirle a BBVA el plazo del
+  terminal **por escrito**.
+- ⚠️ **Y la respuesta se lee con una TERCERA regla**: un cobro aceptado es
+  `0000`–`0099`, una devolución `0900`–`0999` y una **anulación** `0400`. Es la
+  misma trampa que ya hizo que una devolución correcta pareciera un error.
+- **Lo caro no es la pasarela, es el modelo**: hoy una fianza retenida se
+  representa como un **cobro** con `paidAmount`, y una preautorización no es
+  dinero que haya entrado. Toca `payment-summary.util.ts`, `isDepositSettled()`
+  —lo que deja cerrar la reserva—, los informes y los tres PDF.
+
+⚠️ **Bizum ya se puede probar sin tocar código**: la pantalla del comercio lo
+ofrece en «Otras formas de pago» sin que la aplicación mande
+`Ds_Merchant_PayMethods`, y el banco lo exige para el pase a producción. Lo que
+está sin comprobar es el camino de **vuelta** —`Ds_ProcessedPayMethod: 68`—, y
+una vía de cobro no está probada hasta que alguien paga por ella y la aplicación
+se entera sin ayuda.
+
 ### El cliente paga desde su móvil
 
 `getPaymentCheckout` es **pública** y la abre el cliente en `/pay/:paymentId`, ruta
@@ -3964,8 +4134,9 @@ actualiza todas, porque nombrarlas es pedirlo explícitamente. Así que en
 producción, donde nombrarlas es obligatorio, no hay forma de usar el
 `Skipped` como comprobación; lo que vale es que cada una diga
 `Successful update operation` y que `firebase functions:list --project prod`
-siga dando **33** (medido el 2 de noviembre de 2026; ponía 32, del 8 de octubre,
-y se quedó corta al desplegar `createSignalPayment` el 20).
+siga dando **35** (medido el 7 de noviembre de 2026 al desplegar las dos del
+recordatorio de devolución; ponía 33, del 2 de noviembre, y antes 32, del 8 de
+octubre, que se quedó corta al subir `createSignalPayment` el 20).
 
 ⚠️ **Y contar a ojo esa lista no sirve.** La imprime con caracteres de tabla y
 **códigos de color ANSI**, así que un `grep -c` sobre ella cuenta separadores o
@@ -5288,9 +5459,9 @@ número ya emitido. Ante una pérdida de datos con facturas emitidas, lo primero
 restaurar ni desplegar. Está anotado como la primera acción pendiente del sobre;
 mientras siga así, cualquier plan de recuperación depende de una sola persona.
 
-⚠️ **En producción, nunca `--only functions` a secas.** Hay **33** desplegadas y
+⚠️ **En producción, nunca `--only functions` a secas.** Hay **35** desplegadas y
 faltan **las cinco** de la AEAT, que no van allí hasta el 1 de enero y que un
-despliegue completo subiría. Medido el **2 de noviembre de 2026** con
+despliegue completo subiría. Medido el **7 de noviembre de 2026** con
 `functions:list --project prod --json`, comparando los **nombres** y no la cifra
 — que es lo que distingue qué falta de cuántas hay.
 

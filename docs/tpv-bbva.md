@@ -245,8 +245,32 @@ devolver **desaparece** y la ficha dice «Este cobro está devuelto»:
 de verdad —fondos insuficientes, tarjeta caducada—. El simulador de este entorno
 deniega en la **autenticación**, que es un paso antes, y para el otro caso hace
 falta una tarjeta de pruebas concreta que el banco no ha dado. Si BBVA lo exige
-en su lista, hay que pedírsela. Tampoco se probó **Bizum**, que la pasarela
-ofrece y la aplicación no integra.
+en su lista, hay que pedírsela. Tampoco se probó **Bizum** — ver § 3 ter: la
+pantalla del comercio **ya lo ofrece**, así que se prueba con el enlace de pago
+de siempre.
+
+### Dónde se ven estas operaciones, y por qué puede parecer que no están
+
+Dorel dijo el 7 de noviembre de 2026 que **no le salían en la consola del
+banco**. Las operaciones existen —las seis de arriba y la del 7 de noviembre,
+pedido `01305154399C`, autorizada con código **239828**—, así que lo que falla es
+dónde o cómo se consulta. Tres cosas, en el orden en que engañan:
+
+1. ⚠️ **El portal de TEST es otro sitio, con puerto**:
+   `https://sis-t.redsys.es:25443/portalBBVA`, usuario y contraseña `370770240`
+   —los del email del alta—. El panel de producción (`canales.redsys.es`) **no
+   tiene nada de esto**: el comercio `370770240` todavía no existe en el entorno
+   real, que es justo lo que se va a pedir con «Pasar a producción».
+2. ⚠️ **El filtro de fechas arranca en «hoy»**. Las seis operaciones son del **2
+   de noviembre**, así que a partir del día 3 no salen sin ampliar el rango. Por
+   eso se dejó una operación **con la fecha del día** al mirar esto.
+3. **El terminal se muestra como `1`, no como `001`.** La pasarela se identifica
+   `370770240-1` y así aparece en las consultas, aunque el parámetro que se manda
+   sea `001`. Buscar por `001` puede no devolver nada.
+
+⚠️ **El primer acceso puede pedir cambiar la contraseña**, y eso lo hace Dorel:
+es su panel, y una contraseña cambiada por otro es una contraseña que él no
+tiene. Si el usuario se bloquea por intentos, hay que llamar al 912 983 609.
 
 ### Lo que hay que cambiar el día que concedan producción
 
@@ -319,6 +343,120 @@ lo primero que uno piensa es que la clave nueva está mal puesta.
 
 ---
 
+## 3 ter. La fianza retenida en la tarjeta: medido el 7 de noviembre de 2026
+
+**La pregunta de Dorel**, literal: *«quiero poder bloquear en tarjetas como
+preautorización el importe de las fianzas. ¿es posible esto con lo que tengo?
+pre-autorizar y luego cobrar parte de ellas, total y desbloquear»*.
+
+**La respuesta corta: la operativa existe y encaja exactamente con una fianza,
+pero el comercio NO la tiene habilitada.** Y eso no se puede leer en ninguna
+documentación: se mide contra el comercio.
+
+### Lo que contestó la pasarela
+
+Preautorización de 150 € contra `sis-t.redsys.es` con el comercio `370770240`,
+terminal `001`, firma correcta:
+
+```
+Comercio: VELTO MOBILITY (SPAIN)   Terminal: 370770240-1
+Pedido:   6566D6AF5E3A             Importe: 150,00 Euros
+No se puede realizar la operación
+Error en datos enviados. Contacte con su comercio. (SIS0256)
+```
+
+**SIS0256 es, literalmente en la tabla de Redsys, «El comercio no permite
+operativa de preautorizacion».** El mensaje de pantalla dice «Error en datos
+enviados», que lleva a buscar un parámetro mal puesto; no es eso.
+
+⚠️ **Y está comprobado con su control, que es lo que lo hace creíble.** El
+**mismo** formulario, el mismo comercio, la misma clave y el mismo guion,
+cambiando **solo** `DS_MERCHANT_TRANSACTIONTYPE` de `1` a `0`, llega a la
+pantalla de tarjeta y la operación sale **AUTORIZADA con código 239828** (pedido
+`01305154399C`, 150 €, 07/11/2026 18:10). O sea: lo que falla es el **tipo de
+operación**, no los datos ni la firma.
+
+El guion está en
+[probar-preautorizacion.js](probar-preautorizacion.js) y vive en `docs/` por lo
+mismo que los de reglas: no es código de la aplicación. Sirve para repetir esto
+el día que el banco conteste.
+
+### Lo que hay que pedirle a BBVA, y son DOS cosas
+
+1. **Habilitar la operativa de preautorización** en el comercio (y en el de
+   producción cuando lo concedan, que es otro alta distinta).
+2. **El plazo de validez del terminal, por escrito.** Y esto es lo que decide si
+   sirve para este negocio, porque la propia documentación de Redsys se
+   contradice:
+
+   | Fuente | Plazo |
+   |---|---|
+   | la guía operativa de preautorizaciones | *«El plazo de validez de una operación de Preautorización es de treinta días»* |
+   | la tabla de códigos de error (misma web) | **SIS0132**: la confirmación no puede superar en más de **7 días** a la preautorización. **SIS0530**: igual para la anulación |
+
+   ⚠️ **Con 7 días, esto no vale para la mayoría de los alquileres de VELTO** —la
+   tarifa llega a tramos de 31 días y más—: la retención caducaría **antes** de
+   la devolución del coche y la fianza se liberaría sola. Con 30 días cubre casi
+   todo, menos los de más de un mes. Hay un tipo **11, «preautorización de
+   reemplazo»**, que es por donde se renovaría en un alquiler largo, y eso
+   también hay que preguntarlo.
+
+### Si lo habilitan, lo que la operativa da — y encaja
+
+| Qué hace la agencia | Tipo | Detalle |
+|---|---|---|
+| retener la fianza | **1** Preautorización | bloquea el importe, **sin cargo en firme** |
+| quedarse con una parte por daños | **2** Confirmación | importe **menor o igual**; *«la diferencia de importe, si la hubiera, se liberaría a favor del titular»* |
+| quedarse con la fianza entera | **2** Confirmación | por el total |
+| devolverla sin tocar nada | **9** Anulación | libera el bloqueo |
+
+⚠️ **Una preautorización admite UNA confirmación** (`SIS0060`: «Ya existe una
+confirmación asociada»). Así que no se puede ir cobrando a plazos: se decide una
+vez, al cerrar la reserva, y lo no confirmado se libera. Para una fianza es justo
+lo que hace falta.
+
+⚠️ **Solo VISA y MasterCard**, dice la guía. Y hay un `SIS0257` para la tarjeta
+que no lo admite, así que el camino de «esta tarjeta no puede» hay que
+contemplarlo: la salida es cobrar la fianza como hoy.
+
+### Y lo que costaría dentro de la aplicación, que es lo que no se ve
+
+La pasarela es la parte fácil, y está medio hecha:
+
+- `REDSYS_TRANSACTION_TYPE` **ya es una variable** (`redsys.ts`), hoy `0`.
+- La firma y la vía **REST** ya están, probadas y con tests: la confirmación y la
+  anulación se lanzan como la devolución (`redsys-refund.ts`), cambiando el tipo.
+- ⚠️ **Pero la respuesta se lee con una TERCERA regla.** Un cobro aceptado es
+  `0000`–`0099`, una devolución `0900`–`0999`, y una **anulación** responde
+  `0400`. Es exactamente la trampa que ya costó que una devolución aceptada
+  pareciera un error — y lo que sigue a un error es reintentar.
+
+Lo caro es el **modelo**, y es una decisión de negocio, no de código: hoy una
+fianza retenida se representa como un **cobro** (`payments` con `paidAmount`), y
+una preautorización **no es dinero que haya entrado**. Eso toca
+`payment-summary.util.ts`, `isDepositSettled()` —que es lo que deja cerrar la
+reserva—, los informes (una retención no es ingreso, y hoy la fianza ya está
+excluida por otra vía), el recibo, y los tres PDF que imprimen la fianza. Si
+alguna vez se hace, el estado nuevo tiene que nacer **aditivo**, como manda la
+regla de producción.
+
+### Bizum: la pantalla ya lo ofrece
+
+El email del banco pide probar *«tanto de cobros con tarjetas como con Bizum»*.
+Medido en la misma pasada: la pantalla del comercio `370770240` enseña «Otras
+formas de pago → **Bizum**» sin que la aplicación mande nada
+(`Ds_Merchant_PayMethods` no se envía, así que el terminal ofrece lo que tenga
+habilitado). O sea que **se puede probar con el enlace de pago de siempre**, sin
+tocar código: se abre `/pay/:id` y se elige Bizum en vez de tarjeta.
+
+⚠️ **Lo que no está probado es el camino de vuelta de un pago con Bizum**: el
+webhook identifica el método en `Ds_ProcessedPayMethod` (`68` es Bizum) y la
+aplicación no lo mira. Debería dar igual —lo que decide es `Ds_Response`—, pero
+está sin comprobar, y una vía de cobro no está probada hasta que alguien paga
+por ella y la aplicación se entera sin ayuda.
+
+---
+
 ## 4. Lo que falta, y es de Dorel
 
 ⚠️ **A 20 de octubre de 2026 el expediente está EN MANOS DEL BANCO.** Lo que
@@ -342,6 +480,18 @@ y son dos functions, no una.
 | **Decirle al banco lo de la fianza** | 🟡 pendiente — ver 3.2: tasa de devoluciones alta por diseño, y no hay rastro de que se dijera |
 | **Cuenta de empresa en BBVA** | ✅ ya la tiene |
 | **Ficha de Google Business Profile** | ✅ creada, enlazada desde el JSON-LD |
+
+**Y desde el 7 de noviembre de 2026, dos peticiones más al banco** — las dos de
+§ 3 ter, y las dos son suyas porque las contesta el banco y no el código:
+
+| Qué pedir | Por qué, en una línea |
+|---|---|
+| **Habilitar la operativa de preautorización** en el comercio | hoy la pasarela contesta `SIS0256`, «el comercio no permite operativa de preautorización», medido |
+| **El plazo de validez de la preautorización, por escrito** | la documentación de Redsys dice **30 días** en un sitio y **7** en otro, y con 7 esto **no sirve** para los alquileres largos de VELTO |
+
+⚠️ **Y conviene pedirlas antes de «Pasar a producción», no después.** El pase es
+un alta nueva del comercio en el entorno real: lo que no esté habilitado
+entonces hay que volver a pedirlo con el TPV ya cobrando.
 
 > ⚠️ **Aquí ponía que el dominio era el camino crítico y que no respondía.**
 > Era cierto el 2 de octubre y dejó de serlo el 5. Esta tabla se quedó tres

@@ -15,6 +15,32 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 7 de noviembre de 2026 — el WhatsApp de la prórroga
+
+Cerrada **N-46** (nueva): el aviso de Telegram de las **17:00** con el mensaje
+para el cliente ya redactado, por cada alquiler que termina mañana. Desplegado en
+los dos entornos; el relato, en [traspaso-sesion.md](traspaso-sesion.md)
+§ 2 quinvicies y las decisiones en CLAUDE.md.
+
+⚠️ **Y de paso cerró un fallo que nadie había pedido arreglar porque nadie lo
+había visto: el resumen diario de las 9:00 llevaba desde el 10 de septiembre
+saliendo sin una sola entrega ni devolución.** Las consultas de rango sobre
+`pickupDateTime`/`returnDateTime` no devuelven nada —esas fechas están guardadas
+como **mapa**, no como `Timestamp`— y el filtro de estados preguntaba además por
+`status`, que no existe en el documento. Las dos cosas fallan **en silencio**: el
+correo llegaba cada mañana con esas dos secciones vacías.
+
+> La lección, que vale para la lista entera: **un aviso que no sale no se echa de
+> menos.** Lo que lo destapó fue poder preguntarle al resumen «¿qué habrías
+> mandado el día 26?» —el parámetro `fecha` de las vistas previas—, no leer el
+> código.
+
+Queda a criterio de Dorel el **texto** del mensaje (es el suyo casi literal, con
+dos faltas corregidas) y si el aviso debe decir lo que falta cobrar; hoy no lo
+dice, y el por qué está en [avisos-telegram.md](avisos-telegram.md).
+
+---
+
 ## Estado a 6 de noviembre de 2026 (noche) — cuatro peticiones de Dorel
 
 Cerradas las cuatro: **M-66** (el icono del menú en rojo Ferrari al pasar el
@@ -24,10 +50,15 @@ ratón), **M-67** (el bloque del coche fijado, alineado y con su ritmo),
 porcentaje que toca). El relato está en
 [traspaso-sesion.md](traspaso-sesion.md) § 2 quatervicies.
 
-⚠️ **Y queda UNA COSA QUE HACER TÚ en producción**: el apunte de 102,90 € del
-Ford Custom está registrado como «Por traer el cliente» con un 0 %. Ya se puede
-arreglar desde la aplicación —se pulsa la chapa del concepto—, pero la
-corrección la tienes que hacer tú: yo no escribo en producción. Ver M-69.
+**Las cuatro están en producción** desde el merge `0f382f4` de esa noche, y
+Dorel las recorrió allí: «probado y todo perfecto». M-67 llevó **dos** intentos
+—la primera alineación eligió la referencia equivocada—, y eso está contado en
+su ficha porque es la parte que enseña algo.
+
+⚠️ **Lo único que no podía hacer yo era la corrección del apunte**: el de
+102,90 € del Ford Custom nació como «Por traer el cliente» con un 0 %, y
+arreglarlo es escribir en producción. El botón que lo permite ya está allí —se
+pulsa la chapa del concepto—. Ver M-69.
 
 ### ✅ M-69 · «Asignar venta» solo sabía crear comisiones de captación *(6 nov 2026)*
 
@@ -463,6 +494,26 @@ Telegram es el pitido; el correo es el registro escrito que queda cuando el
 pitido falla y el que se puede buscar dentro de seis meses. Reutiliza la cáscara
 de `functions/src/alerts/email-shell.ts`, como el resumen diario y el aviso de
 una solicitud nueva.
+
+### ✅ N-46 · El WhatsApp de la prórroga, a las 17:00 del día antes — hecho el 7 de noviembre de 2026
+
+Lo pidió Dorel ese día: un aviso de Telegram a las 17:00 por cada alquiler que
+termina **mañana**, con el mensaje para el cliente redactado y listo para pegar.
+`sendReturnReminders` + `previewReturnReminders`, desplegadas en los dos
+entornos. Las decisiones están en CLAUDE.md («El aviso de las 17:00») y en
+[avisos-telegram.md](avisos-telegram.md); el relato, en
+[traspaso-sesion.md](traspaso-sesion.md) § 2 quinvicies.
+
+Tres cosas de ahí que conviene no deshacer sin leerlas: va **uno por reserva**
+—porque el bloque `<pre>` se copia tocándolo y con tres clientes dentro no hay
+nada que tocar—, **la cabecera queda fuera** del bloque que se copia, y **sin
+parte de entrega se avisa igual**, marcándolo, porque pedir solo `delivered`
+dejaría sin aviso —**para siempre y sin ruido**— a quien no complete los partes.
+
+⚠️ **Y destapó que el resumen diario llevaba dos meses incompleto.** Ver el
+estado del 7 de noviembre, arriba: una consulta de rango sobre una fecha de
+reserva no devuelve nada, porque está guardada como mapa. Arreglado con la misma
+pieza que usa el aviso nuevo.
 
 ### ⬜ M-63 · Las masas de `.humo` conservan `blur(60px)` aunque ya no se muevan
 

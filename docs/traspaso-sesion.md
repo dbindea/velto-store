@@ -1,25 +1,37 @@
-# Traspaso de sesión — 6 de noviembre de 2026
+# Traspaso de sesión — 7 de noviembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 quatervicies**, que es lo último que pasó (6 de
-> noviembre por la noche: cuatro peticiones de Dorel, y la cuarta destapó que
-> «Asignar venta» solo sabía crear comisiones **de captación** — por eso el
-> reparto de una furgoneta cedida quedó registrado en producción con el
-> concepto y el porcentaje equivocados); después **§ 2 tervicies** (6 de
-> noviembre por la tarde: el botón «Crear reserva» recorrido **en pantalla** por
-> primera vez, y dos arreglos — la devolución de fianza a tarjeta que no llegaba
-> a los libros, y el adelanto de la ficha pública que no servía nunca); después
+> **Orden de lectura:** **§ 2 quinvicies**, que es lo último que pasó (7 de
+> noviembre: el aviso de Telegram de las 17:00 con el WhatsApp de la prórroga ya
+> redactado — y, construyéndolo, se vio que **el resumen diario de las 9:00
+> llevaba dos meses saliendo sin una sola entrega ni devolución**, porque una
+> fecha de reserva está guardada como **mapa** y Firestore no la compara por
+> rango); después **§ 2 quatervicies** (6 de noviembre por la noche: cuatro
+> peticiones de Dorel, y la cuarta destapó que «Asignar venta» solo sabía crear
+> comisiones **de captación** — por eso el reparto de una furgoneta cedida quedó
+> registrado en producción con el concepto y el porcentaje equivocados); después
+> **§ 2 tervicies** (6 de noviembre por la tarde: el botón «Crear reserva»
+> recorrido **en pantalla** por primera vez, y dos arreglos — la devolución de
+> fianza a tarjeta que no llegaba a los libros, y el adelanto de la ficha pública
+> que no servía nunca); después
 > **§ 2 duovicies** (del 4 al 6: cinco cosas que vio Dorel usando la aplicación,
 > con su despliegue de 16 functions); después **§ 2 unvicies** (2 de noviembre:
 > BBVA entregó el entorno de pruebas del TPV y desarrollo pasó al comercio
 > propio de VELTO); después **§ 2 vicies** (del 30 al 31 de octubre: el sitemap
 > anunciaba fichas que no existían y el backoffice de producción resultó ser
-> indexable); después **§ 2 ter**, que dice qué falta por desplegar —hoy **sí
-> falta**: una function y el hosting de la web—; y luego **§ 5**, con los huecos
-> que solo puede cerrar Dorel.
+> indexable); después **§ 2 ter**, que dice qué falta por desplegar —al cerrar
+> el 7 de noviembre, **nada**: las functions del día están en los dos entornos y
+> no hay frontend que publicar—; y luego **§ 5**, con los huecos que
+> solo puede cerrar Dorel.
+>
+> ⚠️ **Y una lección que vale más que el encargo del día: un aviso que no sale
+> no se echa de menos.** El resumen diario «funcionaba» —llegaba cada mañana—
+> mientras la mitad de su contenido estaba vacía por una consulta que no devuelve
+> nada y no falla. Lo que lo destapó fue poder preguntarle «¿qué habrías mandado
+> el día 26?», no leer el código.
 >
 > ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
 > BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
@@ -30,12 +42,15 @@
 > pago de la señal desde la web sigue **apagado** en producción
 > (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
 >
-> ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y
-> queda UNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche, así que
-> M-49 está cerrado de punta a punta; lo que sigue viajando con el **merge a
-> `master`** es el hosting —la web pública (M-50) y todo el frontend del 6—. No
-> cambia la forma de ninguna respuesta, así que el orden con las functions da
-> igual. El detalle está en **§ 2 ter** — y se **mide**, no se copia de aquí.
+> ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y no
+> queda NINGUNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche y el
+> resto —la web pública (M-50) y todo el frontend del día— salió con el merge a
+> `master` (`0f382f4`), que el CI publicó en los dos targets. **Comprobado
+> contra producción, no contra el log del CI**: `rentalcar.veltomobility.com`
+> sirve ya las claves nuevas (`collaborators.editKind`) además del `.web.app`,
+> o sea que Cloudflare no se quedó con la copia vieja, y
+> `veltomobility.com/robots.txt` anuncia el sitemap, que es la marca del build
+> real. Dorel lo recorrió entero en producción: **«probado y todo perfecto»**.
 >
 > ⚠️ **Y lo tercero, con fecha encima: VeriFactu está anunciado para octubre de
 > 2028 y NO publicado.** Dorel trajo la noticia el 6 de noviembre. Hacienda
@@ -2621,16 +2636,154 @@ se ve roto.
 
 ---
 
+## 2 quinvicies. El 7 de noviembre — el WhatsApp de la prórroga, el resumen diario que llevaba dos meses mintiendo, y el TPV
+
+**Lo que pidió Dorel**, con su ejemplo escrito a mano: *«Para las reservas que
+caducan por ejemplo mañana me gustaría recibir hoy como a las 17:00h, el día
+anterior, de la finalización de la reserva, un mensaje en telegram para copiar y
+pegar al cliente en whatsapp»*.
+
+Hecho: `sendReturnReminders`, programada a las **17:00 de Madrid**, manda un
+aviso de Telegram **por cada** alquiler que termina mañana, con el texto del
+cliente en un `<pre>` —que en Telegram se copia tocándolo— y dos enlaces: abrir
+WhatsApp con el mensaje puesto y la ficha de la reserva. Más
+`previewReturnReminders`, para verlo sin esperar a las cinco. Está en los **dos**
+entornos.
+
+Las decisiones que no son adorno están en CLAUDE.md («El aviso de las 17:00») y
+en [docs/avisos-telegram.md](avisos-telegram.md), que ya no habla solo del aviso
+de cobro. Las tres que más se van a cuestionar:
+
+- **Uno por reserva**, no un mensaje con la lista: con tres clientes dentro no
+  hay nada que tocar para copiar.
+- **Sin parte de entrega se avisa igual**, marcándolo. Pedir solo `delivered` es
+  lo correcto en teoría y dejaría a quien no complete los partes sin este aviso
+  **nunca** — y un aviso que no llega no se echa de menos. Lo ya `returned` no se
+  avisa.
+- **No se le manda nada al cliente.** Quien pulsa enviar es Dorel.
+
+### Lo que destapó, que es más gordo que lo que se pidió
+
+⚠️ **`sendDailyDigest` llevaba desde el 10 de septiembre saliendo sin una sola
+entrega ni devolución.** No era un error visible: el correo salía, con sus
+vencimientos y sus solicitudes, y las dos secciones de coches vacías. Los días
+sin nada más **no salía siquiera**, porque `mereceEnvio()` no tenía qué contar.
+
+La causa, que es la que hay que llevarse porque vuelve: `toTimestamp()` guarda
+`pickupDateTime` y `returnDateTime` como un **mapa** `{ seconds, nanoseconds }`,
+no como un `Timestamp`, y Firestore **no compara un mapa con un timestamp**. Una
+consulta de rango sobre esos campos no devuelve **ni un documento** — sin error,
+sin aviso y sin resultado. Medido documento a documento en desarrollo.
+
+⚠️ **Y tapaba un segundo fallo en el mismo bucle: el campo es
+`reservationStatus`, no `status`.** El filtro comparaba contra `undefined`, así
+que no filtraba nada: una reserva cancelada habría salido como entrega de mañana.
+No se vio porque el primer fallo llegaba antes.
+
+Arreglado en los dos avisos con la misma pieza —`caeEnElRango()` y
+`ESTADOS_CON_MOVIMIENTO` en `daily-digest.ts`, con tests—: **se acota por estado
+en la consulta y el rango se filtra en memoria**. El campo **no se ha migrado**,
+a propósito: son fechas de reservas vivas en producción. Antes de consultar una
+fecha de reserva, mira cómo está guardada.
+
+⚠️ **Lo que lo hizo visible fue el parámetro `fecha` de las vistas previas**
+(«haz como si hoy fuera este día»). Sin él, comprobar un aviso programado exige
+que mañana haya movimiento de verdad o cambiarle la fecha a una reserva para
+provocarlo — tocar datos para mirarlos. Es la misma idea que `previewDailyDigest`
+ya tenía a medias, terminada.
+
+### Qué se comprobó, y cómo
+
+| Qué | Cómo | Resultado |
+|---|---|---|
+| el aviso **llega** a Telegram | `previewReturnReminders` con `enviar: true`, dev | `enviados: 1`, marcado `(DEV)` |
+| el caso normal | reserva `delivered` real de dev | nombre de pila, hora, coche, matrícula, lugar y enlace `wa.me` |
+| sin parte de entrega | reserva `confirmed` con la recogida pasada | sale con su aviso |
+| sin nombre ni teléfono | la reserva de siembra sin `vehicleSnapshot` | ni separadores sueltos ni «del vehículo» |
+| un día sin devoluciones | hoy | no manda nada |
+| el resumen **arreglado** | `previewDailyDigest` con `fecha` | «1 devolución» y «1 SIN FIRMAR · 1 entrega», donde antes salía vacío |
+| **producción** | `previewReturnReminders`, sin enviar | el Renault Megane vuelve el **14/11 a las 14:00** → su aviso sale el **13** |
+
+⚠️ **Dos cosas salieron solo mirando el aviso de verdad, no leyendo el código**:
+una reserva sin coche en el snapshot decía «finaliza la reserva **del
+vehículo**», y una sin nombre de cliente dejaba la línea en « · sin teléfono»,
+con el separador suelto delante. Las dos están corregidas y con test. Es el
+patrón de la casa: lo que se compone para que lo lea una persona hay que verlo
+compuesto.
+
+### Sus dos correcciones al texto, que son de negocio
+
+Las hizo al leer el aviso, y por eso están escritas en el código:
+
+- **«prolongarla», no «prolongar la estancia»** — *«es un coche, no un hotel»*.
+  La palabra de hostelería la había puesto yo sobre su texto.
+- **«quedamos a esa hora en X», no «te espero»** — y eso resuelve de paso lo
+  único que no se podía deducir: «en **el** Aeropuerto T1» pide un artículo que
+  «en Oficinas Velto» no lleva, y el lugar lo teclea el operador.
+
+Las dos están desplegadas en los **dos** entornos y comprobadas contra el
+alquiler real de producción.
+
+Queda a su criterio **si el aviso debe decir lo que falta cobrar**. Hoy no lo
+dice: ver el final de [avisos-telegram.md](avisos-telegram.md).
+
+### Y el TPV: dos respuestas, las dos medidas
+
+Dorel preguntó dos cosas el mismo día, con el email del alta de BBVA delante.
+
+**1. «No me salen las pruebas en la consola del banco».** Las operaciones
+**existen** —las seis del 2 de noviembre—, así que lo que falla es dónde se
+consulta. Tres trampas, en § 3 bis de [tpv-bbva.md](tpv-bbva.md): el portal de
+test es otro sitio **y lleva puerto** (`sis-t.redsys.es:25443/portalBBVA`), el
+filtro de fechas arranca en «hoy» y las operaciones son de hace cinco días, y el
+terminal se muestra como **`1`** aunque se mande `001`. Se dejó una operación
+**con la fecha del día** para que la encuentre sin tocar filtros: pedido
+`01305154399C`, 150 €, autorizada con código **239828**.
+
+**2. «¿Puedo bloquear la fianza como preautorización?»** Sí la operativa, **no
+el comercio**: la pasarela contesta `SIS0256`, «el comercio no permite operativa
+de preautorización», y está comprobado con su control —el mismo formulario con
+tipo `0` sale autorizado—. Así que son **dos peticiones al banco** (habilitarla,
+y el plazo por escrito: la documentación de Redsys dice 30 días en un sitio y 7
+en otro, y con 7 no sirve para los alquileres largos). El detalle y lo que
+costaría dentro de la aplicación —que es el modelo, no la pasarela—, en § 3 ter.
+
+⚠️ **Y salió un hallazgo que no se buscaba: Bizum ya se puede probar.** La
+pantalla del comercio lo ofrece sin que la aplicación mande nada, y el banco lo
+**exige** para el pase a producción. Es abrir un `/pay/:id` y elegir Bizum.
+
+El guion de la prueba es
+[probar-preautorizacion.js](probar-preautorizacion.js), en `docs/` por lo mismo
+que los de reglas. ⚠️ **El navegador de pruebas no abre `file:`**, así que el
+formulario se inyecta en una pestaña abierta y se envía — que es exactamente lo
+que hace `RedsysPaymentService.openGateway()`.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **Medido el 6 de noviembre de 2026 por la TARDE: sí falta, y son dos cosas.**
-Por la mañana no faltaba nada; el trabajo de la tarde (§ 2 tervicies) dejó esto
-esperando:
+⚠️ **Al cerrar el 7 de noviembre de 2026: NADA de functions.** El trabajo del
+día es todo backend —las dos del recordatorio, el arreglo del resumen y el
+webhook con la marca de entorno— y **ya está desplegado en los dos entornos, por
+tandas y por nombre**. Producción da **35** functions (`functions:list --project
+prod --json`), y siguen faltando a propósito las cinco de la AEAT. **No hay nada
+de frontend en este día**, así que no hace falta merge a `master` para que
+funcione; lo que falta es subir el commit a `develop`.
 
-| Qué | Cómo sale | Por qué |
+> Histórico del 6 de noviembre, que queda como ejemplo — **no lo creas, vuelve a
+> medirlo con los comandos del final**:
+
+| Qué | Cómo salió | Por qué |
 |---|---|---|
-| ~~**`refundRedsysPayment`**~~ | ~~a mano, por nombre~~ | **DESPLEGADA** por Dorel esa misma noche. M-49 cerrado de punta a punta |
-| **el hosting de la web** | con el merge a `master` (lo publica el CI) | M-50: el adelanto de la ficha pública |
+| ~~**`refundRedsysPayment`**~~ | ~~a mano, por nombre~~ | **DESPLEGADA** por Dorel. M-49 cerrado de punta a punta |
+| ~~**el hosting**~~ | ~~con el merge a `master`~~ | **PUBLICADO** en `0f382f4`: la web pública (M-50) y el frontend del día, los dos targets |
+
+⚠️ **Y lo publicado se comprobó CONTRA PRODUCCIÓN, no contra el log del CI.**
+Un `success` dice que el CI terminó, no que el dominio sirva lo nuevo — que es
+justo donde se cuela la caché de Cloudflare. Lo que lo contesta es pedir un
+fichero que haya cambiado: `assets/i18n/es.json` va con `no-cache` y hoy traía
+claves nuevas, así que `grep editKind` sobre los **dos** hosts —el `.web.app` y
+el dominio propio— distingue «publicado» de «publicado y servido». Los dos lo
+traían. Para el escaparate vale `robots.txt`, que solo anuncia el sitemap en
+modo `live`.
 
 ```powershell
 # M-49. Una sola function: no hace falta tanda. Hecho el 6 de noviembre.
@@ -2648,6 +2801,22 @@ de la web no toca ninguna function.
 comprueba el bundle como lo carga el contenedor
 (`cd functions && node -e "require('./lib/index.js')"`) — hecho el 6 de
 noviembre: carga, y el manifiesto responde **200 en 0,56 s con las 38**.
+
+El despliegue del **7 de noviembre**, que vale como plantilla de tandas, con el
+bundle verificado delante y el manifiesto en **200 en 0,43 s con las 40**:
+
+```powershell
+# Las dos nuevas primero: crean el trabajo de Cloud Scheduler.
+firebase deploy --only functions:sendReturnReminders,functions:previewReturnReminders --project dev
+firebase deploy --only functions:sendDailyDigest,functions:previewDailyDigest --project dev
+firebase deploy --only functions:redsysNotificationWebhook --project dev
+# y lo mismo con --project prod
+```
+
+⚠️ **`redsysNotificationWebhook` entró aunque en producción no cambie nada**: la
+marca `(DEV)` no se aplica allí, así que su comportamiento es idéntico. Se
+despliega igual para que el repositorio y producción no divergan — un fichero
+editado y no desplegado es la trampa de siempre.
 
 **No te fíes de la tabla de arriba — vuelve a preguntarlo, porque envejece cada
 sesión:**

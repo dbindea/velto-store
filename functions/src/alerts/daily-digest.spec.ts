@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   asuntoDe,
+  caeEnElRango,
+  diaDeReferencia,
   entraEnElResumen,
+  ESTADOS_CON_MOVIMIENTO,
   horaEn,
   mereceEnvio,
   rangoManana,
@@ -487,5 +490,117 @@ describe('cuándo se borra un mensaje de contacto', () => {
    */
   it('se borra aunque siga sin contestar, porque el correo ya salió', () => {
     expect(consultaCaducada({ createdAt: hace(25), status: 'new' }, ahora)).toBe(true);
+  });
+});
+
+/**
+ * ⚠️ **El fallo que llevaba dos meses vaciando el resumen diario**, y el motivo
+ * por el que esta función existe. Las fechas de una reserva se guardan con
+ * `toTimestamp()`, que devuelve un **objeto plano** `{ seconds, nanoseconds }`:
+ * el SDK lo escribe como un **mapa**, y Firestore no compara un mapa con un
+ * timestamp. Una consulta de rango sobre `returnDateTime` no devuelve ni un
+ * documento — sin error, sin aviso y sin resultado.
+ *
+ * Las formas de abajo son las que **de verdad** hay en la base de desarrollo,
+ * comprobadas documento a documento el 7 de noviembre de 2026.
+ */
+describe('una fecha de reserva dentro del rango de mañana', () => {
+  const rango = rangoManana(madrid('2026-11-07T16:00:00Z'), TZ);
+
+  /** `{ seconds }` a secas, que es lo que escribe `toTimestamp()`. */
+  const mapa = (iso: string) => ({ seconds: Math.floor(new Date(iso).getTime() / 1000) });
+
+  it('reconoce el mapa plano que escribe la aplicación', () => {
+    expect(caeEnElRango(mapa('2026-11-08T09:00:00Z'), rango)).toBe(true);
+  });
+
+  it('reconoce además un Timestamp del admin SDK y un Date', () => {
+    const instante = new Date('2026-11-08T09:00:00Z');
+    expect(caeEnElRango({ toDate: () => instante }, rango)).toBe(true);
+    expect(caeEnElRango(instante, rango)).toBe(true);
+    // `_seconds` es la forma que devuelve un documento escrito por el admin SDK.
+    expect(caeEnElRango({ _seconds: instante.getTime() / 1000 }, rango)).toBe(true);
+  });
+
+  it('deja fuera hoy y pasado mañana', () => {
+    // Las 21:00 de Madrid de hoy. Ojo: las 23:00Z de hoy ya son mañana allí,
+    // que es justo lo que comprueba el test de los bordes de abajo.
+    expect(caeEnElRango(mapa('2026-11-07T20:00:00Z'), rango)).toBe(false);
+    expect(caeEnElRango(mapa('2026-11-09T09:00:00Z'), rango)).toBe(false);
+  });
+
+  /**
+   * ⚠️ **Los bordes se miden en hora de MADRID.** Una devolución a las 00:30 del
+   * día 8 en Madrid son las 23:30 del 7 en UTC: con el rango calculado en UTC se
+   * quedaría fuera del aviso de nadie.
+   */
+  it('cuenta el día civil de Madrid, no el de UTC', () => {
+    expect(caeEnElRango(mapa('2026-11-07T23:30:00Z'), rango)).toBe(true);
+    expect(caeEnElRango(mapa('2026-11-08T23:30:00Z'), rango)).toBe(false);
+  });
+
+  /**
+   * ⚠️ **Lo ilegible NO entra.** Una fecha que no se puede situar en ningún día
+   * no puede salir como una devolución de mañana — es al revés que el `toDate()`
+   * de la aplicación, que cae a hoy para que el pipe `date` no tumbe la pantalla.
+   */
+  it('descarta lo que no se puede leer en vez de darlo por hoy', () => {
+    expect(caeEnElRango(undefined, rango)).toBe(false);
+    expect(caeEnElRango(null, rango)).toBe(false);
+    expect(caeEnElRango({}, rango)).toBe(false);
+    expect(caeEnElRango('mañana', rango)).toBe(false);
+  });
+});
+
+/**
+ * ⚠️ **El campo es `reservationStatus`, y el resumen preguntaba por `status`.**
+ * El test enumera los cuatro estados a propósito: es lo que obliga a venir aquí
+ * el día que aparezca uno nuevo, en vez de que entre —o se quede fuera— solo.
+ */
+describe('qué reservas se leen', () => {
+  it('las que pueden tener un movimiento mañana, y solo esas', () => {
+    expect([...ESTADOS_CON_MOVIMIENTO]).toEqual([
+      'reserved',
+      'confirmed',
+      'delivered',
+      'returned'
+    ]);
+    expect([...ESTADOS_CON_MOVIMIENTO]).not.toContain('closed');
+    expect([...ESTADOS_CON_MOVIMIENTO]).not.toContain('cancelled');
+  });
+});
+
+/**
+ * El día de referencia de las vistas previas.
+ *
+ * ⚠️ **Es lo que permite ensayar un aviso programado sin tocar datos.** Sin él,
+ * comprobar el resumen o el recordatorio exige que mañana haya movimiento de
+ * verdad — o cambiarle la fecha a una reserva para provocarlo, que es mover
+ * datos para mirarlos.
+ */
+describe('«haz como si hoy fuera este día»', () => {
+  it('cae dentro del día civil de Madrid en las dos mitades del año', () => {
+    // Invierno (UTC+1) y verano (UTC+2): en los dos casos mañana es el día
+    // siguiente, no el mismo ni dos más allá.
+    expect(rangoManana(diaDeReferencia('2026-11-07') as Date, TZ).etiqueta).toBe('08/11/2026');
+    expect(rangoManana(diaDeReferencia('2026-07-15') as Date, TZ).etiqueta).toBe('16/07/2026');
+  });
+
+  it('rechaza lo que no es una fecha', () => {
+    expect(diaDeReferencia('mañana')).toBeNull();
+    expect(diaDeReferencia('07-11-2026')).toBeNull();
+    expect(diaDeReferencia('')).toBeNull();
+  });
+
+  /**
+   * ⚠️ **Un día que no existe NO da fecha inválida: se desborda.**
+   * `new Date('2026-02-31T12:00:00Z')` es el 3 de marzo, así que comprobar
+   * `isNaN` no basta — el ensayo saldría de otro día sin decirlo.
+   */
+  it('rechaza un día que no existe en vez de desbordarlo al mes siguiente', () => {
+    expect(diaDeReferencia('2026-02-31')).toBeNull();
+    expect(diaDeReferencia('2026-13-01')).toBeNull();
+    // Y el 29 de febrero de un año bisiesto sí vale.
+    expect(diaDeReferencia('2028-02-29')).not.toBeNull();
   });
 });

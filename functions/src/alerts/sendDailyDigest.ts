@@ -28,7 +28,10 @@ import { toDate } from '../public/core';
 import { companyConfig } from '../company-config';
 import {
   asuntoDe,
+  caeEnElRango,
+  diaDeReferencia,
   entraEnElResumen,
+  ESTADOS_CON_MOVIMIENTO,
   horaEn,
   mereceEnvio,
   rangoManana,
@@ -135,60 +138,72 @@ export async function construirResumen(
   const { desde, hasta, etiqueta } = rangoManana(ahora);
 
   /**
-   * ⚠️ **Se filtran los estados en memoria, no en la consulta.** Firestore no
-   * admite una desigualdad sobre `pickupDateTime` junto a un `in` sobre
-   * `status` sin un índice compuesto por cada combinación, y el volumen de un
-   * día son unas pocas reservas: no compensa un índice por cada lista.
+   * ⚠️ **Una sola lectura, acotada por ESTADO, y los dos rangos filtrados en
+   * memoria.** Aquí había dos consultas con una desigualdad sobre
+   * `pickupDateTime` y `returnDateTime`, y **no devolvían nunca nada**: esas
+   * fechas se guardan como un mapa `{ seconds, nanoseconds }` y Firestore no
+   * compara un mapa con un timestamp. O sea que este correo llevaba desde el 10
+   * de septiembre de 2026 saliendo sin una sola entrega ni devolución, y los
+   * días en que no había vencimientos ni solicitudes **no salía siquiera** —
+   * `mereceEnvio()` no tenía nada que contar. El motivo entero, en
+   * `caeEnElRango()`.
+   *
+   * Lo que se acota en la consulta es el estado, que sí es una cadena; así no
+   * hay que leer la colección entera todos los días. El precio conocido: lo que
+   * nadie cierra se queda dentro de `ESTADOS_CON_MOVIMIENTO` y se lee cada vez.
    */
-  const [entregasSnap, devolucionesSnap] = await Promise.all([
-    db
-      .collection('reservations')
-      .where('pickupDateTime', '>=', desde)
-      .where('pickupDateTime', '<', hasta)
-      .get(),
-    db
-      .collection('reservations')
-      .where('returnDateTime', '>=', desde)
-      .where('returnDateTime', '<', hasta)
-      .get()
-  ]);
+  const conMovimientoSnap = await db
+    .collection('reservations')
+    .where('reservationStatus', 'in', [...ESTADOS_CON_MOVIMIENTO])
+    .get();
 
   const entregas: MovimientoReserva[] = [];
-  for (const doc of entregasSnap.docs) {
-    const r = doc.data();
-    // Una cancelada no se entrega, y una ya entregada tampoco vuelve a serlo.
-    if (r['status'] === 'cancelled' || r['status'] === 'delivered') continue;
-    if (r['status'] === 'returned' || r['status'] === 'closed') continue;
-    const cuando = aFecha(r['pickupDateTime']);
-    entregas.push({
-      reservationId: doc.id,
-      hora: cuando ? horaEn(cuando) : '—',
-      cliente: String((r['clientSnapshot'] as Record<string, unknown>)?.['fullName'] ?? '—'),
-      telefono: (r['clientSnapshot'] as Record<string, unknown>)?.['phone'] as string | undefined,
-      vehiculo: etiquetaVehiculo(r['vehicleSnapshot'] as Record<string, unknown>),
-      /**
-       * ⚠️ **Va DENTRO de la entrega, no en una lista aparte.** Duplicar la
-       * misma reserva en dos bloques hace que se lean los dos por encima; el
-       * aviso sirve donde está el dato que hay que mirar.
-       */
-      contratoSinFirmar: r['contractStatus'] !== 'signed'
-    });
-  }
-
   const devoluciones: MovimientoReserva[] = [];
-  for (const doc of devolucionesSnap.docs) {
+
+  for (const doc of conMovimientoSnap.docs) {
     const r = doc.data();
-    if (r['status'] === 'cancelled' || r['status'] === 'closed') continue;
-    // Todavía no se ha entregado: su devolución no es cosa de mañana.
-    if (r['status'] === 'reserved' || r['status'] === 'confirmed') continue;
-    const cuando = aFecha(r['returnDateTime']);
-    devoluciones.push({
+    /**
+     * ⚠️ **`reservationStatus`, no `status`.** El filtro de aquí preguntaba por
+     * `status`, que no existe en el documento: comparaba contra `undefined` y
+     * por tanto **no filtraba nada**. No se notó porque el fallo de las fechas
+     * llegaba antes y no había nada que filtrar.
+     */
+    const estado = r['reservationStatus'];
+    const cliente = r['clientSnapshot'] as Record<string, unknown> | undefined;
+
+    const comun = {
       reservationId: doc.id,
-      hora: cuando ? horaEn(cuando) : '—',
-      cliente: String((r['clientSnapshot'] as Record<string, unknown>)?.['fullName'] ?? '—'),
-      telefono: (r['clientSnapshot'] as Record<string, unknown>)?.['phone'] as string | undefined,
+      cliente: String(cliente?.['fullName'] ?? '—'),
+      telefono: cliente?.['phone'] as string | undefined,
       vehiculo: etiquetaVehiculo(r['vehicleSnapshot'] as Record<string, unknown>)
-    });
+    };
+
+    // Una cancelada no se entrega, y una ya entregada tampoco vuelve a serlo.
+    if (
+      (estado === 'reserved' || estado === 'confirmed') &&
+      caeEnElRango(r['pickupDateTime'], { desde, hasta })
+    ) {
+      const cuando = aFecha(r['pickupDateTime']);
+      entregas.push({
+        ...comun,
+        hora: cuando ? horaEn(cuando) : '—',
+        /**
+         * ⚠️ **Va DENTRO de la entrega, no en una lista aparte.** Duplicar la
+         * misma reserva en dos bloques hace que se lean los dos por encima; el
+         * aviso sirve donde está el dato que hay que mirar.
+         */
+        contratoSinFirmar: r['contractStatus'] !== 'signed'
+      });
+    }
+
+    // Todavía sin entregar: su devolución no es cosa de mañana.
+    if (
+      (estado === 'delivered' || estado === 'returned') &&
+      caeEnElRango(r['returnDateTime'], { desde, hasta })
+    ) {
+      const cuando = aFecha(r['returnDateTime']);
+      devoluciones.push({ ...comun, hora: cuando ? horaEn(cuando) : '—' });
+    }
   }
 
   /**
@@ -370,11 +385,18 @@ export const sendDailyDigest = onSchedule(
     }
 
     /**
-     * ⚠️ **La limpieza va AQUÍ y no en una function programada propia**, y es
-     * una decisión de coste: estrenar un `onSchedule` nuevo en producción
-     * activaría Cloud Scheduler allí —hoy no está: las cinco de la AEAT, que
-     * son las que lo usan, no están desplegadas— y sería un servicio más en la
-     * factura de Google. Esta ya corre a las nueve en los dos proyectos.
+     * ⚠️ **La limpieza va AQUÍ y no en una function programada propia**, y era
+     * una decisión de coste: un `onSchedule` más es un trabajo más de Cloud
+     * Scheduler, y el plan da tres gratis **por cuenta de facturación** para
+     * los dos proyectos. Sigue siendo razonable tenerla colgada de esta, que ya
+     * corre a las nueve, pero el argumento de que así «no se activa Scheduler
+     * en producción» era **falso**: esta function ya es programada y está
+     * desplegada allí desde el 10 de septiembre de 2026, así que Scheduler
+     * llevaba activo en los dos proyectos desde entonces.
+     *
+     * Hoy hay tres programadas —este resumen, el recordatorio de devolución de
+     * las 17:00 y el barrido de la AEAT, que solo está en desarrollo—, o sea
+     * dos trabajos en producción y tres en desarrollo.
      *
      * Va **fuera del `try` del resumen**: que falle el correo no puede dejar
      * datos personales sin borrar, ni al revés.
@@ -620,6 +642,11 @@ export async function limpiarConsultasCaducadas(ahora: Date): Promise<number> {
  * ⚠️ **Con `enviar: true` manda el correo de verdad.** Sirve para comprobar lo
  * que no se puede leer en un log: cómo se ve en el móvil. Por defecto solo
  * devuelve lo que habría mandado.
+ *
+ * ⚠️ **Y `fecha` («haz como si hoy fuera este día») es lo que permitió ver que
+ * las entregas y las devoluciones llevaban dos meses saliendo vacías.** Sin
+ * ella, comprobar este correo exige que mañana haya movimiento de verdad, o
+ * cambiarle la fecha a una reserva para provocarlo. Ver `diaDeReferencia()`.
  */
 export const previewDailyDigest = onCall(
   { secrets: [RESEND_API_KEY, VELTO_SIGNING_CERT, VELTO_SIGNING_CERT_PASSWORD] },
@@ -634,10 +661,21 @@ export const previewDailyDigest = onCall(
       p12Base64: VELTO_SIGNING_CERT.value(),
       passphrase: VELTO_SIGNING_CERT_PASSWORD.value()
     };
-    const enviar = (request.data as { enviar?: boolean })?.enviar === true;
+    const datos = (request.data ?? {}) as { enviar?: boolean; fecha?: string };
+
+    let ahora = new Date();
+    if (datos.fecha) {
+      const referencia = diaDeReferencia(datos.fecha);
+      if (!referencia) {
+        throw new HttpsError('invalid-argument', 'La fecha tiene que ser un YYYY-MM-DD real.');
+      }
+      ahora = referencia;
+    }
+
+    const enviar = datos.enviar === true;
     if (!enviar) {
       const avisos = await construirAvisos(cert.p12Base64, cert.passphrase);
-      const resumen = await construirResumen(new Date(), avisos);
+      const resumen = await construirResumen(ahora, avisos);
       const company = companyConfig();
       return {
         enviado: false,
@@ -654,6 +692,6 @@ export const previewDailyDigest = onCall(
         resumen
       };
     }
-    return enviarResumen(RESEND_API_KEY.value(), new Date(), cert);
+    return enviarResumen(RESEND_API_KEY.value(), ahora, cert);
   }
 );

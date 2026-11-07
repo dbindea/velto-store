@@ -28,6 +28,13 @@ export const DIGEST_TIME_ZONE = process.env.VELTO_TIME_ZONE || 'Europe/Madrid';
  * año a su manera.
  */
 import { instanteEnZona } from '../zona';
+/*
+ * ⚠️ El lector **estricto** de la web pública, que devuelve `null` ante una
+ * fecha ilegible en vez de la de hoy. Aquí es el que corresponde: el de la app
+ * daría por buena la fecha de hoy y metería en el aviso de mañana una reserva
+ * cuya fecha nadie puede leer. Ver `caeEnElRango()`.
+ */
+import { toDate } from '../public/core';
 
 /** El año, mes y día que son en esa zona en ese instante. */
 function civil(instante: Date, timeZone: string): { y: number; m: number; d: number } {
@@ -94,6 +101,77 @@ export function rangoManana(ahora: Date, timeZone = DIGEST_TIME_ZONE): RangoDia 
     hasta,
     etiqueta: `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`
   };
+}
+
+/**
+ * ¿Esta fecha de reserva cae dentro del rango?
+ *
+ * ⚠️ **Existe porque el rango NO se puede pedir a Firestore**, y eso costó dos
+ * meses de resúmenes diarios sin una sola entrega ni devolución. Las reservas
+ * guardan `pickupDateTime` y `returnDateTime` con `toTimestamp()`, que devuelve
+ * un **objeto plano** `{ seconds, nanoseconds }` — y el SDK lo escribe como un
+ * **mapa**, no como un `Timestamp`. Firestore ordena por tipo antes que por
+ * valor, así que `where('returnDateTime', '>=', unaFecha)` compara un timestamp
+ * contra mapas y **no devuelve ni un documento**: ni error, ni aviso, ni
+ * resultado. Medido el 7 de noviembre de 2026 contra la base de desarrollo, con
+ * las seis reservas guardadas así.
+ *
+ * Es la misma trampa que vació el calendario —allí era `new Date({seconds})`
+ * dando `Invalid Date`— y tiene la misma forma: **el dato no es lo que la firma
+ * del campo dice que es**.
+ *
+ * Así que el rango se filtra **en memoria**, y lo que se acota en la consulta es
+ * el **estado**, que sí es una cadena. Es lo mismo que ya hacía el resumen con
+ * los estados por no multiplicar índices, un paso más allá.
+ *
+ * ⚠️ **Y lo ilegible NO entra.** Una fecha que no se puede leer no se puede
+ * situar en ningún día: colarla en el aviso de mañana sería avisar de una
+ * devolución inventada.
+ */
+export function caeEnElRango(valor: unknown, rango: { desde: Date; hasta: Date }): boolean {
+  const d = toDate(valor);
+  if (!d) return false;
+  return d.getTime() >= rango.desde.getTime() && d.getTime() < rango.hasta.getTime();
+}
+
+/**
+ * Los estados de una reserva que todavía pueden tener un movimiento mañana.
+ *
+ * ⚠️ **Es la ÚNICA cosa que se puede acotar en la consulta**, por lo de arriba,
+ * así que es lo que evita leer la colección entera todos los días. Lo cerrado y
+ * lo cancelado se queda fuera: no hay nada que entregar ni que devolver.
+ *
+ * ⚠️ **El campo es `reservationStatus`, no `status`** — y aquí ponía `status`,
+ * que **no existe en el documento**. El filtro de estados del resumen comparaba
+ * siempre contra `undefined`, así que no filtraba nada: una reserva cancelada
+ * habría salido como entrega de mañana. No se vio porque el otro fallo llegaba
+ * antes — la consulta no devolvía nada que filtrar. Es el mismo despiste que ya
+ * estaba comentado en `generateBookingConfirmationPdf.ts`.
+ */
+export const ESTADOS_CON_MOVIMIENTO = ['reserved', 'confirmed', 'delivered', 'returned'] as const;
+
+/**
+ * «Haz como si hoy fuera este día», para poder ensayar un aviso programado.
+ *
+ * ⚠️ **Existe para no tocar datos al probar.** Un aviso que solo se puede ver
+ * el día antes de una devolución real no se puede depurar, y la alternativa
+ * —cambiarle la fecha a una reserva para provocarlo— es mover datos para
+ * mirarlos. Lo usan los dos callables de vista previa, nunca lo programado.
+ *
+ * ⚠️ **Mediodía UTC, no medianoche.** Cae dentro de ese día civil en Madrid en
+ * las dos mitades del año; a las 00:00Z, en verano, ya sería el día anterior
+ * allí y el aviso saldría corrido un día. Es la misma trampa que obliga a
+ * calcular `rangoManana()` en la zona del negocio.
+ *
+ * Devuelve `null` si no es `YYYY-MM-DD` o si ese día no existe; quien llama
+ * decide cómo se queja, porque esto no sabe de HTTP.
+ */
+export function diaDeReferencia(fecha: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return null;
+  const d = new Date(`${fecha}T12:00:00Z`);
+  if (isNaN(d.getTime())) return null;
+  // `new Date('2026-02-31T…')` no es inválida: el mes se desborda al 3 de marzo.
+  return d.toISOString().slice(0, 10) === fecha ? d : null;
 }
 
 /** La hora `HH:mm` de un instante, en la zona del negocio. */
