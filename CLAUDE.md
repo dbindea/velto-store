@@ -2804,6 +2804,14 @@ devolución, que ahorra la siguiente pregunta del cliente. Va en **español
 siempre**: no hay ningún campo en `Client` que diga en qué idioma habla, así que
 elegirlo sería inventárselo.
 
+⚠️ **Y las dos correcciones que hizo él al leerlo son de negocio, no de estilo.**
+«Prolongar la **estancia**» pasó a «prolongar**la**» —*«es un coche, no un
+hotel»*: la palabra era de hostelería y la puse yo—, y «**te espero** a esa hora
+en X» pasó a «**quedamos** a esa hora en X», que de paso resuelve lo único que
+no se podía deducir: el artículo del lugar. «En Aeropuerto T1» pide un «el» que
+«en Oficinas Velto» no lleva, y el lugar lo teclea el operador — con «quedamos»
+las dos formas se leen bien. Hay test de los dos.
+
 ⚠️ **Sin parte de entrega se avisa IGUAL, y eso no es laxitud.** Pedir solo
 `delivered` es lo correcto en teoría y tiene un modo de fallo que no se nota:
 quien no complete los partes no recibiría este aviso **nunca**, y un aviso que no
@@ -3709,6 +3717,40 @@ dinero que sí entró y se quedó. Por eso `sumPaid()` **descuenta
 `InvalidPipeArgument` y **tumba el bloque entero**, no solo la fecha. El
 `notifiedAt` de la pasarela llevaba así desde siempre y no se vio porque hasta
 que hubo un cobro real con notificación el `@if` no entraba nunca.
+
+#### La fianza RETENIDA en la tarjeta: el comercio no lo permite todavía
+
+Lo preguntó Dorel el 7 de noviembre de 2026 —preautorizar la fianza, y luego
+cobrar parte, cobrarla toda o desbloquearla— y la respuesta está medida contra
+el comercio de pruebas del banco: la pasarela contesta **`SIS0256`, «El comercio
+no permite operativa de preautorización»**. Con su control: el **mismo**
+formulario con el tipo `0` en vez del `1` sale autorizado, así que no es un
+problema de datos ni de firma.
+
+Lo que hay que saber antes de volver a mirarlo, y el detalle entero está en
+[docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 ter:
+
+- **La operativa encaja con una fianza**: tipo `1` retiene, `2` confirma por un
+  importe **menor o igual** y libera el resto, `9` lo desbloquea. Pero admite
+  **una sola** confirmación (`SIS0060`), así que se decide una vez, al cerrar.
+- ⚠️ **El plazo es el punto que lo puede tumbar**: la guía de Redsys dice **30
+  días** y su tabla de errores **7** (`SIS0132`, `SIS0530`). Con 7 no sirve para
+  los alquileres largos de VELTO, así que hay que pedirle a BBVA el plazo del
+  terminal **por escrito**.
+- ⚠️ **Y la respuesta se lee con una TERCERA regla**: un cobro aceptado es
+  `0000`–`0099`, una devolución `0900`–`0999` y una **anulación** `0400`. Es la
+  misma trampa que ya hizo que una devolución correcta pareciera un error.
+- **Lo caro no es la pasarela, es el modelo**: hoy una fianza retenida se
+  representa como un **cobro** con `paidAmount`, y una preautorización no es
+  dinero que haya entrado. Toca `payment-summary.util.ts`, `isDepositSettled()`
+  —lo que deja cerrar la reserva—, los informes y los tres PDF.
+
+⚠️ **Bizum ya se puede probar sin tocar código**: la pantalla del comercio lo
+ofrece en «Otras formas de pago» sin que la aplicación mande
+`Ds_Merchant_PayMethods`, y el banco lo exige para el pase a producción. Lo que
+está sin comprobar es el camino de **vuelta** —`Ds_ProcessedPayMethod: 68`—, y
+una vía de cobro no está probada hasta que alguien paga por ella y la aplicación
+se entera sin ayuda.
 
 ### El cliente paga desde su móvil
 

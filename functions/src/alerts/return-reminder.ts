@@ -146,13 +146,26 @@ export function mensajeParaCliente(d: DevolucionManana): string {
 
   const cuando = d.hora ? `Mañana a las ${d.hora}` : 'Mañana';
   const queTermina = d.coche.trim() ? `la reserva del ${d.coche.trim()}` : 'tu reserva';
+  /**
+   * ⚠️ **«prolongarla», no «prolongar la estancia».** Corrección de Dorel del 7
+   * de noviembre de 2026, y el motivo es de negocio: *«es un coche, no un
+   * hotel»*. Era un añadido mío sobre su texto, no suyo.
+   */
   const cuerpo =
     `${cuando} finaliza ${queTermina}. ` +
-    `Si deseas prolongar la estancia, escríbeme y formalizamos la prórroga.`;
+    `Si deseas prolongarla, escríbeme y formalizamos la prórroga.`;
 
+  /**
+   * ⚠️ **«quedamos», no «te espero».** La otra corrección del mismo día, y
+   * resuelve de paso el artículo que no se podía deducir: «te espero a esa hora
+   * en Aeropuerto T1» pedía un «el» que depende del sitio —«en Oficinas Velto»
+   * no lo lleva—, y «quedamos a esa hora en Aeropuerto T1» funciona con los dos
+   * porque el lugar queda como nombre propio. Un artículo adivinado a partir de
+   * un texto que teclea el operador se equivoca el día que escriba «la nave».
+   */
   const esaHora = d.hora ? 'a esa hora' : 'a la hora prevista';
   const cierre = d.lugar
-    ? `En caso contrario, te espero ${esaHora} en ${d.lugar}. ¡Gracias!`
+    ? `En caso contrario, quedamos ${esaHora} en ${d.lugar}. ¡Gracias!`
     : `En caso contrario, nos vemos ${esaHora}. ¡Gracias!`;
 
   return `${saludo}\n\n${cuerpo}\n\n${cierre}`;

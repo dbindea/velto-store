@@ -92,8 +92,8 @@ describe('mensajeParaCliente', () => {
     const m = mensajeParaCliente(base);
     expect(m).toContain('Buenas tardes Juan,');
     expect(m).toContain('Mañana a las 10:00 finaliza la reserva del Renault Mégane.');
-    expect(m).toContain('escríbeme y formalizamos la prórroga');
-    expect(m).toContain('te espero a esa hora en Oficinas Velto - Arganda');
+    expect(m).toContain('Si deseas prolongarla, escríbeme y formalizamos la prórroga.');
+    expect(m).toContain('quedamos a esa hora en Oficinas Velto - Arganda');
   });
 
   /**
@@ -106,6 +106,30 @@ describe('mensajeParaCliente', () => {
     expect(m).not.toContain('proroga');
     expect(m).toContain('escríbeme');
     expect(m).toContain('prórroga');
+  });
+
+  /**
+   * ⚠️ **«Estancia» es de hotel y esto es un coche.** Corrección de Dorel del 7
+   * de noviembre de 2026 sobre un añadido mío: lo que se prolonga es el
+   * alquiler, y la palabra de hostelería desentona en el negocio.
+   */
+  it('no habla de «estancia», que es de hotel', () => {
+    const m = mensajeParaCliente(base);
+    expect(m).not.toContain('estancia');
+    expect(m).toContain('prolongarla');
+  });
+
+  /**
+   * ⚠️ **«Quedamos» en vez de «te espero», y no es solo tono**: resuelve el
+   * artículo que no se puede deducir. El lugar lo teclea el operador, así que
+   * unas veces lo pide —«en **el** Aeropuerto T1»— y otras no —«en Oficinas
+   * Velto»—; con «quedamos … en X» las dos formas se leen bien.
+   */
+  it('queda con el cliente sin tener que adivinar el artículo del lugar', () => {
+    expect(mensajeParaCliente(base)).not.toContain('te espero');
+    for (const lugar of ['Aeropuerto T1', 'Oficinas Velto - Arganda', 'Arganda del Rey']) {
+      expect(mensajeParaCliente({ ...base, lugar })).toContain(`quedamos a esa hora en ${lugar}.`);
+    }
   });
 
   /**
@@ -123,7 +147,7 @@ describe('mensajeParaCliente', () => {
     const m = mensajeParaCliente({ ...base, hora: null });
     expect(m).toContain('Mañana finaliza la reserva');
     expect(m).not.toContain('a las null');
-    expect(m).toContain('te espero a la hora prevista');
+    expect(m).toContain('quedamos a la hora prevista');
   });
 
   it('sin nombre saluda igual, sin un hueco detrás', () => {

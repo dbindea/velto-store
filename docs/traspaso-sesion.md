@@ -2636,7 +2636,7 @@ se ve roto.
 
 ---
 
-## 2 quinvicies. El 7 de noviembre — el WhatsApp de la prórroga, y el resumen diario que llevaba dos meses mintiendo
+## 2 quinvicies. El 7 de noviembre — el WhatsApp de la prórroga, el resumen diario que llevaba dos meses mintiendo, y el TPV
 
 **Lo que pidió Dorel**, con su ejemplo escrito a mano: *«Para las reservas que
 caducan por ejemplo mañana me gustaría recibir hoy como a las 17:00h, el día
@@ -2711,16 +2711,52 @@ con el separador suelto delante. Las dos están corregidas y con test. Es el
 patrón de la casa: lo que se compone para que lo lea una persona hay que verlo
 compuesto.
 
-### Lo que queda a su criterio
+### Sus dos correcciones al texto, que son de negocio
 
-- **El texto.** Es el suyo casi literal —solo se corrigieron «escibeme» y
-  «proroga», y se añadió el lugar de devolución—. Cambiarlo es una línea en
-  `mensajeParaCliente()` y desplegar `sendReturnReminders`.
-- **El artículo del lugar.** Con `returnLocation = 'Aeropuerto T1'` la frase sale
-  «te espero a esa hora en Aeropuerto T1»: se lee bien en un WhatsApp, pero el
-  artículo depende del lugar y no se puede deducir sin inventar gramática.
-- **Si debe decir lo que falta cobrar.** Hoy no lo dice: ver el final de
-  `docs/avisos-telegram.md`.
+Las hizo al leer el aviso, y por eso están escritas en el código:
+
+- **«prolongarla», no «prolongar la estancia»** — *«es un coche, no un hotel»*.
+  La palabra de hostelería la había puesto yo sobre su texto.
+- **«quedamos a esa hora en X», no «te espero»** — y eso resuelve de paso lo
+  único que no se podía deducir: «en **el** Aeropuerto T1» pide un artículo que
+  «en Oficinas Velto» no lleva, y el lugar lo teclea el operador.
+
+Las dos están desplegadas en los **dos** entornos y comprobadas contra el
+alquiler real de producción.
+
+Queda a su criterio **si el aviso debe decir lo que falta cobrar**. Hoy no lo
+dice: ver el final de [avisos-telegram.md](avisos-telegram.md).
+
+### Y el TPV: dos respuestas, las dos medidas
+
+Dorel preguntó dos cosas el mismo día, con el email del alta de BBVA delante.
+
+**1. «No me salen las pruebas en la consola del banco».** Las operaciones
+**existen** —las seis del 2 de noviembre—, así que lo que falla es dónde se
+consulta. Tres trampas, en § 3 bis de [tpv-bbva.md](tpv-bbva.md): el portal de
+test es otro sitio **y lleva puerto** (`sis-t.redsys.es:25443/portalBBVA`), el
+filtro de fechas arranca en «hoy» y las operaciones son de hace cinco días, y el
+terminal se muestra como **`1`** aunque se mande `001`. Se dejó una operación
+**con la fecha del día** para que la encuentre sin tocar filtros: pedido
+`01305154399C`, 150 €, autorizada con código **239828**.
+
+**2. «¿Puedo bloquear la fianza como preautorización?»** Sí la operativa, **no
+el comercio**: la pasarela contesta `SIS0256`, «el comercio no permite operativa
+de preautorización», y está comprobado con su control —el mismo formulario con
+tipo `0` sale autorizado—. Así que son **dos peticiones al banco** (habilitarla,
+y el plazo por escrito: la documentación de Redsys dice 30 días en un sitio y 7
+en otro, y con 7 no sirve para los alquileres largos). El detalle y lo que
+costaría dentro de la aplicación —que es el modelo, no la pasarela—, en § 3 ter.
+
+⚠️ **Y salió un hallazgo que no se buscaba: Bizum ya se puede probar.** La
+pantalla del comercio lo ofrece sin que la aplicación mande nada, y el banco lo
+**exige** para el pase a producción. Es abrir un `/pay/:id` y elegir Bizum.
+
+El guion de la prueba es
+[probar-preautorizacion.js](probar-preautorizacion.js), en `docs/` por lo mismo
+que los de reglas. ⚠️ **El navegador de pruebas no abre `file:`**, así que el
+formulario se inyecta en una pestaña abierta y se envía — que es exactamente lo
+que hace `RedsysPaymentService.openGateway()`.
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
