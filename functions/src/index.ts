@@ -108,6 +108,17 @@ export {
 export { sendDailyDigest, previewDailyDigest } from './alerts/sendDailyDigest';
 
 /**
+ * El aviso de las 17:00 con el WhatsApp ya redactado para quien devuelve mañana.
+ *
+ * ⚠️ **No es el resumen con otra hora.** Aquél cuenta lo que hay que preparar;
+ * éste trae el mensaje que hay que mandarle a una persona, y la hora es parte de
+ * la petición: la tarde de antes es la última en la que se puede vender una
+ * prórroga. Por Telegram, porque el correo no suena y este aviso caduca en unas
+ * horas.
+ */
+export { sendReturnReminders, previewReturnReminders } from './alerts/sendReturnReminders';
+
+/**
  * Quién está autorizado, escrito DENTRO del token.
  *
  * ⚠️ **Existe porque las reglas de Storage no pueden leer Firestore**, así que

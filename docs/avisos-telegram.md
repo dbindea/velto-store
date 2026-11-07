@@ -1,9 +1,22 @@
-# El aviso de que ha entrado dinero
+# Los avisos de Telegram
 
-Cómo dar de alta el bot de Telegram que avisa cuando un cobro con tarjeta se
-confirma, y qué hay que saber antes de desplegarlo.
+Cómo dar de alta el bot de Telegram, qué avisos salen por él y qué hay que saber
+antes de desplegarlos.
 
-Escrito el 18 de octubre de 2026.
+Escrito el 18 de octubre de 2026 para el aviso de cobro. **Ampliado el 7 de
+noviembre de 2026**, cuando dejó de haber uno solo:
+
+| Aviso | Cuándo | Lo manda |
+|---|---|---|
+| **Cobro recibido** | al instante, cuando el banco confirma | `redsysNotificationWebhook` |
+| **Mañana termina un alquiler** | **17:00** de Madrid, todos los días | `sendReturnReminders` |
+
+⚠️ **Y desde ese día los avisos llevan `(DEV)` fuera de producción.** La marca la
+pone `avisarPorTelegram()` —donde se **envía**, igual que `asuntoDeCorreo()` en
+los correos—, así que la llevan los dos y la llevará el que se añada mañana. Hoy
+desarrollo escribe por `@VeltoDevBot` y producción por `@VeltoMobilityBot`, pero
+`TELEGRAM_CHAT_ID` es **el mismo número** en los dos `.env` y lo único que
+separaba los avisos era una decisión que no estaba escrita en el código.
 
 ---
 
@@ -109,10 +122,17 @@ TELEGRAM_CHAT_ID=123456789
 
 ### 4. Desplegar
 
+Las que hablan con Telegram son tres, y cada una monta el secret por su cuenta:
+
 ```bash
+# El aviso de cobro
 firebase deploy --only functions:redsysNotificationWebhook --project dev
-firebase deploy --only functions:redsysNotificationWebhook --project prod
+# El recordatorio de las 17:00 y su vista previa
+firebase deploy --only functions:sendReturnReminders,functions:previewReturnReminders --project dev
 ```
+
+Y lo mismo con `--project prod`. ⚠️ **Nunca `--only functions` a secas en
+producción**: subiría las cinco de la AEAT, que no van allí todavía.
 
 ---
 
@@ -171,7 +191,7 @@ timeout, y Redsys sin respuesta.
 
 ---
 
-## Qué llega, y por qué así
+## El aviso de cobro: qué llega, y por qué así
 
 ```
 💳 Cobro recibido
@@ -210,9 +230,106 @@ Hay test.
 
 ---
 
+## El aviso de las 17:00: mañana termina un alquiler
+
+Lo pidió Dorel el 7 de noviembre de 2026, con el texto escrito a mano: *«Para las
+reservas que caducan por ejemplo mañana me gustaría recibir hoy como a las 17:00h
+… un mensaje en telegram para copiar y pegar al cliente en whatsapp»*.
+
+Esto es lo que llega, uno por alquiler que termina mañana:
+
+```
+🔁 Mañana termina un alquiler
+
+Renault Megane · 4466LKK
+Luis Santiago Perdomo Maldonado · +34 615 591 101
+Devolución mañana 14/11 a las 14:00
+
+Para el cliente (tócalo para copiarlo):
+┌──────────────────────────────────────────────┐
+│ Buenas tardes Luis,                          │
+│                                              │
+│ Mañana a las 14:00 finaliza la reserva del   │
+│ Renault Megane. Si deseas prolongar la       │
+│ estancia, escríbeme y formalizamos la        │
+│ prórroga.                                    │
+│                                              │
+│ En caso contrario, te espero a esa hora en   │
+│ Aeropuerto T1. ¡Gracias!                     │
+└──────────────────────────────────────────────┘
+
+Abrir WhatsApp · Ver la reserva
+```
+
+- **El bloque del cliente se copia tocándolo**, porque va en `<pre>`. Ahí está la
+  mitad del valor: seleccionar tres párrafos a mano en un móvil es justo el
+  trabajo que esto quita. Por lo mismo va **uno por reserva** y no un mensaje con
+  la lista — con tres clientes dentro no hay nada que tocar.
+- **La cabecera queda fuera del bloque.** Lo que se copia tiene que ser
+  exactamente lo que recibe el cliente: la matrícula no es asunto suyo, y un
+  «Mañana termina un alquiler» pegado en su chat delata que lo escribió una
+  máquina.
+- **«Abrir WhatsApp» es un extra, no el plan.** `wa.me` abre la aplicación de
+  verdad en el móvil; en el ordenador se escribe desde WhatsApp Web y hay que
+  pegar. Las dos vías, como en la ficha de una solicitud.
+- **No se manda nada al cliente.** Quien pulsa enviar es Dorel. Mandarlo solo
+  pediría la API de WhatsApp Business —número aparte, verificación con Meta,
+  plantilla aprobada y pago por mensaje— y quitaría la última revisión humana de
+  algo que lee un cliente.
+- **Si no hay devoluciones, no se manda nada**, igual que el resumen cuando no
+  hay novedades: un aviso diario que casi siempre dice «nada» se acaba
+  silenciando, y con él el que sí importaba.
+
+### Para cambiar el texto
+
+Está en `mensajeParaCliente()`, en
+[functions/src/alerts/return-reminder.ts](../functions/src/alerts/return-reminder.ts),
+en tres frases: el saludo, la prórroga y la devolución. Es el de Dorel casi
+literal —solo se corrigieron «escibeme» y «proroga», y se añadió el lugar de
+devolución—, y cambiarlo es cambiar una línea y desplegar
+`sendReturnReminders`.
+
+Va en **español siempre**: no hay ningún campo en `Client` que diga en qué idioma
+habla el cliente, así que elegirlo sería inventárselo.
+
+### Verlo sin esperar a las cinco
+
+```js
+// En la consola del navegador, con la sesión abierta. Con `enviar: true` lo
+// manda de verdad; `fecha` es «haz como si hoy fuera este día».
+const fn = firebase.functions().httpsCallable('previewReturnReminders');
+```
+
+Y sin SDK a mano, con el token de la sesión (el patrón de los guiones de esta
+carpeta):
+
+```js
+await fetch('https://europe-west1-velto-store.cloudfunctions.net/previewReturnReminders', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+  body: JSON.stringify({ data: { fecha: '2026-11-13', enviar: false } })
+}).then((r) => r.json());
+```
+
+⚠️ **`fecha` no es un adorno de depuración: es lo que destapó un fallo de dos
+meses.** Al poder preguntar «¿qué habrías mandado el 26 de octubre?» se vio que
+el resumen diario de las 9:00 llevaba desde el 10 de septiembre saliendo **sin
+una sola entrega ni devolución** — las consultas de rango sobre
+`pickupDateTime`/`returnDateTime` no devuelven nada, porque esas fechas están
+guardadas como un **mapa** y no como un `Timestamp`. El caso entero está en
+CLAUDE.md, en «Firestore: una fecha de reserva NO se puede consultar por RANGO».
+
+---
+
 ## Lo que NO hace, y hace falta igual
 
 **El correo.** Telegram es el pitido; el correo es el registro escrito que
 queda cuando el pitido falla, y el que se puede buscar dentro de seis meses.
 Hoy el webhook no manda ninguno. Está pendiente, y reutiliza la cáscara de
 `functions/src/alerts/email-shell.ts`.
+
+**Saber si falta cobrar algo.** El recordatorio de las 17:00 no lo dice, a
+propósito: el día antes de la devolución es cuando interesa saberlo, pero
+mezclarlo con el mensaje de la prórroga convierte un aviso comercial en un aviso
+de cobro. Si hace falta, el sitio es la cabecera —nunca el texto del cliente— y
+la cifra se deriva de `payments`, nunca de `reservation.paymentSummary`.

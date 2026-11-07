@@ -25,6 +25,7 @@
  */
 
 import * as logger from 'firebase-functions/logger';
+import { esProduccion } from '../entorno';
 
 /** Lo que hace falta para redactar el aviso. Nada de aquí es opcional por azar. */
 export interface CobroParaAvisar {
@@ -74,8 +75,14 @@ function euros(n: number): string {
  * contesta `400 can't parse entities` y el aviso **no llega**. O sea que el
  * fallo no es cosmético: es quedarse sin enterarse del cobro, que es justo lo
  * que esto viene a arreglar.
+ *
+ * ⚠️ **Se exporta porque hay más de un aviso**, y tiene que ser el mismo: el
+ * recordatorio de devolución mete dentro de un `<pre>` un texto con el nombre
+ * de un cliente y el lugar de entrega, los dos tecleados por una persona. Dos
+ * escapes distintos son dos reglas que divergen, y la que se olvide se nota
+ * cuando un aviso deja de llegar.
  */
-function esc(s: string): string {
+export function esc(s: string): string {
   return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -113,6 +120,29 @@ export function mensajeCobro(c: CobroParaAvisar): string {
   }
 
   return lineas.join('\n');
+}
+
+/**
+ * El aviso con la marca del entorno, si no es producción.
+ *
+ * ⚠️ **Se aplica donde se ENVÍA, no donde se redacta**, igual que
+ * `asuntoDeCorreo()`: así lo llevan los dos avisos que hay y el que se añada
+ * mañana, en vez de haberse acordado una vez por mensaje.
+ *
+ * ⚠️ **Y hace falta aunque hoy haya dos bots.** Desarrollo escribe por
+ * `@VeltoDevBot` y producción por `@VeltoMobilityBot`, así que llegan a dos
+ * conversaciones distintas — pero el `TELEGRAM_CHAT_ID` es **el mismo número**
+ * en los dos `.env`, y lo que separa los avisos es una decisión que no está
+ * escrita en ninguna parte del código. El día que se unifique el bot, lo que
+ * queda es un aviso de un cobro que no ha entrado en ningún sitio, o el texto
+ * de un cliente de pruebas listo para pegar.
+ *
+ * ⚠️ **Va DELANTE y en su propia línea.** El cuerpo de estos mensajes lleva
+ * bloques que se copian tocándolos: metida dentro, la marca acabaría pegada en
+ * el chat de un cliente.
+ */
+export function textoDeEntorno(texto: string): string {
+  return esProduccion() ? texto : `(DEV)\n${texto}`;
 }
 
 /**
@@ -165,7 +195,7 @@ export async function avisarPorTelegram(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: texto,
+        text: textoDeEntorno(texto),
         parse_mode: 'HTML',
         // El aviso es el texto: una vista previa de enlace lo taparía.
         disable_web_page_preview: true

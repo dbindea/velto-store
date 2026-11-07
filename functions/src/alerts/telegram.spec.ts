@@ -8,8 +8,8 @@
  * mide aquí.
  */
 
-import { describe, expect, it } from 'vitest';
-import { mensajeCobro } from './telegram';
+import { afterEach, describe, expect, it } from 'vitest';
+import { mensajeCobro, textoDeEntorno } from './telegram';
 
 describe('mensajeCobro', () => {
   const base = {
@@ -77,5 +77,46 @@ describe('mensajeCobro', () => {
     const m = mensajeCobro(base);
     expect(m).toContain('<b>');
     expect(m).toContain('</b>');
+  });
+});
+
+/**
+ * ⚠️ **Los dos entornos escriben al MISMO chat.** Hoy lo hacen por dos bots
+ * distintos —`@VeltoDevBot` y `@VeltoMobilityBot`—, así que llegan a dos
+ * conversaciones; pero `TELEGRAM_CHAT_ID` es el mismo número en los dos `.env`,
+ * y lo único que los separa es una decisión que no está escrita en el código.
+ * Un aviso de cobro de desarrollo enseña una cifra que no ha entrado en ningún
+ * sitio, y el recordatorio de devolución trae además un texto listo para
+ * pegarle a un cliente.
+ *
+ * Es la misma regla que `asuntoDeCorreo()`, aplicada donde se **envía**.
+ */
+describe('la marca del entorno', () => {
+  const proyecto = process.env.GCLOUD_PROJECT;
+  afterEach(() => {
+    if (proyecto === undefined) delete process.env.GCLOUD_PROJECT;
+    else process.env.GCLOUD_PROJECT = proyecto;
+  });
+
+  it('en producción no toca el mensaje', () => {
+    process.env.GCLOUD_PROJECT = 'rentalcar-veltomobility';
+    expect(textoDeEntorno('💳 <b>Cobro recibido</b>')).toBe('💳 <b>Cobro recibido</b>');
+  });
+
+  it('fuera de producción lo marca, delante y en su propia línea', () => {
+    process.env.GCLOUD_PROJECT = 'velto-store';
+    expect(textoDeEntorno('💳 Cobro')).toBe('(DEV)\n💳 Cobro');
+  });
+
+  /**
+   * ⚠️ **Lo que no se reconozca se marca**, igual que en `esProduccion()`: una
+   * copia del proyecto para probar una migración saldría sin marcar si la
+   * pregunta se hiciera al revés.
+   */
+  it('un proyecto desconocido cuenta como desarrollo', () => {
+    process.env.GCLOUD_PROJECT = 'velto-store-copia';
+    expect(textoDeEntorno('x').startsWith('(DEV)')).toBe(true);
+    delete process.env.GCLOUD_PROJECT;
+    expect(textoDeEntorno('x').startsWith('(DEV)')).toBe(true);
   });
 });
