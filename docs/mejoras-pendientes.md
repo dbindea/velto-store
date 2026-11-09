@@ -15,6 +15,120 @@ Dos numeraciones, para no mezclar cosas distintas:
 
 ---
 
+## Estado a 9 de noviembre de 2026 — el TPV propio, la señal encendida y el sobre del correo
+
+**Todo lo de este día está en producción**, functions y frontend: `master` en
+`0c37f1a`, producción con **35** functions y sin ninguna de la AEAT. El relato
+entero, en [traspaso-sesion.md](traspaso-sesion.md) § 2 sexvicies.
+
+Tres cosas cerradas y una abierta.
+
+✅ **El TPV de producción pasó al comercio propio de VELTO** (`370770240`,
+terminal `001`), y con él se retiró el `361040215` prestado que llevaba
+cobrando desde el 31 de agosto. **Y el pago de la señal desde la web quedó
+ENCENDIDO en producción**, a petición de Dorel: desde hoy un visitante
+cualquiera puede cerrar su pre-reserva pagando, sin operador de por medio. El
+relato y las seis operaciones de prueba, en [tpv-bbva.md](tpv-bbva.md) § 3 bis.
+
+⚠️ **Lo único que falta ahí es el primer cobro real, y es de Dorel.** El resto
+de la cadena quedó acreditado el mismo día **con una tarjeta denegada a
+propósito**, que es la lección que conviene llevarse: una denegación recorre el
+formulario firmado, la pasarela real, la URL de notificación en `live`, la
+firma en los dos sentidos y la rama de «no aprobado», y **no cuesta nada**. Lo
+que solo prueba un cargo de verdad es la captura, el aviso de cobro y la
+devolución. **La próxima integración empieza por la denegación, no la deja para
+el final.**
+
+✅ **N-47 · El sobre que dice que ese correo al cliente ya salió.** Lo pidió
+Dorel —«en todos los sitios donde se ha enviado un correo automático o manual
+me gustaría poder ver este simbolito para no duplicar envíos»— y empezó siendo
+una pregunta: *¿le llega automáticamente el contrato firmado?* **No.**
+`signContract` sella el PDF y no envía nada; el envío es un botón.
+
+Al cliente le escriben exactamente dos correos y solo uno dejaba rastro:
+
+| correo | cuándo | se veía antes |
+|---|---|---|
+| contrato firmado | a mano, botón | solo en la ficha del **contrato** |
+| confirmación de pre-reserva | automático | **en ningún sitio** — no se guardaba |
+
+⚠️ **El hueco de verdad estaba en la ficha de la RESERVA**, que tiene el mismo
+botón de enviar y no decía nada: desde ahí se podía mandar el contrato dos
+veces sin enterarse. Y la causa de fondo es la de siempre —
+`contractInfo.emailedAt` lo escribía la function desde el **29 de agosto** y el
+modelo no lo declaraba, así que el dato estaba en Firestore sin poder leerse.
+**Tercer caso igual en estos dos modelos.** Al añadir un campo en una function,
+añádelo al modelo en la misma pasada.
+
+Lo decide [`email-sent.util.ts`](../src/app/shared/utils/email-sent.util.ts), y
+sus tres decisiones están en CLAUDE.md § «Al cliente le escriben DOS correos».
+La que más importa: **no usa `toDate()`**, que ante un valor ilegible cae a HOY
+— diría «enviado hoy» de un correo cuya fecha nadie puede leer.
+
+⚠️ **Y lo primero que enseñó al llegar a producción:** de **6** contratos
+firmados, solo **2** tienen el correo enviado. Lo que la aplicación afirma es
+que el **botón** no se usó en los otros cuatro; si salieron por WhatsApp, eso no
+consta en ninguna parte.
+
+⚠️ **El correo del contrato se queda a mano por decisión de Dorel**, ese mismo
+día: *«lo envía una persona»*. No es una automatización pendiente — que nadie lo
+lea como un hueco y lo «mejore».
+
+✅ **F-37 · El HTML del backoffice se servía con `max-age=3600`, así que una
+pestaña podía correr el bundle ANTERIOR durante una hora** — y una ruta sí y
+otra no, en la misma sesión, porque la caché va por URL. Salió verificando el
+sobre: la ficha de un contrato lo enseñaba y la lista no, con el elemento
+ausente del DOM. No era el componente: la página corría `main-ZA5WZFRI.js`
+mientras el servidor ya entregaba `main-C57FIF5W.js`.
+
+⚠️ **Y ya había mordido antes, en esta misma lista.** La nota de F-35 dice «era
+el chunk lazy viejo en la caché del navegador» y concluye *«fuerza la recarga
+antes de concluir que no ha llegado»*: un apaño para la persona, no un arreglo
+de la causa. Ahora el HTML revalida.
+
+⚠️ **El `3600` no estaba escrito en ninguna parte: es el DEFECTO de Firebase
+Hosting.** Por eso no se encontraba buscándolo en el repositorio, y por eso el
+arreglo hay que **escribirlo**. Hoy el bloque `backoffice` declara `no-cache` en
+`/index.html` y en `**/!(*.*)` —las rutas de la SPA—, y el glob excluye lo que
+tiene extensión a propósito: las cabeceras se evalúan contra la **URL pedida**,
+no contra el fichero que sirve el rewrite, así que un `**` se habría llevado por
+delante la caché de los bundles. Medido en producción: `no-cache` en las cuatro
+rutas de HTML, `/assets/i18n/es.json` como estaba y el bundle sin tocar.
+
+⚠️ **El precio está medido y no es un `304`.** Firebase **no responde `304`** a
+un `If-None-Match` con el etag exacto: devuelve `200` con el cuerpo. Son
+**10,7 KB** por carga de pantalla. Los megas siguen cacheados por huella.
+
+⚠️ **No toca el SEO, y la pregunta de Dorel era legítima.** Son dos `target`
+separados en `firebase.json` con sus `headers` dentro: los dos backoffices van
+con `noindex, nofollow` —fuera del índice— y la web pública ya declaraba
+`public, max-age=300` por su cuenta. **Su bloque no se ha tocado**, y se
+comprobó después del despliegue: portada, flota y condiciones siguen en 300, el
+`robots.txt` anuncia el sitemap y ninguna de esas páginas lleva `meta robots`.
+
+### 🚧 M-70 · El `robots.txt` de la web sirve dos bloques que se contradicen
+
+Visto de paso el 9 de noviembre de 2026, **sin urgencia y sin tocar nada**:
+Cloudflare inyecta su bloque gestionado **por delante** del nuestro con
+`Disallow: /` para `GPTBot`, `ClaudeBot`, `Google-Extended` y
+`Applebot-Extended`, y el nuestro, detrás, les dice `Allow: /`.
+
+Como los grupos se **fusionan** por user-agent y entre reglas igual de
+específicas gana la **menos restrictiva**, manda el `Allow`: **el bloqueo de
+rastreadores de IA que está puesto en el panel de Cloudflare no surte efecto**
+para los que nombramos. Es el mismo mecanismo que ya destapó que el backoffice
+de producción era indexable (§ 2 vicies del traspaso), y la misma lección: **lo
+que hay en `public/` no es lo que se entrega.**
+
+**Para Google no cambia nada** —`User-agent: *` sale `Allow: /` por los dos
+lados y el sitemap se anuncia—, así que el posicionamiento está bien. Lo que hay
+es una decisión tomada en dos sitios que se contradicen. Si se quiere que los de
+IA queden fuera de verdad, se resuelve **en el repositorio**, no en Cloudflare.
+Queda a criterio de Dorel: puede que quiera justo lo contrario —aparecer en las
+respuestas de los asistentes es tráfico—, y por eso no se ha cambiado.
+
+---
+
 ## Estado a 7 de noviembre de 2026 — el WhatsApp de la prórroga
 
 Cerrada **N-46** (nueva): el aviso de Telegram de las **17:00** con el mensaje

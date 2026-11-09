@@ -4,7 +4,11 @@
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
 > trabajo a partir de ahora.
 >
-> **Orden de lectura:** **§ 2 quinvicies**, que es lo último que pasó (7 de
+> **Orden de lectura:** **§ 2 sexvicies**, que es lo último que pasó (9 de
+> noviembre: el TPV de producción a nombre de VELTO, la señal cobrable desde la
+> web, el sobre que dice que un correo al cliente ya salió, y el `index.html`
+> cacheado una hora que hacía correr el bundle **anterior** — un fallo cuyo
+> síntoma es «mi cambio no ha salido»); después **§ 2 quinvicies** (7 de
 > noviembre: el aviso de Telegram de las 17:00 con el WhatsApp de la prórroga ya
 > redactado — y, construyéndolo, se vio que **el resumen diario de las 9:00
 > llevaba dos meses saliendo sin una sola entrega ni devolución**, porque una
@@ -27,11 +31,15 @@
 > no hay frontend que publicar—; y luego **§ 5**, con los huecos que
 > solo puede cerrar Dorel.
 >
-> ⚠️ **Desde el día 7 no se ha tocado código, y los dos avisos ya han corrido
-> SOLOS.** Medido el 9 de noviembre: `sendReturnReminders` se disparó en
-> **producción** el día 8 a las **17:00 de Madrid**, que es lo único que
-> distingue «programado» de «programado y corriendo». El árbol está limpio y
-> `develop` lleva por encima de `master` **solo documentación**.
+> ⚠️ **Al cerrar el 9 de noviembre no queda NADA por desplegar:** `develop` y
+> `master` están en el mismo commit (`0c37f1a`), el árbol está limpio y las
+> cuatro cosas del día están en los dos entornos. Producción sigue con **35**
+> functions y ninguna de la AEAT. Lo que falta es de Dorel y está en § 5.
+>
+> ✅ **Y los dos avisos programados ya han corrido SOLOS.** Medido el 9 de
+> noviembre: `sendReturnReminders` se disparó en **producción** el día 8 a las
+> **17:00 de Madrid**, que es lo único que distingue «programado» de «programado
+> y corriendo».
 >
 > ⚠️ **Y que esos avisos lleguen VACÍOS estos días es lo correcto, no una
 > recaída.** Los movimientos de la flota, medidos el día 7, son la **devolución
@@ -2881,17 +2889,202 @@ npx firebase functions:log --only sendReturnReminders --project prod
 aunque se le pidan funciones de los dos. Es la misma confusión que `firebase use`
 ya provocó una vez con los despliegues.
 
+## 2 sexvicies. El 9 de noviembre — el TPV propio, la señal encendida, el sobre del correo y la caché que acusaba al código
+
+Cuatro cosas, y las cuatro están **en producción**. Dos son de negocio y dos
+salieron por el camino.
+
+### El TPV pasó al comercio propio, y lo prestado se retiró
+
+Dorel trajo el alta de producción y el mismo día producción dejó de cobrar con
+el `361040215` **prestado** (terminal `1`) y pasó al **`370770240`** terminal
+`001` con su clave de `live`. Son las cuatro functions de `REDSYS_*`, y se
+cambiaron **tres cosas y no una** —comercio, terminal y clave—: con la clave de
+uno y el código de otro, la pasarela contesta `SIS0042`, que se lee como «la
+clave está mal» y manda a mirar donde no es.
+
+⚠️ **La clave llegó con una trampa:** empieza por `/` y ese carácter se pierde
+al copiarla, dejando **23 bytes donde 3DES pide 24**. La fuente que manda es la
+**API KEY** `PROD_…`, que lleva dentro comercio, terminal y clave sin
+posibilidad de copiarse a medias.
+
+⚠️ **Y ahora los dos entornos comparten el CÓDIGO de comercio**, así que lo
+único que separa un cobro de prueba de uno real son `REDSYS_ENVIRONMENT` y qué
+versión del secret tenga cada proyecto. Antes el número los distinguía de un
+vistazo en cualquier log.
+
+**No había ninguna fianza atrapada** en el comercio viejo: de trece cobros en
+producción, uno solo es de Redsys y está cancelado sin cobrar. Comprobado antes
+de desplegar, que es el orden que importa.
+
+### La señal desde la web quedó ENCENDIDA en producción
+
+`VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` en los dos entornos, a petición de Dorel
+y con sus dos condiciones cumplidas —probado de punta a punta en desarrollo el 2
+de noviembre y el TPV concedido—.
+
+⚠️ **Desde hoy la web pública puede cobrar de verdad.** Un visitante cualquiera
+deja su pre-reserva, pulsa «Pagar la señal» y sale un cargo a su tarjeta: es la
+**única** vía en la que no hay un operador con sesión de por medio. Lo que la
+limita es `puedePagarSenal()`, y el importe lo pone
+`importeSenal(quoteSnapshot.gross)` y **no la petición** — lo que llega de fuera
+es un id y nada más.
+
+⚠️ **Son DOS functions al cambiar la bandera y la segunda se olvida:**
+`createBookingRequest` la lee **dos veces** —lo que responde a la web y el botón
+del correo al cliente—, así que desplegando solo `createSignalPayment` el cobro
+quedaría disponible y el correo seguiría saliendo sin botón.
+
+**La bandera se mide, no se lee del fichero:** un `POST` a `/api/pagar-senal` con
+un id bien formado que no existe da `403 disabled` apagada y `404 not-found`
+encendida, sin escribir nada.
+
+### ✅ La tarjeta denegada a propósito, que es la lección del día
+
+Dorel recorrió el flujo público de producción con una tarjeta que sabía
+denegada, para no generar un cobro real. El resultado acredita **toda la cadena
+menos la captura**: `Ds_Response 9673`, **notificación recibida en el mismo
+minuto**, comercio `370770240`, terminal `001`, cobro `Pendiente` y pagado
+0,00 €.
+
+Lo que eso prueba, y no es poco: el formulario firmado, la pasarela real, **la
+URL de notificación en `live`** —que este documento daba por no comprobable sin
+cobrar—, que la firma cuadra **en los dos sentidos** (con la clave mal, el
+`SIS0042` llega antes de la pantalla de la tarjeta; y el webhook valida antes de
+escribir) y que la rama de «no aprobado» **no toca `paidAmount` ni manda
+Telegram**.
+
+⚠️ **Lo que solo prueba un cargo real:** una autorización `0000`–`0099`, el
+aviso de cobro y la **devolución** con el comercio nuevo. Sigue pendiente y es
+de Dorel: importe mínimo y devolverlo desde la ficha del cobro.
+
+> **Para la próxima integración: la denegación va PRIMERO, no última.** Recorre
+> casi todo y no cuesta un euro.
+
+### ✅ N-47 · El sobre que dice que ese correo al cliente ya salió
+
+Empezó como una pregunta de Dorel —*«¿le llega automáticamente el contrato
+firmado?»*— y la respuesta es **no**: `signContract` sella el PDF y no envía
+nada; el envío es `sendSignedContractEmail`, un callable con `auth` que lanza un
+botón. Y lo que pidió a renglón seguido fue el indicador: *«en todos los sitios
+donde se ha enviado un correo automático o manual me gustaría poder ver este
+simbolito para no duplicar envíos»*.
+
+⚠️ **El hueco estaba en la ficha de la RESERVA**, que tiene el mismo botón y no
+decía nada: desde ahí se podía mandar el contrato dos veces sin enterarse. Y la
+causa de fondo es la de siempre — `contractInfo.emailedAt` lo escribía la
+function desde el **29 de agosto** y el modelo **no lo declaraba**, así que el
+dato estaba en Firestore sin poder leerse. **Tercer caso igual en estos dos
+modelos.**
+
+El otro correo al cliente —la confirmación de pre-reserva, que **sí** es
+automática— no se guardaba en ninguna parte. Ahora `createBookingRequest`
+escribe `clientEmailedAt` después de enviarlo, y **su fallo no tumba la
+solicitud**: el correo ya salió y lo que falta es la anotación.
+
+Lo decide [`email-sent.util.ts`](../src/app/shared/utils/email-sent.util.ts),
+con 10 tests. Las tres decisiones que no son adorno están en CLAUDE.md § «Al
+cliente le escriben DOS correos»; la que más importa: **no usa `toDate()`**, que
+ante un valor ilegible cae a HOY — diría «enviado hoy» de un correo cuya fecha
+nadie puede leer.
+
+⚠️ **Y el correo del contrato se queda A MANO por decisión de Dorel**, el mismo
+día: *«lo envía una persona»*. No es una automatización pendiente.
+
+**Lo primero que enseñó en producción:** de **6** contratos firmados, solo **2**
+tienen el correo enviado. Lo que la aplicación afirma es que el **botón** no se
+usó en los otros cuatro; si salieron por WhatsApp, eso no consta.
+
+### ✅ F-37 · El HTML se servía con `max-age=3600`, y el síntoma acusaba al código
+
+Verificando el sobre, la ficha de un contrato lo enseñaba y la lista **no**, con
+el elemento ausente del DOM. La plantilla estaba bien y el componente estaba en
+`dist`. Lo que pasaba: la página corría **`main-ZA5WZFRI.js`** mientras el
+servidor ya entregaba **`main-C57FIF5W.js`**, porque `index.html` se cacheaba una
+hora **y la caché va por URL** — así que una ruta puede correr el bundle nuevo y
+otra el viejo en la misma pestaña.
+
+⚠️ **El síntoma es «mi cambio no ha salido» y lleva derecho a buscar el fallo en
+el código.** Es la misma trampa que las traducciones cacheadas, un nivel más
+arriba: allí el bundle era nuevo y el JSON viejo; aquí el bundle entero es el de
+antes.
+
+⚠️ **Y ya había mordido:** la nota de F-35 lo despachó como «era el chunk lazy
+viejo en la caché» y concluyó «fuerza la recarga antes de concluir que no ha
+llegado» — un apaño para la persona, no un arreglo de la causa.
+
+⚠️ **El `3600` no estaba escrito en ninguna parte: es el DEFECTO de Firebase
+Hosting**, así que no se encontraba buscándolo. Hoy el bloque `backoffice`
+declara `no-cache` en `/index.html` y en `**/!(*.*)`, y el glob **excluye lo que
+tiene extensión a propósito**: las cabeceras se evalúan contra la URL pedida, no
+contra el fichero que sirve el rewrite, así que un `**` habría matado la caché de
+los bundles — que no la necesitan, porque llevan la huella en el nombre.
+
+⚠️ **Las reglas de `headers` se ACUMULAN** (medido: las seis rutas salen con su
+`Cache-Control` **y** con el `X-Robots-Tag` del `**` anterior). Aun así van
+declaradas **después** de aquella: si solo se aplicara la primera coincidencia, lo
+que no entraría es el `no-cache` y el `noindex` se conservaría — fallar del lado
+que no descubre el backoffice.
+
+⚠️ **El precio no es un `304`.** Firebase **no responde `304`** a un
+`If-None-Match` con el etag exacto: devuelve `200` con el cuerpo. Son **10,7 KB**
+por carga de pantalla.
+
+⚠️ **Y no toca el SEO, que fue la pregunta de Dorel** —«no quiero al arreglar
+esto perjudicar el otro»—. Medido **antes** de escribir nada: los dos backoffices
+iban a `3600` **con `noindex, nofollow`** (o sea fuera del índice, donde esto no
+cuenta) y la web pública ya declaraba `public, max-age=300` en su propio bloque.
+Son dos `target` separados con sus `headers` dentro: **su bloque no se ha
+tocado**, y se volvió a medir después del despliegue.
+
+### Un falso positivo que conviene no repetir
+
+Reporté que las solicitudes de la web proponían la recogida a las **00:00** y
+**era mi propio dato de prueba**: creé las solicitudes llamando a
+`/api/solicitud` con `from: "2026-12-01"` a secas, y `parseFecha` lee una hora
+ausente como medianoche. La web real nunca manda eso — `comoCampo()` compone
+siempre `YYYY-MM-DDTHH:MM` con `HORA_RECOGIDA = 10`, y el buscador normaliza
+cualquier fecha sin hora a `T10:00`, con test de ello.
+
+> **Al fabricar datos de prueba, mándalos con la misma forma que los manda la
+> web.** Un fixture que se salta la normalización del cliente produce un fallo
+> que no existe, y cuesta el tiempo de desmentirlo.
+
+---
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **A 9 de noviembre de 2026: NADA.** Desde el release del día 7 no se ha
-tocado código —el árbol está limpio y `develop` lleva por encima de `master`
-**solo documentación**—, y el trabajo de aquel día era todo backend: las dos del
-recordatorio, el arreglo del resumen y el webhook con la marca de entorno. Está
-**desplegado en los dos entornos, por tandas y por nombre**. Producción da
-**35** functions (`functions:list --project prod --json`), y siguen faltando a
-propósito las cinco de la AEAT.
+⚠️ **A 9 de noviembre de 2026, al cerrar: NADA.** El árbol está limpio,
+`develop` y `master` están **en el mismo commit** (`0c37f1a`) y todo el trabajo
+del día —las cuatro cosas de § 2 sexvicies— está en los dos entornos.
 
-Y `master` está al día: el merge **`68d10f3`** lo publicó a petición de Dorel.
+Cómo salió, que vale como plantilla:
+
+```powershell
+# 1. La function primero: solo cambia comportamiento (escribe un campo mas).
+firebase deploy --only functions:createBookingRequest --project prod
+# 2. El frontend y la cabecera de caché, con el merge a master -> CI.
+git checkout master; git merge --ff-only develop; git push origin master
+```
+
+⚠️ **NUNCA `npm run deploy:prod:functions`**, que es el error fácil al tener
+prisa: ese script lleva `--only functions` a secas y subiría **las cinco de la
+AEAT** a producción. Por nombre, siempre.
+
+Comprobado después **por nombres y no por la cifra**, que es lo que distingue
+qué falta de cuántas hay: producción da **35** functions, **cero** de la AEAT y
+`createBookingRequest` dentro.
+
+Y comprobado **contra producción, no contra el log del CI**: el backoffice sirve
+el bundle `main-HCKTWVVF.js` con el sobre dentro —la ficha del contrato
+`C-0SBXUX-2026` lo enseña al lado de «FIRMADO» y la ficha de su reserva añade
+«Enviado por correo: 04/11/2026 19:23»—, las cuatro rutas de HTML salen con
+`no-cache`, y el escaparate sigue en `public, max-age=300` con su `robots.txt`
+anunciando el sitemap. El CI vació además la caché de Cloudflare, así que el
+cambio de cabecera está vivo ya en el dominio propio.
+
+> Histórico del 7 de noviembre: `master` lo publicó el merge **`68d10f3`** a
+> petición de Dorel.
 ⚠️ **No llevaba ni una línea de frontend** —el diff contra `src/`, `web/`,
 `angular.json` y `package.json` salía **vacío**—, así que el CI republicó el
 mismo bundle; el merge sirve para que la rama de producción tenga el código que
@@ -3148,6 +3341,7 @@ que tener en la cabeza al retomar:
 | ~~Encender el pago de la señal~~ | ✅ **encendido el 9 de noviembre de 2026**, a petición de Dorel | la web pública cobra ya de verdad. Redesplegadas `createSignalPayment` y `createBookingRequest` —las **dos**, porque la segunda lee la bandera también para el botón del correo—. No hizo falta hosting: el rewrite ya estaba. ⚠️ Se hizo **antes** del primer cobro mínimo de prueba, así que el primero que pague puede ser un cliente real — mitigado el mismo día recorriendo la vía en producción con una tarjeta **denegada** |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
+| **M-70** · ¿los rastreadores de IA entran o no? | Dorel | hoy el `robots.txt` servido **se contradice**: Cloudflare inyecta `Disallow: /` para `GPTBot`, `ClaudeBot` y `Google-Extended`, y el nuestro les dice `Allow: /` — y al fusionarse gana el `Allow`, así que el bloqueo del panel **no surte efecto**. Para Google no cambia nada y el SEO está bien; lo que hay es una decisión tomada en dos sitios. Si se quiere de verdad, se resuelve en el repositorio |
 
 ✅ **La ficha de Google está completa y cuadra con la web.** Contrastada el 31
 de octubre de 2026 contra el JSON-LD que sirve la web, enumerando las filas del
