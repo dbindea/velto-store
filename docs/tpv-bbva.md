@@ -345,6 +345,15 @@ hay desplegado de verdad y no qué se quiso desplegar:
 - las **cuatro** functions llevan `REDSYS_MERCHANT_CODE=370770240`,
   `REDSYS_TERMINAL=001`, `REDSYS_ENVIRONMENT=live` y el secret en **versión 3**;
 - producción sigue con **35** functions, así que no se colaron las de la AEAT;
+
+⚠️ **Y una lectura que parece un despliegue a medias y no lo es: las otras 31
+functions siguen llevando `REDSYS_MERCHANT_CODE=361040215` en su entorno.**
+Medido el mismo día: 31 con el viejo y 4 con el nuevo. El `.env` se sube **con
+cada function**, así que las que no se redesplegaron conservan el de antes — y da
+igual, porque **ninguna de ellas lo lee**. Entrará solo en el siguiente despliegue
+de cada una. Lo que hay que mirar al auditar esto no es cuántas llevan cada
+valor, sino que **las cuatro de `REDSYS_*`** lleven el nuevo.
+
 - la clave nueva pasa por `signRedsysParameters()` real y da una firma de 44
   caracteres que `signaturesMatch()` acepta en base64 normal y URL-safe, **y
   rechaza con otra clave** — sin ese control, el round-trip pasaría solo.
