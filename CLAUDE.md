@@ -2734,6 +2734,62 @@ Por eso `firebase.json` declara `Cache-Control: no-cache` en `/assets/i18n/**`:
 se siguen cacheando, pero **revalidando**, así que no pueden quedar desparejados
 del bundle que los pide. Requiere desplegar hosting para que tome efecto.
 
+#### Y el mismo fallo lo tenía el HTML, que es el que decide qué bundle corre
+
+⚠️ **`index.html` se servía con `max-age=3600` y la caché va por URL, así que
+una pestaña podía correr el bundle ANTERIOR durante una hora — y una ruta sí y
+otra no, en la misma sesión.** Salió el 9 de noviembre de 2026 verificando el
+sobre del correo: la ficha de un contrato enseñaba el indicador nuevo y la lista
+no, con el elemento ausente del DOM. No era el componente ni la plantilla: la
+página corría `main-ZA5WZFRI.js` mientras el servidor ya entregaba
+`main-C57FIF5W.js`. Es decir, **el síntoma es «mi cambio no ha salido» y lleva
+derecho a buscar el fallo en el código**, que es la misma trampa que las
+traducciones cacheadas, un nivel más arriba.
+
+⚠️ **El `3600` no estaba escrito en ninguna parte: es el DEFECTO de Firebase
+Hosting.** Por eso no se encontraba buscando en el repositorio — y por eso el
+arreglo hay que escribirlo, no corregirlo.
+
+Hoy el bloque `backoffice` declara `no-cache` en `/index.html` y en
+`**/!(*.*)`, que son las rutas de la SPA —las que no llevan extensión—. Medido
+en `velto-store.web.app` después de desplegar:
+
+| | `Cache-Control` |
+|---|---|
+| `/`, `/index.html`, `/dashboard`, `/reservations/abc123` | `no-cache` |
+| `/assets/i18n/es.json` | `no-cache`, como ya estaba |
+| `/main-C57FIF5W.js` | `max-age=3600`, **sin tocar** |
+
+⚠️ **Los bundles se quedan como estaban a propósito**: llevan la huella en el
+nombre, así que una hora de caché no puede servir contenido equivocado — el
+nombre cambia con el contenido. Lo que no lleva huella es justo el HTML.
+
+⚠️ **El glob tiene que excluir lo que tenga extensión, o el arreglo se lleva por
+delante la caché de los bundles.** `**` coincidiría con todo: las cabeceras se
+evalúan contra la **URL pedida**, no contra el fichero que el rewrite acaba
+sirviendo. De ahí `**/!(*.*)`.
+
+⚠️ **Y las reglas de `headers` se ACUMULAN**, que era la duda al elegir el
+orden: las seis rutas medidas salen con su `Cache-Control` **y** con el
+`X-Robots-Tag: noindex, nofollow` del `**` anterior. Aun así van declaradas
+después de aquella, porque si solo se aplicara la primera coincidencia el
+`noindex` se conservaría y lo que no entraría es el `no-cache` — fallar del lado
+que no descubre el backoffice.
+
+⚠️ **El precio está medido y no es un `304`.** Firebase **no responde `304`** a
+un `If-None-Match` con el etag exacto: devuelve `200` con el cuerpo. O sea que
+cada carga de pantalla descarga **10,7 KB** de HTML en vez de salir de la caché
+del navegador. Es menos de lo que pesa un icono y los bundles —que son los
+megas— siguen cacheados; pero la cuenta es ésa y no «revalida gratis».
+
+⚠️ **Esto NO toca el SEO, y la pregunta es legítima.** Son dos `target`
+separados en `firebase.json` con sus `headers` dentro, así que una cabecera del
+`backoffice` no puede alcanzar `veltomobility.com`. Medido antes de tocar nada:
+los dos backoffices iban a `max-age=3600` **con `noindex, nofollow`** —o sea
+fuera del índice de Google, donde nada de esto cuenta— y la web pública ya
+declaraba `public, max-age=300` por su cuenta. **La web pública no tiene este
+problema y no se ha tocado.**
+
 ⚠️ **Para saber si un despliegue ha salido, mira el dominio `.web.app`**, no el
 propio: aquel es lo que hay publicado y este es lo publicado **más la caché de
 Cloudflare**. Un romper-caché con `?algo` **no basta** — se comprobó y devolvía
@@ -2932,6 +2988,12 @@ el sistema no respalda se deja de creer, y arrastra consigo a los que sí.
 noviembre de 2026 —«¿le llega automáticamente el contrato firmado?»— y la
 respuesta es que no: `signContract` sella el PDF y **no envía nada**. El envío
 es `sendSignedContractEmail`, un callable con `auth` que lanza un botón.
+
+⚠️ **Y se queda a mano por decisión de Dorel**, ese mismo día y con el motivo
+dicho: *«lo envía una persona»*. No es una automatización pendiente, así que no
+se «mejore» el día que alguien lea esto y le parezca un hueco — automatizarlo
+haría salir un correo a un cliente sin que nadie lo decidiera, y lo que la
+pregunta pedía era **saber si ya salió**, que es lo que contesta el sobre.
 
 | correo | cuándo | queda anotado en |
 |---|---|---|
