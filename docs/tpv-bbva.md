@@ -179,12 +179,19 @@ producción, con clave nueva.
 | | Comercio | Terminal | Moneda | Clave |
 |---|---|---|---|---|
 | **desarrollo** (`velto-store`) | `370770240` | `001` | 978 | la **pública de test** de Redsys |
-| producción (`rentalcar-veltomobility`) | `361040215` | `1` | 978 | la real, en Secret Manager |
+| producción (`rentalcar-veltomobility`) | `370770240` | `001` | 978 | la real de `live`, Secret Manager **v3** |
 
-⚠️ **El comercio de producción NO se tocó, y es deliberado.** El `361040215` es
-de otro comercio y está prestado; es el que lleva cobrando de verdad desde el 31
-de agosto de 2026 y el alta de VELTO todavía no está concedida. Cambiarlo hoy
-dejaría producción sin cobrar.
+⚠️ **Aquí ponía que el comercio de producción «NO se tocó, y es deliberado»**, con
+el `361040215` prestado y su terminal `1`. Dejó de ser cierto el **9 de noviembre
+de 2026**: Redsys concedió el alta y producción pasó al comercio propio. Lo que se
+hizo, y lo que se midió, está en «Lo que se hizo el día que concedieron
+producción» más abajo.
+
+⚠️ **Y desde ese día los dos entornos comparten el CÓDIGO de comercio.** Lo único
+que separa un cobro de prueba de uno real son `REDSYS_ENVIRONMENT` y qué versión
+del secret tenga cada proyecto. Antes el número de comercio los distinguía por sí
+solo —se veía de un vistazo en cualquier log—; ahora no, así que ante un pedido no
+se puede deducir el entorno del comercio.
 
 ⚠️ **La clave de desarrollo no hizo falta cambiarla, aunque el comercio sí.** El
 banco asignó a este comercio de pruebas la clave que **Redsys publica en su
@@ -272,38 +279,90 @@ dónde o cómo se consulta. Tres cosas, en el orden en que engañan:
 es su panel, y una contraseña cambiada por otro es una contraseña que él no
 tiene. Si el usuario se bloquea por intentos, hay que llamar al 912 983 609.
 
-### Lo que hay que cambiar el día que concedan producción
+### Lo que se hizo el día que concedieron producción (9 de noviembre de 2026)
 
-⚠️ **Son TRES líneas, no una.** Lo que el banco mandará es la clave nueva, así
-que la tentación es sustituir solo el secret; con el `361040215` todavía escrito
-en `.env.rentalcar-veltomobility`, las firmas saldrían con la clave de un
-comercio y el código de otro y la pasarela contestaría **`SIS0042`** — que se lee
-como «la clave está mal» y no como «no se corresponden».
+Salió exactamente como lo dejaba escrito este documento —**tres líneas y cuatro
+functions**— así que lo que queda aquí es lo que no estaba previsto.
 
 ```bash
 # functions/.env.rentalcar-veltomobility
-REDSYS_MERCHANT_CODE=370770240      # el nuevo
-REDSYS_TERMINAL=001                 # tres dígitos, no 1
+REDSYS_MERCHANT_CODE=370770240      # era 361040215
+REDSYS_TERMINAL=001                 # era 1: tres dígitos, no uno
 REDSYS_ENVIRONMENT=live             # se queda
 
-firebase functions:secrets:set REDSYS_SECRET_KEY --project prod
+firebase functions:secrets:set REDSYS_SECRET_KEY --project prod --data-file <fichero>
 firebase deploy --only functions:createRedsysPaymentLink,functions:getPaymentCheckout --project prod
 firebase deploy --only functions:redsysNotificationWebhook,functions:refundRedsysPayment --project prod
 ```
 
-⚠️ **Y son esas CUATRO functions y ninguna más.** Son las únicas que leen
-`REDSYS_*`; tocar el `.env` cambia el hash de todas, pero en producción el
-despliegue va por nombre y nunca `--only functions` a secas, que subiría las
-cinco de la AEAT que allí no deben estar.
+⚠️ **Son esas CUATRO functions y ninguna más.** Son las únicas que leen `REDSYS_*`;
+tocar el `.env` cambia el hash de todas, pero en producción el despliegue va por
+nombre y nunca `--only functions` a secas, que subiría las cinco de la AEAT que
+allí no deben estar. **No hay que acordarse de cuáles son**: al crear la versión
+del secret, el propio CLI las enumera —«4 functions are using stale version of
+secret REDSYS_SECRET_KEY»— y esa lista es la buena.
 
-⚠️ **Lo primero es CONFIRMAR el comercio que mandan, no darlo por hecho.** Arriba
-va `370770240` porque lo normal en Redsys es que el número sea el mismo para test
-y para real y que lo único distinto sea la clave — pero eso es lo normal, no lo
-seguro: algunas altas traen número de comercio propio para producción. Lo que
-venga en el correo del banco manda sobre este fichero.
+#### ⚠️ La clave venía incompleta, y lo que la salvó fue una comprobación de longitud
 
-⚠️ **La primera operación en producción se hace con un importe mínimo y se
-devuelve.** Allí `live` significa dinero real: no hay tarjetas de prueba.
+Redsys manda **tres cosas** y solo una sirve aquí:
+
+| Lo que llega | Qué es | Se usa |
+|---|---|---|
+| clave **SHA-256** | la de firma, 32 chars base64 → **24 bytes** (3DES) | **sí** |
+| clave «SHA-512» | *en este caso*, una copia **truncada** de la anterior | no |
+| **API KEY** `PROD_…` | base64 de `comercio_terminal_/clave`, las tres juntas | como fuente |
+
+⚠️ **La clave empieza por `/`, y ese carácter se pierde al copiarla.** En el
+fichero que llegó, la clave de 32 caracteres estaba escrita con 31: sin la barra
+inicial. Eso decodifica a **23 bytes**, y 3DES necesita 16 o 24.
+
+Lo que lo cazó es la comprobación de `deriveOperationKey()`, que no es decorativa:
+
+```
+REDSYS_SECRET_KEY debe decodificar a 16 o 24 bytes (son 23)
+```
+
+O sea que este fallo **es ruidoso**, no silencioso — pero solo si se llega a
+firmar. Puesta en Secret Manager, la clave corta habría pasado el despliegue sin
+una queja y habría reventado en el primer cobro real, con un cliente delante.
+**Compruébalo antes de subirla**, que es un `Buffer.from(clave,'base64').length`.
+
+⚠️ **La fuente que manda es la API KEY**, no el texto suelto. Lleva dentro el
+comercio, el terminal y la clave **con su barra**, así que las tres cosas se leen
+de un sitio que no se puede haber copiado a medias —y de paso confirma el terminal,
+que es el otro dato que se escribe mal—. La aplicación **no la usa**: es para las
+librerías de integración de Redsys, y aquí la firma se hace a mano.
+
+⚠️ **Y que la «SHA-512» fuera un prefijo de la «SHA-256» delata un error de copia,
+no dos claves.** Dos claves son azar: no comparten quince caracteres. Si vuelve a
+pasar, no hay que elegir entre ellas — hay que volver a pedir el dato.
+
+#### Lo que se comprobó, y lo que no
+
+Medido con `firebase functions:list --project prod --json`, que es lo que dice qué
+hay desplegado de verdad y no qué se quiso desplegar:
+
+- las **cuatro** functions llevan `REDSYS_MERCHANT_CODE=370770240`,
+  `REDSYS_TERMINAL=001`, `REDSYS_ENVIRONMENT=live` y el secret en **versión 3**;
+- producción sigue con **35** functions, así que no se colaron las de la AEAT;
+- la clave nueva pasa por `signRedsysParameters()` real y da una firma de 44
+  caracteres que `signaturesMatch()` acepta en base64 normal y URL-safe, **y
+  rechaza con otra clave** — sin ese control, el round-trip pasaría solo.
+
+⚠️ **Lo que NO está probado es un cobro.** Una vía de cobro no está probada hasta
+que alguien paga por ella y la aplicación se entera sin ayuda, y aquí `live`
+significa dinero real: la primera operación se hace con un **importe mínimo** y se
+**devuelve** desde la ficha del cobro, que de paso prueba el camino de devolución
+con el comercio nuevo. Mientras eso no se haga, lo único acreditado es que la
+configuración desplegada es la correcta.
+
+⚠️ **Y hay una cosa que solo se ve cobrando: la URL de notificación.** El webhook
+viaja en `Ds_Merchant_MerchantURL` dentro del formulario firmado, pero algunos
+comercios están configurados para usar **solo** la URL del panel. En `test` con
+este mismo comercio funcionó la del formulario (las seis operaciones del § 3 bis),
+así que lo esperable es que en `live` también; si el primer cobro se autoriza y la
+aplicación no se entera, eso es lo que hay que mirar —y el dinero no se pierde:
+queda en `redsysOrphanNotifications` o, si no llega nada, en el panel del banco.
 
 ### ⚠️ Y lo que de verdad hay que mirar antes: las fianzas del comercio viejo
 
@@ -340,6 +399,24 @@ Así que el cambio se **planifica**, no se hace a mitad de mes:
 ⚠️ **El síntoma, si se olvida, no dice esto.** Lo que se verá es una devolución
 que el banco rechaza sobre un cobro que está perfectamente registrado y pagado, y
 lo primero que uno piensa es que la clave nueva está mal puesta.
+
+#### Y se miró: el 9 de noviembre de 2026 no había ninguna
+
+Comprobado en Pagos de producción antes de desplegar, filtrando por **Redsys
+(online)**: de los trece cobros que hay, **uno solo** es de Redsys y está
+**cancelado** con sus 50 € sin cobrar. Ninguna fianza, y ni un cobro con tarjeta
+*online* pagado. Así que el cambio no dejó atrapada ninguna devolución y el paso 3
+—avisar a quien atienda— no hizo falta.
+
+⚠️ **«TPV físico» no es esto.** Hay dos cobros marcados así, y es el datáfono de
+la oficina: otro aparato, otro contrato y ninguna relación con `REDSYS_*`. Contarlos
+como cobros online habría convertido una comprobación limpia en un falso problema.
+
+⚠️ **Y el 10 € real del 31 de agosto de 2026 ya no está**, porque producción se
+vació el 17 de septiembre. Es lo que hizo que esta comprobación saliera vacía: el
+comercio prestado llevaba meses configurado sin volver a cobrar nada por la
+aplicación. Si se vuelve a cambiar de comercio con la base ya rodada, esto no será
+tan fácil.
 
 ---
 

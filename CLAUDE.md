@@ -5528,14 +5528,24 @@ cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en u
 - **Redsys funciona de extremo a extremo** desde el 31 de agosto de 2026: probado contra la
   pasarela de test y **con dinero real en producción** (10 €, código de autorización
   379521). El webhook recibe, valida la firma y escribe el resultado.
-  ⚠️ **Los dos entornos ya NO comparten comercio, desde el 2 de noviembre de 2026.**
-  Desarrollo pasó al comercio **propio de VELTO** que entregó BBVA para probar el alta
-  —`370770240`, terminal `001`, `test`— y producción sigue con el `361040215`, terminal
-  `1`, `live`, que es de otro comercio, está prestado y **es el que cobra de verdad**. Al
-  conceder producción hay que cambiar **tres líneas y no una** —comercio, terminal y
-  clave—, o las firmas salen con la clave de uno y el código de otro y la pasarela
-  contesta `SIS0042`, que se lee como «la clave está mal». El procedimiento y las seis
-  operaciones probadas están en [docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 bis.
+  ⚠️ **El comercio PRESTADO se retiró el 9 de noviembre de 2026, y con él la última
+  pieza que no era de VELTO.** Redsys concedió el alta de producción y los dos entornos
+  cobran ya con el comercio **propio** —`370770240`, terminal `001`— con `test` en
+  desarrollo y `live` en producción; el `361040215` prestado, terminal `1`, que llevaba
+  cobrando desde el 31 de agosto, ya no está en ninguna parte. Se cambiaron **tres líneas
+  y no una** —comercio, terminal y clave—, que es lo que impide que las firmas salgan con
+  la clave de uno y el código de otro y la pasarela conteste `SIS0042`, que se lee como
+  «la clave está mal».
+  ⚠️ **Y ahora los dos entornos comparten el CÓDIGO de comercio**, así que lo único que
+  separa un cobro de prueba de uno real son `REDSYS_ENVIRONMENT` y qué versión del secret
+  tenga cada proyecto. Antes el número los distinguía de un vistazo en cualquier log.
+  ⚠️ **Lo desplegado está medido y el cobro NO está probado.** Las cuatro functions llevan
+  el comercio, el terminal y el secret v3 —comprobado con `functions:list --json`, no a
+  ojo— y producción sigue con 35. Pero `live` es dinero real: la primera operación se hace
+  con un importe mínimo y se devuelve, y hasta entonces lo único acreditado es la
+  configuración. El procedimiento, las seis operaciones de test y la trampa de la clave
+  —llega con una barra inicial que se pierde al copiarla, y sin ella son 23 bytes donde
+  3DES pide 24— están en [docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 bis.
   ⚠️ **Y la pantalla pública del móvil ya se ha registrado sola, en desarrollo.** Aquí
   ponía que «todavía no hay un pago por esa vía que se haya registrado solo» desde que
   perdió un cobro real el 4 de septiembre (F-32). Dejó de ser cierto el 2 de noviembre:
