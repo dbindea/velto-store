@@ -5585,20 +5585,34 @@ cuota arriba — hay que ir por tandas de dos o tres, y las últimas de una en u
   ⚠️ **Y ahora los dos entornos comparten el CÓDIGO de comercio**, así que lo único que
   separa un cobro de prueba de uno real son `REDSYS_ENVIRONMENT` y qué versión del secret
   tenga cada proyecto. Antes el número los distinguía de un vistazo en cualquier log.
-  ⚠️ **Lo desplegado está medido y el cobro NO está probado.** Las cuatro functions llevan
-  el comercio, el terminal y el secret v3 —comprobado con `functions:list --json`, no a
-  ojo— y producción sigue con 35. Pero `live` es dinero real: la primera operación se hace
-  con un importe mínimo y se devuelve, y hasta entonces lo único acreditado es la
-  configuración. El procedimiento, las seis operaciones de test y la trampa de la clave
-  —llega con una barra inicial que se pierde al copiarla, y sin ella son 23 bytes donde
-  3DES pide 24— están en [docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 bis.
+  ⚠️ **Lo desplegado está medido y lo que falta es que el DINERO se mueva.** Las cuatro
+  functions llevan el comercio, el terminal y el secret v3 —comprobado con
+  `functions:list --json`, no a ojo— y producción sigue con 35. El procedimiento, las seis
+  operaciones de test y la trampa de la clave —llega con una barra inicial que se pierde
+  al copiarla, y sin ella son 23 bytes donde 3DES pide 24— están en
+  [docs/tpv-bbva.md](docs/tpv-bbva.md) § 3 bis.
+  ⚠️ **Y una DENEGACIÓN a propósito prueba gratis todo menos la captura**, que es la
+  lección del 9 de noviembre de 2026: Dorel recorrió el flujo público de producción con
+  una tarjeta que sabía denegada y el cobro quedó con `Ds_Response: 9673` y
+  **notificación recibida en el mismo minuto**, comercio `370770240`, terminal `001`,
+  `Pendiente` y pagado 0,00 €. Eso acredita el formulario firmado, la pasarela real, la
+  **URL de notificación en `live`** —que este fichero daba por no comprobable sin
+  cobrar—, que la firma cuadra en los dos sentidos (con la clave mal, `SIS0042` llega
+  antes de la pantalla de la tarjeta; y el webhook valida antes de escribir) y que la
+  rama de «no aprobado» no toca `paidAmount` ni manda Telegram. Lo que **solo** prueba un
+  cargo real: una autorización `0000`–`0099`, el aviso de cobro y la **devolución** con
+  el comercio nuevo. Para la próxima integración, la denegación va primero y no última.
   ⚠️ **Y la pantalla pública del móvil ya se ha registrado sola, en desarrollo.** Aquí
   ponía que «todavía no hay un pago por esa vía que se haya registrado solo» desde que
   perdió un cobro real el 4 de septiembre (F-32). Dejó de ser cierto el 2 de noviembre:
   pre-reserva en `dev.veltorent.com`, «Pagar la señal», 50 € pagados en la pasarela, y la
-  aplicación se enteró **sin que nadie abriera el panel**. En producción esa vía sigue
-  apagada. Una vía de cobro no está probada hasta que alguien paga por ella y la
-  aplicación se entera sin ayuda — y ésta ya lo está en el entorno donde se puede probar.
+  aplicación se enteró **sin que nadie abriera el panel**. Una vía de cobro no está
+  probada hasta que alguien paga por ella y la aplicación se entera sin ayuda — y ésta ya
+  lo está en el entorno donde se puede probar con dinero de mentira.
+  ⚠️ **Y ahí ponía «en producción esa vía sigue apagada», que es FALSO desde el 9 de
+  noviembre de 2026**: está encendida, y ese mismo día se recorrió entera en producción
+  con una tarjeta denegada. Lo único que no se ha hecho por ella con dinero real es
+  cobrar.
 - **Los cargos extra que la fianza no cubre quedan pendientes**, no cobrados. Antes nacían
   `paid` sin cobrarse y el exceso desaparecía (M-33). El reparto vive en
   `distributeRetentionAcrossCharges`, con tests.

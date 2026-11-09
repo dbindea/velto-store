@@ -59,8 +59,10 @@
 >
 > ⚠️ **Lo que falta es el primer cobro, y es de Dorel.** `live` es dinero real:
 > un importe mínimo y devolverlo desde la ficha del cobro, que de paso prueba la
-> devolución con el comercio nuevo. Hasta entonces lo acreditado es la
-> configuración, no la vía. **No había ninguna fianza atrapada** en el comercio
+> devolución con el comercio nuevo. ✅ **El resto de la cadena ya está probado
+> allí**, con una tarjeta **denegada a propósito** el mismo 9 de noviembre: aviso
+> recibido en el mismo minuto, `Ds_Response 9673`, cobro `Pendiente` y pagado
+> 0,00 €. **No había ninguna fianza atrapada** en el comercio
 > viejo —comprobado antes de desplegar: de trece cobros en producción, uno solo
 > es de Redsys y está cancelado sin cobrar—, así que no hay nada que devolver
 > por el panel del banco. El detalle, en
@@ -80,10 +82,13 @@
 > `importeSenal(quoteSnapshot.gross)` y no la petición.
 >
 > ⚠️ **Se encendió ANTES del primer cobro mínimo de prueba, que sigue pendiente.**
-> Así que el primero que pague por ahí puede ser un cliente real. Si algo del
-> comercio nuevo estuviera mal, lo que vería es una pasarela que rechaza —sin
-> firma válida no se cobra, así que no hay cargo perdido— pero lo vería él y no
-> nosotros. Fue decisión de Dorel con esto sobre la mesa.
+> Así que el primero que pague por ahí puede ser un cliente real. Fue decisión de
+> Dorel con esto sobre la mesa.
+>
+> ✅ **Y el mismo día la recorrió él en producción con una tarjeta denegada**, que
+> es lo que baja el riesgo de esa decisión casi a cero: lo único sin ejercitar en
+> `live` es la **captura**, porque todo lo anterior —formulario, pasarela, aviso
+> de vuelta y escritura— quedó acreditado sin mover un euro.
 >
 > **Cómo se mide la bandera sin escribir nada:** un `POST` a `/api/pagar-senal`
 > con un id bien formado que no existe. `403 disabled` = apagado, `404 not-found`
@@ -2252,10 +2257,24 @@ Tampoco **Bizum**, que la pasarela ofrece y la aplicación no integra.
 - ⚠️ **La primera operación en producción, importe mínimo y devuelta. SIGUE
   PENDIENTE y es de Dorel.** Allí `live` significa dinero real: no hay tarjetas de
   prueba. Una vía de cobro no está probada hasta que alguien paga por ella y la
-  aplicación se entera sin ayuda; hoy lo acreditado es que la configuración
-  desplegada es la correcta, no que el cobro funcione. Y si se autoriza pero la
-  aplicación no se entera, lo que hay que mirar es la **URL de notificación** del
-  comercio en el panel.
+  aplicación se entera sin ayuda.
+- ✅ **Pero el resto de la cadena ya está probado en `live`, con una DENEGACIÓN a
+  propósito.** Dorel recorrió el flujo público de producción el 9 de noviembre de
+  2026 con una tarjeta que sabía denegada: el cobro de la pre-reserva `P-7GFZJN`
+  quedó con `Ds_Response 9673`, **notificación recibida en el mismo minuto**,
+  comercio `370770240`, terminal `001`, `Pendiente` y pagado 0,00 €. Eso acredita
+  el formulario firmado, la pasarela real, **la URL de notificación** —que era el
+  único eslabón que se daba por no comprobable sin cobrar—, que la firma cuadra
+  en los dos sentidos y que la rama de «no aprobado» no toca `paidAmount` ni
+  manda Telegram.
+  ⚠️ **La lección de método, que es lo que hay que llevarse: una denegación
+  recorre la cadena entera menos la captura y no cuesta nada.** En la próxima
+  integración de pagos va **primero**, no última. El detalle, en
+  [tpv-bbva.md](tpv-bbva.md) § 3 bis.
+  ⚠️ Y ese cobro de 50 € se queda con el **pedido quemado** (`279531F8CF61`): un
+  reintento tiene que emitir otro o la pasarela contesta `SIS0051`. Lo hace
+  `resolveOrder()` solo; si se quiere limpiar la lista, se **cancela** —no entró
+  dinero—, no se corrige el importe.
 
 ### Y una lección de método que costó la primera medición de la sesión
 
@@ -3124,9 +3143,9 @@ que tener en la cabeza al retomar:
 
 | Qué | A quién espera | Qué desbloquea |
 |---|---|---|
-| ~~El pase a producción del TPV~~ | ✅ **concedido y sustituido el 9 de noviembre de 2026** | producción cobra ya con el comercio **propio** (`370770240`/`001`/`live`, secret v3) y el `361040215` prestado se retiró. **Queda el primer cobro real**, de importe mínimo y devuelto, que es de Dorel |
+| ~~El pase a producción del TPV~~ | ✅ **concedido y sustituido el 9 de noviembre de 2026** | producción cobra ya con el comercio **propio** (`370770240`/`001`/`live`, secret v3) y el `361040215` prestado se retiró. La cadena está probada allí con una **denegación a propósito** (aviso recibido, `9673`); **queda el primer cobro real**, de importe mínimo y devuelto, que es de Dorel |
 | ~~Rehacer `C-0SBXUX-2026`~~ | ✅ **decidido el 6 de noviembre: NO se rehace** | queda en pie la condición, no la tarea: ese PDF remite a unos datos del seguro que no imprime, así que **si hay un siniestro con ese alquiler**, esto se reabre. Los contratos nuevos ya salen bien |
-| ~~Encender el pago de la señal~~ | ✅ **encendido el 9 de noviembre de 2026**, a petición de Dorel | la web pública cobra ya de verdad. Redesplegadas `createSignalPayment` y `createBookingRequest` —las **dos**, porque la segunda lee la bandera también para el botón del correo—. No hizo falta hosting: el rewrite ya estaba. ⚠️ Se hizo **antes** del primer cobro mínimo de prueba, así que el primero que pague puede ser un cliente real |
+| ~~Encender el pago de la señal~~ | ✅ **encendido el 9 de noviembre de 2026**, a petición de Dorel | la web pública cobra ya de verdad. Redesplegadas `createSignalPayment` y `createBookingRequest` —las **dos**, porque la segunda lee la bandera también para el botón del correo—. No hizo falta hosting: el rewrite ya estaba. ⚠️ Se hizo **antes** del primer cobro mínimo de prueba, así que el primero que pague puede ser un cliente real — mitigado el mismo día recorriendo la vía en producción con una tarjeta **denegada** |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
 

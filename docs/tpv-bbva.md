@@ -358,20 +358,74 @@ valor, sino que **las cuatro de `REDSYS_*`** lleven el nuevo.
   caracteres que `signaturesMatch()` acepta en base64 normal y URL-safe, **y
   rechaza con otra clave** — sin ese control, el round-trip pasaría solo.
 
-⚠️ **Lo que NO está probado es un cobro.** Una vía de cobro no está probada hasta
-que alguien paga por ella y la aplicación se entera sin ayuda, y aquí `live`
-significa dinero real: la primera operación se hace con un **importe mínimo** y se
-**devuelve** desde la ficha del cobro, que de paso prueba el camino de devolución
-con el comercio nuevo. Mientras eso no se haga, lo único acreditado es que la
-configuración desplegada es la correcta.
+⚠️ **Lo que NO está probado es que el dinero se MUEVA.** Una vía de cobro no está
+probada hasta que alguien paga por ella y la aplicación se entera sin ayuda, y
+aquí `live` significa dinero real: la primera operación se hace con un **importe
+mínimo** y se **devuelve** desde la ficha del cobro, que de paso prueba el camino
+de devolución con el comercio nuevo.
 
-⚠️ **Y hay una cosa que solo se ve cobrando: la URL de notificación.** El webhook
-viaja en `Ds_Merchant_MerchantURL` dentro del formulario firmado, pero algunos
-comercios están configurados para usar **solo** la URL del panel. En `test` con
-este mismo comercio funcionó la del formulario (las seis operaciones del § 3 bis),
-así que lo esperable es que en `live` también; si el primer cobro se autoriza y la
-aplicación no se entera, eso es lo que hay que mirar —y el dinero no se pierde:
-queda en `redsysOrphanNotifications` o, si no llega nada, en el panel del banco.
+> Aquí ponía además que **la URL de notificación «solo se ve cobrando»**, y era
+> falso: se ve igual de bien siendo **denegado**. Ver el apartado siguiente, que
+> es de ese mismo día.
+
+#### La denegación a propósito, que prueba gratis todo menos la captura
+
+⚠️ **Dorel recorrió el flujo público entero en producción el 9 de noviembre de
+2026 con una tarjeta que sabía denegada, para no generar un cobro real** — y eso
+acredita cinco cosas que hasta ese momento estaban en el aire. Leído en la ficha
+del cobro del backoffice de producción, que es donde se ve si la aplicación se
+enteró:
+
+| | |
+|---|---|
+| cobro | «Señal de la pre-reserva **P-7GFZJN**», cobro libre de 50,00 €, Ford Custom |
+| creado | 09/11/2026 **19:04** · referencia interna `FRE-MW9KLS22-Q1P2` |
+| pedido | `279531F8CF61` · comercio **370770240** · terminal **001** |
+| respuesta | `Ds_Response` **9673** · **notificación recibida 09/11/2026 19:04** |
+| estado | **Pendiente**, pagado **0,00 €**, y sigue pagable |
+
+Qué prueba cada cosa, que es lo que no se lee en la tabla:
+
+- ⚠️ **La URL de notificación FUNCIONA en `live`**, que era el único eslabón que
+  esta sección daba por no comprobable sin cobrar. El aviso entró en el mismo
+  minuto. Y la lección general es mejor que el dato: **una denegación recorre la
+  cadena entera menos la captura, y no cuesta nada** — formulario firmado,
+  pasarela real, aviso de vuelta, firma validada y escritura. Para la próxima
+  integración, ésta es la primera prueba que hay que hacer, no la última.
+- ⚠️ **La clave, el comercio y el terminal son coherentes entre sí.** Son dos
+  comprobaciones encadenadas y las dos pasaron: con la clave equivocada la
+  pasarela contesta `SIS0042` **antes** de enseñar la pantalla de la tarjeta, así
+  que llegar a que la denieguen ya descarta eso; y el webhook **valida la firma
+  antes de escribir**, de modo que haya `responseCode` y `notifiedAt` guardados
+  es la prueba de que cuadró por el camino de vuelta. Es justo el fallo que se
+  evitó cambiando las tres líneas y no solo la clave.
+- **`createSignalPayment` corrió en producción desde la web pública**, o sea que
+  la bandera está encendida de verdad y no solo en el fichero.
+- ⚠️ **La rama de «no aprobado» hace lo correcto.** `9673` queda fuera de
+  `0000`–`0099`, así que no se tocó `paidAmount`, no salió aviso de Telegram
+  —solo se manda con el banco aceptando— y el cobro **se queda pagable**, que es
+  lo que permite al cliente reintentar con otra tarjeta.
+- ⚠️ **Y es la primera vez que ese bloque de la ficha se PINTA en producción.**
+  El `@if` de «Notificación recibida» no se había entrado nunca, porque nunca
+  había habido un aviso real: es el bloque donde el pipe `date` tumbaba la
+  tarjeta entera al recibir un `Timestamp` de Firestore. Se pinta bien.
+
+⚠️ **Lo que el código 9673 significa exactamente no se sabe aquí**, y se deja
+dicho en vez de adivinarlo: se guarda en crudo con el aviso completo
+(`redsys.rawNotification`) y su tabla es la del banco, no la de este
+repositorio. Da igual para esta prueba —la tarjeta se eligió para que fallara—,
+y lo que importa es dónde cae: fuera del rango de aceptado.
+
+⚠️ **Y ese cobro de 50 € se queda con el pedido QUEMADO.** `279531F8CF61` ya
+recibió aviso, así que un reintento desde el mismo enlace tiene que emitir uno
+nuevo o la pasarela contesta `SIS0051`: es exactamente la operación 4 del § 3
+bis, y lo hace `resolveOrder()` sin que nadie intervenga. Si se quiere dejar la
+lista limpia, lo que corresponde es **cancelar** ese cobro —no entró dinero, así
+que aquí sí se puede— y no corregir el importe.
+
+Sigue sin probar, y solo lo prueba un cargo de verdad: que una autorización
+`0000`–`0099` entre y deje el cobro en `paid`, el aviso de Telegram de cobro
+recibido, y la **devolución** con el comercio nuevo.
 
 ### ⚠️ Y lo que de verdad hay que mirar antes: las fianzas del comercio viejo
 
