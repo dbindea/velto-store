@@ -4145,6 +4145,24 @@ escapes del todo, y comparar los **nombres** contra los del manifiesto de
 descubrimiento: ahí se ve qué falta, no solo cuántas hay — que es la pregunta
 buena. Intentarlo con `sed` y `grep` sobre la tabla dio **38** donde hay 32.
 
+⚠️ **Y el hermano de ese error, con los LOGS: `firebase functions:log` no da «lo
+último».** Medido el 9 de noviembre de 2026 comprobando si las dos programadas
+nuevas habían corrido solas: con `-n 300` devolvió una ventana **más vieja** que
+sin bandera —la última línea era del 21 de octubre, y sin `-n`, del 5 de
+noviembre—, así que **la última línea no es la última ejecución**. Es el mismo
+patrón de siempre: una respuesta creíble y equivocada, que aquí lleva a dar por
+muerta una function que está corriendo. Lo que sí contesta es pedir una con pocos
+logs, que cabe entera (`--only sendReturnReminders`).
+
+⚠️ **Y el visor de logs del MCP de Firebase lee el proyecto ACTIVO** —hoy
+`velto-store`— y **no acepta `--project`**: lo que enseña es desarrollo aunque se
+le pidan functions de los dos. Misma trampa que el `firebase use` de arriba.
+
+⚠️ **Un log vacío puede ser el resultado bueno.** `sendReturnReminders` solo
+escribe cuando hay devoluciones, así que una tarde sin ninguna deja únicamente el
+arranque del contenedor. Lo que delata un fallo es una línea `error`; lo que
+delata que la programada **no existe** es que no haya ni arranque a su hora.
+
 ### Secrets
 
 Nunca en el frontend. Se configuran con `firebase functions:secrets:set`.

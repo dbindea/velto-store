@@ -1,4 +1,4 @@
-# Traspaso de sesión — 7 de noviembre de 2026
+# Traspaso de sesión — 9 de noviembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
@@ -26,6 +26,20 @@
 > el 7 de noviembre, **nada**: las functions del día están en los dos entornos y
 > no hay frontend que publicar—; y luego **§ 5**, con los huecos que
 > solo puede cerrar Dorel.
+>
+> ⚠️ **Desde el día 7 no se ha tocado código, y los dos avisos ya han corrido
+> SOLOS.** Medido el 9 de noviembre: `sendReturnReminders` se disparó en
+> **producción** el día 8 a las **17:00 de Madrid**, que es lo único que
+> distingue «programado» de «programado y corriendo». El árbol está limpio y
+> `develop` lleva por encima de `master` **solo documentación**.
+>
+> ⚠️ **Y que esos avisos lleguen VACÍOS estos días es lo correcto, no una
+> recaída.** Los movimientos de la flota, medidos el día 7, son la **devolución
+> del 14** y la **entrega del 16** —ésta con el contrato **sin firmar**—, así que
+> el primer aviso de las 17:00 con contenido sale el **13**. Un correo del día 10
+> diciendo «0 entregas» no es el fallo de vuelta: antes de tocar la consulta,
+> pregúntale con `fecha` por el 13 y por el 15. El detalle, al final de
+> **§ 2 quinvicies**.
 >
 > ⚠️ **Y una lección que vale más que el encargo del día: un aviso que no sale
 > no se echa de menos.** El resumen diario «funcionaba» —llegaba cada mañana—
@@ -2758,13 +2772,51 @@ que los de reglas. ⚠️ **El navegador de pruebas no abre `file:`**, así que 
 formulario se inyecta en una pestaña abierta y se envía — que es exactamente lo
 que hace `RedsysPaymentService.openGateway()`.
 
+### Y desde entonces los dos avisos han corrido solos (8 y 9 de noviembre)
+
+Medido el 9 de noviembre, porque **desplegar una programada no es verla
+dispararse**:
+
+| Qué | Dónde | Cuándo | Qué dejó en el log |
+|---|---|---|---|
+| `sendReturnReminders` | **producción** | 8 nov, 16:00 Z = **17:00 de Madrid** | el arranque, y nada más |
+| `sendDailyDigest` | desarrollo | 7, 8 y 9 nov a las 08:00 Z | el arranque, y nada más |
+
+⚠️ **Y «nada más» es el resultado bueno.** El recordatorio solo escribe
+`Recordatorios de devolución` **cuando hay devoluciones**; sin ellas se va sin
+ruido. Lo que esto comprueba es que **Cloud Scheduler dispara el trabajo nuevo**,
+que era lo que no se podía dar por hecho: el día 7 la function nació **después**
+de las 17:00, así que su primera ejecución de verdad fue la del 8.
+
+⚠️ **Lo que llega vacío estos días es correcto**, y está escrito arriba para que
+nadie lo lea como una recaída: el primer aviso con contenido es el **13** (la
+devolución del 14) y el siguiente, el **15** (la entrega del 16, con el contrato
+sin firmar).
+
+⚠️ **Y una trampa al comprobarlo, que costó un rato: `firebase functions:log` no
+da «lo último».** Con `-n 300` devolvió una ventana **más vieja** que sin
+bandera —la última línea era del 21 de octubre, y sin `-n` del 5 de noviembre—,
+así que **la última línea no es la última ejecución**. Lo que sí contesta es una
+function con pocos logs, que cabe entera:
+
+```bash
+npx firebase functions:log --only sendReturnReminders --project prod
+```
+
+⚠️ **Y el visor de logs del MCP de Firebase lee el PROYECTO ACTIVO** —hoy
+`velto-store`— y no acepta `--project`, así que lo que enseña es **desarrollo**
+aunque se le pidan funciones de los dos. Es la misma confusión que `firebase use`
+ya provocó una vez con los despliegues.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **Al cerrar el 7 de noviembre de 2026: NADA.** El trabajo del día es todo
-backend —las dos del recordatorio, el arreglo del resumen y el webhook con la
-marca de entorno— y está **desplegado en los dos entornos, por tandas y por
-nombre**. Producción da **35** functions (`functions:list --project prod
---json`), y siguen faltando a propósito las cinco de la AEAT.
+⚠️ **A 9 de noviembre de 2026: NADA.** Desde el release del día 7 no se ha
+tocado código —el árbol está limpio y `develop` lleva por encima de `master`
+**solo documentación**—, y el trabajo de aquel día era todo backend: las dos del
+recordatorio, el arreglo del resumen y el webhook con la marca de entorno. Está
+**desplegado en los dos entornos, por tandas y por nombre**. Producción da
+**35** functions (`functions:list --project prod --json`), y siguen faltando a
+propósito las cinco de la AEAT.
 
 Y `master` está al día: el merge **`68d10f3`** lo publicó a petición de Dorel.
 ⚠️ **No llevaba ni una línea de frontend** —el diff contra `src/`, `web/`,
