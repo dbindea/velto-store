@@ -2799,11 +2799,12 @@ bases— y la subida de la factura a Storage.
   | desarrollo | 361040215 | 1 | `test` |
   | producción | 361040215 | 1 | `live` |
 
-  > ⚠️ **Esa tabla es del 31 de agosto y la fila de desarrollo caducó el 2 de
-  > noviembre de 2026**: BBVA entregó el comercio propio de VELTO para probar el
-  > alta y desarrollo pasó a `370770240` / `001`. Producción se queda con el
-  > `361040215` hasta que concedan el pase. Se deja como estaba porque es el
-  > registro de aquel día; lo vigente está en
+  > ⚠️ **Esa tabla es del 31 de agosto y HOY no queda viva ninguna de sus dos
+  > filas.** Desarrollo pasó a `370770240` / `001` el 2 de noviembre de 2026, con
+  > el comercio propio que BBVA entregó para probar el alta, y **producción pasó
+  > al mismo comercio el 9 de noviembre**, cuando se concedió el pase: el
+  > `361040215` estaba prestado y ya no se usa en ninguna parte. Se deja como
+  > estaba porque es el registro de aquel día; lo vigente está en
   > [tpv-bbva.md](tpv-bbva.md) § 3 bis.
 
   **Probado contra la pasarela real de test.** `createRedsysPaymentLink`

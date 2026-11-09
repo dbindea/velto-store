@@ -8,7 +8,7 @@
 > vieja. Lo que sí trae es lo que **no vive en el repositorio**: cómo trabaja
 > Dorel y qué se espera de ti.
 >
-> Última revisión: **6 de noviembre de 2026**.
+> Última revisión: **9 de noviembre de 2026**.
 
 ---
 
@@ -35,10 +35,12 @@ de septiembre de 2026.
 1. **`CLAUDE.md`** — entero. Es largo y cada aviso está ahí porque el fallo ya
    ocurrió una vez. No es documentación: es la memoria de los errores.
 2. **`docs/traspaso-sesion.md`** — dónde quedó todo. Empieza por
-   **§ 2 duovicies** (del 4 al 6 de noviembre: las cinco cosas que vio Dorel
-   usando la aplicación y su despliegue), sigue por **§ 2 ter** (qué falta por
-   desplegar: a 6 de noviembre **nada**, y la sección dice cómo volver a
-   medirlo) y **§ 5** (los huecos que solo puede cerrar él).
+   **§ 2 quinvicies** (7 de noviembre: el aviso de Telegram de las 17:00 con el
+   WhatsApp de la prórroga, y el resumen diario que llevaba **dos meses**
+   saliendo sin una sola entrega porque una fecha de reserva está guardada como
+   **mapa**), sigue por **§ 2 ter** (qué falta por desplegar: a 9 de noviembre
+   **nada**, y la sección dice cómo volver a medirlo) y **§ 5** (los huecos que
+   solo puede cerrar él).
 3. **`docs/mejoras-pendientes.md`** — la lista viva.
 4. **`FUNCIONAL.md`** — el negocio, si la tarea lo toca.
 
@@ -83,7 +85,7 @@ Son **tres** suites, una por build:
 
 ```bash
 npm run build && npm test                  # backoffice: 988 tests en 41 ficheros
-npm --prefix functions run build && npm --prefix functions test   # 797 en 34
+npm --prefix functions run build && npm --prefix functions test   # 841 en 35
 npm --prefix web run build && npm --prefix web test               # 126 en 10
 npm --prefix web run check                 # astro check
 
@@ -91,8 +93,10 @@ npm run i18n:audit && npm run css:audit && npm run spacing:audit && npm run rows
 npm run lint    # linea base: 0 errores y 291 avisos
 ```
 
-Las cuatro cifras son del **6 de noviembre de 2026** y están para comparar, no
-para alcanzar: lo que importa es que no bajen y que no haya ficheros en rojo.
+Las cifras están para comparar, no para alcanzar: lo que importa es que no bajen
+y que no haya ficheros en rojo. La de **functions** es del **9 de noviembre**
+—vuelta a medir ese día—; las otras tres, del **6**, y desde entonces no se ha
+tocado ni `src/` ni `web/`.
 
 ⚠️ **`tsc` NO valida las plantillas y `strictTemplates` está activo**: hay que
 construir. Si sale un **error** de lint, es de lo que acabas de tocar; los 291
@@ -150,10 +154,10 @@ Siete trampas al medir, todas pagadas ya:
 - **`VELTO_VERIFACTU_ENABLED` en producción**: sigue en `false` hasta el 1 de
   enero de 2027 y solo lo cambia Dorel.
 - **Las cinco Cloud Functions que hablan con la AEAT** no están en producción a
-  propósito. En producción, **nunca `--only functions` a secas**: allí hay **33**
-  de las 38 que define el código, y un despliegue completo subiría esas cinco. La
-  cifra envejece — compara **nombres**, con
-  `firebase functions:list --project prod --json`.
+  propósito. En producción, **nunca `--only functions` a secas**: allí hay **35**
+  de las 40 que define el código, y un despliegue completo subiría esas cinco. La
+  cifra envejece —ésta ya ha caducado cuatro veces— así que compara **nombres**,
+  con `firebase functions:list --project prod --json`.
 - **El orden al desplegar:** una function que cambia la **forma** de su respuesta
   va **después** del frontend que la lee; una que solo cambia comportamiento,
   antes. Los dos caminos son distintos y durante unos minutos conviven versiones
@@ -168,27 +172,37 @@ Siete trampas al medir, todas pagadas ya:
 1. Pregunta el estado del repositorio con los comandos de arriba, **después de
    un `git fetch`**. Esto ha fallado dos veces seguidas por medir contra la rama
    local.
-2. **Di lo que falta por desplegar, midiéndolo.** A 6 de noviembre de 2026 **no
-   falta nada**: las dos ramas en `3e8a899` y las 16 functions del release
-   salieron el 5. Pero eso envejece en cuanto alguien toque algo, y un
-   `git diff` contra `master` **no** dice si las functions están al día —el CI
-   solo publica hosting—. Lo que lo contesta es la marca de tiempo de cada una,
-   en `source.storageSource.generation` del `functions:list --json`; hay un
-   comando que las ordena en [traspaso-sesion.md](traspaso-sesion.md) § 2 ter.
+2. **Di lo que falta por desplegar, midiéndolo.** A 9 de noviembre de 2026 **no
+   falta nada**: `master` en `68d10f3`, `develop` con **solo documentación** por
+   delante, y las cinco functions del día 7 desplegadas en los dos entornos.
+   Pero eso envejece en cuanto alguien toque algo, y un `git diff` contra
+   `master` **no** dice si las functions están al día —el CI solo publica
+   hosting—. Lo que lo contesta es la marca de tiempo de cada una, en
+   `source.storageSource.generation` del `functions:list --json`; hay un comando
+   que las ordena en [traspaso-sesion.md](traspaso-sesion.md) § 2 ter.
 3. Si no te da una tarea concreta, **pregúntale**. El desarrollo por tandas se
    acabó: lo que viene sale de él usando la aplicación o mirando la web. Lo que
    sigue esperando, ordenado por lo que más vale cerrar:
-   - **N-45** — decidir si se rehace el contrato `C-0SBXUX-2026`, el único
-     firmado que salió sin los datos del seguro. Un PDF sellado no se corrige:
-     hay que sustituirlo y volver a firmarlo. **Decide él.**
-   - **M-64** — recorrer en pantalla el botón «Crear reserva» de la ficha del
-     coche y su calendario. Tiene 21 tests de la aritmética y **nadie lo ha
-     pulsado**, que es el patrón de fallo dominante de esta casa.
-   - **M-49 y M-50** — la fianza devuelta a la tarjeta que los libros no dan por
-     devuelta, y los dos 404 por visita de la ficha pública.
-   - **El pase a producción del TPV**, que espera a BBVA, y el **Storage de
-     producción sin vaciar** (el DNI, el carné y la firma de personas reales cuyas
-     fichas ya no existen).
+   - **M-65** — al sustituir un contrato firmado, su PDF **se pisa**: el
+     archivado conserva los datos y la huella, pero la ruta de Storage es fija
+     por reserva. Son unas quince líneas y desplegar `generateContractPdf`, y
+     hay que hacerlo **antes** de la primera sustitución real: después el
+     fichero ya está pisado. Hoy no hay ninguno que sustituir —N-45 se decidió
+     que no—, y por eso es fácil que se olvide.
+   - **El TPV**, que avanzó pero no está concedido: dos peticiones a BBVA
+     —habilitar la **preautorización** del comercio, que hoy contesta `SIS0256`,
+     y el **plazo de la retención por escrito**, que la documentación de Redsys
+     da como 30 días en un sitio y 7 en otro— y probar **Bizum** de punta a
+     punta, que el banco **exige** para el pase a producción y ya se puede
+     hacer. Todo en [tpv-bbva.md](tpv-bbva.md) § 3 bis y § 3 ter.
+   - **VeriFactu: mirar el BOE en DICIEMBRE.** Decisión suya del 6 de noviembre.
+     Octubre de 2028 está **anunciado y no publicado**; lo vigente sigue siendo
+     el 1 de enero de 2027 para sociedades.
+   - **El Storage de producción sin vaciar** (el DNI, el carné y la firma de
+     personas reales cuyas fichas ya no existen).
+   - Y dos cosas que decide él sobre el aviso de las 17:00: el **texto** —es el
+     suyo casi literal— y si debe decir **lo que falta cobrar**; hoy no lo dice,
+     y el por qué está al final de [avisos-telegram.md](avisos-telegram.md).
 
 ⚠️ **Y dos cosas que deciden muchas discusiones de diseño.**
 

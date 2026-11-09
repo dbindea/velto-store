@@ -1,4 +1,4 @@
-# Traspaso de sesión — 7 de noviembre de 2026
+# Traspaso de sesión — 9 de noviembre de 2026
 
 > Pégalo entero al abrir la sesión nueva. Está escrito para alguien que **no ha
 > visto nada de lo anterior**: dice dónde estamos, qué NO tocar, y cómo entra el
@@ -27,20 +27,54 @@
 > no hay frontend que publicar—; y luego **§ 5**, con los huecos que
 > solo puede cerrar Dorel.
 >
+> ⚠️ **Desde el día 7 no se ha tocado código, y los dos avisos ya han corrido
+> SOLOS.** Medido el 9 de noviembre: `sendReturnReminders` se disparó en
+> **producción** el día 8 a las **17:00 de Madrid**, que es lo único que
+> distingue «programado» de «programado y corriendo». El árbol está limpio y
+> `develop` lleva por encima de `master` **solo documentación**.
+>
+> ⚠️ **Y que esos avisos lleguen VACÍOS estos días es lo correcto, no una
+> recaída.** Los movimientos de la flota, medidos el día 7, son la **devolución
+> del 14** y la **entrega del 16** —ésta con el contrato **sin firmar**—, así que
+> el primer aviso de las 17:00 con contenido sale el **13**. Un correo del día 10
+> diciendo «0 entregas» no es el fallo de vuelta: antes de tocar la consulta,
+> pregúntale con `fecha` por el 13 y por el 15. El detalle, al final de
+> **§ 2 quinvicies**.
+>
 > ⚠️ **Y una lección que vale más que el encargo del día: un aviso que no sale
 > no se echa de menos.** El resumen diario «funcionaba» —llegaba cada mañana—
 > mientras la mitad de su contenido estaba vacía por una consulta que no devuelve
 > nada y no falla. Lo que lo destapó fue poder preguntarle «¿qué habrías mandado
 > el día 26?», no leer el código.
 >
-> ⚠️ **Lo primero que hay que saber hoy: el TPV avanzó, pero NO está concedido.**
-> BBVA contestó el 2 de noviembre con el **entorno de pruebas** —`370770240`,
-> terminal `001`—, que es el paso previo. Desarrollo ya cobra contra ese comercio
-> y las seis operaciones que pide el banco están probadas; **producción sigue con
-> el `361040215`, que es prestado y es el que cobra de verdad.** Dorel iba a
-> pedir el pase a producción y avisará para sustituirlo allí. Mientras tanto, el
-> pago de la señal desde la web sigue **apagado** en producción
-> (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada.
+> ⚠️ **Lo primero que hay que saber hoy: el TPV ESTÁ CONCEDIDO y producción ya
+> cobra con el comercio propio.** Dorel lo trajo el **9 de noviembre de 2026** y
+> ese mismo día se sustituyó: producción pasó del `361040215` **prestado**
+> (terminal `1`) al `370770240` terminal `001` con su clave de `live`, y el
+> prestado ya no está en ninguna parte. Son las cuatro functions de
+> `REDSYS_*` —`createRedsysPaymentLink`, `getPaymentCheckout`,
+> `redsysNotificationWebhook`, `refundRedsysPayment`— y están desplegadas y
+> medidas con `functions:list --json`: comercio, terminal y secret **v3**, con
+> producción todavía en 35 functions.
+>
+> ⚠️ **Lo que falta es el primer cobro, y es de Dorel.** `live` es dinero real:
+> un importe mínimo y devolverlo desde la ficha del cobro, que de paso prueba la
+> devolución con el comercio nuevo. Hasta entonces lo acreditado es la
+> configuración, no la vía. **No había ninguna fianza atrapada** en el comercio
+> viejo —comprobado antes de desplegar: de trece cobros en producción, uno solo
+> es de Redsys y está cancelado sin cobrar—, así que no hay nada que devolver
+> por el panel del banco. El detalle, en
+> [docs/tpv-bbva.md](tpv-bbva.md) § 3 bis.
+>
+> ⚠️ **Y la clave llegó con una trampa que conviene conocer**: la de firma
+> empieza por `/` y ese carácter se pierde al copiarla, dejando 23 bytes donde
+> 3DES pide 24. La fuente que manda es la **API KEY** `PROD_…`, que lleva dentro
+> comercio, terminal y clave sin posibilidad de copiarse a medias.
+>
+> El pago de la señal desde la web sigue **apagado** en producción
+> (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada. Ese
+> interruptor es ahora la única cosa que separa la web pública de cobrar de
+> verdad, y encenderlo es decisión de Dorel.
 >
 > ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y no
 > queda NINGUNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche y el
@@ -2102,7 +2136,12 @@ repositorio, que es donde tienen que estar.
 | | Comercio | Terminal | Entorno |
 |---|---|---|---|
 | **desarrollo** | `361040215` → **`370770240`** | `1` → **`001`** | `test` |
-| producción | `361040215` *(sin tocar)* | `1` | `live` |
+| producción | `361040215` *(sin tocar ese día)* | `1` | `live` |
+
+> ⚠️ **La fila de producción es de ese día y duró una semana.** El 9 de noviembre
+> de 2026 se concedió el alta y pasó también al `370770240` terminal `001`, con
+> su clave de `live`. Ver «Lo siguiente, y es de Dorel» al final de esta misma
+> sección.
 
 ⚠️ **Lo que cambia en el repositorio es UN fichero y dos líneas de valor**:
 `functions/.env.velto-store`. El comercio y el terminal no son secretos —viajan
@@ -2163,31 +2202,46 @@ Tampoco **Bizum**, que la pasarela ofrece y la aplicación no integra.
 
 ### Lo siguiente, y es de Dorel
 
-Dijo que pediría el pase a producción y que avisaría para sustituirlo allí
-también. Cuando llegue, lo que hay escrito en
-[tpv-bbva.md](tpv-bbva.md) § 3 bis es el guion; de ahí, lo que no es obvio:
+> ⚠️ **Hecho el 9 de noviembre de 2026.** Esta sección decía «cuando llegue» y ya
+> llegó: Dorel trajo las credenciales de producción y se sustituyó ese mismo día.
+> Lo que sigue se queda porque las cuatro advertencias se cumplieron todas, y
+> porque la primera operación real **todavía está pendiente**. El relato
+> completo, en [tpv-bbva.md](tpv-bbva.md) § 3 bis.
 
-- ⚠️ **Son TRES líneas y no una.** Lo que mandará el banco es la clave, así que
-  la tentación es cambiar solo el secret; con el `361040215` todavía escrito en
-  `.env.rentalcar-veltomobility`, las firmas saldrían con la clave de un
-  comercio y el código de otro y la pasarela contestaría **`SIS0042`** — que se
-  lee como «la clave está mal» y no como «no se corresponden».
-- ⚠️ **Y CONFIRMAR el número que mandan**, no darlo por igual al de pruebas. Lo
-  normal en Redsys es que coincida y solo cambie la clave, pero eso es lo normal
-  y no lo seguro.
-- ⚠️ **Lo que de verdad hay que mirar antes: las fianzas del comercio viejo.**
+- ⚠️ **Eran TRES líneas y no una**, y así se cambiaron: comercio, terminal y
+  secret. Con el `361040215` todavía escrito en `.env.rentalcar-veltomobility`,
+  las firmas habrían salido con la clave de un comercio y el código de otro y la
+  pasarela contestaría **`SIS0042`** — que se lee como «la clave está mal» y no
+  como «no se corresponden».
+- ⚠️ **El número había que CONFIRMARLO y coincidía**: el banco mandó el mismo
+  `370770240` con terminal `001` y solo cambió la clave, que es lo normal en
+  Redsys. Lo que lo confirmó no fue suponerlo: la **API KEY** `PROD_…` lleva
+  dentro `comercio_terminal_clave`, así que los tres datos vienen de una sola
+  fuente.
+- ⚠️ **Y la clave venía CORTA.** Empieza por `/` y ese carácter se pierde al
+  copiarla: 31 caracteres en vez de 32, o sea 23 bytes donde 3DES pide 24. Lo
+  habría cazado `deriveOperationKey()` con un error explícito, pero **en el primer
+  cobro**, con un cliente delante — así que se comprueba antes de subirla, que es
+  un `Buffer.from(clave,'base64').length`. La línea rotulada «SHA-512» era una
+  copia truncada de la misma clave, no una segunda: dos claves no comparten
+  quince caracteres.
+- ⚠️ **Las fianzas del comercio viejo se miraron, y no había ninguna.**
   `refundRedsysPayment` lee el comercio y la clave de `process.env` **en cada
-  llamada** —no del documento del pago— y manda el pedido del cobro original. En
-  cuanto se cambie, **cualquier cobro hecho con el `361040215` deja de poderse
-  devolver desde la aplicación**: la petición sale a nombre de un comercio que
-  no conoce ese pedido. El caso que más duele es una **fianza cobrada y aún sin
-  devolver**, que es lo normal — se devuelve semanas después. No tiene arreglo en
-  el código: el documento guarda su `merchantCode`, pero la clave del comercio
-  viejo no se puede recuperar porque solo hay una en Secret Manager. Así que el
-  cambio se **planifica**: mirar antes si queda alguna, y o devolverla antes o
-  asumir que esa irá por el panel del banco.
-- ⚠️ **La primera operación en producción, importe mínimo y devuelta.** Allí
-  `live` significa dinero real: no hay tarjetas de prueba.
+  llamada** —no del documento del pago— y manda el pedido del cobro original, así
+  que al cambiar de comercio **cualquier cobro hecho con el `361040215` deja de
+  poderse devolver desde la aplicación**. No tiene arreglo en el código: el
+  documento guarda su `merchantCode`, pero la clave vieja no se puede recuperar
+  porque solo hay una en Secret Manager. De los trece cobros de producción, el
+  único de Redsys estaba **cancelado sin cobrar** —ninguna fianza, ningún cobro
+  online pagado—, de modo que no quedó nada atrapado. Ojo: los dos de **«TPV
+  físico»** son el datáfono de la oficina y no cuentan aquí.
+- ⚠️ **La primera operación en producción, importe mínimo y devuelta. SIGUE
+  PENDIENTE y es de Dorel.** Allí `live` significa dinero real: no hay tarjetas de
+  prueba. Una vía de cobro no está probada hasta que alguien paga por ella y la
+  aplicación se entera sin ayuda; hoy lo acreditado es que la configuración
+  desplegada es la correcta, no que el cobro funcione. Y si se autoriza pero la
+  aplicación no se entera, lo que hay que mirar es la **URL de notificación** del
+  comercio en el panel.
 
 ### Y una lección de método que costó la primera medición de la sesión
 
@@ -2758,15 +2812,68 @@ que los de reglas. ⚠️ **El navegador de pruebas no abre `file:`**, así que 
 formulario se inyecta en una pestaña abierta y se envía — que es exactamente lo
 que hace `RedsysPaymentService.openGateway()`.
 
+### Y desde entonces los dos avisos han corrido solos (8 y 9 de noviembre)
+
+Medido el 9 de noviembre, porque **desplegar una programada no es verla
+dispararse**:
+
+| Qué | Dónde | Cuándo | Qué dejó en el log |
+|---|---|---|---|
+| `sendReturnReminders` | **producción** | 8 nov, 16:00 Z = **17:00 de Madrid** | el arranque, y nada más |
+| `sendDailyDigest` | desarrollo | 7, 8 y 9 nov a las 08:00 Z | el arranque, y nada más |
+
+⚠️ **Y «nada más» es el resultado bueno.** El recordatorio solo escribe
+`Recordatorios de devolución` **cuando hay devoluciones**; sin ellas se va sin
+ruido. Lo que esto comprueba es que **Cloud Scheduler dispara el trabajo nuevo**,
+que era lo que no se podía dar por hecho: el día 7 la function nació **después**
+de las 17:00, así que su primera ejecución de verdad fue la del 8.
+
+⚠️ **Lo que llega vacío estos días es correcto**, y está escrito arriba para que
+nadie lo lea como una recaída: el primer aviso con contenido es el **13** (la
+devolución del 14) y el siguiente, el **15** (la entrega del 16, con el contrato
+sin firmar).
+
+⚠️ **Y una trampa al comprobarlo, que costó un rato: `firebase functions:log` no
+da «lo último».** Con `-n 300` devolvió una ventana **más vieja** que sin
+bandera —la última línea era del 21 de octubre, y sin `-n` del 5 de noviembre—,
+así que **la última línea no es la última ejecución**. Lo que sí contesta es una
+function con pocos logs, que cabe entera:
+
+```bash
+npx firebase functions:log --only sendReturnReminders --project prod
+```
+
+⚠️ **Y el visor de logs del MCP de Firebase lee el PROYECTO ACTIVO** —hoy
+`velto-store`— y no acepta `--project`, así que lo que enseña es **desarrollo**
+aunque se le pidan funciones de los dos. Es la misma confusión que `firebase use`
+ya provocó una vez con los despliegues.
+
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **Al cerrar el 7 de noviembre de 2026: NADA de functions.** El trabajo del
-día es todo backend —las dos del recordatorio, el arreglo del resumen y el
-webhook con la marca de entorno— y **ya está desplegado en los dos entornos, por
-tandas y por nombre**. Producción da **35** functions (`functions:list --project
-prod --json`), y siguen faltando a propósito las cinco de la AEAT. **No hay nada
-de frontend en este día**, así que no hace falta merge a `master` para que
-funcione; lo que falta es subir el commit a `develop`.
+⚠️ **A 9 de noviembre de 2026: NADA.** Desde el release del día 7 no se ha
+tocado código —el árbol está limpio y `develop` lleva por encima de `master`
+**solo documentación**—, y el trabajo de aquel día era todo backend: las dos del
+recordatorio, el arreglo del resumen y el webhook con la marca de entorno. Está
+**desplegado en los dos entornos, por tandas y por nombre**. Producción da
+**35** functions (`functions:list --project prod --json`), y siguen faltando a
+propósito las cinco de la AEAT.
+
+Y `master` está al día: el merge **`68d10f3`** lo publicó a petición de Dorel.
+⚠️ **No llevaba ni una línea de frontend** —el diff contra `src/`, `web/`,
+`angular.json` y `package.json` salía **vacío**—, así que el CI republicó el
+mismo bundle; el merge sirve para que la rama de producción tenga el código que
+producción ya ejecutaba. **Comprobado contra el dominio, no contra el log del
+CI**: el pie del backoffice dice `VELTO v1.0 68d10f3` en
+`rentalcar.veltomobility.com` —o sea que Cloudflare no se quedó con la copia
+vieja— y el `robots.txt` del escaparate sigue anunciando el sitemap, que es la
+marca del modo `live`.
+
+⚠️ **Y las marcas de subida de las functions se miraron una a una**, que es lo
+que distingue «desplegado» de «creo que lo desplegué»: las cinco llevan la fecha
+del día 7 (`source.storageSource.generation`, que son microsegundos). Hubo que
+volver a subir `previewDailyDigest` por un cambio que era **solo un comentario**
+—no cambiaba nada— para que el bundle desplegado y el repositorio no divergieran
+ni en eso.
 
 > Histórico del 6 de noviembre, que queda como ejemplo — **no lo creas, vuelve a
 > medirlo con los comandos del final**:
@@ -3003,9 +3110,9 @@ que tener en la cabeza al retomar:
 
 | Qué | A quién espera | Qué desbloquea |
 |---|---|---|
-| **El pase a producción del TPV** | **Dorel lo pide, BBVA lo concede** | cobrar en producción con el comercio **propio** y no con el `361040215` prestado |
+| ~~El pase a producción del TPV~~ | ✅ **concedido y sustituido el 9 de noviembre de 2026** | producción cobra ya con el comercio **propio** (`370770240`/`001`/`live`, secret v3) y el `361040215` prestado se retiró. **Queda el primer cobro real**, de importe mínimo y devuelto, que es de Dorel |
 | ~~Rehacer `C-0SBXUX-2026`~~ | ✅ **decidido el 6 de noviembre: NO se rehace** | queda en pie la condición, no la tarea: ese PDF remite a unos datos del seguro que no imprime, así que **si hay un siniestro con ese alquiler**, esto se reabre. Los contratos nuevos ya salen bien |
-| Encender el pago de la señal | **Dorel**, cuando el TPV esté concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y el rewrite `/api/pagar-senal`, que solo está en desarrollo** |
+| Encender el pago de la señal | **Dorel** — y su condición ya se cumplió: el TPV está concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y hosting por el rewrite `/api/pagar-senal`**. ⚠️ Es lo único que separa hoy la web pública de cobrar de verdad, así que conviene hacerlo **después** del primer cobro mínimo de prueba y no antes |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
 

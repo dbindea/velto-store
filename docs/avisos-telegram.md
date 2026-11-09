@@ -319,6 +319,33 @@ una sola entrega ni devolución** — las consultas de rango sobre
 guardadas como un **mapa** y no como un `Timestamp`. El caso entero está en
 CLAUDE.md, en «Firestore: una fecha de reserva NO se puede consultar por RANGO».
 
+### Y saber si ha corrido SOLA es otra pregunta
+
+La vista previa dice lo que mandaría; no dice si Cloud Scheduler ha disparado el
+trabajo. Eso está en el log, y hay dos trampas al leerlo —las dos medidas el 9
+de noviembre de 2026, comprobando las primeras ejecuciones automáticas:
+
+⚠️ **`firebase functions:log` NO da «lo último».** Con `-n 300` devolvió una
+ventana **más vieja** que sin bandera: la última línea era del 21 de octubre, y
+sin `-n`, del 5 de noviembre. O sea que **la última línea no es la última
+ejecución**, y creerlo lleva a dar por muerta una programada que está corriendo.
+Lo que sí contesta es pedir una function con pocos logs, que cabe entera:
+
+```bash
+npx firebase functions:log --only sendReturnReminders --project prod
+```
+
+⚠️ **Y el visor de logs del MCP de Firebase lee el PROYECTO ACTIVO** —hoy
+`velto-store`— y no acepta `--project`: lo que enseña es **desarrollo** aunque se
+le pidan functions de los dos. Es la misma confusión que `firebase use` ya
+provocó con los despliegues.
+
+⚠️ **Un log vacío es el resultado BUENO.** `enviarRecordatorios()` solo escribe
+`Recordatorios de devolución` **cuando hay devoluciones**, así que una tarde sin
+ninguna deja únicamente el arranque del contenedor. Lo que delataría un fallo es
+una línea `error`, no la ausencia de líneas — y lo que delata que la programada
+**no existe** es que no haya ni arranque a esa hora.
+
 ---
 
 ## Lo que NO hace, y hace falta igual
