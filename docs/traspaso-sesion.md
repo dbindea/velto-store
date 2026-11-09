@@ -31,9 +31,9 @@
 > no hay frontend que publicar—; y luego **§ 5**, con los huecos que
 > solo puede cerrar Dorel.
 >
-> ⚠️ **Al cerrar el 9 de noviembre no queda NADA por desplegar:** `develop` y
-> `master` están en el mismo commit (`0c37f1a`), el árbol está limpio y las
-> cuatro cosas del día están en los dos entornos. Producción sigue con **35**
+> ⚠️ **Al cerrar el 9 de noviembre no queda NADA por desplegar:** `master` está
+> en `0c37f1a` con **todo el código** del día, el árbol está limpio y `develop`
+> lleva por encima **solo documentación**. Producción sigue con **35**
 > functions y ninguna de la AEAT. Lo que falta es de Dorel y está en § 5.
 >
 > ✅ **Y los dos avisos programados ya han corrido SOLOS.** Medido el 9 de
@@ -3054,9 +3054,11 @@ cualquier fecha sin hora a `T10:00`, con test de ello.
 
 ## 2 ter. Qué hay sin subir y qué falta por desplegar
 
-⚠️ **A 9 de noviembre de 2026, al cerrar: NADA.** El árbol está limpio,
-`develop` y `master` están **en el mismo commit** (`0c37f1a`) y todo el trabajo
-del día —las cuatro cosas de § 2 sexvicies— está en los dos entornos.
+⚠️ **A 9 de noviembre de 2026, al cerrar: NADA.** El árbol está limpio y todo el
+trabajo del día —las cuatro cosas de § 2 sexvicies— está en los dos entornos.
+`master` quedó en **`0c37f1a`** con todo el código, y lo que `develop` lleva por
+encima es **solo documentación**, que es el estado normal aquí: lo que publica el
+CI es código, y los `.md` no necesitan despliegue.
 
 Cómo salió, que vale como plantilla:
 
