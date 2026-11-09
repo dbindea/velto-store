@@ -71,10 +71,24 @@
 > 3DES pide 24. La fuente que manda es la **API KEY** `PROD_…`, que lleva dentro
 > comercio, terminal y clave sin posibilidad de copiarse a medias.
 >
-> El pago de la señal desde la web sigue **apagado** en producción
-> (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`); la function sí está desplegada. Ese
-> interruptor es ahora la única cosa que separa la web pública de cobrar de
-> verdad, y encenderlo es decisión de Dorel.
+> ⚠️ **Y el pago de la señal desde la web quedó ENCENDIDO en producción el mismo
+> día**, a petición de Dorel y con sus dos condiciones cumplidas. O sea que desde
+> el 9 de noviembre de 2026 **la web pública puede cobrar de verdad**: un
+> visitante cualquiera deja su pre-reserva, pulsa «Pagar la señal» y sale un cargo
+> a su tarjeta. Es la única vía en la que no hay un operador con sesión de por
+> medio; lo que la limita es `puedePagarSenal()`, y el importe lo pone
+> `importeSenal(quoteSnapshot.gross)` y no la petición.
+>
+> ⚠️ **Se encendió ANTES del primer cobro mínimo de prueba, que sigue pendiente.**
+> Así que el primero que pague por ahí puede ser un cliente real. Si algo del
+> comercio nuevo estuviera mal, lo que vería es una pasarela que rechaza —sin
+> firma válida no se cobra, así que no hay cargo perdido— pero lo vería él y no
+> nosotros. Fue decisión de Dorel con esto sobre la mesa.
+>
+> **Cómo se mide la bandera sin escribir nada:** un `POST` a `/api/pagar-senal`
+> con un id bien formado que no existe. `403 disabled` = apagado, `404 not-found`
+> = encendido. Un id vacío no sirve: falla en la validación antes de llegar a la
+> bandera.
 >
 > ⚠️ **Y lo segundo: la tarde del 6 de noviembre dejó dos cosas esperando y no
 > queda NINGUNA.** `refundRedsysPayment` la desplegó Dorel esa misma noche y el
@@ -1622,7 +1636,7 @@ misma pantalla `/pay/:id`, y la reserva la sigue creando Dorel al convertir —c
 | | |
 |---|---|
 | decide | `puedePagarSenal()` en `functions/src/public/signal-core.ts`, pura y con 19 tests |
-| bandera | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED` — `true` en desarrollo, **`false` en producción** |
+| bandera | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED` — `true` en desarrollo y, **desde el 9 de noviembre de 2026, `true` también en producción** |
 | llave | el **id del documento** de la solicitud, nunca la referencia corta |
 | desde el correo | `/pagar-senal?s=<id>`, una página que pregunta al backend **al pulsar** |
 
@@ -2956,7 +2970,7 @@ delante:
 | ¿hay que desplegar algo? | **sí**: `refundRedsysPayment` a mano y el hosting de la web con el merge. Ver la tabla del principio de esta sección |
 | functions en producción | **33** de las **38** que define el código |
 | cuáles faltan | **solo las cinco de la AEAT**, a propósito hasta el 1 de enero |
-| rewrites de la web | los cinco responden; `/api/pagar-senal`, solo en desarrollo |
+| rewrites de la web | los cinco responden. ⚠️ Aquí ponía que `/api/pagar-senal` estaba «solo en desarrollo» y es falso: `firebase.json` es un fichero para los dos proyectos, así que un rewrite no sabe de entornos. Medido el 9 de noviembre de 2026 contra `veltomobility.com` |
 | las dos más viejas | `syncAuthClaims` y `onAuthorizedUserChanged`, del **25 de septiembre** — les falta solo el refactor de imports (M-60) |
 
 > Aquí ponía, esa misma mañana, que **no faltaba nada**. Siguió siendo cierto
@@ -3112,7 +3126,7 @@ que tener en la cabeza al retomar:
 |---|---|---|
 | ~~El pase a producción del TPV~~ | ✅ **concedido y sustituido el 9 de noviembre de 2026** | producción cobra ya con el comercio **propio** (`370770240`/`001`/`live`, secret v3) y el `361040215` prestado se retiró. **Queda el primer cobro real**, de importe mínimo y devuelto, que es de Dorel |
 | ~~Rehacer `C-0SBXUX-2026`~~ | ✅ **decidido el 6 de noviembre: NO se rehace** | queda en pie la condición, no la tarea: ese PDF remite a unos datos del seguro que no imprime, así que **si hay un siniestro con ese alquiler**, esto se reabre. Los contratos nuevos ya salen bien |
-| Encender el pago de la señal | **Dorel** — y su condición ya se cumplió: el TPV está concedido | `VELTO_WEB_SIGNAL_PAYMENT_ENABLED=true` + redesplegar `createSignalPayment` y `createBookingRequest`, **y hosting por el rewrite `/api/pagar-senal`**. ⚠️ Es lo único que separa hoy la web pública de cobrar de verdad, así que conviene hacerlo **después** del primer cobro mínimo de prueba y no antes |
+| ~~Encender el pago de la señal~~ | ✅ **encendido el 9 de noviembre de 2026**, a petición de Dorel | la web pública cobra ya de verdad. Redesplegadas `createSignalPayment` y `createBookingRequest` —las **dos**, porque la segunda lee la bandera también para el botón del correo—. No hizo falta hosting: el rewrite ya estaba. ⚠️ Se hizo **antes** del primer cobro mínimo de prueba, así que el primero que pague puede ser un cliente real |
 | Que lo legal lo mire un abogado | un abogado | está escrito y es honesto, pero lo firma una empresa real |
 | Reseñas en la ficha | Dorel, pidiéndoselas a clientes | pesa más que todo el JSON-LD junto para «alquiler de coches Arganda» |
 

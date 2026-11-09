@@ -1368,11 +1368,36 @@ backend al pulsar, así que el plazo se comprueba en ese momento.
 dicta por teléfono y se teclea: con ella, cualquiera probando combinaciones
 lanzaría cobros a nombre de otro. Misma regla que los enlaces `/d/…`.
 
-⚠️ **En producción está APAGADO** (`VELTO_WEB_SIGNAL_PAYMENT_ENABLED=false`),
-por decisión de Dorel al pedirlo: «para producción en disabled». Con la bandera
-en `false`, `createSignalPayment` contesta `403` **antes de abrir la
-transacción** y `createBookingRequest` le dice a la web que no lo ofrezca — las
-dos capas hacen falta, porque esconder un botón es interfaz y no seguridad.
+⚠️ **ENCENDIDO en los dos entornos desde el 9 de noviembre de 2026.** Nació
+apagado en producción por decisión de Dorel al pedirlo —«para producción en
+disabled»— y sus dos condiciones se cumplieron ese día: probado de punta a punta
+en desarrollo el 2 de noviembre y el TPV del banco concedido. Con la bandera en
+`false`, `createSignalPayment` contesta `403` **antes de abrir la transacción** y
+`createBookingRequest` le dice a la web que no lo ofrezca — las dos capas hacen
+falta, porque esconder un botón es interfaz y no seguridad.
+
+⚠️ **Son DOS functions al cambiar la bandera, y la segunda se olvida.**
+`createBookingRequest` la lee **dos veces** —lo que responde a la web y el botón
+del correo al cliente, que apunta a `/pagar-senal`—, así que desplegando solo
+`createSignalPayment` el cobro quedaría disponible y el correo seguiría saliendo
+sin botón.
+
+⚠️ **Y esto es la única vía por la que un DESCONOCIDO hace que salga un cobro con
+tarjeta real.** Todo lo demás lo lanza un operador con sesión. Lo que lo limita no
+es la bandera sino `puedePagarSenal()`, y el importe sale de
+`importeSenal(quoteSnapshot.gross)` y **no de la petición**: lo que llega de fuera
+es un id y nada más.
+
+⚠️ **Se encendió ANTES del primer cobro mínimo en producción**, que sigue
+pendiente — o sea que el primero que pague por aquí puede ser un cliente de
+verdad. Fue decisión de Dorel con eso dicho. Lo que no puede pasar es un cargo
+perdido: sin firma válida la pasarela no cobra.
+
+⚠️ **La bandera se mide, no se lee del fichero.** Un `POST` a
+`/api/pagar-senal` con un id **bien formado que no existe** contesta `403
+disabled` con el pago apagado y `404 not-found` con él encendido, y no escribe
+nada. Es lo que distinguió el antes del después ese día; un id vacío no sirve,
+porque falla en la validación antes de llegar a la bandera.
 
 ⚠️ **Esa frase decía «sin mirar siquiera la solicitud» y era FALSA**, en los
 tres sitios donde estaba escrita. La comprobación vivía solo dentro de
@@ -2744,7 +2769,11 @@ También desplegadas: `generateQuotePdf`, `generateBookingConfirmationPdf`, `doc
 
 ⚠️ **`createSignalPayment` es PÚBLICA y es la única que puede acabar cobrando
 dinero**, así que lleva bandera propia por entorno
-(`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`) y **solo está desplegada en desarrollo**.
+(`VELTO_WEB_SIGNAL_PAYMENT_ENABLED`). Aquí ponía que **solo estaba desplegada en
+desarrollo**, y era falso desde el 20 de octubre de 2026: está en los dos, y
+desde el **9 de noviembre** está además **encendida** en los dos. Desplegada y
+encendida no son lo mismo, y esta frase llegó a equivocarse en las dos cosas a la
+vez.
 Crea el cobro de la señal de una pre-reserva para que el visitante la pague sin
 que nadie le mande el enlace; lo decide `puedePagarSenal()`, que es pura y con
 tests. Ver «La señal se paga desde la web» en el módulo de Solicitudes.
@@ -2915,19 +2944,26 @@ los del manifiesto de descubrimiento en vez de a ojo):
 
 ⚠️ **Aquí ponía 32 y que faltaba además `createSignalPayment`, y las dos cosas
 eran FALSAS desde el 20 de octubre de 2026.** Está desplegada en producción
-desde ese día —**apagada** por `VELTO_WEB_SIGNAL_PAYMENT_ENABLED`, que es otra
-cosa: desplegada y encendida no son lo mismo— y el traspaso de sesión ya lo
-recogía entonces. Lo que no se actualizó fue esta tabla. Vuelto a medir el 2 de
+desde ese día —**apagada** entonces por `VELTO_WEB_SIGNAL_PAYMENT_ENABLED`, que
+es otra cosa: desplegada y encendida no son lo mismo; está **encendida** desde el
+9 de noviembre de 2026— y el traspaso de sesión ya lo recogía entonces. Lo que no se actualizó fue esta tabla. Vuelto a medir el 2 de
 noviembre de 2026 con `--json`: **33**, y las cinco que faltan son las de la
 AEAT. Es el patrón que esta misma sección avisa dos párrafos más abajo, cometido
 aquí: **una cifra escrita a mano en un sitio no se entera de lo que se midió en
 otro.**
 
 ⚠️ **Y la 38 es `createSignalPayment`**, del 19 de octubre de 2026 (medido en el
-manifiesto, no contado a ojo). Su rewrite `/api/pagar-senal` **sigue solo en
-desarrollo**: el día que se encienda el pago de la señal en producción hay que
-desplegar hosting además de la function — sin el rewrite la petición cae en el
-catch-all y devuelve HTML donde se espera JSON.
+manifiesto, no contado a ojo). Aquí ponía que su rewrite `/api/pagar-senal`
+**seguía solo en desarrollo** y es FALSO: `firebase.json` es **un solo fichero
+para los dos proyectos**, así que el rewrite viajó con el primer merge a `master`
+posterior al 19 de octubre. Medido el 9 de noviembre de 2026 contra
+`veltomobility.com/api/pagar-senal`, que es lo que distingue un rewrite que existe
+de uno que no: un `POST` devuelve **`application/json`** y no el HTML de la SPA.
+
+La advertencia de fondo sigue valiendo y no es ésta: lo que necesita hosting es un
+rewrite **nuevo**, porque sin él la petición cae en el catch-all y devuelve HTML
+donde se espera JSON. Lo que no se sostenía era deducir de «la function solo está
+en un entorno» que su rewrite también — el rewrite no sabe de entornos.
 
 ⚠️ **Vuelto a medir el 8 de octubre de 2026 y la fila del CÓDIGO también había
 envejecido**: ponía 36 y son **37**. No es que se añadiera ninguna ese día —
@@ -4015,7 +4051,13 @@ la AEAT. Hoy, y esta combinación es la que importa:
 | | Emite (`INVOICING`) | Remite (`VERIFACTU`) | Cobra la señal desde la web (`WEB_SIGNAL_PAYMENT`) |
 |---|---|---|---|
 | desarrollo | `true` | `true`, contra **preproducción** | `true` |
-| producción | **`true`** desde el 17 sep 2026 | **`false`**, y ver abajo | **`false`** |
+| producción | **`true`** desde el 17 sep 2026 | **`false`**, y ver abajo | **`true`** desde el 9 nov 2026 |
+
+⚠️ **La última columna estuvo en `false` y cambió el 9 de noviembre de 2026**, el
+mismo día que se concedió el TPV a nombre de VELTO. Las tres banderas van ya por
+caminos distintos, que es exactamente para lo que cada una es suya: hoy
+producción **emite** facturas, **no remite** a la AEAT y **sí cobra** la señal
+desde la web.
 
 ⚠️ **Ese «hasta el 1 de enero» que ponía aquí tiene ahora una fecha de
 revisión.** Hacienda anunció el 5 de octubre de 2026 que llevaría VeriFactu a
@@ -5514,9 +5556,13 @@ Sus rewrites —`/api/solicitud`, `/api/contacto` y, desde el 19 de octubre de
 la petición cae en el catch-all de la web y devuelve HTML donde se esperaba
 JSON, así que el visitante escribe seis líneas y ve un fallo de red. Es la
 lección de `/d/**`, que estuvo escrita sin desplegar. **Los cuatro primeros
-están puestos desde el 5 de octubre**, y el de la señal **solo en desarrollo**,
-porque en producción esa vía está apagada. Se comprueban como dice la sección de
-Cloud Functions: lo que delata uno ausente es `200 text/html`.
+están puestos desde el 5 de octubre** y el de la señal también: aquí ponía que
+estaba «solo en desarrollo, porque en producción esa vía está apagada», y era un
+razonamiento equivocado además de un dato falso. ⚠️ **`firebase.json` es un solo
+fichero para los dos proyectos, así que un rewrite no sabe de entornos**: entra
+en los dos en cuanto se despliega hosting, lo lleve encendida la function o no.
+Medido el 9 de noviembre de 2026 contra `veltomobility.com`. Se comprueban como
+dice la sección de Cloud Functions: lo que delata uno ausente es `200 text/html`.
 
 ⚠️ **Y en desarrollo tampoco, aunque allí estén todas.** Con 38 functions, un
 `--only functions` que las toque todas **agota la cuota de CPU de Cloud Run**:

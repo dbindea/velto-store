@@ -555,6 +555,12 @@ y son dos functions, no una.
 > ⚠️ **El 2 de noviembre de 2026 el banco contestó con el entorno de pruebas**
 > —ver § 3 bis—, así que el expediente ya no está parado. Lo que queda de esta
 > tabla sigue vigente.
+>
+> ⚠️ **Y el 9 de noviembre de 2026 concedieron producción, así que las dos frases
+> de arriba caducaron.** El expediente ya no está en manos del banco y el pago de
+> la señal **está encendido** en producción (`=true`), con sus dos functions
+> redesplegadas. Se deja el párrafo porque «son dos functions, no una» siguió
+> siendo el detalle que había que acertar.
 
 | Qué | Estado el 17 de octubre de 2026 |
 |---|---|
