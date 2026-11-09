@@ -48,6 +48,20 @@ export interface ReservationContractInfo {
   signedAt?: any;
   /** The relative URL path used by the customer to sign the contract. */
   signingUrl?: string;
+  /**
+   * Cuándo se le mandó el contrato firmado por correo al cliente.
+   *
+   * ⚠️ **Lo escribe `sendSignedContractEmail` desde el 29 de agosto de 2026 y
+   * este modelo no lo declaraba**, así que el dato estaba en Firestore y no se
+   * podía leer sin que TypeScript se quejara — motivo por el que ninguna
+   * pantalla de reserva lo enseñaba y se podía mandar el contrato dos veces.
+   *
+   * ⚠️ **Es una cadena ISO, no un `Timestamp`**, al revés que `contracts.emailedAt`
+   * —que es un `serverTimestamp()`— y las escribe la **misma** llamada. De ahí
+   * que `emailSentOf()` reciba varios candidatos y lleve su propio lector:
+   * `any` porque las dos formas llegan aquí.
+   */
+  emailedAt?: any;
 }
 
 /**

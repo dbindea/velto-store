@@ -163,6 +163,8 @@
     "showingLatest": "Se muestran los más recientes. Para uno antiguo concreto, usa el buscador.",
     "viewAll": "Ver todo",
     "emailPlaceholder": "cliente@email.com",
+    "emailSent": "Enviado por correo",
+    "emailSentOn": "Enviado por correo el {date}",
     "copy": "Copiar",
     "copyFailed": "No se pudo copiar"
   },
@@ -2188,6 +2190,7 @@
     "fields": {
       "dates": "Fechas",
       "phone": "Teléfono",
+      "email": "Correo",
       "received": "Recibida",
       "priceUntil": "Precio garantizado hasta",
       "internalNote": "Nota interna",

@@ -2926,6 +2926,66 @@ mientras el asistente ofrecía el coche sin rechistar. Por eso
 `VencimientoVehiculo` lleva `bloquea`, copia fiel de aquella lista. Un aviso que
 el sistema no respalda se deja de creer, y arrastra consigo a los que sí.
 
+### Al cliente le escriben DOS correos, y el sobre dice que ya salieron
+
+⚠️ **Ninguno de los dos se manda al firmar.** Lo preguntó Dorel el 9 de
+noviembre de 2026 —«¿le llega automáticamente el contrato firmado?»— y la
+respuesta es que no: `signContract` sella el PDF y **no envía nada**. El envío
+es `sendSignedContractEmail`, un callable con `auth` que lanza un botón.
+
+| correo | cuándo | queda anotado en |
+|---|---|---|
+| **contrato firmado** | a mano, botón «Enviar por email» | `contracts/{id}.emailedAt` **y** `reservations/{id}.contractInfo.emailedAt` |
+| **confirmación de pre-reserva** | automático, al crearla | `bookingRequests/{id}.clientEmailedAt` |
+
+Todo lo demás que manda Resend —el resumen de las 9:00, el aviso de una
+solicitud, el formulario de contacto— va **a la agencia**, no al cliente, y por
+eso no lleva sobre: nadie puede duplicarlo.
+
+⚠️ **El sobre es `<app-email-sent-badge>` y lo que decide es `emailSentOf()`**
+([email-sent.util.ts](src/app/shared/utils/email-sent.util.ts)), no el
+componente: cada pantalla le pasa los campos que de verdad ha cargado. Está en
+la ficha y la lista de contratos, en la tarjeta de contrato de la reserva y en
+las solicitudes.
+
+Tres decisiones suyas que no son adorno:
+
+- ⚠️ **No usa `toDate()` de `reservation-date.util`**, que ante un valor
+  ilegible **cae a HOY**. Aquí eso diría «enviado hoy» de un correo cuya fecha
+  nadie puede leer — inventarse el dato que la pantalla existe para contar.
+  Lector estricto propio, como `availability-calendar.util.ts` y
+  `public/core.ts`.
+- ⚠️ **La PRESENCIA decide el sobre; la fecha, solo el rótulo.** Un `emailedAt`
+  guardado pero ilegible significa que el correo **salió**: esconder el sobre
+  diría que no, y lo siguiente es el envío duplicado que esto viene a evitar.
+  Ante la duda, sobre sin fecha.
+- ⚠️ **Y por eso el `date` pipe no se cae.** Lo que le llega es un `Date` de
+  verdad y nunca el `Timestamp` guardado — el mismo fallo que tumbaba el bloque
+  entero del `notifiedAt` de Redsys.
+
+⚠️ **El mismo envío se guarda DOS veces y con formas distintas**, en la misma
+llamada: `Timestamp` en el contrato y **cadena ISO** en la reserva. De ahí que
+`emailSentOf()` reciba varios candidatos.
+
+⚠️ **Y `contractInfo.emailedAt` llevaba sin declarar en el modelo desde el 29 de
+agosto de 2026**, así que el dato estaba en Firestore y la ficha de la reserva no
+podía leerlo: por eso se podía mandar el contrato dos veces desde ahí sin que
+nada lo dijera. Es el tercer caso igual en estos dos modelos —el `email` de la
+solicitud ya lo documenta—, y siempre por lo mismo: **la forma del documento se
+decide en dos repositorios que no comparten módulo.** Al añadir un campo en una
+function, añádelo al modelo en la misma pasada.
+
+⚠️ **`clientEmailedAt` es aditivo y no se migra.** Una solicitud anterior al 9
+de noviembre de 2026 no lo lleva aunque su correo saliera: sin sobre se lee «no
+consta», que es la verdad. Y ahí **no hay botón de reenviar** —ese correo es
+automático—, así que el sobre no previene nada: sirve para saber, antes de
+llamar, si el cliente ya tiene el presupuesto delante.
+
+⚠️ **En la lista de solicitudes el sobre va junto a la REFERENCIA**, por lo
+mismo que la chapa de «Señal cobrada»: esas dos primeras columnas son `fr` y
+absorben lo que ocupe. En una celda propia movería el precio. Comprobado
+midiendo con el sobre y sin él — 403 px en los dos casos.
+
 ⚠️ **Los dos proyectos ya NO tienen las mismas functions** (verificado el 28 de
 septiembre de 2026 con `firebase functions:list`, comparando los nombres contra
 los del manifiesto de descubrimiento en vez de a ojo):

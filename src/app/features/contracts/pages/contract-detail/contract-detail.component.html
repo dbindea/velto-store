@@ -15,6 +15,11 @@
           <span class="badge" [ngClass]="getStatusClass(contract.status)">
             {{ getStatusLabel(contract.status) }}
           </span>
+          <!--
+            El sobre, al lado del estado: lo pidió Dorel para no mandar dos
+            veces el mismo contrato. Se pinta solo si consta el envío.
+          -->
+          <app-email-sent-badge [sent]="emailSent(contract)" />
         </div>
         <p class="subtitle">
           <span class="client-name">{{ contract.clientSnapshot.fullName }}</span> ·

@@ -65,6 +65,13 @@
                     {{ 'bookingRequests.signal.paidBadge' | translate }}
                   </span>
                 }
+                <!--
+                  ⚠️ **El sobre va AQUÍ por lo mismo que la chapa de la señal**:
+                  estas dos primeras columnas son `fr` y absorben lo que ocupe,
+                  así que no descuadra el precio de las filas que lo llevan. Una
+                  celda propia los movería 85 px, que es lo que ya pasó una vez.
+                -->
+                <app-email-sent-badge [sent]="correoEnviado(r)" />
               </span>
               <strong>{{ r.name }}</strong>
             </div>
@@ -175,6 +182,35 @@
                     </button>
                   </span>
                 </div>
+                <!--
+                  ⚠️ **El correo del visitante no se enseñaba en ninguna parte**,
+                  aunque el formulario lo pida y el modelo lo guarde. Va junto al
+                  teléfono, que es el otro dato de contacto, y debajo cuándo se
+                  le escribió: las dos preguntas que hay que contestar antes de
+                  volver a escribirle.
+                -->
+                @if (r.email) {
+                  <div class="dato">
+                    <span class="dato__et">{{ 'bookingRequests.fields.email' | translate }}</span>
+                    <span class="email">{{ r.email }}</span>
+                  </div>
+                }
+                @if (correoEnviado(r); as enviado) {
+                  @if (enviado.sent) {
+                    <div class="dato">
+                      <span class="dato__et">{{ 'common.emailSent' | translate }}</span>
+                      <!--
+                        ⚠️ El guion es para un `clientEmailedAt` guardado que no
+                        se pueda leer: consta el envío y no la fecha. Las
+                        solicitudes de ANTES del 9 de noviembre de 2026 no
+                        entran aquí —no tienen el campo, así que no sale ni esta
+                        fila ni el sobre—, y eso se lee como «no consta», que es
+                        la verdad: su correo salió y nadie lo anotó.
+                      -->
+                      <span>{{ enviado.at ? (enviado.at | date: 'dd/MM/yyyy HH:mm') : '—' }}</span>
+                    </div>
+                  }
+                }
                 <div class="dato">
                   <span class="dato__et">{{ 'bookingRequests.fields.received' | translate }}</span>
                   <span>{{ fecha(r.createdAt) | date: 'dd/MM/yyyy HH:mm' }}</span>

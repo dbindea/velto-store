@@ -217,6 +217,13 @@
             {{ getContractLabel(reservation.contractStatus) }}
           </span>
         }
+        <!--
+          ⚠️ **Fuera de las dos ramas a propósito.** El envío puede constar en
+          el contrato o en la reserva, y quien lo resuelve es
+          `contractEmailSent()`; metido dentro de cada rama habría que repetirlo
+          y una de las dos acabaría quedándose sin él.
+        -->
+        <app-email-sent-badge [sent]="contractEmailSent()" />
       </div>
       <div class="card-content">
         <div class="contract-actions">
@@ -284,6 +291,29 @@
             </button>
           }
         </div>
+
+        <!--
+          Cuándo se mandó, en texto y junto al botón que lo manda.
+          ⚠️ **El sobre de la cabecera no basta aquí**: su fecha solo sale al
+          pasar el ratón, y esta es la única pantalla donde la fecha del envío
+          no aparece en ninguna otra parte — la decisión de no volver a mandarlo
+          se toma delante de este botón.
+          ⚠️ Y el pipe `date` recibe un `Date` de verdad, nunca el `Timestamp`
+          guardado: eso lo resuelve el lector estricto de `emailSentOf()`, que
+          es lo que impide que este bloque se caiga entero.
+        -->
+        @if (contractEmailSent(); as enviado) {
+          @if (enviado.sent) {
+            <p class="field-hint">
+              <i class="pi pi-envelope" aria-hidden="true"></i>
+              @if (enviado.at) {
+                {{ 'common.emailSent' | translate }}: {{ enviado.at | date:'dd/MM/yyyy HH:mm' }}
+              } @else {
+                {{ 'common.emailSent' | translate }}
+              }
+            </p>
+          }
+        }
 
         @if (hasActiveSigningLink() && contract?.signingLinkPath) {
           <div class="signing-link-row">

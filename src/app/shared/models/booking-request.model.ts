@@ -90,6 +90,23 @@ export interface BookingRequest {
    * decide en dos repositorios que no comparten módulo.
    */
   email?: string;
+
+  /**
+   * Cuándo se le mandó al visitante el correo de confirmación con su
+   * presupuesto. Lo escribe `createBookingRequest` justo después de enviarlo.
+   *
+   * ⚠️ **No se guardaba hasta el 9 de noviembre de 2026**, y era el único
+   * correo al cliente sin rastro: el panel no podía distinguir «se le avisó» de
+   * «no se le avisó», así que lo único que quedaba era volver a escribirle. Es
+   * la misma petición que el sobre del contrato — para no duplicar envíos.
+   *
+   * ⚠️ **Y las solicitudes ANTERIORES no se migran**: su correo salió y aquí no
+   * consta. Se resuelve al leer, que es la forma de la casa — sin sobre se lee
+   * «no consta», no «no se envió», y por eso el rótulo del sobre habla de lo
+   * que consta. Un `undefined` aquí es viejo, no un fallo.
+   */
+  clientEmailedAt?: any;
+
   note: string;
 
   vehicleId: string;

@@ -13,11 +13,20 @@ import {
 import { toDate } from '@shared/utils/reservation-date.util';
 import { PAGINA, hayMas, siguientePagina } from '@shared/utils/pagination.util';
 import { ClearInputDirective } from '@shared/directives/clear-input.directive';
+import { EmailSentBadgeComponent } from '@shared/components/email-sent-badge/email-sent-badge.component';
+import { emailSentOf, type EmailSent } from '@shared/utils/email-sent.util';
 
 @Component({
   selector: 'app-contract-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, ClearInputDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    TranslatePipe,
+    ClearInputDirective,
+    EmailSentBadgeComponent
+  ],
   templateUrl: './contract-list.component.html',
   styleUrl: './contract-list.component.scss'
 })
@@ -112,6 +121,11 @@ export class ContractListComponent implements OnInit, OnDestroy {
 
   getCreatedAt(c: Contract): Date | null {
     return c.createdAt ? toDate(c.createdAt) : null;
+  }
+
+  /** Para el sobre de cada fila. Ver `email-sent.util.ts`. */
+  emailSent(c: Contract): EmailSent {
+    return emailSentOf(c.emailedAt);
   }
 
   getSignedAt(c: Contract): Date | null {

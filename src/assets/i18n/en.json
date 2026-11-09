@@ -163,6 +163,8 @@
     "showingLatest": "Showing the most recent ones. To find an older one, use the search box.",
     "viewAll": "View all",
     "emailPlaceholder": "customer@email.com",
+    "emailSent": "Sent by email",
+    "emailSentOn": "Sent by email on {date}",
     "copy": "Copy",
     "copyFailed": "Could not copy"
   },
@@ -2188,6 +2190,7 @@
     "fields": {
       "dates": "Dates",
       "phone": "Phone",
+      "email": "Email",
       "received": "Received",
       "priceUntil": "Price guaranteed until",
       "internalNote": "Internal note",

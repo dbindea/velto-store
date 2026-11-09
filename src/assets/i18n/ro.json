@@ -163,6 +163,8 @@
     "showingLatest": "Se afișează cele mai recente. Pentru unul vechi anume, folosește căutarea.",
     "viewAll": "Vezi tot",
     "emailPlaceholder": "client@email.com",
+    "emailSent": "Trimis prin e-mail",
+    "emailSentOn": "Trimis prin e-mail pe {date}",
     "copy": "Copiază",
     "copyFailed": "Nu s-a putut copia"
   },
@@ -2188,6 +2190,7 @@
     "fields": {
       "dates": "Date",
       "phone": "Telefon",
+      "email": "E-mail",
       "received": "Primită",
       "priceUntil": "Preț garantat până la",
       "internalNote": "Notă internă",

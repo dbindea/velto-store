@@ -738,6 +738,27 @@ export const createBookingRequest = onRequest(
             presupuesto ?? '',
             ref.id
           );
+          /*
+           * ⚠️ **Que el correo salió se GUARDA, y hasta el 9 de noviembre de
+           * 2026 no se guardaba.** Era el único correo al cliente que no
+           * dejaba rastro, así que el panel no podía distinguir «se le avisó»
+           * de «no se le avisó» y la única salida era volver a escribirle. Lo
+           * pidió Dorel junto al sobre del contrato, con la misma frase: para
+           * no duplicar envíos.
+           *
+           * ⚠️ **Va DESPUÉS del envío y su fallo no tumba nada**, igual que
+           * `quoteUrl` arriba: la solicitud ya existe y el correo ya salió, así
+           * que tirar aquí dejaría al visitante viendo un error de una
+           * pre-reserva que sí se creó — y volviendo a enviarla.
+           *
+           * ⚠️ **Un `Date`, no un centinela.** El resto del documento usa
+           * `ahora`, que el admin SDK escribe como `Timestamp`; mezclar formas
+           * para la misma clase de dato es lo que obligó a que
+           * `emailSentOf()` lleve un lector de cinco ramas.
+           */
+          await ref.update({ clientEmailedAt: new Date() }).catch((error) => {
+            logger.error('Correo enviado pero no anotado', { id: ref.id, error });
+          });
         } catch (error) {
           logger.error('No se pudo mandar el correo al cliente', { id: ref.id, error });
         }

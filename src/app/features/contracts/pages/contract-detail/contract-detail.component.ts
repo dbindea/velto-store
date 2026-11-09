@@ -27,11 +27,20 @@ import {
 } from '@shared/utils/reservation-workflow.util';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ClearInputDirective } from '@shared/directives/clear-input.directive';
+import { EmailSentBadgeComponent } from '@shared/components/email-sent-badge/email-sent-badge.component';
+import { emailSentOf, type EmailSent } from '@shared/utils/email-sent.util';
 
 @Component({
   selector: 'app-contract-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslatePipe, ClearInputDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    TranslatePipe,
+    ClearInputDirective,
+    EmailSentBadgeComponent
+  ],
   templateUrl: './contract-detail.component.html',
   styleUrl: './contract-detail.component.scss'
 })
@@ -310,6 +319,14 @@ export class ContractDetailComponent implements OnInit, OnDestroy {
   }
   getEmailedAt(c: Contract): Date | null {
     return c.emailedAt ? toDate(c.emailedAt) : null;
+  }
+
+  /**
+   * Para el sobre de la cabecera. Aquí solo hay un sitio donde el envío puede
+   * constar —el propio contrato—; la ficha de la reserva tiene dos.
+   */
+  emailSent(c: Contract): EmailSent {
+    return emailSentOf(c.emailedAt);
   }
 
   // CONTRACT_STATUS_LABELS holds i18n keys; resolve here because the template

@@ -42,6 +42,7 @@
               <span class="badge" [ngClass]="CONTRACT_STATUS_COLORS[c.status]">
                 {{ CONTRACT_STATUS_LABELS[c.status] | translate }}
               </span>
+              <app-email-sent-badge [sent]="emailSent(c)" />
             </div>
             <div class="row-info">
               <div class="info-line">

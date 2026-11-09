@@ -96,6 +96,8 @@ import {
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { depositAvailable } from '@shared/utils/deposit.util';
 import { ClearInputDirective } from '@shared/directives/clear-input.directive';
+import { EmailSentBadgeComponent } from '@shared/components/email-sent-badge/email-sent-badge.component';
+import { emailSentOf, type EmailSent } from '@shared/utils/email-sent.util';
 
 @Component({
   selector: 'app-reservation-detail',
@@ -107,7 +109,8 @@ import { ClearInputDirective } from '@shared/directives/clear-input.directive';
     ReservationTimelineComponent,
     ReservationNotesPanelComponent, FormErrorComponent, RouterLink,
     ReceiptDialogComponent,
-    ClearInputDirective
+    ClearInputDirective,
+    EmailSentBadgeComponent
   ],
   templateUrl: './reservation-detail.component.html',
   styleUrl: './reservation-detail.component.scss'
@@ -2019,6 +2022,22 @@ export class ReservationDetailComponent implements OnInit {
   closeContractEmailForm(): void {
     this.showEmailForm = false;
     this.emailError = '';
+  }
+
+  /**
+   * Si el contrato firmado ya se le mandó por correo, para el sobre de la
+   * cabecera y la línea que hay junto al botón de enviar.
+   *
+   * ⚠️ **Dos candidatos porque el MISMO envío se escribe en dos sitios y con
+   * formas distintas.** `sendSignedContractEmail` pone `emailedAt` en el
+   * contrato como `Timestamp` y en la reserva como cadena ISO, en la misma
+   * llamada. Aquí manda el contrato cuando está cargado —es el documento que
+   * manda sobre su propio estado, igual que con el estado del contrato tres
+   * líneas más arriba en la plantilla— y la reserva es el respaldo para las
+   * tarjetas que no lo cargan.
+   */
+  contractEmailSent(): EmailSent {
+    return emailSentOf(this.contract?.emailedAt, this.reservation?.contractInfo?.emailedAt);
   }
 
   /** `emailError` guarda una CLAVE i18n. Ver la nota de `contract-detail`. */

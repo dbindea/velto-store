@@ -37,6 +37,8 @@ import {
 } from '@shared/utils/booking-request.util';
 import { toDate } from '@shared/utils/reservation-date.util';
 import { copyToClipboard } from '@shared/utils/clipboard.util';
+import { EmailSentBadgeComponent } from '@shared/components/email-sent-badge/email-sent-badge.component';
+import { emailSentOf, type EmailSent } from '@shared/utils/email-sent.util';
 
 type Filtro = 'open' | 'all' | BookingRequestStatus;
 
@@ -53,7 +55,7 @@ type Filtro = 'open' | 'all' | BookingRequestStatus;
 @Component({
   selector: 'app-booking-requests',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, EmailSentBadgeComponent],
   templateUrl: './booking-requests.component.html',
   styleUrl: './booking-requests.component.scss'
 })
@@ -439,6 +441,19 @@ export class BookingRequestsComponent {
   /** El mismo número que el enlace, pero separado para leerlo y dictarlo. */
   telefonoLegible(r: BookingRequest): string {
     return formatPhone(r.phone);
+  }
+
+  /**
+   * Si al visitante se le mandó el correo de confirmación con su presupuesto.
+   *
+   * ⚠️ **Aquí no hay ningún botón de reenviar: el correo es automático.** Así
+   * que esto no previene un envío duplicado como el del contrato — sirve para
+   * saber, antes de llamar, si el cliente ya tiene el presupuesto delante.
+   * Sin sobre se lee «no consta», que para una solicitud anterior al 9 de
+   * noviembre de 2026 es exactamente lo que pasa.
+   */
+  correoEnviado(r: BookingRequest): EmailSent {
+    return emailSentOf(r.clientEmailedAt);
   }
 
   /**
